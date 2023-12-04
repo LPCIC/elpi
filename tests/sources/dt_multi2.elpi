@@ -1,0 +1,19 @@
+% The indexing with trie is used and returns only
+% one matching clause
+:index (1 1)
+pred p o:int, o:int.
+
+pred build_p i:int, i:int, i:int, o:list prop.
+build_p _ 0 0 [p 0 0] :- !.
+build_p Mem X 0 [p X 0 | TL] :-
+  X > 0, X' is X - 1,
+  build_p Mem X' Mem TL.
+build_p Mem X Y [p X Y | TL] :-
+  Y > 0, Y' is Y - 1,
+  build_p Mem X Y' TL.
+
+main :-
+  N = 100,
+  build_p N N N L,
+  L => std.time (p 0 X) T, 
+  print T.

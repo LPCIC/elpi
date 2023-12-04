@@ -2394,11 +2394,12 @@ let chose_indexing state predicate l =
     (* TODO: @FissoreD here we should raise an error if n > arity of the predicate? *)
     | [] -> error ("Wrong indexing for " ^ Symbols.show state predicate)
     | 0 :: l -> aux (argno+1) l
-    | 1 :: l when all_zero l -> MapOn argno
-    | path_depth :: l when all_zero l -> Trie { argno ; path_depth }
-    | _ -> Hash l
+    | 1 :: l when all_zero l -> argno
+    | _ -> -1
+    (* | _ -> Hash l *)
   in
-    aux 0 l
+    let index = aux 0 l in 
+    if index == (-1) then Trie l else MapOn index
 
 let check_rule_pattern_in_clique state clique { D.CHR.pattern; rule_name } =
   try

@@ -2449,7 +2449,7 @@ let rec arg_to_trie_path_aux ~safe ~depth t_list path_depth : Discrimination_tre
 and arg_to_trie_path ~safe ~depth t path_depth : Discrimination_tree.path =
   let open Discrimination_tree in
   if path_depth = 0 then []
-  else 
+  else
     let path_depth = path_depth - 1 in 
     match deref_head ~depth t with 
     | Const k when k == Global_symbols.uvarc -> [mkVariable]
@@ -2475,11 +2475,30 @@ and arg_to_trie_path ~safe ~depth t path_depth : Discrimination_tree.path =
       mkConstant ~safe Global_symbols.consc (if path_depth = 0 then 0 else 2) :: hd_path @ tl_path
 
 (** 
-  [arg_to_trie_path ~path_depth ~depth t]
-  Take a term and returns its path representation up to path_depth
+  [arg_to_trie_path ~safe ~depth is_goal args arg_depths mode]
+  returns the path represetation of a term to be used in indexing with trie.
+  args, args_depths and mode are the lists of respectively the arguments, the 
+  depths and the modes of the current term to be indexed.
+  is_goal is used to know if we are encoding the path for instance retriaval or 
+  for clause insertion in the trie. 
+  In the former case, each argument we add a special mkInputMode/mkOutputMode 
+  node before each argument to be indexed. This special node is used during 
+  instance retrival to deal with the input/output mode of the considere argument
 *)
-let arg_to_trie_path ~safe ~path_depth ~depth t = 
-  arg_to_trie_path ~safe ~depth t path_depth
+let rec build_arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_tree.path =
+  let open Discrimination_tree in
+  let prepend_mode is_goal mode tl = if is_goal then mode :: tl else tl in
+  match args, arg_depths, mode with 
+  | _, [], _ -> []
+  | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, [] ->
+    let tl = arg_to_trie_path ~safe ~depth arg_hd arg_depth_hd @ 
+      build_arg_to_trie_path ~safe ~depth is_goal arg_tl arg_depth_tl [] in 
+    prepend_mode is_goal mkOutputMode tl
+  | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, mode_hd :: mode_tl ->
+    let tl = arg_to_trie_path ~safe ~depth arg_hd arg_depth_hd @ 
+      build_arg_to_trie_path ~safe ~depth is_goal arg_tl arg_depth_tl mode_tl in
+    prepend_mode is_goal (match mode_hd with Input -> mkInputMode | _ -> mkOutputMode) tl
+  | _, _ :: _,_ -> anomaly "Invalid Index length"
 
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
@@ -2528,11 +2547,11 @@ let add1clause ~depth m (predicate,clause) =
          time = time + 1;
          args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
-  | IndexWithTrie {mode; argno; args_idx; time; path_depth } ->
-      let path = arg_to_trie_path ~safe:true ~depth ~path_depth (match clause.args with [] -> Discard | l -> List.nth l argno) in 
+  | IndexWithTrie {mode; arg_depths; args_idx; time } ->
+      let path = build_arg_to_trie_path ~depth ~safe:true false clause.args arg_depths mode in
       let dt = DT.index args_idx path clause ~time in
         Ptmap.add predicate (IndexWithTrie {
-          mode; argno; path_depth;
+          mode; arg_depths;
           time = time+1;
           args_idx = dt
         }) m
@@ -2583,8 +2602,8 @@ let make_index ~depth ~indexing ~clauses_rev:p =
           flex_arg_clauses = [];
           arg_idx = Ptmap.empty;
         }
-      | Trie { argno; path_depth } -> IndexWithTrie {
-          argno; path_depth; mode; 
+      | Trie arg_depths -> IndexWithTrie {
+          arg_depths;  mode; 
           args_idx = DT.empty;
           time = min_int;
         }
@@ -2641,10 +2660,8 @@ let rec nth_not_bool_default l n = match l with
   | x :: _ when n = 0 -> x 
   | _ :: l -> nth_not_bool_default l (n - 1)
 
-let trie_goal_args goal argno : term = match goal with
-  | Const a when argno = 0 -> goal
-  | App(k, x, _) when argno = 0 -> x
-  | App (_, _, xs) -> nth_not_found xs (argno - 1)
+let trie_goal_args goal : term list = match goal with
+  | App(_, x, xs) -> x :: xs
   | _ -> assert false
 
 let get_clauses ~depth predicate goal { index = m } =
@@ -2662,14 +2679,13 @@ let get_clauses ~depth predicate goal { index = m } =
        let hash = hash_goal_args ~depth mode args goal in
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
-     | IndexWithTrie {argno; path_depth; mode; args_idx} -> 
-        let mode_arg = nth_not_bool_default mode argno in 
-        let path = arg_to_trie_path ~safe:false ~depth ~path_depth (trie_goal_args goal argno) in
+     | IndexWithTrie {arg_depths; mode; args_idx} ->
+        let path = build_arg_to_trie_path ~safe:false ~depth true (trie_goal_args goal) arg_depths mode in
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.pp_path path
-          pp_int path_depth
+          (pplist pp_int ";") arg_depths
           (*Discrimination_tree.(pp pp_clause) args_idx*)];
-        let candidates = DT.retrieve mode_arg path args_idx in 
+        let candidates = DT.retrieve path args_idx in 
           [%spy "dev:disc-tree:candidates" ~rid 
             pp_int (List.length candidates)];
         candidates

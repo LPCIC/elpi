@@ -170,8 +170,7 @@ and second_lvl_idx =
   }
 | IndexWithTrie of {
     mode : mode;
-    argno : int;        (* position of argument on which the trie is built *)
-    path_depth : int;   (* depth bound at which the term is inspected *)
+    arg_depths : int list;   (* the list of args on which the trie is built *)
     time : int;         (* time is used to recover the total order *)
     args_idx : clause DT.t; 
 }
@@ -192,12 +191,13 @@ type suspended_goal = {
                  P. Indexing is done by hashing all the parameters with a non
                  zero depth and comparing it with the hashing of the parameters
                  of the query
-  - [IndexWithTrie N D] -> N-th argument at D depth
+  - [Trie L] -> we use the same logic of Hash, except we use Trie to discriminate
+                clauses
 *)
 type indexing =
   | MapOn of int
   | Hash of int list
-  | Trie of { argno : int; path_depth : int }
+  | Trie of int list
 [@@deriving show]
 
 let mkLam x = Lam x [@@inline]

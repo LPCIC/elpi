@@ -9,7 +9,6 @@ let kConstant = 0
 let kPrimitive = 1
 let kVariable = 2
 let kOther = 3
-
 let k_lshift = Sys.int_size - k_bits
 let ka_lshift = Sys.int_size - k_bits - arity_bits
 let k_mask = ((1 lsl k_bits) - 1) lsl k_lshift
@@ -25,20 +24,25 @@ let arity_of n =
 let mkConstant ~safe c a =
   let rc = encode kConstant c a in
   if safe && (abs c > data_mask || a >= 1 lsl arity_bits) then
-    Elpi_util.Util.anomaly (Printf.sprintf "Indexing at depth > 1 is unsupported since constant %d/%d is too large or wide" c a);
+    Elpi_util.Util.anomaly
+      (Printf.sprintf "Indexing at depth > 1 is unsupported since constant %d/%d is too large or wide" c a);
   rc
+
 let mkVariable = encode kVariable 0 0
 let mkOther = encode kOther 0 0
 let mkPrimitive c = encode kPrimitive (Elpi_util.Util.CData.hash c lsl k_bits) 0
-
-let () = assert(k_of (mkConstant ~safe:false ~-17 0) == kConstant)
-let () = assert(k_of mkVariable == kVariable)
-let () = assert(k_of mkOther == kOther)
-
-let isVariable x = k_of x == kVariable
-let isOther x = k_of x == kOther
+let mkInputMode = encode kOther 1 0
+let mkOutputMode = encode kOther 2 0
+let () = assert (k_of (mkConstant ~safe:false ~-17 0) == kConstant)
+let () = assert (k_of mkVariable == kVariable)
+let () = assert (k_of mkOther == kOther)
+let isVariable x = x == mkVariable
+let isOther x = x == kOther
+let isInput x = x == mkInputMode
+let isOutput x = x == mkOutputMode
 
 type cell = int
+
 let pp_cell fmt n =
   let k = k_of n in
   if k == kConstant then
@@ -46,12 +50,14 @@ let pp_cell fmt n =
     let arity = (arity_mask land n) lsr ka_lshift in
     Format.fprintf fmt "Constant(%d,%d)" data arity
   else if k == kVariable then Format.fprintf fmt "Variable"
-  else if k == kOther then Format.fprintf fmt "Other"
+  else if k == kOther then
+    if isInput n then Format.fprintf fmt "Input"
+    else if isOutput n then Format.fprintf fmt "Output"
+    else Format.fprintf fmt "Other"
   else if k == kPrimitive then Format.fprintf fmt "Primitive"
   else Format.fprintf fmt "%o" k
 
-let show_cell n =
-  Format.asprintf "%a" pp_cell n
+let show_cell n = Format.asprintf "%a" pp_cell n
 
 module Trie = struct
   (*
@@ -84,9 +90,7 @@ module Trie = struct
       ['a t Ptmap.t]. The empty trie is just the empty map. *)
 
   type key = int list
-
-  type 'a t =
-    | Node of { data : 'a list; other : 'a t option; map : 'a t Ptmap.t }
+  type 'a t = Node of { data : 'a list; other : 'a t option; map : 'a t Ptmap.t }
 
   let empty = Node { data = []; other = None; map = Ptmap.empty }
 
@@ -131,7 +135,12 @@ module Trie = struct
     Format.fprintf fmt "} other:{";
     (match other with None -> () | Some m -> pp ppelem fmt m);
     Format.fprintf fmt "} key:{";
-    Ptmap.to_list map |> Elpi_util.Util.pplist (fun fmt (k,v) -> pp_cell fmt k; pp ppelem fmt v) "; " fmt;
+    Ptmap.to_list map
+    |> Elpi_util.Util.pplist
+         (fun fmt (k, v) ->
+           pp_cell fmt k;
+           pp ppelem fmt v)
+         "; " fmt;
     Format.fprintf fmt "}]"
 
   let show (fmt : Format.formatter -> 'a -> unit) (n : 'a t) : string =
@@ -146,11 +155,7 @@ let compare x y = x - y
 
 let skip (path : path) : path =
   let rec aux arity path =
-    if arity = 0 then path
-    else
-      match path with
-      | [] -> assert false
-      | m :: tl -> aux (arity - 1 + arity_of m) tl
+    if arity = 0 then path else match path with [] -> assert false | m :: tl -> aux (arity - 1 + arity_of m) tl
   in
   match path with
   | [] -> Elpi_util.Util.anomaly "Skipping empty path is not possible"
@@ -197,31 +202,34 @@ let rec merge (l1 : ('a * int) list) l2 =
   | ((_, tx) as x) :: xs, (_, ty) :: _ when tx > ty -> x :: merge xs l2
   | _, y :: ys -> y :: merge l1 ys
 
-let get_all_children v mode = isOther v || (isVariable v && Elpi_util.Util.Output == mode)
+let get_all_children v mode = isOther v || (isVariable v && isOutput mode)
 
 (* get_all_children returns if a key should be unified with all the values of
    the current sub-tree. This key should be either K.to_unfy or K.variable.
    In the latter case, the mode boolean to be true (we are in output mode). *)
-let rec retrieve_aux mode path = function
+let rec retrieve_aux (mode : cell) path = function
   | [] -> []
   | hd :: tl -> merge (retrieve mode path hd) (retrieve_aux mode path tl)
 
 and retrieve mode path tree =
   match (tree, path) with
   | Trie.Node { data }, [] -> data
-  | Trie.Node { other; map }, v :: path when get_all_children v mode ->
-      retrieve_aux mode path (all_children other map)
+  | node, hd :: tl when isInput hd || isOutput hd -> retrieve hd tl tree
+  | Trie.Node { other; map }, v :: path when get_all_children v mode -> retrieve_aux mode path (all_children other map)
   | Trie.Node { other = None; map }, node :: sub_path ->
-      if mode == Elpi_util.Util.Input && isVariable node then []
+      if isInput mode && isVariable node then []
       else
         let subtree = try Ptmap.find node map with Not_found -> Trie.empty in
         retrieve mode sub_path subtree
   | Trie.Node { other = Some other; map }, (node :: sub_path as path) ->
       merge
-        (if mode == Elpi_util.Util.Input && isVariable node then []
-        else
-          let subtree = try Ptmap.find node map with Not_found -> Trie.empty in
-          retrieve mode sub_path subtree)
+        (if isInput mode && isVariable node then []
+         else
+           let subtree = try Ptmap.find node map with Not_found -> Trie.empty in
+           retrieve mode sub_path subtree)
         (retrieve mode (skip path) other)
 
-let retrieve mode path index = retrieve mode path index |> List.map fst
+let retrieve path index =
+  match path with
+  | [] -> Elpi_util.Util.anomaly "A path should at least of length 2"
+  | mode :: tl -> retrieve mode tl index |> List.map fst
