@@ -37,7 +37,7 @@ let () = assert (k_of (mkConstant ~safe:false ~-17 0) == kConstant)
 let () = assert (k_of mkVariable == kVariable)
 let () = assert (k_of mkOther == kOther)
 let isVariable x = x == mkVariable
-let isOther x = x == kOther
+let isOther x = x == mkOther
 let isInput x = x == mkInputMode
 let isOutput x = x == mkOutputMode
 
