@@ -2429,76 +2429,74 @@ let hash_clause_arg_list = hash_arg_list false
 let hash_goal_arg_list = hash_arg_list true
 
 (** 
-  [arg_to_trie_path_aux ~depth t_list path_depth]
-  Takes a list of terms and builds the path representing this list with
-  height limited to [depth].
-*)
-let rec arg_to_trie_path_aux ~safe ~depth t_list path_depth : Discrimination_tree.path = 
-  if path_depth = 0 then []
-  else 
-    match t_list with 
-    | [] -> []
-    | hd :: tl -> 
-        let hd_path = arg_to_trie_path ~safe ~depth hd path_depth in 
-        let tl_path = arg_to_trie_path_aux ~safe ~depth tl path_depth in 
-        hd_path @ tl_path
-(**
-  [arg_to_trie_path ~depth t path_depth]
-  Takes a [term] and returns it path representation with height bound by [path_depth]
-*)
-and arg_to_trie_path ~safe ~depth t path_depth : Discrimination_tree.path =
-  let open Discrimination_tree in
-  if path_depth = 0 then []
-  else
-    let path_depth = path_depth - 1 in 
-    match deref_head ~depth t with 
-    | Const k when k == Global_symbols.uvarc -> [mkVariable]
-    | Const k when safe -> [mkConstant ~safe k 0]
-    | Const k -> [mkConstant ~safe k 0]
-    | CData d -> [mkPrimitive d]
-    | App (k,_,_) when k == Global_symbols.uvarc -> [mkVariable]
-    | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~safe ~depth a (path_depth+1)
-    | Nil -> [mkConstant ~safe Global_symbols.nilc 0]
-    | Lam _ -> [mkOther] (* loose indexing to enable eta *)
-    | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [mkVariable]
-    | Builtin (k,tl) ->
-      let path = arg_to_trie_path_aux ~safe ~depth tl path_depth in 
-      mkConstant ~safe k (if path_depth = 0 then 0 else List.length tl) :: path 
-    | App (k, x, xs) -> 
-      let arg_length = if path_depth = 0 then 0 else List.length xs + 1 in
-      let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
-      let tl_path = arg_to_trie_path_aux ~safe ~depth xs path_depth in
-      mkConstant ~safe k arg_length :: hd_path @ tl_path
-    | Cons (x,xs) ->
-      let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
-      let tl_path = arg_to_trie_path ~safe ~depth xs path_depth in
-      mkConstant ~safe Global_symbols.consc (if path_depth = 0 then 0 else 2) :: hd_path @ tl_path
-
-(** 
   [arg_to_trie_path ~safe ~depth is_goal args arg_depths mode]
   returns the path represetation of a term to be used in indexing with trie.
   args, args_depths and mode are the lists of respectively the arguments, the 
   depths and the modes of the current term to be indexed.
   is_goal is used to know if we are encoding the path for instance retriaval or 
-  for clause insertion in the trie. 
+  for clause insertion in the trie.
   In the former case, each argument we add a special mkInputMode/mkOutputMode 
   node before each argument to be indexed. This special node is used during 
   instance retrival to deal with the input/output mode of the considere argument
 *)
-let rec build_arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_tree.path =
+let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_tree.path =
   let open Discrimination_tree in
-  let prepend_mode is_goal mode tl = if is_goal then mode :: tl else tl in
-  match args, arg_depths, mode with 
-  | _, [], _ -> []
-  | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, [] ->
+  (** prepend the mode of the current argument if we are "pathifing" a goal *)
+  let prepend_mode is_goal mode tl = if is_goal then mode :: tl else tl in     
+  (** gives the path representation of a list of sub-terms *)
+  let rec arg_to_trie_path_aux ~safe ~depth t_list path_depth : Discrimination_tree.path = 
+    if path_depth = 0 then []
+    else 
+      match t_list with 
+      | [] -> []
+      | hd :: tl -> 
+          let hd_path = arg_to_trie_path ~safe ~depth hd path_depth in 
+          let tl_path = arg_to_trie_path_aux ~safe ~depth tl path_depth in 
+          hd_path @ tl_path
+  (** gives the path representation of a term *)
+  and arg_to_trie_path ~safe ~depth t path_depth : Discrimination_tree.path =
+    let open Discrimination_tree in
+    if path_depth = 0 then []
+    else
+      let path_depth = path_depth - 1 in 
+      match deref_head ~depth t with 
+      | Const k when k == Global_symbols.uvarc -> [mkVariable]
+      | Const k when safe -> [mkConstant ~safe k 0]
+      | Const k -> [mkConstant ~safe k 0]
+      | CData d -> [mkPrimitive d]
+      | App (k,_,_) when k == Global_symbols.uvarc -> [mkVariable]
+      | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~safe ~depth a (path_depth+1)
+      | Nil -> [mkConstant ~safe Global_symbols.nilc 0]
+      | Lam _ -> [mkOther] (* loose indexing to enable eta *)
+      | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [mkVariable]
+      | Builtin (k,tl) ->
+        let path = arg_to_trie_path_aux ~safe ~depth tl path_depth in 
+        mkConstant ~safe k (if path_depth = 0 then 0 else List.length tl) :: path 
+      | App (k, x, xs) -> 
+        let arg_length = if path_depth = 0 then 0 else List.length xs + 1 in
+        let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
+        let tl_path = arg_to_trie_path_aux ~safe ~depth xs path_depth in
+        mkConstant ~safe k arg_length :: hd_path @ tl_path
+      | Cons (x,xs) ->
+        let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
+        let tl_path = arg_to_trie_path ~safe ~depth xs path_depth in
+        mkConstant ~safe Global_symbols.consc (if path_depth = 0 then 0 else 2) :: hd_path @ tl_path
+  (** builds the sub-path of a sublist of arguments of the current clause  *)
+  and make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl = 
     let tl = arg_to_trie_path ~safe ~depth arg_hd arg_depth_hd @ 
-      build_arg_to_trie_path ~safe ~depth is_goal arg_tl arg_depth_tl [] in 
-    prepend_mode is_goal mkOutputMode tl
-  | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, mode_hd :: mode_tl ->
-    let tl = arg_to_trie_path ~safe ~depth arg_hd arg_depth_hd @ 
-      build_arg_to_trie_path ~safe ~depth is_goal arg_tl arg_depth_tl mode_tl in
+      aux ~safe ~depth is_goal arg_tl arg_depth_tl mode_tl in
     prepend_mode is_goal (match mode_hd with Input -> mkInputMode | _ -> mkOutputMode) tl
-  | _, _ :: _,_ -> anomaly "Invalid Index length"
+  (** main function: build the path of the arguments received in entry  *)
+  and aux ~safe ~depth is_goal args arg_depths mode : Discrimination_tree.path =
+    match args, arg_depths, mode with 
+    | _, [], _ -> []
+    | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, [] ->
+      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl Output []
+    | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, mode_hd :: mode_tl ->
+      make_sub_path  arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl 
+    | _, _ :: _,_ -> anomaly "Invalid Index length" in
+  if args == [] then prepend_mode is_goal mkOutputMode [] 
+  else aux ~safe ~depth is_goal args arg_depths mode 
 
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
@@ -2548,7 +2546,7 @@ let add1clause ~depth m (predicate,clause) =
          args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
   | IndexWithTrie {mode; arg_depths; args_idx; time } ->
-      let path = build_arg_to_trie_path ~depth ~safe:true false clause.args arg_depths mode in
+      let path = arg_to_trie_path ~depth ~safe:true false clause.args arg_depths mode in
       let dt = DT.index args_idx path clause ~time in
         Ptmap.add predicate (IndexWithTrie {
           mode; arg_depths;
@@ -2661,6 +2659,7 @@ let rec nth_not_bool_default l n = match l with
   | _ :: l -> nth_not_bool_default l (n - 1)
 
 let trie_goal_args goal : term list = match goal with
+  | Const _ -> []
   | App(_, x, xs) -> x :: xs
   | _ -> assert false
 
@@ -2680,7 +2679,7 @@ let get_clauses ~depth predicate goal { index = m } =
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
      | IndexWithTrie {arg_depths; mode; args_idx} ->
-        let path = build_arg_to_trie_path ~safe:false ~depth true (trie_goal_args goal) arg_depths mode in
+        let path = arg_to_trie_path ~safe:false ~depth true (trie_goal_args goal) arg_depths mode in
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.pp_path path
           (pplist pp_int ";") arg_depths
