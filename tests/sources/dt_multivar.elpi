@@ -1,0 +1,25 @@
+:index (2 2)
+pred p o:list int, o:int.
+
+p [1] 0.
+p [1,2|_] 0.
+p [1,2,3|_] 0.
+p [1,2,3,4|_] 0.
+p [1,2,3,4,5|_] 0.
+
+:index (2)
+pred p1 o:list (list int).
+p1 [[3] | _].
+p1 [X, [Y], [1,X,3] | _].
+
+pred findall-length i:prop.
+findall-length P Len :-
+  std.findall P L,
+  std.length L Len.
+
+main :-
+  findall-length (p [_|_] _) 5,
+  findall-length (p1 [[_]|_]) 1,
+  findall-length (p1 [[_]]) 1,
+  findall-length (p1 [[3], X, [1, 5, 3], [4, 6]]) 1
+  .
