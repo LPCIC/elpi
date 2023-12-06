@@ -176,27 +176,38 @@ end
 type path = cell list [@@deriving show]
 
 let compare x y = x - y
+let count_parentheses n k = if isListHead k then n + 1 else if isListEnd k || isMultivariable k then n - 1 else n
 
 let skip hd tl : path =
-  let rec aux arity path =
-    if arity = 0 then path else match path with [] -> assert false | m :: tl -> aux (arity - 1 + arity_of m) tl
+  let rec aux_list acc path =
+    if acc = 0 then path
+    else match path with [] -> anomaly "DT: skip error" | m :: tl -> aux_list (count_parentheses acc m) tl
   in
-  aux (arity_of hd) tl
+  let rec aux_const arity path =
+    if arity = 0 then path
+    else
+      match path with
+      | [] -> assert false
+      | m :: tl ->
+          if isListHead m then
+            let skip_list = aux_list 1 tl in
+            aux_const (arity - 1) skip_list
+          else aux_const (arity - 1 + arity_of m) tl
+  in
+  if isListHead hd then aux_list 1 tl else aux_const (arity_of hd) tl
 
 (**
   Takes a path and skip a multivariable:
     we take the node just after the first occurrence of isListEnd or isMultivariable
     with no corresponding isListHead
 *)
-let skip_multivariable tl =
+let skip_multivariable hd tl =
   let rec aux = function
-    | hd :: tl, acc when isListHead hd -> aux (tl, acc + 1)
-    | hd :: tl, 0 when isListEnd hd || isMultivariable hd -> tl
-    | hd :: tl, acc when isListEnd hd -> aux (tl, acc - 1)
-    | _ :: _, -1 | [], _ -> anomaly "Invalid negative guard"
-    | _ :: tl, n -> aux (tl, n)
+    | x, 0 -> x
+    | hd :: tl, acc -> aux (tl, count_parentheses acc hd)
+    | _, -1 | [], _ -> anomaly "Skip multivariable of invalid path"
   in
-  aux (tl, 0)
+  aux (tl, count_parentheses 1 hd)
 
 type 'a t = ('a * int) Trie.t
 
@@ -216,57 +227,47 @@ let all_children map other =
         if n = 0 then [ tree; other ]
         else Ptmap.fold (fun k v res -> get_from_function (n - 1 + arity_of k) v @ res) map [ other ]
   in
-  let new_n n k = if isListHead k then n + 1 else if isListEnd k then n - 1 else n in
   let rec get_from_list n = function
-    | Trie.Node { other = None; map } as tree ->
-        if n = 0 then [ tree ] else Ptmap.fold (fun k v res -> get_from_list (new_n n k) v @ res) map []
-    | Trie.Node { other = Some other; map } as tree ->
-        if n = 0 then [ tree; other ] else Ptmap.fold (fun k v res -> get_from_list (new_n n k) v @ res) map [ other ]
+    | Trie.Node { other = None; map; multivariable = None } as tree ->
+        if n = 0 then [ tree ] else Ptmap.fold (fun k v res -> get_from_list (count_parentheses n k) v @ res) map []
+    | Trie.Node { other = Some other; map; multivariable = None } as tree ->
+        if n = 0 then [ tree; other ]
+        else Ptmap.fold (fun k v res -> get_from_list (count_parentheses n k) v @ res) map [] @ get_from_list n other
+    | Trie.Node { other = None; map; multivariable = Some a } as tree ->
+        if n = 0 then [ tree ]
+        else Ptmap.fold (fun k v res -> get_from_list (count_parentheses n k) v @ res) map (get_from_list (n - 1) a)
+    | Trie.Node { other = Some other; map; multivariable = Some a } as tree ->
+        if n = 0 then [ tree; other ]
+        else
+          Ptmap.fold (fun k v res -> get_from_list (count_parentheses n k) v @ res) map (get_from_list (n - 1) a)
+          @ get_from_list n other
   in
   let some_to_list = function Some x -> [ x ] | None -> [] in
   Ptmap.fold
-    (fun k v res ->
-      (* pp_string Format.std_formatter "\n\nThe current cell is: "; *)
-      (* pp_cell Format.std_formatter k; *)
-      (* pp_string Format.std_formatter "\n\n "; *)
-      if isListHead k then get_from_list 1 v @ res else get_from_function (arity_of k) v @ res)
+    (fun k v res -> if isListHead k then get_from_list 1 v @ res else get_from_function (arity_of k) v @ res)
     map (some_to_list other)
 
 let skip_multivar_trie (Trie.Node { other; map; multivariable }) : 'a Trie.t list =
-  let new_n n k = if isListHead k then n + 1 else if isListEnd k then n - 1 else n in
   let rec get_from_list n = function
     | Trie.Node { other = None; map; multivariable } as tree ->
         if n = 0 then [ tree ]
         else
           Ptmap.fold
-            (fun k v res ->
-              (* pp_string Format.std_formatter "The key is:";
-                 pp_cell Format.std_formatter k;
-                 pp_string Format.std_formatter "\n\n"; *)
-              get_from_list (new_n n k) v @ res)
+            (fun k v res -> get_from_list (count_parentheses n k) v @ res)
             map
             (match multivariable with None -> [] | Some a -> [ a ])
     | Trie.Node { other = Some other; map; multivariable } as tree ->
         if n = 0 then [ tree; other ]
         else
-          Ptmap.fold
-            (fun k v res ->
-              (* pp_string Format.std_formatter "The key is:";
-                 pp_cell Format.std_formatter k;
-                 pp_string Format.std_formatter "\n\n"; *)
-              get_from_list (new_n n k) v @ res)
-            map
-            (other :: (match multivariable with None -> [] | Some a -> [ a ]))
+          get_from_list n other
+          @ Ptmap.fold
+              (fun k v res -> get_from_list (count_parentheses n k) v @ res)
+              map
+              (match multivariable with None -> [] | Some a -> [ a ])
   in
   let some_to_list = function Some x -> [ x ] | None -> [] in
   (match other with None -> [] | Some a -> get_from_list 1 a)
-  @ Ptmap.fold
-      (fun k v res ->
-        (* pp_string Format.std_formatter "The current key is";
-           pp_cell Format.std_formatter k;
-           pp_string Format.std_formatter "\n"; *)
-        if isListEnd k then v :: res else get_from_list 1 v @ res)
-      map (some_to_list multivariable)
+  @ Ptmap.fold (fun k v res -> get_from_list (count_parentheses 1 k) v @ res) map (some_to_list multivariable)
 
 (* NOTE: l1 and l2 are supposed to be sorted *)
 let rec merge (l1 : ('a * int) list) l2 =
@@ -286,68 +287,37 @@ let rec retrieve_aux (mode : cell) path = function
 
 and retrieve mode path (tree : ('a * cell) Trie.t) =
   match (tree, path) with
+  | _, _ when Trie.empty == tree -> []
   | Trie.Node { data }, [] -> data
-  | node, hd :: tl when isInput hd || isOutput hd -> retrieve hd tl tree
-  | node, hd :: tl when isMultivariable hd || isListEnd hd ->
-      (* assert false; *)
-      (* pp_string Format.std_formatter "In multivariable branch\n"; *)
-      (* pp (fun fmt _ -> pp_string fmt "+") Format.std_formatter node; *)
-      (* pp_string Format.std_formatter "\n\n"; *)
-      let sub_tries = skip_multivar_trie node in
-      (* pp_string Format.std_formatter "Sub-tries list is\n"; *)
-      (* pplist (pp (fun fmt _ -> pp_string fmt "+")) ";" Format.std_formatter sub_tries; *)
-      (* pp_string Format.std_formatter "\n\n"; *)
+  | _, hd :: tl when isInput hd || isOutput hd -> retrieve hd tl tree
+  | _, hd :: tl when isMultivariable hd ->
+      let sub_tries = skip_multivar_trie tree in
       retrieve_aux mode tl sub_tries
   | Trie.Node { map; other; multivariable }, hd :: tl when get_all_children hd mode -> (
-      (* TODO: Be carefull: if the head of the trie is a ListHead then we should get the children after the corresponding ListEnd  *)
-      (* pp_string Format.std_formatter "\n\nIn get_all_children branch\n"; *)
-      (* pp (fun fmt _ -> pp_string fmt "+") Format.std_formatter tree; *)
-      (* pp_string Format.std_formatter "\nThe all_children are\n"; *)
-      (* pplist (pp (fun fmt _ -> pp_string fmt "+")) ";" Format.std_formatter (all_children map other); *)
-      (* assert false; *)
-      let from_map = retrieve_aux mode tl (all_children map other) in
-      (* pp_string Format.std_formatter "\n the result is\n"; *)
-      (* pp (fun fmt _ -> pp_string fmt "+") Format.std_formatter tree; *)
-      (* pplist (fun fmt _ -> pp_string fmt "+") ";" Format.std_formatter from_map; *)
-      (* pp_string Format.std_formatter "\n\n"; *)
+      let all_children = all_children map other in
+      let from_map = retrieve_aux mode tl all_children in
       match multivariable with
       | None -> from_map
       | Some a ->
-          (* pp_string Format.std_formatter " Before error?\n"; *)
-          (* pp_path Format.std_formatter path; *)
-          let skipped_path = skip_multivariable tl in
-          (* pp_string Format.std_formatter "\nSkipped path is\n"; *)
-          (* pp_path Format.std_formatter skipped_path; *)
-          (* pp_string Format.std_formatter "\n\n"; *)
+          let skipped_path = skip_multivariable hd tl in
           let retrive_multivariable = retrieve mode skipped_path a in
-          (* pp_string Format.std_formatter "Tretrieved multivariable is\n"; *)
-          (* pplist ( (fun fmt _ -> pp_string fmt "+")) ";" Format.std_formatter retrive_multivariable; *)
-          (* pp_string Format.std_formatter "\n\n"; *)
           merge from_map retrive_multivariable)
   | Trie.Node { other; map; multivariable }, hd :: tl -> (
-      (* pp_string Format.std_formatter "\nIn last branch\n"; *)
-      (* pp_path Format.std_formatter path; *)
-      (* pp_string Format.std_formatter "\nThe subtrie is\n"; *)
-      (* pp (fun fmt _ -> pp_string fmt "+") Format.std_formatter tree; *)
-      let xxx =
+      let from_map =
         if isInput mode && isVariable hd then []
         else
           let subtree = try Ptmap.find hd map with Not_found -> Trie.empty in
-          (* pp_string Format.std_formatter "\n1\n"; *)
-          (* pp_string Format.std_formatter "\nThe subssubtrie is\n"; *)
-          (* pp (fun fmt _ -> pp_string fmt "+") Format.std_formatter subtree; *)
           retrieve mode tl subtree
       in
-      (* pp_string Format.std_formatter "\nBefore \n"; *)
-      (* pp_path Format.std_formatter tl; *)
-      (* pp_string Format.std_formatter "\n After\n"; *)
       match (other, multivariable) with
-      | None, None -> xxx
-      | Some a, None -> merge xxx (retrieve mode (skip hd tl) a)
-      | None, Some a ->
-          (* pp_string Format.std_formatter "\nIn multivariable sub sub section\n"; *)
-          merge xxx (retrieve mode (skip_multivariable tl) a)
-      | Some a, Some b -> merge (merge xxx (retrieve mode (skip hd tl) a)) (retrieve mode (skip_multivariable tl) b))
+      | None, None -> from_map
+      | Some a, None ->
+          let new_path = skip hd tl in
+          let sub_tree = retrieve mode new_path a in
+          merge from_map sub_tree
+      | None, Some a -> merge from_map (retrieve mode (skip_multivariable hd tl) a)
+      | Some a, Some b ->
+          merge (merge from_map (retrieve mode (skip hd tl) a)) (retrieve mode (skip_multivariable hd tl) b))
 
 let retrieve path index =
   match path with
