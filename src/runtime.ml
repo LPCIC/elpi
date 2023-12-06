@@ -2453,7 +2453,7 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
         let path_of_a = arg_to_trie_path ~safe ~depth a path_depth in
         const2list_term ~depth ~safe ~h:(h+1) path_depth (len+1) (path_of_a :: res) b
   (* TODO: complexity problem next line *)
-  | a -> mkListHead :: flatten_rev  ([mkMultivariable] :: res)
+  | a -> mkListHead :: flatten_rev  ([mkListEnd] :: res)
   (** prepend the mode of the current argument if we are "pathifing" a goal *)
   and prepend_mode is_goal mode tl = if is_goal then mode :: tl else tl
   (** gives the path representation of a list of sub-terms *)
