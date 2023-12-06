@@ -41,9 +41,8 @@ let mkOther = encode kOther 0 0
 let mkPrimitive c = encode kPrimitive (CData.hash c lsl k_bits) 0
 let mkInputMode = encode kOther 1 0
 let mkOutputMode = encode kOther 2 0
-let mkMultivariable = encode kOther 3 0
-let mkListHead = encode kOther 4 0
-let mkListEnd = encode kOther 5 0
+let mkListHead = encode kOther 3 0
+let mkListEnd = encode kOther 4 0
 let () = assert (k_of (mkConstant ~safe:false ~-17 0) == kConstant)
 let () = assert (k_of mkVariable == kVariable)
 let () = assert (k_of mkOther == kOther)
@@ -51,7 +50,6 @@ let isVariable x = x == mkVariable
 let isOther x = x == mkOther
 let isInput x = x == mkInputMode
 let isOutput x = x == mkOutputMode
-let isMultivariable x = x == mkMultivariable
 let isListHead x = x == mkListHead
 let isListEnd x = x == mkListEnd
 
@@ -68,7 +66,6 @@ let pp_cell fmt n =
     Format.fprintf fmt
       (if isInput n then "Input"
        else if isOutput n then "Output"
-       else if isMultivariable n then "Multivarible"
        else if isListHead n then "ListHead"
        else if isListEnd n then "ListEnd"
        else "Other")
@@ -139,7 +136,7 @@ module Trie = struct
           let t' = match other with None -> empty | Some x -> x in
           let t'' = ins (r, t') in
           Node { t with other = Some t'' }
-      | x :: r, Node ({ multivariable } as t) when isMultivariable x ->
+      | x :: r, Node ({ multivariable } as t) when isListEnd x ->
           let t' = match multivariable with None -> empty | Some x -> x in
           let t'' = ins (r, t') in
           Node { t with multivariable = Some t'' }
@@ -176,7 +173,7 @@ end
 type path = cell list [@@deriving show]
 
 let compare x y = x - y
-let count_parentheses n k = if isListHead k then n + 1 else if isListEnd k || isMultivariable k then n - 1 else n
+let count_parentheses n k = if isListHead k then n + 1 else if isListEnd k then n - 1 else n
 
 let skip hd tl : path =
   let rec aux_list acc path =
@@ -290,7 +287,7 @@ and retrieve mode path (tree : ('a * cell) Trie.t) =
   | _, _ when Trie.empty == tree -> []
   | Trie.Node { data }, [] -> data
   | _, hd :: tl when isInput hd || isOutput hd -> retrieve hd tl tree
-  | _, hd :: tl when isMultivariable hd ->
+  | _, hd :: tl when isListEnd hd ->
       let sub_tries = skip_multivar_trie tree in
       retrieve_aux mode tl sub_tries
   | Trie.Node { map; other; multivariable }, hd :: tl when get_all_children hd mode -> (
