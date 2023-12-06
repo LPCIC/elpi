@@ -2476,25 +2476,20 @@ let hash_goal_arg_list = hash_arg_list true
   instance retrival to deal with the input/output mode of the considere argument
 *)
 let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_tree.path =
-  (* pp_string Fmt.std_formatter "The input is:";
-  pplist (fun fmt x -> pp_term fmt (deref_head ~depth x)) ";" Fmt.std_formatter ( args );
-  pp_string Fmt.std_formatter "\n"; *)
   let open Discrimination_tree in
   let rec flatten_rev = function 
     | [] -> []
     | hd :: tl -> flatten_rev tl @ hd in
-  let rec const2list_term ~safe ~depth path_depth (len: int) (res: path list) : term -> Discrimination_tree.path = function 
+  let rec const2list_term ~safe ~depth ?(h=0) path_depth (len: int) (res: path list) : term -> Discrimination_tree.path = function 
+  (* TODO: complexity problem next line *)
   | Nil -> mkListHead :: (flatten_rev ([mkListEnd] :: res))
-  | Cons (a, b) -> 
-      let path_of_a = arg_to_trie_path ~safe ~depth a path_depth in
-      (* TODO: complexity proble next line *)
-      const2list_term ~depth ~safe path_depth (len+1) (path_of_a :: res) b
-  | a -> 
-      (* pp_string Fmt.std_formatter "In const2list_term";  *)
-      (* pp_term Fmt.std_formatter a;  *)
-      (* pp_string Fmt.std_formatter "\n";  *)
-      (* TODO: complexity problem next line *)
-      mkListHead :: flatten_rev  ([mkMultivariable] :: res)
+  | Cons (a, b) ->
+      if h > 10 then mkListHead :: (flatten_rev ([mkListEnd] :: res))
+      else
+        let path_of_a = arg_to_trie_path ~safe ~depth a path_depth in
+        const2list_term ~depth ~safe ~h:(h+1) path_depth (len+1) (path_of_a :: res) b
+  (* TODO: complexity problem next line *)
+  | a -> mkListHead :: flatten_rev  ([mkMultivariable] :: res)
   (** prepend the mode of the current argument if we are "pathifing" a goal *)
   and prepend_mode is_goal mode tl = if is_goal then mode :: tl else tl
   (** gives the path representation of a list of sub-terms *)
@@ -2510,7 +2505,6 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
   (** gives the path representation of a term *)
   and arg_to_trie_path ~safe ~depth t path_depth : Discrimination_tree.path =
     let open Discrimination_tree in
-    let old = false in
     if path_depth = 0 then []
     else
       let path_depth = path_depth - 1 in 
@@ -2531,19 +2525,8 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
         let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
         let tl_path = arg_to_trie_path_aux ~safe ~depth xs path_depth in
         mkConstant ~safe k arg_length :: hd_path @ tl_path
-      | Nil -> 
-        if old then [mkConstant ~safe Global_symbols.nilc 0] else
-        []
+      | Nil -> [mkListHead; mkListEnd]
       | Cons (x,xs) ->
-          if old then 
-            let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
-            let tl_path = arg_to_trie_path ~safe ~depth xs path_depth in
-            mkConstant ~safe Global_symbols.consc (if path_depth = 0 then 0 else 2) :: hd_path @ tl_path
-          else
-        (* pp_string Fmt.std_formatter (Printf.sprintf "Cons is %d and Nil is %d\n" Global_symbols.consc Global_symbols.nilc); *)
-        (* pp_string Fmt.std_formatter "In cons: "; *)
-        (* pp_term Fmt.std_formatter (deref_head ~depth t); *)
-          (* pp_string Fmt.std_formatter "\n"; *)
           const2list_term ~safe ~depth (path_depth + 1) 0 [arg_to_trie_path ~safe ~depth x (path_depth + 1)] xs 
   (** builds the sub-path of a sublist of arguments of the current clause  *)
   and make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl = 
@@ -2562,10 +2545,6 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
     let res = 
   if args == [] then prepend_mode is_goal mkOutputMode [] 
   else aux ~safe ~depth is_goal args arg_depths mode  in 
-  (* pplist pp_term ";" Fmt.std_formatter args; *)
-  (* pp_string Fmt.std_formatter "\n"; *)
-  (* pp_path Fmt.std_formatter res; *)
-  (* pp_string Fmt.std_formatter "\n"; *)
   res
 
 let add1clause ~depth m (predicate,clause) =
@@ -2755,7 +2734,6 @@ let get_clauses ~depth predicate goal { index = m } =
           (pplist pp_int ";") arg_depths
           (*Discrimination_tree.(pp (fun fmt x -> pp_string fmt "+")) args_idx*)];
         let candidates = DT.retrieve path args_idx in 
-          (* pp_string Fmt.std_formatter (Printf.sprintf "The number of filtered clauses is %d\n" (List.length candidates)); *)
           [%spy "dev:disc-tree:candidates" ~rid 
             pp_int (List.length candidates)];
         candidates
