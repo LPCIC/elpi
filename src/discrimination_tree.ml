@@ -41,8 +41,9 @@ let mkOther = encode kOther 0 0
 let mkPrimitive c = encode kPrimitive (CData.hash c lsl k_bits) 0
 let mkInputMode = encode kOther 1 0
 let mkOutputMode = encode kOther 2 0
-let mkListHead = encode kOther 3 0
-let mkListEnd = encode kOther 4 0
+let mkMultivariable = encode kOther 3 0
+let mkListHead = encode kOther 4 0
+let mkListEnd = encode kOther 5 0
 let () = assert (k_of (mkConstant ~safe:false ~-17 0) == kConstant)
 let () = assert (k_of mkVariable == kVariable)
 let () = assert (k_of mkOther == kOther)
@@ -52,6 +53,7 @@ let isInput x = x == mkInputMode
 let isOutput x = x == mkOutputMode
 let isListHead x = x == mkListHead
 let isListEnd x = x == mkListEnd
+let isMultivariable x = x == mkMultivariable
 
 type cell = int
 
@@ -66,6 +68,7 @@ let pp_cell fmt n =
     Format.fprintf fmt
       (if isInput n then "Input"
        else if isOutput n then "Output"
+       else if isMultivariable n then "Multivarible"
        else if isListHead n then "ListHead"
        else if isListEnd n then "ListEnd"
        else "Other")
@@ -136,7 +139,7 @@ module Trie = struct
           let t' = match other with None -> empty | Some x -> x in
           let t'' = ins (r, t') in
           Node { t with other = Some t'' }
-      | x :: r, Node ({ multivariable } as t) when isListEnd x ->
+      | x :: r, Node ({ multivariable } as t) when isMultivariable x ->
           let t' = match multivariable with None -> empty | Some x -> x in
           let t'' = ins (r, t') in
           Node { t with multivariable = Some t'' }
@@ -173,7 +176,7 @@ end
 type path = cell list [@@deriving show]
 
 let compare x y = x - y
-let count_parentheses n k = if isListHead k then n + 1 else if isListEnd k then n - 1 else n
+let count_parentheses n k = if isListHead k then n + 1 else if isListEnd k || isMultivariable k then n - 1 else n
 
 let skip hd tl : path =
   let rec aux_list acc path =
@@ -202,7 +205,7 @@ let skip_multivariable hd tl =
   let rec aux = function
     | x, 0 -> x
     | hd :: tl, acc -> aux (tl, count_parentheses acc hd)
-    | _, -1 | [], _ -> anomaly "Skip multivariable of invalid path"
+    | _, -1 | [], _ -> anomaly ("Skip multivariable of invalid path for " ^ show_path (hd :: tl))
   in
   aux (tl, count_parentheses 1 hd)
 
@@ -217,13 +220,6 @@ let index tree ps info ~time = Trie.add ps (info, time) tree
     that are rooted just after the term represented by the tree root
     are returned (we are skipping the root) *)
 let all_children map other =
-  let rec get_from_function n = function
-    | Trie.Node { other = None; map } as tree ->
-        if n = 0 then [ tree ] else Ptmap.fold (fun k v res -> get_from_function (n - 1 + arity_of k) v @ res) map []
-    | Trie.Node { other = Some other; map } as tree ->
-        if n = 0 then [ tree; other ]
-        else Ptmap.fold (fun k v res -> get_from_function (n - 1 + arity_of k) v @ res) map [ other ]
-  in
   let rec get_from_list n = function
     | Trie.Node { other = None; map; multivariable = None } as tree ->
         if n = 0 then [ tree ] else Ptmap.fold (fun k v res -> get_from_list (count_parentheses n k) v @ res) map []
@@ -238,6 +234,26 @@ let all_children map other =
         else
           Ptmap.fold (fun k v res -> get_from_list (count_parentheses n k) v @ res) map (get_from_list (n - 1) a)
           @ get_from_list n other
+  in
+  let rec get_from_function n = function
+    | Trie.Node { other = None; map } as tree ->
+        if n = 0 then [ tree ]
+        else
+          Ptmap.fold
+            (fun k v res ->
+              (if isListHead k then List.map (get_from_function (n - 1)) (get_from_list 1 v) |> List.flatten
+               else get_from_function (n - 1 + arity_of k) v)
+              @ res)
+            map []
+    | Trie.Node { other = Some other; map } as tree ->
+        if n = 0 then [ tree; other ]
+        else
+          Ptmap.fold
+            (fun k v res ->
+              (if isListHead k then List.map (get_from_function (n - 1)) (get_from_list 1 v) |> List.flatten
+               else get_from_function (n - 1 + arity_of k) v)
+              @ res)
+            map [ other ]
   in
   let some_to_list = function Some x -> [ x ] | None -> [] in
   Ptmap.fold
@@ -287,7 +303,7 @@ and retrieve mode path (tree : ('a * cell) Trie.t) =
   | _, _ when Trie.empty == tree -> []
   | Trie.Node { data }, [] -> data
   | _, hd :: tl when isInput hd || isOutput hd -> retrieve hd tl tree
-  | _, hd :: tl when isListEnd hd ->
+  | _, hd :: tl when isMultivariable hd ->
       let sub_tries = skip_multivar_trie tree in
       retrieve_aux mode tl sub_tries
   | Trie.Node { map; other; multivariable }, hd :: tl when get_all_children hd mode -> (

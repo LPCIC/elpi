@@ -154,6 +154,14 @@ let () = declare "dt_multiparam3"
   ~expectation:(FailureOutput (Str.regexp "dev:disc-tree:candidates = 0"))
   ()
 
+let () = declare "dt_multivar"
+  ~source_elpi:"dt_multivar.elpi"
+  ~description:"discrimination_tree indexing multi with flexible in input mode"
+  ~typecheck:false
+  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+  ~expectation:(SuccessOutput (Str.regexp ".* = 5[.\n]* ="))
+  ()
+
 let () = declare "is"
   ~source_elpi:"is.elpi"
   ~description:"calc"
