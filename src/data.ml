@@ -168,7 +168,7 @@ and second_lvl_idx =
     time : int;                             (* time is used to recover the total order *)
     args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
   }
-| IndexWithTrie of {
+| IndexWithDiscriminationTree of {
     mode : mode;
     arg_depths : int list;   (* the list of args on which the trie is built *)
     time : int;         (* time is used to recover the total order *)
@@ -191,13 +191,14 @@ type suspended_goal = {
                  P. Indexing is done by hashing all the parameters with a non
                  zero depth and comparing it with the hashing of the parameters
                  of the query
-  - [Trie L] -> we use the same logic of Hash, except we use Trie to discriminate
-                clauses
+  - [DiscriminationTree L] ->
+            we use the same logic of Hash, except we use DiscriminationTree to discriminate
+            clauses
 *)
 type indexing =
   | MapOn of int
   | Hash of int list
-  | Trie of int list
+  | DiscriminationTree of int list
 [@@deriving show]
 
 let mkLam x = Lam x [@@inline]

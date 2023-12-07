@@ -2405,9 +2405,9 @@ let chose_indexing state predicate l k =
     | _ -> default ()
   in
   match k with
-  | Some Ast.Structured.DiscriminationTree -> Trie l
+  | Some Ast.Structured.DiscriminationTree -> DiscriminationTree l
   | Some HashMap -> Hash l
-  | None -> check_map (fun () -> Trie l) 0 l
+  | None -> check_map (fun () -> DiscriminationTree l) 0 l
   | Some Map -> check_map (fun () ->
       error ("Wrong indexing for " ^ Symbols.show state predicate ^
              ": Map indexes exactly one argument at depth 1")) 0 l

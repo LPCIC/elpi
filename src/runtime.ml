@@ -2545,10 +2545,10 @@ let add1clause ~depth m (predicate,clause) =
          time = time + 1;
          args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
-  | IndexWithTrie {mode; arg_depths; args_idx; time } ->
+  | IndexWithDiscriminationTree {mode; arg_depths; args_idx; time } ->
       let path = arg_to_trie_path ~depth ~safe:true false clause.args arg_depths mode in
       let dt = DT.index args_idx path clause ~time in
-        Ptmap.add predicate (IndexWithTrie {
+        Ptmap.add predicate (IndexWithDiscriminationTree {
           mode; arg_depths;
           time = time+1;
           args_idx = dt
@@ -2600,7 +2600,7 @@ let make_index ~depth ~indexing ~clauses_rev:p =
           flex_arg_clauses = [];
           arg_idx = Ptmap.empty;
         }
-      | Trie arg_depths -> IndexWithTrie {
+      | DiscriminationTree arg_depths -> IndexWithDiscriminationTree {
           arg_depths;  mode; 
           args_idx = DT.empty;
           time = min_int;
@@ -2678,7 +2678,7 @@ let get_clauses ~depth predicate goal { index = m } =
        let hash = hash_goal_args ~depth mode args goal in
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
-     | IndexWithTrie {arg_depths; mode; args_idx} ->
+     | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
         let path = arg_to_trie_path ~safe:false ~depth true (trie_goal_args goal) arg_depths mode in
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.pp_path path
@@ -2906,7 +2906,7 @@ let clausify ~loc { index } ~depth t =
     match Ptmap.find x index with
     | TwoLevelIndex { mode } -> mode
     | BitHash { mode } -> mode
-    | IndexWithTrie { mode } -> mode
+    | IndexWithDiscriminationTree { mode } -> mode
     | exception Not_found -> [] in
   let l = split_conj ~depth t in
   let clauses, program, lcs =
