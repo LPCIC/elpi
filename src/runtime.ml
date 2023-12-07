@@ -2448,12 +2448,12 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
   (* TODO: complexity problem next line *)
   | Nil -> mkListHead :: (flatten_rev ([mkListEnd] :: res))
   | Cons (a, b) ->
-      if h > 10 then mkListHead :: (flatten_rev ([mkListEnd] :: res))
+      if h > 30 then mkListHead :: (flatten_rev ([mkListEnd] :: res))
       else
         let path_of_a = arg_to_trie_path ~safe ~depth a path_depth in
         const2list_term ~depth ~safe ~h:(h+1) path_depth (len+1) (path_of_a :: res) b
   (* TODO: complexity problem next line *)
-  | a -> mkListHead :: flatten_rev  ([mkListEnd] :: res)
+  | a -> mkListHead :: flatten_rev  ([mkMultivariable] :: res)
   (** prepend the mode of the current argument if we are "pathifing" a goal *)
   and prepend_mode is_goal mode tl = if is_goal then mode :: tl else tl
   (** gives the path representation of a list of sub-terms *)
@@ -2506,10 +2506,8 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
     | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, mode_hd :: mode_tl ->
       make_sub_path  arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl 
     | _, _ :: _,_ -> anomaly "Invalid Index length" in
-    let res = 
   if args == [] then prepend_mode is_goal mkOutputMode [] 
-  else aux ~safe ~depth is_goal args arg_depths mode  in 
-  res
+  else aux ~safe ~depth is_goal args arg_depths mode  
 
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
@@ -2591,8 +2589,12 @@ let add1clause ~depth m (predicate,clause) =
         arg_idx = Ptmap.add arg_hd [clause] Ptmap.empty;
       }) m
 
-let add_clauses ~depth clauses p =       
+let add_clauses ~depth clauses p =
+  (* pplist (fun fmt (hd, b) -> ppclause fmt hd b) ";" Fmt.std_formatter clauses; *)
+  (* let t1 = Unix.gettimeofday () in *)
   let p = List.fold_left (add1clause ~depth) p clauses in
+  (* let t2 = Unix.gettimeofday () in  *)
+  (* pp_string Fmt.std_formatter (Printf.sprintf "\nTime taken by add_clauses is %f\n" (t2-.t1)); *)
   p
 
 let make_index ~depth ~indexing ~clauses_rev:p =

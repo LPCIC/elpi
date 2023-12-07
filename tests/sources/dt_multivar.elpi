@@ -1,6 +1,5 @@
 :index (2 2)
 pred p o:list int, o:int.
-
 p [1] 0.
 p [1,2|_] 0.
 p [1,2,3|_] 0.
@@ -15,6 +14,13 @@ p1 [_|_].
 p1 [X_, [Y_] | _].
 p1 [X_, Y_ | _].
 p1 [X_, Y_].
+
+kind arity-one type.
+type list-wrapper list int.
+
+:index(5)
+pred p2 o:arity-one.
+p2 (list-wrapper [1]).
 
 pred findall-length i:prop, i:int.
 findall-length P Len :-
@@ -37,4 +43,5 @@ main :-
   findall-length (p1 [[3], [1], [X, 3]]) 4,
   findall-length (p1 [_|_]) 5,
   findall-length (p1 _) 6,
+  findall-length (p2 X_) 1,
   true.
