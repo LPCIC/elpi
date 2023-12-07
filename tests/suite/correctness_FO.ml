@@ -159,7 +159,11 @@ let () = declare "dt_multivar"
   ~description:"discrimination_tree indexing multi with flexible in input mode"
   ~typecheck:false
   ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
-  ~expectation:(SuccessOutput (Str.regexp ".* = 5[.\n]* ="))
+  ~expectation:(SuccessOutput (
+      let wanted_length = [5;1;0;1;1;5;4;5;2;5;4;5;6;1] in
+      let all_char = "\\(.\\|\n\\)*" in
+      let s = List.fold_left (fun acc e -> Printf.sprintf "%s = %d%s" acc e all_char) "" wanted_length in
+      Str.regexp s))
   ()
 
 let () = declare "is"
