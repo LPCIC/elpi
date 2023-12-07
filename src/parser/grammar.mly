@@ -296,7 +296,7 @@ attribute:
 | BEFORE; s = STRING { Before s }
 | REPLACE; s = STRING { Replace s }
 | EXTERNAL { External }
-| INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN { Index l }
+| INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
 
 indexing:
 | FRESHUV { 0 }

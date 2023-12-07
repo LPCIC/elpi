@@ -110,6 +110,10 @@ let () = declare "conj2_legacy"
   ~legacy_parser:true
   ()
 
+(* 
+  Note in the following tests with DT, we disable typecheck not to print the
+  number of candidates found in the search of clauses done by the elpi typechecker
+*)
 let () = declare "dt_var"
   ~source_elpi:"dt_var.elpi"
   ~description:"discrimination_tree indexing flex"
@@ -124,6 +128,30 @@ let () = declare "dt_var2"
   ~typecheck:false
   ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 3"))
+  ()
+
+let () = declare "dt_multi1"
+  ~source_elpi:"dt_multi1.elpi"
+  ~description:"discrimination_tree indexing multi argument"
+  ~typecheck:false
+  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+  ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 1"))
+  ()
+
+let () = declare "dt_multi2"
+  ~source_elpi:"dt_multi2.elpi"
+  ~description:"discrimination_tree indexing multi with flexible"
+  ~typecheck:false
+  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+  ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 101"))
+  ()
+
+let () = declare "dt_multi3"
+  ~source_elpi:"dt_multi3.elpi"
+  ~description:"discrimination_tree indexing multi with flexible in input mode"
+  ~typecheck:false
+  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+  ~expectation:(FailureOutput (Str.regexp "dev:disc-tree:candidates = 0"))
   ()
 
 let () = declare "is"
