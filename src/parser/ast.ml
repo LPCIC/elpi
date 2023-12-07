@@ -135,7 +135,7 @@ type raw_attribute =
   | Before of string
   | Replace of string
   | External
-  | Index of int list
+  | Index of int list * string option
 [@@deriving show]
 
 module Clause = struct
@@ -307,7 +307,8 @@ and cattribute = {
 }
 and tattribute =
   | External
-  | Index of int list
+  | Index of int list * tindex option
+and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;
   full_name : 'a;

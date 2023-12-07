@@ -9,9 +9,9 @@ let error s a1 a2 =
   let f2 = Filename.temp_file "parser_out" "txt" in
   let oc1 = open_out f1 in
   let oc2 = open_out f2 in
-  output_string oc1 "new:\n";
+  output_string oc1 "\nnew:\n";
   output_string oc1 (Program.show a1);
-  output_string oc2 "reference:\n";
+  output_string oc2 "\nreference:\n";
   output_string oc2 (Program.show a2);
   flush_all ();
   close_out oc1;
@@ -43,9 +43,9 @@ let test s x y w z att b =
     let p = Parser.program_from ~loc lexbuf in
     if p <> exp then
       error s p exp
-    with Parse.ParseError(loc,message) ->
-      Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
-      exit 1
+  with Parse.ParseError(loc,message) ->
+    Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
+    exit 1
 
 let testR s x y w z attributes to_match to_remove guard new_goal =
   let exp = [Program.(Chr { Chr.to_match; to_remove; guard; new_goal; loc=(mkLoc x y w z); attributes })] in
@@ -55,10 +55,25 @@ let testR s x y w z attributes to_match to_remove guard new_goal =
     let p = Parser.program_from ~loc lexbuf in
     if p <> exp then
       error s p exp
-    with Parse.ParseError(loc,message) ->
+  with Parse.ParseError(loc,message) ->
+    Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
+    exit 1
+     
+let testT s x y w z attributes () =
+  let lexbuf = Lexing.from_string s in
+  let loc = Loc.initial "(input)" in
+  try
+    let p = Parser.program_from ~loc lexbuf in
+    match p with
+    | [Program.Pred _] -> ()
+    | [Program.Type _] -> ()
+    | _ -> 
+      Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) "not a type declaration";
+      exit 1
+  with Parse.ParseError(loc,message) ->
       Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
       exit 1
-     
+      
 let testF s i msg =
   let lexbuf = Lexing.from_string s in
   let loc = Loc.initial "(input)" in
@@ -136,6 +151,8 @@ let _ =
   testF "x. x]"             5 "unexpected keyword";
   testF "x. +"              4 "unexpected start";
   test  ":name \"x\" x."     0 11 1 0 [Name "x"] (c"x");
+  testT ":index (1) \"foobar\" pred x."     0 11 1 0 [Index ([1],Some "foobar")] ();
+  testT ":index (1) pred x."     0 11 1 0 [Index ([1], None)] ();
   testF "p :- g (f x) \\ y." 14 ".*bind.*must follow.*name.*";
   testF "foo i:term, o:term. foo A B :- A = [B]." 6 "unexpected keyword";
   (*    01234567890123456789012345 *)

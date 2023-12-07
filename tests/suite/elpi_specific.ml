@@ -438,3 +438,10 @@ let () = declare "trace-browser-elab-broken2"
   ~expectation:(FailureOutput (Str.regexp "broken.*step_id 217.*json object 1857"))
   ()
   
+
+let () = declare "bad_index"
+  ~source_elpi:"bad_index.elpi"
+  ~description:"bad indexing directive"
+  ~expectation:Test.(FailureOutput (Str.regexp "Wrong indexing"))
+  ()
+ 

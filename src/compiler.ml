@@ -632,9 +632,16 @@ end = struct (* {{{ *)
            | Some Structured.External -> duplicate_err "external"
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
-      | Index i :: rest ->
+      | Index(i,index_type) :: rest ->
+         let it =
+           match index_type with
+           | None -> None
+           | Some "Map" -> Some Map
+           | Some "Hash" -> Some HashMap
+           | Some "DTree" -> Some DiscriminationTree
+           | Some s -> error ~loc ("unknown indexing directive " ^ s) in
          begin match r with
-           | None -> aux (Some (Structured.Index i)) rest
+           | None -> aux (Some (Structured.Index(i,it))) rest
            | Some (Structured.Index _) -> duplicate_err "index"
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
@@ -643,7 +650,7 @@ end = struct (* {{{ *)
     let attributes = aux None attributes in
     let attributes =
       match attributes with
-      | None -> Structured.Index [1]
+      | None -> Structured.Index([1],None)
       | Some x -> x in
     { Type.attributes; loc; name; ty }
 
@@ -2388,17 +2395,22 @@ let compile_clause modes initial_depth state
   if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
   state, cl
 
-let chose_indexing state predicate l =
+let chose_indexing state predicate l k =
   let all_zero = List.for_all ((=) 0) in
-  let rec aux argno = function
+  let rec check_map default argno = function
     (* TODO: @FissoreD here we should raise an error if n > arity of the predicate? *)
-    | [] -> error ("Wrong indexing for " ^ Symbols.show state predicate)
-    | 0 :: l -> aux (argno+1) l
+    | [] -> error ("Wrong indexing for " ^ Symbols.show state predicate ^ ": no argument selected.")
+    | 0 :: l -> check_map default (argno+1) l
     | 1 :: l when all_zero l -> MapOn argno
-    | _ -> Trie l
-    (* TODO: @FissoreD we should add some syntax if we don't want to lose the indexing with Hash *)
-    (* | _ -> Hash l *)
-  in aux 0 l
+    | _ -> default ()
+  in
+  match k with
+  | Some Ast.Structured.DiscriminationTree -> Trie l
+  | Some HashMap -> Hash l
+  | None -> check_map (fun () -> Trie l) 0 l
+  | Some Map -> check_map (fun () ->
+      error ("Wrong indexing for " ^ Symbols.show state predicate ^
+             ": Map indexes exactly one argument at depth 1")) 0 l
 
 let check_rule_pattern_in_clique state clique { D.CHR.pattern; rule_name } =
   try
@@ -2436,8 +2448,8 @@ let run
       let mode = try C.Map.find name modes with Not_found -> [] in
       let declare_index, index =
         match tindex with
-        | Some (Ast.Structured.Index l) -> true, chose_indexing state name l
-        | _ -> false, chose_indexing state name [1] in
+        | Some (Ast.Structured.Index(l,k)) -> true, chose_indexing state name l k
+        | _ -> false, chose_indexing state name [1] None in
       try
         let _, old_tindex = C.Map.find name map in
         if old_tindex <> index then
