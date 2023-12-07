@@ -310,7 +310,8 @@ means that no false positives are returned by the index.
 
 ### Discrimination tree index
 
-If only one argument is indexed at depth greater than one, then Elpi uses
+If one argument is indexed at depth greater than one, or more arguments
+are indexed at any depth, then Elpi uses
 a [discrimination tree](https://www.cs.cmu.edu/~fp/courses/99-atp/lectures/lecture28.html).
 Both the rule argument and the goal argument are
 indexed up to the given depth. The indexing is not perfect, false positives may
@@ -319,13 +320,17 @@ be returned and ruled out by unification.
 Indexed terms are linearized into paths. Paths are inserted into a trie data
 structure sharing common prefixes.
 
+One can force this index even if only one term is indexed by using the directive
+`:index (...) "DTree"`.
+
 ### Hash based index
 
-If more than one argument is indexed then Elpi uses an index based on the idea of
+If more than one argument is indexed then Elpi can use an index based on the idea of
 [unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.html).
+To exable it one has to use the `:index (...) "Hash"` directive.
 
 ```prolog
-:index(2)
+:index (2) "Hash"
 pred mult o:nat, o:nat, o:nat.
 mult o X o.
 mult (s (s o)) X C :- plus X X C.
