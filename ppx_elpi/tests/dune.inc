@@ -115,6 +115,29 @@
 
 
 (rule
+ (targets test_opaque_type_alias.actual.ml)
+ (deps (:pp pp.exe) (:input test_opaque_type_alias.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (alias runtest)
+ (action (diff test_opaque_type_alias.expected.ml test_opaque_type_alias.actual.ml)))
+
+(rule
+ (alias runtest)
+ (action (diff test_opaque_type_alias.expected.elpi test_opaque_type_alias.actual.elpi)))
+
+(rule
+  (target test_opaque_type_alias.actual.elpi)
+  (action (run ./test_opaque_type_alias.exe %{target})))
+
+(executable
+  (name test_opaque_type_alias)
+  (modules test_opaque_type_alias)
+  (preprocess (pps elpi.ppx)))
+
+
+(rule
  (targets test_poly_adt.actual.ml)
  (deps (:pp pp.exe) (:input test_poly_adt.ml))
  (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))

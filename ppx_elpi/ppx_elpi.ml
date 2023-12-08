@@ -1410,9 +1410,9 @@ let analyze_typedecl (module B : Ast_builder.S) same_mutrec_block tdecl =
     ptype_params = params;
     ptype_cstrs = _;
     ptype_kind = k;
-    ptype_manifest = None;
+    ptype_manifest;
     _
-    } when k = Ptype_abstract || has_elpi_tcdata tdecl ->
+    } when (k = Ptype_abstract && ptype_manifest = None) || has_elpi_tcdata tdecl ->
       let params, _ = analyze_params (module B) params in
       let elpi_name, elpi_code = get_elpi_tcode (module B) name tdecl in
       let elpi_doc = get_elpi_tdoc name tdecl in
