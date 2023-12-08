@@ -8,7 +8,7 @@ module String =
 let pp_tctx _ _ = ()
 type tctx =
   | Entry of ((string)[@elpi.key ]) * bool [@@elpi.index (module String)]
-
+[@@deriving elpi { declaration }]
 include
   struct
     [@@@ocaml.warning "-60"]
@@ -47,16 +47,6 @@ include
                    "context entry applied to a non nominal")
           else None
       | _ -> None
-      module Ctx_for_tctx =
-      struct
-        class type t = object('self)
-          inherit Elpi.API.ContextualConversion.ctx
-          method get_tctx2dbl : Elpi.API.RawData.constant Elpi_tctx_Map.t
-          method get_dbl2tctx : tctx Elpi.API.ContextualConversion.ctx_entry Elpi.API.RawData.Constants.Map.t
-          method push_tctx : depth:int -> Elpi.API.Data.state -> string -> tctx Elpi.API.ContextualConversion.ctx_entry -> 'self
-        end
-      end
-
     let elpi_push_tctx ~depth:elpi__depth  elpi__state elpi__name
       elpi__ctx_item =
       let (elpi__ctx2dbl, elpi__dbl2ctx) =
@@ -81,6 +71,10 @@ include
         Elpi.API.State.set elpi_tctx_state elpi__state
           (elpi__ctx2dbl, elpi__dbl2ctx) in
       elpi__state
+    module Ctx_for_tctx =
+      struct
+        class type t = object inherit Elpi.API.ContextualConversion.ctx end
+      end
     let rec elpi_embed_tctx :
       'c 'csts .
         ((Elpi.API.RawData.constant * tctx), #Ctx_for_tctx.t as 'c, 'csts)
@@ -189,7 +183,7 @@ include
         embed = elpi_embed_tctx;
         readback = elpi_readback_tctx
       }
-    let __context_made_of_tctx =
+    let context_made_of_tctx =
       {
         Elpi.API.ContextualConversion.is_entry_for_nominal = elpi_is_tctx;
         to_key = elpi_tctx_to_key;
@@ -210,18 +204,7 @@ include
     let elpi_tctx = Elpi.API.BuiltIn.MLDataC tctx
     class ctx_for_tctx (h : Elpi.API.Data.hyps)  (s : Elpi.API.Data.state)
       : Ctx_for_tctx.t =
-      object (self) inherit  ((Elpi.API.ContextualConversion.ctx) h)
-      val tctx2dbl : Elpi.API.RawData.constant Elpi_tctx_Map.t = Elpi_tctx_Map.empty
-      val dbl2tctx : tctx Elpi.API.ContextualConversion.ctx_entry Elpi.API.RawData.Constants.Map.t = Elpi.API.RawData.Constants.Map.empty
-      method get_tctx2dbl = tctx2dbl
-      method get_dbl2tctx = dbl2tctx
-      method push_tctx ~depth st name v =
-        {< 
-        tctx2dbl = Elpi_tctx_Map.add name depth tctx2dbl;
-        dbl2tctx = Elpi.API.RawData.Constants.Map.add depth v dbl2tctx
-        >}
-  
-    end
+      object (_) inherit  ((Elpi.API.ContextualConversion.ctx) h) end
     let (in_ctx_for_tctx :
       (Ctx_for_tctx.t, 'csts) Elpi.API.ContextualConversion.ctx_readback) =
       fun ~depth ->
@@ -232,7 +215,7 @@ include
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 let tctx :
   'c 'csts . ((int * tctx), 'c, 'csts) Elpi.API.ContextualConversion.t = tctx
-let __context_made_of_tctx :
+let context_made_of_tctx :
   'c 'csts .
     (tctx, string, #ctx_for_tctx as 'c, 'csts)
       Elpi.API.ContextualConversion.context
@@ -246,7 +229,7 @@ type term =
   | App of term * term 
   | Lam of bool * string *
   ((term)[@elpi.binder "term" tctx (fun b -> fun s -> Entry (s, b))]) 
-
+[@@deriving elpi { declaration }]
 include
   struct
     [@@@ocaml.warning "-60"]
@@ -271,12 +254,13 @@ include
       struct
         class type t =
           object
-            (*inherit Elpi.API.ContextualConversion.ctx*)
+            inherit Elpi.API.ContextualConversion.ctx
             inherit Ctx_for_tctx.t
+            method  tctx : tctx Elpi.API.ContextualConversion.ctx_field
           end
       end
     let rec elpi_embed_term :
-       'c 'csts .
+      'c 'csts .
         (term, #Ctx_for_term.t as 'c, 'csts)
           Elpi.API.ContextualConversion.embedding
       =
@@ -286,7 +270,8 @@ include
             fun elpi__state ->
               function
               | Var elpi__29 ->
-                  let (elpi__ctx2dbl) = elpi__hyps#get_tctx2dbl in
+                  let (elpi__ctx2dbl, _) =
+                    Elpi.API.State.get elpi_tctx_state elpi__state in
                   let elpi__key = (fun x -> x) elpi__29 in
                   (if not (Elpi_tctx_Map.mem elpi__key elpi__ctx2dbl)
                    then Elpi.API.Utils.error "Unbound variable";
@@ -336,20 +321,25 @@ include
                     (fun b -> fun s -> Entry (s, b)) elpi__38 elpi__39 in
                   let elpi__ctx_key =
                     elpi_tctx_to_key ~depth:elpi__depth elpi__ctx_entry in
-                  let elpi__ctx_entry : tctx Elpi.API.ContextualConversion.ctx_entry =
+                  let elpi__ctx_entry =
                     {
                       Elpi.API.ContextualConversion.entry = elpi__ctx_entry;
                       depth = elpi__depth
                     } in
-                  let elpi__hyps' = elpi__hyps#push_tctx ~depth:elpi__depth elpi__state elpi__ctx_key elpi__ctx_entry in
+                  let elpi__state =
+                    elpi_push_tctx ~depth:(elpi__depth + 1) elpi__state
+                      elpi__ctx_key elpi__ctx_entry in
                   let (elpi__state, elpi__47, elpi__43) =
                     (fun ~depth ->
                        fun h ->
                          fun c ->
                            fun s -> fun t -> elpi_embed_term ~depth h c s t)
-                      ~depth:(elpi__depth + 1) elpi__hyps' elpi__constraints
+                      ~depth:(elpi__depth + 1) elpi__hyps elpi__constraints
                       elpi__state elpi__40 in
                   let elpi__46 = Elpi.API.RawData.mkLam elpi__47 in
+                  let elpi__state =
+                    elpi_pop_tctx ~depth:(elpi__depth + 1) elpi__state
+                      elpi__ctx_key in
                   (elpi__state,
                     (Elpi.API.RawData.mkAppL
                        elpi_constant_constructor_term_Lamc
@@ -484,7 +474,7 @@ include
                       (Format.asprintf "Not a constructor of type %s: %a"
                          "term" (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and term :
-       'csts .
+      'c 'csts .
         (term, #Ctx_for_term.t as 'c, 'csts) Elpi.API.ContextualConversion.t
       =
       let kind = Elpi.API.ContextualConversion.TyName "term" in
@@ -519,6 +509,8 @@ include
       object (_)
         inherit  ((Elpi.API.ContextualConversion.ctx) h)
         inherit ! ((ctx_for_tctx) h s)
+        method tctx =
+          context_made_of_tctx.Elpi.API.ContextualConversion.get s
       end
     let (in_ctx_for_term :
       (Ctx_for_term.t, 'csts) Elpi.API.ContextualConversion.ctx_readback) =

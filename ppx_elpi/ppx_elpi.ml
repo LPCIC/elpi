@@ -271,6 +271,7 @@ let elpi_loc_of_position (module B : Ast_builder.S) pos = let open B in
 
 let pexp_disable_warnings (module B : Ast_builder.S) x =
   let open B in
+  let _ = loc in
   [%expr [%e x ][@warning "-26-27-32-39-60"]]
 
 let rec on_last f = function

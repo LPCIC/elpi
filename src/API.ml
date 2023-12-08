@@ -1521,10 +1521,10 @@ module PPX = struct
     let kind fmt ty ~doc = ED.BuiltInPredicate.ADT.document_kind fmt ty doc
     let constructor fmt ~name ~doc ~ty ~args =
       ED.BuiltInPredicate.ADT.document_constructor
-        fmt name doc (List.map (fun x -> (false,ED.Conversion.show_ty_ast x,"")) (args @ [ty]))
+        fmt name doc (List.map (fun x -> (false,ED.Conversion.show_ty_ast ~prec:Arrow x,"")) (args @ [ty]))
     let adt ~doc ~ty ~args =
       ED.BuiltInPredicate.ADT.document_adt doc ty
-        (List.map (fun (n,s,a) -> n,s,List.map (fun x -> (false,ED.Conversion.show_ty_ast x,"")) (a@[ty])) args)
+        (List.map (fun (n,s,a) -> n,s,List.map (fun x -> (false,ED.Conversion.show_ty_ast ~prec:Arrow x,"")) (a@[ty])) args)
     type prec_level = ED.Conversion.prec_level = Arrow | AppArg
     let show_ty_ast = ED.Conversion.show_ty_ast
           

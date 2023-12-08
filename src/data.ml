@@ -740,6 +740,7 @@ let rec show_ty_ast ?prec = function
       let src = show_ty_ast ~prec:Arrow src in
       let tgt = show_ty_ast tgt in
       with_par prec Arrow (src ^" -> "^ tgt)
+
   | TyApp (s,x,xs) ->
       let t = String.concat " " (s :: List.map (show_ty_ast ~prec:AppArg) (x::xs)) in
       with_par prec AppArg t
@@ -1239,7 +1240,7 @@ let compile_matcher : type bs b m ms t h c. (bs,b,ms,m,t,h,c) constructor_argume
 let rec tyargs_of_args : type a b c d e. string -> (a,b,c,d,e) compiled_constructor_arguments -> (bool * string * string) list =
   fun self -> function
   | XN -> [false,self,""]
-  | XA ({ ty },rest) -> (false,Conversion.show_ty_ast ty,"") :: tyargs_of_args self rest
+  | XA ({ ty },rest) -> (false,Conversion.show_ty_ast ~prec:Arrow ty,"") :: tyargs_of_args self rest
 
 let compile_constructors ty self self_name l =
   let names =

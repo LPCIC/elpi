@@ -9,7 +9,7 @@ touch test_XXX.expected.elpi
 dune runtest --auto-promote # promotes the dune file
 ```
 
-As a template for `test_XXX.ml` you should use test_simple_adt.ml
+As a template for `test_XXX.ml` you should use `test_simple_adt.ml``
 
 To run tests and acknowledge a change
 ```shell
