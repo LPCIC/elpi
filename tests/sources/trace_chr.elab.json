@@ -41,7 +41,7 @@
               { "goal_text": "X0 = s X1", "goal_id": 7 },
               { "goal_text": "not (even X1)", "goal_id": 8 }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -68,7 +68,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 2,
@@ -106,7 +106,7 @@
                 "goal_id": 9
               }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -152,7 +152,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 3,
@@ -436,7 +436,7 @@
               "events": [ [ "Assign", "A0 := X1" ] ]
             },
             "siblings": [ { "goal_text": "odd X1", "goal_id": 12 } ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -511,7 +511,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 9,
@@ -549,7 +549,7 @@
                 "goal_id": 13
               }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -643,7 +643,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 10,
@@ -870,7 +870,7 @@
                 "goal_id": 18
               }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -935,7 +935,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 13,

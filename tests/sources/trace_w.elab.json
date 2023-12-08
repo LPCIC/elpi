@@ -36,7 +36,7 @@
               "events": []
             },
             "siblings": [ { "goal_text": "tests [2]", "goal_id": 5 } ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -63,7 +63,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 2,
@@ -99,7 +99,7 @@
               { "goal_text": "test 2 X0", "goal_id": 6 },
               { "goal_text": "typecheck X0", "goal_id": 7 }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -145,7 +145,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 3,
@@ -302,7 +302,7 @@
               },
               { "goal_text": "print", "goal_id": 13 }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -367,7 +367,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 5,
@@ -491,7 +491,7 @@
             "siblings": [
               { "goal_text": "new_constraint (theta []) [_]", "goal_id": 14 }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -575,7 +575,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 7,
@@ -615,7 +615,7 @@
                 "goal_id": 15
               }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -718,7 +718,7 @@
         ]
       }
     ],
-    "color": "YellowGreen"
+    "color": "Green"
   },
   {
     "step_id": 8,
@@ -878,7 +878,7 @@
                 "goal_id": 19
               }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -962,7 +962,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 10,
@@ -1559,7 +1559,7 @@
                 "goal_id": 23
               }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -1662,7 +1662,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 15,
@@ -1703,7 +1703,7 @@
                 "goal_id": 24
               }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -1825,7 +1825,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
   },
   {
     "step_id": 16,
