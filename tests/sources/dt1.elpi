@@ -1,0 +1,36 @@
+:index (20) % DT is on
+pred f i:list int. 
+
+macro @listlength :- 16.
+macro @maxlist :- 1000.
+
+pred mk-index i:int, i:(list int -> prop), o:list prop.
+mk-index 0 _ [].
+mk-index N P [C|CL] :- N > 0, N1 is N - 1, mk-clause P @listlength [N] C, mk-index N1 P CL.
+
+pred mk-clause i:(list int -> prop), i:int, i:list int, o:prop.
+mk-clause P 0 X (P X).
+mk-clause P N ACC C :- N > 0, N1 is N - 1,
+  mk-clause P N1 [N1|ACC] C.
+
+pred repeat i:int, i:prop.
+repeat 0 _.
+repeat N P :- N > 0, N1 is N - 1, P, !, repeat N1 P.
+
+% Indexing with DT:    0.000082
+% Indexing with MapOn: 0.000007
+
+main :-
+  mk-index @maxlist f CL1,
+  !,
+  L0 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,14,15, @maxlist],
+  L1 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,14,15, 1],
+  % std.iota @listlength L,
+  % std.append L [@maxlist] L0,
+  % std.append L [1] L1,
+  CL1 => std.do! [
+    std.time (repeat 300000 (f L0)) TFast,
+    std.time (repeat 300000 (f L1)) TSlow,
+    print "DT=" TFast,
+    print "PT=" TSlow,
+  ].
