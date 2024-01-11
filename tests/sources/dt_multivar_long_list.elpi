@@ -1,0 +1,23 @@
+kind n type.
+type z n.
+type succ n.
+
+:index (10) 
+pred p o:list n.
+p [z,z,z,z,z,z,z,z,z,z,z,z,z,z,z].
+
+pred make_n i:int, o:n.
+make_n 0 z.
+make_n N (succ X) :- N > 0, N1 is N - 1, make_n N1 X. 
+
+pred make_list i:int, i:n, i:n, o:list n.
+make_list 0 _ LastN [LastN] :- !.
+make_list ListLen N LastN [N | TL] :-
+  ListLen > 0, ListLen' is ListLen - 1,
+  make_list ListLen' N LastN TL.
+
+main :-
+  make_n 5 N,
+  make_n 2 Last,
+  make_list 10 N Last L,
+  print L.
