@@ -1,0 +1,22 @@
+pred of i:term, o:ty.
+
+% terms
+of (app H A) (mono T) :-
+  of H (mono (S ==> T)),
+  of A (mono S).
+
+of (lam F) (mono (S ==> T)) :-
+  pi x\ of x (mono S) => of (F x) (mono T).
+
+of (let E PT B) (mono TB) :-
+  of E (mono T),
+  gammabar (mono T) PT,
+  pi x\ of x PT => of (B x) (mono TB).
+
+of (eq LHS RHS) (mono bool) :-
+  of LHS (mono T),
+  of RHS (mono T),
+  eqbar T.
+
+of X (mono T) :- of X (all E Poly), specialize (all E Poly) T.
+

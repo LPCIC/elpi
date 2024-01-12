@@ -1,0 +1,220 @@
+%%%%%%%%%%% syntax %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% terms
+kind term type.
+
+type global  string -> term.
+
+type app term -> term -> term.
+type lam (term -> term) -> term.
+type let term -> ty -> (term -> term) -> term.
+type eq  term -> term -> term.
+
+
+% type expressions
+kind tye type.
+
+type (==>) tye -> tye -> tye.
+type int   tye.
+type bool  tye.
+type list  tye -> tye.
+type pair  tye -> tye -> tye.
+
+% types
+kind ty type.
+
+type all    eq? -> (tye -> ty) -> ty.
+type mono   tye -> ty.
+
+kind eq? type.
+
+type any eq?.
+type eqt eq?.
+
+%%%%%%%%%%%% typing %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+pred of i:term, o:ty.
+
+of (global "1")      (mono int).
+of (global "2")      (mono int).
+of (global "3")      (mono int).
+of (global "plus")   (mono (int ==> int ==> int)).
+
+of (global "[]")    (all any x\ mono (list x)).
+of (global "::")    (all any x\ mono (x ==> list x ==> list x)).
+of (global "size")  (all any x\ mono (list x ==> int)).
+of (global "undup") (all eqt x\ mono (list x ==> list x)).
+
+of (global ",")     (all any x\ all any y\ mono (x ==> y ==> (pair x y))).
+
+accumulate hm.
+% accumulate j.
+
+%%%%%%%%%%%% type schema elimination %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pred specialize i:ty, o:tye.
+
+specialize (mono T) T.
+specialize (all any F) T :- specialize (F Fresh_) T.
+specialize (all eqt F) T :- specialize (F Fresh) T, eqbar Fresh.
+
+pred eqbar i:tye.
+
+eqbar bool.
+eqbar int.
+eqbar (list A) :- eqbar A.
+eqbar (pair A B) :- eqbar A, eqbar B.
+
+eqbar T :- var T, new_constraint (eqbar T) [T,_].
+
+eqbar T :- eqtype-error T.
+
+%%%%%%%%%%%%% type schema introduction %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% theta carries the list of type variables for which eqbar has to hold
+pred theta i:list tye.
+
+theta L :- new_constraint (theta L) [_].
+
+% gammabar is not a real constraint, but rather a 
+pred gammabar i:ty, o:ty.
+
+gammabar (mono T) TS :-
+  new_constraint (gammabar (mono T) TS) [_].
+
+% constraint store %
+constraint of gammabar eqbar theta {
+
+rule (theta L)                   % matched
+     \  (G ?- gammabar T TS)     % matched and removed
+     |  (generalize L G T POLYT) % guard + syntesis
+    <=> (TS = POLYT).            % new goal
+
+rule (eqbar V) \ (theta L) | (not(mem L V)) <=> (theta [V | L]).
+
+}
+
+pred generalize i:list tye, i:list prop, i:ty, o:ty.
+generalize Theta Gamma (mono T) PolyT :-
+  free-ty (mono T) [] VT,
+  free-gamma Gamma [] VGamma,
+  filter VT (x\ not(mem VGamma x)) ToQuantify,
+  bind ToQuantify Theta T PolyT.
+
+% computation of free (unification) variables %%%%%%%%%%%%%%%%%%%%%%%
+pred free-ty i:ty, i:list tye, o:list tye.
+free-ty (mono X) L L1 :- free X L L1.
+free-ty (all _ F) L L1 :- pi x\ free-ty (F x) L L1.
+
+pred free-gamma i:list prop, i:list tye, o:list tye.
+free-gamma [] L L.
+free-gamma [of _ T|X] L L2 :- free-ty T L L1, free-gamma X L1 L2.
+
+pred free i:tye, i:list tye, o:list tye.
+free int L L.
+free bool L L.
+free (list A) L L1 :- free A L L1.
+free (pair A B) L L2 :- free A L L1, free B L1 L2.
+free (A ==> B) L L2 :- free A L L1, free B L1 L2.
+free (uvar _ _ as X) L L1 :- if (mem L X) (L1 = L) (L1 = [X|L]).
+
+% quantification (binding) of a list of variables %%%%%%%%%%%%%%%%%%%%%%%
+pred bind i:list tye, i:list tye, i:tye, o:ty.
+bind [] _ T (mono T1) :- copy T T1.
+bind [X|XS] Theta T (all E x\ T1 x) :-
+  if (mem Theta X) (E = eqt) (E = any),
+  pi c\ copy X c => bind XS Theta T (T1 c).
+
+pred copy i:tye, o:tye.
+copy int int.
+copy bool bool.
+copy (A ==> B) (A1 ==> B1) :- copy A A1, copy B B1.
+copy (list A) (list A1) :- copy A A1.
+copy (pair A B) (pair A1 B1) :- copy A A1, copy B B1.
+copy (uvar U L) (uvar U L).
+
+% boring stuff %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+pred filter i:list A, i:(A -> prop), o:list A.
+filter [] _ [].
+filter [X|XS] P [X|YS] :- P X, !, filter XS P YS.
+filter [_|XS] P YS :- filter XS P YS.
+
+pred mem! i:list A, o:A.
+mem! [X|_] X :- !.
+mem! [_|XS] X :- mem XS X.
+
+% 'uvar X L' is the frozen 'X' and its arguments 'L'
+pred mem i:list tye, i:tye.
+mem L (uvar X _) :- mem! L (uvar X Fresh_).
+
+pred assert i:term, i:tye, i:tye.
+assert _ TY ETY :- TY = ETY, !.
+assert T TY ETY :- print "KO: term (" T ") has type (" TY ") but its context expects (" ETY ")\n", halt.
+
+pred eqtype-error i:tye.
+eqtype-error T :- print "KO: type (" T ") has no equality\n", halt.
+
+pred new_constraint i:prop, i:A.
+new_constraint P X :- declare_constraint P X.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+pred err.
+of X (mono ETY) :- not err, !, err => of X (mono TY), assert X TY ETY.
+of X (mono _) :- print "KO: term (" X ") has no type\n", halt.
+
+pred typecheck i:term.
+typecheck T :-
+  print "Checking:" T,
+  theta [],
+  of T TY, !,
+  print T " : " TY,
+  print.
+
+pred tests i:list string.
+tests [X] :- test X PL, typecheck PL.
+
+main :- tests ["2"].
+
+pred test i:string, o:term.
+% 3 = 2
+test "1" (eq (global "3") (global "2")).
+
+% let id x = x in id []
+test "2" (let (lam x\x) Ty_ id\
+          app id (global "[]")).
+
+% let id x = x in (id [], id 1)
+test "3" (let (lam x\x) Ty_ id\
+          app id (app (app (global ",")  (global "[]")) (global "1"))).
+
+% let refl x = x = x in refl []
+test "4" (let (lam x\ eq x x) Ty_ refl\
+          app refl (global "[]")).
+
+% let refl x = x = x in refl []
+test "5" (let (lam x\ eq x x) Ty_ refl\
+          app refl (global "1")).
+
+
+% (fun x -> x) = (fun x -> x)
+test "-1" (eq (lam x\x) (lam x\x)).
+
+% let refl x = x = x in refl (fun x -> x)
+test "-2" (let (lam x\ eq x x) Ty_ refl\
+           app refl (lam x\x)).
+
+test "-3" (eq (global "1") (global "[]")).
+
+test "-4" (eq (app (app (global ",") (global "1")) (global "1"))
+              (app (lam (_\global "2")) (global "3"))).
+
+test "-5" (global "xxx").
+
+test "-6" (app (lam x\app x x) (lam x\app x x)).
+
+
+  % let card x = size (undup x) in card []
+  % let f y = let g x = (x,y) in g y in f 1
+  % size 1
+  % [1] = (1,1)

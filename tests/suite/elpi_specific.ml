@@ -445,3 +445,21 @@ let () = declare "bad_index"
   ~expectation:Test.(FailureOutput (Str.regexp "Wrong indexing"))
   ()
  
+
+let sample = mk_tmp_file "trace_w.json" ".new"
+let () = declare "trace-browser-w"
+  ~source_elpi:"trace-w/main.elpi"
+  ~description:"trace generation"
+  ~typecheck:false
+  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_w.json" })
+  ()
+
+let sample = mk_tmp_file "trace_w.elab.json" ".new"
+let () = declare "trace-browser-w-elab"
+  ~source_json:"trace_w.json"
+  ~description:"trace elaboration"
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_w.elab.json" })
+  ()
+  
+  

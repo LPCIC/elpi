@@ -429,7 +429,7 @@ let success_analysis (elaborated_steps : Elaborated_step.t StepMap.t) =
     StepMap.bindings elaborated_steps |> List.rev |> List.iter (function
       | _, (_,Broken _) -> ()
       | _, (_,Resume _) -> ()
-      | _, (_,Suspend _) -> ()
+      | _, (_,Suspend { goal_id }) -> set_success goal_id true
       | _, (_,Cut (goal_id,_)) -> set_success goal_id true
       | _, (_,CHR _) -> ()
       | _, (_,Init _) -> ()
