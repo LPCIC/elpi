@@ -1,3 +1,10 @@
+# v1.18.2 (January 2024)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+API:
+  - Change `clause_of_term` accepts a ``` `Replace ``` grafting directive
+
 # v1.18.1 (December 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
