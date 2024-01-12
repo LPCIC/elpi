@@ -2,6 +2,10 @@
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
 
+Language:
+  - Change indexing for multiple arguments is now based on discrimination trees
+  - Change `:index` acecpts an optional string to force `"Hash"` based indexing
+
 API:
   - Change `clause_of_term` accepts a ``` `Replace ``` grafting directive
 
