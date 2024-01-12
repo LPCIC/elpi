@@ -1345,6 +1345,7 @@ module Utils = struct
       (match graft with
         | Some (`After,x) -> [After x]
         | Some (`Before,x) -> [Before x]
+        | Some (`Replace,x) -> [Replace x]
         | None -> []) in
     [Program.Clause {
       Clause.loc = loc;
