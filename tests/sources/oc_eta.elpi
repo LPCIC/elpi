@@ -1,0 +1,4 @@
+main :-
+  pi w \ f (y\ X y) w = X w, print X.
+
+type f (A -> A) -> A -> A.
