@@ -753,7 +753,7 @@ let occurr_check r1 r2 =
 
          here maux carries the r1 = X (the ?avoid), while deref_uv does not, to avoid
          occur checking things twice. But deref_uv, if Y contains X, may assign
-         X to X' (or a x..\ X' x..). If this happend, then r1 is no more a dummy
+         X' to X (or x..\ X' x.. t oX). If this happens, then r1 is no more a dummy
          (unassigned variable) *)
         if !!r1 != C.dummy || r1 == r2 then raise RestrictionFailure
 
