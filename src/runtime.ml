@@ -745,7 +745,17 @@ exception RestrictionFailure
 let occurr_check r1 r2 =
   match r1 with
   | None -> ()
-  | Some r1 -> if r1 == r2 then raise RestrictionFailure
+  | Some r1 ->
+      (* It may be the case that in `X = Y` where `Y = f X` the term Y has to be
+         moved/derefd in two steps, eg:
+         
+          else maux empty_env depth (deref_uv ~from:vardepth ~to_:(from+depth) args t)
+
+         here maux carries the r1 = X (the ?avoid), while deref_uv does not, to avoid
+         occur checking things twice. But deref_uv, if Y contains X, may assign
+         X' to X (or x..\ X' x.. t oX). If this happens, then r1 is no more a dummy
+         (unassigned variable) *)
+        if !!r1 != C.dummy || r1 == r2 then raise RestrictionFailure
 
 let rec make_lambdas destdepth args =
  if args = 0 then let x = UVar(oref C.dummy,destdepth,0) in x,x

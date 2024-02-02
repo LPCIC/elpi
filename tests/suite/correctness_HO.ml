@@ -300,3 +300,10 @@ let () = declare "hdclause"
   ~typecheck:false
   ()
   
+
+  let () = declare "oc_eta"
+  ~source_elpi:"oc_eta.elpi"
+  ~description:"eta expansion and occur check"
+  ~typecheck:true
+  ~expectation:Failure
+  ()
