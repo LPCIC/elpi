@@ -50,6 +50,10 @@ module Func = struct
 
   end
 
+  let is_uvar_name s =
+    let c = s.[0] in
+    ('A' <= c && c <= 'Z')
+
   include Self
   module Map = Map.Make(Self)
 

@@ -990,9 +990,7 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
   let spy_spill c =
     spilling := !spilling || c == D.Global_symbols.spillc in
 
-  let is_uvar_name f = 
-     let c = (F.show f).[0] in
-     ('A' <= c && c <= 'Z') in
+  let is_uvar_name f =  F.is_uvar_name f in
     
   let is_discard f =
     F.(equal f dummyname) ||
