@@ -303,6 +303,13 @@ let () = declare "graft_replace_err"
   ~expectation:Test.(FailureOutput (Str.regexp "name attribute"))
   ()
 
+let () = declare "mk_uv_meta"
+  ~source_elpi:"mk-evar-meta.elpi"
+  ~description:"uvar surgery at the meta level"
+  ~typecheck:true
+  ~expectation:Test.Success
+  ()
+
 let mk_tmp_file =
   let tmp = ref 0 in
   let dir = Filename.get_temp_dir_name () in
