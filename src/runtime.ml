@@ -3161,8 +3161,18 @@ end = struct (* {{{ *)
           let tl' = daux d tl in
           if hd == hd' && tl == tl' then orig
           else Cons(hd',tl')
+      | App(c,UVar(r,lvl,ano),a) when !!r != C.dummy ->
+          daux d (App(c,deref_uv ~to_:d ~from:lvl ano !!r,a))
+      | App(c,AppUVar(r,lvl,args),a) when !!r != C.dummy ->
+          daux d (App(c,deref_appuv ~to_:d ~from:lvl args !!r,a))
       | App(c,Const x,[args]) when c == Global_symbols.uvarc ->
           let r = C.Map.find x f.c2uv in
+          let args = lp_list_to_list ~depth:d args in
+          mkAppUVar r 0 (smart_map (daux d) args)
+      | App(c,UVar(r,_,_),[args]) when c == Global_symbols.uvarc ->
+          let args = lp_list_to_list ~depth:d args in
+          mkAppUVar r 0 (smart_map (daux d) args)
+      | App(c,AppUVar(r,_,_),[args]) when c == Global_symbols.uvarc ->
           let args = lp_list_to_list ~depth:d args in
           mkAppUVar r 0 (smart_map (daux d) args)
       | App(c,x,xs) as orig ->

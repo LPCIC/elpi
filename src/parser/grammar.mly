@@ -26,6 +26,10 @@ let desugar_multi_binder loc = function
   | App(Const hd as binder,args)
     when Func.equal hd Func.pif || Func.equal hd Func.sigmaf && List.length args > 1 ->
       let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
+      let () = match last with
+        | Lam _ -> ()
+        | Const x when Func.is_uvar_name x -> ()
+        | _ -> raise (ParseError(loc,"The last argument of 'pi' or 'sigma' must be a function or a unification variable, while it is: " ^ Ast.Term.show last)) in
       let names = List.map (function
         | Const x -> Func.show x
         | (App _ | Lam _ | CData _ | Quoted _) ->

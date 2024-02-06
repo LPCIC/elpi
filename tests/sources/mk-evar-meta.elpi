@@ -1,0 +1,15 @@
+main :-
+  (pi x y z\ sigma X XL\ mk-uvar [y] X XL, print "1)" X "/" XL, var XL X [y]).
+
+  
+type mk-uvar list A -> B -> C -> o.
+mk-uvar L U UL :- declare_constraint (mk-uvar L U UL) [_].
+
+constraint mk-uvar {
+
+  rule \ (mk-uvar L U UL) | (meta-mk-uvar L U UL X XL) <=> (U = X, UL = XL).
+
+}
+
+type meta-mk-uvar list A -> B -> C -> D -> E -> o.
+meta-mk-uvar L (uvar _ _) (uvar _ _) X XL :- X = (uvar D []), XL = (uvar D L).

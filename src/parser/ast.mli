@@ -32,6 +32,8 @@ module Func : sig
   val dummyname : t
   val spillf : t
 
+  val is_uvar_name : t -> bool
+
   val from_string : string -> t
 
   module Map : Map.S with type key = t
