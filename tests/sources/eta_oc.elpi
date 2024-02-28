@@ -1,0 +1,24 @@
+type test-unif o -> o.
+test-unif T :- print "Original goal is" T, fail.
+test-unif T :- T, !, print "--> Unif success" T "\n".
+% test-unif T :- print "--> FAIL in this unification:" T "\n".
+
+pred p o:A.
+type f A -> B.
+
+main :-
+  test-unif ((x\y\X x y) = (x\y\X y x)), !,
+  test-unif (Q = (x\y\Q x y)), !,
+  test-unif (Z = (x\y\Z y x)), !,
+  (pi a\ test-unif (W a = (x\y\W a y x))), !,
+  (pi b a\ test-unif (A a = (x\y\A a y x))), !,
+  not (pi b a\ test-unif (B a = (x\y\f (B a x y)))), !,
+  (pi b a\ test-unif (C a = (y\x\C y y x))), !,
+  (p (x\f (a\a) x) => pi w\ p (f (x\x))), !,
+  (p (f (x\x)) => pi w\ p (x\f (a\a) x)), !,
+  (p (r\x\f (a\a) r x) => pi w\ p (r\f (x\x) r)), !,
+  (p (r\f (x\x) r) => pi w\ p (r\x\f (a\a) r x)), !,
+  test-unif ((r\D) = (x\y\r\D y x)), !,
+  test-unif ((r\x\y\E x y) = (r\x\y\E x r)), !,
+  (p (x\ F x a) => pi w r\ p (F r)), !,
+  true.

@@ -1504,14 +1504,12 @@ let bind ~argsdepth r gamma l a d delta b left t e =
           mkAppUVar r lvl (List.map (bind b delta w) orig_args)
         end
   end] in
-  try
     let v = mknLam new_lams (bind b delta 0 t) in
     [%spy "user:assign:HO" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
         (uppterm gamma [] ~argsdepth e) (UVar(r,gamma,0))
         (uppterm gamma [] ~argsdepth e) v) ()];
     r @:= v;
     true
-  with RestrictionFailure -> [%spy "dev:bind:restriction-failure" ~rid];false
 ;;
 (* exception Non_linear *)
 
@@ -1621,6 +1619,8 @@ let eta_contract_flex depth xdepth ~argsdepth e t =
   eta_contract_flex depth depth xdepth ~argsdepth e t []
   [@@inline]
 
+let isLam = function Lam _ -> true | _ -> false
+  
 let rec unif argsdepth matching depth adepth a bdepth b e =
    [%trace "unif" ~rid ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] ~argsdepth empty_env) a
@@ -1708,7 +1708,13 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       unif argsdepth matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 vd 0 @ args) in
       unif argsdepth matching depth adepth args bdepth arg e
+   | Lam _, (Const c | App(c,_,_)) when  c == Global_symbols.uvarc && matching ->
+      begin match eta_contract_flex depth adepth ~argsdepth:adepth e a with
+      | None -> false
+      | Some a -> unif argsdepth matching depth adepth a bdepth b e
+      end
    | (App _ | Const _ | Builtin _ | Nil | Cons _ | CData _), (Const c | App(c,_,[])) when c == Global_symbols.uvarc && matching -> false
+
    (* On purpose we let the fully applied uvarc pass, so that at the
     * meta level one can unify fronzen constants. One can use the var builtin
     * to discriminate the two cases, as in "p (uvar F L as X) :- var X, .." *)
@@ -1738,11 +1744,14 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
            (uppterm depth [] ~argsdepth e) t) ()];
          r @:= t;
          true
-       with RestrictionFailure ->
-        (* avoid fail occur-check on: x\A x = A *)
-        match eta_contract_flex depth adepth ~argsdepth:bdepth e a with
-        | None -> false
-        | Some a -> unif argsdepth matching depth adepth a bdepth b e end
+       with RestrictionFailure when isLam a ->
+          (* avoid fail occur-check on: x\A x = A  | x\y\A y x = A
+             we eta expand and see how it is under the lambdas *)
+          let b = (mkLam @@ mkAppUVar r origdepth [mkConst @@ depth + bdepth]) in
+          let a = hmove ~from:(adepth+depth) ~to_:(bdepth+depth) a in
+          unif argsdepth matching depth bdepth a bdepth b e
+       | RestrictionFailure -> false
+       end
    | UVar (r,origdepth,0), _ when not matching ->
        begin try
          let t =
@@ -1758,12 +1767,14 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
            (uppterm origdepth [] ~argsdepth:0 empty_env) t) ()];
          r @:= t;
          true
-       with RestrictionFailure ->
-        (* avoid fail occur-check on: x\A x = A *)
-        match eta_contract_flex depth bdepth ~argsdepth:bdepth e b with
-        | None -> false
-        | Some b -> unif argsdepth matching depth adepth a bdepth b e end
-
+       with RestrictionFailure when isLam b ->
+          (* avoid fail occur-check on: x\A x = A  | x\y\A y x = A
+             we eta expand and see how it is under the lambdas *)
+          let a = (mkLam @@ mkAppUVar r origdepth [mkConst @@ depth + adepth]) in
+          let b = move ~argsdepth ~from:(bdepth+depth) ~to_:(adepth+depth) e b in
+          unif argsdepth matching depth adepth a adepth b e
+       | RestrictionFailure -> false
+       end
    (* simplify *)
    (* TODO: unif->deref_uv case. Rewrite the code to do the job directly? *)
    | _, Arg (i,args) ->
@@ -1798,7 +1809,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        if is_llam then
          let r = oref C.dummy in
          e.(i) <- UVar(r,adepth,0);
-         bind ~argsdepth r adepth args adepth depth delta bdepth false other e
+         try bind ~argsdepth r adepth args adepth depth delta bdepth false other e
+         with RestrictionFailure -> false
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!"
          (uppterm depth [] ~argsdepth empty_env) a (uppterm depth [] ~argsdepth e) b ;
@@ -1814,10 +1826,15 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        end else error (error_msg_hard_unif a b)
    | AppUVar(r2,_,_), (AppUVar (r1,_,_) | UVar (r1,_,_)) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 ->
        unif argsdepth matching depth bdepth b adepth a e
-   | AppUVar (r, lvl,args), other when not matching ->
+   | AppUVar (r, lvl,(args as oargs)), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
        if is_llam then
-         bind ~argsdepth r lvl args adepth depth delta bdepth true other e
+         try bind ~argsdepth r lvl args adepth depth delta bdepth true other e
+         with RestrictionFailure when isLam other ->
+          let a = mkLam @@ mkAppUVar r lvl (smart_map (move ~argsdepth e ~from:(depth+adepth) ~to_:(depth+adepth+1)) oargs @ [mkConst @@ depth + adepth]) in
+          let b = move ~from:(depth+bdepth) ~to_:(depth+adepth) ~argsdepth e b in
+          unif argsdepth matching depth adepth a adepth b e
+         | RestrictionFailure -> false
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!"
          (uppterm depth [] ~argsdepth empty_env) a (uppterm depth [] ~argsdepth empty_env) b ;
@@ -1826,11 +1843,16 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        CS.declare_new { kind; blockers };
        true
        end else error (error_msg_hard_unif a b)
-   | other, AppUVar (r, lvl,args) ->
+   | other, AppUVar (r, lvl,(args as oargs)) ->
        let is_llam, args = is_llam lvl args adepth bdepth depth false e in
        if is_llam then
-         bind ~argsdepth r lvl args adepth depth delta bdepth false other e
-       else if !delay_hard_unif_problems then begin
+         try bind ~argsdepth r lvl args adepth depth delta bdepth false other e
+         with RestrictionFailure when isLam other ->
+          let b = mkLam @@ mkAppUVar r lvl (smart_map (move ~argsdepth e ~from:(depth+bdepth) ~to_:(depth+bdepth+1)) oargs @ [mkConst @@ depth + bdepth]) in
+          let a = hmove ~from:(depth+adepth) ~to_:(depth+bdepth) a in
+          unif argsdepth matching depth bdepth a bdepth b e
+         | RestrictionFailure -> false
+        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!"
          (uppterm depth [] ~argsdepth empty_env) a (uppterm depth [] ~argsdepth e) b ;
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b; matching} in
@@ -1867,36 +1889,28 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
 
    (* eta *)
    | Lam t, Const c ->
-       eta_contract_heap_or_expand_stack argsdepth matching depth adepth a t bdepth b c [] e
+       eta_expand_stack argsdepth matching depth adepth t bdepth b c [] e
    | Const c, Lam t ->
-       eta_contract_stack_or_expand_heap argsdepth matching depth adepth a c [] bdepth b t e
+       eta_expand_heap argsdepth matching depth adepth c [] bdepth b t e
    | Lam t, App (c,x,xs) ->
-       eta_contract_heap_or_expand_stack argsdepth matching depth adepth a t bdepth b c (x::xs) e
+       eta_expand_stack argsdepth matching depth adepth t bdepth b c (x::xs) e
    | App (c,x,xs), Lam t ->
-       eta_contract_stack_or_expand_heap argsdepth matching depth adepth a c (x::xs) bdepth b t e
+       eta_expand_heap argsdepth matching depth adepth c (x::xs) bdepth b t e
 
    | _ -> false
    end]
-and eta_contract_heap_or_expand_stack argsdepth matching depth adepth a x bdepth b c args e =
-  match eta_contract_flex depth adepth ~argsdepth:adepth e a with
-  | Some flex -> unif argsdepth matching depth adepth flex bdepth b e
-  | None when c == Global_symbols.uvarc-> false
-  | None ->
-      let extra = mkConst (bdepth+depth) in
-      let motion = move ~argsdepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
-      let args = smart_map motion args in
-      let eta = C.mkAppL c (args @ [extra]) in
-      unif argsdepth matching (depth+1) adepth x bdepth eta e
-and eta_contract_stack_or_expand_heap argsdepth matching depth adepth a c args bdepth b x e =
-  match eta_contract_flex depth bdepth ~argsdepth:adepth e b with
-  | Some flex -> unif argsdepth matching depth adepth a bdepth flex e
-  | None when c == Global_symbols.uvarc-> false
-  | None ->
-      let extra = mkConst (adepth+depth) in
-      let motion = hmove ~from:(adepth+depth) ~to_:(adepth+depth+1) in
-      let args = smart_map motion args in
-      let eta= C.mkAppL c (args @ [extra]) in
-      unif argsdepth matching (depth+1) adepth eta bdepth x e
+and eta_expand_stack argsdepth matching depth adepth x bdepth b c args e =
+  let extra = mkConst (bdepth+depth) in
+  let motion = move ~argsdepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
+  let args = smart_map motion args in
+  let eta = C.mkAppL c (args @ [extra]) in
+  unif argsdepth matching (depth+1) adepth x bdepth eta e
+and eta_expand_heap argsdepth matching depth adepth c args bdepth b x e =
+  let extra = mkConst (adepth+depth) in
+  let motion = hmove ~from:(adepth+depth) ~to_:(adepth+depth+1) in
+  let args = smart_map motion args in
+  let eta= C.mkAppL c (args @ [extra]) in
+  unif argsdepth matching (depth+1) adepth eta bdepth x e
 
 ;;
 
