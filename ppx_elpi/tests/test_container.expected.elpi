@@ -1,0 +1,16 @@
+
+
+% loc
+kind loc type -> type.
+type loc int -> A0 -> loc A0. % loc
+
+% term
+kind term type.
+type a int -> term. % A
+type b string -> bool -> term. % B
+
+typeabbrev x (pair (loc term) int). % x
+
+
+
+

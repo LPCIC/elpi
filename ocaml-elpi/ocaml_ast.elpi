@@ -1,0 +1,630 @@
+
+
+% position
+kind position type.
+type position string -> int -> int -> int -> position. % position
+
+% location
+kind location type.
+type location position -> position -> bool -> location. % location
+
+typeabbrev location-stack (list location). % location_stack
+
+% loc
+kind loc_ type -> type.
+type loc A0 -> location -> loc_ A0. % loc
+
+% longident
+kind longident type.
+type lident string -> longident. % Lident
+type ldot longident -> string -> longident. % Ldot
+type lapply longident -> longident -> longident. % Lapply
+
+typeabbrev longident-loc (loc_ longident). % longident_loc
+
+% rec_flag
+kind rec-flag type.
+type nonrecursive rec-flag. % Nonrecursive
+type recursive rec-flag. % Recursive
+
+% direction_flag
+kind direction-flag type.
+type upto direction-flag. % Upto
+type downto direction-flag. % Downto
+
+% private_flag
+kind private-flag type.
+type private private-flag. % Private
+type public private-flag. % Public
+
+% mutable_flag
+kind mutable-flag type.
+type immutable mutable-flag. % Immutable
+type mutable mutable-flag. % Mutable
+
+% virtual_flag
+kind virtual-flag type.
+type virtual virtual-flag. % Virtual
+type concrete virtual-flag. % Concrete
+
+% override_flag
+kind override-flag type.
+type override override-flag. % Override
+type fresh override-flag. % Fresh
+
+% closed_flag
+kind closed-flag type.
+type closed_ closed-flag. % Closed
+type open_ closed-flag. % Open
+
+typeabbrev label string. % label
+
+% arg_label
+kind arg-label type.
+type nolabel arg-label. % Nolabel
+type labelled string -> arg-label. % Labelled
+type optional string -> arg-label. % Optional
+
+% variance
+kind variance type.
+type covariant variance. % Covariant
+type contravariant variance. % Contravariant
+type novariance variance. % NoVariance
+
+% injectivity
+kind injectivity type.
+type injective injectivity. % Injective
+type noinjectivity injectivity. % NoInjectivity
+
+% constant
+kind constant_ type.
+type pconst-integer string -> option char -> constant_. % Pconst_integer
+type pconst-char char -> constant_. % Pconst_char
+type pconst-string string -> location -> option string ->
+                   constant_. % Pconst_string
+type pconst-float string -> option char -> constant_. % Pconst_float
+
+% attribute
+kind attribute type.
+type attribute loc_ string -> payload -> location ->
+               attribute. % attribute
+
+typeabbrev extension (pair (loc_ string) payload). % extension
+
+typeabbrev attributes (list attribute). % attributes
+
+% payload
+kind payload type.
+type pstr structure -> payload. % PStr
+type psig signature -> payload. % PSig
+type ptyp core-type -> payload. % PTyp
+type ppat pattern -> option expression -> payload. % PPat
+
+% core_type
+kind core-type type.
+type core-type core-type-desc -> location -> location-stack ->
+               attributes -> core-type. % core_type
+
+% core_type_desc
+kind core-type-desc type.
+type ptyp-any core-type-desc. % Ptyp_any
+type ptyp-var string -> core-type-desc. % Ptyp_var
+type ptyp-arrow arg-label -> core-type -> core-type ->
+                core-type-desc. % Ptyp_arrow
+type ptyp-tuple list core-type -> core-type-desc. % Ptyp_tuple
+type ptyp-constr longident-loc -> list core-type ->
+                 core-type-desc. % Ptyp_constr
+type ptyp-object list object-field -> closed-flag ->
+                 core-type-desc. % Ptyp_object
+type ptyp-class longident-loc -> list core-type ->
+                core-type-desc. % Ptyp_class
+type ptyp-alias core-type -> string -> core-type-desc. % Ptyp_alias
+type ptyp-variant list row-field -> closed-flag -> option (list label) ->
+                  core-type-desc. % Ptyp_variant
+type ptyp-poly list (loc_ string) -> core-type ->
+               core-type-desc. % Ptyp_poly
+type ptyp-package package-type -> core-type-desc. % Ptyp_package
+type ptyp-extension extension -> core-type-desc. % Ptyp_extension
+
+typeabbrev package-type (pair longident-loc (list (pair longident-loc core-type))). % package_type
+
+% row_field
+kind row-field type.
+type row-field row-field-desc -> location -> attributes ->
+               row-field. % row_field
+
+% row_field_desc
+kind row-field-desc type.
+type rtag loc_ label -> bool -> list core-type -> row-field-desc. % Rtag
+type rinherit core-type -> row-field-desc. % Rinherit
+
+% object_field
+kind object-field type.
+type object-field object-field-desc -> location -> attributes ->
+                  object-field. % object_field
+
+% object_field_desc
+kind object-field-desc type.
+type otag loc_ label -> core-type -> object-field-desc. % Otag
+type oinherit core-type -> object-field-desc. % Oinherit
+
+% pattern
+kind pattern type.
+type pattern pattern-desc -> location -> location-stack -> attributes ->
+             pattern. % pattern
+
+% pattern_desc
+kind pattern-desc type.
+type ppat-any pattern-desc. % Ppat_any
+type ppat-var loc_ string -> pattern-desc. % Ppat_var
+type ppat-alias pattern -> loc_ string -> pattern-desc. % Ppat_alias
+type ppat-constant constant_ -> pattern-desc. % Ppat_constant
+type ppat-interval constant_ -> constant_ -> pattern-desc. % Ppat_interval
+type ppat-tuple list pattern -> pattern-desc. % Ppat_tuple
+type ppat-construct longident-loc ->
+                    option (pair (list (loc_ string)) pattern) ->
+                    pattern-desc. % Ppat_construct
+type ppat-variant label -> option pattern -> pattern-desc. % Ppat_variant
+type ppat-record list (pair longident-loc pattern) -> closed-flag ->
+                 pattern-desc. % Ppat_record
+type ppat-array list pattern -> pattern-desc. % Ppat_array
+type ppat-or pattern -> pattern -> pattern-desc. % Ppat_or
+type ppat-constraint pattern -> core-type ->
+                     pattern-desc. % Ppat_constraint
+type ppat-type longident-loc -> pattern-desc. % Ppat_type
+type ppat-lazy pattern -> pattern-desc. % Ppat_lazy
+type ppat-unpack loc_ (option string) -> pattern-desc. % Ppat_unpack
+type ppat-exception pattern -> pattern-desc. % Ppat_exception
+type ppat-extension extension -> pattern-desc. % Ppat_extension
+type ppat-open longident-loc -> pattern -> pattern-desc. % Ppat_open
+
+% expression
+kind expression type.
+type expression expression-desc -> location -> location-stack ->
+                attributes -> expression. % expression
+
+% expression_desc
+kind expression-desc type.
+type pexp-ident longident-loc -> expression-desc. % Pexp_ident
+type pexp-constant constant_ -> expression-desc. % Pexp_constant
+type pexp-let rec-flag -> list value-binding -> expression ->
+              expression-desc. % Pexp_let
+type pexp-function list case -> expression-desc. % Pexp_function
+type pexp-fun arg-label -> option expression -> pattern -> expression ->
+              expression-desc. % Pexp_fun
+type pexp-apply expression -> list (pair arg-label expression) ->
+                expression-desc. % Pexp_apply
+type pexp-match expression -> list case -> expression-desc. % Pexp_match
+type pexp-try expression -> list case -> expression-desc. % Pexp_try
+type pexp-tuple list expression -> expression-desc. % Pexp_tuple
+type pexp-construct longident-loc -> option expression ->
+                    expression-desc. % Pexp_construct
+type pexp-variant label -> option expression ->
+                  expression-desc. % Pexp_variant
+type pexp-record list (pair longident-loc expression) ->
+                 option expression -> expression-desc. % Pexp_record
+type pexp-field expression -> longident-loc ->
+                expression-desc. % Pexp_field
+type pexp-setfield expression -> longident-loc -> expression ->
+                   expression-desc. % Pexp_setfield
+type pexp-array list expression -> expression-desc. % Pexp_array
+type pexp-ifthenelse expression -> expression -> option expression ->
+                     expression-desc. % Pexp_ifthenelse
+type pexp-sequence expression -> expression ->
+                   expression-desc. % Pexp_sequence
+type pexp-while expression -> expression -> expression-desc. % Pexp_while
+type pexp-for pattern -> expression -> expression -> direction-flag ->
+              expression -> expression-desc. % Pexp_for
+type pexp-constraint expression -> core-type ->
+                     expression-desc. % Pexp_constraint
+type pexp-coerce expression -> option core-type -> core-type ->
+                 expression-desc. % Pexp_coerce
+type pexp-send expression -> loc_ label -> expression-desc. % Pexp_send
+type pexp-new longident-loc -> expression-desc. % Pexp_new
+type pexp-setinstvar loc_ label -> expression ->
+                     expression-desc. % Pexp_setinstvar
+type pexp-override list (pair (loc_ label) expression) ->
+                   expression-desc. % Pexp_override
+type pexp-letmodule loc_ (option string) -> module-expr -> expression ->
+                    expression-desc. % Pexp_letmodule
+type pexp-letexception extension-constructor -> expression ->
+                       expression-desc. % Pexp_letexception
+type pexp-assert expression -> expression-desc. % Pexp_assert
+type pexp-lazy expression -> expression-desc. % Pexp_lazy
+type pexp-poly expression -> option core-type ->
+               expression-desc. % Pexp_poly
+type pexp-object class-structure -> expression-desc. % Pexp_object
+type pexp-newtype loc_ string -> expression ->
+                  expression-desc. % Pexp_newtype
+type pexp-pack module-expr -> expression-desc. % Pexp_pack
+type pexp-open open-declaration -> expression ->
+               expression-desc. % Pexp_open
+type pexp-letop letop -> expression-desc. % Pexp_letop
+type pexp-extension extension -> expression-desc. % Pexp_extension
+type pexp-unreachable expression-desc. % Pexp_unreachable
+
+% case
+kind case type.
+type case pattern -> option expression -> expression -> case. % case
+
+% letop
+kind letop type.
+type letop binding-op -> list binding-op -> expression -> letop. % letop
+
+% binding_op
+kind binding-op type.
+type binding-op loc_ string -> pattern -> expression -> location ->
+                binding-op. % binding_op
+
+% value_description
+kind value-description type.
+type value-description loc_ string -> core-type -> list string ->
+                       attributes -> location ->
+                       value-description. % value_description
+
+% type_declaration
+kind type-declaration type.
+type type-declaration loc_ string ->
+                      list (pair core-type (pair variance injectivity)) ->
+                      list (triple core-type core-type location) ->
+                      type-kind -> private-flag -> option core-type ->
+                      attributes -> location ->
+                      type-declaration. % type_declaration
+
+% type_kind
+kind type-kind type.
+type ptype-abstract type-kind. % Ptype_abstract
+type ptype-variant list constructor-declaration ->
+                   type-kind. % Ptype_variant
+type ptype-record list label-declaration -> type-kind. % Ptype_record
+type ptype-open type-kind. % Ptype_open
+
+% label_declaration
+kind label-declaration type.
+type label-declaration loc_ string -> mutable-flag -> core-type ->
+                       location -> attributes ->
+                       label-declaration. % label_declaration
+
+% constructor_declaration
+kind constructor-declaration type.
+type constructor-declaration loc_ string -> list (loc_ string) ->
+                             constructor-arguments -> option core-type ->
+                             location -> attributes ->
+                             constructor-declaration. % constructor_declaration
+
+% constructor_arguments
+kind constructor-arguments type.
+type pcstr-tuple list core-type -> constructor-arguments. % Pcstr_tuple
+type pcstr-record list label-declaration ->
+                  constructor-arguments. % Pcstr_record
+
+% type_extension
+kind type-extension type.
+type type-extension longident-loc ->
+                    list (pair core-type (pair variance injectivity)) ->
+                    list extension-constructor -> private-flag ->
+                    location -> attributes ->
+                    type-extension. % type_extension
+
+% extension_constructor
+kind extension-constructor type.
+type extension-constructor loc_ string -> extension-constructor-kind ->
+                           location -> attributes ->
+                           extension-constructor. % extension_constructor
+
+% type_exception
+kind type-exception type.
+type type-exception extension-constructor -> location -> attributes ->
+                    type-exception. % type_exception
+
+% extension_constructor_kind
+kind extension-constructor-kind type.
+type pext-decl list (loc_ string) -> constructor-arguments ->
+               option core-type -> extension-constructor-kind. % Pext_decl
+type pext-rebind longident-loc ->
+                 extension-constructor-kind. % Pext_rebind
+
+% class_type
+kind class-type type.
+type class-type class-type-desc -> location -> attributes ->
+                class-type. % class_type
+
+% class_type_desc
+kind class-type-desc type.
+type pcty-constr longident-loc -> list core-type ->
+                 class-type-desc. % Pcty_constr
+type pcty-signature class-signature -> class-type-desc. % Pcty_signature
+type pcty-arrow arg-label -> core-type -> class-type ->
+                class-type-desc. % Pcty_arrow
+type pcty-extension extension -> class-type-desc. % Pcty_extension
+type pcty-open open-description -> class-type ->
+               class-type-desc. % Pcty_open
+
+% class_signature
+kind class-signature type.
+type class-signature core-type -> list class-type-field ->
+                     class-signature. % class_signature
+
+% class_type_field
+kind class-type-field type.
+type class-type-field class-type-field-desc -> location -> attributes ->
+                      class-type-field. % class_type_field
+
+% class_type_field_desc
+kind class-type-field-desc type.
+type pctf-inherit class-type -> class-type-field-desc. % Pctf_inherit
+type pctf-val quadruple (loc_ label) mutable-flag virtual-flag core-type ->
+              class-type-field-desc. % Pctf_val
+type pctf-method quadruple (loc_ label) private-flag virtual-flag core-type ->
+                 class-type-field-desc. % Pctf_method
+type pctf-constraint pair core-type core-type ->
+                     class-type-field-desc. % Pctf_constraint
+type pctf-attribute attribute -> class-type-field-desc. % Pctf_attribute
+type pctf-extension extension -> class-type-field-desc. % Pctf_extension
+
+% class_infos
+kind class-infos type -> type.
+type class-infos virtual-flag ->
+                 list (pair core-type (pair variance injectivity)) ->
+                 loc_ string -> A0 -> location -> attributes ->
+                 class-infos A0. % class_infos
+
+typeabbrev class-description (class-infos class-type). % class_description
+
+typeabbrev class-type-declaration (class-infos class-type). % class_type_declaration
+
+% class_expr
+kind class-expr type.
+type class-expr class-expr-desc -> location -> attributes ->
+                class-expr. % class_expr
+
+% class_expr_desc
+kind class-expr-desc type.
+type pcl-constr longident-loc -> list core-type ->
+                class-expr-desc. % Pcl_constr
+type pcl-structure class-structure -> class-expr-desc. % Pcl_structure
+type pcl-fun arg-label -> option expression -> pattern -> class-expr ->
+             class-expr-desc. % Pcl_fun
+type pcl-apply class-expr -> list (pair arg-label expression) ->
+               class-expr-desc. % Pcl_apply
+type pcl-let rec-flag -> list value-binding -> class-expr ->
+             class-expr-desc. % Pcl_let
+type pcl-constraint class-expr -> class-type ->
+                    class-expr-desc. % Pcl_constraint
+type pcl-extension extension -> class-expr-desc. % Pcl_extension
+type pcl-open open-description -> class-expr ->
+              class-expr-desc. % Pcl_open
+
+% class_structure
+kind class-structure type.
+type class-structure pattern -> list class-field ->
+                     class-structure. % class_structure
+
+% class_field
+kind class-field type.
+type class-field class-field-desc -> location -> attributes ->
+                 class-field. % class_field
+
+% class_field_desc
+kind class-field-desc type.
+type pcf-inherit override-flag -> class-expr -> option (loc_ string) ->
+                 class-field-desc. % Pcf_inherit
+type pcf-val triple (loc_ label) mutable-flag class-field-kind ->
+             class-field-desc. % Pcf_val
+type pcf-method triple (loc_ label) private-flag class-field-kind ->
+                class-field-desc. % Pcf_method
+type pcf-constraint pair core-type core-type ->
+                    class-field-desc. % Pcf_constraint
+type pcf-initializer expression -> class-field-desc. % Pcf_initializer
+type pcf-attribute attribute -> class-field-desc. % Pcf_attribute
+type pcf-extension extension -> class-field-desc. % Pcf_extension
+
+% class_field_kind
+kind class-field-kind type.
+type cfk-virtual core-type -> class-field-kind. % Cfk_virtual
+type cfk-concrete override-flag -> expression ->
+                  class-field-kind. % Cfk_concrete
+
+typeabbrev class-declaration (class-infos class-expr). % class_declaration
+
+% module_type
+kind module-type type.
+type module-type module-type-desc -> location -> attributes ->
+                 module-type. % module_type
+
+% module_type_desc
+kind module-type-desc type.
+type pmty-ident longident-loc -> module-type-desc. % Pmty_ident
+type pmty-signature signature -> module-type-desc. % Pmty_signature
+type pmty-functor functor-parameter -> module-type ->
+                  module-type-desc. % Pmty_functor
+type pmty-with module-type -> list with-constraint ->
+               module-type-desc. % Pmty_with
+type pmty-typeof module-expr -> module-type-desc. % Pmty_typeof
+type pmty-extension extension -> module-type-desc. % Pmty_extension
+type pmty-alias longident-loc -> module-type-desc. % Pmty_alias
+
+% functor_parameter
+kind functor-parameter type.
+type unit functor-parameter. % Unit
+type named loc_ (option string) -> module-type ->
+           functor-parameter. % Named
+
+typeabbrev signature (list signature-item). % signature
+
+% signature_item
+kind signature-item type.
+type signature-item signature-item-desc -> location ->
+                    signature-item. % signature_item
+
+% signature_item_desc
+kind signature-item-desc type.
+type psig-value value-description -> signature-item-desc. % Psig_value
+type psig-type rec-flag -> list type-declaration ->
+               signature-item-desc. % Psig_type
+type psig-typesubst list type-declaration ->
+                    signature-item-desc. % Psig_typesubst
+type psig-typext type-extension -> signature-item-desc. % Psig_typext
+type psig-exception type-exception ->
+                    signature-item-desc. % Psig_exception
+type psig-module module-declaration -> signature-item-desc. % Psig_module
+type psig-modsubst module-substitution ->
+                   signature-item-desc. % Psig_modsubst
+type psig-recmodule list module-declaration ->
+                    signature-item-desc. % Psig_recmodule
+type psig-modtype module-type-declaration ->
+                  signature-item-desc. % Psig_modtype
+type psig-modtypesubst module-type-declaration ->
+                       signature-item-desc. % Psig_modtypesubst
+type psig-open open-description -> signature-item-desc. % Psig_open
+type psig-include include-description ->
+                  signature-item-desc. % Psig_include
+type psig-class list class-description ->
+                signature-item-desc. % Psig_class
+type psig-class-type list class-type-declaration ->
+                     signature-item-desc. % Psig_class_type
+type psig-attribute attribute -> signature-item-desc. % Psig_attribute
+type psig-extension extension -> attributes ->
+                    signature-item-desc. % Psig_extension
+
+% module_declaration
+kind module-declaration type.
+type module-declaration loc_ (option string) -> module-type ->
+                        attributes -> location ->
+                        module-declaration. % module_declaration
+
+% module_substitution
+kind module-substitution type.
+type module-substitution loc_ string -> longident-loc -> attributes ->
+                         location ->
+                         module-substitution. % module_substitution
+
+% module_type_declaration
+kind module-type-declaration type.
+type module-type-declaration loc_ string -> option module-type ->
+                             attributes -> location ->
+                             module-type-declaration. % module_type_declaration
+
+% open_infos
+kind open-infos type -> type.
+type open-infos A0 -> override-flag -> location -> attributes ->
+                open-infos A0. % open_infos
+
+typeabbrev open-description (open-infos longident-loc). % open_description
+
+typeabbrev open-declaration (open-infos module-expr). % open_declaration
+
+% include_infos
+kind include-infos type -> type.
+type include-infos A0 -> location -> attributes ->
+                   include-infos A0. % include_infos
+
+typeabbrev include-description (include-infos module-type). % include_description
+
+typeabbrev include-declaration (include-infos module-expr). % include_declaration
+
+% with_constraint
+kind with-constraint type.
+type pwith-type longident-loc -> type-declaration ->
+                with-constraint. % Pwith_type
+type pwith-module longident-loc -> longident-loc ->
+                  with-constraint. % Pwith_module
+type pwith-modtype loc_ longident -> module-type ->
+                   with-constraint. % Pwith_modtype
+type pwith-modtypesubst loc_ longident -> module-type ->
+                        with-constraint. % Pwith_modtypesubst
+type pwith-typesubst longident-loc -> type-declaration ->
+                     with-constraint. % Pwith_typesubst
+type pwith-modsubst longident-loc -> longident-loc ->
+                    with-constraint. % Pwith_modsubst
+
+% module_expr
+kind module-expr type.
+type module-expr module-expr-desc -> location -> attributes ->
+                 module-expr. % module_expr
+
+% module_expr_desc
+kind module-expr-desc type.
+type pmod-ident longident-loc -> module-expr-desc. % Pmod_ident
+type pmod-structure structure -> module-expr-desc. % Pmod_structure
+type pmod-functor functor-parameter -> module-expr ->
+                  module-expr-desc. % Pmod_functor
+type pmod-apply module-expr -> module-expr ->
+                module-expr-desc. % Pmod_apply
+type pmod-constraint module-expr -> module-type ->
+                     module-expr-desc. % Pmod_constraint
+type pmod-unpack expression -> module-expr-desc. % Pmod_unpack
+type pmod-extension extension -> module-expr-desc. % Pmod_extension
+
+typeabbrev structure (list structure-item). % structure
+
+% structure_item
+kind structure-item type.
+type structure-item structure-item-desc -> location ->
+                    structure-item. % structure_item
+
+% structure_item_desc
+kind structure-item-desc type.
+type pstr-eval expression -> attributes ->
+               structure-item-desc. % Pstr_eval
+type pstr-value rec-flag -> list value-binding ->
+                structure-item-desc. % Pstr_value
+type pstr-primitive value-description ->
+                    structure-item-desc. % Pstr_primitive
+type pstr-type rec-flag -> list type-declaration ->
+               structure-item-desc. % Pstr_type
+type pstr-typext type-extension -> structure-item-desc. % Pstr_typext
+type pstr-exception type-exception ->
+                    structure-item-desc. % Pstr_exception
+type pstr-module module-binding -> structure-item-desc. % Pstr_module
+type pstr-recmodule list module-binding ->
+                    structure-item-desc. % Pstr_recmodule
+type pstr-modtype module-type-declaration ->
+                  structure-item-desc. % Pstr_modtype
+type pstr-open open-declaration -> structure-item-desc. % Pstr_open
+type pstr-class list class-declaration ->
+                structure-item-desc. % Pstr_class
+type pstr-class-type list class-type-declaration ->
+                     structure-item-desc. % Pstr_class_type
+type pstr-include include-declaration ->
+                  structure-item-desc. % Pstr_include
+type pstr-attribute attribute -> structure-item-desc. % Pstr_attribute
+type pstr-extension extension -> attributes ->
+                    structure-item-desc. % Pstr_extension
+
+% value_binding
+kind value-binding type.
+type value-binding pattern -> expression -> attributes -> location ->
+                   value-binding. % value_binding
+
+% module_binding
+kind module-binding type.
+type module-binding loc_ (option string) -> module-expr -> attributes ->
+                    location -> module-binding. % module_binding
+
+% toplevel_phrase
+kind toplevel-phrase type.
+type ptop-def structure -> toplevel-phrase. % Ptop_def
+type ptop-dir toplevel-directive -> toplevel-phrase. % Ptop_dir
+
+% toplevel_directive
+kind toplevel-directive type.
+type toplevel-directive loc_ string -> option directive-argument ->
+                        location ->
+                        toplevel-directive. % toplevel_directive
+
+% directive_argument
+kind directive-argument type.
+type directive-argument directive-argument-desc -> location ->
+                        directive-argument. % directive_argument
+
+% directive_argument_desc
+kind directive-argument-desc type.
+type pdir-string string -> directive-argument-desc. % Pdir_string
+type pdir-int string -> option char -> directive-argument-desc. % Pdir_int
+type pdir-ident longident -> directive-argument-desc. % Pdir_ident
+type pdir-bool bool -> directive-argument-desc. % Pdir_bool
+
+
+
+

@@ -1,0 +1,3 @@
+
+map.value-binding (value-binding {{:pat ( [%e "P1"], [%e "P2" ] ) }} E X L)
+                  (value-binding {{:pat ( [%e "P2"], [%e "P1" ] ) }} E X L) :- !.
