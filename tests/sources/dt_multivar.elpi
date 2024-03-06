@@ -1,0 +1,50 @@
+:index (2 2)
+pred p o:list int, o:int.
+p [1] 0.
+p [1,2|_] 0.
+p [1,2,3|_] 0.
+p [1,2,3,4|_] 0.
+p [1,2,3,4,5|_] 0.
+
+:index (2)
+pred p1 o:list (list int).
+p1 [].
+p1 [[3] | _].
+p1 [_|_].
+p1 [X_, [Y_] | _].
+p1 [X_, Y_ | _].
+p1 [X_, Y_].
+
+kind arity-one type.
+type list-wrapper list int.
+
+:index(5)
+pred p2 o:arity-one.
+p2 (list-wrapper [1]).
+
+pred findall-length i:prop, i:int.
+findall-length P Len :-
+  std.findall P L,
+  % print "Elpi result is" L,
+  std.length L Len1,
+  std.assert! (Len = Len1) "Invalid length".
+
+main :-
+  % Index on multiple args
+  findall-length (p _ _) 5,
+  findall-length (p [1] _) 1,
+  findall-length (p [1,3] _) 0,
+  findall-length (p [1,2,5] _) 1,
+  findall-length (p [1,2,5|_] _) 1,
+  findall-length (p [_|_] _) 5,
+  findall-length (p [_,_|_] _) 4,
+  % Index on list of lists
+  findall-length (p1 [[_]|_]) 5,
+  findall-length (p1 [[_]]) 2,
+  findall-length (p1 [[3], [1]]) 5,
+  findall-length (p1 [[3], [1], [X, 3]]) 4,
+  findall-length (p1 [_|_]) 5,
+  findall-length (p1 _) 6,
+  % Index on deep terms
+  findall-length (p2 X_) 1,
+  true.

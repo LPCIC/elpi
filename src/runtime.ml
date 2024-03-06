@@ -2465,10 +2465,24 @@ let hash_goal_arg_list = hash_arg_list true
 *)
 let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_tree.path =
   let open Discrimination_tree in
+  let rec flatten_rev = function 
+    | [] -> []
+    | hd :: tl -> flatten_rev tl @ hd in
+  let rec const2list_term ~safe ~depth ?(h=0) path_depth (len: int) (res: path list) (t: term) : Discrimination_tree.path =
+    match deref_head ~depth t with
+    (* TODO: complexity problem next line *)
+    | Nil -> mkListHead :: (flatten_rev ([mkListEnd] :: res))
+    | Cons (a, b) ->
+        if h > 30 then mkListHead :: (flatten_rev ([mkListEnd] :: res))
+        else
+          let path_of_a = arg_to_trie_path ~safe ~depth a path_depth in
+          const2list_term ~depth ~safe ~h:(h+1) path_depth (len+1) (path_of_a :: res) b
+    (* TODO: complexity problem next line *)
+    | a -> mkListHead :: flatten_rev  ([mkMultivariable] :: res)
   (** prepend the mode of the current argument if we are "pathifing" a goal *)
-  let prepend_mode is_goal mode tl = if is_goal then mode :: tl else tl in     
+  and prepend_mode is_goal mode tl = if is_goal then mode :: tl else tl
   (** gives the path representation of a list of sub-terms *)
-  let rec arg_to_trie_path_aux ~safe ~depth t_list path_depth : Discrimination_tree.path = 
+  and arg_to_trie_path_aux ~safe ~depth t_list path_depth : Discrimination_tree.path = 
     if path_depth = 0 then []
     else 
       match t_list with 
@@ -2490,7 +2504,6 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
       | CData d -> [mkPrimitive d]
       | App (k,_,_) when k == Global_symbols.uvarc -> [mkVariable]
       | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~safe ~depth a (path_depth+1)
-      | Nil -> [mkConstant ~safe Global_symbols.nilc 0]
       | Lam _ -> [mkOther] (* loose indexing to enable eta *)
       | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [mkVariable]
       | Builtin (k,tl) ->
@@ -2501,10 +2514,9 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
         let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
         let tl_path = arg_to_trie_path_aux ~safe ~depth xs path_depth in
         mkConstant ~safe k arg_length :: hd_path @ tl_path
+      | Nil -> [mkListHead; mkListEnd]
       | Cons (x,xs) ->
-        let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
-        let tl_path = arg_to_trie_path ~safe ~depth xs path_depth in
-        mkConstant ~safe Global_symbols.consc (if path_depth = 0 then 0 else 2) :: hd_path @ tl_path
+          const2list_term ~safe ~depth (path_depth + 1) 0 [arg_to_trie_path ~safe ~depth x (path_depth + 1)] xs 
   (** builds the sub-path of a sublist of arguments of the current clause  *)
   and make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl = 
     let tl = arg_to_trie_path ~safe ~depth arg_hd arg_depth_hd @ 
@@ -2520,7 +2532,7 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
       make_sub_path  arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl 
     | _, _ :: _,_ -> anomaly "Invalid Index length" in
   if args == [] then prepend_mode is_goal mkOutputMode [] 
-  else aux ~safe ~depth is_goal args arg_depths mode 
+  else aux ~safe ~depth is_goal args arg_depths mode  
 
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
@@ -2602,8 +2614,12 @@ let add1clause ~depth m (predicate,clause) =
         arg_idx = Ptmap.add arg_hd [clause] Ptmap.empty;
       }) m
 
-let add_clauses ~depth clauses p =       
+let add_clauses ~depth clauses p =
+  (* pplist (fun fmt (hd, b) -> ppclause fmt hd b) ";" Fmt.std_formatter clauses; *)
+  (* let t1 = Unix.gettimeofday () in *)
   let p = List.fold_left (add1clause ~depth) p clauses in
+  (* let t2 = Unix.gettimeofday () in  *)
+  (* pp_string Fmt.std_formatter (Printf.sprintf "\nTime taken by add_clauses is %f\n" (t2-.t1)); *)
   p
 
 let make_index ~depth ~indexing ~clauses_rev:p =
@@ -2707,7 +2723,7 @@ let get_clauses ~depth predicate goal { index = m } =
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.pp_path path
           (pplist pp_int ";") arg_depths
-          (*Discrimination_tree.(pp pp_clause) args_idx*)];
+          (*Discrimination_tree.(pp (fun fmt x -> pp_string fmt "+")) args_idx*)];
         let candidates = DT.retrieve path args_idx in 
           [%spy "dev:disc-tree:candidates" ~rid 
             pp_int (List.length candidates)];
