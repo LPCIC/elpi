@@ -313,3 +313,10 @@ let () = declare "eta_oc"
   ~typecheck:true
   ~expectation:Success
   ()
+  
+let () = declare "bug_226"
+  ~source_elpi:"bug_226.elpi"
+  ~description:"move/unif bug"
+  ~typecheck:true
+  ~expectation:Success
+  ()
