@@ -956,8 +956,16 @@ let rec move ~argsdepth e ?avoid ~from ~to_ t =
     | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy ->
        if depth == 0 then deref_appuv ?avoid ~from:vardepth ~to_ args t
        else maux empty_env depth (deref_appuv ~from:vardepth ~to_:(from+depth) args t)
-    | Arg (i, args) when e.(i) != C.dummy ->
-       deref_uv ?avoid ~from:argsdepth ~to_:(to_+depth) args e.(i)
+    | Arg (i, argsno) when e.(i) != C.dummy ->
+       if from = argsdepth then deref_uv ?avoid ~from:argsdepth ~to_:(to_+depth) argsno e.(i)
+       else
+        let args = C.mkinterval from argsno 0 in
+        let args =
+        try smart_map3 maux e depth args
+        with RestrictionFailure ->
+          anomaly "move: could check if unrestrictable args are unused" in
+       deref_appuv ?avoid ~from:argsdepth ~to_:(to_+depth) args e.(i)
+
     | AppArg(i, args) when e.(i) != C.dummy ->
        let args =
         try smart_map3 maux e depth args
