@@ -1,0 +1,13 @@
+
+pred f o:(term -> term) o:term.
+f R (fun d\ R d).
+%f R N :- N = (fun d\ R d).
+
+
+pred foo o:(term -> term) o:term.
+foo R N :-
+  pi d\
+    f R N.
+
+main :-
+  foo R N, N == fun x\R x.
