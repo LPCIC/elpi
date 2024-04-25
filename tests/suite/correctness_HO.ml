@@ -320,3 +320,10 @@ let () = declare "bug_226"
   ~typecheck:true
   ~expectation:Success
   ()
+
+let () = declare "chr-scope"
+  ~source_elpi:"chr-scope.elpi"
+  ~description:"chr-relocation"
+  ~typecheck:true
+  ~expectation:Success
+  ()
