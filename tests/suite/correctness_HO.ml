@@ -327,3 +327,17 @@ let () = declare "chr-scope"
   ~typecheck:true
   ~expectation:Success
   ()
+
+let () = declare "chr-scope-change"
+  ~source_elpi:"chr-scope-change.elpi"
+  ~description:"chr-relocation"
+  ~typecheck:true
+  ~expectation:Success
+  ()
+
+let () = declare "chr-scope-change-err"
+  ~source_elpi:"chr-scope-change-failure.elpi"
+  ~description:"chr-relocation"
+  ~typecheck:true
+  ~expectation:(FailureOutput (Str.regexp "cannot be put in the desired context"))
+  ()

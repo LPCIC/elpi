@@ -1,0 +1,12 @@
+constraint foo good bad {
+    rule \ ([C1,C2] : D ?- foo G B) <=> ([] : D ?- foo G B).
+}
+
+pred good i:int.
+pred bad i:int.
+pred foo i:int, i:int.
+foo A B :- print A B, good A, bad B.
+
+main :-
+  pi x y\
+    good x => bad y => declare_constraint (foo x y) []. 

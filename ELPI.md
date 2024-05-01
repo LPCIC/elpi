@@ -620,9 +620,13 @@ As soon as a new constraint C is declared:
    If the name context for the new goal is given, then the new goal
    is checked to live in such context before resuming.  If the name
    context is not specified the resumed goals lives in the disjoint union
-   of all name contexts.
+   of all name contexts (*).
    
-The application of CHR rules follows the [refined operation semantics](https://en.wikipedia.org/wiki/Constraint_Handling_Rules).
+The application of CHR rules follows the [refined operational semantics](https://en.wikipedia.org/wiki/Constraint_Handling_Rules).
+
+(*) The name context `C` is the first component of the sequent, eg
+`C : G ?- P`. `C` is unified with the list of eigen variables, that is
+`[c0, c1, .. cn]`. 
 
 ## Quotations
 

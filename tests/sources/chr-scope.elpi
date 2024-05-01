@@ -7,11 +7,12 @@ move A B (x\f B x) (x\f A x).
 pred c i:tm, i:tm -> tm.
 
 constraint c {
-    rule (E : G ?- c (uvar X [A]) T1) \ (c (uvar X [B]) T2)
-      | (move A B T2 T2', print E T2') <=> (E : G => T1 = T2).
+    rule (E : G ?- c (uvar X [A]) T1) \ (F : _ ?- c (uvar X [B]) T2)
+      | (move A B T2 T2') <=> (E : G ?- T1 = T2').
 }
 
 main :-
   pi x\
     declare_constraint (c (X x) (y\f x y)) [X x],
+    pi z\ 
     declare_constraint (c (X x) (y\f x y)) [X x].

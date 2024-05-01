@@ -1,0 +1,12 @@
+constraint foo good bad {
+    rule \ (L : D ?- foo G B) | (std.rev L L1) <=> (L1 : D ?- foo G B).
+}
+
+pred good i:int.
+pred bad i:int.
+pred foo i:int, i:int.
+foo A B :- print A B, good A, bad B.
+
+main :-
+  pi x y\
+    good x => bad y => declare_constraint (foo x y) []. 
