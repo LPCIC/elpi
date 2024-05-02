@@ -4,7 +4,11 @@ Language:
   - Change CHR syntax now accepts any term in eigen variables position `E` in
     sequent `E : _ ?- _`. Meaningful terms are lists or unification variables
   - Change CHR eigen variables are a list of names (used to be an integer)
+
+Runtime:
   - Fix CHR relocation/scope-checking for new goals
+  - Fix relocation error in unification on non-linear patterns with locally
+    bound variables
 
 # v1.18.2 (January 2024)
 
