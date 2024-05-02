@@ -1,4 +1,4 @@
-# UNRELEASED
+# v1.19.0 (May 2024)
 
 Language:
   - Change CHR syntax now accepts any term in eigen variables position `E` in
