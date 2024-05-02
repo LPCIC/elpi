@@ -1,3 +1,11 @@
+# UNRELEASED
+
+Language:
+  - Change CHR syntax now accepts any term in eigen variables position `E` in
+    sequent `E : _ ?- _`. Meaningful terms are lists or unification variables
+  - Change CHR eigen variables are a list of names (used to be an integer)
+  - Fix CHR relocation/scope-checking for new goals
+
 # v1.18.2 (January 2024)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

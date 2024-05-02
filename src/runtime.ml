@@ -688,7 +688,7 @@ module HO : sig
 
   val shift_bound_vars : depth:int -> to_:int -> term -> term
 
-  val subtract_to_consts : amount:int -> depth:int -> term -> term
+  val map_free_vars : map:constant C.Map.t -> depth:int -> to_:int -> term -> term
 
   val delay_hard_unif_problems : bool Fork.local_ref
     
@@ -2029,12 +2029,16 @@ let shift_bound_vars ~depth ~to_ t =
   in
     if depth = to_ then t else shift depth t
 
-let subtract_to_consts ~amount ~depth t =
+let map_free_vars ~map ~depth ~to_ t =
+  let shift_bound = depth - to_ in
   let shift_db d n =
     if n < 0 then n
-    else if n < amount then
-      error "The term cannot be put in the desired context"
-    else n - amount in
+    else if n < depth then try C.Map.find n map with Not_found ->
+      error (Printf.sprintf "The term cannot be put in the desired context since it contains name: %s" @@ C.show n)
+    else if n >= depth && n - depth <= d then n - shift_bound
+    else
+      error (Printf.sprintf "The term cannot be put in the desired context since it contains name: %s" @@ C.show n)
+    in
   let rec shift d = function
   | Const n as x -> let m = shift_db d n in if m = n then x else mkConst m
   | Lam r as orig ->
@@ -2059,16 +2063,16 @@ let subtract_to_consts ~amount ~depth t =
     if args == args' then orig
     else AppArg (i, args')
   | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != C.dummy ->
-      anomaly "subtract_to_consts: non-derefd term"
-  | (UVar _ | AppUVar _) ->
-      error "The term cannot be put in the desired context (leftover uvar)"
-      | Builtin(c,xs) as orig ->
-        let xs' = smart_map (shift d) xs in
-        if xs == xs' then orig
-        else Builtin(c,xs')
+      anomaly "map_free_vars: non-derefd term"
+  | UVar(r,lvl,ano) -> UVar(r,min lvl to_,ano)
+  | AppUVar (r,lvl,args) -> AppUVar (r,min lvl to_,smart_map (shift d) args)
+  | Builtin(c,xs) as orig ->
+    let xs' = smart_map (shift d) xs in
+    if xs == xs' then orig
+    else Builtin(c,xs')
   | CData _ as x -> x
   in
-    if amount = 0 then t else shift 0 t
+    if depth = to_ && C.Map.is_empty map then t else shift 0 t
 
 let eta_contract_flex ~depth t =
   eta_contract_flex depth 0 ~argsdepth:0 empty_env t
@@ -3084,7 +3088,7 @@ module Ice : sig
       freezer -> freezer * term
 
   val defrost :
-    maxd:int -> term -> env -> to_:int -> freezer -> term
+    from:int -> term -> env -> to_:int -> map:constant C.Map.t -> freezer -> term
 
   val assignments : freezer -> assignment list
 
@@ -3162,17 +3166,17 @@ end = struct (* {{{ *)
     [%spy "dev:freeze:out" ~rid (uppterm maxground [] ~argsdepth:0 empty_env) t];
     !f, t
 
-  let defrost ~maxd t env ~to_ f =
+  let defrost ~from t env ~to_ ~map f =
   [%spy "dev:defrost:in" ~rid (fun fmt () ->
-    Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
-      (uppterm maxd [] ~argsdepth:maxd env) t) ()];
-    let t = full_deref ~adepth:maxd env ~depth:maxd t in
+    Fmt.fprintf fmt "from:%d to:%d %a" from to_
+      (uppterm from [] ~argsdepth:from env) t) ()];
+    let t = full_deref ~adepth:from env ~depth:from t in
   [%spy "dev:defrost:fully-derefd" ~rid (fun fmt ()->
-    Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
-      (uppterm maxd [] ~argsdepth:0 empty_env) t) ()];
-    let t = subtract_to_consts ~amount:(maxd - to_) ~depth:maxd t in
+    Fmt.fprintf fmt "from:%d to:%d %a" from to_
+      (uppterm from [] ~argsdepth:0 empty_env) t) ()];
+    let t = map_free_vars ~map ~depth:from ~to_ t in
   [%spy "dev:defrost:shifted" ~rid (fun fmt () ->
-    Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
+    Fmt.fprintf fmt "from:%d to:%d %a" from to_
       (uppterm to_ [] ~argsdepth:0 empty_env) t) ()];
     let rec daux d = function
       | Const c when C.Map.mem c f.c2uv ->
@@ -3446,7 +3450,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
     (pats_to_match @ pats_to_remove) ([],[],[]) in
   
   let match_eigen i m (dto,d,eigen) pat =
-    match_goal (gid[@trace]) i max_depth env m (dto,d,Data.C.of_int eigen) pat in
+    match_goal (gid[@trace]) i max_depth env m (dto,d,list_to_lp_list @@ C.mkinterval 0 eigen 0) pat in
   let match_conclusion i m g pat =
     match_goal (gid[@trace]) i max_depth env m g pat in
   let match_context i m ctx pctx =
@@ -3466,6 +3470,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
     (* no meta meta level *)
     chr = CHR.empty;
     initial_goal =
+      (* TODO: maybe we don't need to do this if we don't reach the guard *)
       move ~argsdepth:max_depth ~from:max_depth ~to_:max_depth env
         (shift_bound_vars ~depth:0 ~to_:max_depth guard);
     assignments = StrMap.empty;
@@ -3494,12 +3499,12 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
            Format.fprintf f "(lives-at:%d, to-be-lifted-to:%d) %a"
              dt dto (uppterm dt [] ~argsdepth:0 empty_env) t) ";") constraints_goals];
 
-      let m = fold_left2i match_eigen m
-        constraints_depts patterns_eigens in
       let m = fold_left2i match_conclusion m
         constraints_goals patterns_goals in
       let m = fold_left2i match_context m
         constraints_contexts patterns_contexts in
+      let m = fold_left2i match_eigen m
+        constraints_depts patterns_eigens in
 
       [%spy "dev:CHR:matching-assignments" ~rid
         (pplist (uppterm max_depth [] ~argsdepth:0 empty_env) ~boxed:false ",") (Array.to_list env)];
@@ -3522,15 +3527,19 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
       | Some { CHR.eigen; context; conclusion } ->
       let eigen =
         match full_deref ~adepth:max_depth env ~depth:max_depth eigen with
-        | CData x when Data.C.is_int x -> Data.C.to_int x
-        | Discard -> max_depth
-        | _ -> error "eigen not resolving to an integer" in
+        | (Nil | Cons _) as x -> lp_list_to_list ~depth:max_depth x
+        | Discard -> C.mkinterval 0 max_depth 0
+        | _ -> error "eigen not resolving to a list of names" 
+      in
+      let max_eigen,map = List.fold_left (fun (i,m) c ->
+          i+1,C.Map.add (Data.destConst c) i m)
+        (0,C.Map.empty) eigen in
       let conclusion =
-        Ice.defrost ~maxd:max_depth ~to_:eigen
+        Ice.defrost ~from:max_depth ~to_:max_eigen ~map
           (App(Global_symbols.implc,context,[conclusion])) env m in
       (* TODO: check things make sense in heigen *)
       let prog = initial_program in
-      Some (make_constraint_def ~rid ~gid:((make_subgoal_id gid (eigen,conclusion))[@trace]) eigen prog [] conclusion) in
+      Some (make_constraint_def ~rid ~gid:((make_subgoal_id gid (max_eigen,conclusion))[@trace]) max_eigen prog [] conclusion) in
     [%spy "dev:CHR:try-rule:success" ~rid];
     Some(rule_name, constraints_to_remove, new_goals, Ice.assignments m)
   with NoMatch ->

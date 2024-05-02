@@ -265,9 +265,9 @@ sequent:
     let context, conclusion = decode_sequent t in
     { Chr.eigen = underscore (); context; conclusion }
   }
-| LPAREN; c = constant; COLON; t = term; RPAREN {
+| LPAREN; c = closed_term; COLON; t = term; RPAREN {
     let context, conclusion = decode_sequent t in
-    { Chr.eigen = Const c; context; conclusion }
+    { Chr.eigen = c; context; conclusion }
   }
 
 goal:

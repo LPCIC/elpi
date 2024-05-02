@@ -108,7 +108,6 @@ program: CONSTANT RPAREN
 
 Unexpected keyword.
 
-goal: AFTER USE_SIG
 program: AFTER FAMILY_QMARK USE_SIG
 program: AFTER VDASH FLOAT USE_SIG
 program: AFTER FAMILY_TIMES FLOAT USE_SIG
@@ -183,6 +182,7 @@ goal: AFTER VDASH FLOAT USE_SIG
 goal: AFTER FAMILY_TIMES FLOAT USE_SIG
 goal: AFTER FAMILY_SHARP FLOAT USE_SIG
 goal: LPAREN AFTER RPAREN USE_SIG
+goal: AFTER USE_SIG
 goal: AFTER AFTER USE_SIG
 goal: AFTER FAMILY_TICK FLOAT USE_SIG
 goal: AFTER SLASH FLOAT USE_SIG
@@ -272,6 +272,8 @@ Malformed macro declaration. Example:
 macro @foo X Y :- p X => q Y.
 
 program: COLON VDASH
+program: COLON REPLACE VDASH
+program: COLON INDEX LPAREN FRESHUV RPAREN VDASH
 
 Attribute expected. Examples:
 :name "some name"
@@ -317,7 +319,6 @@ type lam (tm -> tm) -> tm.
 type (++) list A -> list A -> list A.
 
 program: RULE LPAREN USE_SIG
-program: RULE LPAREN AFTER USE_SIG
 program: RULE VDASH
 program: RULE IFF AFTER VDASH
 program: RULE LPAREN AFTER COLON VDASH
