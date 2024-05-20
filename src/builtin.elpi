@@ -478,10 +478,9 @@ primitive? X S :- is_cdata X (ctype S).
 external pred new_int o:int.
 
 % [findall_solution P L] finds all the solved instances of P and puts them
-% in L
-% in the order in which they are found. Instances can contain
-% eigenvariables
-% and unification variables.
+% in L in the order in which they are found. Instances can contain
+% eigenvariables and unification variables. P may or may not be
+% instantiated. Instances should be found in L.
 
 external pred findall_solutions i:prop, o:list prop.
 
