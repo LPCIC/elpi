@@ -301,7 +301,6 @@ module RawOpaqueData = struct
     cout: t -> 'a;
     name : string;
   }
-
   let conversion_of_cdata ~name ?(doc="") ~constants_map ~values_map ~constants
      ~pp ({ Util.CData.cin; isc; cout; name = c } )
   =

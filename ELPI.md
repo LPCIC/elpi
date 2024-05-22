@@ -292,8 +292,16 @@ The attribute `:if` can also be used on CHR rules.
 
 By default the clauses for a predicate are indexed by looking
 at their first argument at depth 1. The `:index` attribute lets
-one specify a different argument.
+one specify a different argument and/or a different indexing technique.
+The syntax is
+```
+:index (<arg-spec>) "index-type"
+```
+where `<arg-spec>` is a list of numbers or `_`, and `"index-type"` is an
+optional string. Values supported are `"Map"` (tree map over constants, standard
+Prolog indexing), `"Hash"` (see below) and `"DTree"` (see below).
 
+For example:
 ```prolog
 :index(_ 1)
 pred mymap i:(A -> B), i:list A, o:list B.
@@ -305,27 +313,30 @@ argument (that means don't index it), at depth 1 the second argument and at dept
 0 all the remaining ones.
 
 If only one argument is indexed, and it is indexed at depth one, then Elpi uses
-a standard indexing technique based on a perfect (for depth 1) search tree. This
-means that no false positives are returned by the index.
+a standard indexing technique based on a binary search tree, i.e.
+the `"Map"` index-type.
 
 ### Discrimination tree index
 
-If only one argument is indexed at depth greater than one, then Elpi uses
+If only one argument is indexed at depth greater than one, or more than one
+argument is indexed at depth greater than zero, then Elpi uses
 a [discrimination tree](https://www.cs.cmu.edu/~fp/courses/99-atp/lectures/lecture28.html).
 Both the rule argument and the goal argument are
-indexed up to the given depth. The indexing is not perfect, false positives may
-be returned and ruled out by unification.
+indexed up to the given depth.
 
-Indexed terms are linearized into paths. Paths are inserted into a trie data
-structure sharing common prefixes.
+Indexed terms are linearized into paths where each element is an integer.
+Paths are inserted into a trie data structure sharing common prefixes.
+Opaque data (like int, string, etc) are hashed to fit the size of the
+path element.
 
 ### Hash based index
 
-If more than one argument is indexed then Elpi uses an index based on the idea of
-[unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.html).
+[unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.html)
+can be selected by using the `"Hash"` index-type. One can index one or more arguments
+at any depth, but the entire hash will fit one integer (63 bits).
 
 ```prolog
-:index(2)
+:index(2) "Hash"
 pred mult o:nat, o:nat, o:nat.
 mult o X o.
 mult (s (s o)) X C :- plus X X C.

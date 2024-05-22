@@ -82,3 +82,5 @@
 (rule
   (targets trace.ts)
   (action (run atdts %{dep:trace.atd})))
+
+(test (name test_discrimination_tree) (libraries elpi) (modules test_discrimination_tree) (preprocess (pps ppx_deriving.std)))
