@@ -128,8 +128,9 @@ module Trie = struct
   let empty = Node { data = []; other = None; listTailVariable = None; map = Ptmap.empty }
 
   let add a v t =
+    let max = ref 0 in
     let rec ins ~pos = let x = a.(pos) in function
-      | Node ({ data } as t) when isPathEnd x -> Node { t with data = v :: data }
+      | Node ({ data } as t) when isPathEnd x -> max := pos; Node { t with data = v :: data }
       | Node ({ other } as t) when isVariable x || isOther x ->
           let t' = match other with None -> empty | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
@@ -143,7 +144,8 @@ module Trie = struct
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with map = Ptmap.add x t'' map }
     in
-    ins ~pos:0 t
+    let t = ins ~pos:0 t in
+    t, !max
 
   let rec pp (ppelem : Format.formatter -> 'a -> unit) (fmt : Format.formatter)
       (Node { data; other; listTailVariable; map } : 'a t) : unit =
@@ -203,12 +205,15 @@ let skip_listTailVariable ~pos path : int =
 
 type 'a data = { data : 'a; time : int }
 
-type 'a t = 'a data Trie.t
+type 'a t = 'a data Trie.t * int
 
-let pp pp_a fmt (t : 'a t) : unit = Trie.pp (fun fmt { data } -> pp_a fmt data) fmt t
-let show pp_a (t : 'a t) : string = Trie.show (fun fmt { data } -> pp_a fmt data) t
-let empty = Trie.empty
-let index tree ps data ~time = Trie.add ps { data ; time } tree
+let pp pp_a fmt (t,_ : 'a t) : unit = Trie.pp (fun fmt { data } -> pp_a fmt data) fmt t
+let show pp_a (t,_ : 'a t) : string = Trie.show (fun fmt { data } -> pp_a fmt data) t
+let empty = Trie.empty, 0
+let index (tree,om) ps data ~time =
+  let t, m = Trie.add ps { data ; time } tree in
+  t, (max om m)
+let max_path (_,x) = x
 
 (* the equivalent of skip, but on the index, thus the list of trees
     that are rooted just after the term represented by the tree root
@@ -247,7 +252,7 @@ let cmp_data { time = tx } { time = ty } = ty - tx
 
 let get_all_children v mode = isOther v || (isVariable v && isOutput mode)
 
-let rec retrieve ~pos ~add_result mode path (tree : 'a t) : unit =
+let rec retrieve ~pos ~add_result mode path tree : unit =
   let hd = path.(pos) in
   (* Format.eprintf "%d %a\n%!" pos pp_cell hd; *)
   match tree with
@@ -298,12 +303,12 @@ and on_all_children ~pos ~add_result mode path map =
   map
 
 
-let retrieve ~pos ~add_result path (index : 'a t) =
+let retrieve ~pos ~add_result path index =
   let mode = path.(pos) in
   assert(isInput mode || isOutput mode);
   retrieve ~add_result mode ~pos:(pos+1) path index
   
-let retrieve path index = 
+let retrieve path (index,_) = 
   let r = call (retrieve ~pos:0 path index) in
   List.sort cmp_data r |> List.map (fun x -> x.data)
 

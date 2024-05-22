@@ -2439,9 +2439,9 @@ let hash_goal_arg_list = hash_arg_list true
   node before each argument to be indexed. This special node is used during 
   instance retrival to deal with the input/output mode of the considere argument
 *)
-let arg_to_trie_path ~safe ~depth is_goal args arg_depths arg_modes : Discrimination_tree.path =
+let arg_to_trie_path ~safe ~depth is_goal args arg_depths arg_modes mp : Discrimination_tree.path =
   let open Discrimination_tree in
-  let path = ref @@ Array.make 80 mkPathEnd in
+  let path = ref @@ Array.make (max mp 8) mkPathEnd in
   let pos = ref 0 in
   let rec emit e =
     let len = Array.length !path in
@@ -2570,12 +2570,12 @@ let add1clause ~depth m (predicate,clause) =
          args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
   | IndexWithDiscriminationTree {mode; arg_depths; args_idx; time } ->
-      let path = arg_to_trie_path ~depth ~safe:true false clause.args arg_depths mode in
-      let dt = DT.index args_idx path clause ~time in
+      let path = arg_to_trie_path ~depth ~safe:true false clause.args arg_depths mode (DT.max_path args_idx) in
+      let args_idx = DT.index args_idx path clause ~time in
         Ptmap.add predicate (IndexWithDiscriminationTree {
           mode; arg_depths;
           time = time+1;
-          args_idx = dt
+          args_idx = args_idx
         }) m
   | exception Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
@@ -2707,7 +2707,7 @@ let get_clauses ~depth predicate goal { index = m } =
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
-        let path = arg_to_trie_path ~safe:false ~depth true (trie_goal_args goal) arg_depths mode in
+        let path = arg_to_trie_path ~safe:false ~depth true (trie_goal_args goal) arg_depths mode (Discrimination_tree.max_path args_idx) in
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.pp_path path
           (pplist pp_int ";") arg_depths
