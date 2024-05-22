@@ -51,6 +51,7 @@ let mkOutputMode = encode ~k:kOther ~data:2 ~arity:0
 let mkListTailVariable = encode ~k:kOther ~data:3 ~arity:0
 let mkListHead = encode ~k:kOther ~data:4 ~arity:0
 let mkListEnd = encode ~k:kOther ~data:5 ~arity:0
+let mkPathEnd = encode ~k:kOther ~data:6 ~arity:0
 
 
 let isVariable x = x == mkVariable
@@ -60,6 +61,7 @@ let isOutput x = x == mkOutputMode
 let isListHead x = x == mkListHead
 let isListEnd x = x == mkListEnd
 let isListTailVariable x = x == mkListTailVariable
+let isPathEnd x = x == mkPathEnd
 
 type cell = int
 
@@ -77,6 +79,7 @@ let pp_cell fmt n =
        else if isListTailVariable n then "ListTailVariable"
        else if isListHead n then "ListHead"
        else if isListEnd n then "ListEnd"
+       else if isPathEnd n then "PathEnd"
        else "Other")
   else if k == kPrimitive then Format.fprintf fmt "Primitive"
   else Format.fprintf fmt "%o" k
@@ -124,23 +127,23 @@ module Trie = struct
 
   let empty = Node { data = []; other = None; listTailVariable = None; map = Ptmap.empty }
 
-  let add l v t =
-    let rec ins = function
-      | [], Node ({ data } as t) -> Node { t with data = v :: data }
-      | x :: r, Node ({ other } as t) when isVariable x || isOther x ->
+  let add a v t =
+    let rec ins ~pos = let x = a.(pos) in function
+      | Node ({ data } as t) when isPathEnd x -> Node { t with data = v :: data }
+      | Node ({ other } as t) when isVariable x || isOther x ->
           let t' = match other with None -> empty | Some x -> x in
-          let t'' = ins (r, t') in
+          let t'' = ins ~pos:(pos+1) t' in
           Node { t with other = Some t'' }
-      | x :: r, Node ({ listTailVariable } as t) when isListTailVariable x ->
+      | Node ({ listTailVariable } as t) when isListTailVariable x ->
           let t' = match listTailVariable with None -> empty | Some x -> x in
-          let t'' = ins (r, t') in
+          let t'' = ins ~pos:(pos+1) t' in
           Node { t with listTailVariable = Some t'' }
-      | x :: r, Node ({ map } as t) ->
+      | Node ({ map } as t) ->
           let t' = try Ptmap.find x map with Not_found -> empty in
-          let t'' = ins (r, t') in
+          let t'' = ins ~pos:(pos+1) t' in
           Node { t with map = Ptmap.add x t'' map }
     in
-    ins (l, t)
+    ins ~pos:0 t
 
   let rec pp (ppelem : Format.formatter -> 'a -> unit) (fmt : Format.formatter)
       (Node { data; other; listTailVariable; map } : 'a t) : unit =
@@ -165,46 +168,38 @@ module Trie = struct
     Buffer.contents b
 end
 
-type path = cell list [@@deriving show]
+type path = cell array [@@deriving show]
 
 let compare x y = x - y
 let update_par_count n k =
   if isListHead k then n + 1 else
   if isListEnd k || isListTailVariable k then n - 1 else n
 
-let skip hd tl : path =
-  let rec aux_list acc path =
-    if acc = 0 then path
-    else
-      match path with
-      | [] -> anomaly "DT: skip error"
-      | m :: tl -> aux_list (update_par_count acc m) tl
+let skip ~pos path (*hd tl*) : int =
+  let rec aux_list acc p =
+    if acc = 0 then p
+    else aux_list (update_par_count acc path.(p)) (p+1)
   in
-  let rec aux_const arity path =
-    if arity = 0 then path
+  let rec aux_const arity p =
+    if arity = 0 then p
     else
-      match path with
-      | [] -> assert false
-      | m :: tl ->
-          if isListHead m then
-            let skip_list = aux_list 1 tl in
-            aux_const (arity - 1) skip_list
-          else aux_const (arity - 1 + arity_of m) tl
+      if isListHead path.(p) then
+        let skip_list = aux_list 1 (p+1) in
+        aux_const (arity - 1) skip_list
+      else aux_const (arity - 1 + arity_of path.(p)) (p+1)
   in
-  if isListHead hd then aux_list 1 tl else aux_const (arity_of hd) tl
+  if isListHead path.(pos) then aux_list 1 (pos+1) else aux_const (arity_of path.(pos)) (pos+1)
 
 (**
   Takes a path and skip a listTailVariable:
     we take the node just after the first occurrence of isListEnd or isListTailVariable
     with no corresponding isListHead
 *)
-let skip_listTailVariable hd tl =
-  let rec aux = function
-    | x, 0 -> x
-    | hd :: tl, acc -> aux (tl, update_par_count acc hd)
-    | _, -1 | [], _ -> anomaly ("Skip listTailVariable of invalid path for " ^ show_path (hd :: tl))
-  in
-  aux (tl, update_par_count 1 hd)
+let skip_listTailVariable ~pos path : int =
+  let rec aux i pc =
+    if pc = 0 then i
+    else aux (i+1) (update_par_count pc path.(i)) in
+  aux (pos + 1) (update_par_count 1 path.(pos))
 
 type 'a data = { data : 'a; time : int }
 
@@ -252,30 +247,32 @@ let cmp_data { time = tx } { time = ty } = ty - tx
 
 let get_all_children v mode = isOther v || (isVariable v && isOutput mode)
 
-let rec retrieve ~add_result mode path (tree : 'a t) : unit =
-  match (tree, path) with
-  | _, _ when Trie.empty == tree -> ()
-  | Trie.Node { data }, [] -> List.iter add_result data
-  | _, hd :: tl when isInput hd || isOutput hd ->
+let rec retrieve ~pos ~add_result mode path (tree : 'a t) : unit =
+  let hd = path.(pos) in
+  (* Format.eprintf "%d %a\n%!" pos pp_cell hd; *)
+  match tree with
+  | _ when Trie.empty == tree -> ()
+  | Trie.Node { data } when isPathEnd hd -> List.iter add_result data
+  | _ when isInput hd || isOutput hd ->
      (* next argument, we update the mode *)
-     retrieve ~add_result hd tl tree
-  | _, hd :: tl when isListTailVariable hd ->
+     retrieve ~pos:(pos+1) ~add_result hd path tree
+  | _ when isListTailVariable hd ->
       let sub_tries = skip_to_listEnd tree in
-      List.iter (retrieve ~add_result mode tl) sub_tries
-  | Trie.Node { map; other; listTailVariable }, hd :: tl when get_all_children hd mode ->
-      on_all_children ~add_result mode tl map;
-      Option.iter (retrieve ~add_result mode tl) other;
-      Option.iter (fun a -> retrieve ~add_result mode (skip_listTailVariable hd tl) a) listTailVariable
-  | Trie.Node { other; map; listTailVariable }, hd :: tl ->
+      List.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
+  | Trie.Node { map; other; listTailVariable } when get_all_children hd mode ->
+      on_all_children ~pos:(pos+1) ~add_result mode path map;
+      Option.iter (retrieve ~pos:(pos+1) ~add_result mode path) other;
+      Option.iter (fun a -> retrieve ~pos:(skip_listTailVariable ~pos path) ~add_result mode path a) listTailVariable
+  | Trie.Node { other; map; listTailVariable } ->
       begin
         if isInput mode && isVariable hd then ()
         else
-          try retrieve ~add_result mode tl (Ptmap.find hd map)
+          try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find hd map)
           with Not_found -> ()
       end;
-      Option.iter (fun a -> retrieve ~add_result mode (skip hd tl) a) other;
-      Option.iter (fun a -> retrieve ~add_result mode (skip_listTailVariable hd tl) a) listTailVariable
-and on_all_children ~add_result mode path map =
+      Option.iter (fun a -> retrieve ~pos:(skip ~pos path) ~add_result mode path a) other;
+      Option.iter (fun a -> retrieve ~pos:(skip_listTailVariable ~pos path) ~add_result mode path a) listTailVariable
+and on_all_children ~pos ~add_result mode path map =
   let rec skip_list par_count arity = function
     | Trie.Node { other; map; listTailVariable } as tree ->
         if par_count = 0 then begin
@@ -287,8 +284,8 @@ and on_all_children ~add_result mode path map =
         end
   and skip_functor arity = function
     | Trie.Node { other; map } as tree ->
-        Option.iter (retrieve ~add_result mode path) other;
-        if arity = 0 then retrieve ~add_result mode path tree
+        Option.iter (retrieve ~pos ~add_result mode path) other;
+        if arity = 0 then retrieve ~pos ~add_result mode path tree
         else
           Ptmap.iter (fun k v ->
               if isListHead k then skip_list 1 (arity - 1) v
@@ -301,12 +298,12 @@ and on_all_children ~add_result mode path map =
   map
 
 
-let retrieve ~add_result path (index : 'a t) =
-  match path with
-  | [] -> anomaly "DT: A path should begin with a mode"
-  | mode :: tl -> assert(isInput mode || isOutput mode); retrieve ~add_result mode tl index
+let retrieve ~pos ~add_result path (index : 'a t) =
+  let mode = path.(pos) in
+  assert(isInput mode || isOutput mode);
+  retrieve ~add_result mode ~pos:(pos+1) path index
   
 let retrieve path index = 
-  let r = call (retrieve path index) in
+  let r = call (retrieve ~pos:0 path index) in
   List.sort cmp_data r |> List.map (fun x -> x.data)
 
