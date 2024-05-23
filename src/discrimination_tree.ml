@@ -237,26 +237,17 @@ type 'a data = { data : 'a; time : int }
     In the example it is no needed to index the goal path to depth 100, but rather considering
     the maximal depth of the first argument, which 4 << 100
   *)
-type 'a t = {t: 'a data Trie.t; max_size : int;  max_depths : int list } 
+type 'a t = {t: 'a data Trie.t; max_size : int;  max_depths : int array } 
 
 let pp pp_a fmt { t } : unit = Trie.pp (fun fmt { data } -> pp_a fmt data) fmt t
 let show pp_a { t } : string = Trie.show (fun fmt { data } -> pp_a fmt data) t
 
-let index { t; max_size; max_depths } path max_depths' data ~time =
+let index { t; max_size; max_depths } path data ~time =
   let t, m = Trie.add path { data ; time } t in
-  let max_depths = List.map2 max max_depths' max_depths in
-  {t; max_size = max max_size m; max_depths}
+  { t; max_size = max max_size m; max_depths }
 
 let max_path { max_size } = max_size
 let max_depths { max_depths } = max_depths 
-
-let depths_for_path_creation ~is_goal { max_depths } y =
-  let x = max_depths in
-  let rec for_goal = function
-  | [], y -> y
-  | x::xs, y::ys -> x :: for_goal (xs, ys)
-  | _, [] -> anomaly "[TD]: Invalid length for arg_depth" in
-  if is_goal then if List.length x = List.length y then x else for_goal (x,y) else y
 
 (* the equivalent of skip, but on the index, thus the list of trees
     that are rooted just after the term represented by the tree root
@@ -351,7 +342,7 @@ and on_all_children ~pos ~add_result mode path map =
   map
 
 let empty_dt args_depth : 'a t =
-  let max_depths = List.init (List.length args_depth) (fun _ -> 0) in
+  let max_depths = Array.make (List.length args_depth) 0 in
   {t = Trie.empty_; max_depths; max_size = 0}
 
 let retrieve ~pos ~add_result path index =
