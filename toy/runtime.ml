@@ -245,8 +245,14 @@ end
 type goal = tm
 [@@deriving show]
 
-type rule = int * tm * tm list * tm list
+type constraints = tm list
 [@@deriving show]
+
+type rule = { nvars : int; hd : tm; csts : constraints; hyps : tm list }
+[@@deriving show]
+type solution = rule (* with empty hyps *)
+[@@deriving show]
+
 type rules = rule list
 [@@deriving show]
 
@@ -285,7 +291,9 @@ let rec unif (trail:Heap.t) (sb:tm array) (a:tm) (b:tm) = match a, b with
 type canonical_goal = tm
 [@@deriving show]
 
-let abstract ?from g =
+type varmap = int * int PtrMap.t
+
+let abstract ?(from : varmap option) (g : goal) : varmap * canonical_goal =
   let i, m = match from with None -> 0, PtrMap.empty () | Some(i,m) -> i, m in
   let i = ref i in
   let m = ref m in
@@ -310,7 +318,7 @@ let abstract ?from g =
   let abstract = aux g in
   (!i, !m), abstract
     
-let abstract_constraints from constraints =
+let abstract_constraints (from : varmap) constraints : int * constraints =
   let rec aux from relevant irrelevant changed = function
     | [] -> changed, from, relevant, irrelevant
     | (((_,f1),_),c as x) :: rest ->
@@ -380,14 +388,14 @@ end
 (******************************* run ****************************)
 
 type continuation = (* the AND part, what to do next *)
-  | Done
+  | Done (* Program end *)
   | ExitSLGRoot of { heap : Heap.t; [@printer (fun _ _ -> ())] next : continuation; alts : alt }
   | TableSolution of { entry : canonical_goal; solution : tm }
   | SolveGoals of {
       brothers : goal list;
       cutinfo : alt; [@printer (fun _ _ -> ())] (* in elpi this is kept by passing it to run for the immediate brothers *)
       next : continuation;
-    }
+}
 and alt = (* the OR part, what to do if we fail *)
   | NoAlt
   | UnblockSLGGenerator of { generator : slg_generator; alts : alt } (* a ! did not fire *)
@@ -400,10 +408,15 @@ and alt = (* the OR part, what to do if we fail *)
 }
 and slg_generator =
   | Root of {
-      initial_goal : (int * tm * tm list);
+      initial_goal : initial_goal;
       rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
     }
   | UnexploredBranches of { heap : Heap.t; alts : alt }
+and initial_goal = {
+  nvars : int;
+  cgoal : canonical_goal;
+  ccsts : constraints; (* canonical as well *)
+}
 [@@deriving show]
 
 let rec flatten_frame = function
@@ -442,22 +455,22 @@ let pp_table fmt dt =
 
 let table_reset () = table := DT.empty
 
-let consistent _ _ = true
+let csts_consistent _ _ = true (* consistency of constraint store *)
 
 let rec select (heap : Heap.t) goal = function
   | [] -> None
-  | (stack,hd,csts,conds)::rules ->
-    let stack = Array.init stack (fun _ -> dummy) in
-    [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a %a." pp_tm goal pp_tm hd pp_tm (App("|",csts)) pp_tm (App("&",conds))) ()];
+  | { nvars; hd; csts ; hyps } ::rules ->
+    let stack = Array.init nvars (fun _ -> dummy) in
+    [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a %a." pp_tm goal pp_tm hd pp_tm (App("|",csts)) pp_tm (App("&",hyps))) ()];
     let prev = Heap.checkpoint heap in
     if not (unif heap stack goal hd) then begin
       Heap.backtrack heap prev;
       select heap goal rules
     end else begin
       let csts = List.map (heapify stack) csts in
-      if consistent csts !(heap.constraints) then begin
+      if csts_consistent csts !(heap.constraints) then begin
         List.iter (Heap.add_cs heap) csts;
-        Some (prev, List.map (heapify stack) conds, rules)
+        Some (prev, List.map (heapify stack) hyps, rules)
       end else begin
         Heap.backtrack heap prev;
         select heap goal rules
@@ -475,7 +488,7 @@ type slg_consumer = {
 }
 [@@deriving show]
 
-let init_tree (stack,cg,cs) =
+let init_tree { nvars = stack; cgoal = cg; ccsts = cs } =
   let stack = Array.init stack (fun _ -> dummy) in
   let g = heapify stack cg in
   let cs = List.map (heapify stack) cs in
@@ -484,7 +497,7 @@ let init_tree (stack,cg,cs) =
 type slg_status = {
   consumers : slg_consumer list DT.t;
   generators : slg_generator list;
-  resume_queue : (slg_consumer * rule) list;
+  resume_queue : (slg_consumer * solution) list;
   root : (canonical_goal * (Heap.t * alt) option) option;
 }
 [@@deriving show]
@@ -519,22 +532,22 @@ let push_consumer cgoal (c : slg_consumer) (s : slg_status) =
 let push_generator (g : slg_generator) (s : slg_status) =
   { s with generators = g :: s.generators }
 
-let set_root_if_not_set cgoal heap alts s =
+let set_root_if_not_set cgoal heap alts s : slg_status =
   if s.root = None then { s with root = Some(cgoal, Some(heap, alts)) } else s
 
-let resume_all_consumers cgoal (c : rule) (s : slg_status) =
+let resume_all_consumers cgoal (c : solution) (s : slg_status) =
   try
     let consumers = DT.find cgoal s.consumers in
     {s with resume_queue = List.map (fun x -> x,c) consumers @ s.resume_queue }
   with Not_found -> (* consumers may have been cut away *)
     s
   
-let table_solution cgoal solution constraints s =
+let table_solution cgoal solution constraints (s : slg_status) : slg_status * bool =
   match DT.find cgoal !table with
   | solutions, status ->
-      let abstract_map, solution = abstract solution in
-      let nvars, constraints = abstract_constraints abstract_map constraints in
-      let solution = nvars, solution, constraints, [] in
+      let abstract_map, hd = abstract solution in
+      let nvars, csts = abstract_constraints abstract_map constraints in
+      let solution = { hyps = []; nvars; hd; csts } in
       if List.mem solution solutions then
         s, false
       else begin
@@ -599,8 +612,8 @@ and enter_slg goal rules next alts cutinfo heap sgs =
       let sgs = set_root_if_not_set cgoal heap alts sgs in
       let sgs = push_consumer cgoal { goal; next = ExitSLGRoot { heap; next; alts }; heap; checkpoint = Heap.checkpoint heap } sgs in
       new_table_entry cgoal;
-      let nvars, cconstraints = abstract_constraints abstract_map !(heap.constraints) in
-      let sgs = push_generator (Root { initial_goal = (nvars,cgoal,cconstraints); rules }) sgs in
+      let nvars, ccsts = abstract_constraints abstract_map !(heap.constraints) in
+      let sgs = push_generator (Root { initial_goal = { nvars ; cgoal ; ccsts }; rules }) sgs in
       slg sgs
 
 and slg ({ generators; resume_queue; root; _ } as s) =
@@ -627,7 +640,7 @@ and slg ({ generators; resume_queue; root; _ } as s) =
      | UnexploredBranches { heap; alts } :: generators ->
         let s = { s with generators } in
         next_alt heap alts s
-     | Root { initial_goal = (_, entry,_); rules = []; _ } :: generators ->
+     | Root { initial_goal = { cgoal = entry; _ }; rules = []; _ } :: generators ->
         let s = { s with generators } in
         let s = table_entry_complete entry s in (* TODO: do this more ofted/early *)
         slg s
@@ -647,7 +660,7 @@ and slg ({ generators; resume_queue; root; _ } as s) =
             | ngoal :: brothers ->
                 let next = SolveGoals { brothers; cutinfo = NoAlt; next = TableSolution { entry; solution = goal } } in
                 if has_cut subgoals then
-                  let alts = UnblockSLGGenerator { generator; alts = NoAlt } in
+                  let alts = UnblockSLGGenerator { generator; alts = NoAlt } in (* this is cut away if the subgoal ! is reached *)
                   run { goal = ngoal; next; alts; rules = !all_rules; cutinfo = NoAlt; heap; } s        
                 else
                   let s = push_generator generator s in
@@ -661,7 +674,7 @@ and sld goal rules next (alts : alt) (cutinfo : alt) (heap: Heap.t) (sgs : slg_s
   else 
     match select heap goal rules with
     | None -> next_alt heap alts sgs
-    | Some (_, [], []) -> pop_andl next alts heap sgs
+    (*| Some (_, [], []) -> pop_andl next alts heap sgs*)
     | Some (choice_point, [], rules) ->
         let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point; alts } in
         pop_andl next alts heap sgs
@@ -715,10 +728,14 @@ and next_alt (heap : Heap.t) (alts : alt) (sgs : slg_status) : result =
 
 let run goal rules =
   let heap = Heap.init ~constraints:[] in
-  match goal with
-  | [] -> assert false
-  | [goal] -> run { goal; rules; next = Done; alts = NoAlt; cutinfo = NoAlt; heap } empty_slg_status
-  | goal::gs -> run { goal; rules; next = SolveGoals { brothers = gs; next = Done; cutinfo = NoAlt }; alts = NoAlt; cutinfo = NoAlt; heap } empty_slg_status
+  let slg_status = empty_slg_status in
+  let sld_status =
+    match goal with
+    | [] -> assert false
+    | [goal] -> { goal; rules; next = Done; alts = NoAlt; cutinfo = NoAlt; heap }
+    | goal::gs -> { goal; rules; next = SolveGoals { brothers = gs; next = Done; cutinfo = NoAlt }; alts = NoAlt; cutinfo = NoAlt; heap }
+  in
+  run sld_status slg_status
 
 (***************************** TEST *************************)
 module P = struct
@@ -755,7 +772,7 @@ module P = struct
         let hd = vars hd in
         let hyps = List.map vars hyps in
         let csts = List.map cvars csts in
-        List.length !l, hd, csts, hyps)
+        { nvars = List.length !l ; hd ; csts ; hyps })
     with Parser.Error -> Format.eprintf "cannot parse %s\n%!" s; exit 1
 
   let parse_query s = try
