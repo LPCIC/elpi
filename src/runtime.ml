@@ -2571,11 +2571,14 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
   (** builds the sub-path of a sublist of arguments of the current clause  *)
   and make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl = 
     emit_mode is_goal (match mode_hd with Input -> mkInputMode | _ -> mkOutputMode);
-    current_user_depth := arg_depth_hd;
-    current_min_depth := max_int;
-    (* Format.printf "Current head is %d\n" arg_depth_hd; *)
-    main ~safe ~depth arg_hd arg_depth_hd;
-    update_ar !current_min_depth;
+    begin 
+      if not is_goal then begin
+        current_user_depth := arg_depth_hd;
+        current_min_depth := max_int;
+        main ~safe ~depth arg_hd arg_depth_hd;
+        update_ar !current_min_depth;
+      end else main ~safe ~depth arg_hd args_depths_ar.(!current_ar_pos)
+    end;
     incr current_ar_pos;
     aux ~safe ~depth is_goal arg_tl arg_depth_tl mode_tl
 
@@ -2780,8 +2783,8 @@ let get_clauses ~depth predicate goal { index = m } =
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
-        let (path: Discrimination_tree.path) = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) [] (Discrimination_tree.max_depths args_idx) mode (Discrimination_tree.max_path args_idx) in
-        (* Format.printf "Goal: MaxDepth is : %a \n" (Format.pp_print_list ~pp_sep:(fun fmt _ -> Format.pp_print_string fmt " ") Format.pp_print_int) (Array.to_list (Discrimination_tree.max_depths args_idx)); *)
+        let (path: Discrimination_tree.path) = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths (Discrimination_tree.max_depths args_idx) mode (Discrimination_tree.max_path args_idx) in
+        (* Format.(printf "Goal: MaxDepth is %a\n" (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_int) (Discrimination_tree.max_depths args_idx |> Array.to_list)); *)
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.pp_path path
           (pplist pp_int ";") arg_depths
