@@ -2569,7 +2569,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
           list_to_trie_path ~safe ~depth (path_depth + 1) 0 xs
 
   (** builds the sub-path of a sublist of arguments of the current clause  *)
-  and make_sub_path pos arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl = 
+  and make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl = 
     emit_mode is_goal (match mode_hd with Input -> mkInputMode | _ -> mkOutputMode);
     current_user_depth := arg_depth_hd;
     current_min_depth := max_int;
@@ -2577,20 +2577,20 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
     main ~safe ~depth arg_hd arg_depth_hd;
     update_ar !current_min_depth;
     incr current_ar_pos;
-    aux (pos + 1) ~safe ~depth is_goal arg_tl arg_depth_tl mode_tl
+    aux ~safe ~depth is_goal arg_tl arg_depth_tl mode_tl
 
   (** main function: build the path of the arguments received in entry  *)
-  and aux pos ~safe ~depth is_goal args arg_depths arg_mode =
+  and aux ~safe ~depth is_goal args arg_depths arg_mode =
     match args, arg_depths, arg_mode with 
     | _, [], _ -> ()
     | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, [] ->
-      make_sub_path pos arg_hd arg_tl arg_depth_hd arg_depth_tl Output []
+      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl Output []
     | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, mode_hd :: mode_tl ->
-      make_sub_path pos arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl 
+      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl 
     | _, _ :: _,_ -> anomaly "Invalid Index length" in
   begin
     if args == [] then emit_mode is_goal mkOutputMode
-    else aux 0 ~safe ~depth is_goal args (if is_goal then Array.to_list args_depths_ar else arg_depths) arg_modes
+    else aux ~safe ~depth is_goal args (if is_goal then Array.to_list args_depths_ar else arg_depths) arg_modes
   end;
   !path
 
@@ -2643,6 +2643,7 @@ let add1clause ~depth m (predicate,clause) =
        }) m
   | IndexWithDiscriminationTree {mode; arg_depths; args_idx; time } ->
       let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths (Discrimination_tree.max_depths args_idx) mode (Discrimination_tree.max_path args_idx) in
+      (* Format.(printf "Inst: MaxDepth is %a\n" (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_int) (Discrimination_tree.max_depths args_idx |> Array.to_list)); *)
       let args_idx = Discrimination_tree.index args_idx path clause ~time in
         Ptmap.add predicate (IndexWithDiscriminationTree {
           mode; arg_depths;
@@ -2780,7 +2781,7 @@ let get_clauses ~depth predicate goal { index = m } =
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
         let (path: Discrimination_tree.path) = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) [] (Discrimination_tree.max_depths args_idx) mode (Discrimination_tree.max_path args_idx) in
-        (* Format.printf "Array list is : %a \n" (Format.pp_print_list ~pp_sep:(fun fmt _ -> Format.pp_print_string fmt) Format.pp_print_int) (Array.to_list (Discrimination_tree.max_depths args_idx)); *)
+        (* Format.printf "Goal: MaxDepth is : %a \n" (Format.pp_print_list ~pp_sep:(fun fmt _ -> Format.pp_print_string fmt " ") Format.pp_print_int) (Array.to_list (Discrimination_tree.max_depths args_idx)); *)
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.pp_path path
           (pplist pp_int ";") arg_depths
