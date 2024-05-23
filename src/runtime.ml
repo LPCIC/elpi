@@ -2465,15 +2465,15 @@ let hash_clause_arg_list = hash_arg_list false
 let hash_goal_arg_list = hash_arg_list true
 
 (** 
-  [arg_to_trie_path ~safe ~depth is_goal args arg_depths mode]
+  [arg_to_trie_path ~safe ~depth ~is_goal args arg_depths arg_modes]
   returns the path represetation of a term to be used in indexing with trie.
-  args, args_depths and mode are the lists of respectively the arguments, the 
+  args, args_depths and arg_modes are the lists of respectively the arguments, the 
   depths and the modes of the current term to be indexed.
-  is_goal is used to know if we are encoding the path for instance retriaval or 
+  ~is_goal is used to know if we are encoding the path for instance retriaval or 
   for clause insertion in the trie.
   In the former case, each argument we add a special mkInputMode/mkOutputMode 
   node before each argument to be indexed. This special node is used during 
-  instance retrival to deal with the input/output mode of the considere argument
+  instance retrival to know the mode of the current argument
 *)
 let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths arg_modes mp : Discrimination_tree.path =
   let open Discrimination_tree in
