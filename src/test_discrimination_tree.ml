@@ -2,7 +2,7 @@
 open Elpi.Internal.Discrimination_tree
 let () = assert (k_of (mkConstant ~safe:false ~data:~-17 ~arity:0) == kConstant)
 let () = assert (k_of mkVariable == kVariable)
-let () = assert (k_of mkOther == kOther)
+let () = assert (k_of mkLam == kOther)
 let () =
   let open Elpi.API in
   match RawData.look ~depth:0 (RawOpaqueData.of_int 4) with
@@ -12,7 +12,7 @@ let () =
   
 let () = assert (arity_of (mkConstant ~safe:false ~data:~-17 ~arity:3) == 3)
 let () = assert (arity_of mkVariable == 0)
-let () = assert (arity_of mkOther == 0)
+let () = assert (arity_of mkLam == 0)
 let () = assert (arity_of mkInputMode == 0)
 let () = assert (arity_of mkOutputMode == 0)
 let () = assert (arity_of mkListTailVariable == 0)

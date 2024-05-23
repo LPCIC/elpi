@@ -44,7 +44,7 @@ let mkConstant ~safe ~data ~arity =
 let mkPrimitive c = encode ~k:kPrimitive ~data:(CData.hash c lsl k_bits) ~arity:0
 
 let mkVariable = encode ~k:kVariable ~data:0 ~arity:0
-let mkOther = encode ~k:kOther ~data:0 ~arity:0
+let mkLam = encode ~k:kOther ~data:0 ~arity:0
 
 (* each argument starts with its mode *)
 let mkInputMode = encode ~k:kOther ~data:1 ~arity:0
@@ -56,7 +56,7 @@ let mkPathEnd = encode ~k:kOther ~data:6 ~arity:0
 
 
 let isVariable x = x == mkVariable
-let isOther x = x == mkOther
+let isLam x = x == mkLam
 let isInput x = x == mkInputMode
 let isOutput x = x == mkOutputMode
 let isListHead x = x == mkListHead
@@ -135,7 +135,7 @@ module Trie = struct
     let max = ref 0 in
     let rec ins ~pos = let x = a.(pos) in function
       | Node ({ data } as t) when isPathEnd x -> max := pos; Node { t with data = v :: data }
-      | Node ({ other } as t) when isVariable x || isOther x ->
+      | Node ({ other } as t) when isVariable x || isLam x ->
           let t' = match other with None -> empty_ | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with other = Some t'' }
@@ -284,7 +284,7 @@ let skip_to_listEnd mode t = call (skip_to_listEnd mode t)
 
 let cmp_data { time = tx } { time = ty } = ty - tx
 
-let get_all_children v mode = isOther v || (isVariable v && isOutput mode)
+let get_all_children v mode = isLam v || (isVariable v && isOutput mode)
 
 let rec retrieve ~pos ~add_result mode path tree : unit =
   let hd = path.(pos) in
