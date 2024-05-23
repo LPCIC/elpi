@@ -1,17 +1,20 @@
 open Runtime
 
 let trail_checks () =
-  let t = Heap.init ~constraints:[] in
-  let t0 = Heap.checkpoint t in
+  let h = Heap.init ~constraints:[] in
+  let h0 = Heap.checkpoint h in
   let v = ref dummy in
   let x = Ast.App("x",[]) in
   let y = Ast.App("y",[]) in
-  Heap.assign t v x;
-  let t1 = Heap.checkpoint t in
-  Heap.backtrack t t0;
-  Heap.assign t v y;
-  let _ = Heap.backtrack t t1 in
-  assert(!v = x)
+  Heap.assign h v x;
+  let h1 = Heap.checkpoint h in
+  Heap.backtrack h h0;
+  assert(!v = dummy);
+  Heap.assign h v y;
+  Heap.backtrack h h1;
+  assert(!v = x);
+  Heap.backtrack h h0;
+  assert(!v = dummy)
 
 let () =
   let filters = Trace_ppx_runtime.Runtime.parse_argv (List.tl @@ Array.to_list Sys.argv) in
