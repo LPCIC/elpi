@@ -631,8 +631,8 @@ and slg ({ generators; resume_queue; root; _ } as s) =
   | [] ->
      if (*is_root_complete root ||*) generators = [] then (* Hum, we should do a SCC here, there is not necessarily ONE root *)
        match root with
-       | None -> FAIL
-       | Some (_,None) -> FAIL
+       | None -> FAIL (* if no sld alts, then we always try slg *)
+       | Some (_,None) -> FAIL (* no slg alts and no generators *)
        | Some (e,Some(heap,alts)) -> next_alt heap alts { s with root = Some (e,None) }
      else match generators with
      | [] -> assert false

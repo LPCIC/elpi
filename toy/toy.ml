@@ -144,6 +144,16 @@ let () =
     ",
     "_cut_p(A), _cut_q(B)", 3, ["_cut_p(one), _cut_q(one)"; "_cut_p(one), _cut_q(two)"; "no"]);
 
+    `Check("cut, XSB 5.2.6 - 7",
+    "
+    _cut_p(X) :- _cut_q(X), cut_r, !.
+    cut_r :- cut_s.
+    cut_s :- _cut_q(X).
+    _cut_q(one).
+    _cut_q(two).
+    ",
+    "_cut_p(A), _cut_q(B)", 3, ["_cut_p(one), _cut_q(one)"; "_cut_p(one), _cut_q(two)"; "no"]);
+
   `Check("table loop",
       "
       _t :- _t.
@@ -413,6 +423,12 @@ let () =
     ",
     "c(X, Y), _p(X,A), _p(Y,B)", 2, ["X0 < X1, X0 < X2, X0 < X1, X1 < X3, X1 < X1| c(X0, X1), _p(X0, X2), _p(X1, X3)"; "no"]);
 
+    `Check("dt unif",
+    "
+    _p(a,b) :- q.
+    q.
+    ",
+    "_p(X, b), _p(a, Y), _p(A,B)", 2, ["_p(a, b), _p(a, b), _p(a, b)"; "no"]);
   ] in
 
   let filter allowed = function
