@@ -131,6 +131,8 @@ let cut = App("!",[])
 
 let rid = ref 0 (* trace_ppx, runtime id *)
 
+module Pp = struct
+
 let pp_var, pp_reset =
   let l = ref [] in
   (fun v ->
@@ -157,7 +159,12 @@ let pp_tm = pp
 let ppl s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s) pp
 let ppli s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s) ppi
 
+end
+let pp_tm = Pp.pp
+
 (******************************* backtrack ****************************)
+
+module Heap = struct
 
 type history_item =
   | Assign of tm ref * history
@@ -168,7 +175,7 @@ type history_item =
 and history = history_item ref
 [@@deriving show]
 
-type heap = {
+type t = {
   log : history ref; (* tracks the tip *)
   constraints : tm list ref;
 }
@@ -224,14 +231,16 @@ let backtrack log cstore last_choice_point =
       log := last_choice_point;
       last_choice_point := Top)
 
-let backtrack (heap : heap) (point : history) =
+let backtrack (heap : t) (point : history) =
   backtrack heap.log heap.constraints point
 
-let checkpoint (heap : heap) : history = !(heap.log)
+let checkpoint (heap : t) : history = !(heap.log)
 
-let init_heap constraints =
+let init ~constraints =
   let top = ref Top in
   { log = ref top; constraints = ref constraints }
+
+end
 
 type goal = tm
 [@@deriving show]
@@ -254,7 +263,7 @@ let rec heapify s = function
   | Arg i when s.(i) != dummy -> s.(i)
   | Arg i -> let t = Var (ref dummy) in s.(i) <- t; t
 
-let rec unif (trail:heap) (sb:tm array) (a:tm) (b:tm) = match a, b with
+let rec unif (trail:Heap.t) (sb:tm array) (a:tm) (b:tm) = match a, b with
   | Arg _, _ -> assert false
 
   (* deref *)
@@ -263,8 +272,8 @@ let rec unif (trail:heap) (sb:tm array) (a:tm) (b:tm) = match a, b with
   | _, Arg i when sb.(i) != dummy -> unif trail sb a sb.(i)
 
   (* assign *)
-  | Var r, _ -> assign trail r (heapify sb b); true
-  | _, Var r -> assign trail r a; true (* missing OC *)
+  | Var r, _ -> Heap.assign trail r (heapify sb b); true
+  | _, Var r -> Heap.assign trail r a; true (* missing OC *)
   | _, Arg i -> sb.(i) <- a; true
 
   | App(c1,args1), App(c2,args2) ->
@@ -372,7 +381,7 @@ end
 
 type continuation = (* the AND part, what to do next *)
   | Done
-  | ExitSLGRoot of { heap : heap; [@printer (fun _ _ -> ())] next : continuation; alts : alt }
+  | ExitSLGRoot of { heap : Heap.t; [@printer (fun _ _ -> ())] next : continuation; alts : alt }
   | TableSolution of { entry : canonical_goal; solution : tm }
   | SolveGoals of {
       brothers : goal list;
@@ -383,7 +392,7 @@ and alt = (* the OR part, what to do if we fail *)
   | NoAlt
   | UnblockSLGGenerator of { generator : slg_generator; alts : alt } (* a ! did not fire *)
   | ExploreAnotherSLDPath of {
-      choice_point : history; [@printer (fun _ _ -> ())]
+      choice_point : Heap.history; [@printer (fun _ _ -> ())]
       goal: goal;
       rules : rule list; [@printer (fun _ _ -> ())]
       next : continuation; [@printer (fun _ _ -> ())]
@@ -394,7 +403,7 @@ and slg_generator =
       initial_goal : (int * tm * tm list);
       rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
     }
-  | UnexploredBranches of { heap : heap; alts : alt }
+  | UnexploredBranches of { heap : Heap.t; alts : alt }
 [@@deriving show]
 
 let rec flatten_frame = function
@@ -435,22 +444,22 @@ let table_reset () = table := DT.empty
 
 let consistent _ _ = true
 
-let rec select (heap : heap) goal = function
+let rec select (heap : Heap.t) goal = function
   | [] -> None
   | (stack,hd,csts,conds)::rules ->
     let stack = Array.init stack (fun _ -> dummy) in
     [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a %a." pp_tm goal pp_tm hd pp_tm (App("|",csts)) pp_tm (App("&",conds))) ()];
-    let prev = checkpoint heap in
+    let prev = Heap.checkpoint heap in
     if not (unif heap stack goal hd) then begin
-      backtrack heap prev;
+      Heap.backtrack heap prev;
       select heap goal rules
     end else begin
       let csts = List.map (heapify stack) csts in
       if consistent csts !(heap.constraints) then begin
-        List.iter (add_cs heap) csts;
+        List.iter (Heap.add_cs heap) csts;
         Some (prev, List.map (heapify stack) conds, rules)
       end else begin
-        backtrack heap prev;
+        Heap.backtrack heap prev;
         select heap goal rules
       end
     end
@@ -461,8 +470,8 @@ let new_table_entry cgoal =
 type slg_consumer = {
   goal : goal;
   next : continuation;
-  heap : heap;
-  checkpoint : history;
+  heap : Heap.t;
+  checkpoint : Heap.history;
 }
 [@@deriving show]
 
@@ -470,13 +479,13 @@ let init_tree (stack,cg,cs) =
   let stack = Array.init stack (fun _ -> dummy) in
   let g = heapify stack cg in
   let cs = List.map (heapify stack) cs in
-  cg, g, init_heap cs
+  cg, g, Heap.init ~constraints:cs
 
 type slg_status = {
   consumers : slg_consumer list DT.t;
   generators : slg_generator list;
   resume_queue : (slg_consumer * rule) list;
-  root : (canonical_goal * (heap * alt) option) option;
+  root : (canonical_goal * (Heap.t * alt) option) option;
 }
 [@@deriving show]
 
@@ -490,7 +499,7 @@ let empty_slg_status = {
 type sld_status = {
   goal : goal;
   next : continuation;
-  heap : heap;
+  heap : Heap.t;
   cutinfo : alt;
   rules : rule list;
   alts : alt;
@@ -559,7 +568,7 @@ let is_root_complete root_entry =
 
 let has_cut = List.mem cut
 
-type result = TIMEOUT | FAIL | OK of tm list * heap * alt * slg_status
+type result = TIMEOUT | FAIL | OK of tm list * Heap.t * alt * slg_status
 
 (* called on a goal as we see it for the first time *)
 let rec run { goal; rules; next; alts; cutinfo; heap } (sgs : slg_status) : result =
@@ -576,19 +585,19 @@ and enter_slg goal rules next alts cutinfo heap sgs =
   match DT.find cgoal !table with
   | [], Incomplete ->
       [%spy "slg:suspend" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next; heap; checkpoint = checkpoint heap } sgs in
+      let sgs = push_consumer cgoal { goal; next; heap; checkpoint = Heap.checkpoint heap } sgs in
       slg sgs
   | answers, Complete -> (* TODO: Trie -> DT(find_unifiable) *)
       [%spy "slg:complete->sld" ~rid pp_tm cgoal];
       sld goal answers next alts cutinfo heap sgs
   | answers, Incomplete ->
       [%spy "slg:incomplete->sld+slg" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next; heap; checkpoint = checkpoint heap } sgs in
+      let sgs = push_consumer cgoal { goal; next; heap; checkpoint = Heap.checkpoint heap } sgs in
       sld goal answers next alts cutinfo heap sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
       let sgs = set_root_if_not_set cgoal heap alts sgs in
-      let sgs = push_consumer cgoal { goal; next = ExitSLGRoot { heap; next; alts }; heap; checkpoint = checkpoint heap } sgs in
+      let sgs = push_consumer cgoal { goal; next = ExitSLGRoot { heap; next; alts }; heap; checkpoint = Heap.checkpoint heap } sgs in
       new_table_entry cgoal;
       let nvars, cconstraints = abstract_constraints abstract_map !(heap.constraints) in
       let sgs = push_generator (Root { initial_goal = (nvars,cgoal,cconstraints); rules }) sgs in
@@ -600,7 +609,7 @@ and slg ({ generators; resume_queue; root; _ } as s) =
   begin match resume_queue with
   | ({ goal; next; heap; checkpoint }, solution) :: resume_queue ->
       let s = { s with resume_queue } in
-      backtrack heap checkpoint;
+      Heap.backtrack heap checkpoint;
       begin match select heap goal [solution] with
       | None -> slg s
       | Some(_,[],[]) -> pop_andl next NoAlt heap s (* #1 *)
@@ -645,7 +654,7 @@ and slg ({ generators; resume_queue; root; _ } as s) =
                   run { goal = ngoal; next; alts = NoAlt; rules = !all_rules; cutinfo = NoAlt; heap } s        
 end]
 
-and sld goal rules next (alts : alt) (cutinfo : alt) (heap:heap) (sgs : slg_status) =
+and sld goal rules next (alts : alt) (cutinfo : alt) (heap: Heap.t) (sgs : slg_status) =
   if !gas = 0 then TIMEOUT else let () = decr gas in
   if goal = cut then
     pop_andl_maybe_tabled_tail_cut next cutinfo heap sgs
@@ -673,7 +682,7 @@ and pop_andl_maybe_tabled_tail_cut next alts heap sgs =
         next_alt heap alts sgs
 | x -> pop_andl x alts heap sgs
 
-and pop_andl (next : continuation) (alts : alt) (heap : heap) (sgs : slg_status) =
+and pop_andl (next : continuation) (alts : alt) (heap : Heap.t) (sgs : slg_status) =
   [%trace "pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_continuation next pp_alt alts) begin
   match next with
   | Done -> OK (!(heap.constraints),heap,alts,sgs)
@@ -692,7 +701,7 @@ and pop_andl (next : continuation) (alts : alt) (heap : heap) (sgs : slg_status)
             alts; cutinfo; heap; } sgs
   end]
 
-and next_alt (heap : heap) (alts : alt) (sgs : slg_status) : result =
+and next_alt (heap : Heap.t) (alts : alt) (sgs : slg_status) : result =
   [%trace "next_alt" ~rid ("@[<hov 2>%a]@\n" pp_alt alts) begin
   match alts with
   | NoAlt -> slg sgs
@@ -700,12 +709,12 @@ and next_alt (heap : heap) (alts : alt) (sgs : slg_status) : result =
       let sgs = push_generator generator sgs in
       next_alt heap alts sgs
   | ExploreAnotherSLDPath { goal; rules; next; choice_point ; alts } ->
-      backtrack heap choice_point;
-      sld goal rules next (alts : alt) (NoAlt : alt) (heap:heap) (sgs : slg_status)
+      Heap.backtrack heap choice_point;
+      sld goal rules next (alts : alt) (NoAlt : alt) (heap: Heap.t) (sgs : slg_status)
   end]
 
 let run goal rules =
-  let heap = init_heap [] in
+  let heap = Heap.init ~constraints:[] in
   match goal with
   | [] -> assert false
   | [goal] -> run { goal; rules; next = Done; alts = NoAlt; cutinfo = NoAlt; heap } empty_slg_status
@@ -766,14 +775,14 @@ let main query steps n program =
   let query = P.parse_query query in
   all_rules := program;
   gas := steps;
-  pp_reset ();
+  Pp.pp_reset ();
   table_reset ();
   let rec all n = function
   | FAIL -> [Format.asprintf "no"]
   | TIMEOUT -> [Format.asprintf "steps"]
   | OK (csts,heap,alts,sgs) ->
-      let g = Format.asprintf "%a" (ppl ", ") query in
-      let c = if csts = [] then "" else Format.asprintf "%a| " (ppli ", ") csts in
+      let g = Format.asprintf "%a" (Pp.ppl ", ") query in
+      let c = if csts = [] then "" else Format.asprintf "%a| " (Pp.ppli ", ") csts in
       let s = c^g in
       if n = 1 then [s]
       else s :: all (n-1) (next_alt heap alts sgs)
