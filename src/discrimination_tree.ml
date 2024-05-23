@@ -126,22 +126,25 @@ module Trie = struct
     map : 'a t Ptmap.t;              (* for Constant, Primitive, ListHead, ListEnd *)
   }
 
-  let empty = Node { data = []; other = None; listTailVariable = None; map = Ptmap.empty }
+  let empty_ = Node { data = []; other = None; listTailVariable = None; map = Ptmap.empty }
+
+  let is_empty (Node { data; other; listTailVariable; map }) = 
+    data = [] && other = None && listTailVariable = None && map = Ptmap.empty
 
   let add a v t =
     let max = ref 0 in
     let rec ins ~pos = let x = a.(pos) in function
       | Node ({ data } as t) when isPathEnd x -> max := pos; Node { t with data = v :: data }
       | Node ({ other } as t) when isVariable x || isOther x ->
-          let t' = match other with None -> empty | Some x -> x in
+          let t' = match other with None -> empty_ | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with other = Some t'' }
       | Node ({ listTailVariable } as t) when isListTailVariable x ->
-          let t' = match listTailVariable with None -> empty | Some x -> x in
+          let t' = match listTailVariable with None -> empty_ | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with listTailVariable = Some t'' }
       | Node ({ map } as t) ->
-          let t' = try Ptmap.find x map with Not_found -> empty in
+          let t' = try Ptmap.find x map with Not_found -> empty_ in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with map = Ptmap.add x t'' map }
     in
@@ -206,15 +209,52 @@ let skip_listTailVariable ~pos path : int =
 
 type 'a data = { data : 'a; time : int }
 
-type 'a t = 'a data Trie.t * int
+(* A discrimination tree is a record {t; max_size; max_depths } where
+   - t is a Trie for instance retrival 
+   - max_size is a int representing the max size of a path in the Trie
+   - max_depths is a int list representing the max depth of the each indexed arguments
 
-let pp pp_a fmt (t,_ : 'a t) : unit = Trie.pp (fun fmt { data } -> pp_a fmt data) fmt t
-let show pp_a (t,_ : 'a t) : string = Trie.show (fun fmt { data } -> pp_a fmt data) t
-let empty = Trie.empty, 0
-let index (tree,om) ps data ~time =
-  let t, m = Trie.add ps { data ; time } tree in
-  t, (max om m)
-let max_path (_,x) = x
+  Note : 
+  - max_size is used as an heuristic for the size of path when a new one is created
+    (we use arrays, therefore we have to allocate them)
+  - During the construction of a goal's path using max_depths, the goal's argument can
+    be larger than that of the corresponding instances. If the indexing depth
+    for an argument i is set to X by the user but the maximal depth of i in the
+    database is Y (where Y is much less than X it is inefficient to build a path
+    of height X for the goal. Instead, constructing a path of height Y is more
+    efficient and can lead to performance gains. As an example, consider the following:
+    ```elpi
+      kind term type.
+      type app list term -> term.
+      type con string -> term.
+      :index (100)
+      pred p i:term.
+      p (app[con "f", app[X]]).
+
+      main :-
+        p (app [con "f", app[app[app[...app[con "g"]]]]])
+    ```
+    In the example it is no needed to index the goal path to depth 100, but rather considering
+    the maximal depth of the first argument, which 4 << 100
+  *)
+type 'a t = {t: 'a data Trie.t; max_size : int;  max_depths : int list } 
+
+let pp pp_a fmt { t } : unit = Trie.pp (fun fmt { data } -> pp_a fmt data) fmt t
+let show pp_a { t } : string = Trie.show (fun fmt { data } -> pp_a fmt data) t
+
+let index ({ t; max_size } as dt) ps data ~time =
+  let t, m = Trie.add ps { data ; time } t in
+  {dt with t; max_size = max max_size m}
+
+let max_path { max_size } = max_size
+
+let depths_for_path_creation ~is_goal { max_depths } y =
+  let x = max_depths in
+  let rec for_goal = function
+  | [], y -> y
+  | x::xs, y::ys -> x :: for_goal (xs, ys)
+  | _, [] -> anomaly "[TD]: Invalid length for arg_depth" in
+  if is_goal then if List.length x = List.length y then x else for_goal (x,y) else y
 
 (* the equivalent of skip, but on the index, thus the list of trees
     that are rooted just after the term represented by the tree root
@@ -257,7 +297,7 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
   let hd = path.(pos) in
   let Trie.Node {data; map; other; listTailVariable} = tree in
   (* Format.eprintf "%d %a\n%!" pos pp_cell hd; *)
-  if tree == Trie.empty then ()
+  if Trie.is_empty tree then ()
   else if isPathEnd hd then List.iter add_result data
   else if isInput hd || isOutput hd then 
     (* next argument, we update the mode *)
@@ -308,13 +348,16 @@ and on_all_children ~pos ~add_result mode path map =
     else skip_functor (arity_of k) v)
   map
 
+let empty_dt args_depth : 'a t =
+  let max_depths = List.init (List.length args_depth) (fun _ -> 0) in
+  {t = Trie.empty_; max_depths; max_size = 0}
 
 let retrieve ~pos ~add_result path index =
   let mode = path.(pos) in
   assert(isInput mode || isOutput mode);
   retrieve ~add_result mode ~pos:(pos+1) path index
   
-let retrieve path (index,_) = 
-  let r = call (retrieve ~pos:0 path index) in
+let retrieve path { t } = 
+  let r = call (retrieve ~pos:0 path t) in
   List.sort cmp_data r |> List.map (fun x -> x.data)
 

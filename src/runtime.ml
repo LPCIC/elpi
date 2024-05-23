@@ -2623,8 +2623,10 @@ let add1clause ~depth m (predicate,clause) =
          args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
   | IndexWithDiscriminationTree {mode; arg_depths; args_idx; time } ->
-      let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths mode (DT.max_path args_idx) in
-      let args_idx = DT.index args_idx path clause ~time in
+      (* let arg_depths_for_path = let x_ = DT.arg_depth args_idx in arg_depths in  *)
+      let arg_depths_for_path = arg_depths in
+      let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths_for_path mode (Discrimination_tree.max_path args_idx) in
+      let args_idx = Discrimination_tree.index args_idx path clause ~time in
         Ptmap.add predicate (IndexWithDiscriminationTree {
           mode; arg_depths;
           time = time+1;
@@ -2683,7 +2685,7 @@ let make_index ~depth ~indexing ~clauses_rev:p =
         }
       | DiscriminationTree arg_depths -> IndexWithDiscriminationTree {
           arg_depths;  mode; 
-          args_idx = DT.empty;
+          args_idx = Discrimination_tree.empty_dt arg_depths;
           time = min_int;
         }
     end m) indexing Ptmap.empty in
@@ -2765,7 +2767,7 @@ let get_clauses ~depth predicate goal { index = m } =
           Discrimination_tree.pp_path path
           (pplist pp_int ";") arg_depths
           (*Discrimination_tree.(pp (fun fmt x -> pp_string fmt "+")) args_idx*)];
-        let candidates = DT.retrieve path args_idx in 
+        let candidates = Discrimination_tree.retrieve path args_idx in 
           [%spy "dev:disc-tree:candidates" ~rid 
             pp_int (List.length candidates)];
         candidates

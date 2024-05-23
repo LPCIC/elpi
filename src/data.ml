@@ -133,8 +133,6 @@ mode = arg_mode list
 let to_mode = function true -> Input | false -> Output
 
 
-module DT = Discrimination_tree
-
 type stuck_goal = {
   mutable blockers : blockers;
   kind : unification_def stuck_goal_kind;
@@ -172,7 +170,7 @@ and second_lvl_idx =
     mode : mode;
     arg_depths : int list;   (* the list of args on which the trie is built *)
     time : int;         (* time is used to recover the total order *)
-    args_idx : clause DT.t; 
+    args_idx : clause Discrimination_tree.t; 
 }
 [@@deriving show]
 
