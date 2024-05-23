@@ -41,16 +41,17 @@ let mkConstant ~safe ~data ~arity =
     anomaly (Printf.sprintf "Indexing at depth > 1 is unsupported since constant %d/%d is too large or wide" data arity);
   rc
 
+let mkPrimitive c = encode ~k:kPrimitive ~data:(CData.hash c lsl k_bits) ~arity:0
+
 let mkVariable = encode ~k:kVariable ~data:0 ~arity:0
 let mkOther = encode ~k:kOther ~data:0 ~arity:0
-let mkPrimitive c = encode ~k:kPrimitive ~data:(CData.hash c lsl k_bits) ~arity:0
 
 (* each argument starts with its mode *)
 let mkInputMode = encode ~k:kOther ~data:1 ~arity:0
 let mkOutputMode = encode ~k:kOther ~data:2 ~arity:0
 let mkListTailVariable = encode ~k:kOther ~data:3 ~arity:0
 let mkListHead = encode ~k:kOther ~data:4 ~arity:0
-let mkListEnd = encode ~k:kOther ~data:5 ~arity:0
+let mkListEnd = encode ~k:kOther ~data:5 ~arity:0 
 let mkPathEnd = encode ~k:kOther ~data:6 ~arity:0
 
 
@@ -247,36 +248,40 @@ let skip_to_listEnd ~add_result (Trie.Node { other; map; listTailVariable }) =
   (some_to_list listTailVariable)
 let skip_to_listEnd t = call (skip_to_listEnd t)
 
-(* NOTE: l1 and l2 are supposed to be sorted *)
 let cmp_data { time = tx } { time = ty } = ty - tx
 
 let get_all_children v mode = isOther v || (isVariable v && isOutput mode)
 
 let rec retrieve ~pos ~add_result mode path tree : unit =
   let hd = path.(pos) in
+  let Trie.Node {data; map; other; listTailVariable} = tree in
   (* Format.eprintf "%d %a\n%!" pos pp_cell hd; *)
-  match tree with
-  | _ when Trie.empty == tree -> ()
-  | Trie.Node { data } when isPathEnd hd -> List.iter add_result data
-  | _ when isInput hd || isOutput hd ->
-     (* next argument, we update the mode *)
+  if tree == Trie.empty then ()
+  else if isPathEnd hd then List.iter add_result data
+  else if isInput hd || isOutput hd then 
+    (* next argument, we update the mode *)
      retrieve ~pos:(pos+1) ~add_result hd path tree
-  | _ when isListTailVariable hd ->
-      let sub_tries = skip_to_listEnd tree in
-      List.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
-  | Trie.Node { map; other; listTailVariable } when get_all_children hd mode ->
-      on_all_children ~pos:(pos+1) ~add_result mode path map;
-      Option.iter (retrieve ~pos:(pos+1) ~add_result mode path) other;
-      Option.iter (fun a -> retrieve ~pos:(skip_listTailVariable ~pos path) ~add_result mode path a) listTailVariable
-  | Trie.Node { other; map; listTailVariable } ->
-      begin
-        if isInput mode && isVariable hd then ()
-        else
+  else if isListTailVariable hd then
+    let sub_tries = skip_to_listEnd tree in
+    List.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
+  else begin
+    (* Here the constructor can be Constant, Primitive, Variable, Other, ListHead, ListEnd *)
+    begin
+      if get_all_children hd mode then 
+        (* we take all the children in the map *)
+        on_all_children ~pos:(pos+1) ~add_result mode path map
+      else if isInput mode && isVariable hd then () (* no search has to be done in the map *)
+      else
+          (* we have a Constant, Primitive, ListHead or ListHead and look for the key in the map *)
           try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find hd map)
           with Not_found -> ()
-      end;
-      Option.iter (fun a -> retrieve ~pos:(skip ~pos path) ~add_result mode path a) other;
-      Option.iter (fun a -> retrieve ~pos:(skip_listTailVariable ~pos path) ~add_result mode path a) listTailVariable
+    end;
+    (* moreover, we have to take into account other and listTailVariable since they represent UVar in the tree,
+       therefore they can be unified with the hd *)
+    Option.iter (fun a -> retrieve ~pos:(skip ~pos path) ~add_result mode path a) other;
+    Option.iter (fun a -> retrieve ~pos:(skip_listTailVariable ~pos path) ~add_result mode path a) listTailVariable
+  end
+
 and on_all_children ~pos ~add_result mode path map =
   let rec skip_list par_count arity = function
     | Trie.Node { other; map; listTailVariable } as tree ->
