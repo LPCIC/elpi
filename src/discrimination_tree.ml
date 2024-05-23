@@ -224,7 +224,7 @@ let call f =
   let add_result x = res := x :: !res in
   f ~add_result; !res
   
-let skip_to_listEnd ~add_result (Trie.Node { other; map; listTailVariable }) =
+let skip_to_listEnd ~add_result mode (Trie.Node { other; map; listTailVariable }) =
   let rec get_from_list n = function
     | Trie.Node { other = None; map; listTailVariable } as tree ->
         if n = 0 then add_result tree
@@ -244,9 +244,10 @@ let skip_to_listEnd ~add_result (Trie.Node { other; map; listTailVariable }) =
   in
   let some_to_list = function Some x -> add_result x | None -> () in
   (match other with None -> () | Some a -> get_from_list 1 a);
-  Ptmap.iter (fun k v -> get_from_list (update_par_count 1 k) v) map;
-  (some_to_list listTailVariable)
-let skip_to_listEnd t = call (skip_to_listEnd t)
+  if isOutput mode then Ptmap.iter (fun k v -> get_from_list (update_par_count 1 k) v) map;
+  some_to_list listTailVariable
+
+let skip_to_listEnd mode t = call (skip_to_listEnd mode t)
 
 let cmp_data { time = tx } { time = ty } = ty - tx
 
@@ -262,7 +263,7 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
     (* next argument, we update the mode *)
      retrieve ~pos:(pos+1) ~add_result hd path tree
   else if isListTailVariable hd then
-    let sub_tries = skip_to_listEnd tree in
+    let sub_tries = skip_to_listEnd mode tree in
     List.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
   else begin
     (* Here the constructor can be Constant, Primitive, Variable, Other, ListHead, ListEnd *)
