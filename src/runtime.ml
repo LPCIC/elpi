@@ -2494,13 +2494,30 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths arg_modes mp : Discrim
     match deref_head ~depth t with
     | Nil -> emit mkListEnd
     | Cons (a, b) ->
+        (* heuristic: we limit the size of the list to at most 30 *)
+        (*            this aims to control the width of the path, *)
+        (*            or equivalently the number of children of   *)
+        (*            a specific node.                            *)
+        (* for example, the term `app[1,...,100]` with depth 2,   *)
+        (*              has the node `app` with arity `1` as first*)
+        (*              cell, then come the elment of the list    *)
+        (*              up to the 30^th elemebt                   *)
         if h > 30 then emit mkListEnd
         else
           begin
             main ~safe ~depth a path_depth;
             list_to_trie_path ~depth ~safe ~h:(h+1) path_depth (len+1) b
           end
-    | a -> emit mkListTailVariable
+    
+    (* These cases can come from terms like `[_ | _]`, `[_ | A]` ...  *)
+    | UVar _ | AppUVar _ | Arg _ | AppArg _ | Discard -> emit mkListTailVariable
+
+    (* One could write the following: 
+      type f list int.
+      p [1,2,3,4 | f]. *)
+    | App _ | Const _ -> emit mkListTailVariable
+
+    | Builtin _ | CData _ | Lam _ -> type_error (Format.asprintf "[DT]: not a list: %a" (Pp.ppterm depth [] ~argsdepth:0 Data.empty_env) (deref_head ~depth t));
   and emit_mode is_goal mode = if is_goal then emit mode
   (** gives the path representation of a list of sub-terms *)
   and arg_to_trie_path_aux ~safe ~depth t_list path_depth : unit = 
