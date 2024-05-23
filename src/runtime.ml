@@ -2490,9 +2490,21 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
       path := newpath;
       emit e
     end in
-  let rec list_to_trie_path ~safe ~depth ?(h=0) path_depth (len: int) (t: term) : int =
+  
+  let current_ar_pos = ref 0 in
+  let current_user_depth = ref 0 in
+  let current_min_depth = ref max_int in
+  let update_current_min_depth d = if not is_goal then current_min_depth := min !current_min_depth d in
+
+  let update_ar depth =
+    (* Format.printf "Current remaining depth is %d\n" depth; *)
+    if not is_goal then 
+      args_depths_ar.(!current_ar_pos) <- max args_depths_ar.(!current_ar_pos) (!current_user_depth - depth) 
+  in
+
+  let rec list_to_trie_path ~safe ~depth ?(h=0) path_depth (len: int) (t: term) : unit =
     match deref_head ~depth t with
-    | Nil -> emit mkListEnd; path_depth
+    | Nil -> emit mkListEnd; update_current_min_depth path_depth
     | Cons (a, b) ->
         (* heuristic: we limit the size of the list to at most 30 *)
         (*            this aims to control the width of the path, *)
@@ -2502,69 +2514,71 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
         (*              has the node `app` with arity `1` as first*)
         (*              cell, then come the elment of the list    *)
         (*              up to the 30^th elemebt                   *)
-        if h > 30 then (emit mkListEnd; path_depth)
+        if h > 30 then (emit mkListEnd; update_current_min_depth path_depth)
         else
-          let depth1 = main ~safe ~depth a path_depth in
-          let depth2 = list_to_trie_path ~depth ~safe ~h:(h+1) path_depth (len+1) b in
-          min depth1 depth2
+          main ~safe ~depth a path_depth;
+          list_to_trie_path ~depth ~safe ~h:(h+1) path_depth (len+1) b
     
     (* These cases can come from terms like `[_ | _]`, `[_ | A]` ...  *)
-    | UVar _ | AppUVar _ | Arg _ | AppArg _ | Discard -> emit mkListTailVariable; path_depth
+    | UVar _ | AppUVar _ | Arg _ | AppArg _ | Discard -> emit mkListTailVariable; update_current_min_depth path_depth
 
     (* One could write the following: 
       type f list int.
       p [1,2,3,4 | f]. *)
-    | App _ | Const _ -> emit mkListTailVariable; path_depth
+    | App _ | Const _ -> emit mkListTailVariable; update_current_min_depth path_depth
 
     | Builtin _ | CData _ | Lam _ -> 
         type_error (Format.asprintf "[DT]: not a list: %a" (Pp.ppterm depth [] ~argsdepth:0 Data.empty_env) (deref_head ~depth t))
 
   and emit_mode is_goal mode = if is_goal then emit mode
   (** gives the path representation of a list of sub-terms *)
-  and arg_to_trie_path_aux ~safe ~depth t_list path_depth : int = 
-    if path_depth = 0 then path_depth
+  and arg_to_trie_path_aux ~safe ~depth t_list path_depth : unit = 
+    if path_depth = 0 then ()
     else 
       match t_list with 
-      | [] -> path_depth
+      | [] -> update_current_min_depth path_depth
       | hd :: tl -> 
-          let depth1 = main ~safe ~depth hd path_depth in
-          let depth2 = arg_to_trie_path_aux ~safe ~depth tl path_depth in
-          min depth1 depth2
+          main ~safe ~depth hd path_depth;
+          arg_to_trie_path_aux ~safe ~depth tl path_depth
   (** gives the path representation of a term *)
-  and main ~safe ~depth t path_depth : int =
-    if path_depth = 0 then 0
+  and main ~safe ~depth t path_depth : unit =
+    if path_depth = 0 then ()
     else
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
-      | Const k when k == Global_symbols.uvarc -> emit mkVariable; path_depth
-      | Const k when safe -> emit @@ mkConstant ~safe ~data:k ~arity:0; path_depth
-      | Const k -> emit @@ mkConstant ~safe ~data:k ~arity:0; path_depth
-      | CData d -> emit @@ mkPrimitive d; path_depth
-      | App (k,_,_) when k == Global_symbols.uvarc -> emit @@ mkVariable; path_depth
+      | Const k when k == Global_symbols.uvarc -> emit mkVariable; update_current_min_depth path_depth
+      | Const k when safe -> emit @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
+      | Const k -> emit @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
+      | CData d -> emit @@ mkPrimitive d; update_current_min_depth path_depth
+      | App (k,_,_) when k == Global_symbols.uvarc -> emit @@ mkVariable; update_current_min_depth path_depth
       | App (k,a,_) when k == Global_symbols.asc -> main ~safe ~depth a (path_depth+1)
-      | Lam _ -> emit @@ mkOther; path_depth (* loose indexing to enable eta *)
-      | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> emit @@ mkVariable; path_depth
+      | Lam _ -> emit @@ mkOther; update_current_min_depth path_depth (* loose indexing to enable eta *)
+      | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> emit @@ mkVariable; update_current_min_depth path_depth
       | Builtin (k,tl) ->
         emit @@ mkConstant ~safe ~data:k ~arity:(if path_depth = 0 then 0 else List.length tl);
         arg_to_trie_path_aux ~safe ~depth tl path_depth
       | App (k, x, xs) -> 
         let arg_length = if path_depth = 0 then 0 else List.length xs + 1 in
         emit @@ mkConstant ~safe ~data:k ~arity:arg_length;
-        let depth1 = main ~safe ~depth x path_depth in
-        let depth2 = arg_to_trie_path_aux ~safe ~depth xs path_depth in
-        min depth1 depth2
-      | Nil -> emit mkListHead; emit mkListEnd; path_depth
+        main ~safe ~depth x path_depth;
+        arg_to_trie_path_aux ~safe ~depth xs path_depth
+      | Nil -> emit mkListHead; emit mkListEnd; update_current_min_depth path_depth
       | Cons (x,xs) ->
           emit mkListHead;
-          let depth1 = main ~safe ~depth x (path_depth + 1) in
-          let depth2 = list_to_trie_path ~safe ~depth (path_depth + 1) 0 xs in
-          min depth1 depth2
+          main ~safe ~depth x (path_depth + 1);
+          list_to_trie_path ~safe ~depth (path_depth + 1) 0 xs
+
   (** builds the sub-path of a sublist of arguments of the current clause  *)
   and make_sub_path pos arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl = 
     emit_mode is_goal (match mode_hd with Input -> mkInputMode | _ -> mkOutputMode);
-    let used_depth = arg_depth_hd - main ~safe ~depth arg_hd arg_depth_hd in
-    if (not is_goal) then args_depths_ar.(pos) <- max used_depth (args_depths_ar.(pos));
+    current_user_depth := arg_depth_hd;
+    current_min_depth := max_int;
+    (* Format.printf "Current head is %d\n" arg_depth_hd; *)
+    main ~safe ~depth arg_hd arg_depth_hd;
+    update_ar !current_min_depth;
+    incr current_ar_pos;
     aux (pos + 1) ~safe ~depth is_goal arg_tl arg_depth_tl mode_tl
+
   (** main function: build the path of the arguments received in entry  *)
   and aux pos ~safe ~depth is_goal args arg_depths arg_mode =
     match args, arg_depths, arg_mode with 
