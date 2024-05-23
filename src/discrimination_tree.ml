@@ -242,11 +242,13 @@ type 'a t = {t: 'a data Trie.t; max_size : int;  max_depths : int list }
 let pp pp_a fmt { t } : unit = Trie.pp (fun fmt { data } -> pp_a fmt data) fmt t
 let show pp_a { t } : string = Trie.show (fun fmt { data } -> pp_a fmt data) t
 
-let index { t; max_size } path max_depths data ~time =
+let index { t; max_size; max_depths } path max_depths' data ~time =
   let t, m = Trie.add path { data ; time } t in
+  let max_depths = List.map2 max max_depths' max_depths in
   {t; max_size = max max_size m; max_depths}
 
 let max_path { max_size } = max_size
+let max_depths { max_depths } = max_depths 
 
 let depths_for_path_creation ~is_goal { max_depths } y =
   let x = max_depths in
