@@ -3901,6 +3901,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
         in
       prune alts in
     if cutto_alts == Noalts then T.trail := T.empty ();
+    [%spy "user:rule:cut" ~rid ~gid pp_string "success"];
     match gs with
     | [] -> pop_andl cutto_alts next cutto_alts
     | { depth; program; goal; gid = gid [@trace] } :: gs -> run depth program goal (gid[@trace]) gs next cutto_alts cutto_alts
