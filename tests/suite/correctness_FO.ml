@@ -122,6 +122,16 @@ let () = declare "dt_var"
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 2"))
   ()
 
+let () = 
+  let sample = Filename.get_temp_dir_name () ^ Filename.dir_sep ^ "dt_max_depths.log" in
+  declare "dt_max_depths"
+  ~source_elpi:"dt_max_depths.elpi"
+  ~description:"discrimination_tree max_depth"
+  ~typecheck:false
+  ~trace:(On["tty";"file://"^sample;"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:depth-path"])
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "dt_max_depths.log" })
+  ()
+
 let () = declare "dt_var2"
   ~source_elpi:"dt_var2.elpi"
   ~description:"discrimination_tree indexing flex"

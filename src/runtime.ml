@@ -2498,10 +2498,9 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
 
   let update_ar depth = 
     if not is_goal then begin
-    (* Format.printf "Current remaining depth is %d\n" depth; *)
     let old_max = args_depths_ar.(!current_ar_pos) in
     let current_max = (!current_user_depth - depth) in
-    if old_max < current_max  then 
+    if old_max < current_max then 
       args_depths_ar.(!current_ar_pos) <- current_max
     end
   in
@@ -2649,8 +2648,10 @@ let add1clause ~depth m (predicate,clause) =
          args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
   | IndexWithDiscriminationTree {mode; arg_depths; args_idx; time } ->
-      let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths (Discrimination_tree.max_depths args_idx) mode (Discrimination_tree.max_path args_idx) in
-      (* Format.(printf "Inst: MaxDepth is %a\n" (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_int) (Discrimination_tree.max_depths args_idx |> Array.to_list)); *)
+    let max_depths = Discrimination_tree.max_depths args_idx in
+    let max_path = Discrimination_tree.max_path args_idx in
+      let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths max_depths mode max_path in
+      [%spy "dev:disc-tree:depth-path" ~rid pp_string "Inst: MaxDepths " (pplist pp_int "") (Array.to_list max_depths)];
       let args_idx = Discrimination_tree.index args_idx path clause ~time in
         Ptmap.add predicate (IndexWithDiscriminationTree {
           mode; arg_depths;
@@ -2787,7 +2788,10 @@ let get_clauses ~depth predicate goal { index = m } =
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
-        let (path: Discrimination_tree.path) = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths (Discrimination_tree.max_depths args_idx) mode (Discrimination_tree.max_path args_idx) in
+        let max_depths = Discrimination_tree.max_depths args_idx in
+        let max_path = Discrimination_tree.max_path args_idx in
+        let (path: Discrimination_tree.path) = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths max_depths mode max_path in
+        [%spy "dev:disc-tree:depth-path" ~rid pp_string "Goal: MaxDepths " (pplist pp_int ";") (Array.to_list max_depths)];
         (* Format.(printf "Goal: MaxDepth is %a\n" (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_int) (Discrimination_tree.max_depths args_idx |> Array.to_list)); *)
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.pp_path path

@@ -317,8 +317,9 @@ let mk_tmp_file =
     incr tmp;
     dir ^ Filename.dir_sep ^ x ^ "__" ^ string_of_int !tmp ^ "__" ^ y
     
-let sample = mk_tmp_file "trace.json" ".new"
-let () = declare "trace-browser"
+let () =
+  let sample = mk_tmp_file "trace.json" ".new" in
+  declare "trace-browser"
   ~source_elpi:"trace.elpi"
   ~description:"trace generation"
   ~typecheck:false
