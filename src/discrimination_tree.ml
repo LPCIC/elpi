@@ -128,8 +128,7 @@ module Trie = struct
 
   let empty_ = Node { data = []; other = None; listTailVariable = None; map = Ptmap.empty }
 
-  let is_empty (Node { data; other; listTailVariable; map }) = 
-    data = [] && other = None && listTailVariable = None && map = Ptmap.empty
+  let is_empty x = x == empty_
 
   let add a v t =
     let max = ref 0 in
