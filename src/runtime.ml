@@ -957,7 +957,7 @@ let rec move ~argsdepth e ?avoid ~from ~to_ t =
        if depth == 0 then deref_appuv ?avoid ~from:vardepth ~to_ args t
        else maux empty_env depth (deref_appuv ~from:vardepth ~to_:(from+depth) args t)
     | Arg (i, argsno) when e.(i) != C.dummy ->
-       if from = argsdepth then deref_uv ?avoid ~from:argsdepth ~to_:(to_+depth) argsno e.(i)
+       if to_ = argsdepth then deref_uv ?avoid ~from:argsdepth ~to_:(to_+depth) argsno e.(i)
        else
         let args = C.mkinterval from argsno 0 in
         let args =
