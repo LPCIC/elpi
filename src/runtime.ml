@@ -2482,7 +2482,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
   let rec emit e =
     let len = Array.length !path in
     if !pos < len - 1 then begin
-      !path.(!pos) <- e;
+      Array.unsafe_set !path !pos e;
       incr pos
     end else begin
       let newpath = Array.make (2 * len) mkPathEnd in
@@ -2496,12 +2496,13 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
   let current_min_depth = ref max_int in
   let update_current_min_depth d = if not is_goal then current_min_depth := min !current_min_depth d in
 
+  (* Invariant: !current_ar_pos < Array.length args_depths_ar *)
   let update_ar depth = 
     if not is_goal then begin
-    let old_max = args_depths_ar.(!current_ar_pos) in
-    let current_max = (!current_user_depth - depth) in
+    let old_max = Array.unsafe_get args_depths_ar !current_ar_pos in
+    let current_max = !current_user_depth - depth in
     if old_max < current_max then 
-      args_depths_ar.(!current_ar_pos) <- current_max
+      Array.unsafe_set args_depths_ar !current_ar_pos current_max
     end
   in
 
@@ -2580,7 +2581,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
         current_min_depth := max_int;
         main ~safe ~depth arg_hd arg_depth_hd;
         update_ar !current_min_depth;
-      end else main ~safe ~depth arg_hd args_depths_ar.(!current_ar_pos)
+      end else main ~safe ~depth arg_hd (Array.unsafe_get args_depths_ar !current_ar_pos)
     end;
     incr current_ar_pos;
     aux ~safe ~depth is_goal arg_tl arg_depth_tl mode_tl
