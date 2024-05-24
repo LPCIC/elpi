@@ -126,24 +126,24 @@ module Trie = struct
     map : 'a t Ptmap.t;              (* for Constant, Primitive, ListHead, ListEnd *)
   }
 
-  let empty_ = Node { data = []; other = None; listTailVariable = None; map = Ptmap.empty }
+  let empty = Node { data = []; other = None; listTailVariable = None; map = Ptmap.empty }
 
-  let is_empty x = x == empty_
+  let is_empty x = x == empty
 
   let add a v t =
     let max = ref 0 in
     let rec ins ~pos = let x = a.(pos) in function
       | Node ({ data } as t) when isPathEnd x -> max := pos; Node { t with data = v :: data }
       | Node ({ other } as t) when isVariable x || isLam x ->
-          let t' = match other with None -> empty_ | Some x -> x in
+          let t' = match other with None -> empty | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with other = Some t'' }
       | Node ({ listTailVariable } as t) when isListTailVariable x ->
-          let t' = match listTailVariable with None -> empty_ | Some x -> x in
+          let t' = match listTailVariable with None -> empty | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with listTailVariable = Some t'' }
       | Node ({ map } as t) ->
-          let t' = try Ptmap.find x map with Not_found -> empty_ in
+          let t' = try Ptmap.find x map with Not_found -> empty in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with map = Ptmap.add x t'' map }
     in
@@ -342,7 +342,7 @@ and on_all_children ~pos ~add_result mode path map =
 
 let empty_dt args_depth : 'a t =
   let max_depths = Array.make (List.length args_depth) 0 in
-  {t = Trie.empty_; max_depths; max_size = 0}
+  {t = Trie.empty; max_depths; max_size = 0}
 
 let retrieve ~pos ~add_result path index =
   let mode = path.(pos) in
