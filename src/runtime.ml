@@ -2536,7 +2536,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
   and emit_mode is_goal mode = if is_goal then emit mode
   (** gives the path representation of a list of sub-terms *)
   and arg_to_trie_path_aux ~safe ~depth t_list path_depth : unit = 
-    if path_depth = 0 then ()
+    if path_depth = 0 then update_current_min_depth path_depth
     else 
       match t_list with 
       | [] -> update_current_min_depth path_depth
@@ -2545,7 +2545,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
           arg_to_trie_path_aux ~safe ~depth tl path_depth
   (** gives the path representation of a term *)
   and main ~safe ~depth t path_depth : unit =
-    if path_depth = 0 then ()
+    if path_depth = 0 then update_current_min_depth path_depth
     else
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 

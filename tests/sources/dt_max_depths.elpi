@@ -24,6 +24,6 @@ main :-
   % depths:          3 (capped by the index)             3 
   (q (prod t (prod t (prod t (prod t (prod t t))))) => q _),
   % with lists
-  % depths: 2 (capped by the index)       2 ==> bug in the log we have 1, why ??
+  % depths: 2 (capped by the index)       2
   (r (app [app [app [ app[app[t]]]]]) => r _)
   .
