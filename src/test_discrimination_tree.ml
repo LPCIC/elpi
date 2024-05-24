@@ -1,5 +1,6 @@
-
 open Elpi.Internal.Discrimination_tree
+open Internal
+
 let () = assert (k_of (mkConstant ~safe:false ~data:~-17 ~arity:0) == kConstant)
 let () = assert (k_of mkVariable == kVariable)
 let () = assert (k_of mkLam == kOther)

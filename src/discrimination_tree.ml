@@ -352,3 +352,14 @@ let retrieve path { t } =
   let r = call (retrieve ~pos:0 path t) in
   List.sort cmp_data r |> List.map (fun x -> x.data)
 
+
+module Internal = struct
+  let kConstant = kConstant
+  let kPrimitive = kPrimitive
+  let kVariable = kVariable
+  let kOther = kOther
+
+  let k_of = k_of
+  let arity_of = arity_of
+  let data_of = data_of
+end
