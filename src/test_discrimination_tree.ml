@@ -40,7 +40,7 @@ let () =
 
   let test_nb = ref 1 in
   
-  let test (pathInsts: (cell list * string) list ) (pathGoal,_) mode nb =
+  let test (pathInsts: (cell list * string) list) (pathGoal,_) mode nb =
     Printf.printf "\n-> Running test %d <-\n" !test_nb; incr test_nb;
     let pathGoal = Array.of_list (mode :: pathGoal @ [mkPathEnd]) in
     (* Format.printf "%a\n" pp_path pathGoal; *)

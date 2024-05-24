@@ -117,7 +117,6 @@ module Trie = struct
       are given by a map from type [key] to sub-tries, so of type
       ['a t Ptmap.t]. The empty trie is just the empty map. *)
 
-  type key = int list
   type 'a t = Node of {
     data : 'a list;
     (* children *)
