@@ -2496,10 +2496,14 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
   let current_min_depth = ref max_int in
   let update_current_min_depth d = if not is_goal then current_min_depth := min !current_min_depth d in
 
-  let update_ar depth =
+  let update_ar depth = 
+    if not is_goal then begin
     (* Format.printf "Current remaining depth is %d\n" depth; *)
-    if not is_goal then 
-      args_depths_ar.(!current_ar_pos) <- max args_depths_ar.(!current_ar_pos) (!current_user_depth - depth) 
+    let old_max = args_depths_ar.(!current_ar_pos) in
+    let current_max = (!current_user_depth - depth) in
+    if old_max < current_max  then 
+      args_depths_ar.(!current_ar_pos) <- current_max
+    end
   in
 
   let rec list_to_trie_path ~safe ~depth ?(h=0) path_depth (len: int) (t: term) : unit =
@@ -2552,7 +2556,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
       | CData d -> emit @@ mkPrimitive d; update_current_min_depth path_depth
       | App (k,_,_) when k == Global_symbols.uvarc -> emit @@ mkVariable; update_current_min_depth path_depth
       | App (k,a,_) when k == Global_symbols.asc -> main ~safe ~depth a (path_depth+1)
-      | Lam _ -> emit @@ mkOther; update_current_min_depth path_depth (* loose indexing to enable eta *)
+      | Lam _ -> emit @@ mkLam; update_current_min_depth path_depth (* loose indexing to enable eta *)
       | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> emit @@ mkVariable; update_current_min_depth path_depth
       | Builtin (k,tl) ->
         emit @@ mkConstant ~safe ~data:k ~arity:(if path_depth = 0 then 0 else List.length tl);
