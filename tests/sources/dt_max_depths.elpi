@@ -1,0 +1,29 @@
+kind term type.
+type app list term -> term.
+type t term.
+type prod term -> term -> term.
+
+
+:index (100 100)
+pred p o:term, o:term.
+
+
+:index (3)
+pred q o:term.
+
+:index (2)
+pred r o:term.
+
+
+% Instances are loaded locally to get the correct printing in
+% the trace
+main :-
+  % depths: 2     1      1       3                2 3
+  (p (app[t | _]) _ => p _ (app[app[t] | _]) => p _ _),
+  % with deep terms
+  % depths:          3 (capped by the index)             3 
+  (q (prod t (prod t (prod t (prod t (prod t t))))) => q _),
+  % with lists
+  % depths: 2 (capped by the index)       2
+  (r (app [app [app [ app[app[t]]]]]) => r _)
+  .

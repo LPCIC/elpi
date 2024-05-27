@@ -122,6 +122,16 @@ let () = declare "dt_var"
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 2"))
   ()
 
+let () = 
+  let sample = Filename.get_temp_dir_name () ^ Filename.dir_sep ^ "dt_max_depths.log" in
+  declare "dt_max_depths"
+  ~source_elpi:"dt_max_depths.elpi"
+  ~description:"discrimination_tree max_depth"
+  ~typecheck:false
+  ~trace:(On["tty";"file://"^sample;"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:depth-path"])
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "dt_max_depths.log" })
+  ()
+
 let () = declare "dt_var2"
   ~source_elpi:"dt_var2.elpi"
   ~description:"discrimination_tree indexing flex"
@@ -130,28 +140,40 @@ let () = declare "dt_var2"
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 3"))
   ()
 
-let () = declare "dt_multi1"
-  ~source_elpi:"dt_multi1.elpi"
+let () = declare "dt_multiparam1"
+  ~source_elpi:"dt_multiparam1.elpi"
   ~description:"discrimination_tree indexing multi argument"
   ~typecheck:false
   ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 1"))
   ()
 
-let () = declare "dt_multi2"
-  ~source_elpi:"dt_multi2.elpi"
+let () = declare "dt_multiparam2"
+  ~source_elpi:"dt_multiparam2.elpi"
   ~description:"discrimination_tree indexing multi with flexible"
   ~typecheck:false
   ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 101"))
   ()
 
-let () = declare "dt_multi3"
-  ~source_elpi:"dt_multi3.elpi"
+let () = declare "dt_multiparam3"
+  ~source_elpi:"dt_multiparam3.elpi"
   ~description:"discrimination_tree indexing multi with flexible in input mode"
   ~typecheck:false
   ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(FailureOutput (Str.regexp "dev:disc-tree:candidates = 0"))
+  ()
+
+let () = declare "dt_multivar"
+  ~source_elpi:"dt_multivar.elpi"
+  ~description:"discrimination_tree indexing multi with flexible in input mode"
+  ~typecheck:false
+  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+  ~expectation:(SuccessOutput (
+      let wanted_length = [5;1;0;1;1;5;4;5;2;5;4;5;6;1] in
+      let all_char = "\\(.\\|\n\\)*" in
+      let s = List.fold_left (fun acc e -> Printf.sprintf "%s = %d%s" acc e all_char) "" wanted_length in
+      Str.regexp s))
   ()
 
 let () = declare "is"

@@ -1,0 +1,24 @@
+kind tree type.
+type node list tree -> tree.
+type leaf int -> tree.
+
+pred width o:int.
+width 5.
+
+pred mkt i:int, o:tree.
+mkt 0 (leaf N) :- !, random.int 100 N.
+mkt M (node [leaf M|L]) :- M1 is M - 1, std.iota {random.int {width}} L1, std.map L1 (_\mkt M1) L.
+
+:index (5) "DTree"
+pred p i:tree.
+
+pred iter i:int, i:prop.
+iter 0 _ :- !.
+iter N P :- P, !, M is N - 1, iter M P.
+
+main :-
+  mkt 6 T, mkt 6 T1,
+  p T => std.time (iter 300000 (p T)) Time1,
+  print "match" Time1,
+  p T => std.time (iter 300000 (p T1 ; true)) Time2,
+  print "no match" Time2.

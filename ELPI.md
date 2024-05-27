@@ -292,8 +292,16 @@ The attribute `:if` can also be used on CHR rules.
 
 By default the clauses for a predicate are indexed by looking
 at their first argument at depth 1. The `:index` attribute lets
-one specify a different argument.
+one specify a different argument and/or a different indexing technique.
+The syntax is
+```
+:index (<arg-spec>) "index-type"
+```
+where `<arg-spec>` is a list of numbers or `_`, and `"index-type"` is an
+optional string. Values supported are `"Map"` (tree map over constants, standard
+Prolog indexing), `"Hash"` (see below) and `"DTree"` (see below).
 
+For example:
 ```prolog
 :index(_ 1)
 pred mymap i:(A -> B), i:list A, o:list B.
@@ -305,8 +313,8 @@ argument (that means don't index it), at depth 1 the second argument and at dept
 0 all the remaining ones.
 
 If only one argument is indexed, and it is indexed at depth one, then Elpi uses
-a standard indexing technique based on a perfect (for depth 1) search tree. This
-means that no false positives are returned by the index.
+a standard indexing technique based on a binary search tree, i.e.
+the `"Map"` index-type.
 
 ### Discrimination tree index
 
@@ -314,8 +322,7 @@ If one argument is indexed at depth greater than one, or more arguments
 are indexed at any depth, then Elpi uses
 a [discrimination tree](https://www.cs.cmu.edu/~fp/courses/99-atp/lectures/lecture28.html).
 Both the rule argument and the goal argument are
-indexed up to the given depth. The indexing is not perfect, false positives may
-be returned and ruled out by unification.
+indexed up to the given depth.
 
 Indexed terms are linearized into paths. Paths are inserted into a trie data
 structure sharing common prefixes.
