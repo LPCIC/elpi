@@ -12,23 +12,14 @@ val mkListHead : cell
 val mkListEnd : cell
 val mkPathEnd : cell
 
-val isVariable : cell -> bool
-val isLam : cell -> bool
-val isInput : cell -> bool
-val isOutput : cell -> bool
-val isListHead : cell -> bool
-val isListEnd : cell -> bool
-val isListTailVariable : cell -> bool
-val isPathEnd : cell -> bool
-
 module Trie : sig
   type 'a t
   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 end
 
-type 'a data = { data : 'a; time : cell; }
-type 'a t = { t : 'a data Trie.t; max_size : int; max_depths : int array; }
+type 'a data
+type 'a t
 
 val index : 'a t -> path -> 'a -> time:int -> 'a t
 val max_path : 'a t -> int
@@ -51,6 +42,10 @@ val show_path : path -> string
 val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 
+(***********************************************************)
+(* Internal stuff used mainly for unit tests               *)
+(***********************************************************)
+
 module Internal: sig
   val kConstant : int
   val kPrimitive : int
@@ -60,4 +55,13 @@ module Internal: sig
   val k_of : cell -> int
   val arity_of : cell -> int
   val data_of : cell -> int
+
+  val isVariable : cell -> bool
+  val isLam : cell -> bool
+  val isInput : cell -> bool
+  val isOutput : cell -> bool
+  val isListHead : cell -> bool
+  val isListEnd : cell -> bool
+  val isListTailVariable : cell -> bool
+  val isPathEnd : cell -> bool
 end

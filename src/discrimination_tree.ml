@@ -362,4 +362,14 @@ module Internal = struct
   let k_of = k_of
   let arity_of = arity_of
   let data_of = data_of
+
+  let isVariable = isVariable
+  let isLam = isLam
+  let isInput = isInput
+  let isOutput = isOutput
+  let isListHead = isListHead
+  let isListEnd = isListEnd
+  let isListTailVariable = isListTailVariable
+  let isPathEnd = isPathEnd
+
 end
