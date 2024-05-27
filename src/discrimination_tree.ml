@@ -174,7 +174,6 @@ end
 
 type path = cell array [@@deriving show]
 
-let compare x y = x - y
 let update_par_count n k =
   if isListHead k then n + 1 else
   if isListEnd k || isListTailVariable k then n - 1 else n

@@ -41,30 +41,31 @@ let () =
 
   let test_nb = ref 1 in
   
-  let test (pathInsts: (cell list * string) list) (pathGoal,_) mode nb =
+  let test (pathInsts: (cell list * int) list) (pathGoal,_) mode nb =
     Printf.printf "\n-> Running test %d <-\n" !test_nb; incr test_nb;
     let pathGoal = Array.of_list (mode :: pathGoal @ [mkPathEnd]) in
     (* Format.printf "%a\n" pp_path pathGoal; *)
     let pathInsts = List.map (fun (x,y) -> x @ [mkPathEnd], y) pathInsts in
     let add_to_trie t (key,value) = 
-      index t (Array.of_list key) value ~time:0 in
+      index t (Array.of_list key) value ~time:value in
     let trie = List.fold_left add_to_trie (empty_dt []) pathInsts in 
     let retrived = retrieve pathGoal trie in
     let retrived_nb = List.length retrived in 
     Format.printf " Retrived clause number is %d\n%!" retrived_nb;
     let pp_sep = fun f _ -> Format.pp_print_string f " " in
-    Format.printf " Found instances are %a\n%!" (Format.pp_print_list ~pp_sep Format.pp_print_string) (List.sort String.compare retrived);
-    if (retrived_nb <> nb) then (failwith (Format.asprintf "Test DT error: Expected %d clauses, %d found" nb retrived_nb))
+    Format.printf " Found instances are %a\n%!" (Format.pp_print_list ~pp_sep Format.pp_print_int) retrived;
+    if retrived_nb <> nb then failwith (Format.asprintf "Test DT error: Expected %d clauses, %d found" nb retrived_nb);
+    if List.sort Int.compare retrived |> List.rev <> retrived then failwith "Test DT error: resultin list is not correctly ordered"
   in
   
-  let p1 = [mkListHead; constA; mkListTailVariable; constA], "1" in                                         (* 1:  [a | _] a *)
-  let p2 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; mkListEnd; constA], "2" in                    (* 2: [a,x0,x1,x3] a *)
-  let p3 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; mkListEnd; mkVariable], "3" in                (* 3: [a,x0,x1,x3] X *)
-  let p4 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; constA; mkListEnd], "4" in                    (* 4: [a,x0,x1,x3,a] *)
-  let p5 = [mkLam; mkVariable], "5" in                                                                    (* 5: (x\ ...) X *)
-  let p6 = [mkListHead; constF; mkListHead; mkName 1; mkName 2; mkListTailVariable; constA; mkListEnd], "6" in (* 6: [f [x1, x2 | _] a] f *)
-  let p7 = [mkListHead; constA; mkVariable; mkListEnd; constA], "7" in                                      (* 7: [a,X] a *)
-  let p8 = [mkListHead; constA; mkName 0; mkListEnd; mkVariable], "8" in                                    (* 8: [a,x0] X *)
+  let p1 = [mkListHead; constA; mkListTailVariable; constA], 1 in                                         (* 1: [a | _] a *)
+  let p2 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; mkListEnd; constA], 2 in                    (* 2: [a,x0,x1,x3] a *)
+  let p3 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; mkListEnd; mkVariable], 3 in                (* 3: [a,x0,x1,x3] X *)
+  let p4 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; constA; mkListEnd], 4 in                    (* 4: [a,x0,x1,x3,a] *)
+  let p5 = [mkLam; mkVariable], 5 in                                                                    (* 5: (x\ ...) X *)
+  let p6 = [mkListHead; constF; mkListHead; mkName 1; mkName 2; mkListTailVariable; constA; mkListEnd], 6 in (* 6: [f [x1, x2 | _] a] f *)
+  let p7 = [mkListHead; constA; mkVariable; mkListEnd; constA], 7 in                                      (* 7: [a,X] a *)
+  let p8 = [mkListHead; constA; mkName 0; mkListEnd; mkVariable], 8 in                                    (* 8: [a,x0] X *)
 
   test [p2; p3; p4; p5; p6] p1 mkOutputMode 3;
   test [p2; p3; p4; p5; p6] p1 mkInputMode 1;
