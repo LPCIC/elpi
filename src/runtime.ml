@@ -2490,7 +2490,7 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
           let path_of_a = arg_to_trie_path ~safe ~depth a path_depth in
           const2list_term ~depth ~safe ~h:(h+1) path_depth (len+1) (path_of_a :: res) b
     (* TODO: complexity problem next line *)
-    | a -> mkListHead :: flatten_rev  ([mkMultivariable] :: res)
+    | a -> mkListHead :: flatten_rev  ([mkListTailVariable] :: res)
   (** prepend the mode of the current argument if we are "pathifing" a goal *)
   and prepend_mode is_goal mode tl = if is_goal then mode :: tl else tl
   (** gives the path representation of a list of sub-terms *)
@@ -2511,8 +2511,8 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
       | Const k when k == Global_symbols.uvarc -> [mkVariable]
-      | Const k when safe -> [mkConstant ~safe k 0]
-      | Const k -> [mkConstant ~safe k 0]
+      | Const k when safe -> [mkConstant ~safe ~data:k ~arity:0]
+      | Const k -> [mkConstant ~safe ~data:k ~arity:0]
       | CData d -> [mkPrimitive d]
       | App (k,_,_) when k == Global_symbols.uvarc -> [mkVariable]
       | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~safe ~depth a (path_depth+1)
@@ -2520,12 +2520,12 @@ let arg_to_trie_path ~safe ~depth is_goal args arg_depths mode : Discrimination_
       | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [mkVariable]
       | Builtin (k,tl) ->
         let path = arg_to_trie_path_aux ~safe ~depth tl path_depth in 
-        mkConstant ~safe k (if path_depth = 0 then 0 else List.length tl) :: path 
+        mkConstant ~safe ~data:k ~arity:(if path_depth = 0 then 0 else List.length tl) :: path 
       | App (k, x, xs) -> 
         let arg_length = if path_depth = 0 then 0 else List.length xs + 1 in
         let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
         let tl_path = arg_to_trie_path_aux ~safe ~depth xs path_depth in
-        mkConstant ~safe k arg_length :: hd_path @ tl_path
+        mkConstant ~safe ~data:k ~arity:arg_length :: hd_path @ tl_path
       | Nil -> [mkListHead; mkListEnd]
       | Cons (x,xs) ->
           const2list_term ~safe ~depth (path_depth + 1) 0 [arg_to_trie_path ~safe ~depth x (path_depth + 1)] xs 
