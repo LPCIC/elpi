@@ -12,12 +12,6 @@ val mkListHead : cell
 val mkListEnd : cell
 val mkPathEnd : cell
 
-module Trie : sig
-  type 'a t
-  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-  val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
-end
-
 type 'a data
 type 'a t
 
