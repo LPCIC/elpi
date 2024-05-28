@@ -19,8 +19,9 @@ let k_bits = 2
    - c : the "data"
    - a : the "arity"
 *)
-let k_lshift = Sys.int_size - k_bits
-let ka_lshift = Sys.int_size - k_bits - arity_bits
+let cell_size = Sys.int_size
+let k_lshift = cell_size - k_bits
+let ka_lshift = cell_size - k_bits - arity_bits
 let k_mask = ((1 lsl k_bits) - 1) lsl k_lshift
 let arity_mask = (((1 lsl arity_bits) lsl k_bits) - 1) lsl ka_lshift
 let data_mask = (1 lsl ka_lshift) - 1
@@ -86,6 +87,41 @@ let pp_cell fmt n =
   else Format.fprintf fmt "%o" k
 
 let show_cell n = Format.asprintf "%a" pp_cell n
+module Path : sig
+  type t
+  val pp : Format.formatter -> t -> unit
+  val get : t -> int -> cell
+  type builder
+  val make : int -> cell -> builder
+  val emit : builder -> cell -> unit
+  val stop : builder -> t
+  val of_list : cell list -> t
+
+end = struct
+ type t = cell array [@@deriving show]
+ let get a i = a.(i)
+
+ type builder = { mutable pos : int; mutable path : cell array }
+ let make size e = { pos = 0; path = Array.make size e }
+ let rec emit p e = 
+    let len = Array.length p.path in
+    if p.pos < len - 1 then begin
+      Array.unsafe_set p.path p.pos e;
+      p.pos <- p.pos + 1
+    end else begin
+      let newpath = Array.make (2 * len) mkPathEnd in
+      Array.blit p.path 0 newpath 0 len;
+      p.path <- newpath;
+      emit p e
+    end
+ let stop { path } = path
+
+ let of_list l =
+  let path = make 1 (List.hd l) in
+  List.iter (emit path) l;
+  stop path
+  
+end
 
 module Trie = struct
   (*
@@ -129,9 +165,10 @@ module Trie = struct
 
   let is_empty x = x == empty
 
-  let add a v t =
+
+  let add (a : Path.t) v t =
     let max = ref 0 in
-    let rec ins ~pos = let x = a.(pos) in function
+    let rec ins ~pos = let x = Path.get a pos in function
       | Node ({ data } as t) when isPathEnd x -> max := pos; Node { t with data = v :: data }
       | Node ({ other } as t) when isVariable x || isLam x ->
           let t' = match other with None -> empty | Some x -> x in
@@ -172,7 +209,6 @@ module Trie = struct
     Buffer.contents b
 end
 
-type path = cell array [@@deriving show]
 
 let update_par_count n k =
   if isListHead k then n + 1 else
@@ -181,17 +217,17 @@ let update_par_count n k =
 let skip ~pos path (*hd tl*) : int =
   let rec aux_list acc p =
     if acc = 0 then p
-    else aux_list (update_par_count acc path.(p)) (p+1)
+    else aux_list (update_par_count acc (Path.get path p)) (p+1)
   in
   let rec aux_const arity p =
     if arity = 0 then p
     else
-      if isListHead path.(p) then
+      if isListHead (Path.get path p) then
         let skip_list = aux_list 1 (p+1) in
         aux_const (arity - 1) skip_list
-      else aux_const (arity - 1 + arity_of path.(p)) (p+1)
+      else aux_const (arity - 1 + arity_of (Path.get path p)) (p+1)
   in
-  if isListHead path.(pos) then aux_list 1 (pos+1) else aux_const (arity_of path.(pos)) (pos+1)
+  if isListHead (Path.get path pos) then aux_list 1 (pos+1) else aux_const (arity_of (Path.get path pos)) (pos+1)
 
 (**
   Takes a path and skip a listTailVariable:
@@ -201,8 +237,8 @@ let skip ~pos path (*hd tl*) : int =
 let skip_listTailVariable ~pos path : int =
   let rec aux i pc =
     if pc = 0 then i
-    else aux (i+1) (update_par_count pc path.(i)) in
-  aux (pos + 1) (update_par_count 1 path.(pos))
+    else aux (i+1) (update_par_count pc (Path.get path i)) in
+  aux (pos + 1) (update_par_count 1 (Path.get path pos))
 
 type 'a data = { data : 'a; time : int }
 
@@ -284,7 +320,7 @@ let cmp_data { time = tx } { time = ty } = ty - tx
 let get_all_children v mode = isLam v || (isVariable v && isOutput mode)
 
 let rec retrieve ~pos ~add_result mode path tree : unit =
-  let hd = path.(pos) in
+  let hd = Path.get path pos in
   let Trie.Node {data; map; other; listTailVariable} = tree in
   (* Format.eprintf "%d %a\n%!" pos pp_cell hd; *)
   if Trie.is_empty tree then ()
@@ -343,7 +379,7 @@ let empty_dt args_depth : 'a t =
   {t = Trie.empty; max_depths; max_size = 0}
 
 let retrieve ~pos ~add_result path index =
-  let mode = path.(pos) in
+  let mode = Path.get path pos in
   assert(isInput mode || isOutput mode);
   retrieve ~add_result mode ~pos:(pos+1) path index
   
