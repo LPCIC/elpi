@@ -268,6 +268,7 @@ let set_trace_output format formatter =
   match format with
   | TTY ->
       F.pp_set_max_boxes formatter !tty_formatter_maxbox;
+      F.pp_set_ellipsis_text formatter "…";
       F.pp_set_margin formatter !tty_formatter_maxcols;
       printer := print_tty formatter
   | JSON ->

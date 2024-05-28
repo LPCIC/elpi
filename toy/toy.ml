@@ -31,7 +31,7 @@ let () =
       t(X,Y) :- t(X,Z), t(Z,Y).
       t(X,X).
       ",
-    "t(a,X)", 4, ["t(a, b)"; "t(a, c)"; "t(a, d)"; "steps"]);
+    "t(a,X)", ["t(a, b)"; "t(a, c)"; "t(a, d)"; "steps"]);
 
   `Check("transitive closure loops before producing any solution",
       "
@@ -41,14 +41,14 @@ let () =
       t(a,c).
       t(b,d).
       ",
-    "t(a,X)", 1, ["steps"]);
+    "t(a,X)", ["steps"]);
 
   `Check("cutting the solution is failure",
       "
       t :- !, fail.
       t.
       ",
-    "t", 1, ["no"]);
+    "t", ["no"]);
 
   `Check("non-hd cut",
     "
@@ -58,7 +58,7 @@ let () =
     x :- t.
     x.
     ",
-  "x", 1, ["x"]);
+  "x", ["x"]);
 
 
   `Check("cutting nothing is noop",
@@ -66,7 +66,7 @@ let () =
       t.
       t :- !, fail.
       ",
-    "t", 2, ["t"; "no"]);
+    "t", ["t"; "no"]);
 
   `Check("tail cut kills alternatives",
       "
@@ -74,7 +74,7 @@ let () =
       t.
       p :- t, !.
       ",
-    "p", 2, ["p"; "no"]);
+    "p", ["p"; "no"]);
 
   `Check("tail cut removed, more solutions",
       "
@@ -82,7 +82,7 @@ let () =
       t.
       p :- t.
       ",
-    "p", 3, ["p"; "p"; "no"]);
+    "p", ["p"; "p"; "no"]);
 
   `Check("cut, XSB 5.2.6 - 1",
     "
@@ -92,7 +92,7 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(one)", 2, ["_cut_p(one)"; "no"]);
+    "_cut_p(one)", ["_cut_p(one)"; "no"]);
 
   `Check("cut, XSB 5.2.6 - 2",
     "
@@ -102,7 +102,7 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(two)", 2, ["_cut_p(two)"; "no"]);
+    "_cut_p(two)", ["_cut_p(two)"; "no"]);
 
   `Check("cut, XSB 5.2.6 - 3",
     "
@@ -112,7 +112,7 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(one)", 2, ["_cut_p(one)"; "no"]);
+    "_cut_p(one)", ["_cut_p(one)"; "no"]);
 
   `Check("cut, XSB 5.2.6 - 4",
     "
@@ -122,7 +122,7 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(two)", 2, ["_cut_p(two)"; "no"]);
+    "_cut_p(two)", ["_cut_p(two)"; "no"]);
 
   `Check("cut, XSB 5.2.6 - 5",
     "
@@ -132,7 +132,7 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(A)", 2, ["_cut_p(one)"; "no"]); (* XSB gives cut_p(2) ?!?!?! *)
+    "_cut_p(A)", ["_cut_p(one)"; "no"]); (* XSB gives cut_p(2) ?!?!?! *)
 
   `Check("cut, XSB 5.2.6 - 6",
     "
@@ -142,7 +142,7 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(A), _cut_q(B)", 3, ["_cut_p(one), _cut_q(one)"; "_cut_p(one), _cut_q(two)"; "no"]);
+    "_cut_p(A), _cut_q(B)", ["_cut_p(one), _cut_q(one)"; "_cut_p(one), _cut_q(two)"; "no"]);
 
     `Check("cut, XSB 5.2.6 - 7",
     "
@@ -152,20 +152,20 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(A), _cut_q(B)", 3, ["_cut_p(one), _cut_q(one)"; "_cut_p(one), _cut_q(two)"; "no"]);
+    "_cut_p(A), _cut_q(B)", ["_cut_p(one), _cut_q(one)"; "_cut_p(one), _cut_q(two)"; "no"]);
 
   `Check("table loop",
       "
       _t :- _t.
       ",
-    "_t", 1, ["no"]);
+    "_t", ["no"]);
 
   `Check("table next",
     "
     _t(X) :- _t(X).
     _t(a).
     ",
-  "_t(X)", 2, ["_t(a)"; "no"]);
+  "_t(X)", ["_t(a)"; "no"]);
 
   `Check("AAMFTESLP",
     "
@@ -178,7 +178,7 @@ let () =
     q(b).
     q(c).
     ",
-    "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
+    "_p(a,Z)", ["_p(a, b)"; "_p(a, c)"; "no"]);
 
     `Check("AAMFTESLP alts sld",
     "
@@ -189,7 +189,7 @@ let () =
     e(b,c).
     e(b,d).
     ",
-    "_p(a,Z)", 4, ["_p(a, b)"; "_p(a, c)"; "_p(a, d)"; "no"]);
+    "_p(a,Z)", ["_p(a, b)"; "_p(a, c)"; "_p(a, d)"; "no"]);
 
 
     `Check("AAMFTESLP nodup",
@@ -203,7 +203,7 @@ let () =
     q(b). q(b).
     q(c).
     ",
-    "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
+    "_p(a,Z)", ["_p(a, b)"; "_p(a, c)"; "no"]);
 
     `Check("AAMFTESLP trclosure order",
     "
@@ -216,7 +216,7 @@ let () =
     q(b). q(b).
     q(c).
     ",
-    "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
+    "_p(a,Z)", ["_p(a, b)"; "_p(a, c)"; "no"]);
 
     `Check("slg+sld",
     "
@@ -225,7 +225,7 @@ let () =
     _p(b,c).
     _p(b,d).
     ",
-    "_p(a,Z)", 4, ["_p(a, b)"; "_p(a, c)"; "_p(a, d)"; "no"]);
+    "_p(a,Z)", ["_p(a, b)"; "_p(a, c)"; "_p(a, d)"; "no"]);
 
     `Check("AAMFTESLP facts order",
     "
@@ -238,7 +238,7 @@ let () =
     q(b). q(b).
     q(c).
     ",
-    "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
+    "_p(a,Z)", ["_p(a, b)"; "_p(a, c)"; "no"]);
 
     `Check("AAMFTESLP sld cut",
     "
@@ -251,7 +251,7 @@ let () =
     q(b). q(b).
     q(c).
     ",
-    "_p(a,Z)", 1, ["no"]);
+    "_p(a,Z)", ["no"]);
 
     `Check("AAMFTESLP sld context",
     "
@@ -265,7 +265,7 @@ let () =
     q(c).
     x(c).
     ",
-    "_p(a,Z), x(Z)", 2, ["_p(a, c), x(c)"; "no"]);
+    "_p(a,Z), x(Z)", ["_p(a, c), x(c)"; "no"]);
 
     `Check("AAMFTESLP sld context fail",
     "
@@ -279,7 +279,7 @@ let () =
     q(c).
     x(d).
     ",
-    "_p(a,Z), x(Z)", 1, ["no"]);
+    "_p(a,Z), x(Z)", ["no"]);
 
     `Check("fibo",
     "
@@ -287,7 +287,7 @@ let () =
     f(s(z)).
     f(s(s(X))) :- f(s(X)), f(X).
     ",
-    "f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))", 1, ["steps"]);
+    "f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))", ["steps"]);
 
     `Check("fibo tab",
     "
@@ -295,7 +295,7 @@ let () =
     _f(s(z)).
     _f(s(s(X))) :- _f(s(X)), _f(X).
     ",
-    "_f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))", 1, ["_f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))"]);
+    "_f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))", ["_f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))"]);
 
     `Check("alternatives to root",
     "
@@ -308,7 +308,7 @@ let () =
     main(a,a).
     main(a,a).
     ",
-    "main(a,a)", 3, ["main(a, a)"; "main(a, a)"; "no"]);
+    "main(a,a)", ["main(a, a)"; "main(a, a)"; "no"]);
 
     `Check("table trail hard",
     "
@@ -317,7 +317,7 @@ let () =
     _p(X,Z) :- _p(X,Y), _p(Y,Z).
     _p(X,X).
     ",
-    "_p(a, X)", 4, ["_p(a, b)"; "_p(a, c)"; "_p(a, a)"; "no"]);
+    "_p(a, X)", ["_p(a, b)"; "_p(a, c)"; "_p(a, a)"; "no"]);
 
     `Check("table cut",
     "
@@ -326,7 +326,7 @@ let () =
     _p(X,Z) :- _p(X,Y), !, _p(Y,Z).
     _p(X,X).
     ",
-    "_p(a, X)", 3, ["_p(a, b)"; "_p(a, c)";"no"]);
+    "_p(a, X)", ["_p(a, b)"; "_p(a, c)";"no"]);
 
     `Check("table fail",
     "
@@ -344,7 +344,7 @@ let () =
     main :- _p(a, q).
     main :- _p(a, q).
     ",
-    "main", 1, ["no"]);
+    "main", ["no"]);
 
     `Check("no table fail",
     "
@@ -362,7 +362,7 @@ let () =
     main :- p(a, q).
     main :- p(a, q).
     ",
-    "main", 1, ["steps"]);
+    "main", ["steps"]);
 
     `Check("table open solution",
     "
@@ -370,34 +370,34 @@ let () =
     _p(Y,c).
     _p(a,b) :- _p(a,X), _p(X,c).
     ",
-    "_p(a, X)", 4, ["_p(a, X0)"; "_p(a, c)"; "_p(a, b)";"no"]);
+    "_p(a, X)", ["_p(a, X0)"; "_p(a, c)"; "_p(a, b)";"no"]);
 
     `Check("table subsumption",
     "
     _p(X).
     ",
-    "_p(X),_p(s(X)),_p(z)", 2, ["_p(X0), _p(s(X0)), _p(z)"; "no"]);
+    "_p(X),_p(s(X)),_p(z)", ["_p(X0), _p(s(X0)), _p(z)"; "no"]);
 
     `Check("csts1",
     "
     p(X) ?- X < one | true.
     true.
     ",
-    "p(X), p(A)", 2, ["X0 < one, X1 < one| p(X0), p(X1)"; "no"]);
+    "p(X), p(A)", ["X0 < one, X1 < one| p(X0), p(X1)"; "no"]);
 
     `Check("csts2",
     "
     p(X,Y) ?- X < Y | true.
     true.
     ",
-    "p(X,A), p(A,X)", 2, ["X0 < X1, X1 < X0| p(X0, X1), p(X1, X0)"; "no"]);
+    "p(X,A), p(A,X)", ["X0 < X1, X1 < X0| p(X0, X1), p(X1, X0)"; "no"]);
 
     `Check("csts table",
     "
     _p(X,Y) ?- X < Y | true.
     true.
     ",
-    "_p(X,A), _p(Y,B)", 2, ["X0 < X1, X2 < X3| _p(X0, X1), _p(X2, X3)"; "no"]);
+    "_p(X,A), _p(Y,B)", ["X0 < X1, X2 < X3| _p(X0, X1), _p(X2, X3)"; "no"]);
 
     `Check("csts table2",
     "
@@ -405,7 +405,7 @@ let () =
     c(X,Y) ?- X < Y | true.
     true.
     ",
-    "c(C, D), _p(X,A), _p(Y,B)", 2, ["X0 < X1, X2 < X3, X4 < X5| c(X0, X1), _p(X2, X3), _p(X4, X5)"; "no"]);
+    "c(C, D), _p(X,A), _p(Y,B)", ["X0 < X1, X2 < X3, X4 < X5| c(X0, X1), _p(X2, X3), _p(X4, X5)"; "no"]);
 
     `Check("csts table3",
     "
@@ -413,7 +413,7 @@ let () =
     c(X,Y) ?- X < Y | true.
     true.
     ",
-    "c(X, Y), _p(X,A), _p(Y,B)", 2, ["X0 < X1, X0 < X2, X0 < X1, X1 < X3, X1 < X1| c(X0, X1), _p(X0, X2), _p(X1, X3)"; "no"]);
+    "c(X, Y), _p(X,A), _p(Y,B)", ["X0 < X1, X0 < X2, X0 < X1, X1 < X3, X1 < X1| c(X0, X1), _p(X0, X2), _p(X1, X3)"; "no"]);
 
     `Check("csts table3 bis",
     "
@@ -421,18 +421,46 @@ let () =
     c(X,Y) ?- X < Y | true.
     _p(X,Y) ?- X < Y | true.
     ",
-    "c(X, Y), _p(X,A), _p(Y,B)", 2, ["X0 < X1, X0 < X2, X0 < X1, X1 < X3, X1 < X1| c(X0, X1), _p(X0, X2), _p(X1, X3)"; "no"]);
+    "c(X, Y), _p(X,A), _p(Y,B)", ["X0 < X1, X0 < X2, X0 < X1, X1 < X3, X1 < X1| c(X0, X1), _p(X0, X2), _p(X1, X3)"; "no"]);
 
     `Check("dt unif",
     "
     _p(a,b) :- q.
     q.
     ",
-    "_p(X, b), _p(a, Y), _p(A,B)", 2, ["_p(a, b), _p(a, b), _p(a, b)"; "no"]);
+    "_p(X, b), _p(a, Y), _p(A,B)", ["_p(a, b), _p(a, b), _p(a, b)"; "no"]);
+
+    `Check("stamp1",
+    "
+    p(X,Z) :- e(X,Z).
+    p(X,Z) :- p(X,Y), p(Y,Z).
+    e(a,b).
+    e(b,c).
+    ",
+    "p(a,Z)", ["p(a, b)"; "p(a, c)"; "steps"]);
+
+    `Check("stamp2",
+    "
+    p(X,Z) :- p(X,Y), p(Y,Z).
+    p(X,Z) :- e(X,Z).
+    e(a,b).
+    e(b,c).
+    ",
+    "p(a,Z)", ["steps"]);
+
+    `Check("stamp3",
+    "
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    _p(X,Z) :- e(X,Z).
+    e(a,b).
+    e(b,c).
+    ",
+    "_p(a,Z)", ["_p(a, b)"; "_p(a, c)"; "no"]);
+
   ] in
 
   let filter allowed = function
-    | `Check(name,_,_,_,_) -> allowed = [] || List.mem name allowed in
+    | `Check(name,_,_,_) -> allowed = [] || List.mem name allowed in
   let checks = List.filter (filter filters) checks in
   List.iter check checks;
 
