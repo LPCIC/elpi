@@ -1,5 +1,14 @@
 type cell
-type path = cell array
+module Path : sig
+  type t
+  val pp : Format.formatter -> t -> unit
+  val get : t -> int -> cell
+  type builder
+  val make : int -> cell -> builder
+  val emit : builder -> cell -> unit
+  val stop : builder -> t
+  val of_list : cell list -> t
+end
 
 val mkConstant : safe:bool -> data:int -> arity:int -> cell
 val mkPrimitive : Elpi_util.Util.CData.t -> cell
@@ -23,7 +32,7 @@ type 'a t
 
     @note: in the elpi runtime, there are no two rule having the same [~time]
 *)
-val index : 'a t -> path -> 'a -> time:int -> 'a t
+val index : 'a t -> Path.t -> 'a -> time:int -> 'a t
 
 val max_path : 'a t -> int
 val max_depths : 'a t -> int array
@@ -41,7 +50,7 @@ val empty_dt : 'b list -> 'a t
   has been added at time [t] and r_2 been added at time [t+1] then
   r_2 will appear before r_1 in the final result
 *)
-val retrieve : path -> 'a t -> 'a list
+val retrieve : Path.t -> 'a t -> 'a list
 
 (***********************************************************)
 (* Printers                                                *)
@@ -49,9 +58,6 @@ val retrieve : path -> 'a t -> 'a list
 
 val pp_cell : Format.formatter -> cell -> unit
 val show_cell : cell -> string
-
-val pp_path : Format.formatter -> path -> unit
-val show_path : path -> string
 
 val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 val show : (Format.formatter -> 'a -> unit) -> 'a t -> string

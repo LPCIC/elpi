@@ -43,11 +43,11 @@ let () =
   
   let test (pathInsts: (cell list * int) list) (pathGoal,_) mode nb =
     Printf.printf "\n-> Running test %d <-\n" !test_nb; incr test_nb;
-    let pathGoal = Array.of_list (mode :: pathGoal @ [mkPathEnd]) in
+    let pathGoal = Path.of_list (mode :: pathGoal @ [mkPathEnd]) in
     (* Format.printf "%a\n" pp_path pathGoal; *)
     let pathInsts = List.map (fun (x,y) -> x @ [mkPathEnd], y) pathInsts in
     let add_to_trie t (key,value) = 
-      index t (Array.of_list key) value ~time:value in
+      index t (Path.of_list key) value ~time:value in
     let trie = List.fold_left add_to_trie (empty_dt []) pathInsts in 
     let retrived = retrieve pathGoal trie in
     let retrived_nb = List.length retrived in 

@@ -2475,21 +2475,9 @@ let hash_goal_arg_list = hash_arg_list true
   node before each argument to be indexed. This special node is used during 
   instance retrival to know the mode of the current argument
 *)
-let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_modes mp : Discrimination_tree.path =
+let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_modes mp : Discrimination_tree.Path.t =
   let open Discrimination_tree in
-  let path = ref @@ Array.make (max mp 8) mkPathEnd in
-  let pos = ref 0 in
-  let rec emit e =
-    let len = Array.length !path in
-    if !pos < len - 1 then begin
-      Array.unsafe_set !path !pos e;
-      incr pos
-    end else begin
-      let newpath = Array.make (2 * len) mkPathEnd in
-      Array.blit !path 0 newpath 0 len;
-      path := newpath;
-      emit e
-    end in
+  let path = Path.make (max mp 8) mkPathEnd in
   
   let current_ar_pos = ref 0 in
   let current_user_depth = ref 0 in
@@ -2508,7 +2496,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
 
   let rec list_to_trie_path ~safe ~depth ?(h=0) path_depth (len: int) (t: term) : unit =
     match deref_head ~depth t with
-    | Nil -> emit mkListEnd; update_current_min_depth path_depth
+    | Nil -> Path.emit path mkListEnd; update_current_min_depth path_depth
     | Cons (a, b) ->
         (* heuristic: we limit the size of the list to at most 30 *)
         (*            this aims to control the width of the path, *)
@@ -2518,23 +2506,23 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
         (*              has the node `app` with arity `1` as first*)
         (*              cell, then come the elment of the list    *)
         (*              up to the 30^th elemebt                   *)
-        if h > 30 then (emit mkListEnd; update_current_min_depth path_depth)
+        if h > 30 then (Path.emit path mkListEnd; update_current_min_depth path_depth)
         else
           main ~safe ~depth a path_depth;
           list_to_trie_path ~depth ~safe ~h:(h+1) path_depth (len+1) b
     
     (* These cases can come from terms like `[_ | _]`, `[_ | A]` ...  *)
-    | UVar _ | AppUVar _ | Arg _ | AppArg _ | Discard -> emit mkListTailVariable; update_current_min_depth path_depth
+    | UVar _ | AppUVar _ | Arg _ | AppArg _ | Discard -> Path.emit path mkListTailVariable; update_current_min_depth path_depth
 
     (* One could write the following: 
       type f list int.
       p [1,2,3,4 | f]. *)
-    | App _ | Const _ -> emit mkListTailVariable; update_current_min_depth path_depth
+    | App _ | Const _ -> Path.emit path mkListTailVariable; update_current_min_depth path_depth
 
     | Builtin _ | CData _ | Lam _ -> 
         type_error (Format.asprintf "[DT]: not a list: %a" (Pp.ppterm depth [] ~argsdepth:0 Data.empty_env) (deref_head ~depth t))
 
-  and emit_mode is_goal mode = if is_goal then emit mode
+  and emit_mode is_goal mode = if is_goal then Path.emit path mode
   (** gives the path representation of a list of sub-terms *)
   and arg_to_trie_path_aux ~safe ~depth t_list path_depth : unit = 
     if path_depth = 0 then update_current_min_depth path_depth
@@ -2550,25 +2538,25 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
     else
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
-      | Const k when k == Global_symbols.uvarc -> emit mkVariable; update_current_min_depth path_depth
-      | Const k when safe -> emit @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
-      | Const k -> emit @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
-      | CData d -> emit @@ mkPrimitive d; update_current_min_depth path_depth
-      | App (k,_,_) when k == Global_symbols.uvarc -> emit @@ mkVariable; update_current_min_depth path_depth
+      | Const k when k == Global_symbols.uvarc -> Path.emit path mkVariable; update_current_min_depth path_depth
+      | Const k when safe -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
+      | Const k -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
+      | CData d -> Path.emit path @@ mkPrimitive d; update_current_min_depth path_depth
+      | App (k,_,_) when k == Global_symbols.uvarc -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
       | App (k,a,_) when k == Global_symbols.asc -> main ~safe ~depth a (path_depth+1)
-      | Lam _ -> emit @@ mkLam; update_current_min_depth path_depth (* loose indexing to enable eta *)
-      | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> emit @@ mkVariable; update_current_min_depth path_depth
+      | Lam _ -> Path.emit path @@ mkLam; update_current_min_depth path_depth (* loose indexing to enable eta *)
+      | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
       | Builtin (k,tl) ->
-        emit @@ mkConstant ~safe ~data:k ~arity:(if path_depth = 0 then 0 else List.length tl);
+        Path.emit path @@ mkConstant ~safe ~data:k ~arity:(if path_depth = 0 then 0 else List.length tl);
         arg_to_trie_path_aux ~safe ~depth tl path_depth
       | App (k, x, xs) -> 
         let arg_length = if path_depth = 0 then 0 else List.length xs + 1 in
-        emit @@ mkConstant ~safe ~data:k ~arity:arg_length;
+        Path.emit path @@ mkConstant ~safe ~data:k ~arity:arg_length;
         main ~safe ~depth x path_depth;
         arg_to_trie_path_aux ~safe ~depth xs path_depth
-      | Nil -> emit mkListHead; emit mkListEnd; update_current_min_depth path_depth
+      | Nil -> Path.emit path mkListHead; Path.emit path mkListEnd; update_current_min_depth path_depth
       | Cons (x,xs) ->
-          emit mkListHead;
+          Path.emit path mkListHead;
           main ~safe ~depth x (path_depth + 1);
           list_to_trie_path ~safe ~depth (path_depth + 1) 0 xs
 
@@ -2599,7 +2587,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
     if args == [] then emit_mode is_goal mkOutputMode
     else aux ~safe ~depth is_goal args (if is_goal then Array.to_list args_depths_ar else arg_depths) arg_modes
   end;
-  !path
+  Path.stop path
 
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
@@ -2791,11 +2779,11 @@ let get_clauses ~depth predicate goal { index = m } =
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
         let max_depths = Discrimination_tree.max_depths args_idx in
         let max_path = Discrimination_tree.max_path args_idx in
-        let (path: Discrimination_tree.path) = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths max_depths mode max_path in
+        let (path: Discrimination_tree.Path.t) = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths max_depths mode max_path in
         [%spy "dev:disc-tree:depth-path" ~rid pp_string "Goal: MaxDepths " (pplist pp_int ";") (Array.to_list max_depths)];
         (* Format.(printf "Goal: MaxDepth is %a\n" (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_int) (Discrimination_tree.max_depths args_idx |> Array.to_list)); *)
         [%spy "dev:disc-tree:path" ~rid 
-          Discrimination_tree.pp_path path
+          Discrimination_tree.Path.pp path
           (pplist pp_int ";") arg_depths
           (*Discrimination_tree.(pp (fun fmt x -> pp_string fmt "+")) args_idx*)];
         let candidates = Discrimination_tree.retrieve path args_idx in 
