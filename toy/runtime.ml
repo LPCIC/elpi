@@ -267,6 +267,11 @@ let rec fold_left2 f l1 l2 = match l1, l2 with
   | x::xs, y::ys -> f x y && fold_left2 f xs ys
   | _ -> false
 
+let rec predicate_of = function
+  | App(c,_) -> c
+  | Var r when !r != dummy -> predicate_of !r
+  | _ -> assert false
+
 let rec heapify s = function
   | App(c,l) -> App(c,List.map (heapify s) l)
   | Var _ as x -> x
@@ -415,7 +420,7 @@ and alt = (* the OR part, what to do if we fail *)
   | NoAlt
   | ExploreAnotherSLDPath of {
     goal: goal;
-    rules : rule list; [@printer (fun _ _ -> ())]
+    rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
     next : continuation; [@printer (fun _ _ -> ())]
     alts : alt;
     choice_point : Heap.history; [@printer (fun _ _ -> ())]
@@ -435,6 +440,11 @@ and slg_initial_goal = {
   ccsts : constraints; (* canonical as well *)
 }
 [@@deriving show { with_path = false }]
+
+let ifanyrule = function
+  | ExploreAnotherSLDPath { rules; alts; _ } as x ->
+      if rules = [] then alts else x
+  | x -> x
 
 let rec flatten_frame = function
   | SolveGoals { brothers; next; _ } ->
@@ -500,6 +510,10 @@ let rec select (heap : Heap.t) goal = function
         select heap goal rules
       end
     end
+let filter g rules =
+  let p = predicate_of g in
+  let rules = List.filter (fun { hd; _ } -> predicate_of hd = p) rules in
+  rules
 
 let new_table_entry cgoal =
   table := DT.add cgoal ([],Incomplete) !table
@@ -622,6 +636,7 @@ let rec run { goal; rules; next; alts; cut_alts; heap } (sgs : slg_status) : res
   [%trace "run" ~rid 
     ("@[<hov 2>g: %a@ next: %a@ alts: %a@]@\n" pp_tm goal pp_continuation next pp_alt alts)
   begin 
+    let rules = filter goal rules in
     sld goal rules next alts cut_alts heap sgs
 end]
 
@@ -683,7 +698,8 @@ module SLG : Runtime = struct
 let rec run { goal; rules; next; alts; cut_alts; heap } (sgs : slg_status) : result =
   [%trace "run" ~rid 
     ("@[<hov 2>g: %a@ next: %a@ alts: %a@]@\n" pp_tm goal pp_continuation next pp_alt alts)
-  begin 
+  begin
+    let rules = filter goal rules in
     if tabled goal
     then enter_slg goal rules next alts cut_alts heap sgs
     else       sld goal rules next alts cut_alts heap sgs
@@ -741,7 +757,7 @@ and slg ({ generators; resume_queue; root; _ } as s) =
         next_alt heap alts s
      | Root { initial_goal = { cgoal = entry; _ }; rules = []; _ } :: generators ->
         let s = { s with generators } in
-        let s = table_entry_complete entry s in (* TODO: do this more ofted/early *)
+        let s = table_entry_complete entry s in
         slg s
      | Root { initial_goal; rules } :: generators ->
         let s = { s with generators } in
@@ -771,14 +787,14 @@ and sld goal rules next (alts : alt) (cut_alts : alt) (heap: Heap.t) (sgs : slg_
   if goal = cut then
     pop_andl_maybe_tabled_tail_cut next cut_alts heap sgs
   else 
-    match select heap goal rules with
+    match select heap goal (filter goal rules) with
     | None -> next_alt heap alts sgs
     | Some (choice_point, [], rules) ->
-        let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point; alts } in
+        let alts = ifanyrule @@ ExploreAnotherSLDPath { goal; rules; next; choice_point; alts } in
         pop_andl next alts heap sgs
     | Some (choice_point, ngoal :: brothers, rules) ->
         let old_alts = alts in
-        let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point; alts } in
+        let alts = ifanyrule @@ ExploreAnotherSLDPath { goal; rules; next; choice_point; alts } in
         let next = SolveGoals { brothers; cut_alts = old_alts; next } in
         run { goal = ngoal; rules = !all_rules; next; alts; cut_alts = old_alts; heap } sgs
 
@@ -904,6 +920,7 @@ let main query steps n program =
       let g = Format.asprintf "%a" (Pp.ppl ", ") query in
       let c = if csts = [] then "" else Format.asprintf "%a| " (Pp.ppli ", ") csts in
       let s = c^g in
+      [%spy "solution" ~rid Format.pp_print_string s];
       if n = 1 then [s]
       else s :: all (n-1) (R.next_alt heap alts sgs)
   in
