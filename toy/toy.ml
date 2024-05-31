@@ -457,6 +457,16 @@ let () =
     ",
     "_p(a,Z)", ["_p(a, b)"; "_p(a, c)"; "no"]);
 
+    `Check("stamp4",
+    "
+    _p(X,Z) :- _p(X,Y), !, _p(Y,Z).
+    _p(X,Z) :- e(X,Z).
+    e(a,b).
+    e(b,c).
+    ",
+    "_p(a,Z)", ["no"]);
+
+
   ] in
 
   let filter allowed = function
