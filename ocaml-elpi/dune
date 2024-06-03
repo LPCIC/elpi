@@ -1,0 +1,30 @@
+
+(library
+  (name ocaml_elpi_ppx)
+  (public_name ocaml-elpi.ppx)
+  (libraries
+  ocaml-compiler-libs.shadow
+  ocaml-compiler-libs.common
+  compiler-libs.common
+  ocaml-migrate-parsetree
+  elpi ppxlib ppx_show.runtime)
+  (flags (:standard -open Ocaml_shadow -safe-string))
+  (preprocess (pps ppx_show elpi.ppx))
+  (modules ocaml_ast_for_elpi main_ocaml_elpi_rewriter)
+  (kind ppx_rewriter)
+)
+
+(rule
+  (target ocaml_ast.elpi)
+  (mode promote)
+  (action (run ./document_ocaml_ast_for_elpi.exe %{target})) )
+
+(executable
+  (name document_ocaml_ast_for_elpi)
+  (modules document_ocaml_ast_for_elpi)
+  (optional)
+  (libraries ocaml-elpi.ppx))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
