@@ -1,3 +1,17 @@
+# v1.19.1 (June 2024)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+Language:
+  - New `:index (<arg-spec>) "index-type"` where the index type can be
+    Map, Hash or DTree
+
+Runtime:
+  - Fix performance regression due to the fix to relocation in unification
+    introduced in 1.19.0
+  - New list flattening in DTree index, that is term `app [t1,t2,t3]`
+    is indexed using the same DTree space/depth of term `app t1 t2 t3`
+    
 # v1.19.0 (May 2024)
 
 Language:
