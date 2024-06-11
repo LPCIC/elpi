@@ -592,6 +592,8 @@ length []    0.
 
 pred rev i:list A, o:list A.
 rev L RL  :- rev.aux L []  RL.
+
+pred rev.aux i:list A, i:list A, o:list A.
 rev.aux [X|XS] ACC R :- rev.aux XS [X|ACC] R.
 rev.aux [] L L.
 
