@@ -5,6 +5,9 @@
   - Add `choose`, `min`, `max`, `fold` and `partition` methods to OCaml sets
   - Add `fold` method to OCaml maps
 
+- Stdlib:
+  - Fix first argument of `std.rev` is in input
+
 - Runtime:
   - Fix discrimination tree retrieval
 
