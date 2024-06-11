@@ -1,3 +1,13 @@
+# UNRELEASED
+
+
+- Builtins:
+  - Add `choose`, `min`, `max`, `fold` and `partition` methods to OCaml sets
+  - Add `fold` method to OCaml maps
+
+- Runtime:
+  - Fix discrimination tree retrieval
+
 # v1.19.1 (June 2024)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

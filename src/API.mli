@@ -650,43 +650,65 @@ module BuiltInPredicate : sig
 
     type 'a pred1
     type ('a,'b) pred2
+    type ('a) pred2a
     type ('a,'b,'c) pred3
+    type ('a,'b) pred3a
 
     val pred1 : 'a Conversion.t -> 'a pred1 Conversion.t
     val pred2 : 'a Conversion.t -> 'b Conversion.t -> ('a,'b) pred2 Conversion.t
     val pred3 : 'a Conversion.t -> 'b Conversion.t -> 'c Conversion.t -> ('a,'b,'c) pred3 Conversion.t
+    val pred2a : 'a Conversion.t -> string -> ('a) pred2a Conversion.t
+    val pred3a : 'a Conversion.t -> 'b Conversion.t -> string -> ('a,'b) pred3a Conversion.t
 
     val filter1 :
       once:once -> depth:int ->
-      filter:(('a -> bool) -> 's -> 's) ->
+      filter:(('a -> bool) -> 's -> 't) ->
       'a pred1 ->
       's ->
       Data.state ->
-      Data.state * 's * Conversion.extra_goals
+      Data.state * 't * Conversion.extra_goals
 
     val filter2 :
       once:once -> depth:int ->
-      filter:(('a -> 'b -> bool) -> 's -> 's) ->
+      filter:(('a -> 'b -> bool) -> 's -> 't) ->
       ('a,'b) pred2 ->
       's ->
       Data.state ->
-      Data.state * 's * Conversion.extra_goals
+      Data.state * 't * Conversion.extra_goals
 
     val map1 :
       once:once -> depth:int ->
-      map:(('a -> 'c) -> 's -> 's) ->
+      map:(('a -> 'c) -> 's -> 't) ->
       ('a,'c) pred2 ->
       's ->
       Data.state ->
-      Data.state * 's * Conversion.extra_goals
+      Data.state * 't * Conversion.extra_goals
 
     val map2 :
       once:once -> depth:int ->
-      map:(('a -> 'b -> 'c) -> 's -> 's) ->
+      map:(('a -> 'b -> 'c) -> 's -> 't) ->
       ('a,'b,'c) pred3 ->
       's ->
       Data.state ->
-      Data.state * 's * Conversion.extra_goals
+      Data.state * 't * Conversion.extra_goals
+
+    val fold1 :
+      once:once -> depth:int ->
+      fold:(('a -> Data.term -> Data.term) -> 's -> Data.term -> Data.term) ->
+      ('a) pred2a ->
+      's ->
+      Data.term ->
+      Data.state ->
+      Data.state * Data.term * Conversion.extra_goals
+
+    val fold2 :
+      once:once -> depth:int ->
+      fold:(('a -> 'b -> Data.term -> Data.term) -> 's -> Data.term -> Data.term) ->
+      ('a,'b) pred3a ->
+      's ->
+      Data.term ->
+      Data.state ->
+      Data.state * Data.term * Conversion.extra_goals
 
   end
 

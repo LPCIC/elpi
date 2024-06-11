@@ -1,0 +1,29 @@
+pred map2 i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
+map2 [] [_|_] _ _ :- fail.
+map2 [_|_] [] _ _ :- fail.
+map2 [] [] _ [].
+map2 [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, map2 XS YS F ZS.
+
+main :-
+  map2 [1] [1] (x\y\r\r = 1) _,
+  map2 [] [] (x\y\r\r = 1) _,
+  map2 [_] [_] (x\y\r\r = 1) _,
+
+  not(map2 [_|_] [_|_] (x\y\r\r = 1) _), % mode
+  
+  not(map2 [1] [] (x\y\r\r = 1) _),
+  not(map2 [] [1] (x\y\r\r = 1) _),
+
+  not(map2 [_] [] (x\y\r\r = 1) _),
+  not(map2 [] [_] (x\y\r\r = 1) _),
+
+  not(map2 [1|_] [] (x\y\r\r = 1) _),
+  not(map2 [] [1|_] (x\y\r\r = 1) _),
+  
+  not(map2 [_|_] [] (x\y\r\r = 1) _),
+  not(map2 [] [_|_] (x\y\r\r = 1) _),
+
+  not(map2 [_|_] [_] (x\y\r\r = 1) _), % mode
+  not(map2 [_] [_|_] (x\y\r\r = 1) _), % mode
+
+  true.

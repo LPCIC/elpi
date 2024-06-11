@@ -851,6 +851,10 @@ external pred std.string.map.map i:std.string.map A,
                                  i:string -> A -> B -> prop, 
                                  o:std.string.map B.
 
+% [std.string.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
+external pred std.string.map.fold i:std.string.map A, i:C, 
+                                  i:string -> A -> C -> C -> prop, o:C.
+
 % CAVEAT: the type parameter of std.int.map must be a closed term
 
 kind std.int.map type -> type.
@@ -882,6 +886,10 @@ external pred std.int.map.filter i:std.int.map A, i:int -> A -> prop,
 external pred std.int.map.map i:std.int.map A, i:int -> A -> B -> prop, 
                               o:std.int.map B.
 
+% [std.int.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
+external pred std.int.map.fold i:std.int.map A, i:C, 
+                               i:int -> A -> C -> C -> prop, o:C.
+
 % CAVEAT: the type parameter of std.loc.map must be a closed term
 
 kind std.loc.map type -> type.
@@ -912,6 +920,10 @@ external pred std.loc.map.filter i:std.loc.map A, i:loc -> A -> prop,
 % [std.loc.map.map M F M1] Map M w.r.t. the predicate F
 external pred std.loc.map.map i:std.loc.map A, i:loc -> A -> B -> prop, 
                               o:std.loc.map B.
+
+% [std.loc.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
+external pred std.loc.map.fold i:std.loc.map A, i:C, 
+                               i:loc -> A -> C -> C -> prop, o:C.
 
 kind std.string.set type.
 
@@ -950,6 +962,15 @@ external pred std.string.set.subset i:std.string.set, i:std.string.set.
 % [std.string.set.elements M L] L is M transformed into list
 external pred std.string.set.elements i:std.string.set, o:list string.
 
+% [std.string.set.choose M X] X is an element of M
+external pred std.string.set.choose i:std.string.set, o:string.
+
+% [std.string.set.min M X] X is the smallest element of M
+external pred std.string.set.min i:std.string.set, o:string.
+
+% [std.string.set.max M X] X is the bigger of M
+external pred std.string.set.max i:std.string.set, o:string.
+
 % [std.string.set.cardinal M N] N is the number of elements of M
 external pred std.string.set.cardinal i:std.string.set, o:int.
 
@@ -961,6 +982,16 @@ external pred std.string.set.filter i:std.string.set, i:string -> prop,
 external pred std.string.set.map i:std.string.set, 
                                  i:string -> string -> prop, 
                                  o:std.string.set.
+
+% [std.string.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
+external pred std.string.set.fold i:std.string.set, i:A, 
+                                  i:string -> A -> A -> prop, o:A.
+
+% [std.string.set.partition M F M1 M2] Partitions M w.r.t. the predicate F,
+% M1 is where F holds
+external pred std.string.set.partition i:std.string.set, 
+                                       i:string -> prop, 
+                                       o:std.string.set, o:std.string.set.
 
 kind std.int.set type.
 
@@ -997,6 +1028,15 @@ external pred std.int.set.subset i:std.int.set, i:std.int.set.
 % [std.int.set.elements M L] L is M transformed into list
 external pred std.int.set.elements i:std.int.set, o:list int.
 
+% [std.int.set.choose M X] X is an element of M
+external pred std.int.set.choose i:std.int.set, o:int.
+
+% [std.int.set.min M X] X is the smallest element of M
+external pred std.int.set.min i:std.int.set, o:int.
+
+% [std.int.set.max M X] X is the bigger of M
+external pred std.int.set.max i:std.int.set, o:int.
+
 % [std.int.set.cardinal M N] N is the number of elements of M
 external pred std.int.set.cardinal i:std.int.set, o:int.
 
@@ -1007,6 +1047,15 @@ external pred std.int.set.filter i:std.int.set, i:int -> prop,
 % [std.int.set.map M F M1] Map M w.r.t. the predicate F
 external pred std.int.set.map i:std.int.set, i:int -> int -> prop, 
                               o:std.int.set.
+
+% [std.int.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
+external pred std.int.set.fold i:std.int.set, i:A, 
+                               i:int -> A -> A -> prop, o:A.
+
+% [std.int.set.partition M F M1 M2] Partitions M w.r.t. the predicate F, M1
+% is where F holds
+external pred std.int.set.partition i:std.int.set, i:int -> prop, 
+                                    o:std.int.set, o:std.int.set.
 
 kind std.loc.set type.
 
@@ -1043,6 +1092,15 @@ external pred std.loc.set.subset i:std.loc.set, i:std.loc.set.
 % [std.loc.set.elements M L] L is M transformed into list
 external pred std.loc.set.elements i:std.loc.set, o:list loc.
 
+% [std.loc.set.choose M X] X is an element of M
+external pred std.loc.set.choose i:std.loc.set, o:loc.
+
+% [std.loc.set.min M X] X is the smallest element of M
+external pred std.loc.set.min i:std.loc.set, o:loc.
+
+% [std.loc.set.max M X] X is the bigger of M
+external pred std.loc.set.max i:std.loc.set, o:loc.
+
 % [std.loc.set.cardinal M N] N is the number of elements of M
 external pred std.loc.set.cardinal i:std.loc.set, o:int.
 
@@ -1053,6 +1111,15 @@ external pred std.loc.set.filter i:std.loc.set, i:loc -> prop,
 % [std.loc.set.map M F M1] Map M w.r.t. the predicate F
 external pred std.loc.set.map i:std.loc.set, i:loc -> loc -> prop, 
                               o:std.loc.set.
+
+% [std.loc.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
+external pred std.loc.set.fold i:std.loc.set, i:A, 
+                               i:loc -> A -> A -> prop, o:A.
+
+% [std.loc.set.partition M F M1 M2] Partitions M w.r.t. the predicate F, M1
+% is where F holds
+external pred std.loc.set.partition i:std.loc.set, i:loc -> prop, 
+                                    o:std.loc.set, o:std.loc.set.
 
 #line 0 "builtin_map.elpi"
 kind std.map type -> type -> type.
