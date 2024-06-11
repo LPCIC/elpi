@@ -180,3 +180,8 @@ let () = declare "is"
   ~source_elpi:"is.elpi"
   ~description:"calc"
   ()
+
+  let () = declare "trie"
+  ~source_elpi:"trie.elpi"
+  ~description:"discrimination_tree on trees"
+  ()
