@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="#" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+<li class="toctree-l1"><a class="reference external" href="elpi-option-legacy-parser/index.html#http://">elpi-option-legacy-parser</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">About</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/about.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="about">
+<h1>About<a class="headerlink" href="#about" title="Link to this heading"></a></h1>
+<p>This page is both an introspection and self documentation for this documentation stack.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<p>Before building this documentation, make sure to have <code class="docutils literal notranslate"><span class="pre">sphinx</span></code> installed:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install sphinx</span>
+<span class="go">pip install in-place</span>
+</pre></div>
+</div>
+<p>To match the visuals used in the community (<em>e.g.</em> <a class="reference external" href="https://coq.inria.fr/distrib/current/refman/">https://coq.inria.fr/distrib/current/refman/</a>):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install sphinx-rtd-theme</span>
+</pre></div>
+</div>
+<p>On debian based systems, one can use the package manager:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">apt install sphinx-doc</span>
+<span class="go">apt install python3-sphinx-rtd-theme</span>
+<span class="go">pip install in-place</span>
+</pre></div>
+</div>
+</section>
+<section id="extensions">
+<h2>Extensions<a class="headerlink" href="#extensions" title="Link to this heading"></a></h2>
+<p>This documentation can make use of the following plugins:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">extensions</span> <span class="o">=</span> <span class="p">[</span>
+   <span class="s1">&#39;sphinx.ext.intersphinx&#39;</span><span class="p">,</span>
+   <span class="s1">&#39;sphinx.ext.githubpages&#39;</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Namely, <code class="docutils literal notranslate"><span class="pre">intersphinx</span></code> (<a class="reference external" href="https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html">https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html</a>) can generate links to the documentation of objects in external projects, either explicitly through the external role, or as a fallback resolution for any other cross-reference, and, <code class="docutils literal notranslate"><span class="pre">githubpages</span></code> (<a class="reference external" href="https://www.sphinx-doc.org/en/master/usage/extensions/githubpages.html#module-sphinx.ext.githubpages">https://www.sphinx-doc.org/en/master/usage/extensions/githubpages.html#module-sphinx.ext.githubpages</a>) which creates a <code class="docutils literal notranslate"><span class="pre">.nojekyll</span></code> file on generated HTML directory to publish the document on GitHub Pages.</p>
+</section>
+<section id="building">
+<h2>Building<a class="headerlink" href="#building" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">sphinx</span></code> comes with its own helpers to build the documentation but are not meant to be used directly, see <a class="reference internal" href="playground.html"><span class="doc">Playground</span></a> section for injection points.</p>
+<p>Instead, use the <code class="docutils literal notranslate"><span class="pre">doc-sphinx</span></code> target of the source tree’s root’s <code class="docutils literal notranslate"><span class="pre">Makefile</span></code> to build the documentation:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">make</span> <span class="n">doc</span><span class="o">-</span><span class="n">build</span>
+</pre></div>
+</div>
+<p>Or, to build and publish the documentation to github pages:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">make</span> <span class="n">doc</span><span class="o">-</span><span class="n">publish</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
