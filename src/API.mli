@@ -658,35 +658,35 @@ module BuiltInPredicate : sig
 
     val filter1 :
       once:once -> depth:int ->
-      filter:(('a -> bool) -> 's -> 's) ->
+      filter:(('a -> bool) -> 's -> 't) ->
       'a pred1 ->
       's ->
       Data.state ->
-      Data.state * 's * Conversion.extra_goals
+      Data.state * 't * Conversion.extra_goals
 
     val filter2 :
       once:once -> depth:int ->
-      filter:(('a -> 'b -> bool) -> 's -> 's) ->
+      filter:(('a -> 'b -> bool) -> 's -> 't) ->
       ('a,'b) pred2 ->
       's ->
       Data.state ->
-      Data.state * 's * Conversion.extra_goals
+      Data.state * 't * Conversion.extra_goals
 
     val map1 :
       once:once -> depth:int ->
-      map:(('a -> 'c) -> 's -> 's) ->
+      map:(('a -> 'c) -> 's -> 't) ->
       ('a,'c) pred2 ->
       's ->
       Data.state ->
-      Data.state * 's * Conversion.extra_goals
+      Data.state * 't * Conversion.extra_goals
 
     val map2 :
       once:once -> depth:int ->
-      map:(('a -> 'b -> 'c) -> 's -> 's) ->
+      map:(('a -> 'b -> 'c) -> 's -> 't) ->
       ('a,'b,'c) pred3 ->
       's ->
       Data.state ->
-      Data.state * 's * Conversion.extra_goals
+      Data.state * 't * Conversion.extra_goals
 
   end
 

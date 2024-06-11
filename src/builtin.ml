@@ -1198,6 +1198,27 @@ set,
     (fun m _ ~depth -> !: (Set.elements m))),
   DocAbove);
 
+  MLCode(Pred(name^".choose",
+    In(set,"M",
+    Out(alpha,"X",
+    Easy "X is an element of M")),
+    (fun m _ ~depth -> !: (try Set.choose m with Not_found -> raise No_clause))),
+  DocAbove);
+
+  MLCode(Pred(name^".min",
+    In(set,"M",
+    Out(alpha,"X",
+    Easy "X is the smallest element of M")),
+    (fun m _ ~depth -> !: (try Set.min_elt m with Not_found -> raise No_clause))),
+  DocAbove);
+
+  MLCode(Pred(name^".max",
+    In(set,"M",
+    Out(alpha,"X",
+    Easy "X is the bigger of M")),
+    (fun m _ ~depth -> !: (try Set.max_elt m with Not_found -> raise No_clause))),
+  DocAbove);
+
   MLCode(Pred(name^".cardinal",
     In(set,"M",
     Out(int,"N",
@@ -1229,6 +1250,20 @@ set,
       
       state, !: m, gls
     )),
+  DocAbove);
+
+  MLCode(Pred(name^".partition",
+  In(set,"M",
+  In(HOAdaptors.pred1 alpha,"F",
+  Out(set,"M1",
+  Out(set,"M2",
+  FullHO(ContextualConversion.unit_ctx, "Partitions M w.r.t. the predicate F, M1 is where F holds"))))),
+  (fun m f _ _ ~once ~depth _ _ state ->
+
+    let state, (m1, m2), gls = HOAdaptors.filter1 ~once ~depth ~filter:Set.partition f m state in
+    
+    state, !: m1 +! m2, gls
+  )),
   DocAbove);
 
 
