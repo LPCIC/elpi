@@ -3,6 +3,7 @@
 
 - Builtins:
   - Add `choose`, `min`, `max`, `fold` and `partition` methods to OCaml sets
+  - Add `fold` method to OCaml maps
 
 - Runtime:
   - Fix discrimination tree retrieval
