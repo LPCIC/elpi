@@ -1252,6 +1252,21 @@ set,
     )),
   DocAbove);
 
+  MLCode(Pred(name^".fold",
+    In(set,"M",
+    In(poly "A","Acc",
+    In(HOAdaptors.pred2a alpha "A","F",
+    Out(poly "A","Acc1",
+    FullHO(ContextualConversion.unit_ctx, "fold M w.r.t. the predicate F"))))),
+    (fun m a f _ ~once ~depth _ _ state ->
+
+      let state, a, gls = HOAdaptors.fold1 ~once ~depth ~fold:Set.fold f m a state in
+      
+      state, !: a, gls
+    )),
+  DocAbove);
+
+
   MLCode(Pred(name^".partition",
   In(set,"M",
   In(HOAdaptors.pred1 alpha,"F",
@@ -1367,6 +1382,21 @@ let open BuiltIn in let open BuiltInData in
       let state, m, gls = HOAdaptors.map2 ~once ~depth ~map:Map.mapi f m state in
       
       state, !: m, gls
+    )),
+  DocAbove);
+
+
+  MLCode(Pred(name^".fold",
+    In(map "A","M",
+    In(poly "C","Acc",
+    In(HOAdaptors.pred3a alpha closed_A "C","F",
+    Out(poly "C","Acc1",
+    FullHO(ContextualConversion.unit_ctx, "fold M w.r.t. the predicate F"))))),
+    (fun m a f _ ~once ~depth _ _ state ->
+
+      let state, a, gls = HOAdaptors.fold2 ~once ~depth ~fold:Map.fold f m a state in
+      
+      state, !: a, gls
     )),
   DocAbove);
 

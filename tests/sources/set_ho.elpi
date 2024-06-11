@@ -5,6 +5,8 @@ main :-
   std.time (std.filter {std.int.set.elements S} (x\0 is x mod 123) L, std.fold L {std.int.set.empty} std.int.set.add S2) T2,
   std.int.set.cardinal S2 M,
   std.assert! (N = M) "wrong card filter",
+  std.int.set.fold S1 0 (x\a\r\ r is a + x) Sum,
+  std.assert! (Sum = 40599594) "wrong fold",
   print T1 " < " T2,
   std.int.set.map S1 (_\r\ r = 1) S3,
   std.assert! (std.int.set.cardinal S3 1) "wrong card map".

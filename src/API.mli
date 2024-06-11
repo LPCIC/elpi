@@ -650,11 +650,15 @@ module BuiltInPredicate : sig
 
     type 'a pred1
     type ('a,'b) pred2
+    type ('a) pred2a
     type ('a,'b,'c) pred3
+    type ('a,'b) pred3a
 
     val pred1 : 'a Conversion.t -> 'a pred1 Conversion.t
     val pred2 : 'a Conversion.t -> 'b Conversion.t -> ('a,'b) pred2 Conversion.t
     val pred3 : 'a Conversion.t -> 'b Conversion.t -> 'c Conversion.t -> ('a,'b,'c) pred3 Conversion.t
+    val pred2a : 'a Conversion.t -> string -> ('a) pred2a Conversion.t
+    val pred3a : 'a Conversion.t -> 'b Conversion.t -> string -> ('a,'b) pred3a Conversion.t
 
     val filter1 :
       once:once -> depth:int ->
@@ -687,6 +691,24 @@ module BuiltInPredicate : sig
       's ->
       Data.state ->
       Data.state * 't * Conversion.extra_goals
+
+    val fold1 :
+      once:once -> depth:int ->
+      fold:(('a -> Data.term -> Data.term) -> 's -> Data.term -> Data.term) ->
+      ('a) pred2a ->
+      's ->
+      Data.term ->
+      Data.state ->
+      Data.state * Data.term * Conversion.extra_goals
+
+    val fold2 :
+      once:once -> depth:int ->
+      fold:(('a -> 'b -> Data.term -> Data.term) -> 's -> Data.term -> Data.term) ->
+      ('a,'b) pred3a ->
+      's ->
+      Data.term ->
+      Data.state ->
+      Data.state * Data.term * Conversion.extra_goals
 
   end
 

@@ -2,7 +2,7 @@
 
 
 - Builtins:
-  - Add `choose`, `min`, `max` and `partition` methods to OCaml sets
+  - Add `choose`, `min`, `max`, `fold` and `partition` methods to OCaml sets
 
 - Runtime:
   - Fix discrimination tree retrieval

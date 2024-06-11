@@ -916,7 +916,9 @@ module BuiltInPredicate = struct
 
     type 'a pred1 = Data.term * 'a Conversion.t
     type ('a,'b) pred2 = Data.term * 'a Conversion.t * 'b Conversion.t
+    type ('a) pred2a = Data.term * 'a Conversion.t
     type ('a,'b,'c) pred3 = Data.term * 'a Conversion.t * 'b Conversion.t * 'c Conversion.t
+    type ('a,'b) pred3a = Data.term * 'a Conversion.t * 'b Conversion.t
 
     let pred1_ty x = Conversion.TyApp("->",x.Conversion.ty,[Conversion.TyName"prop"])
     let pred1 x = { Conversion.ty = pred1_ty x; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<pred1>"); pp_doc = (fun fmt () -> ()) }
@@ -924,6 +926,10 @@ module BuiltInPredicate = struct
     let pred2 x y = { Conversion.ty = pred2_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<pred2>"); pp_doc = (fun fmt () -> ()) }
     let pred3_ty x y z = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[TyApp("->",z.Conversion.ty,[Conversion.TyName"prop"])])]))
     let pred3 x y z = { Conversion.ty = pred3_ty x y z; readback = (fun ~depth state e -> state,(e,x,y,z),[]); embed = (fun ~depth state (x,_,_,_) -> state,x,[]); pp = (fun fmt (x,_,_,_) -> Format.fprintf fmt "<pred3>"); pp_doc = (fun fmt () -> ()) }
+    let pred2a_ty x a = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",Conversion.TyName a,[TyApp("->",Conversion.TyName a,[Conversion.TyName"prop"])])]))
+    let pred2a x a = { Conversion.ty = pred2a_ty x a; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<pred2a>"); pp_doc = (fun fmt () -> ()) }
+    let pred3a_ty x y a = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[TyApp("->",Conversion.TyName a,[TyApp("->",Conversion.TyName a,[Conversion.TyName"prop"])])])]))
+    let pred3a x y a = { Conversion.ty = pred3a_ty x y a; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<pred3a>"); pp_doc = (fun fmt () -> ()) }
 
 
     let filter1 ~once ~depth ~filter (f,c1) m state =
@@ -932,7 +938,7 @@ module BuiltInPredicate = struct
       let m = filter (fun x ->
         try
           let state, x, gls0 = c1.Conversion.embed ~depth !st x in
-          gls := gls0 :: !gls;
+          if gls0 <> [] then gls := gls0 :: !gls;
           let state = once ~depth (beta ~depth f [x]) state in
           st := state;
           true
@@ -945,7 +951,7 @@ module BuiltInPredicate = struct
         try
           let state, x, gls0 = c1.Conversion.embed ~depth !st x in
           let state, y, gls1 = c2.Conversion.embed ~depth state y in
-          gls := gls1 :: gls0 :: !gls;
+          if gls0 <> [] || gls1 <> [] then gls := gls1 :: gls0 :: !gls;
           let state = once ~depth (beta ~depth f [x;y]) state in
           st := state;
           true
@@ -959,9 +965,9 @@ module BuiltInPredicate = struct
           let state, x, gls0 = c1.Conversion.embed ~depth !st x in
           let state, y = FlexibleData.Elpi.make state in
           let y = RawData.mkUnifVar y ~args:(List.init depth RawData.mkConst) state in
-          gls := gls0 :: !gls;
           let state = once ~depth (beta ~depth f [x;y]) state in
           let state, y, gls1 = c2.Conversion.readback ~depth state y in
+          if gls0 <> [] || gls1 <> [] then gls := gls1 :: gls0 :: !gls;
           st := state;
           y
         ) m in
@@ -975,14 +981,44 @@ module BuiltInPredicate = struct
           let state, y, gls1 = c2.Conversion.embed ~depth state y in
           let state, z = FlexibleData.Elpi.make state in
           let z = RawData.mkUnifVar z ~args:(List.init depth RawData.mkConst) state in
-          gls := gls1 :: gls0 :: !gls;
           let state = once ~depth (beta ~depth f [x;y;z]) state in
-          let state, z, gls1 = c3.Conversion.readback ~depth state z in
+          let state, z, gls2 = c3.Conversion.readback ~depth state z in
+          if gls0 <> [] || gls1 <> [] || gls2 <> [] then gls := gls2 :: gls1 :: gls0 :: !gls;
           st := state;
           z
         ) m in
       !st, m, List.concat @@ List.rev !gls            
-      
+
+      let fold1 ~once ~depth ~fold (f,c1) m a state =
+        let gls = ref [] in
+        let st = ref state in
+        let a = fold (fun x a ->
+            let state, x, gls0 = c1.Conversion.embed ~depth !st x in
+            let state, y = FlexibleData.Elpi.make state in
+            let y = RawData.mkUnifVar y ~args:(List.init depth RawData.mkConst) state in
+            if gls0 <> [] then gls := gls0 :: !gls;
+            let state = once ~depth (beta ~depth f [x;a;y]) state in
+            st := state;
+            y
+          ) m a in
+        !st, a, List.concat @@ List.rev !gls
+  
+      let fold2 ~once ~depth ~fold (f,c1,c2) m a state =
+        let gls = ref [] in
+        let st = ref state in
+        let a = fold (fun x y a ->
+            let state, x, gls0 = c1.Conversion.embed ~depth !st x in
+            let state, y, gls1 = c2.Conversion.embed ~depth state y in
+            let state, z = FlexibleData.Elpi.make state in
+            let z = RawData.mkUnifVar z ~args:(List.init depth RawData.mkConst) state in
+            let state = once ~depth (beta ~depth f [x;y;a;z]) state in
+            if gls0 <> [] || gls1 <> [] then gls := gls1 :: gls0 :: !gls;
+            st := state;
+            z
+          ) m a in
+        !st, a, List.concat @@ List.rev !gls            
+        
+
   end
 
 end
