@@ -345,7 +345,7 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
     end;
     (* moreover, we have to take into account other and listTailVariable since they represent UVar in the tree,
        therefore they can be unified with the hd *)
-    Option.iter (fun a -> retrieve ~pos:(skip ~pos path) ~add_result mode path a) other;
+    if not(isListEnd hd) then Option.iter (fun a -> retrieve ~pos:(skip ~pos path) ~add_result mode path a) other;
     Option.iter (fun a -> retrieve ~pos:(skip_listTailVariable ~pos path) ~add_result mode path a) listTailVariable
   end
 
