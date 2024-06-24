@@ -70,6 +70,8 @@ module Term = struct
   and quote = { data : string; loc : Loc.t; kind : string option }
   [@@deriving show]
 
+exception NotInProlog of Loc.t * string
+
 let mkC x = CData x
 let mkLam x t = Lam (Func.from_string x,t)
 let mkNil = Const Func.nilf
@@ -83,7 +85,11 @@ let mkQuoted loc s =
     match s.[i] with
     | '{' -> find_data (i+1)
     | ':' ->
-       let rec find_space i = match s.[i] with
+       let len = String.length s in
+       let rec find_space i =
+         if i >= len then
+           raise (NotInProlog(loc,"syntax error: bad named quotation: {{"^s^"}}.\nDid you separate the name from the data with a space as in {{:name data}} ?."));
+         match s.[i] with
          | ' ' -> i 
          | '\n' -> i 
          | _ -> find_space (i+1) in
@@ -103,7 +109,6 @@ let mkSeq l =
  in
   aux l
 
-exception NotInProlog of Loc.t * string
 
 let rec best_effort_pp = function
  | Lam (x,t) -> "x\\" ^ best_effort_pp t
