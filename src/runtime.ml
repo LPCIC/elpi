@@ -954,8 +954,8 @@ let rec move ~argsdepth e ?avoid ~from ~to_ t =
        if depth == 0 then deref_uv ?avoid ~from:vardepth ~to_ args t
        else maux empty_env depth (deref_uv ~from:vardepth ~to_:(from+depth) args t)
     | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy ->
-       if depth == 0 then deref_appuv ?avoid ~from:vardepth ~to_ args t
-       else maux empty_env depth (deref_appuv ~from:vardepth ~to_:(from+depth) args t)
+       (* wrong, args escape occur check: if depth == 0 then deref_appuv ?avoid ~from:vardepth ~to_ args t
+       else *) maux empty_env depth (deref_appuv ~from:vardepth ~to_:(from+depth) args t)
     | Arg (i, argsno) when e.(i) != C.dummy ->
        if to_ = argsdepth then deref_uv ?avoid ~from:argsdepth ~to_:(to_+depth) argsno e.(i)
        else
