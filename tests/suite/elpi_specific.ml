@@ -284,6 +284,14 @@ X0 || X2 && X3 ==> X4
 |})))
   ()
 
+let () = declare "linear"
+  ~source_elpi:"linear.elpi"
+  ~description:"linear variable check"
+  ~typecheck:true
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "Foo_Bar is linear"))
+  ()
+
+
 let () = declare "IO_COLON"
   ~source_elpi:"io_colon.elpi"
   ~description:"IO_COLON token"

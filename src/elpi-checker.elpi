@@ -275,11 +275,14 @@ infix >>> 141.
 type (>>>) term -> int -> entry.
 type variable term -> prop.
 
+pred silence-linear-warning i:string.
+silence-linear-warning VN :- rex_match "^_.*" VN ; rex_match ".*_$" VN.
+
 mode (report-linear i).
 report-linear [].
 report-linear [(V >>> 1 + uvar) |NS] :- !,
   pp V VN,
-  if (not(rex_match "_" VN), not(rex_match ".*_" VN))
+  if (not(silence-linear-warning VN))
     (checking LOC,
      MSG is VN ^" is linear: name it _" ^ VN ^
          " (discard) or " ^ VN ^ "_ (fresh variable)",
@@ -288,7 +291,7 @@ report-linear [(V >>> 1 + uvar) |NS] :- !,
   report-linear NS.
 report-linear [(V >>> uvar) |NS] :-
   pp V VN,
-  if (not(rex_match "_" VN), not(rex_match ".*_" VN))
+  if (not(silence-linear-warning VN))
     (checking LOC, MSG is VN ^" is unused", warning LOC MSG)
     true,
   report-linear NS.
