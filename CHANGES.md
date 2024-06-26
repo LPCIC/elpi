@@ -1,3 +1,9 @@
+# UNRELEASED
+
+- Runtime:
+  - Fix missing restriction
+
+
 # v1.19.2 (June 2024)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
