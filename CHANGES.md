@@ -1,8 +1,16 @@
-# UNRELEASED
+# v1.19.3 (June 2024)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+- Linter:
+  - Fix regex for linearity check, `Foo_Bar` was silently ignored for
+    linearity purpose
+
+- Parser:
+  - Fix error message for named quotation
 
 - Runtime:
   - Fix missing restriction
-
 
 # v1.19.2 (June 2024)
 
