@@ -31,6 +31,9 @@ pred ignore-failure! i:prop.
 ignore-failure! P :- P, !.
 ignore-failure! _.
 
+pred once i:prop.
+once P :- P, !.
+
 % [assert! C M] takes the first success of C or fails with message M 
 pred assert! i:prop, i:string.
 assert! Cond Msg :- (Cond ; fatal-error-w-data Msg Cond), !.
