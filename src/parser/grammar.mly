@@ -135,7 +135,7 @@ decl:
 | ext = accumulate; l = separated_nonempty_list(CONJ,filename); FULLSTOP {
     Program.Accumulated(loc $sloc,List.(concat (map (fun x ->
       let cwd = Filename.dirname (loc $sloc).source_name in
-      C.parse_file (cwd ^ "/" ^ x ^ ext)) l)))
+      C.parse_file ~cwd (x ^ ext)) l)))
   }
 | LOCAL; l = separated_nonempty_list(CONJ,constant); option(type_term); FULLSTOP {
     Program.Local l
