@@ -25,7 +25,7 @@
                   "rule_loc": [
                     "File",
                     {
-                      "filename": "tests/sources/trace2.elpi",
+                      "filename": "trace2.elpi",
                       "line": 1,
                       "column": 0,
                       "character": 0
@@ -55,7 +55,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace2.elpi",
+                    "filename": "trace2.elpi",
                     "line": 1,
                     "column": 0,
                     "character": 0
@@ -106,7 +106,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace2.elpi",
+                    "filename": "trace2.elpi",
                     "line": 1,
                     "column": 0,
                     "character": 0
@@ -162,7 +162,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace2.elpi",
+                    "filename": "trace2.elpi",
                     "line": 1,
                     "column": 0,
                     "character": 0
@@ -220,7 +220,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace2.elpi",
+                    "filename": "trace2.elpi",
                     "line": 1,
                     "column": 0,
                     "character": 0
@@ -281,7 +281,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace2.elpi",
+                    "filename": "trace2.elpi",
                     "line": 1,
                     "column": 0,
                     "character": 0
@@ -350,7 +350,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace2.elpi",
+                    "filename": "trace2.elpi",
                     "line": 1,
                     "column": 0,
                     "character": 0
@@ -449,7 +449,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace2.elpi",
+                    "filename": "trace2.elpi",
                     "line": 1,
                     "column": 0,
                     "character": 0
@@ -526,7 +526,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace2.elpi",
+                    "filename": "trace2.elpi",
                     "line": 1,
                     "column": 0,
                     "character": 0

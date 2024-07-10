@@ -25,7 +25,7 @@
                   "rule_loc": [
                     "File",
                     {
-                      "filename": "tests/sources/trace_findall.elpi",
+                      "filename": "trace_findall.elpi",
                       "line": 5,
                       "column": 0,
                       "character": 23
@@ -52,7 +52,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace_findall.elpi",
+                    "filename": "trace_findall.elpi",
                     "line": 5,
                     "column": 0,
                     "character": 23
@@ -135,7 +135,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace_findall.elpi",
+                    "filename": "trace_findall.elpi",
                     "line": 5,
                     "column": 0,
                     "character": 23
@@ -186,7 +186,7 @@
                           "rule_loc": [
                             "File",
                             {
-                              "filename": "tests/sources/trace_findall.elpi",
+                              "filename": "trace_findall.elpi",
                               "line": 1,
                               "column": 0,
                               "character": 0
@@ -210,7 +210,7 @@
                         "rule_loc": [
                           "File",
                           {
-                            "filename": "tests/sources/trace_findall.elpi",
+                            "filename": "trace_findall.elpi",
                             "line": 1,
                             "column": 0,
                             "character": 0
@@ -246,7 +246,7 @@
                           "rule_loc": [
                             "File",
                             {
-                              "filename": "tests/sources/trace_findall.elpi",
+                              "filename": "trace_findall.elpi",
                               "line": 2,
                               "column": 0,
                               "character": 5
@@ -270,7 +270,7 @@
                         "rule_loc": [
                           "File",
                           {
-                            "filename": "tests/sources/trace_findall.elpi",
+                            "filename": "trace_findall.elpi",
                             "line": 2,
                             "column": 0,
                             "character": 5
@@ -306,7 +306,7 @@
                           "rule_loc": [
                             "File",
                             {
-                              "filename": "tests/sources/trace_findall.elpi",
+                              "filename": "trace_findall.elpi",
                               "line": 3,
                               "column": 0,
                               "character": 10
@@ -330,7 +330,7 @@
                         "rule_loc": [
                           "File",
                           {
-                            "filename": "tests/sources/trace_findall.elpi",
+                            "filename": "trace_findall.elpi",
                             "line": 3,
                             "column": 0,
                             "character": 10
@@ -366,7 +366,7 @@
                           "rule_loc": [
                             "File",
                             {
-                              "filename": "tests/sources/trace_findall.elpi",
+                              "filename": "trace_findall.elpi",
                               "line": 2,
                               "column": 0,
                               "character": 5
@@ -390,7 +390,7 @@
                         "rule_loc": [
                           "File",
                           {
-                            "filename": "tests/sources/trace_findall.elpi",
+                            "filename": "trace_findall.elpi",
                             "line": 2,
                             "column": 0,
                             "character": 5
@@ -409,7 +409,7 @@
                         "rule_loc": [
                           "File",
                           {
-                            "filename": "tests/sources/trace_findall.elpi",
+                            "filename": "trace_findall.elpi",
                             "line": 3,
                             "column": 0,
                             "character": 10
@@ -460,7 +460,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace_findall.elpi",
+                    "filename": "trace_findall.elpi",
                     "line": 5,
                     "column": 0,
                     "character": 23
@@ -511,7 +511,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "tests/sources/trace_findall.elpi",
+                    "filename": "trace_findall.elpi",
                     "line": 5,
                     "column": 0,
                     "character": 23
