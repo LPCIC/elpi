@@ -65,7 +65,7 @@ let parse grammar digest lexbuf =
 let already_parsed = Hashtbl.create 11
 
 let () =
-  parse_ref := (fun ?cwd filename ->
+  parse_ref := (fun ?cwd (filename as orig_filename) ->
   let filename = C.resolver ?cwd ~unit:filename () in
   let digest = Digest.file filename in
   let to_parse =
@@ -80,7 +80,7 @@ let () =
     else
       let ic = open_in filename in
       let lexbuf = Lexing.from_channel ic in
-      lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
+      lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = orig_filename };
       Hashtbl.add already_parsed digest true;
       let ast = parse Grammar.program digest lexbuf in
       close_in ic;
