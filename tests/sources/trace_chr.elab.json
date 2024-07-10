@@ -25,7 +25,7 @@
                   "rule_loc": [
                     "File",
                     {
-                      "filename": "trace_chr.elpi",
+                      "filename": "tests/sources/trace_chr.elpi",
                       "line": 19,
                       "column": 0,
                       "character": 353
@@ -54,7 +54,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -90,7 +90,7 @@
                   "rule_loc": [
                     "File",
                     {
-                      "filename": "trace_chr.elpi",
+                      "filename": "tests/sources/trace_chr.elpi",
                       "line": 16,
                       "column": 0,
                       "character": 252
@@ -119,7 +119,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
                     "character": 252
@@ -138,7 +138,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -177,7 +177,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
                     "character": 252
@@ -196,7 +196,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -235,7 +235,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -288,7 +288,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -389,7 +389,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -425,7 +425,7 @@
                   "rule_loc": [
                     "File",
                     {
-                      "filename": "trace_chr.elpi",
+                      "filename": "tests/sources/trace_chr.elpi",
                       "line": 14,
                       "column": 0,
                       "character": 230
@@ -449,7 +449,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 14,
                     "column": 0,
                     "character": 230
@@ -478,7 +478,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
                     "character": 252
@@ -497,7 +497,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -533,7 +533,7 @@
                   "rule_loc": [
                     "File",
                     {
-                      "filename": "trace_chr.elpi",
+                      "filename": "tests/sources/trace_chr.elpi",
                       "line": 17,
                       "column": 0,
                       "character": 303
@@ -562,7 +562,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 17,
                     "column": 0,
                     "character": 303
@@ -581,7 +581,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 14,
                     "column": 0,
                     "character": 230
@@ -610,7 +610,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
                     "character": 252
@@ -629,7 +629,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -668,7 +668,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 17,
                     "column": 0,
                     "character": 303
@@ -687,7 +687,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 14,
                     "column": 0,
                     "character": 230
@@ -716,7 +716,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
                     "character": 252
@@ -735,7 +735,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -818,7 +818,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -854,7 +854,7 @@
                   "rule_loc": [
                     "File",
                     {
-                      "filename": "trace_chr.elpi",
+                      "filename": "tests/sources/trace_chr.elpi",
                       "line": 16,
                       "column": 0,
                       "character": 252
@@ -883,7 +883,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
                     "character": 252
@@ -921,7 +921,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -960,7 +960,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
                     "character": 252
@@ -998,7 +998,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
@@ -1024,7 +1024,7 @@
           {
             "chr_text": " \\ (even A0) (odd A0) | (odd z) <=> (true)",
             "chr_loc": {
-              "filename": "trace_chr.elpi",
+              "filename": "tests/sources/trace_chr.elpi",
               "line": 2,
               "column": 3,
               "character": 25
@@ -1061,7 +1061,7 @@
             "chr_attempt": {
               "chr_text": " \\ (even A0) (odd A0) | (odd (s z)) <=> (fail)",
               "chr_loc": {
-                "filename": "trace_chr.elpi",
+                "filename": "tests/sources/trace_chr.elpi",
                 "line": 3,
                 "column": 3,
                 "character": 71
@@ -1095,7 +1095,7 @@
                                 "rule_loc": [
                                   "File",
                                   {
-                                    "filename": "trace_chr.elpi",
+                                    "filename": "tests/sources/trace_chr.elpi",
                                     "line": 13,
                                     "column": 0,
                                     "character": 209
@@ -1121,7 +1121,7 @@
                               "rule_loc": [
                                 "File",
                                 {
-                                  "filename": "trace_chr.elpi",
+                                  "filename": "tests/sources/trace_chr.elpi",
                                   "line": 13,
                                   "column": 0,
                                   "character": 209
@@ -1157,7 +1157,7 @@
                                 "rule_loc": [
                                   "File",
                                   {
-                                    "filename": "trace_chr.elpi",
+                                    "filename": "tests/sources/trace_chr.elpi",
                                     "line": 11,
                                     "column": 0,
                                     "character": 200
@@ -1181,7 +1181,7 @@
                               "rule_loc": [
                                 "File",
                                 {
-                                  "filename": "trace_chr.elpi",
+                                  "filename": "tests/sources/trace_chr.elpi",
                                   "line": 11,
                                   "column": 0,
                                   "character": 200
@@ -1200,7 +1200,7 @@
                               "rule_loc": [
                                 "File",
                                 {
-                                  "filename": "trace_chr.elpi",
+                                  "filename": "tests/sources/trace_chr.elpi",
                                   "line": 13,
                                   "column": 0,
                                   "character": 209
@@ -1349,7 +1349,7 @@
                 "rule_loc": [
                   "File",
                   {
-                    "filename": "trace_chr.elpi",
+                    "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
                     "character": 353
