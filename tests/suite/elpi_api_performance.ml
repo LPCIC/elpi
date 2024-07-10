@@ -3,7 +3,7 @@
 (* ------------------------------------------------------------------------- *)
 open Suite
 
-let declare = Test.declare ~category:(Filename.(chop_extension (basename __FILE__)))
+let declare = Test.declare ~category:(Filename.(chop_extension (basename __FILE__))) ~promote:false
 
 let () = declare "sepcomp_perf1"
   ~source_dune:"sepcomp_perf1.ml"

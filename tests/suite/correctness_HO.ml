@@ -4,7 +4,7 @@
 open Suite
 
 let declare = Test.declare
-    ~category:(Filename.(chop_extension (basename __FILE__)))
+    ~category:(Filename.(chop_extension (basename __FILE__))) ~promote:false
 
 let () = declare "ho"
   ~source_elpi:"ho.elpi"

@@ -25,6 +25,7 @@ INSTALL=_build/install/default
 BUILD=_build/default
 SHELL:=/usr/bin/env bash
 TIMEOUT=90.0
+PROMOTE=false
 PWD=$(shell pwd)
 RUNNERS=\
   dune \
@@ -78,6 +79,7 @@ tests:
 	ulimit -s $(STACK); OCAMLRUNPARAM=l=$(STACK) \
 		tests/test.exe \
 		--seed $$RANDOM \
+		--promote $(PROMOTE) \
 		--timeout $(TIMEOUT) \
 		$(TIME) \
 		--sources=$(PWD)/tests/sources/ \
