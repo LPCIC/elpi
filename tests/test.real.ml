@@ -6,9 +6,9 @@ open Suite
     
 module Printer : sig
 
-  type status = [ `OK | `KO | `SKIPPED | `TIMEOUT | `RUNNING ]
+  type status = [ `OK | `KO | `SKIPPED | `TIMEOUT | `RUNNING | `PROMOTE ]
   val print :
-    executable:string -> name:string -> description:string -> float -> float -> float -> int -> status -> unit
+    executable:string -> name:string -> description:string -> promote:bool -> float -> float -> float -> int -> status -> unit
 
   val print_header :
     executables:string list -> seed:int -> timeout:float -> unit
@@ -22,13 +22,14 @@ module Printer : sig
 end = struct
 open ANSITerminal
 
-type status = [ `OK | `KO | `SKIPPED | `TIMEOUT | `RUNNING ]
+type status = [ `OK | `KO | `SKIPPED | `TIMEOUT | `RUNNING | `PROMOTE ]
 let print_state col s = printf [col] "%-9s%!" s
 let print_timing name t0 t1 t2 mem ex = printf [] "%-20s %6.2f %6.2f %6.2f %6.1fM  %s%!" name t0 t1 t2 (float_of_int mem /. 1024.0) ex
 let print_info name descr ex = printf [] "%-43s %s" (name ^" ("^descr^")") ex
 
-let print ~executable ~name ~description:descr t0 t1 t2 mem = function
+let print ~executable ~name ~description:descr ~promote t0 t1 t2 mem = function
   | `OK -> print_state green "OK"; print_timing name t0 t1 t2 mem executable
+  | `PROMOTE -> print_state green "PROMOTE"; print_timing name t0 t1 t2 mem executable
   | `TIMEOUT -> print_state red "TIMEOUT"; print_info name descr executable
   | `KO -> print_state red "KO"; print_info name descr executable
   | `RUNNING -> print_state blue "RUNNING"; print_info name descr executable
@@ -79,10 +80,10 @@ let aNSITerminal_move_bol () =
   if Sys.win32 then ANSITerminal.printf [] "\n%!"
   else ANSITerminal.move_bol ()
 
-let run timeout _seed sources env { Runner.run; test; executable }  =
+let run timeout _seed sources promote env { Runner.run; test; executable }  =
 
   let { Test.name; description; _ } = test in
-  let print = Printer.print ~executable:(Filename.basename executable) ~name ~description in
+  let print = Printer.print ~executable:(Filename.basename executable) ~name ~description ~promote in
 
   print 0.0 0.0 0.0 0 `RUNNING;
   aNSITerminal_move_bol ();
@@ -96,6 +97,8 @@ let run timeout _seed sources env { Runner.run; test; executable }  =
             print execution typechecking walltime mem `KO
         | Runner.Success { Runner.execution; typechecking; walltime; mem } ->
             print execution typechecking walltime mem `OK
+        | Runner.Promote { Runner.execution; typechecking; walltime; mem } ->
+            print execution typechecking walltime mem `PROMOTE
       end;
       Some x
   in
@@ -114,6 +117,9 @@ let print_csv plot results =
           | Runner.Success { Runner.execution; walltime; mem; _ } -> (* TODO: print typechecking time *)
               Printf.fprintf oc "%s,%s,%f,%f,%d\n"
                 executable name execution walltime mem
+          | Runner.Promote { Runner.execution; walltime; mem; _ } -> (* TODO: print typechecking time *)
+              Printf.fprintf oc "%s,%s,%f,%f,%d\n"
+                executable name execution walltime mem
           end
       | None -> ());
   close_out oc;
@@ -130,7 +136,7 @@ let rec find_map f = function
       | Some y -> y
       | None -> find_map f xs
 
-let main sources plot timeout executables namef catskip timetool seed =
+let main sources plot timeout promote executables namef catskip timetool seed =
   Random.init seed;
   let filter_name =
     let rex = Str.regexp (".*"^namef) in
@@ -140,10 +146,10 @@ let main sources plot timeout executables namef catskip timetool seed =
   let tests = Suite.Test.get ~catskip filter_name in
   Printer.print_header ~executables ~seed ~timeout;
   let jobs =
-    tests |> List.map (Suite.Runner.jobs ~timetool ~executables)
+    tests |> List.map (Suite.Runner.jobs ~timetool ~executables ~promote)
           |> List.concat in
   let results =
-    List.map (run timeout seed sources env) jobs in
+    List.map (run timeout seed sources promote env) jobs in
   let total, ok, ko, skipped =
     let skip, rest =
       List.partition (function None -> true | _ -> false) results in
@@ -205,6 +211,10 @@ let mem =
   let doc = "Uses $(docv) as the tool to measure memory." in
   Arg.(value & opt non_dir_file "/usr/bin/time" & info ["time"] ~docv:"PATH" ~doc)
 
+let promote = 
+  let doc = "Promotes the tests (if failing)" in
+  Arg.(value & opt bool false & info ["promote"] ~docv:"PATH" ~doc)
+
 let info =
   let doc = "run the test suite" in
   let tests = Test.names ()
@@ -216,5 +226,5 @@ let info =
 ;;
 
 let () =
-  (Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ runners $ namef $ catskip $ mem $ seed),info)) [@ warning "-A"]
+  (Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ promote $ runners $ namef $ catskip $ mem $ seed),info)) [@ warning "-A"]
   (* ocaml >= 4.08 | exit @@ Cmd.eval (Cmd.v info Term.(const main $ src $ plot $ timeout $ runners $ namef $ catskip $ mem $ seed)) *)

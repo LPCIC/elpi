@@ -1,21 +1,23 @@
 help:
 	@echo 'Build targets:'
 	@echo
-	@echo '  build            builds elpi'
-	@echo '  install          install elpi'
-	@echo '  clean            remove build artifacts'
-	@echo '  release          release the software (note: git tag -s first)'
+	@echo '  build                  builds elpi'
+	@echo '  install                install elpi'
+	@echo '  clean                  remove build artifacts'
+	@echo '  release                release the software (note: git tag -s first)'
 	@echo
 	@echo 'Testing targets:'
 	@echo
-	@echo '  tests            runs the entire test suite'
-	@echo '  tests ONLY=rex   runs only tests matching rex'
+	@echo '  tests                  runs the entire test suite'
+	@echo '  tests ONLY=rex         runs only tests matching rex'
+	@echo '  tests PROMOTE=true     runs and promote tests if different'
+	@echo '                           (can be combined with ONLY)'
 	@echo
-	@echo '  git/treeish      checkout treeish and build elpi.git.treeish'
+	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
 	@echo
 	@echo 'Parser maintenance targets:'
 	@echo
-	@echo '  menhir-repl      run menhir in interactive mode'
+	@echo '  menhir-repl            run menhir in interactive mode'
 	@echo '  menhir-explain-conflicts'
 	@echo '  menhir-complete-errormsgs run when updating the grammar'
 	@echo '  menhir-strip-errormsgs remove comments from error message file'
@@ -25,6 +27,7 @@ INSTALL=_build/install/default
 BUILD=_build/default
 SHELL:=/usr/bin/env bash
 TIMEOUT=90.0
+PROMOTE=false
 PWD=$(shell pwd)
 RUNNERS=\
   dune \
@@ -78,6 +81,7 @@ tests:
 	ulimit -s $(STACK); OCAMLRUNPARAM=l=$(STACK) \
 		tests/test.exe \
 		--seed $$RANDOM \
+		--promote $(PROMOTE) \
 		--timeout $(TIMEOUT) \
 		$(TIME) \
 		--sources=$(PWD)/tests/sources/ \

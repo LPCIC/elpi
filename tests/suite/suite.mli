@@ -33,6 +33,7 @@ val declare :
   ?outside_llam:bool ->
   ?trace:trace ->
   ?legacy_parser:bool ->
+  ?promote:bool ->
   category:string ->
   unit -> unit
 
@@ -68,7 +69,7 @@ type time = {
   walltime : float;
   mem : int;
 }
-type rc = Timeout of float | Success of time | Failure of time
+type rc = Timeout of float | Success of time | Failure of time | Promote of time
 
 type result = {
   executable : string;
@@ -88,6 +89,6 @@ type job = {
   run : timeout:float -> env:string array -> sources:string -> result output;
 }
 
-val jobs : timetool:string -> executables:string list -> Test.t -> job list
+val jobs : timetool:string -> executables:string list -> promote:bool -> Test.t -> job list
 
 end

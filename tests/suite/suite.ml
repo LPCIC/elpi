@@ -41,6 +41,7 @@ let declare
     ?(outside_llam=false)
     ?(trace=Off)
     ?(legacy_parser=false)
+    ?(promote=false)
     ~category
     ()
 =
@@ -103,7 +104,7 @@ type time = {
   walltime : float;
   mem : int;
 }
-type rc = Timeout of float | Success of time | Failure of time
+type rc = Timeout of float | Success of time | Failure of time | Promote of time
 
 type result = {
   executable : string;
@@ -117,7 +118,7 @@ type 'a output =
   | Done of 'a
 
 type run =
-  executable:string -> timetool:string -> timeout:float -> env:string array -> sources:string ->
+  executable:string -> timetool:string -> timeout:float -> env:string array -> sources:string -> promote:bool ->
     Test.t -> result output
 
 (* Some tests are only for teyjus/elpi *)
@@ -140,7 +141,7 @@ type job = {
 
 let (||>) l f = List.(concat (map f l))
 
-let jobs ~timetool ~executables test =
+let jobs ~timetool ~executables ~promote test =
   executables ||> (fun executable ->
   !runners ||> (fun (applicable,run) ->
      match applicable ~executable test with
@@ -148,7 +149,7 @@ let jobs ~timetool ~executables test =
      | Can_run_it -> [{ 
          test;
          executable;
-         run = (run ~timetool ~executable test)
+         run = (run ~timetool ~executable ~promote test)
        }]))
 
 end
@@ -376,7 +377,7 @@ let () = Runner.declare
       then Runner.Can_run_it
     else Runner.Not_for_me
   end
-  ~run:begin fun ~executable ~timetool ~timeout ~env ~sources test ->
+  ~run:begin fun ~executable ~timetool ~timeout ~env ~sources ~promote test ->
   let source =
     match test.Test.source_elpi with Some x -> x | _ -> assert false in
   if not (Sys.file_exists executable) then Runner.Skipped
@@ -411,6 +412,9 @@ let () = Runner.declare
         | Test.Success -> Runner.Success { walltime; typechecking; execution; mem }
         | Test.SuccessOutput rex when Util.with_log log (match_rex rex) -> Runner.Success { walltime; typechecking; execution; mem }
         | Test.SuccessOutputFile { sample; adjust; reference } when match_file ~log sample adjust (sources^"/"^reference) -> Runner.Success { walltime; typechecking; execution; mem }
+        | Test.SuccessOutputFile { sample; adjust; reference } when promote ->
+            FileUtil.cp [adjust sample] (sources^"/"^reference);
+            Runner.Promote { walltime; typechecking; execution; mem }
         | _ -> Runner.Failure { walltime; typechecking; execution; mem }
         end
 
@@ -449,7 +453,7 @@ module ElpiTraceElab = struct
       if is_elpi_elab executable && source_json <> None then
         Runner.Can_run_it
       else Runner.Not_for_me)
-    ~run:(fun ~executable ~timetool ~timeout ~env ~sources test ->
+    ~run:(fun ~executable ~timetool ~timeout ~env ~sources ~promote test ->
     if not (Sys.file_exists executable) then Runner.Skipped
     else
       let log = Util.open_log ~executable test in
@@ -477,6 +481,9 @@ module ElpiTraceElab = struct
         match outcome, outcomey, test.Test.expectation with
         | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when match_file ~log sample adjust (sources^"/"^reference) ->
             Runner.Success { walltime; typechecking; execution; mem }
+        | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when promote ->
+            FileUtil.cp [adjust sample] (sources^"/"^reference);
+            Runner.Promote { walltime; typechecking; execution; mem }
         | Util.Exit(m,walltime,mem), None, Test.FailureOutput rex when m != 0 && Util.with_log log (match_rex rex) ->
             Runner.Success { walltime; typechecking; execution; mem }
         | _ -> Runner.Failure { walltime = 0.0; typechecking; execution = 0.0; mem = 0 }
@@ -502,7 +509,7 @@ let is_tjsim =
     if is_tjsim executable && source_teyjus <> None then Runner.Can_run_it
     else Runner.Not_for_me
   end
-  ~run:begin fun ~executable ~timetool ~timeout ~env ~sources test ->
+  ~run:begin fun ~executable ~timetool ~timeout ~env ~sources ~promote test ->
   let source =
     match test.Test.source_teyjus with Some x -> sources^x | _ -> assert false in
   if not (Sys.file_exists executable) then Runner.Skipped
@@ -577,7 +584,7 @@ let () = Runner.declare
   ~applicable:begin fun ~executable { source_dune; _ } ->
     if is_dune executable && is_dune_src source_dune then Runner.Can_run_it else Runner.Not_for_me
   end
-  ~run:begin fun ~executable ~timetool ~timeout ~env ~sources test ->
+  ~run:begin fun ~executable ~timetool ~timeout ~env ~sources ~promote test ->
   let source =
     match test.Test.source_dune with Some x -> x | _ -> assert false in
   if not (Sys.file_exists executable) then Runner.Skipped
