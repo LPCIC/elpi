@@ -1,6 +1,16 @@
-# Coming
+# v1.19.4 (July 2024)
 
-- Add `once` predicate
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+- Stdlib:
+  - Add `once` predicate
+
+- Build:
+  - New `make tests PROMOTE=true`
+
+- Parser:
+  - Change purge `_build/xxx` from paths once files are resolved in order
+    to have locs point to the sources and not their copy in `_build`
 
 # v1.19.3 (June 2024)
 
