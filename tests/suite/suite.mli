@@ -69,7 +69,7 @@ type time = {
   walltime : float;
   mem : int;
 }
-type rc = Timeout of float | Success of time | Failure of time | Promote of bool
+type rc = Timeout of float | Success of time | Failure of time | Promote of time
 
 type result = {
   executable : string;
