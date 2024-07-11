@@ -33,7 +33,7 @@ val declare :
   ?outside_llam:bool ->
   ?trace:trace ->
   ?legacy_parser:bool ->
-  promote:bool ->
+  ?promote:bool ->
   category:string ->
   unit -> unit
 

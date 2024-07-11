@@ -41,7 +41,7 @@ let declare
     ?(outside_llam=false)
     ?(trace=Off)
     ?(legacy_parser=false)
-    ~(promote: bool)
+    ?(promote=false)
     ~category
     ()
 =
