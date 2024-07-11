@@ -481,6 +481,9 @@ module ElpiTraceElab = struct
         match outcome, outcomey, test.Test.expectation with
         | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when match_file ~log sample adjust (sources^"/"^reference) ->
             Runner.Success { walltime; typechecking; execution; mem }
+        | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when promote ->
+            FileUtil.cp [adjust sample] (sources^"/"^reference);
+            Runner.Promote { walltime; typechecking; execution; mem }
         | Util.Exit(m,walltime,mem), None, Test.FailureOutput rex when m != 0 && Util.with_log log (match_rex rex) ->
             Runner.Success { walltime; typechecking; execution; mem }
         | _ -> Runner.Failure { walltime = 0.0; typechecking; execution = 0.0; mem = 0 }
