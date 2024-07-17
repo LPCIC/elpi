@@ -42,7 +42,7 @@ module Term = struct
 
 (* Used by pretty printers, to be later instantiated in module Constants *)
 let pp_const = mk_spaghetti_printer ()
-type constant = int (* De Bruijn levels *)
+type constant = int (* De Bruijn levels *) [@@ deriving ord]
 let pp_constant = pp_spaghetti pp_const
 let show_constant = show_spaghetti pp_const
 let equal_constant x y = x == y
@@ -106,7 +106,7 @@ and uvar_body = {
   mutable contents : term [@printer (pp_spaghetti_any ~id:id_term pp_oref)];
   mutable uid_private : int; (* unique name, the sign is flipped when blocks a constraint *)
 }
-[@@deriving show]
+[@@deriving show, ord]
 
 (* we use this projection to be sure we ignore the sign *)
 let uvar_id { uid_private } = abs uid_private [@@inline];;
@@ -116,7 +116,7 @@ let uvar_isnt_a_blocker { uid_private } = uid_private > 0 [@@inline];;
 let uvar_set_blocker r   = r.uid_private <- -(uvar_id r) [@@inline];;
 let uvar_unset_blocker r = r.uid_private <-  (uvar_id r) [@@inline];;
 
-type arg_mode = Util.arg_mode = Input | Output [@@deriving show]
+type arg_mode = Util.arg_mode = Input | Output [@@deriving show, ord]
 
 type clause = {
     depth : int;
@@ -128,7 +128,7 @@ type clause = {
 }
 and 
 mode = arg_mode list
-[@@deriving show]
+[@@deriving show, ord]
 
 let to_mode = function true -> Input | false -> Output
 
@@ -669,7 +669,7 @@ type clause_w_info = {
 [@@ deriving show]
 
 type macro_declaration = (Ast.Term.t * Loc.t) F.Map.t
-[@@ deriving show]
+[@@ deriving show, ord]
 
 exception No_clause
 exception No_more_steps

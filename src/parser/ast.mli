@@ -48,7 +48,7 @@ module Term : sig
    | CData of CData.t
    | Quoted of quote
   and quote = { data : string; loc : Loc.t; kind : string option }
-  [@@ deriving show]
+  [@@ deriving show, ord]
 
   exception NotInProlog of Loc.t * string
 
@@ -84,7 +84,7 @@ module Clause : sig
     attributes : 'attributes;
     body : 'term;
   }
-  [@@ deriving show]
+  [@@ deriving show, ord]
 
 end
 
@@ -129,7 +129,7 @@ module Mode : sig
 
   type 'name t =
     { name : 'name; args : bool list; loc : Loc.t }
-  [@@ deriving show]
+  [@@ deriving show, ord]
 
 end
 
@@ -222,6 +222,6 @@ and 'a shorthand = {
   full_name : 'a;
   short_name : 'a;
 }
-[@@deriving show]
+[@@deriving show, ord]
 
 end

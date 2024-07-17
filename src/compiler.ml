@@ -367,7 +367,7 @@ type argmap = {
   n2t : (D.term * D.Constants.t) StrMap.t;
   n2i : int StrMap.t;
 }
-[@@ deriving show]
+[@@ deriving show, ord]
 
 let empty_amap = {
  nargs = 0;
@@ -399,14 +399,14 @@ type preterm = {
   loc : Loc.t;
   spilling : bool;
 }
-[@@ deriving show]
+[@@ deriving show, ord]
 
 type type_declaration = {
   tname : D.constant;
   ttype : preterm;
   tloc : Loc.t;
 }
-[@@ deriving show]
+[@@ deriving show, ord]
 
 type type_abbrev_declaration = {
   taname : D.constant;
@@ -414,14 +414,14 @@ type type_abbrev_declaration = {
   taparams : int;
   taloc : Loc.t;
 }
-[@@ deriving show]
+[@@ deriving show, ord]
 
 type presequent = {
   peigen : D.term;
   pcontext : D.term;
   pconclusion : D.term;
 }
-[@@ deriving show]
+[@@ deriving show, ord]
 type prechr_rule = {
   pto_match : presequent list;
   pto_remove : presequent list;
@@ -432,7 +432,7 @@ type prechr_rule = {
   pifexpr : string option;
   pcloc : Loc.t;
 }
-[@@ deriving show]
+[@@ deriving show, ord]
 
 (****************************************************************************
   Intermediate program representation
@@ -465,7 +465,7 @@ and typ = {
   tindex : Ast.Structured.tattribute;
   decl : type_declaration
 }
-[@@deriving show]
+[@@deriving show, ord]
 
 end
 
