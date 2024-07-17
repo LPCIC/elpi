@@ -441,6 +441,64 @@ type prechr_rule = {
 open Data
 module C = Constants
 
+module Types = struct
+
+type typ = {
+  tindex : Ast.Structured.tattribute;
+  decl : type_declaration
+}
+[@@deriving show, ord]
+
+module Set = Util.Set.Make(struct
+  type t = typ
+  let compare = compare_typ
+  let show = show_typ
+  let pp = pp_typ
+end)
+
+type types = {
+  set : Set.t;
+  lst : typ list;
+  def : typ;
+} [@@deriving show, ord]
+
+let make t = { set = Set.singleton t; lst = [t]; def = t }
+
+let merge t1 t2 =
+  let l2 = List.filter (fun t -> not @@ Set.mem t t1.set) t2.lst in
+  match l2 with
+  | [] -> t1
+  | _ :: _ ->
+    {
+      set = Set.union t1.set t2.set;
+      lst = t1.lst @ l2;
+      def = t2.def;
+    }
+
+let smart_map (f : typ -> typ) (t : types) : types =
+  let fold t accu =
+    let t' = f t in
+    if t' == t then accu
+    else Set.add t' (Set.remove t accu)
+  in
+  let set' = Set.fold fold t.set t.set in
+  let lst' = smart_map f t.lst in
+  let def' = f t.def in
+  if set' == t.set && lst' == t.lst && def' == t.def then t
+  else { set = set'; lst = lst'; def = def' }
+
+let append x t = {
+  set = Set.add x t.set;
+  lst = x :: t.lst;
+  def = t.def;
+}
+
+let fold f accu t = List.fold_left f accu t.lst
+let iter f t = List.iter f t.lst
+let for_all f t = List.for_all f t.lst
+
+end
+
 module Structured = struct
 
 type program = {
@@ -449,7 +507,7 @@ type program = {
   toplevel_macros : macro_declaration;
 }
 and pbody = {
-  types : typ list C.Map.t;
+  types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   body : block list;
@@ -461,10 +519,6 @@ and block =
   | Namespace of string * pbody
   | Shorten of C.t Ast.Structured.shorthand list * pbody
   | Constraints of constant list * prechr_rule list * pbody
-and typ = {
-  tindex : Ast.Structured.tattribute;
-  decl : type_declaration
-}
 [@@deriving show, ord]
 
 end
@@ -472,7 +526,7 @@ end
 module Flat = struct
 
 type program = {
-  types : Structured.typ list C.Map.t;
+  types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   clauses : (preterm,Ast.Structured.attribute) Ast.Clause.t list;
@@ -489,7 +543,7 @@ end
 module Assembled = struct
 
 type program = {
-  types : Structured.typ list C.Map.t;
+  types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   clauses_rev : (preterm,attribute) Ast.Clause.t list;
@@ -532,7 +586,7 @@ module WithMain = struct
 
 (* The entire program + query, but still in "printable" format *)
 type 'a query = {
-  types : Structured.typ list C.Map.t;
+  types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
   clauses_rev : (preterm,Assembled.attribute) Ast.Clause.t list;
@@ -854,9 +908,9 @@ module ToDBL : sig
   val prefix_const : State.t -> string list -> C.t -> State.t * C.t
   val merge_modes : State.t -> (mode * Loc.t) Map.t -> (mode * Loc.t) Map.t -> (mode * Loc.t) Map.t
   val merge_types :
-    Structured.typ list C.Map.t ->
-    Structured.typ list C.Map.t ->
-    Structured.typ list C.Map.t 
+    Types.types C.Map.t ->
+    Types.types C.Map.t ->
+    Types.types C.Map.t
   val merge_type_abbrevs : State.t ->
     type_abbrev_declaration C.Map.t ->
     type_abbrev_declaration C.Map.t ->
@@ -1228,7 +1282,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     let state, ttype =
       preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) ty in
     let ttype = assert(List.length ttype = 1); List.hd ttype in
-    state, { Structured.tindex = attributes; decl = { tname; ttype; tloc = loc } }
+    state, { Types.tindex = attributes; decl = { tname; ttype; tloc = loc } }
 
    let funct_of_ast state c =
      try
@@ -1264,7 +1318,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       | Some _ as l, None -> l
       | None, (Some _ as l) -> l
       | Some l1, Some l2 ->
-           Some (l1 @ (List.filter (fun x -> not @@ List.mem x l1) l2))) t1 t2
+           Some (Types.merge l1 l2)) t1 t2
 
   let merge_type_abbrevs s m1 m2 =
     C.Map.fold (fun _ v m -> add_to_index_type_abbrev s m v) m1 m2
@@ -1345,9 +1399,9 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
   let map_append k v m =
     try
       let l = C.Map.find k m in
-      C.Map.add k (v::l) m
+      C.Map.add k (Types.append v l) m
     with Not_found ->
-      C.Map.add k [v] m
+      C.Map.add k (Types.make v) m
 
   let run (state : State.t) ~toplevel_macros p =
  (* FIXME: otypes omodes - NO, rewrite spilling on data.term *)
@@ -1359,7 +1413,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       let type_abbrevs = List.fold_left (add_to_index_type_abbrev state) C.Map.empty type_abbrevs in
       let state, types =
         map_acc (compile_type lcs) state types in
-      let types = List.fold_left (fun m t -> map_append t.Structured.decl.tname t m) C.Map.empty types in
+      let types = List.fold_left (fun m t -> map_append t.Types.decl.tname t m) C.Map.empty types in
       let state, modes = List.fold_left compile_mode (state,C.Map.empty) modes in
       let defs_m = defs_of_modes modes in
       let defs_t = defs_of_types types in
@@ -1508,12 +1562,12 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     t,c) n2t in
   { nargs; c2i; i2n; n2t; n2i }
 
-  let smart_map_type state f ({ Structured.tindex; decl = { tname; ttype; tloc }} as tdecl) =
+  let smart_map_type state f ({ Types.tindex; decl = { tname; ttype; tloc }} as tdecl) =
     let tname1 = f tname in
     let ttype1 = smart_map_term ~on_type:true state f ttype.term in
     let tamap1 =subst_amap state f ttype.amap in
     if tname1 == tname && ttype1 == ttype.term && ttype.amap = tamap1 then tdecl
-    else { Structured.tindex; decl = { tname = tname1; tloc; ttype = { term = ttype1; amap = tamap1; loc = ttype.loc; spilling = ttype.spilling } } }
+    else { Types.tindex; decl = { tname = tname1; tloc; ttype = { term = ttype1; amap = tamap1; loc = ttype.loc; spilling = ttype.spilling } } }
 
 
   let map_sequent state f { peigen; pcontext; pconclusion } =
@@ -1571,7 +1625,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
 
   let apply_subst_types ?live_symbols st s tm =
     let ksub = apply_subst_constant ?live_symbols s in
-    C.Map.fold (fun k tl m -> C.Map.add (ksub k) (smart_map (smart_map_type st ksub) tl) m) tm C.Map.empty
+    C.Map.fold (fun k tl m -> C.Map.add (ksub k) (Types.smart_map (smart_map_type st ksub) tl) m) tm C.Map.empty
 
   let apply_subst_type_abbrevs ?live_symbols st s = tabbrevs_map st (apply_subst_constant ?live_symbols s)
 
@@ -1691,16 +1745,16 @@ module Spill : sig
 
   
   val spill_clause :
-    State.t -> types:Structured.typ list C.Map.t -> modes:(constant -> mode) ->
+    State.t -> types:Types.types C.Map.t -> modes:(constant -> mode) ->
       (preterm, 'a) Ast.Clause.t -> (preterm, 'a) Ast.Clause.t
 
   val spill_chr :
-    State.t -> types:Structured.typ list C.Map.t -> modes:(constant -> mode) ->
+    State.t -> types:Types.types C.Map.t -> modes:(constant -> mode) ->
       (constant list * prechr_rule list) -> (constant list * prechr_rule list)
   
   (* Exported to compile the query *)
   val spill_preterm :
-    State.t -> Structured.typ list C.Map.t -> (C.t -> mode) -> preterm -> preterm
+    State.t -> Types.types C.Map.t -> (C.t -> mode) -> preterm -> preterm
 
 end = struct (* {{{ *)
 
@@ -1716,7 +1770,7 @@ end = struct (* {{{ *)
 
   let type_of_const types c =
     try
-      let { Structured.decl = { ttype } } = List.hd @@ List.rev @@ C.Map.find c types in
+      let { Types.decl = { ttype } } = (C.Map.find c types).Types.def in
       read_ty ttype.term
     with
       Not_found -> `Unknown
@@ -2200,11 +2254,11 @@ let is_builtin state tname =
 let check_all_builtin_are_typed state types =
    Constants.Set.iter (fun c ->
      if not (match C.Map.find c types with
-     | l -> l |> List.for_all (fun { Structured.tindex;_} -> tindex = Ast.Structured.External)
+     | l -> l |> Types.for_all (fun { Types.tindex;_} -> tindex = Ast.Structured.External)
      | exception Not_found -> false) then
        error ("Built-in without external type declaration: " ^ Symbols.show state c))
    (Builtins.all state);
-  C.Map.iter (fun tname tl -> tl |> List.iter (fun { Structured.tindex; decl = { tname; tloc }} ->
+  C.Map.iter (fun tname tl -> tl |> Types.iter (fun { Types.tindex; decl = { tname; tloc }} ->
     if tindex = Ast.Structured.External && not (is_builtin state tname) then
       error ~loc:tloc ("external type declaration without Built-in: " ^
             Symbols.show state tname)))
@@ -2212,7 +2266,7 @@ let check_all_builtin_are_typed state types =
 ;;
 
 let check_no_regular_types_for_builtins state types =
-  C.Map.iter (fun tname l -> l |> List.iter (fun {Structured.tindex; decl = { tloc } } ->
+  C.Map.iter (fun tname l -> l |> Types.iter (fun {Types.tindex; decl = { tloc } } ->
     if tindex <> Ast.Structured.External && is_builtin state tname then
       anomaly ~loc:tloc ("type declaration for Built-in " ^
             Symbols.show state tname ^ " must be flagged as external");
@@ -2461,7 +2515,7 @@ let run
           map
       with Not_found ->
         C.Map.add name (mode,index) map in
-    let map = C.Map.fold (fun tname l acc -> l |> List.fold_left (fun acc { Structured.tindex } -> add_indexing_for tname (Some tindex) acc) acc) types C.Map.empty in
+    let map = C.Map.fold (fun tname l acc -> Types.fold (fun acc { Types.tindex } -> add_indexing_for tname (Some tindex) acc) acc l) types C.Map.empty in
     let map = C.Map.fold (fun k _ m -> add_indexing_for k None m) modes map in
     map in
   let state, clauses_rev =
@@ -2709,8 +2763,9 @@ let static_check ~exec ~checker:(state,program)
   let time = `Compiletime in
   let state, p,q = quote_syntax time state q in
   let state, tlist = C.Map.fold (fun tname l (state,tl) ->
+    let l = l.Types.lst in
     let state, l =
-      List.rev l |> map_acc (fun state { Structured.decl = { ttype } } ->
+      List.rev l |> map_acc (fun state { Types.decl = { ttype } } ->
         let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
         let ttypet = unfold_type_abbrevs ~compiler_state initial_depth type_abbrevs ttype in
         let state, ttypet = quote_preterm time ~compiler_state state ~on_type:true ttypet in
