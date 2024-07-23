@@ -590,7 +590,7 @@ module CHR : sig
   val empty : t
 
   val new_clique : (constant -> string) -> constant list -> constant list -> t -> t * clique
-  val clique_of : constant -> t -> Constants.Set.t option
+  val clique_of : constant -> t -> (Constants.Set.t * Constants.Set.t) option
   val add_rule : clique -> rule -> t -> t
   val in_clique : clique -> constant -> bool
   
@@ -602,7 +602,7 @@ module CHR : sig
 
 end = struct (* {{{ *)
 
-  type clique = Constants.Set.t [@@deriving show]
+  type clique = {ctx_filter: Constants.Set.t; clique: Constants.Set.t} [@@deriving show]
   type sequent = { eigen : term; context : term; conclusion : term }
   and rule = {
     to_match : sequent list;
@@ -624,37 +624,44 @@ end = struct (* {{{ *)
 
   let empty = { cliques = Constants.Map.empty; rules = Constants.Map.empty }
 
-  let in_clique m c = Constants.Set.mem c m
+  let in_clique {clique; ctx_filter} c = Constants.Set.mem c clique
 
   let new_clique show_constant hyps cl ({ cliques } as chr) =
+    let open Constants in
     if cl = [] then error "empty clique";
-    let c = Constants.Set.of_list cl in
+    let c = Set.of_list cl in
+    let ctx_filter = Set.of_list hyps in
     
-    (* Non overlapping clique check *)
-    Constants.Map.iter (fun _ c' ->
-      if not (Constants.Set.is_empty (Constants.Set.inter c c')) && not (Constants.Set.equal c c') then
-        error ("overlapping constraint cliques: {" ^
-          String.concat "," (List.map show_constant (Constants.Set.elements c))^"} {" ^
-          String.concat "," (List.map show_constant (Constants.Set.elements c'))^ "}")
-    ) cliques;
-
-    (* Add constants in the context (for hypotheses) *)
-    let c = List.fold_right Constants.Set.add hyps c in
-    let cliques =
-      List.fold_right (fun x cliques -> Constants.Map.add x c cliques) (hyps @ cl) cliques in
-    { chr with cliques }, c
+    (* Check new inserted clique is valid *)
+    let build_clique_str c =
+      Printf.sprintf "{ %s }" @@ String.concat "," (List.map show_constant (Set.elements c)) 
+    in
+    let old_ctx_filter = ref None in
+    let exception Stop in
+    (try 
+      Map.iter (fun _ ({clique=c';ctx_filter=ctx_filter'}) ->
+        if Set.equal c c' then (old_ctx_filter := Some ctx_filter'; raise Stop)
+        else if not (Set.disjoint c c') then (* different, not disjoint clique *)
+          error ("overlapping constraint cliques:" ^ build_clique_str c ^ "and" ^ build_clique_str c')
+      ) cliques;
+    with Stop -> ());
+    let clique = 
+      {ctx_filter = Set.union ctx_filter (Option.value ~default:Set.empty !old_ctx_filter); clique=c} in
+    let (cliques: clique Constants.Map.t) =
+      List.fold_left (fun cliques x -> Constants.Map.add x clique cliques) cliques cl in
+    { chr with cliques }, clique
 
   let clique_of c { cliques } =
-    try Some (Constants.Map.find c cliques)
+    try Some (let res = Constants.Map.find c cliques in res.clique, res.ctx_filter)
     with Not_found -> None
 
-  let add_rule cl r ({ rules } as chr) =
+  let add_rule ({clique}: clique) r ({ rules } as chr) =
     let rules = Constants.Set.fold (fun c rules ->
       try
         let rs = Constants.Map.find c rules in
         Constants.Map.add c (rs @ [r]) rules
       with Not_found -> Constants.Map.add c [r] rules)
-      cl rules in
+      clique rules in
     { chr with rules }
 
 

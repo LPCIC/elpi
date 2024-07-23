@@ -4,6 +4,7 @@ pred q i:int.
 pred trig1.
 
 pred acc i:int.
+pred acc1 i:int.
 
 pred tester i:string, i:list prop, i:int.
 tester Str Ctx Var :-
@@ -12,10 +13,14 @@ tester Str Ctx Var :-
   Ctx => acc Var,
   print "SUCCESS !!".
 
-% the syntax `acc ?-` is used to load acc clauses as hypothesis in the context
+% the syntax `acc ?-` is used to load acc1 clauses as hypothesis in the context
+constraint acc1 ?- p trig {
+  rule \ trig (Ctx ?- p A) | (std.mem! Ctx (acc 2)) <=> (Ctx => (acc 2, acc1 A)).
+}
+
+% this extends the previous constraint
 constraint acc ?- p trig {
-  rule trig \ (Ctx ?- p A) <=> (tester "p" Ctx A).
-  rule \ trig.
+  rule \ trig (Ctx ?- p A) <=> (Ctx => (acc A, acc1 A)).
 }
 
 % here again `acc ?-` is used but the clique error message is not thrown, since,
@@ -25,9 +30,11 @@ constraint acc ?- q trig1 {
   rule \ trig1.
 }
 
-main :- acc 3 => declare_constraint (p 3) [_], declare_constraint trig [_],
-        acc 4 => declare_constraint (q 4) [_], declare_constraint trig1 [_],
-        print "Constraint store is empty ?",
-        print_constraints, % Should be empty
-        print "End print Constraitn store",
-        acc 4 => declare_constraint (q 5) [_], not (declare_constraint trig1 [_]).
+main :- std.do![
+  acc 4 => declare_constraint (q 4) [_], declare_constraint trig1 [_],
+  acc 4 => declare_constraint (q 5) [_], not (declare_constraint trig1 [_]),
+  
+  acc 3 => acc1 3 => declare_constraint (p 3) [_], declare_constraint trig [_], !,
+  acc 4 => acc1 5 => declare_constraint (p 4) [_], not (declare_constraint trig [_]), 
+  acc 2 => acc1 4 => declare_constraint (p 4) [_], declare_constraint trig [_],
+].
