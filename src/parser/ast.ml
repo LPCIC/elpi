@@ -221,7 +221,7 @@ module Program = struct
     (* Blocks *)
     | Begin of Loc.t
     | Namespace of Loc.t * Func.t
-    | Constraint of Loc.t * Func.t list
+    | Constraint of Loc.t * Func.t list * Func.t list
     | Shorten of Loc.t * (Func.t * Func.t) list (* prefix suffix *)
     | End of Loc.t
 
@@ -303,7 +303,7 @@ and block =
   | Clauses of (Term.t,attribute) Clause.t list
   | Namespace of Func.t * program
   | Shorten of Func.t shorthand list * program
-  | Constraints of Func.t list * cattribute Chr.t list * program
+  | Constraints of Func.t list * Func.t list * cattribute Chr.t list * program
 and attribute = {
   insertion : insertion option;
   id : string option;

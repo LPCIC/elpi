@@ -341,3 +341,10 @@ let () = declare "chr-scope-change-err"
   ~typecheck:true
   ~expectation:(FailureOutput (Str.regexp "cannot be put in the desired context"))
   ()
+
+let () = declare "chr_with_hypotheses"
+  ~source_elpi:"chr_with_hypotheses.elpi"
+  ~description:"chr_with_hypotheses"
+  ~typecheck:true
+  ~expectation:Success
+  ()

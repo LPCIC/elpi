@@ -1,0 +1,33 @@
+pred p i:int.
+pred trig.
+pred q i:int.
+pred trig1.
+
+pred acc i:int.
+
+pred tester i:string, i:list prop, i:int.
+tester Str Ctx Var :-
+  print "In" Str "ctx is" Ctx,
+  print "Doing acc with" Var,
+  Ctx => acc Var,
+  print "SUCCESS !!".
+
+% the syntax `acc |-` is used to load acc clauses as hypothesis in the context
+constraint acc |- p trig {
+  rule trig \ (Ctx ?- p A) <=> (tester "p" Ctx A).
+  rule \ trig.
+}
+
+% here again `acc |-` is used but the clique error message is not thrown, since,
+% again `acc` is loaded and supposed to be only used as hypotheses in the context
+constraint acc |- q trig1 {
+  rule trig1 \ (Ctx ?- q A) <=> (tester "q" Ctx A).
+  rule \ trig1.
+}
+
+main :- acc 3 => declare_constraint (p 3) [_], declare_constraint trig [_],
+        acc 4 => declare_constraint (q 4) [_], declare_constraint trig1 [_],
+        print "Constraint store is empty ?",
+        print_constraints, % Should be empty
+        print "End print Constraitn store",
+        acc 4 => declare_constraint (q 5) [_], not (declare_constraint trig1 [_]).

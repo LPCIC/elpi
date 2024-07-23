@@ -589,7 +589,7 @@ module CHR : sig
 
   val empty : t
 
-  val new_clique : (constant -> string) -> constant list -> t -> t * clique
+  val new_clique : (constant -> string) -> constant list -> constant list -> t -> t * clique
   val clique_of : constant -> t -> Constants.Set.t option
   val add_rule : clique -> rule -> t -> t
   val in_clique : clique -> constant -> bool
@@ -597,10 +597,12 @@ module CHR : sig
   val rules_for : constant -> t -> rule list
 
   val pp : Fmt.formatter -> t -> unit
+  val pp_clique : Fmt.formatter -> clique -> unit
   val show : t -> string
 
 end = struct (* {{{ *)
 
+  type clique = Constants.Set.t [@@deriving show]
   type sequent = { eigen : term; context : term; conclusion : term }
   and rule = {
     to_match : sequent list;
@@ -615,27 +617,31 @@ end = struct (* {{{ *)
   }
   [@@ deriving show]
   type t = {
-    cliques : Constants.Set.t Constants.Map.t;
+    cliques : clique Constants.Map.t;
     rules : rule list Constants.Map.t
   }
   [@@ deriving show]
-  type clique = Constants.Set.t
 
   let empty = { cliques = Constants.Map.empty; rules = Constants.Map.empty }
 
   let in_clique m c = Constants.Set.mem c m
 
-  let new_clique show_constant cl ({ cliques } as chr) =
+  let new_clique show_constant hyps cl ({ cliques } as chr) =
     if cl = [] then error "empty clique";
-    let c = List.fold_right Constants.Set.add cl Constants.Set.empty in
+    let c = Constants.Set.of_list cl in
+    
+    (* Non overlapping clique check *)
     Constants.Map.iter (fun _ c' ->
       if not (Constants.Set.is_empty (Constants.Set.inter c c')) && not (Constants.Set.equal c c') then
         error ("overlapping constraint cliques: {" ^
           String.concat "," (List.map show_constant (Constants.Set.elements c))^"} {" ^
           String.concat "," (List.map show_constant (Constants.Set.elements c'))^ "}")
     ) cliques;
+
+    (* Add constants in the context (for hypotheses) *)
+    let c = List.fold_right Constants.Set.add hyps c in
     let cliques =
-      List.fold_right (fun x cliques -> Constants.Map.add x c cliques) cl cliques in
+      List.fold_right (fun x cliques -> Constants.Map.add x c cliques) (hyps @ cl) cliques in
     { chr with cliques }, c
 
   let clique_of c { cliques } =
