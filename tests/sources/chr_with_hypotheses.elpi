@@ -12,15 +12,15 @@ tester Str Ctx Var :-
   Ctx => acc Var,
   print "SUCCESS !!".
 
-% the syntax `acc |-` is used to load acc clauses as hypothesis in the context
-constraint acc |- p trig {
+% the syntax `acc ?-` is used to load acc clauses as hypothesis in the context
+constraint acc ?- p trig {
   rule trig \ (Ctx ?- p A) <=> (tester "p" Ctx A).
   rule \ trig.
 }
 
-% here again `acc |-` is used but the clique error message is not thrown, since,
+% here again `acc ?-` is used but the clique error message is not thrown, since,
 % again `acc` is loaded and supposed to be only used as hypotheses in the context
-constraint acc |- q trig1 {
+constraint acc ?- q trig1 {
   rule trig1 \ (Ctx ?- q A) <=> (tester "q" Ctx A).
   rule \ trig1.
 }
