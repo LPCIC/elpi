@@ -197,12 +197,17 @@ type program = {
   modes : Func.t Mode.t list;
   body : block list;
 }
+and block_constraint = {
+   clique : Func.t list;
+   ctx_filter : Func.t list;
+   rules : cattribute Chr.t list
+}
 and block =
   | Locals of Func.t list * program
   | Clauses of (Term.t,attribute) Clause.t list
   | Namespace of Func.t * program
   | Shorten of Func.t shorthand list * program
-  | Constraints of Func.t list * Func.t list * cattribute Chr.t list * program
+  | Constraints of block_constraint * program
 and attribute = {
   insertion : insertion option;
   id : string option;
