@@ -2,7 +2,13 @@
 
 - Compiler:
   - Improve performance of separate compilation
-  
+- CHR:
+  - Syntax extension for constraint declaration.
+  - This aims to avoid the `overlapping` clique error
+  - Example: `constraint c t x ?- p1 p2 { rule (Ctx ?- ...) <=> (Ctx => ...) }`
+  - `c`, `t` and `x` are the symbols which should be loaded in the rule of the
+    constraint and should be considered as symbols composing the context (`Ctx`)
+    under which `p1` and `p2` are used.
 
 # v1.19.4 (July 2024)
 
