@@ -546,8 +546,6 @@ type program = {
   clauses : (preterm,Ast.Structured.attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
   local_names : int;
-
-  toplevel_macros : macro_declaration;
 }
 [@@deriving show]
 
@@ -591,7 +589,7 @@ type compilation_unit = {
 
 type builtins = string * Data.BuiltInPredicate.declaration list
 
-type header = State.t * compilation_unit
+type header = State.t * compilation_unit * macro_declaration
 type program = State.t * Assembled.program
 
 
@@ -1509,7 +1507,7 @@ module Flatten : sig
 
   (* Eliminating the structure (name spaces) *)
 
-  val run : State.t -> Structured.program -> C.Set.t * Flat.program
+  val run : State.t -> Structured.program -> C.Set.t * macro_declaration * Flat.program
 
   val relocate : State.t -> D.constant D.Constants.Map.t -> Flat.program  -> Flat.program
   val relocate_term : State.t -> D.constant D.Constants.Map.t -> term -> term
@@ -1708,13 +1706,12 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     let modes = apply_subst_modes ~live_symbols empty_subst modes in
     let types, type_abbrevs, modes, clauses, chr =
       compile_body live_symbols state local_names types type_abbrevs modes [] [] empty_subst body in
-    !live_symbols, { Flat.types;
+    !live_symbols, toplevel_macros, { Flat.types;
       type_abbrevs;
       modes;
       clauses;
       chr = List.rev chr;
       local_names;
-      toplevel_macros;
     }
     let relocate_term state s t =
       let ksub = apply_subst_constant ([],s) in
@@ -1727,7 +1724,6 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       clauses;
       chr;
       local_names;
-      toplevel_macros;
     } =
       let f = [], f in
     {
@@ -1737,7 +1733,6 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       clauses = apply_subst_clauses state f clauses;
       chr = smart_map (apply_subst_chr state f) chr;
       local_names;
-      toplevel_macros;
     }
 
 
@@ -2082,7 +2077,7 @@ let assemble flags state code  (ul : compilation_unit list) =
 
   let state, clauses_rev, types, type_abbrevs, modes, chr_rev =
     List.fold_left (fun (state, cl1, t1, ta1, m1, c1) ({ symbol_table; code }  as _u) ->
-      let state, { Flat.clauses = cl2; types = t2; type_abbrevs = ta2; modes = m2; chr = c2; toplevel_macros = _ } =
+      let state, { Flat.clauses = cl2; types = t2; type_abbrevs = ta2; modes = m2; chr = c2; } =
         let state, shift = Stdlib.Result.get_ok @@ Symbols.build_shift ~flags ~base:state symbol_table in
         let code =
           if C.Map.is_empty shift then code
@@ -2155,7 +2150,7 @@ let unit_or_header_of_ast { print_passes } s ?(toplevel_macros=F.Map.empty) p =
     Format.eprintf "== Structured ================@\n@[<v 0>%a@]@\n"
       (w_symbol_table s Structured.pp_program) p;
 
-  let alive, p = Flatten.run s p in
+  let alive, toplevel_macros, p = Flatten.run s p in
 
   if print_passes then
     Format.eprintf "== Flat ================@\n@[<v 0>%a@]@\n"
@@ -2165,7 +2160,7 @@ let unit_or_header_of_ast { print_passes } s ?(toplevel_macros=F.Map.empty) p =
     version = "%%VERSION_NUM%%";
     code = p;
     symbol_table = Symbols.prune (State.get Symbols.table s) ~alive
-  }
+  }, toplevel_macros
 ;;
 
 let print_unit { print_units } x =
@@ -2208,17 +2203,16 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
       | Data.BuiltInPredicate.MLDataC _ -> state
       | Data.BuiltInPredicate.LPCode _ -> state
       | Data.BuiltInPredicate.LPDoc _ -> state) state decls) state builtins in
-  let state, u = unit_or_header_of_ast flags state ast in
+  let state, u, toplevel_macros = unit_or_header_of_ast flags state ast in
   print_unit flags u;
-  state, u
+  state, u, toplevel_macros
 
-let unit_of_ast ~flags ~header:(s, (header : compilation_unit)) p : compilation_unit =
-  let toplevel_macros = header.code.Flat.toplevel_macros in
-  let _, u = unit_or_header_of_ast flags s ~toplevel_macros p in
+let unit_of_ast ~flags ~header:(s, (header : compilation_unit), toplevel_macros) p : compilation_unit =
+  let _, u, _ = unit_or_header_of_ast flags s ~toplevel_macros p in
   print_unit flags u;
   u
 
-let assemble_units ~flags ~header:(s,h) units : program =
+let assemble_units ~flags ~header:(s,h,toplevel_macros) units : program =
 
   let nunits_with_locals =
     (h :: units) |> List.filter (fun {code = { Flat.local_names = x }} -> x > 0) |> List.length in
@@ -2226,7 +2220,7 @@ let assemble_units ~flags ~header:(s,h) units : program =
   if nunits_with_locals > 0 then
     error "Only 1 compilation unit is supported when local directives are used";
 
-  let init = { Assembled.empty with toplevel_macros = h.code.toplevel_macros; local_names = h.code.local_names } in
+  let init = { Assembled.empty with toplevel_macros; local_names = h.code.local_names } in
 
   let s, p = Assemble.assemble flags s init (h :: units) in
 
