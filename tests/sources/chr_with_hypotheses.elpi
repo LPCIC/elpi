@@ -1,5 +1,6 @@
 pred p i:int.
 pred trig.
+
 pred q i:int.
 pred trig1.
 
@@ -30,11 +31,16 @@ constraint acc ?- q trig1 {
   rule \ trig1.
 }
 
-main :- std.do![
+pred q&trig1.
+q&trig1 :-
   acc 4 => declare_constraint (q 4) [_], declare_constraint trig1 [_],
-  acc 4 => declare_constraint (q 5) [_], not (declare_constraint trig1 [_]),
-  
-  acc 3 => acc1 3 => declare_constraint (p 3) [_], declare_constraint trig [_], !,
+  acc 4 => declare_constraint (q 5) [_], not (declare_constraint trig1 [_]).
+
+pred p&trig.
+p&trig :-
+  acc 3 => acc1 3 => declare_constraint (p 3) [_], declare_constraint trig [_],
   acc 4 => acc1 5 => declare_constraint (p 4) [_], not (declare_constraint trig [_]), 
-  acc 2 => acc1 4 => declare_constraint (p 4) [_], declare_constraint trig [_],
-].
+  acc 2 => acc1 4 => declare_constraint (p 4) [_], declare_constraint trig [_].
+
+main :-
+  p&trig, q&trig1.
