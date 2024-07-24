@@ -39,7 +39,7 @@ q&trig1 :-
 pred p&trig.
 p&trig :-
   acc 3 => acc1 3 => declare_constraint (p 3) [_], declare_constraint trig [_],
-  acc 4 => acc1 5 => declare_constraint (p 4) [_], not (declare_constraint trig [_]), 
+  std.spy-do![acc 4 => acc1 5 => declare_constraint (p 4) [_], not (declare_constraint trig [_])], 
   acc 2 => acc1 4 => declare_constraint (p 4) [_], declare_constraint trig [_].
 
 main :-
