@@ -546,7 +546,6 @@ type program = {
   clauses : (preterm,Ast.Structured.attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
   local_names : int;
-  symbols : C.Set.t;
 
   toplevel_macros : macro_declaration;
 }
@@ -1510,7 +1509,7 @@ module Flatten : sig
 
   (* Eliminating the structure (name spaces) *)
 
-  val run : State.t -> Structured.program -> Flat.program
+  val run : State.t -> Structured.program -> C.Set.t * Flat.program
 
   val relocate : State.t -> D.constant D.Constants.Map.t -> Flat.program  -> Flat.program
   val relocate_term : State.t -> D.constant D.Constants.Map.t -> term -> term
@@ -1709,14 +1708,13 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     let modes = apply_subst_modes ~live_symbols empty_subst modes in
     let types, type_abbrevs, modes, clauses, chr =
       compile_body live_symbols state local_names types type_abbrevs modes [] [] empty_subst body in
-    { Flat.types;
+    !live_symbols, { Flat.types;
       type_abbrevs;
       modes;
       clauses;
       chr = List.rev chr;
       local_names;
       toplevel_macros;
-      symbols = !live_symbols
     }
     let relocate_term state s t =
       let ksub = apply_subst_constant ([],s) in
@@ -1730,7 +1728,6 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       chr;
       local_names;
       toplevel_macros;
-      symbols;
     } =
       let f = [], f in
     {
@@ -1741,7 +1738,6 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       chr = smart_map (apply_subst_chr state f) chr;
       local_names;
       toplevel_macros;
-      symbols;
     }
 
 
@@ -2159,7 +2155,7 @@ let unit_or_header_of_ast { print_passes } s ?(toplevel_macros=F.Map.empty) p =
     Format.eprintf "== Structured ================@\n@[<v 0>%a@]@\n"
       (w_symbol_table s Structured.pp_program) p;
 
-  let p = Flatten.run s p in
+  let alive, p = Flatten.run s p in
 
   if print_passes then
     Format.eprintf "== Flat ================@\n@[<v 0>%a@]@\n"
@@ -2168,7 +2164,7 @@ let unit_or_header_of_ast { print_passes } s ?(toplevel_macros=F.Map.empty) p =
   s, {
     version = "%%VERSION_NUM%%";
     code = p;
-    symbol_table = Symbols.prune (State.get Symbols.table s) ~alive:p.Flat.symbols
+    symbol_table = Symbols.prune (State.get Symbols.table s) ~alive
   }
 ;;
 
