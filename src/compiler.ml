@@ -71,21 +71,23 @@ module Symbols : sig
   val show                       : D.State.t -> D.constant -> string
 
   type table
+  type pruned_table
   val pp_table : Format.formatter -> table -> unit
+  val pp_pruned_table : Format.formatter -> pruned_table -> unit
   val table : table D.State.component
   val compile_table : table -> D.symbol_table
   val lock : table -> table
   val locked : table -> bool
   val equal : table -> table -> bool
-  val size : table -> int
-  val prune : table -> alive:D.Constants.Set.t -> table
+  val size : pruned_table -> int
+  val prune : table -> alive:D.Constants.Set.t -> pruned_table
   (* debug *)
-  val symbols : table -> string list
+  val symbols : pruned_table -> string list
 
   val global_table : unit -> table
   val uuid : table -> UUID.t
 
-  val build_shift : ?lock_base:bool -> flags:flags -> base:D.State.t -> table -> (D.State.t * D.constant D.Constants.Map.t, string) Stdlib.Result.t
+  val build_shift : ?lock_base:bool -> flags:flags -> base:D.State.t -> pruned_table -> (D.State.t * D.constant D.Constants.Map.t, string) Stdlib.Result.t
 
 end = struct
 
@@ -103,22 +105,26 @@ type table = {
   uuid : Util.UUID.t;
 } [@@deriving show]
 
+type pruned_table = {
+  c2s0 : string D.Constants.Map.t;
+  c2t0 : D.term D.Constants.Map.t;
+} [@@deriving show]
+
 let locked { locked } = locked
 let lock t = { t with locked = true }
 let uuid { uuid } = uuid
 let equal t1 t2 =
   locked t1 && locked t2 && uuid t1 = uuid t2
 
-let size t = D.Constants.Map.cardinal t.c2t
+let size t = D.Constants.Map.cardinal t.c2t0
 
-let symbols { c2s } =
-  List.map (fun (c,s) -> s ^ ":" ^ string_of_int c) (D.Constants.Map.bindings c2s)
+let symbols { c2s0 } =
+  List.map (fun (c,s) -> s ^ ":" ^ string_of_int c) (D.Constants.Map.bindings c2s0)
 
 let prune t ~alive =
-  { t with 
-    c2s = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2s;
-    c2t = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2t;
-    ast2ct = F.Map.filter (fun _ (k,_) -> D.Constants.Set.mem k alive) t.ast2ct;
+  {
+    c2s0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2s;
+    c2t0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2t;
   }
 
 let table = D.State.declare
@@ -243,7 +249,7 @@ let build_shift ?(lock_base=false) ~flags:{ print_units } ~base symbols =
        heuristic in unfolding) *)
     List.fold_left (fun (base,shift as acc) (v, t) ->
       if v < 0 then
-        let name = Map.find v symbols.c2s in
+        let name = Map.find v symbols.c2s0 in
         try
           let c, _ = F.Map.find (F.from_string name)  base.ast2ct in
           if c == v then acc
@@ -262,7 +268,7 @@ let build_shift ?(lock_base=false) ~flags:{ print_units } ~base symbols =
           let base = { base with c2t = Map.add v t base.c2t } in
           base, shift
       )
-     (base,Map.empty)  (List.rev (Map.bindings symbols.c2t)))
+     (base,Map.empty)  (List.rev (Map.bindings symbols.c2t0)))
 
 let build_shift ?lock_base ~flags ~base symbols =
   try Stdlib.Result.Ok (build_shift ?lock_base ~flags ~base symbols)
@@ -516,7 +522,7 @@ let empty = {
 end
 
 type compilation_unit = {
-  symbol_table : Symbols.table;
+  symbol_table : Symbols.pruned_table;
   version : string;
   code : Flat.program;
 }
