@@ -107,7 +107,7 @@ type table = {
 
 type pruned_table = {
   c2s0 : string D.Constants.Map.t;
-  c2t0 : D.term D.Constants.Map.t;
+  c2t0 : D.term option D.Constants.Map.t;
 } [@@deriving show]
 
 let locked { locked } = locked
@@ -122,10 +122,10 @@ let symbols { c2s0 } =
   List.map (fun (c,s) -> s ^ ":" ^ string_of_int c) (D.Constants.Map.bindings c2s0)
 
 let prune t ~alive =
-  {
-    c2s0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2s;
-    c2t0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2t;
-  }
+  let c2s0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2s in
+  let c2t0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2t in
+  let c2t0 = D.Constants.Map.mapi (fun k t -> if k < 0 then None else Some t) c2t0 in
+  { c2s0; c2t0 }
 
 let table = D.State.declare
   ~descriptor:D.elpi_state_descriptor
@@ -265,10 +265,11 @@ let build_shift ?(lock_base=false) ~flags:{ print_units } ~base symbols =
       else
         if Map.mem v base.c2t then acc
         else
+          let t = match t with None -> assert false | Some t -> t in
           let base = { base with c2t = Map.add v t base.c2t } in
           base, shift
       )
-     (base,Map.empty)  (List.rev (Map.bindings symbols.c2t0)))
+     (base,Map.empty) (List.rev (Map.bindings symbols.c2t0)))
 
 let build_shift ?lock_base ~flags ~base symbols =
   try Stdlib.Result.Ok (build_shift ?lock_base ~flags ~base symbols)
