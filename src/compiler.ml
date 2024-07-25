@@ -106,8 +106,8 @@ type table = {
 } [@@deriving show]
 
 type entry =
-| ENeg of D.constant * string
-| EPos of D.constant * D.term
+| GlobalSymbol of D.constant * string
+| BoundVariable of D.constant * D.term
 [@@deriving show]
 
 type pruned_table = entry array [@@deriving show]
@@ -122,8 +122,8 @@ let size t = Array.length t
 
 let symbols table =
   let map = function
-  | ENeg (c, s) -> Some (s ^ ":" ^ string_of_int c)
-  | EPos _ -> None
+  | GlobalSymbol (c, s) -> Some (s ^ ":" ^ string_of_int c)
+  | BoundVariable _ -> None
   in
   List.rev @@ List.filter_map map @@ Array.to_list table
 
@@ -131,8 +131,8 @@ let prune t ~alive =
   let c2s = t.c2s in
   let c2t0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2t in
   let map k t =
-    if k < 0 then ENeg (k, D.Constants.Map.find k c2s)
-    else EPos (k, t)
+    if k < 0 then GlobalSymbol (k, D.Constants.Map.find k c2s)
+    else BoundVariable (k, t)
   in
   let c2t0 = D.Constants.Map.mapi map c2t0 in
   Array.of_list @@ List.rev_map snd @@ D.Constants.Map.bindings c2t0
@@ -259,7 +259,7 @@ let build_shift ?(lock_base=false) ~flags:{ print_units } ~base symbols =
        heuristic in unfolding) *)
     Array.fold_left (fun (base,shift as acc) e ->
       match e with
-      | ENeg (v, name) ->
+      | GlobalSymbol (v, name) ->
         begin try
           let c, _ = F.Map.find (F.from_string name)  base.ast2ct in
           if c == v then acc
@@ -273,7 +273,7 @@ let build_shift ?(lock_base=false) ~flags:{ print_units } ~base symbols =
           let base, (c,_) = allocate_global_symbol_aux (Ast.Func.from_string name) base in
           base, Map.add v c shift
         end
-      | EPos (v, t) ->
+      | BoundVariable (v, t) ->
         if Map.mem v base.c2t then acc
         else
           let base = { base with c2t = Map.add v t base.c2t } in
