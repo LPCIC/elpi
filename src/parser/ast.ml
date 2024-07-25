@@ -68,7 +68,7 @@ module Term = struct
    | CData of CData.t
    | Quoted of quote
   and quote = { data : string; loc : Loc.t; kind : string option }
-  [@@deriving show]
+  [@@deriving show, ord]
 
 exception NotInProlog of Loc.t * string
 
@@ -154,7 +154,7 @@ module Clause = struct
     attributes : 'attributes;
     body : 'term;
   }
-  [@@deriving show]
+  [@@deriving show, ord]
 
 end
 
@@ -169,7 +169,7 @@ module Chr = struct
     attributes : 'attribute;
     loc: Loc.t;
   }
-  [@@deriving show]
+  [@@deriving show, ord]
 
 
 
@@ -182,7 +182,7 @@ module Macro = struct
      name : 'name;
      body : 'term
   }
-  [@@deriving show]
+  [@@deriving show, ord]
 
 end
 
@@ -194,7 +194,7 @@ module Type = struct
     name : Func.t;
     ty : Term.t;
   }
-  [@@deriving show]
+  [@@deriving show, ord]
 
 end
 
@@ -202,7 +202,7 @@ module Mode = struct
 
   type 'name t =
     { name : 'name; args : bool list; loc : Loc.t }
-  [@@deriving show]
+  [@@deriving show, ord]
 
 end
 
@@ -210,7 +210,7 @@ module TypeAbbreviation = struct
 
   type ('name) t =
     { name : 'name; value : Term.t; nparams : int; loc : Loc.t }
-  [@@deriving show]
+  [@@deriving show, ord]
 
 end
 
@@ -323,6 +323,6 @@ and 'a shorthand = {
   full_name : 'a;
   short_name : 'a;
 }
-[@@deriving show]
+[@@deriving show, ord]
 
 end
