@@ -106,14 +106,11 @@ type table = {
 } [@@deriving show]
 
 type entry =
-| ENeg of D.constant
+| ENeg of D.constant * string
 | EPos of D.constant * D.term
 [@@deriving show]
 
-type pruned_table = {
-  c2s0 : string D.Constants.Map.t;
-  c2t0 : entry array;
-} [@@deriving show]
+type pruned_table = entry array [@@deriving show]
 
 let locked { locked } = locked
 let lock t = { t with locked = true }
@@ -121,17 +118,24 @@ let uuid { uuid } = uuid
 let equal t1 t2 =
   locked t1 && locked t2 && uuid t1 = uuid t2
 
-let size t = Array.length t.c2t0
+let size t = Array.length t
 
-let symbols { c2s0 } =
-  List.map (fun (c,s) -> s ^ ":" ^ string_of_int c) (D.Constants.Map.bindings c2s0)
+let symbols table =
+  let map = function
+  | ENeg (c, s) -> Some (s ^ ":" ^ string_of_int c)
+  | EPos _ -> None
+  in
+  List.rev @@ List.filter_map map @@ Array.to_list table
 
 let prune t ~alive =
-  let c2s0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2s in
+  let c2s = t.c2s in
   let c2t0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2t in
-  let c2t0 = D.Constants.Map.mapi (fun k t -> if k < 0 then ENeg k else EPos (k, t)) c2t0 in
-  let c2t0 = Array.of_list @@ List.rev_map snd @@ D.Constants.Map.bindings c2t0 in
-  { c2s0; c2t0 }
+  let map k t =
+    if k < 0 then ENeg (k, D.Constants.Map.find k c2s)
+    else EPos (k, t)
+  in
+  let c2t0 = D.Constants.Map.mapi map c2t0 in
+  Array.of_list @@ List.rev_map snd @@ D.Constants.Map.bindings c2t0
 
 let table = D.State.declare
   ~descriptor:D.elpi_state_descriptor
@@ -255,8 +259,7 @@ let build_shift ?(lock_base=false) ~flags:{ print_units } ~base symbols =
        heuristic in unfolding) *)
     Array.fold_left (fun (base,shift as acc) e ->
       match e with
-      | ENeg v ->
-        let name = Map.find v symbols.c2s0 in
+      | ENeg (v, name) ->
         begin try
           let c, _ = F.Map.find (F.from_string name)  base.ast2ct in
           if c == v then acc
@@ -276,7 +279,7 @@ let build_shift ?(lock_base=false) ~flags:{ print_units } ~base symbols =
           let base = { base with c2t = Map.add v t base.c2t } in
           base, shift
       )
-     (base,Map.empty) symbols.c2t0)
+     (base, Map.empty) symbols)
 
 let build_shift ?lock_base ~flags ~base symbols =
   try Stdlib.Result.Ok (build_shift ?lock_base ~flags ~base symbols)
