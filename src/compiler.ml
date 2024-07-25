@@ -907,7 +907,7 @@ module ToDBL : sig
   (* Exported since also used to flatten (here we "flatten" locals) *)
   val prefix_const : State.t -> string list -> C.t -> State.t * C.t
   val merge_modes : State.t -> (mode * Loc.t) Map.t -> (mode * Loc.t) Map.t -> (mode * Loc.t) Map.t
-  val merge_types :
+  val merge_types : State.t -> 
     Types.types C.Map.t ->
     Types.types C.Map.t ->
     Types.types C.Map.t
@@ -1306,21 +1306,16 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     state, C.Map.add mname (args,loc) modes
 
   let merge_modes state m1 m2 =
+    if C.Map.is_empty m1 then m2 else
     C.Map.fold (fun k v m ->
       check_duplicate_mode state k v m;
       C.Map.add k v m)
     m2 m1
-
-  let merge_types t1 t2 =
-    C.Map.merge (fun _ l1 l2 ->
-      match l1, l2 with
-      | None, None -> None
-      | Some _ as l, None -> l
-      | None, (Some _ as l) -> l
-      | Some l1, Some l2 ->
-           Some (Types.merge l1 l2)) t1 t2
+  let merge_types _s t1 t2 =
+    C.Map.union (fun _ l1 l2 -> Some (Types.merge l1 l2)) t1 t2
 
   let merge_type_abbrevs s m1 m2 =
+    if C.Map.is_empty m2 then m1 else
     C.Map.fold (fun _ v m -> add_to_index_type_abbrev s m v) m1 m2
 
   let rec toplevel_clausify loc ~depth state t =
@@ -1439,7 +1434,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
             compile_program macros lcs state p in
           let defs = C.Set.union defs symbols in
           let modes = merge_modes state modes mp in
-          let types = merge_types types tp in
+          let types = merge_types state types tp in
           let type_abbrevs = merge_type_abbrevs state type_abbrevs ta in
           let state = set_varmap state orig_varmap in
           let lcs, state, types, type_abbrevs, modes, defs, compiled_rest =
@@ -1659,7 +1654,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     | [] -> types, type_abbrevs, modes, clauses, chr
     | Shorten(shorthands, { types = t; type_abbrevs = ta; modes = m; body; symbols = s }) :: rest ->
         let insubst = push_subst_shorthands shorthands s subst in
-        let types = ToDBL.merge_types (apply_subst_types ~live_symbols state insubst t) types in
+        let types = ToDBL.merge_types state (apply_subst_types ~live_symbols state insubst t) types in
         let type_abbrevs = ToDBL.merge_type_abbrevs state (apply_subst_type_abbrevs ~live_symbols state insubst ta) type_abbrevs in
         let modes = ToDBL.merge_modes state (apply_subst_modes ~live_symbols insubst m) modes in
         let types, type_abbrevs, modes, clauses, chr =
@@ -1667,7 +1662,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
         compile_body live_symbols state lcs types type_abbrevs modes clauses chr subst rest
     | Namespace (extra, { types = t; type_abbrevs = ta; modes = m; body; symbols = s }) :: rest ->
         let state, insubst = push_subst state extra s subst in
-        let types = ToDBL.merge_types (apply_subst_types ~live_symbols state insubst t) types in
+        let types = ToDBL.merge_types state (apply_subst_types ~live_symbols state insubst t) types in
         let type_abbrevs = ToDBL.merge_type_abbrevs state (apply_subst_type_abbrevs ~live_symbols state insubst ta) type_abbrevs in
         let modes = ToDBL.merge_modes state (apply_subst_modes ~live_symbols insubst m) modes in
         let types, type_abbrevs, modes, clauses, chr =
@@ -1678,7 +1673,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
         let clauses = clauses @ cl in
         compile_body live_symbols state lcs types type_abbrevs modes clauses chr subst rest
     | Constraints (clique, rules, { types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
-        let types = ToDBL.merge_types (apply_subst_types ~live_symbols state subst t) types in
+        let types = ToDBL.merge_types state (apply_subst_types ~live_symbols state subst t) types in
         let type_abbrevs = ToDBL.merge_type_abbrevs state (apply_subst_type_abbrevs ~live_symbols state subst ta) type_abbrevs in
         let modes = ToDBL.merge_modes state (apply_subst_modes ~live_symbols subst m) modes in
         let chr = apply_subst_chr ~live_symbols state subst (clique,rules) :: chr in
@@ -2085,7 +2080,7 @@ let assemble flags state code  (ul : compilation_unit list) =
         state, code in
       let modes = ToDBL.merge_modes state m1 m2 in
       let type_abbrevs = ToDBL.merge_type_abbrevs state ta1 ta2 in
-      let types = ToDBL.merge_types t1 t2 in
+      let types = ToDBL.merge_types state t1 t2 in
       let cl2 = filter_if flags clause_name cl2 in
       let cl2 = List.map (Spill.spill_clause state ~types ~modes:(fun c -> fst @@ C.Map.find c modes)) cl2 in
       let c2 = List.map (Spill.spill_chr state ~types ~modes:(fun c -> fst @@ C.Map.find c modes)) c2 in
