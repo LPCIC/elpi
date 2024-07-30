@@ -482,12 +482,7 @@ let merge t1 t2 =
     }
 
 let smart_map (f : typ -> typ) (t : types) : types =
-  let fold t accu =
-    let t' = f t in
-    if t' == t then accu
-    else Set.add t' (Set.remove t accu)
-  in
-  let set' = Set.fold fold t.set t.set in
+  let set' = Set.map f t.set in
   let lst' = smart_map f t.lst in
   let def' = f t.def in
   if set' == t.set && lst' == t.lst && def' == t.def then t
