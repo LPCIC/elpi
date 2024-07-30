@@ -79,11 +79,7 @@ jobs:
           opam exec -- cygpath -m ${{ github.workspace }} | % {$_ -replace "^","workspace=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
           opam exec -- sed -i ' ' tests/sources/*.elpi
           & "setup-x86_64.exe" -v -q -P time,which,wdiff
-
-#          opam exec -- which which
-#          opam exec -- time which
-#          opam exec -- which time
-#          opam exec -- which wdiff
+          opam exec -- which time
 
 # Build ######################################################################
 #
