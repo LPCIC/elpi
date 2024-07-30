@@ -461,15 +461,61 @@ The `constraint` directive gives control on the hypothetical part of the
 program that is kept by the suspended goal and lets one express constraint
 handling rules.
 
-A "clique" of related predicates is declared with
+A new constraint can be declared with the following syntax:
 ```prolog
-constraint foo bar ... {
+constraint p1 p2 p3 ?- foo bar {
+  rule (Ctx ?- foo Arg1) | ... <=> (Ctx => bar Arg1)
+}
+```
+
+> [!IMPORTANT]
+> When a suspended goal (via `declare_constraint`) is resumed, only the rules
+implementing the symbols passed in the head of the constraint are kept. 
+
+In our example, only the rules for `p1, p2, p3, foo` and `bar` are kept.
+Therefore, if just before the suspension of the goal `foo x` a rule like `p4`
+exists, this rule will be filtered out from the context of the suspended goal.
+
+The symbol `?-` separates two lists of
+predicate names: the former list is a predicate filter for the context;
+the latter list is a predicate filer for the goal.
+
+In the example above, the rules implementing `p1`, `p2` and `p3` are kep in
+in the suspended goal context. Therefore, when
+solving the goal  `Ctx => bar Arg1` all the rules for these three predicates are
+part of `Ctx`.
+
+The list of predicate names after the `?-` should form a "clique", a set of
+symbols disjoint from all the other cliques in the constraint store. If two
+overlapping cliques are detected, the fatal error *overlapping constraint
+cliques* is raised. The overlapping check is not applied to the context filters,
+that is, in the case of two constraints declared
+on two same cliques `c` with different filters `h1` and `h2`, then the two
+filters are merged and added to the clique `c`.
+
+For example, if we keep the example above, the following code snipped would
+correctly extend the previous constraint:
+
+```
+constraint p4 ?- foo bar {
   rule ...
 }
 ```
-The effect is that whenever a goal about `foo` or `bar`
-is suspended (via `declare_constraint`) only its hypothetical
-clauses about `foo` or `bar` are kept.
+
+From now on, all the goals suspended on the predicates `foo` and `bar` will see
+in their contexts the all the rules implementing the predicates `p1, p2,
+p3, p4` = $\{$`p1,p2,p3`$\} \cup \{$`p4`$\}$.
+
+> [!NOTE]
+> If the list of predicate names before `?-` is empty, then the `?-` can be omitted  
+
+Example: `constraint foo bar { ... }`. In this case the new suspended goals
+talking about `foo` and `bar` will consider the rules for the predicates `p1,
+p2, p3` = $\{$`p1,p2,p3`$\} \cup \varnothing$.
+
+Finally `constraint foo bax { ... }.` raise the overlapping clique error, since
+this constraint set intersect with another clique, i.e. $\{$`foo,bax`$\} \cap
+\{$`foo, bar`$\} \neq \varnothing$. 
 
 When one or more goals are suspended on lists of unification
 variables with a non-empty intersection, 
@@ -519,7 +565,8 @@ Failure
 #### Syntax
 Here `+` means one or more, `*` zero or more
 ```
-CONSTRAINT ::= constraint CLIQUE { RULE* }
+CTX_FILTER ::= CLIQUE ?-
+CONSTRAINT ::= constraint CTX_FILTER? CLIQUE { RULE* }
 CLIQUE ::= NAME+
 RULE ::= rule TO-MATCH TO-REMOVE GUARD TO-ADD .
 TO-MATCH  ::= SEQUENT*

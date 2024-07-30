@@ -3415,9 +3415,10 @@ let declare_constraint ~depth prog (gid[@trace]) args =
     | _ -> type_error "declare_constraint takes at least one argument"
   in 
   match CHR.clique_of (head_of g) !chrules with
-  | Some clique -> (* real constraint *)
+  | Some (clique, ctx_filter) -> (* real constraint *)
      (* XXX head_of is weak because no clausify ? XXX *)
-     delay_goal ~filter_ctx:(fun { hsrc = x } -> C.Set.mem (head_of x) clique)
+     delay_goal ~filter_ctx:(fun { hsrc = x } -> 
+        C.Set.mem (head_of x) clique || C.Set.mem (head_of x) ctx_filter)
        ~depth prog ~goal:g (gid[@trace]) ~on:keys
   | None -> delay_goal ~depth prog ~goal:g (gid[@trace]) ~on:keys
 

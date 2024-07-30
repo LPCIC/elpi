@@ -458,6 +458,13 @@ type prechr_rule = {
 open Data
 module C = Constants
 
+type block_constraint = {
+   clique : constant list;
+   ctx_filter : constant list;
+   rules : prechr_rule list
+}
+[@@deriving show, ord]
+
 module Types = struct
 
 type typ = {
@@ -530,7 +537,11 @@ and block =
   | Clauses of (preterm,Ast.Structured.attribute) Ast.Clause.t list (* TODO: use a map : predicate -> clause list to speed up insertion *)
   | Namespace of string * pbody
   | Shorten of C.t Ast.Structured.shorthand list * pbody
-  | Constraints of constant list * prechr_rule list * pbody
+  | Constraints of block_constraint * pbody
+and typ = {
+  tindex : Ast.Structured.tattribute;
+  decl : type_declaration
+}
 [@@deriving show, ord]
 
 end
@@ -542,7 +553,7 @@ type program = {
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   clauses : (preterm,Ast.Structured.attribute) Ast.Clause.t list;
-  chr : (constant list * prechr_rule list) list;
+  chr : block_constraint list;
   local_names : int;
 }
 [@@deriving show]
@@ -556,7 +567,7 @@ type program = {
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   clauses_rev : (preterm,attribute) Ast.Clause.t list;
-  chr : (constant list * prechr_rule list) list;
+  chr : block_constraint list;
   local_names : int;
 
   toplevel_macros : macro_declaration;
@@ -599,7 +610,7 @@ type 'a query = {
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
   clauses_rev : (preterm,Assembled.attribute) Ast.Clause.t list;
-  chr : (constant list * prechr_rule list) list;
+  chr : block_constraint list;
   initial_depth : int;
   query : preterm;
   query_arguments : 'a Query.arguments [@opaque];
@@ -737,13 +748,13 @@ end = struct (* {{{ *)
             error "CHR cannot be declared inside an anonymous block";
           aux_end_block loc ns (Locals(locals1,p) :: cl2b clauses @ blocks)
             [] macros types tabbrs modes locals chr accs rest
-      | Program.Constraint (loc, f) :: rest ->
+      | Program.Constraint (loc, ctx_filter, clique) :: rest ->
           if chr <> [] then
             error "Constraint blocks cannot be nested";
           let p, locals1, chr, rest = aux ns [] [] [] [] [] [] [] [] accs rest in
           if locals1 <> [] then
             error "locals cannot be declared inside a Constraint block";
-          aux_end_block loc ns (Constraints(f,chr,p) :: cl2b clauses @ blocks)
+          aux_end_block loc ns (Constraints({ctx_filter;clique;rules=chr},p) :: cl2b clauses @ blocks)
             [] macros types tabbrs modes locals [] accs rest
       | Program.Namespace (loc, n) :: rest ->
           let p, locals1, chr1, rest = aux (n::ns) [] [] [] [] [] [] [] [] StrSet.empty rest in
@@ -1476,9 +1487,10 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
           lcs, state, types, type_abbrevs, modes,
           C.Set.union defs (C.Set.diff p.Structured.symbols shorts),
           Structured.Shorten(shorthands, p) :: compiled_rest
-      | Constraints (clique, rules, p) :: rest ->
+      | Constraints ({ctx_filter; clique; rules}, p) :: rest ->
           (* XXX missing check for nested constraints *)
           let state, clique = map_acc funct_of_ast state clique in
+          let state, ctx_filter = map_acc funct_of_ast state ctx_filter in
           let state, rules =
             map_acc (prechr_rule_of_ast lcs macros) state rules in
           let state, lcs, _, p = compile_program macros lcs state p in
@@ -1486,7 +1498,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
             compile_body macros types type_abbrevs modes lcs defs state rest in
           lcs, state, types, type_abbrevs, modes,
           C.Set.union defs p.Structured.symbols,
-          Structured.Constraints(clique, rules,p) :: compiled_rest
+          Structured.Constraints({ctx_filter; clique; rules},p) :: compiled_rest
     in
     let state, local_names, toplevel_macros, pbody =
       compile_program toplevel_macros 0 state p in
@@ -1603,8 +1615,6 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     let body1 = smart_map_preterm state f body in
     if body1 == body then x else { x with Ast.Clause.body = body1 }
 
-  let map_pair f g (x,y) = f x, g y
-
   type subst = (string list * C.t C.Map.t)
 
 
@@ -1636,9 +1646,12 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
   let apply_subst_modes ?live_symbols s m =
     C.Map.fold (fun c v m -> C.Map.add (apply_subst_constant ?live_symbols s c) v m) m C.Map.empty
 
-  let apply_subst_chr ?live_symbols st s l =
-    map_pair (smart_map (apply_subst_constant ?live_symbols s))
-             (smart_map (map_chr st (apply_subst_constant ?live_symbols s))) l
+  let apply_subst_chr ?live_symbols st s (l: (block_constraint)) =
+    let app_sub_const f = smart_map (f (apply_subst_constant ?live_symbols s)) in
+     (fun {ctx_filter; rules; clique} ->
+        { ctx_filter = app_sub_const Fun.id ctx_filter;
+          clique = app_sub_const Fun.id clique;
+          rules = app_sub_const (map_chr st) rules }) l
 
   let apply_subst_clauses ?live_symbols st s =
     smart_map (map_clause st (apply_subst_constant ?live_symbols s))
@@ -1681,11 +1694,11 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
         let cl = apply_subst_clauses ~live_symbols state subst cl in
         let clauses = clauses @ cl in
         compile_body live_symbols state lcs types type_abbrevs modes clauses chr subst rest
-    | Constraints (clique, rules, { types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
+    | Constraints ({ctx_filter; clique; rules}, { types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
         let types = ToDBL.merge_types state (apply_subst_types ~live_symbols state subst t) types in
         let type_abbrevs = ToDBL.merge_type_abbrevs state (apply_subst_type_abbrevs ~live_symbols state subst ta) type_abbrevs in
         let modes = ToDBL.merge_modes state (apply_subst_modes ~live_symbols subst m) modes in
-        let chr = apply_subst_chr ~live_symbols state subst (clique,rules) :: chr in
+        let chr = apply_subst_chr ~live_symbols state subst {ctx_filter;clique;rules} :: chr in
         let types, type_abbrevs, modes, clauses, chr =
           compile_body live_symbols state lcs types type_abbrevs modes clauses chr subst body in
         compile_body live_symbols state lcs types type_abbrevs modes clauses chr subst rest
@@ -1748,7 +1761,7 @@ module Spill : sig
 
   val spill_chr :
     State.t -> types:Types.types C.Map.t -> modes:(constant -> mode) ->
-      (constant list * prechr_rule list) -> (constant list * prechr_rule list)
+      block_constraint -> block_constraint
   
   (* Exported to compile the query *)
   val spill_preterm :
@@ -1996,9 +2009,9 @@ end = struct (* {{{ *)
       option_mapacc (spill_presequent state modes types pcloc) pamap pnew_goal in
     { r with pguard; pnew_goal; pamap }
 
-  let spill_chr state ~types ~modes (clique, rules) =
+  let spill_chr state ~types ~modes {ctx_filter; clique; rules} =
     let rules = List.map (spill_rule state modes types) rules in
-    (clique, rules)
+    {ctx_filter; clique; rules}
 
   let spill_clause state ~types ~modes ({ Ast.Clause.body = { term; amap; loc; spilling } } as x) =
     if not spilling then x
@@ -2094,7 +2107,7 @@ let assemble flags state code  (ul : compilation_unit list) =
   let chr = List.concat (code.Assembled.chr :: List.rev chr_rev) in
   let chr =
     let pifexpr { pifexpr } = pifexpr in
-    List.map (fun (symbs,rules) -> symbs, filter_if flags pifexpr rules) chr in
+    List.map (fun {ctx_filter;clique;rules} -> {ctx_filter;clique;rules=filter_if flags pifexpr rules}) chr in
   state, { Assembled.clauses_rev; types; type_abbrevs; modes; chr; local_names = code.Assembled.local_names; toplevel_macros = code.Assembled.toplevel_macros }
 
 end (* }}} *)
@@ -2486,8 +2499,8 @@ let run
   check_no_regular_types_for_builtins state types;
   (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
   let state, chr =
-    List.fold_left (fun (state, chr) (clique, rules) ->
-      let chr, clique = CHR.new_clique (Symbols.show state) clique chr in
+    List.fold_left (fun (state, chr) {ctx_filter; clique; rules} ->
+      let chr, clique = CHR.new_clique (Symbols.show state) ctx_filter clique chr in
       let state, rules = map_acc (compile_chr initial_depth) state rules in
       List.iter (check_rule_pattern_in_clique state clique) rules;
       state, List.fold_left (fun x y -> CHR.add_rule clique y x) chr rules)

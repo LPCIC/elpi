@@ -126,7 +126,8 @@ decl:
 | t = kind; FULLSTOP { Program.Type t }
 | m = mode; FULLSTOP { Program.Mode [m] }
 | m = macro; FULLSTOP { Program.Macro m }
-| CONSTRAINT; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, cl) }
+| CONSTRAINT; hyps = list(constant); QDASH; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, hyps, cl) }
+| CONSTRAINT; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, [], cl) }
 | NAMESPACE; c = constant; LCURLY { Program.Namespace(loc $sloc, c )}
 | SHORTEN; s = shorten; FULLSTOP { Program.Shorten(loc $sloc, s) }
 | a = typeabbrev; FULLSTOP { Program.TypeAbbreviation a }
