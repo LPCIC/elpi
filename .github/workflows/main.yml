@@ -57,7 +57,6 @@ jobs:
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           opam-local-packages:
-#          dune-cache: true # does not seem to work
 
       - name: Extra setup on Linux
         if: runner.os == 'Linux'
@@ -79,7 +78,9 @@ jobs:
           opam exec -- cygpath -m ${{ github.workspace }} | % {$_ -replace "^","workspace=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
           opam exec -- sed -i ' ' tests/sources/*.elpi
           & "setup-x86_64.exe" -v -q -P time,which,wdiff
-          opam exec -- which time
+          opam exec -- ls D:\cygwin\bin\time.exe
+          opam exec -- ls /cygdrive/d/bin/time.exe
+          opam exec -- which time.exe
 
 # Build ######################################################################
 #
