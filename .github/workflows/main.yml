@@ -18,13 +18,18 @@ jobs:
           - windows-latest
         ocaml-compiler:
           - 4.14.x
-          - 4.08.x
         profile:
           - dev
         include:
           - os: ubuntu-latest
-            ocaml-compiler: 5.1.x
+            ocaml-compiler: 5.2.x
             profile: fatalwarnings
+          - os: macos-latest
+            ocaml-compiler: 5.2.x
+            profile: dev
+          - os: windows-latest
+            ocaml-compiler: 5.2.x
+            profile: dev
 
     runs-on: ${{ matrix.os }}
 
@@ -36,7 +41,7 @@ jobs:
           git config --global core.eol lf
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
 # Environment setup ###########################################################
 # 
@@ -48,14 +53,10 @@ jobs:
 # Hence we use GH's ${{ expressions }} rather than the ones from the shell.
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: avsm/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           opam-local-packages:
-#          dune-cache: true # does not seem to work
-
-      - name: Install opam-depext
-        run: opam install opam-depext || true # in opam 2.1 there is no depext to install
 
       - name: Extra setup on Linux
         if: runner.os == 'Linux'
@@ -74,14 +75,8 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           opam exec -- cygpath -m ${{ github.workspace }} | % {$_ -replace "^","workspace=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-          opam exec -- cygpath -m "$Env:CYGWIN_ROOT" | % {$_ -replace "^","cygwin_root=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
           opam exec -- sed -i ' ' tests/sources/*.elpi
-          & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -v -q -P time,which,wdiff
-
-#          opam exec -- which which
-#          opam exec -- time which
-#          opam exec -- which time
-#          opam exec -- which wdiff
+          & "setup-x86_64.exe" -v -q -P time,which,wdiff
 
 # Build ######################################################################
 #
@@ -125,7 +120,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           opam exec -- ls -l tests/sources/*.elpi
-          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe' TIME=--time=${{ env.cygwin_root }}/bin/time.exe
+          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe' TIME=--time=D:/cygwin/bin/time.exe
 
 # Artifacts 2 ################################################################
 
