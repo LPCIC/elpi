@@ -18,7 +18,6 @@ jobs:
           - windows-latest
         ocaml-compiler:
           - 4.14.x
-          - 5.2.x
         profile:
           - dev
         include:
@@ -26,13 +25,10 @@ jobs:
             ocaml-compiler: 5.2.x
             profile: fatalwarnings
           - os: macos-latest
-            ocaml-compiler: 4.13.x
-            profile: dev
-          - os: ubuntu-latest
-            ocaml-compiler: 4.08.x
+            ocaml-compiler: 5.2.x
             profile: dev
           - os: windows-latest
-            ocaml-compiler: 4.08.x
+            ocaml-compiler: 5.1.x
             profile: dev
 
     runs-on: ${{ matrix.os }}
