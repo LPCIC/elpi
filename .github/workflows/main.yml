@@ -78,6 +78,10 @@ jobs:
           opam exec -- cygpath -m ${{ github.workspace }} | % {$_ -replace "^","workspace=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
           opam exec -- sed -i ' ' tests/sources/*.elpi
           & "setup-x86_64.exe" -v -q -P time,which,wdiff
+
+      - name: Extra setup on Windows
+        if: runner.os == 'Windows'
+        run: |
           opam exec -- ls D:\cygwin\bin\time.exe
           opam exec -- ls /cygdrive/d/bin/time.exe
           opam exec -- which time.exe
