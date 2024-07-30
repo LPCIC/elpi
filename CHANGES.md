@@ -1,7 +1,10 @@
-# Unreleased
+# v1.19.5 (July 2024)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
 
 - Compiler:
   - Improve performance of separate compilation
+  
 - CHR:
   - Syntax extension for constraint declaration.
   - This aims to avoid the `overlapping` clique error
