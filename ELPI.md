@@ -474,25 +474,24 @@ implementing the symbols passed in the head of the constraint are kept.
 
 In our example, only the rules for `p1, p2, p3, foo` and `bar` are kept.
 Therefore, if just before the suspension of the goal `foo x` a rule like `p4`
-exists, this rule will not be filtered out from the rules in the suspended goal.
+exists, this rule will be filtered out from the context of the suspended goal.
 
-The symbol `?-` in the head of a constraint is used to separate two lists of
-predicate names, the former list represents predicate names to be loaded as a
-predicate filter to load the wanted rules as hypotheses in the context, whereas
-the latter list contains predicates to be used in the new premises to be solved.
+The symbol `?-` separates two lists of
+predicate names: the former list is a predicate filter for the context;
+the latter list is a predicate filer for the goal.
 
-In the example above, the rules implementing `p1`, `p2` and `p3` are filtered in
-in the suspended goal, that is, they are loaded into `Ctx`. Therefore, when
+In the example above, the rules implementing `p1`, `p2` and `p3` are kep in
+in the suspended goal context. Therefore, when
 solving the goal  `Ctx => bar Arg1` all the rules for these three predicates are
-charged.
+part of `Ctx`.
 
 The list of predicate names after the `?-` should form a "clique", a set of
 symbols disjoint from all the other cliques in the constraint store. If two
 overlapping cliques are detected, the fatal error *overlapping constraint
-cliques* is raised. The overlapping check is not applied to the list of
-hypotheses symbols before `?-`, that is, in the case of two constraints declared
-on two same cliques `c` with different hypothesis `h1` and `h2`, then the two
-set of hypotheses are merged and added to the clique `c`.
+cliques* is raised. The overlapping check is not applied to the context filters,
+that is, in the case of two constraints declared
+on two same cliques `c` with different filters `h1` and `h2`, then the two
+filters are merged and added to the clique `c`.
 
 For example, if we keep the example above, the following code snipped would
 correctly extend the previous constraint:
@@ -504,11 +503,11 @@ constraint p4 ?- foo bar {
 ```
 
 From now on, all the goals suspended on the predicates `foo` and `bar` will see
-in their contexts the four all the rules implementing the predicates `p1, p2,
+in their contexts the all the rules implementing the predicates `p1, p2,
 p3, p4` = $\{$`p1,p2,p3`$\} \cup \{$`p4`$\}$.
 
 > [!NOTE]
-> If the list of predicate names before `?-` is empty, then the `?-` can be avoided  
+> If the list of predicate names before `?-` is empty, then the `?-` can be omitted  
 
 Example: `constraint foo bar { ... }`. In this case the new suspended goals
 talking about `foo` and `bar` will consider the rules for the predicates `p1,
