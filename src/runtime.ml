@@ -388,16 +388,16 @@ module ConstraintStoreAndTrail : sig
 
   val initial_trail : trail Fork.local_ref
   val trail : trail Fork.local_ref
-  val cut_trail : unit -> unit [@@inline]
+  val cut_trail : unit -> unit 
 
   (* If true, no need to trail an imperative action.  Not part of trial_this
    * because you can save allocations and a function call by testing locally *)
   val last_call : bool ref
 
   (* add an item to the trail *)
-  val trail_assignment : uvar_body -> unit           [@@inline]
-  val trail_stuck_goal_addition : stuck_goal -> unit [@@inline]
-  val trail_stuck_goal_removal : stuck_goal -> unit  [@@inline]
+  val trail_assignment : uvar_body -> unit           
+  val trail_stuck_goal_addition : stuck_goal -> unit 
+  val trail_stuck_goal_removal : stuck_goal -> unit  
 
   (* backtrack *)
   val undo :
