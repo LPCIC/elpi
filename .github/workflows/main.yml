@@ -53,7 +53,7 @@ jobs:
 # Hence we use GH's ${{ expressions }} rather than the ones from the shell.
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: avsm/setup-ocaml@v2
+        uses: avsm/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           opam-local-packages:
