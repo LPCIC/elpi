@@ -18,12 +18,12 @@ jobs:
           - windows-latest
         ocaml-compiler:
           - 4.14.x
-          - 4.08.x
+          - 4.09.x
         profile:
           - dev
         include:
           - os: ubuntu-latest
-            ocaml-compiler: 5.1.x
+            ocaml-compiler: 5.2.x
             profile: fatalwarnings
 
     runs-on: ${{ matrix.os }}
