@@ -13,6 +13,7 @@ test P T :-
 clause (x\y\F y x) :- F = a\b\b.
 clause1 (x\y\x).
 clause2 (x\y\X x, F y (X x)) :- F = a\b\b.
+clause4 (x\x).
 
 type r A -> B.
 prune_arg (r F).
@@ -28,7 +29,7 @@ main :-
   test (eq\F\        pi x\ pi y\ sigma R\ R = x, eq (F y x) (r (w\h w R))) (a\b\r (x\h x b)),
   spy (pi dummy\ clause (x\y\x)),
   (pi dummy\ clause1 (x\y\F y x), F = a\b\b),
-  (pi dummy\ clause2 (x\y\x,x)),
+  % (pi dummy\ clause2 (x\y\x,x)),
   (clause3 (x\y\G y x) => pi dummy\ clause3 (x\y\x)), (G = a\b\b),
   test (eq\F\        sigma H\pi x\ pi y\ eq (F y) (r (H y x)), H x x = x, H x y = x)   (a\r a),
 
@@ -44,5 +45,7 @@ main :-
   test (eq\F\        pi x\pi y\prune_arg (F y x))  (a\b\r (v a b)),
   test (eq\F\        pi x\pi y\prune_arg2 (F y x)) (a\b\r (x\v a b)),
   test (eq\F\        pi x\pi y\prune_arg3 (F y x)) (a\b\r (x\y\v a b)),
+
+  (sigma X\ (pi x\ clause4 (y\ X x y), print X, X = (x\y\y))),
  
   true.
