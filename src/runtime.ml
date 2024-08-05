@@ -1636,7 +1636,6 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        bdepth (ppterm (bdepth+depth) [] ~argsdepth e) b)
    begin
    let delta = adepth - bdepth in
-         
    (delta = 0 && a == b) || match a,b with
     | (Discard, _ | _, Discard) -> true
 
@@ -1884,7 +1883,19 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
    | Builtin (c1,xs), Builtin (c2,ys) ->
        (* Inefficient comparison *)
        c1 = c2 && for_all2 (fun x y -> unif argsdepth matching depth adepth x bdepth y e) xs ys
-   | Lam t1, Lam t2 -> unif argsdepth matching (depth+1) adepth t1 bdepth t2 e
+   | Lam t1, Lam t2 -> 
+      (* Before unifying t1 and t2, we put them at the same level,
+        this aims to correctely unify `c0 |- c1\ X c0 c1` and `c0\ c0`.
+        After term move, the unification is done between the terms:
+        `c0 |- c1\ X c0 c1` and `c1\ c1`, which leads to
+        `c0 c1 |- X c0 c1` and `c1 |- c1` and `x\y\y` is assigned to X.
+        Note: term alignement is usefull only in the presence of uvars
+      *)
+      let t2, bdepth = if bdepth < adepth then 
+        move ~argsdepth e ~from:(bdepth+depth) ~to_:(adepth+depth) (t2), adepth else (t2, bdepth) in
+      let t1, adepth = if adepth < bdepth then 
+        move ~argsdepth e ~from:(bdepth+depth) ~to_:(adepth+depth) (t1), bdepth else (t1, adepth) in
+      unif argsdepth matching (depth+1) adepth t1 bdepth t2 e
    | Const c1, Const c2 ->
       if c1 < bdepth then c1=c2 else c1 >= adepth && c1 = c2 + delta
    (*| Const c1, Const c2 when c1 < bdepth -> c1=c2
