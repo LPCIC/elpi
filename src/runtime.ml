@@ -1255,8 +1255,8 @@ and deref_uv ?avoid ~from ~to_ args t =
      (* TODO: when the UVar/Arg is not C.dummy, we call deref_uv that
         will call move that will call_deref_uv again. Optimize the
         path *)
-     | UVar(t,depth,args2) when from = depth+args2 ->
-        UVar(t,depth,args2+args')
+     (* | UVar(t,depth,args2) when from = depth+args2 ->
+        UVar(t,depth,args2+args') *)
      | AppUVar (r,depth,args2) ->
         let args = C.mkinterval from args' 0 in
         AppUVar (r,depth,args2 @ args)
@@ -1264,7 +1264,7 @@ and deref_uv ?avoid ~from ~to_ args t =
         let args1 = C.mkinterval vardepth argsno 0 in
         let args2 = C.mkinterval from args' 0 in
         let args = args1 @ args2 in
-        AppUVar (r,vardepth,args)
+        mkAppUVar r vardepth args
      | Cons _ | Nil -> type_error "deref_uv: applied list"
      | Discard -> type_error "deref_uv: applied Discard"
      | CData _ -> t
