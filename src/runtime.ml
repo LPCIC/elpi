@@ -758,8 +758,10 @@ let occurr_check r1 r2 =
         if !!r1 != C.dummy || r1 == r2 then raise RestrictionFailure
 
 let rec make_lambdas destdepth args =
- if args = 0 then let x = UVar(oref C.dummy,destdepth,0) in x,x
- else let x,y = make_lambdas (destdepth+1) (args-1) in Lam x, y
+ if args <= 0 then
+    UVar(oref C.dummy,destdepth,0)
+ else
+   Lam (make_lambdas (destdepth+1) (args-1))
 
 let rec mknLam n x = if n = 0 then x else Lam (mknLam (n-1) x)
 
@@ -1633,7 +1635,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
    [%trace "unif" ~rid ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] ~argsdepth empty_env) a
        depth (if matching then "m" else "")
-       bdepth (ppterm (bdepth+depth) [] ~argsdepth e) b)
+       bdepth (ppterm (bdepth+depth) [] ~argsdepth:bdepth e) b)
    begin
    let delta = adepth - bdepth in
          
@@ -1783,32 +1785,47 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
           unif argsdepth matching depth adepth a adepth b e
        | RestrictionFailure -> false
        end
-   (* simplify *)
-   (* TODO: unif->deref_uv case. Rewrite the code to do the job directly? *)
-   | _, Arg (i,args) ->
-      let v = fst (make_lambdas adepth args) in
-      [%spy "user:assign" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+
+   (* XXX simplify either generated UVar(_,_,0) or AppUVar XXX *)
+  | _, Arg (i,args) ->
+      let v = make_lambdas adepth (args - depth) in
+      [%spy "user:assign:simplify:stack:arg" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
         (uppterm depth [] ~argsdepth e) (Arg(i,0))
         (uppterm depth [] ~argsdepth e) v) ()];
       e.(i) <- v;
       [%spy "user:assign" ~rid (fun fmt () -> ppterm depth [] ~argsdepth empty_env fmt (e.(i))) ()];
+      let bdepth, b =
+        match deref_uv ~from:argsdepth ~to_:(bdepth+depth) args v with
+        | UVar(r,from,args) when args > 0 -> adepth, AppUVar(r,from,C.mkinterval (from) args 0)
+        | _ -> bdepth, b
+      in
       unif argsdepth matching depth adepth a bdepth b e
    | UVar(r1,_,a1), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a1 + a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
    | AppUVar(r1,_,_), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e
 
    | _, UVar (r,origdepth,args) when args > 0 && match a with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
-      let v = fst (make_lambdas origdepth args) in
-      [%spy "user:assign:simplify" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+      let v = make_lambdas origdepth (args - depth) in
+      [%spy "user:assign:simplify:stack:uvar" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
         (uppterm depth [] ~argsdepth e) (UVar(r,origdepth,0))
         (uppterm depth [] ~argsdepth e) v) ()];
       r @:= v;
+      let b =
+        match deref_uv ~from:origdepth ~to_:(bdepth+depth) args v with
+        | UVar(r,from,args) when args > 0 -> AppUVar(r,from,C.mkinterval from args 0)
+        | _ -> b
+      in
       unif argsdepth matching depth adepth a bdepth b e
    | UVar (r,origdepth,args), _ when args > 0 && match b with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
-      let v = fst (make_lambdas origdepth args) in
-      [%spy "user:assign:simplify" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+      let v = make_lambdas origdepth (args - depth) in
+      [%spy "user:assign:simplify:heap" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
          (uppterm depth [] ~argsdepth e) (UVar(r,origdepth,0))
          (uppterm depth [] ~argsdepth e) v) ()];
       r @:= v;
+      let a =
+        match deref_uv ~from:origdepth ~to_:(adepth+depth) args v with
+        | UVar(r,from,args) when args > 0 -> AppUVar(r,from,C.mkinterval from args 0)
+        | _ -> a
+      in
       unif argsdepth matching depth adepth a bdepth b e
 
    (* HO *)

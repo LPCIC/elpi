@@ -410,7 +410,7 @@
 {"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 122, column 0, character 3232:"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 122, column 0, character 3232:","(bind [] _ A0 (mono A1)) :- (copy A0 A1)."]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--539 [] ==> uvar frozen--539 []"]}
-{"step" : 33,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign:simplify","payload" : ["X13 := c0 \\\nX15 c0"]}
+{"step" : 33,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign:simplify:heap","payload" : ["X13 := c0 \\\nX15 c0"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X15^1 := mono X16^1"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["62"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["copy (uvar frozen--539 [] ==> uvar frozen--539 []) X16^1"]}
