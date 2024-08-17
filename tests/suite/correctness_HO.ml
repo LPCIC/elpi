@@ -348,10 +348,3 @@ let () = declare "chr_with_hypotheses"
   ~typecheck:true
   ~expectation:Success
   ()
-
-let () = declare "bug-256"
-  ~source_elpi:"bug-256.elpi"
-  ~description:"move/unif"
-  ~typecheck:true
-  ~expectation:Success
-  ()

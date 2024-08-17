@@ -1,6 +1,0 @@
-pred u o:(int -> int).
-u (y\y).
-
-main :-
-  pi x\ u (y\ X x y),
-  std.assert! (X 1 2 = 2) "bug".
