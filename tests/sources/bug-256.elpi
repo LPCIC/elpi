@@ -2,5 +2,17 @@ pred u o:(int -> int).
 u (y\y).
 
 main :-
-  pi x\ u (y\ X x y),
-  std.assert! (X 1 2 = 2) "bug".
+  print "-----------",
+  t1,
+  print "-----------",
+  t2,
+  t3,
+  true.
+
+t1 :- pi x\ u (y\ X x y), std.assert! (X 1 2 = 2) "bug".
+
+t2 :-
+  (pi X\ p ( a\f (X a))) => pi x y\ p ( a\f (g x y a)). 
+
+t3 :-
+  (pi X\ q ( a\b\c\d\f (X a))) => pi x y\ q ( a\b\c\d\f (g x y a)). 

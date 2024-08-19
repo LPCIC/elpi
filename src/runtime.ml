@@ -811,6 +811,12 @@ let expand_appuv ~depth r ~lvl ~args =
           (uppterm lvl [] ~argsdepth:0 empty_env) t) ass];
   rc
 
+let deoptimize_uv_w_args = function
+  | UVar(r,lvl,args) when args > 0 ->
+      AppUVar(r,lvl,C.mkinterval lvl args 0)
+  | x -> x
+
+
 (* move performs at once:
    1) refreshing of the arguments into variables (heapifycation)
    2) restriction/occur-check
@@ -1793,12 +1799,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
         (uppterm depth [] ~argsdepth e) (Arg(i,0))
         (uppterm depth [] ~argsdepth e) v) ()];
       e.(i) <- v;
-      [%spy "user:assign" ~rid (fun fmt () -> ppterm depth [] ~argsdepth empty_env fmt (e.(i))) ()];
-      let bdepth, b =
-        match deref_uv ~from:argsdepth ~to_:(adepth+depth) args v with
-        | UVar(r,from,args) when args > 0 -> adepth, AppUVar(r,from,C.mkinterval (from) args 0)
-        | _ -> bdepth, b
-      in
+      let bdepth = adepth in (* like in deref for arg *)
+      let b = deoptimize_uv_w_args @@ deref_uv ~from:argsdepth ~to_:(bdepth+depth) args v in
       unif argsdepth matching depth adepth a bdepth b e
    | UVar(r1,_,a1), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a1 + a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
    | AppUVar(r1,_,_), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e
@@ -1809,11 +1811,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
         (uppterm depth [] ~argsdepth e) (UVar(r,origdepth,0))
         (uppterm depth [] ~argsdepth e) v) ()];
       r @:= v;
-      let b =
-        match deref_uv ~from:origdepth ~to_:(bdepth+depth) args v with
-        | UVar(r,from,args) when args > 0 -> AppUVar(r,from,C.mkinterval from args 0)
-        | _ -> b
-      in
+      let b = deoptimize_uv_w_args @@ deref_uv ~from:origdepth ~to_:(bdepth+depth) args v in
       unif argsdepth matching depth adepth a bdepth b e
    | UVar (r,origdepth,args), _ when args > 0 && match b with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = make_lambdas origdepth (args - depth) in
@@ -1821,11 +1819,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
          (uppterm depth [] ~argsdepth e) (UVar(r,origdepth,0))
          (uppterm depth [] ~argsdepth e) v) ()];
       r @:= v;
-      let a =
-        match deref_uv ~from:origdepth ~to_:(adepth+depth) args v with
-        | UVar(r,from,args) when args > 0 -> AppUVar(r,from,C.mkinterval from args 0)
-        | _ -> a
-      in
+      let a = deoptimize_uv_w_args @@ deref_uv ~from:origdepth ~to_:(adepth+depth) args v in
       unif argsdepth matching depth adepth a bdepth b e
 
    (* HO *)
