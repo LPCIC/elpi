@@ -1,0 +1,35 @@
+
+name: Users workflow
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+    test-users:
+        name: "test users"
+        runs-on: ubuntu-latest
+        env:
+          OPAMWITHTEST: true
+          OPAMVERBOSE: true
+        steps:
+        - uses: actions/checkout@v4
+
+        - uses: ocaml/setup-ocaml@v3
+          with:
+            ocaml-compiler: 4.14.x
+            opam-local-packages:
+
+        - run: opam install ./elpi.opam
+          env:
+            OPAMWITHTEST: false
+            
+        - run: opam pin add coq-elpi https://github.com/LPCIC/coq-elpi.git#master
+        - run: opam pin add coq-hierarchy-builder https://github.com/math-comp/hierarchy-builder.git#master
+        - run: opam pin add coq-mathcomp-ssreflect https://github.com/math-comp/math-comp.git#master
+        - run: opam pin add coq-mathcomp-fingroup https://github.com/math-comp/math-comp.git#master
+        - run: opam pin add coq-mathcomp-algebra https://github.com/math-comp/math-comp.git#master
+        - run: opam pin add coq-mathcomp-solvable https://github.com/math-comp/math-comp.git#master
+        - run: opam pin add coq-mathcomp-field https://github.com/math-comp/math-comp.git#master
