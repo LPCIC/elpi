@@ -1795,7 +1795,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       e.(i) <- v;
       [%spy "user:assign" ~rid (fun fmt () -> ppterm depth [] ~argsdepth empty_env fmt (e.(i))) ()];
       let bdepth, b =
-        match deref_uv ~from:argsdepth ~to_:(bdepth+depth) args v with
+        match deref_uv ~from:argsdepth ~to_:(adepth+depth) args v with
         | UVar(r,from,args) when args > 0 -> adepth, AppUVar(r,from,C.mkinterval (from) args 0)
         | _ -> bdepth, b
       in
