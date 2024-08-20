@@ -1,3 +1,11 @@
+# v1.19.6 (August 2024)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+- Runtime:
+  - Fix bug in unification code for "automatic intro" (as in the intro tactic)
+    of UVar arguments
+
 # v1.19.5 (July 2024)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
