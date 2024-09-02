@@ -49,6 +49,7 @@ type t = Tokens.token =
   | IMPORT
   | IFF
   | IF
+  | FUNCTIONAL
   | FULLSTOP
   | FRESHUV
   | FLOAT of ( float )

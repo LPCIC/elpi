@@ -57,6 +57,7 @@
 %token IF
 %token BEFORE
 %token AFTER
+%token FUNCTIONAL
 %token REPLACE
 %token REMOVE
 %token NAME 

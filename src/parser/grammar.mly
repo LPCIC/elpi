@@ -310,6 +310,7 @@ attribute:
 | REPLACE; s = STRING { Replace s }
 | REMOVE; s = STRING { Remove s }
 | EXTERNAL { External }
+| FUNCTIONAL { Functional }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
 
 indexing:
