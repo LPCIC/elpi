@@ -9,3 +9,4 @@
 (executable (name sepcomp_perf2) (modules sepcomp_perf2) (libraries sepcomp))
 (executable (name sepcomp_perf3) (modules sepcomp_perf3) (libraries sepcomp))
 (executable (name sepcomp_perf4) (modules sepcomp_perf4) (libraries sepcomp))
+(executable (name sepcomp_perf5) (modules sepcomp_perf5) (libraries sepcomp))
