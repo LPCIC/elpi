@@ -41,13 +41,14 @@ end
 
 module Term : sig
 
-  type t =
+  type t_ =
    | Const of Func.t
    | App of t * t list
    | Lam of Func.t * t
    | CData of CData.t
    | Quoted of quote
-  and quote = { data : string; loc : Loc.t; kind : string option }
+  and t = { it : t; loc : Loc.t }
+  and quote = { data : string; kind : string option }
   [@@ deriving show, ord]
 
   exception NotInProlog of Loc.t * string
@@ -57,14 +58,29 @@ module Term : sig
 
   val mkAppF : Loc.t -> Func.t -> t list -> t
 
-  val mkCon : string -> t
-  val mkNil : t
-  val mkSeq : t list -> t
+  val mkCon : Loc.t -> string -> t
+  val mkNil : Loc.t -> t
+  val mkSeq : Loc.t -> t list -> t
   val mkQuoted : Loc.t -> string -> t
-  val mkFreshUVar : unit -> t
-  val mkFreshName : unit -> t
-  val mkLam : string -> t -> t
-  val mkC : CData.t -> t
+  val mkFreshUVar : Loc.t -> t
+  val mkFreshName : Loc.t -> t
+  val mkLam : Loc.t -> string -> t -> t
+  val mkC : Loc.t -> CData.t -> t
+
+end
+
+module ScopedTerm : sig
+
+  type t_ =
+   | Global of Func.t
+   | Local of Func.t
+   | Var of Func.t * t list
+   | App of Func.t * t * t list
+   | Lam of Func.t * t
+   | CData of CData.t
+   and t = { it : t; loc : Loc.t }
+  [@@ deriving show, ord]
+  
 end
 
 type raw_attribute =
