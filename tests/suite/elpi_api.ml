@@ -20,7 +20,7 @@ let () = declare "sepcomp2"
 let () = declare "sepcomp3"
   ~source_dune:"sepcomp3.ml"
   ~description:"separate compilation double naming"
-  ~expectation:Test.(FailureOutput (Str.regexp "a clause named xxx already exists"))
+  ~expectation:Test.(FailureOutput (Str.regexp "duplicate clause name xxx"))
   ()
 
 let () = declare "sepcomp4"

@@ -125,13 +125,13 @@ type clause = {
     vars : int;
     mode : mode;        (* CACHE to avoid allocation in get_clauses *)
     loc : Loc.t option; (* debug *)
+    name : string option; (* for grafting *)
 }
 and 
 mode = arg_mode list
 [@@deriving show, ord]
 
 let to_mode = function true -> Input | false -> Output
-
 
 type stuck_goal = {
   mutable blockers : blockers;
@@ -151,14 +151,17 @@ and prolog_prog = {
   src : clause_src list; (* hypothetical context in original form, for CHR *)
   index : index;
 }
-and index = second_lvl_idx Ptmap.t
-and second_lvl_idx =
+and preindex = (clause * int list) second_lvl_idx Ptmap.t
+and index = clause second_lvl_idx Ptmap.t
+and 'clause second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
     argno : int;
-    all_clauses : clause list;        (* when the query is flexible *)
-    flex_arg_clauses : clause list;   (* when the query is rigid but arg_id ha nothing *)
-    arg_idx : clause list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+    time : int;
+    times : int list StrMap.t;
+    all_clauses : 'clause list;        (* when the query is flexible *)
+    flex_arg_clauses : 'clause list;   (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : 'clause list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
     mode : mode;

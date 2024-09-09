@@ -5,7 +5,13 @@
   (modules elpi_REPL)
   (package elpi)
 )
-
+(executable
+  (name bl)
+  (public_name bl)
+  (libraries unix)
+  (modules bl)
+  (package elpi)
+)
 (env
   (dev
     (flags (:standard -w -9 -w -32 -w -27 -w -6 -w -37 -warn-error -A)))

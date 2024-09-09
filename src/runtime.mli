@@ -61,11 +61,18 @@ val hmove :
   from:int -> to_:int -> term -> term
 val subst: depth:int -> term list -> term -> term
 
-val make_index :
+(* updates how predicates are indexed *)
+val update_indexing :
+  (mode * indexing) Constants.Map.t ->
+    preindex -> preindex
+
+val add_to_index :
   depth:int ->
-  indexing:(mode * indexing) Constants.Map.t ->
-  clauses_rev:(constant * clause) list ->
-    prolog_prog
+  predicate:constant ->
+  graft:Elpi_parser.Ast.Structured.insertion option ->
+  clause -> preindex -> preindex
+
+val rev_index : preindex -> index
 
 (* The projection from the internal notion of constraints in the API one *)
 val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option
@@ -73,7 +80,8 @@ val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option
 (* can raise CannotDeclareClauseForBuiltin *)
 val clausify1 :
   loc:Loc.t ->
-  mode Constants.Map.t -> (* for caching it in the clause *)
+  name:string option ->
+  modes:(constant -> mode) -> (* for caching it in the clause *)
   nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 
 val full_deref : depth:int -> term -> term
