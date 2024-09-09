@@ -133,6 +133,28 @@ mode = arg_mode list
 
 let to_mode = function true -> Input | false -> Output
 
+module Bl = struct
+
+  type 'a t = BNil | BCons of { head : 'a; mutable tail : 'a t }
+  [@@deriving show, ord]
+
+  type 'a builder = { mutable list : 'a t; mutable last : 'a t }
+  [@@deriving show, ord]
+
+  let empty : _ builder = { list = BNil; last = BNil }
+  
+  let init b head = b.list <- BCons { head ; tail = BNil }; b.last <- b.list
+  
+  let cons x = function
+    | { list = BNil } as b -> init b x
+    | { list } as b -> b.list <- BCons { head = x; tail = list }
+  
+  let rcons x = function
+    | { list = BNil } as b -> init b x
+    | { last = BCons l } as b -> l.tail <- BCons { head = x; tail = BNil }; b.last <- l.tail
+    | _ -> assert false
+
+end
 type stuck_goal = {
   mutable blockers : blockers;
   kind : unification_def stuck_goal_kind;
@@ -152,16 +174,16 @@ and prolog_prog = {
   index : index;
 }
 and preindex = (clause * int list) second_lvl_idx Ptmap.t
-and index = clause second_lvl_idx Ptmap.t
+and index = preindex
 and 'clause second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
     argno : int;
     time : int;
     times : int list StrMap.t;
-    all_clauses : 'clause list;        (* when the query is flexible *)
-    flex_arg_clauses : 'clause list;   (* when the query is rigid but arg_id ha nothing *)
-    arg_idx : 'clause list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+    all_clauses : 'clause Bl.builder;        (* when the query is flexible *)
+    flex_arg_clauses : 'clause Bl.builder;   (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : 'clause Bl.builder Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
     mode : mode;
