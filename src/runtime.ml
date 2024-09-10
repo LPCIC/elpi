@@ -2608,29 +2608,30 @@ let rec replace ?fail it c l : (clause * int list) list =
   | x :: xs -> x :: replace ?fail it c xs
   
 
-let postpend ?fail ~times ~time graft clause l_rev =
+let postpend ?fail ~times ~time graft clause clauses =
   match graft with
-  (* | None when rev -> l_rev @ [clause] *)
-  | None -> Bl.rcons (clause,[time]) l_rev
+  | None -> Bl.rcons clause clauses
   | Some (Elpi_parser.Ast.Structured.Before x)  ->
       let reference = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
-      Bl.insert_before (fun (_,x) -> x = reference) (clause, reference @ [time]) l_rev
+      clause.timestamp <- reference @ [time];
+      Bl.insert_before (fun x -> x.timestamp = reference) clause clauses
   | Some (Elpi_parser.Ast.Structured.After x)   ->
       let reference = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
-      Bl.insert_after (fun (_,x) -> x = reference) (clause, reference @ [-time]) l_rev;
-      l_rev
+      clause.timestamp <- reference @ [-time];
+      Bl.insert_after (fun x -> x.timestamp = reference) clause clauses;
+      clauses
   | Some (Elpi_parser.Ast.Structured.Replace x) ->
       let reference = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
-      Bl.replace (fun (_,x) -> x = reference) (clause,[time]) l_rev;
-      l_rev
+      Bl.replace (fun x -> x.timestamp = reference) clause clauses;
+      clauses
 
 
-let add1clause2 ~depth ~(insert: ?fail:bool -> _) m ?graft predicate clause = function
+let add1clause2 ~depth ~(insert: ?fail:bool -> _) ~empty m ?graft predicate clause name = function
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx; time; times } ->
     let times =
-      match clause.name with
+      match name with
       | None -> times
-      | Some id -> if StrMap.mem id times then error ?loc:clause.loc ("duplicate clause name " ^ id) else StrMap.add id [time] times in
+      | Some id -> clause.timestamp <- [time]; if StrMap.mem id times then error ?loc:clause.loc ("duplicate clause name " ^ id) else StrMap.add id clause.timestamp times in
     begin match classify_clause_argno ~depth argno mode clause.args with
     (* X: matches both rigid and flexible terms *)
     | Variable ->
@@ -2673,67 +2674,68 @@ let add1clause2 ~depth ~(insert: ?fail:bool -> _) m ?graft predicate clause = fu
     let hash = hash_clause_arg_list predicate ~depth clause.args mode args in
     let clauses =
       try Ptmap.find hash args_idx
-      with Not_found -> [] in
+      with Not_found -> empty () in
     Ptmap.add predicate (BitHash {
        mode; args;
        time = time + 1;
-       args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
+       args_idx = Ptmap.add hash (insert ~fail:false ~times:StrMap.empty ~time graft clause clauses) args_idx
      }) m
 | IndexWithDiscriminationTree {mode; arg_depths; args_idx; time } ->
   let max_depths = Discrimination_tree.max_depths args_idx in
   let max_path = Discrimination_tree.max_path args_idx in
     let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths max_depths mode max_path in
     [%spy "dev:disc-tree:depth-path" ~rid pp_string "Inst: MaxDepths " (pplist pp_int "") (Array.to_list max_depths)];
-    let args_idx = Discrimination_tree.index args_idx path clause ~time in
+    clause.timestamp <- [time];
+    let args_idx = Discrimination_tree.index args_idx path clause in
       Ptmap.add predicate (IndexWithDiscriminationTree {
         mode; arg_depths;
         time = time+1;
         args_idx = args_idx
       }) m
 
-let add1clause ~depth m ~insert ~empty ~cons ?graft predicate clause =
+let add1clause ~depth m ~insert ~empty ~cons ?graft predicate clause name =
   try
-    add1clause2 ~depth m ~insert ?graft predicate clause (Ptmap.find predicate m)
+    add1clause2 ~depth m ~insert ~empty ?graft predicate clause name (Ptmap.find predicate m)
   with
   | Not_found ->
     let times = StrMap.empty in
     let time = 0 in
     let times =
-      match clause.name with
+      match name with
       | None -> times
-      | Some id -> if StrMap.mem id times then error ?loc:clause.loc ("duplicate clause name " ^ id) else StrMap.add id [time] times in
+      | Some id -> clause.timestamp <- [time]; if StrMap.mem id times then error ?loc:clause.loc ("duplicate clause name " ^ id) else StrMap.add id clause.timestamp times in
 
       match classify_clause_argno ~depth 0 [] clause.args with
       | Variable ->
       Ptmap.add predicate (TwoLevelIndex {
         argno = 0; mode = [];
-        all_clauses = cons (clause,[time]) (empty ());
-        flex_arg_clauses = cons (clause,[time]) (empty ());
+        all_clauses = cons clause (empty ());
+        flex_arg_clauses = cons clause (empty ());
         arg_idx =Ptmap.empty;
         time = time + 1; times;
       }) m
       | MustBeVariable ->
       Ptmap.add predicate (TwoLevelIndex {
         argno = 0;mode = [];
-        all_clauses = cons (clause,[time]) (empty ());
+        all_clauses = cons clause (empty ());
         flex_arg_clauses = empty ();
-        arg_idx = Ptmap.add mustbevariablec (cons (clause,[time]) (empty ())) Ptmap.empty;
+        arg_idx = Ptmap.add mustbevariablec (cons clause (empty ())) Ptmap.empty;
         time = time + 1; times;
         }) m
       | Rigid (arg_hd,arg_mode) ->
-      let all_clauses = if arg_mode == Input then empty () else (cons (clause,[time]) (empty ())) in
+      let all_clauses = if arg_mode == Input then empty () else (cons clause (empty ())) in
       Ptmap.add predicate (TwoLevelIndex {
         argno = 0;mode = [];
         all_clauses;
         flex_arg_clauses = empty ();
-        arg_idx = Ptmap.add arg_hd (cons (clause,[time]) (empty ())) Ptmap.empty;
+        arg_idx = Ptmap.add arg_hd (cons clause (empty ())) Ptmap.empty;
         time = time + 1; times;
         }) m
 
 let add_clauses ~depth ~insert ~empty ~cons clauses idx =
   (* pplist (fun fmt (hd, b) -> ppclause fmt hd b) ";" Fmt.std_formatter clauses; *)
   (* let t1 = Unix.gettimeofday () in *)
-  let idx = List.fold_left (fun m (p,c) -> add1clause ~depth ~insert ~empty ~cons m ?graft:None p c) idx clauses in
+  let idx = List.fold_left (fun m (p,c) -> add1clause ~depth ~insert ~empty ~cons m ?graft:None p c None) idx clauses in
   (* let t2 = Unix.gettimeofday () in  *)
   (* pp_string Fmt.std_formatter (Printf.sprintf "\nTime taken by add_clauses is %f\n" (t2-.t1)); *)
   idx
@@ -2778,23 +2780,8 @@ let lex (_,l1) (_,l2) =
   in
   lex l1 l2
 
-let close_index (index : preindex) : index =
-  index |> Ptmap.iter (fun _ -> function
-| TwoLevelIndex {
-  all_clauses;
-  flex_arg_clauses;
-  arg_idx;
-} ->
-  ignore(Bl.commit all_clauses);
-  ignore(Bl.commit flex_arg_clauses);
-  ignore(Ptmap.iter (fun _ x -> ignore(Bl.commit x)) arg_idx)
-| BitHash _  -> ()
-| IndexWithDiscriminationTree _  -> ()
-);
-Obj.magic index
-
-let add_to_index ~depth ~predicate ~graft clause index =
-  add1clause ~depth ~insert:postpend ~empty:Bl.empty ~cons:Bl.rcons ?graft index predicate clause
+let add_to_index ~depth ~predicate ~graft clause name index =
+  add1clause ~depth ~insert:postpend ~empty:Bl.empty ~cons:Bl.rcons ?graft index predicate clause name
 
 let make_index ~depth ~indexing ~clauses_rev:p =
   let m = update_indexing indexing Ptmap.empty in
@@ -2804,8 +2791,8 @@ let make_index ~depth ~indexing ~clauses_rev:p =
 
 let add_clauses ~depth clauses clauses_src { index; src } =
   let empty _ = Bl.Nil in
-  let cons head tail = Bl.Cons { head; tail; last = () } in
-  let insert ?fail ~times ~time graft clause l_rev = cons (clause,[]) l_rev in
+  let cons head tail = Bl.Cons { head ; tail; last = () } in
+  let insert ?fail ~times ~time graft head tail = Bl.Cons { head; tail; last = () } in
   { index = add_clauses ~depth ~insert ~empty ~cons clauses index; src = List.rev clauses_src @ src }
 
 type goal_arg_classification =
@@ -2860,21 +2847,23 @@ let trie_goal_args goal : term list = match goal with
   | App(_, x, xs) -> x :: xs
   | _ -> assert false
 
+let cmp_timestamp { timestamp = tx } { timestamp = ty } = List.hd ty - List.hd tx
+
 let get_clauses ~depth predicate goal { index = m } =
  let rc =
    try
      match Ptmap.find predicate m with
      | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
        begin match classify_goal_argno ~depth argno goal with
-       | Variable -> Bl.to_list_map fst @@ all_clauses
+       | Variable -> all_clauses
        | Rigid arg_hd ->
-          try Bl.to_list_map fst @@ Ptmap.find arg_hd arg_idx
-          with Not_found -> Bl.to_list_map fst @@ flex_arg_clauses
+          try Ptmap.find arg_hd arg_idx
+          with Not_found -> flex_arg_clauses
        end
      | BitHash { args; mode; args_idx } ->
        let hash = hash_goal_args ~depth mode args goal in
-       let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
-       List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
+       let cl = Bl.flatten (Ptmap.find_unifiables hash args_idx) in
+       Bl.sort cmp_timestamp cl
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
         let max_depths = Discrimination_tree.max_depths args_idx in
         let max_path = Discrimination_tree.max_path args_idx in
@@ -2885,14 +2874,14 @@ let get_clauses ~depth predicate goal { index = m } =
           Discrimination_tree.Path.pp path
           (pplist pp_int ";") arg_depths
           (*Discrimination_tree.(pp (fun fmt x -> pp_string fmt "+")) args_idx*)];
-        let candidates = Discrimination_tree.retrieve path args_idx in 
+        let candidates = Discrimination_tree.retrieve cmp_timestamp path args_idx in 
           [%spy "dev:disc-tree:candidates" ~rid 
-            pp_int (List.length candidates)];
+            pp_int (Bl.length candidates)];
         candidates
-   with Not_found -> []
+   with Not_found -> Bl.Nil
  in
- [%log "get_clauses" ~rid (C.show predicate) (List.length rc)];
- [%spy "dev:get_clauses" ~rid C.pp predicate pp_int (List.length rc)];
+ [%log "get_clauses" ~rid (C.show predicate) (Bl.length rc)];
+ [%spy "dev:get_clauses" ~rid C.pp predicate pp_int (Bl.length rc)];
  rc
 
 (* flatten_snd = List.flatten o (List.map ~~snd~~) *)
@@ -2956,7 +2945,7 @@ module Clausify : sig
 
   val clausify : loc:Loc.t option -> prolog_prog -> depth:int -> term -> (constant*clause) list * clause_src list * int
 
-  val clausify1 : loc:Loc.t -> name:string option -> modes:(constant -> mode) -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
+  val clausify1 : loc:Loc.t -> modes:(constant -> mode) -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
   
   (* Utilities that deref on the fly *)
   val lp_list_to_list : depth:int -> term -> term list
@@ -3030,16 +3019,16 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the argument lives in (depth+lts)
  *  - the clause will live in (depth+lcs)
  *)
-let rec claux1 loc name get_mode vars depth hyps ts lts lcs t =
+let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   [%trace "clausify" ~rid ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] ~argsdepth:0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
   | Discard -> error ?loc "ill-formed hypothetical clause: discard in head position"
   | App(c, g2, [g1]) when c == Global_symbols.rimplc ->
-     claux1 loc name get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
+     claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
   | App(c, _, _) when c == Global_symbols.rimplc -> error ?loc "ill-formed hypothetical clause"
   | App(c, g1, [g2]) when c == Global_symbols.implc ->
-     claux1 loc name get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
+     claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
   | App(c, _, _) when c == Global_symbols.implc -> error ?loc "ill-formed hypothetical clause"
   | App(c, arg, []) when c == Global_symbols.sigmac ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
@@ -3049,10 +3038,10 @@ let rec claux1 loc name get_mode vars depth hyps ts lts lcs t =
       match args with
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
-     claux1 loc name get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
+     claux1 loc get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
   | App(c, arg, []) when c == Global_symbols.pic ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
-     claux1 loc name get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
+     claux1 loc get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
   | App(c, _, _) when c == Global_symbols.andc ->
      error ?loc "Conjunction in the head of a clause is not supported"
   | Const _
@@ -3084,14 +3073,14 @@ let rec claux1 loc name get_mode vars depth hyps ts lts lcs t =
            type_error ?loc "The head of a clause cannot be a builtin data type"
        | Cons _ | Nil -> assert false
      in
-     let c = { depth = depth+lcs; args; hyps; mode = get_mode hd; vars; loc; name } in
+     let c = { depth = depth+lcs; args; hyps; mode = get_mode hd; vars; loc; timestamp = [] } in
      [%spy "dev:claudify:extra-clause" ~rid (ppclause ~hd) c];
      (hd,c), { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
-     claux1 loc name get_mode vars depth hyps ts lts lcs
+     claux1 loc get_mode vars depth hyps ts lts lcs
        (deref_uv ~from ~to_:(depth+lts) args g)
   | AppUVar ({contents=g},from,args) when g != C.dummy ->
-     claux1 loc name get_mode vars depth hyps ts lts lcs
+     claux1 loc get_mode vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ ->
       error ?loc "The head of a clause cannot be flexible"
@@ -3113,7 +3102,7 @@ let clausify ~loc { index } ~depth t =
   let clauses, program, lcs =
     List.fold_left (fun (clauses, programs, lcs) t ->
       let clause, program, lcs =
-        try claux1 loc None get_mode 0 depth [] [] 0 lcs t
+        try claux1 loc get_mode 0 depth [] [] 0 lcs t
         with CannotDeclareClauseForBuiltin(loc,c) ->
           error ?loc ("Declaring a clause for built in predicate " ^ C.show c)
       in
@@ -3121,8 +3110,8 @@ let clausify ~loc { index } ~depth t =
   clauses, program, lcs
 ;;
 
-let clausify1 ~loc ~name ~modes ~nargs ~depth t =
-  claux1 (Some loc) name modes nargs depth [] [] 0 0 t
+let clausify1 ~loc ~modes ~nargs ~depth t =
+  claux1 (Some loc) modes nargs depth [] [] 0 0 t
 
 end (* }}} *)
 open Clausify
@@ -3168,7 +3157,7 @@ and alternative = {
   stack : frame;
   trail : T.trail;
   state : State.t;
-  clauses : clause list;
+  clauses : clause Bl.l;
   next : alternative;
 }
 let noalts : alternative = Obj.magic (Sys.opaque_identity 0)
@@ -3939,12 +3928,12 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     | Const k ->
        let clauses = get_clauses ~depth k g p in
        [%spy "user:rule" ~rid ~gid pp_string "backchain"];
-       [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
+       [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) (Bl.to_list clauses)];
        [%tcall backchain depth p (k, C.dummy, [], gs) (gid[@trace]) next alts cutto_alts clauses]
     | App (k,x,xs) ->
        let clauses = get_clauses ~depth k g p in
        [%spy "user:rule" ~rid ~gid pp_string "backchain"];
-       [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
+       [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) (Bl.to_list clauses)];
        [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts cutto_alts clauses]
     | Builtin(c, args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (C.show c)];
        let once ~depth g state =
@@ -3972,12 +3961,12 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
   (* We pack some arguments into a tuple otherwise we consume too much stack *)
   and backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cp = [%trace "select" ~rid begin
     match cp with
-      | [] -> [%spy "user:rule:backchain" ~rid ~gid pp_string "fail"];
+      | Bl.Nil -> [%spy "user:rule:backchain" ~rid ~gid pp_string "fail"];
         [%tcall next_alt alts]
-      | { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc } :: cs ->
-        [%spy "user:rule:backchain:try" ~rid ~gid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin loc) (ppclause ~hd:k) { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc; name = None }];
+      | Bl.Cons { head = { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc } ; tail = cs } ->
+        [%spy "user:rule:backchain:try" ~rid ~gid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin loc) (ppclause ~hd:k) { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc; timestamp = [] }];
         let old_trail = !T.trail in
-        T.last_call := alts == noalts && cs == [];
+        T.last_call := alts == noalts && cs == Bl.Nil;
         let env = Array.make c_vars C.dummy in
         match
           match c_args with
@@ -3991,7 +3980,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
             T.undo ~old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cs]
         | true ->
            let oldalts = alts in
-           let alts = if cs = [] then alts else
+           let alts = if cs == Bl.Nil then alts else
              { program = p; adepth = depth; agoal_hd = k; ogoal_arg = arg; ogoal_args = args_of_g; agid = gid[@trace]; goals = gs; stack = next;
                trail = old_trail;
                state = !CS.state;
@@ -4019,7 +4008,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     let ()[@trace] =
       let rec prune ({ agid = agid[@trace]; clauses; adepth = depth; agoal_hd = hd } as alts) =
         if alts != cutto_alts then begin
-          List.iter (fun c -> 
+          Bl.iter (fun c -> 
             [%spy "user:rule:cut:branch" ~rid UUID.pp agid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin c.loc) (ppclause ~hd) c])
           clauses;
           prune alts.next
@@ -4177,7 +4166,7 @@ end;*)
     [%cur_pred (Some (C.show k))];
     [%spyl "user:curgoal" ~rid ~gid (uppterm depth [] ~argsdepth:0 empty_env) [Const k;App(k,arg,args)]];
     [%spy "user:rule" ~rid ~gid pp_string "backchain"];
-    [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
+    [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) (Bl.to_list clauses)];
     [%tcall backchain depth p (k, arg, args, gs) (gid[@trace]) next alts cutto_alts clauses]
     end]
   in

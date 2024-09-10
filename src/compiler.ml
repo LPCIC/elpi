@@ -2173,20 +2173,21 @@ let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} 
     let map = C.Map.fold (fun k _ m -> add_indexing_for k None m) modes map in
     map, C.Map.union (fun _ _ _ -> assert false) map old_idx
      
-let compile_clause modes initial_depth state
+let compile_clause modes initial_depth (state, index)
     { Ast.Clause.body = ({ amap = { nargs }} as body); loc; attributes }
   =
   let state, body = stack_term_of_preterm ~depth:0 state body in
   let modes x = try fst @@ C.Map.find x modes with Not_found -> [] in
   let name = attributes.Ast.Structured.id in
   let (p,cl), _, morelcs =
-    try R.clausify1 ~loc ~name ~modes ~nargs ~depth:initial_depth body
+    try R.clausify1 ~loc ~modes ~nargs ~depth:initial_depth body
     with D.CannotDeclareClauseForBuiltin(loc,c) ->
       error ?loc ("Declaring a clause for built in predicate " ^ Symbols.show state c)
     in
   if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
   let graft = attributes.Ast.Structured.insertion in
-  state, (p,cl,graft)
+  let index = R.add_to_index ~depth:initial_depth ~predicate:p ~graft cl name index in
+  state, index
 
 
 let assemble flags state code  (ul : compilation_unit list) =
@@ -2214,15 +2215,8 @@ let assemble flags state code  (ul : compilation_unit list) =
       let c2 = List.map (Spill.spill_chr state ~types ~modes:(fun c -> fst @@ C.Map.find c modes)) c2 in
       let clauses = List.fold_left (fun l x -> Bl.rcons (compile_clause_attributes x) l) clauses cl2 in
   
-      let state, compiled_clauses =
-        map_acc (compile_clause modes local_names) state cl2 in
-  
-      let index =
-        compiled_clauses |> List.fold_left (fun p (predicate,c,graft) ->
-          (* if c.name <> None then Format.eprintf "adding %a\n" pp_clause c;
-          if graft <> None then Format.eprintf "graftin %a\n" pp_clause c; *)
-          R.add_to_index ~depth:local_names ~predicate ~graft c p)
-        index in
+      let state, index =
+        List.fold_left (compile_clause modes local_names) (state,index) cl2 in
       
       state, index, idx2, clauses, types, type_abbrevs, modes, c2 :: c1
     ) (state, code.Assembled.prolog_program, code.Assembled.indexing, code.clauses, code.Assembled.types, code.Assembled.type_abbrevs, code.Assembled.modes, []) ul in
@@ -2569,9 +2563,6 @@ let run
       List.iter (check_rule_pattern_in_clique state clique) rules;
       state, List.fold_left (fun x y -> CHR.add_rule clique y x) chr rules)
     (state, CHR.empty) chr in
-  (* let state, clauses_rev =
-    map_acc (compile_clause modes initial_depth) state clauses_rev in
-  let prolog_program = R.make_index ~depth:initial_depth ~indexing ~clauses_rev in *)
   let compiler_symbol_table = State.get Symbols.table state in
   let builtins = Hashtbl.create 17 in
   let pred_list = (State.get Builtins.builtins state).code in
@@ -2582,7 +2573,7 @@ let run
     pred_list;
   let symbol_table = Symbols.compile_table compiler_symbol_table in
   {
-    D.compiled_program = { index = R.close_index prolog_program; src = [] };
+    D.compiled_program = { index = close_index prolog_program; src = [] };
     chr;
     initial_depth;
     initial_goal;

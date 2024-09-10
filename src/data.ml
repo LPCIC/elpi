@@ -125,7 +125,7 @@ type clause = {
     vars : int;
     mode : mode;        (* CACHE to avoid allocation in get_clauses *)
     loc : Loc.t option; (* debug *)
-    name : string option; (* for grafting *)
+    mutable timestamp : int list; (* for grafting *)
 }
 and 
 mode = arg_mode list
@@ -151,8 +151,11 @@ and prolog_prog = {
   src : clause_src list; (* hypothetical context in original form, for CHR *)
   index : index;
 }
-and preindex = (clause * int list) Bl.t second_lvl_idx Ptmap.t
-and index = (clause * int list) Bl.l second_lvl_idx Ptmap.t
+
+(* These two are the same, but the latter should not be mutated *)
+and preindex = clause Bl.t second_lvl_idx Ptmap.t
+and index = clause Bl.l second_lvl_idx Ptmap.t
+
 and 'clause_list second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
@@ -167,7 +170,7 @@ and 'clause_list second_lvl_idx =
     mode : mode;
     args : int list;
     time : int;                             (* time is used to recover the total order *)
-    args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
+    args_idx : 'clause_list Ptmap.t; (* clause, insertion time *)
   }
 | IndexWithDiscriminationTree of {
     mode : mode;
@@ -176,6 +179,10 @@ and 'clause_list second_lvl_idx =
     args_idx : clause Discrimination_tree.t; 
 }
 [@@deriving show]
+
+let close_index (index : preindex) : index =
+  Obj.magic index
+
 
 type constraints = stuck_goal list
 type hyps = clause_src list

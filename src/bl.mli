@@ -34,3 +34,10 @@ val commit_map : ('a -> 'b) -> 'a t -> 'b l
 (* allocates a new list, O(n) time and space *)
 val to_list : 'a l -> 'a list
 val to_list_map : ('a -> 'b) -> 'a l -> 'b list
+
+val iter : ('a -> unit) -> 'a l -> unit
+val of_list : 'a list -> 'a l
+val length : 'a l -> int
+val flatten : 'a l list -> 'a l
+val sort : ('a -> 'a -> int) -> 'a l -> 'a l
+val rev : 'a l -> 'a l

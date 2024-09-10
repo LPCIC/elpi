@@ -240,8 +240,6 @@ let skip_listTailVariable ~pos path : int =
     else aux (i+1) (update_par_count pc (Path.get path i)) in
   aux (pos + 1) (update_par_count 1 (Path.get path pos))
 
-type 'a data = { data : 'a; time : int }
-
 (* A discrimination tree is a record {t; max_size; max_depths } where
    - t is a Trie for instance retrival 
    - max_size is a int representing the max size of a path in the Trie
@@ -270,13 +268,13 @@ type 'a data = { data : 'a; time : int }
     In the example it is no needed to index the goal path to depth 100, but rather considering
     the maximal depth of the first argument, which 4 << 100
   *)
-type 'a t = {t: 'a data Trie.t; max_size : int;  max_depths : int array } 
+type 'a t = {t: 'a Trie.t; max_size : int;  max_depths : int array } 
 
-let pp pp_a fmt { t } : unit = Trie.pp (fun fmt { data } -> pp_a fmt data) fmt t
-let show pp_a { t } : string = Trie.show (fun fmt { data } -> pp_a fmt data) t
+let pp pp_a fmt { t } : unit = Trie.pp (fun fmt data -> pp_a fmt data) fmt t
+let show pp_a { t } : string = Trie.show (fun fmt data -> pp_a fmt data) t
 
-let index { t; max_size; max_depths } path data ~time =
-  let t, m = Trie.add path { data ; time } t in
+let index { t; max_size; max_depths } path data =
+  let t, m = Trie.add path data t in
   { t; max_size = max max_size m; max_depths }
 
 let max_path { max_size } = max_size
@@ -286,8 +284,8 @@ let max_depths { max_depths } = max_depths
     that are rooted just after the term represented by the tree root
     are returned (we are skipping the root) *)
 let call f =
-  let res = ref [] in
-  let add_result x = res := x :: !res in
+  let res = ref @@ Bl.Nil in
+  let add_result x = res := Bl.Cons { head = x; tail = !res; last = () } in
   f ~add_result; !res
   
 let skip_to_listEnd ~add_result mode (Trie.Node { other; map; listTailVariable }) =
@@ -315,8 +313,6 @@ let skip_to_listEnd ~add_result mode (Trie.Node { other; map; listTailVariable }
 
 let skip_to_listEnd mode t = call (skip_to_listEnd mode t)
 
-let cmp_data { time = tx } { time = ty } = ty - tx
-
 let get_all_children v mode = isLam v || (isVariable v && isOutput mode)
 
 let rec retrieve ~pos ~add_result mode path tree : unit =
@@ -330,7 +326,7 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
      retrieve ~pos:(pos+1) ~add_result hd path tree
   else if isListTailVariable hd then
     let sub_tries = skip_to_listEnd mode tree in
-    List.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
+    Bl.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
   else begin
     (* Here the constructor can be Constant, Primitive, Variable, Other, ListHead, ListEnd *)
     begin
@@ -383,9 +379,9 @@ let retrieve ~pos ~add_result path index =
   assert(isInput mode || isOutput mode);
   retrieve ~add_result mode ~pos:(pos+1) path index
   
-let retrieve path { t } = 
+let retrieve cmp_data path { t } = 
   let r = call (retrieve ~pos:0 path t) in
-  List.sort cmp_data r |> List.map (fun x -> x.data)
+  Bl.sort cmp_data r
 
 
 module Internal = struct

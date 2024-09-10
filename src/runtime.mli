@@ -70,9 +70,7 @@ val add_to_index :
   depth:int ->
   predicate:constant ->
   graft:Elpi_parser.Ast.Structured.insertion option ->
-  clause -> preindex -> preindex
-
-val close_index : preindex -> index
+  clause -> string option -> preindex -> preindex
 
 (* The projection from the internal notion of constraints in the API one *)
 val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option
@@ -80,7 +78,6 @@ val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option
 (* can raise CannotDeclareClauseForBuiltin *)
 val clausify1 :
   loc:Loc.t ->
-  name:string option ->
   modes:(constant -> mode) -> (* for caching it in the clause *)
   nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 
