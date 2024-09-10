@@ -16,7 +16,7 @@ let rec pp pp_a fmt = function
 
 let show pp_a x = Format.asprintf "%a" (pp pp_a) x
 
-type 'a l = Nil | Cons of { head : 'a; tail : 'a l; last : unit; } [@@deriving show, ord]
+type 'a l = Nil | Cons of { head : 'a; tail : 'a l; last : unit; }
 [@@deriving show]
 let empty () = BNil
 
