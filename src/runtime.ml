@@ -2616,7 +2616,7 @@ let insert ?fail ~times ~time graft clause l_rev =
   | Some (Elpi_parser.Ast.Structured.After x)   -> let reference = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in (clause, reference @ [-time]) :: l_rev
   | Some (Elpi_parser.Ast.Structured.Replace x) -> let reference = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in replace ?fail reference (clause,[time]) l_rev
 
-let prepend ?fail ~times ~time graft clause l_rev = clause :: l_rev
+let prepend ?fail ~times ~time graft clause l_rev = Bl.cons clause l_rev
 
 let add1clause2 ~depth ~(insert: ?fail:bool -> _) m ?graft predicate clause = function
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx; time; times } ->
