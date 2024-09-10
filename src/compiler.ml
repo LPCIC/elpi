@@ -566,7 +566,7 @@ type program = {
   types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
-  clauses_rev : (preterm,attribute) Ast.Clause.t list;
+  clauses : (preterm,attribute) Ast.Clause.t Bl.t;
   prolog_program : preindex;
   indexing : (mode * indexing) C.Map.t;
   chr : block_constraint list;
@@ -583,7 +583,7 @@ let empty = {
   types = C.Map.empty;
   type_abbrevs = C.Map.empty;
   modes = C.Map.empty;
-  clauses_rev = [];
+  clauses = Bl.empty ();
   prolog_program = Ptmap.empty;
   indexing = C.Map.empty;
   chr = [];
@@ -613,7 +613,7 @@ type 'a query = {
   types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
-  clauses_rev : (preterm,Assembled.attribute) Ast.Clause.t list; (* remove? *)
+  clauses : (preterm,Assembled.attribute) Ast.Clause.t Bl.l; (* remove? *)
   prolog_program : preindex;
   chr : block_constraint list;
   initial_depth : int;
@@ -2166,7 +2166,7 @@ let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} 
         else
           map
       with Not_found ->
-        Printf.eprintf "declaring index for %s\n" (Symbols.show state name);
+        (* Printf.eprintf "declaring index for %s\n" (Symbols.show state name); *)
         C.Map.add name (mode,index) map in
         
     let map = C.Map.fold (fun tname l acc -> Types.fold (fun acc { Types.tindex } -> add_indexing_for tname (Some tindex) acc) acc l) types C.Map.empty in
@@ -2191,8 +2191,10 @@ let compile_clause modes initial_depth state
 
 let assemble flags state code  (ul : compilation_unit list) =
 
-  let state, index, indexing, clauses_rev, types, type_abbrevs, modes, chr_rev =
-    List.fold_left (fun (state, index, idx1, cl1, t1, ta1, m1, c1) ({ symbol_table; code }  as _u) ->
+  let local_names = code.Assembled.local_names in
+
+  let state, index, indexing, clauses, types, type_abbrevs, modes, chr_rev =
+    List.fold_left (fun (state, index, idx1, clauses, t1, ta1, m1, c1) ({ symbol_table; code }  as _u) ->
       let state, { Flat.clauses = cl2; types = t2; type_abbrevs = ta2; modes = m2; chr = c2; } =
         let state, shift = Stdlib.Result.get_ok @@ Symbols.build_shift ~flags ~base:state symbol_table in
         let code =
@@ -2210,28 +2212,27 @@ let assemble flags state code  (ul : compilation_unit list) =
       let cl2 = filter_if flags clause_ifexpr cl2 in
       let cl2 = List.map (Spill.spill_clause state ~types ~modes:(fun c -> fst @@ C.Map.find c modes)) cl2 in
       let c2 = List.map (Spill.spill_chr state ~types ~modes:(fun c -> fst @@ C.Map.find c modes)) c2 in
-      state, index, idx2, cl2 :: cl1, types, type_abbrevs, modes, c2 :: c1
-    ) (state, code.Assembled.prolog_program, code.Assembled.indexing, [], code.Assembled.types, code.Assembled.type_abbrevs, code.Assembled.modes, []) ul in
-  let clauses = List.concat (List.rev clauses_rev) in
-  let clauses_rev = List.map compile_clause_attributes clauses @ code.clauses_rev in
-  (* let clauses_rev = sort_insertion ~old_rev:code.clauses_rev ~extra:clauses in *)
-
-  let state, compiled_clauses =
-    map_acc (compile_clause modes code.Assembled.local_names) state clauses in
-  let index =
-    compiled_clauses |> List.fold_left (fun p (predicate,c,graft) ->
-      (* if c.name <> None then Format.eprintf "adding %a\n" pp_clause c;
-      if graft <> None then Format.eprintf "graftin %a\n" pp_clause c; *)
-      R.add_to_index ~depth:code.Assembled.local_names
-        ~predicate ~graft c p)
-    index in
+      let clauses = List.fold_left (fun l x -> Bl.rcons (compile_clause_attributes x) l) clauses cl2 in
+  
+      let state, compiled_clauses =
+        map_acc (compile_clause modes local_names) state cl2 in
+  
+      let index =
+        compiled_clauses |> List.fold_left (fun p (predicate,c,graft) ->
+          (* if c.name <> None then Format.eprintf "adding %a\n" pp_clause c;
+          if graft <> None then Format.eprintf "graftin %a\n" pp_clause c; *)
+          R.add_to_index ~depth:local_names ~predicate ~graft c p)
+        index in
+      
+      state, index, idx2, clauses, types, type_abbrevs, modes, c2 :: c1
+    ) (state, code.Assembled.prolog_program, code.Assembled.indexing, code.clauses, code.Assembled.types, code.Assembled.type_abbrevs, code.Assembled.modes, []) ul in
   let prolog_program = index in
 
   let chr = List.concat (code.Assembled.chr :: List.rev chr_rev) in
   let chr =
     let pifexpr { pifexpr } = pifexpr in
     List.map (fun {ctx_filter;clique;rules} -> {ctx_filter;clique;rules=filter_if flags pifexpr rules}) chr in
-  state, { Assembled.clauses_rev; indexing; prolog_program; types; type_abbrevs; modes; chr; local_names = code.Assembled.local_names; toplevel_macros = code.Assembled.toplevel_macros }
+  state, { Assembled.clauses; indexing; prolog_program; types; type_abbrevs; modes; chr; local_names = code.Assembled.local_names; toplevel_macros = code.Assembled.toplevel_macros }
 
 end (* }}} *)
 
@@ -2437,7 +2438,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
     modes;
     type_abbrevs;
     prolog_program = assembled_program.Assembled.prolog_program;
-    clauses_rev = assembled_program.Assembled.clauses_rev;
+    clauses = Bl.commit assembled_program.Assembled.clauses;
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
@@ -2469,7 +2470,7 @@ let query_of_term (compiler_state, assembled_program) f =
     type_abbrevs;
     modes;
     prolog_program = assembled_program.Assembled.prolog_program;
-    clauses_rev = assembled_program.Assembled.clauses_rev;
+    clauses = Bl.commit assembled_program.Assembled.clauses;
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
@@ -2548,7 +2549,7 @@ let run
   {
     WithMain.types;
     modes;
-    clauses_rev = _;
+    clauses = _;
     prolog_program;
     chr;
     initial_depth;
@@ -2581,7 +2582,7 @@ let run
     pred_list;
   let symbol_table = Symbols.compile_table compiler_symbol_table in
   {
-    D.compiled_program = { index = R.rev_index prolog_program; src = [] };
+    D.compiled_program = { index = R.close_index prolog_program; src = [] };
     chr;
     initial_depth;
     initial_goal;
@@ -2597,10 +2598,10 @@ end (* }}} *)
 let optimize_query = Compiler.run
 
 let pp_program pp fmt {
-    WithMain.clauses_rev;
+    WithMain.clauses;
     initial_depth;
     compiler_state; } =
-  let clauses = List.rev clauses_rev in
+  let clauses = Bl.to_list clauses in
   let compiler_state, clauses =
     map_acc (fun state { Ast.Clause.body } ->
        stack_term_of_preterm ~depth:initial_depth state body)
@@ -2744,9 +2745,9 @@ let rec lam2forall = function
   | UVar _ | AppUVar _ -> assert false
   | Arg _ | AppArg _ -> assert false
 
-let quote_syntax time new_state { WithMain.clauses_rev; query; compiler_state } =
+let quote_syntax time new_state { WithMain.clauses; query; compiler_state } =
   let names = sorted_names_of_argmap query.amap in
-  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state (List.rev clauses_rev) in
+  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state (Bl.to_list clauses) in
   let new_state, queryt = quote_preterm time ~on_type:false ~compiler_state new_state query in
   let q =
     App(clausec,CData (quote_loc ~id:"query" query.loc),

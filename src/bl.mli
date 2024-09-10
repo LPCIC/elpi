@@ -12,6 +12,7 @@ val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 
 (* These 3 are O(1) *)
 val empty : unit -> 'a t
+val single : 'a -> 'a t
 val cons : 'a -> 'a t -> 'a t
 val rcons : 'a -> 'a t -> 'a t
 
@@ -20,9 +21,9 @@ val replace : ('a -> bool) -> 'a -> 'a t -> unit
 val insert_before : ('a -> bool) -> 'a -> 'a t -> 'a t
 val insert_after : ('a -> bool) -> 'a -> 'a t -> unit
 
-type  'a l = Nil | Cons of { head : 'a; last : unit; tail : 'a l }
-val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a l -> unit
-val show : (Format.formatter -> 'a -> unit) -> 'a l -> string
+type  'a l = Nil | Cons of { head : 'a; tail : 'a l; last : unit; }
+val pp_l : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a l -> unit
+val show_l : (Format.formatter -> 'a -> unit) -> 'a l -> string
 
 (* no more rcons, O(1) time and space *)
 val commit : 'a t -> 'a l
@@ -32,3 +33,4 @@ val commit_map : ('a -> 'b) -> 'a t -> 'b l
 
 (* allocates a new list, O(n) time and space *)
 val to_list : 'a l -> 'a list
+val to_list_map : ('a -> 'b) -> 'a l -> 'b list

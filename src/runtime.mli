@@ -72,7 +72,7 @@ val add_to_index :
   graft:Elpi_parser.Ast.Structured.insertion option ->
   clause -> preindex -> preindex
 
-val rev_index : preindex -> index
+val close_index : preindex -> index
 
 (* The projection from the internal notion of constraints in the API one *)
 val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option

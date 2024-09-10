@@ -2,7 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-type 'a t = BNil | BCons of { mutable head : 'a; mutable last : 'a t; mutable tail : 'a t }
+type 'a t = BNil | BCons of { mutable head : 'a; mutable tail : 'a t; mutable last : 'a t;  }
 
 let rec pp pp_a fmt = function
   | BNil -> Format.fprintf fmt "[]"
@@ -16,8 +16,8 @@ let rec pp pp_a fmt = function
 
 let show pp_a x = Format.asprintf "%a" (pp pp_a) x
 
-type 'a l = Nil | Cons of { head : 'a; last : unit; tail : 'a l } [@@deriving show, ord]
-
+type 'a l = Nil | Cons of { head : 'a; tail : 'a l; last : unit; } [@@deriving show, ord]
+[@@deriving show]
 let empty () = BNil
 
 let cons head tail =
@@ -26,6 +26,8 @@ let cons head tail =
       let rec last = BCons { head; tail; last } in
       last
   | BCons { last } -> BCons { head; tail; last }
+
+let single x = cons x (empty ())
 
 let set_last_tail l = function
   | BCons x ->
@@ -47,20 +49,20 @@ let rcons head tail =
       tail
 
 let rec replace f x = function
-  | BNil -> assert false
+  | BNil -> ()
   | BCons ({ head; tail } as b) when f head -> b.head <- x
   | BCons { tail } -> replace f x tail
 
 let rec insert_before f x = function
-  | BNil -> assert false (*let rec last = BCons { head = x; last; tail = BNil } in last*)
+  | BNil -> BNil
   | BCons { head; last } as l when f head -> BCons { head = x; last; tail = l }
   | BCons { head; last; tail } -> BCons { head; last; tail = insert_before f x tail }
 
 let insert_after f x = function
-  | BNil -> assert false
+  | BNil -> ()
   | BCons b0 as l ->
       let rec insert_after_aux = function
-        | BNil -> assert false
+        | BNil -> ()
         | BCons ({ head; last; tail } as b) when f head ->
             let new_tail = BCons { head = x; last; tail } in
             if tail == BNil then b0.last <- new_tail;
@@ -83,3 +85,5 @@ let commit_map f l : 'b l =
   Obj.magic l
 
 let rec to_list = function Nil -> [] | Cons { head; tail } -> head :: to_list tail
+let rec to_list_map f = function Nil -> [] | Cons { head; tail } -> f head :: to_list_map f tail
+
