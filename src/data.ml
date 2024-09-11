@@ -133,6 +133,11 @@ mode = arg_mode list
 
 let to_mode = function true -> Input | false -> Output
 
+type grafting_time = int list
+[@@deriving show, ord]
+type times = grafting_time StrMap.t
+[@@deriving show, ord]
+
 type stuck_goal = {
   mutable blockers : blockers;
   kind : unification_def stuck_goal_kind;
@@ -153,15 +158,14 @@ and prolog_prog = {
 }
 
 (* These two are the same, but the latter should not be mutated *)
-and preindex = clause Bl.t second_lvl_idx Ptmap.t
-and index = clause Bl.l second_lvl_idx Ptmap.t
 
+and preindex = clause Bl.t first_lvl_idx
+and index = clause Bl.l first_lvl_idx
+and 'clause_list first_lvl_idx = { idx : 'clause_list second_lvl_idx Ptmap.t; time : int; times : times }
 and 'clause_list second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
     argno : int;
-    time : int;
-    times : int list StrMap.t;
     all_clauses : 'clause_list;        (* when the query is flexible *)
     flex_arg_clauses : 'clause_list;   (* when the query is rigid but arg_id ha nothing *)
     arg_idx : 'clause_list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
@@ -169,19 +173,42 @@ and 'clause_list second_lvl_idx =
 | BitHash of {
     mode : mode;
     args : int list;
-    time : int;                             (* time is used to recover the total order *)
     args_idx : 'clause_list Ptmap.t; (* clause, insertion time *)
   }
 | IndexWithDiscriminationTree of {
     mode : mode;
     arg_depths : int list;   (* the list of args on which the trie is built *)
-    time : int;         (* time is used to recover the total order *)
     args_idx : clause Discrimination_tree.t; 
 }
 [@@deriving show]
 
-let close_index (index : preindex) : index =
-  Obj.magic index
+let stop = ref false
+let close_index ({idx; time; times} : preindex) : index =
+  let n_all_clauses = ref [] in
+  let n_flex_arg_clauses = ref [] in
+  let n_arg_idx = ref [] in
+  Ptmap.iter (fun k i ->
+    match i with
+    | TwoLevelIndex { all_clauses; flex_arg_clauses; arg_idx } ->
+        n_all_clauses := Bl.length all_clauses :: !n_all_clauses;
+        n_flex_arg_clauses := Bl.length flex_arg_clauses :: !n_flex_arg_clauses;
+        Ptmap.iter (fun k l -> n_arg_idx := Bl.length l :: !n_arg_idx) (Obj.magic arg_idx);
+    | BitHash _ -> ()
+    | IndexWithDiscriminationTree _ -> ()) (Obj.magic idx);
+  let mean l =
+    let length = List.length !l in
+    let sum = List.fold_left (+) 0 !l in
+    float_of_int sum /. float_of_int length in
+  let save l =
+    let cells = List.fold_left (+) 0 !l in
+    let lists = List.length !l in
+    ((cells - lists) * Sys.word_size / 8) / 1024 in
+  if !n_all_clauses <> [] && not !stop then begin
+    stop := true;
+    Printf.eprintf "means: n_all_clauses %4f n_flex_arg_clauses %4f n_arg_idx %4f\n" (mean n_all_clauses) (mean n_flex_arg_clauses) (mean n_arg_idx);
+    Printf.eprintf "save: n_all_clauses %4dKB n_flex_arg_clauses %4dKB n_arg_idx %4dKB\n" (save n_all_clauses) (save n_flex_arg_clauses) (save n_arg_idx);
+  end;
+  { idx = Obj.magic idx; time = -1; times = StrMap.empty }
 
 
 type constraints = stuck_goal list

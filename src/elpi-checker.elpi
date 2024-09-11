@@ -349,7 +349,6 @@ compile-type-abbreviations [(S `:= T)|TS] [Clause|Clauses] :-
 
 :name "check:main"
 check P Q DeclaredTypes TypeAbbreviations :-
-  print DeclaredTypes,
   compile-type-abbreviations TypeAbbreviations Abbrevs,
   Abbrevs => typecheck-program P Q DeclaredTypes RC, !,
   warn-linear P, !,

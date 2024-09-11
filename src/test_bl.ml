@@ -66,3 +66,9 @@ let _ =
   assert(l = [10;11;9;12])
 ;;
 
+let _ =
+  let l = of_list [-2;-3] in
+  let l = sort (-) l in
+  let l = to_list l in
+  assert(l = [-3;-2])
+;;

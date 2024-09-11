@@ -2608,39 +2608,36 @@ let rec replace ?fail it c l : (clause * int list) list =
   | x :: xs -> x :: replace ?fail it c xs
   
 
-let postpend ?fail ~times ~time graft clause clauses =
+let timestamp_clause clause times time graft =
+  let reference x = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
+  match graft with
+  | None -> clause.timestamp <- [time]; []
+  | Some (Elpi_parser.Ast.Structured.Before  x) -> let reference = reference x in clause.timestamp <- reference @ [time]; reference
+  | Some (Elpi_parser.Ast.Structured.After   x) -> let reference = reference x in clause.timestamp <- reference @ [-time]; reference
+  | Some (Elpi_parser.Ast.Structured.Replace x) -> let reference = reference x in reference
+
+let postpend graft reference clause clauses =
   match graft with
   | None -> Bl.rcons clause clauses
-  | Some (Elpi_parser.Ast.Structured.Before x)  ->
-      let reference = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
-      clause.timestamp <- reference @ [time];
+  | Some (Elpi_parser.Ast.Structured.Before _)  ->
       Bl.insert_before (fun x -> x.timestamp = reference) clause clauses
-  | Some (Elpi_parser.Ast.Structured.After x)   ->
-      let reference = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
-      clause.timestamp <- reference @ [-time];
+  | Some (Elpi_parser.Ast.Structured.After _)   ->
       Bl.insert_after (fun x -> x.timestamp = reference) clause clauses;
       clauses
-  | Some (Elpi_parser.Ast.Structured.Replace x) ->
-      let reference = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
+  | Some (Elpi_parser.Ast.Structured.Replace _) ->
       Bl.replace (fun x -> x.timestamp = reference) clause clauses;
       clauses
 
-
-let add1clause2 ~depth ~(insert: ?fail:bool -> _) ~empty m ?graft predicate clause name = function
-  | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx; time; times } ->
-    let times =
-      match name with
-      | None -> times
-      | Some id -> clause.timestamp <- [time]; if StrMap.mem id times then error ?loc:clause.loc ("duplicate clause name " ^ id) else StrMap.add id clause.timestamp times in
+let add1clause2 ~depth ~insert ~empty m graft reference predicate clause = function
+  | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx; } ->
     begin match classify_clause_argno ~depth argno mode clause.args with
     (* X: matches both rigid and flexible terms *)
     | Variable ->
       Ptmap.add predicate (TwoLevelIndex {
-        argno; mode; times;
-        time = time + 1;
-        all_clauses = insert ~times ~time graft clause all_clauses;
-        flex_arg_clauses = insert ~times ~time graft clause flex_arg_clauses;
-        arg_idx = Ptmap.map (fun l_rev -> insert ~times ~time graft clause l_rev) arg_idx;
+        argno; mode;
+        all_clauses = insert graft reference clause all_clauses;
+        flex_arg_clauses = insert graft reference clause flex_arg_clauses;
+        arg_idx = Ptmap.map (fun l_rev -> insert graft reference clause l_rev) arg_idx;
       }) m
     | MustBeVariable ->
     (* uvar: matches only flexible terms (or itself at the meta level) *)
@@ -2648,12 +2645,10 @@ let add1clause2 ~depth ~(insert: ?fail:bool -> _) ~empty m ?graft predicate clau
         try Ptmap.find mustbevariablec arg_idx
         with Not_found -> flex_arg_clauses in
       Ptmap.add predicate (TwoLevelIndex {
-          argno; mode; times;
-        all_clauses = insert ~times ~time graft clause all_clauses;
+          argno; mode;
+        all_clauses = insert graft reference clause all_clauses;
         flex_arg_clauses;
-        time = time + 1;
-
-        arg_idx = Ptmap.add mustbevariablec (insert ~times ~time graft clause l_rev) arg_idx;
+        arg_idx = Ptmap.add mustbevariablec (insert graft reference clause l_rev) arg_idx;
       }) m
     | Rigid (arg_hd,arg_mode) ->
     (* t: a rigid term matches flexible terms only in unification mode *)
@@ -2661,113 +2656,108 @@ let add1clause2 ~depth ~(insert: ?fail:bool -> _) ~empty m ?graft predicate clau
         try Ptmap.find arg_hd arg_idx
         with Not_found -> flex_arg_clauses in
       let all_clauses =
-        if arg_mode = Input then all_clauses else insert ~times ~time graft clause all_clauses in
+        if arg_mode = Input then all_clauses else insert graft reference clause all_clauses in
       Ptmap.add predicate (TwoLevelIndex {
-        argno; mode; times;
+        argno; mode;
         all_clauses;
         flex_arg_clauses;
-        time = time + 1;
-        arg_idx = Ptmap.add arg_hd (insert ~fail:false ~times ~time graft clause l_rev) arg_idx;
+        arg_idx = Ptmap.add arg_hd (insert graft reference clause l_rev) arg_idx;
       }) m
     end
-| BitHash { mode; args; time; args_idx } ->
+| BitHash { mode; args; args_idx } ->
     let hash = hash_clause_arg_list predicate ~depth clause.args mode args in
     let clauses =
       try Ptmap.find hash args_idx
       with Not_found -> empty () in
     Ptmap.add predicate (BitHash {
        mode; args;
-       time = time + 1;
-       args_idx = Ptmap.add hash (insert ~fail:false ~times:StrMap.empty ~time graft clause clauses) args_idx
+       args_idx = Ptmap.add hash (insert graft reference clause clauses) args_idx
      }) m
-| IndexWithDiscriminationTree {mode; arg_depths; args_idx; time } ->
+| IndexWithDiscriminationTree {mode; arg_depths; args_idx; } ->
   let max_depths = Discrimination_tree.max_depths args_idx in
   let max_path = Discrimination_tree.max_path args_idx in
     let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths max_depths mode max_path in
     [%spy "dev:disc-tree:depth-path" ~rid pp_string "Inst: MaxDepths " (pplist pp_int "") (Array.to_list max_depths)];
-    clause.timestamp <- [time];
     let args_idx = Discrimination_tree.index args_idx path clause in
       Ptmap.add predicate (IndexWithDiscriminationTree {
         mode; arg_depths;
-        time = time+1;
         args_idx = args_idx
       }) m
 
-let add1clause ~depth m ~insert ~empty ~cons ?graft predicate clause name =
-  try
-    add1clause2 ~depth m ~insert ~empty ?graft predicate clause name (Ptmap.find predicate m)
-  with
-  | Not_found ->
-    let times = StrMap.empty in
-    let time = 0 in
-    let times =
-      match name with
-      | None -> times
-      | Some id -> clause.timestamp <- [time]; if StrMap.mem id times then error ?loc:clause.loc ("duplicate clause name " ^ id) else StrMap.add id clause.timestamp times in
-
+let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ?graft predicate clause name =
+  let grafting_reference = timestamp_clause clause times time graft in
+  let times =
+    match name with
+    | None -> times
+    | Some id -> if StrMap.mem id times then error ?loc:clause.loc ("duplicate clause name " ^ id) else StrMap.add id [time] times in
+  let idx =
+    try
+      add1clause2 ~depth idx ~insert ~empty graft grafting_reference predicate clause (Ptmap.find predicate idx);
+    with
+    | Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
       | Variable ->
-      Ptmap.add predicate (TwoLevelIndex {
-        argno = 0; mode = [];
-        all_clauses = cons clause (empty ());
-        flex_arg_clauses = cons clause (empty ());
-        arg_idx =Ptmap.empty;
-        time = time + 1; times;
-      }) m
+          Ptmap.add predicate (TwoLevelIndex {
+            argno = 0; mode = [];
+            all_clauses = cons clause (empty ());
+            flex_arg_clauses = cons clause (empty ());
+            arg_idx =Ptmap.empty;
+          }) idx
       | MustBeVariable ->
-      Ptmap.add predicate (TwoLevelIndex {
-        argno = 0;mode = [];
-        all_clauses = cons clause (empty ());
-        flex_arg_clauses = empty ();
-        arg_idx = Ptmap.add mustbevariablec (cons clause (empty ())) Ptmap.empty;
-        time = time + 1; times;
-        }) m
+          Ptmap.add predicate (TwoLevelIndex {
+            argno = 0;mode = [];
+            all_clauses = cons clause (empty ());
+            flex_arg_clauses = empty ();
+            arg_idx = Ptmap.add mustbevariablec (cons clause (empty ())) Ptmap.empty;
+          }) idx
       | Rigid (arg_hd,arg_mode) ->
-      let all_clauses = if arg_mode == Input then empty () else (cons clause (empty ())) in
-      Ptmap.add predicate (TwoLevelIndex {
-        argno = 0;mode = [];
-        all_clauses;
-        flex_arg_clauses = empty ();
-        arg_idx = Ptmap.add arg_hd (cons clause (empty ())) Ptmap.empty;
-        time = time + 1; times;
-        }) m
+          let all_clauses = if arg_mode == Input then empty () else (cons clause (empty ())) in
+          Ptmap.add predicate (TwoLevelIndex {
+            argno = 0;mode = [];
+            all_clauses;
+            flex_arg_clauses = empty ();
+            arg_idx = Ptmap.add arg_hd (cons clause (empty ())) Ptmap.empty;
+          }) idx
+    in
+    { idx; times; time = time_dir time }
+
 
 let add_clauses ~depth ~insert ~empty ~cons clauses idx =
   (* pplist (fun fmt (hd, b) -> ppclause fmt hd b) ";" Fmt.std_formatter clauses; *)
   (* let t1 = Unix.gettimeofday () in *)
-  let idx = List.fold_left (fun m (p,c) -> add1clause ~depth ~insert ~empty ~cons m ?graft:None p c None) idx clauses in
+  let idx = List.fold_left (fun m (p,c) -> add1clause ~depth ~time_dir:(fun x -> x - 1) ~insert ~empty ~cons m ?graft:None p c None) idx clauses in
   (* let t2 = Unix.gettimeofday () in  *)
   (* pp_string Fmt.std_formatter (Printf.sprintf "\nTime taken by add_clauses is %f\n" (t2-.t1)); *)
   idx
-let update_indexing (indexing : (mode * indexing) Constants.Map.t) index =
-  C.Map.fold (fun predicate (mode, indexing) m ->
-    Ptmap.add predicate 
-    begin
-      match indexing with
-      | Hash args -> BitHash {
-          args;
-          mode;
-          time = min_int;
-          args_idx = Ptmap.empty;
-        }
-      | MapOn argno -> 
-        (* Printf.eprintf "indexing for %s" (C.show predicate);  *)
-      TwoLevelIndex {
-          argno;
-          mode;
-          all_clauses = Bl.empty ();
-          flex_arg_clauses = Bl.empty ();
-          arg_idx = Ptmap.empty;
-          time = 0; times = StrMap.empty;
-        }
-      | DiscriminationTree arg_depths -> IndexWithDiscriminationTree {
-          arg_depths;  mode; 
-          args_idx = Discrimination_tree.empty_dt arg_depths;
-          time = min_int;
-        }
-    end m) indexing index
+let update_indexing (indexing : (mode * indexing) Constants.Map.t) (index : preindex) : preindex =
+  let idx =
+    C.Map.fold (fun predicate (mode, indexing) m ->
+      Ptmap.add predicate 
+      begin
+        match indexing with
+        | Hash args -> BitHash {
+            args;
+            mode;
+            args_idx = Ptmap.empty;
+          }
+        | MapOn argno -> 
+          (* Printf.eprintf "indexing for %s" (C.show predicate);  *)
+        TwoLevelIndex {
+            argno;
+            mode;
+            all_clauses = Bl.empty ();
+            flex_arg_clauses = Bl.empty ();
+            arg_idx = Ptmap.empty;
+          }
+        | DiscriminationTree arg_depths -> IndexWithDiscriminationTree {
+            arg_depths;  mode; 
+            args_idx = Discrimination_tree.empty_dt arg_depths;
+          }
+      end m) indexing index.idx
+    in
+      { index with idx }
 
-let lex (_,l1) (_,l2) =
+let lex l1 l2 =
   let rec lex l1 l2 =
   match l1, l2 with
   | [], [] -> 0
@@ -2780,19 +2770,18 @@ let lex (_,l1) (_,l2) =
   in
   lex l1 l2
 
-let add_to_index ~depth ~predicate ~graft clause name index =
-  add1clause ~depth ~insert:postpend ~empty:Bl.empty ~cons:Bl.rcons ?graft index predicate clause name
+let add_to_index ~depth ~predicate ~graft clause name index : preindex =
+  add1clause ~depth ~time_dir:(fun x -> x + 1) ~insert:postpend ~empty:Bl.empty ~cons:Bl.rcons ?graft index predicate clause name
 
-let make_index ~depth ~indexing ~clauses_rev:p =
-  let m = update_indexing indexing Ptmap.empty in
-  let index = add_clauses ~depth ~insert:postpend ~empty:Bl.empty ~cons:Bl.rcons p m in
+let make_empty_index ~depth ~indexing =
+  let index = update_indexing indexing { idx = Ptmap.empty; time = 0; times = StrMap.empty } in
   let index = close_index index in
   { index; src = [] }
 
 let add_clauses ~depth clauses clauses_src { index; src } =
   let empty _ = Bl.Nil in
   let cons head tail = Bl.Cons { head ; tail; last = () } in
-  let insert ?fail ~times ~time graft head tail = Bl.Cons { head; tail; last = () } in
+  let insert graft _grafting_reference head tail = Bl.Cons { head; tail; last = () } in
   { index = add_clauses ~depth ~insert ~empty ~cons clauses index; src = List.rev clauses_src @ src }
 
 type goal_arg_classification =
@@ -2847,9 +2836,9 @@ let trie_goal_args goal : term list = match goal with
   | App(_, x, xs) -> x :: xs
   | _ -> assert false
 
-let cmp_timestamp { timestamp = tx } { timestamp = ty } = List.hd ty - List.hd tx
+let cmp_timestamp { timestamp = tx } { timestamp = ty } = lex tx ty
 
-let get_clauses ~depth predicate goal { index = m } =
+let get_clauses ~depth predicate goal { index = { idx = m } } =
  let rc =
    try
      match Ptmap.find predicate m with
@@ -2935,7 +2924,7 @@ end (* }}} *)
 open Indexing
 
 (* Used to pass the program to the CHR runtime *)
-let orig_prolog_program = Fork.new_local (make_index ~depth:0 ~indexing:C.Map.empty ~clauses_rev:[])
+let orig_prolog_program = Fork.new_local (make_empty_index ~depth:0 ~indexing:C.Map.empty)
 
 (******************************************************************************
   Dynamic Prolog program
@@ -3091,7 +3080,7 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause"
   end]
 
-let clausify ~loc { index } ~depth t =
+let clausify ~loc { index = { idx = index } } ~depth t =
   let get_mode x =
     match Ptmap.find x index with
     | TwoLevelIndex { mode } -> mode

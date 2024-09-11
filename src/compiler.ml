@@ -579,12 +579,12 @@ and attribute = {
 }
 [@@deriving show]
 
-let empty = {
+let empty () = {
   types = C.Map.empty;
   type_abbrevs = C.Map.empty;
   modes = C.Map.empty;
   clauses = Bl.empty ();
-  prolog_program = Ptmap.empty;
+  prolog_program = { idx = Ptmap.empty; time = 0; times = StrMap.empty };
   indexing = C.Map.empty;
   chr = [];
   local_names = 0;
@@ -2349,7 +2349,7 @@ let assemble_units ~flags ~header:(s,h,toplevel_macros) units : program =
   if nunits_with_locals > 0 then
     error "Only 1 compilation unit is supported when local directives are used";
 
-  let init = { Assembled.empty with toplevel_macros; local_names = h.code.local_names } in
+  let init = { (Assembled.empty ()) with toplevel_macros; local_names = h.code.local_names } in
 
   let s, p = Assemble.assemble flags s init (h :: units) in
 
