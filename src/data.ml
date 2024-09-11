@@ -184,7 +184,7 @@ and 'clause_list second_lvl_idx =
 
 let stop = ref false
 let close_index ({idx; time; times} : preindex) : index =
-  let n_all_clauses = ref [] in
+  (* let n_all_clauses = ref [] in
   let n_flex_arg_clauses = ref [] in
   let n_arg_idx = ref [] in
   Ptmap.iter (fun k i ->
@@ -207,7 +207,7 @@ let close_index ({idx; time; times} : preindex) : index =
     stop := true;
     Printf.eprintf "means: n_all_clauses %4f n_flex_arg_clauses %4f n_arg_idx %4f\n" (mean n_all_clauses) (mean n_flex_arg_clauses) (mean n_arg_idx);
     Printf.eprintf "save: n_all_clauses %4dKB n_flex_arg_clauses %4dKB n_arg_idx %4dKB\n" (save n_all_clauses) (save n_flex_arg_clauses) (save n_arg_idx);
-  end;
+  end; *)
   { idx = Obj.magic idx; time = -1; times = StrMap.empty }
 
 

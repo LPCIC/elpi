@@ -2732,6 +2732,8 @@ let add_clauses ~depth ~insert ~empty ~cons clauses idx =
 let update_indexing (indexing : (mode * indexing) Constants.Map.t) (index : preindex) : preindex =
   let idx =
     C.Map.fold (fun predicate (mode, indexing) m ->
+      if Ptmap.mem predicate m then
+        error "changing the indexing a posteriori is not allowed";
       Ptmap.add predicate 
       begin
         match indexing with
