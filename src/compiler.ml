@@ -2186,6 +2186,7 @@ let compile_clause modes initial_depth (state, index)
     in
   if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
   let graft = attributes.Ast.Structured.insertion in
+  (* Printf.eprintf "adding clause from %s\n" (Loc.show loc); *)
   let index = R.add_to_index ~depth:initial_depth ~predicate:p ~graft cl name index in
   state, index
 
@@ -2208,6 +2209,11 @@ let assemble flags state code  (ul : compilation_unit list) =
 
       (* no mode discrepancy tested by merge_modes/types *)
       let new_indexing, idx2 = update_indexing state m2 t2 idx1 in
+      C.Map.iter (fun predicate _ ->
+        if Ptmap.mem predicate index.idx then (* TODO: move this check in the compiler *)
+           error @@ "Some clauses for " ^ Symbols.show state predicate ^ " are already in the program, changing the indexing a posteriori is not allowed")
+        new_indexing;
+
       let index = R.update_indexing new_indexing index in
 
       let cl2 = filter_if flags clause_ifexpr cl2 in
@@ -2594,15 +2600,17 @@ let pp_program pp fmt {
     compiler_state; } =
   let clauses = Bl.to_list clauses in
   let compiler_state, clauses =
-    map_acc (fun state { Ast.Clause.body } ->
-       stack_term_of_preterm ~depth:initial_depth state body)
-       compiler_state clauses in
+    map_acc (fun state { Ast.Clause.body; loc } ->
+       let state, c = stack_term_of_preterm ~depth:initial_depth state body in
+       state, (c,loc))
+    compiler_state clauses in
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
     table = Symbols.compile_table (State.get Symbols.table compiler_state);
   } in
   Format.fprintf fmt "@[<v>";
-  List.iter (fun body ->
+  List.iter (fun (body,loc) ->
+    Format.fprintf fmt "%% %a.@;" Loc.pp loc;
     Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth) body)
     clauses;
   Format.fprintf fmt "@]"

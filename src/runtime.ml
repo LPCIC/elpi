@@ -2628,7 +2628,7 @@ let postpend graft reference clause clauses =
       Bl.replace (fun x -> x.timestamp = reference) clause clauses;
       clauses
 
-let add1clause2 ~depth ~insert ~empty m graft reference predicate clause = function
+let add1clause2 ~depth ~insert ~empty ~copy m graft reference predicate clause = function
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx; } ->
     begin match classify_clause_argno ~depth argno mode clause.args with
     (* X: matches both rigid and flexible terms *)
@@ -2643,7 +2643,7 @@ let add1clause2 ~depth ~insert ~empty m graft reference predicate clause = funct
     (* uvar: matches only flexible terms (or itself at the meta level) *)
       let l_rev =
         try Ptmap.find mustbevariablec arg_idx
-        with Not_found -> flex_arg_clauses in
+        with Not_found -> copy flex_arg_clauses in
       Ptmap.add predicate (TwoLevelIndex {
           argno; mode;
         all_clauses = insert graft reference clause all_clauses;
@@ -2654,7 +2654,7 @@ let add1clause2 ~depth ~insert ~empty m graft reference predicate clause = funct
     (* t: a rigid term matches flexible terms only in unification mode *)
       let l_rev =
         try Ptmap.find arg_hd arg_idx
-        with Not_found -> flex_arg_clauses in
+        with Not_found -> copy flex_arg_clauses in
       let all_clauses =
         if arg_mode = Input then all_clauses else insert graft reference clause all_clauses in
       Ptmap.add predicate (TwoLevelIndex {
@@ -2684,7 +2684,7 @@ let add1clause2 ~depth ~insert ~empty m graft reference predicate clause = funct
         args_idx = args_idx
       }) m
 
-let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ?graft predicate clause name =
+let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ~copy ?graft predicate clause name =
   let grafting_reference = timestamp_clause clause times time graft in
   let times =
     match name with
@@ -2692,7 +2692,7 @@ let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ?graft
     | Some id -> if StrMap.mem id times then error ?loc:clause.loc ("duplicate clause name " ^ id) else StrMap.add id [time] times in
   let idx =
     try
-      add1clause2 ~depth idx ~insert ~empty graft grafting_reference predicate clause (Ptmap.find predicate idx);
+      add1clause2 ~depth idx ~insert ~empty ~copy graft grafting_reference predicate clause (Ptmap.find predicate idx);
     with
     | Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
@@ -2725,15 +2725,13 @@ let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ?graft
 let add_clauses ~depth ~insert ~empty ~cons clauses idx =
   (* pplist (fun fmt (hd, b) -> ppclause fmt hd b) ";" Fmt.std_formatter clauses; *)
   (* let t1 = Unix.gettimeofday () in *)
-  let idx = List.fold_left (fun m (p,c) -> add1clause ~depth ~time_dir:(fun x -> x - 1) ~insert ~empty ~cons m ?graft:None p c None) idx clauses in
+  let idx = List.fold_left (fun m (p,c) -> add1clause ~depth ~time_dir:(fun x -> x - 1) ~copy:(fun x -> x) ~insert ~empty ~cons m ?graft:None p c None) idx clauses in
   (* let t2 = Unix.gettimeofday () in  *)
   (* pp_string Fmt.std_formatter (Printf.sprintf "\nTime taken by add_clauses is %f\n" (t2-.t1)); *)
   idx
 let update_indexing (indexing : (mode * indexing) Constants.Map.t) (index : preindex) : preindex =
   let idx =
     C.Map.fold (fun predicate (mode, indexing) m ->
-      if Ptmap.mem predicate m then
-        error "changing the indexing a posteriori is not allowed";
       Ptmap.add predicate 
       begin
         match indexing with
@@ -2773,7 +2771,7 @@ let lex l1 l2 =
   lex l1 l2
 
 let add_to_index ~depth ~predicate ~graft clause name index : preindex =
-  add1clause ~depth ~time_dir:(fun x -> x + 1) ~insert:postpend ~empty:Bl.empty ~cons:Bl.rcons ?graft index predicate clause name
+  add1clause ~depth ~time_dir:(fun x -> x + 1) ~copy:Bl.copy ~insert:postpend ~empty:Bl.empty ~cons:Bl.rcons ?graft index predicate clause name
 
 let make_empty_index ~depth ~indexing =
   let index = update_indexing indexing { idx = Ptmap.empty; time = 0; times = StrMap.empty } in

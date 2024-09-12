@@ -35,6 +35,22 @@ let set_last_tail l = function
       (* Format.eprintf "set tail of %d to %d \n" (Obj.magic w) (Obj.magic l);  *)
       x.tail <- l
   | BNil -> Elpi_util.Util.anomaly "blist: can't rcons after commit"
+let set_last l = function
+  | BCons x ->  x.last <- l
+  | BNil -> assert false
+
+let copy = function
+  | BNil -> BNil
+  | BCons { head; tail; last } as l ->
+      let x = ref last in
+      let rec aux = function
+        | BNil -> BNil
+        | BCons { head; tail = BNil; last } -> let rec last = BCons { head; tail = BNil; last = last } in x := last; last
+        | BCons { head; tail; last } -> BCons { head; tail = aux tail; last = BNil }
+      in
+      let l = aux l in
+      set_last !x l;
+      l
 
 let rcons head tail =
   match tail with

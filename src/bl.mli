@@ -10,11 +10,14 @@ type 'a t
 val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 
-(* These 3 are O(1) *)
+(* These 4 are O(1) *)
 val empty : unit -> 'a t
 val single : 'a -> 'a t
 val cons : 'a -> 'a t -> 'a t
 val rcons : 'a -> 'a t -> 'a t
+
+(* O(n) spaec and time *)
+val copy : 'a t -> 'a t
 
 (* These 3 are O(n) time, O(1) space. The test must succeed once *)
 val replace : ('a -> bool) -> 'a -> 'a t -> unit
