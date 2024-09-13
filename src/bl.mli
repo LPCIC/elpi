@@ -16,13 +16,13 @@ val single : 'a -> 'a t
 val cons : 'a -> 'a t -> 'a t
 val rcons : 'a -> 'a t -> 'a t
 
-(* O(n) spaec and time *)
+(* O(n) space and time *)
 val copy : 'a t -> 'a t
 
 (* These 3 are O(n) time, O(1) space. The test must succeed once *)
-val replace : ('a -> bool) -> 'a -> 'a t -> unit
+val replace : ('a -> bool) -> 'a -> 'a t -> 'a t
 val insert_before : ('a -> bool) -> 'a -> 'a t -> 'a t
-val insert_after : ('a -> bool) -> 'a -> 'a t -> unit
+val insert_after : ('a -> bool) -> 'a -> 'a t -> 'a t
 
 type  'a l = Nil | Cons of { head : 'a; tail : 'a l; last : unit; }
 val pp_l : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a l -> unit

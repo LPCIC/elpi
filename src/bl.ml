@@ -2,17 +2,25 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-type 'a t = BNil | BCons of { mutable head : 'a; mutable tail : 'a t; mutable last : 'a t;  }
+type 'a t =
+  | BNil
+  | BCons of { mutable head : 'a; mutable tail : 'a t; mutable last : 'a t; }
+  (* | UndoRcons of { old_tail : 'a data; next : 'a t }
+  | UndoInsert of { old_before : 'a data; old_after : 'a data; next : 'a t } *)
+(* and 'a t = 'a data ref *)
 
+let pp_pointer fmt x = Format.fprintf fmt "%x" (Obj.magic x land 0xffffff)
 let rec pp pp_a fmt = function
   | BNil -> Format.fprintf fmt "[]"
   | BCons { head; tail; last } as x ->
-      Format.fprintf fmt "[self %x, tail %x, last %x] %a :: "
-        (Obj.magic x land 0xffffff)
-        (Obj.magic tail land 0xffffff)
-        (Obj.magic last land 0xffffff)
+      Format.fprintf fmt "[self %a, tail %a, last %a] %a :: "
+        pp_pointer x
+        pp_pointer tail
+        pp_pointer last
         pp_a head;
       pp pp_a fmt tail
+  (* | UndoRcons { old_tail; next } -> Format.fprintf fmt "UndoRcons %a :: " pp_pointer old_tail ; pp pp_a fmt next
+  | UndoInsert { old_before; old_after; next } -> Format.fprintf fmt "UndoInsert %a - %a :: " pp_pointer old_before pp_pointer old_after; pp pp_a fmt next *)
 
 let show pp_a x = Format.asprintf "%a" (pp pp_a) x
 
@@ -68,6 +76,7 @@ let rec replace f x = function
   | BNil -> ()
   | BCons ({ head; tail } as b) when f head -> b.head <- x
   | BCons { tail } -> replace f x tail
+let replace f x l = replace f x l; l
 
 let rec insert_before f x = function
   | BNil -> BNil
@@ -86,6 +95,7 @@ let insert_after f x = function
         | BCons { tail } -> insert_after_aux tail
       in
       insert_after_aux l
+let insert_after f x l = insert_after f x l; l
 
 let rec iter f = function Nil -> () | Cons { head; tail } -> f head; iter f tail
 let rec of_list = function

@@ -50,7 +50,7 @@ let _ =
   let l = empty () in
   let l = rcons 10 l in
   let l = rcons 11 l in
-  insert_after ((=) 10) 9 l;
+  let l = insert_after ((=) 10) 9 l in
   let l = rcons 12 l in
   let l = to_list @@ commit l in
   assert(l = [10;9;11;12])
@@ -60,7 +60,7 @@ let _ =
   let l = empty () in
   let l = rcons 10 l in
   let l = rcons 11 l in
-  insert_after ((=) 11) 9 l;
+  let l = insert_after ((=) 11) 9 l in
   let l = rcons 12 l in
   let l = to_list @@ commit l in
   assert(l = [10;11;9;12])
@@ -72,3 +72,17 @@ let _ =
   let l = to_list l in
   assert(l = [-3;-2])
 ;;
+
+
+(* let _ =
+  let l = empty () in
+  let l = rcons 10 l in
+  let l as old = rcons 11 l in
+  let l = insert_after ((=) 10) 9 l in
+  let l = rcons 12 l in
+  let l = to_list @@ commit l in
+  assert(l = [10;9;11;12]);
+  let l = to_list @@ commit old in
+  assert(l = [10;11]);
+
+;; *)

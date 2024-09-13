@@ -2622,11 +2622,9 @@ let postpend graft reference clause clauses =
   | Some (Elpi_parser.Ast.Structured.Before _)  ->
       Bl.insert_before (fun x -> x.timestamp = reference) clause clauses
   | Some (Elpi_parser.Ast.Structured.After _)   ->
-      Bl.insert_after (fun x -> x.timestamp = reference) clause clauses;
-      clauses
+      Bl.insert_after (fun x -> x.timestamp = reference) clause clauses
   | Some (Elpi_parser.Ast.Structured.Replace _) ->
-      Bl.replace (fun x -> x.timestamp = reference) clause clauses;
-      clauses
+      Bl.replace (fun x -> x.timestamp = reference) clause clauses
 
 let add1clause2 ~depth ~insert ~empty ~copy m graft reference predicate clause = function
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx; } ->
