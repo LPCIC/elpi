@@ -160,7 +160,7 @@ and prolog_prog = {
 (* These two are the same, but the latter should not be mutated *)
 
 and preindex = clause Bl.t first_lvl_idx
-and index = clause Bl.l first_lvl_idx
+and index = clause Bl.t first_lvl_idx
 and 'clause_list first_lvl_idx = { idx : 'clause_list second_lvl_idx Ptmap.t; time : int; times : times }
 and 'clause_list second_lvl_idx =
 | TwoLevelIndex of {

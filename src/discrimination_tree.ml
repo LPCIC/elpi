@@ -284,8 +284,8 @@ let max_depths { max_depths } = max_depths
     that are rooted just after the term represented by the tree root
     are returned (we are skipping the root) *)
 let call f =
-  let res = ref @@ Bl.Nil in
-  let add_result x = res := Bl.Cons { head = x; tail = !res; last = () } in
+  let res = ref @@ [] in
+  let add_result x = res := x :: !res in
   f ~add_result; !res
   
 let skip_to_listEnd ~add_result mode (Trie.Node { other; map; listTailVariable }) =
@@ -326,7 +326,7 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
      retrieve ~pos:(pos+1) ~add_result hd path tree
   else if isListTailVariable hd then
     let sub_tries = skip_to_listEnd mode tree in
-    Bl.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
+    List.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
   else begin
     (* Here the constructor can be Constant, Primitive, Variable, Other, ListHead, ListEnd *)
     begin
@@ -381,7 +381,7 @@ let retrieve ~pos ~add_result path index =
   
 let retrieve cmp_data path { t } = 
   let r = call (retrieve ~pos:0 path t) in
-  Bl.sort cmp_data r
+  Bl.of_list @@ List.sort cmp_data r
 
 
 module Internal = struct

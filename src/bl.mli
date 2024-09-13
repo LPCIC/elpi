@@ -24,23 +24,11 @@ val replace : ('a -> bool) -> 'a -> 'a t -> 'a t
 val insert_before : ('a -> bool) -> 'a -> 'a t -> 'a t
 val insert_after : ('a -> bool) -> 'a -> 'a t -> 'a t
 
-type  'a l = Nil | Cons of { head : 'a; tail : 'a l; last : unit; }
-val pp_l : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a l -> unit
-val show_l : (Format.formatter -> 'a -> unit) -> 'a l -> string
+type 'a scan
+val to_scan : 'a t -> 'a scan
+val is_empty : 'a scan -> bool
+val next : 'a scan -> 'a * 'a scan
+val to_list : 'a scan -> 'a list
+val of_list : 'a list -> 'a scan
+val length : 'a scan -> int
 
-(* no more rcons, O(1) time and space *)
-val commit : 'a t -> 'a l
-
-(* no more rcons, O(n) time, O(1) space *)
-val commit_map : ('a -> 'b) -> 'a t -> 'b l
-
-(* allocates a new list, O(n) time and space *)
-val to_list : 'a l -> 'a list
-val to_list_map : ('a -> 'b) -> 'a l -> 'b list
-
-val iter : ('a -> unit) -> 'a l -> unit
-val of_list : 'a list -> 'a l
-val length : 'a l -> int
-val flatten : 'a l list -> 'a l
-val sort : ('a -> 'a -> int) -> 'a l -> 'a l
-val rev : 'a l -> 'a l

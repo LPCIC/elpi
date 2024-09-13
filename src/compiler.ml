@@ -613,7 +613,7 @@ type 'a query = {
   types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
-  clauses : (preterm,Assembled.attribute) Ast.Clause.t Bl.l; (* remove? *)
+  clauses : (preterm,Assembled.attribute) Ast.Clause.t Bl.t; (* remove? *)
   prolog_program : preindex;
   chr : block_constraint list;
   initial_depth : int;
@@ -2438,7 +2438,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
     modes;
     type_abbrevs;
     prolog_program = assembled_program.Assembled.prolog_program;
-    clauses = Bl.commit assembled_program.Assembled.clauses;
+    clauses = assembled_program.Assembled.clauses;
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
@@ -2470,7 +2470,7 @@ let query_of_term (compiler_state, assembled_program) f =
     type_abbrevs;
     modes;
     prolog_program = assembled_program.Assembled.prolog_program;
-    clauses = Bl.commit assembled_program.Assembled.clauses;
+    clauses = assembled_program.Assembled.clauses;
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
@@ -2598,7 +2598,7 @@ let pp_program pp fmt {
     WithMain.clauses;
     initial_depth;
     compiler_state; } =
-  let clauses = Bl.to_list clauses in
+  let clauses = clauses |> Bl.to_scan |> Bl.to_list in
   let compiler_state, clauses =
     map_acc (fun state { Ast.Clause.body; loc } ->
        let state, c = stack_term_of_preterm ~depth:initial_depth state body in
@@ -2746,7 +2746,7 @@ let rec lam2forall = function
 
 let quote_syntax time new_state { WithMain.clauses; query; compiler_state } =
   let names = sorted_names_of_argmap query.amap in
-  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state (Bl.to_list clauses) in
+  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state (clauses |> Bl.to_scan |> Bl.to_list) in
   let new_state, queryt = quote_preterm time ~on_type:false ~compiler_state new_state query in
   let q =
     App(clausec,CData (quote_loc ~id:"query" query.loc),

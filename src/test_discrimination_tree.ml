@@ -55,7 +55,7 @@ let () =
     (* let pp_sep = fun f _ -> Format.pp_print_string f " " in *)
     (* Format.printf " Found instances are %a\n%!" (Format.pp_print_list ~pp_sep Format.pp_print_int) retrived; *)
     if retrived_nb <> nb then failwith (Format.asprintf "Test DT error: Expected %d clauses, %d found" nb retrived_nb);
-    if Elpi.Internal.Bl.sort Int.compare retrived |> Elpi.Internal.Bl.rev <> retrived then failwith "Test DT error: resultin list is not correctly ordered"
+    if (Elpi.Internal.Bl.to_list retrived |> List.sort Int.compare |> List.rev) <> (retrived |> Elpi.Internal.Bl.to_list) then failwith "Test DT error: resultin list is not correctly ordered"
   in
   
   let p1 = [mkListHead; constA; mkListTailVariable; constA], 1 in                                         (* 1: [a | _] a *)

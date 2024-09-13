@@ -2598,15 +2598,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
     if args == [] then emit_mode is_goal mkOutputMode
     else aux ~safe ~depth is_goal args (if is_goal then Array.to_list args_depths_ar else arg_depths) arg_modes
   end;
-  Path.stop path
-
-
-let rec replace ?fail it c l : (clause * int list) list =
-  match l with
-  | [] -> if fail = Some true then error ?loc:(fst c).loc ("unable to graft this clause") else []
-  | (_,time) :: xs when it = time -> c :: xs
-  | x :: xs -> x :: replace ?fail it c xs
-  
+  Path.stop path  
 
 let timestamp_clause clause times time graft =
   let reference x = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
@@ -2777,9 +2769,9 @@ let make_empty_index ~depth ~indexing =
   { index; src = [] }
 
 let add_clauses ~depth clauses clauses_src { index; src } =
-  let empty _ = Bl.Nil in
-  let cons head tail = Bl.Cons { head ; tail; last = () } in
-  let insert graft _grafting_reference head tail = Bl.Cons { head; tail; last = () } in
+  let empty = Bl.empty in
+  let cons = Bl.cons in
+  let insert graft _grafting_reference head tail = Bl.cons head tail in
   { index = add_clauses ~depth ~insert ~empty ~cons clauses index; src = List.rev clauses_src @ src }
 
 type goal_arg_classification =
@@ -2846,11 +2838,11 @@ let get_clauses ~depth predicate goal { index = { idx = m } } =
        | Rigid arg_hd ->
           try Ptmap.find arg_hd arg_idx
           with Not_found -> flex_arg_clauses
-       end
+       end |> Bl.to_scan
      | BitHash { args; mode; args_idx } ->
        let hash = hash_goal_args ~depth mode args goal in
-       let cl = Bl.flatten (Ptmap.find_unifiables hash args_idx) in
-       Bl.sort cmp_timestamp cl
+       let cl = Ptmap.find_unifiables hash args_idx |> List.map Bl.to_scan |> List.map Bl.to_list |> List.flatten in
+       Bl.of_list @@ List.sort cmp_timestamp cl
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
         let max_depths = Discrimination_tree.max_depths args_idx in
         let max_path = Discrimination_tree.max_path args_idx in
@@ -2865,7 +2857,7 @@ let get_clauses ~depth predicate goal { index = { idx = m } } =
           [%spy "dev:disc-tree:candidates" ~rid 
             pp_int (Bl.length candidates)];
         candidates
-   with Not_found -> Bl.Nil
+   with Not_found -> Bl.of_list []
  in
  [%log "get_clauses" ~rid (C.show predicate) (Bl.length rc)];
  [%spy "dev:get_clauses" ~rid C.pp predicate pp_int (Bl.length rc)];
@@ -3144,7 +3136,7 @@ and alternative = {
   stack : frame;
   trail : T.trail;
   state : State.t;
-  clauses : clause Bl.l;
+  clauses : clause Bl.scan;
   next : alternative;
 }
 let noalts : alternative = Obj.magic (Sys.opaque_identity 0)
@@ -3947,13 +3939,14 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
 
   (* We pack some arguments into a tuple otherwise we consume too much stack *)
   and backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cp = [%trace "select" ~rid begin
-    match cp with
-      | Bl.Nil -> [%spy "user:rule:backchain" ~rid ~gid pp_string "fail"];
+    if Bl.is_empty cp then begin
+        [%spy "user:rule:backchain" ~rid ~gid pp_string "fail"];
         [%tcall next_alt alts]
-      | Bl.Cons { head = { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc } ; tail = cs } ->
+    end else
+      let { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc }, cs = Bl.next cp in
         [%spy "user:rule:backchain:try" ~rid ~gid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin loc) (ppclause ~hd:k) { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc; timestamp = [] }];
         let old_trail = !T.trail in
-        T.last_call := alts == noalts && cs == Bl.Nil;
+        T.last_call := alts == noalts && Bl.is_empty cs;
         let env = Array.make c_vars C.dummy in
         match
           match c_args with
@@ -3967,7 +3960,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
             T.undo ~old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cs]
         | true ->
            let oldalts = alts in
-           let alts = if cs == Bl.Nil then alts else
+           let alts = if Bl.is_empty cs then alts else
              { program = p; adepth = depth; agoal_hd = k; ogoal_arg = arg; ogoal_args = args_of_g; agid = gid[@trace]; goals = gs; stack = next;
                trail = old_trail;
                state = !CS.state;
@@ -3995,9 +3988,9 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     let ()[@trace] =
       let rec prune ({ agid = agid[@trace]; clauses; adepth = depth; agoal_hd = hd } as alts) =
         if alts != cutto_alts then begin
-          Bl.iter (fun c -> 
+          List.iter (fun c -> 
             [%spy "user:rule:cut:branch" ~rid UUID.pp agid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin c.loc) (ppclause ~hd) c])
-          clauses;
+          (clauses |> Bl.to_list);
           prune alts.next
         end
       in

@@ -49,7 +49,7 @@ val empty_dt : 'b list -> 'a t
   has been added at time [t] and r_2 been added at time [t+1] then
   r_2 will appear before r_1 in the final result
 *)
-val retrieve : ('a -> 'a -> int) -> Path.t -> 'a t -> 'a Bl.l
+val retrieve : ('a -> 'a -> int) -> Path.t -> 'a t -> 'a Bl.scan
 
 (***********************************************************)
 (* Printers                                                *)
