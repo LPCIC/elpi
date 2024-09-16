@@ -143,50 +143,33 @@ let rec replace f x = function
         if i < len then
           if f data.(i) then BArray { len; data = Array.set data i x }
           else aux (i+1)
-        else a
+        else 
+          a (* bleah *)
       in
         aux 0
 
-let rec insert_before f x = function
-  | BCons (head, _) as l when f head -> BCons (x,l)
-  | BCons (head,tail) -> BCons (head, insert_before f x tail)
-  | BArray { len; data } as a ->
+let rec insert f x = function
+  | BCons (head, tail) when f head <= 0 -> BCons (head, BCons(x,tail))
+  | BCons (head, tail) -> BCons (head, insert f x tail)
+  | BArray { len; data } ->
     let rec aux i =
       if i < len then
-        if f data.(i) then
+        if f data.(i) > 0 then
           if len < Array.length data then begin
             let data = Array.shift_right data i (len-i) in
-            BArray { len = len + 1; data = Array.set data i x}
-          end else
-            extendk len data x (fun data -> let data = Array.shift_right data i (len-i) in Array.set data i x)
-        else
-          aux (i+1)
-      else
-        a
-    in
-      aux 0
-
-
-let rec insert_after f x = function
-  | BCons (head, l) when f head -> BCons (head, BCons(x,l))
-  | BCons (head,tail) -> BCons (head, insert_after f x tail)
-  | BArray { len; data } as a ->
-    let rec aux i =
-      if i < len then
-        if f data.(i) then
-          if len < Array.length data then begin
-            let data = Array.shift_right data (i+1) (len-i-1) in
-            BArray { len = len + 1; data = Array.set data (i+1) x }
+            BArray { len = len + 1; data = Array.set data i x }
           end else
             extendk len data x (fun data ->
-              Format.eprintf "%d i=%d len=%d\n" (Array.length data) i len;
-              Format.eprintf "%d %d %d\n" (i+1) (i+2) (len -i -1);
-              let data = Array.shift_right data (i+1) (len-i-1) in
-              Array.set data (i+1) x)
+              let data = Array.shift_right data i (len-i) in
+              Array.set data i x)
         else
           aux (i+1)
       else
-        a
+          if len < Array.length data then begin
+            BArray { len = len + 1; data = Array.set data len x }
+          end else
+            extendk len data x (fun data -> Array.set data len x)
+
     in
       aux 0
           

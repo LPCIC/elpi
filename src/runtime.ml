@@ -2335,6 +2335,24 @@ let output arguments assignments state =
 
 module Indexing = struct (* {{{ *)
 
+let lex_insertion l1 l2 =
+  let rec lex_insertion fst l1 l2 =
+  match l1, l2 with
+  | [], [] -> 0
+  | x :: l1, y :: l2  when not fst ->
+      let r =
+        if x < 0 && y < 0 || x > 0 && y > 0
+          then y - x else x - y in
+      if r = 0 then lex_insertion false l1 l2
+      else r
+  | x1 :: l1, x2 :: l2 ->
+      let x = x1 - x2 in
+      if x = 0 then lex_insertion false l1 l2
+      else x
+  | [], ys -> lex_insertion false [0] ys
+  | xs, [] -> lex_insertion false xs [0]
+  in
+  lex_insertion true l1 l2
 let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
 
 let ppclause f ~hd { depth; args = args; hyps = hyps } =
@@ -2601,20 +2619,21 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
   Path.stop path  
 
 let timestamp_clause clause times time graft =
-  let reference x = try StrMap.find x times with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
+  let reference x =
+    try StrMap.find x times
+    with Not_found -> error ?loc:clause.loc ("cannot graft, clause " ^ x ^ " not found") in
   match graft with
   | None -> clause.timestamp <- [time]; []
-  | Some (Elpi_parser.Ast.Structured.Before  x) -> let reference = reference x in clause.timestamp <- reference @ [time]; reference
-  | Some (Elpi_parser.Ast.Structured.After   x) -> let reference = reference x in clause.timestamp <- reference @ [-time]; reference
+  | Some (Elpi_parser.Ast.Structured.Before  x) -> let reference = reference x in clause.timestamp <- reference @ [-time]; reference
+  | Some (Elpi_parser.Ast.Structured.After   x) -> let reference = reference x in clause.timestamp <- reference @ [time]; reference
   | Some (Elpi_parser.Ast.Structured.Replace x) -> let reference = reference x in reference
 
 let postpend graft reference clause clauses =
   match graft with
   | None -> Bl.rcons clause clauses
-  | Some (Elpi_parser.Ast.Structured.Before _)  ->
-      Bl.insert_before (fun x -> x.timestamp = reference) clause clauses
+  | Some (Elpi_parser.Ast.Structured.Before _)
   | Some (Elpi_parser.Ast.Structured.After _)   ->
-      Bl.insert_after (fun x -> x.timestamp = reference) clause clauses
+      Bl.insert (fun x -> lex_insertion x.timestamp clause.timestamp) clause clauses
   | Some (Elpi_parser.Ast.Structured.Replace _) ->
       Bl.replace (fun x -> x.timestamp = reference) clause clauses
 
@@ -2676,10 +2695,19 @@ let add1clause2 ~depth ~insert ~empty ~copy m graft reference predicate clause =
 
 let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ~copy ?graft predicate clause name =
   let grafting_reference = timestamp_clause clause times time graft in
+  let times = (* TODO: do this only at compile time *)
+      match graft with
+      | Some (Elpi_parser.Ast.Structured.Replace oid) -> StrMap.remove oid times
+      | _ -> times
+  in
   let times =
     match name with
     | None -> times
-    | Some id -> if StrMap.mem id times then error ?loc:clause.loc ("duplicate clause name " ^ id) else StrMap.add id [time] times in
+    | Some id ->
+        if StrMap.mem id times then
+          error ?loc:clause.loc ("duplicate clause name " ^ id)
+        else
+          StrMap.add id clause.timestamp times in
   let idx =
     try
       add1clause2 ~depth idx ~insert ~empty ~copy graft grafting_reference predicate clause (Ptmap.find predicate idx);
@@ -2706,7 +2734,14 @@ let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ~copy 
             argno = 0;mode = [];
             all_clauses;
             flex_arg_clauses = empty ();
-            arg_idx = Ptmap.add arg_hd (cons clause (empty ())) Ptmap.empty;
+            arg_idx = 
+              begin
+                let pippo = Ptmap.add arg_hd (cons clause (empty ())) Ptmap.empty in
+
+                  (* Format.eprintf "New %a\n" (Ptmap.pp (Bl.pp pp_clause)) pippo; *)
+
+                pippo
+              end
           }) idx
     in
     { idx; times; time = time_dir time }
@@ -2746,19 +2781,6 @@ let update_indexing (indexing : (mode * indexing) Constants.Map.t) (index : prei
       end m) indexing index.idx
     in
       { index with idx }
-
-let lex l1 l2 =
-  let rec lex l1 l2 =
-  match l1, l2 with
-  | [], [] -> 0
-  | x1 :: l1, x2 :: l2 ->
-      let x = x1 - x2 in
-      if x = 0 then lex l1 l2
-      else x
-  | [], x :: _ -> x
-  | x :: _, [] -> -x
-  in
-  lex l1 l2
 
 let add_to_index ~depth ~predicate ~graft clause name index : preindex =
   add1clause ~depth ~time_dir:(fun x -> x + 1) ~copy:Bl.copy ~insert:postpend ~empty:Bl.empty ~cons:Bl.rcons ?graft index predicate clause name
@@ -2826,7 +2848,7 @@ let trie_goal_args goal : term list = match goal with
   | App(_, x, xs) -> x :: xs
   | _ -> assert false
 
-let cmp_timestamp { timestamp = tx } { timestamp = ty } = lex tx ty
+let cmp_timestamp { timestamp = tx } { timestamp = ty } = lex_insertion tx ty
 
 let get_clauses ~depth predicate goal { index = { idx = m } } =
  let rc =
@@ -4181,6 +4203,10 @@ end;*)
   set FFI.builtins builtins;
   set rid !max_runtime_id;
   let search = exec (fun () ->
+    (* let o = open_out "/tmp/log" in
+     let fmt = Format.formatter_of_out_channel o in
+    Format.fprintf fmt "%a\n%!" pp_preindex compiled_program.index;
+    close_out o; *)
      [%spy "dev:trail:init" ~rid (fun fmt () -> T.print_trail fmt) ()];
      let gid[@trace] = UUID.make () in
      [%spy "user:newgoal" ~rid ~gid (uppterm initial_depth [] ~argsdepth:0 empty_env) initial_goal];
@@ -4271,6 +4297,7 @@ let add_to_index = add_to_index
 let clausify1 = Clausify.clausify1
 let mkinterval = C.mkinterval
 let mkAppL = C.mkAppL
+let lex_insertion = lex_insertion
 
 let expand_uv ~depth r ~lvl ~ano =
   let t, assignment = HO.expand_uv ~depth r ~lvl ~ano in

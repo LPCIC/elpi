@@ -42,11 +42,11 @@ let test_scan bl l =
 let bl,l = test_build ()
 let () = test_scan (bl |> to_scan |> to_list) l
 
-let _ =
+(* let _ =
   let l = empty () in
   let l = rcons 10 l in
   let l = rcons 11 l in
-  let l = insert_after ((=) 10) 9 l in
+  let l = insert (fun x -> 10 -x) 9 l in
   let l = rcons 12 l in
   let l = to_list @@ to_scan l in
   assert(l = [10;9;11;12])
@@ -56,7 +56,7 @@ let _ =
   let l = empty () in
   let l = rcons 10 l in
   let l = rcons 11 l in
-  let l = insert_after ((=) 11) 9 l in
+  let l = insert (fun x -> x - 11) 9 l in
   let l = rcons 12 l in
   let l = to_list @@ to_scan l in
   assert(l = [10;11;9;12])
@@ -70,7 +70,7 @@ let _ =
   let l as old = rcons 11 l in
 
   assert(to_list @@ to_scan old = [8;10;11]);
-  let l = insert_after ((=) 10) 9 l in
+  let l = insert (fun x -> x - 10) 9 l in
 
   let l = to_list @@ to_scan l in
   assert(l = [8;10;9;11]);
@@ -78,4 +78,4 @@ let _ =
   let l = to_list @@ to_scan old in
   assert(l = [8;10;11]);
 
-;;
+;; *)

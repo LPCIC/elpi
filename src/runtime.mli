@@ -82,3 +82,6 @@ val clausify1 :
   nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 
 val full_deref : depth:int -> term -> term
+
+(* for testing *)
+val lex_insertion : int list -> int list -> int
