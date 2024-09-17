@@ -2710,7 +2710,25 @@ let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ~copy 
           StrMap.add id clause.timestamp times in
   let idx =
     try
-      add1clause2 ~depth idx ~insert ~empty ~copy graft grafting_reference predicate clause (Ptmap.find predicate idx);
+      (* TODO: do this only at compile time *)
+      match graft with
+      | Some (Elpi_parser.Ast.Structured.Replace _) ->
+          Ptmap.map (function
+          | TwoLevelIndex {
+            argno; mode;
+            all_clauses;
+            flex_arg_clauses;
+            arg_idx;
+            } -> TwoLevelIndex {
+              argno; mode;
+              all_clauses = insert graft grafting_reference clause all_clauses;
+              flex_arg_clauses = insert graft grafting_reference clause flex_arg_clauses;
+              arg_idx = Ptmap.map (fun l -> insert graft grafting_reference clause l) arg_idx;
+              }
+          | BitHash { mode; args; args_idx } -> BitHash { mode; args; args_idx = Ptmap.map (fun l -> insert graft grafting_reference clause l) args_idx }
+          | IndexWithDiscriminationTree {mode; arg_depths; args_idx; } -> IndexWithDiscriminationTree {mode; arg_depths; args_idx = Discrimination_tree.replace (fun x -> x.timestamp = grafting_reference) clause args_idx; }
+          ) idx
+      | _ -> add1clause2 ~depth idx ~insert ~empty ~copy graft grafting_reference predicate clause (Ptmap.find predicate idx);
     with
     | Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
