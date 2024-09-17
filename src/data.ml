@@ -184,33 +184,7 @@ and 'clause_list second_lvl_idx =
 
 let stop = ref false
 let close_index ({idx; time; times} : preindex) : index =
-  (* let n_all_clauses = ref [] in
-  let n_flex_arg_clauses = ref [] in
-  let n_arg_idx = ref [] in
-  Ptmap.iter (fun k i ->
-    match i with
-    | TwoLevelIndex { all_clauses; flex_arg_clauses; arg_idx } ->
-        n_all_clauses := Bl.length all_clauses :: !n_all_clauses;
-        n_flex_arg_clauses := Bl.length flex_arg_clauses :: !n_flex_arg_clauses;
-        Ptmap.iter (fun k l -> n_arg_idx := Bl.length l :: !n_arg_idx) (Obj.magic arg_idx);
-    | BitHash _ -> ()
-    | IndexWithDiscriminationTree _ -> ()) (Obj.magic idx);
-  let mean l =
-    let length = List.length !l in
-    let sum = List.fold_left (+) 0 !l in
-    float_of_int sum /. float_of_int length in
-  let save l =
-    let cells = List.fold_left (+) 0 !l in
-    let lists = List.length !l in
-    ((cells - lists) * Sys.word_size / 8) / 1024 in
-  if !n_all_clauses <> [] && not !stop then begin
-    stop := true;
-    Printf.eprintf "means: n_all_clauses %4f n_flex_arg_clauses %4f n_arg_idx %4f\n" (mean n_all_clauses) (mean n_flex_arg_clauses) (mean n_arg_idx);
-    Printf.eprintf "save: n_all_clauses %4dKB n_flex_arg_clauses %4dKB n_arg_idx %4dKB\n" (save n_all_clauses) (save n_flex_arg_clauses) (save n_arg_idx);
-  end; *)
-  (* Format.eprintf "%a\n" pp_preindex {idx; time; times}; *)
-  { idx = Obj.magic idx; time = -1; times = StrMap.empty }
-
+  { idx =idx; time = 0; times = StrMap.empty }
 
 type constraints = stuck_goal list
 type hyps = clause_src list

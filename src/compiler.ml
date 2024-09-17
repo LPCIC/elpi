@@ -566,7 +566,7 @@ type program = {
   types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
-  clauses : (preterm,attribute) Ast.Clause.t Bl.t;
+  clauses : (preterm,attribute) Ast.Clause.t list;
   prolog_program : preindex;
   indexing : (mode * indexing) C.Map.t;
   chr : block_constraint list;
@@ -576,6 +576,7 @@ type program = {
 }
 and attribute = {
   id : string option;
+  timestamp : grafting_time;
 }
 [@@deriving show]
 
@@ -583,7 +584,7 @@ let empty () = {
   types = C.Map.empty;
   type_abbrevs = C.Map.empty;
   modes = C.Map.empty;
-  clauses = Bl.empty ();
+  clauses = [];
   prolog_program = { idx = Ptmap.empty; time = 0; times = StrMap.empty };
   indexing = C.Map.empty;
   chr = [];
@@ -613,7 +614,7 @@ type 'a query = {
   types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
-  clauses : (preterm,Assembled.attribute) Ast.Clause.t Bl.t; (* remove? *)
+  clauses : (preterm,Assembled.attribute) Ast.Clause.t list;
   prolog_program : preindex;
   chr : block_constraint list;
   initial_depth : int;
@@ -661,10 +662,10 @@ end = struct (* {{{ *)
          aux_attrs { r with id = Some s } rest
       | After s :: rest ->
          if r.insertion <> None then duplicate_err "insertion";
-         aux_attrs { r with insertion = Some (After s) } rest
+         aux_attrs { r with insertion = Some (Insert (After s)) } rest
       | Before s :: rest ->
          if r.insertion <> None then duplicate_err "insertion";
-         aux_attrs { r with insertion = Some (Before s) } rest
+         aux_attrs { r with insertion = Some (Insert (Before s)) } rest
       | Replace s :: rest ->
           if r.insertion <> None then duplicate_err "insertion";
           aux_attrs { r with insertion = Some (Replace s) } rest
@@ -2079,46 +2080,8 @@ module Assemble : sig
 
 end = struct (* {{{ *)
 
-let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} as c) =
-  { c with Ast.Clause.attributes = { Assembled.id }}
-
-  let sort_insertion ~old_rev ~extra:l =
-    let add s { Ast.Clause.attributes = { Assembled.id }; loc } =
-      match id with
-      | None -> s
-      | Some n ->
-          if StrMap.mem n s then
-            error ~loc ("a clause named " ^ n ^
-                   " already exists at " ^ Loc.show (StrMap.find n s))
-          else
-            StrMap.add n loc s in    
-    let rec insert loc_name c l =
-      match l, loc_name with
-      | [],_ -> error ~loc:c.Ast.Clause.loc ("unable to graft this clause: no clause named " ^
-             match loc_name with
-             | Ast.Structured.Replace x -> x
-             | Ast.Structured.After x -> x
-             | Ast.Structured.Before x -> x)
-      | { Ast.Clause.attributes = { Assembled.id = Some n }} :: xs,
-        Ast.Structured.Replace name when n = name ->
-           c :: xs
-      | { Ast.Clause.attributes = { Assembled.id = Some n }} as x :: xs,
-        Ast.Structured.After name when n = name ->
-           c :: x :: xs
-      | { Ast.Clause.attributes = { Assembled.id = Some n }} as x :: xs,
-        Ast.Structured.Before name when n = name ->
-           x :: c :: xs
-      | x :: xs, _ -> x :: insert loc_name c xs in
-    let rec aux_sort seen acc = function
-      | [] -> acc
-      | { Ast.Clause.attributes = { Ast.Structured.insertion = Some i }} as x :: xs ->
-          let x = compile_clause_attributes x in
-          aux_sort (add seen x) (insert i x acc) xs
-      | x :: xs ->
-          let x = compile_clause_attributes x in
-          aux_sort (add seen x) (x :: acc) xs
-    in
-    aux_sort StrMap.empty old_rev l
+let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} as c) timestamp =
+  { c with Ast.Clause.attributes = { Assembled.id; timestamp }}
 
   (* let shift_pp fmt ({ Data.Constants.c2s},s,{ Data.Constants.c2s = c2s2 }) =
     Format.fprintf fmt "{{ @[<hov 2>";
@@ -2173,22 +2136,22 @@ let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} 
     let map = C.Map.fold (fun k _ m -> add_indexing_for k None m) modes map in
     map, C.Map.union (fun _ _ _ -> assert false) map old_idx
      
-let compile_clause modes initial_depth (state, index)
-    { Ast.Clause.body = ({ amap = { nargs }} as body); loc; attributes }
+let compile_clause modes initial_depth (state, index, clauses)
+    ({ Ast.Clause.body = ({ amap = { nargs }} as body); loc; attributes } as c)
   =
   let state, body = stack_term_of_preterm ~depth:0 state body in
   let modes x = try fst @@ C.Map.find x modes with Not_found -> [] in
   let name = attributes.Ast.Structured.id in
   let (p,cl), _, morelcs =
-    try R.clausify1 ~loc ~modes ~nargs ~depth:initial_depth body
+    try R.CompileTime.clausify1 ~loc ~modes ~nargs ~depth:initial_depth body
     with D.CannotDeclareClauseForBuiltin(loc,c) ->
       error ?loc ("Declaring a clause for built in predicate " ^ Symbols.show state c)
     in
   if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
   let graft = attributes.Ast.Structured.insertion in
-  (* Printf.eprintf "adding clause from %s\n" (Loc.show loc); *)
-  let index = R.add_to_index ~depth:initial_depth ~predicate:p ~graft cl name index in
-  state, index
+   (* Printf.eprintf "adding clause from %s %s\n" (Loc.show loc) (Option.fold ~none:"" ~some:String.show name);  *)
+  let index = R.CompileTime.add_to_index ~depth:initial_depth ~predicate:p ~graft cl name index in
+  state, index, (compile_clause_attributes c cl.timestamp) :: clauses
 
 
 let assemble flags state code  (ul : compilation_unit list) =
@@ -2214,15 +2177,14 @@ let assemble flags state code  (ul : compilation_unit list) =
            error @@ "Some clauses for " ^ Symbols.show state predicate ^ " are already in the program, changing the indexing a posteriori is not allowed")
         new_indexing;
 
-      let index = R.update_indexing new_indexing index in
+      let index = R.CompileTime.update_indexing new_indexing index in
 
       let cl2 = filter_if flags clause_ifexpr cl2 in
       let cl2 = List.map (Spill.spill_clause state ~types ~modes:(fun c -> fst @@ C.Map.find c modes)) cl2 in
       let c2 = List.map (Spill.spill_chr state ~types ~modes:(fun c -> fst @@ C.Map.find c modes)) c2 in
-      let clauses = List.fold_left (fun l x -> Bl.rcons (compile_clause_attributes x) l) clauses cl2 in
   
-      let state, index =
-        List.fold_left (compile_clause modes local_names) (state,index) cl2 in
+      let state, index,clauses =
+        List.fold_left (compile_clause modes local_names) (state,index,clauses) cl2 in
       
       state, index, idx2, clauses, types, type_abbrevs, modes, c2 :: c1
     ) (state, code.Assembled.prolog_program, code.Assembled.indexing, code.clauses, code.Assembled.types, code.Assembled.type_abbrevs, code.Assembled.modes, []) ul in
@@ -2598,19 +2560,19 @@ let pp_program pp fmt {
     WithMain.clauses;
     initial_depth;
     compiler_state; } =
-  let clauses = clauses |> Bl.to_scan |> Bl.to_list in
+  let clauses = clauses |> List.sort (fun c1 c2 -> R.lex_insertion c1.Ast.Clause.attributes.Assembled.timestamp c2.Ast.Clause.attributes.Assembled.timestamp) in
   let compiler_state, clauses =
-    map_acc (fun state { Ast.Clause.body; loc } ->
+    map_acc (fun state { Ast.Clause.body; loc; attributes = { Assembled.id; timestamp } } ->
        let state, c = stack_term_of_preterm ~depth:initial_depth state body in
-       state, (c,loc))
+       state, (c,loc,id,timestamp))
     compiler_state clauses in
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
     table = Symbols.compile_table (State.get Symbols.table compiler_state);
   } in
   Format.fprintf fmt "@[<v>";
-  List.iter (fun (body,loc) ->
-    Format.fprintf fmt "%% %a.@;" Loc.pp loc;
+  List.iter (fun (body,loc,name,timestamp) ->
+    Format.fprintf fmt "@[<h>%% [%a] %a %a@]@;" Format.(pp_print_list ~pp_sep:(fun fmt () -> pp_print_string fmt "; ") pp_print_int) timestamp Loc.pp loc Format.(pp_print_option (fun fmt x -> pp_print_string fmt x)) name ;
     Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth) body)
     clauses;
   Format.fprintf fmt "@]"
@@ -2746,7 +2708,8 @@ let rec lam2forall = function
 
 let quote_syntax time new_state { WithMain.clauses; query; compiler_state } =
   let names = sorted_names_of_argmap query.amap in
-  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state (clauses |> Bl.to_scan |> Bl.to_list) in
+  let clauses = clauses |> List.sort (fun c1 c2 -> R.lex_insertion c1.Ast.Clause.attributes.Assembled.timestamp c2.Ast.Clause.attributes.Assembled.timestamp) in
+  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state clauses in
   let new_state, queryt = quote_preterm time ~on_type:false ~compiler_state new_state query in
   let q =
     App(clausec,CData (quote_loc ~id:"query" query.loc),
