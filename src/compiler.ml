@@ -718,7 +718,7 @@ end = struct (* {{{ *)
            | Some "Map" -> Some Map
            | Some "Hash" -> Some HashMap
            | Some "DTree" -> Some DiscriminationTree
-           | Some s -> error ~loc ("unknown indexing directive " ^ s) in
+           | Some s -> error ~loc ("unknown indexing directive " ^ s ^ ". Valid ones are: Map, Hash, DTree.") in
          begin match r with
            | None -> aux_tatt (Some (Structured.Index(i,it))) rest
            | Some (Structured.Index _) -> duplicate_err "index"
