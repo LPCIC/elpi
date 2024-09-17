@@ -58,6 +58,7 @@
 %token BEFORE
 %token AFTER
 %token REPLACE
+%token REMOVE
 %token NAME 
 %token INDEX 
 %token CONS

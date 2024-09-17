@@ -174,6 +174,15 @@ module Trie = struct
           map = map |> Ptmap.map (replace p x);
         }
 
+  let rec remove f = function
+    | Node { data; other; listTailVariable; map } ->
+        Node {
+          data = data |> List.filter (fun x -> not (f x));
+          other = other |> Option.map (remove f);
+          listTailVariable = listTailVariable |> Option.map (remove f);
+          map = map |> Ptmap.map (remove f);
+        }
+
   let add (a : Path.t) v t =
     let max = ref 0 in
     let rec ins ~pos = let x = Path.get a pos in function
@@ -392,6 +401,7 @@ let retrieve cmp_data path { t } =
   Bl.of_list @@ List.sort cmp_data r
 
 let replace p x i = { i with t = Trie.replace p x i.t }
+let remove keep dt = { dt with t = Trie.remove keep dt.t}
 
 module Internal = struct
   let kConstant = kConstant

@@ -668,6 +668,9 @@ end = struct (* {{{ *)
       | Replace s :: rest ->
           if r.insertion <> None then duplicate_err "insertion";
           aux_attrs { r with insertion = Some (Replace s) } rest
+      | Remove s :: rest ->
+          if r.insertion <> None then duplicate_err "insertion";
+          aux_attrs { r with insertion = Some (Remove s) } rest
       | If s :: rest ->
          if r.ifexpr <> None then duplicate_err "if";
          aux_attrs { r with ifexpr = Some s } rest
@@ -693,7 +696,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux_chr { r with cifexpr = Some s } rest
-      | (Before _ | After _ | Replace _ | External | Index _) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | External | Index _) as a :: _ -> illegal_err a 
     in
     let cid = Loc.show loc in 
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
@@ -724,7 +727,7 @@ end = struct (* {{{ *)
            | Some (Structured.Index _) -> duplicate_err "index"
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
-      | (Before _ | After _ | Replace _ | Name _ | If _) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _) as a :: _ -> illegal_err a 
     in
     let attributes = aux_tatt None attributes in
     let attributes =
@@ -2080,7 +2083,7 @@ module Assemble : sig
 end = struct (* {{{ *)
 
 let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} as c) =
-  { c with Ast.Clause.attributes = { Assembled.id }}
+  { c with attributes = { Assembled.id }}
 
   let sort_insertion ~old_rev ~extra:l =
     let add s { Ast.Clause.attributes = { Assembled.id }; loc } =
@@ -2096,18 +2099,19 @@ let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} 
       match l, loc_name with
       | [],_ -> error ~loc:c.Ast.Clause.loc ("unable to graft this clause: no clause named " ^
              match loc_name with
-             | Ast.Structured.Replace x -> x
-             | Ast.Structured.After x -> x
-             | Ast.Structured.Before x -> x)
-      | { Ast.Clause.attributes = { Assembled.id = Some n }} :: xs,
-        Ast.Structured.Replace name when n = name ->
-           c :: xs
-      | { Ast.Clause.attributes = { Assembled.id = Some n }} as x :: xs,
+             | Replace x | After x | Before x | Remove x -> x)
+      | { Ast.Clause.attributes = { Assembled.id = Some n }} as x :: xs, (* AFTER   *)
         Ast.Structured.After name when n = name ->
            c :: x :: xs
-      | { Ast.Clause.attributes = { Assembled.id = Some n }} as x :: xs,
-        Ast.Structured.Before name when n = name ->
+      | { attributes = { Assembled.id = Some n }} as x :: xs,            (* BEFORE  *)
+        Before name when n = name ->
            x :: c :: xs
+      | { attributes = { id = Some n }} :: xs,                           (* REPLACE *)
+        Replace name when n = name ->
+           c :: xs
+      | { attributes = { id = Some n }} :: xs,                           (* REMOVE  *)
+        Remove name when n = name ->
+           c :: xs
       | x :: xs, _ -> x :: insert loc_name c xs in
     let rec aux_sort seen acc = function
       | [] -> acc
@@ -2264,7 +2268,7 @@ let rec constants_of acc = function
 let w_symbol_table s f x =
   let table = Symbols.compile_table @@ State.get Symbols.table s in
   let pp_ctx = { table; uv_names = ref (IntMap.empty,0) } in
-  Util.set_spaghetti_printer Util.pp_const (R.Pp.pp_constant ~pp_ctx);
+  Util.set_spaghetti_printer pp_const (R.Pp.pp_constant ~pp_ctx);
   f x
 
 (* Compiler passes *)

@@ -1,0 +1,20 @@
+% CLASSIC INDEX
+pred p o:int.
+
+:name "p0" p 0.
+
+:remove "p0" p 1. % TODO: p 1 is not inserted. Should have another syntax....
+
+:index (10) 
+pred q o:int.
+
+:name "q0" q 0.
+
+:remove "q0" q 1. % TODO: same as before....
+
+
+main :- 
+  std.findall (p _) [],
+  std.findall (q _) [],
+  true
+  .

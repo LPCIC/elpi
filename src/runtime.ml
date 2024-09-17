@@ -2625,17 +2625,20 @@ let timestamp_clause clause times time graft =
   match graft with
   | None -> clause.timestamp <- [time]; []
   | Some (Elpi_parser.Ast.Structured.Before  x) -> let reference = reference x in clause.timestamp <- reference @ [-time]; reference
-  | Some (Elpi_parser.Ast.Structured.After   x) -> let reference = reference x in clause.timestamp <- reference @ [time]; reference
-  | Some (Elpi_parser.Ast.Structured.Replace x) -> clause.timestamp <- [time]; let reference = reference x in reference
+  | Some (After   x) -> let reference = reference x in clause.timestamp <- reference @ [time]; reference
+  | Some (Replace x) -> clause.timestamp <- [time]; let reference = reference x in reference
+  | Some (Remove x) -> let reference = reference x in reference
 
 let postpend graft reference clause clauses =
   match graft with
   | None -> Bl.rcons clause clauses
   | Some (Elpi_parser.Ast.Structured.Before _)
-  | Some (Elpi_parser.Ast.Structured.After _)   ->
+  | Some (After _)   ->
       Bl.insert (fun x -> lex_insertion x.timestamp clause.timestamp) clause clauses
-  | Some (Elpi_parser.Ast.Structured.Replace _) ->
+  | Some (Replace _) ->
       Bl.replace (fun x -> x.timestamp = reference) clause clauses
+  | Some (Remove _) -> (* TODO: in this case the clause is ignored... *)
+      Bl.remove (fun x -> x.timestamp = reference) clauses
 
 let add1clause2 ~depth ~insert ~empty ~copy m graft reference predicate clause = function
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx; } ->
@@ -2697,7 +2700,7 @@ let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ~copy 
   let grafting_reference = timestamp_clause clause times time graft in
   let times = (* TODO: do this only at compile time *)
       match graft with
-      | Some (Elpi_parser.Ast.Structured.Replace oid) -> StrMap.remove oid times
+      | Some (Replace oid) -> StrMap.remove oid times
       | _ -> times
   in
   let times =
@@ -2712,7 +2715,7 @@ let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ~copy 
     try
       (* TODO: do this only at compile time *)
       match graft with
-      | Some (Elpi_parser.Ast.Structured.Replace _) ->
+      | Some (Replace _) ->
           Ptmap.map (function
           | TwoLevelIndex {
             argno; mode;
@@ -2725,8 +2728,24 @@ let add1clause ~depth { idx; time; times } ~time_dir ~insert ~empty ~cons ~copy 
               flex_arg_clauses = insert graft grafting_reference clause flex_arg_clauses;
               arg_idx = Ptmap.map (fun l -> insert graft grafting_reference clause l) arg_idx;
               }
-          | BitHash { mode; args; args_idx } -> BitHash { mode; args; args_idx = Ptmap.map (fun l -> insert graft grafting_reference clause l) args_idx }
-          | IndexWithDiscriminationTree {mode; arg_depths; args_idx; } -> IndexWithDiscriminationTree {mode; arg_depths; args_idx = Discrimination_tree.replace (fun x -> x.timestamp = grafting_reference) clause args_idx; }
+          | BitHash hash -> BitHash { hash with args_idx = Ptmap.map (fun l -> insert graft grafting_reference clause l) hash.args_idx }
+          | IndexWithDiscriminationTree dt -> IndexWithDiscriminationTree {dt with args_idx = Discrimination_tree.replace (fun x -> x.timestamp = grafting_reference) clause dt.args_idx; }
+          ) idx
+      | Some (Remove _) ->
+          Ptmap.map (function
+          | TwoLevelIndex {
+            argno; mode;
+            all_clauses;
+            flex_arg_clauses;
+            arg_idx;
+            } -> TwoLevelIndex {
+              argno; mode;
+              all_clauses = insert graft grafting_reference clause all_clauses;
+              flex_arg_clauses = insert graft grafting_reference clause flex_arg_clauses;
+              arg_idx = Ptmap.map (fun l -> insert graft grafting_reference clause l) arg_idx;
+              }
+          | BitHash hash -> BitHash { hash with args_idx = Ptmap.map (fun l -> insert graft grafting_reference clause l) hash.args_idx }
+          | IndexWithDiscriminationTree dt -> IndexWithDiscriminationTree {dt with args_idx = Discrimination_tree.remove (fun x -> x.timestamp = grafting_reference) dt.args_idx; }
           ) idx
       | _ -> add1clause2 ~depth idx ~insert ~empty ~copy graft grafting_reference predicate clause (Ptmap.find predicate idx);
     with

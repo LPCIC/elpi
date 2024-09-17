@@ -88,6 +88,13 @@ module Array = struct
     in
       shift t (i+len-1)
 
+  let shift_left t i len =
+    let rec shift t j =
+      if j = len then t
+      else shift (set t j (get t (j+1))) (j + 1)
+    in
+      shift t i
+
   let rec length t = match !t with Diff(_,_,x) -> length x | Array a -> Array.length a
 
   let of_list l = ref @@ Array (Array.of_list l)
@@ -142,6 +149,18 @@ let rec replace f x = function
       let rec aux i =
         if i < len then
           if f data.(i) then BArray { len; data = Array.set data i x }
+          else aux (i+1)
+        else 
+          a (* bleah *)
+      in
+        aux 0
+let rec remove f = function
+  | BCons (head,tail) when f head -> tail
+  | BCons (head, tail) -> BCons (head, remove f tail)
+  | BArray { len; data } as a ->
+      let rec aux i =
+        if i < len then
+          if f data.(i) then BArray { len = len-1; data = Array.shift_left data i len }
           else aux (i+1)
         else 
           a (* bleah *)
