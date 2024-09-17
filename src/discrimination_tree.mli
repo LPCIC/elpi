@@ -51,7 +51,7 @@ val empty_dt : 'b list -> 'a t
 *)
 val retrieve : ('a -> 'a -> int) -> Path.t -> 'a t -> 'a Bl.scan
 
-val replace : ('a -> bool) -> 'a -> 'a t -> 'a t
+val remove : ('a -> bool) -> 'a t -> 'a t
 
 (***********************************************************)
 (* Printers                                                *)

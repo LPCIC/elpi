@@ -135,7 +135,7 @@ let to_mode = function true -> Input | false -> Output
 
 type grafting_time = int list
 [@@deriving show, ord]
-type times = grafting_time StrMap.t
+type times = (grafting_time * constant) StrMap.t
 [@@deriving show, ord]
 
 type stuck_goal = {

@@ -165,13 +165,13 @@ module Trie = struct
 
   let is_empty x = x == empty
 
-  let rec replace p x = function
+  let rec remove p = function
     | Node { data; other; listTailVariable; map } ->
         Node {
-          data = data |> List.map (fun y -> if p y then x else y);
-          other = other |> Option.map (replace p x);
-          listTailVariable = listTailVariable |> Option.map (replace p x);
-          map = map |> Ptmap.map (replace p x);
+          data = data |> List.filter (fun y -> not(p y));
+          other = other |> Option.map (remove p);
+          listTailVariable = listTailVariable |> Option.map (remove p);
+          map = map |> Ptmap.map (remove p);
         }
 
   let add (a : Path.t) v t =
@@ -391,7 +391,7 @@ let retrieve cmp_data path { t } =
   let r = call (retrieve ~pos:0 path t) in
   Bl.of_list @@ List.sort cmp_data r
 
-let replace p x i = { i with t = Trie.replace p x i.t }
+let remove p i = { i with t = Trie.remove p i.t }
 
 module Internal = struct
   let kConstant = kConstant

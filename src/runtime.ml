@@ -2725,14 +2725,14 @@ let add_clauses ~depth clauses idx =
 let add_clauses ~depth clauses clauses_src { index; src } =
   { index = add_clauses ~depth clauses index; src = List.rev clauses_src @ src }
 
-let add_to_times loc name time times =
+let add_to_times loc name time predicate times =
   match name with
   | None -> times
   | Some id ->
     if StrMap.mem id times then
       error ?loc ("duplicate clause name " ^ id)
     else
-      StrMap.add id time times
+      StrMap.add id (time,predicate) times
 
 let time_of loc x times =
   try StrMap.find x times
@@ -2740,23 +2740,23 @@ let time_of loc x times =
 
 let remove_from_times id times = StrMap.remove id times
     
-let replace_clause_in_snd_lvl_idx p clause = function
+let remove_clause_in_snd_lvl_idx p = function
 | TwoLevelIndex { argno; mode; all_clauses; flex_arg_clauses; arg_idx; } ->
   TwoLevelIndex {
     argno; mode;
-    all_clauses = Bl.replace p clause all_clauses;
-    flex_arg_clauses = Bl.replace p clause flex_arg_clauses;
-    arg_idx = Ptmap.map (Bl.replace p clause) arg_idx;
+    all_clauses = Bl.remove p all_clauses;
+    flex_arg_clauses = Bl.remove p flex_arg_clauses;
+    arg_idx = Ptmap.map (Bl.remove p) arg_idx;
    }
 | BitHash { mode; args; args_idx } ->
   BitHash {
     mode; args;
-    args_idx = Ptmap.map (Bl.replace p clause) args_idx
+    args_idx = Ptmap.map (Bl.remove p) args_idx
   }
 | IndexWithDiscriminationTree {mode; arg_depths; args_idx; } ->
   IndexWithDiscriminationTree {
     mode; arg_depths;
-    args_idx = Discrimination_tree.replace p clause args_idx;
+    args_idx = Discrimination_tree.remove p args_idx;
   }
 
 let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate clause name =
@@ -2766,23 +2766,25 @@ let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate cla
     match graft with
     | None ->
         let timestamp = [time] in
-        let times = add_to_times clause.loc name timestamp times in
+        let times = add_to_times clause.loc name timestamp predicate times in
         clause.timestamp <- timestamp;
         let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.rcons predicate clause snd_lvl_idx in
         { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
     | Some (Ast.Structured.Replace x) ->
-        let timestamp = [time] in
-        let reference = time_of clause.loc x times in
+        let reference, predicate1 = time_of clause.loc x times in
+        if predicate1 <> predicate then
+          error ?loc:clause.loc ("cannot replace a clause for another predicate");
         let times = remove_from_times x times in
-        clause.timestamp <- timestamp;
-        let snd_lvl_idx = replace_clause_in_snd_lvl_idx (fun x -> x.timestamp = reference) clause snd_lvl_idx in
+        clause.timestamp <- reference;
+        let snd_lvl_idx = remove_clause_in_snd_lvl_idx (fun x -> x.timestamp = reference) snd_lvl_idx in
+        let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.(insert (fun x -> lex_insertion x.timestamp reference)) predicate clause snd_lvl_idx in
         { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
     | Some (Ast.Structured.Insert gr) ->
         let timestamp =
           match gr with
-          | Ast.Structured.Before x -> time_of clause.loc x times @ [-time]
-          | Ast.Structured.After x  -> time_of clause.loc x times @ [+time] in
-        let times = add_to_times clause.loc name timestamp times in
+          | Ast.Structured.Before x -> (fst @@ time_of clause.loc x times) @ [-time]
+          | Ast.Structured.After x  -> (fst @@ time_of clause.loc x times) @ [+time] in
+        let times = add_to_times clause.loc name timestamp predicate times in
         clause.timestamp <- timestamp;
         let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.(insert (fun x -> lex_insertion x.timestamp timestamp)) predicate clause snd_lvl_idx in
         { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
