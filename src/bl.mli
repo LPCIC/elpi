@@ -19,7 +19,7 @@ val rcons : 'a -> 'a t -> 'a t
 (* O(n) space and time *)
 val copy : 'a t -> 'a t
 
-(* These 3 are O(n) time, O(1) space. The test must succeed once *)
+(* These 2 are O(n) time, O(1) space. The test must succeed once *)
 val replace : ('a -> bool) -> 'a -> 'a t -> 'a t
 val insert : ('a -> int) -> 'a -> 'a t -> 'a t
 

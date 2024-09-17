@@ -2626,7 +2626,7 @@ let timestamp_clause clause times time graft =
   | None -> clause.timestamp <- [time]; []
   | Some (Elpi_parser.Ast.Structured.Before  x) -> let reference = reference x in clause.timestamp <- reference @ [-time]; reference
   | Some (Elpi_parser.Ast.Structured.After   x) -> let reference = reference x in clause.timestamp <- reference @ [time]; reference
-  | Some (Elpi_parser.Ast.Structured.Replace x) -> let reference = reference x in reference
+  | Some (Elpi_parser.Ast.Structured.Replace x) -> clause.timestamp <- [time]; let reference = reference x in reference
 
 let postpend graft reference clause clauses =
   match graft with
