@@ -358,24 +358,28 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   @ [
 
   LPCode "type (<), (>), (=<), (>=) A -> A -> prop.";
+  LPCode "mode ((<) i i). mode ((>) i i). mode ((=<) i i). mode ((>=) i i). ";
   LPCode "X  > Y  :- gt_ X Y.";
   LPCode "X  < Y  :- lt_ X Y.";
   LPCode "X  =< Y :- le_ X Y.";
   LPCode "X  >= Y :- ge_ X Y.";
 
   LPCode "type (i<), (i>), (i=<), (i>=) int -> int -> prop.";
+  LPCode "mode ((i<) i i). mode ((i>) i i). mode ((i=<) i i). mode ((i>=) i i). ";
   LPCode "X i< Y  :- lt_ X Y.";
   LPCode "X i> Y  :- gt_ X Y.";
   LPCode "X i=< Y :- le_ X Y.";
   LPCode "X i>= Y :- ge_ X Y.";
 
   LPCode "type (r<), (r>), (r=<), (r>=) float -> float -> prop.";
+  LPCode "mode ((r<) i i). mode ((r>) i i). mode ((r=<) i i). mode ((r>=) i i). ";
   LPCode "X r< Y  :- lt_ X Y.";
   LPCode "X r> Y  :- gt_ X Y.";
   LPCode "X r=< Y :- le_ X Y.";
   LPCode "X r>= Y :- ge_ X Y.";
 
   LPCode "type (s<), (s>), (s=<), (s>=) string -> string -> prop.";
+  LPCode "mode ((s<) i i). mode ((s>) i i). mode ((s=<) i i). mode ((s>=) i i). ";
   LPCode "X s< Y  :- lt_ X Y.";
   LPCode "X s> Y  :- gt_ X Y.";
   LPCode "X s=< Y :- le_ X Y.";

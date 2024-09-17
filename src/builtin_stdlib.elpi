@@ -135,6 +135,8 @@ map [X|XS] F [Y|YS] :- F X Y, map XS F YS.
 
 pred map-i i:list A, i:(int -> A -> B -> prop), o:list B.
 map-i L F R :- map-i.aux L 0 F R.
+
+pred map-i.aux i:list A, i:int, i:(int -> A -> B -> prop), o:list B.
 map-i.aux [] _ _ [].
 map-i.aux [X|XS] N F [Y|YS] :- F N X Y, M is N + 1, map-i.aux XS M F YS.
 
@@ -243,8 +245,10 @@ null [].
 
 pred iota i:int, o:list int.
 iota N L :- iota.aux 0 N L.
+
+pred iota.aux i:int, i:int, o:list int.
 iota.aux X X [] :- !.
-iota.aux N X [N|R] :- M is N + 1, iota.aux M X R.
+iota.aux N X [N|R] :- std.spy(M is N + 1), iota.aux M X R.
 
 % [intersperse X L R] R is [L0, X, ..., X, LN]
 :index(_ 1)

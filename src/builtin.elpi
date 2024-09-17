@@ -172,6 +172,8 @@ external pred ge_ i:A, i:A.
 
 type (<), (>), (=<), (>=) A -> A -> prop.
 
+mode ((<) i i). mode ((>) i i). mode ((=<) i i). mode ((>=) i i). 
+
 X  > Y  :- gt_ X Y.
 
 X  < Y  :- lt_ X Y.
@@ -181,6 +183,8 @@ X  =< Y :- le_ X Y.
 X  >= Y :- ge_ X Y.
 
 type (i<), (i>), (i=<), (i>=) int -> int -> prop.
+
+mode ((i<) i i). mode ((i>) i i). mode ((i=<) i i). mode ((i>=) i i). 
 
 X i< Y  :- lt_ X Y.
 
@@ -192,6 +196,8 @@ X i>= Y :- ge_ X Y.
 
 type (r<), (r>), (r=<), (r>=) float -> float -> prop.
 
+mode ((r<) i i). mode ((r>) i i). mode ((r=<) i i). mode ((r>=) i i). 
+
 X r< Y  :- lt_ X Y.
 
 X r> Y  :- gt_ X Y.
@@ -201,6 +207,8 @@ X r=< Y :- le_ X Y.
 X r>= Y :- ge_ X Y.
 
 type (s<), (s>), (s=<), (s>=) string -> string -> prop.
+
+mode ((s<) i i). mode ((s>) i i). mode ((s=<) i i). mode ((s>=) i i). 
 
 X s< Y  :- lt_ X Y.
 
@@ -660,6 +668,8 @@ map [X|XS] F [Y|YS] :- F X Y, map XS F YS.
 
 pred map-i i:list A, i:(int -> A -> B -> prop), o:list B.
 map-i L F R :- map-i.aux L 0 F R.
+
+pred map-i.aux i:list A, i:int, i:(int -> A -> B -> prop), o:list B.
 map-i.aux [] _ _ [].
 map-i.aux [X|XS] N F [Y|YS] :- F N X Y, M is N + 1, map-i.aux XS M F YS.
 
