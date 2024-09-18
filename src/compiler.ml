@@ -577,6 +577,7 @@ type program = {
 and attribute = {
   id : string option;
   timestamp : grafting_time;
+  insertion : Ast.Structured.insertion option;
 }
 [@@deriving show]
 
@@ -2086,8 +2087,8 @@ module Assemble : sig
 
 end = struct (* {{{ *)
 
-let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} as c) timestamp =
-  { c with Ast.Clause.attributes = { Assembled.id; timestamp }}
+let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} as c) timestamp insertion =
+  { c with Ast.Clause.attributes = { Assembled.id; timestamp; insertion }}
 
   (* let shift_pp fmt ({ Data.Constants.c2s},s,{ Data.Constants.c2s = c2s2 }) =
     Format.fprintf fmt "{{ @[<hov 2>";
@@ -2157,7 +2158,7 @@ let compile_clause modes initial_depth (state, index, clauses)
   let graft = attributes.Ast.Structured.insertion in
    (* Printf.eprintf "adding clause from %s %s\n" (Loc.show loc) (Option.fold ~none:"" ~some:String.show name);  *)
   let index = R.CompileTime.add_to_index ~depth:initial_depth ~predicate:p ~graft cl name index in
-  state, index, (compile_clause_attributes c cl.timestamp) :: clauses
+  state, index, (compile_clause_attributes c cl.timestamp graft) :: clauses
 
 
 let assemble flags state code  (ul : compilation_unit list) =
@@ -2562,11 +2563,23 @@ end (* }}} *)
 
 let optimize_query = Compiler.run
 
+let removals l =
+  l |> List.filter_map (fun c -> match c.Ast.Clause.attributes.Assembled.insertion with Some (Remove x) -> Some x | Some (Replace x) -> Some x| _ -> None)
+
+let handle_clause_graftin clauses =
+  let clauses = clauses |> List.sort (fun c1 c2 -> R.lex_insertion c1.Ast.Clause.attributes.Assembled.timestamp c2.Ast.Clause.attributes.Assembled.timestamp) in
+  let removals = removals clauses in
+  let clauses = clauses |> List.filter (fun c -> let id = c.Ast.Clause.attributes.Assembled.id in id = None || not(List.exists (fun x -> id = Some x) removals)) in
+  let clauses = clauses |> List.filter (fun c -> match c.Ast.Clause.attributes.Assembled.insertion with Some (Remove _) -> false | _ -> true) in
+  clauses
+
 let pp_program pp fmt {
     WithMain.clauses;
     initial_depth;
     compiler_state; } =
-  let clauses = clauses |> List.sort (fun c1 c2 -> R.lex_insertion c1.Ast.Clause.attributes.Assembled.timestamp c2.Ast.Clause.attributes.Assembled.timestamp) in
+
+  let clauses = handle_clause_graftin clauses in
+
   let compiler_state, clauses =
     map_acc (fun state { Ast.Clause.body; loc; attributes = { Assembled.id; timestamp } } ->
        let state, c = stack_term_of_preterm ~depth:initial_depth state body in
@@ -2714,7 +2727,7 @@ let rec lam2forall = function
 
 let quote_syntax time new_state { WithMain.clauses; query; compiler_state } =
   let names = sorted_names_of_argmap query.amap in
-  let clauses = clauses |> List.sort (fun c1 c2 -> R.lex_insertion c1.Ast.Clause.attributes.Assembled.timestamp c2.Ast.Clause.attributes.Assembled.timestamp) in
+  let clauses = handle_clause_graftin clauses in
   let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state clauses in
   let new_state, queryt = quote_preterm time ~on_type:false ~compiler_state new_state query in
   let q =
