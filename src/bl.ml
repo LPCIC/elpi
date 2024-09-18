@@ -2,20 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-(*
-build: bl=0.517913 l=0.583841        
-scan: bl=0.025057 l=0.020488
-
-base: 0.011125                       
-extend: 1.322639
-query: 0.000045
-optimize: 0.000187
-ok
-exec: 0.000044
-*)
-
 module Array = struct
-
+  (* Main code taken from OCaml-bazaar, Library General
+     Public License version 2. *)
   type 'a t = 'a data ref
 
   and 'a data =
@@ -50,13 +39,6 @@ module Array = struct
   
   let reroot t = rerootk t (fun () -> ())
 
-  let extend len t a =
-    let data = reroot t; match ! t with Array x -> x | Diff _ -> assert false in
-    let newdata = Array.make (2*(max 1 len)) a in
-    if len > 0 then
-      Array.blit data 0 newdata 0 len;
-    ref @@ Array newdata
-
   let get t i =
     match !t with
     | Array a ->
@@ -81,6 +63,15 @@ module Array = struct
     | Diff _ ->
         assert false
 
+  (* New code, all bugs are mine ;-) *)
+  let extend len t a =
+    let data = reroot t; match ! t with Array x -> x | Diff _ -> assert false in
+    let newdata = Array.make (2*(max 1 len)) a in
+    if len > 0 then
+      Array.blit data 0 newdata 0 len;
+    ref @@ Array newdata
+      
+      
   let shift_right t i len =
     let rec shift t j =
       if j < i then t
@@ -104,25 +95,6 @@ type 'a t =
   | BArray of { len : int; data : 'a Array.t }
   | BCons of 'a * 'a t
   [@@deriving show]
-
-  (* | UndoRcons of { old_tail : 'a data; next : 'a t }
-  | UndoInsert of { old_before : 'a data; old_after : 'a data; next : 'a t } *)
-(* and 'a t = 'a data ref *)
-
-let pp_pointer fmt x = Format.fprintf fmt "%x" (Obj.magic x land 0xffffff)
-(* let rec pp pp_a fmt = function
-  | BArray -> Format.fprintf fmt "[]"
-  | BCons { head; tail; last } as x ->
-      Format.fprintf fmt "[self %a, tail %a, last %a] %a :: "
-        pp_pointer x
-        pp_pointer tail
-        pp_pointer last
-        pp_a head;
-      pp pp_a fmt tail *)
-  (* | UndoRcons { old_tail; next } -> Format.fprintf fmt "UndoRcons %a :: " pp_pointer old_tail ; pp pp_a fmt next
-  | UndoInsert { old_before; old_after; next } -> Format.fprintf fmt "UndoInsert %a - %a :: " pp_pointer old_before pp_pointer old_after; pp pp_a fmt next *)
-
-(* let show pp_a x = Format.asprintf "%a" (pp pp_a) x *)
 
 let empty () = BArray { len = 0; data = Array.empty () }
 
@@ -190,15 +162,6 @@ let rec insert f x = function
     in
       aux 0
           
-let rec commit = function
-  | BCons(x,xs) -> x :: commit xs
-  | BArray { len; data } ->
-      let[@tail_mod_cons] rec aux i =
-        if i = len then []
-        else data.(i) :: aux (i+1)
-      in
-        aux 0
-
 type 'a scan = 'a t * int
 let to_scan x = x, 0
 let is_empty (x,n) =
@@ -211,16 +174,19 @@ let next (x,n) =
   | BArray { len; data } -> assert(n < len); data.(n), (x,n+1)
   | BCons (a,xs) -> a, (xs,n)
 
+let(*[@tail_mod_cons]*) rec to_list_aux i len data =
+  if i = len then []
+  else data.(i) :: to_list_aux (i+1) len data
+
+let rec to_list = function
+  | BCons(x,xs) -> x :: to_list xs
+  | BArray { len; data } -> to_list_aux 0 len data
+
 let to_list (x,n) =
-  if n = 0 then commit x else
+  if n = 0 then to_list x else
   match x with
   | BCons _ -> assert false
-  | BArray { len; data } ->
-    let[@tail_mod_cons] rec aux i =
-      if i = len then []
-      else data.(i) :: aux (i+1)
-    in
-    aux n
+  | BArray { len; data } -> to_list_aux n len data
 
 let of_list l = let data = Array.of_list l in BArray { len = Array.length data; data }, 0
 
