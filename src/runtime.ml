@@ -4235,10 +4235,6 @@ end;*)
   set FFI.builtins builtins;
   set rid !max_runtime_id;
   let search = exec (fun () ->
-    (* let o = open_out "/tmp/log" in
-     let fmt = Format.formatter_of_out_channel o in
-    Format.fprintf fmt "%a\n%!" pp_index compiled_program.index;
-    close_out o; *)
      [%spy "dev:trail:init" ~rid (fun fmt () -> T.print_trail fmt) ()];
      let gid[@trace] = UUID.make () in
      [%spy "user:newgoal" ~rid ~gid (uppterm initial_depth [] ~argsdepth:0 empty_env) initial_goal];
