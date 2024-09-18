@@ -143,6 +143,7 @@ type raw_attribute =
   | After of string
   | Before of string
   | Replace of string
+  | Remove of string
   | External
   | Index of int list * string option
 [@@deriving show]
@@ -318,7 +319,7 @@ and attribute = {
   id : string option;
   ifexpr : string option;
 }
-and insertion = Insert of insertion_place | Replace of string
+and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string
 and tattribute =
   | External

@@ -655,6 +655,8 @@ end = struct (* {{{ *)
       error ~loc ("illegal attribute " ^ show_raw_attribute a) in
     let illegal_replace s =
       error ~loc ("replacing clause for "^ s ^" cannot have a name attribute") in
+    let illegal_remove_id s =
+      error ~loc ("remove clause for "^ s ^" cannot have a name attribute") in
     let rec aux_attrs r = function
       | [] -> r
       | Name s :: rest ->
@@ -669,6 +671,9 @@ end = struct (* {{{ *)
       | Replace s :: rest ->
           if r.insertion <> None then duplicate_err "insertion";
           aux_attrs { r with insertion = Some (Replace s) } rest
+      | Remove s :: rest ->
+          if r.insertion <> None then duplicate_err "insertion";
+          aux_attrs { r with insertion = Some (Remove s) } rest
       | If s :: rest ->
          if r.ifexpr <> None then duplicate_err "if";
          aux_attrs { r with ifexpr = Some s } rest
@@ -678,6 +683,7 @@ end = struct (* {{{ *)
     begin
       match attributes.insertion, attributes.id with
       | Some (Replace x), Some _ -> illegal_replace x
+      | Some (Remove x), Some _ -> illegal_remove_id x
       | _ -> ()
     end;
     { c with Clause.attributes }
@@ -694,7 +700,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux_chr { r with cifexpr = Some s } rest
-      | (Before _ | After _ | Replace _ | External | Index _) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | External | Index _) as a :: _ -> illegal_err a 
     in
     let cid = Loc.show loc in 
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
@@ -725,7 +731,7 @@ end = struct (* {{{ *)
            | Some (Structured.Index _) -> duplicate_err "index"
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
-      | (Before _ | After _ | Replace _ | Name _ | If _) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _) as a :: _ -> illegal_err a 
     in
     let attributes = aux_tatt None attributes in
     let attributes =
@@ -2225,7 +2231,7 @@ let rec constants_of acc = function
 let w_symbol_table s f x =
   let table = Symbols.compile_table @@ State.get Symbols.table s in
   let pp_ctx = { table; uv_names = ref (IntMap.empty,0) } in
-  Util.set_spaghetti_printer Data.pp_const (R.Pp.pp_constant ~pp_ctx);
+  Util.set_spaghetti_printer pp_const (R.Pp.pp_constant ~pp_ctx);
   f x
 
 (* Compiler passes *)

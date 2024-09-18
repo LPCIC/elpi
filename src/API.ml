@@ -1381,6 +1381,7 @@ module Utils = struct
         | Some (`After,x) -> [After x]
         | Some (`Before,x) -> [Before x]
         | Some (`Replace,x) -> [Replace x]
+        | Some (`Remove,x) -> [Remove x]
         | None -> []) in
     [Program.Clause {
       Clause.loc = loc;

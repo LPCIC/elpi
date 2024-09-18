@@ -2770,6 +2770,14 @@ let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate cla
         clause.timestamp <- timestamp;
         let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.rcons predicate clause snd_lvl_idx in
         { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
+    | Some (Ast.Structured.Remove x) ->
+        let reference, predicate1 = time_of clause.loc x times in
+        if predicate1 <> predicate then
+          error ?loc:clause.loc ("cannot remove a clause for another predicate");
+        let times = remove_from_times x times in
+        clause.timestamp <- reference;
+        let snd_lvl_idx = remove_clause_in_snd_lvl_idx (fun x -> x.timestamp = reference) snd_lvl_idx in
+        { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
     | Some (Ast.Structured.Replace x) ->
         let reference, predicate1 = time_of clause.loc x times in
         if predicate1 <> predicate then
