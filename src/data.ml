@@ -159,21 +159,21 @@ and prolog_prog = {
 
 (* These two are the same, but the latter should not be mutated *)
 
-and preindex = clause Bl.t first_lvl_idx
-and index = clause Bl.t first_lvl_idx
-and 'clause_list first_lvl_idx = { idx : 'clause_list second_lvl_idx Ptmap.t; time : int; times : times }
-and 'clause_list second_lvl_idx =
+and clause_list = clause Bl.t
+and index = first_lvl_idx
+and first_lvl_idx = { idx : second_lvl_idx Ptmap.t; time : int; times : times }
+and second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
     argno : int;
-    all_clauses : 'clause_list;        (* when the query is flexible *)
-    flex_arg_clauses : 'clause_list;   (* when the query is rigid but arg_id ha nothing *)
-    arg_idx : 'clause_list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+    all_clauses : clause_list;        (* when the query is flexible *)
+    flex_arg_clauses : clause_list;   (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : clause_list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
     mode : mode;
     args : int list;
-    args_idx : 'clause_list Ptmap.t; (* clause, insertion time *)
+    args_idx : clause_list Ptmap.t; (* clause, insertion time *)
   }
 | IndexWithDiscriminationTree of {
     mode : mode;
@@ -183,7 +183,7 @@ and 'clause_list second_lvl_idx =
 [@@deriving show]
 
 let stop = ref false
-let close_index ({idx; time; times} : preindex) : index =
+let close_index ({idx; time; times} : index) : index =
   { idx =idx; time = 0; times = StrMap.empty }
 
 type constraints = stuck_goal list

@@ -2800,7 +2800,7 @@ let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate cla
       let idx = Ptmap.add predicate (make_new_Map_snd_level_index 0 []) idx in
       add1clause_compile_time ~depth { idx; time; times } ~graft predicate clause name
 
-let update_indexing (indexing : (mode * indexing) Constants.Map.t) (index : preindex) : preindex =
+let update_indexing (indexing : (mode * indexing) Constants.Map.t) (index : index) : index =
   let idx =
     C.Map.fold (fun predicate (mode, indexing) m ->
       Ptmap.add predicate 
@@ -2820,7 +2820,7 @@ let update_indexing (indexing : (mode * indexing) Constants.Map.t) (index : prei
     in
       { index with idx }
 
-let add_to_index ~depth ~predicate ~graft clause name index : preindex =
+let add_to_index ~depth ~predicate ~graft clause name index : index =
   add1clause_compile_time ~depth ~graft index predicate clause name
 
 let make_empty_index ~depth ~indexing =
@@ -4237,7 +4237,7 @@ end;*)
   let search = exec (fun () ->
     (* let o = open_out "/tmp/log" in
      let fmt = Format.formatter_of_out_channel o in
-    Format.fprintf fmt "%a\n%!" pp_preindex compiled_program.index;
+    Format.fprintf fmt "%a\n%!" pp_index compiled_program.index;
     close_out o; *)
      [%spy "dev:trail:init" ~rid (fun fmt () -> T.print_trail fmt) ()];
      let gid[@trace] = UUID.make () in

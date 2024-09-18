@@ -74,14 +74,14 @@ module CompileTime : sig
   (* updates how predicates are indexed *)
   val update_indexing :
     (mode * indexing) Constants.Map.t ->
-      preindex -> preindex
+      index -> index
 
   (* adds 1 clause to its index *)
   val add_to_index :
     depth:int ->
     predicate:constant ->
     graft:Elpi_parser.Ast.Structured.insertion option ->
-    clause -> string option -> preindex -> preindex
+    clause -> string option -> index -> index
 
   (* can raise CannotDeclareClauseForBuiltin *)
   val clausify1 :

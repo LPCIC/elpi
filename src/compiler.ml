@@ -567,7 +567,7 @@ type program = {
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   clauses : (preterm,attribute) Ast.Clause.t list;
-  prolog_program : preindex;
+  prolog_program : index;
   indexing : (mode * indexing) C.Map.t;
   chr : block_constraint list;
   local_names : int;
@@ -615,7 +615,7 @@ type 'a query = {
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
   clauses : (preterm,Assembled.attribute) Ast.Clause.t list;
-  prolog_program : preindex;
+  prolog_program : index;
   chr : block_constraint list;
   initial_depth : int;
   query : preterm;
