@@ -42,3 +42,21 @@ let () = declare "sepcomp6"
   ~expectation:Test.(SuccessOutput (Str.regexp "ok"))
   ()
 
+  let () = declare "sepcomp7"
+  ~source_dune:"sepcomp7.ml"
+  ~description:"separate compilation different processes, with remove (step 1)"
+  ~expectation:Test.Success
+  ()
+
+  let () = declare "sepcomp8"
+  ~source_dune:"sepcomp8.ml"
+  ~description:"separate compilation different processes, with remove (step 2)"
+  ~expectation:Test.Success
+  ()
+
+  let () = declare "sepcomp9"
+  ~source_dune:"sepcomp9.ml"
+  ~description:"separate compilation different processes, with remove (step 3)"
+  ~expectation:Test.Success
+  ()
+
