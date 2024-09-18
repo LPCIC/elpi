@@ -161,7 +161,11 @@ and prolog_prog = {
 
 and clause_list = clause Bl.t
 and index = first_lvl_idx
-and first_lvl_idx = { idx : second_lvl_idx Ptmap.t; time : int; times : times }
+and first_lvl_idx = {
+  idx : second_lvl_idx Ptmap.t;
+  time : int; (* ticking clock, to timestamp clauses so to recover total order after retrieval if necessary. positive at compile time, negative at run time *)
+  times : times; (* timestamp of named clauses, for grafting at compile time *)
+}
 and second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
