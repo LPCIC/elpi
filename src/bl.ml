@@ -138,7 +138,7 @@ let rec remove f = function
         aux 0
 
 let rec insert f x = function
-  | BCons (head, tail) when f head <= 0 -> BCons (head, BCons(x,tail))
+  | BCons (head, tail) when f head > 0 -> BCons (head, BCons(x,tail))
   | BCons (head, tail) -> BCons (head, insert f x tail)
   | BArray { len; data } ->
     let rec aux i =
@@ -174,19 +174,24 @@ let next (x,n) =
   | BArray { len; data } -> assert(n < len); data.(n), (x,n+1)
   | BCons (a,xs) -> a, (xs,n)
 
-let(*[@tail_mod_cons]*) rec to_list_aux i len data =
+(* ocaml >= 4.14
+let[@tail_mod_cons] rec to_list_aux i len data =
   if i = len then []
-  else data.(i) :: to_list_aux (i+1) len data
+  else data.(i) :: to_list_aux (i+1) len data *)
+
+let rec to_list_aux i len data acc =
+  if i = len then List.rev acc
+  else to_list_aux (i+1) len data (data.(i) :: acc)
 
 let rec to_list = function
   | BCons(x,xs) -> x :: to_list xs
-  | BArray { len; data } -> to_list_aux 0 len data
+  | BArray { len; data } -> to_list_aux 0 len data []
 
 let to_list (x,n) =
   if n = 0 then to_list x else
   match x with
   | BCons _ -> assert false
-  | BArray { len; data } -> to_list_aux n len data
+  | BArray { len; data } -> to_list_aux n len data []
 
 let of_list l = let data = Array.of_list l in BArray { len = Array.length data; data }, 0
 
