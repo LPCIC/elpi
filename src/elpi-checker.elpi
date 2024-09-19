@@ -31,6 +31,7 @@ mode (error i o).
 :name "default-typechecking-error"
 error Msg tt :- std.forall Msg (x\ sigma L M\ fst x L, snd x M, print L "Error:" M).
 
+mode (warning i i).
 type warning (ctype "Loc.t") -> string -> prop.
 :name "default-typechecking-warning"
 warning Loc Msg :- print Loc "Warning:" Msg.
@@ -177,6 +178,7 @@ refresh (forall F) T :- !, refresh (F FRESH_) T.
 refresh (tconst "any") FRESH_ :- !.
 refresh X X.
 
+% mode (safe-dest-app i o o).
 safe-dest-app (app [X | A]) X A :- !.
 safe-dest-app X X [].
 
@@ -364,7 +366,9 @@ compile-type-abbreviations [(S `:= T)|TS] [Clause|Clauses] :-
   type->ppt-clause S [] T Clause,
   compile-type-abbreviations TS Clauses.
 
-to-constant V :- V = cdata "0".
+macro @rigid-term :- (cdata "rigid-term").
+
+to-constant V :- V = @rigid-term.
 
 mode (to-rigid-term i).
 to-rigid-term N :- name N, !.
@@ -376,54 +380,84 @@ to-rigid-term (lam F) :- !, pi x\ to-rigid-term (F x).
 to-rigid-term (const _) :- !.
 to-rigid-term A :- halt "Error in to-rigid-term" A.
 
+mode (is-rigid-term i).
+is-rigid-term N :- name N, !.
+is-rigid-term V :- var V, !, fail.
+is-rigid-term (cdata (uvar _ as V)) :- !, to-constant V.
+is-rigid-term (cdata _) :- !.
+is-rigid-term (app L) :- !, std.forall L is-rigid-term.
+is-rigid-term (lam F) :- !, pi x\ is-rigid-term (F x).
+is-rigid-term (const _) :- !.
+is-rigid-term A :- halt "Error in is-rigid-term" A.
+
 mode (build-mode i o).
 build-mode L R :- std.map L (x\r\ r = false) R.
 
-mode (find-mode i i i o).
-find-mode [] X _ _ :- fatal-no-mode, halt "Check-well-modes-negative: no mode for" X.
-find-mode [] X Args R :- !, print "No mode for" X, build-mode Args R.
-find-mode [pr X R|_] X _ R :- !.
-find-mode [_ | Xs] X Args R :- !, find-mode Xs X Args R.
+pred add-no-modes o:list A, i:A.
+add-no-modes X T :- var X, !, X = [T|Y_], print "No mode for" T.
+add-no-modes [X|_] Y :- not (var X), X = Y, !.
+add-no-modes [X|Xs] T :- var Xs, !, print "No mode for" X, Xs = [T|Y_].
+add-no-modes [_|Xs] T :- !, add-no-modes Xs T.
 
-mode (set-head-mode i i i).
-set-head-mode Head Args AllModes :-
-  find-mode AllModes Head Args Mode, !, 
+mode (find-mode i i i i o).
+find-mode [] NoModesz_ X _ _ :- fatal-no-mode, halt "Check-well-modes-negative: no mode for" X.
+find-mode [] NoModes X Args R :- !, add-no-modes NoModes X, build-mode Args R .
+find-mode [pr X R|_] _ X _ R :- !.
+find-mode [_ | Xs] NoModes X Args R :- !, find-mode Xs NoModes X Args R.
+
+mode (set-head-mode i i i i).
+set-head-mode NoModes Head Args AllModes :-
+  find-mode AllModes NoModes Head Args Mode, !,
   std.forall2 Mode Args (m\t\ if m (to-rigid-term t) true).
-set-head-mode _ _ _.
+set-head-mode _ _ _ _.
+
+mode (check-head-output i i i i i).
+check-head-output NoModes Head Args AllModes Loc :-
+  find-mode AllModes NoModes Head Args Mode, !, 
+  std.forall2 Mode Args (m\t\ 
+    if m true (if (is-rigid-term t) true (print "There is an output of\"" Head "\"that is not rigid" Args Loc))).
+check-head-output _ _ _ _ _.
 
 mode (variadic-mode i).
 variadic-mode (const "halt").
 variadic-mode (const "print").
 
 mode (is-ho-predicate i).
-is-ho-predicate (cdata "0").
+is-ho-predicate (@rigid-term).
 
-mode (check-well-modes-negative i i i).
-check-well-modes-negative _ _        N :- name N, !.
-check-well-modes-negative _ _        V :- var V, !, to-constant V.
-check-well-modes-negative _ _        (cdata (uvar _ as V)) :- !, to-constant V.
-check-well-modes-negative _ _        (cdata _) :- !.
-check-well-modes-negative AllModes Loc (app [const "," | L]) :- !,
-  std.forall L (x\ if (var x) (halt "Passed flexible to ,") (check-well-modes-negative AllModes Loc x)).
-check-well-modes-negative AllModes Loc (app [const "pi", lam B]) :- !,
-  pi x\ check-well-modes-negative AllModes Loc (B x).
-check-well-modes-negative AllModes Loc (app [const "=>", Hyp, Body]) :- !,
-  print "Going to check the positive term" Hyp,
-  check-well-moded-positive Hyp AllModes Loc,
-  check-well-modes-negative AllModes Loc Body.
-check-well-modes-negative _ _ (app [HD|_]) :- variadic-mode HD, !.
-check-well-modes-negative AllModes Loc (app [HD|Args]) :- !,
-  find-mode AllModes HD Args Mode,
+pred map-var o:A, i:string, o:prop.
+map-var V S R :- var V, !, R = (get-str X S :- X == V).
+
+pred get-str o:A, o:string.
+
+mode (check-well-modes-negative i i i i).
+check-well-modes-negative _ _ _        N :- name N, !.
+% check-well-modes-negative _ _ _        V :- var V, !, to-constant V.
+check-well-modes-negative _ _ _        (cdata (uvar _ as V)) :- !, to-constant V.
+check-well-modes-negative _ _ _        (cdata _) :- !.
+check-well-modes-negative NoModes AllModes Loc (app [const "," | L]) :- !,
+  std.forall L (x\ if (var x) (halt "Passed flexible to ," Loc) (check-well-modes-negative NoModes AllModes Loc x)).
+check-well-modes-negative NoModes AllModes Loc (app [const "pi", lam B]) :- !,
+  pi x\ check-well-modes-negative NoModes AllModes Loc (B x).
+check-well-modes-negative NoModes AllModes Loc (app [const "=>", Hyp, Body]) :- !,
+  check-well-moded-positive NoModes Hyp AllModes Loc [],
+  check-well-modes-negative NoModes AllModes Loc Body.
+check-well-modes-negative _ _ _ (app [HD|_]) :- variadic-mode HD, !.
+check-well-modes-negative NoModes AllModes Loc (app [HD|Args]) :- !,
+  find-mode AllModes NoModes HD Args Mode,
   % TODO: go in depth if we have (f (g x)): x should be rigid if the mode of g is (i) ?
-  std.forall2 Mode Args (m\t\ if (m, var t) (halt "Invalid mode call for" HD Args Loc) (to-rigid-term t)).
-check-well-modes-negative AllModes Loc (lam F) :- !, pi x\ check-well-modes-negative AllModes Loc (F x).
-check-well-modes-negative _ _       (const _ as _) :- !.
+  std.forall2 Mode Args (m\t\ if (m, var t) (
+    std.map Args get-str Args',
+    halt "Invalid mode call for" HD Args' Loc
+  ) (to-rigid-term t)).
+check-well-modes-negative NoModes AllModes Loc (lam F) :- !, pi x\ check-well-modes-negative NoModes AllModes Loc (F x).
+check-well-modes-negative _ _ _       (const _ as _) :- !.
 
-mode (check-well-modes-negative-list i i i).
-check-well-modes-negative-list [] _ _ :- !.
-check-well-modes-negative-list [X | Xs] Modes Loc :-
-  check-well-modes-negative Modes Loc X,
-  check-well-modes-negative-list Xs Modes Loc.
+mode (check-well-modes-negative-list i i i i).
+check-well-modes-negative-list [] _ _ _ :- !.
+check-well-modes-negative-list [X | Xs] NoModes Modes Loc :-
+  check-well-modes-negative NoModes Modes Loc X,
+  check-well-modes-negative-list Xs NoModes Modes Loc.
 
 mode (to-check i).
 to-check _ :- !, true.
@@ -434,38 +468,37 @@ to-check _ :- !, true.
 % to-check (app [(const ":-"), (app [Head | _]) | _]) :- !,
 %   to-check Head.
 
-mode (check-well-moded-positive i i i).
-check-well-moded-positive uvar _ _ :- halt "Got uvar in check well-moded-positive".
-check-well-moded-positive (arg B) Modes Loc :- !,
-  check-well-moded-positive (B X_) Modes Loc.
-check-well-moded-positive (const _) _ _ :- !.
-check-well-moded-positive (app [(const ":-"), (app [Head | Args]) | Prem] as P) Modes Loc :-
-  set-head-mode Head Args Modes, 
-  check-well-modes-negative-list Prem Modes Loc, !,
-  print "After check the clause is" P.
+% mode (check-well-moded-positive i i i i).
+pred check-well-moded-positive o:A, i:B, i:C, i:D, i:E.
+check-well-moded-positive _ X _ _ _ :- var X, halt "Got uvar in check well-moded-positive".
+check-well-moded-positive NoModes (arg B) Modes Loc [N|Names] :- !,
+  map-var X N P,
+  P => check-well-moded-positive NoModes (B X) Modes Loc Names.
+check-well-moded-positive _ (const _) _ _ _ :- !.
+check-well-moded-positive NoModes (app [(const ":-"), (app [Head | Args]) | Prem]) Modes Loc Names_ :-
+  set-head-mode NoModes Head Args Modes, 
+  check-well-modes-negative-list Prem NoModes Modes Loc,
+  check-head-output NoModes Head Args Modes Loc.
+check-well-moded-positive NoModes (app [(const ":-"), (const _) | Prem]) Modes Loc Names_ :- !,
+   check-well-modes-negative-list Prem NoModes Modes Loc.
+check-well-moded-positive NoModes (app [(const "pi"), lam B]) Modes Loc Names :- !,
+  check-well-moded-positive NoModes (B X_) Modes Loc Names.
+check-well-moded-positive NoModes (app [(const ",") | L]) Modes Loc Names :- !,
+  std.forall L (x\ check-well-moded-positive NoModes x Modes Loc Names).
+check-well-moded-positive NoModes (app ([const "::", A, L])) Modes Loc Names :- !,
+  check-well-moded-positive NoModes A Modes Loc Names,
+  check-well-moded-positive NoModes L Modes Loc Names.
+check-well-moded-positive _ (app _) _ _ _ :- !. % print "TODO: for" T.
+check-well-moded-positive _ (@rigid-term) _ _ _ :- !.
 
-check-well-moded-positive (app [(const ":-"), (const _) | Prem]) Modes Loc :- !,
-  check-well-modes-negative-list Prem Modes Loc.
-check-well-moded-positive (app [(const "pi"), lam B]) Modes Loc :- !,
-  check-well-moded-positive (B X_) Modes Loc. % Here positive, hence Lam is applied to a fresh variable
-check-well-moded-positive (app [(const ",") | L]) Modes Loc :- !,
-  std.forall L (x\ check-well-moded-positive x Modes Loc).
-check-well-moded-positive (app ([const "::", A, L])) Modes Loc :- !,
-  check-well-moded-positive A Modes Loc,
-  check-well-moded-positive L Modes Loc.
-check-well-moded-positive (app _ as T) _ _ :- !, print "TODO: for" T.
-check-well-moded-positive (cdata "0") _ _ :- !.
-
-check-well-moded-positive A _ _ :- halt "check-well-moded-positive: Uncaught branch in" A.
+check-well-moded-positive _ A _ _ _ :- halt "check-well-moded-positive: Uncaught branch in" A.
 
 mode (check-well-moded-prog i i).
 check-well-moded-prog [] _ :- !.
-check-well-moded-prog [clause Loc _Vars Body | Tl] Modes :-
+check-well-moded-prog [clause Loc Vars Body | Tl] Modes :-
   to-check Body, !,
   % print "Going to check" Loc Body,
-  check-well-moded-positive Body Modes Loc, !,
-  check-well-moded-prog Tl Modes.
-check-well-moded-prog [_ | Tl] Modes :-
+  check-well-moded-positive NoModes_ Body Modes Loc Vars, !,
   check-well-moded-prog Tl Modes.
 
 check-overlapping-prog [] _ :- !.
