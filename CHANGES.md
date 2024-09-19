@@ -1,3 +1,17 @@
+# v1.20.0 (September 2024)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+- Language:
+  - attribute `:remove` to remove a clause from the program
+
+- Compiler:
+  - Build the index at assembly time, rather than optimization time.
+    This makes compilation slower, but startup faster.
+  - Adding clauses before the type/mode declaration of a predicate
+    is now forbidden, since they are immediately inserted in the index
+    and the type/mode declaration can change the index type
+
 # v1.19.6 (August 2024)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
