@@ -277,7 +277,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   MLData BuiltInData.string;
   MLData BuiltInData.float;
 
-  LPCode "pred (;) o:prop, o:prop.";
+  LPCode "pred (;) i:prop, i:prop.";
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 

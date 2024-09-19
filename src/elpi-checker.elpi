@@ -399,13 +399,13 @@ add-no-modes [X|_] Y :- not (var X), X = Y, !.
 add-no-modes [X|Xs] T :- var Xs, !, print "No mode for" X, Xs = [T|Y_].
 add-no-modes [_|Xs] T :- !, add-no-modes Xs T.
 
-mode (find-mode i i i i o).
-find-mode [] NoModesz_ X _ _ :- fatal-no-mode, halt "Check-well-modes-negative: no mode for" X.
+mode (find-mode i o i i o).
+find-mode [] NoModes_ X _ _ :- fatal-no-mode, halt "Check-well-modes-negative: no mode for" X.
 find-mode [] NoModes X Args R :- !, add-no-modes NoModes X, build-mode Args R .
 find-mode [pr X R|_] _ X _ R :- !.
 find-mode [_ | Xs] NoModes X Args R :- !, find-mode Xs NoModes X Args R.
 
-mode (set-head-mode i i i i).
+mode (set-head-mode o i i i).
 set-head-mode NoModes Head Args AllModes :-
   find-mode AllModes NoModes Head Args Mode, !,
   std.forall2 Mode Args (m\t\ if m (to-rigid-term t) true).
@@ -414,8 +414,10 @@ set-head-mode _ _ _ _.
 mode (check-head-output i i i i i).
 check-head-output NoModes Head Args AllModes Loc :-
   find-mode AllModes NoModes Head Args Mode, !, 
-  std.forall2 Mode Args (m\t\ 
-    if m true (if (is-rigid-term t) true (print "There is an output of\"" Head "\"that is not rigid" Args Loc))).
+  std.forall2 Mode Args (m\t\ sigma Args'\
+    if m true (if (is-rigid-term t) true (
+      std.assert!(std.map Args get-str Args') "Should not fail",
+      print "There is an output of\"" Head "\"that is not rigid" Args' Loc))).
 check-head-output _ _ _ _ _.
 
 mode (variadic-mode i).
@@ -426,17 +428,18 @@ mode (is-ho-predicate i).
 is-ho-predicate (@rigid-term).
 
 pred map-var o:A, i:string, o:prop.
-map-var V S R :- var V, !, R = (get-str X S :- X == V).
+map-var V S R :- var V, !, R = (get-str X (cdata S) :- X == V, !).
 
-pred get-str o:A, o:string.
+pred get-str o:A, o:term.
+get-str X X :- not (var X), !.
 
-mode (check-well-modes-negative i i i i).
+mode (check-well-modes-negative o i i i).
 check-well-modes-negative _ _ _        N :- name N, !.
 % check-well-modes-negative _ _ _        V :- var V, !, to-constant V.
 check-well-modes-negative _ _ _        (cdata (uvar _ as V)) :- !, to-constant V.
 check-well-modes-negative _ _ _        (cdata _) :- !.
 check-well-modes-negative NoModes AllModes Loc (app [const "," | L]) :- !,
-  std.forall L (x\ if (var x) (halt "Passed flexible to ," Loc) (check-well-modes-negative NoModes AllModes Loc x)).
+  std.forall L (x\ if (var x) ((fatal-no-mode, halt "Passed flexible to ," Loc); print "Passed flexible to ," Loc) (check-well-modes-negative NoModes AllModes Loc x)).
 check-well-modes-negative NoModes AllModes Loc (app [const "pi", lam B]) :- !,
   pi x\ check-well-modes-negative NoModes AllModes Loc (B x).
 check-well-modes-negative NoModes AllModes Loc (app [const "=>", Hyp, Body]) :- !,
@@ -446,14 +449,14 @@ check-well-modes-negative _ _ _ (app [HD|_]) :- variadic-mode HD, !.
 check-well-modes-negative NoModes AllModes Loc (app [HD|Args]) :- !,
   find-mode AllModes NoModes HD Args Mode,
   % TODO: go in depth if we have (f (g x)): x should be rigid if the mode of g is (i) ?
-  std.forall2 Mode Args (m\t\ if (m, var t) (
-    std.map Args get-str Args',
-    halt "Invalid mode call for" HD Args' Loc
+  std.forall2 Mode Args (m\t\ sigma Args'\ if (m, var t) (
+    std.assert!(std.map Args get-str Args') "Should not fail",
+    if (fatal-no-mode) (halt "INVALID MODE CALL FOR" HD Args' Loc) (print "INVALID MODE CALL FOR" HD Args' Loc)
   ) (to-rigid-term t)).
 check-well-modes-negative NoModes AllModes Loc (lam F) :- !, pi x\ check-well-modes-negative NoModes AllModes Loc (F x).
 check-well-modes-negative _ _ _       (const _ as _) :- !.
 
-mode (check-well-modes-negative-list i i i i).
+mode (check-well-modes-negative-list i o i i).
 check-well-modes-negative-list [] _ _ _ :- !.
 check-well-modes-negative-list [X | Xs] NoModes Modes Loc :-
   check-well-modes-negative NoModes Modes Loc X,

@@ -25,7 +25,7 @@ typeabbrev string (ctype "string").
 typeabbrev float (ctype "float").
 
 
-pred (;) o:prop, o:prop.
+pred (;) i:prop, i:prop.
 
 (A ; _) :- A.
 
