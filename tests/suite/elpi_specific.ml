@@ -311,6 +311,25 @@ let () = declare "graft_replace_err"
   ~expectation:Test.(FailureOutput (Str.regexp "name attribute"))
   ()
 
+let () = declare "graft_remove"
+  ~source_elpi:"graft_remove.elpi"
+  ~description:"remove a clase"
+  ~typecheck:true
+  ()
+
+
+let () = declare "graft_before"
+  ~source_elpi:"graft_before.elpi"
+  ~description:"grafting a clause before the clause of another predicate"
+  ~typecheck:true
+  ()
+
+let () = declare "graft_before_same"
+  ~source_elpi:"graft_before_same.elpi"
+  ~description:"grafting a clause before the clause of the same predicate"
+  ~typecheck:true
+  ()
+
 let () = declare "mk_uv_meta"
   ~source_elpi:"mk-evar-meta.elpi"
   ~description:"uvar surgery at the meta level"

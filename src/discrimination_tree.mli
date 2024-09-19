@@ -21,7 +21,6 @@ val mkListHead : cell
 val mkListEnd : cell
 val mkPathEnd : cell
 
-type 'a data
 type 'a t
 
 (** [index dt path value ~time] returns a new discrimination tree starting from [dt]
@@ -32,7 +31,7 @@ type 'a t
 
     @note: in the elpi runtime, there are no two rule having the same [~time]
 *)
-val index : 'a t -> Path.t -> 'a -> time:int -> 'a t
+val index : 'a t -> Path.t -> 'a -> 'a t
 
 val max_path : 'a t -> int
 val max_depths : 'a t -> int array
@@ -50,7 +49,10 @@ val empty_dt : 'b list -> 'a t
   has been added at time [t] and r_2 been added at time [t+1] then
   r_2 will appear before r_1 in the final result
 *)
-val retrieve : Path.t -> 'a t -> 'a list
+val retrieve : ('a -> 'a -> int) -> Path.t -> 'a t -> 'a Bl.scan
+
+val replace : ('a -> bool) -> 'a -> 'a t -> 'a t
+val remove  : ('a -> bool) -> 'a t -> 'a t
 
 (***********************************************************)
 (* Printers                                                *)
