@@ -2115,8 +2115,13 @@ let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} 
         error ("Wrong indexing for " ^ Symbols.show state predicate ^
                 ": Map indexes exactly one argument at depth 1")) 0 l
   
-  let update_indexing state modes types old_idx =
-    let add_indexing_for name tindex map =
+  let update_indexing state index modes types old_idx =
+    let check_if_some_clauses_already_in ~loc predicate =
+      if Ptmap.mem predicate index then
+         error ~loc @@ "Some clauses for " ^ Symbols.show state predicate ^
+           " are already in the program, changing the indexing a posteriori is not allowed."
+      in  
+    let add_indexing_for ~loc name tindex map =
       let mode = try fst @@ C.Map.find name modes with Not_found -> [] in
       let declare_index, index =
         match tindex with
@@ -2128,19 +2133,21 @@ let compile_clause_attributes ({ Ast.Clause.attributes = { Ast.Structured.id }} 
           with Not_found -> C.Map.find name old_idx in
         if old_tindex <> index then
           if old_tindex <> MapOn 1 && declare_index then
-            error ("multiple and inconsistent indexing attributes for " ^
+            error ~loc ("multiple and inconsistent indexing attributes for " ^
                       Symbols.show state name)
           else
-            if declare_index then C.Map.add name (mode,index) map
-            else map
+            if declare_index then begin
+              check_if_some_clauses_already_in ~loc name;
+              C.Map.add name (mode,index) map
+            end else map
         else
           map
       with Not_found ->
-        (* Printf.eprintf "declaring index for %s\n" (Symbols.show state name); *)
+        check_if_some_clauses_already_in ~loc name;
         C.Map.add name (mode,index) map in
         
-    let map = C.Map.fold (fun tname l acc -> Types.fold (fun acc { Types.tindex } -> add_indexing_for tname (Some tindex) acc) acc l) types C.Map.empty in
-    let map = C.Map.fold (fun k _ m -> add_indexing_for k None m) modes map in
+    let map = C.Map.fold (fun tname l acc -> Types.fold (fun acc { Types.tindex; decl = { tloc } } -> add_indexing_for ~loc:tloc tname (Some tindex) acc) acc l) types C.Map.empty in
+    let map = C.Map.fold (fun k (_,loc) m -> add_indexing_for ~loc k None m) modes map in
     map, C.Map.union (fun _ _ _ -> assert false) map old_idx
      
 let compile_clause modes initial_depth (state, index, clauses)
@@ -2178,11 +2185,7 @@ let assemble flags state code  (ul : compilation_unit list) =
       let types = ToDBL.merge_types state t1 t2 in
 
       (* no mode discrepancy tested by merge_modes/types *)
-      let new_indexing, idx2 = update_indexing state m2 t2 idx1 in
-      C.Map.iter (fun predicate _ ->
-        if Ptmap.mem predicate index.idx then (* TODO: move this check in the compiler *)
-           error @@ "Some clauses for " ^ Symbols.show state predicate ^ " are already in the program, changing the indexing a posteriori is not allowed")
-        new_indexing;
+      let new_indexing, idx2 = update_indexing state index.idx m2 t2 idx1 in
 
       let index = R.CompileTime.update_indexing new_indexing index in
 
