@@ -778,6 +778,8 @@ null [].
 
 pred iota i:int, o:list int.
 iota N L :- iota.aux 0 N L.
+
+pred iota.aux i:int, i:int, o:list int.
 iota.aux X X [] :- !.
 iota.aux N X [N|R] :- M is N + 1, iota.aux M X R.
 
@@ -1186,6 +1188,7 @@ bal L K V R T :-
   HR2 is HR + 2,
   bal.aux HL HR HL2 HR2 L K V R T.
 
+pred bal.aux i:int, i:int, i:int, i:int, i:map K V, i:K, i:V, i:map K V, o:map K V.
 bal.aux HL _ _ HR2 (node LL LV LD LR _) X D R T :-
   HL > HR2, {height LL} >= {height LR}, !,
   create LL LV LD {create LR X D R} T.
@@ -1203,12 +1206,16 @@ bal.aux _ _ _ _ L K V R T :- create L K V R T.
 pred add i:map K V, i:(K -> K -> cmp -> prop), i:K, i:V, o:map K V.
 add empty _ K V T :- create empty K V empty T.
 add (node _ X _ _ _ as M) Cmp X1 XD M1 :- Cmp X1 X E, add.aux E M Cmp X1 XD M1.
+
+pred add.aux i:cmp, i:map K V, i:(K -> K -> cmp -> prop), i:K, i:V, o:map K V.
 add.aux eq (node L _ _ R H) _   X XD T :- T = node L X XD R H. 
 add.aux lt (node L V D R _) Cmp X XD T :- bal {add L Cmp X XD} V D R T.
 add.aux gt (node L V D R _) Cmp X XD T :- bal L V D {add R Cmp X XD} T.
 
 pred find i:map K V, i:(K -> K -> cmp -> prop), i:K, o:V.
 find (node L K1 V1 R _) Cmp K V :- Cmp K K1 E, find.aux E Cmp L R V1 K V.
+
+pred find.aux i:cmp, i:(K -> K -> cmp -> prop), i:map K V, i:map K V, i:V, i:K, o:V.
 find.aux eq _   _ _ V _ V.
 find.aux lt Cmp L _ _ K V :- find L Cmp K V.
 find.aux gt Cmp _ R _ K V :- find R Cmp K V.
@@ -1231,6 +1238,8 @@ merge M1 M2 R :-
 pred remove i:map K V, i:(K -> K -> cmp -> prop), i:K, o:map K V.
 remove empty _ _ empty :- !.
 remove (node L V D R _) Cmp X M :- Cmp X V E, remove.aux E Cmp L R V D X M.
+
+pred remove.aux i:cmp, i:(K -> K -> cmp -> prop), i:map K V, i:map K V, i:V, i:K, i:K, o:map K V.
 remove.aux eq _   L R _ _ _ M :- merge L R M.
 remove.aux lt Cmp L R V D X M :- bal {remove L Cmp X} V D R M.
 remove.aux gt Cmp L R V D X M :- bal L V D {remove R Cmp X} M.
@@ -1296,6 +1305,7 @@ bal L E R T :-
   HR2 is HR + 2,
   bal.aux HL HR HL2 HR2 L E R T.
 
+pred bal.aux i:int, i:int, i:int, i:int, i:set E, i:E, i:set E, o:set E.
 bal.aux HL _ _ HR2 (node LL LV LR _) X R T :-
   HL > HR2, {height LL} >= {height LR}, !,
   create LL LV {create LR X R} T.
@@ -1313,13 +1323,17 @@ bal.aux _ _ _ _ L E R T :- create L E R T.
 pred add i:set E, i:(E -> E -> cmp -> prop), i:E, o:set E.
 add empty _ E T :- create empty E empty T.
 add (node L X R H) Cmp X1 S :- Cmp X1 X E, add.aux E Cmp L R X X1 H S.
-add.aux eq _ L R X _ H (node L X R H).
+
+pred add.aux i:cmp, i:(E -> E -> cmp -> prop), i:set E, i:set E, i:E, i:E, i:int, o:set E.
+add.aux eq _   L R X _ H (node L X R H).
 add.aux lt Cmp L R E X _ T :- bal {add L Cmp X} E R T.
 add.aux gt Cmp L R E X _ T :- bal L E {add R Cmp X} T.
 
 pred mem i:set E, i:(E -> E -> cmp -> prop), i:E.
 mem (node L K R _) Cmp E :- Cmp E K O, mem.aux O Cmp L R E.
 mem.aux eq _ _ _ _.
+
+pred mem.aux i:cmp, i:(E -> E -> cmp -> prop), i:set E, i:set E, i:E.
 mem.aux lt Cmp L _ E :- mem L Cmp E.
 mem.aux gt Cmp _ R E :- mem R Cmp E.
 
@@ -1341,6 +1355,8 @@ merge M1 M2 R :-
 pred remove i:set E, i:(E -> E -> cmp -> prop), i:E, o:set E.
 remove empty _ _ empty.
 remove (node L E R _) Cmp X M :- Cmp X E O, remove.aux O Cmp L R E X M.
+
+pred remove.aux i:cmp, i:(E -> E -> cmp -> prop), i:set E, i:set E, i:E, i:E, o:set E.
 remove.aux eq _   L R _ _ M :- merge L R M.
 remove.aux lt Cmp L R E X M :- bal {remove L Cmp X} E R M.
 remove.aux gt Cmp L R E X M :- bal L E {remove R Cmp X} M.

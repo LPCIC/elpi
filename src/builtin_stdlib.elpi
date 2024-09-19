@@ -248,7 +248,7 @@ iota N L :- iota.aux 0 N L.
 
 pred iota.aux i:int, i:int, o:list int.
 iota.aux X X [] :- !.
-iota.aux N X [N|R] :- std.spy(M is N + 1), iota.aux M X R.
+iota.aux N X [N|R] :- M is N + 1, iota.aux M X R.
 
 % [intersperse X L R] R is [L0, X, ..., X, LN]
 :index(_ 1)
