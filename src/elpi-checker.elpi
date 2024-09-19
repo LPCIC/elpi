@@ -398,32 +398,32 @@ variadic-mode (const "print").
 mode (is-ho-predicate i).
 is-ho-predicate (cdata "0").
 
-mode (check-well-modes-negative i i).
-check-well-modes-negative _        N :- name N, !.
-check-well-modes-negative _        V :- var V, !, to-constant V.
-check-well-modes-negative _        (cdata (uvar _ as V)) :- !, to-constant V.
-check-well-modes-negative _        (cdata _) :- !.
-check-well-modes-negative AllModes (app [const "," | L]) :- !,
-  std.forall L (x\ if (var x) (halt "Passed flexible to ,") (check-well-modes-negative AllModes x)).
-check-well-modes-negative AllModes (app [const "pi", lam B]) :- !,
-  pi x\ check-well-modes-negative AllModes (B x).
-check-well-modes-negative AllModes (app [const "=>", Hyp, Body]) :- !,
+mode (check-well-modes-negative i i i).
+check-well-modes-negative _ _        N :- name N, !.
+check-well-modes-negative _ _        V :- var V, !, to-constant V.
+check-well-modes-negative _ _        (cdata (uvar _ as V)) :- !, to-constant V.
+check-well-modes-negative _ _        (cdata _) :- !.
+check-well-modes-negative AllModes Loc (app [const "," | L]) :- !,
+  std.forall L (x\ if (var x) (halt "Passed flexible to ,") (check-well-modes-negative AllModes Loc x)).
+check-well-modes-negative AllModes Loc (app [const "pi", lam B]) :- !,
+  pi x\ check-well-modes-negative AllModes Loc (B x).
+check-well-modes-negative AllModes Loc (app [const "=>", Hyp, Body]) :- !,
   print "Going to check the positive term" Hyp,
-  check-well-moded-positive Hyp AllModes,
-  check-well-modes-negative AllModes Body.
-check-well-modes-negative _ (app [HD|_]) :- variadic-mode HD, !.
-check-well-modes-negative AllModes (app [HD|Args]) :- !,
+  check-well-moded-positive Hyp AllModes Loc,
+  check-well-modes-negative AllModes Loc Body.
+check-well-modes-negative _ _ (app [HD|_]) :- variadic-mode HD, !.
+check-well-modes-negative AllModes Loc (app [HD|Args]) :- !,
   find-mode AllModes HD Args Mode,
-  std.forall2 Mode Args (m\t\ if (m, var t) (halt "Invalid mode call for" HD Args) (to-rigid-term t)).
-check-well-modes-negative AllModes (lam F) :- !, pi x\ check-well-modes-negative AllModes (F x).
-check-well-modes-negative _        (const _ as _) :- !.
-check-well-modes-negative _         A :- halt "Error in to-rigid-term" A.
+  % TODO: go in depth if we have (f (g x)): x should be rigid if the mode of g is (i) ?
+  std.forall2 Mode Args (m\t\ if (m, var t) (halt "Invalid mode call for" HD Args Loc) (to-rigid-term t)).
+check-well-modes-negative AllModes Loc (lam F) :- !, pi x\ check-well-modes-negative AllModes Loc (F x).
+check-well-modes-negative _ _       (const _ as _) :- !.
 
-mode (check-well-modes-negative-list i i).
-check-well-modes-negative-list [] _ :- !.
-check-well-modes-negative-list [X | Xs] AllModes :-
-  check-well-modes-negative AllModes X,
-  check-well-modes-negative-list Xs AllModes.
+mode (check-well-modes-negative-list i i i).
+check-well-modes-negative-list [] _ _ :- !.
+check-well-modes-negative-list [X | Xs] Modes Loc :-
+  check-well-modes-negative Modes Loc X,
+  check-well-modes-negative-list Xs Modes Loc.
 
 mode (to-check i).
 to-check _ :- !, true.
@@ -434,36 +434,36 @@ to-check _ :- !, true.
 % to-check (app [(const ":-"), (app [Head | _]) | _]) :- !,
 %   to-check Head.
 
-mode (check-well-moded-positive i i).
-check-well-moded-positive uvar _ :- halt "Got uvar in check well-moded-positive".
-check-well-moded-positive (arg B) AllModes :- !,
-  check-well-moded-positive (B X_) AllModes.
-check-well-moded-positive (const _) _ :- !.
-check-well-moded-positive (app [(const ":-"), (app [Head | Args]) | Prem] as P) AllModes :-
-  set-head-mode Head Args AllModes, 
-  check-well-modes-negative-list Prem AllModes, !,
+mode (check-well-moded-positive i i i).
+check-well-moded-positive uvar _ _ :- halt "Got uvar in check well-moded-positive".
+check-well-moded-positive (arg B) Modes Loc :- !,
+  check-well-moded-positive (B X_) Modes Loc.
+check-well-moded-positive (const _) _ _ :- !.
+check-well-moded-positive (app [(const ":-"), (app [Head | Args]) | Prem] as P) Modes Loc :-
+  set-head-mode Head Args Modes, 
+  check-well-modes-negative-list Prem Modes Loc, !,
   print "After check the clause is" P.
 
-check-well-moded-positive (app [(const ":-"), (const _) | Prem]) AllModes :- !,
-  check-well-modes-negative-list Prem AllModes.
-check-well-moded-positive (app [(const "pi"), lam B]) AllModes :- !,
-  check-well-moded-positive (B X_) AllModes. % Here positive, hence Lam is applied to a fresh variable
-check-well-moded-positive (app [(const ",") | L]) AllModes :- !,
-  std.forall L (x\ check-well-moded-positive x AllModes).
-check-well-moded-positive (app ([const "::", A, L])) AllModes :- !,
-  check-well-moded-positive A AllModes,
-  check-well-moded-positive L AllModes.
-check-well-moded-positive (app _ as T) _ :- !, print "TODO: for" T.
-check-well-moded-positive (cdata "0") _ :- !.
+check-well-moded-positive (app [(const ":-"), (const _) | Prem]) Modes Loc :- !,
+  check-well-modes-negative-list Prem Modes Loc.
+check-well-moded-positive (app [(const "pi"), lam B]) Modes Loc :- !,
+  check-well-moded-positive (B X_) Modes Loc. % Here positive, hence Lam is applied to a fresh variable
+check-well-moded-positive (app [(const ",") | L]) Modes Loc :- !,
+  std.forall L (x\ check-well-moded-positive x Modes Loc).
+check-well-moded-positive (app ([const "::", A, L])) Modes Loc :- !,
+  check-well-moded-positive A Modes Loc,
+  check-well-moded-positive L Modes Loc.
+check-well-moded-positive (app _ as T) _ _ :- !, print "TODO: for" T.
+check-well-moded-positive (cdata "0") _ _ :- !.
 
-check-well-moded-positive A _ :- halt "check-well-moded-positive: Uncaught branch in" A.
+check-well-moded-positive A _ _ :- halt "check-well-moded-positive: Uncaught branch in" A.
 
 mode (check-well-moded-prog i i).
 check-well-moded-prog [] _ :- !.
 check-well-moded-prog [clause Loc _Vars Body | Tl] Modes :-
   to-check Body, !,
-  print "Going to check" Loc Body,
-  check-well-moded-positive Body Modes, !,
+  % print "Going to check" Loc Body,
+  check-well-moded-positive Body Modes Loc, !,
   check-well-moded-prog Tl Modes.
 check-well-moded-prog [_ | Tl] Modes :-
   check-well-moded-prog Tl Modes.
