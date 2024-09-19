@@ -103,3 +103,7 @@ let () = declare "dt_off"
   ~source_elpi:"dt_bench.elpi"
   ~description:"discrimination_tree on trees"
   ()
+  let () = declare "dt_order"
+  ~source_elpi:"dt_order.elpi"
+  ~description:"discrimination_tree grafting"
+  ()

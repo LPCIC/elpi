@@ -20,7 +20,7 @@ let () = declare "sepcomp2"
 let () = declare "sepcomp3"
   ~source_dune:"sepcomp3.ml"
   ~description:"separate compilation double naming"
-  ~expectation:Test.(FailureOutput (Str.regexp "a clause named xxx already exists"))
+  ~expectation:Test.(FailureOutput (Str.regexp "duplicate clause name xxx"))
   ()
 
 let () = declare "sepcomp4"
@@ -40,5 +40,23 @@ let () = declare "sepcomp6"
   ~after:"sepcomp5"
   ~description:"separate compilation different processes (step 2)"
   ~expectation:Test.(SuccessOutput (Str.regexp "ok"))
+  ()
+
+  let () = declare "sepcomp7"
+  ~source_dune:"sepcomp7.ml"
+  ~description:"separate compilation different processes, with remove (step 1)"
+  ~expectation:Test.Success
+  ()
+
+  let () = declare "sepcomp8"
+  ~source_dune:"sepcomp8.ml"
+  ~description:"separate compilation different processes, with remove (step 2)"
+  ~expectation:Test.Success
+  ()
+
+  let () = declare "sepcomp9"
+  ~source_dune:"sepcomp9.ml"
+  ~description:"separate compilation different processes, with remove (step 3)"
+  ~expectation:Test.Success
   ()
 

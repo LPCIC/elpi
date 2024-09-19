@@ -298,10 +298,13 @@ Malformed 'if' attribute. Example:
 
 program: COLON BEFORE VDASH
 program: COLON AFTER VDASH
+program: COLON REMOVE VDASH
 
 Malformed grafting attribute. Example:
 :before "some name"
 :after "some other name"
+:replace "some other name"
+:remove "some other name"
 
 program: COLON EXTERNAL VDASH
 program: COLON EXTERNAL COLON VDASH
@@ -411,6 +414,8 @@ kind list  type -> type.
 
 program: CONSTRAINT VDASH
 program: CONSTRAINT AFTER VDASH
+program: CONSTRAINT QDASH VDASH
+program: CONSTRAINT QDASH AFTER QDASH
 
 Constraint Handling Rule header expected. Examples:
 constraint foo {

@@ -1,5 +1,10 @@
 open Elpi.Internal.Discrimination_tree
+module DT = Elpi.Internal.Discrimination_tree
 open Internal
+
+let test ~expected found = 
+  if expected <> found then failwith (Format.asprintf "Test DT error: Expected %d, but found %d" expected found)
+
 
 let () = assert (k_of (mkConstant ~safe:false ~data:~-17 ~arity:0) == kConstant)
 let () = assert (k_of mkVariable == kVariable)
@@ -47,15 +52,15 @@ let () =
     (* Format.printf "%a\n" pp_path pathGoal; *)
     let pathInsts = List.map (fun (x,y) -> x @ [mkPathEnd], y) pathInsts in
     let add_to_trie t (key,value) = 
-      index t (Path.of_list key) value ~time:value in
+      index t (Path.of_list key) value in
     let trie = List.fold_left add_to_trie (empty_dt []) pathInsts in 
-    let retrived = retrieve pathGoal trie in
-    let retrived_nb = List.length retrived in 
+    let retrived = retrieve (fun x y -> y - x) pathGoal trie in
+    let retrived_nb = Elpi.Internal.Bl.length retrived in 
     Format.printf " Retrived clause number is %d\n%!" retrived_nb;
-    let pp_sep = fun f _ -> Format.pp_print_string f " " in
-    Format.printf " Found instances are %a\n%!" (Format.pp_print_list ~pp_sep Format.pp_print_int) retrived;
-    if retrived_nb <> nb then failwith (Format.asprintf "Test DT error: Expected %d clauses, %d found" nb retrived_nb);
-    if List.sort Int.compare retrived |> List.rev <> retrived then failwith "Test DT error: resultin list is not correctly ordered"
+    (* let pp_sep = fun f _ -> Format.pp_print_string f " " in *)
+    (* Format.printf " Found instances are %a\n%!" (Format.pp_print_list ~pp_sep Format.pp_print_int) retrived; *)
+    test retrived_nb nb;
+    if (Elpi.Internal.Bl.to_list retrived |> List.sort Int.compare |> List.rev) <> (retrived |> Elpi.Internal.Bl.to_list) then failwith "Test DT error: resultin list is not correctly ordered"
   in
   
   let p1 = [mkListHead; constA; mkListTailVariable; constA], 1 in                                         (* 1: [a | _] a *)
@@ -70,4 +75,40 @@ let () =
   test [p2; p3; p4; p5; p6] p1 mkOutputMode 3;
   test [p2; p3; p4; p5; p6] p1 mkInputMode 1;
   test [p1; p2; p3; p4; p5; p6; p8] p7 mkOutputMode 3;
-  test [p1; p2; p3; p4; p5; p6; p8] p7 mkInputMode 2;
+  test [p1; p2; p3; p4; p5; p6; p8] p7 mkInputMode 2
+
+let () =  
+  let get_length dt path = DT.retrieve compare path !dt |> Elpi.Internal.Bl.length in
+  let remove dt e = dt := DT.remove (fun x -> x = e) !dt in
+  let index dt path v = dt := DT.index !dt path v in 
+
+  let constA = mkConstant ~safe:false ~data:~-1 ~arity:~-0 in (* a *)
+  let p1 = [mkListHead; constA; mkListTailVariable; constA] in
+  let p2 = [mkListHead; constA; mkListTailVariable; constA; constA] in
+  
+  let p1Index = Path.of_list p1 in (* path for indexing *)
+  let p1Retr = mkInputMode :: p1 |> Path.of_list in (* path for retrival *)
+
+  let p2Index = Path.of_list p2 in (* path for indexing *)
+  let p2Retr = mkInputMode :: p2 |> Path.of_list in (* path for retrival *)
+
+  let dt = DT.empty_dt (List.init 0 Fun.id) |> ref in
+  index dt p1Index 100; index dt p1Index 200;
+  index dt p2Index 200; index dt p2Index 200;
+
+  Printf.printf "Test remove 1\n";
+  test ~expected:2 (get_length dt p1Retr);
+  test ~expected:2 (get_length dt p2Retr);
+
+  Printf.printf "Test remove 2\n";
+  remove dt 100;
+  test ~expected:1 (get_length dt p1Retr);
+  test ~expected:2 (get_length dt p2Retr);
+  
+  Printf.printf "Test remove 3\n";
+  remove dt 100;
+  test ~expected:1 (get_length dt p1Retr);
+
+  Printf.printf "Test remove 4\n";
+  remove dt 200;
+  test ~expected:0 (get_length dt p1Retr)

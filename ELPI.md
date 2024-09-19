@@ -241,10 +241,10 @@ such clause using the `:before` attribute.
 fatal-error Msg :- !, M is "elpi: " ^ Msg, coq-err M.
 ```
 
-The `:after` and `:replace` attributes is also available.
+The `:after`, `:replace` and `:remove` attributes is also available.
 
-The `:replace` attribute cannot be given to a named clause. This is to avoid
-the following ambiguity:
+The `:replace` and `:remove` attribute cannot be given to a named clause.
+This is to avoid the following ambiguity:
 
 ```prolog
 :name "replace-me"
@@ -259,6 +259,16 @@ p 2.
 p 3.
 ```
 Here the order in which replacement is performed would matter.
+
+Both `:replace:` and `:remove` can only apply to rules for the same predicate.
+Example:
+
+```prolog
+:name "this" p 1.
+
+:remove "this" p _. % OK
+:remove "this" q _. % Error
+```
 
 
 ## Conditional compilation

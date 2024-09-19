@@ -125,6 +125,7 @@ type clause = {
     vars : int;
     mode : mode;        (* CACHE to avoid allocation in get_clauses *)
     loc : Loc.t option; (* debug *)
+    mutable timestamp : int list; (* for grafting *)
 }
 and 
 mode = arg_mode list
@@ -132,6 +133,10 @@ mode = arg_mode list
 
 let to_mode = function true -> Input | false -> Output
 
+type grafting_time = int list
+[@@deriving show, ord]
+type times = (grafting_time * constant) StrMap.t
+[@@deriving show, ord]
 
 type stuck_goal = {
   mutable blockers : blockers;
@@ -151,28 +156,39 @@ and prolog_prog = {
   src : clause_src list; (* hypothetical context in original form, for CHR *)
   index : index;
 }
-and index = second_lvl_idx Ptmap.t
+
+(* These two are the same, but the latter should not be mutated *)
+
+and clause_list = clause Bl.t
+and index = first_lvl_idx
+and first_lvl_idx = {
+  idx : second_lvl_idx Ptmap.t;
+  time : int; (* ticking clock, to timestamp clauses so to recover total order after retrieval if necessary. positive at compile time, negative at run time *)
+  times : times; (* timestamp of named clauses, for grafting at compile time *)
+}
 and second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
     argno : int;
-    all_clauses : clause list;        (* when the query is flexible *)
-    flex_arg_clauses : clause list;   (* when the query is rigid but arg_id ha nothing *)
-    arg_idx : clause list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+    all_clauses : clause_list;        (* when the query is flexible *)
+    flex_arg_clauses : clause_list;   (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : clause_list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
     mode : mode;
     args : int list;
-    time : int;                             (* time is used to recover the total order *)
-    args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
+    args_idx : clause_list Ptmap.t; (* clause, insertion time *)
   }
 | IndexWithDiscriminationTree of {
     mode : mode;
     arg_depths : int list;   (* the list of args on which the trie is built *)
-    time : int;         (* time is used to recover the total order *)
     args_idx : clause Discrimination_tree.t; 
 }
 [@@deriving show]
+
+let stop = ref false
+let close_index ({idx; time; times} : index) : index =
+  { idx =idx; time = 0; times = StrMap.empty }
 
 type constraints = stuck_goal list
 type hyps = clause_src list

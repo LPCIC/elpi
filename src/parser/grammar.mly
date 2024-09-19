@@ -300,6 +300,7 @@ attribute:
 | AFTER; s = STRING { After s }
 | BEFORE; s = STRING { Before s }
 | REPLACE; s = STRING { Replace s }
+| REMOVE; s = STRING { Remove s }
 | EXTERNAL { External }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
 
@@ -400,6 +401,7 @@ constant:
 | BEFORE { Func.from_string "before" }
 | AFTER { Func.from_string "after" }
 | REPLACE { Func.from_string "replace" }
+| REMOVE { Func.from_string "remove" }
 | INDEX { Func.from_string "index" }
 | c = IO { Func.from_string @@ String.make 1 c }
 | CUT { Func.cutf }
