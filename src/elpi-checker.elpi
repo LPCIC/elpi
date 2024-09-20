@@ -428,39 +428,58 @@ mode (is-ho-predicate i).
 is-ho-predicate (@rigid-term).
 
 pred map-var o:A, i:string, o:prop.
-map-var V S R :- var V, !, R = (get-str X (cdata S) :- X == V, !).
+map-var V S R :- var V, !, R = (get-str X (cdata S) :- same_term X V, !).
 
-pred get-str o:A, o:term.
-get-str X X :- not (var X), !.
+pred get-str i:term, o:term.
+get-str N N :- name N, !.
+get-str (cdata _ as X) X :- !.
+get-str (app L) (app L'):- !, std.map L get-str L'.
+get-str (lam F) (lam F') :- !, pi x\ get-str (F x) (F' x).
+get-str (const T) (const T) :- !.
+get-str A A :- var A, !.
+get-str A _ :- halt "Error in get-str" A.
 
-mode (check-well-modes-negative o i i i).
-check-well-modes-negative _ _ _        N :- name N, !.
-% check-well-modes-negative _ _ _        V :- var V, !, to-constant V.
-check-well-modes-negative _ _ _        (cdata (uvar _ as V)) :- !, to-constant V.
-check-well-modes-negative _ _ _        (cdata _) :- !.
-check-well-modes-negative NoModes AllModes Loc (app [const "," | L]) :- !,
-  std.forall L (x\ if (var x) ((fatal-no-mode, halt "Passed flexible to ," Loc); print "Passed flexible to ," Loc) (check-well-modes-negative NoModes AllModes Loc x)).
-check-well-modes-negative NoModes AllModes Loc (app [const "pi", lam B]) :- !,
-  pi x\ check-well-modes-negative NoModes AllModes Loc (B x).
-check-well-modes-negative NoModes AllModes Loc (app [const "=>", Hyp, Body]) :- !,
+pred check-args-mode i:D, o:A, i:B, i:C, i:prop, i:term.
+check-args-mode HD _ _ Loc Mode Arg :-
+  Mode, var Arg, !,
+  std.assert!(get-str Arg Arg') "Should not fail",
+  if (fatal-no-mode) (halt "WARNING: Flex arg" Arg' "passed to" HD Loc) (print "WARNING: Flex arg" Arg' "passed to" HD Loc).
+% TODO: following rule aims to go under lambda which are args of a predicate
+%       however, this is gives a error if partial application is used
+% check-args-mode _ NoModes AllModes Loc Mode Arg :-
+%   Mode, Arg = lam L, !,
+%   print ("Going under lambda") Arg,
+%   pi x\ std.assert!(check-well-moded-negative NoModes AllModes Loc (L x)) "Should not fail".
+check-args-mode _ _ _ _ Mode Arg :- Mode, !.
+check-args-mode _ _ _ _ Mode Arg :- 
+  not Mode, to-rigid-term Arg.
+
+mode (check-well-moded-negative o i i i).
+check-well-moded-negative _ _ _        N :- name N, !.
+% check-well-moded-negative _ _ _        V :- var V, !, to-constant V.
+check-well-moded-negative _ _ _        (cdata (uvar _ as V)) :- !, to-constant V.
+check-well-moded-negative _ _ _        (cdata _) :- !.
+check-well-moded-negative NoModes AllModes Loc (app [const "," | L]) :- !,
+  std.forall L (x\ if (var x) ((fatal-no-mode, halt "Passed flexible to ," Loc); print "Passed flexible to ," Loc) (check-well-moded-negative NoModes AllModes Loc x)).
+check-well-moded-negative NoModes AllModes Loc (app [const "pi", lam B]) :- !,
+  pi x\ check-well-moded-negative NoModes AllModes Loc (B x).
+check-well-moded-negative NoModes AllModes Loc (app [const "=>", Hyp, Body]) :- !,
   check-well-moded-positive NoModes Hyp AllModes Loc [],
-  check-well-modes-negative NoModes AllModes Loc Body.
-check-well-modes-negative _ _ _ (app [HD|_]) :- variadic-mode HD, !.
-check-well-modes-negative NoModes AllModes Loc (app [HD|Args]) :- !,
+  check-well-moded-negative NoModes AllModes Loc Body.
+check-well-moded-negative _ _ _ (app [HD|_]) :- variadic-mode HD, !.
+check-well-moded-negative NoModes AllModes Loc (app [HD|Args]) :- !,
   find-mode AllModes NoModes HD Args Mode,
-  % TODO: go in depth if we have (f (g x)): x should be rigid if the mode of g is (i) ?
-  std.forall2 Mode Args (m\t\ sigma Args'\ if (m, var t) (
-    std.assert!(std.map Args get-str Args') "Should not fail",
-    if (fatal-no-mode) (halt "INVALID MODE CALL FOR" HD Args' Loc) (print "INVALID MODE CALL FOR" HD Args' Loc)
-  ) (to-rigid-term t)).
-check-well-modes-negative NoModes AllModes Loc (lam F) :- !, pi x\ check-well-modes-negative NoModes AllModes Loc (F x).
-check-well-modes-negative _ _ _       (const _ as _) :- !.
+  if ({std.length Mode} = {std.length Args}) true (halt "Invalid mode length for" HD Loc),
+  std.forall2 Mode Args (x\y\std.assert!(check-args-mode HD NoModes AllModes Loc x y) "Mh").
+check-well-moded-negative NoModes AllModes Loc (lam F) :- !, 
+  pi x\ check-well-moded-negative NoModes AllModes Loc (F x).
+check-well-moded-negative _ _ _       (const _ as _) :- !.
 
-mode (check-well-modes-negative-list i o i i).
-check-well-modes-negative-list [] _ _ _ :- !.
-check-well-modes-negative-list [X | Xs] NoModes Modes Loc :-
-  check-well-modes-negative NoModes Modes Loc X,
-  check-well-modes-negative-list Xs NoModes Modes Loc.
+mode (check-well-moded-negative-list i o i i).
+check-well-moded-negative-list [] _ _ _ :- !.
+check-well-moded-negative-list [X | Xs] NoModes Modes Loc :-
+  check-well-moded-negative NoModes Modes Loc X,
+  check-well-moded-negative-list Xs NoModes Modes Loc.
 
 mode (to-check i).
 to-check _ :- !, true.
@@ -480,10 +499,10 @@ check-well-moded-positive NoModes (arg B) Modes Loc [N|Names] :- !,
 check-well-moded-positive _ (const _) _ _ _ :- !.
 check-well-moded-positive NoModes (app [(const ":-"), (app [Head | Args]) | Prem]) Modes Loc Names_ :-
   set-head-mode NoModes Head Args Modes, 
-  check-well-modes-negative-list Prem NoModes Modes Loc,
+  check-well-moded-negative-list Prem NoModes Modes Loc,
   check-head-output NoModes Head Args Modes Loc.
 check-well-moded-positive NoModes (app [(const ":-"), (const _) | Prem]) Modes Loc Names_ :- !,
-   check-well-modes-negative-list Prem NoModes Modes Loc.
+   check-well-moded-negative-list Prem NoModes Modes Loc.
 check-well-moded-positive NoModes (app [(const "pi"), lam B]) Modes Loc Names :- !,
   check-well-moded-positive NoModes (B X_) Modes Loc Names.
 check-well-moded-positive NoModes (app [(const ",") | L]) Modes Loc Names :- !,
@@ -511,8 +530,8 @@ mode (check i i i i i i).
 check P Q DeclaredTypes TypeAbbreviations Modes _FuncPred :-
   compile-type-abbreviations TypeAbbreviations Abbrevs,
   Abbrevs => typecheck-program P Q DeclaredTypes RC, !,
-  check-well-moded-prog P Modes,
   warn-linear P, !,
-  if (var RC) (true) (fail).
+  if (var RC) (true) (fail),
+  check-well-moded-prog P Modes.
 
 % vim: set ft=lprolog:
