@@ -182,7 +182,34 @@ pred:
        mkApp (loc $loc(c)) [mkCon (t.loc)(* BUG *)"->";t;ty]) args (mkCon (loc $sloc) (* BUG *) "prop") }
  }
 pred_item:
-| io = IO_COLON; ty = type_term { (Mode.Fo (mode_of_IO io),ty) }
+// | io = IO_COLON; ty = type_term { (Mode.Fo (mode_of_IO io),ty) }
+| io = IO_COLON; c = constant { (Mode.Fo (mode_of_IO io), Const (fix_church c)) }
+| io = IO_COLON; LPAREN; hd = pred_item_opt; ARROW; l=separated_nonempty_list(ARROW, pred_item_opt); RPAREN 
+      { let mode, ty = List.split l in
+        let ty = snd hd :: ty in
+        let rec aux = function [] | [_] -> failwith "Error" 
+          | [a;b] -> mkApp (loc $loc(hd)) [mkCon "->"; a; b] | a :: tl -> mkApp (loc $loc(hd)) [mkCon "->"; a; aux tl]
+        in
+        (
+          Mode.Ho (mode_of_IO io, mode), 
+          aux ty
+        ) }
+| io = IO_COLON; hd = constant; args = nonempty_list(atype_term) { (Mode.Fo (mode_of_IO io), mkAppF (loc $loc(hd)) hd args) }
+
+pred_item_opt:
+| io = option(IO_COLON); c = constant { (Mode.Fo (mode_of_IO (Option.value ~default:'o' io)), Const (fix_church c)) }
+| io = option(IO_COLON); LPAREN; hd = pred_item_opt; ARROW; l=separated_nonempty_list(ARROW, pred_item_opt); RPAREN 
+      { let mode, ty = List.split l in
+        let ty = snd hd :: ty in
+        let rec aux = function [] | [_] -> failwith "Error" 
+          | [a;b] -> mkApp (loc $loc(hd)) [mkCon "->"; a; b] | a :: tl -> mkApp (loc $loc(hd)) [mkCon "->"; a; aux tl]
+        in
+        (
+          Mode.Ho (mode_of_IO (Option.value ~default:'o' io), mode), 
+          aux ty
+        ) }
+| io = option(IO_COLON); hd = constant; args = nonempty_list(atype_term) { (Mode.Fo (mode_of_IO (Option.value ~default:'o' io)), mkAppF (loc $loc(hd)) hd args) }
+
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
