@@ -411,13 +411,22 @@ set-head-mode NoModes Head Args AllModes :-
   std.forall2 Mode Args (m\t\ if m (to-rigid-term t) true).
 set-head-mode _ _ _ _.
 
+pred get-vars i:term, o:list term.
+get-vars N [] :- name N, !.
+get-vars (cdata _ as X) [] :- !.
+get-vars (app L) L'' :- !, std.map L get-vars L', std.flatten L' L''.
+get-vars (lam F) L :- !, pi x\ get-vars (F x) L.
+get-vars (const T) [] :- !.
+get-vars A [B] :- var A, !, get-str A B.
+get-vars A _ :- halt "Error in get-vars" A.
+
 mode (check-head-output i i i i i).
 check-head-output NoModes Head Args AllModes Loc :-
   find-mode AllModes NoModes Head Args Mode, !, 
-  std.forall2 Mode Args (m\t\ sigma Args'\
-    if m true (if (is-rigid-term t) true (
-      std.assert!(std.map Args get-str Args') "Should not fail",
-      print "There is an output of\"" Head "\"that is not rigid" Args' Loc))).
+  std.forall2 Mode Args (m\t\ sigma Vars\
+    std.assert! (get-vars t Vars) "Should not fail",
+    if m true (if (Vars = []) true (
+      print "WARNING: The variables" Vars "are is output position of the predicate\"" Head "\"and cannot be ensured to be ground" Loc))).
 check-head-output _ _ _ _ _.
 
 mode (variadic-mode i).
@@ -428,7 +437,7 @@ mode (is-ho-predicate i).
 is-ho-predicate (@rigid-term).
 
 pred map-var o:A, i:string, o:prop.
-map-var V S R :- var V, !, R = (get-str X (cdata S) :- same_term X V, !).
+map-var V S R :- var V, !, R = (get-str X (cdata S) :- var V, same_term X V, !).
 
 pred get-str i:term, o:term.
 get-str N N :- name N, !.
@@ -460,7 +469,8 @@ check-well-moded-negative _ _ _        N :- name N, !.
 check-well-moded-negative _ _ _        (cdata (uvar _ as V)) :- !, to-constant V.
 check-well-moded-negative _ _ _        (cdata _) :- !.
 check-well-moded-negative NoModes AllModes Loc (app [const "," | L]) :- !,
-  std.forall L (x\ if (var x) ((fatal-no-mode, halt "Passed flexible to ," Loc); print "Passed flexible to ," Loc) (check-well-moded-negative NoModes AllModes Loc x)).
+  std.forall L (x\ if (var x) ((fatal-no-mode, halt "Passed flexible to ," Loc); print "Passed flexible to ," Loc) 
+  (check-well-moded-negative NoModes AllModes Loc x)).
 check-well-moded-negative NoModes AllModes Loc (app [const "pi", lam B]) :- !,
   pi x\ check-well-moded-negative NoModes AllModes Loc (B x).
 check-well-moded-negative NoModes AllModes Loc (app [const "=>", Hyp, Body]) :- !,
@@ -468,6 +478,10 @@ check-well-moded-negative NoModes AllModes Loc (app [const "=>", Hyp, Body]) :- 
   check-well-moded-negative NoModes AllModes Loc Body.
 check-well-moded-negative _ _ _ (app [HD|_]) :- variadic-mode HD, !.
 check-well-moded-negative NoModes AllModes Loc (app [HD|Args]) :- !,
+  % print "Checking mode of" HD Args,
+  if (var HD) 
+    (if (fatal-no-mode) (halt "WARNING: Flex head symbol" HD "at" Loc) (print "WARNING: Flex head symbol" HD "at" Loc))
+    true,
   find-mode AllModes NoModes HD Args Mode,
   if ({std.length Mode} = {std.length Args}) true (halt "Invalid mode length for" HD Loc),
   std.forall2 Mode Args (x\y\std.assert!(check-args-mode HD NoModes AllModes Loc x y) "Mh").
@@ -492,12 +506,13 @@ to-check _ :- !, true.
 
 % mode (check-well-moded-positive i i i i).
 pred check-well-moded-positive o:A, i:B, i:C, i:D, i:E.
-check-well-moded-positive _ X _ _ _ :- var X, halt "Got uvar in check well-moded-positive".
+check-well-moded-positive _ X _ Loc _ :- var X, print "WARNING: Got uvar in check well-moded-positive" Loc.
 check-well-moded-positive NoModes (arg B) Modes Loc [N|Names] :- !,
   map-var X N P,
   P => check-well-moded-positive NoModes (B X) Modes Loc Names.
 check-well-moded-positive _ (const _) _ _ _ :- !.
 check-well-moded-positive NoModes (app [(const ":-"), (app [Head | Args]) | Prem]) Modes Loc Names_ :-
+  % print "Checking mode positive of" Head Args ":-" Prem,
   set-head-mode NoModes Head Args Modes, 
   check-well-moded-negative-list Prem NoModes Modes Loc,
   check-head-output NoModes Head Args Modes Loc.
@@ -515,13 +530,14 @@ check-well-moded-positive _ (@rigid-term) _ _ _ :- !.
 
 check-well-moded-positive _ A _ _ _ :- halt "check-well-moded-positive: Uncaught branch in" A.
 
-mode (check-well-moded-prog i i).
-check-well-moded-prog [] _ :- !.
-check-well-moded-prog [clause Loc Vars Body | Tl] Modes :-
+mode (check-well-moded-prog i o i).
+check-well-moded-prog [] _ _ :- !.
+check-well-moded-prog [clause Loc Vars Body | Tl] NoModes Modes :-
   to-check Body, !,
-  % print "Going to check" Loc Body,
-  check-well-moded-positive NoModes_ Body Modes Loc Vars, !,
-  check-well-moded-prog Tl Modes.
+  % print "====================================================",
+  % print "Going to check" Loc Vars Body,
+  check-well-moded-positive NoModes Body Modes Loc Vars, !,
+  check-well-moded-prog Tl NoModes Modes.
 
 check-overlapping-prog [] _ :- !.
 
@@ -532,6 +548,6 @@ check P Q DeclaredTypes TypeAbbreviations Modes _FuncPred :-
   Abbrevs => typecheck-program P Q DeclaredTypes RC, !,
   warn-linear P, !,
   if (var RC) (true) (fail),
-  check-well-moded-prog P Modes.
+  check-well-moded-prog P NoModes_ Modes.
 
 % vim: set ft=lprolog:
