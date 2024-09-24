@@ -460,9 +460,9 @@ get-str A _ :- halt "Error in get-str" A.
 pred check-args-mode i:D, o:A, i:B, i:C, i:prop, i:term.
 check-args-mode HD _ _ Loc Mode Arg :-
   get-head-mode Mode ModeP,
-  ModeP, var Arg, !,
+  ModeP, get-vars Arg L, not (L = []), !,
   std.assert!(get-str Arg Arg') "Should not fail",
-  if (fatal-no-mode) (halt "WARNING: Flex arg" Arg' "passed to" HD Loc) (print "WARNING: Flex arg" Arg' "passed to" HD Loc).
+  if (fatal-no-mode) (halt "WARNING: Not ground" Arg' "passed to" HD Loc) (print "WARNING: Not ground" Arg' "passed to" HD Loc).
 % TODO: following rule aims to go under lambda which are args of a predicate
 %       however, this is gives a error if partial application is used
 % check-args-mode _ NoModes AllModes Loc Mode Arg :-
@@ -478,7 +478,7 @@ check-well-moded-negative _        N :- name N, !.
 check-well-moded-negative _        (cdata (uvar _ as V)) :- !, to-constant V.
 check-well-moded-negative _        (cdata _) :- !.
 check-well-moded-negative Loc (app [const "," | L]) :- !,
-  std.forall L (x\ if (var x) ((fatal-no-mode, halt "Passed flexible to ," Loc); print "Passed flexible to ," Loc) 
+  std.forall L (x\ if (var x) ((fatal-no-mode, halt "WARNING: Passed flexible to ," Loc); print "WARNING: Passed flexible to ," Loc) 
   (check-well-moded-negative Loc x)).
 check-well-moded-negative Loc (app [const "pi", lam B]) :- !,
   pi x\ check-well-moded-negative Loc (B x).
