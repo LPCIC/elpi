@@ -435,7 +435,7 @@ check-head-output Head Args Loc :-
   std.forall2 Mode Args (m\t\ sigma Vars\
     std.assert! (get-vars t Vars) "Should not fail",
     if (get-head-mode m true) true (if (Vars = []) true (
-      print "WARNING: The variables" Vars "are is output position of the predicate\"" Head "\"and cannot be ensured to be ground" Loc))).
+      print "WARNING: The variables" Vars "are in output position of the predicate\"" Head "\"and cannot be ensured to be ground" Loc))).
 check-head-output _ _ _.
 
 mode (variadic-mode i).

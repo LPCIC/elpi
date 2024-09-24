@@ -192,7 +192,29 @@ let () = declare "is"
   ~description:"calc"
   ()
 
-  let () = declare "trie"
+let () = declare "trie"
   ~source_elpi:"trie.elpi"
   ~description:"discrimination_tree on trees"
+  ()
+
+let () = declare "mode_checking_fo"
+  ~source_elpi:"mode_checking_fo.elpi"
+  ~description:"mode_checking_fo"
+  ~expectation:(SuccessOutputTxt (
+    let expected = [|
+      "WARNING: Flex arg cdata Y passed to const p "; 
+      "WARNING: The variables [cdata Y] are in output position of the predicate\" "; 
+      " const p \"and cannot be ensured to be ground "|] in
+    let is_in_file = Util.has_substring ~sub:"mode_checking_fo" in
+    let start_warning = String.starts_with ~prefix:"WARNING" in
+    let pos = ref 0 in
+    let rec f = function
+      | [] | [_] -> true
+      | x :: x' :: xs when start_warning x && is_in_file x' ->
+        expected.(!pos) = x && (incr pos; f xs)
+      | x :: x' :: x'' :: xs when start_warning x && is_in_file x'' ->
+        expected.(!pos) = x && (incr pos; expected.(!pos) = x') && (incr pos; f xs)
+      | _ :: xs -> f xs in
+      f
+    ))
   ()
