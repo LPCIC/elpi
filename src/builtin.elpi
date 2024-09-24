@@ -862,17 +862,17 @@ external pred std.string.map.bindings i:std.string.map A,
 
 % [std.string.map.filter M F M1] Filter M w.r.t. the predicate F
 external pred std.string.map.filter i:std.string.map A, 
-                                    i:string -> A -> prop, 
+                                    i:(string -> A -> prop), 
                                     o:std.string.map A.
 
 % [std.string.map.map M F M1] Map M w.r.t. the predicate F
 external pred std.string.map.map i:std.string.map A, 
-                                 i:string -> A -> B -> prop, 
+                                 i:(string -> A -> B -> prop), 
                                  o:std.string.map B.
 
 % [std.string.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external pred std.string.map.fold i:std.string.map A, i:C, 
-                                  i:string -> A -> C -> C -> prop, o:C.
+                                  i:(string -> A -> C -> C -> prop), o:C.
 
 % CAVEAT: the type parameter of std.int.map must be a closed term
 
@@ -898,16 +898,16 @@ external pred std.int.map.find i:int, i:std.int.map A, o:A.
 external pred std.int.map.bindings i:std.int.map A, o:list (pair int A).
 
 % [std.int.map.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.int.map.filter i:std.int.map A, i:int -> A -> prop, 
+external pred std.int.map.filter i:std.int.map A, i:(int -> A -> prop), 
                                  o:std.int.map A.
 
 % [std.int.map.map M F M1] Map M w.r.t. the predicate F
-external pred std.int.map.map i:std.int.map A, i:int -> A -> B -> prop, 
+external pred std.int.map.map i:std.int.map A, i:(int -> A -> B -> prop), 
                               o:std.int.map B.
 
 % [std.int.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external pred std.int.map.fold i:std.int.map A, i:C, 
-                               i:int -> A -> C -> C -> prop, o:C.
+                               i:(int -> A -> C -> C -> prop), o:C.
 
 % CAVEAT: the type parameter of std.loc.map must be a closed term
 
@@ -933,16 +933,16 @@ external pred std.loc.map.find i:loc, i:std.loc.map A, o:A.
 external pred std.loc.map.bindings i:std.loc.map A, o:list (pair loc A).
 
 % [std.loc.map.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.loc.map.filter i:std.loc.map A, i:loc -> A -> prop, 
+external pred std.loc.map.filter i:std.loc.map A, i:(loc -> A -> prop), 
                                  o:std.loc.map A.
 
 % [std.loc.map.map M F M1] Map M w.r.t. the predicate F
-external pred std.loc.map.map i:std.loc.map A, i:loc -> A -> B -> prop, 
+external pred std.loc.map.map i:std.loc.map A, i:(loc -> A -> B -> prop), 
                               o:std.loc.map B.
 
 % [std.loc.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external pred std.loc.map.fold i:std.loc.map A, i:C, 
-                               i:loc -> A -> C -> C -> prop, o:C.
+                               i:(loc -> A -> C -> C -> prop), o:C.
 
 kind std.string.set type.
 
@@ -994,22 +994,22 @@ external pred std.string.set.max i:std.string.set, o:string.
 external pred std.string.set.cardinal i:std.string.set, o:int.
 
 % [std.string.set.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.string.set.filter i:std.string.set, i:string -> prop, 
+external pred std.string.set.filter i:std.string.set, i:(string -> prop), 
                                     o:std.string.set.
 
 % [std.string.set.map M F M1] Map M w.r.t. the predicate F
 external pred std.string.set.map i:std.string.set, 
-                                 i:string -> string -> prop, 
+                                 i:(string -> string -> prop), 
                                  o:std.string.set.
 
 % [std.string.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external pred std.string.set.fold i:std.string.set, i:A, 
-                                  i:string -> A -> A -> prop, o:A.
+                                  i:(string -> A -> A -> prop), o:A.
 
 % [std.string.set.partition M F M1 M2] Partitions M w.r.t. the predicate F,
 % M1 is where F holds
 external pred std.string.set.partition i:std.string.set, 
-                                       i:string -> prop, 
+                                       i:(string -> prop), 
                                        o:std.string.set, o:std.string.set.
 
 kind std.int.set type.
@@ -1060,20 +1060,20 @@ external pred std.int.set.max i:std.int.set, o:int.
 external pred std.int.set.cardinal i:std.int.set, o:int.
 
 % [std.int.set.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.int.set.filter i:std.int.set, i:int -> prop, 
+external pred std.int.set.filter i:std.int.set, i:(int -> prop), 
                                  o:std.int.set.
 
 % [std.int.set.map M F M1] Map M w.r.t. the predicate F
-external pred std.int.set.map i:std.int.set, i:int -> int -> prop, 
+external pred std.int.set.map i:std.int.set, i:(int -> int -> prop), 
                               o:std.int.set.
 
 % [std.int.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external pred std.int.set.fold i:std.int.set, i:A, 
-                               i:int -> A -> A -> prop, o:A.
+                               i:(int -> A -> A -> prop), o:A.
 
 % [std.int.set.partition M F M1 M2] Partitions M w.r.t. the predicate F, M1
 % is where F holds
-external pred std.int.set.partition i:std.int.set, i:int -> prop, 
+external pred std.int.set.partition i:std.int.set, i:(int -> prop), 
                                     o:std.int.set, o:std.int.set.
 
 kind std.loc.set type.
@@ -1124,20 +1124,20 @@ external pred std.loc.set.max i:std.loc.set, o:loc.
 external pred std.loc.set.cardinal i:std.loc.set, o:int.
 
 % [std.loc.set.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.loc.set.filter i:std.loc.set, i:loc -> prop, 
+external pred std.loc.set.filter i:std.loc.set, i:(loc -> prop), 
                                  o:std.loc.set.
 
 % [std.loc.set.map M F M1] Map M w.r.t. the predicate F
-external pred std.loc.set.map i:std.loc.set, i:loc -> loc -> prop, 
+external pred std.loc.set.map i:std.loc.set, i:(loc -> loc -> prop), 
                               o:std.loc.set.
 
 % [std.loc.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external pred std.loc.set.fold i:std.loc.set, i:A, 
-                               i:loc -> A -> A -> prop, o:A.
+                               i:(loc -> A -> A -> prop), o:A.
 
 % [std.loc.set.partition M F M1 M2] Partitions M w.r.t. the predicate F, M1
 % is where F holds
-external pred std.loc.set.partition i:std.loc.set, i:loc -> prop, 
+external pred std.loc.set.partition i:std.loc.set, i:(loc -> prop), 
                                     o:std.loc.set, o:std.loc.set.
 
 #line 0 "builtin_map.elpi"

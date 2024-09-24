@@ -2674,6 +2674,9 @@ let truec    = D.Global_symbols.declare_global_symbol "true"
 let falsec   = D.Global_symbols.declare_global_symbol "false"
 let pairc    = D.Global_symbols.declare_global_symbol "pr"
 
+let modefoc  = D.Global_symbols.declare_global_symbol "mode-fo"
+let modehoc  = D.Global_symbols.declare_global_symbol "mode-ho"
+
 let mkQApp ~on_type l =
   let c = if on_type then tappc else appc in
   App(c,R.list_to_lp_list l,[])
@@ -2879,9 +2882,15 @@ let static_check ~exec ~checker:(state,program)
     state, c :: tl) functionality (state,[]) in
 
   (* Building modes *)
+  let arg_mode2bool = function Input -> Const truec | Output -> Const falsec in
+
+  let rec mode2elpi = function
+    | D.Fo b -> App(modefoc,arg_mode2bool b,[])
+    | D.Ho (b, l) -> App(modehoc,arg_mode2bool b,[R.list_to_lp_list @@ List.map mode2elpi l]) in
+
   let state, modes = C.Map.fold (fun tname v (state,tl) -> 
     let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
-    let m = List.map (fun x -> match get_arg_mode x with Input -> Const truec | Output -> Const falsec) v in
+    let m = List.map mode2elpi v in
     state, (App(pairc, c, [R.list_to_lp_list m])) :: tl) modes (state,[]) in
 
   let loc = Loc.initial "(static_check)" in
