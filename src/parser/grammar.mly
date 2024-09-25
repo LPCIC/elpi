@@ -191,7 +191,7 @@ pred_item:
           | [a;b] -> mkApp (loc $loc(hd)) [mkCon "->"; a; b] | a :: tl -> mkApp (loc $loc(hd)) [mkCon "->"; a; aux tl]
         in
         (
-          Mode.Ho (mode_of_IO io, mode), 
+          Mode.Ho (mode_of_IO io, List.rev @@ List.tl @@ List.rev (fst hd :: mode)), 
           aux ty
         ) }
 | io = IO_COLON; hd = constant; args = nonempty_list(atype_term) { (Mode.Fo (mode_of_IO io), mkAppF (loc $loc(hd)) hd args) }
@@ -205,7 +205,7 @@ pred_item_opt:
           | [a;b] -> mkApp (loc $loc(hd)) [mkCon "->"; a; b] | a :: tl -> mkApp (loc $loc(hd)) [mkCon "->"; a; aux tl]
         in
         (
-          Mode.Ho (mode_of_IO (Option.value ~default:'o' io), mode), 
+          Mode.Ho (mode_of_IO (Option.value ~default:'o' io), List.rev @@ List.tl @@ List.rev (fst hd :: mode)), 
           aux ty
         ) }
 | io = option(IO_COLON); hd = constant; args = nonempty_list(atype_term) { (Mode.Fo (mode_of_IO (Option.value ~default:'o' io)), mkAppF (loc $loc(hd)) hd args) }

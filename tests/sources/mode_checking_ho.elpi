@@ -24,4 +24,10 @@ pred q i:prop, o:prop.
 q A R :- A, R = A. % Everything goes moothly!
 q A R :- R, R = A. % Mh, R is output, ie supposed flex
 
+pred r0 i:(i:A -> i:B -> prop), i:A, i:B.
+r0 F A B :- F A B.
+
+pred r1 i:(i:A -> i:B -> i:C -> prop), i:A, i:B, o:C.
+r1 F A B C :- F A B C. % Not good: C is in output but used as input in F
+
 main.

@@ -221,9 +221,9 @@ let () = declare "mode_checking_fo"
   ~description:"mode_checking_fo"
   ~expectation:(SuccessOutputTxt (
     let expected = [|
-      "WARNING: Not ground cdata Y passed to const p "; 
-      "WARNING: The variables \\[cdata Y\\] are in output position of the predicate\" "; 
-      " const p \"and cannot be ensured to be ground "|] in
+      "WARNING: Not ground Y passed to p "; 
+      "WARNING: The variables \\[Y\\] are in output position of the predicate\" "; 
+      "\"and cannot be ensured to be ground "|] in
     mode_check expected "mode_checking_fo"
     ))
   ()
@@ -233,10 +233,13 @@ let () = declare "mode_checking_ho"
   ~description:"mode_checking_ho"
   ~expectation:(SuccessOutputTxt (
     let expected = [|
-      "WARNING: Not ground cdata Z passed to const p "; 
-      "WARNING: Not ground app \\[const con, cdata Z\\] passed to const p ";
-      "WARNING: Not ground X[0-9]+ c[0-9]+ passed to const p ";
-      "WARNING: Passed flexible to , "
+      "WARNING: Not ground Z passed to p "; 
+      "WARNING: Not ground (con Z) passed to p ";
+      "WARNING: Not ground X[0-9]+ c[0-9]+ passed to p ";
+      "WARNING: Passed flexible to , ";
+      "WARNING: Not ground C passed to c0 ";
+      "WARNING: The variables \\[C\\] are in output position of the predicate\" ";
+      "\"and cannot be ensured to be ground "
       |] in
     mode_check expected "mode_checking_ho"
     ))
