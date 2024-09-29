@@ -430,6 +430,7 @@ type type_abbrev_declaration = {
   tavalue : preterm;
   taparams : int;
   taloc : Loc.t;
+  timestamp:int
 }
 [@@ deriving show, ord]
 
@@ -1291,13 +1292,13 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     end;
     F.Map.add n (body,loc) m
 
-  let compile_type_abbrev lcs state { Ast.TypeAbbreviation.name; nparams; loc; value } =
+  let compile_type_abbrev geti lcs state { Ast.TypeAbbreviation.name; nparams; loc; value } =
     let state, (taname, _) = Symbols.allocate_global_symbol state name in
     let state, tavalue = preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) value in
     let tavalue = assert(List.length tavalue = 1); List.hd tavalue in
     if tavalue.amap.nargs != 0 then
       error ~loc ("type abbreviation for " ^ F.show name ^ " has unbound variables");
-    state, { taname; tavalue; taparams = nparams; taloc = loc }
+    state, { taname; tavalue; taparams = nparams; taloc = loc; timestamp = geti () }
 
   let add_to_index_type_abbrev state m ({ taname; taloc; tavalue; taparams } as x) =
     if C.Map.mem taname m then begin
@@ -1348,8 +1349,9 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     C.Map.union (fun _ l1 l2 -> Some (Types.merge l1 l2)) t1 t2
 
   let merge_type_abbrevs s m1 m2 =
+    let len = C.Map.cardinal m1 in
     if C.Map.is_empty m2 then m1 else
-    C.Map.fold (fun _ v m -> add_to_index_type_abbrev s m v) m1 m2
+    C.Map.fold (fun _ (k:type_abbrev_declaration) m -> add_to_index_type_abbrev s m {k with timestamp=k.timestamp+len}) m2 m1
 
   let rec toplevel_clausify loc ~depth state t =
     let state, cl = map_acc (pi2arg loc ~depth []) state (R.split_conj ~depth t) in
@@ -1432,12 +1434,13 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       C.Map.add k (Types.make v) m
 
   let run (state : State.t) ~toplevel_macros p =
+    let geti = let i = ref ~-1 in fun () -> incr i; !i in
  (* FIXME: otypes omodes - NO, rewrite spilling on data.term *)
     let rec compile_program omacros lcs state { macros; types; type_abbrevs; modes; body } =
       check_no_overlap_macros omacros macros;
       let active_macros =
         List.fold_left compile_macro omacros macros in
-      let state, type_abbrevs = map_acc (compile_type_abbrev lcs) state type_abbrevs in
+      let state, type_abbrevs = map_acc (compile_type_abbrev geti lcs) state type_abbrevs in
       let type_abbrevs = List.fold_left (add_to_index_type_abbrev state) C.Map.empty type_abbrevs in
       let state, types =
         map_acc (compile_type lcs) state types in
@@ -1637,11 +1640,11 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
   let _apply_subst_list f = apply_subst (fun x -> smart_map (f x))
 
   let tabbrevs_map state f m =
-    C.Map.fold (fun _ { taname; tavalue; taparams; taloc } m ->
+    C.Map.fold (fun _ { taname; tavalue; taparams; taloc; timestamp } m ->
       (* TODO: check for collisions *)
       let taname = f taname in
       let tavalue = smart_map_preterm ~on_type:true state f tavalue in
-      C.Map.add taname { taname; tavalue; taparams; taloc } m
+      C.Map.add taname { taname; tavalue; taparams; taloc; timestamp } m
       ) m C.Map.empty
 
   let apply_subst_constant ?live_symbols =
@@ -2739,43 +2742,45 @@ let quote_syntax time new_state { WithMain.clauses; query; compiler_state } =
        close_w_binder argc queryt query.amap]) in
   new_state, clist, q
 
-let unfold_type_abbrevs ~compiler_state lcs type_abbrevs { term; loc; amap } =
-  let find_opt c =
-    try Some (C.Map.find c type_abbrevs) with Not_found -> None in
-  let rec aux_tabbrv seen = function
-    | Const c as x ->
+let unfold_type_abbrevs ~is_typeabbrev ~compiler_state lcs type_abbrevs { term; loc; amap } ttime =
+  let error_undefined ~t1 ~t2 c tavalue =
+    if is_typeabbrev && t1 <= t2 then
+      error (Format.asprintf "typeabbrev %a uses the undefined %s constant at %a" (R.Pp.ppterm 0 [] ~argsdepth:0 [||]) tavalue.term (Symbols.show compiler_state c) Util.Loc.pp tavalue.loc);
+  in
+  (* Printf.printf "Istypeabbrev %b\n" is_typeabbrev; *)
+  (* C.Map.iter (fun k v -> Format.printf "Looping %d %s %a %d\n%!" k (Symbols.show compiler_state k) pp_term v.tavalue.term v.timestamp) type_abbrevs; *)
+  let find_opt c = C.Map.find_opt c type_abbrevs in
+  let rec aux_tabbrv ttime = function
+  | Const c as x ->
         begin match find_opt c with
-        | Some { tavalue; taparams } ->
+        | Some { tavalue; taparams; timestamp=time } ->
           if taparams > 0 then
             error ~loc ("type abbreviation " ^ Symbols.show compiler_state c ^ " needs " ^
               string_of_int taparams ^ " arguments");
-          if C.Set.mem c seen then
-            error ~loc
-              ("looping while unfolding type abbreviation for "^ Symbols.show compiler_state c);
-          aux_tabbrv (C.Set.add c seen) tavalue.term
+          error_undefined ttime time c tavalue;
+          aux_tabbrv time tavalue.term
         | None -> x
         end
     | App(c,t,ts) as x ->
         begin match find_opt c with
-        | Some { tavalue; taparams } ->
+        | Some { tavalue; taparams; timestamp=time } ->
           let nargs = 1 + List.length ts in
           if taparams > nargs then
             error ~loc ("type abbreviation " ^ Symbols.show compiler_state c ^ " needs " ^
               string_of_int taparams ^ " arguments, only " ^
               string_of_int nargs ^ " are provided");
-          if C.Set.mem c seen then
-            error ~loc
-              ("looping while unfolding type abbreviation for "^ Symbols.show compiler_state c);
-          aux_tabbrv (C.Set.add c seen) (R.deref_appuv ~from:lcs ~to_:lcs (t::ts) tavalue.term)
+          error_undefined ttime time c tavalue;
+          aux_tabbrv time (R.deref_appuv ~from:lcs ~to_:lcs (t::ts) tavalue.term)
         | None ->
-          let t1 = aux_tabbrv seen t in
-          let ts1 = smart_map (aux_tabbrv seen) ts in
+          let t1 = aux_tabbrv ttime t in
+          let ts1 = smart_map (aux_tabbrv ttime) ts in
           if t1 == t && ts1 == ts then x
           else App(c,t1,ts1)
         end
+    | Lam x -> Lam (aux_tabbrv ttime x)
     | x -> x
   in
-    { term = aux_tabbrv C.Set.empty term; loc; amap; spilling = false }
+    { term = aux_tabbrv ttime term; loc; amap; spilling = false }
 
 let term_of_ast ~depth state text =
  if State.get D.while_compiling state then
@@ -2797,25 +2802,29 @@ let static_check ~exec ~checker:(state,program)
   ({ WithMain.types; type_abbrevs; initial_depth; compiler_state } as q) =
   let time = `Compiletime in
   let state, p,q = quote_syntax time state q in
+
+  (* C.Map.iter (fun k ((v:type_abbrev_declaration),t) -> Format.printf "H %s %a %d\n%!" (Symbols.show state k) 
+    pp_term v.tavalue.term t) type_abbrevs; *)
+
+  let state, talist =
+    C.Map.bindings type_abbrevs |>
+    map_acc (fun state (name, { tavalue; timestamp=ttime }) ->
+      let tavaluet = unfold_type_abbrevs ~is_typeabbrev:true ~compiler_state initial_depth type_abbrevs tavalue ttime in
+      let state, tavaluet = quote_preterm time ~compiler_state state ~on_type:true tavaluet in
+      state, App(colonec, D.C.of_string (Symbols.show compiler_state name), [lam2forall tavaluet])) state
+    in
   let state, tlist = C.Map.fold (fun tname l (state,tl) ->
     let l = l.Types.lst in
     let state, l =
       List.rev l |> map_acc (fun state { Types.decl = { ttype } } ->
         let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
-        let ttypet = unfold_type_abbrevs ~compiler_state initial_depth type_abbrevs ttype in
+        let ttypet = unfold_type_abbrevs ~is_typeabbrev:false ~compiler_state initial_depth type_abbrevs ttype 0 in
         let state, ttypet = quote_preterm time ~compiler_state state ~on_type:true ttypet in
         state, App(colonc,c, [close_w_binder forallc ttypet ttype.amap])) state
       in
         state, l :: tl)
       types (state,[]) in
   let tlist = List.concat (List.rev tlist) in
-  let state, talist =
-    C.Map.bindings type_abbrevs |>
-    map_acc (fun state (name, { tavalue;  } ) ->
-      let tavaluet = unfold_type_abbrevs ~compiler_state initial_depth type_abbrevs tavalue in
-      let state, tavaluet = quote_preterm time ~compiler_state state ~on_type:true tavaluet in
-      state, App(colonec, D.C.of_string (Symbols.show compiler_state name), [lam2forall tavaluet])) state
-    in
   let loc = Loc.initial "(static_check)" in
   let query =
     query_of_term (state, program) (fun ~depth state ->

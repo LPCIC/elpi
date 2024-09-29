@@ -99,6 +99,17 @@ let () = declare "typeabbrv12"
   ~description:"type abbreviations and error messages"
   ()
 
+let () = declare "typeabbrv13"
+  ~source_elpi:"typeabbrv13.elpi"
+  ~description:"type abbreviations"
+  ()
+
+let () = declare "typeabbrv14"
+  ~source_elpi:"typeabbrv14.elpi"
+  ~description:"type abbreviations"
+  ~expectation:(FailureOutput (Str.regexp "SYMBOL.*uses the undefined dl constant"))
+  ()
+
 let () = declare "conj2"
   ~source_elpi:"conj2.elpi"
   ~description:"parsing and evaluation of & (binary conj)"
