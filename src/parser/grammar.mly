@@ -283,10 +283,10 @@ clause:
       body;
     }
   }
-| attributes = attributes; l = clause_hd_term; VDASH; r = term { 
+| attributes = attributes; l = clause_hd_term; v = VDASH; r = term { 
     { Clause.loc = loc $sloc;
       attributes;
-      body = mkAppF (loc $loc) Func.rimplf [l;r]
+      body = mkApp (loc $sloc) [mkConst (loc $loc(v)) Func.rimplf;l;r]
     }
 }
 
@@ -379,7 +379,7 @@ clause_hd_term:
 | t = clause_hd_closed_term { t }
 
 clause_hd_closed_term:
-| t = constant { mkConst (loc $loc) t }
+| t = constant { mkConst (loc $sloc) t }
 | LPAREN; t = term; RPAREN { t }
 
 clause_hd_open_term:

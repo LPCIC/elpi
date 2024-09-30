@@ -36,9 +36,9 @@ let message_of_state s = try Error_messages.message s with Not_found -> "syntax 
 
 module Parser = Parse.Make(struct let resolver = Elpi_util.Util.std_resolver ~paths:[] () end)
 let test s x y w z att b =
+  let loc = Loc.initial "(input)" in
   let exp = [mkClause (mkLoc x y w z) att b] in
   let lexbuf = Lexing.from_string s in
-  let loc = Loc.initial "(input)" in
   try
     let p = Parser.program_from ~loc lexbuf in
     if p <> exp then
@@ -92,21 +92,25 @@ let testF s i msg =
     end
 
 
-let (|-) a b = mkApp (mkLoc 1 0 0 0) [mkCon (mkLoc 1 0 0 0) ":-";a;b]
-let (@) a b = mkApp (mkLoc 1 0 0 0) ([mkCon (mkLoc 1 0 0 0) a] @ b)
+let (|-) a n b =
+  let a1 = a.loc.source_start in
+  let b2 = b.loc.source_stop in
+  mkApp (mkLoc a1 b2 1 0) [mkCon (mkLoc n (n+1) 1 0) ":-";a;b]
+let (@) a b = mkApp (mkLoc 1 0 1 0) ([mkCon (mkLoc 1 0 1 0) a] @ b)
 
-let (-->) x b = mkLam (mkLoc 1 0 0 0) x b
-let mkNil = mkNil (mkLoc 1 0 0 0)
-let mkSeq = mkSeq (mkLoc 1 0 0 0)
-let c s = mkCon (mkLoc 1 0 0 0) s
-let str s = mkC (mkLoc 1 0 0 0) (cstring.Elpi_util.Util.CData.cin s)
+let (-->) x b = mkLam (mkLoc 1 0 1 0) x b
+let mkNil = mkNil (mkLoc 1 0 1 0)
+let mkSeq = mkSeq (mkLoc 1 0 1 0)
+let c n s = mkCon (mkLoc n n 1 0) s
+let str s = mkC (mkLoc 1 0 1 0) (cstring.Elpi_util.Util.CData.cin s)
 
-let ss t = { Chr.eigen = underscore (mkLoc 1 0 0 0); context = underscore (mkLoc 1 0 0 0); conclusion = t }
+let ss t = { Chr.eigen = underscore (mkLoc 1 0 1 0); context = underscore (mkLoc 1 0 1 0); conclusion = t }
 let s e g t = { Chr.eigen = e; context = g; conclusion = t }
-(* 
 let _ =
   (*    01234567890123456789012345 *)
-  test  "p :- q."           0 6  1 0 [] (c"p" |- c"q");
+  test  "p :- q."           1 6  1 0 [] ((c 1 "p" |- 3) (c 6 "q"));
+  test  " p :- q."          2 7  1 0 [] ((c 2 "p" |- 4) (c 7 "q"));
+  (* 
   test  "p :- q r."         0 8  1 0 [] (c"p" |- "q" @ [c"r"]);
   test  "p :- !, q."        0 9  1 0 [] (c"p" |- "," @ [c"!"; c"q"]);
   test  "p :- q r s."       0 10 1 0 [] (c"p" |- "q" @ [c"r";c"s"]);
@@ -161,7 +165,8 @@ let _ =
   testR "rule p (q r)."     0 12 1 0 [] [ss (c"p");ss ("q" @ [c"r"])] [] None None;
   testR "rule (E : G ?- r)."0 17 1 0 [] [s (c "E") (c"G") (c"r")] [] None None;
   test  "p :- f \".*\\\\.aux\"." 0 17 1 0 [] (":-" @ [c"p";"f"@ [str ".*\\.aux"]]);
-;; *)
+  *)
+;; 
 
 (* test that all families of tokens are parsed as such *)
 let sanity_check : unit =

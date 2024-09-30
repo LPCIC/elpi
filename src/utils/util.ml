@@ -141,7 +141,7 @@ module Loc = struct
     let source =
      if source_name = "" then ""
      else "File \"" ^ source_name ^ "\", " in
-    let chars = Printf.sprintf "character %d" source_start (*source_stop*) in
+    let chars = Printf.sprintf "characters %d-%d" source_start source_stop in
     let pos =
       if line = -1 then chars
       else Printf.sprintf "line %d, column %d, %s"
