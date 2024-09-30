@@ -47,8 +47,8 @@ module Term : sig
    | Lam of Func.t * t
    | CData of CData.t
    | Quoted of quote
-  and t = { it : t; loc : Loc.t }
-  and quote = { data : string; kind : string option }
+  and t = { it : t_; loc : Loc.t }
+  and quote = { qloc : Loc.t; data : string; kind : string option }
   [@@ deriving show, ord]
 
   exception NotInProlog of Loc.t * string
@@ -59,6 +59,7 @@ module Term : sig
   val mkAppF : Loc.t -> Func.t -> t list -> t
 
   val mkCon : Loc.t -> string -> t
+  val mkConst : Loc.t -> Func.t -> t
   val mkNil : Loc.t -> t
   val mkSeq : Loc.t -> t list -> t
   val mkQuoted : Loc.t -> string -> t

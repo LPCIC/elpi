@@ -61,20 +61,21 @@ end
 
 module Term = struct
   
-  type t =
+  type t_ =
    | Const of Func.t
    | App of t * t list
    | Lam of Func.t * t
    | CData of CData.t
    | Quoted of quote
-  and quote = { data : string; loc : Loc.t; kind : string option }
-  [@@deriving show, ord]
+  and t = { it : t_; loc : Loc.t }
+  and quote = { qloc : Loc.t; data : string; kind : string option }
+  [@@ deriving show, ord]
 
 exception NotInProlog of Loc.t * string
 
-let mkC x = CData x
-let mkLam x t = Lam (Func.from_string x,t)
-let mkNil = Const Func.nilf
+let mkC loc x = { loc; it = CData x }
+let mkLam loc x t = { loc; it = Lam (Func.from_string x,t) }
+let mkNil loc = {loc; it = Const Func.nilf }
 let mkQuoted loc s =
   let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n;
                                  source_stop = loc.Loc.source_stop - m;
@@ -96,45 +97,60 @@ let mkQuoted loc s =
        let space_after = find_space 0 - 1 in
        let kind = String.sub s (i+1) space_after in
        let data = String.sub s (i+space_after+2) (String.length s - i - i - space_after-2) in
-       { loc = strip (i+space_after+2) i loc; data; kind = Some kind }
-    | _ -> { loc = strip i i loc; data = String.sub s i (String.length s - i - i); kind = None }
+       { qloc = strip (i+space_after+2) i loc; data; kind = Some kind }
+    | _ -> { qloc = strip i i loc; data = String.sub s i (String.length s - i - i); kind = None }
   in
-    Quoted (find_data 0)
-let mkSeq l =
- let rec aux =
+    { loc; it = Quoted (find_data 0) }
+let mkSeq loc (l : t list) =
+ let rec aux loc =
   function
     [] -> assert false
   | [e] -> e
-  | hd::tl -> App(Const Func.consf,[hd;aux tl])
+  | hd::tl -> { loc; it = App({ it = Const Func.consf; loc = hd.loc },[hd;aux loc tl]) } (* BUG *)
  in
-  aux l
+   aux loc l
 
 
 let rec best_effort_pp = function
- | Lam (x,t) -> "x\\" ^ best_effort_pp t
+ | Lam (x,t) -> "x\\" ^ best_effort_pp t.it
  | CData c -> CData.show c
  | Quoted _ -> "{{ .. }}"
  | _ -> ".."
 
 let mkApp loc = function
 (* FG: for convenience, we accept an empty list of arguments *)
-  | [(App _ | Const _ | Quoted _) as c] -> c
-  | App(c,l1)::l2 -> App(c,l1@l2)
-  | (Const _ | Quoted _) as c::l2 -> App(c,l2)
+  | [{ it = (App _ | Const _ | Quoted _) } as c] -> c
+  | { it = App(c,l1) } ::l2 -> { loc; it = App(c,l1@l2) }
+  | { it = (Const _ | Quoted _) } as c::l2 -> { loc; it = App(c,l2) }
   | [] -> anomaly ~loc "empty application"
-  | x::_ -> raise (NotInProlog(loc,"syntax error: the head of an application must be a constant or a variable, got: " ^ best_effort_pp x))
+  | x::_ -> raise (NotInProlog(loc,"syntax error: the head of an application must be a constant or a variable, got: " ^ best_effort_pp x.it))
 
 let mkAppF loc c = function
   | [] -> anomaly ~loc "empty application"
-  | args -> App(Const c,args)
+  | args -> { loc; it = App( { it = Const c; loc },args) }
 
 
 let fresh_uv_names = ref (-1);;
-let mkFreshUVar () = incr fresh_uv_names; Const (Func.from_string ("_" ^ string_of_int !fresh_uv_names))
+let mkFreshUVar loc = incr fresh_uv_names; { loc; it = Const (Func.from_string ("_" ^ string_of_int !fresh_uv_names)) }
 let fresh_names = ref (-1);;
-let mkFreshName () = incr fresh_names; Const (Func.from_string ("__" ^ string_of_int !fresh_names))
-let mkCon c = Const (Func.from_string c)
+let mkFreshName loc = incr fresh_names; { loc; it = Const (Func.from_string ("__" ^ string_of_int !fresh_names)) }
+let mkCon loc c = { loc; it = Const (Func.from_string c) }
+let mkConst loc c = { loc; it = Const c }
 
+end
+
+module ScopedTerm = struct
+
+  type t_ =
+   | Global of Func.t
+   | Local of Func.t
+   | Var of Func.t * t list
+   | App of Func.t * t * t list
+   | Lam of Func.t * t
+   | CData of CData.t
+   and t = { it : t; loc : Loc.t }
+  [@@ deriving show, ord]
+  
 end
 
 type raw_attribute =

@@ -22,43 +22,44 @@ let loc (startpos, endpos) = {
   line_starts_at = startpos.Lexing.pos_bol;
 }
 
-let desugar_multi_binder loc = function
-  | App(Const hd as binder,args)
+let desugar_multi_binder loc t =
+  match t.it with
+  | App( { it = Const hd } as binder,args)
     when Func.equal hd Func.pif || Func.equal hd Func.sigmaf && List.length args > 1 ->
       let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
-      let () = match last with
+      let () = match last.it with
         | Lam _ -> ()
         | Const x when Func.is_uvar_name x -> ()
         | _ -> raise (ParseError(loc,"The last argument of 'pi' or 'sigma' must be a function or a unification variable, while it is: " ^ Ast.Term.show last)) in
       let names = List.map (function
-        | Const x -> Func.show x
-        | (App _ | Lam _ | CData _ | Quoted _) ->
+        | { it = Const x } -> Func.show x
+        | { it = (App _ | Lam _ | CData _ | Quoted _) } ->
             raise (ParseError(loc,"Only names are allowed after 'pi' or 'sigma'"))) rev_rest in
       let body = mkApp loc [binder;last] in
-      List.fold_left (fun bo name -> mkApp loc [binder;mkLam name bo]) body names
-  | (App _ | Const _ | Lam _ | CData _ | Quoted _) as t -> t
+      List.fold_left (fun bo name -> mkApp loc [binder;mkLam loc (* BUG *) name bo]) body names
+  | (App _ | Const _ | Lam _ | CData _ | Quoted _) -> t
 ;;
 
 let desugar_macro loc lhs rhs =
   match lhs, rhs with
-  | Const name, body ->
+  | { it = Const name }, body ->
       if ((Func.show name).[0] != '@') then
         raise (ParseError(loc,"Macro name must begin with '@'"));
       name, body
-  | App(Const name,args), body ->
+  | { it = App({ it = Const name },args) }, body ->
       if ((Func.show name).[0] != '@') then
         raise (ParseError(loc,"Macro name must begin with '@'"));
       let names = List.map (function
-        | Const x -> Func.show x
-        | (App _ | Lam _ | CData _ | Quoted _) ->
+        | { it = Const x } -> Func.show x
+        | { it = (App _ | Lam _ | CData _ | Quoted _) } ->
               raise (ParseError(loc,"Macro parameters must be names"))) args in
-      name, List.fold_right mkLam names body
+      name, List.fold_right (mkLam loc) (* BUG *) names body
   | _ ->
         raise (ParseError(loc,"Illformed macro left hand side"))
 ;;
 
 let mkApp loc = function
-  | Const c :: a :: App (Const c1, args) :: [] when Func.(equal c andf && equal c1 andf) ->
+  | { it = Const c } :: a :: { it = App ({ it = Const c1 }, args) } :: [] when Func.(equal c andf && equal c1 andf) ->
       mkAppF loc c (a :: args)
   | l -> mkApp loc l
 
@@ -66,17 +67,17 @@ let binder l = function
   | None -> l
   | Some (loc,b) ->
       match List.rev l with
-      | Const name :: rest ->
-          List.rev rest @ [mkLam (Func.show name) b]
+      | { it = Const name; loc } :: rest ->
+          List.rev rest @ [mkLam loc (Func.show name) b]
       | _ -> raise (ParseError(loc,"bind '\\' operator must follow a name"))
 ;;
 
-let underscore () = Const Func.dummyname
+let underscore loc = { loc; it = Const Func.dummyname }
 
 let decode_sequent t =
-  match t with
-  | App(Const c,[hyps;bo]) when c == Func.sequentf -> hyps, bo
-  | _ -> underscore (), t
+  match t.it with
+  | App({ it = Const c },[hyps;bo]) when c == Func.sequentf -> hyps, bo
+  | _ -> underscore t.loc, t
 
 let prop = Func.from_string "prop"
 
@@ -170,7 +171,7 @@ pred:
    { Mode.loc=loc $sloc; name; args = List.map fst args },
    { Type.loc=loc $sloc; attributes; name;
      ty = List.fold_right (fun (_,t) ty ->
-       mkApp (loc $loc(c)) [mkCon "->";t;ty]) args (mkCon "prop") }
+       mkApp (loc $loc(c)) [mkCon (t.loc)(* BUG *)"->";t;ty]) args (mkCon (loc $sloc) (* BUG *) "prop") }
  }
 pred_item:
 | io = IO_COLON; ty = type_term { (mode_of_IO io,ty) }
@@ -188,18 +189,18 @@ type_:
   }
 
 atype_term:
-| c = STRING { mkC (cstring.Util.CData.cin c) }
-| c = constant { Const (fix_church c) }
+| c = STRING { mkC (loc $loc) (cstring.Util.CData.cin c) }
+| c = constant { mkConst (loc $loc(c)) (fix_church c) }
 | LPAREN; t = type_term; RPAREN { t }
 type_term:
-| c = constant { Const (fix_church c) }
+| c = constant { mkConst (loc $loc(c)) (fix_church c) }
 | hd = constant; args = nonempty_list(atype_term) { mkAppF (loc $loc(hd)) hd args }
-| hd = type_term; ARROW; t = type_term { mkApp (loc $loc(hd)) [mkCon "->"; hd; t] }
+| hd = type_term; a = ARROW; t = type_term { mkApp (loc $loc(hd)) [mkCon (loc $loc(a)) "->"; hd; t] }
 | LPAREN; t = type_term; RPAREN { t }
 
 kind_term:
-| TYPE { mkCon "type" }
-| hd = TYPE; ARROW; t = kind_term { mkApp (loc $loc(hd)) [mkCon "->"; mkCon "type"; t] }
+| TYPE { mkCon (loc $loc) "type" }
+| hd = TYPE; ARROW; t = kind_term { mkApp (loc $loc(hd)) [mkCon (loc $loc) "->"; mkCon (loc $loc) "type"; t] }
 
 mode:
 | MODE; LPAREN; c = constant; l = nonempty_list(i_o); RPAREN {
@@ -219,7 +220,7 @@ typeabbrev:
     let name, args = a in
     let args = List.map Func.show args in
     let nparams = List.length args in
-    let value = List.fold_right mkLam args t in
+    let value = List.fold_right (mkLam (loc $sloc)) (* BUG *) args t in
     { TypeAbbreviation.name = name;
       nparams = nparams;
       value = value;
@@ -264,7 +265,7 @@ subtrie:
 sequent:
 | t = closed_term {
     let context, conclusion = decode_sequent t in
-    { Chr.eigen = underscore (); context; conclusion }
+    { Chr.eigen = underscore (loc $loc(t)); context; conclusion }
   }
 | LPAREN; c = closed_term; COLON; t = term; RPAREN {
     let context, conclusion = decode_sequent t in
@@ -285,7 +286,7 @@ clause:
 | attributes = attributes; l = clause_hd_term; VDASH; r = term { 
     { Clause.loc = loc $sloc;
       attributes;
-      body = App(Const Func.rimplf,[l;r])
+      body = mkAppF (loc $loc) Func.rimplf [l;r]
     }
 }
 
@@ -319,23 +320,23 @@ term_noconj:
 | t = closed_term { t }
 
 closed_term:
-| x = INTEGER { mkC (cint.Util.CData.cin x)}
-| x = FLOAT { mkC (cfloat.Util.CData.cin x)}
-| x = STRING { mkC (cstring.Util.CData.cin x)}
+| x = INTEGER { mkC (loc $loc) (cint.Util.CData.cin x)}
+| x = FLOAT { mkC (loc $loc) (cfloat.Util.CData.cin x)}
+| x = STRING { mkC (loc $loc) (cstring.Util.CData.cin x)}
 | x = QUOTED { mkQuoted (loc $loc) x }
-| LPAREN; t = term; AS; c = term; RPAREN { App(mkCon "as",[t;c]) }
-| LBRACKET; l = list_items { mkSeq l }
-| LBRACKET; l = list_items_tail;  {  mkSeq l }
-| LCURLY; t = term; RCURLY { App (Const Func.spillf,[t]) }
+| LPAREN; t = term; AS; c = term; RPAREN { mkApp (loc $loc) [mkCon (loc $loc) "as";t;c] }
+| LBRACKET; l = list_items { mkSeq (loc $loc) l }
+| LBRACKET; l = list_items_tail;  {  mkSeq (loc $loc) l }
+| LCURLY; t = term; RCURLY { mkAppF (loc $loc) Func.spillf [t] }
 | t = head_term { t }
 
 head_term:
-| t = constant { Const t }
+| t = constant { mkConst (loc $loc) t }
 | LPAREN; t = term; RPAREN { t }
 
 list_items:
-| RBRACKET { [mkNil] }
-| x = term_noconj; RBRACKET { [x;mkNil] }
+| RBRACKET { [mkNil (loc $loc)] }
+| x = term_noconj; RBRACKET { [x;mkNil (loc $loc)] }
 | x = term_noconj; CONJ; xs = list_items { x :: xs }
 
 list_items_tail:
@@ -344,13 +345,13 @@ list_items_tail:
 | x = term_noconj; CONJ; xs = list_items_tail { x :: xs }
 
 binder_term:
-| t = constant; b = binder_body { mkLam (Func.show t) (snd b) }
+| t = constant; b = binder_body { mkLam (loc $loc) (Func.show t) (snd b) }
 
 binder_body:
 | bind = BIND; b = term { (loc $loc(bind), b) }
 
 binder_term_noconj:
-| t = constant; BIND; b = term { mkLam (Func.show t) b }
+| t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) b }
 
 open_term:
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
@@ -358,9 +359,9 @@ open_term:
     let t = mkApp (loc $loc(hd)) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
-| l = term; s = infix;  r = term { mkApp (loc $loc) [Const s;l;r] }
-| s = prefix; r = term { App(Const s,[r]) }
-| l = term; s = postfix; { App(Const s,[l]) }
+| l = term; s = infix;  r = term { mkAppF (loc $loc) s [l;r] }
+| s = prefix; r = term { mkAppF (loc $loc) s [r] }
+| l = term; s = postfix; { mkAppF (loc $loc) s [l] }
 
 open_term_noconj:
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
@@ -368,9 +369,9 @@ open_term_noconj:
     let t = mkApp (loc $loc(hd)) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
-| l = term_noconj; s = infix_noconj;  r = term_noconj { mkApp (loc $loc) [Const s;l;r] }
-| s = prefix; r = term_noconj { App(Const s,[r]) }
-| l = term_noconj; s = postfix; { App(Const s,[l]) }
+| l = term_noconj; s = infix_noconj;  r = term_noconj { mkApp (loc $loc) [mkConst (loc $loc)(* BUG *) s;l;r] }
+| s = prefix; r = term_noconj { mkAppF (loc $loc) s [r] }
+| l = term_noconj; s = postfix; { mkAppF (loc $loc) s [l] }
 
 (* avoids the conflict between `{` (Program.Begin) and `{spilled}` (Program.Clause) *)
 clause_hd_term:
@@ -378,7 +379,7 @@ clause_hd_term:
 | t = clause_hd_closed_term { t }
 
 clause_hd_closed_term:
-| t = constant { Const t }
+| t = constant { mkConst (loc $loc) t }
 | LPAREN; t = term; RPAREN { t }
 
 clause_hd_open_term:
@@ -387,9 +388,9 @@ clause_hd_open_term:
     let t = mkApp (loc $loc(hd)) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
-| l = clause_hd_term; s = infix_novdash; r = term { mkApp (loc $loc) [Const s;l;r] }
-| s = prefix; r = term { App(Const s,[r]) }
-| l = clause_hd_term; s = postfix; { App(Const s,[l]) }
+| l = clause_hd_term; s = infix_novdash; r = term { mkAppF (loc $loc) s [l;r] }
+| s = prefix; r = term { mkAppF (loc $loc) s [r] }
+| l = clause_hd_term; s = postfix; { mkAppF (loc $loc) s [l] }
 
 constant:
 | c = CONSTANT {
