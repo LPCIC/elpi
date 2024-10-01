@@ -92,28 +92,42 @@ let testF s i msg =
     end
 
 
-let (|-) a n b =
+let (|-) a n ?(bug=false) b =
   let a1 = a.loc.source_start in
   let b2 = b.loc.source_stop in
-  mkApp (mkLoc a1 b2 1 0) [mkCon (mkLoc n (n+1) 1 0) ":-";a;b]
-let (@) a b = mkApp (mkLoc 1 0 1 0) ([mkCon (mkLoc 1 0 1 0) a] @ b)
+  mkApp (mkLoc a1 b2 1 0) [mkCon (mkLoc (n + (if bug then -1 else 0)) (n+1) 1 0) ":-";a;b]
+
 
 let (-->) x b = mkLam (mkLoc 1 0 1 0) x b
 let mkNil = mkNil (mkLoc 1 0 1 0)
 let mkSeq = mkSeq (mkLoc 1 0 1 0)
 let c n s = mkCon (mkLoc n n 1 0) s
+
+let minl = List.fold_left (fun n x -> min n x.loc.source_start) max_int
+let maxl = List.fold_left (fun n x -> max n x.loc.source_stop) min_int
+let app a n ?(bug=false) b =
+  let a1 = minl (c n a :: b) in
+  let b2 = maxl (c n a :: b) in
+  mkApp (mkLoc a1 b2 1 0) (mkCon (mkLoc (n + (if bug then -1 else 0)) n 1 0) a :: b)
 let str s = mkC (mkLoc 1 0 1 0) (cstring.Elpi_util.Util.CData.cin s)
 
 let ss t = { Chr.eigen = underscore (mkLoc 1 0 1 0); context = underscore (mkLoc 1 0 1 0); conclusion = t }
 let s e g t = { Chr.eigen = e; context = g; conclusion = t }
+
+let bug n = n-1
+
 let _ =
   (*    01234567890123456789012345 *)
   test  "p :- q."           1 6  1 0 [] ((c 1 "p" |- 3) (c 6 "q"));
+  test  "p:- q."            1 5  1 0 [] ((c 1 "p" |- 2) ~bug:true (c 5 "q"));
   test  " p :- q."          2 7  1 0 [] ((c 2 "p" |- 4) (c 7 "q"));
+  test  " p  :- q."         2 8  1 0 [] ((c 2 "p" |- 5) (c 8 "q"));
+  (*    01234567890123456789012345 *)
+  test  "p :- q r."         1 8  1 0 [] ((c 1 "p" |- 3) @@ app "q" 6 [c 8 "r"]);
+  test  "p :- ! , q."       1 10 1 0 [] ((c 1 "p" |- 3) @@ app "," 8 [c 6 "!"; c 10 "q"]);
+  test  "p :- !, q."        1 9  1 0 [] ((c 1 "p" |- 3) @@ app "," ~bug:true 7 [c 6 "!"; c 9 "q"]);
+  test  "p :- q r s."       1 10 1 0 [] ((c 1 "p" |- 3) @@ app "q" 6 [c 8 "r";c 10 "s"]);
   (* 
-  test  "p :- q r."         0 8  1 0 [] (c"p" |- "q" @ [c"r"]);
-  test  "p :- !, q."        0 9  1 0 [] (c"p" |- "," @ [c"!"; c"q"]);
-  test  "p :- q r s."       0 10 1 0 [] (c"p" |- "q" @ [c"r";c"s"]);
   test  "p :- x \\ q r."    0 12 1 0 [] (c"p" |- "x" --> ("q" @ [c"r"]));
   test  "p :- _ \\ q r."    0 12 1 0 [] (c"p" |- "%dummy" --> ("q" @ [c"r"]));
   test  "(A ; B) :- A."     0 12 1 0 [] (";" @ [c"A";c"B"] |- c"A");

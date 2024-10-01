@@ -59,8 +59,8 @@ let desugar_macro loc lhs rhs =
 ;;
 
 let mkApp loc = function
-  | { it = Const c } :: a :: { it = App ({ it = Const c1 }, args) } :: [] when Func.(equal c andf && equal c1 andf) ->
-      mkAppF loc c (a :: args)
+  | { it = Const c; loc = cloc } :: a :: { it = App ({ it = Const c1 }, args) } :: [] when Func.(equal c andf && equal c1 andf) ->
+      mkAppF loc (cloc,c) (a :: args)
   | l -> mkApp loc l
 
 let binder l = function
@@ -194,8 +194,8 @@ atype_term:
 | LPAREN; t = type_term; RPAREN { t }
 type_term:
 | c = constant { mkConst (loc $loc(c)) (fix_church c) }
-| hd = constant; args = nonempty_list(atype_term) { mkAppF (loc $loc(hd)) hd args }
-| hd = type_term; a = ARROW; t = type_term { mkApp (loc $loc(hd)) [mkCon (loc $loc(a)) "->"; hd; t] }
+| hd = constant; args = nonempty_list(atype_term) { mkAppF (loc $loc) (loc $loc(hd),hd) args }
+| hd = type_term; a = ARROW; t = type_term { mkApp (loc $loc) [mkCon (loc $loc(a)) "->"; hd; t] }
 | LPAREN; t = type_term; RPAREN { t }
 
 kind_term:
@@ -327,7 +327,7 @@ closed_term:
 | LPAREN; t = term; AS; c = term; RPAREN { mkApp (loc $loc) [mkCon (loc $loc) "as";t;c] }
 | LBRACKET; l = list_items { mkSeq (loc $loc) l }
 | LBRACKET; l = list_items_tail;  {  mkSeq (loc $loc) l }
-| LCURLY; t = term; RCURLY { mkAppF (loc $loc) Func.spillf [t] }
+| l = LCURLY; t = term; RCURLY { mkAppF (loc $loc) (loc $loc(l),Func.spillf) [t] }
 | t = head_term { t }
 
 head_term:
@@ -356,12 +356,12 @@ binder_term_noconj:
 open_term:
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
     let args = binder args b in
-    let t = mkApp (loc $loc(hd)) (hd :: args) in
+    let t = mkApp (loc $loc) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
-| l = term; s = infix;  r = term { mkAppF (loc $loc) s [l;r] }
-| s = prefix; r = term { mkAppF (loc $loc) s [r] }
-| l = term; s = postfix; { mkAppF (loc $loc) s [l] }
+| l = term; s = infix;  r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
+| s = prefix; r = term { mkAppF (loc $loc) (loc $loc(s),s) [r] }
+| l = term; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
 open_term_noconj:
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
@@ -370,8 +370,8 @@ open_term_noconj:
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
 | l = term_noconj; s = infix_noconj;  r = term_noconj { mkApp (loc $loc) [mkConst (loc $loc)(* BUG *) s;l;r] }
-| s = prefix; r = term_noconj { mkAppF (loc $loc) s [r] }
-| l = term_noconj; s = postfix; { mkAppF (loc $loc) s [l] }
+| s = prefix; r = term_noconj { mkAppF (loc $loc) (loc $loc(s),s) [r] }
+| l = term_noconj; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
 (* avoids the conflict between `{` (Program.Begin) and `{spilled}` (Program.Clause) *)
 clause_hd_term:
@@ -388,9 +388,9 @@ clause_hd_open_term:
     let t = mkApp (loc $loc(hd)) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
-| l = clause_hd_term; s = infix_novdash; r = term { mkAppF (loc $loc) s [l;r] }
-| s = prefix; r = term { mkAppF (loc $loc) s [r] }
-| l = clause_hd_term; s = postfix; { mkAppF (loc $loc) s [l] }
+| l = clause_hd_term; s = infix_novdash; r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
+| s = prefix; r = term { mkAppF (loc $loc) (loc $loc(s),s) [r] }
+| l = clause_hd_term; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
 constant:
 | c = CONSTANT {

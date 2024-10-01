@@ -56,7 +56,7 @@ module Term : sig
   (* Can raise NotInProlog *)
   val mkApp : Loc.t -> t list -> t
 
-  val mkAppF : Loc.t -> Func.t -> t list -> t
+  val mkAppF : Loc.t -> (Loc.t * Func.t) -> t list -> t
 
   val mkCon : Loc.t -> string -> t
   val mkConst : Loc.t -> Func.t -> t

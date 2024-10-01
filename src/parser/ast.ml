@@ -125,9 +125,9 @@ let mkApp loc = function
   | [] -> anomaly ~loc "empty application"
   | x::_ -> raise (NotInProlog(loc,"syntax error: the head of an application must be a constant or a variable, got: " ^ best_effort_pp x.it))
 
-let mkAppF loc c = function
+let mkAppF loc (cloc, c) = function
   | [] -> anomaly ~loc "empty application"
-  | args -> { loc; it = App( { it = Const c; loc },args) }
+  | args -> { loc; it = App( { it = Const c; loc = cloc },args) }
 
 
 let fresh_uv_names = ref (-1);;
