@@ -103,15 +103,24 @@ let lam x n b =
   mkLam (mkLoc n stop 1 0) x b
 let mkNil ?(bug=false) n = mkNil (mkLoc (n + (if bug then -1 else 0)) n 1 0)
 let mkSeq n m = mkSeq (mkLoc n m 1 0)
-let c ?(bug=false) n s =
-  mkCon (mkLoc (n + (if bug then -1 else 0)) (n + String.length s - 1) 1 0) s
+let c ?(bug=false) n ?len s =
+  let len = match len with None -> String.length s | Some x -> x in
+  mkCon (mkLoc (n + (if bug then -1 else 0)) (n + len - 1) 1 0) s
 
 let minl = List.fold_left (fun n x -> min n x.loc.source_start) max_int
 let maxl = List.fold_left (fun n x -> max n x.loc.source_stop) min_int
-let app a n ?(bug=false) b =
-  let a1 = minl (c ~bug n a :: b) in
-  let b2 = maxl (c n a :: b) in
-  mkApp (mkLoc a1 b2 1 0) (mkCon (mkLoc (n + (if bug then -1 else 0)) (n + String.length a  - 1) 1 0) a :: b)
+let app a ?(len=String.length a) n ?(bug=false) b =
+  let c = c ~bug n ~len a in
+  let a1 = minl (c :: b) in
+  let b2 = maxl (c :: b) in
+  mkApp (mkLoc a1 b2 1 0) (c :: b)
+
+let spill n m ?bug b =
+  let len = 1 in
+  let a = "%spill" in
+  let c = c ?bug n ~len a in
+  mkApp (mkLoc (n + (if bug = Some true then -1 else 0)) m 1 0) [c ; b]
+
 let str s = mkC (mkLoc 1 0 1 0) (cstring.Elpi_util.Util.CData.cin s)
 
 let ss t = { Chr.eigen = underscore (mkLoc 1 0 1 0); context = underscore (mkLoc 1 0 1 0); conclusion = t }
@@ -154,8 +163,9 @@ let _ =
   (*    01234567890123456789012345 *)
   test  "p :- [ a , b ]."   1 14  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 14 [c 8 "a";c 12 "b";mkNil 14]);
   test  "p :- [a,b]."       1 10  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 10 [c 7 ~bug:true "a";c 9 ~bug:true "b";mkNil ~bug:true 10]);
+  test  "p :- [ a , {b} ]." 1 16  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 16 [c 8"a";spill 12 14 (c 13 ~bug:true "b");mkNil 16]);
+  test  "p :- [a,{b}]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 12 [c 7 ~bug:true "a";spill 9 11 ~bug:true (c ~bug:true 10 "b");mkNil ~bug:true 12]);
   (* 
-  test  "p :- [a,{b}]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq [c"a";"%spill"@[c"b"];mkNil]);
   test  "p :- [(a + b)]."   1 14  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["+" @ [c"a";c"b"];mkNil]);
   test  "p :- [a + b]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["+" @ [c"a";c"b"];mkNil]);
   test  "p :- [f a,b]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["f" @ [c"a"];c"b";mkNil]);
