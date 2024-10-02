@@ -344,7 +344,7 @@ head_term:
 
 list_items:
 | RBRACKET { [mkNil (loc $loc)] }
-| x = term_noconj; RBRACKET { [x;mkNil (loc $loc)] }
+| x = term_noconj; r = RBRACKET { [x;mkNil (loc $loc(r))] }
 | x = term_noconj; CONJ; xs = list_items { x :: xs }
 
 list_items_tail:
@@ -374,10 +374,10 @@ open_term:
 open_term_noconj:
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
     let args = binder args b in
-    let t = mkApp (loc $loc(hd)) (hd :: args) in
+    let t = mkApp (loc $loc) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
-| l = term_noconj; s = infix_noconj;  r = term_noconj { mkApp (loc $loc) [mkConst (loc $loc)(* BUG *) s;l;r] }
+| l = term_noconj; s = infix_noconj;  r = term_noconj { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
 | s = prefix; r = term_noconj { mkAppF (loc $loc) (loc $loc(s),s) [r] }
 | l = term_noconj; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
@@ -393,7 +393,7 @@ clause_hd_closed_term:
 clause_hd_open_term:
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
     let args = binder args b in
-    let t = mkApp (loc $loc(hd)) (hd :: args) in
+    let t = mkApp (loc $loc) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
 | l = clause_hd_term; s = infix_novdash; r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }

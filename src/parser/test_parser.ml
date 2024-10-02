@@ -101,15 +101,15 @@ let (|-) a n ?(bug=false) b =
 let lam x n b =
   let stop = b.loc.source_stop in
   mkLam (mkLoc n stop 1 0) x b
-let mkNil = mkNil (mkLoc 1 0 1 0)
-let mkSeq = mkSeq (mkLoc 1 0 1 0)
+let mkNil ?(bug=false) n = mkNil (mkLoc (n + (if bug then -1 else 0)) n 1 0)
+let mkSeq n m = mkSeq (mkLoc n m 1 0)
 let c ?(bug=false) n s =
-  mkCon (mkLoc (n + (if bug then -1 else 0)) n 1 0) s
+  mkCon (mkLoc (n + (if bug then -1 else 0)) (n + String.length s - 1) 1 0) s
 
 let minl = List.fold_left (fun n x -> min n x.loc.source_start) max_int
 let maxl = List.fold_left (fun n x -> max n x.loc.source_stop) min_int
 let app a n ?(bug=false) b =
-  let a1 = minl (c n a :: b) in
+  let a1 = minl (c ~bug n a :: b) in
   let b2 = maxl (c n a :: b) in
   mkApp (mkLoc a1 b2 1 0) (mkCon (mkLoc (n + (if bug then -1 else 0)) (n + String.length a  - 1) 1 0) a :: b)
 let str s = mkC (mkLoc 1 0 1 0) (cstring.Elpi_util.Util.CData.cin s)
@@ -141,23 +141,26 @@ let _ =
   test  "p :- q, r, s."     1 12 1 0 [] ((c 1 "p" |- 3) @@ app "," ~bug:true 7 [c 6 "q"; c 9 "r"; c 12 "s"]);
   (*    01234567890123456789012345 *)
   test  "p :- q + r * s."   1 14 1 0 [] ((c 1 "p" |- 3) @@ app "+" 8 [c 6 "q"; app "*" 12 [c 10 "r";c 14 "s"]]);
-  (* 
-  test  "p :- q + r , s."   0 14 1 0 [] (c"p" |- "," @ ["+" @ [c"q"; c"r" ]; c"s"]);
-  test  "p :- q && r = s."  0 15 1 0 [] (c"p" |- "=" @ ["&&" @ [c"q"; c"r"]; c"s"]);
-  test  "q && r x || s."    0 13 1 0 [] ("||" @ ["&&" @ [c"q";"r"@[c"x"]]; c"s"]);
-  test  "f x ==> y."        0 9 1 0 []  ("==>" @ ["f" @ [c"x"]; c"y"]);
-  test  "p :- !, (s X) = X, q." 0 20 1 0 [] (c"p" |- "," @ [c"!";"=" @ ["s" @ [c"X"]; c"X"]; c"q"]);
-  test  "p :- []."          0 7  1 0 [] (c"p" |- mkNil);
-  test  "name."             0 4  1 0 [] (c "name");
-  test  "p :- a => b => c." 0 16 1 0 [] (":-" @ [c"p";"=>" @ [c"a";"=>"@[c"b";c"c"]]]); 
+  test  "p :- q + r , s."   1 14 1 0 [] ((c 1 "p" |- 3) @@ app "," 12 [app "+" 8 [c 6 "q";c 10 "r"]; c 14 "s"]);
+  test  "p :- q && r = s."  1 15 1 0 [] ((c 1 "p" |- 3) @@ app "=" 13 [app "&&" 8 [c 6 "q"; c 11 "r"]; c 15 "s"]);
+  test  "q && r x || s."    1 13 1 0 [] (app "||" 10 [app "&&" 3 [c 1 "q"; app "r" 6 [c 8 "x"]]; c 13 "s"]);
   (*    01234567890123456789012345 *)
-  test  "p :- [a,b]."       0 10  1 0 [] (c"p" |- mkSeq [c"a";c"b";mkNil]);
-  test  "p :- [a,{b}]."     0 12  1 0 [] (c"p" |- mkSeq [c"a";"%spill"@[c"b"];mkNil]);
-  test  "p :- [(a + b)]."   0 14  1 0 [] (c"p" |- mkSeq ["+" @ [c"a";c"b"];mkNil]);
-  test  "p :- [a + b]."     0 12  1 0 [] (c"p" |- mkSeq ["+" @ [c"a";c"b"];mkNil]);
-  test  "p :- [f a,b]."     0 12  1 0 [] (c"p" |- mkSeq ["f" @ [c"a"];c"b";mkNil]);
-  test  "p :- [(a,b)]."     0 12  1 0 [] (c"p" |- mkSeq ["," @ [c"a";c"b"];mkNil]);
-  test  "p :- [a,b|c]."     0 12  1 0 [] (c"p" |- mkSeq [c"a";c"b";c"c"]);
+  test  "f x ==> y."        1 9 1 0 []  (app "==>" 5 [app "f" 1 [c 3 "x"]; c 9 "y"]);
+  test  "p :- !, (s X) = X, q." 1 20 1 0 [] ((c 1 "p" |- 3) @@ app "," ~bug:true 7 [c 6 "!";app "=" 15 [app "s" ~bug:true 10 [c 12 "X"]; c 17 "X"]; c 20 "q"]);
+  test  "p :- [ ]."         1 8  1 0 [] ((c 1 "p" |- 3) @@ mkNil 8);
+  test  "p :- []."          1 7  1 0 [] ((c 1 "p" |- 3) @@ mkNil ~bug:true 7);
+  test  "name."             1 4  1 0 [] (c 1 "name");
+  test  "p :- a => b => c." 1 16 1 0 [] (app ":-" 3 [c 1 "p";app "=>" 8 [c 6 "a";app "=>" 13 [c 11 "b";c 16 "c"]]]); 
+  (*    01234567890123456789012345 *)
+  test  "p :- [ a , b ]."   1 14  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 14 [c 8 "a";c 12 "b";mkNil 14]);
+  test  "p :- [a,b]."       1 10  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 10 [c 7 ~bug:true "a";c 9 ~bug:true "b";mkNil ~bug:true 10]);
+  (* 
+  test  "p :- [a,{b}]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq [c"a";"%spill"@[c"b"];mkNil]);
+  test  "p :- [(a + b)]."   1 14  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["+" @ [c"a";c"b"];mkNil]);
+  test  "p :- [a + b]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["+" @ [c"a";c"b"];mkNil]);
+  test  "p :- [f a,b]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["f" @ [c"a"];c"b";mkNil]);
+  test  "p :- [(a,b)]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["," @ [c"a";c"b"];mkNil]);
+  test  "p :- [a,b|c]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq [c"a";c"b";c"c"]);
   test  "p :- [a,b\\@f, x\\b]." 0 18  1 0 [] (c"p" |- mkSeq [c"a";"b" --> ("," @ [c"@f"; "x" --> c"b"]);mkNil]);
   test  "X is a."           0 6  1 0 [] ("is" @ [c"X";c"a"]);
   testF "p :- f use_sig."   14 ".*term expected";

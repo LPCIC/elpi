@@ -106,7 +106,9 @@ let mkSeq loc (l : t list) =
   function
     [] -> assert false
   | [e] -> e
-  | hd::tl -> { loc; it = App({ it = Const Func.consf; loc = hd.loc },[hd;aux loc tl]) } (* BUG *)
+  | hd::tl ->
+      let tl = aux loc tl in
+      { loc = Loc.merge hd.loc tl.loc; it = App({ it = Const Func.consf; loc = hd.loc },[hd;tl]) }
  in
    aux loc l
 
