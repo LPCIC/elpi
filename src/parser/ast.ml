@@ -59,6 +59,37 @@ module Func = struct
 
 end
 
+module Mode = struct
+
+  type mode = Util.arg_mode = Input | Output
+  [@@deriving show, ord]
+
+end
+
+type raw_attribute =
+  | If of string
+  | Name of string
+  | After of string
+  | Before of string
+  | Replace of string
+  | Remove of string
+  | External
+  | Index of int list * string option
+  | Functional
+[@@deriving show, ord]
+
+module TypeExpression = struct
+
+  type t =
+   | TConst of Func.t
+   | TApp of Func.t * t * t list
+   | TPred of raw_attribute list * ((Mode.mode * t) list)
+   | TArr of t * t
+   | TCData of CData.t
+  [@@ deriving show, ord]
+
+end
+
 module Term = struct
   
   type t_ =
@@ -212,28 +243,22 @@ module Type = struct
     loc : Loc.t;
     attributes : 'attribute;
     name : Func.t;
-    ty : Term.t;
+    ty : TypeExpression.t;
   }
-  [@@deriving show, ord]
-
-end
-
-module Mode = struct
-
-  type mode = Fo of bool | Ho of bool * (mode list)
-  [@@deriving show, ord]
-
-  type 'name t =
-    { name : 'name; args : mode list; loc : Loc.t }
   [@@deriving show, ord]
 
 end
 
 module TypeAbbreviation = struct
 
+  type closedTypeexpression = 
+    | Lam of Func.t * closedTypeexpression 
+    | Ty of TypeExpression.t
+  [@@ deriving show, ord]
+
   type ('name) t =
-    { name : 'name; value : Term.t; nparams : int; loc : Loc.t }
-  [@@deriving show, ord]
+    { name : 'name; value : closedTypeexpression; nparams : int; loc : Loc.t }
+  [@@ deriving show, ord]
 
 end
 
@@ -253,12 +278,12 @@ module Program = struct
     (* data *)
     | Clause of (Term.t, raw_attribute list) Clause.t
     | Local of Func.t list
-    | Mode of Func.t Mode.t list
-    | Functionality of Func.t list
+    (* TODO: to remove *)
+    | Mode of raw_attribute list Type.t list
     | Chr of raw_attribute list Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Type of raw_attribute list Type.t list
-    | Pred of raw_attribute list Type.t * Func.t Mode.t
+    | Pred of raw_attribute list Type.t
     | TypeAbbreviation of Func.t TypeAbbreviation.t
     | Ignored of Loc.t
   [@@deriving show]
@@ -319,7 +344,7 @@ type program = {
   macros : (Func.t, Term.t) Macro.t list;
   types : tattribute Type.t list;
   type_abbrevs : Func.t TypeAbbreviation.t list;
-  modes : Func.t Mode.t list;
+  modes : tattribute Type.t list;
   functionality : Func.t list;
   body : block list;
 }

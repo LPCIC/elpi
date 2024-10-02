@@ -25,20 +25,18 @@ type wrong-arity term -> typ -> list term -> err.
 type unknown term -> err.
 type assert prop -> err -> prop.
 
-type error list (pair (ctype "Loc.t") string) -> bool -> prop.
-mode (error i o).
+pred error i:list (pair (ctype "Loc.t") string), o:bool.
 
 :name "default-typechecking-error"
 error Msg tt :- std.forall Msg (x\ sigma L M\ fst x L, snd x M, print L "Error:" M).
 
-mode (warning i i).
-type warning (ctype "Loc.t") -> string -> prop.
+pred warning i:(ctype "Loc.t"), o:string.
 :name "default-typechecking-warning"
 warning Loc Msg :- print Loc "Warning:" Msg.
 
-mode (assert i i).
+pred assert i:prop, i:err.
 assert P _ :- P, !.
-assert _ (type-err T Ty ETy) :- !,
+assert P (type-err T Ty ETy) :- !,
   checking LOC,
   ppt Ty TyPP, ppt ETy ETyPP,
   if (TyPP = ETyPP) (term_to_string Ty TyS, term_to_string ETy ETyS) (TyS = TyPP, ETyS = ETyPP),
@@ -51,7 +49,7 @@ assert _ (wrong-arity T Ty A) :- !,
           " but is applied to " ^ {pp-list A},
   error [pr LOC MSG] _.
 
-mode (stash-new i i).
+pred stash-new i:A, i:B.
 stash-new E S :- open_safe E L, ( std.mem! L S ; stash_in_safe E S ), !.
 
 report-all-failures-if-no-success P RC :-
@@ -65,8 +63,7 @@ report-all-failures-and-fail-if-no-success P RC :-
    ;
    (error {open_safe E} RC, fail)).
 
-mode (pp i o).
-type pp term -> string -> prop.
+pred pp i:term, o:string.
 pp (app L) T1 :- !, pp-list L T, T1 is "(" ^ T ^ ")".
 pp (lam F) T :- !, pi x\ term_to_string x XS, (pp x XS :- !) => pp (F x) T.
 pp (const "discard") "_" :- !.
@@ -74,19 +71,19 @@ pp (const S) S :- !.
 pp (cdata X) S :- !, term_to_string X S.
 pp X XS :- term_to_string X XS.
 
-mode (pp-list i o).
+pred pp-list i:list term, o:string.
 pp-list [X] Y :- !, pp X Y.
 pp-list [X|XS] Y :- pp-list XS XSS, pp X XT, Y is XT ^ " " ^ XSS.
 pp-list [] "".
 
-mode (ppt i o).
+pred ppt i:typ, o:string.
 ppt (ctype S) X :- !, X is "(ctype " ^ S ^ ")".
 ppt (tconst X) X :- !.
 ppt (tapp L) X :- !, ppt-list L T, X is "(" ^ T ^ ")".
 ppt (arrow A B) S :- !, ppt A AS, ppt B BS, S is "(" ^ AS ^ " -> " ^ BS ^ ")".
 ppt X Y :- term_to_string X Y.
 
-mode (ppt-list i o).
+pred ppt-list i:list typ, o:string.
 ppt-list [X] Y :- !, ppt X Y.
 ppt-list [X|XS] Y :- ppt-list XS XSS, ppt X XT, Y is XT ^ " " ^ XSS.
 ppt-list [] "".
@@ -105,7 +102,7 @@ rm-any-variadic prop prop.
 rm-any-variadic (arrow A1 B1) (arrow A2 B2) :- rm-any-variadic A1 A2, rm-any-variadic B1 B2.
 rm-any-variadic (uvar as X) X.
 
-mode (rm-any-variadic-list i o).
+pred rm-any-variadic-list i:list typ, o:list typ.
 rm-any-variadic-list [] [].
 rm-any-variadic-list [X|XS] [Y|YS] :- rm-any-variadic X Y, rm-any-variadic-list XS YS.
 
@@ -122,7 +119,7 @@ of (app [HD|ARGS]) TY :- !,
 of (lam F) (arrow T B) :- !, pi x\
   (of x T :- !) => of (F x) B.
 
-mode (of-app i i o o o).
+pred of-app i:typ i:list term, o:typ, o:term, o:A.
 
 :if "DEBUG:CHECKER"
 of-app Ty Args Tgt Hd _ :-
@@ -144,7 +141,7 @@ of-app (uvar as Ty)  [] TGT HD (D - []) :- !,
 of-app Ty Args _ HD (D - []) :- !,
   assert false (wrong-arity (app [HD|D]) Ty Args).
 
-mode (of-clause i i).
+pred of-clause i:list string, i:term.
 of-clause [N|NS] (arg C) :- !, pi x\ 
  (pp x N :- !) => (pi Tf\ of x Tf :- !, assert (unif T Tf) (type-err x T Tf)) =>
  of-clause NS (C x).
@@ -159,7 +156,7 @@ type checking (ctype "Loc.t") -> prop.
 log-tc-clause Loc Query :- !, print {trace.counter "run"} "typecheck" Loc Query.
 log-tc-clause _ _.
 
-mode (typecheck i i i i i).
+pred typecheck i:list term, i:term, i:float, i:A, i:B.
 typecheck P _ T0 NP _RC :- D is {gettimeofday} - T0, D > 10.0, !,
   print "[skipping" {std.length P} "clauses out of" NP "due to time limit]".
 
@@ -174,7 +171,8 @@ typecheck [ (clause Loc Names Clause) | Rest] Q T0 NP RC :-
     report-all-failures-if-no-success (of-clause Names Clause) RC, !,
   typecheck Rest Q T0 NP RC.
 
-mode (refresh i o).
+% mode (refresh i o).
+pred refresh i:typ, o:typ.
 refresh (forall F) T :- !, refresh (F FRESH_) T.
 refresh (tconst "any") FRESH_ :- !.
 refresh X X.
@@ -205,16 +203,16 @@ collect-symbols-program [ C | P ] Acc Res :-
   collect-symbols-program P Acc1 Res.
 collect-symbols-program [] X X.
 
-mode (under-env i i).
+pred under-env i:A, i:B.
 
 type known term -> prop.
 
-mode (similar i i).
+pred similar i:A, i:B.
 similar S1 S2 :-
   R is ".*\\." ^ {rex_replace "[\\+\\*]" "." S2},
   rex_match R S1.
 
-mode (filter-similar i i o).
+pred filter-similar i:A, i:B, o:C.
 filter-similar [] _ [].
 filter-similar [const K `: _ |KS] S [K|R] :- similar K S, !, filter-similar KS S R.
 filter-similar [_|KS] S R :- filter-similar KS S R.
@@ -223,7 +221,7 @@ pred str_concat i:list string, o:string.
 str_concat [] "".
 str_concat [S|SS] R :- str_concat SS RR, R is S ^ " " ^ RR.
 
-mode (warn-undeclared i i o).
+pred warn-undeclared i:A, i:B, o:C.
 warn-undeclared _Known (pr ( "main") _) ff :- !.
 warn-undeclared _ (pr ( S) _) ff :- rex_match ".*\\.aux" S, !.
 warn-undeclared _ (pr ( S) _) ff :- rex_match ".*\\.aux\\." S, !.
@@ -233,7 +231,7 @@ warn-undeclared Known (pr ( S) LOC) tt :-
   MSG is "constant " ^ S ^ " has no declared type." ^ H,
   warning LOC MSG.
 
-mode (forall_uto10 i i i).
+pred forall_uto10 i:A, i:B, i:C.
 forall_uto10 [] _ _ :- !.
 forall_uto10 [X|XS] N P :- N < 10, !,
   P X Done, !,
@@ -243,7 +241,7 @@ forall_uto10 ([pr _ LOC|_] as L) _ _ :-
   Msg is "[suppressing " ^ {term_to_string {std.length L}} ^ " warnings]",
   warning LOC Msg.
   
-mode (under-decl-env i i).
+pred under-decl-env i:A, i:B.
 under-decl-env [] P :- P.
 under-decl-env [ X `: PT | XS ] P :-
   %print "Assume" X PT,
@@ -254,7 +252,7 @@ under-undecl-env [ pr X _ | XS ] P :-
   %print "Assume" X PT,
   (of (const X) Ty_ :- !) => under-undecl-env XS P.
 
-mode (rm-known i i o).
+pred rm-known i:A, i:B, o:C.
 rm-known (const N `: _) S S1 :- std.string.map.remove N S S1.
 
 :if "TIME:CHECKER"
@@ -265,7 +263,7 @@ pred check-all-symbols i:std.string.map loc.
 :name "check-all-symbols:main"
 check-all-symbols _.
 
-mode (typecheck-program i i i o).
+pred typecheck-program i:A, i:B, i:C, o:D.
 :name "typecheck-program:main"
 typecheck-program P Q DeclaredTypes RC :-
   KnownTypes = [
@@ -293,7 +291,7 @@ type variable term -> prop.
 pred silence-linear-warning i:string.
 silence-linear-warning VN :- rex_match "^_.*" VN ; rex_match ".*_$" VN.
 
-mode (report-linear i).
+pred report-linear i:A.
 report-linear [].
 report-linear [(V >>> 1 + uvar) |NS] :- !,
   pp V VN,
@@ -312,23 +310,22 @@ report-linear [(V >>> uvar) |NS] :-
   report-linear NS.
 report-linear [(_ >>> _) | NS] :- report-linear NS.
 
-type count A -> list B -> prop.
-mode (count i i).
+pred count i:A, i:list B.
 count (lam F) E :- pi x\ count (F x) E.
 count (app [X|XS]) E :- !, count X E, count (app XS) E.
 count (app []) _ :- !.
 count X E :- variable X, !, incr X E.
 count _ _.
 
-mode (incr i i).
+pred incr i:A, i:B.
 incr X [(X >>> K) | _] :- add1 K.
 incr X [_ | XS] :- incr X XS.
 
-mode (add1 i).
+pred add1 i:A.
 add1 (uvar as K) :- K = 1 + FRESH_.
 add1 (1 + K) :- add1 K.
 
-mode (check-non-linear i i i).
+pred check-non-linear i:A, i:B, i:C.
 check-non-linear [N|NS] (arg C) L :- pi x\
  (pp x N :- !) => (variable x) => check-non-linear NS (C x) [(x >>> FRESH_) | L].
 check-non-linear [] (arg C) L :- pi x\
@@ -336,7 +333,7 @@ check-non-linear [] (arg C) L :- pi x\
 check-non-linear _ C L :-
   count C L, report-linear L.
 
-mode (warn-linear i).
+pred warn-linear i:A.
 :name "warn-linear:main"
 warn-linear [].
 warn-linear [ (clause Loc Names Clause) |CS] :-
@@ -349,13 +346,13 @@ main.
 
 % ------- entry ---------------------------------------
 
-mode (type->ppt-clause i i i o).
+pred type->ppt-clause i:A, i:B, i:C, o:D.
 type->ppt-clause S ACC (forall F) (pi C) :- !,
   pi x\ type->ppt-clause S [x|ACC] (F x) (C x).
 type->ppt-clause S [] T (pi Str\ ppt T Str :- !, ppt (tconst S) Str).
 type->ppt-clause S ACC T (pi Str\ ppt T Str :- !, ppt (tapp [tconst S|Args]) Str) :- std.rev ACC Args.
 
-mode (compile-type-abbreviations i o).
+pred compile-type-abbreviations i:A, o:B.
 compile-type-abbreviations [] [].
 compile-type-abbreviations [(_ `:= tconst _)|TS] Clauses :- !,
   % we don't refold immediate aliases
@@ -371,7 +368,7 @@ macro @rigid-term :- (cdata "rigid-term").
 
 to-constant V :- V = @rigid-term.
 
-mode (to-rigid-term i).
+pred to-rigid-term i:term.
 to-rigid-term N :- name N, !.
 to-rigid-term V :- var V, !, to-constant V.
 to-rigid-term (cdata (uvar _ as V)) :- !, to-constant V.
@@ -381,7 +378,7 @@ to-rigid-term (lam F) :- !, pi x\ to-rigid-term (F x).
 to-rigid-term (const _) :- !.
 to-rigid-term A :- halt "Error in to-rigid-term" A.
 
-mode (is-rigid-term i).
+pred is-rigid-term i:term.
 is-rigid-term N :- name N, !.
 is-rigid-term V :- var V, !, fail.
 is-rigid-term (cdata (uvar _ as V)) :- !, to-constant V.
@@ -391,7 +388,7 @@ is-rigid-term (lam F) :- !, pi x\ is-rigid-term (F x).
 is-rigid-term (const _) :- !.
 is-rigid-term A :- halt "Error in is-rigid-term" A.
 
-mode (build-mode i o).
+pred build-mode i:list A, o:list bool.
 build-mode L R :- std.map L (x\r\ r = mode-fo false) R.
 
 pred add-no-modes o:list A, i:A.
@@ -400,24 +397,25 @@ add-no-modes [X|_] Y :- not (var X), X = Y, !.
 add-no-modes [X|Xs] T :- var Xs, !, print "No mode for" X, Xs = [T|Y_].
 add-no-modes [_|Xs] T :- !, add-no-modes Xs T.
 
-mode (find-mode.aux i i i i o).
+pred find-mode.aux i:A, i:B, i:C, i:D, o:E.
 find-mode.aux [] NoModes_ X _ _ :- fatal-no-mode, halt "Check-well-modes-negative: no mode for" X.
 find-mode.aux [] NoModes X Args R :- !, add-no-modes NoModes X, build-mode Args R .
 find-mode.aux [pr X R|_] _ X _ R :- !.
 find-mode.aux [_ | Xs] NoModes X Args R :- !, find-mode.aux Xs NoModes X Args R.
 
-mode (find-mode i i o).
+pred find-mode i:A, i:B, o:C.
 find-mode X Args R :- modes Modes, no-modes NoModes, find-mode.aux Modes NoModes X Args R. 
 
-mode (get-head-mode i o).
+pred get-head-mode i:A, o:B.
 get-head-mode (mode-fo M) M :- !.
 get-head-mode (mode-ho M _) M :- !.
 
-mode (set-head-mode i i).
+pred set-head-mode i:A, i:B.
 set-head-mode Head Args :-
   find-mode Head Args Mode, !,
-  if ({std.length Mode} = {std.length Args}) true (halt "Invalid mode length for (2)" Head Loc),
-  std.forall2 Mode Args (m\t\ if (get-head-mode m true) (to-rigid-term t) true).
+  if ({std.length Mode} = {std.length Args}) 
+    (std.forall2 Mode Args (m\t\ if (get-head-mode m true) (to-rigid-term t) true)) 
+    (print "Invalid mode length for (2)" Head Loc).
 set-head-mode _ _.
 
 pred get-vars i:term, o:list string.
@@ -429,7 +427,7 @@ get-vars (const T) [] :- !.
 get-vars A [B] :- var A, !, pp A B.
 get-vars A _ :- halt "Error in get-vars" A.
 
-mode (check-head-output i i i).
+pred check-head-output i:A, i:B, i:C.
 check-head-output Head Args Loc :-
   find-mode Head Args Mode, !, 
   std.forall2 Mode Args (m\t\ sigma Vars\
@@ -438,11 +436,11 @@ check-head-output Head Args Loc :-
       print "WARNING: The variables" Vars "are in output position of the predicate\"" Head "\"and cannot be ensured to be ground" Loc))).
 check-head-output _ _ _.
 
-mode (variadic-mode i).
+pred variadic-mode i:A.
 variadic-mode (const "halt").
 variadic-mode (const "print").
 
-mode (is-ho-predicate i).
+pred is-ho-predicate i:A.
 is-ho-predicate (@rigid-term).
 
 pred map-var o:A, i:string, o:prop.
@@ -471,7 +469,7 @@ check-args-mode HD _ _ Loc Mode Arg :-
 check-args-mode _ _ _ _ Mode Arg :- get-head-mode Mode ModeP, ModeP, !.
 check-args-mode _ _ _ _ Mode Arg :- get-head-mode Mode ModeP, not ModeP, to-rigid-term Arg.
 
-mode (check-well-moded-negative i i).
+pred check-well-moded-negative i:A, i:B.
 check-well-moded-negative _        N :- name N, !.
 % check-well-moded-negative _        V :- var V, !, to-constant V.
 check-well-moded-negative _        (cdata (uvar _ as V)) :- !, to-constant V.
@@ -491,20 +489,21 @@ check-well-moded-negative Loc (app [HD|Args]) :- !,
     true,
   find-mode HD Args Mode,
   % print "Mode is" Mode,
-  if ({std.length Mode} = {std.length Args}) true (halt "Invalid mode length for" HD Loc),
-  std.forall2 Mode Args (x\y\std.assert!(check-args-mode HD NoModes AllModes Loc x y) "Mh").
+  if ({std.length Mode} = {std.length Args}) 
+    (std.forall2 Mode Args (x\y\std.assert!(check-args-mode HD NoModes AllModes Loc x y) "Mh")) 
+    (print "Invalid mode length for" HD Loc).
 check-well-moded-negative Loc (lam F) :- !, 
   pi x\ check-well-moded-negative Loc (F x).
 check-well-moded-negative _       (const _ as _) :- !.
 
-mode (check-well-moded-negative-list i i).
+pred check-well-moded-negative-list i:A, i:B.
 check-well-moded-negative-list [] _ :- !.
 check-well-moded-negative-list [X | Xs] Loc :-
   check-well-moded-negative Loc X,
   check-well-moded-negative-list Xs Loc.
 
-mode (to-check i).
-to-check _ :- !, true.
+pred to-check i:A.
+to-check _ :- fail, !, true.
 % to-check "r1" :- !.
 
 pred check-well-moded-positive-ho-mode i:list term, i:list A, i:list term, i:B.
@@ -552,7 +551,7 @@ head-symbol (const C) C.
 head-symbol (app [const ":-", X | _]) S :- !, head-symbol X S.
 head-symbol (app [const C|L]) C.
 
-mode (check-well-moded-prog i).
+pred check-well-moded-prog i:A.
 check-well-moded-prog [] :- !.
 check-well-moded-prog [clause Loc Vars Body | Tl] :-
   if (to-check {head-symbol Body})
@@ -561,7 +560,7 @@ check-well-moded-prog [clause Loc Vars Body | Tl] :-
 
 check-overlapping-prog [] _ :- !.
 
-mode (check i i i i i i).
+pred check i:A, i:B, i:C, i:D, i:E, i:F.
 :name "check:main"
 check P Q DeclaredTypes TypeAbbreviations Modes _FuncPred :-
   compile-type-abbreviations TypeAbbreviations Abbrevs,

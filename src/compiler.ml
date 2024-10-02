@@ -822,19 +822,19 @@ end = struct (* {{{ *)
           aux_run ns blocks (c::clauses) macros types tabbrs modes functionality locals chr accs rest
       | Program.Macro m :: rest ->
           aux_run ns blocks clauses (m::macros) types tabbrs modes functionality locals chr accs rest
-      | Program.Pred (t,m) :: rest ->
+      | Program.Pred t :: rest ->
           aux_run ns blocks clauses macros types tabbrs modes functionality locals chr accs
-            (Program.Mode [m] :: Program.Type [t] :: rest)
+            (Program.Mode [t] :: Program.Type [t] :: rest)
       | Program.Mode ms :: rest ->
-          aux_run ns blocks clauses macros types tabbrs (ms @ modes) functionality locals chr accs rest
-      | Program.Functionality f :: rest ->
-          assert (0 = 1);
-          aux_run ns blocks clauses macros types tabbrs modes (f @ functionality) locals chr accs rest
+          let t = List.map structure_type_attributes ms in
+          aux_run ns blocks clauses macros types tabbrs (t @ modes) functionality locals chr accs rest
       | Program.Type [] :: rest ->
           aux_run ns blocks clauses macros types tabbrs modes functionality locals chr accs rest
-      | Program.Type (t::ts) :: rest ->
+      | Program.Type (t::ts) :: rest ->          
           let t = structure_type_attributes t in
-          let types = if List.mem t types then types else t :: types in
+          (* Format.sprintf "Going to rec call aux with %s" (Ast.Type.pp (fun f x -> Ast.Structured.pp_tattribute f (List.hd x))) t |> print_endline; *)
+          let types = if t.attributes <> Functional && List.mem t types then types else t :: types in
+          let functionality = if t.attributes = Functional then t.name :: functionality else functionality in
           aux_run ns blocks clauses macros types tabbrs modes functionality locals chr accs
             (Program.Type ts :: rest)
       | Program.TypeAbbreviation abbr :: rest ->
@@ -1089,22 +1089,15 @@ let fresh_Arg =
 
 let get_Args s = StrMap.map fst (get_argmap s).n2t
 
-let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
+let is_discard f = F.(equal f dummyname) || (F.show f).[0] = '_'
+let is_macro_name f = (F.show f).[0] = '@'
+
+
+let preterm_of_ast loc ~depth:arg_lvl macro state ast =
 
   let spilling = ref false in
   let spy_spill c =
     spilling := !spilling || c == D.Global_symbols.spillc in
-
-  let is_uvar_name f =  F.is_uvar_name f in
-    
-  let is_discard f =
-    F.(equal f dummyname) ||
-    let c = (F.show f).[0] in
-     c = '_' in
-
-  let is_macro_name f =
-     let c = (F.show f).[0] in
-     c = '@' in
 
   let rec hcons_alien_term state = function
     | Term.Const x ->
@@ -1128,7 +1121,6 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
   in
 
   let rec stack_macro_of_ast lvl state f =
-    if on_type then error ~loc ("Macros cannot occur in types. Use a typeabbrev declaration instead");
     try aux lvl state (fst (F.Map.find f macro))
     with Not_found -> error ~loc ("Undeclared macro " ^ F.show f)
 
@@ -1138,11 +1130,11 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
     with Not_found ->
      if is_discard f then
        state, Discard
-     else if is_uvar_name f then
+     else if F.is_uvar_name f then
        mk_Arg state ~name:(F.show f) ~args:[]
      else if is_macro_name f then
        stack_macro_of_ast curlvl state f
-     else if not on_type && Builtins.is_declared_str state (F.show f) then
+     else if Builtins.is_declared_str state (F.show f) then
        state, Builtin(fst(Symbols.get_global_symbol state f),[])
      else if CustomFunctorCompilation.is_backtick f then
        CustomFunctorCompilation.compile_backtick state f
@@ -1234,6 +1226,94 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
   state, t, !spilling
 ;;
 
+let type_expression_of_ast loc ~depth:arg_lvl macro state (ast: Ast.TypeExpression.t) =
+
+  let rec hcons_alien_term state = function
+    | Term.Const x ->
+        Symbols.get_global_or_allocate_bound_symbol state x
+    | Cons(x, y) ->
+       let state, x = hcons_alien_term state x in
+       let state, y = hcons_alien_term state y in
+       state, Term.mkCons x y
+    | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
+    | App(c,x,l) ->
+       let state, x = hcons_alien_term state x in
+       let state, l = map_acc hcons_alien_term state l in
+       state, Term.mkApp c x l
+    | Builtin(c,l) ->
+       let state, l = map_acc hcons_alien_term state l in
+       state, Term.mkBuiltin c l
+    | Lam x ->
+       let state, x = hcons_alien_term state x in
+       state, Term.mkLam x
+    | (Nil | CData _ | Discard) as x -> state, x
+  in
+
+  let stack_funct_of_ast curlvl state f  =
+    try state, F.Map.find f (get_varmap state)
+    with Not_found ->
+     if is_discard f then error ~loc "Discard operator cannot be used in type declaration"
+     else if F.is_uvar_name f then mk_Arg state ~name:(F.show f) ~args:[]
+     else if is_macro_name f then error ~loc "Macros cannot occur in types. Use a typeabbrev declaration instead"
+     else
+       let state, (_,t) = Symbols.allocate_global_symbol state f in
+       state, t in
+
+  let get_arrow_const lvl state = 
+    match stack_funct_of_ast lvl state (F.from_string "->") with 
+    | s, Const c -> s, c
+    | _ -> error ~loc "Unreachable branch" in
+
+  let rec aux lvl state = function
+    | Ast.TypeExpression.TConst f -> stack_funct_of_ast lvl state f
+    | TApp(f, hd, tl) ->
+      let tl = hd :: tl in
+      let state, rev_tl =
+        List.fold_left (fun (state, tl) t ->
+          let state, t = aux lvl state t in
+          (state, t::tl))
+        (state, []) tl in
+      let tl = List.rev rev_tl in
+      let state, c = stack_funct_of_ast lvl state f in
+      begin match c with
+      | Const c -> begin match tl with
+        | hd2::tl -> state, Term.App(c,hd2,tl)
+        | _ -> anomaly "Application node with no arguments" end
+      | App(c,hd1,tl1) -> state, Term.App(c,hd1,tl1@tl)
+      | Builtin(c,tl1) -> state, Term.Builtin(c,tl1@tl)
+      | Lam _ -> (* macro with args *)
+        hcons_alien_term state (R.deref_appuv ~from:lvl ~to_:lvl tl c)
+      | Discard -> error ~loc "Clause shape unsupported: _ cannot be applied"
+      | _ -> error ~loc "Clause shape unsupported" end
+    | TCData c -> state, CData (CData.hcons c)
+    | TArr (a,b) -> 
+      let state, a = aux lvl state a in
+      let state, b = aux lvl state b in
+      let state, c = get_arrow_const lvl state in
+      state, App(c, a, [b])
+    | TPred (_,l) -> 
+      let l = List.rev l in
+      let hd, tl = List.hd l, List.tl l in
+      List.fold_left (fun (state,t:  State.t * term) e ->
+        let state, t' = aux lvl state (snd e) in
+        let state, c = get_arrow_const lvl state in
+        state, App (c, t', [t])
+        ) (aux lvl state (snd hd)) tl
+  in
+  let a, b = aux arg_lvl state ast in a, b, false
+
+let typeabbrev_of_ast loc ~depth:depth macro state (ast: Ast.TypeAbbreviation.closedTypeexpression) =
+  let rec aux depth state = function
+    | Ast.TypeAbbreviation.Lam (x, t) ->
+       let orig_varmap = get_varmap state in
+       let state, c = Symbols.allocate_bound_symbol state depth in
+       let state = update_varmap state (F.Map.add x c) in
+       let state, t', _ = aux (depth+1) state t in
+       set_varmap state orig_varmap, Lam t', false
+    | Ty t -> type_expression_of_ast ~depth loc macro state t
+  in
+  aux depth state ast
+
 let lp ~depth state loc s =
   let module P = (val option_get ~err:"No parser" (State.get parser state)) in
   let loc, ast = P.goal ~loc ~text:s in
@@ -1265,15 +1345,15 @@ let prechr_rule_of_ast depth macros state r =
   { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pifexpr; pcloc }
   
 (* used below *)
-let preterms_of_ast ?on_type loc ~depth macros state f t =
+let of_ast transformer loc ~depth macros state f t =
   assert(is_empty_amap (get_argmap state));
-  let state, term, spilling = preterm_of_ast ?on_type loc ~depth macros state t in
+  let state, term, spilling = transformer loc ~depth macros state t in
   let state, terms = f ~depth state term in
   let amap = get_argmap state in
   let state = State.end_clause_compilation state in
   (* TODO: may have spurious entries in the amap *)
   state, List.map (fun (loc,term) -> { term; amap; loc; spilling }) terms
-;;
+;; 
 
 (* exported *)
 let query_preterm_of_function ~depth:_ macros state f =
@@ -1312,7 +1392,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
 
   let compile_type_abbrev geti lcs state { Ast.TypeAbbreviation.name; nparams; loc; value } =
     let state, (taname, _) = Symbols.allocate_global_symbol state name in
-    let state, tavalue = preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) value in
+    let state, tavalue = of_ast typeabbrev_of_ast loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) value in
     let tavalue = assert(List.length tavalue = 1); List.hd tavalue in
     if tavalue.amap.nargs != 0 then
       error ~loc ("type abbreviation for " ^ F.show name ^ " has unbound variables");
@@ -1332,7 +1412,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
   let compile_type lcs state { Ast.Type.attributes; loc; name; ty } =
     let state, (tname, _) = Symbols.allocate_global_symbol state name in
     let state, ttype =
-      preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) ty in
+      of_ast type_expression_of_ast loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) ty in
     let ttype = assert(List.length ttype = 1); List.hd ttype in
     state, { Types.tindex = attributes; decl = { tname; ttype; tloc = loc } }
 
@@ -1351,13 +1431,25 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
        ("Duplicate mode declaration for " ^ Symbols.show state name ^ " (also at "^
          Loc.show (snd (C.Map.find name map)) ^ ")")
 
-  let rec to_mode_rec = function
-    | [] -> []
-    | Ast.Mode.Fo fo :: tl -> Fo (bool2IO fo) :: to_mode_rec tl
-    | Ho (ho, xs) :: tl -> Ho (bool2IO ho, to_mode_rec xs) :: to_mode_rec tl
+  let to_mode = function Ast.Mode.Input -> Input | Output -> Output
 
-  let compile_mode (state, modes) { Ast.Mode.name; args; loc } =
-    let args = to_mode_rec args in
+  let rec to_mode_rec_aux = function
+  | [] -> []
+  | ((m: Ast.Mode.mode), Ast.TypeExpression.TPred (_,p)) :: l -> Ho (to_mode m, to_mode_rec_aux p) :: to_mode_rec_aux l 
+  | (m, _) :: l -> Fo (to_mode m) :: to_mode_rec_aux l
+  and to_mode_rec = function
+    | Ast.TypeExpression.TConst _ | TCData _ -> []
+    | TArr (a,b) -> []
+    | TPred (_, m) ->
+        let m = List.rev m |> List.tl |> List.rev in
+        to_mode_rec_aux m
+    | TApp (a,b,l) -> []
+
+  let compile_mode (state, modes) { Ast.Type.name; ty; loc } =
+    let o = open_out "/home/dfissore/Documents/github/ELPI_DEV/functionality/aa" in
+    Format.fprintf (Format.formatter_of_out_channel o) "Doing to mode of %s\n%!" (F.show name);
+    close_out o;
+    let args = to_mode_rec ty in
     let state, mname = funct_of_ast state name in
     check_duplicate_mode state mname (args,loc) modes;
     state, C.Map.add mname (args,loc) modes
@@ -1396,7 +1488,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     | [] -> lcs, state, []
     | { Ast.Clause.body; attributes; loc } :: rest ->
       let state, ts =
-        preterms_of_ast loc ~depth:lcs macros state (toplevel_clausify loc) body in
+        of_ast preterm_of_ast loc ~depth:lcs macros state (toplevel_clausify loc) body in
       let cl = List.map (fun body -> { Ast.Clause.loc; attributes; body}) ts in
       let lcs, state, rest = compile_clauses lcs state macros rest in
       lcs, state, cl :: rest

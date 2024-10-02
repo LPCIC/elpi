@@ -84,6 +84,14 @@ let equal_stuck_goal_kind _ x y = x == y
 type 'unification_def stuck_goal_kind +=
   | Unification of 'unification_def
 
+type arg_mode = Util.arg_mode = Input | Output [@@deriving show, ord]
+
+type mode_aux = Util.mode_aux =
+  | Fo of arg_mode
+  | Ho of arg_mode * mode
+and mode = mode_aux list
+[@@ deriving show, ord]
+
 type term =
   (* Pure terms *)
   | Const of constant
@@ -116,8 +124,6 @@ let uvar_isnt_a_blocker { uid_private } = uid_private > 0 [@@inline];;
 let uvar_set_blocker r   = r.uid_private <- -(uvar_id r) [@@inline];;
 let uvar_unset_blocker r = r.uid_private <-  (uvar_id r) [@@inline];;
 
-type arg_mode = Util.arg_mode = Input | Output [@@deriving show, ord]
-
 type clause = {
     depth : int;
     args : term list;
@@ -127,10 +133,6 @@ type clause = {
     loc : Loc.t option; (* debug *)
     mutable timestamp : int list; (* for grafting *)
 }
-and mode_aux = Util.mode_aux =
-  | Fo of arg_mode
-  | Ho of arg_mode * mode
-and mode = mode_aux list
 [@@deriving show, ord]
 
 let bool2IO = function true -> Input | false -> Output

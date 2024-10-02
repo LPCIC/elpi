@@ -3,7 +3,8 @@ type lam (term -> term) -> term.
 type arr ty -> ty -> ty.
 type nat ty.
 type bool ty.
-mode (term i o).
+
+pred term i:term, o:ty.
 term (app HD ARG) TGT :- term HD (arr SRC TGT), term ARG SRC.
 term (lam F) (arr SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
 term (uvar as X) T :- declare_constraint (term X T) [X].

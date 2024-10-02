@@ -14,7 +14,7 @@ module Printer : sig
     executables:string list -> seed:int -> timeout:float -> unit
     
   val print_summary :
-    total:int -> ok:int -> ko:int -> skipped:int -> unit
+    total:int -> ok:int -> ko:int -> skipped:int -> timeout:int -> unit
 
   val print_log :
     fname:string -> unit
@@ -46,12 +46,13 @@ let print_header ~executables ~seed ~timeout =
   printf [blue] "------------------------------------------------------------------\n";
 ;;
 
-let print_summary ~total ~ok ~ko ~skipped =
+let print_summary ~total ~ok ~ko ~skipped ~timeout =
   printf [blue] "------------------------------------------------------------------\n";
   printf [blue] "Tests: "; printf [] "%d\n" total;
   printf [blue] "Passed: "; printf [] "%d\n" ok;
   printf [blue] "Failed: "; printf [] "%d\n" ko;
   printf [blue] "Skipped: "; printf [] "%d\n" skipped;
+  printf [blue] "Timeout:"; printf [] "%d\n" timeout
 ;;
 
 let print_file fname =
@@ -150,15 +151,16 @@ let main sources plot timeout promote executables namef catskip timetool seed =
           |> List.concat in
   let results =
     List.map (run timeout seed sources promote env) jobs in
-  let total, ok, ko, skipped =
-    let skip, rest =
-      List.partition (function None -> true | _ -> false) results in
-    let ok, ko =
-      List.partition (function
-        | Some { Runner.rc = Runner.Success _; _ } -> true
-        | _ -> false) rest in
-    List.(length jobs, length ok, length ko, length skip) in
-  Printer.print_summary ~total ~ok ~ko ~skipped;
+  let total, ok, ko, skipped, timeout =
+    let rec part total ok ko skipped timeout = function
+      | [] -> (total, ok, ko, skipped, timeout)
+      | Some {Runner.rc = Success _; _} :: l -> part (total+1) (ok+1) ko skipped timeout l
+      | Some {rc = Promote _; _} :: l ->        part (total+1) (ok+1) ko skipped timeout l
+      | Some {rc = Failure _; _} :: l ->        part (total+1) ok (ko+1) skipped timeout l
+      | None :: l ->                            part (total+1) ok ko (skipped+1) timeout l
+      | Some {rc = Timeout _; _} :: l ->        part (total+1) ok ko skipped (timeout+1) l
+    in part 0 0 0 0 0 results in
+  Printer.print_summary ~total ~ok ~ko ~skipped ~timeout;
   begin try
     let log_first_failure =
       results |> find_map (function

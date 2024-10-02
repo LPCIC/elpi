@@ -62,14 +62,14 @@ typ' (univ ## A ## B) :- typ A, typ B.
 typ' (A --> B) :- typ A, typ B.
 typ' (disj_union ## A ## B) :- typ A, typ B.
 
-mode (term i o).
+pred term i:A, o:B.
 term (lam A F) (A --> B) :- typ A, pi x\ term x A => term (F x) B.
 term (F # T) B :- term F (A --> B), term T A.
 term (eq ## A) (A --> A --> prop) :- typ A.
 term (uvar as T) TY :- declare_constraint (term T TY) T.
 
 /* like term, but on terms that are already known to be well-typed */
-mode (reterm i o).
+pred reterm i:A, o:B.
 reterm (lam A F) (A --> B) :- pi x\ reterm x A => reterm (F x) B.
 reterm (F # T) B :- reterm F (A --> B).
 reterm (eq ## A) (A --> A --> prop).

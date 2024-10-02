@@ -170,52 +170,52 @@ external pred le_ i:A, i:A.
 % [ge_ X Y] checks if X >= Y. Works for string, int and float
 external pred ge_ i:A, i:A.
 
-type (<), (>), (=<), (>=) A -> A -> prop.
+pred (>) i:A, i:A.
+X > Y :- gt_ X Y.
 
-mode ((<) i i). mode ((>) i i). mode ((=<) i i). mode ((>=) i i). 
+pred (<) i:A, i:A.
+X < Y :- lt_ X Y.
 
-X  > Y  :- gt_ X Y.
+pred (=<) i:A, i:A.
+X =< Y :- le_ X Y.
 
-X  < Y  :- lt_ X Y.
+pred (>=) i:A, i:A.
+X >= Y :- ge_ X Y.
 
-X  =< Y :- le_ X Y.
+pred (i>) i:int, i:int.
+X i> Y :- gt_ X Y.
 
-X  >= Y :- ge_ X Y.
+pred (i<) i:int, i:int.
+X i< Y :- lt_ X Y.
 
-type (i<), (i>), (i=<), (i>=) int -> int -> prop.
-
-mode ((i<) i i). mode ((i>) i i). mode ((i=<) i i). mode ((i>=) i i). 
-
-X i< Y  :- lt_ X Y.
-
-X i> Y  :- gt_ X Y.
-
+pred (i=<) i:int, i:int.
 X i=< Y :- le_ X Y.
 
+pred (i>=) i:int, i:int.
 X i>= Y :- ge_ X Y.
 
-type (r<), (r>), (r=<), (r>=) float -> float -> prop.
+pred (r>) i:float, i:float.
+X r> Y :- gt_ X Y.
 
-mode ((r<) i i). mode ((r>) i i). mode ((r=<) i i). mode ((r>=) i i). 
+pred (r<) i:float, i:float.
+X r< Y :- lt_ X Y.
 
-X r< Y  :- lt_ X Y.
-
-X r> Y  :- gt_ X Y.
-
+pred (r=<) i:float, i:float.
 X r=< Y :- le_ X Y.
 
+pred (r>=) i:float, i:float.
 X r>= Y :- ge_ X Y.
 
-type (s<), (s>), (s=<), (s>=) string -> string -> prop.
+pred (s>) i:string, i:string.
+X s> Y :- gt_ X Y.
 
-mode ((s<) i i). mode ((s>) i i). mode ((s=<) i i). mode ((s>=) i i). 
+pred (s<) i:string, i:string.
+X s< Y :- lt_ X Y.
 
-X s< Y  :- lt_ X Y.
-
-X s> Y  :- gt_ X Y.
-
+pred (s=<) i:string, i:string.
 X s=< Y :- le_ X Y.
 
+pred (s>=) i:string, i:string.
 X s>= Y :- ge_ X Y.
 
 %  -- Standard data types (supported in the FFI) --
