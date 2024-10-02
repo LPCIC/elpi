@@ -91,7 +91,6 @@ let testF s i msg =
       exit 1;
     end
 
-
 let (|-) a n ?(bug=false) b =
   let a1 = a.loc.source_start in
   let b2 = b.loc.source_stop in
@@ -126,7 +125,10 @@ let str s = mkC (mkLoc 1 0 1 0) (cstring.Elpi_util.Util.CData.cin s)
 let ss t = { Chr.eigen = underscore (mkLoc 1 0 1 0); context = underscore (mkLoc 1 0 1 0); conclusion = t }
 let s e g t = { Chr.eigen = e; context = g; conclusion = t }
 
-let bug n = n-1
+(* ~bug:true means that the token starts one char to the left of what is declared
+   I could not understand where the bug is, but since it mainly affects infix symbols
+   it should not make error reporting too imprecise in practice
+*)
 
 let _ =
   (*    01234567890123456789012345 *)
@@ -165,10 +167,12 @@ let _ =
   test  "p :- [a,b]."       1 10  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 10 [c 7 ~bug:true "a";c 9 ~bug:true "b";mkNil ~bug:true 10]);
   test  "p :- [ a , {b} ]." 1 16  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 16 [c 8"a";spill 12 14 (c 13 ~bug:true "b");mkNil 16]);
   test  "p :- [a,{b}]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 12 [c 7 ~bug:true "a";spill 9 11 ~bug:true (c ~bug:true 10 "b");mkNil ~bug:true 12]);
+  (*    01234567890123456789012345 *)
+  test  "p :- [(a + b)]."   1 14  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 14 [app "+" 10 [c ~bug:true 8 "a";c 12 "b"];mkNil ~bug:true 14]);
+  test  "p :- [a + b]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 12 [app "+" 9 [c 7 ~bug:true "a";c 11 "b"];mkNil ~bug:true 12]);
+  test  "p :- [ f a , b ]." 1 16  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 12 [app "f" 8 [c 10 "a"];c 14 "b";mkNil 16]);
+  test  "p :- [f a,b]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 12 [app "f" 7 ~bug:true [c 9 "a"];c ~bug:true 11 "b";mkNil ~bug:true 12]);
   (* 
-  test  "p :- [(a + b)]."   1 14  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["+" @ [c"a";c"b"];mkNil]);
-  test  "p :- [a + b]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["+" @ [c"a";c"b"];mkNil]);
-  test  "p :- [f a,b]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["f" @ [c"a"];c"b";mkNil]);
   test  "p :- [(a,b)]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq ["," @ [c"a";c"b"];mkNil]);
   test  "p :- [a,b|c]."     1 12  1 0 [] ((c 1 "p" |- 3) @@ mkSeq [c"a";c"b";c"c"]);
   test  "p :- [a,b\\@f, x\\b]." 0 18  1 0 [] (c"p" |- mkSeq [c"a";"b" --> ("," @ [c"@f"; "x" --> c"b"]);mkNil]);
