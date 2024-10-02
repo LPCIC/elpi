@@ -65,6 +65,11 @@ let mkApp loc = function
       mkAppF loc (cloc,c) (a :: args)
   | l -> mkApp loc l
 
+let mkAppF loc (cloc,c) = function
+  | a :: { it = App ({ it = Const c1 }, args) } :: [] when Func.(equal c andf && equal c1 andf) ->
+      mkAppF loc (cloc,c) (a :: args)
+  | l -> mkAppF loc (cloc,c) l
+
 let binder l = function
   | None -> l
   | Some (loc,b) ->
