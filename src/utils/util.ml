@@ -161,6 +161,16 @@ module Loc = struct
     line_starts_at = 0;
   }
 
+  let merge l r =
+    assert(l.source_name = r.source_name);
+    {
+    source_name = l.source_name;
+    source_start = l.source_start;
+    source_stop = r.source_stop;
+    line = r.line;
+    line_starts_at = r.line_starts_at;
+  }
+
 end
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =

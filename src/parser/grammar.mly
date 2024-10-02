@@ -32,11 +32,13 @@ let desugar_multi_binder loc t =
         | Const x when Func.is_uvar_name x -> ()
         | _ -> raise (ParseError(loc,"The last argument of 'pi' or 'sigma' must be a function or a unification variable, while it is: " ^ Ast.Term.show last)) in
       let names = List.map (function
-        | { it = Const x } -> Func.show x
+        | { it = Const x; loc } -> Func.show x, loc
         | { it = (App _ | Lam _ | CData _ | Quoted _) } ->
             raise (ParseError(loc,"Only names are allowed after 'pi' or 'sigma'"))) rev_rest in
-      let body = mkApp loc [binder;last] in
-      List.fold_left (fun bo name -> mkApp loc [binder;mkLam loc (* BUG *) name bo]) body names
+      let body = mkApp (Loc.merge binder.loc last.loc) [binder;last] in
+      List.fold_left (fun bo (name,nloc) ->
+        let loc = Loc.merge nloc bo.loc in
+        mkApp loc [binder;mkLam loc name bo]) body names
   | (App _ | Const _ | Lam _ | CData _ | Quoted _) -> t
 ;;
 
@@ -50,10 +52,10 @@ let desugar_macro loc lhs rhs =
       if ((Func.show name).[0] != '@') then
         raise (ParseError(loc,"Macro name must begin with '@'"));
       let names = List.map (function
-        | { it = Const x } -> Func.show x
+        | { it = Const x; loc } -> Func.show x, loc
         | { it = (App _ | Lam _ | CData _ | Quoted _) } ->
               raise (ParseError(loc,"Macro parameters must be names"))) args in
-      name, List.fold_right (mkLam loc) (* BUG *) names body
+      name, List.fold_right (fun (name,nloc) b -> mkLam (Loc.merge nloc b.loc) name b) names body
   | _ ->
         raise (ParseError(loc,"Illformed macro left hand side"))
 ;;
@@ -67,8 +69,9 @@ let binder l = function
   | None -> l
   | Some (loc,b) ->
       match List.rev l with
-      | { it = Const name; loc } :: rest ->
-          List.rev rest @ [mkLam loc (Func.show name) b]
+      | { it = Const name; loc = bloc } :: rest ->
+          let lloc = Loc.merge bloc b.loc in
+          List.rev rest @ [mkLam lloc (Func.show name) b]
       | _ -> raise (ParseError(loc,"bind '\\' operator must follow a name"))
 ;;
 
