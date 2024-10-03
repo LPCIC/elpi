@@ -8,8 +8,8 @@
 {"step" : 1,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:curgoal","payload" : [";","p 1 X0 ; p 2 X1"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 28, column 0, characters 296-308:","File \"builtin.elpi\", line 30, column 0, characters 311-323:"]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 28, column 0, characters 296-308:","(A0 ; _) :- A0."]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 30, column 0, characters 354-366:","File \"builtin.elpi\", line 32, column 0, characters 369-381:"]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 30, column 0, characters 354-366:","(A0 ; _) :- A0."]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := p 1 X0"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["6"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["p 1 X0"]}
@@ -24,8 +24,8 @@
 {"step" : 3,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["is","1 is 2 + 3"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 73, column 0, characters 1031-1049:"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 73, column 0, characters 1031-1049:","(A0 is A1) :- (calc A1 A0)."]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 75, column 0, characters 1089-1107:"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 75, column 0, characters 1089-1107:","(A0 is A1) :- (calc A1 A0)."]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := 1"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A1 := 2 + 3"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["8"]}
@@ -71,8 +71,8 @@
 {"step" : 10,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:rule:eq","payload" : ["fail"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:curgoal","payload" : [";","p 1 X0 ; p 2 X1"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 30, column 0, characters 311-323:"]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 30, column 0, characters 311-323:","(_ ; A0) :- A0."]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 32, column 0, characters 369-381:"]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 32, column 0, characters 369-381:","(_ ; A0) :- A0."]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := p 2 X1"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["13"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["p 2 X1"]}
