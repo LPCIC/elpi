@@ -1028,10 +1028,9 @@ module BuiltIn = struct
   let declare ~file_name l = file_name, l
   let document_fmt fmt ?(calc=Setup.default_calc_descriptor) (_,l) =
     ED.BuiltInPredicate.document fmt l (List.rev !calc)
-  let document_file ?(header="") ?(calc=Setup.default_calc_descriptor) (name,l) =
+  let document_file ?(calc=Setup.default_calc_descriptor) (name,l) =
     let oc = open_out name in
     let fmt = Format.formatter_of_out_channel oc in
-    Format.fprintf fmt "%s%!" header;
     ED.BuiltInPredicate.document fmt l (List.rev !calc);
     Format.pp_print_flush fmt ();
     close_out oc
