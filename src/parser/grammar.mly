@@ -82,10 +82,10 @@ let binder l = function
 
 let underscore loc = { loc; it = Const Func.dummyname }
 
-let decode_sequent t =
+let decode_sequent loc t =
   match t.it with
   | App({ it = Const c },[hyps;bo]) when c == Func.sequentf -> hyps, bo
-  | _ -> underscore t.loc, t
+  | _ -> underscore loc, t
 
 let prop = Func.from_string "prop"
 
@@ -169,7 +169,7 @@ chr_rule:
   to_remove = preceded(BIND,nonempty_list(sequent))?;
   guard = preceded(PIPE,term)?;
   new_goal = preceded(IFF,sequent)? {
-    { Chr.to_match; to_remove = Util.option_default [] to_remove; guard; new_goal; attributes; loc=(loc $sloc) }
+    { Chr.to_match; to_remove = Util.option_default [] to_remove; guard; new_goal; attributes; loc=(loc $loc) }
   }
 
 pred:
@@ -272,11 +272,11 @@ subtrie:
 
 sequent:
 | t = closed_term {
-    let context, conclusion = decode_sequent t in
-    { Chr.eigen = underscore (loc $loc(t)); context; conclusion }
+    let context, conclusion = decode_sequent (loc $loc) t in
+    { Chr.eigen = underscore (loc $loc); context; conclusion }
   }
 | LPAREN; c = closed_term; COLON; t = term; RPAREN {
-    let context, conclusion = decode_sequent t in
+    let context, conclusion = decode_sequent (loc $loc) t in
     { Chr.eigen = c; context; conclusion }
   }
 
@@ -332,7 +332,7 @@ closed_term:
 | x = FLOAT { mkC (loc $loc) (cfloat.Util.CData.cin x)}
 | x = STRING { mkC (loc $loc) (cstring.Util.CData.cin x)}
 | x = QUOTED { mkQuoted (loc $loc) x }
-| LPAREN; t = term; AS; c = term; RPAREN { mkApp (loc $loc) [mkCon (loc $loc) "as";t;c] }
+| LPAREN; t = term; a = AS; c = term; RPAREN { mkApp (loc $loc) [mkCon (loc $loc(a)) "as";t;c] }
 | LBRACKET; l = list_items { mkSeq (loc $loc) l }
 | LBRACKET; l = list_items_tail;  {  mkSeq (loc $loc) l }
 | l = LCURLY; t = term; RCURLY { mkAppF (loc $loc) (loc $loc(l),Func.spillf) [t] }

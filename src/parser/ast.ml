@@ -110,7 +110,7 @@ let mkSeq loc (l : t list) =
       let tl = aux loc tl in
       { loc = Loc.merge hd.loc tl.loc; it = App({ it = Const Func.consf; loc = hd.loc },[hd;tl]) }
  in
-   aux loc l
+   { (aux loc l) with loc }
 
 
 let rec best_effort_pp = function

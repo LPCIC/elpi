@@ -171,6 +171,8 @@ module Loc = struct
     line_starts_at = r.line_starts_at;
   }
 
+  let extend n l = { l with source_start = l.source_start - n; source_stop = l.source_stop + n }
+   
 end
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =

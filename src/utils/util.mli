@@ -102,6 +102,9 @@ module Loc : sig
   val initial : string -> t
   (* merge left right *)
   val merge : t -> t -> t
+  (* starts/end n chars before/after*)
+  val extend : int -> t -> t
+
 end
 
 (******************** list ******************)
