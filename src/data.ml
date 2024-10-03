@@ -1300,11 +1300,7 @@ let pp_tab_args fmt l =
 
 let pp_arg sep fmt (dir,ty,doc) =
   let dir = if dir then "i" else "o" in
-  try 
-    (Re.Str.search_forward (Re.Str.regexp "->") ty 0 |> ignore);
-    Fmt.fprintf fmt "%s:(%s)%s" dir ty sep
-  with Not_found ->
-    Fmt.fprintf fmt "%s:%s%s" dir ty sep
+  Fmt.fprintf fmt "%s:%s%s" dir ty sep
 ;;
 
 let pp_args = pplist (pp_arg "") ", " ~pplastelem:(pp_arg "")

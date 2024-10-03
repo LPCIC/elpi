@@ -1446,9 +1446,6 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     | TApp (a,b,l) -> []
 
   let compile_mode (state, modes) { Ast.Type.name; ty; loc } =
-    let o = open_out "/home/dfissore/Documents/github/ELPI_DEV/functionality/aa" in
-    Format.fprintf (Format.formatter_of_out_channel o) "Doing to mode of %s\n%!" (F.show name);
-    close_out o;
     let args = to_mode_rec ty in
     let state, mname = funct_of_ast state name in
     check_duplicate_mode state mname (args,loc) modes;

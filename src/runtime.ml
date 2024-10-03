@@ -2380,7 +2380,6 @@ let tail_opt = function
   | [] -> []
   | _ :: xs -> xs
 
-(** [hd_opt L] returns false if L = [[]] otherwise L.(0)  *)
 let hd_opt = function
   | x :: _ -> get_arg_mode x
   | _ -> Output
