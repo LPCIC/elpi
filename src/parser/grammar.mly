@@ -135,7 +135,6 @@ decl:
 | p = pred; FULLSTOP { Program.Pred p }
 | t = type_; FULLSTOP { Program.Type t }
 | t = kind; FULLSTOP { Program.Type t }
-| m = mode; FULLSTOP { Util.error ~loc:(loc $sloc) "mode is no more accepted as a valid token" }
 | m = macro; FULLSTOP { Program.Macro m }
 | CONSTRAINT; hyps = list(constant); QDASH; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, hyps, cl) }
 | CONSTRAINT; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, [], cl) }
@@ -185,13 +184,6 @@ pred_item:
 anonymous_pred:
 | attributes = attributes; PRED;
   args = separated_list(option(CONJ),pred_item) { TPred (attributes, args @ [mode_of_IO 'o', TConst (Func.from_string "prop")]) }
-
-// Still parsing the mode string, but then an error is raised
-mode:
-| MODE; LPAREN; c = constant; l = nonempty_list(i_o); RPAREN { Util.error ~loc:(loc $sloc) "mode is no more accepted as a valid token" }
-i_o:
-| io = IO { mode_of_IO io }
-
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {

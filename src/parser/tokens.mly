@@ -33,7 +33,6 @@
 %token MINUSr
 %token MINUSi
 %token MINUSs
-%token MODE
 %token MACRO
 %token RULE
 %token NAMESPACE

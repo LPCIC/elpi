@@ -48,11 +48,14 @@ let print_header ~executables ~seed ~timeout =
 
 let print_summary ~total ~ok ~ko ~skipped ~timeout =
   printf [blue] "------------------------------------------------------------------\n";
-  printf [blue] "Tests: "; printf [] "%d\n" total;
-  printf [blue] "Passed: "; printf [] "%d\n" ok;
-  printf [blue] "Failed: "; printf [] "%d\n" ko;
-  printf [blue] "Skipped: "; printf [] "%d\n" skipped;
-  printf [blue] "Timeout:"; printf [] "%d\n" timeout
+  let print_stat ?(to_print=false) k v =
+    if to_print || v <> 0 then (printf [blue] "%s: " k; printf [] "%d\n" v)
+  in
+  print_stat ~to_print:true "Tests" total;
+  print_stat ~to_print:true "Passed" ok;
+  print_stat ~to_print:true "Failed" ko;
+  print_stat "Skipped" skipped;
+  print_stat "Timeout" timeout
 ;;
 
 let print_file fname =

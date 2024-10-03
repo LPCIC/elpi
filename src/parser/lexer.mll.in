@@ -145,7 +145,7 @@ and token = parse
 | "accumulate" { ACCUMULATE }
 | "local" { LOCAL }
 | "pred" { PRED }
-| "mode" { MODE }
+| "mode" { failwith "Mode is a no more maintained keyword" }
 | "macro" { MACRO }
 | "rule" { RULE }
 | "namespace" { NAMESPACE }
