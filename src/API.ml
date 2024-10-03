@@ -1344,17 +1344,18 @@ module Utils = struct
     let open EA in
     let module Data = ED.Term in
     let module R = (val !r) in let open R in
+    let buggy_loc = loc in
     let rec aux d ctx t =
       match deref_head ~depth:d t with
       | Data.Const i when i >= 0 && i < depth ->
           error "program_of_term: the term is not closed"
       | Data.Const i when i < 0 ->
-          Term.mkCon loc (* BUG *) (ED.Constants.show i)
+          Term.mkCon buggy_loc (ED.Constants.show i)
       | Data.Const i -> Util.IntMap.find i ctx
       | Data.Lam t ->
           let s = "x" ^ string_of_int d in
-          let ctx = Util.IntMap.add d (Term.mkCon loc (* BUG *) s) ctx in
-          Term.mkLam loc (* BUG *) s (aux (d+1) ctx t)
+          let ctx = Util.IntMap.add d (Term.mkCon buggy_loc s) ctx in
+          Term.mkLam buggy_loc s (aux (d+1) ctx t)
       | Data.App(c,x,xs) ->
           let c = aux d ctx (R.mkConst c) in
           let x = aux d ctx x in
@@ -1364,16 +1365,16 @@ module Utils = struct
       | Data.Cons(hd,tl) ->
           let hd = aux d ctx hd in
           let tl = aux d ctx tl in
-          Term.mkSeq loc (* BUG *) [hd;tl]
-      | Data.Nil -> Term.mkNil loc (* BUG *)
+          Term.mkSeq buggy_loc [hd;tl]
+      | Data.Nil -> Term.mkNil buggy_loc
       | Data.Builtin(c,xs) ->
-          let c = Term.mkCon loc (* BUG *) (ED.Constants.show c) in
+          let c = Term.mkCon buggy_loc (ED.Constants.show c) in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: xs)
-      | Data.CData x -> Term.mkC loc (* BUG *) x
+      | Data.CData x -> Term.mkC buggy_loc x
       | (Data.UVar _ | Data.AppUVar _) ->
           error "program_of_term: the term contains uvars"
-      | Data.Discard -> Term.mkCon loc (* BUG *) "_"
+      | Data.Discard -> Term.mkCon buggy_loc "_"
     in
     let attributes =
       (match name with Some x -> [Name x] | None -> []) @

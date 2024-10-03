@@ -1182,8 +1182,8 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
        let state = update_varmap state (F.Map.add x c) in
        let state, t' = aux (lvl+1) state t in
        set_varmap state orig_varmap, Term.Lam t'
-    | Ast.Term.App ({ Ast.Term.it = Ast.Term.App (f,l1) },l2) ->
-       aux lvl state ({ Ast.Term.it = Ast.Term.App (f, l1@l2); loc (* BUG *) })
+    | Ast.Term.App ({ Ast.Term.it = Ast.Term.App (f,l1); loc },l2) ->
+       aux lvl state ({ Ast.Term.it = Ast.Term.App (f, l1@l2); loc = Loc.merge t.Ast.Term.loc loc })
     | Ast.Term.CData c -> state, Term.CData (CData.hcons c)
     | Ast.Term.App ({ Ast.Term.it = Ast.Term.Lam _},_) ->
         error ~loc "Beta-redexes not allowed, use something like (F = x\\x, F a)"

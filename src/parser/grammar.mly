@@ -226,18 +226,17 @@ macro:
 typeabbrev:
 | TYPEABBREV; a = abbrevform; t = type_term {
     let name, args = a in
-    let args = List.map Func.show args in
     let nparams = List.length args in
-    let value = List.fold_right (mkLam (loc $sloc)) (* BUG *) args t in
+    let value = List.fold_right (fun (n,loc) -> mkLam loc (Func.show n)) args t in
     { TypeAbbreviation.name = name;
       nparams = nparams;
       value = value;
-      loc = loc $sloc }
+      loc = loc $loc }
   }
 
 abbrevform:
 | c = constant { c, [] }
-| LPAREN; hd = constant; args = nonempty_list(constant); RPAREN { hd, args  }
+| LPAREN; hd = constant; args = nonempty_list(constant_w_loc); RPAREN { hd, args  }
 
 
 ignored:
@@ -420,6 +419,9 @@ constant:
 | LPAREN; s = mixfix_SYMB; RPAREN { s }
 | LPAREN; AS; RPAREN  { Func.from_string "as" }
 | NIL { Func.nilf }
+
+constant_w_loc:
+| c = constant { c, loc $loc }
 
 mixfix_SYMB:
 | x = infix { x }
