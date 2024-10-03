@@ -1977,9 +1977,9 @@
               "chr_text": "(theta A0) \\ (A1 ?- gammabar A2 A3) | (generalize A0 A1 A2 A4) <=> (A3 = A4)",
               "chr_loc": {
                 "filename": "tests/sources/trace-w/main.elpi",
-                "line": 87,
-                "column": 0,
-                "character": 2001
+                "line": 85,
+                "column": 36,
+                "character": 1999
               },
               "chr_condition_cards": [
                 {
@@ -2429,9 +2429,9 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 504,
+                                    "line": 506,
                                     "column": 0,
-                                    "character": 12502
+                                    "character": 12560
                                   }
                                 ]
                               }
@@ -2466,9 +2466,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -2629,9 +2629,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -2761,9 +2761,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -2873,9 +2873,9 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 505,
+                                    "line": 507,
                                     "column": 0,
-                                    "character": 12523
+                                    "character": 12581
                                   }
                                 ]
                               }
@@ -2906,9 +2906,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 505,
+                                  "line": 507,
                                   "column": 0,
-                                  "character": 12523
+                                  "character": 12581
                                 }
                               ]
                             }
@@ -3035,9 +3035,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 505,
+                                  "line": 507,
                                   "column": 0,
-                                  "character": 12523
+                                  "character": 12581
                                 }
                               ]
                             }
@@ -3273,9 +3273,9 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 504,
+                                    "line": 506,
                                     "column": 0,
-                                    "character": 12502
+                                    "character": 12560
                                   }
                                 ]
                               }
@@ -3315,9 +3315,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -3478,9 +3478,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -3655,9 +3655,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -3796,9 +3796,9 @@
                               "File",
                               {
                                 "filename": "builtin.elpi",
-                                "line": 505,
+                                "line": 507,
                                 "column": 0,
-                                "character": 12523
+                                "character": 12581
                               }
                             ]
                           }
@@ -3846,9 +3846,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -4136,9 +4136,9 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 52,
+                                    "line": 54,
                                     "column": 0,
-                                    "character": 609
+                                    "character": 667
                                   }
                                 ]
                               }
@@ -4172,9 +4172,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 52,
+                                  "line": 54,
                                   "column": 0,
-                                  "character": 609
+                                  "character": 667
                                 }
                               ]
                             }
@@ -4297,9 +4297,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 52,
+                                  "line": 54,
                                   "column": 0,
-                                  "character": 609
+                                  "character": 667
                                 }
                               ]
                             }
@@ -4391,9 +4391,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 52,
+                                  "line": 54,
                                   "column": 0,
-                                  "character": 609
+                                  "character": 667
                                 }
                               ]
                             }
@@ -4465,9 +4465,9 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 54,
+                                    "line": 56,
                                     "column": 0,
-                                    "character": 631
+                                    "character": 689
                                   }
                                 ]
                               }
@@ -4489,9 +4489,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 54,
+                                  "line": 56,
                                   "column": 0,
-                                  "character": 631
+                                  "character": 689
                                 }
                               ]
                             }
@@ -4789,9 +4789,9 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 504,
+                                    "line": 506,
                                     "column": 0,
-                                    "character": 12502
+                                    "character": 12560
                                   }
                                 ]
                               }
@@ -4826,9 +4826,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -4951,9 +4951,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -5045,9 +5045,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 504,
+                                  "line": 506,
                                   "column": 0,
-                                  "character": 12502
+                                  "character": 12560
                                 }
                               ]
                             }
@@ -5119,9 +5119,9 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 505,
+                                    "line": 507,
                                     "column": 0,
-                                    "character": 12523
+                                    "character": 12581
                                   }
                                 ]
                               }
@@ -5145,9 +5145,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 505,
+                                  "line": 507,
                                   "column": 0,
-                                  "character": 12523
+                                  "character": 12581
                                 }
                               ]
                             }
@@ -5234,9 +5234,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 505,
+                                  "line": 507,
                                   "column": 0,
-                                  "character": 12523
+                                  "character": 12581
                                 }
                               ]
                             }

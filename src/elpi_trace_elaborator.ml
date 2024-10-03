@@ -235,7 +235,7 @@ let int_of_string s =
 let decode_loc s =
   if Str.(string_match (regexp "File .(context step_id:\\([0-9]+\\))") s 0) then
     `Context (int_of_string (Str.matched_group 1 s))
-  else if Str.(string_match (regexp "File .\\([^,]+\\)., line \\([0-9]+\\), column \\([0-9]+\\), character \\([0-9]+\\)") s 0) then
+  else if Str.(string_match (regexp "File .\\([^,]+\\)., line \\([0-9]+\\), column \\([0-9]+\\), characters? \\([0-9]+\\)-?\\([0-9]+\\)?") s 0) then
     `File {
       filename = Str.matched_group 1 s;
       line = Str.matched_group 2 s |> int_of_string;
