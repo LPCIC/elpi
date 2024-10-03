@@ -70,7 +70,7 @@ module Term : sig
 
 end
 
-module ScopedTerm : sig
+(* module ScopedTerm : sig
 
   type t_ =
    | Global of Func.t
@@ -82,7 +82,7 @@ module ScopedTerm : sig
    and t = { it : t; loc : Loc.t }
   [@@ deriving show, ord]
   
-end
+end *)
 
 type raw_attribute =
   | If of string

@@ -141,7 +141,7 @@ let mkConst loc c = { loc; it = Const c }
 
 end
 
-module ScopedTerm = struct
+(* module ScopedTerm = struct
 
   type t_ =
    | Global of Func.t
@@ -153,7 +153,7 @@ module ScopedTerm = struct
    and t = { it : t; loc : Loc.t }
   [@@ deriving show, ord]
   
-end
+end *)
 
 type raw_attribute =
   | If of string
