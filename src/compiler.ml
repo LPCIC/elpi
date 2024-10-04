@@ -1135,14 +1135,15 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
        let state, (_,t) = Symbols.allocate_global_symbol state f in
        state, t
 
-  and aux lvl state = function
+  and aux lvl state t =
+    match t.Ast.Term.it with
     | Ast.Term.Const f when F.(equal f nilf) -> state, Term.Nil
     | Ast.Term.Const f -> stack_funct_of_ast lvl state f
-    | Ast.Term.App(Ast.Term.Const f, [hd;tl]) when F.(equal f consf) ->
+    | Ast.Term.App({ Ast.Term.it = Ast.Term.Const f }, [hd;tl]) when F.(equal f consf) ->
        let state, hd = aux lvl state hd in
        let state, tl = aux lvl state tl in
        state, Term.Cons(hd,tl)
-    | Ast.Term.App(Ast.Term.Const f, tl) ->
+    | Ast.Term.App({ Ast.Term.it = Ast.Term.Const f }, tl) ->
        let state, rev_tl =
          List.fold_left (fun (state, tl) t ->
            let state, t = aux lvl state t in
@@ -1181,14 +1182,14 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
        let state = update_varmap state (F.Map.add x c) in
        let state, t' = aux (lvl+1) state t in
        set_varmap state orig_varmap, Term.Lam t'
-    | Ast.Term.App (Ast.Term.App (f,l1),l2) ->
-       aux lvl state (Ast.Term.App (f, l1@l2))
+    | Ast.Term.App ({ Ast.Term.it = Ast.Term.App (f,l1); loc },l2) ->
+       aux lvl state ({ Ast.Term.it = Ast.Term.App (f, l1@l2); loc = Loc.merge t.Ast.Term.loc loc })
     | Ast.Term.CData c -> state, Term.CData (CData.hcons c)
-    | Ast.Term.App (Ast.Term.Lam _,_) ->
+    | Ast.Term.App ({ Ast.Term.it = Ast.Term.Lam _},_) ->
         error ~loc "Beta-redexes not allowed, use something like (F = x\\x, F a)"
-    | Ast.Term.App (Ast.Term.CData _,_) ->
+    | Ast.Term.App ({ Ast.Term.it = Ast.Term.CData _},_) ->
         error ~loc "Applied literal"
-    | Ast.Term.Quoted { Ast.Term.data; kind = None; loc } ->
+    | Ast.Term.Quoted { Ast.Term.data; kind = None; qloc = loc } ->
          let unquote =
            let default_quotation = State.get default_quotation state in
            option_get ~err:"No default quotation" default_quotation in
@@ -1197,7 +1198,7 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
            let state, t = unquote ~depth:lvl state loc data in
            hcons_alien_term state t
          with Elpi_parser.Parser_config.ParseError(loc,msg) -> error ~loc msg end
-    | Ast.Term.Quoted { Ast.Term.data; kind = Some name; loc } ->
+    | Ast.Term.Quoted { Ast.Term.data; kind = Some name; qloc = loc } ->
          let unquote =
            let named_quotations = State.get named_quotations state in
            try StrMap.find name named_quotations
@@ -1207,7 +1208,7 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
            let state, t = unquote ~depth:lvl state loc data in
            hcons_alien_term state t
          with Elpi_parser.Parser_config.ParseError(loc,msg) -> error ~loc msg end
-    | Ast.Term.App (Ast.Term.Quoted _,_) ->
+    | Ast.Term.App ({ Ast.Term.it = Ast.Term.Quoted _},_) ->
         error ~loc "Applied quotation"
   in
 

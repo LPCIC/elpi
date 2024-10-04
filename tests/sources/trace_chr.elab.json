@@ -337,9 +337,9 @@
                     "File",
                     {
                       "filename": "builtin.elpi",
-                      "line": 9,
+                      "line": 11,
                       "column": 0,
-                      "character": 89
+                      "character": 147
                     }
                   ]
                 }
@@ -361,9 +361,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 9,
+                    "line": 11,
                     "column": 0,
-                    "character": 89
+                    "character": 147
                   }
                 ]
               }
@@ -772,9 +772,9 @@
                     "File",
                     {
                       "filename": "builtin.elpi",
-                      "line": 52,
+                      "line": 54,
                       "column": 0,
-                      "character": 609
+                      "character": 667
                     }
                   ]
                 }
@@ -800,9 +800,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 52,
+                    "line": 54,
                     "column": 0,
-                    "character": 609
+                    "character": 667
                   }
                 ]
               }
@@ -903,9 +903,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 52,
+                    "line": 54,
                     "column": 0,
-                    "character": 609
+                    "character": 667
                   }
                 ]
               }
@@ -980,9 +980,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 52,
+                    "line": 54,
                     "column": 0,
-                    "character": 609
+                    "character": 667
                   }
                 ]
               }
@@ -1025,9 +1025,9 @@
             "chr_text": " \\ (even A0) (odd A0) | (odd z) <=> (true)",
             "chr_loc": {
               "filename": "tests/sources/trace_chr.elpi",
-              "line": 2,
-              "column": 3,
-              "character": 25
+              "line": 1,
+              "column": 21,
+              "character": 21
             },
             "chr_condition_cards": [
               {
@@ -1062,9 +1062,9 @@
               "chr_text": " \\ (even A0) (odd A0) | (odd (s z)) <=> (fail)",
               "chr_loc": {
                 "filename": "tests/sources/trace_chr.elpi",
-                "line": 3,
-                "column": 3,
-                "character": 71
+                "line": 2,
+                "column": 45,
+                "character": 67
               },
               "chr_condition_cards": [
                 {
@@ -1307,9 +1307,9 @@
                     "File",
                     {
                       "filename": "builtin.elpi",
-                      "line": 54,
+                      "line": 56,
                       "column": 0,
-                      "character": 631
+                      "character": 689
                     }
                   ]
                 }
@@ -1331,9 +1331,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 54,
+                    "line": 56,
                     "column": 0,
-                    "character": 631
+                    "character": 689
                   }
                 ]
               }

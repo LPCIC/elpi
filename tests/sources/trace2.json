@@ -1,8 +1,8 @@
 {"step" : 0,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["main"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["main","main"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace2.elpi\", line 1, column 0, character 0:"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace2.elpi\", line 1, column 0, character 0:","main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail))))))."]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace2.elpi\", line 1, column 0, characters 0-56:"]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace2.elpi\", line 1, column 0, characters 0-56:","main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail))))))."]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["5"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["print 1"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["6"]}
@@ -36,11 +36,11 @@
 {"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:rule:and","payload" : ["success"]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["true","true"]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
-{"step" : 7,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 9, column 0, character 89:"]}
-{"step" : 7,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 9, column 0, character 89:","true :- ."]}
+{"step" : 7,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 11, column 0, characters 147-151:"]}
+{"step" : 7,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 11, column 0, characters 147-151:","true :- ."]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["fail","fail"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
-{"step" : 8,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"(context step_id:5)\", line 1, column 0, character 0:"]}
-{"step" : 8,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:5)\", line 1, column 0, character 0:","fail :- ."]}
+{"step" : 8,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"(context step_id:5)\", line 1, column 0, characters 0-0:"]}
+{"step" : 8,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:5)\", line 1, column 0, characters 0-0:","fail :- ."]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}

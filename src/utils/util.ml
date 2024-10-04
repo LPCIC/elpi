@@ -141,7 +141,7 @@ module Loc = struct
     let source =
      if source_name = "" then ""
      else "File \"" ^ source_name ^ "\", " in
-    let chars = Printf.sprintf "character %d" source_start (*source_stop*) in
+    let chars = Printf.sprintf "characters %d-%d" source_start source_stop in
     let pos =
       if line = -1 then chars
       else Printf.sprintf "line %d, column %d, %s"
@@ -161,6 +161,18 @@ module Loc = struct
     line_starts_at = 0;
   }
 
+  let merge l r =
+    assert(l.source_name = r.source_name);
+    {
+    source_name = l.source_name;
+    source_start = l.source_start;
+    source_stop = r.source_stop;
+    line = r.line;
+    line_starts_at = r.line_starts_at;
+  }
+
+  let extend n l = { l with source_start = l.source_start - n; source_stop = l.source_stop + n }
+   
 end
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
