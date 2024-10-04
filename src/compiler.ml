@@ -1275,13 +1275,19 @@ let type_expression_of_ast loc ~depth:arg_lvl macro state (ast: Ast.TypeExpressi
     | TPred (_,l) -> (* TODO: Check if function is in the _ *) 
       (* let _ =
         let x = List.map snd l in
-        Format.printf "AAA %a %a\n%!" Loc.pp loc (Format.pp_print_list Ast.TypeExpression.pp) x;
+        Format.eprintf "AAA %a %a\n%!" Loc.pp loc (Format.pp_print_list Ast.TypeExpression.pp) x;
       in *)
-      let state, mode_type = List.fold_right (fun (m, t) (state, acc) -> 
-        let state, t = aux lvl state t in state, ((to_mode m, t)::acc)) l (state, []) in
+      let rec aux' state = function
+      | [] -> state, []
+      | (m,t) :: xs -> 
+          let state, t = aux lvl state t in
+          let state, l = aux' state xs in
+          state, ((to_mode m,t)::l) in
+      let state, mode_type = aux' state l in
+        (* set_spaghetti_printer pp_const (fun fmt e -> Format.fprintf fmt "%s" (Symbols.show state e)); *)
       (* let _ =
         let x = List.map snd mode_type in
-        Format.printf "BBB %a %a\n%!" Loc.pp loc (Format.pp_print_list pp_ttype) x;
+        Format.eprintf "BBB %a %a\n%!" Loc.pp loc (Format.pp_print_list pp_ttype) x;
       in *)
       state, TPred (false, mode_type) (* TODO: the bool depends on if the functionality is passed to the pred *)
   in
