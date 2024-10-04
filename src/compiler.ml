@@ -1693,7 +1693,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     | Shorten(shorthands, { types = t; type_abbrevs = ta; modes = m; body; symbols = s }) :: rest ->
         let insubst = push_subst_shorthands shorthands s subst in
         let types = ToDBL.merge_types state (apply_subst_types ~live_symbols state insubst t) types in
-        let type_abbrevs = ToDBL.merge_type_abbrevs state (apply_subst_type_abbrevs ~live_symbols state insubst ta) type_abbrevs in
+        let type_abbrevs = ToDBL.merge_type_abbrevs state type_abbrevs (apply_subst_type_abbrevs ~live_symbols state insubst ta) in
         let modes = ToDBL.merge_modes state (apply_subst_modes ~live_symbols insubst m) modes in
         let types, type_abbrevs, modes, clauses, chr =
           compile_body live_symbols state lcs types type_abbrevs modes clauses chr insubst body in
@@ -1701,7 +1701,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     | Namespace (extra, { types = t; type_abbrevs = ta; modes = m; body; symbols = s }) :: rest ->
         let state, insubst = push_subst state extra s subst in
         let types = ToDBL.merge_types state (apply_subst_types ~live_symbols state insubst t) types in
-        let type_abbrevs = ToDBL.merge_type_abbrevs state (apply_subst_type_abbrevs ~live_symbols state insubst ta) type_abbrevs in
+        let type_abbrevs = ToDBL.merge_type_abbrevs state type_abbrevs (apply_subst_type_abbrevs ~live_symbols state insubst ta) in
         let modes = ToDBL.merge_modes state (apply_subst_modes ~live_symbols insubst m) modes in
         let types, type_abbrevs, modes, clauses, chr =
           compile_body live_symbols state lcs types type_abbrevs modes clauses chr insubst body in
@@ -1712,7 +1712,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
         compile_body live_symbols state lcs types type_abbrevs modes clauses chr subst rest
     | Constraints ({ctx_filter; clique; rules}, { types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
         let types = ToDBL.merge_types state (apply_subst_types ~live_symbols state subst t) types in
-        let type_abbrevs = ToDBL.merge_type_abbrevs state (apply_subst_type_abbrevs ~live_symbols state subst ta) type_abbrevs in
+        let type_abbrevs = ToDBL.merge_type_abbrevs state type_abbrevs (apply_subst_type_abbrevs ~live_symbols state subst ta) in
         let modes = ToDBL.merge_modes state (apply_subst_modes ~live_symbols subst m) modes in
         let chr = apply_subst_chr ~live_symbols state subst {ctx_filter;clique;rules} :: chr in
         let types, type_abbrevs, modes, clauses, chr =
@@ -2747,11 +2747,17 @@ let unfold_type_abbrevs ~is_typeabbrev ~compiler_state lcs type_abbrevs { term; 
     if is_typeabbrev && t1 <= t2 then
       error (Format.asprintf "typeabbrev %a uses the undefined %s constant at %a" (R.Pp.ppterm 0 [] ~argsdepth:0 [||]) tavalue.term (Symbols.show compiler_state c) Util.Loc.pp tavalue.loc);
   in
-  (* Printf.printf "Istypeabbrev %b\n" is_typeabbrev; *)
-  (* C.Map.iter (fun k v -> Format.printf "Looping %d %s %a %d\n%!" k (Symbols.show compiler_state k) pp_term v.tavalue.term v.timestamp) type_abbrevs; *)
   let find_opt c = C.Map.find_opt c type_abbrevs in
+  (* DEBUG HELPER: Prints the type_abrev dictionary sorted by timestamp *)
+  (* let _ = 
+    let x = C.Map.bindings type_abbrevs in
+    let y = List.sort (fun (_, (x: type_abbrev_declaration)) (_, y) -> x.timestamp - y.timestamp) x in
+    print_endline "---------------------------------------------";
+    List.iter (fun (k,(v:type_abbrev_declaration)) -> 
+      Format.printf "TIME AND KEY %s -- %d\n%!" (Symbols.show compiler_state k) (v.timestamp)) y;
+  in *)
   let rec aux_tabbrv ttime = function
-  | Const c as x ->
+    | Const c as x ->
         begin match find_opt c with
         | Some { tavalue; taparams; timestamp=time } ->
           if taparams > 0 then
