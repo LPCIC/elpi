@@ -1,0 +1,6 @@
+pred p o:int.
+pred q  o:int,o:int.
+q 2 3.
+p X :- print X.
+
+main :- (true ;  (p {q X})), !, var X.

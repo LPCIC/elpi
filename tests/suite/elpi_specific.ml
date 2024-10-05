@@ -145,6 +145,11 @@ let () = declare "spilling_and"
   ~description:"spilling anonymous compound goal"
   ()
 
+let () = declare "spilling_or"
+  ~source_elpi:"spill_or.elpi"
+  ~description:"spilling prem order"
+  ()
+
 let () = declare "block"
   ~source_elpi:"block.elpi"
   ~description:"blocks are closed"
