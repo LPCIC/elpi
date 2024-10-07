@@ -1351,8 +1351,13 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
        ("Duplicate mode declaration for " ^ Symbols.show state name ^ " (also at "^
          Loc.show (snd (C.Map.find name map)) ^ ")")
 
+  let rec to_mode_rec = function
+    | [] -> []
+    | Ast.Mode.Fo fo :: tl -> Fo (bool2IO fo) :: to_mode_rec tl
+    | Ho (ho, xs) :: tl -> Ho (bool2IO ho, to_mode_rec xs) :: to_mode_rec tl
+
   let compile_mode (state, modes) { Ast.Mode.name; args; loc } =
-    let args = List.map to_mode args in
+    let args = to_mode_rec args in
     let state, mname = funct_of_ast state name in
     check_duplicate_mode state mname (args,loc) modes;
     state, C.Map.add mname (args,loc) modes

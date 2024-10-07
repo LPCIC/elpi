@@ -146,8 +146,11 @@ end
 
 module Mode : sig
 
+  type mode = Fo of bool | Ho of bool * (mode list)
+  [@@deriving show, ord]
+
   type 'name t =
-    { name : 'name; args : bool list; loc : Loc.t }
+    { name : 'name; args : mode list; loc : Loc.t }
   [@@ deriving show, ord]
 
 end

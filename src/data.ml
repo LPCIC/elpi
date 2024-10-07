@@ -133,6 +133,7 @@ and mode_aux = Util.mode_aux =
 and mode = mode_aux list
 [@@deriving show, ord]
 
+let bool2IO = function true -> Input | false -> Output
 let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
 let to_mode = function true -> Fo Input | false -> Fo Output
 

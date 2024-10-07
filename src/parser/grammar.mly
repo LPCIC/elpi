@@ -182,7 +182,7 @@ pred:
        mkApp (loc $loc(c)) [mkCon (t.loc)(* BUG *)"->";t;ty]) args (mkCon (loc $sloc) (* BUG *) "prop") }
  }
 pred_item:
-| io = IO_COLON; ty = type_term { (mode_of_IO io,ty) }
+| io = IO_COLON; ty = type_term { (Mode.Fo (mode_of_IO io),ty) }
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
@@ -215,7 +215,7 @@ mode:
     { Mode.name = c; args = l; loc = loc $sloc } 
 }
 i_o:
-| io = IO { mode_of_IO io }
+| io = IO { Mode.Fo (mode_of_IO io) }
 
 macro:
 | MACRO; m = term; VDASH; b = term {
