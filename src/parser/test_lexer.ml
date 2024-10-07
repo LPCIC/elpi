@@ -28,6 +28,7 @@ type t = Tokens.token =
   | NAMESPACE
   | NAME
   | MODULE
+  | MODE
   | MOD
   | MINUSs
   | MINUSr

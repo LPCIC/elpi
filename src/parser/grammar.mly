@@ -135,6 +135,7 @@ decl:
 | p = pred; FULLSTOP { Program.Pred p }
 | t = type_; FULLSTOP { Program.Type t }
 | t = kind; FULLSTOP { Program.Type t }
+| m = mode; FULLSTOP {  raise (ParseError(loc $loc,"mode is no more supported")) }
 | m = macro; FULLSTOP { Program.Macro m }
 | CONSTRAINT; hyps = list(constant); QDASH; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, hyps, cl) }
 | CONSTRAINT; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, [], cl) }
@@ -153,6 +154,13 @@ decl:
   }
 | ignored; FULLSTOP { Program.Ignored (loc $sloc) }
 | f = fixity; FULLSTOP { error_mixfix (loc $loc) }
+
+mode:
+| MODE; LPAREN; c = constant; l = nonempty_list(i_o); RPAREN {
+    ()
+}
+i_o:
+| io = IO { mode_of_IO io }
 
 accumulate:
 | ACCUMULATE { ".elpi" }
@@ -176,14 +184,14 @@ chr_rule:
 pred:
 | attributes = attributes; PRED;
   name = constant; args = separated_list(option(CONJ),pred_item) {
-   { Type.loc=loc $sloc; name; attributes; ty = TPred ([], args @ [mode_of_IO 'o', TConst (Func.from_string "prop")]) }
+   { Type.loc=loc $sloc; name; attributes; ty = TPred ([], args) }
  }
 pred_item:
 | io = IO_COLON; ty = type_term { (mode_of_IO io,ty) }
 
 anonymous_pred:
 | attributes = attributes; PRED;
-  args = separated_list(option(CONJ),pred_item) { TPred (attributes, args @ [mode_of_IO 'o', TConst (Func.from_string "prop")]) }
+  args = separated_list(option(CONJ),pred_item) { TPred (attributes, args) }
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
@@ -409,6 +417,7 @@ constant:
 | REPLACE { Func.from_string "replace" }
 | REMOVE { Func.from_string "remove" }
 | INDEX { Func.from_string "index" }
+| MODE { Func.from_string "mode" }
 | c = IO { Func.from_string @@ String.make 1 c }
 | CUT { Func.cutf }
 | PI { Func.pif }

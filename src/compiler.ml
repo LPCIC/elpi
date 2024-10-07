@@ -1428,9 +1428,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
   and to_mode_rec = function
     | Ast.TypeExpression.TConst _ | TCData _ -> []
     | TArr (a,b) -> []
-    | TPred (_, m) ->
-        let m = List.rev m |> List.tl |> List.rev in
-        to_mode_rec_aux m
+    | TPred (_, m) -> to_mode_rec_aux m
     | TApp (a,b,l) -> []
 
   let compile_mode (state, modes) { Ast.Type.name; ty; loc } =
@@ -1921,23 +1919,27 @@ module Spill : sig
 
 end = struct (* {{{ *)
 
+  type typespill =
+    | Variadic of typespill * typespill 
+    | Arrow of typespill list * typespill | Prop | Unknown
+    [@@deriving show]
+
   let rec read_ty = function
-    | TApp(c,x,[y]) when c == D.Global_symbols.variadic -> `Variadic (read_ty x,read_ty y)
+    | TApp(c,x,[y]) when c == D.Global_symbols.variadic -> Variadic (read_ty x,read_ty y)
     | TArr(x,y) -> 
         let ty_x = read_ty x in
         begin match read_ty y with
-        | `Arrow(tys,ty) -> `Arrow (ty_x :: tys, ty)
-        | ty -> `Arrow([ty_x], ty) end
-    | TConst x when x == D.Global_symbols.propc -> `Prop
-    | TPred (_, l) -> `Arrow (List.map (fun (_, t) -> read_ty t) l, `Prop)
-    | _ -> `Unknown
+        | Arrow(tys,ty) -> Arrow (ty_x :: tys, ty)
+        | ty -> Arrow([ty_x], ty) end
+    | TConst x when x == D.Global_symbols.propc -> Prop
+    | TPred (_, l) -> Arrow (List.map (fun (_, t) -> read_ty t) l, Prop)
+    | _ -> Unknown
 
-  let type_of_const types c =
+  let type_of_const ~state types c =
     try
       let { Types.decl = { ttype } } = (C.Map.find c types).Types.def in
       read_ty ttype.ttype
-    with
-      Not_found -> `Unknown
+    with Not_found -> Unknown
 
   let missing_args_of state loc modes types t =
     let c, args =
@@ -1951,15 +1953,15 @@ end = struct (* {{{ *)
         | _ -> error ~loc "Only applications can be spilled"
       in
         aux_mia t in
-    let ty = type_of_const types c in
+    let ty = type_of_const state types c in
     let ty_mode, mode =
       match modes c with
-      | l -> `Arrow(List.length l,`Prop), l
+      | l -> `Arrow(List.length l,Prop), l
       | exception Not_found -> `Unknown, [] in
     let nargs = List.length args in
     let missing_args =
       match ty_mode, ty with
-      | `Unknown,`Arrow(args,_) -> List.length args - nargs
+      | `Unknown,Arrow(args,_) -> List.length args - nargs
       | `Arrow(arity,_),_ ->
           let missing = arity - nargs in
           let output_suffix =
@@ -2092,19 +2094,19 @@ end = struct (* {{{ *)
          let spills, args, is_prop =
            let (@@@) (s1,a1) (s2,a2,b) = s1 @ s2, a1 @ a2, b in
            let rec aux_spaux ty args = match ty, args with
-             | (`Variadic(_,`Prop) | `Arrow([],`Prop)), [] -> [],[],true
+             | (Variadic(_,Prop) | Arrow([],Prop)), [] -> [],[],true
              | _, [] -> [],[],false
-             | `Variadic(`Prop,_), a1 :: an ->
+             | Variadic(Prop,_), a1 :: an ->
                    ([],spaux1_prop ctx a1) @@@ aux_spaux ty an
-             | `Arrow(`Prop :: ty,c), a1 :: an ->
-                   ([],spaux1_prop ctx a1) @@@ aux_spaux (`Arrow(ty,c)) an
-             | `Arrow((_ :: _ as ty),c), a1 :: an ->
+             | Arrow(Prop :: ty,c), a1 :: an ->
+                   ([],spaux1_prop ctx a1) @@@ aux_spaux (Arrow(ty,c)) an
+             | Arrow((_ :: _ as ty),c), a1 :: an ->
                    let spills, a1 = spaux ctx a1 in
                    let ty = drop (size_outermost_spill spills ~default:1) ty in
-                   (spills, a1) @@@ aux_spaux (`Arrow(ty,c)) an
+                   (spills, a1) @@@ aux_spaux (Arrow(ty,c)) an
              | _, a1 :: an -> spaux ctx a1 @@@ aux_spaux ty an
            in
-             aux_spaux (type_of_const types hd) args in
+             aux_spaux (type_of_const !state types hd) args in
          if is_prop then [], [add_spilled spills (mkAppC hd args)]
          else spills, [mkAppC hd args]
       | (CData _ | Const _ | Discard | Nil) as x -> [],[x]
@@ -2849,7 +2851,7 @@ let quote_pretype time ~compiler_state new_state { tloc; ttype; tamap } =
     | TPred (f, l) -> 
         (* TODO: @FissoreD (flemma) for compatibility modes are ignored. Consider them! *)
         let l = List.rev_map snd l in
-        let t = List.fold_left (fun acc e -> TArr (e, acc)) (List.hd l) (List.tl l) in
+        let t = List.fold_left (fun acc e -> TArr (e, acc)) (TConst D.Global_symbols.propc) l in
         aux depth t
   in
   let term = aux tamap.nargs ttype in

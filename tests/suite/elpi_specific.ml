@@ -150,6 +150,11 @@ let () = declare "spilling_or"
   ~description:"spilling prem order"
   ()
 
+let () = declare "spilling_in_list"
+  ~source_elpi:"spill_in_list.elpi"
+  ~description:"spilling prem order"
+  ()
+
 let () = declare "block"
   ~source_elpi:"block.elpi"
   ~description:"blocks are closed"
