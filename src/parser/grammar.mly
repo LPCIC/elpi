@@ -223,7 +223,7 @@ typeabbrev:
 | TYPEABBREV; a = abbrevform; t = type_term {
     let name, args = a in
     let nparams = List.length args in
-    let mkLam n body =  TypeAbbreviation.Lam (n, body) in
+    let mkLam (n,_) body =  TypeAbbreviation.Lam (n, body) in
     let value = List.fold_right mkLam args (Ty t) in
     { TypeAbbreviation.name = name;
       nparams = nparams;

@@ -113,18 +113,6 @@ end
   
 end *)
 
-type raw_attribute =
-  | If of string
-  | Name of string
-  | After of string
-  | Before of string
-  | Replace of string
-  | Remove of string
-  | External
-  | Index of int list * string option
-  | Functional
-[@@ deriving show]
-
 module Clause : sig
 
   type ('term,'attributes) t = {
