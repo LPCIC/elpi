@@ -92,6 +92,15 @@ type mode_aux = Util.mode_aux =
 and mode = mode_aux list
 [@@ deriving show, ord]
 
+type ttype =
+  | TConst of constant
+  | TApp of constant * ttype * ttype list
+  | TPred of bool * ((arg_mode * ttype) list) (* The bool is for functionality *)
+  | TArr of ttype * ttype
+  | TCData of CData.t
+  | TLam of ttype (* this is for parametrized typeabbrevs *)
+  [@@ deriving show, ord]
+
 type term =
   (* Pure terms *)
   | Const of constant
@@ -115,6 +124,8 @@ and uvar_body = {
   mutable uid_private : int; (* unique name, the sign is flipped when blocks a constraint *)
 }
 [@@deriving show, ord]
+
+let cons2tcons ?(loc=Loc.initial"") = function Const t -> TConst t | _ -> anomaly ~loc "Unreachable branch"
 
 (* we use this projection to be sure we ignore the sign *)
 let uvar_id { uid_private } = abs uid_private [@@inline];;

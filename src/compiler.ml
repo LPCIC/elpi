@@ -418,16 +418,23 @@ type preterm = {
 }
 [@@ deriving show, ord]
 
+type pretype = {
+  ttype : D.ttype; (* Args are still constants *)
+  tamap : argmap;
+  tloc : Loc.t;
+}
+[@@ deriving show, ord]
+
 type type_declaration = {
   tname : D.constant;
-  ttype : preterm;
+  ttype : pretype;
   tloc : Loc.t;
 }
 [@@ deriving show, ord]
 
 type type_abbrev_declaration = {
   taname : D.constant;
-  tavalue : preterm;
+  tavalue : pretype;
   taparams : int;
   taloc : Loc.t;
   timestamp:int
@@ -1226,45 +1233,23 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
   state, t, !spilling
 ;;
 
-let type_expression_of_ast loc ~depth:arg_lvl macro state (ast: Ast.TypeExpression.t) =
+let to_mode = function Ast.Mode.Input -> Input | Output -> Output
 
-  let rec hcons_alien_term state = function
-    | Term.Const x ->
-        Symbols.get_global_or_allocate_bound_symbol state x
-    | Cons(x, y) ->
-       let state, x = hcons_alien_term state x in
-       let state, y = hcons_alien_term state y in
-       state, Term.mkCons x y
-    | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
-    | App(c,x,l) ->
-       let state, x = hcons_alien_term state x in
-       let state, l = map_acc hcons_alien_term state l in
-       state, Term.mkApp c x l
-    | Builtin(c,l) ->
-       let state, l = map_acc hcons_alien_term state l in
-       state, Term.mkBuiltin c l
-    | Lam x ->
-       let state, x = hcons_alien_term state x in
-       state, Term.mkLam x
-    | (Nil | CData _ | Discard) as x -> state, x
-  in
+let type_expression_of_ast loc ~depth:arg_lvl macro state (ast: Ast.TypeExpression.t) : State.t * ttype * bool =
 
-  let stack_funct_of_ast curlvl state f  =
-    try state, F.Map.find f (get_varmap state)
+  let stack_funct_of_ast curlvl state f : State.t * ttype =
+    try state, cons2tcons ~loc @@ F.Map.find f (get_varmap state)
     with Not_found ->
      if is_discard f then error ~loc "Discard operator cannot be used in type declaration"
-     else if F.is_uvar_name f then mk_Arg state ~name:(F.show f) ~args:[]
+     else if F.is_uvar_name f then 
+        let state, t = mk_Arg state ~name:(F.show f) ~args:[] in
+        state, cons2tcons ~loc t
      else if is_macro_name f then error ~loc "Macros cannot occur in types. Use a typeabbrev declaration instead"
      else
-       let state, (_,t) = Symbols.allocate_global_symbol state f in
-       state, t in
+       let state, (c,_) = Symbols.allocate_global_symbol state f in
+       state, TConst c in
 
-  let get_arrow_const lvl state = 
-    match stack_funct_of_ast lvl state (F.from_string "->") with 
-    | s, Const c -> s, c
-    | _ -> error ~loc "Unreachable branch" in
-
-  let rec aux lvl state = function
+  let rec aux lvl state : Ast.TypeExpression.t -> State.t * ttype = function
     | Ast.TypeExpression.TConst f -> stack_funct_of_ast lvl state f
     | TApp(f, hd, tl) ->
       let tl = hd :: tl in
@@ -1276,40 +1261,40 @@ let type_expression_of_ast loc ~depth:arg_lvl macro state (ast: Ast.TypeExpressi
       let tl = List.rev rev_tl in
       let state, c = stack_funct_of_ast lvl state f in
       begin match c with
-      | Const c -> begin match tl with
-        | hd2::tl -> state, Term.App(c,hd2,tl)
+      | TConst c -> begin match tl with
+        | hd2::tl -> state, TApp(c,hd2,tl)
         | _ -> anomaly "Application node with no arguments" end
-      | App(c,hd1,tl1) -> state, Term.App(c,hd1,tl1@tl)
-      | Builtin(c,tl1) -> state, Term.Builtin(c,tl1@tl)
-      | Lam _ -> (* macro with args *)
-        hcons_alien_term state (R.deref_appuv ~from:lvl ~to_:lvl tl c)
-      | Discard -> error ~loc "Clause shape unsupported: _ cannot be applied"
+      | TApp(c,hd1,tl1) -> state, TApp(c,hd1,tl1@tl)
+      | TLam _ -> error ~loc "Should be unreachable"
       | _ -> error ~loc "Clause shape unsupported" end
-    | TCData c -> state, CData (CData.hcons c)
+    | TCData c -> state, TCData (CData.hcons c)
     | TArr (a,b) -> 
       let state, a = aux lvl state a in
       let state, b = aux lvl state b in
-      let state, c = get_arrow_const lvl state in
-      state, App(c, a, [b])
-    | TPred (_,l) -> 
-      let l = List.rev l in
-      let hd, tl = List.hd l, List.tl l in
-      List.fold_left (fun (state,t:  State.t * term) e ->
-        let state, t' = aux lvl state (snd e) in
-        let state, c = get_arrow_const lvl state in
-        state, App (c, t', [t])
-        ) (aux lvl state (snd hd)) tl
+      state, TArr(a, b)
+    | TPred (_,l) -> (* TODO: Check if function is in the _ *) 
+      (* let _ =
+        let x = List.map snd l in
+        Format.printf "AAA %a %a\n%!" Loc.pp loc (Format.pp_print_list Ast.TypeExpression.pp) x;
+      in *)
+      let state, mode_type = List.fold_right (fun (m, t) (state, acc) -> 
+        let state, t = aux lvl state t in state, ((to_mode m, t)::acc)) l (state, []) in
+      (* let _ =
+        let x = List.map snd mode_type in
+        Format.printf "BBB %a %a\n%!" Loc.pp loc (Format.pp_print_list pp_ttype) x;
+      in *)
+      state, TPred (false, mode_type) (* TODO: the bool depends on if the functionality is passed to the pred *)
   in
   let a, b = aux arg_lvl state ast in a, b, false
 
-let typeabbrev_of_ast loc ~depth:depth macro state (ast: Ast.TypeAbbreviation.closedTypeexpression) =
+let typeabbrev_of_ast loc ~depth:depth macro state (ast: Ast.TypeAbbreviation.closedTypeexpression) : State.t * ttype * bool =
   let rec aux depth state = function
     | Ast.TypeAbbreviation.Lam (x, t) ->
        let orig_varmap = get_varmap state in
        let state, c = Symbols.allocate_bound_symbol state depth in
        let state = update_varmap state (F.Map.add x c) in
        let state, t', _ = aux (depth+1) state t in
-       set_varmap state orig_varmap, Lam t', false
+       set_varmap state orig_varmap, TLam t', false
     | Ty t -> type_expression_of_ast ~depth loc macro state t
   in
   aux depth state ast
@@ -1345,14 +1330,34 @@ let prechr_rule_of_ast depth macros state r =
   { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pifexpr; pcloc }
   
 (* used below *)
-let of_ast transformer loc ~depth macros state f t =
+let preterms_of_ast loc ~depth macros state f t =
   assert(is_empty_amap (get_argmap state));
-  let state, term, spilling = transformer loc ~depth macros state t in
+  let state, term, spilling = preterm_of_ast loc ~depth macros state t in
   let state, terms = f ~depth state term in
   let amap = get_argmap state in
   let state = State.end_clause_compilation state in
   (* TODO: may have spurious entries in the amap *)
   state, List.map (fun (loc,term) -> { term; amap; loc; spilling }) terms
+;; 
+
+let type_expression_of_ast loc ~depth macros state f (t: Ast.TypeExpression.t) : State.t * pretype list =
+  assert(is_empty_amap (get_argmap state));
+  let state, term, spilling = type_expression_of_ast loc ~depth macros state t in
+  let state, terms = f ~depth state term in
+  let tamap = get_argmap state in
+  let state = State.end_clause_compilation state in
+  (* TODO: may have spurious entries in the amap *)
+  state, List.map (fun (tloc,ttype) -> { ttype; tamap; tloc }) terms
+;; 
+
+let type_abbrev_of_ast loc ~depth macros state f t : State.t * pretype list =
+  assert(is_empty_amap (get_argmap state));
+  let state, term, spilling = typeabbrev_of_ast loc ~depth macros state t in
+  let state, terms = f ~depth state term in
+  let tamap = get_argmap state in
+  let state = State.end_clause_compilation state in
+  (* TODO: may have spurious entries in the amap *)
+  state, List.map (fun (tloc,ttype) -> { ttype; tamap; tloc }) terms
 ;; 
 
 (* exported *)
@@ -1392,9 +1397,9 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
 
   let compile_type_abbrev geti lcs state { Ast.TypeAbbreviation.name; nparams; loc; value } =
     let state, (taname, _) = Symbols.allocate_global_symbol state name in
-    let state, tavalue = of_ast typeabbrev_of_ast loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) value in
+    let state, tavalue = type_abbrev_of_ast loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) value in
     let tavalue = assert(List.length tavalue = 1); List.hd tavalue in
-    if tavalue.amap.nargs != 0 then
+    if tavalue.tamap.nargs != 0 then
       error ~loc ("type abbreviation for " ^ F.show name ^ " has unbound variables");
     state, { taname; tavalue; taparams = nparams; taloc = loc; timestamp = geti () }
 
@@ -1402,7 +1407,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     if C.Map.mem taname m then begin
       let { taloc = otherloc; tavalue = othervalue; taparams = otherparams } =
         C.Map.find taname m in
-      if taparams != otherparams || othervalue.term != tavalue.term then
+      if taparams != otherparams || othervalue.ttype != tavalue.ttype then
       error ~loc:taloc
         ("duplicate type abbreviation for " ^ Symbols.show state taname ^
           ". Previous declaration: " ^ Loc.show otherloc)
@@ -1411,8 +1416,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
 
   let compile_type lcs state { Ast.Type.attributes; loc; name; ty } =
     let state, (tname, _) = Symbols.allocate_global_symbol state name in
-    let state, ttype =
-      of_ast type_expression_of_ast loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) ty in
+    let state, ttype = type_expression_of_ast loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) ty in
     let ttype = assert(List.length ttype = 1); List.hd ttype in
     state, { Types.tindex = attributes; decl = { tname; ttype; tloc = loc } }
 
@@ -1430,8 +1434,6 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       error ~loc
        ("Duplicate mode declaration for " ^ Symbols.show state name ^ " (also at "^
          Loc.show (snd (C.Map.find name map)) ^ ")")
-
-  let to_mode = function Ast.Mode.Input -> Input | Output -> Output
 
   let rec to_mode_rec_aux = function
   | [] -> []
@@ -1485,7 +1487,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     | [] -> lcs, state, []
     | { Ast.Clause.body; attributes; loc } :: rest ->
       let state, ts =
-        of_ast preterm_of_ast loc ~depth:lcs macros state (toplevel_clausify loc) body in
+        preterms_of_ast loc ~depth:lcs macros state (toplevel_clausify loc) body in
       let cl = List.map (fun body -> { Ast.Clause.loc; attributes; body}) ts in
       let lcs, state, rest = compile_clauses lcs state macros rest in
       lcs, state, cl :: rest
@@ -1664,11 +1666,11 @@ end = struct (* {{{ *)
   (* This function *must* re-hashcons all leaves (Const) and recognize
      builtins since it is (also) used to apply a compilation unit relocation *)
 
-  let smart_map_term ?(on_type=false) state f t =
+  let smart_map_term state f t =
     let rec aux_sm = function
       | Const c ->
           let c1 = f c in
-          if not on_type && Builtins.is_declared state c1 then Builtin(c1,[])
+          if Builtins.is_declared state c1 then Builtin(c1,[])
           else Symbols.get_canonical state c1
       | Lam t as x ->
           let t1 = aux_sm t in
@@ -1683,13 +1685,13 @@ end = struct (* {{{ *)
       | Builtin(c,ts) ->
           let c1 = f c in
           let ts1 = smart_map aux_sm ts in
-          if not on_type && Builtins.is_declared state c1 then Builtin(c,ts1)
+          if Builtins.is_declared state c1 then Builtin(c,ts1)
           else if ts1 = [] then Symbols.get_canonical state c1 else App(c,List.hd ts1,List.tl ts1)
       | App(c,t,ts) ->
           let c1 = f c in
           let t1 = aux_sm t in
           let ts1 = smart_map aux_sm ts in
-          if not on_type && Builtins.is_declared state c1 then Builtin (c1,t1 :: ts1)
+          if Builtins.is_declared state c1 then Builtin (c1,t1 :: ts1)
           else App(c1,t1,ts1)
       | Cons(hd,tl) as x ->
           let hd1 = aux_sm hd in
@@ -1699,6 +1701,23 @@ end = struct (* {{{ *)
           assert(!!r == D.dummy);
           x
       | (Arg _ | CData _ | Nil | Discard) as x -> x
+    in
+      aux_sm t
+
+  let smart_map_ttype state f t =
+    let rec aux_sm = function
+      | TConst c -> cons2tcons @@ Symbols.get_canonical state (f c)
+      | TLam t as x ->
+          let t1 = aux_sm t in
+          if t == t1 then x else TLam t1
+      | TApp(c,t,ts) ->
+          let c1 = f c in
+          let t1 = aux_sm t in
+          let ts1 = smart_map aux_sm ts in
+          TApp(c1,t1,ts1)
+      | TCData _ as x -> x
+      | TArr (a,b) -> TArr (aux_sm a, aux_sm b)
+      | TPred (f, l) -> TPred (f, List.map (fun (m, t) -> m, aux_sm t) l)
     in
       aux_sm t
 
@@ -1714,10 +1733,10 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
 
   let smart_map_type state f ({ Types.tindex; decl = { tname; ttype; tloc }} as tdecl) =
     let tname1 = f tname in
-    let ttype1 = smart_map_term ~on_type:true state f ttype.term in
-    let tamap1 =subst_amap state f ttype.amap in
-    if tname1 == tname && ttype1 == ttype.term && ttype.amap = tamap1 then tdecl
-    else { Types.tindex; decl = { tname = tname1; tloc; ttype = { term = ttype1; amap = tamap1; loc = ttype.loc; spilling = ttype.spilling } } }
+    let ttype1 = smart_map_ttype state f ttype.ttype in
+    let tamap1 =subst_amap state f ttype.tamap in
+    if tname1 == tname && ttype1 == ttype.ttype && ttype.tamap = tamap1 then tdecl
+    else { Types.tindex; decl = { tname = tname1; tloc; ttype = { ttype = ttype1; tamap = tamap1; tloc = ttype.tloc; } } }
 
 
   let map_sequent state f { peigen; pcontext; pconclusion } =
@@ -1739,11 +1758,17 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       pifexpr; pname; pcloc;
     }
 
-  let smart_map_preterm ?on_type state f ({ term; amap; loc; spilling } as x) =
-    let term1 = smart_map_term ?on_type state f term in
+  let smart_map_preterm state f ({ term; amap; loc; spilling } as x) =
+    let term1 = smart_map_term state f term in
     let amap1 = subst_amap state f amap in
     if term1 == term && amap1 == amap then x
     else { term = term1; amap = amap1; loc; spilling }
+
+  let smart_map_pretype state f ({ ttype; tamap; tloc } as x) =
+    let term1 = smart_map_ttype state f ttype in
+    let amap1 = subst_amap state f tamap in
+    if term1 == ttype && amap1 == tamap then x
+    else { ttype = term1; tamap = amap1; tloc }
 
   let map_clause state f ({ Ast.Clause.body } as x) =
     let body1 = smart_map_preterm state f body in
@@ -1761,7 +1786,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     C.Map.fold (fun _ { taname; tavalue; taparams; taloc; timestamp } m ->
       (* TODO: check for collisions *)
       let taname = f taname in
-      let tavalue = smart_map_preterm ~on_type:true state f tavalue in
+      let tavalue = smart_map_pretype state f tavalue in
       C.Map.add taname { taname; tavalue; taparams; taloc; timestamp } m
       ) m C.Map.empty
 
@@ -1911,19 +1936,19 @@ module Spill : sig
 end = struct (* {{{ *)
 
   let rec read_ty = function
-    | App(c,x,[y]) when c == D.Global_symbols.variadic -> `Variadic (read_ty x,read_ty y)
-    | App(c,x,[y]) when c == D.Global_symbols.arrowc -> 
+    | TApp(c,x,[y]) when c == D.Global_symbols.variadic -> `Variadic (read_ty x,read_ty y)
+    | TApp(c,x,[y]) when c == D.Global_symbols.arrowc -> 
         let ty_x = read_ty x in
         begin match read_ty y with
         | `Arrow(tys,ty) -> `Arrow (ty_x :: tys, ty)
         | ty -> `Arrow([ty_x], ty) end
-    | Const x when x == D.Global_symbols.propc -> `Prop
+    | TConst x when x == D.Global_symbols.propc -> `Prop
     | _ -> `Unknown
 
   let type_of_const types c =
     try
       let { Types.decl = { ttype } } = (C.Map.find c types).Types.def in
-      read_ty ttype.term
+      read_ty ttype.ttype
     with
       Not_found -> `Unknown
 
@@ -2781,20 +2806,14 @@ let mkQCon time ~compiler_state new_state ~on_type ?(amap=empty_amap) c =
     if c < 0 then new_state, App(a,D.C.of_string (Symbols.show compiler_state c),[])
     else allocate_bound_symbol new_state (c + amap.nargs)
 
-let quote_preterm time ~compiler_state new_state ?(on_type=false) { term; amap } =
+let quote_preterm time ~compiler_state new_state { term; amap } =
   let new_state = ref new_state in
-  let mkQApp = mkQApp ~on_type in
+  let mkQApp = mkQApp ~on_type:false in
   let mkQCon c =
-    let n, x = mkQCon time ~compiler_state !new_state ~on_type ~amap c in
+    let n, x = mkQCon time ~compiler_state !new_state ~on_type:false ~amap c in
     new_state := n;
     x in
   let rec aux_quote depth term = match term with
-    | App(c,CData s,[])
-      when on_type && c == D.Global_symbols.ctypec && D.C.is_string s -> term
-    | App(c,s,[t]) when on_type && c == D.Global_symbols.arrowc ->
-        App(arrowc,aux_quote depth s,[aux_quote depth t])
-    | Const n when on_type && Symbols.show compiler_state n = "prop" -> term
-
     | Const n -> mkQCon n
     | Builtin(c,[]) -> mkQCon c
     | Lam x -> App(lamc,Lam (aux_quote (depth+1) x),[])
@@ -2823,6 +2842,32 @@ let quote_preterm time ~compiler_state new_state ?(on_type=false) { term; amap }
     | Discard -> mkQCon discardc
   in
   let term = aux_quote amap.nargs term in
+  !new_state, term
+
+let quote_pretype time ~compiler_state new_state { tloc; ttype; tamap } =
+  let new_state = ref new_state in
+  let mkQApp = mkQApp ~on_type:true in
+  let mkQCon c =
+    let n, x = mkQCon time ~compiler_state !new_state ~on_type:true ~amap:tamap c in
+    new_state := n;
+    x in
+  let rec aux depth term : term = match term with
+    | TApp(c,TCData s,[]) when c == D.Global_symbols.ctypec && D.C.is_string s -> App(c, CData s, [])
+    | TArr (s, t) -> App(arrowc,aux depth s,[aux depth t])
+    | TConst n when D.Global_symbols.propc = n -> Const n
+    | TConst n -> mkQCon n
+    | TLam x -> App(lamc,Lam (aux (depth+1) x),[])
+    | TApp(c,x,xs) -> mkQApp (mkQCon c :: List.(map (aux depth) (x :: xs)))
+    | TCData x -> App(cdatac, CData x,[])
+    | TPred (f, l) -> 
+      (* TODO: (flemma) for compatibility modes are ignored. Consider them! *)
+        (* Format.eprintf "LOC %s %a\n%!" (Loc.show tloc) (Format.pp_print_list pp_ttype) (List.map snd l); *)
+        let l = List.rev_map snd l in
+        let t = List.fold_left (fun acc e -> TArr (e, acc)) (List.hd l) (List.tl l) in
+        (* Format.eprintf "The arrow type is %a\n%!" pp_ttype t; *)
+        aux depth t
+  in
+  let term = aux tamap.nargs ttype in
   !new_state, term
 
 (* FIXME : close_with_pis already exists but unused *)
@@ -2866,39 +2911,52 @@ let quote_syntax time new_state { WithMain.clauses; query; compiler_state } =
   let names = sorted_names_of_argmap query.amap in
   let clauses = handle_clause_graftin clauses in
   let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state clauses in
-  let new_state, queryt = quote_preterm time ~on_type:false ~compiler_state new_state query in
+  let new_state, queryt = quote_preterm time ~compiler_state new_state query in
   let q =
     App(clausec,CData (quote_loc ~id:"query" query.loc),
       [R.list_to_lp_list names;
        close_w_binder argc queryt query.amap]) in
   new_state, clist, q
 
-let unfold_type_abbrevs ~is_typeabbrev ~compiler_state lcs type_abbrevs { term; loc; amap } ttime =
-  let error_undefined ~t1 ~t2 c tavalue =
+let unfold_type_abbrevs ~is_typeabbrev ~compiler_state lcs type_abbrevs { ttype; tloc; tamap } ttime =
+  let loc = tloc in
+  let rec subst lvl (args: ttype array) = function
+    | TConst c when c >= 0 -> args.(c-lvl)
+    | TConst _ | TCData _ as t -> t
+    | TLam t -> subst (lvl+1) args t
+    | TArr (a, b) -> TArr (subst lvl args a, subst lvl args b)
+    | TPred (f, l) -> TPred (f, List.map (fun (a,b) -> a, subst lvl args b) l)
+    | TApp (a, b, c) -> TApp (a, subst lvl args b, List.map (subst lvl args) c)
+  in
+  let rec beta lvl (eaten: ttype list) t args =
+    match t, args with
+    | TLam t', x::xs -> beta (lvl+1) (x::eaten) t' xs
+    | t, [] -> 
+      (* Format.eprintf "Calling subst on %a\n%!" pp_ttype t; 
+      Format.eprintf "with args on %a\n%!" (Format.pp_print_list pp_ttype) eaten; 
+      Format.eprintf "depth is %d\n%!" lvl; *)
+      subst 0 (Array.of_list eaten) t
+    | _, _::_ -> error ~loc "higher-order types do not exist"
+  in
+  (* Format.eprintf "Going to unfold %a\n%!" (pp_ttype) ttype;  *)
+  let error_undefined ~t1 ~t2 c (tavalue: pretype) =
     if is_typeabbrev && t1 <= t2 then
-      error (Format.asprintf "typeabbrev %a uses the undefined %s constant at %a" (R.Pp.ppterm 0 [] ~argsdepth:0 [||]) tavalue.term (Symbols.show compiler_state c) Util.Loc.pp tavalue.loc);
+      error (Format.asprintf "typeabbrev %a uses the undefined %s constant at %a" pp_ttype tavalue.ttype (Symbols.show compiler_state c) Util.Loc.pp tavalue.tloc);
   in
   let find_opt c = C.Map.find_opt c type_abbrevs in
-  (* DEBUG HELPER: Prints the type_abrev dictionary sorted by timestamp *)
-  (* let _ = 
-    let x = C.Map.bindings type_abbrevs in
-    let y = List.sort (fun (_, (x: type_abbrev_declaration)) (_, y) -> x.timestamp - y.timestamp) x in
-    print_endline "---------------------------------------------";
-    List.iter (fun (k,(v:type_abbrev_declaration)) -> 
-      Format.printf "TIME AND KEY %s -- %d\n%!" (Symbols.show compiler_state k) (v.timestamp)) y;
-  in *)
-  let rec aux_tabbrv ttime = function
-    | Const c as x ->
+  let rec aux seen = function
+    | TConst c as x ->
         begin match find_opt c with
         | Some { tavalue; taparams; timestamp=time } ->
+          (* Format.printf "Found a match %a\n" pp_ttype tavalue.ttype; *)
           if taparams > 0 then
             error ~loc ("type abbreviation " ^ Symbols.show compiler_state c ^ " needs " ^
               string_of_int taparams ^ " arguments");
           error_undefined ttime time c tavalue;
-          aux_tabbrv time tavalue.term
+          aux time tavalue.ttype
         | None -> x
         end
-    | App(c,t,ts) as x ->
+    | TApp(c,t,ts) as x ->
         begin match find_opt c with
         | Some { tavalue; taparams; timestamp=time } ->
           let nargs = 1 + List.length ts in
@@ -2906,18 +2964,28 @@ let unfold_type_abbrevs ~is_typeabbrev ~compiler_state lcs type_abbrevs { term; 
             error ~loc ("type abbreviation " ^ Symbols.show compiler_state c ^ " needs " ^
               string_of_int taparams ^ " arguments, only " ^
               string_of_int nargs ^ " are provided");
+          (* Format.eprintf "Seen is [%a]\n%!" (Format.pp_print_list Format.pp_print_int) (C.Set.elements seen);
+          Format.eprintf "Current is %d\n%!" c;
+          Format.eprintf "Result is %a\n%!" pp_ttype tavalue.ttype;
+          Format.eprintf "lcs is %d\n%!" lcs;
+          Format.eprintf "Args are [%a]\n%!" (Format.pp_print_list pp_ttype) (t::ts); *)
           error_undefined ttime time c tavalue;
-          aux_tabbrv time (R.deref_appuv ~from:lcs ~to_:lcs (t::ts) tavalue.term)
+          aux time (beta 0 [] tavalue.ttype (t::ts))
+          (* aux (C.Set.add c seen) (R.deref_appuv ~from:lcs ~to_:lcs (t::ts) tavalue.term) *)
         | None ->
-          let t1 = aux_tabbrv ttime t in
-          let ts1 = smart_map (aux_tabbrv ttime) ts in
+          let t1 = aux seen t in
+          let ts1 = smart_map (aux seen) ts in
           if t1 == t && ts1 == ts then x
-          else App(c,t1,ts1)
+          else TApp(c,t1,ts1)
         end
-    | Lam x -> Lam (aux_tabbrv ttime x)
-    | x -> x
+    | TPred (f, l) -> TPred (f, List.map (fun (a, b) -> a, aux seen b) l)
+    | TArr (a, b) -> TArr (aux seen a, aux seen b)
+    | TCData _ as a -> a
+    | TLam a -> TLam (aux seen a)
   in
-    { term = aux_tabbrv ttime term; loc; amap; spilling = false }
+    (* Format.eprintf "Unfold result is %a\n%!" pp_ttype (aux C.Set.empty ttype); *)
+    { ttype = aux ttime ttype; tloc; tamap }
+
 
 let term_of_ast ~depth state text =
  if State.get D.while_compiling state then
@@ -2940,32 +3008,33 @@ let static_check ~exec ~checker:(state,program)
   let time = `Compiletime in
   let state, p,q = quote_syntax time state q in
 
-  (* C.Map.iter (fun k ((v:type_abbrev_declaration),t) -> Format.printf "H %s %a %d\n%!" (Symbols.show state k) 
-    pp_term v.tavalue.term t) type_abbrevs; *)
-
+    (* Building type abbrev list *)
   let state, talist =
     C.Map.bindings type_abbrevs |>
-    map_acc (fun state (name, { tavalue; timestamp=ttime }) ->
+    map_acc (fun state (name, { tavalue; timestamp=ttime } ) ->
+      (* Printf.eprintf "Unfolding %d %s\n" name (Symbols.show compiler_state name);  *)
       let tavaluet = unfold_type_abbrevs ~is_typeabbrev:true ~compiler_state initial_depth type_abbrevs tavalue ttime in
-      let state, tavaluet = quote_preterm time ~compiler_state state ~on_type:true tavaluet in
+      let state, tavaluet = quote_pretype time ~compiler_state state tavaluet in
       state, App(colonec, D.C.of_string (Symbols.show compiler_state name), [lam2forall tavaluet])) state
-    in
+  in
 
-
+  (* Building types *)
   let state, tlist = C.Map.fold (fun tname l (state,tl) ->
     let l = l.Types.lst in
     let state, l =
-      List.rev l |> map_acc (fun state { Types.decl = { ttype } } ->
+      List.rev l |> map_acc (fun state { Types.decl = { ttype; tname } } ->
         let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
+        (* Printf.eprintf "Working with the type %s\n" (Symbols.show compiler_state tname); *)
         let ttypet = unfold_type_abbrevs ~is_typeabbrev:false ~compiler_state initial_depth type_abbrevs ttype 0 in
-        let state, ttypet = quote_preterm time ~compiler_state state ~on_type:true ttypet in
-        state, App(colonc,c, [close_w_binder forallc ttypet ttype.amap])) state
+        (* Format.eprintf "Going to quote_pretype %a\n%!" pp_ttype ttypet.ttype; *)
+        let state, ttypet = quote_pretype time ~compiler_state state ttypet in
+        (* Format.eprintf "Going to close_w_binder %a\n%!" pp_term ttypet; *)
+        state, App(colonc,c, [close_w_binder forallc ttypet ttype.tamap])) state
       in
         state, l :: tl)
       types (state,[]) in
-  let tlist = List.concat (List.rev tlist) in
-
-    (* Building functionality *)
+  let tlist = List.concat (List.rev tlist) in  
+  (* Building functionality *)
   let state, functionality = C.Set.fold (fun tname (state,tl) ->
     let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
     state, c :: tl) functionality (state,[]) in
