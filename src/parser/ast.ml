@@ -267,7 +267,6 @@ module Program = struct
     | Clause of (Term.t, raw_attribute list) Clause.t
     | Local of Func.t list
     (* TODO: to remove *)
-    | Mode of raw_attribute list Type.t list
     | Chr of raw_attribute list Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Type of raw_attribute list Type.t list

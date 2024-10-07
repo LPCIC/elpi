@@ -830,18 +830,16 @@ end = struct (* {{{ *)
       | Program.Macro m :: rest ->
           aux_run ns blocks clauses (m::macros) types tabbrs modes functionality locals chr accs rest
       | Program.Pred t :: rest ->
-          aux_run ns blocks clauses macros types tabbrs modes functionality locals chr accs
-            (Program.Mode [t] :: Program.Type [t] :: rest)
-      | Program.Mode ms :: rest ->
-          let t = List.map structure_type_attributes ms in
-          aux_run ns blocks clauses macros types tabbrs (t @ modes) functionality locals chr accs rest
+          let t = structure_type_attributes t in
+          let types = if t.attributes <> Functional && List.mem t types then types else t :: types in
+          let functionality = if t.attributes = Functional then t.name :: functionality else functionality in
+          aux_run ns blocks clauses macros types tabbrs (t::modes) functionality locals chr accs rest
       | Program.Type [] :: rest ->
           aux_run ns blocks clauses macros types tabbrs modes functionality locals chr accs rest
       | Program.Type (t::ts) :: rest ->          
           let t = structure_type_attributes t in
-          (* Format.sprintf "Going to rec call aux with %s" (Ast.Type.pp (fun f x -> Ast.Structured.pp_tattribute f (List.hd x))) t |> print_endline; *)
-          let types = if t.attributes <> Functional && List.mem t types then types else t :: types in
-          let functionality = if t.attributes = Functional then t.name :: functionality else functionality in
+          if t.attributes = Functional then error ~loc:t.loc "functional attribute only applies to pred";
+          let types = if List.mem t types then types else t :: types in
           aux_run ns blocks clauses macros types tabbrs modes functionality locals chr accs
             (Program.Type ts :: rest)
       | Program.TypeAbbreviation abbr :: rest ->
