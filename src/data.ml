@@ -127,11 +127,14 @@ type clause = {
     loc : Loc.t option; (* debug *)
     mutable timestamp : int list; (* for grafting *)
 }
-and 
-mode = arg_mode list
+and mode_aux = Util.mode_aux =
+  | Fo of arg_mode
+  | Ho of arg_mode * mode
+and mode = mode_aux list
 [@@deriving show, ord]
 
-let to_mode = function true -> Input | false -> Output
+let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
+let to_mode = function true -> Fo Input | false -> Fo Output
 
 type grafting_time = int list
 [@@deriving show, ord]

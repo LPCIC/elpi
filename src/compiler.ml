@@ -1468,7 +1468,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       let state, types =
         map_acc (compile_type lcs) state types in
       let types = List.fold_left (fun m t -> map_append t.Types.decl.tname t m) C.Map.empty types in
-      let state, modes = List.fold_left compile_mode (state,C.Map.empty) modes in
+      let state, (modes:(Data.mode * Loc.t) C.Map.t) = List.fold_left compile_mode (state,C.Map.empty) modes in
       let state, functionality = List.fold_left compile_functionality (state,C.Set.empty) functionality in
       let defs_m = defs_of_modes modes in
       let defs_t = defs_of_types types in
@@ -1479,7 +1479,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       (state : State.t), lcs, active_macros,
       { Structured.types; type_abbrevs; modes; functionality; body; symbols }
 
-    and compile_body macros types type_abbrevs (modes : (mode * Loc.t) C.Map.t) lcs defs state = function
+    and compile_body macros types type_abbrevs (modes: (Data.mode * Loc.t) C.Map.t) lcs defs state = function
       | [] -> lcs, state, types, type_abbrevs, modes, defs, []
       | Locals (nlist, p) :: rest ->
           let orig_varmap = get_varmap state in
@@ -1857,7 +1857,7 @@ end = struct (* {{{ *)
       | `Arrow(arity,_),_ ->
           let missing = arity - nargs in
           let output_suffix =
-            let rec aux_output = function Output :: l -> 1 + aux_output l | _ -> 0 in
+            let rec aux_output = function x :: l when get_arg_mode x = Output -> 1 + aux_output l | _ -> 0 in
             aux_output (List.rev mode) in
           if missing > output_suffix then
             error ~loc Printf.(sprintf
@@ -2876,7 +2876,7 @@ let static_check ~exec ~checker:(state,program)
   (* Building modes *)
   let state, modes = C.Map.fold (fun tname v (state,tl) -> 
     let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
-    let m = List.map (function Input -> Const truec | Output -> Const falsec) v in
+    let m = List.map (fun x -> match get_arg_mode x with Input -> Const truec | Output -> Const falsec) v in
     state, (App(pairc, c, [R.list_to_lp_list m])) :: tl) modes (state,[]) in
 
   let loc = Loc.initial "(static_check)" in
