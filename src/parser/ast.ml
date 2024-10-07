@@ -251,6 +251,7 @@ module Program = struct
     | Clause of (Term.t, raw_attribute list) Clause.t
     | Local of Func.t list
     | Mode of Func.t Mode.t list
+    | Functionality of Func.t list
     | Chr of raw_attribute list Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Type of raw_attribute list Type.t list
@@ -316,6 +317,7 @@ type program = {
   types : tattribute Type.t list;
   type_abbrevs : Func.t TypeAbbreviation.t list;
   modes : Func.t Mode.t list;
+  functionality : Func.t list;
   body : block list;
 }
 and cattribute = {

@@ -348,7 +348,7 @@ compile-type-abbreviations [(S `:= T)|TS] [Clause|Clauses] :-
   compile-type-abbreviations TS Clauses.
 
 :name "check:main"
-check P Q DeclaredTypes TypeAbbreviations :-
+check P Q DeclaredTypes TypeAbbreviations Modes FuncPred :-
   compile-type-abbreviations TypeAbbreviations Abbrevs,
   Abbrevs => typecheck-program P Q DeclaredTypes RC, !,
   warn-linear P, !,
