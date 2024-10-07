@@ -170,7 +170,8 @@ let () = declare "elpi_only_llam"
 let () = declare "hollight"
   ~source_elpi:"hollight.elpi"
   ~description:"hollight implementation"
-  ~expectation:Test.(FailureOutput (Str.regexp "Mode is a no more maintained keyword")) (* needs advanced modes *)
+  (* ~expectation:Test.(FailureOutput (Str.regexp "Mode is a no more maintained keyword")) needs advanced modes *)
+  ~expectation:Test.Failure
   ()
 let () = declare "hollight_legacy"
   ~source_elpi:"hollight_legacy.elpi"

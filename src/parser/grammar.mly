@@ -135,7 +135,6 @@ decl:
 | p = pred; FULLSTOP { Program.Pred p }
 | t = type_; FULLSTOP { Program.Type t }
 | t = kind; FULLSTOP { Program.Type t }
-| m = mode; FULLSTOP {  raise (ParseError(loc $loc,"mode is no more supported")) }
 | m = macro; FULLSTOP { Program.Macro m }
 | CONSTRAINT; hyps = list(constant); QDASH; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, hyps, cl) }
 | CONSTRAINT; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, [], cl) }
@@ -154,13 +153,6 @@ decl:
   }
 | ignored; FULLSTOP { Program.Ignored (loc $sloc) }
 | f = fixity; FULLSTOP { error_mixfix (loc $loc) }
-
-mode:
-| MODE; LPAREN; c = constant; l = nonempty_list(i_o); RPAREN {
-    ()
-}
-i_o:
-| io = IO { mode_of_IO io }
 
 accumulate:
 | ACCUMULATE { ".elpi" }
@@ -417,7 +409,6 @@ constant:
 | REPLACE { Func.from_string "replace" }
 | REMOVE { Func.from_string "remove" }
 | INDEX { Func.from_string "index" }
-| MODE { Func.from_string "mode" }
 | c = IO { Func.from_string @@ String.make 1 c }
 | CUT { Func.cutf }
 | PI { Func.pif }

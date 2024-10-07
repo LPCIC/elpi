@@ -145,7 +145,6 @@ and token = parse
 | "accumulate" { ACCUMULATE }
 | "local" { LOCAL }
 | "pred" { PRED }
-| "mode" { MODE }
 | "macro" { MACRO }
 | "rule" { RULE }
 | "namespace" { NAMESPACE }
