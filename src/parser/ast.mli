@@ -93,6 +93,7 @@ type raw_attribute =
   | Remove of string
   | External
   | Index of int list * string option
+  | Functional
 [@@ deriving show]
 
 module Clause : sig
@@ -240,6 +241,7 @@ and cattribute = {
 and tattribute =
   | External
   | Index of int list * tindex option
+  | Functional
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;

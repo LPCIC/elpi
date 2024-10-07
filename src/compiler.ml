@@ -679,7 +679,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.ifexpr <> None then duplicate_err "if";
          aux_attrs { r with ifexpr = Some s } rest
-      | (External | Index _) as a :: _-> illegal_err a
+      | (External | Index _ | Functional) as a :: _-> illegal_err a
     in
     let attributes = aux_attrs { insertion = None; id = None; ifexpr = None } attributes in
     begin
@@ -702,7 +702,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux_chr { r with cifexpr = Some s } rest
-      | (Before _ | After _ | Replace _ | Remove _ | External | Index _) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | External | Index _ | Functional) as a :: _ -> illegal_err a 
     in
     let cid = Loc.show loc in 
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
@@ -732,6 +732,13 @@ end = struct (* {{{ *)
            | None -> aux_tatt (Some (Structured.Index(i,it))) rest
            | Some (Structured.Index _) -> duplicate_err "index"
            | Some _ -> error ~loc "external predicates cannot be indexed"
+         end
+      | Functional :: rest ->
+          begin match r with
+           | None -> aux_tatt (Some Functional) rest
+           | Some (Structured.Index _) -> duplicate_err "index"
+           | Some _ -> error ~loc "external predicates cannot be indexed"
+
          end
       | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _) as a :: _ -> illegal_err a 
     in

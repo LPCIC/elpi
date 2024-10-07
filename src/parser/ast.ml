@@ -164,6 +164,7 @@ type raw_attribute =
   | Remove of string
   | External
   | Index of int list * string option
+  | Functional
 [@@deriving show]
 
 module Clause = struct
@@ -342,6 +343,7 @@ and insertion_place = Before of string | After of string
 and tattribute =
   | External
   | Index of int list * tindex option
+  | Functional
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;
