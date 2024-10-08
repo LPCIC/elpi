@@ -28,6 +28,8 @@ depends: [
   "atdgen" {>= "2.10.0"}
   "atdts" {>= "2.10.0"}
   "odoc" {with-doc}
+  "ocaml-migrate-parsetree"
+  "stdcompat"
 ]
 synopsis: "ELPI - Embeddable λProlog Interpreter"
 description: """

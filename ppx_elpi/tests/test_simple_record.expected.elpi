@@ -1,0 +1,9 @@
+
+
+% simple
+kind simple type.
+type simple int -> bool -> simple. % simple
+
+
+
+

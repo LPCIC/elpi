@@ -1,0 +1,10 @@
+
+
+% simple
+kind simple type.
+type a simple. % A
+type b int -> simple. % B
+
+
+
+
