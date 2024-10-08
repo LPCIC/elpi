@@ -2977,7 +2977,6 @@ let static_check ~exec ~checker:(state,program)
   let time = `Compiletime in
   let state, p,q = quote_syntax time state q in
 
-  
   let estract_info_from_types tname {Types.lst} (state, tlist, functionality) =
     let functionality = ref functionality in
     let state = ref state in
@@ -2987,12 +2986,7 @@ let static_check ~exec ~checker:(state,program)
         let ttypet = unfold_type_abbrevs ~is_typeabbrev:false ~compiler_state initial_depth type_abbrevs ttype 0 in
         let st, ttypet = quote_pretype time ~compiler_state st ttypet in
         state := st;
-        begin
-          if is_functional ttype.ttype then
-            let st, f = mkQCon time ~compiler_state st ~on_type:false tname in
-            state := st;
-            functionality := f :: !functionality
-        end;
+        if is_functional ttype.ttype then functionality := c :: !functionality;
         App(colonc,c, [close_w_binder forallc ttypet ttype.tamap])) lst
     in
     !state, l :: tlist, !functionality
