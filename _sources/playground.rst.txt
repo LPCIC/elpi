@@ -103,7 +103,7 @@ This ``elpi`` directive should pass validation:
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
    Success:
    
@@ -151,7 +151,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.070
+   Typechecking time: 0.077
    
 **../../tests/sources/accumulate_twice2.elpi
 :**
@@ -173,7 +173,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.076
+   Typechecking time: 0.084
    
 **../../tests/sources/accumulated.elpi
 :**
@@ -195,7 +195,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.081
    
 **../../tests/sources/ackermann.elpi
 :**
@@ -210,7 +210,7 @@ Test Bed
     Warning: constant zero has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 13, column 0, characters 530-558: 
     Warning: 
-    constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.partition std.loc.set.fold std.loc.set.map std.loc.set.filter std.loc.set.cardinal std.loc.set.max std.loc.set.min std.loc.set.choose std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.partition std.int.set.fold std.int.set.map std.int.set.filter std.int.set.cardinal std.int.set.max std.int.set.min std.int.set.choose std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.partition std.string.set.fold std.string.set.map std.string.set.filter std.string.set.cardinal std.string.set.max std.string.set.min std.string.set.choose std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.fold std.string.map.map std.string.map.filter std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
+    constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.partition std.loc.set.fold std.loc.set.map std.loc.set.filter std.loc.set.cardinal std.loc.set.max std.loc.set.min std.loc.set.choose std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.partition std.int.set.fold std.int.set.map std.int.set.filter std.int.set.cardinal std.int.set.max std.int.set.min std.int.set.choose std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.partition std.string.set.fold std.string.set.map std.string.set.filter std.string.set.cardinal std.string.set.max std.string.set.min std.string.set.choose std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.fold std.string.map.map std.string.map.filter std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 13, column 0, characters 530-558: 
     Warning: constant ack has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 19, column 0, characters 676-715: 
@@ -224,7 +224,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.083
+   Typechecking time: 0.090
    
    Success:
    
@@ -262,7 +262,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.082
+   Typechecking time: 0.090
    
    Success:
    
@@ -285,13 +285,13 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, characters 0-40: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, characters 0-40: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, characters 0-40: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -301,7 +301,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.083
+   Typechecking time: 0.089
    
    Success:
    
@@ -335,30 +335,28 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 7, column 0, characters 133-193: 
-    Warning: constant term has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 11, column 0, characters 319-327: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 12, column 0, characters 327-335: 
     Warning: constant len has no declared type. Did you mean std.length ?
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 28, column 0, characters 761-789: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 29, column 0, characters 769-797: 
     Warning: constant compatible has no declared type.
-   compat [term c1 (uvar frozen--538 []), term c0 (uvar frozen--539 [])] |- 
-    frozen--531 [c1, c0] 
-    arr (uvar frozen--532 [c0, c1]) 
-     (arr (uvar frozen--533 [c0, c1]) (uvar frozen--534 [])) , 
-    [term c3 (uvar frozen--536 []), term c2 (uvar frozen--535 [])] |- frozen--531 
+   compat [term c1 (uvar frozen--540 []), term c0 (uvar frozen--541 [])] |- 
+    frozen--533 [c1, c0] 
+    arr (uvar frozen--534 [c0, c1]) 
+     (arr (uvar frozen--535 [c0, c1]) (uvar frozen--536 [])) , 
+    [term c3 (uvar frozen--538 []), term c2 (uvar frozen--537 [])] |- frozen--533 
     [c2, c3] 
-    arr (uvar frozen--535 []) (arr (uvar frozen--536 []) (uvar frozen--537 []))
+    arr (uvar frozen--537 []) (arr (uvar frozen--538 []) (uvar frozen--539 []))
    NEW [X0 = X1, X2 = X3] arr (X4 c0 c1) (arr (X5 c0 c1) X6) = arr X1 (arr X3 X7)
    1
-   compat [term c0 bool] |- frozen--544 [c0] uvar frozen--545 [] , 
-    [term c1 (uvar frozen--546 [])] |- frozen--544 [c1] nat
+   compat [term c0 bool] |- frozen--546 [c0] uvar frozen--547 [] , 
+    [term c1 (uvar frozen--548 [])] |- frozen--546 [c1] nat
    NEW [bool = X8] X9 = nat
    2
-   compat [term c0 bool] |- frozen--551 [c0] uvar frozen--552 [] , 
-    [term c1 (uvar frozen--552 [])] |- frozen--551 [c1] nat
+   compat [term c0 bool] |- frozen--553 [c0] uvar frozen--554 [] , 
+    [term c1 (uvar frozen--554 [])] |- frozen--553 [c1] nat
    NEW [bool = X10] X10 = nat
-   compat [term c0 bool] |- frozen--557 [c0] uvar frozen--558 [] , [term c1 nat] 
-    |- frozen--557 [c1] nat
+   compat [term c0 bool] |- frozen--559 [c0] uvar frozen--560 [] , [term c1 nat] 
+    |- frozen--559 [c1] nat
    NEW [bool = nat] X11 = nat
    
 
@@ -373,7 +371,7 @@ Test Bed
    
    Success:
    
-   Time: 0.001
+   Time: 0.000
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -391,8 +389,6 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chrGCD.elpi", line 6, column 0, characters 74-130: 
-    Warning: constant gcd has no declared type.
    group 1 solved
    group 2 solved
    
@@ -404,7 +400,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.077
    
    Success:
    
@@ -425,20 +421,12 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chrLEQ.elpi", line 7, column 0, characters 238-307: 
-    Warning: constant ltn has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chrLEQ.elpi", line 2, column 0, characters 16-85: 
-    Warning: constant leq has no declared type.
-   
-
-.. code-block:: console
-
    
    Parsing time: 0.000
    
    Compilation time: 0.001
    
-   Typechecking time: 0.081
+   Typechecking time: 0.079
    
    Success:
    
@@ -466,7 +454,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.075
    
    Success:
    
@@ -500,7 +488,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.079
+   Typechecking time: 0.084
    
    Success:
    
@@ -539,10 +527,10 @@ Test Bed
     constant d has no declared type. Did you mean std.debug-print std.drop std.drop-last std.do! std.do-ok! std.loc.set.diff std.int.set.diff std.string.set.diff ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_sem.elpi", line 1, column 0, characters 0-134: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_sem.elpi", line 1, column 0, characters 0-134: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    c
    
 
@@ -553,7 +541,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.082
+   Typechecking time: 0.088
    
    Success:
    
@@ -587,7 +575,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.079
+   Typechecking time: 0.086
    
    Success:
    
@@ -620,7 +608,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.072
+   Typechecking time: 0.077
    
    Success:
    
@@ -656,10 +644,10 @@ Test Bed
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.loc.set.choose std.int.set.cardinal std.int.set.choose std.string.set.cardinal std.string.set.choose std.string.concat unix.process.close ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 5, column 0, characters 79-98: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 2, column 0, characters 60-70: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -669,7 +657,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.104
+   Typechecking time: 0.110
    
    Success:
    
@@ -717,7 +705,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.104
+   Typechecking time: 0.110
    
    Success:
    
@@ -747,10 +735,10 @@ Test Bed
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.loc.set.choose std.int.set.cardinal std.int.set.choose std.string.set.cardinal std.string.set.choose std.string.concat unix.process.close ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, characters 36-54: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, characters 36-54: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -760,7 +748,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.091
+   Typechecking time: 0.097
    
    Success:
    
@@ -786,7 +774,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.076
    
    Success:
    
@@ -825,10 +813,10 @@ Test Bed
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.loc.set.choose std.int.set.cardinal std.int.set.choose std.string.set.cardinal std.string.set.choose std.string.concat unix.process.close ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, characters 79-106: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 2, column 0, characters 60-70: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, characters 79-106: 
     Warning: Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
@@ -840,7 +828,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.107
+   Typechecking time: 0.117
    
    Success:
    
@@ -870,10 +858,10 @@ Test Bed
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.loc.set.choose std.int.set.cardinal std.int.set.choose std.string.set.cardinal std.string.set.choose std.string.concat unix.process.close ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut6.elpi", line 4, column 0, characters 40-50: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut6.elpi", line 3, column 0, characters 25-38: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -883,7 +871,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.090
+   Typechecking time: 0.098
    
    Success:
    
@@ -909,7 +897,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
    Success:
    
@@ -943,7 +931,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.079
+   Typechecking time: 0.084
    
    Success:
    
@@ -968,10 +956,10 @@ Test Bed
     Warning: constant x has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 0, characters 0-34: 
     Warning: 
-    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
+    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.remove.aux std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 0, characters 0-34: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    
 
 .. code-block:: console
@@ -981,12 +969,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.083
+   Typechecking time: 0.089
    Fatal error: Unification problem outside the pattern fragment. ((Data.Term.App (f, (Data.Term.Const x), [])) == (Data.Term.AppUVar (
-      { Data.Term.contents = please extend this printer; uid_private = 41792 },
+      { Data.Term.contents = please extend this printer; uid_private = 42067 },
       0,
       [(Data.Term.UVar (
-          { Data.Term.contents = please extend this printer; uid_private = 41791
+          { Data.Term.contents = please extend this printer; uid_private = 42066
             },
           0, 0))
         ]
@@ -1006,7 +994,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.070
+   Typechecking time: 0.078
    
    Success:
    
@@ -1045,7 +1033,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.085
+   Typechecking time: 0.090
    
    Success:
    
@@ -1131,7 +1119,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.102
+   Typechecking time: 0.109
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/even-odd.elpi
@@ -1154,7 +1142,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.072
+   Typechecking time: 0.078
    
    Success:
    
@@ -1205,7 +1193,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.094
+   Typechecking time: 0.104
    
    Success:
    
@@ -1228,7 +1216,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 1, column 0, characters 0-16: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 1, column 0, characters 0-16: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 5, column 0, characters 25-51: 
@@ -1242,7 +1230,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.079
+   Typechecking time: 0.087
    
    Success:
    
@@ -1280,7 +1268,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.079
+   Typechecking time: 0.086
    
    Success:
    
@@ -1306,7 +1294,7 @@ Test Bed
     constant ignore has no declared type. Did you mean std.ignore-failure! ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 2, column 0, characters 10-60: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 2, column 0, characters 10-60: 
     Warning: 
     constant d has no declared type. Did you mean std.debug-print std.drop std.drop-last std.do! std.do-ok! std.loc.set.diff std.int.set.diff std.string.set.diff ?
@@ -1319,7 +1307,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.083
+   Typechecking time: 0.094
    
    Success:
    
@@ -1362,7 +1350,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.088
+   Typechecking time: 0.093
    
    Success:
    
@@ -1387,7 +1375,7 @@ Test Bed
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case2.elpi", line 1, column 0, characters 0-17: 
     Warning: 
-    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
+    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.remove.aux std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case2.elpi", line 1, column 0, characters 0-17: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.loc.set.choose std.int.set.cardinal std.int.set.choose std.string.set.cardinal std.string.set.choose std.string.concat unix.process.close ?
@@ -1400,7 +1388,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.083
+   Typechecking time: 0.088
    
    Success:
    
@@ -1423,7 +1411,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case3.elpi", line 1, column 0, characters 0-72: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    
 
 .. code-block:: console
@@ -1433,7 +1421,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.081
    
    Success:
    
@@ -1491,9 +1479,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.118
+   Typechecking time: 0.125
    
    Success:
    
@@ -1519,7 +1507,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.070
+   Typechecking time: 0.079
    
    Success:
    
@@ -1551,7 +1539,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.078
    
    Success:
    
@@ -1576,7 +1564,7 @@ Test Bed
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ho.elpi", line 5, column 0, characters 79-80: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -1586,7 +1574,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.077
+   Typechecking time: 0.087
    
    Success:
    
@@ -1607,9 +1595,8 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hollight.elpi", line 231, column 18, characters 8433-8433:
-   Malformed mode declaration. Example:
-   mode (foo i i o).
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hollight.elpi", line 235, column 9, characters 8624-8624:
+   Right parenthesis ')' expected.
    
    
 **../../tests/sources/hollight_legacy.elpi
@@ -1695,7 +1682,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.076
    
    Success:
    
@@ -1718,20 +1705,20 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, characters 31-59: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, characters 31-59: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, characters 31-59: 
     Warning: 
-    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
+    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.remove.aux std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 5, column 0, characters 62-76: 
     Warning: constant ko has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, characters 31-59: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, characters 31-59: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -1741,7 +1728,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.095
+   Typechecking time: 0.102
    
    Success:
    
@@ -1764,7 +1751,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, characters 19-73: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, characters 19-73: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, characters 19-73: 
@@ -1772,10 +1759,10 @@ Test Bed
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.loc.set.choose std.int.set.cardinal std.int.set.choose std.string.set.cardinal std.string.set.choose std.string.concat unix.process.close ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, characters 19-73: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, characters 19-73: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -1785,7 +1772,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.091
+   Typechecking time: 0.102
    
    Success:
    
@@ -1817,11 +1804,11 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.087
+   Typechecking time: 0.096
    
    Success:
    
-   Time: 1.860
+   Time: 1.888
    
    Constraints:
    
@@ -1840,7 +1827,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/io_colon.elpi", line 1, column 0, characters 0-34: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    
 
 .. code-block:: console
@@ -1850,7 +1837,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.080
    
    Success:
    
@@ -1881,12 +1868,12 @@ Test Bed
     Warning: constant impl has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 12, column 0, characters 330-376: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 0, characters 186-232: 
     Warning: constant appl has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 12, column 0, characters 330-376: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -1896,7 +1883,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.100
+   Typechecking time: 0.105
    
    Success:
    
@@ -1919,12 +1906,12 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 3, column 0, characters 19-38: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 3, column 0, characters 19-38: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 3, column 0, characters 19-38: 
     Warning: 
-    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
+    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.remove.aux std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 0, characters 41-54: 
     Warning: constant ko has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 0, characters 41-54: 
@@ -1938,7 +1925,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.090
+   Typechecking time: 0.102
    
    Success:
    
@@ -1980,7 +1967,7 @@ Test Bed
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, characters 278-844: 
     Warning: constant x3 has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, characters 278-844: 
-    Warning: [suppressing 28 warnings]
+    Warning: [suppressing 18 warnings]
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 10, column 0, characters 221-275: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 34, column 0, characters 847-863: 
@@ -2000,11 +1987,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.113
+   Typechecking time: 0.122
    
    Success:
    
-   Time: 0.316
+   Time: 0.333
    
    Constraints:
    
@@ -2023,7 +2010,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/list_as_conj.elpi", line 2, column 0, characters 15-41: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    a
    b
    done
@@ -2036,7 +2023,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.076
+   Typechecking time: 0.081
    
    Success:
    
@@ -2062,7 +2049,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
    Success:
    
@@ -2096,7 +2083,7 @@ Test Bed
     constant h has no declared type. Did you mean std.map.private.height std.set.private.height ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 25, column 0, characters 564-2057: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 25, column 0, characters 564-2057: 
     Warning: constant clause3 has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 16, column 0, characters 417-458: 
@@ -2296,7 +2283,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.122
+   Typechecking time: 0.127
    
    Success:
    
@@ -2317,30 +2304,29 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 8, column 0, characters 216-229: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 8, column 0, characters 219-232: 
     Warning: constant zero has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 33, column 0, characters 798-862: 
-    Warning: constant watch has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 3, column 0, characters 18-64: 
-    Warning: constant term has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 9, column 0, characters 231-254: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 9, column 0, characters 234-257: 
     Warning: constant succ has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 29, column 0, characters 710-749: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 29, column 0, characters 713-752: 
     Warning: 
     constant spy has no declared type. Did you mean std.spy std.spy! std.spy-do! ?
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 8, column 0, characters 216-229: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 8, column 0, characters 219-232: 
     Warning: constant nat has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 4, column 0, characters 66-124: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 4, column 0, characters 69-127: 
     Warning: constant lam has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 22, column 0, characters 521-549: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 22, column 0, characters 524-552: 
     Warning: constant compatible has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 19, column 0, characters 457-484: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 19, column 0, characters 460-487: 
     Warning: constant both_or_none has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 36, column 0, characters 893-1395: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 36, column 0, characters 896-1398: 
     Warning: constant b2n has no declared type.
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 3, column 0, characters 18-64: 
-    Warning: [suppressing 2 warnings]
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 30, column 0, characters 751-779: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 3, column 0, characters 21-67: 
+    Warning: constant arr has no declared type.
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 3, column 0, characters 21-67: 
+    Warning: 
+    constant app has no declared type. Did you mean std.append std.appendR ?
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 30, column 0, characters 754-782: 
     Warning: P is linear: name it _P (discard) or P_ (fresh variable)
    X0 X1 X1 X0 nat | lam X0 c2 \ lam X1 c3 \ X2 c0 c2 c3 | 
     lam X1 c2 \ lam X0 c3 \ X2 c0 c3 c2
@@ -2360,7 +2346,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.117
+   Typechecking time: 0.126
    
    Success:
    
@@ -2381,7 +2367,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.300389 + 0.055736 + 0.914252
+   1.357435 + 0.058246 + 0.959460
    
 
 .. code-block:: console
@@ -2391,11 +2377,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.078
    
    Success:
    
-   Time: 2.492
+   Time: 2.611
    
    Constraints:
    
@@ -2412,7 +2398,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.559562 + 3.306948 + 0.335598
+   6.563497 + 3.056940 + 0.375984
    
 
 .. code-block:: console
@@ -2422,11 +2408,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.080
    
    Success:
    
-   Time: 10.209
+   Time: 10.003
    
    Constraints:
    
@@ -2443,7 +2429,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.784594 + 2.858218 + 0.260727
+   5.870813 + 2.913567 + 0.236531
    
 
 .. code-block:: console
@@ -2451,13 +2437,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.080
    
    Success:
    
-   Time: 8.909
+   Time: 9.027
    
    Constraints:
    
@@ -2485,7 +2471,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.076
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/named_clauses00.elpi
@@ -2535,7 +2521,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.082
    
    Success:
    
@@ -2557,7 +2543,8 @@ Test Bed
 .. code-block:: console
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, characters 174-238: 
-    Warning: constant aux has no declared type. Did you mean std.rev.aux rev.aux ?
+    Warning: 
+    constant aux has no declared type. Did you mean std.rev.aux std.map-i.aux std.iota.aux std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux rev.aux ?
    
 
 .. code-block:: console
@@ -2567,7 +2554,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.081
    
    Success:
    
@@ -2603,7 +2590,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.085
+   Typechecking time: 0.091
    
    Success:
    
@@ -2630,7 +2617,7 @@ Test Bed
     Warning: constant x.acc.main has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, characters 174-238: 
     Warning: 
-    constant aux has no declared type. Did you mean x.acc.rev.aux std.rev.aux ?
+    constant aux has no declared type. Did you mean x.acc.rev.aux std.rev.aux std.map-i.aux std.iota.aux std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux ?
    
 
 .. code-block:: console
@@ -2640,7 +2627,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.084
+   Typechecking time: 0.092
    
    Success:
    
@@ -2684,7 +2671,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.102
+   Typechecking time: 0.110
    
    Success:
    
@@ -2710,7 +2697,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.070
+   Typechecking time: 0.076
    
    Success:
    
@@ -2768,7 +2755,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.110
+   Typechecking time: 0.118
    
    Success:
    
@@ -2872,15 +2859,15 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, characters 30-96: 
     Warning: 
-    constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.partition std.loc.set.fold std.loc.set.map std.loc.set.filter std.loc.set.cardinal std.loc.set.max std.loc.set.min std.loc.set.choose std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.partition std.int.set.fold std.int.set.map std.int.set.filter std.int.set.cardinal std.int.set.max std.int.set.min std.int.set.choose std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.partition std.string.set.fold std.string.set.map std.string.set.filter std.string.set.cardinal std.string.set.max std.string.set.min std.string.set.choose std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.fold std.string.map.map std.string.map.filter std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
+    constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.partition std.loc.set.fold std.loc.set.map std.loc.set.filter std.loc.set.cardinal std.loc.set.max std.loc.set.min std.loc.set.choose std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.partition std.int.set.fold std.int.set.map std.int.set.filter std.int.set.cardinal std.int.set.max std.int.set.min std.int.set.choose std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.partition std.string.set.fold std.string.set.map std.string.set.filter std.string.set.cardinal std.string.set.max std.string.set.min std.string.set.choose std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.fold std.string.map.map std.string.map.filter std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, characters 30-96: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, characters 30-96: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, characters 30-96: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    
 
 .. code-block:: console
@@ -2890,7 +2877,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.088
+   Typechecking time: 0.095
    
    Success:
    
@@ -2913,7 +2900,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif2.elpi", line 3, column 0, characters 32-54: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif2.elpi", line 2, column 0, characters 18-30: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    
@@ -2925,7 +2912,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.079
+   Typechecking time: 0.085
    
    Success:
    
@@ -2950,12 +2937,12 @@ Test Bed
     Warning: constant z has no declared type. Did you mean std.zip ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, characters 19-59: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, characters 19-59: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, characters 19-59: 
     Warning: 
-    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
+    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.remove.aux std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 5, column 0, characters 62-82: 
     Warning: constant ko has no declared type.
    
@@ -2967,7 +2954,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.090
+   Typechecking time: 0.099
    
    Success:
    
@@ -3001,7 +2988,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.078
+   Typechecking time: 0.085
    
    Success:
    
@@ -3024,10 +3011,10 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 9, column 0, characters 152-190: 
     Warning: 
-    constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.partition std.loc.set.fold std.loc.set.map std.loc.set.filter std.loc.set.cardinal std.loc.set.max std.loc.set.min std.loc.set.choose std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.partition std.int.set.fold std.int.set.map std.int.set.filter std.int.set.cardinal std.int.set.max std.int.set.min std.int.set.choose std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.partition std.string.set.fold std.string.set.map std.string.set.filter std.string.set.cardinal std.string.set.max std.string.set.min std.string.set.choose std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.fold std.string.map.map std.string.map.filter std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
+    constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.partition std.loc.set.fold std.loc.set.map std.loc.set.filter std.loc.set.cardinal std.loc.set.max std.loc.set.min std.loc.set.choose std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.partition std.int.set.fold std.int.set.map std.int.set.filter std.int.set.cardinal std.int.set.max std.int.set.min std.int.set.choose std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.partition std.string.set.fold std.string.set.map std.string.set.filter std.string.set.cardinal std.string.set.max std.string.set.min std.string.set.choose std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.fold std.string.map.map std.string.map.filter std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 8, column 0, characters 122-150: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 7, column 0, characters 85-120: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 3, column 0, characters 33-40: 
@@ -3045,7 +3032,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.096
+   Typechecking time: 0.103
    
    Success:
    
@@ -3096,7 +3083,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.104
+   Typechecking time: 0.113
    
    Success:
    
@@ -3126,7 +3113,7 @@ Test Bed
     Warning: constant mem_ has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 30, column 0, characters 1008-1060: 
     Warning: 
-    constant mem has no declared type. Did you mean std.mem! std.mem std.set.mem std.set.private.mem std.loc.set.mem std.int.set.mem std.string.set.mem std.loc.map.mem std.int.map.mem std.string.map.mem ?
+    constant mem has no declared type. Did you mean std.mem! std.mem std.set.mem std.set.private.mem std.set.private.mem.aux std.loc.set.mem std.int.set.mem std.string.set.mem std.loc.map.mem std.int.map.mem std.string.map.mem ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 129, column 0, characters 3786-4387: 
     Warning: constant main2 has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 102, column 0, characters 3251-3783: 
@@ -3176,7 +3163,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.126
+   Typechecking time: 0.134
    
    Success:
    
@@ -3213,23 +3200,23 @@ Test Bed
     Warning: constant x has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: 
-    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
+    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.remove.aux std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: constant g has no declared type. Did you mean gc.get ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: constant ==> has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
@@ -3251,7 +3238,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.111
+   Typechecking time: 0.120
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/queens.elpi
@@ -3275,7 +3262,7 @@ Test Bed
     Warning: constant select has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 15, column 0, characters 204-236: 
     Warning: 
-    constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.partition std.loc.set.fold std.loc.set.map std.loc.set.filter std.loc.set.cardinal std.loc.set.max std.loc.set.min std.loc.set.choose std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.partition std.int.set.fold std.int.set.map std.int.set.filter std.int.set.cardinal std.int.set.max std.int.set.min std.int.set.choose std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.partition std.string.set.fold std.string.set.map std.string.set.filter std.string.set.cardinal std.string.set.max std.string.set.min std.string.set.choose std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.fold std.string.map.map std.string.map.filter std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
+    constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.partition std.loc.set.fold std.loc.set.map std.loc.set.filter std.loc.set.cardinal std.loc.set.max std.loc.set.min std.loc.set.choose std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.partition std.int.set.fold std.int.set.map std.int.set.filter std.int.set.cardinal std.int.set.max std.int.set.min std.int.set.choose std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.partition std.string.set.fold std.string.set.map std.string.set.filter std.string.set.cardinal std.string.set.max std.string.set.min std.string.set.choose std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.fold std.string.map.map std.string.map.filter std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, characters 348-405: 
     Warning: constant range has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, characters 348-405: 
@@ -3307,11 +3294,11 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.119
+   Typechecking time: 0.125
    
    Success:
    
-   Time: 1.568
+   Time: 1.618
    
    Constraints:
    
@@ -3341,7 +3328,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.078
    
    Success:
    
@@ -3362,7 +3349,7 @@ Test Bed
 
 .. code-block:: console
 
-   5
+   8
    
 
 .. code-block:: console
@@ -3372,7 +3359,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.070
+   Typechecking time: 0.076
    
    Success:
    
@@ -3418,11 +3405,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.095
+   Typechecking time: 0.103
    
    Success:
    
-   Time: 0.248
+   Time: 0.262
    
    Constraints:
    
@@ -3464,11 +3451,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.095
+   Typechecking time: 0.102
    
    Success:
    
-   Time: 1.769
+   Time: 1.694
    
    Constraints:
    
@@ -3496,7 +3483,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
 **../../tests/sources/restriction3.elpi
 :**
@@ -3507,7 +3494,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction3.elpi", line 18, column 0, characters 442-573: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction3.elpi", line 17, column 0, characters 419-550: 
     Warning: constant foo has no declared type.
    ----<<---- enter:  X0 c0 = lam c1 \ lam c2 \ X1^1 c1 c2
    ---->>---- exit:  lam c1 \ lam c2 \ X1^1 c1 c2 = lam c1 \ lam c2 \ X1^1 c1 c2
@@ -3526,7 +3513,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.078
+   Typechecking time: 0.083
    
    Success:
    
@@ -3549,7 +3536,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction4.elpi", line 1, column 0, characters 0-74: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction4.elpi", line 1, column 0, characters 0-74: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    ----<<---- enter:  X0 c0 = f (X1^1 c1) c2 \ X2^1 c1 c2
@@ -3563,7 +3550,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.080
    
    Success:
    
@@ -3595,7 +3582,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.076
    
    Success:
    
@@ -3618,7 +3605,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction6.elpi", line 1, column 0, characters 0-79: 
     Warning: 
-    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
+    constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction6.elpi", line 1, column 0, characters 0-79: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    ----<<---- enter:  X0 c0 = f (X1^1 c1) c2 \ c3 \ X2^2 c3
@@ -3632,7 +3619,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.082
    
    Success:
    
@@ -3674,7 +3661,7 @@ Test Bed
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, characters 2004-2589: 
     Warning: constant x2 has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, characters 2004-2589: 
-    Warning: [suppressing 16 warnings]
+    Warning: [suppressing 6 warnings]
    
 
 .. code-block:: console
@@ -3684,11 +3671,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.113
+   Typechecking time: 0.120
    
    Success:
    
-   Time: 0.131
+   Time: 0.133
    
    Constraints:
    
@@ -3726,7 +3713,7 @@ Test Bed
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, characters 171-756: 
     Warning: constant x2 has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, characters 171-756: 
-    Warning: [suppressing 16 warnings]
+    Warning: [suppressing 6 warnings]
    
 
 .. code-block:: console
@@ -3736,11 +3723,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.112
+   Typechecking time: 0.120
    
    Success:
    
-   Time: 0.127
+   Time: 0.133
    
    Constraints:
    
@@ -3762,7 +3749,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.078
    
    Success:
    
@@ -3799,7 +3786,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.080
+   Typechecking time: 0.086
    
    Success:
    
@@ -3820,7 +3807,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.126861 + 0.053626 + 0.790340
+   1.192297 + 0.055611 + 0.834587
    
 
 .. code-block:: console
@@ -3830,11 +3817,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.072
+   Typechecking time: 0.079
    
    Success:
    
-   Time: 2.057
+   Time: 2.179
    
    Constraints:
    
@@ -3870,7 +3857,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.092
+   Typechecking time: 0.100
    
    Success:
    
@@ -3906,7 +3893,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.085
+   Typechecking time: 0.091
    
    Success:
    
@@ -3938,7 +3925,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.076
+   Typechecking time: 0.081
    
 **../../tests/sources/shorten_aux2.elpi
 :**
@@ -3962,7 +3949,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.078
+   Typechecking time: 0.085
    
 **../../tests/sources/shorten_builtin.elpi
 :**
@@ -3983,7 +3970,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.070
+   Typechecking time: 0.077
    
    Success:
    
@@ -4025,7 +4012,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.086
+   Typechecking time: 0.094
    
    Success:
    
@@ -4056,7 +4043,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.072
+   Typechecking time: 0.078
    
    Success:
    
@@ -4087,7 +4074,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.079
    
    Success:
    
@@ -4119,7 +4106,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
    Success:
    
@@ -4142,7 +4129,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trace.elpi", line 2, column 0, characters 1-20: 
     Warning: 
-    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
+    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.remove.aux std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trace.elpi", line 6, column 0, characters 60-83: 
     Warning: Y is linear: name it _Y (discard) or Y_ (fresh variable)
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trace.elpi", line 6, column 0, characters 60-83: 
@@ -4156,7 +4143,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.076
+   Typechecking time: 0.082
    
    Success:
    
@@ -4187,7 +4174,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
    Success:
    
@@ -4213,7 +4200,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.078
    
    Success:
    
@@ -4239,7 +4226,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.070
+   Typechecking time: 0.079
    
    Success:
    
@@ -4262,7 +4249,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trace_findall.elpi", line 1, column 0, characters 0-3: 
     Warning: 
-    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
+    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.remove.aux std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
    [p 1, p 2, p 3]
    
 
@@ -4273,7 +4260,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.083
    
    Success:
    
@@ -4296,20 +4283,20 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 4, column 0, characters 49-72: 
     Warning: 
-    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
+    constant r has no declared type. Did you mean std.rev std.rev.aux std.map.remove std.map.private.remove std.map.private.remove.aux std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove.aux std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 5, column 0, characters 74-103: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 4, column 0, characters 49-72: 
     Warning: 
-    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
+    constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.remove.aux std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.remove.aux std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.add.aux std.set.private.bal.aux std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.mem.aux std.set.private.set std.map.private.map std.loc.set.partition std.int.set.partition std.string.set.partition unix.process.close unix.process.open unix.process unix.process ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 4, column 0, characters 49-72: 
     Warning: constant foo has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 7, column 0, characters 110-113: 
     Warning: 
-    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
+    constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 6, column 0, characters 105-108: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -4319,7 +4306,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.095
+   Typechecking time: 0.102
    
    Success:
    
@@ -4345,7 +4332,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.076
    
    Success:
    
@@ -4371,7 +4358,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.078
    
    Success:
    
@@ -4411,7 +4398,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.081
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv11.elpi
@@ -4434,7 +4421,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.076
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv12.elpi
@@ -4457,7 +4444,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.076
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv2.elpi
@@ -4487,7 +4474,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.078
    
    Success:
    
@@ -4513,7 +4500,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
    Success:
    
@@ -4538,7 +4525,7 @@ Test Bed
    Parsing time: 0.000
    
    Compilation time: 0.001
-   Fatal error: exception Elpi__Compiler.CompileError(0, "typeabbrev SYMBOL-510 uses the undefined y constant at File \"/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv5.elpi\", line 2, column 0, characters 16-30:")
+   Fatal error: exception Elpi__Compiler.CompileError(0, "typeabbrev (Data.Term.TConst SYMBOL-512) uses the undefined y constant at File \"/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv5.elpi\", line 2, column 0, characters 16-30:")
    
 **../../tests/sources/typeabbrv6.elpi
 :**
@@ -4567,7 +4554,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
    Success:
    
@@ -4593,7 +4580,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.070
+   Typechecking time: 0.076
    
    Success:
    
@@ -4619,7 +4606,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
    Success:
    
@@ -4645,7 +4632,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.077
    
    Success:
    
@@ -4681,7 +4668,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.078
+   Typechecking time: 0.084
    
    Success:
    
@@ -4714,7 +4701,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.072
+   Typechecking time: 0.077
    
    Success:
    
@@ -4746,7 +4733,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.070
+   Typechecking time: 0.075
    
    Success:
    
@@ -4771,7 +4758,7 @@ Test Bed
     Warning: constant quantify has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 5, column 0, characters 105-121: 
     Warning: 
-    constant mem has no declared type. Did you mean std.mem! std.mem std.set.mem std.set.private.mem std.loc.set.mem std.int.set.mem std.string.set.mem std.loc.map.mem std.int.map.mem std.string.map.mem ?
+    constant mem has no declared type. Did you mean std.mem! std.mem std.set.mem std.set.private.mem std.set.private.mem.aux std.loc.set.mem std.int.set.mem std.string.set.mem std.loc.map.mem std.int.map.mem std.string.map.mem ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, characters 1561-1690: 
     Warning: constant generalize has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, characters 1561-1690: 
@@ -4823,7 +4810,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.123
+   Typechecking time: 0.127
    
    Success:
    
