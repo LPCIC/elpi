@@ -14,7 +14,7 @@ module Printer : sig
     executables:string list -> seed:int -> timeout:float -> unit
     
   val print_summary :
-    total:int -> ok:int -> ko:int -> skipped:int -> timeout:int -> unit
+    total:int -> ok:int -> ko_list:string list -> skipped:int -> timeout:int -> unit
 
   val print_log :
     fname:string -> unit
@@ -46,16 +46,19 @@ let print_header ~executables ~seed ~timeout =
   printf [blue] "------------------------------------------------------------------\n";
 ;;
 
-let print_summary ~total ~ok ~ko ~skipped ~timeout =
+let print_summary ~total ~ok ~ko_list ~skipped ~timeout =
   printf [blue] "------------------------------------------------------------------\n";
   let print_stat ?(to_print=false) k v =
     if to_print || v <> 0 then (printf [blue] "%s: " k; printf [] "%d\n" v)
   in
   print_stat ~to_print:true "Tests" total;
   print_stat ~to_print:true "Passed" ok;
-  print_stat ~to_print:true "Failed" ko;
+  print_stat ~to_print:true "Failed" (List.length ko_list);
   print_stat "Skipped" skipped;
-  print_stat "Timeout" timeout
+  print_stat "Timeout" timeout;
+  if ko_list <> [] then 
+    let verb = if List.length ko_list = 1 then "is" else "are" in
+    printf [red] "Failed tests %s [%s]\n" verb (String.concat "," ko_list)
 ;;
 
 let print_file fname =
@@ -154,16 +157,16 @@ let main sources plot timeout promote executables namef catskip timetool seed =
           |> List.concat in
   let results =
     List.map (run timeout seed sources promote env) jobs in
-  let total, ok, ko, skipped, timeout =
-    let rec part total ok ko skipped timeout = function
-      | [] -> (total, ok, ko, skipped, timeout)
-      | Some {Runner.rc = Success _; _} :: l -> part (total+1) (ok+1) ko skipped timeout l
-      | Some {rc = Promote _; _} :: l ->        part (total+1) (ok+1) ko skipped timeout l
-      | Some {rc = Failure _; _} :: l ->        part (total+1) ok (ko+1) skipped timeout l
-      | None :: l ->                            part (total+1) ok ko (skipped+1) timeout l
-      | Some {rc = Timeout _; _} :: l ->        part (total+1) ok ko skipped (timeout+1) l
-    in part 0 0 0 0 0 results in
-  Printer.print_summary ~total ~ok ~ko ~skipped ~timeout;
+  let total, ok, ko_list, skipped, timeout =
+    let rec part total ok ko_list skipped timeout = function
+      | [] -> (total, ok, List.rev ko_list, skipped, timeout)
+      | Some {Runner.rc = Success _; _} :: l -> part (total+1) (ok+1) ko_list skipped timeout l
+      | Some {rc = Promote _; _} :: l ->        part (total+1) (ok+1) ko_list skipped timeout l
+      | Some {rc = Failure _; test} :: l ->        part (total+1) ok (test.name :: ko_list) skipped timeout l
+      | None :: l ->                            part (total+1) ok ko_list (skipped+1) timeout l
+      | Some {rc = Timeout _; _} :: l ->        part (total+1) ok ko_list skipped (timeout+1) l
+    in part 0 0 [] 0 0 results in
+  Printer.print_summary ~total ~ok ~ko_list ~skipped ~timeout;
   begin try
     let log_first_failure =
       results |> find_map (function
@@ -173,7 +176,7 @@ let main sources plot timeout promote executables namef catskip timetool seed =
   with Not_found -> ()
   end;
   if List.length executables > 1 then print_csv plot results;
-  if ko = 0 then exit 0 else exit 1
+  if ko_list = [] then exit 0 else exit 1
 
 open Cmdliner
 

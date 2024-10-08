@@ -561,7 +561,6 @@ type program = {
   types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
-  functionality : C.Set.t;
   clauses : (preterm,Ast.Structured.attribute) Ast.Clause.t list;
   chr : block_constraint list;
   local_names : int;
@@ -576,7 +575,6 @@ type program = {
   types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
-  functionality: C.Set.t;
   clauses : (preterm,attribute) Ast.Clause.t list;
   prolog_program : index;
   indexing : (mode * indexing) C.Map.t;
@@ -596,7 +594,6 @@ let empty () = {
   types = C.Map.empty;
   type_abbrevs = C.Map.empty;
   modes = C.Map.empty;
-  functionality = C.Set.empty;
   clauses = [];
   prolog_program = { idx = Ptmap.empty; time = 0; times = StrMap.empty };
   indexing = C.Map.empty;
@@ -627,7 +624,6 @@ type 'a query = {
   types : Types.types C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
-  functionality : C.Set.t;
   clauses : (preterm,Assembled.attribute) Ast.Clause.t list;
   prolog_program : index;
   chr : block_constraint list;
@@ -1861,13 +1857,11 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     let types = apply_subst_types ~live_symbols state empty_subst types in
     let type_abbrevs = apply_subst_type_abbrevs ~live_symbols state empty_subst type_abbrevs in
     let modes = apply_subst_modes ~live_symbols empty_subst modes in
-    let functionality = apply_subst_functionality ~live_symbols empty_subst functionality in
     let types, type_abbrevs, modes, clauses, chr =
       compile_body live_symbols state local_names types type_abbrevs modes [] [] empty_subst body in
     !live_symbols, toplevel_macros, { Flat.types;
       type_abbrevs;
       modes;
-      functionality;
       clauses;
       chr = List.rev chr;
       local_names;
@@ -1880,7 +1874,6 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       Flat.types;
       type_abbrevs;
       modes;
-      functionality;
       clauses;
       chr;
       local_names;
@@ -1890,7 +1883,6 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       Flat.types = apply_subst_types state f types;
       type_abbrevs = apply_subst_type_abbrevs state f type_abbrevs;
       modes = apply_subst_modes f modes;
-      functionality = apply_subst_functionality f functionality;
       clauses = apply_subst_clauses state f clauses;
       chr = smart_map (apply_subst_chr state f) chr;
       local_names;
@@ -2313,16 +2305,15 @@ let compile_clause modes initial_depth (state, index, clauses)
 let assemble flags state code  (ul : compilation_unit list) =
   let local_names = code.Assembled.local_names in
 
-  let state, index, indexing, clauses, types, type_abbrevs, modes, functionality, chr_rev =
-    List.fold_left (fun (state, index, idx1, clauses, t1, ta1, m1, f1, c1) ({ symbol_table; code }  as _u) ->
-      let state, { Flat.clauses = cl2; types = t2; type_abbrevs = ta2; modes = m2; functionality = f2; chr = c2; } =
+  let state, index, indexing, clauses, types, type_abbrevs, modes, chr_rev =
+    List.fold_left (fun (state, index, idx1, clauses, t1, ta1, m1, c1) ({ symbol_table; code }  as _u) ->
+      let state, { Flat.clauses = cl2; types = t2; type_abbrevs = ta2; modes = m2; chr = c2; } =
         let state, shift = Stdlib.Result.get_ok @@ Symbols.build_shift ~flags ~base:state symbol_table in
         let code =
           if C.Map.is_empty shift then code
           else Flatten.relocate state shift code in
         state, code in
       let modes = ToDBL.merge_modes state m1 m2 in
-      let functionality = ToDBL.merge_functionality f1 f2 in
       let type_abbrevs = ToDBL.merge_type_abbrevs state ta1 ta2 in
       let types = ToDBL.merge_types state t1 t2 in
 
@@ -2337,14 +2328,14 @@ let assemble flags state code  (ul : compilation_unit list) =
       let state, index,clauses =
         List.fold_left (compile_clause modes local_names) (state,index,clauses) cl2 in
       
-      state, index, idx2, clauses, types, type_abbrevs, modes, functionality, c2 :: c1
-    ) (state, code.prolog_program, code.indexing, code.clauses, code.types, code.type_abbrevs, code.modes, code.functionality, []) ul in
+      state, index, idx2, clauses, types, type_abbrevs, modes, c2 :: c1
+    ) (state, code.prolog_program, code.indexing, code.clauses, code.types, code.type_abbrevs, code.modes, []) ul in
   let prolog_program = index in
   let chr = List.concat (code.chr :: List.rev chr_rev) in
   let chr =
     let pifexpr { pifexpr } = pifexpr in
     List.map (fun {ctx_filter;clique;rules} -> {ctx_filter;clique;rules=filter_if flags pifexpr rules}) chr in
-  state, { Assembled.clauses; indexing; prolog_program; types; type_abbrevs; modes; functionality; chr; local_names = code.local_names; toplevel_macros = code.toplevel_macros }
+  state, { Assembled.clauses; indexing; prolog_program; types; type_abbrevs; modes; chr; local_names = code.local_names; toplevel_macros = code.toplevel_macros }
 
 end (* }}} *)
 
@@ -2548,7 +2539,6 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   {
     WithMain.types;
     modes;
-    functionality = assembled_program.Assembled.functionality;
     type_abbrevs;
     prolog_program = assembled_program.Assembled.prolog_program;
     clauses = assembled_program.Assembled.clauses;
@@ -2582,7 +2572,6 @@ let query_of_term (compiler_state, assembled_program) f =
     WithMain.types;
     type_abbrevs;
     modes;
-    functionality = assembled_program.functionality;
     clauses = assembled_program.clauses;
     prolog_program = assembled_program.prolog_program;
     chr = assembled_program.Assembled.chr;
@@ -2930,11 +2919,10 @@ let unfold_type_abbrevs ~is_typeabbrev ~compiler_state lcs type_abbrevs { ttype;
   in
   let find_opt c = C.Map.find_opt c type_abbrevs in
 
-  (* Format.eprintf "Going to unfold %a\n%!" (pp_ttype) ttype;  *)  let rec aux seen = function
+  let rec aux seen = function
     | TConst c as x ->
         begin match find_opt c with
         | Some { tavalue; taparams; timestamp=time } ->
-          (* Format.printf "Found a match %a\n" pp_ttype tavalue.ttype; *)
           if taparams > 0 then
             error ~loc ("type abbreviation " ^ Symbols.show compiler_state c ^ " needs " ^
               string_of_int taparams ^ " arguments");
@@ -2950,14 +2938,8 @@ let unfold_type_abbrevs ~is_typeabbrev ~compiler_state lcs type_abbrevs { ttype;
             error ~loc ("type abbreviation " ^ Symbols.show compiler_state c ^ " needs " ^
               string_of_int taparams ^ " arguments, only " ^
               string_of_int nargs ^ " are provided");
-          (* Format.eprintf "Seen is [%a]\n%!" (Format.pp_print_list Format.pp_print_int) (C.Set.elements seen);
-          Format.eprintf "Current is %d\n%!" c;
-          Format.eprintf "Result is %a\n%!" pp_ttype tavalue.ttype;
-          Format.eprintf "lcs is %d\n%!" lcs;
-          Format.eprintf "Args are [%a]\n%!" (Format.pp_print_list pp_ttype) (t::ts); *)
           error_undefined ttime time c tavalue;
           aux time (beta tavalue.ttype (t::ts))
-          (* aux (C.Set.add c seen) (R.deref_appuv ~from:lcs ~to_:lcs (t::ts) tavalue.term) *)
         | None ->
           let t1 = aux seen t in
           let ts1 = smart_map (aux seen) ts in
@@ -2969,7 +2951,6 @@ let unfold_type_abbrevs ~is_typeabbrev ~compiler_state lcs type_abbrevs { ttype;
     | TCData _ as a -> a
     | TLam a -> TLam (aux seen a)
   in
-    (* Format.eprintf "Unfold result is %a\n%!" pp_ttype (aux C.Set.empty ttype); *)
     { ttype = aux ttime ttype; tloc; tamap }
 
 
@@ -2989,42 +2970,47 @@ let term_of_ast ~depth state text =
  state, R.move ~argsdepth ~from:depth ~to_:depth env t
 ;;
 
+let is_functional = function TPred (b,_) -> b | _ -> false
+
 let static_check ~exec ~checker:(state,program)
-  ({ WithMain.types; type_abbrevs; functionality; modes; initial_depth; compiler_state } as q) =
+  ({ WithMain.types; type_abbrevs; modes; initial_depth; compiler_state } as q) =
   let time = `Compiletime in
   let state, p,q = quote_syntax time state q in
 
-    (* Building type abbrev list *)
+  
+  let estract_info_from_types tname {Types.lst} (state, tlist, functionality) =
+    let functionality = ref functionality in
+    let state = ref state in
+    let l =
+      List.rev_map (fun { Types.decl = { ttype; tname } } ->
+        let st, c = mkQCon time ~compiler_state !state ~on_type:false tname in
+        let ttypet = unfold_type_abbrevs ~is_typeabbrev:false ~compiler_state initial_depth type_abbrevs ttype 0 in
+        let st, ttypet = quote_pretype time ~compiler_state st ttypet in
+        state := st;
+        begin
+          if is_functional ttype.ttype then
+            let st, f = mkQCon time ~compiler_state st ~on_type:false tname in
+            state := st;
+            functionality := f :: !functionality
+        end;
+        App(colonc,c, [close_w_binder forallc ttypet ttype.tamap])) lst
+    in
+    !state, l :: tlist, !functionality
+  in
+
+  (* Building type abbrev list *)
   let state, talist =
     C.Map.bindings type_abbrevs |>
     map_acc (fun state (name, { tavalue; timestamp=ttime } ) ->
-      (* Printf.eprintf "Unfolding %d %s\n" name (Symbols.show compiler_state name);  *)
       let tavaluet = unfold_type_abbrevs ~is_typeabbrev:true ~compiler_state initial_depth type_abbrevs tavalue ttime in
       let state, tavaluet = quote_pretype time ~compiler_state state tavaluet in
       state, App(colonec, D.C.of_string (Symbols.show compiler_state name), [lam2forall tavaluet])) state
   in
 
-  (* Building types *)
-  let state, tlist = C.Map.fold (fun tname l (state,tl) ->
-    let l = l.Types.lst in
-    let state, l =
-      List.rev l |> map_acc (fun state { Types.decl = { ttype; tname } } ->
-        let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
-        (* Printf.eprintf "Working with the type %s\n" (Symbols.show compiler_state tname); *)
-        let ttypet = unfold_type_abbrevs ~is_typeabbrev:false ~compiler_state initial_depth type_abbrevs ttype 0 in
-        (* Format.eprintf "Going to quote_pretype %a\n%!" pp_ttype ttypet.ttype; *)
-        let state, ttypet = quote_pretype time ~compiler_state state ttypet in
-        state, App(colonc,c, [close_w_binder forallc ttypet ttype.tamap])) state
-      in
-        state, l :: tl)
-      types (state,[]) in
+  (* Building types and functionality *)
+  let state, tlist, functionality = C.Map.fold estract_info_from_types types (state,[],[]) in
   let tlist = List.concat (List.rev tlist) in
   
-  (* Building functionality *)
-  let state, functionality = C.Set.fold (fun tname (state,tl) ->
-    let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
-    state, c :: tl) functionality (state,[]) in
-
   (* Building modes *)
   let arg_mode2bool = function Input -> Const truec | Output -> Const falsec in
 
