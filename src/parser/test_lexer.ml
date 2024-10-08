@@ -28,7 +28,6 @@ type t = Tokens.token =
   | NAMESPACE
   | NAME
   | MODULE
-  | MODE
   | MOD
   | MINUSs
   | MINUSr
@@ -49,6 +48,7 @@ type t = Tokens.token =
   | IMPORT
   | IFF
   | IF
+  | FUNCTIONAL
   | FULLSTOP
   | FRESHUV
   | FLOAT of ( float )

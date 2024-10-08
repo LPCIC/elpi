@@ -25,7 +25,7 @@ typeabbrev string (ctype "string").
 typeabbrev float (ctype "float").
 
 
-pred (;) o:prop, o:prop.
+pred (;) i:prop, i:prop.
 
 (A ; _) :- A.
 
@@ -170,44 +170,52 @@ external pred le_ i:A, i:A.
 % [ge_ X Y] checks if X >= Y. Works for string, int and float
 external pred ge_ i:A, i:A.
 
-type (<), (>), (=<), (>=) A -> A -> prop.
+pred (>) i:A, i:A.
+X > Y :- gt_ X Y.
 
-X  > Y  :- gt_ X Y.
+pred (<) i:A, i:A.
+X < Y :- lt_ X Y.
 
-X  < Y  :- lt_ X Y.
+pred (=<) i:A, i:A.
+X =< Y :- le_ X Y.
 
-X  =< Y :- le_ X Y.
+pred (>=) i:A, i:A.
+X >= Y :- ge_ X Y.
 
-X  >= Y :- ge_ X Y.
+pred (i>) i:int, i:int.
+X i> Y :- gt_ X Y.
 
-type (i<), (i>), (i=<), (i>=) int -> int -> prop.
+pred (i<) i:int, i:int.
+X i< Y :- lt_ X Y.
 
-X i< Y  :- lt_ X Y.
-
-X i> Y  :- gt_ X Y.
-
+pred (i=<) i:int, i:int.
 X i=< Y :- le_ X Y.
 
+pred (i>=) i:int, i:int.
 X i>= Y :- ge_ X Y.
 
-type (r<), (r>), (r=<), (r>=) float -> float -> prop.
+pred (r>) i:float, i:float.
+X r> Y :- gt_ X Y.
 
-X r< Y  :- lt_ X Y.
+pred (r<) i:float, i:float.
+X r< Y :- lt_ X Y.
 
-X r> Y  :- gt_ X Y.
-
+pred (r=<) i:float, i:float.
 X r=< Y :- le_ X Y.
 
+pred (r>=) i:float, i:float.
 X r>= Y :- ge_ X Y.
 
-type (s<), (s>), (s=<), (s>=) string -> string -> prop.
+pred (s>) i:string, i:string.
+X s> Y :- gt_ X Y.
 
-X s< Y  :- lt_ X Y.
+pred (s<) i:string, i:string.
+X s< Y :- lt_ X Y.
 
-X s> Y  :- gt_ X Y.
-
+pred (s=<) i:string, i:string.
 X s=< Y :- le_ X Y.
 
+pred (s>=) i:string, i:string.
 X s>= Y :- ge_ X Y.
 
 %  -- Standard data types (supported in the FFI) --
@@ -565,7 +573,7 @@ assert! Cond Msg :- (Cond ; fatal-error-w-data Msg Cond), !.
 
 % [assert-ok! C M] like assert! but the last argument of the predicate must
 % be a diagnostic that is printed after M in case it is not ok
-pred assert-ok! i:(diagnostic -> prop), i:string.
+pred assert-ok! i:(pred o:diagnostic), i:string.
 assert-ok! Cond Msg :- Cond Diagnostic, !, (Diagnostic = ok ; Diagnostic = error S, fatal-error-w-data Msg S), !.
 assert-ok! _ Msg :- fatal-error-w-data Msg "no diagnostic returned".
 
@@ -640,57 +648,59 @@ split-at 0 L [] L :- !.
 split-at N [X|XS] [X|LN] LM :- !, N1 is N - 1, split-at N1 XS LN LM.
 split-at _ _ _ _ :- fatal-error "split-at run out of list items".
 
-pred fold i:list B, i:A, i:(B -> A -> A -> prop), o:A.
+pred fold i:list B, i:A, i:(pred i:B, i:A, o:A), o:A.
 fold [] A _ A.
 fold [X|XS] A F R :- F X A A1, fold XS A1 F R.
 
-pred fold-right i:list B, i:A, i:(B -> A -> A -> prop), o:A.
+pred fold-right i:list B, i:A, i:(pred i:B, i:A, o:A), o:A.
 fold-right [] A _ A.
 fold-right [X|XS] A F R :- fold-right XS A F A', F X A' R.
 
-pred fold2 i:list C, i:list B, i:A, i:(C -> B -> A -> A -> prop), o:A.
+pred fold2 i:list C, i:list B, i:A, i:(pred i:C, i:B, i:A, o:A), o:A.
 fold2 [] [_|_] _ _ _ :- fatal-error "fold2 on lists of different length".
 fold2 [_|_] [] _ _ _ :- fatal-error "fold2 on lists of different length".
 fold2 [] [] A _ A.
 fold2 [X|XS] [Y|YS] A F R :- F X Y A A1, fold2 XS YS A1 F R.
 
-pred map i:list A, i:(A -> B -> prop), o:list B.
+pred map i:list A, i:(pred i:A, o:B), o:list B.
 map [] _ [].
 map [X|XS] F [Y|YS] :- F X Y, map XS F YS.
 
-pred map-i i:list A, i:(int -> A -> B -> prop), o:list B.
+pred map-i i:list A, i:(pred i:int, i:A, o:B), o:list B.
 map-i L F R :- map-i.aux L 0 F R.
+
+pred map-i.aux i:list A, i:int, i:(pred i:int, i:A, o:B), o:list B.
 map-i.aux [] _ _ [].
 map-i.aux [X|XS] N F [Y|YS] :- F N X Y, M is N + 1, map-i.aux XS M F YS.
 
-pred map-filter i:list A, i:(A -> B -> prop), o:list B.
+pred map-filter i:list A, i:(pred i:A, o:B), o:list B.
 map-filter [] _ [].
 map-filter [X|XS] F [Y|YS] :- F X Y, !, map-filter XS F YS.
 map-filter [_|XS] F YS :- map-filter XS F YS.
 
 :index(1 1)
-pred map2 i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
+pred map2 i:list A, i:list B, i:(pred i:A, i:B, o:C), o:list C.
 map2 [] [_|_] _ _ :- fatal-error "map2 on lists of different length".
 map2 [_|_] [] _ _ :- fatal-error "map2 on lists of different length".
 map2 [] [] _ [].
 map2 [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, map2 XS YS F ZS.
 
-pred map2-filter i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
+pred map2-filter i:list A, i:list B, i:(pred i:A, i:B, o:C), o:list C.
 map2-filter [] [_|_] _ _ :- fatal-error "map2-filter on lists of different length".
 map2-filter [_|_] [] _ _ :- fatal-error "map2-filter on lists of different length".
 map2-filter [] [] _ [].
 map2-filter [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, !, map2-filter XS YS F ZS.
 map2-filter [_|XS] [_|YS] F ZS :- map2-filter XS YS F ZS.
 
-pred map-ok i:list A, i:(A -> B -> diagnostic -> prop), o:list A, o:diagnostic.
+pred map-ok i:list A, i:(pred i:A, i:B, o:diagnostic), o:list A, o:diagnostic.
 map-ok [X|L] P [Y|YS] S :- P X Y S0, if (S0 = ok) (map-ok L P YS S) (S = S0).
 map-ok [] _ [] ok.
 
-pred fold-map i:list A, i:B, i:(A -> B -> C -> B -> prop), o:list C, o:B.
+pred fold-map i:list A, i:B, i:(pred i:A, i:B, o:C, o:B), o:list C, o:B.
 fold-map [] A _ [] A.
 fold-map [X|XS] A F [Y|YS] A2 :- F X A Y A1, fold-map XS A1 F YS A2.
 
-pred omap i:option A, i:(A -> B -> prop), o:option B.
+pred omap i:option A, i:(pred i:A, o:B), o:option B.
 omap none _ none.
 omap (some X) F (some Y) :- F X Y.
 
@@ -721,31 +731,31 @@ pred mem i:list A, o:A.
 mem [X|_] X.
 mem [_|L] X :- mem L X.
 
-pred exists i:list A, i:(A -> prop).
+pred exists i:list A, i:(pred i:A).
 exists [X|_] P :- P X.
 exists [_|L] P :- exists L P.
 
-pred exists2 i:list A, i:list B, i:(A -> B -> prop).
+pred exists2 i:list A, i:list B, i:(pred i:A, i:B).
 exists2 [] [_|_] _ :- fatal-error "exists2 on lists of different length".
 exists2 [_|_] [] _ :- fatal-error "exists2 on lists of different length".
 exists2 [X|_] [Y|_] P :- P X Y.
 exists2 [_|L] [_|M] P :- exists2 L M P.
 
-pred forall i:list A, i:(A -> prop).
+pred forall i:list A, i:(pred i:A).
 forall [] _.
 forall [X|L] P :- P X, forall L P.
 
-pred forall-ok i:list A, i:(A -> diagnostic -> prop), o:diagnostic.
+pred forall-ok i:list A, i:(pred i:A, o:diagnostic), o:diagnostic.
 forall-ok [X|L] P S :- P X S0, if (S0 = ok) (forall-ok L P S) (S = S0).
 forall-ok [] _ ok.
 
-pred forall2 i:list A, i:list B, i:(A -> B -> prop).
+pred forall2 i:list A, i:list B, i:(pred i:A, i:B).
 forall2 [] [_|_] _ :- fatal-error "forall2 on lists of different length".
 forall2 [_|_] [] _ :- fatal-error "forall2 on lists of different length".
 forall2 [X|XS] [Y|YS] P :- P X Y, forall2 XS YS P.
 forall2 [] [] _.
 
-pred filter i:list A, i:(A -> prop), o:list A.
+pred filter i:list A, i:(pred i:A), o:list A.
 filter []    _ [].
 filter [X|L] P R :- if (P X) (R = X :: L1) (R = L1), filter L P L1.
 
@@ -768,6 +778,8 @@ null [].
 
 pred iota i:int, o:list int.
 iota N L :- iota.aux 0 N L.
+
+pred iota.aux i:int, i:int, o:list int.
 iota.aux X X [] :- !.
 iota.aux N X [N|R] :- M is N + 1, iota.aux M X R.
 
@@ -780,7 +792,7 @@ intersperse Sep [X|XS] [X,Sep|YS] :- intersperse Sep XS YS.
 
 %  -- Misc --
 
-pred flip i:(A -> B -> prop), i:B, i:A.
+pred flip i:(pred i:A, i:B), i:B, i:A.
 flip P X Y :- P Y X.
 
 pred time i:prop, o:float.
@@ -791,7 +803,7 @@ do! [].
 do! [P|PS] :- P, !, do! PS.
 
 :index(_ 1)
-pred do-ok! o:diagnostic, i:list (diagnostic -> prop).
+pred do-ok! o:diagnostic, i:list (pred o:diagnostic).
 do-ok! ok [].
 do-ok! S [P|PS] :- P S0, !, if (S0 = ok) (do-ok! S PS) (S = S0).
 
@@ -801,7 +813,7 @@ lift-ok P Msg R :- (P, R = ok; R = error Msg).
 pred spy-do! i:list prop.
 spy-do! L :- map L (x\y\y = spy x) L1, do! L1.
 
-pred while-ok-do! i:diagnostic, i:list (diagnostic -> prop), o:diagnostic.
+pred while-ok-do! i:diagnostic, i:list (pred o:diagnostic), o:diagnostic.
 while-ok-do! (error _ as E) _ E.
 while-ok-do! ok [] ok.
 while-ok-do! ok [P|PS] R :- P C, !, while-ok-do! C PS R.
@@ -1130,12 +1142,12 @@ external pred std.loc.set.partition i:std.loc.set, i:loc -> prop,
 
 #line 0 "builtin_map.elpi"
 kind std.map type -> type -> type.
-type std.map std.map.private.map K V -> (K -> K -> cmp -> prop) -> std.map K V.
+type std.map std.map.private.map K V -> (pred i:K, i:K, o:cmp) -> std.map K V.
 
 namespace std.map {
 
 % [make Eq Ltn M] builds an empty map M where keys are compared using Eq and Ltn
-pred make i:(K -> K -> cmp -> prop), o:std.map K V.
+pred make i:(pred i:K, i:K, o:cmp), o:std.map K V.
 make Cmp (std.map private.empty Cmp).
 
 % [find K M V] looks in M for the value V associated to K
@@ -1176,6 +1188,7 @@ bal L K V R T :-
   HR2 is HR + 2,
   bal.aux HL HR HL2 HR2 L K V R T.
 
+pred bal.aux i:int, i:int, i:int, i:int, i:map K V, i:K, i:V, i:map K V, o:map K V.
 bal.aux HL _ _ HR2 (node LL LV LD LR _) X D R T :-
   HL > HR2, {height LL} >= {height LR}, !,
   create LL LV LD {create LR X D R} T.
@@ -1190,15 +1203,19 @@ bal.aux _ HR HL2 _ L X D (node (node RLL RLV RLD RLR _) RV RD RR _) T :-
   create {create L X D RLL} RLV RLD {create RLR RV RD RR} T.
 bal.aux _ _ _ _ L K V R T :- create L K V R T.
 
-pred add i:map K V, i:(K -> K -> cmp -> prop), i:K, i:V, o:map K V.
+pred add i:map K V, i:(pred i:K, i:K, o:cmp), i:K, i:V, o:map K V.
 add empty _ K V T :- create empty K V empty T.
 add (node _ X _ _ _ as M) Cmp X1 XD M1 :- Cmp X1 X E, add.aux E M Cmp X1 XD M1.
+
+pred add.aux i:cmp, i:map K V, i:(pred i:K, i:K, o:cmp), i:K, i:V, o:map K V.
 add.aux eq (node L _ _ R H) _   X XD T :- T = node L X XD R H. 
 add.aux lt (node L V D R _) Cmp X XD T :- bal {add L Cmp X XD} V D R T.
 add.aux gt (node L V D R _) Cmp X XD T :- bal L V D {add R Cmp X XD} T.
 
-pred find i:map K V, i:(K -> K -> cmp -> prop), i:K, o:V.
+pred find i:map K V, i:(pred i:K, i:K, o:cmp), i:K, o:V.
 find (node L K1 V1 R _) Cmp K V :- Cmp K K1 E, find.aux E Cmp L R V1 K V.
+
+pred find.aux i:cmp, i:(pred i:K, i:K, o:cmp), i:map K V, i:map K V, i:V, i:K, o:V.
 find.aux eq _   _ _ V _ V.
 find.aux lt Cmp L _ _ K V :- find L Cmp K V.
 find.aux gt Cmp _ R _ K V :- find R Cmp K V.
@@ -1218,9 +1235,11 @@ merge M1 M2 R :-
   min-binding M2 X D,
   bal M1 X D {remove-min-binding M2} R.
 
-pred remove i:map K V, i:(K -> K -> cmp -> prop), i:K, o:map K V.
+pred remove i:map K V, i:(pred i:K, i:K, o:cmp), i:K, o:map K V.
 remove empty _ _ empty :- !.
 remove (node L V D R _) Cmp X M :- Cmp X V E, remove.aux E Cmp L R V D X M.
+
+pred remove.aux i:cmp, i:(pred i:K, i:K, o:cmp), i:map K V, i:map K V, i:V, i:K, i:K, o:map K V.
 remove.aux eq _   L R _ _ _ M :- merge L R M.
 remove.aux lt Cmp L R V D X M :- bal {remove L Cmp X} V D R M.
 remove.aux gt Cmp L R V D X M :- bal L V D {remove R Cmp X} M.
@@ -1237,12 +1256,12 @@ bindings (node L V D R _) X X1 :-
 
 #line 0 "builtin_set.elpi"
 kind std.set type -> type.
-type std.set std.set.private.set E -> (E -> E -> cmp -> prop) -> std.set E.
+type std.set std.set.private.set E -> (pred i:E, i:E, o:cmp) -> std.set E.
 
 namespace std.set {
 
 % [make Eq Ltn M] builds an empty set M where keys are compared using Eq and Ltn
-pred make i:(E -> E -> cmp -> prop), o:std.set E.
+pred make i:(pred i:E, i:E, o:cmp), o:std.set E.
 make Cmp (std.set private.empty Cmp).
 
 % [mem E M] looks if E is in M
@@ -1286,6 +1305,7 @@ bal L E R T :-
   HR2 is HR + 2,
   bal.aux HL HR HL2 HR2 L E R T.
 
+pred bal.aux i:int, i:int, i:int, i:int, i:set E, i:E, i:set E, o:set E.
 bal.aux HL _ _ HR2 (node LL LV LR _) X R T :-
   HL > HR2, {height LL} >= {height LR}, !,
   create LL LV {create LR X R} T.
@@ -1300,16 +1320,20 @@ bal.aux _ HR HL2 _ L X (node (node RLL RLV RLR _) RV RR _) T :-
   create {create L X RLL} RLV {create RLR RV RR} T.
 bal.aux _ _ _ _ L E R T :- create L E R T.
 
-pred add i:set E, i:(E -> E -> cmp -> prop), i:E, o:set E.
+pred add i:set E, i:(pred i:E, i:E, o:cmp), i:E, o:set E.
 add empty _ E T :- create empty E empty T.
 add (node L X R H) Cmp X1 S :- Cmp X1 X E, add.aux E Cmp L R X X1 H S.
-add.aux eq _ L R X _ H (node L X R H).
+
+pred add.aux i:cmp, i:(pred i:E, i:E, o:cmp), i:set E, i:set E, i:E, i:E, i:int, o:set E.
+add.aux eq _   L R X _ H (node L X R H).
 add.aux lt Cmp L R E X _ T :- bal {add L Cmp X} E R T.
 add.aux gt Cmp L R E X _ T :- bal L E {add R Cmp X} T.
 
-pred mem i:set E, i:(E -> E -> cmp -> prop), i:E.
+pred mem i:set E, i:(pred i:E, i:E, o:cmp), i:E.
 mem (node L K R _) Cmp E :- Cmp E K O, mem.aux O Cmp L R E.
 mem.aux eq _ _ _ _.
+
+pred mem.aux i:cmp, i:(pred i:E, i:E, o:cmp), i:set E, i:set E, i:E.
 mem.aux lt Cmp L _ E :- mem L Cmp E.
 mem.aux gt Cmp _ R E :- mem R Cmp E.
 
@@ -1328,9 +1352,11 @@ merge M1 M2 R :-
   min-binding M2 X,
   bal M1 X {remove-min-binding M2} R.
 
-pred remove i:set E, i:(E -> E -> cmp -> prop), i:E, o:set E.
+pred remove i:set E, i:(pred i:E, i:E, o:cmp), i:E, o:set E.
 remove empty _ _ empty.
 remove (node L E R _) Cmp X M :- Cmp X E O, remove.aux O Cmp L R E X M.
+
+pred remove.aux i:cmp, i:(pred i:E, i:E, o:cmp), i:set E, i:set E, i:E, i:E, o:set E.
 remove.aux eq _   L R _ _ M :- merge L R M.
 remove.aux lt Cmp L R E X M :- bal {remove L Cmp X} E R M.
 remove.aux gt Cmp L R E X M :- bal L E {remove R Cmp X} M.

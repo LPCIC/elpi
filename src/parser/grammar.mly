@@ -13,6 +13,8 @@ open Parser_config
 open Ast
 open Term
 
+open TypeExpression
+
 
 let loc (startpos, endpos) = {
   Util.Loc.source_name = startpos.Lexing.pos_fname;
@@ -92,8 +94,8 @@ let prop = Func.from_string "prop"
 let fix_church x = if Func.show x = "o" then prop else x
 
 let mode_of_IO io =
-  if io = 'i' then true
-  else if io = 'o' then false
+  if io = 'i' then Mode.Input
+  else if io = 'o' then Mode.Output
   else assert false
 
 %}
@@ -130,10 +132,9 @@ program:
 decl:
 | c = clause; FULLSTOP { Program.Clause c }
 | r = chr_rule; FULLSTOP { Program.Chr r }
-| p = pred; FULLSTOP { Program.Pred (snd p, fst p) }
+| p = pred; FULLSTOP { Program.Pred p }
 | t = type_; FULLSTOP { Program.Type t }
 | t = kind; FULLSTOP { Program.Type t }
-| m = mode; FULLSTOP { Program.Mode [m] }
 | m = macro; FULLSTOP { Program.Macro m }
 | CONSTRAINT; hyps = list(constant); QDASH; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, hyps, cl) }
 | CONSTRAINT; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, [], cl) }
@@ -174,15 +175,15 @@ chr_rule:
 
 pred:
 | attributes = attributes; PRED;
-  c = constant; args = separated_list(option(CONJ),pred_item) {
-   let name = c in
-   { Mode.loc=loc $sloc; name; args = List.map fst args },
-   { Type.loc=loc $sloc; attributes; name;
-     ty = List.fold_right (fun (_,t) ty ->
-       mkApp (loc $loc(c)) [mkCon (t.loc)(* BUG *)"->";t;ty]) args (mkCon (loc $sloc) (* BUG *) "prop") }
+  name = constant; args = separated_list(option(CONJ),pred_item) {
+   { Type.loc=loc $sloc; name; attributes; ty = TPred ([], args) }
  }
 pred_item:
 | io = IO_COLON; ty = type_term { (mode_of_IO io,ty) }
+
+anonymous_pred:
+| attributes = attributes; PRED;
+  args = separated_list(option(CONJ),pred_item) { TPred (attributes, args) }
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
@@ -197,25 +198,20 @@ type_:
   }
 
 atype_term:
-| c = STRING { mkC (loc $loc) (cstring.Util.CData.cin c) }
-| c = constant { mkConst (loc $loc(c)) (fix_church c) }
+| c = STRING { TCData (cstring.Util.CData.cin c) }
+| c = constant { TConst (fix_church c) }
 | LPAREN; t = type_term; RPAREN { t }
+| LPAREN; t = anonymous_pred; RPAREN { t }
 type_term:
-| c = constant { mkConst (loc $loc(c)) (fix_church c) }
-| hd = constant; args = nonempty_list(atype_term) { mkAppF (loc $loc) (loc $loc(hd),hd) args }
-| hd = type_term; a = ARROW; t = type_term { mkApp (loc $loc) [mkCon (loc $loc(a)) "->"; hd; t] }
+| c = constant { TConst (fix_church c) }
+| hd = constant; args = nonempty_list(atype_term) { TApp (hd, List.hd args, List.tl args) }
+| hd = type_term; ARROW; t = type_term { TArr (hd, t) }
+| LPAREN; t = anonymous_pred; RPAREN { t }
 | LPAREN; t = type_term; RPAREN { t }
 
 kind_term:
-| TYPE { mkCon (loc $loc) "type" }
-| hd = TYPE; ARROW; t = kind_term { mkApp (loc $loc(hd)) [mkCon (loc $loc) "->"; mkCon (loc $loc) "type"; t] }
-
-mode:
-| MODE; LPAREN; c = constant; l = nonempty_list(i_o); RPAREN {
-    { Mode.name = c; args = l; loc = loc $sloc } 
-}
-i_o:
-| io = IO { mode_of_IO io }
+| TYPE { TConst (Func.from_string "type") }
+| TYPE; ARROW; t = kind_term { TArr (TConst (Func.from_string "type"), t) }
 
 macro:
 | MACRO; m = term; VDASH; b = term {
@@ -227,7 +223,8 @@ typeabbrev:
 | TYPEABBREV; a = abbrevform; t = type_term {
     let name, args = a in
     let nparams = List.length args in
-    let value = List.fold_right (fun (n,loc) -> mkLam loc (Func.show n)) args t in
+    let mkLam (n,_) body =  TypeAbbreviation.Lam (n, body) in
+    let value = List.fold_right mkLam args (Ty t) in
     { TypeAbbreviation.name = name;
       nparams = nparams;
       value = value;
@@ -310,6 +307,7 @@ attribute:
 | REPLACE; s = STRING { Replace s }
 | REMOVE; s = STRING { Remove s }
 | EXTERNAL { External }
+| FUNCTIONAL { Functional }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
 
 indexing:

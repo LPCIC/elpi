@@ -145,6 +145,16 @@ let () = declare "spilling_and"
   ~description:"spilling anonymous compound goal"
   ()
 
+let () = declare "spilling_or"
+  ~source_elpi:"spill_or.elpi"
+  ~description:"spilling prem order"
+  ()
+
+let () = declare "spilling_in_list"
+  ~source_elpi:"spill_in_list.elpi"
+  ~description:"spilling prem order"
+  ()
+
 let () = declare "block"
   ~source_elpi:"block.elpi"
   ~description:"blocks are closed"
@@ -160,7 +170,8 @@ let () = declare "elpi_only_llam"
 let () = declare "hollight"
   ~source_elpi:"hollight.elpi"
   ~description:"hollight implementation"
-  ~expectation:Test.(FailureOutput (Str.regexp "line 231")) (* needs advanced modes *)
+  (* ~expectation:Test.(FailureOutput (Str.regexp "Mode is a no more maintained keyword")) needs advanced modes *)
+  ~expectation:Test.Failure
   ()
 let () = declare "hollight_legacy"
   ~source_elpi:"hollight_legacy.elpi"

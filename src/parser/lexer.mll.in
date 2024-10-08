@@ -145,7 +145,6 @@ and token = parse
 | "accumulate" { ACCUMULATE }
 | "local" { LOCAL }
 | "pred" { PRED }
-| "mode" { MODE }
 | "macro" { MACRO }
 | "rule" { RULE }
 | "namespace" { NAMESPACE }
@@ -172,6 +171,7 @@ and token = parse
 | "pi" { PI }
 | "sigma" { SIGMA }
 | "after" { AFTER }
+| "functional" { FUNCTIONAL }
 | "before" { BEFORE }
 | "replace" { REPLACE }
 | "remove" { REMOVE }

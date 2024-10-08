@@ -192,7 +192,55 @@ let () = declare "is"
   ~description:"calc"
   ()
 
-  let () = declare "trie"
+let () = declare "trie"
   ~source_elpi:"trie.elpi"
   ~description:"discrimination_tree on trees"
+  ()
+
+let mode_check expected fname =
+  let is_in_file = Util.has_substring ~sub:fname in
+  let start_warning = String.starts_with ~prefix:"WARNING" in
+  let pos = ref 0 in
+  let check_same x =
+    let res = try Str.(search_forward (regexp expected.(!pos))) x 0 |> ignore; true
+              with Not_found -> false in
+    if not res then Printf.eprintf "Expected [[%s]]; \nFound    [[%s]]\n" expected.(!pos) x;
+    incr pos; 
+    res in
+  let rec f = function
+    | [] | [_] -> true
+    | x :: x' :: xs when start_warning x && is_in_file x' ->
+      check_same x && f xs
+    | x :: x' :: x'' :: xs when start_warning x && is_in_file x'' ->
+      check_same x && check_same x' && f xs
+    | _ :: xs -> f xs in
+    f
+
+let () = declare "mode_checking_fo"
+  ~source_elpi:"mode_checking_fo.elpi"
+  ~description:"mode_checking_fo"
+  ~expectation:(SuccessOutputTxt (
+    let expected = [|
+      "WARNING: Not ground Y passed to p "; 
+      "WARNING: The variables \\[Y\\] are in output position of the predicate\" "; 
+      "\"and cannot be ensured to be ground "|] in
+    mode_check expected "mode_checking_fo"
+    ))
+  ()
+
+let () = declare "mode_checking_ho"
+  ~source_elpi:"mode_checking_ho.elpi"
+  ~description:"mode_checking_ho"
+  ~expectation:(SuccessOutputTxt (
+    let expected = [|
+      "WARNING: Not ground Z passed to p "; 
+      "WARNING: Not ground (con Z) passed to p ";
+      "WARNING: Not ground X[0-9]+ c[0-9]+ passed to p ";
+      "WARNING: Passed flexible to , ";
+      "WARNING: Not ground C passed to c0 ";
+      "WARNING: The variables \\[C\\] are in output position of the predicate\" ";
+      "\"and cannot be ensured to be ground "
+      |] in
+    mode_check expected "mode_checking_ho"
+    ))
   ()

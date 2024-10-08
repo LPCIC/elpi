@@ -39,6 +39,35 @@ module Func : sig
   module Map : Map.S with type key = t
 end
 
+module Mode : sig
+
+  type mode = Input | Output
+  [@@deriving show, ord]
+
+end
+
+type raw_attribute =
+  | If of string
+  | Name of string
+  | After of string
+  | Before of string
+  | Replace of string
+  | Remove of string
+  | External
+  | Index of int list * string option
+  | Functional
+[@@ deriving show]
+
+module TypeExpression : sig
+  type t =
+   | TConst of Func.t
+   | TApp of Func.t * t * t list
+   | TPred of raw_attribute list * ((Mode.mode * t) list)
+   | TArr of t * t
+   | TCData of CData.t
+  [@@ deriving show, ord]
+end
+
 module Term : sig
 
   type t_ =
@@ -84,17 +113,6 @@ end
   
 end *)
 
-type raw_attribute =
-  | If of string
-  | Name of string
-  | After of string
-  | Before of string
-  | Replace of string
-  | Remove of string
-  | External
-  | Index of int list * string option
-[@@ deriving show]
-
 module Clause : sig
 
   type ('term,'attributes) t = {
@@ -137,25 +155,22 @@ module Type : sig
     loc : Loc.t;
     attributes : 'attribute;
     name : Func.t;
-    ty : Term.t;
+    ty : TypeExpression.t;
   }
   [@@ deriving show]
 
 end
 
-module Mode : sig
-
-  type 'name t =
-    { name : 'name; args : bool list; loc : Loc.t }
-  [@@ deriving show, ord]
-
-end
-
 module TypeAbbreviation : sig
 
+  type closedTypeexpression = 
+    | Lam of Func.t * closedTypeexpression 
+    | Ty of TypeExpression.t
+  [@@ deriving show, ord]
+
   type ('name) t =
-    { name : 'name; value : Term.t; nparams : int; loc : Loc.t }
-  [@@ deriving show]
+    { name : 'name; value : closedTypeexpression; nparams : int; loc : Loc.t }
+  [@@ deriving show, ord]
 
 end
 
@@ -174,11 +189,10 @@ module Program : sig
     (* data *)
     | Clause of (Term.t, raw_attribute list) Clause.t
     | Local of Func.t list
-    | Mode of Func.t Mode.t list
     | Chr of raw_attribute list Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Type of raw_attribute list Type.t list
-    | Pred of raw_attribute list Type.t * Func.t Mode.t
+    | Pred of raw_attribute list Type.t
     | TypeAbbreviation of Func.t TypeAbbreviation.t
     | Ignored of Loc.t
   [@@ deriving show]
@@ -212,7 +226,8 @@ type program = {
   macros : (Func.t, Term.t) Macro.t list;
   types : tattribute Type.t list;
   type_abbrevs : Func.t TypeAbbreviation.t list;
-  modes : Func.t Mode.t list;
+  modes : tattribute Type.t list;
+  functionality : Func.t list;
   body : block list;
 }
 and block_constraint = {
@@ -240,6 +255,7 @@ and cattribute = {
 and tattribute =
   | External
   | Index of int list * tindex option
+  | Functional
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;

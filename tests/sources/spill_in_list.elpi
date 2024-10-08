@@ -1,0 +1,10 @@
+pred p o:A, o:A.
+
+pred print-list i:A.
+print-list X :- print X.
+
+main :- 
+  std.do! [
+    CL = [],
+    print-list {std.map CL p},
+  ].

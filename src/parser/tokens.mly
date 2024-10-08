@@ -33,7 +33,6 @@
 %token MINUSr
 %token MINUSi
 %token MINUSs
-%token MODE
 %token MACRO
 %token RULE
 %token NAMESPACE
@@ -57,6 +56,7 @@
 %token IF
 %token BEFORE
 %token AFTER
+%token FUNCTIONAL
 %token REPLACE
 %token REMOVE
 %token NAME 

@@ -2380,9 +2380,8 @@ let tail_opt = function
   | [] -> []
   | _ :: xs -> xs
 
-(** [hd_opt L] returns false if L = [[]] otherwise L.(0)  *)
 let hd_opt = function
-  | b :: _ -> b
+  | x :: _ -> get_arg_mode x
   | _ -> Output
 
 type clause_arg_classification =
@@ -2519,7 +2518,7 @@ let hash_goal_arg_list = hash_arg_list true
   node before each argument to be indexed. This special node is used during 
   instance retrival to know the mode of the current argument
 *)
-let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_modes mp : Discrimination_tree.Path.t =
+let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode mp : Discrimination_tree.Path.t =
   let open Discrimination_tree in
   let path = Path.make (max mp 8) mkPathEnd in
   
@@ -2619,17 +2618,17 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
     aux ~safe ~depth is_goal arg_tl arg_depth_tl mode_tl
 
   (** main function: build the path of the arguments received in entry  *)
-  and aux ~safe ~depth is_goal args arg_depths arg_mode =
-    match args, arg_depths, arg_mode with 
+  and aux ~safe ~depth is_goal args arg_depths mode =
+    match args, arg_depths, mode with 
     | _, [], _ -> ()
     | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, [] ->
       make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl Output []
     | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, mode_hd :: mode_tl ->
-      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl 
+      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl (get_arg_mode mode_hd) mode_tl 
     | _, _ :: _,_ -> anomaly "Invalid Index length" in
   begin
     if args == [] then emit_mode is_goal mkOutputMode
-    else aux ~safe ~depth is_goal args (if is_goal then Array.to_list args_depths_ar else arg_depths) arg_modes
+    else aux ~safe ~depth is_goal args (if is_goal then Array.to_list args_depths_ar else arg_depths) mode
   end;
   Path.stop path  
 
@@ -4008,7 +4007,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
           | x :: xs -> arg != C.dummy &&
              match c_mode with
              | [] -> unif ~argsdepth:depth ~matching:false (gid[@trace]) depth env c_depth arg x && for_all23 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs
-             | arg_mode :: ms -> unif ~argsdepth:depth ~matching:(arg_mode == Input) (gid[@trace]) depth env c_depth arg x && for_all3b3 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs ms false
+             | arg_mode :: ms -> unif ~argsdepth:depth ~matching:(get_arg_mode arg_mode == Input) (gid[@trace]) depth env c_depth arg x && for_all3b3 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs ms false
         with
         | false ->
             T.undo ~old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cs]

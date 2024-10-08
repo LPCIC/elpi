@@ -1,5 +1,4 @@
-type  if prop -> prop -> prop -> prop.
-mode (if i i i).
+pred  if i:prop, i:prop, i:prop.
 if B T _ :- B, !, T.
 if _ _ E :- E.
 

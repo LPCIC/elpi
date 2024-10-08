@@ -1,4 +1,4 @@
-mode (term i o).
+pred term i:A, o:B.
 
 term (app X Y) B :- term X (arr A B), term Y A.
 term (lam A F) (arr A B) :- pi x\ term x A => term (F x) B.
@@ -29,7 +29,7 @@ compatible _ _ _ _ [false].
 spy P :- print "[" P, P, print "]ok", !.
 spy P :- print "]fail", fail.
 
-mode (watch i).
+pred watch i:A.
 watch (uvar as X) :- declare_constraint (print "watch" X) [X], !.
 watch X :- print "watch" X.
 

@@ -84,6 +84,23 @@ let equal_stuck_goal_kind _ x y = x == y
 type 'unification_def stuck_goal_kind +=
   | Unification of 'unification_def
 
+type arg_mode = Util.arg_mode = Input | Output [@@deriving show, ord]
+
+type mode_aux = Util.mode_aux =
+  | Fo of arg_mode
+  | Ho of arg_mode * mode
+and mode = mode_aux list
+[@@ deriving show, ord]
+
+type ttype =
+  | TConst of constant
+  | TApp of constant * ttype * ttype list
+  | TPred of bool * ((arg_mode * ttype) list) (* The bool is for functionality *)
+  | TArr of ttype * ttype
+  | TCData of CData.t
+  | TLam of ttype (* this is for parametrized typeabbrevs *)
+  [@@ deriving show, ord]
+
 type term =
   (* Pure terms *)
   | Const of constant
@@ -108,6 +125,8 @@ and uvar_body = {
 }
 [@@deriving show, ord]
 
+let cons2tcons ?(loc=Loc.initial"") = function Const t -> TConst t | _ -> anomaly ~loc "Unreachable branch"
+
 (* we use this projection to be sure we ignore the sign *)
 let uvar_id { uid_private } = abs uid_private [@@inline];;
 let uvar_is_a_blocker   { uid_private } = uid_private < 0 [@@inline];;
@@ -115,8 +134,6 @@ let uvar_isnt_a_blocker { uid_private } = uid_private > 0 [@@inline];;
 
 let uvar_set_blocker r   = r.uid_private <- -(uvar_id r) [@@inline];;
 let uvar_unset_blocker r = r.uid_private <-  (uvar_id r) [@@inline];;
-
-type arg_mode = Util.arg_mode = Input | Output [@@deriving show, ord]
 
 type clause = {
     depth : int;
@@ -127,11 +144,10 @@ type clause = {
     loc : Loc.t option; (* debug *)
     mutable timestamp : int list; (* for grafting *)
 }
-and 
-mode = arg_mode list
 [@@deriving show, ord]
 
-let to_mode = function true -> Input | false -> Output
+let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
+let to_mode = function true -> Fo Input | false -> Fo Output
 
 type grafting_time = int list
 [@@deriving show, ord]
