@@ -231,3 +231,24 @@ let () = declare "mode_checking_ho"
     mode_check expected "mode_checking_ho"
     ))
   ()
+
+let () =
+  let status = Test.
+    [|Failure; Success; Failure; Success; Failure; (*05*)
+      Success; Failure; Failure; Failure; Failure; (*10*)
+      Failure; Success; Failure; Failure; Success; (*15*)
+      Success; Success; Failure; Failure; Success; (*20*)
+      Failure; Success; Failure; Failure; Failure; (*25*)
+      Failure; Failure; Success; Success; Failure|] in
+  let ignore = [1;5;7;8;9;10;11;13;16;17;20;24;26;27;28;30] in
+  (* interesting tests:24 *)
+  for i = 0 to -1 (* Array.length status - 1*) do
+    if not (List.mem (i+1) ignore) then (
+    let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
+    let descr = Printf.sprintf "functionality%d" (i+1) in
+    declare descr
+    ~source_elpi:name
+    ~description:descr
+    ~expectation:status.(i)
+    ())
+  done

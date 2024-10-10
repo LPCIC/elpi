@@ -2,7 +2,8 @@
   (name elpi_compiler)
   (public_name elpi.compiler)
   (preprocess (per_module
-    ((pps ppx_deriving.std) compiler_data compiler determinacy_checker)))
+    ((pps ppx_deriving.std ppx_inline_test) compiler_data compiler determinacy_checker)))
+  (inline_tests)
   (libraries re.str unix stdlib-shims elpi.parser elpi.util elpi.runtime)
   (modules compiler_data type_checker determinacy_checker compiler)
 )
