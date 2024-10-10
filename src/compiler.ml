@@ -555,56 +555,6 @@ module C = Constants
 }
 [@@deriving show, ord] *)
 
-module Types = struct
-
-type typ = (Ast.Structured.tattribute,Ast.Structured.functionality) Ast.Type.t
-[@@deriving show, ord]
-
-module Set = Util.Set.Make(struct
-  type t = typ
-  let compare = compare_typ
-  let show = show_typ
-  let pp = pp_typ
-end)
-
-type types = {
-  set : Set.t;
-  lst : typ list;
-  def : typ;
-} [@@deriving show, ord]
-
-let make t = { set = Set.singleton t; lst = [t]; def = t }
-
-let merge t1 t2 =
-  let l2 = List.filter (fun t -> not @@ Set.mem t t1.set) t2.lst in
-  match l2 with
-  | [] -> t1
-  | _ :: _ ->
-    {
-      set = Set.union t1.set t2.set;
-      lst = t1.lst @ l2;
-      def = t2.def;
-    }
-
-let smart_map (f : typ -> typ) (t : types) : types =
-  let set' = Set.map f t.set in
-  let lst' = smart_map f t.lst in
-  let def' = f t.def in
-  if set' == t.set && lst' == t.lst && def' == t.def then t
-  else { set = set'; lst = lst'; def = def' }
-
-let append x t = {
-  set = Set.add x t.set;
-  lst = x :: t.lst;
-  def = t.def;
-}
-
-let fold f accu t = List.fold_left f accu t.lst
-let iter f t = List.iter f t.lst
-let for_all f t = List.for_all f t.lst
-
-end
-
 module ScopedTerm = struct
 
   type scope = Local | Global
@@ -677,7 +627,7 @@ module ScopedTypeExpression = struct
     | Ty of e
   [@@ deriving show]
 
-  type t = { name : F.t; value : v_; nparams : int; loc : Loc.t }
+  type t = { name : F.t; value : v_; nparams : int; loc : Loc.t; indexing : Ast.Structured.tattribute option }
   [@@ deriving show]
 
   let rec eqt ctx t1 t2 =
@@ -700,6 +650,58 @@ module ScopedTypeExpression = struct
 
 end
 
+module Types = struct
+
+  type typ = ScopedTypeExpression.t
+  [@@deriving show, ord]
+  
+  module Set = Util.Set.Make(struct
+    type t = typ
+    open ScopedTypeExpression
+   let compare { name = name1 } { name = name2 } = F.compare name1 name2
+    let show = show_typ
+    let pp = pp_typ
+  end)
+  
+  type types = {
+    set : Set.t;
+    lst : typ list;
+    def : typ;
+  } [@@deriving show, ord]
+  
+  let make t = { set = Set.singleton t; lst = [t]; def = t }
+  
+  let merge t1 t2 =
+    let l2 = List.filter (fun t -> not @@ Set.mem t t1.set) t2.lst in
+    match l2 with
+    | [] -> t1
+    | _ :: _ ->
+      {
+        set = Set.union t1.set t2.set;
+        lst = t1.lst @ l2;
+        def = t2.def;
+      }
+  
+  let smart_map (f : typ -> typ) (t : types) : types =
+    let set' = Set.map f t.set in
+    let lst' = smart_map f t.lst in
+    let def' = f t.def in
+    if set' == t.set && lst' == t.lst && def' == t.def then t
+    else { set = set'; lst = lst'; def = def' }
+  
+  let append x t = {
+    set = Set.add x t.set;
+    lst = x :: t.lst;
+    def = t.def;
+  }
+  
+  let fold f accu t = List.fold_left f accu t.lst
+  let iter f t = List.iter f t.lst
+  let for_all f t = List.for_all f t.lst
+  
+end
+  
+  
 type macro_declaration = (ScopedTerm.t * Loc.t) F.Map.t
 [@@ deriving show, ord]
 
@@ -1221,7 +1223,7 @@ end = struct
       | Ast.TypeAbbreviation.Lam(c,loc,_) -> error ~loc "only variables can be abstracted in type schema"
       | Ast.TypeAbbreviation.Ty t -> ScopedTypeExpression.Ty (scope_loc_tye ctx t)
   in
-    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc }
+    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; indexing = None }
 
   let compile_type_abbrev abbrvs ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
     let ab = scope_type_abbrev ab in
