@@ -621,6 +621,7 @@ module ScopedTerm = struct
   [@@ deriving show]
 
   type ctx = { vmap : (F.t * F.t) list; uvmap : (F.t * F.t) list ref }
+  let empty_ctx () = { vmap = []; uvmap = ref [] }
 
   let eq_var { vmap } c1 c2 = List.mem (c1,c2) vmap
 
@@ -651,7 +652,7 @@ module ScopedTerm = struct
       | CData c1, CData c2 -> CData.equal c1 c2
       | _ -> false
     in
-      eq { vmap = []; uvmap = ref [] } t1 t2
+      eq (empty_ctx ()) t1 t2
 
     let compare _ _ = assert false
 
@@ -674,7 +675,10 @@ module ScopedTypeExpression = struct
   type v_ =
     | Lam of F.t * v_
     | Ty of e
+  [@@ deriving show]
+
   type t = { name : F.t; value : v_; nparams : int; loc : Loc.t }
+  [@@ deriving show]
 
   let rec eqt ctx t1 t2 =
     match t1.it, t2.it with
@@ -692,6 +696,8 @@ module ScopedTypeExpression = struct
     | Ty t1, Ty t2 -> eqt ctx t1 t2
     | _ -> false
 
+  let compare _ _ = assert false
+
 end
 
 type macro_declaration = (ScopedTerm.t * Loc.t) F.Map.t
@@ -706,7 +712,7 @@ type program = {
 }
 and pbody = {
   types : Types.types F.Map.t;
-  type_abbrevs : (F.t,ScopedTerm.t) Ast.TypeAbbreviation.t F.Map.t;
+  type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   body : block list;
   symbols : F.Set.t;
@@ -729,7 +735,7 @@ module Flat = struct
 type program = {
   toplevel_macros : macro_declaration;
   types : Types.types F.Map.t;
-  type_abbrevs : (F.t,ScopedTerm.t) Ast.TypeAbbreviation.t F.Map.t;
+  type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
@@ -750,7 +756,7 @@ module Assembled = struct
 type program = {
   (* clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list; for printing *)
   types : Types.types F.Map.t;
-  type_abbrevs : (F.t,ScopedTerm.t) Ast.TypeAbbreviation.t F.Map.t;
+  type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
 
   prolog_program : index;
@@ -791,7 +797,7 @@ module WithMain = struct
 (* The entire program + query, but still in "printable" format *)
 type 'a query = {
   types : Types.types F.Map.t;
-  type_abbrevs : (F.t,ScopedTerm.t) Ast.TypeAbbreviation.t F.Map.t;
+  type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   (* clauses : (preterm,Assembled.attribute) Ast.Clause.t list; *)
   prolog_program : index;
@@ -1191,6 +1197,8 @@ end = struct
     let it = scope_term ctx ~loc it in
     { ScopedTerm.it; loc }
 
+  let scope_loc_term = scope_loc_term F.Set.empty
+
   let rec scope_tye ctx ~loc t =
     match t with
     | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(ScopedTerm.Local,c))
@@ -1215,17 +1223,14 @@ end = struct
   in
     { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc }
 
-  let scope_loc_term = scope_loc_term F.Set.empty
-
-  let compile_type_abbrev abbrvs { Ast.TypeAbbreviation.name; value; nparams; loc } =
-    let value = scope_loc_term value in
+  let compile_type_abbrev abbrvs ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
+    let ab = scope_type_abbrev ab in
     if F.Map.mem name abbrvs then begin
-      let { Ast.TypeAbbreviation.loc = otherloc; nparams = othernparams; value = othervalue; } = F.Map.find name abbrvs in
-      if nparams != othernparams || not @@ ScopedTerm.equal othervalue value then
+      let { ScopedTypeExpression.loc = otherloc; nparams = othernparams; value = othervalue; } = F.Map.find name abbrvs in
+      if nparams != othernparams || not @@ ScopedTypeExpression.eq (ScopedTerm.empty_ctx ()) othervalue ab.value then
         error ~loc ("duplicate type abbreviation for " ^ F.show name ^ ". Previous declaration: " ^ Loc.show otherloc);
     end;
-    let abbrv = { Ast.TypeAbbreviation.name; value; nparams; loc } in
-    F.Map.add name abbrv abbrvs
+    F.Map.add name ab abbrvs
 
   let check_duplicate_mode name (mode, loc) map =
     if F.Map.mem name map && fst (F.Map.find name map) <> mode then
@@ -1233,7 +1238,7 @@ end = struct
         ("Duplicate mode declaration for " ^ F.show name ^ " (also at "^
           Loc.show (snd (F.Map.find name map)) ^ ")")
 
-  let compile_mode modes { Ast.Mode.name; args; loc } =
+  let compile_mode modes { Ast.Mode.name; args; loc } = THESE ARE NOW TYPES
     let args = List.map to_mode args in
     (* check_duplicate_mode name (args,loc) modes; *)
     F.Map.add name (args,loc) modes
@@ -2310,9 +2315,9 @@ end (* }}} *)
     Types.types F.Map.t ->
     Types.types F.Map.t
   val merge_type_abbrevs :
-    (F.t, ScopedTerm.t) Ast.TypeAbbreviation.t F.Map.t ->
-    (F.t, ScopedTerm.t) Ast.TypeAbbreviation.t F.Map.t ->
-    (F.t, ScopedTerm.t) Ast.TypeAbbreviation.t F.Map.t
+    ScopedTypeExpression.t F.Map.t ->
+    ScopedTypeExpression.t F.Map.t ->
+    ScopedTypeExpression.t F.Map.t
 
  end = struct
 
@@ -2338,26 +2343,30 @@ end (* }}} *)
 
   let apply_subst_scoped_term f t =
     let open ScopedTerm in
-    let rec aux ({ it; loc } as t) =
+    let rec aux it =
       match it with
-      | Const(Local,_) -> t
-      | Const(Global,c) -> let c' = f c in if c == c' then t else { it = Const(Global,c'); loc }
+      | Const(Local,_) -> it
+      | Const(Global,c) -> let c' = f c in if c == c' then it else Const(Global,c')
       | App(scope,c,x,xs) ->
           let c' = if scope = Global then f c else c in
-          let x' = aux x in
-          let xs' = smart_map aux xs in
-          if c == c' && x == x' && xs == xs' then t
-          else { it = App(scope,c',x',xs'); loc }
+          let x' = aux_loc x in
+          let xs' = smart_map aux_loc xs in
+          if c == c' && x == x' && xs == xs' then it
+          else App(scope,c',x',xs')
       | Lam(n,b) ->
-          let b' = aux b in
-          if b == b' then t else { it = Lam(n,b'); loc }
+          let b' = aux_loc b in
+          if b == b' then it else Lam(n,b')
       | Var(c,l) ->
-          let l' = smart_map aux l in
-          if l == l' then t else { it = Var(c,l'); loc }
-      | Discard -> t
-      | CData _ -> t
+          let l' = smart_map aux_loc l in
+          if l == l' then it else Var(c,l')
+      | Discard -> it
+      | CData _ -> it
+    and aux_loc ({ it; loc } as orig) =
+      let it' = aux it in
+      if it == it' then orig
+      else { it = it'; loc }
     in
-      aux t
+      aux_loc t
 
   let map_clause f ({ Ast.Clause.body } as x) =
     let body' = f body in
@@ -2401,13 +2410,28 @@ end (* }}} *)
   let apply_subst_types s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) (apply_subst_types s v) m) l F.Map.empty
 
+  let rec apply_subst_scoped_type f { ScopedTypeExpression.it; loc } = { ScopedTypeExpression.it = aux f it; loc }
+  and aux f = function
+    | ScopedTypeExpression.Const(ScopedTerm.Local,_) as x -> x
+    | ScopedTypeExpression.Const(ScopedTerm.Global,c) -> ScopedTypeExpression.Const(ScopedTerm.Global,f c)
+    | ScopedTypeExpression.CData _ as x -> x
+    | ScopedTypeExpression.App(c,x,xs) -> ScopedTypeExpression.App(c,apply_subst_scoped_type f x, List.map (apply_subst_scoped_type f) xs)
+    | ScopedTypeExpression.Arrow(s,t) -> ScopedTypeExpression.Arrow(apply_subst_scoped_type f s, apply_subst_scoped_type f t)
+    | ScopedTypeExpression.Pred(p,l) -> ScopedTypeExpression.Pred(p,List.map (fun (m,t) -> m,apply_subst_scoped_type f t) l) 
+
+  let apply_subst_scoped_type_expression f t =
+    let rec aux = function
+      | ScopedTypeExpression.Lam(c,t) -> ScopedTypeExpression.Lam(c,aux t)
+      | ScopedTypeExpression.Ty ty -> ScopedTypeExpression.Ty(apply_subst_scoped_type f ty) in
+    t
+
   let apply_subst_modes s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
 
-  let apply_subst_type_abbrevs s { Ast.TypeAbbreviation.name; value; nparams; loc } =
+  let apply_subst_type_abbrevs s { ScopedTypeExpression.name; value; nparams; loc } =
     let name = subst_global s name in
-    let value = apply_subst_scoped_term (subst_global s) value in
-    { Ast.TypeAbbreviation.name; value; nparams; loc }
+    let value = apply_subst_scoped_type_expression (subst_global s) value in
+    { ScopedTypeExpression.name; value; nparams; loc }
 
   let apply_subst_type_abbrevs s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
@@ -2422,11 +2446,11 @@ end (* }}} *)
         F.Map.add k v m)
       m2 m1
 
-    let add_to_index_type_abbrev m ({ Ast.TypeAbbreviation.name; loc; value; nparams } as x) =
+    let add_to_index_type_abbrev m ({ ScopedTypeExpression.name; loc; value; nparams } as x) =
       if F.Map.mem name m then begin
-        let { Ast.TypeAbbreviation.loc = otherloc; value = othervalue; nparams = otherparams } =
+        let { ScopedTypeExpression.loc = otherloc; value = othervalue; nparams = otherparams } =
           F.Map.find name m in
-        if nparams != otherparams || not @@ ScopedTerm.equal othervalue value then
+        if nparams != otherparams || not @@ ScopedTypeExpression.eq (ScopedTerm.empty_ctx ()) othervalue value then
         error ~loc
           ("duplicate type abbreviation for " ^ F.show name ^
             ". Previous declaration: " ^ Loc.show otherloc)
