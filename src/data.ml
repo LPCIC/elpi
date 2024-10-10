@@ -477,8 +477,8 @@ module Global_symbols : sig
   (* Table used at link time *)
   type t = {
     (* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
-    mutable s2ct : (constant * term) StrMap.t;
-    mutable c2s : string Constants.Map.t;
+    mutable s2ct : (constant * term) Ast.Func.Map.t;
+    mutable c2s : (Ast.Func.t * term) Constants.Map.t;
     (* negative *)
     mutable last_global : int;
 
@@ -522,8 +522,8 @@ module Global_symbols : sig
 end = struct
 
 type t = {
-  mutable s2ct : (constant * term) StrMap.t;
-  mutable c2s : string Constants.Map.t;
+  mutable s2ct : (constant * term) Ast.Func.Map.t;
+  mutable c2s : (Ast.Func.t * term) Constants.Map.t;
   mutable last_global : int;
   mutable locked : bool;
 }
@@ -531,33 +531,35 @@ type t = {
 
 let table = {
   last_global = 0;
-  s2ct = StrMap.empty;
+  s2ct = Ast.Func.Map.empty;
   c2s = Constants.Map.empty;
   locked = false;
 }
 
 let declare_global_symbol x =
-  try fst @@ StrMap.find x table.s2ct
+  let x = Ast.Func.from_string x in
+  try fst @@ Ast.Func.Map.find x table.s2ct
   with Not_found ->
     if table.locked then
       Util.anomaly "declare_global_symbol called after initialization";
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
     let t = Const n in
-    table.s2ct <- StrMap.add x (n,t) table.s2ct;
-    table.c2s <- Constants.Map.add n x table.c2s;
+    table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
+    table.c2s <- Constants.Map.add n (x,t) table.c2s;
     n
 
 let declare_global_symbol_for_builtin x =
+  let x = Ast.Func.from_string x in
   if table.locked then
     Util.anomaly "declare_global_symbol_for_builtin called after initialization";
-  try fst @@ StrMap.find x table.s2ct
+  try fst @@ Ast.Func.Map.find x table.s2ct
   with Not_found ->
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
     let t = Builtin(n,[]) in
-    table.s2ct <- StrMap.add x (n,t) table.s2ct;
-    table.c2s <- Constants.Map.add n x table.c2s;
+    table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
+    table.c2s <- Constants.Map.add n (x,t) table.c2s;
     n
 
 let lock () = table.locked <- true
@@ -621,7 +623,7 @@ module CHR : sig
 
   val empty : t
 
-  val new_clique : (constant -> string) -> constant list -> constant list -> t -> t * clique
+  val new_clique : (constant -> Ast.Func.t) -> constant list -> constant list -> t -> t * clique
   val clique_of : constant -> t -> (Constants.Set.t * Constants.Set.t) option
   val add_rule : clique -> rule -> t -> t
   val in_clique : clique -> constant -> bool
@@ -666,7 +668,7 @@ end = struct (* {{{ *)
     
     (* Check new inserted clique is valid *)
     let build_clique_str c =
-      Printf.sprintf "{ %s }" @@ String.concat "," (List.map show_constant (Set.elements c)) 
+      Printf.sprintf "{ %s }" @@ String.concat "," (List.map (fun x -> Ast.Func.show @@ show_constant x) (Set.elements c)) 
     in
     let old_ctx_filter = ref None in
     let exception Stop in
@@ -712,9 +714,6 @@ type clause_w_info = {
   clbody : clause;
 }
 [@@ deriving show]
-
-type macro_declaration = (Ast.Term.t * Loc.t) F.Map.t
-[@@ deriving show, ord]
 
 exception No_clause
 exception No_more_steps
@@ -995,6 +994,8 @@ type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints
   | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) ffi
 
 type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
+let pp fmt (Pred(name,_,_)) = Format.fprintf fmt "%s" name
+let compare (Pred(name1,_,_)) (Pred(name2,_,_)) = String.compare name1 name2
 
 type doc_spec = DocAbove | DocNext
 
@@ -1410,9 +1411,8 @@ type 'a executable = {
   compiled_program : prolog_prog;
   (* chr rules *)
   chr : CHR.t;
-  (* initial depth (used for both local variables and CHR (#eigenvars) *)
-  initial_depth : int;
   (* query *)
+  initial_depth : int; (* used by findall and CHR *)
   initial_goal: term;
   (* constraints coming from compilation *)
   initial_runtime_state : State.t;

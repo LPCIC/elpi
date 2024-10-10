@@ -37,6 +37,7 @@ module Func : sig
   val from_string : string -> t
 
   module Map : Map.S with type key = t
+  module Set : Set.S with type elt = t
 end
 
 module Mode : sig
@@ -59,13 +60,15 @@ type raw_attribute =
 [@@ deriving show]
 
 module TypeExpression : sig
-  type t =
+
+  type 'attribute t =
    | TConst of Func.t
-   | TApp of Func.t * t * t list
-   | TPred of raw_attribute list * ((Mode.mode * t) list)
-   | TArr of t * t
+   | TApp of Func.t * 'attribute t * 'attribute t list
+   | TPred of 'attribute * ((Mode.mode * 'attribute t) list)
+   | TArr of 'attribute t * 'attribute t
    | TCData of CData.t
   [@@ deriving show, ord]
+
 end
 
 module Term : sig
@@ -99,20 +102,6 @@ module Term : sig
 
 end
 
-(* module ScopedTerm : sig
-
-  type t_ =
-   | Global of Func.t
-   | Local of Func.t
-   | Var of Func.t * t list
-   | App of Func.t * t * t list
-   | Lam of Func.t * t
-   | CData of CData.t
-   and t = { it : t; loc : Loc.t }
-  [@@ deriving show, ord]
-  
-end *)
-
 module Clause : sig
 
   type ('term,'attributes) t = {
@@ -126,16 +115,16 @@ end
 
 module Chr : sig
 
-  type sequent = { eigen : Term.t; context : Term.t; conclusion : Term.t }
-  and 'attribute t = {
-    to_match : sequent list;
-    to_remove : sequent list;
-    guard : Term.t option;
-    new_goal : sequent option;
+  type 'term sequent = { eigen : 'term; context : 'term; conclusion : 'term }
+  and ('attribute,'term) t = {
+    to_match : 'term sequent list;
+    to_remove : 'term sequent list;
+    guard : 'term option;
+    new_goal : 'term sequent option;
     attributes : 'attribute;
     loc : Loc.t;
   }
-  [@@ deriving show]
+  [@@ deriving show,ord]
 
 end
 
@@ -151,25 +140,25 @@ end
 
 module Type : sig
 
-  type 'attribute t = {
+  type ('attribute,'inner_attribute) t = {
     loc : Loc.t;
     attributes : 'attribute;
     name : Func.t;
-    ty : TypeExpression.t;
+    ty : 'inner_attribute TypeExpression.t;
   }
-  [@@ deriving show]
+  [@@deriving show, ord]
 
 end
 
 module TypeAbbreviation : sig
 
-  type closedTypeexpression = 
-    | Lam of Func.t * closedTypeexpression 
-    | Ty of TypeExpression.t
+  type 'ty closedTypeexpression = 
+    | Lam of Func.t * 'ty closedTypeexpression 
+    | Ty of 'ty
   [@@ deriving show, ord]
 
-  type ('name) t =
-    { name : 'name; value : closedTypeexpression; nparams : int; loc : Loc.t }
+  type ('name,'ty) t =
+    { name : 'name; value : 'ty closedTypeexpression; nparams : int; loc : Loc.t }
   [@@ deriving show, ord]
 
 end
@@ -184,20 +173,17 @@ module Program : sig
     | Shorten of Loc.t * (Func.t * Func.t) list (* prefix suffix *)
     | End of Loc.t
 
-    | Accumulated of Loc.t * (Digest.t * decl list) list
+    | Accumulated of Loc.t * (string * Digest.t * decl list) list
 
     (* data *)
     | Clause of (Term.t, raw_attribute list) Clause.t
-    | Local of Func.t list
-    | Chr of raw_attribute list Chr.t
+    | Chr of (raw_attribute list,Term.t) Chr.t
     | Macro of (Func.t, Term.t) Macro.t
-    | Type of raw_attribute list Type.t list
-    | Pred of raw_attribute list Type.t
-    | TypeAbbreviation of Func.t TypeAbbreviation.t
+    | Type of (raw_attribute list,raw_attribute list) Type.t list
+    | Pred of (raw_attribute list,raw_attribute list) Type.t
+    | TypeAbbreviation of (Func.t,raw_attribute list TypeExpression.t) TypeAbbreviation.t
     | Ignored of Loc.t
   [@@ deriving show]
-
-  val mkLocal : string list -> decl
 
   type t = decl list
   [@@ deriving show]
@@ -206,7 +192,7 @@ end
 
 module Goal : sig
 
-  type t = Loc.t * Term.t
+  type t = Term.t
   [@@ deriving show]
 
 end
@@ -224,23 +210,22 @@ module Structured : sig
 
 type program = {
   macros : (Func.t, Term.t) Macro.t list;
-  types : tattribute Type.t list;
-  type_abbrevs : Func.t TypeAbbreviation.t list;
-  modes : tattribute Type.t list;
-  functionality : Func.t list;
+  types : (tattribute,functionality) Type.t list;
+  type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
+  modes : (tattribute,functionality) Type.t list;
   body : block list;
 }
-and block_constraint = {
-   clique : Func.t list;
-   ctx_filter : Func.t list;
-   rules : cattribute Chr.t list
+and ('func,'term) block_constraint = {
+   clique : 'func list;
+   ctx_filter : 'func list;
+   rules : (cattribute,'term) Chr.t list
 }
 and block =
-  | Locals of Func.t list * program
   | Clauses of (Term.t,attribute) Clause.t list
   | Namespace of Func.t * program
   | Shorten of Func.t shorthand list * program
-  | Constraints of block_constraint * program
+  | Constraints of (Func.t,Term.t) block_constraint * program
+  | Accumulated of program
 and attribute = {
   insertion : insertion option;
   id : string option;
@@ -255,13 +240,13 @@ and cattribute = {
 and tattribute =
   | External
   | Index of int list * tindex option
-  | Functional
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;
   full_name : 'a;
   short_name : 'a;
 }
+and functionality = Function | Relation
 [@@deriving show, ord]
 
 end

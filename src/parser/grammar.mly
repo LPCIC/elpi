@@ -149,8 +149,7 @@ decl:
       C.parse_file ~cwd (x ^ ext)) l)))
   }
 | LOCAL; l = separated_nonempty_list(CONJ,constant); option(type_term); FULLSTOP {
-    Program.Local l
-  }
+    raise (ParseError(loc $loc,"local keyword is no longer supported"))  }
 | ignored; FULLSTOP { Program.Ignored (loc $sloc) }
 | f = fixity; FULLSTOP { error_mixfix (loc $loc) }
 
@@ -277,8 +276,8 @@ sequent:
   }
 
 goal:
-| g = term; EOF { ( loc $sloc , g ) }
-| g = term; FULLSTOP { ( loc $sloc , g ) }
+| g = term; EOF { g }
+| g = term; FULLSTOP { g }
 
 clause:
 | attributes = attributes; body = clause_hd_term; {

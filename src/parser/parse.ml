@@ -32,7 +32,7 @@ end
 
 module Make(C : Config) = struct
   
-let parse_ref : (?cwd:string -> string -> (Digest.t * Ast.Program.decl list) list) ref =
+let parse_ref : (?cwd:string -> string -> (string * Digest.t * Ast.Program.decl list) list) ref =
   ref (fun ?cwd:_ _ -> assert false)
   
 module Grammar = Grammar.Make(struct
@@ -42,11 +42,10 @@ let message_of_state s = try Error_messages.message s with Not_found -> "syntax 
 let chunk s (p1,p2) =
   String.sub s p1.Lexing.pos_cnum (p2.Lexing.pos_cnum - p1.Lexing.pos_cnum)
 
-let parse grammar digest lexbuf =
+let parse grammar lexbuf =
   let buffer, lexer = MenhirLib.ErrorReports.wrap Lexer.token in
   try
-    let p = grammar lexer lexbuf in
-    digest, p
+    grammar lexer lexbuf
   with
   | Ast.Term.NotInProlog(loc,message) ->
       raise (Parser_config.ParseError(loc,message^"\n"))
@@ -77,15 +76,15 @@ let () =
     else [filename,digest] in
   to_parse |> List.map (fun (filename,digest) ->
     if Hashtbl.mem already_parsed digest then
-      digest, []
+      filename, digest, []
     else
       let ic = open_in filename in
       let lexbuf = Lexing.from_channel ic in
       lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = dest };
       Hashtbl.add already_parsed digest true;
-      let ast = parse Grammar.program digest lexbuf in
+      let ast = parse Grammar.program lexbuf in
       close_in ic;
-      ast))
+      filename, digest,ast))
 
 let to_lexing_loc { Util.Loc.source_name; line; line_starts_at; source_start; _ } =
   { Lexing.pos_fname = source_name;
@@ -102,7 +101,7 @@ let lexing_set_position lexbuf loc =
   
 let goal_from ~loc lexbuf =
   lexing_set_position lexbuf loc;
-  snd @@ parse Grammar.goal "" lexbuf
+  parse Grammar.goal lexbuf
       
 let goal ~loc ~text =
   let lexbuf = Lexing.from_string text in
@@ -111,11 +110,11 @@ let goal ~loc ~text =
 let program_from ~loc lexbuf =
   Hashtbl.clear already_parsed;
   lexing_set_position lexbuf loc;
-  snd @@ parse Grammar.program "" lexbuf
+  parse Grammar.program lexbuf
 
 let program ~file =
   Hashtbl.clear already_parsed;
-  List.(concat (map snd @@ !parse_ref file))
+  List.(concat (map (fun (_,_,x) -> x) @@ !parse_ref file))
 
 module Internal = struct
 let infix_SYMB = Grammar.infix_SYMB
