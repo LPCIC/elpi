@@ -58,8 +58,11 @@ let table = Fork.new_local {
   frozen_constants = 0;
 }
 
+let () = at_exit (fun () -> let open Hashtbl in let s = stats !table.c2t in
+  Array.iter (fun i -> Printf.eprintf "%d\n" i) s.bucket_histogram)
+
 let show ?(table = !table) n =
-  try Constants.Map.find n Global_symbols.table.c2s
+  try (*Ast.Func.show @@ fst @@*) Constants.Map.find n Global_symbols.table.c2s
   with Not_found ->
     try Hashtbl.find table.c2s n
     with Not_found ->
@@ -76,7 +79,7 @@ let mkConst x =
     Hashtbl.add !table.c2t x xx;
     xx
   [@@inline]
-
+  
 let fresh_global_constant () =
    !table.frozen_constants <- !table.frozen_constants - 1;
    let n = !table.frozen_constants in
@@ -2549,7 +2552,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
         (*              has the node `app` with arity `1` as first*)
         (*              cell, then come the elment of the list    *)
         (*              up to the 30^th elemebt                   *)
-        if h > 30 then (Path.emit path mkListEnd; update_current_min_depth path_depth)
+        if h > 31 then (Path.emit path mkListEnd; update_current_min_depth path_depth)
         else
           main ~safe ~depth a path_depth;
           list_to_trie_path ~depth ~safe ~h:(h+1) path_depth (len+1) b
@@ -4284,7 +4287,7 @@ let execute_once ?max_steps ?delay_outside_fragment exec =
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
- let { search; next_solution; get; destroy } = make_runtime ?delay_outside_fragment exec in
+ let { search; next_solution; get; destroy = _ } = make_runtime ?delay_outside_fragment exec in
  let k = ref noalts in
  let do_with_infos f =
    let time0 = Unix.gettimeofday() in

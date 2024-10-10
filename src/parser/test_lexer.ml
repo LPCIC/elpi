@@ -5,6 +5,7 @@ type t = Tokens.token =
   | VDASH
   | USE_SIG
   | USEONLY
+  | UNTYPED
   | TYPEABBREV
   | TYPE
   | STRING of ( string )
@@ -13,6 +14,7 @@ type t = Tokens.token =
   | SIG
   | SHORTEN
   | RULE
+  | RTRI
   | RPAREN
   | REPLACE
   | REMOVE

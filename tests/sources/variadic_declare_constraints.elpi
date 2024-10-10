@@ -1,3 +1,4 @@
+kind tm type.
 type foo tm -> (tm -> tm) -> prop.
 
 main :-

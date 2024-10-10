@@ -1,5 +1,5 @@
 % r Y yields Y=\0
-q (a\ X a) X.
-r A :- pi c\ q (a\a) A.
+:untyped q (a\ X a) X.
+:untyped r A :- pi c\ q (a\a) A.
 
-main :- r Y, Y = x\x.
+:untyped main :- r Y, Y = x\x.

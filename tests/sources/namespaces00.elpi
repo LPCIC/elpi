@@ -6,4 +6,7 @@ namespace rev {
 pred rev i:list A, o:list A.
 rev L RL  :- rev.aux L []  RL.
 
+pred aux i:list A, i:list A, o:list A.
+
+pred main.
 main :- rev [1,2,3] [3,2,1], not(aux [] [] []), rev.aux [] [] [].

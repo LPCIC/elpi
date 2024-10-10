@@ -1,18 +1,25 @@
 accumulate helena.
 
 % TESTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+type l_imp, l_mp, l_refimp, l_trimp, l_con, l_not, l_wel, l_weli, l_et, w, w1, w2, k+3, c+1, c+2, c+3, c+4, c+5, c+6, c+7, c+8, c+9, k+prop any.
 
+pred test_sta.
 test_sta :- k+succ k+1 k+2 => conv+ (sort k+1) satom m+1 m+0 satom (sort k+2).
 
+pred test_conv.
 test_conv :- conv+ (appr w1 (abst l+y w2 x\ (abst l+y x y\ y))) satom m+0 m+0 satom (abst l+y w1 x\ x).
 
+pred test_tv_11.
 test_tv_11 :- k+succ k+1 k+2 => k+succ k+2 k+3 => tv+ (appr (sort k+1) (abst l+y (sort k+2) x\ x)).
 
+pred test_tv_12.
 test_tv_12 :- tv+ w => tv+ (abst l+y w x\ cast w x).
 
+pred test_tv_13.
 test_tv_13 :- tv+ w => tv+ (cast (abst l+y w x\ w) (abst l+y w x\ x)).
 
 % does fail with resticted applicability
+pred test_tv_2.
 test_tv_2 :- k+succ k+0 k+1 =>
              tv+ (abst l+y (abst l+y (sort k+1) x\ (sort k+1)) x\ (abst l+y x y\ appx (sort k+0) y)).
 
@@ -70,6 +77,7 @@ g+line l_et c+9
           a
        )).
 
+pred test_gv_32.
 test_gv_32 :- gv+ (
    (gdef+2 l_imp
    (gdef+2 l_mp
@@ -83,6 +91,7 @@ test_gv_32 :- gv+ (
    gtop)))))))))
 ).
 
+pred test_gv_31.
 test_gv_31 :- gv+ (
    (gdef+1 c+1 (abst l+y (sort k+1) a\
                (abst l+y (sort k+1) b\

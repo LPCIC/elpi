@@ -37,13 +37,14 @@
 %I  desperate2.ml                0.11s
 %I  desperate3.ml                0.12s
 
-rev L RL  :- aux L xnil  RL .
-aux (xcons X XS)  ACC  R :- aux XS (xcons X ACC) R . 
-aux xnil  L  L .
+:untyped rev L RL  :- aux L xnil  RL .
+:untyped aux (xcons X XS)  ACC  R :- aux XS (xcons X ACC) R . 
+:untyped aux xnil  L  L .
 
-append (xcons X XS) L (xcons X L1)  :- append XS L L1 .
-append xnil L L .
+:untyped append (xcons X XS) L (xcons X L1)  :- append XS L L1 .
+:untyped append xnil L L .
 
+:untyped
 main :-
     X1 =  (xcons x1 (xcons x2 (xcons x3 (xcons x4 (xcons x5 (xcons x6 (xcons x7 (xcons x8 (xcons x9 (xcons x10 xnil)))))))))),
    append X1 X1 X2  ,

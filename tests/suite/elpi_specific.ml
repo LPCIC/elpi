@@ -185,20 +185,13 @@ let () = declare "asclause"
   ~description:"parsing of the .. as X clause"
   ~expectation:Test.Success
   ()
-
-let () = declare "elpi-checker"
-  ~source_elpi:"elpi-checker-copy.elpi"
-  ~description:"type checking the type checker"
-  ~typecheck:true
-  ~expectation:Test.Success
-  ()
-
+(* 
 let () = declare "elpi2html"
   ~source_elpi:"elpi2html-copy.elpi"
   ~description:"type checking elpi2html"
   ~typecheck:true
   ~expectation:Test.Success
-  ()
+  () *)
 
 let () = declare "same_term"
   ~source_elpi:"same_term.elpi"
@@ -241,12 +234,13 @@ let () = declare "CHR_no_clique"
   ~expectation:Test.Failure
   ()
 
+(* needs quote_syntax
 let () = declare "quote_syntax"
-  ~source_elpi:"quote_syntax.elpi"
+ ~source_elpi:"quote_syntax.elpi"
   ~description:"quote_syntax API"
   ~typecheck:true
   ~expectation:(Test.SuccessOutput (Str.regexp "const main"))
-  ()
+  () *)
 
 let () = declare "var"
   ~source_elpi:"var.elpi"

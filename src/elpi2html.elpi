@@ -29,7 +29,7 @@ len uvar 0.
 len [] 0.
 len [_|XS] N :- len XS M, N is M + 1.
 
-pred write-to o:ctype "out_stream".
+pred write-to o:out_stream.
 pred write i:string.
 write S :- write-to OC, output OC S.
 
@@ -398,6 +398,7 @@ main [IN,OUT|FILTERS] :- !,
 main _ :- usage.
 main.
 
+pred usage.
 usage :-
   halt "usage: elpi elpi2html.elpi -exec main -- in out [filter]".
 

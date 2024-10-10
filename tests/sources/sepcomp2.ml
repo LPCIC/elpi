@@ -1,5 +1,6 @@
 let us = [{|
 
+pred p.
 main :- p.
 
 |}; {|

@@ -4,7 +4,7 @@ accum_sig  fp_types, fp_vocab.
 
 kind namex  type.
 
-exportdef  trm  namex -> tm -> o.
+type  trm  namex -> tm -> o.
 
 type  trfact1  namex.
 type  trfact2  namex.

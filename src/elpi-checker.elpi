@@ -15,6 +15,8 @@ type ctype string -> typ.
 
 % --------- utils  ---------------------------------------------------------
 
+kind entry type.
+kind term type.
 type (`:) term -> typ -> entry.
 type (`:=) string -> typ -> entry.
 
@@ -23,14 +25,13 @@ kind err type.
 type type-err term -> typ -> typ -> err.
 type wrong-arity term -> typ -> list term -> err.
 type unknown term -> err.
-type assert prop -> err -> prop.
 
-pred error i:list (pair (ctype "Loc.t") string), o:bool.
+pred error i:list (pair loc string), o:bool.
 
 :name "default-typechecking-error"
 error Msg tt :- std.forall Msg (x\ sigma L M\ fst x L, snd x M, print L "Error:" M).
 
-pred warning i:(ctype "Loc.t"), o:string.
+pred warning i:loc, o:string.
 :name "default-typechecking-warning"
 warning Loc Msg :- print Loc "Warning:" Msg.
 
@@ -49,9 +50,11 @@ assert _ (wrong-arity T Ty A) :- !,
           " but is applied to " ^ {pp-list A},
   error [pr LOC MSG] _.
 
-pred stash-new i:A, i:B.
+pred stash-new i:safe, i:B.
 stash-new E S :- open_safe E L, ( std.mem! L S ; stash_in_safe E S ), !.
 
+pred report-all-failures-and-fail-if-no-success i:prop, o:bool.
+pred report-all-failures-if-no-success i:prop, o:bool.
 report-all-failures-if-no-success P RC :-
   new_safe E,
   (((pi ML\ error ML _ :- !, std.forall ML (stash-new E), fail) => P)
@@ -150,7 +153,7 @@ of-clause [] (arg C) :- !, pi x\
  of-clause [] (C x).
 of-clause _ C :- of C TC, assert (unif TC prop) (type-err C TC prop).
 
-type checking (ctype "Loc.t") -> prop.
+type checking loc -> prop.
 
 :if "DEBUG:CHECKER"
 log-tc-clause Loc Query :- !, print {trace.counter "run"} "typecheck" Loc Query.

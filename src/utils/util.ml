@@ -232,7 +232,9 @@ let rec for_all3b p l1 l2 bl b =
 ;;
 
 type arg_mode = Input | Output
-and mode_aux =
+[@@deriving show, ord]
+
+type mode_aux =
   | Fo of arg_mode
   | Ho of arg_mode * mode
 and mode = mode_aux list
@@ -268,9 +270,9 @@ let pp_loc_opt = function
   | None -> ""
   | Some loc -> Loc.show loc
 let default_warn ?loc s =
-  Printf.eprintf "Warning: %s%s\n%!" (pp_loc_opt loc) s
+  Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" (pp_loc_opt loc) s
 let default_error ?loc s =
-  Printf.eprintf "Fatal error: %s%s\n%!" (pp_loc_opt loc) s;
+  Format.eprintf "@[<hv>Fatal error: %s@,%s@]\n%!" (pp_loc_opt loc) s;
   exit 1
 let default_anomaly ?loc s =
   let trace =
@@ -332,7 +334,13 @@ let option_get ?err = function
       match err with
       | None -> assert false
       | Some msg -> anomaly msg
-let option_map f = function Some x -> Some (f x) | None -> None
+
+let option_map f = function
+  | Some x -> Some (f x)
+  | None -> None
+let option_smart_map f = function
+  | Some x as orig -> let x' = f x in if x' == x then orig else Some x'
+  | None -> None
 let option_mapacc f acc = function
   | Some x -> let acc, y = f acc x in acc, Some y
   | None -> acc, None
@@ -519,7 +527,7 @@ let _ = show
    let hash x = x
  end
 
- let counter = ref 0
+ let counter = ref 2
  let make () = incr counter; !counter
 
  module Htbl = Hashtbl.Make(Self)

@@ -1,18 +1,18 @@
-copy (app M N) (app M2 N2) :- copy M M2, copy N N2.
-copy (lam F) (lam F2) :- pi x\ copy x x => copy (F x) (F2 x).
+:untyped copy (app M N) (app M2 N2) :- copy M M2, copy N N2.
+:untyped copy (lam F) (lam F2) :- pi x\ copy x x => copy (F x) (F2 x).
 
-cbv (lam F) (lam F2) :- pi x\ cbv x x => copy x x => cbv (F x) (F2 x).
-cbv (app M N) R2 :-
+:untyped cbv (lam F) (lam F2) :- pi x\ cbv x x => copy x x => cbv (F x) (F2 x).
+:untyped cbv (app M N) R2 :-
  cbv N N2,
  cbv M M2,
  beta M2 N2 R2.
 
-beta (lam F) T R2 :- !,
+:untyped beta (lam F) T R2 :- !,
  (pi x\ copy x T => copy (F x) (R' x), R = R' x),
  cbv R R2.
-beta H A (app H A).
+:untyped beta H A (app H A).
 
-main :-
+:untyped main :-
  ZERO = (lam s\ lam z\ z),
  SUCC = (lam n\ lam s\ lam z\ app s (app (app n s) z)),
  cbv (app SUCC ZERO) ONE,

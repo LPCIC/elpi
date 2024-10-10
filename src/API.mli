@@ -30,6 +30,84 @@ module Ast : sig
 
     val initial : string -> t
   end
+
+  module Name : sig
+    type t
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+
+    module Set : sig
+      include Set.S with type elt = t
+      val show : t -> string
+      val pp : Format.formatter -> t -> unit
+     end
+   val from_string : string -> t
+
+   type constant = int
+   val is_global : t -> int -> bool
+  end 
+  module Scope : sig
+    type t
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+    type language
+    val pp_language : Format.formatter -> language -> unit
+    val show_language : language -> string
+
+  end
+  module Opaque : sig
+    type t
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+  
+  module Type : sig
+    type t_ =
+      | Any
+      | Con of Name.t
+      | App of Name.t * t * t list
+      | Arr of t * t
+    and t = { it : t_; loc : Loc.t }
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+
+  module Term : sig
+    type t_ =
+      | Const of Scope.t * Name.t
+      | Discard
+      | Var of Name.t * t list (** unification variable *)
+      | App of Scope.t * Name.t * t * t list
+      | Lam of (Name.t * Scope.language) option * Type.t option * t
+      | Opaque of Opaque.t
+      | Cast of t * Type.t
+    and t = { it : t_; loc : Loc.t; }
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+
+    (** See {!module:RawData.Constants} to allocate global constants *)
+    type constant = Name.constant
+    val mkGlobal : loc:Loc.t -> constant -> t
+    val mkBound : loc:Loc.t -> language:Scope.language -> Name.t -> t
+    val mkAppGlobal : loc:Loc.t -> constant -> t -> t list -> t
+    val mkAppBound : loc:Loc.t ->  language:Scope.language -> Name.t -> t -> t list -> t
+    val mkVar : loc:Loc.t -> Name.t -> t list -> t
+    val mkOpaque : loc:Loc.t -> Opaque.t -> t
+    val mkCast : loc:Loc.t -> t -> Type.t -> t
+    val mkLam : loc:Loc.t -> (Name.t *  Scope.language) option -> ?ty:Type.t -> t -> t
+
+    (** Handy constructors to build goals *)
+    val mkImplication : loc:Loc.t -> t -> t -> t
+    val mkPi : loc:Loc.t -> Name.t -> ?ty:Type.t -> t -> t
+    val mkConj : loc:Loc.t -> t list -> t
+    val mkEq : loc:Loc.t -> t -> t -> t
+
+    val list_to_lp_list : t list -> t
+    val lp_list_to_list : t -> t list
+  
+  end
+
+
 end
 
 module Setup : sig
@@ -215,25 +293,21 @@ module Compile : sig
        units
      - macros declared as part of the builtins given to Setup.init are
        visible in all units
-     - types, type abbreviations and mode declarations from all units are
+     - types, type abbreviations and mode declarations from the  units are
        merged at assembly time
-
-     *)
+*)
   type compilation_unit
-  val unit : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> compilation_unit
-  val assemble : ?flags:flags -> elpi:Setup.elpi -> compilation_unit list -> program
-  val extend : ?flags:flags -> base:program -> compilation_unit list -> program
+  val empty_base : elpi:Setup.elpi -> program
+  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> Ast.program -> compilation_unit
+  val extend : ?flags:flags -> base:program -> compilation_unit -> program
 
   (* then compile the query *)
   val query : program -> Ast.query -> unit query
-
+  
   (* finally obtain the executable *)
   val optimize : 'a query -> 'a executable
-
-  (** Runs a checker. Returns true if no errors were found.
-      See also Builtins.default_checker. *)
-  val static_check : checker:program -> 'a query -> bool
-
+  
+  val total_type_checking_time : 'a query -> float
 end
 
 module Execute : sig
@@ -784,7 +858,7 @@ end
        | _ -> ...
 
    ]} *)
-module Query : sig
+(* module Query : sig
 
   type name = string
   type _ arguments =
@@ -797,7 +871,7 @@ module Query : sig
   val compile : Compile.program -> Ast.Loc.t -> 'a t -> 'a Compile.query
 
 end
-
+ *)
 (* ************************************************************************* *)
 (* ********************* Advanced Extension API **************************** *)
 (* ************************************************************************* *)
@@ -866,6 +940,7 @@ module FlexibleData : sig
     val show :  t -> string
     val equal : t -> t -> bool
     val hash : t -> int
+    val fresh : unit -> Ast.Name.t
   end
 
   module type Host = sig
@@ -955,7 +1030,7 @@ module RawOpaqueData : sig
   type name = string
   type doc = string
 
-  type t
+  type t = Ast.Opaque.t
 
  (** If the data_hconsed is true, then the [cin] function below will
      automatically hashcons the data using the [eq] and [hash] functions. *)
@@ -971,6 +1046,7 @@ module RawOpaqueData : sig
 
   type 'a cdata = private {
     cin : 'a -> Data.term;
+    cino : 'a -> Ast.Opaque.t;
     isc : t -> bool;
     cout: t -> 'a;
     name : string;
@@ -1048,17 +1124,19 @@ end
    * substitutes assigned unification variables by their value. *)
 module RawData : sig
 
-  type constant = int (** De Bruijn levels (not indexes):
-                          the distance of the binder from the root.
-                          Starts at 0 and grows for bound variables;
-                          global constants have negative values. *)
+  type constant = Ast.Term.constant
+  
+  (** De Bruijn levels (not indexes): the distance of the binder from the root.
+      starts at 0 and grows for bound variables;
+      global constants have negative values. *)
+
   type builtin
   type term = Data.term
   type view = private
     (* Pure subterms *)
-    | Const of constant                   (* global constant or a bound var *)
+    | Const of int                        (* global constant or a bound var *)
     | Lam of term                         (* lambda abstraction, i.e. x\ *)
-    | App of constant * term * term list  (* application (at least 1 arg) *)
+    | App of int * term * term list       (* application (at least 1 arg) *)
     (* Optimizations *)
     | Cons of term * term                 (* :: *)
     | Nil                                 (* [] *)
@@ -1077,7 +1155,7 @@ module RawData : sig
   val kool : view -> term
 
   (** Smart constructors *)
-  val mkBound : constant -> term  (* bound variable, i.e. >= 0 *)
+  val mkBound : int -> term  (* bound variable, i.e. >= 0 *)
   val mkLam : term -> term
   val mkCons : term -> term -> term
   val mkNil : term
@@ -1087,10 +1165,16 @@ module RawData : sig
 
   (** Lower level smart constructors *)
   val mkGlobal : constant -> term (* global constant, i.e. < 0 *)
-  val mkApp : constant -> term -> term list -> term
-  val mkAppL : constant -> term list -> term
+  val mkAppGlobal  : constant -> term -> term list -> term
+  val mkAppGlobalL : constant -> term list -> term
+  val mkAppBound  : int -> term -> term list -> term
+  val mkAppBoundL : int -> term list -> term
+  
   val mkBuiltin : builtin -> term list -> term
-  val mkConst : constant -> term (* no check, works for globals and bound *)
+
+  (** no check, works for globals and bound *)
+  val mkConst : int -> term
+  val mkApp : int -> term -> term list -> term
 
   val cmp_builtin : builtin -> builtin -> int
   type hyp = {
@@ -1158,49 +1242,56 @@ end
 (** This module lets one generate a query by providing a RawData.term directly *)
 module RawQuery : sig
 
-  (* The output term is to be used to build the query but is *not* the handle
+  (** The output term is to be used to build the query but is *not* the handle
      to the eventual solution. The compiler transforms it, later on, into
      a UnifVar. Use the name to fetch the solution. *)
   val mk_Arg :
     State.t -> name:string -> args:Data.term list ->
       State.t * Data.term
 
-  (* Args are parameters of the query (e.g. capital letters). *)
+  (** Args are parameters of the query (e.g. capital letters). *)
   val is_Arg : State.t -> Data.term -> bool
 
-  (* with the possibility to update the state in which the query will run *)
+  (** with the possibility to update the state in which the query will run *)
   val compile_ast :
     Compile.program -> Ast.query -> (State.t -> State.t) -> unit Compile.query
 
-  (* generate the query term and initial state by hand *)
-  val compile :
-    Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term) * Conversion.extra_goals) ->
-      unit Compile.query
+  (** generate the query ast term with a function. The resulting term is typed, spilled, etc *)
+  val compile_term :
+    Compile.program -> (State.t -> State.t * Ast.Term.t) -> unit Compile.query
+  
+  (** generate the query term by hand, the result is used as is *)
+  val compile_raw_term :
+    Compile.program -> (State.t -> State.t * Data.term * Conversion.extra_goals) -> unit Compile.query
+
+  (** typechecks *)
+  val term_to_raw_term : State.t -> Compile.program -> depth:int -> Ast.Term.t -> State.t * Data.term
 
   
 end
 
 module Quotation : sig
 
-  type quotation =
-    depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
+  type quotation = language:Ast.Scope.language -> State.t -> Ast.Loc.t -> string -> Ast.Term.t
 
   (** The default quotation [{{code}}] *)
   val set_default_quotation : ?descriptor:Setup.quotations_descriptor -> quotation -> unit
 
   (** Named quotation [{{name:code}}] *)
-  val register_named_quotation : ?descriptor:Setup.quotations_descriptor -> name:string -> quotation -> unit
+  val register_named_quotation : ?descriptor:Setup.quotations_descriptor -> name:string -> quotation -> Ast.Scope.language
 
   (** The anti-quotation to lambda Prolog *)
-  val lp : quotation
+  val elpi_language : Ast.Scope.language
+  val elpi : quotation
 
-  (** See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
+  (* TODO decide what to do
+  * See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker)
   val quote_syntax_runtime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
   val quote_syntax_compiletime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
 
   (** To implement the string_to_term built-in (AVOID, makes little sense
    * if depth is non zero, since bound variables have no name!) *)
-  val term_at : depth:int -> State.t -> string -> State.t * Data.term
+  val term_at : depth:int -> State.t -> string -> State.t * Data.term *)
 
   (** Like quotations but for identifiers that begin and end with
    * "`" or "'", e.g. `this` and 'that'. Useful if the object language
@@ -1208,10 +1299,10 @@ module Quotation : sig
    * (e.g. CD.string like but with a case insensitive comparison) *)
 
   val declare_backtick : ?descriptor:Setup.quotations_descriptor -> name:string ->
-    (State.t -> string -> State.t * Data.term) -> unit
+    quotation -> Ast.Scope.language
 
   val declare_singlequote : ?descriptor:Setup.quotations_descriptor -> name:string ->
-    (State.t -> string -> State.t * Data.term) -> unit
+    quotation -> Ast.Scope.language
 
   val new_quotations_descriptor : unit -> Setup.quotations_descriptor
 

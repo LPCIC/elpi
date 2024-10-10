@@ -1,25 +1,25 @@
 namespace a {
 
-  foo1 :- b.c.foo.
-  foo2 :- b.foo1, b.foo2.
+  :untyped foo1 :- b.c.foo.
+  :untyped foo2 :- b.foo1, b.foo2.
 
   namespace b {
 
-    foo1 :- c.foo.
+     :untyped foo1 :- c.foo.
 
     namespace c {
  
-      foo.
+       :untyped foo.
    
     }
 
-    foo2 :- c.foo.
+     :untyped foo2 :- c.foo.
 
   }
 
-  foo3 :- b.c.foo.
-  foo4 :- b.foo1, b.foo2.
+   :untyped foo3 :- b.c.foo.
+   :untyped foo4 :- b.foo1, b.foo2.
 
 }
 
-main :- a.foo1, a.foo2, a.foo3, a.foo4.
+ :untyped main :- a.foo1, a.foo2, a.foo3, a.foo4.

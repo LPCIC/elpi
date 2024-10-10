@@ -8,6 +8,7 @@
 %token FRESHUV
 %token CUT
 %token COLON
+%token RTRI
 %token BIND
 %token LPAREN
 %token RPAREN
@@ -56,6 +57,7 @@
 %token IF
 %token BEFORE
 %token AFTER
+%token UNTYPED
 %token FUNCTIONAL
 %token REPLACE
 %token REMOVE

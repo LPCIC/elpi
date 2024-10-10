@@ -1,4 +1,4 @@
-
+pred p i:int, o:int.
 p 1 1 :- 1 is 2 + 3.
 p 1 2 :- X = 1, Y = 2, X = Y.
 p 2 3.

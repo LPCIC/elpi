@@ -44,6 +44,12 @@ module Func = struct
   let arrowf = from_string "->"
   let sequentf = from_string "?-"
   let ctypef = from_string "ctype"
+
+  let propf = from_string "prop"
+
+  let typef = from_string "type"
+  let mainf = from_string "main"
+
   
   let dummyname = from_string "%dummy"
   let spillf = from_string "%spill"
@@ -56,12 +62,13 @@ module Func = struct
 
   include Self
   module Map = Map.Make(Self)
+  module Set = Set.Make(Self)
 
 end
 
 module Mode = struct
 
-  type mode = Util.arg_mode = Input | Output
+  type t = Util.arg_mode = Input | Output
   [@@deriving show, ord]
 
 end
@@ -76,28 +83,33 @@ type raw_attribute =
   | External
   | Index of int list * string option
   | Functional
+  | Untyped
 [@@deriving show, ord]
+
 
 module TypeExpression = struct
 
-  type t =
-   | TConst of Func.t
-   | TApp of Func.t * t * t list
-   | TPred of raw_attribute list * ((Mode.mode * t) list)
-   | TArr of t * t
-   | TCData of CData.t
+  type 'attribute t_ =
+    | TConst of Func.t
+    | TApp of Func.t * 'attribute t * 'attribute t list
+    | TPred of 'attribute * (Mode.t * 'attribute t) list
+    | TArr of 'attribute t * 'attribute t
+  and 'a t = { tit : 'a t_; tloc : Loc.t }
   [@@ deriving show, ord]
 
 end
-
+  
 module Term = struct
   
+  type typ = raw_attribute list TypeExpression.t
+  [@@ deriving show, ord]
   type t_ =
    | Const of Func.t
    | App of t * t list
-   | Lam of Func.t * t
+   | Lam of Func.t * typ option * t
    | CData of CData.t
    | Quoted of quote
+   | Cast of t * typ
   and t = { it : t_; loc : Loc.t }
   and quote = { qloc : Loc.t; data : string; kind : string option }
   [@@ deriving show, ord]
@@ -105,14 +117,14 @@ module Term = struct
 exception NotInProlog of Loc.t * string
 
 let mkC loc x = { loc; it = CData x }
-let mkLam loc x t = { loc; it = Lam (Func.from_string x,t) }
+let mkLam loc x ty t = { loc; it = Lam (Func.from_string x,ty,t) }
 let mkNil loc = {loc; it = Const Func.nilf }
 let mkQuoted loc s =
   let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n;
-                                 source_stop = loc.Loc.source_stop - m;
-                                 line_starts_at = loc.Loc.line_starts_at - m; } in
+                                 source_stop = loc.Loc.source_stop(* - m*);
+                                 line_starts_at = loc.Loc.line_starts_at(* - m*); } in
   (* {{...}} stripped by the parser *)
-  let loc = strip 2 2 loc in
+  (* let loc = strip 2 2 loc in *)
   let rec find_data i =
     match s.[i] with
     | '{' -> find_data (i+1)
@@ -128,24 +140,25 @@ let mkQuoted loc s =
        let space_after = find_space 0 - 1 in
        let kind = String.sub s (i+1) space_after in
        let data = String.sub s (i+space_after+2) (String.length s - i - i - space_after-2) in
-       { qloc = strip (i+space_after+2) i loc; data; kind = Some kind }
-    | _ -> { qloc = strip i i loc; data = String.sub s i (String.length s - i - i); kind = None }
+       { qloc = strip (i+space_after+1+2) i loc; data; kind = Some kind }
+    | _ -> { qloc = strip (i+2) (i+2) loc; data = String.sub s i (String.length s - i - i); kind = None }
   in
     { loc; it = Quoted (find_data 0) }
-let mkSeq loc (l : t list) =
- let rec aux loc =
-  function
+let mkSeq ?loc (l : t list) =
+ let rec aux = function
     [] -> assert false
   | [e] -> e
   | hd::tl ->
-      let tl = aux loc tl in
+      let tl = aux tl in
       { loc = Loc.merge hd.loc tl.loc; it = App({ it = Const Func.consf; loc = hd.loc },[hd;tl]) }
  in
-   { (aux loc l) with loc }
+   let l = aux l in
+   match loc with None -> l | Some loc -> { l with loc }
+let mkCast loc t ty = { loc; it = Cast(t,ty) }
 
 
 let rec best_effort_pp = function
- | Lam (x,t) -> "x\\" ^ best_effort_pp t.it
+ | Lam (x,_,t) -> "x\\" ^ best_effort_pp t.it
  | CData c -> CData.show c
  | Quoted _ -> "{{ .. }}"
  | _ -> ".."
@@ -172,20 +185,6 @@ let mkConst loc c = { loc; it = Const c }
 
 end
 
-(* module ScopedTerm = struct
-
-  type t_ =
-   | Global of Func.t
-   | Local of Func.t
-   | Var of Func.t * t list
-   | App of Func.t * t * t list
-   | Lam of Func.t * t
-   | CData of CData.t
-   and t = { it : t; loc : Loc.t }
-  [@@ deriving show, ord]
-  
-end *)
-
 module Clause = struct
   
   type ('term,'attributes) t = {
@@ -198,19 +197,17 @@ module Clause = struct
 end
 
 module Chr = struct
-  
-  type sequent = { eigen : Term.t; context : Term.t; conclusion : Term.t }
-  and 'attribute t = {
-    to_match : sequent list;
-    to_remove : sequent list;
-    guard : Term.t option;
-    new_goal : sequent option;
+
+  type 'term sequent = { eigen : 'term; context : 'term; conclusion : 'term }
+  and ('attribute,'term) t = {
+    to_match : 'term sequent list;
+    to_remove : 'term sequent list;
+    guard : 'term option;
+    new_goal : 'term sequent option;
     attributes : 'attribute;
-    loc: Loc.t;
+    loc : Loc.t;
   }
-  [@@deriving show, ord]
-
-
+  [@@ deriving show,ord]
 
 end
 
@@ -227,11 +224,11 @@ end
 
 module Type = struct
 
-  type 'attribute t = {
+  type ('attribute,'inner_attribute) t = {
     loc : Loc.t;
     attributes : 'attribute;
     name : Func.t;
-    ty : TypeExpression.t;
+    ty : 'inner_attribute TypeExpression.t;
   }
   [@@deriving show, ord]
 
@@ -239,13 +236,13 @@ end
 
 module TypeAbbreviation = struct
 
-  type closedTypeexpression = 
-    | Lam of Func.t * closedTypeexpression 
-    | Ty of TypeExpression.t
+  type 'ty closedTypeexpression = 
+    | Lam of Func.t * Loc.t * 'ty closedTypeexpression 
+    | Ty of 'ty
   [@@ deriving show, ord]
 
-  type ('name) t =
-    { name : 'name; value : closedTypeexpression; nparams : int; loc : Loc.t }
+  type ('name,'ty) t =
+    { name : 'name; value : 'ty closedTypeexpression; nparams : int; loc : Loc.t }
   [@@ deriving show, ord]
 
 end
@@ -261,22 +258,19 @@ module Program = struct
     | Shorten of Loc.t * (Func.t * Func.t) list (* prefix suffix *)
     | End of Loc.t
 
-    | Accumulated of Loc.t * (Digest.t * decl list) list
+    | Accumulated of Loc.t * (string * Digest.t * decl list) list
 
     (* data *)
     | Clause of (Term.t, raw_attribute list) Clause.t
-    | Local of Func.t list
-    (* TODO: to remove *)
-    | Chr of raw_attribute list Chr.t
+    | Chr of (raw_attribute list,Term.t) Chr.t
     | Macro of (Func.t, Term.t) Macro.t
-    | Type of raw_attribute list Type.t list
-    | Pred of raw_attribute list Type.t
-    | TypeAbbreviation of Func.t TypeAbbreviation.t
+    | Kind of (raw_attribute list,raw_attribute list) Type.t list
+    | Type of (raw_attribute list,raw_attribute list) Type.t list
+    | Pred of (raw_attribute list,raw_attribute list) Type.t
+    | TypeAbbreviation of (Func.t,raw_attribute list TypeExpression.t) TypeAbbreviation.t
     | Ignored of Loc.t
   [@@deriving show]
 
-
-let mkLocal x = Local (List.map Func.from_string x)
 
 type t = decl list [@@deriving show]
 
@@ -284,8 +278,8 @@ end
 
 module Goal = struct
 
-  type t = Loc.t * Term.t
-  let pp fmt (_,t) = Term.pp fmt t
+  type t = Term.t
+  let pp fmt t = Term.pp fmt t
   let show x = Format.asprintf "%a" pp x
 
 end
@@ -329,44 +323,46 @@ module Structured = struct
 
 type program = {
   macros : (Func.t, Term.t) Macro.t list;
-  types : tattribute Type.t list;
-  type_abbrevs : Func.t TypeAbbreviation.t list;
-  modes : tattribute Type.t list;
-  functionality : Func.t list;
+  kinds : (unit,unit) Type.t list;
+  types : (tattribute,functionality) Type.t list;
+  type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
+  modes : (tattribute,functionality) Type.t list;
   body : block list;
 }
 and cattribute = {
   cid : string;
   cifexpr : string option
 }
-and block_constraint = {
-   clique : Func.t list;
-   ctx_filter : Func.t list;
-   rules : cattribute Chr.t list
+and ('func,'term) block_constraint = {
+   clique : 'func list;
+   ctx_filter : 'func list;
+   rules : (cattribute,'term) Chr.t list
 }
 and block =
-  | Locals of Func.t list * program
   | Clauses of (Term.t,attribute) Clause.t list
   | Namespace of Func.t * program
   | Shorten of Func.t shorthand list * program
-  | Constraints of block_constraint * program
+  | Constraints of (Func.t,Term.t) block_constraint * program
+  | Accumulated of program
 and attribute = {
   insertion : insertion option;
   id : string option;
   ifexpr : string option;
+  typecheck : bool;
 }
 and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string
 and tattribute =
   | External
   | Index of int list * tindex option
-  | Functional
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;
   full_name : 'a;
   short_name : 'a;
 }
+and functionality = Function | Relation
+and variadic = Variadic | NotVariadic
 [@@deriving show, ord]
 
 end

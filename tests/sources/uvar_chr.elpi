@@ -1,9 +1,10 @@
 
+kind term type.
 type app term -> term -> term.
 type lam (term -> term) -> term.
 
 pred unsafe-cast o:A, o:B.
-unsafe-cast X X.
+:untyped unsafe-cast X X.
 
 pred mk-app i:term, i:list term, o:term.
 mk-app HD [] HD :- !.
@@ -17,6 +18,7 @@ copy (lam F) (lam F1) :- pi x\ copy x x => copy (F x) (F1 x).
 copy (uvar F L as X) T :- var X, !, copy-list L L1, mk-app F L1 T.
 copy (uvar C L) (uvar C L1) :- copy-list L L1.
 
+pred copy-list i:list term, o:list term.
 copy-list [] [].
 copy-list [X|XS] [Y|YS] :- copy X Y, copy-list XS YS.
 

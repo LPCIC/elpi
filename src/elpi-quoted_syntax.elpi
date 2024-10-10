@@ -10,12 +10,12 @@ type app list term -> term.
 type lam (term -> term) -> term.
 type const string -> term.
 
-type cdata ctype "cdata" -> term. % int, string, float.. see also $is_cdata
+type cdata any -> term. % int, string, float.. see also $is_cdata
 
 type arg (term -> term) -> term.  % only to bind the args of a clause
 
 kind clause type.
-type clause (ctype "Loc.t") -> list string -> term -> clause.
+type clause loc -> list string -> term -> clause.
 
 % a program is then a list of clause while
 % the query is just one item of the same kind.

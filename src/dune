@@ -1,7 +1,7 @@
 (library
   (public_name elpi)
   (preprocess (per_module
-    ((pps ppx_deriving.std) API data compiler discrimination_tree bl)
+    ((pps ppx_deriving.std) API data compiler_data compiler discrimination_tree bl)
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") runtime)
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"false\"") runtime_trace_off)
     ))
@@ -14,7 +14,7 @@
     ; ----- public API ---------------------------------
     elpi API builtin builtin_checker
     ; ----- internal stuff -----------------------------
-    compiler data ptmap discrimination_tree bl runtime_trace_off runtime
+    compiler_data compiler data ptmap discrimination_tree bl runtime_trace_off runtime
     builtin_stdlib builtin_map builtin_set
     legacy_parser_proxy)
   (private_modules
@@ -24,25 +24,25 @@
 )
 
 (rule (with-stdout-to builtin_stdlib.ml (progn
-  (echo "let code = {code|#line 0 \"builtin_stdlib.elpi\"\n")
+  (echo "let code = {code|#line 1 \"builtin_stdlib.elpi\"\n")
   (cat builtin_stdlib.elpi)
   (echo "|code};;")
 )))
 (rule (with-stdout-to builtin_map.ml (progn
-  (echo "let code = {code|#line 0 \"builtin_map.elpi\"\n")
+  (echo "let code = {code|#line 1 \"builtin_map.elpi\"\n")
   (cat builtin_map.elpi)
   (echo "|code};;")
 )))
 (rule (with-stdout-to builtin_set.ml (progn
-  (echo "let code = {code|#line 0 \"builtin_set.elpi\"\n")
+  (echo "let code = {code|#line 1 \"builtin_set.elpi\"\n")
   (cat builtin_set.elpi)
   (echo "|code};;")
 )))
 (rule (with-stdout-to builtin_checker.ml (progn
   (echo "let code = {code|")
-  (echo "#line 0 \"elpi-quoted_syntax.elpi\"\n")
+  (echo "#line 1 \"elpi-quoted_syntax.elpi\"\n")
   (cat elpi-quoted_syntax.elpi)
-  (echo "#line 0 \"elpi-checker.elpi\"\n")
+  (echo "#line 1 \"elpi-checker.elpi\"\n")
   (cat elpi-checker.elpi)
   (echo "|code};;")
 )))
@@ -84,3 +84,4 @@
 (test (name test_discrimination_tree) (libraries elpi) (modules test_discrimination_tree) (preprocess (pps ppx_deriving.std)))
 (test (name test_bl) (libraries elpi) (modules test_bl) (preprocess (pps ppx_deriving.std)))
 (test (name test_lex) (libraries elpi) (modules test_lex) (preprocess (pps ppx_deriving.std)))
+(test (name test_compiler_data) (libraries elpi) (modules test_compiler_data) (preprocess (pps ppx_deriving.std)))

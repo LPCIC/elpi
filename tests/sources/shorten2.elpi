@@ -1,5 +1,6 @@
 accumulate shorten_aux, shorten_aux2.
 
+pred foo.
 foo :- true.
 
 main :-

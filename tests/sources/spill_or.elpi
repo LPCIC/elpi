@@ -1,6 +1,6 @@
-pred p o:int.
-pred q  o:int,o:int.
+pred p o:int, o:int.
+pred q o:int, o:int.
 q 2 3.
-p X :- print X.
+p X X.
 
-main :- (true ;  (p {q X})), !, var X.
+main :- (fail ;  (p {q 2} X)), !, X == 3.
