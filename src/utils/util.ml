@@ -232,7 +232,9 @@ let rec for_all3b p l1 l2 bl b =
 ;;
 
 type arg_mode = Input | Output
-and mode_aux =
+[@@deriving show, ord]
+
+type mode_aux =
   | Fo of arg_mode
   | Ho of arg_mode * mode
 and mode = mode_aux list

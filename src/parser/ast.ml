@@ -62,7 +62,7 @@ end
 
 module Mode = struct
 
-  type mode = Util.arg_mode = Input | Output
+  type t = Util.arg_mode = Input | Output
   [@@deriving show, ord]
 
 end
@@ -79,18 +79,20 @@ type raw_attribute =
   | Functional
 [@@deriving show, ord]
 
+
 module TypeExpression = struct
 
-  type 'attribute t =
-   | TConst of Func.t
-   | TApp of Func.t * 'attribute t * 'attribute t list
-   | TPred of 'attribute * (Mode.mode * 'attribute t) list
-   | TArr of 'attribute t * 'attribute t
-   | TCData of CData.t
+  type 'attribute t_ =
+    | TConst of Func.t
+    | TApp of Func.t * 'attribute t * 'attribute t list
+    | TPred of 'attribute * (Mode.t * 'attribute t) list
+    | TArr of 'attribute t * 'attribute t
+    | TCData of CData.t
+  and 'a t = { tit : 'a t_; tloc : Loc.t }
   [@@ deriving show, ord]
 
 end
-
+  
 module Term = struct
   
   type t_ =
@@ -225,7 +227,7 @@ end
 module TypeAbbreviation = struct
 
   type 'ty closedTypeexpression = 
-    | Lam of Func.t * 'ty closedTypeexpression 
+    | Lam of Func.t * Loc.t * 'ty closedTypeexpression 
     | Ty of 'ty
   [@@ deriving show, ord]
 

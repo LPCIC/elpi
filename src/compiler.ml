@@ -665,19 +665,24 @@ module ScopedTypeExpression = struct
   type t_ =
     | Const of scope * F.t
     | App of F.t * e * e list
+    | Arrow of e * e
+    | Pred of Ast.Structured.functionality * (Ast.Mode.t * e) list
     | CData of CData.t
   and e = { it : t_; loc : Loc.t }
   [@@ deriving show]
 
-  type t =
-    | Lam of F.t * t
+  type v_ =
+    | Lam of F.t * v_
     | Ty of e
+  type t = { name : F.t; value : v_; nparams : int; loc : Loc.t }
 
   let rec eqt ctx t1 t2 =
     match t1.it, t2.it with
     | Const(Global,c1), Const(Global,c2) -> F.equal c1 c2
     | Const(Local,c1), Const(Local,c2) -> ScopedTerm.eq_var ctx c1 c2
     | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
+    | Arrow(s1,t1), Arrow(s2,t2) -> eqt ctx s1 s2 && eqt ctx t1 t2
+    | Pred(f1,l1), Pred(f2,l2) -> f1 == f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
     | CData c1, CData c2 -> CData.equal c1 c2
     | _ -> false
 
@@ -881,7 +886,8 @@ end = struct (* {{{ *)
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
 
 
-  let rec structure_type_expression_aux ~loc = function
+  let rec structure_type_expression_aux ~loc t = { t with TypeExpression.tit =
+    match t.TypeExpression.tit with
     | TypeExpression.TPred([Functional],p) -> TypeExpression.TPred(Function,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc p) p)
     | TypeExpression.TPred([],p) -> TypeExpression.TPred(Relation,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc p) p)
     | TypeExpression.TPred(a :: _, _) -> error ~loc ("illegal attribute " ^ show_raw_attribute a)
@@ -889,11 +895,13 @@ end = struct (* {{{ *)
     | TypeExpression.TApp(c,x,xs) -> TypeExpression.TApp(c,structure_type_expression_aux ~loc x,List.map (structure_type_expression_aux ~loc) xs)
     | TypeExpression.TCData c -> TypeExpression.TCData c
     | TypeExpression.TConst c -> TypeExpression.TConst c
+  }
 
-  let structure_type_expression loc toplevel_func = function
+  let structure_type_expression loc toplevel_func t = 
+    match t.TypeExpression.tit with
     | TypeExpression.TPred([],p) ->
-        TypeExpression.TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc p) p)
-    | x -> structure_type_expression_aux ~loc x
+      { t with TypeExpression.tit = TypeExpression.TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc p) p) }
+    | x -> structure_type_expression_aux ~loc t
 
   let structure_type_attributes { Type.attributes; loc; name; ty } =
     let duplicate_err s =
@@ -934,7 +942,7 @@ end = struct (* {{{ *)
 
   let structure_type_abbreviation { TypeAbbreviation.name; value; nparams; loc } =
     let rec aux = function
-      | TypeAbbreviation.Lam(c,t) -> TypeAbbreviation.Lam(c,aux t)
+      | TypeAbbreviation.Lam(c,loc,t) -> TypeAbbreviation.Lam(c,loc,aux t)
       | TypeAbbreviation.Ty t -> TypeAbbreviation.Ty (structure_type_expression loc Relation t)
   in
   { TypeAbbreviation.name; value = aux value; nparams; loc }
@@ -1182,6 +1190,30 @@ end = struct
   and scope_loc_term ctx { Ast.Term.it; loc } =
     let it = scope_term ctx ~loc it in
     { ScopedTerm.it; loc }
+
+  let rec scope_tye ctx ~loc t =
+    match t with
+    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(ScopedTerm.Local,c))
+    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(ScopedTerm.Global,c))
+    | Ast.TypeExpression.TApp(c,x,xs) ->
+        if F.Set.mem c ctx then error ~loc "type schema parameters cannot be type formers";
+        ScopedTypeExpression.App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
+    | Ast.TypeExpression.TPred(m,xs) ->
+        ScopedTypeExpression.Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
+    | Ast.TypeExpression.TArr(s,t) ->
+        ScopedTypeExpression.Arrow(scope_loc_tye ctx s, scope_loc_tye ctx t)
+    | Ast.TypeExpression.TCData c -> ScopedTypeExpression.CData c
+  and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
+
+  let scope_type_abbrev { Ast.TypeAbbreviation.name; value; nparams; loc } =
+    let rec aux ctx = function
+      | Ast.TypeAbbreviation.Lam(c,loc,t) when is_uvar_name c ->
+          if F.Set.mem c ctx then error ~loc "duplicate type schema variable";
+          ScopedTypeExpression.Lam(c,aux (F.Set.add c ctx) t)
+      | Ast.TypeAbbreviation.Lam(c,loc,_) -> error ~loc "only variables can be abstracted in type schema"
+      | Ast.TypeAbbreviation.Ty t -> ScopedTypeExpression.Ty (scope_loc_tye ctx t)
+  in
+    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc }
 
   let scope_loc_term = scope_loc_term F.Set.empty
 

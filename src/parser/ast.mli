@@ -42,7 +42,7 @@ end
 
 module Mode : sig
 
-  type mode = Input | Output
+  type t = Input | Output
   [@@deriving show, ord]
 
 end
@@ -61,13 +61,14 @@ type raw_attribute =
 
 module TypeExpression : sig
 
-  type 'attribute t =
+  type 'attribute t_ =
    | TConst of Func.t
    | TApp of Func.t * 'attribute t * 'attribute t list
-   | TPred of 'attribute * ((Mode.mode * 'attribute t) list)
+   | TPred of 'attribute * (Mode.t * 'attribute t) list
    | TArr of 'attribute t * 'attribute t
    | TCData of CData.t
-  [@@ deriving show, ord]
+   and 'a t = { tit : 'a t_; tloc : Loc.t }
+   [@@ deriving show, ord]
 
 end
 
@@ -153,7 +154,7 @@ end
 module TypeAbbreviation : sig
 
   type 'ty closedTypeexpression = 
-    | Lam of Func.t * 'ty closedTypeexpression 
+    | Lam of Func.t * Loc.t * 'ty closedTypeexpression 
     | Ty of 'ty
   [@@ deriving show, ord]
 

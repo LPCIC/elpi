@@ -24,7 +24,7 @@ let loc (startpos, endpos) = {
   line_starts_at = startpos.Lexing.pos_bol;
 }
 
-let desugar_multi_binder loc t =
+let desugar_multi_binder loc (t : Ast.Term.t) =
   match t.it with
   | App( { it = Const hd } as binder,args)
     when Func.equal hd Func.pif || Func.equal hd Func.sigmaf && List.length args > 1 ->
@@ -112,6 +112,8 @@ let mode_of_IO io =
 %type < Func.t > prefix_SYMB
 %type < Func.t > postfix_SYMB
 %type < Func.t > constant
+%type < 'a TypeExpression.t > type_term
+%type < 'a TypeExpression.t > atype_term
 
 (* entry points *)
 %start program
@@ -175,14 +177,14 @@ chr_rule:
 pred:
 | attributes = attributes; PRED;
   name = constant; args = separated_list(option(CONJ),pred_item) {
-   { Type.loc=loc $sloc; name; attributes; ty = TPred ([], args) }
+   { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([], args) } }
  }
 pred_item:
 | io = IO_COLON; ty = type_term { (mode_of_IO io,ty) }
 
 anonymous_pred:
 | attributes = attributes; PRED;
-  args = separated_list(option(CONJ),pred_item) { TPred (attributes, args) }
+  args = separated_list(option(CONJ),pred_item) { { tloc = loc $loc; tit = TPred (attributes, args) } }
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
@@ -197,20 +199,20 @@ type_:
   }
 
 atype_term:
-| c = STRING { TCData (cstring.Util.CData.cin c) }
-| c = constant { TConst (fix_church c) }
+| c = STRING { { tloc = loc $loc; tit = TCData (cstring.Util.CData.cin c) } }
+| c = constant { { tloc = loc $loc; tit = TConst (fix_church c) } }
 | LPAREN; t = type_term; RPAREN { t }
 | LPAREN; t = anonymous_pred; RPAREN { t }
 type_term:
-| c = constant { TConst (fix_church c) }
-| hd = constant; args = nonempty_list(atype_term) { TApp (hd, List.hd args, List.tl args) }
-| hd = type_term; ARROW; t = type_term { TArr (hd, t) }
+| c = constant { { tloc = loc $loc; tit = TConst (fix_church c) } }
+| hd = constant; args = nonempty_list(atype_term) { { tloc = loc $loc; tit = TApp (hd, List.hd args, List.tl args) } }
+| hd = type_term; ARROW; t = type_term { { tloc = loc $loc; tit = TArr (hd, t) } }
 | LPAREN; t = anonymous_pred; RPAREN { t }
 | LPAREN; t = type_term; RPAREN { t }
 
 kind_term:
-| TYPE { TConst (Func.from_string "type") }
-| TYPE; ARROW; t = kind_term { TArr (TConst (Func.from_string "type"), t) }
+| TYPE { { tloc = loc $loc; tit = TConst (Func.from_string "type") } }
+| x = TYPE; ARROW; t = kind_term { { tloc = loc $loc; tit = TArr ({ tloc = loc $loc(x); tit = TConst (Func.from_string "type") }, t) } }
 
 macro:
 | MACRO; m = term; VDASH; b = term {
@@ -222,7 +224,7 @@ typeabbrev:
 | TYPEABBREV; a = abbrevform; t = type_term {
     let name, args = a in
     let nparams = List.length args in
-    let mkLam (n,_) body =  TypeAbbreviation.Lam (n, body) in
+    let mkLam (n,l) body =  TypeAbbreviation.Lam (n, l, body) in
     let value = List.fold_right mkLam args (Ty t) in
     { TypeAbbreviation.name = name;
       nparams = nparams;
