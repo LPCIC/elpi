@@ -621,23 +621,29 @@ end
 module MutableOnce : sig 
   type 'a t
   [@@ deriving show]
-  val make : unit -> 'a t
+  val make : F.t -> 'a t
   val set : 'a t -> 'a -> unit
   val get : 'a t -> 'a
   val is_set : 'a t -> bool
+  val pretty : Format.formatter -> 'a t -> unit
 end = struct
-  type 'a t = 'a option ref
+  type 'a t = F.t * 'a option ref
   [@@ deriving show]
 
-  let make () = ref None
+  let make f = f, ref None
 
-  let is_set x = Option.is_some !x
-  let set r x =
+  let is_set (_,x) = Option.is_some !x
+  let set (_,r) x =
     match !r with
     | None -> r := Some x
     | Some _ -> anomaly "MutableOnce"
   
-  let get x = match !x with Some x -> x | None -> anomaly "get"
+  let get (_,x) = match !x with Some x -> x | None -> anomaly "get"
+
+  let pretty fmt (f,x) =
+    match !x with
+    | None -> Format.fprintf fmt "%a" F.pp f
+    | Some _ -> anomaly "pp"
 end
 
 module TypeAssignment = struct
@@ -649,6 +655,18 @@ module TypeAssignment = struct
     | Arr of Ast.Structured.variadic * t * t
     | UVar of t MutableOnce.t
   [@@ deriving show]
+
+  open Format
+
+  let rec pretty fmt = function
+    | Prop -> fprintf fmt "prop"
+    | Any -> fprintf fmt "any"
+    | Cons c -> F.pp fmt c
+    | App(f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist pretty " ") (x::xs)
+    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "%a -> %a" pretty s pretty t
+    | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" pretty s pretty t
+    | UVar m when MutableOnce.is_set m -> pretty fmt @@ MutableOnce.get m
+    | UVar m -> MutableOnce.pretty fmt m
 
 end
 module ScopedTerm = struct
@@ -663,6 +681,18 @@ module ScopedTerm = struct
    | CData of CData.t
    and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
   [@@ deriving show]
+
+  open Format
+  let rec pretty fmt { it } = pretty_ fmt it
+  and pretty_ fmt = function
+    | Const(_,f) -> fprintf fmt "%a" F.pp f
+    | Discard -> fprintf fmt "_"
+    | Lam(None,t) -> fprintf fmt "_\\ %a" pretty t
+    | Lam(Some f,t) -> fprintf fmt "%a\\ %a" F.pp f pretty t
+    | App(_,f,x,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") (x::xs)
+    | Var(f,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") xs
+    | CData c -> fprintf fmt "%a" CData.pp c
+    
 
   let equal t1 t2 =
     let rec eq ctx t1 t2 =
@@ -747,10 +777,10 @@ end = struct
   open ScopedTerm
 
   let error_not_a_function ~loc c ty x =
-    let msg = Format.asprintf "%a has type %a but is passed argument %a" F.pp c TypeAssignment.pp ty ScopedTerm.pp x in
+    let msg = Format.asprintf "%a has type %a but is passed argument %a" F.pp c TypeAssignment.pretty ty ScopedTerm.pretty x in
     error ~loc msg
     let error_bad_argument ~loc c ty x tx =
-      let msg = Format.asprintf "%a has type %a but %a expects an argument of type %a"  ScopedTerm.pp x TypeAssignment.pp tx F.pp c TypeAssignment.pp ty in
+      let msg = Format.asprintf "%a has type %a but %a expects an argument of type %a"  ScopedTerm.pretty x TypeAssignment.pretty tx F.pp c TypeAssignment.pretty ty in
       error ~loc msg
   
   let check env (t : ScopedTerm.t) =
@@ -765,7 +795,7 @@ end = struct
       | App(Global,c,x,xs) -> check_app ctx ~loc c (fresh_skema @@ global_type env ~loc c) (x::xs)
       | App(Local,c,x,xs) -> check_app ctx ~loc c (local_type ctx ~loc c) (x::xs)
       | Lam(c,t) -> check_lam ctx ~loc c t
-      | Discard -> TypeAssignment.UVar (MutableOnce.make ())
+      | Discard -> TypeAssignment.UVar (MutableOnce.make (F.from_string "Any"))
       | Var(c,args) -> check_app ctx ~loc c (uvar_type c) args
 
     and cdata_type ~loc c =
@@ -781,7 +811,7 @@ end = struct
     and fresh_skema { TypeList.def } = (* TODO overloading *)
       let rec aux subst = function
         | ScopedTypeExpression.Lam(c,t) ->
-            let subst = F.Map.add c (TypeAssignment.UVar (MutableOnce.make ())) subst in
+            let subst = F.Map.add c (TypeAssignment.UVar (MutableOnce.make c)) subst in
             aux subst t
         | ScopedTypeExpression.Ty t -> aux_ty subst t
       and aux_ty subst e =
@@ -811,8 +841,9 @@ end = struct
 
     and check_lam ctx ~loc c t =
       let c = match c with Some c -> c | None -> fresh_name () in
-      let ctx = F.Map.add c (TypeAssignment.UVar(MutableOnce.make ())) ctx in
-      check_loc ctx t
+      let src = TypeAssignment.UVar(MutableOnce.make c) in
+      let ctx = F.Map.add c src ctx in
+      TypeAssignment.Arr(Ast.Structured.NotVariadic,src,check_loc ctx t)
       
     and check_app ctx ~loc c ty = function
       | [] -> ty
@@ -830,15 +861,15 @@ end = struct
           | TypeAssignment.UVar m when MutableOnce.is_set m ->
               check_app ctx ~loc c (MutableOnce.get m) (x :: xs)
           | TypeAssignment.UVar m ->
-              let s = TypeAssignment.UVar(MutableOnce.make ()) in
-              let t = TypeAssignment.UVar(MutableOnce.make ()) in
+              let s = TypeAssignment.UVar(MutableOnce.make (F.from_string "Src")) in
+              let t = TypeAssignment.UVar(MutableOnce.make (F.from_string "Tgt")) in
               check_app ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) (x :: xs)
           | _ -> error_not_a_function ~loc c ty x (* TODO: trim loc up to x *)
 
     and uvar_type c =
       try F.Map.find c !sigma
       with Not_found ->
-        let ty = TypeAssignment.UVar (MutableOnce.make ()) in
+        let ty = TypeAssignment.UVar (MutableOnce.make c) in
         sigma := F.Map.add c ty !sigma;
         ty
     and unify t1 t2 =
@@ -1379,7 +1410,7 @@ end = struct
       error ~loc "Applied quotation"
   and scope_loc_term ctx { Ast.Term.it; loc } =
     let it = scope_term ctx ~loc it in
-    { ScopedTerm.it; loc; ty = MutableOnce.make () }
+    { ScopedTerm.it; loc; ty = MutableOnce.make (F.from_string "Ty") }
 
   let scope_loc_term = scope_loc_term F.Set.empty
 
