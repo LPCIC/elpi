@@ -650,7 +650,7 @@ module ScopedTypeExpression = struct
 
 end
 
-module Types = struct
+module TypeList = struct
 
   type typ = ScopedTypeExpression.t
   [@@deriving show, ord]
@@ -713,7 +713,7 @@ type program = {
   toplevel_macros : macro_declaration;
 }
 and pbody = {
-  types : Types.types F.Map.t;
+  types : TypeList.types F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   body : block list;
@@ -736,7 +736,7 @@ module Flat = struct
 
 type program = {
   toplevel_macros : macro_declaration;
-  types : Types.types F.Map.t;
+  types : TypeList.types F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list;
@@ -757,7 +757,7 @@ module Assembled = struct
 
 type program = {
   (* clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list; for printing *)
-  types : Types.types F.Map.t;
+  types : TypeList.types F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
 
@@ -798,7 +798,7 @@ module WithMain = struct
 
 (* The entire program + query, but still in "printable" format *)
 type 'a query = {
-  types : Types.types F.Map.t;
+  types : TypeList.types F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   (* clauses : (preterm,Assembled.attribute) Ast.Clause.t list; *)
@@ -1150,9 +1150,9 @@ end = struct
   let map_append k v m =
     try
       let l = F.Map.find k m in
-      F.Map.add k (Types.append v l) m
+      F.Map.add k (TypeList.append v l) m
     with Not_found ->
-      F.Map.add k (Types.make v) m
+      F.Map.add k (TypeList.make v) m
 
   let is_uvar_name f =  F.is_uvar_name f
 
@@ -2346,9 +2346,9 @@ end (* }}} *)
     (mode * Loc.t) F.Map.t ->
     (mode * Loc.t) F.Map.t
   val merge_types :
-    Types.types F.Map.t ->
-    Types.types F.Map.t ->
-    Types.types F.Map.t
+    TypeList.types F.Map.t ->
+    TypeList.types F.Map.t ->
+    TypeList.types F.Map.t
   val merge_type_abbrevs :
     ScopedTypeExpression.t F.Map.t ->
     ScopedTypeExpression.t F.Map.t ->
@@ -2476,7 +2476,7 @@ end (* }}} *)
     if name == name' && value' == value then orig
     else { ScopedTypeExpression.name = name'; value = value'; nparams; loc; indexing }
 
-  let apply_subst_types s = Types.smart_map (smart_map_type (subst_global s))
+  let apply_subst_types s = TypeList.smart_map (smart_map_type (subst_global s))
 
   let apply_subst_types s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) (apply_subst_types s v) m) l F.Map.empty
@@ -2491,7 +2491,7 @@ end (* }}} *)
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
 
     let merge_types t1 t2 =
-      F.Map.union (fun _ l1 l2 -> Some (Types.merge l1 l2)) t1 t2
+      F.Map.union (fun _ l1 l2 -> Some (TypeList.merge l1 l2)) t1 t2
 
     let merge_modes m1 m2 =
       if F.Map.is_empty m1 then m2 else
@@ -2949,7 +2949,7 @@ end = struct
     let symbols, map =
       F.Map.fold (fun tname l (symbols, acc) ->
         let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols tname in
-        symbols, Types.fold (fun acc { ScopedTypeExpression.indexing; loc } ->
+        symbols, TypeList.fold (fun acc { ScopedTypeExpression.indexing; loc } ->
                    add_indexing_for ~loc tname c indexing acc)
                   acc l)
       types (symbols, C.Map.empty) in
