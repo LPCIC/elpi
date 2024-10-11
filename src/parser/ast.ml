@@ -44,6 +44,9 @@ module Func = struct
   let arrowf = from_string "->"
   let sequentf = from_string "?-"
   let ctypef = from_string "ctype"
+
+  let propf = from_string "prop"
+
   
   let dummyname = from_string "%dummy"
   let spillf = from_string "%spill"
@@ -349,6 +352,7 @@ and 'a shorthand = {
   short_name : 'a;
 }
 and functionality = Function | Relation
+and variadic = Variadic | NotVariadic
 [@@deriving show, ord]
 
 end

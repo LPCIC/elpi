@@ -555,10 +555,107 @@ module C = Constants
 }
 [@@deriving show, ord] *)
 
-module ScopedTerm = struct
+module ScopeContext = struct
 
   type scope = Local | Global
   [@@ deriving show, ord]
+
+type ctx = { vmap : (F.t * F.t) list; uvmap : (F.t * F.t) list ref }
+let empty () = { vmap = []; uvmap = ref [] }
+
+let eq_var { vmap } c1 c2 = List.mem (c1,c2) vmap
+
+
+let purge f c l = List.filter (fun x -> not @@ F.equal (f x) c) l
+let push_ctx c1 c2 ctx = { ctx with vmap = (c1 , c2) :: (purge fst c1 @@ purge snd c2 ctx.vmap) }
+let eq_uvar ctx c1 c2 =
+  if List.exists (fun (x,_) -> F.equal x c1) !(ctx.uvmap) ||
+     List.exists (fun (_,y) -> F.equal y c2) !(ctx.uvmap) then
+    List.mem (c1,c2) !(ctx.uvmap)
+  else begin
+    ctx.uvmap := (c1,c2) :: !(ctx.uvmap);
+    true
+  end
+end
+
+module ScopedTypeExpression = struct
+  open ScopeContext
+  type t_ =
+    | Prop | Any
+    | Const of scope * F.t
+    | App of F.t * e * e list
+    | Arrow of Ast.Structured.variadic * e * e
+    | Pred of Ast.Structured.functionality * (Ast.Mode.t * e) list
+    | Primitive of string
+  and e = { it : t_; loc : Loc.t }
+  [@@ deriving show]
+
+  type v_ =
+    | Lam of F.t * v_
+    | Ty of e
+  [@@ deriving show]
+
+  type t = { name : F.t; value : v_; nparams : int; loc : Loc.t; indexing : Ast.Structured.tattribute option }
+  [@@ deriving show]
+
+  let rec eqt ctx t1 t2 =
+    match t1.it, t2.it with
+    | Const(Global,c1), Const(Global,c2) -> F.equal c1 c2
+    | Const(Local,c1), Const(Local,c2) -> eq_var ctx c1 c2
+    | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
+    | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 == b2 && eqt ctx s1 s2 && eqt ctx t1 t2
+    | Pred(f1,l1), Pred(f2,l2) -> f1 == f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
+    | Primitive c1, Primitive c2 -> String.equal c1 c2
+    | Prop, Prop -> true
+    | Any, Any -> true
+    | _ -> false
+
+  let rec eq ctx t1 t2 =
+    match t1, t2 with
+    | Lam(c1,b1), Lam(c2,b2) -> eq (push_ctx c1 c2 ctx) b1 b2
+    | Ty t1, Ty t2 -> eqt ctx t1 t2
+    | _ -> false
+
+  let compare _ _ = assert false
+
+end
+
+module MutableOnce : sig 
+  type 'a t
+  [@@ deriving show]
+  val make : unit -> 'a t
+  val set : 'a t -> 'a -> unit
+  val get : 'a t -> 'a
+  val is_set : 'a t -> bool
+end = struct
+  type 'a t = 'a option ref
+  [@@ deriving show]
+
+  let make () = ref None
+
+  let is_set x = Option.is_some !x
+  let set r x =
+    match !r with
+    | None -> r := Some x
+    | Some _ -> anomaly "MutableOnce"
+  
+  let get x = match !x with Some x -> x | None -> anomaly "get"
+end
+
+module TypeAssignment = struct
+
+  type t =
+    | Prop | Any
+    | Primitive of string
+    | Cons of F.t
+    | App of F.t * t * t list
+    | Arr of Ast.Structured.variadic * t * t
+    | UVar of t MutableOnce.t
+  [@@ deriving show]
+
+end
+module ScopedTerm = struct
+  open ScopeContext
 
   type t_ =
    | Const of scope * F.t
@@ -567,26 +664,8 @@ module ScopedTerm = struct
    | App of scope * F.t * t * t list
    | Lam of F.t option * t
    | CData of CData.t
-   and t = { it : t_; loc : Loc.t }
+   and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
   [@@ deriving show]
-
-  type ctx = { vmap : (F.t * F.t) list; uvmap : (F.t * F.t) list ref }
-  let empty_ctx () = { vmap = []; uvmap = ref [] }
-
-  let eq_var { vmap } c1 c2 = List.mem (c1,c2) vmap
-
-
-  let purge f c l = List.filter (fun x -> not @@ F.equal (f x) c) l
-  let push_ctx c1 c2 ctx = { ctx with vmap = (c1 , c2) :: (purge fst c1 @@ purge snd c2 ctx.vmap) }
-  let eq_uvar ctx c1 c2 =
-    if List.exists (fun (x,_) -> F.equal x c1) !(ctx.uvmap) ||
-       List.exists (fun (_,y) -> F.equal y c2) !(ctx.uvmap) then
-      List.mem (c1,c2) !(ctx.uvmap)
-    else begin
-      ctx.uvmap := (c1,c2) :: !(ctx.uvmap);
-      true
-    end
-
 
   let equal t1 t2 =
     let rec eq ctx t1 t2 =
@@ -602,53 +681,12 @@ module ScopedTerm = struct
       | CData c1, CData c2 -> CData.equal c1 c2
       | _ -> false
     in
-      eq (empty_ctx ()) t1 t2
+      eq (empty ()) t1 t2
 
     let compare _ _ = assert false
 
 end
 
-module ScopedTypeExpression = struct
-
-  type scope = ScopedTerm.scope = Local | Global
-  [@@ deriving show, ord]
-
-  type t_ =
-    | Const of scope * F.t
-    | App of F.t * e * e list
-    | Arrow of e * e
-    | Pred of Ast.Structured.functionality * (Ast.Mode.t * e) list
-    | CData of CData.t
-  and e = { it : t_; loc : Loc.t }
-  [@@ deriving show]
-
-  type v_ =
-    | Lam of F.t * v_
-    | Ty of e
-  [@@ deriving show]
-
-  type t = { name : F.t; value : v_; nparams : int; loc : Loc.t; indexing : Ast.Structured.tattribute option }
-  [@@ deriving show]
-
-  let rec eqt ctx t1 t2 =
-    match t1.it, t2.it with
-    | Const(Global,c1), Const(Global,c2) -> F.equal c1 c2
-    | Const(Local,c1), Const(Local,c2) -> ScopedTerm.eq_var ctx c1 c2
-    | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
-    | Arrow(s1,t1), Arrow(s2,t2) -> eqt ctx s1 s2 && eqt ctx t1 t2
-    | Pred(f1,l1), Pred(f2,l2) -> f1 == f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
-    | CData c1, CData c2 -> CData.equal c1 c2
-    | _ -> false
-
-  let rec eq ctx t1 t2 =
-    match t1, t2 with
-    | Lam(c1,b1), Lam(c2,b2) -> eq (ScopedTerm.push_ctx c1 c2 ctx) b1 b2
-    | Ty t1, Ty t2 -> eqt ctx t1 t2
-    | _ -> false
-
-  let compare _ _ = assert false
-
-end
 
 module TypeList = struct
 
@@ -663,7 +701,7 @@ module TypeList = struct
     let pp = pp_typ
   end)
   
-  type types = {
+  type t = {
     set : Set.t;
     lst : typ list;
     def : typ;
@@ -682,7 +720,7 @@ module TypeList = struct
         def = t2.def;
       }
   
-  let smart_map (f : typ -> typ) (t : types) : types =
+  let smart_map (f : typ -> typ) (t : t) : t =
     let set' = Set.map f t.set in
     let lst' = smart_map f t.lst in
     let def' = f t.def in
@@ -701,6 +739,138 @@ module TypeList = struct
   
 end
   
+module TypeChecker : sig
+
+  type env = TypeList.t F.Map.t
+  val check : env -> ScopedTerm.t -> TypeAssignment.t
+
+end = struct
+  type env = TypeList.t F.Map.t
+
+  open ScopedTerm
+
+  let error_not_a_function ~loc c ty x =
+    let msg = Format.asprintf "%a has type %a but is passed argument %a" F.pp c TypeAssignment.pp ty ScopedTerm.pp x in
+    error ~loc msg
+    let error_bad_argument ~loc c ty x tx =
+      let msg = Format.asprintf "%a has type %a but %a expects an argument of type %a"  ScopedTerm.pp x TypeAssignment.pp tx F.pp c TypeAssignment.pp ty in
+      error ~loc msg
+  
+  let check env (t : ScopedTerm.t) =
+    let sigma : TypeAssignment.t F.Map.t ref = ref F.Map.empty in
+    let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
+    let rec check ctx ~loc = function
+      | Const(Global,c) ->
+          let sk = global_type env ~loc c in
+          fresh_skema sk
+      | Const(Local,c) -> local_type ctx ~loc c
+      | CData c -> TypeAssignment.Primitive (CData.name c)
+      | App(Global,c,x,xs) -> check_app ctx ~loc c (fresh_skema @@ global_type env ~loc c) (x::xs)
+      | App(Local,c,x,xs) -> check_app ctx ~loc c (local_type ctx ~loc c) (x::xs)
+      | Lam(c,t) -> check_lam ctx ~loc c t
+      | Discard -> TypeAssignment.UVar (MutableOnce.make ())
+      | Var(c,args) -> check_app ctx ~loc c (uvar_type c) args
+
+    and global_type env ~loc c =
+      try F.Map.find c env
+      with Not_found -> error ~loc "unknown global"
+
+      (* TODO: do this once and forall *)
+    and fresh_skema { TypeList.def } = (* TODO overloading *)
+      let rec aux subst = function
+        | ScopedTypeExpression.Lam(c,t) ->
+            let subst = F.Map.add c (TypeAssignment.UVar (MutableOnce.make ())) subst in
+            aux subst t
+        | ScopedTypeExpression.Ty t -> aux_ty subst t
+      and aux_ty subst e =
+        match e.it with
+        | ScopedTypeExpression.Prop -> TypeAssignment.Prop
+        | ScopedTypeExpression.Any -> TypeAssignment.Any
+        | ScopedTypeExpression.App(c,x,xs) ->
+            TypeAssignment.App(c,aux_ty subst x, List.map (aux_ty subst) xs)
+        | ScopedTypeExpression.Arrow(b,s,t) -> TypeAssignment.Arr(b,aux_ty subst s, aux_ty subst t)
+        | ScopedTypeExpression.Pred(_,l) ->
+            List.fold_right (fun (_,t) r -> TypeAssignment.Arr(Ast.Structured.NotVariadic,aux_ty subst t,r)) l TypeAssignment.Prop
+        | ScopedTypeExpression.Primitive c -> TypeAssignment.Primitive c
+        | ScopedTypeExpression.Const(Global,c) when F.equal c F.propf -> TypeAssignment.Prop
+        | ScopedTypeExpression.Const(Global,c) -> TypeAssignment.Cons c
+        | ScopedTypeExpression.Const(Local,c) ->
+            try F.Map.find c subst
+            with Not_found -> anomaly "free variable"
+      in
+        Format.eprintf "skema: %a\n%!" ScopedTypeExpression.pp def;
+        let instance = aux F.Map.empty def.ScopedTypeExpression.value in
+        Format.eprintf "instance: %a\n%!" TypeAssignment.pp instance;
+        instance
+
+
+    and local_type ctx ~loc c =
+      try F.Map.find c ctx
+      with Not_found -> anomaly ~loc "free variable"
+
+    and check_lam ctx ~loc c t =
+      let c = match c with Some c -> c | None -> fresh_name () in
+      let ctx = F.Map.add c (TypeAssignment.UVar(MutableOnce.make ())) ctx in
+      check_loc ctx t
+      
+    and check_app ctx ~loc c ty = function
+      | [] -> ty
+      | x :: xs ->
+        match ty with
+          | TypeAssignment.Arr(Ast.Structured.Variadic,s,t) ->
+              let tx = check_loc ctx x in
+              if unify s tx then
+                if xs = [] then t else check_app ctx ~loc c ty xs
+              else error_bad_argument ~loc c s x tx         
+          | TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t) ->
+              let tx = check_loc ctx x in
+              if unify s tx then check_app ctx ~loc c t xs
+              else error_bad_argument ~loc c s x tx         
+          | TypeAssignment.UVar m when MutableOnce.is_set m ->
+              check_app ctx ~loc c (MutableOnce.get m) (x :: xs)
+          | TypeAssignment.UVar m ->
+              let s = TypeAssignment.UVar(MutableOnce.make ()) in
+              let t = TypeAssignment.UVar(MutableOnce.make ()) in
+              check_app ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) (x :: xs)
+          | _ -> error_not_a_function ~loc c ty x (* TODO: trim loc up to x *)
+
+    and uvar_type c =
+      try F.Map.find c !sigma
+      with Not_found ->
+        let ty = TypeAssignment.UVar (MutableOnce.make ()) in
+        sigma := F.Map.add c ty !sigma;
+        ty
+    and unify t1 t2 =
+      let open TypeAssignment in
+      match t1, t2 with
+      | Any, _ -> true
+      | _, Any -> true
+      | UVar m, _ when MutableOnce.is_set m -> unify (MutableOnce.get m) t2
+      | _, UVar m when MutableOnce.is_set m -> unify t1 (MutableOnce.get m)
+      | Primitive s1, Primitive s2 -> String.equal s1 s2
+      | App(c1,x,xs), App(c2,y,ys) ->
+          F.equal c1 c2 && unify x y && Util.for_all2 unify xs ys
+      | Cons c1, Cons c2 -> F.equal c1 c2    
+      | Prop, Prop -> true
+      | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unify s1 s2 && unify t1 t2
+      | Arr(Ast.Structured.Variadic,_,t), _ -> unify t t2
+      | _, Arr(Ast.Structured.Variadic,_,t) -> unify t1 t
+      | UVar m, _ -> assign m t2
+      | _, UVar m -> assign m t1
+      | _,_ -> false
+
+    and assign m t = oc m t && (MutableOnce.set m t; true)
+    and oc _ _ = true (* TODO *)
+    and check_loc ctx { loc; it; ty } =
+      let typ = check ctx ~loc it in
+      MutableOnce.set ty typ;
+      typ
+    in
+      check_loc F.Map.empty t
+end
+
+
+
   
 type macro_declaration = (ScopedTerm.t * Loc.t) F.Map.t
 [@@ deriving show, ord]
@@ -713,7 +883,7 @@ type program = {
   toplevel_macros : macro_declaration;
 }
 and pbody = {
-  types : TypeList.types F.Map.t;
+  types : TypeList.t F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   body : block list;
@@ -736,7 +906,7 @@ module Flat = struct
 
 type program = {
   toplevel_macros : macro_declaration;
-  types : TypeList.types F.Map.t;
+  types : TypeList.t F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list;
@@ -757,7 +927,7 @@ module Assembled = struct
 
 type program = {
   (* clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list; for printing *)
-  types : TypeList.types F.Map.t;
+  types : TypeList.t F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
 
@@ -798,7 +968,7 @@ module WithMain = struct
 
 (* The entire program + query, but still in "printable" format *)
 type 'a query = {
-  types : TypeList.types F.Map.t;
+  types : TypeList.t F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   (* clauses : (preterm,Assembled.attribute) Ast.Clause.t list; *)
@@ -1197,22 +1367,27 @@ end = struct
       error ~loc "Applied quotation"
   and scope_loc_term ctx { Ast.Term.it; loc } =
     let it = scope_term ctx ~loc it in
-    { ScopedTerm.it; loc }
+    { ScopedTerm.it; loc; ty = MutableOnce.make () }
 
   let scope_loc_term = scope_loc_term F.Set.empty
 
   let rec scope_tye ctx ~loc t =
     match t with
-    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(ScopedTerm.Local,c))
-    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(ScopedTerm.Global,c))
+    | Ast.TypeExpression.TConst c when F.show c = "prop" -> ScopedTypeExpression.Prop
+    | Ast.TypeExpression.TConst c when F.show c = "any" -> ScopedTypeExpression.Any
+    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(ScopeContext.Local,c))
+    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(ScopeContext.Global,c))
+    | Ast.TypeExpression.TApp(c,x,[y]) when F.show c = "variadic" ->
+        ScopedTypeExpression.Arrow(Ast.Structured.Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
     | Ast.TypeExpression.TApp(c,x,xs) ->
         if F.Set.mem c ctx || is_uvar_name c then error ~loc "type schema parameters cannot be type formers";
         ScopedTypeExpression.App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
     | Ast.TypeExpression.TPred(m,xs) ->
         ScopedTypeExpression.Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
     | Ast.TypeExpression.TArr(s,t) ->
-        ScopedTypeExpression.Arrow(scope_loc_tye ctx s, scope_loc_tye ctx t)
-    | Ast.TypeExpression.TCData c -> ScopedTypeExpression.CData c
+        ScopedTypeExpression.Arrow(Ast.Structured.NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
+    | Ast.TypeExpression.TCData c when D.C.is_string c -> ScopedTypeExpression.Primitive (D.C.to_string c)
+    | Ast.TypeExpression.TCData _ -> (* TODO fix parser *) assert false
   and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
 
   let scope_type_abbrev { Ast.TypeAbbreviation.name; value; nparams; loc } =
@@ -1235,11 +1410,14 @@ end = struct
         | Const(Local, _) -> assert false (* there are no binders yet *)
         | Const(Global,c) when is_uvar_name c -> F.Set.add c e
         | Const(Global,_) -> e
-        | CData _ -> e
-        | Arrow(x,y) -> aux (aux e x) y
+        | Primitive _ -> e
+        | Prop -> e
+        | Any -> e
+        | Arrow(_,x,y) -> aux (aux e x) y
         | Pred(_,l) -> List.fold_left aux e (List.map snd l)
       in
         aux F.Set.empty value in
+    let value = scope_loc_tye vars ty in
     let nparams = F.Set.cardinal vars in
     let value =
       let rec close s t =
@@ -1255,7 +1433,7 @@ end = struct
     let ab = scope_type_abbrev ab in
     if F.Map.mem name abbrvs then begin
       let { ScopedTypeExpression.loc = otherloc; nparams = othernparams; value = othervalue; } = F.Map.find name abbrvs in
-      if nparams != othernparams || not @@ ScopedTypeExpression.eq (ScopedTerm.empty_ctx ()) othervalue ab.value then
+      if nparams != othernparams || not @@ ScopedTypeExpression.eq (ScopeContext.empty ()) othervalue ab.value then
         error ~loc ("duplicate type abbreviation for " ^ F.show name ^ ". Previous declaration: " ^ Loc.show otherloc);
     end;
     F.Map.add name ab abbrvs
@@ -2346,9 +2524,9 @@ end (* }}} *)
     (mode * Loc.t) F.Map.t ->
     (mode * Loc.t) F.Map.t
   val merge_types :
-    TypeList.types F.Map.t ->
-    TypeList.types F.Map.t ->
-    TypeList.types F.Map.t
+    TypeList.t F.Map.t ->
+    TypeList.t F.Map.t ->
+    TypeList.t F.Map.t
   val merge_type_abbrevs :
     ScopedTypeExpression.t F.Map.t ->
     ScopedTypeExpression.t F.Map.t ->
@@ -2396,10 +2574,10 @@ end (* }}} *)
           if l == l' then it else Var(c,l')
       | Discard -> it
       | CData _ -> it
-    and aux_loc ({ it; loc } as orig) =
+    and aux_loc ({ it; loc; ty } as orig) =
       let it' = aux it in
       if it == it' then orig
-      else { it = it'; loc }
+      else { it = it'; loc; ty }
     in
       aux_loc t
 
@@ -2443,19 +2621,21 @@ end (* }}} *)
     if it' == it then orig else { ScopedTypeExpression.it = it'; loc }
   and smart_map_scoped_ty f orig =
     match orig with
-    | ScopedTypeExpression.CData _ -> orig
-    | ScopedTypeExpression.Const(ScopedTerm.Local,_) -> orig
-    | ScopedTypeExpression.Const(ScopedTerm.Global,c) ->
+    | ScopedTypeExpression.Prop -> orig
+    | ScopedTypeExpression.Any -> orig
+    | ScopedTypeExpression.Primitive _ -> orig
+    | ScopedTypeExpression.Const(ScopeContext.Local,_) -> orig
+    | ScopedTypeExpression.Const(ScopeContext.Global,c) ->
         let c' = f c in
-        if c == c' then orig else ScopedTypeExpression.Const(ScopedTerm.Global,c')
+        if c == c' then orig else ScopedTypeExpression.Const(ScopeContext.Global,c')
     | ScopedTypeExpression.App(c,x,xs) ->
         let x' = smart_map_scoped_loc_ty f x in
         let xs' = smart_map (smart_map_scoped_loc_ty f) xs in
         if x' == x && xs' == xs then orig else ScopedTypeExpression.App(c,x',xs')
-    | ScopedTypeExpression.Arrow(x,y) ->
+    | ScopedTypeExpression.Arrow(v,x,y) ->
         let x' = smart_map_scoped_loc_ty f x in
         let y' = smart_map_scoped_loc_ty f y in
-        if x' == x && y' == y then orig else ScopedTypeExpression.Arrow(x',y')
+        if x' == x && y' == y then orig else ScopedTypeExpression.Arrow(v,x',y')
     | ScopedTypeExpression.Pred(c,l) ->
         let l' = smart_map (fun (m,x as orig) ->
           let x' = smart_map_scoped_loc_ty f x in
@@ -2504,7 +2684,7 @@ end (* }}} *)
       if F.Map.mem name m then begin
         let { ScopedTypeExpression.loc = otherloc; value = othervalue; nparams = otherparams } =
           F.Map.find name m in
-        if nparams != otherparams || not @@ ScopedTypeExpression.eq (ScopedTerm.empty_ctx ()) othervalue value then
+        if nparams != otherparams || not @@ ScopedTypeExpression.eq (ScopeContext.empty ()) othervalue value then
         error ~loc
           ("duplicate type abbreviation for " ^ F.show name ^
             ". Previous declaration: " ^ Loc.show otherloc)
@@ -3097,6 +3277,11 @@ end = struct
         let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols (F.from_string name) in
         let state = Builtins.register state p c in
         symbols,state) (symbols,state) builtins in
+
+    (* TODO: make this callable on a unit (+ its base) *)
+    clauses |> List.iter (fun { Ast.Clause.body; loc } ->
+      if TypeAssignment.Prop <> TypeChecker.check types body then
+        error ~loc "type error");
 
     let symbols, chr =
       List.fold_left (extend1_chr_block flags state) (symbols,ochr) chr in

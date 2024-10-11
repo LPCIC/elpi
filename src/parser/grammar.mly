@@ -89,9 +89,7 @@ let decode_sequent loc t =
   | App({ it = Const c },[hyps;bo]) when c == Func.sequentf -> hyps, bo
   | _ -> underscore loc, t
 
-let prop = Func.from_string "prop"
-
-let fix_church x = if Func.show x = "o" then prop else x
+let fix_church x = if Func.show x = "o" then Func.propf else x
 
 let mode_of_IO io =
   if io = 'i' then Mode.Input

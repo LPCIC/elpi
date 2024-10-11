@@ -28,6 +28,7 @@ module Func : sig
   val arrowf : t
   val sequentf : t
   val ctypef : t
+  val propf : t
 
   val dummyname : t
   val spillf : t
@@ -248,6 +249,7 @@ and 'a shorthand = {
   short_name : 'a;
 }
 and functionality = Function | Relation
+and variadic = Variadic | NotVariadic
 [@@deriving show, ord]
 
 end
