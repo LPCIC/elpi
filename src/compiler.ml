@@ -1206,7 +1206,7 @@ end = struct
     | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(ScopedTerm.Local,c))
     | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(ScopedTerm.Global,c))
     | Ast.TypeExpression.TApp(c,x,xs) ->
-        if F.Set.mem c ctx then error ~loc "type schema parameters cannot be type formers";
+        if F.Set.mem c ctx || is_uvar_name c then error ~loc "type schema parameters cannot be type formers";
         ScopedTypeExpression.App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
     | Ast.TypeExpression.TPred(m,xs) ->
         ScopedTypeExpression.Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
@@ -1226,8 +1226,29 @@ end = struct
     { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; indexing = None }
 
   let compile_type { Ast.Type.name; loc; attributes; ty } =
+    let open ScopedTypeExpression in
     let value = scope_loc_tye F.Set.empty ty in
-    (* TODO: abstract capital globals *) let nparams = 0 in let value = ScopedTypeExpression.Ty value in
+    let vars =
+      let rec aux e { it } =
+        match it with
+        | App(_,x,xs) -> List.fold_left aux e (x :: xs)
+        | Const(Local, _) -> assert false (* there are no binders yet *)
+        | Const(Global,c) when is_uvar_name c -> F.Set.add c e
+        | Const(Global,_) -> e
+        | CData _ -> e
+        | Arrow(x,y) -> aux (aux e x) y
+        | Pred(_,l) -> List.fold_left aux e (List.map snd l)
+      in
+        aux F.Set.empty value in
+    let nparams = F.Set.cardinal vars in
+    let value =
+      let rec close s t =
+        if F.Set.is_empty s then t
+        else
+          let c = F.Set.choose s in
+          let s = F.Set.remove c s in
+          close s (Lam(c,t)) in
+      close vars (Ty value) in
     { ScopedTypeExpression.name; indexing = Some attributes; loc; nparams; value }
 
   let compile_type_abbrev abbrvs ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
