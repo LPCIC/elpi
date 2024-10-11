@@ -1225,6 +1225,11 @@ end = struct
   in
     { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; indexing = None }
 
+  let compile_type { Ast.Type.name; loc; attributes; ty } =
+    let value = scope_loc_tye F.Set.empty ty in
+    (* TODO: abstract capital globals *) let nparams = 0 in let value = ScopedTypeExpression.Ty value in
+    { ScopedTypeExpression.name; indexing = Some attributes; loc; nparams; value }
+
   let compile_type_abbrev abbrvs ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
     let ab = scope_type_abbrev ab in
     if F.Map.mem name abbrvs then begin
@@ -1240,10 +1245,17 @@ end = struct
         ("Duplicate mode declaration for " ^ F.show name ^ " (also at "^
           Loc.show (snd (F.Map.find name map)) ^ ")")
 
-  let compile_mode modes { Ast.Mode.name; args; loc } = THESE ARE NOW TYPES
-    let args = List.map to_mode args in
-    (* check_duplicate_mode name (args,loc) modes; *)
-    F.Map.add name (args,loc) modes
+  let compile_mode modes { Ast.Type.name; loc; ty = { Ast.TypeExpression.tit } } =
+    let fix_mode = function Ast.Mode.Input -> Util.Input | Ast.Mode.Output -> Util.Output in 
+    let rec type_to_mode = function
+      | m, Ast.TypeExpression.{ tit = TPred(_,l) } -> Ho(fix_mode m,List.map type_to_mode l)
+      | m, _ -> Fo (fix_mode m) in
+    match tit with
+    | Ast.TypeExpression.TPred(_,l) ->
+        let args = List.map type_to_mode l in
+       check_duplicate_mode name (args,loc) modes;
+       F.Map.add name (args,loc) modes
+    | _ -> modes
 
   let defs_of m = F.Map.bindings m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
 
@@ -1287,7 +1299,7 @@ end = struct
       (* let active_macros =
         List.fold_left compile_macro omacros macros in *)
       let type_abbrevs = List.fold_left compile_type_abbrev F.Map.empty type_abbrevs in
-      let types = List.fold_left (fun m t -> map_append t.Ast.Type.name t m) F.Map.empty types in
+      let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (compile_type t) m) F.Map.empty types in
       let modes = List.fold_left compile_mode F.Map.empty modes in
       let defs_m = defs_of modes in
       let defs_t = defs_of types in
@@ -2343,7 +2355,7 @@ end (* }}} *)
       { old_prefix; subst = List.fold_left push1 oldsubst shorthands }
 
 
-  let apply_subst_scoped_term f t =
+  let smart_map_scoped_term f t =
     let open ScopedTerm in
     let rec aux it =
       match it with
@@ -2370,7 +2382,7 @@ end (* }}} *)
     in
       aux_loc t
 
-  let map_clause f ({ Ast.Clause.body } as x) =
+  let smart_map_clause f ({ Ast.Clause.body } as x) =
     let body' = f body in
     if body == body' then x else { x with body = body' }
 
@@ -2379,62 +2391,81 @@ end (* }}} *)
     with Not_found -> f
 
   let apply_subst_clauses s cl =
-    smart_map (map_clause (apply_subst_scoped_term (subst_global s))) cl
+    smart_map (smart_map_clause (smart_map_scoped_term (subst_global s))) cl
 
-  let apply_subst_sequent s { Ast.Chr. eigen; context; conclusion } =
-    let eigen = apply_subst_scoped_term (subst_global s) eigen in
-    let context = apply_subst_scoped_term (subst_global s) context in
-    let conclusion = apply_subst_scoped_term (subst_global s) conclusion in
-    { Ast.Chr. eigen; context; conclusion }
+  let smart_map_sequent f ({ Ast.Chr. eigen; context; conclusion } as orig) =
+    let eigen' = smart_map_scoped_term f eigen in
+    let context' = smart_map_scoped_term f context in
+    let conclusion' = smart_map_scoped_term f conclusion in
+    if eigen' == eigen && context' == context && conclusion' == conclusion then orig
+    else { Ast.Chr.eigen = eigen'; context = context'; conclusion = conclusion' }
 
-  let subst_chr s { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } =
-    let to_match = smart_map (apply_subst_sequent s) to_match in
-    let to_remove = smart_map (apply_subst_sequent s) to_remove in
-    let guard = Option.map (apply_subst_scoped_term (subst_global s)) guard in
-    let new_goal = Option.map (apply_subst_sequent s) new_goal in
-    { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc }
+  let smart_map_chr f ({ Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } as orig) =
+    let to_match' = smart_map (smart_map_sequent f) to_match in
+    let to_remove' = smart_map (smart_map_sequent f) to_remove in
+    let guard' = Util.option_map (smart_map_scoped_term f) guard in
+    let new_goal' = Util.option_map (smart_map_sequent f) new_goal in
+    if to_match' == to_match && to_remove' == to_remove && guard' == guard && new_goal' == new_goal then orig
+    else { Ast.Chr.to_match = to_match'; to_remove = to_remove'; guard = guard'; new_goal = new_goal'; attributes; loc }
 
-  let apply_subst_chr s { Ast.Structured.clique; ctx_filter; rules } =
-    let clique = smart_map (subst_global s) clique in
-    let ctx_filter = smart_map (subst_global s) ctx_filter in
-    let rules = smart_map (subst_chr s) rules in
-    { Ast.Structured.clique; ctx_filter; rules }
+  let smart_map_chrs f ({ Ast.Structured.clique; ctx_filter; rules } as orig) =
+    let clique' = smart_map f clique in
+    let ctx_filter' = smart_map f ctx_filter in
+    let rules' = smart_map (smart_map_chr f) rules in
+    if clique' == clique && ctx_filter' == ctx_filter && rules' == rules then orig
+    else { Ast.Structured.clique = clique'; ctx_filter = ctx_filter'; rules = rules' }
 
-    let smart_map_type f ({ Ast.Type.name; ty; loc; attributes } as tdecl) =
-      (* let name' = f name in
-      let ty' = apply_subst_scoped_term f ty in
-      if name == name' && ty' == ty then tdecl
-      else { Ast.Type.name; ty; loc; attributes } *)
-      tdecl
+  let apply_subst_chrs s = smart_map_chrs (subst_global s)
+
+  let rec smart_map_scoped_loc_ty f ({ ScopedTypeExpression.it; loc } as orig) =
+    let it' = smart_map_scoped_ty f it in
+    if it' == it then orig else { ScopedTypeExpression.it = it'; loc }
+  and smart_map_scoped_ty f orig =
+    match orig with
+    | ScopedTypeExpression.CData _ -> orig
+    | ScopedTypeExpression.Const(ScopedTerm.Local,_) -> orig
+    | ScopedTypeExpression.Const(ScopedTerm.Global,c) ->
+        let c' = f c in
+        if c == c' then orig else ScopedTypeExpression.Const(ScopedTerm.Global,c')
+    | ScopedTypeExpression.App(c,x,xs) ->
+        let x' = smart_map_scoped_loc_ty f x in
+        let xs' = smart_map (smart_map_scoped_loc_ty f) xs in
+        if x' == x && xs' == xs then orig else ScopedTypeExpression.App(c,x',xs')
+    | ScopedTypeExpression.Arrow(x,y) ->
+        let x' = smart_map_scoped_loc_ty f x in
+        let y' = smart_map_scoped_loc_ty f y in
+        if x' == x && y' == y then orig else ScopedTypeExpression.Arrow(x',y')
+    | ScopedTypeExpression.Pred(c,l) ->
+        let l' = smart_map (fun (m,x as orig) ->
+          let x' = smart_map_scoped_loc_ty f x in
+          if x' == x then orig else m,x') l in
+        if l' == l then orig else ScopedTypeExpression.Pred(c,l')
+
+  let rec smart_map_tye f = function
+    | ScopedTypeExpression.Lam(c,t) as orig ->
+        let t' = smart_map_tye f t in
+        if t == t' then orig else ScopedTypeExpression.Lam(c,t')
+    | ScopedTypeExpression.Ty t as orig ->
+      let t' = smart_map_scoped_loc_ty f t in
+      if t == t' then orig else ScopedTypeExpression.Ty t'
+
+  let smart_map_type f ({ ScopedTypeExpression.name; value; nparams; loc; indexing } as orig) =
+    let name' = f name in
+    let value' = smart_map_tye f value in
+    if name == name' && value' == value then orig
+    else { ScopedTypeExpression.name = name'; value = value'; nparams; loc; indexing }
 
   let apply_subst_types s = Types.smart_map (smart_map_type (subst_global s))
 
   let apply_subst_types s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) (apply_subst_types s v) m) l F.Map.empty
 
-  let rec apply_subst_scoped_type f { ScopedTypeExpression.it; loc } = { ScopedTypeExpression.it = aux f it; loc }
-  and aux f = function
-    | ScopedTypeExpression.Const(ScopedTerm.Local,_) as x -> x
-    | ScopedTypeExpression.Const(ScopedTerm.Global,c) -> ScopedTypeExpression.Const(ScopedTerm.Global,f c)
-    | ScopedTypeExpression.CData _ as x -> x
-    | ScopedTypeExpression.App(c,x,xs) -> ScopedTypeExpression.App(c,apply_subst_scoped_type f x, List.map (apply_subst_scoped_type f) xs)
-    | ScopedTypeExpression.Arrow(s,t) -> ScopedTypeExpression.Arrow(apply_subst_scoped_type f s, apply_subst_scoped_type f t)
-    | ScopedTypeExpression.Pred(p,l) -> ScopedTypeExpression.Pred(p,List.map (fun (m,t) -> m,apply_subst_scoped_type f t) l) 
-
-  let apply_subst_scoped_type_expression f t =
-    let rec aux = function
-      | ScopedTypeExpression.Lam(c,t) -> ScopedTypeExpression.Lam(c,aux t)
-      | ScopedTypeExpression.Ty ty -> ScopedTypeExpression.Ty(apply_subst_scoped_type f ty) in
-    t
 
   let apply_subst_modes s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
 
-  let apply_subst_type_abbrevs s { ScopedTypeExpression.name; value; nparams; loc } =
-    let name = subst_global s name in
-    let value = apply_subst_scoped_type_expression (subst_global s) value in
-    { ScopedTypeExpression.name; value; nparams; loc }
-
+  let apply_subst_type_abbrevs s t = smart_map_scoped_ty (subst_global s) t
+  
   let apply_subst_type_abbrevs s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
 
@@ -2492,7 +2523,7 @@ end (* }}} *)
       let types = merge_types (apply_subst_types subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs subst ta) in
       let modes = merge_modes (apply_subst_modes subst m) modes in
-      let chr = apply_subst_chr subst ch :: chr in
+      let chr = apply_subst_chrs subst ch :: chr in
       let types, type_abbrevs, modes, clauses, chr =
         compile_block types type_abbrevs modes clauses chr subst body in
       compile_block types type_abbrevs modes clauses chr subst rest
@@ -2897,8 +2928,8 @@ end = struct
     let symbols, map =
       F.Map.fold (fun tname l (symbols, acc) ->
         let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols tname in
-        symbols, Types.fold (fun acc { Ast.Type.attributes = tindex; loc = tloc } ->
-                   add_indexing_for ~loc:tloc tname c (Some tindex) acc)
+        symbols, Types.fold (fun acc { ScopedTypeExpression.indexing; loc } ->
+                   add_indexing_for ~loc tname c indexing acc)
                   acc l)
       types (symbols, C.Map.empty) in
     let symbols, map =

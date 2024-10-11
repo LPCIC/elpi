@@ -334,7 +334,13 @@ let option_get ?err = function
       match err with
       | None -> assert false
       | Some msg -> anomaly msg
-let option_map f = function Some x -> Some (f x) | None -> None
+
+let option_map f = function
+  | Some x -> Some (f x)
+  | None -> None
+let option_smart_map f = function
+  | Some x as orig -> let x' = f x in if x' == x then orig else Some x'
+  | None -> None
 let option_mapacc f acc = function
   | Some x -> let acc, y = f acc x in acc, Some y
   | None -> acc, None

@@ -144,6 +144,7 @@ val uniq : 'a list -> 'a list
 
 val option_get : ?err:string -> 'a option -> 'a
 val option_map : ('a -> 'b) -> 'a option -> 'b option
+val option_smart_map : ('a -> 'a) -> 'a option -> 'a option
 val pp_option :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
 val option_mapacc :
