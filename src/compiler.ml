@@ -586,7 +586,6 @@ module ScopedTypeExpression = struct
     | App of F.t * e * e list
     | Arrow of Ast.Structured.variadic * e * e
     | Pred of Ast.Structured.functionality * (Ast.Mode.t * e) list
-    | Primitive of string
   and e = { it : t_; loc : Loc.t }
   [@@ deriving show]
 
@@ -605,7 +604,6 @@ module ScopedTypeExpression = struct
     | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
     | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 == b2 && eqt ctx s1 s2 && eqt ctx t1 t2
     | Pred(f1,l1), Pred(f2,l2) -> f1 == f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
-    | Primitive c1, Primitive c2 -> String.equal c1 c2
     | Prop, Prop -> true
     | Any, Any -> true
     | _ -> false
@@ -646,7 +644,6 @@ module TypeAssignment = struct
 
   type t =
     | Prop | Any
-    | Primitive of string
     | Cons of F.t
     | App of F.t * t * t list
     | Arr of Ast.Structured.variadic * t * t
@@ -764,12 +761,17 @@ end = struct
           let sk = global_type env ~loc c in
           fresh_skema sk
       | Const(Local,c) -> local_type ctx ~loc c
-      | CData c -> TypeAssignment.Primitive (CData.name c)
+      | CData c -> cdata_type ~loc c
       | App(Global,c,x,xs) -> check_app ctx ~loc c (fresh_skema @@ global_type env ~loc c) (x::xs)
       | App(Local,c,x,xs) -> check_app ctx ~loc c (local_type ctx ~loc c) (x::xs)
       | Lam(c,t) -> check_lam ctx ~loc c t
       | Discard -> TypeAssignment.UVar (MutableOnce.make ())
       | Var(c,args) -> check_app ctx ~loc c (uvar_type c) args
+
+    and cdata_type ~loc c =
+      let name = F.from_string @@ CData.name c in
+      let _ = global_type env ~loc name in (* TODO check marked as external *)
+      TypeAssignment.Cons name
 
     and global_type env ~loc c =
       try F.Map.find c env
@@ -791,7 +793,6 @@ end = struct
         | ScopedTypeExpression.Arrow(b,s,t) -> TypeAssignment.Arr(b,aux_ty subst s, aux_ty subst t)
         | ScopedTypeExpression.Pred(_,l) ->
             List.fold_right (fun (_,t) r -> TypeAssignment.Arr(Ast.Structured.NotVariadic,aux_ty subst t,r)) l TypeAssignment.Prop
-        | ScopedTypeExpression.Primitive c -> TypeAssignment.Primitive c
         | ScopedTypeExpression.Const(Global,c) when F.equal c F.propf -> TypeAssignment.Prop
         | ScopedTypeExpression.Const(Global,c) -> TypeAssignment.Cons c
         | ScopedTypeExpression.Const(Local,c) ->
@@ -847,7 +848,6 @@ end = struct
       | _, Any -> true
       | UVar m, _ when MutableOnce.is_set m -> unify (MutableOnce.get m) t2
       | _, UVar m when MutableOnce.is_set m -> unify t1 (MutableOnce.get m)
-      | Primitive s1, Primitive s2 -> String.equal s1 s2
       | App(c1,x,xs), App(c2,y,ys) ->
           F.equal c1 c2 && unify x y && Util.for_all2 unify xs ys
       | Cons c1, Cons c2 -> F.equal c1 c2    
@@ -859,8 +859,20 @@ end = struct
       | _, UVar m -> assign m t1
       | _,_ -> false
 
-    and assign m t = oc m t && (MutableOnce.set m t; true)
-    and oc _ _ = true (* TODO *)
+    and assign m t = same_var m t || (oc m t && (MutableOnce.set m t; true))
+    and same_var m = function
+      | UVar n when n == m -> true
+      | UVar n when MutableOnce.is_set n -> same_var m (MutableOnce.get n)
+      | _ -> false
+    and oc m = function
+      | Prop -> true
+      | Arr(_,x,y) -> oc m x && oc m y
+      | App(_,x,xs) -> List.for_all (oc m) (x::xs)
+      | Any -> true
+      | Cons _ -> true
+      | UVar n when m == n -> false
+      | UVar n when MutableOnce.is_set n -> oc m (MutableOnce.get n)
+      | UVar _ -> true
     and check_loc ctx { loc; it; ty } =
       let typ = check ctx ~loc it in
       MutableOnce.set ty typ;
@@ -1386,7 +1398,6 @@ end = struct
         ScopedTypeExpression.Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
     | Ast.TypeExpression.TArr(s,t) ->
         ScopedTypeExpression.Arrow(Ast.Structured.NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
-    | Ast.TypeExpression.TCData c when D.C.is_string c -> ScopedTypeExpression.Primitive (D.C.to_string c)
     | Ast.TypeExpression.TCData _ -> (* TODO fix parser *) assert false
   and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
 
@@ -1410,7 +1421,6 @@ end = struct
         | Const(Local, _) -> assert false (* there are no binders yet *)
         | Const(Global,c) when is_uvar_name c -> F.Set.add c e
         | Const(Global,_) -> e
-        | Primitive _ -> e
         | Prop -> e
         | Any -> e
         | Arrow(_,x,y) -> aux (aux e x) y
@@ -2623,7 +2633,6 @@ end (* }}} *)
     match orig with
     | ScopedTypeExpression.Prop -> orig
     | ScopedTypeExpression.Any -> orig
-    | ScopedTypeExpression.Primitive _ -> orig
     | ScopedTypeExpression.Const(ScopeContext.Local,_) -> orig
     | ScopedTypeExpression.Const(ScopeContext.Global,c) ->
         let c' = f c in

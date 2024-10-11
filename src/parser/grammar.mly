@@ -185,9 +185,9 @@ anonymous_pred:
   args = separated_list(option(CONJ),pred_item) { { tloc = loc $loc; tit = TPred (attributes, args) } }
 
 kind:
-| KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
+| e = option(EXTERNAL); KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
     names |> List.map (fun n->
-     { Type.loc=loc $sloc; attributes=[]; name =  n; ty = k })
+     { Type.loc=loc $sloc; attributes= (match e with None -> [] | Some _ -> [External]); name =  n; ty = k })
   }
 type_:
 | attributes = attributes;
