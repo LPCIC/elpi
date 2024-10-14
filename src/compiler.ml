@@ -690,19 +690,22 @@ end
 
 module TypeAssignment = struct
 
+  type 'a overloading =
+    | Single of 'a
+    | Overloaded of 'a list
+  [@@ deriving show]
+
   type 'a t_ =
     | Prop | Any
     | Cons of F.t
     | App of F.t * 'a t_ * 'a t_ list
-    | Arr of Ast.Structured.variadic * 'a t_ * 'a t_
+    | Arr of Ast.Structured.variadic * 'a t_ overloading * 'a t_
     | UVar of 'a
   [@@ deriving show]
 
   type skema1 = Lam of F.t * skema1 | Ty of F.t t_
   [@@ deriving show]
-  type skema =
-    | Single of skema1
-    | Overloaded of skema1 list
+  type skema = skema1 overloading
   [@@ deriving show]
 
   type t = Val of t MutableOnce.t t_
@@ -716,17 +719,10 @@ module TypeAssignment = struct
       | (Prop | Any | Cons _) as x -> x
       | UVar c -> UVar (F.Map.find c map)
       | App(c,x,xs) -> App (c,aux map x,List.map (aux map) xs)
-      | Arr(v,s,t) -> Arr(v,aux map s, aux map t)
+      | Arr(v,Single s,t) -> Arr(v,Single(aux map s), aux map t)
+      | Arr _ -> assert false (* Overloading pushed down later *)
   in
     fresh F.Map.empty sk
-
-  let fresh = function
-    | Single sk -> fresh sk
-    | Overloaded _ -> assert false (* TODO *)
-
-  let unval (Val x) = x
-  let deref m = unval @@ MutableOnce.get m
-  let set m v = MutableOnce.set m (Val v)
 
   let merge_skema x y =
     match x, y with
@@ -734,6 +730,26 @@ module TypeAssignment = struct
     | Single x, Overloaded ys -> Overloaded (x::ys)
     | Overloaded xs, Single y -> Overloaded(xs@[y])
     | Overloaded xs, Overloaded ys -> Overloaded (xs @ ys)
+  
+  let rec push_down = function
+    | [] -> assert false
+    | [x] -> x
+    | x :: y :: xs -> push_down ((push_down_ty x y) :: xs)
+  and push_down_ty x y =
+    match x, y with
+    | Arr(v,s,t1), Arr(v',s',t2) when v == v' -> Arr(v,merge_skema s s',push_down_ty t1 t2)
+    | x, y when x = y -> x
+    | _ -> error "TODO intersection"
+
+
+  let fresh = function
+    | Single sk -> fresh sk
+    | Overloaded l -> push_down @@ List.map fresh l
+
+  let unval (Val x) = x
+  let deref m = unval @@ MutableOnce.get m
+  let set m v = MutableOnce.set m (Val v)
+
 
   open Format
 
@@ -742,13 +758,15 @@ module TypeAssignment = struct
     | Any -> fprintf fmt "any"
     | Cons c -> F.pp fmt c
     | App(f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist pretty " ") (x::xs)
-    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "%a -> %a" pretty s pretty t
-    | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" pretty s pretty t
+    | Arr(Ast.Structured.NotVariadic,Single s,t) -> fprintf fmt "%a -> %a" pretty s pretty t
+    | Arr(Ast.Structured.NotVariadic,Overloaded _,t) -> fprintf fmt ".. /\.. -> %a" pretty t
+    | Arr(Ast.Structured.Variadic,Single s,t) -> fprintf fmt "%a ..-> %a" pretty s pretty t
+    | Arr(Ast.Structured.Variadic,_,t) -> assert false
     | UVar m when MutableOnce.is_set m -> pretty fmt @@ unval @@ MutableOnce.get m
     | UVar m -> MutableOnce.pretty fmt m
 
 
-  let rec smart_map_t f orig =
+  (* let rec smart_map_t f orig =
     match orig with
     | Prop -> orig
     | Any -> orig
@@ -777,7 +795,7 @@ module TypeAssignment = struct
 
   let smart_map f (Val t as orig) =
     let t' = smart_map_t f t in
-    if t == t' then orig else Val t'
+    if t == t' then orig else Val t' *)
 
 end
 module ScopedTerm = struct
@@ -892,9 +910,9 @@ end = struct
       | App(c,x,xs) ->
           check_global_exists ~loc c arities (1 + List.length xs);
           TypeAssignment.App(c,aux_loc ctx x, List.map (aux_loc ctx) xs)
-      | Arrow(v,s,t) -> TypeAssignment.Arr(v,aux_loc ctx s,aux_loc ctx t)
+      | Arrow(v,s,t) -> TypeAssignment.Arr(v,Single (aux_loc ctx s),aux_loc ctx t)
       | Pred(_,[]) -> TypeAssignment.Prop
-      | Pred(f,(_,x)::xs) -> TypeAssignment.Arr(Ast.Structured.NotVariadic,aux_loc ctx x,aux ~loc ctx (Pred(f,xs)))
+      | Pred(f,(_,x)::xs) -> TypeAssignment.Arr(Ast.Structured.NotVariadic,Single (aux_loc ctx x),aux ~loc ctx (Pred(f,xs)))
     in
     match List.map (fun { value; loc } -> aux_params ~loc F.Set.empty value) lst with
     | [] -> assert false
@@ -945,18 +963,22 @@ end = struct
       let c = match c with Some c -> c | None -> fresh_name () in
       let src = TypeAssignment.UVar(MutableOnce.make c) in
       let ctx = F.Map.add c src ctx in
-      TypeAssignment.Arr(Ast.Structured.NotVariadic,src,check_loc ctx t)
+      TypeAssignment.Arr(Ast.Structured.NotVariadic,Single src,check_loc ctx t)
       
     and check_app ctx ~loc c ty = function
       | [] -> ty
       | x :: xs ->
         match ty with
-          | TypeAssignment.Arr(Ast.Structured.Variadic,s,t) ->
+          | TypeAssignment.Arr(Ast.Structured.Variadic,Single s,t) ->
               let tx = check_loc ctx x in
               if unify s tx then
                 if xs = [] then t else check_app ctx ~loc c ty xs
               else error_bad_argument ~loc c s x tx         
-          | TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t) ->
+          | TypeAssignment.Arr(Ast.Structured.NotVariadic,Single s,t) ->
+              let tx = check_loc ctx x in
+              if unify s tx then check_app ctx ~loc c t xs
+              else error_bad_argument ~loc c s x tx         
+          | TypeAssignment.Arr(Ast.Structured.NotVariadic,Overloaded sl,t) ->
               let tx = check_loc ctx x in
               if unify s tx then check_app ctx ~loc c t xs
               else error_bad_argument ~loc c s x tx         
@@ -965,7 +987,7 @@ end = struct
           | TypeAssignment.UVar m ->
               let s = TypeAssignment.UVar(MutableOnce.make (F.from_string "Src")) in
               let t = TypeAssignment.UVar(MutableOnce.make (F.from_string "Tgt")) in
-              check_app ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) (x :: xs)
+              check_app ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,Single s,t)) (x :: xs)
           | _ -> error_not_a_function ~loc c ty x (* TODO: trim loc up to x *)
 
     and uvar_type c =
@@ -985,7 +1007,7 @@ end = struct
           F.equal c1 c2 && unify x y && Util.for_all2 unify xs ys
       | Cons c1, Cons c2 -> F.equal c1 c2    
       | Prop, Prop -> true
-      | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unify s1 s2 && unify t1 t2      
+      | Arr(b1,Single s1,t1), Arr(b2,Single s2,t2) -> b1 == b2 && unify s1 s2 && unify t1 t2      
       | Arr(Ast.Structured.Variadic,_,t), _ -> unify t t2
       | _, Arr(Ast.Structured.Variadic,_,t) -> unify t1 t
       | UVar m, _ -> assign m t2
@@ -999,7 +1021,8 @@ end = struct
       | _ -> false
     and oc m = function
       | Prop -> true
-      | Arr(_,x,y) -> oc m x && oc m y
+      | Arr(_,Single x,y) -> oc m x && oc m y
+      | Arr(_,Overloaded x,y) -> assert false (* TODO *)
       | App(_,x,xs) -> List.for_all (oc m) (x::xs)
       | Any -> true
       | Cons _ -> true
