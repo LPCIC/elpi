@@ -197,7 +197,6 @@ type_:
   }
 
 atype_term:
-| c = STRING { { tloc = loc $loc; tit = TCData (cstring.Util.CData.cin c) } }
 | c = constant { { tloc = loc $loc; tit = TConst (fix_church c) } }
 | LPAREN; t = type_term; RPAREN { t }
 | LPAREN; t = anonymous_pred; RPAREN { t }

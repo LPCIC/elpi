@@ -15,6 +15,7 @@ type ctype string -> typ.
 
 % --------- utils  ---------------------------------------------------------
 
+kind entry type.
 type (`:) term -> typ -> entry.
 type (`:=) string -> typ -> entry.
 
@@ -25,12 +26,12 @@ type wrong-arity term -> typ -> list term -> err.
 type unknown term -> err.
 type assert prop -> err -> prop.
 
-pred error i:list (pair (ctype "Loc.t") string), o:bool.
+pred error i:list (pair loc string), o:bool.
 
 :name "default-typechecking-error"
 error Msg tt :- std.forall Msg (x\ sigma L M\ fst x L, snd x M, print L "Error:" M).
 
-pred warning i:(ctype "Loc.t"), o:string.
+pred warning i:loc, o:string.
 :name "default-typechecking-warning"
 warning Loc Msg :- print Loc "Warning:" Msg.
 
@@ -150,7 +151,7 @@ of-clause [] (arg C) :- !, pi x\
  of-clause [] (C x).
 of-clause _ C :- of C TC, assert (unif TC prop) (type-err C TC prop).
 
-type checking (ctype "Loc.t") -> prop.
+type checking loc -> prop.
 
 :if "DEBUG:CHECKER"
 log-tc-clause Loc Query :- !, print {trace.counter "run"} "typecheck" Loc Query.

@@ -665,6 +665,7 @@ module MutableOnce : sig
   [@@ deriving show]
   val make : F.t -> 'a t
   val set : 'a t -> 'a -> unit
+  val unset : 'a t -> unit
   val get : 'a t -> 'a
   val is_set : 'a t -> bool
   val pretty : Format.formatter -> 'a t -> unit
@@ -681,6 +682,7 @@ end = struct
     | Some _ -> anomaly "MutableOnce"
   
   let get (_,x) = match !x with Some x -> x | None -> anomaly "get"
+  let unset (_,x) = x := None
 
   let pretty fmt (f,x) =
     match !x with
@@ -693,7 +695,7 @@ module TypeAssignment = struct
   type 'a overloading =
     | Single of 'a
     | Overloaded of 'a list
-  [@@ deriving show]
+  [@@ deriving show, fold]
 
   type 'a t_ =
     | Prop | Any
@@ -701,7 +703,7 @@ module TypeAssignment = struct
     | App of F.t * 'a t_ * 'a t_ list
     | Arr of Ast.Structured.variadic * 'a t_ overloading * 'a t_
     | UVar of 'a
-  [@@ deriving show]
+  [@@ deriving show, fold]
 
   type skema1 = Lam of F.t * skema1 | Ty of F.t t_
   [@@ deriving show]
@@ -731,21 +733,6 @@ module TypeAssignment = struct
     | Overloaded xs, Single y -> Overloaded(xs@[y])
     | Overloaded xs, Overloaded ys -> Overloaded (xs @ ys)
   
-  let rec push_down = function
-    | [] -> assert false
-    | [x] -> x
-    | x :: y :: xs -> push_down ((push_down_ty x y) :: xs)
-  and push_down_ty x y =
-    match x, y with
-    | Arr(v,s,t1), Arr(v',s',t2) when v == v' -> Arr(v,merge_skema s s',push_down_ty t1 t2)
-    | x, y when x = y -> x
-    | _ -> error "TODO intersection"
-
-
-  let fresh = function
-    | Single sk -> fresh sk
-    | Overloaded l -> push_down @@ List.map fresh l
-
   let unval (Val x) = x
   let deref m = unval @@ MutableOnce.get m
   let set m v = MutableOnce.set m (Val v)
@@ -764,6 +751,23 @@ module TypeAssignment = struct
     | Arr(Ast.Structured.Variadic,_,t) -> assert false
     | UVar m when MutableOnce.is_set m -> pretty fmt @@ unval @@ MutableOnce.get m
     | UVar m -> MutableOnce.pretty fmt m
+
+  let vars_of (Val t)  = fold_t_ (fun xs x -> x :: xs) [] t
+
+  let rec push_down n = function
+  | [] -> assert false
+  | [x] -> x
+  | x :: y :: xs -> push_down n ((push_down_ty n x y) :: xs)
+and push_down_ty n x y =
+  match x, y with
+  | Arr(v,s,t1), Arr(v',s',t2) when v == v' -> Arr(v,merge_skema s s',push_down_ty n t1 t2)
+  | x, y when x = y -> x
+  | x,y -> error @@ (Format.asprintf "@[<v> TODO intersection %a:@ %a@ %a@]" F.pp n pretty x pretty y)
+
+
+let fresh name = function
+  | Single sk -> fresh sk
+  | Overloaded l -> push_down name @@ List.map fresh l
 
 
   (* let rec smart_map_t f orig =
@@ -867,7 +871,7 @@ module TypeChecker : sig
   val check_type : arities -> TypeList.t -> TypeAssignment.skema
 
   type env = TypeAssignment.skema F.Map.t
-  val check : env -> ScopedTerm.t -> TypeAssignment.t
+  val check : arities -> env -> ScopedTerm.t -> TypeAssignment.t
 
 end = struct
   type arities = Arity.t F.Map.t
@@ -930,30 +934,36 @@ end = struct
     let error_bad_argument ~loc c ty x tx =
       let msg = Format.asprintf "%a has type %a but %a expects an argument of type %a"  ScopedTerm.pretty x TypeAssignment.pretty tx F.pp c TypeAssignment.pretty ty in
       error ~loc msg
-  
-  let check env (t : ScopedTerm.t) =
+
+    let error_bad_arguments ~loc c tys x tx =
+      let msg = Format.asprintf "%a has type %a but %a expects an argument of one of the types: %a"
+        ScopedTerm.pretty x TypeAssignment.pretty tx F.pp c
+        (pplist TypeAssignment.pretty "; ") tys in
+      error ~loc msg
+    
+  let check kinds env (t : ScopedTerm.t) =
     let sigma : TypeAssignment.t F.Map.t ref = ref F.Map.empty in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
     let rec check ctx ~loc = function
       | Const(Global,c) ->
           let sk = global_type env ~loc c in
-          TypeAssignment.fresh sk
+          TypeAssignment.fresh c sk
       | Const(Local,c) -> local_type ctx ~loc c
-      | CData c -> cdata_type ~loc c
-      | App(Global,c,x,xs) -> check_app ctx ~loc c (TypeAssignment.fresh @@ global_type env ~loc c) (x::xs)
+      | CData c -> cdata_type ~loc kinds c
+      | App(Global,c,x,xs) -> check_app ctx ~loc c (TypeAssignment.fresh c @@ global_type env ~loc c) (x::xs)
       | App(Local,c,x,xs) -> check_app ctx ~loc c (local_type ctx ~loc c) (x::xs)
       | Lam(c,t) -> check_lam ctx ~loc c t
       | Discard -> TypeAssignment.UVar (MutableOnce.make (F.from_string "Any"))
       | Var(c,args) -> check_app ctx ~loc c (uvar_type c) args
 
-    and cdata_type ~loc c =
+    and cdata_type ~loc kinds c =
       let name = F.from_string @@ CData.name c in
-      let _ = global_type env ~loc name in (* TODO check marked as external *)
+      check_global_exists ~loc name kinds 0;
       TypeAssignment.Cons name
 
     and global_type env ~loc c =
       try F.Map.find c env
-      with Not_found -> error ~loc "unknown global"
+      with Not_found -> error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
 
     and local_type ctx ~loc c =
       try F.Map.find c ctx
@@ -980,8 +990,8 @@ end = struct
               else error_bad_argument ~loc c s x tx         
           | TypeAssignment.Arr(Ast.Structured.NotVariadic,Overloaded sl,t) ->
               let tx = check_loc ctx x in
-              if unify s tx then check_app ctx ~loc c t xs
-              else error_bad_argument ~loc c s x tx         
+              if List.exists (try_unify tx) sl then check_app ctx ~loc c t xs
+              else error_bad_arguments ~loc c sl x tx         
           | TypeAssignment.UVar m when MutableOnce.is_set m ->
               check_app ctx ~loc c (TypeAssignment.deref m) (x :: xs)
           | TypeAssignment.UVar m ->
@@ -989,6 +999,17 @@ end = struct
               let t = TypeAssignment.UVar(MutableOnce.make (F.from_string "Tgt")) in
               check_app ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,Single s,t)) (x :: xs)
           | _ -> error_not_a_function ~loc c ty x (* TODO: trim loc up to x *)
+
+    and try_unify x y =
+      let vx = TypeAssignment.vars_of (Val x) in
+      let vy = TypeAssignment.vars_of (Val y) in
+      let b = unify x y in
+      if not b then (undo vx; undo vy);
+      b
+    
+    and undo = function
+      | [] -> ()
+      | m :: ms -> MutableOnce.unset m; undo ms
 
     and uvar_type c =
       try TypeAssignment.unval @@ F.Map.find c !sigma
@@ -1035,6 +1056,10 @@ end = struct
       typ
     in
       TypeAssignment.Val (check_loc F.Map.empty t)
+
+
+  let check a b c =
+    try check a b c with CompileError(loc,msg) -> Format.eprintf "%a: %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop)
 end
 
 
@@ -1243,7 +1268,6 @@ end = struct (* {{{ *)
     | TypeExpression.TPred(a :: _, _) -> error ~loc ("illegal attribute " ^ show_raw_attribute a)
     | TypeExpression.TArr(s,t) -> TypeExpression.TArr(structure_type_expression_aux ~loc valid s,structure_type_expression_aux ~loc valid t) 
     | TypeExpression.TApp(c,x,xs) -> TypeExpression.TApp(c,structure_type_expression_aux ~loc valid x,List.map (structure_type_expression_aux ~loc valid) xs)
-    | TypeExpression.TCData c -> TypeExpression.TCData c
     | TypeExpression.TConst c -> TypeExpression.TConst c
   }
 
@@ -1572,7 +1596,6 @@ end = struct
         ScopedTypeExpression.Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
     | Ast.TypeExpression.TArr(s,t) ->
         ScopedTypeExpression.Arrow(Ast.Structured.NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
-    | Ast.TypeExpression.TCData _ -> (* TODO fix parser *) assert false
   and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
 
   let scope_type_abbrev { Ast.TypeAbbreviation.name; value; nparams; loc } =
@@ -3466,7 +3489,7 @@ end = struct
 
     (* TODO: make this callable on a unit (+ its base) *)
     clauses |> List.iter (fun { Ast.Clause.body; loc } ->
-      if TypeAssignment.Prop <> TypeAssignment.unval @@ TypeChecker.check types body then
+      if TypeAssignment.Prop <> TypeAssignment.unval @@ TypeChecker.check kinds types body then
         error ~loc "Illtyped rule: not a predicate"); (* TODO remove whn bidirectional *)
 
     let symbols, chr =

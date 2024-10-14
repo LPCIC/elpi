@@ -68,7 +68,6 @@ module TypeExpression : sig
    | TApp of Func.t * 'attribute t * 'attribute t list
    | TPred of 'attribute * (Mode.t * 'attribute t) list
    | TArr of 'attribute t * 'attribute t
-   | TCData of CData.t
    and 'a t = { tit : 'a t_; tloc : Loc.t }
    [@@ deriving show, ord]
 
