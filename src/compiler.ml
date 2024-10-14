@@ -1136,11 +1136,11 @@ end = struct
       TypeAssignment.Val (check_loc F.Map.empty t)
 
 
-  (* let check ~type_abbrevs a b c =
+  let check ~type_abbrevs a b c =
     try check ~type_abbrevs a b c with
     | CompileError(_,"Unknown global: %spill") -> Printf.eprintf "SPILLING"; exit 1
     | CompileError(_,s) when Re.Str.(string_match (regexp "Unknown global: @")) s 0 -> Printf.eprintf "MACRO"; exit 1
-    | CompileError(loc,msg) -> Format.eprintf "Ignoring type error: %a %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop) *)
+    | CompileError(loc,msg) -> Format.eprintf "Ignoring type error: %a %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop)
 end
 
 

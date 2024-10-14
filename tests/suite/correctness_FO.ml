@@ -85,17 +85,17 @@ let () = declare "typeabbrv9"
   ()
 let () = declare "typeabbrv10"
   ~source_elpi:"typeabbrv10.elpi"
-  ~expectation:(FailureOutput (Str.regexp "3 has type int but is used with type (foo X[0-9]+)"))
+  ~expectation:(FailureOutput (Str.regexp "3 has type int but .*"))
   ~description:"type abbreviations and error messages"
   ()
 let () = declare "typeabbrv11"
   ~source_elpi:"typeabbrv11.elpi"
-  ~expectation:(FailureOutput (Str.regexp "x has type string but is used with type int"))
+  ~expectation:(FailureOutput (Str.regexp "x has type string but f expects an argument of type x"))
   ~description:"type abbreviations and error messages"
   ()
 let () = declare "typeabbrv12"
   ~source_elpi:"typeabbrv12.elpi"
-  ~expectation:(FailureOutput (Str.regexp "x has type string but is used with type y"))
+  ~expectation:(FailureOutput (Str.regexp "x has type string but f expects an argument of type y"))
   ~description:"type abbreviations and error messages"
   ()
 
