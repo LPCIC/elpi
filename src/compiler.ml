@@ -708,26 +708,39 @@ module TypeAssignment = struct
     | Inter of  'a t_ * 'a t_
   [@@ deriving show, fold]
 
-  type skema1 = Lam of F.t * skema1 | Ty of F.t t_
+  type skema = Lam of F.t * skema | Ty of F.t t_
   [@@ deriving show]
-  type skema = skema1 overloading
+  type overloaded_skema = skema overloading
   [@@ deriving show]
 
   type t = Val of t MutableOnce.t t_
   [@@ deriving show]
 
+  let nparams t =
+      let rec aux = function Ty _ -> 0 | Lam(_,t) -> 1 + aux t in
+      aux t
+  
+  let rec subst map = function
+    | (Prop | Any | Cons _) as x -> x
+    | UVar c -> F.Map.find c map
+    | App(c,x,xs) -> App (c,subst map x,List.map (subst map) xs)
+    | Arr(v,s,t) -> Arr(v,subst map s, subst map t)
+    | Inter (l,r) -> Inter(subst map l,subst map r)
+
   let fresh sk =
     let rec fresh map = function
-      | Lam(c,t) -> fresh (F.Map.add c (MutableOnce.make c) map) t
-      | Ty t -> if F.Map.is_empty map then Obj.magic t else aux map t
-    and aux map = function
-      | (Prop | Any | Cons _) as x -> x
-      | UVar c -> UVar (F.Map.find c map)
-      | App(c,x,xs) -> App (c,aux map x,List.map (aux map) xs)
-      | Arr(v,s,t) -> Arr(v,aux map s, aux map t)
-      | Inter _ -> assert false (* Overloading pushed down later *)
+      | Lam(c,t) -> fresh (F.Map.add c (UVar (MutableOnce.make c)) map) t
+      | Ty t -> if F.Map.is_empty map then Obj.magic t else subst map t
   in
     fresh F.Map.empty sk
+
+  let rec apply m sk args =
+    match sk, args with
+    | Ty t, [] -> subst m t
+    | Lam(c,t), x::xs -> apply (F.Map.add c x m) t xs
+    | _ -> assert false
+
+  let apply sk args = apply F.Map.empty sk args
 
   let merge_skema x y =
     match x, y with
@@ -865,14 +878,24 @@ end
   
 module TypeChecker : sig
 
+  type type_abbrevs = TypeAssignment.skema F.Map.t
   type arities = Arity.t F.Map.t
-  val check_type : arities -> TypeList.t -> TypeAssignment.skema
+  val check_disjoint : type_abbrevs:ScopedTypeExpression.t F.Map.t -> kinds:arities -> unit
 
-  type env = TypeAssignment.skema F.Map.t
-  val check : arities -> env -> ScopedTerm.t -> TypeAssignment.t
+  val check_type : type_abbrevs:type_abbrevs -> arities -> ScopedTypeExpression.t -> TypeAssignment.skema
+  val check_types : type_abbrevs:type_abbrevs -> arities -> TypeList.t -> TypeAssignment.overloaded_skema
+
+  type env = TypeAssignment.overloaded_skema F.Map.t
+  val check : type_abbrevs:type_abbrevs-> arities -> env -> ScopedTerm.t -> TypeAssignment.t
 
 end = struct
+  type type_abbrevs = TypeAssignment.skema F.Map.t
   type arities = Arity.t F.Map.t
+
+  let check_disjoint ~type_abbrevs ~kinds =
+    kinds |> F.Map.iter (fun k (_,lock) -> if F.Map.mem k type_abbrevs then
+      let { ScopedTypeExpression.loc } = F.Map.find k type_abbrevs in
+      error ~loc (Format.asprintf "Type abbreviations and types must be dijoint. Type %a declared in %a" F.pp k Loc.pp lock))
 
   open ScopedTypeExpression
 
@@ -884,16 +907,21 @@ end = struct
     if not @@ F.Set.mem c ctx then
       error ~loc (Format.asprintf "Unknown type parameter %a. Known parameters: %a" F.pp c (pplist F.pp ", ") (F.Set.elements ctx))
 
-  let check_global_exists ~loc c arities nargs =
-    if not (F.Map.mem c arities) then
-      error ~loc ("Unknown type " ^ F.show c);
-    let arity, _ = F.Map.find c arities in
-    if arity != nargs then
-      error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
+  let check_global_exists ~loc c (type_abbrevs : type_abbrevs) arities nargs =
+    if F.Map.mem c arities then begin
+      let arity, _ = F.Map.find c arities in
+      if arity != nargs then
+        error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
+    end else if F.Map.mem c type_abbrevs then begin
+      let arity = TypeAssignment.nparams @@ F.Map.find c type_abbrevs in
+      if arity != nargs then
+        error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
+    end else
+      error ~loc ("Unknown type " ^ F.show c)
 
-  let check_type arities lst =
+  let check_type ~type_abbrevs arities ~loc ctx x =
     (* Format.eprintf "check_type under %a\n%!" (F.Map.pp (fun fmt (n,_) -> ())) arities;  *)
-    (* Format.eprintf "check_type %a %a\n%!" F.pp name ScopedTypeExpression.pp_v_ value;  *)
+    (* Format.eprintf "check_type %a\n%!" ScopedTypeExpression.pp_v_ x;  *)
     let rec aux_params ~loc ctx = function
       | Lam(c,t) ->
           check_param_unique ~loc c ctx;
@@ -907,29 +935,34 @@ end = struct
           check_param_exists ~loc c ctx;
           TypeAssignment.UVar c
       | Const(Global,c) ->
-          check_global_exists ~loc c arities 0;
+          check_global_exists ~loc c type_abbrevs arities 0;
           TypeAssignment.Cons c
       | App(c,x,xs) ->
-          check_global_exists ~loc c arities (1 + List.length xs);
+          check_global_exists ~loc c type_abbrevs arities (1 + List.length xs);
           TypeAssignment.App(c,aux_loc ctx x, List.map (aux_loc ctx) xs)
       | Arrow(v,s,t) -> TypeAssignment.Arr(v,aux_loc ctx s,aux_loc ctx t)
       | Pred(_,[]) -> TypeAssignment.Prop
       | Pred(f,(_,x)::xs) -> TypeAssignment.Arr(Ast.Structured.NotVariadic,aux_loc ctx x,aux ~loc ctx (Pred(f,xs)))
     in
-    match List.map (fun { value; loc } -> aux_params ~loc F.Set.empty value) lst with
+      aux_params ~loc ctx x
+
+  let check_types  ~type_abbrevs arities lst =
+    match List.map (fun { value; loc } -> check_type ~type_abbrevs arities ~loc F.Set.empty value) lst with
     | [] -> assert false
     | [x] -> TypeAssignment.Single x
     | xs -> TypeAssignment.Overloaded xs
 
+  let check_type  ~type_abbrevs arities { value; loc } =
+    check_type ~type_abbrevs arities ~loc F.Set.empty value
 
-  type env = TypeAssignment.skema F.Map.t
+  type env = TypeAssignment.overloaded_skema F.Map.t
 
   open ScopedTerm
 
   let error_not_a_function ~loc c ty x =
     let msg = Format.asprintf "%a has type %a. It is not a function but it is passed the argument %a" F.pp c TypeAssignment.pretty ty ScopedTerm.pretty x in
     error ~loc msg
-    let error_bad_argument ~loc c ty x tx =
+    let error_bad_argument ~loc ~type_abbrevs c ty x tx =
       let msg = Format.asprintf "%a has type %a but %a expects an argument of type %a"  ScopedTerm.pretty x TypeAssignment.pretty tx F.pp c TypeAssignment.pretty ty in
       error ~loc msg
 
@@ -939,7 +972,7 @@ end = struct
         (pplist TypeAssignment.pretty "; ") tys in
       error ~loc msg
     
-  let check kinds env (t : ScopedTerm.t) =
+  let check ~type_abbrevs kinds env (t : ScopedTerm.t) =
     (* Format.eprintf "checking %a\n" ScopedTerm.pretty t; *)
     let sigma : TypeAssignment.t F.Map.t ref = ref F.Map.empty in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
@@ -958,7 +991,7 @@ end = struct
 
     and cdata_type ~loc kinds c =
       let name = F.from_string @@ CData.name c in
-      check_global_exists ~loc name kinds 0;
+      check_global_exists ~loc name type_abbrevs kinds 0;
       TypeAssignment.Cons name
 
     and global_type env ~loc c =
@@ -1012,11 +1045,11 @@ end = struct
               let tx = check_loc ctx x in
               if unify s tx then
                 if xs = [] then t else check_app ctx ~loc c ty xs
-              else error_bad_argument ~loc c s x tx         
+              else error_bad_argument ~loc ~type_abbrevs c s x tx         
           | TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t) ->
               let tx = check_loc ctx x in
               if unify s tx then check_app ctx ~loc c t xs
-              else error_bad_argument ~loc c s x tx         
+              else error_bad_argument ~loc ~type_abbrevs c s x tx         
           | TypeAssignment.UVar m when MutableOnce.is_set m ->
               check_app ctx ~loc c (TypeAssignment.deref m) (x :: xs)
           | TypeAssignment.UVar m ->
@@ -1044,21 +1077,34 @@ end = struct
         sigma := F.Map.add c (TypeAssignment.Val ty) !sigma;
         ty
     and unify t1 t2 =
+      (* Format.eprintf "%a = %a\n" TypeAssignment.pretty t1 TypeAssignment.pretty t2; *)
       let open TypeAssignment in
       match t1, t2 with
       | Any, _ -> true
       | _, Any -> true
       | UVar m, _ when MutableOnce.is_set m -> unify (TypeAssignment.deref m) t2
       | _, UVar m when MutableOnce.is_set m -> unify t1 (TypeAssignment.deref m)
-      | App(c1,x,xs), App(c2,y,ys) ->
-          F.equal c1 c2 && unify x y && Util.for_all2 unify xs ys
-      | Cons c1, Cons c2 -> F.equal c1 c2    
+      | App(c1,x,xs), App(c2,y,ys) when F.equal c1 c2 ->
+         unify x y && Util.for_all2 unify xs ys
+      | Cons c1, Cons c2 when F.equal c1 c2 -> true
       | Prop, Prop -> true
       | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unify s1 s2 && unify t1 t2      
       | Arr(Ast.Structured.Variadic,_,t), _ -> unify t t2
       | _, Arr(Ast.Structured.Variadic,_,t) -> unify t1 t
       | UVar m, _ -> assign m t2
       | _, UVar m -> assign m t1
+      | Cons c, _ when F.Map.mem c type_abbrevs ->
+          let t1 = apply (F.Map.find c type_abbrevs) [] in
+          unify t1 t2
+      | _, Cons c when F.Map.mem c type_abbrevs ->
+          let t2 = apply (F.Map.find c type_abbrevs) [] in
+          unify t1 t2
+      | App(c,x,xs), _ when F.Map.mem c type_abbrevs ->
+          let t1 = apply (F.Map.find c type_abbrevs) (x::xs) in
+          unify t1 t2
+      | _, App(c,x,xs) when F.Map.mem c type_abbrevs ->
+          let t2 = apply (F.Map.find c type_abbrevs) (x::xs) in
+          unify t1 t2
       | _,_ -> false
 
     and assign m t = same_var m t || (oc m t && ((*Format.eprintf "%a := %a\n" MutableOnce.(pp TypeAssignment.pp) m TypeAssignment.(pp_t_ MutableOnce.(pp TypeAssignment.pp)) t;*)TypeAssignment.set m t; true))
@@ -1090,11 +1136,11 @@ end = struct
       TypeAssignment.Val (check_loc F.Map.empty t)
 
 
-  let check a b c =
-    try check a b c with
+  (* let check ~type_abbrevs a b c =
+    try check ~type_abbrevs a b c with
     | CompileError(_,"Unknown global: %spill") -> Printf.eprintf "SPILLING"; exit 1
     | CompileError(_,s) when Re.Str.(string_match (regexp "Unknown global: @")) s 0 -> Printf.eprintf "MACRO"; exit 1
-    | CompileError(loc,msg) -> Format.eprintf "Ignoring type error: %a %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop)
+    | CompileError(loc,msg) -> Format.eprintf "Ignoring type error: %a %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop) *)
 end
 
 
@@ -1113,7 +1159,7 @@ type program = {
 and pbody = {
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
-  type_abbrevs : ScopedTypeExpression.t F.Map.t;
+  type_abbrevs : (F.t * ScopedTypeExpression.t) list;
   modes : (mode * Loc.t) F.Map.t;
   body : block list;
   symbols : F.Set.t;
@@ -1137,7 +1183,7 @@ type program = {
   toplevel_macros : macro_declaration;
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
-  type_abbrevs : ScopedTypeExpression.t F.Map.t;
+  type_abbrevs : (F.t * ScopedTypeExpression.t) list;
   modes : (mode * Loc.t) F.Map.t;
   clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
@@ -1158,8 +1204,8 @@ module Assembled = struct
 type program = {
   (* clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list; for printing *)
   kinds : Arity.t F.Map.t;
-  types : TypeAssignment.skema F.Map.t;
-  type_abbrevs : ScopedTypeExpression.t F.Map.t;
+  types : TypeAssignment.overloaded_skema F.Map.t;
+  type_abbrevs : TypeAssignment.skema F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   total_type_checking_time : float;
 
@@ -1202,8 +1248,8 @@ module WithMain = struct
 (* The entire program + query, but still in "printable" format *)
 type 'a query = {
   kinds : Arity.t F.Map.t;
-  types : TypeAssignment.skema F.Map.t;
-  type_abbrevs : ScopedTypeExpression.t F.Map.t;
+  types : TypeAssignment.overloaded_skema F.Map.t;
+  type_abbrevs : TypeAssignment.skema F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   (* clauses : (preterm,Assembled.attribute) Ast.Clause.t list; *)
   prolog_program : index;
@@ -1674,14 +1720,9 @@ end = struct
       close vars (Ty value) in
     { ScopedTypeExpression.name; indexing = Some attributes; loc; nparams; value }
 
-  let compile_type_abbrev abbrvs ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
+  let compile_type_abbrev ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
     let ab = scope_type_abbrev ab in
-    if F.Map.mem name abbrvs then begin
-      let { ScopedTypeExpression.loc = otherloc; nparams = othernparams; value = othervalue; } = F.Map.find name abbrvs in
-      if nparams != othernparams || not @@ ScopedTypeExpression.eq (ScopeContext.empty ()) othervalue ab.value then
-        error ~loc ("duplicate type abbreviation for " ^ F.show name ^ ". Previous declaration: " ^ Loc.show otherloc);
-    end;
-    F.Map.add name ab abbrvs
+    name, ab
 
   let check_duplicate_mode name (mode, loc) map =
     if F.Map.mem name map && fst (F.Map.find name map) <> mode then
@@ -1701,7 +1742,8 @@ end = struct
        F.Map.add name (args,loc) modes
     | _ -> modes
 
-  let defs_of m = F.Map.bindings m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
+  let defs_of_map m = F.Map.bindings m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
+  let defs_of_assoclist m = m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
 
   let global_hd_symbols_of_clauses cl =
     let open ScopedTerm in
@@ -1751,14 +1793,14 @@ end = struct
       let active_macros = F.Map.empty in
       (* let active_macros =
         List.fold_left compile_macro omacros macros in *)
-      let type_abbrevs = List.fold_left compile_type_abbrev F.Map.empty type_abbrevs in
+      let type_abbrevs = List.map compile_type_abbrev type_abbrevs in
       let kinds = List.fold_left compile_kind F.Map.empty kinds in
       let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (TypeList.make @@ compile_type t) m) F.Map.empty types in
       let modes = List.fold_left compile_mode F.Map.empty modes in
-      let defs_m = defs_of modes in
-      let defs_k = defs_of kinds in
-      let defs_t = defs_of types in
-      let defs_ta = defs_of type_abbrevs in
+      let defs_m = defs_of_map modes in
+      let defs_k = defs_of_map kinds in
+      let defs_t = defs_of_map types in
+      let defs_ta = defs_of_assoclist type_abbrevs in
       let state, kinds, types, type_abbrevs, modes, defs_b, body =
         compile_body active_macros kinds types type_abbrevs modes F.Set.empty state body in
       let symbols = F.Set.(union (union (union (union defs_k defs_m) defs_t) defs_b) defs_ta) in
@@ -2788,13 +2830,13 @@ end (* }}} *)
     TypeList.t F.Map.t ->
     TypeList.t F.Map.t *)
   val merge_type_assignments :
-    TypeAssignment.skema F.Map.t ->
-    TypeAssignment.skema F.Map.t ->
-    TypeAssignment.skema F.Map.t
+    TypeAssignment.overloaded_skema F.Map.t ->
+    TypeAssignment.overloaded_skema F.Map.t ->
+    TypeAssignment.overloaded_skema F.Map.t
   val merge_type_abbrevs :
-    ScopedTypeExpression.t F.Map.t ->
-    ScopedTypeExpression.t F.Map.t ->
-    ScopedTypeExpression.t F.Map.t
+    (F.t * ScopedTypeExpression.t) list ->
+    (F.t * ScopedTypeExpression.t) list ->
+    (F.t * ScopedTypeExpression.t) list
 
  end = struct
 
@@ -2892,11 +2934,9 @@ end (* }}} *)
 
   let apply_subst_kinds s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
-
-  let apply_subst_type_abbrevs s t = ScopedTypeExpression.smart_map_scoped_ty (subst_global s) t
   
   let apply_subst_type_abbrevs s l =
-    F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
+    List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
 
     let merge_type_assignments t1 t2 =
       F.Map.union (fun _ l1 l2 -> Some (TypeAssignment.merge_skema l1 l2)) t1 t2
@@ -2929,11 +2969,7 @@ end (* }}} *)
       F.Map.add name x m
 
 
-    let merge_type_abbrevs m1 m2 =
-      (* let len = F.Map.cardinal m1 in *)
-      if F.Map.is_empty m2 then m1 else
-      F.Map.fold (fun _ v m ->
-          add_to_index_type_abbrev m v (* BUG timestamp +len *)) m2 m1
+    let merge_type_abbrevs m1 m2 = m1 @ m2 (* TODO check duplicates *)
 
   let rec compile_block kinds types type_abbrevs modes clauses chr subst = function
     | [] -> kinds, types, type_abbrevs, modes, clauses, chr
@@ -3507,6 +3543,9 @@ end = struct
     let chr, clique = CHR.new_clique (SymbolMap.global_name state symbols) ctx_filter clique chr in
     List.fold_left (extend1_chr flags state clique) (symbols,chr) rules
    
+  let merge_type_abbrevs m1 m2 =
+    F.Map.union (fun k _ _ -> error ("Duplicate type abbreviation for " ^ F.show k)) m1 m2
+
   let extend1 flags
     (state, { Assembled.symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
             { version; code = { Flat.toplevel_macros; kinds; types; type_abbrevs; modes; clauses; chr; builtins }} =
@@ -3514,14 +3553,23 @@ end = struct
     let kinds = Flatten.merge_kinds ok kinds in
     let modes = Flatten.merge_modes om modes in
 
+    let type_abbrevs =
+      List.fold_left (fun type_abbrevs (name, ty) ->
+        (* TODO check dijoint from kinds and type_abbrevs *)
+        F.Map.add name (TypeChecker.check_type ~type_abbrevs kinds ty) type_abbrevs)
+        ota type_abbrevs in
+
+
+    let type_abbrevs = merge_type_abbrevs ota type_abbrevs in
+
     let t0 = Unix.gettimeofday () in
-    let types = F.Map.map (TypeChecker.check_type kinds) types in
+    (* TypeChecker.check_disjoint ~type_abbrevs ~kinds; *)
+    let types = F.Map.map (TypeChecker.check_types ~type_abbrevs kinds) types in
     let t1 = Unix.gettimeofday () in
     let total_type_checking_time = total_type_checking_time +. t1 -. t0 in
 
     let types = Flatten.merge_type_assignments ot types in
 
-    let type_abbrevs = Flatten.merge_type_abbrevs ota type_abbrevs in
 
     let symbols, state =
       List.fold_left (fun (symbols,state) (D.BuiltInPredicate.Pred(name,_,_) as p) ->
@@ -3532,7 +3580,7 @@ end = struct
     (* TODO: make this callable on a unit (+ its base) *)
     let t0 = Unix.gettimeofday () in
     clauses |> List.iter (fun { Ast.Clause.body; loc } ->
-      if TypeAssignment.Prop <> TypeAssignment.unval @@ TypeChecker.check kinds types body then
+      if TypeAssignment.Prop <> TypeAssignment.unval @@ TypeChecker.check ~type_abbrevs kinds types body then
         error ~loc "Illtyped rule: not a predicate"); (* TODO remove whn bidirectional *)
     let t1 = Unix.gettimeofday () in
     let total_type_checking_time = total_type_checking_time +. t1 -. t0 in
