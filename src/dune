@@ -24,25 +24,25 @@
 )
 
 (rule (with-stdout-to builtin_stdlib.ml (progn
-  (echo "let code = {code|#line 0 \"builtin_stdlib.elpi\"\n")
+  (echo "let code = {code|#line 1 \"builtin_stdlib.elpi\"\n")
   (cat builtin_stdlib.elpi)
   (echo "|code};;")
 )))
 (rule (with-stdout-to builtin_map.ml (progn
-  (echo "let code = {code|#line 0 \"builtin_map.elpi\"\n")
+  (echo "let code = {code|#line 1 \"builtin_map.elpi\"\n")
   (cat builtin_map.elpi)
   (echo "|code};;")
 )))
 (rule (with-stdout-to builtin_set.ml (progn
-  (echo "let code = {code|#line 0 \"builtin_set.elpi\"\n")
+  (echo "let code = {code|#line 1 \"builtin_set.elpi\"\n")
   (cat builtin_set.elpi)
   (echo "|code};;")
 )))
 (rule (with-stdout-to builtin_checker.ml (progn
   (echo "let code = {code|")
-  (echo "#line 0 \"elpi-quoted_syntax.elpi\"\n")
+  (echo "#line 1 \"elpi-quoted_syntax.elpi\"\n")
   (cat elpi-quoted_syntax.elpi)
-  (echo "#line 0 \"elpi-checker.elpi\"\n")
+  (echo "#line 1 \"elpi-checker.elpi\"\n")
   (cat elpi-checker.elpi)
   (echo "|code};;")
 )))

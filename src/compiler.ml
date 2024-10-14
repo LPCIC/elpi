@@ -618,6 +618,46 @@ module ScopedTypeExpression = struct
 
   let compare _ _ = assert false
 
+  let rec smart_map_scoped_loc_ty f ({ it; loc } as orig) =
+    let it' = smart_map_scoped_ty f it in
+    if it' == it then orig else { it = it'; loc }
+  and smart_map_scoped_ty f orig =
+    match orig with
+    | Prop -> orig
+    | Any -> orig
+    | Const(ScopeContext.Local,_) -> orig
+    | Const(ScopeContext.Global,c) ->
+        let c' = f c in
+        if c == c' then orig else Const(ScopeContext.Global,c')
+    | App(c,x,xs) ->
+        let c' = f c in
+        let x' = smart_map_scoped_loc_ty f x in
+        let xs' = smart_map (smart_map_scoped_loc_ty f) xs in
+        if c' == c && x' == x && xs' == xs then orig else App(c',x',xs')
+    | Arrow(v,x,y) ->
+        let x' = smart_map_scoped_loc_ty f x in
+        let y' = smart_map_scoped_loc_ty f y in
+        if x' == x && y' == y then orig else Arrow(v,x',y')
+    | Pred(c,l) ->
+        let l' = smart_map (fun (m,x as orig) ->
+          let x' = smart_map_scoped_loc_ty f x in
+          if x' == x then orig else m,x') l in
+        if l' == l then orig else Pred(c,l')
+
+  let rec smart_map_tye f = function
+    | Lam(c,t) as orig ->
+        let t' = smart_map_tye f t in
+        if t == t' then orig else Lam(c,t')
+    | Ty t as orig ->
+      let t' = smart_map_scoped_loc_ty f t in
+      if t == t' then orig else Ty t'
+
+  let smart_map f ({ name; value; nparams; loc; indexing } as orig) =
+    let name' = f name in
+    let value' = smart_map_tye f value in
+    if name == name' && value' == value then orig
+    else { name = name'; value = value'; nparams; loc; indexing }
+
 end
 
 module MutableOnce : sig 
@@ -658,7 +698,11 @@ module TypeAssignment = struct
     | UVar of 'a
   [@@ deriving show]
 
-  type skema = Lam of F.t * skema | Ty of F.t t_
+  type skema1 = Lam of F.t * skema1 | Ty of F.t t_
+  [@@ deriving show]
+  type skema =
+    | Single of skema1
+    | Overloaded of skema1 list
   [@@ deriving show]
 
   type t = Val of t MutableOnce.t t_
@@ -676,11 +720,20 @@ module TypeAssignment = struct
   in
     fresh F.Map.empty sk
 
+  let fresh = function
+    | Single sk -> fresh sk
+    | Overloaded _ -> assert false (* TODO *)
+
   let unval (Val x) = x
   let deref m = unval @@ MutableOnce.get m
   let set m v = MutableOnce.set m (Val v)
 
-  let merge_skema x _ = (* TODO overloading *) x
+  let merge_skema x y =
+    match x, y with
+    | Single x, Single y -> Overloaded [x;y]
+    | Single x, Overloaded ys -> Overloaded (x::ys)
+    | Overloaded xs, Single y -> Overloaded(xs@[y])
+    | Overloaded xs, Overloaded ys -> Overloaded (xs @ ys)
 
   open Format
 
@@ -775,52 +828,18 @@ end
 
 module TypeList = struct
 
-  type typ = ScopedTypeExpression.t
+  type t = ScopedTypeExpression.t list
   [@@deriving show, ord]
   
-  module Set = Util.Set.Make(struct
-    type t = typ
-    open ScopedTypeExpression
-   let compare { name = name1 } { name = name2 } = F.compare name1 name2
-    let show = show_typ
-    let pp = pp_typ
-  end)
+  let make t = [t]
   
-  type t = {
-    set : Set.t;
-    lst : typ list;
-    def : typ;
-  } [@@deriving show, ord]
+  let merge t1 t2 = t1 @ t2
   
-  let make t = { set = Set.singleton t; lst = [t]; def = t }
+  let smart_map = smart_map
   
-  let merge t1 t2 =
-    let l2 = List.filter (fun t -> not @@ Set.mem t t1.set) t2.lst in
-    match l2 with
-    | [] -> t1
-    | _ :: _ ->
-      {
-        set = Set.union t1.set t2.set;
-        lst = t1.lst @ l2;
-        def = t2.def;
-      }
-  
-  let smart_map (f : typ -> typ) (t : t) : t =
-    let set' = Set.map f t.set in
-    let lst' = smart_map f t.lst in
-    let def' = f t.def in
-    if set' == t.set && lst' == t.lst && def' == t.def then t
-    else { set = set'; lst = lst'; def = def' }
-  
-  let append x t = {
-    set = Set.add x t.set;
-    lst = x :: t.lst;
-    def = t.def;
-  }
-  
-  let fold f accu t = List.fold_left f accu t.lst
-  let iter f t = List.iter f t.lst
-  let for_all f t = List.for_all f t.lst
+  let append x t = x :: t
+
+  let fold = List.fold_left
   
 end
   
@@ -842,8 +861,8 @@ end = struct
       error ~loc ("Duplicate type parameter " ^ F.show c)
 
   let check_param_exists ~loc c ctx =
-    if F.Set.mem c ctx then
-      error ~loc ("Unknown type parameter " ^ F.show c)
+    if not @@ F.Set.mem c ctx then
+      error ~loc (Format.asprintf "Unknown type parameter %a. Known parameters: %a" F.pp c (pplist F.pp ", ") (F.Set.elements ctx))
 
   let check_global_exists ~loc c arities nargs =
     if not (F.Map.mem c arities) then
@@ -852,11 +871,13 @@ end = struct
     if arity != nargs then
       error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
 
-  let check_type arities { TypeList.def = { name; value; loc; nparams } } = (* TODO overloading *)
-    let rec aux_params ctx = function
+  let check_type arities lst =
+    (* Format.eprintf "check_type under %a\n%!" (F.Map.pp (fun fmt (n,_) -> ())) arities;  *)
+    (* Format.eprintf "check_type %a %a\n%!" F.pp name ScopedTypeExpression.pp_v_ value;  *)
+    let rec aux_params ~loc ctx = function
       | Lam(c,t) ->
           check_param_unique ~loc c ctx;
-          TypeAssignment.Lam(c,aux_params (F.Set.add c ctx) t)
+          TypeAssignment.Lam(c,aux_params ~loc (F.Set.add c ctx) t)
       | Ty t -> TypeAssignment.Ty(aux_loc ctx t)
     and aux_loc ctx { loc; it } = aux ~loc ctx it
     and aux ~loc ctx = function
@@ -875,7 +896,10 @@ end = struct
       | Pred(_,[]) -> TypeAssignment.Prop
       | Pred(f,(_,x)::xs) -> TypeAssignment.Arr(Ast.Structured.NotVariadic,aux_loc ctx x,aux ~loc ctx (Pred(f,xs)))
     in
-      aux_params F.Set.empty value
+    match List.map (fun { value; loc } -> aux_params ~loc F.Set.empty value) lst with
+    | [] -> assert false
+    | [x] -> TypeAssignment.Single x
+    | xs -> TypeAssignment.Overloaded xs
 
 
   type env = TypeAssignment.skema F.Map.t
@@ -1328,7 +1352,7 @@ end = struct (* {{{ *)
           aux_run ns blocks clauses macros kinds types tabbrs modes chr accs rest
       | Program.Kind (k::ks) :: rest ->          
           let k = structure_kind_attributes k in
-            aux_run ns blocks clauses macros (k :: kinds) types tabbrs modes chr accs (Program.Kind ks :: rest)
+          aux_run ns blocks clauses macros (k :: kinds) types tabbrs modes chr accs (Program.Kind ks :: rest)
       | Program.Type [] :: rest ->
           aux_run ns blocks clauses macros kinds types tabbrs modes chr accs rest
       | Program.Type (t::ts) :: rest ->          
@@ -1648,11 +1672,12 @@ end = struct
       let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (TypeList.make @@ compile_type t) m) F.Map.empty types in
       let modes = List.fold_left compile_mode F.Map.empty modes in
       let defs_m = defs_of modes in
+      let defs_k = defs_of kinds in
       let defs_t = defs_of types in
       let defs_ta = defs_of type_abbrevs in
       let state, kinds, types, type_abbrevs, modes, defs_b, body =
         compile_body active_macros kinds types type_abbrevs modes F.Set.empty state body in
-      let symbols = F.Set.(union (union (union defs_m defs_t) defs_b) defs_ta) in
+      let symbols = F.Set.(union (union (union (union defs_k defs_m) defs_t) defs_b) defs_ta) in
       (state : State.t), active_macros,
       { Scoped.types; kinds; type_abbrevs; modes; body; symbols }
 
@@ -2674,10 +2699,10 @@ end (* }}} *)
     Arity.t F.Map.t ->
     Arity.t F.Map.t ->
     Arity.t F.Map.t
-  val merge_types :
+  (* val merge_types :
     TypeList.t F.Map.t ->
     TypeList.t F.Map.t ->
-    TypeList.t F.Map.t
+    TypeList.t F.Map.t *)
   val merge_type_assignments :
     TypeAssignment.skema F.Map.t ->
     TypeAssignment.skema F.Map.t ->
@@ -2771,46 +2796,8 @@ end (* }}} *)
 
   let apply_subst_chrs s = smart_map_chrs (subst_global s)
 
-  let rec smart_map_scoped_loc_ty f ({ ScopedTypeExpression.it; loc } as orig) =
-    let it' = smart_map_scoped_ty f it in
-    if it' == it then orig else { ScopedTypeExpression.it = it'; loc }
-  and smart_map_scoped_ty f orig =
-    match orig with
-    | ScopedTypeExpression.Prop -> orig
-    | ScopedTypeExpression.Any -> orig
-    | ScopedTypeExpression.Const(ScopeContext.Local,_) -> orig
-    | ScopedTypeExpression.Const(ScopeContext.Global,c) ->
-        let c' = f c in
-        if c == c' then orig else ScopedTypeExpression.Const(ScopeContext.Global,c')
-    | ScopedTypeExpression.App(c,x,xs) ->
-        let x' = smart_map_scoped_loc_ty f x in
-        let xs' = smart_map (smart_map_scoped_loc_ty f) xs in
-        if x' == x && xs' == xs then orig else ScopedTypeExpression.App(c,x',xs')
-    | ScopedTypeExpression.Arrow(v,x,y) ->
-        let x' = smart_map_scoped_loc_ty f x in
-        let y' = smart_map_scoped_loc_ty f y in
-        if x' == x && y' == y then orig else ScopedTypeExpression.Arrow(v,x',y')
-    | ScopedTypeExpression.Pred(c,l) ->
-        let l' = smart_map (fun (m,x as orig) ->
-          let x' = smart_map_scoped_loc_ty f x in
-          if x' == x then orig else m,x') l in
-        if l' == l then orig else ScopedTypeExpression.Pred(c,l')
 
-  let rec smart_map_tye f = function
-    | ScopedTypeExpression.Lam(c,t) as orig ->
-        let t' = smart_map_tye f t in
-        if t == t' then orig else ScopedTypeExpression.Lam(c,t')
-    | ScopedTypeExpression.Ty t as orig ->
-      let t' = smart_map_scoped_loc_ty f t in
-      if t == t' then orig else ScopedTypeExpression.Ty t'
-
-  let smart_map_type f ({ ScopedTypeExpression.name; value; nparams; loc; indexing } as orig) =
-    let name' = f name in
-    let value' = smart_map_tye f value in
-    if name == name' && value' == value then orig
-    else { ScopedTypeExpression.name = name'; value = value'; nparams; loc; indexing }
-
-  let apply_subst_types s = TypeList.smart_map (smart_map_type (subst_global s))
+  let apply_subst_types s = TypeList.smart_map (ScopedTypeExpression.smart_map (subst_global s))
 
   let apply_subst_types s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) (apply_subst_types s v) m) l F.Map.empty
@@ -2822,7 +2809,7 @@ end (* }}} *)
   let apply_subst_kinds s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
 
-  let apply_subst_type_abbrevs s t = smart_map_scoped_ty (subst_global s) t
+  let apply_subst_type_abbrevs s t = ScopedTypeExpression.smart_map_scoped_ty (subst_global s) t
   
   let apply_subst_type_abbrevs s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty

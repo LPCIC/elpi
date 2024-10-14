@@ -530,7 +530,7 @@ external pred random.self_init .
 % (excluded)
 external pred random.int i:int, o:int.
 
-#line 0 "builtin_stdlib.elpi"
+#line 1 "builtin_stdlib.elpi"
 % == stdlib =======================================================
 
 % Conventions:
@@ -1140,7 +1140,7 @@ external pred std.loc.set.fold i:std.loc.set, i:A,
 external pred std.loc.set.partition i:std.loc.set, i:loc -> prop, 
                                     o:std.loc.set, o:std.loc.set.
 
-#line 0 "builtin_map.elpi"
+#line 1 "builtin_map.elpi"
 kind std.map type -> type -> type.
 type std.map std.map.private.map K V -> (pred i:K, i:K, o:cmp) -> std.map K V.
 
@@ -1254,7 +1254,7 @@ bindings (node L V D R _) X X1 :-
 } % std.map
 
 
-#line 0 "builtin_set.elpi"
+#line 1 "builtin_set.elpi"
 kind std.set type -> type.
 type std.set std.set.private.set E -> (pred i:E, i:E, o:cmp) -> std.set E.
 
