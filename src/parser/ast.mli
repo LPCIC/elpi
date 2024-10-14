@@ -29,6 +29,7 @@ module Func : sig
   val sequentf : t
   val ctypef : t
   val propf : t
+  val typef : t
 
   val dummyname : t
   val spillf : t
@@ -181,6 +182,7 @@ module Program : sig
     | Clause of (Term.t, raw_attribute list) Clause.t
     | Chr of (raw_attribute list,Term.t) Chr.t
     | Macro of (Func.t, Term.t) Macro.t
+    | Kind of (raw_attribute list,raw_attribute list) Type.t list
     | Type of (raw_attribute list,raw_attribute list) Type.t list
     | Pred of (raw_attribute list,raw_attribute list) Type.t
     | TypeAbbreviation of (Func.t,raw_attribute list TypeExpression.t) TypeAbbreviation.t
@@ -212,6 +214,7 @@ module Structured : sig
 
 type program = {
   macros : (Func.t, Term.t) Macro.t list;
+  kinds : (unit,unit) Type.t list;
   types : (tattribute,functionality) Type.t list;
   type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
   modes : (tattribute,functionality) Type.t list;

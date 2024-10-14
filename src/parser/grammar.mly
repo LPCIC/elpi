@@ -134,7 +134,7 @@ decl:
 | r = chr_rule; FULLSTOP { Program.Chr r }
 | p = pred; FULLSTOP { Program.Pred p }
 | t = type_; FULLSTOP { Program.Type t }
-| t = kind; FULLSTOP { Program.Type t }
+| t = kind; FULLSTOP { Program.Kind t }
 | m = macro; FULLSTOP { Program.Macro m }
 | CONSTRAINT; hyps = list(constant); QDASH; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, hyps, cl) }
 | CONSTRAINT; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, [], cl) }
@@ -185,9 +185,9 @@ anonymous_pred:
   args = separated_list(option(CONJ),pred_item) { { tloc = loc $loc; tit = TPred (attributes, args) } }
 
 kind:
-| e = option(EXTERNAL); KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
+| KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
     names |> List.map (fun n->
-     { Type.loc=loc $sloc; attributes= (match e with None -> [] | Some _ -> [External]); name =  n; ty = k })
+     { Type.loc=loc $sloc; attributes=[]; name =  n; ty = k })
   }
 type_:
 | attributes = attributes;

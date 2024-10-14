@@ -578,6 +578,8 @@ let eq_uvar ctx c1 c2 =
   end
 end
 
+module Arity = struct type t = int * Loc.t [@@deriving show, ord] end
+
 module ScopedTypeExpression = struct
   open ScopeContext
   type t_ =
@@ -648,13 +650,37 @@ end
 
 module TypeAssignment = struct
 
-  type t =
+  type 'a t_ =
     | Prop | Any
     | Cons of F.t
-    | App of F.t * t * t list
-    | Arr of Ast.Structured.variadic * t * t
-    | UVar of t MutableOnce.t
+    | App of F.t * 'a t_ * 'a t_ list
+    | Arr of Ast.Structured.variadic * 'a t_ * 'a t_
+    | UVar of 'a
   [@@ deriving show]
+
+  type skema = Lam of F.t * skema | Ty of F.t t_
+  [@@ deriving show]
+
+  type t = Val of t MutableOnce.t t_
+  [@@ deriving show]
+
+  let fresh sk =
+    let rec fresh map = function
+      | Lam(c,t) -> fresh (F.Map.add c (MutableOnce.make c) map) t
+      | Ty t -> if F.Map.is_empty map then Obj.magic t else aux map t
+    and aux map = function
+      | (Prop | Any | Cons _) as x -> x
+      | UVar c -> UVar (F.Map.find c map)
+      | App(c,x,xs) -> App (c,aux map x,List.map (aux map) xs)
+      | Arr(v,s,t) -> Arr(v,aux map s, aux map t)
+  in
+    fresh F.Map.empty sk
+
+  let unval (Val x) = x
+  let deref m = unval @@ MutableOnce.get m
+  let set m v = MutableOnce.set m (Val v)
+
+  let merge_skema x _ = (* TODO overloading *) x
 
   open Format
 
@@ -665,8 +691,40 @@ module TypeAssignment = struct
     | App(f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist pretty " ") (x::xs)
     | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "%a -> %a" pretty s pretty t
     | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" pretty s pretty t
-    | UVar m when MutableOnce.is_set m -> pretty fmt @@ MutableOnce.get m
+    | UVar m when MutableOnce.is_set m -> pretty fmt @@ unval @@ MutableOnce.get m
     | UVar m -> MutableOnce.pretty fmt m
+
+
+  let rec smart_map_t f orig =
+    match orig with
+    | Prop -> orig
+    | Any -> orig
+    | Cons c -> let c' = f c in if c == c' then orig else Cons c'
+    | App(c,x,xs) ->
+        let c' = f c in
+        let x' = smart_map_t f x in
+        let xs' = smart_map (smart_map_t f) xs in
+        if c == c' && x == x' && xs == xs' then orig
+        else App(c',x',xs')
+    | Arr(v,s,t) ->
+        let s' = smart_map_t f s in
+        let t' = smart_map_t f t in
+        if s' == s && t' == t then orig
+        else Arr(v,s',t')
+    | UVar _ -> orig
+
+  let rec smart_map_skema f orig =
+    match orig with
+    | Lam(c,t) ->
+      let t' = smart_map_skema f t in
+      if t == t' then orig else Lam(c,t')
+    | Ty t ->
+        let t' = smart_map_t f t in
+        if t == t' then orig else Ty t'
+
+  let smart_map f (Val t as orig) =
+    let t' = smart_map_t f t in
+    if t == t' then orig else Val t'
 
 end
 module ScopedTerm = struct
@@ -768,11 +826,59 @@ end
   
 module TypeChecker : sig
 
-  type env = TypeList.t F.Map.t
+  type arities = Arity.t F.Map.t
+  val check_type : arities -> TypeList.t -> TypeAssignment.skema
+
+  type env = TypeAssignment.skema F.Map.t
   val check : env -> ScopedTerm.t -> TypeAssignment.t
 
 end = struct
-  type env = TypeList.t F.Map.t
+  type arities = Arity.t F.Map.t
+
+  open ScopedTypeExpression
+
+  let check_param_unique ~loc c ctx =
+    if F.Set.mem c ctx then
+      error ~loc ("Duplicate type parameter " ^ F.show c)
+
+  let check_param_exists ~loc c ctx =
+    if F.Set.mem c ctx then
+      error ~loc ("Unknown type parameter " ^ F.show c)
+
+  let check_global_exists ~loc c arities nargs =
+    if not (F.Map.mem c arities) then
+      error ~loc ("Unknown type " ^ F.show c);
+    let arity, _ = F.Map.find c arities in
+    if arity != nargs then
+      error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
+
+  let check_type arities { TypeList.def = { name; value; loc; nparams } } = (* TODO overloading *)
+    let rec aux_params ctx = function
+      | Lam(c,t) ->
+          check_param_unique ~loc c ctx;
+          TypeAssignment.Lam(c,aux_params (F.Set.add c ctx) t)
+      | Ty t -> TypeAssignment.Ty(aux_loc ctx t)
+    and aux_loc ctx { loc; it } = aux ~loc ctx it
+    and aux ~loc ctx = function
+      | Prop -> TypeAssignment.Prop
+      | Any -> TypeAssignment.Any
+      | Const(Local,c) ->
+          check_param_exists ~loc c ctx;
+          TypeAssignment.UVar c
+      | Const(Global,c) ->
+          check_global_exists ~loc c arities 0;
+          TypeAssignment.Cons c
+      | App(c,x,xs) ->
+          check_global_exists ~loc c arities (1 + List.length xs);
+          TypeAssignment.App(c,aux_loc ctx x, List.map (aux_loc ctx) xs)
+      | Arrow(v,s,t) -> TypeAssignment.Arr(v,aux_loc ctx s,aux_loc ctx t)
+      | Pred(_,[]) -> TypeAssignment.Prop
+      | Pred(f,(_,x)::xs) -> TypeAssignment.Arr(Ast.Structured.NotVariadic,aux_loc ctx x,aux ~loc ctx (Pred(f,xs)))
+    in
+      aux_params F.Set.empty value
+
+
+  type env = TypeAssignment.skema F.Map.t
 
   open ScopedTerm
 
@@ -789,10 +895,10 @@ end = struct
     let rec check ctx ~loc = function
       | Const(Global,c) ->
           let sk = global_type env ~loc c in
-          fresh_skema sk
+          TypeAssignment.fresh sk
       | Const(Local,c) -> local_type ctx ~loc c
       | CData c -> cdata_type ~loc c
-      | App(Global,c,x,xs) -> check_app ctx ~loc c (fresh_skema @@ global_type env ~loc c) (x::xs)
+      | App(Global,c,x,xs) -> check_app ctx ~loc c (TypeAssignment.fresh @@ global_type env ~loc c) (x::xs)
       | App(Local,c,x,xs) -> check_app ctx ~loc c (local_type ctx ~loc c) (x::xs)
       | Lam(c,t) -> check_lam ctx ~loc c t
       | Discard -> TypeAssignment.UVar (MutableOnce.make (F.from_string "Any"))
@@ -806,34 +912,6 @@ end = struct
     and global_type env ~loc c =
       try F.Map.find c env
       with Not_found -> error ~loc "unknown global"
-
-      (* TODO: do this once and forall *)
-    and fresh_skema { TypeList.def } = (* TODO overloading *)
-      let rec aux subst = function
-        | ScopedTypeExpression.Lam(c,t) ->
-            let subst = F.Map.add c (TypeAssignment.UVar (MutableOnce.make c)) subst in
-            aux subst t
-        | ScopedTypeExpression.Ty t -> aux_ty subst t
-      and aux_ty subst e =
-        match e.it with
-        | ScopedTypeExpression.Prop -> TypeAssignment.Prop
-        | ScopedTypeExpression.Any -> TypeAssignment.Any
-        | ScopedTypeExpression.App(c,x,xs) ->
-            TypeAssignment.App(c,aux_ty subst x, List.map (aux_ty subst) xs)
-        | ScopedTypeExpression.Arrow(b,s,t) -> TypeAssignment.Arr(b,aux_ty subst s, aux_ty subst t)
-        | ScopedTypeExpression.Pred(_,l) ->
-            List.fold_right (fun (_,t) r -> TypeAssignment.Arr(Ast.Structured.NotVariadic,aux_ty subst t,r)) l TypeAssignment.Prop
-        | ScopedTypeExpression.Const(Global,c) when F.equal c F.propf -> TypeAssignment.Prop
-        | ScopedTypeExpression.Const(Global,c) -> TypeAssignment.Cons c
-        | ScopedTypeExpression.Const(Local,c) ->
-            try F.Map.find c subst
-            with Not_found -> anomaly "free variable"
-      in
-        Format.eprintf "skema: %a\n%!" ScopedTypeExpression.pp def;
-        let instance = aux F.Map.empty def.ScopedTypeExpression.value in
-        Format.eprintf "instance: %a\n%!" TypeAssignment.pp instance;
-        instance
-
 
     and local_type ctx ~loc c =
       try F.Map.find c ctx
@@ -859,7 +937,7 @@ end = struct
               if unify s tx then check_app ctx ~loc c t xs
               else error_bad_argument ~loc c s x tx         
           | TypeAssignment.UVar m when MutableOnce.is_set m ->
-              check_app ctx ~loc c (MutableOnce.get m) (x :: xs)
+              check_app ctx ~loc c (TypeAssignment.deref m) (x :: xs)
           | TypeAssignment.UVar m ->
               let s = TypeAssignment.UVar(MutableOnce.make (F.from_string "Src")) in
               let t = TypeAssignment.UVar(MutableOnce.make (F.from_string "Tgt")) in
@@ -867,33 +945,33 @@ end = struct
           | _ -> error_not_a_function ~loc c ty x (* TODO: trim loc up to x *)
 
     and uvar_type c =
-      try F.Map.find c !sigma
+      try TypeAssignment.unval @@ F.Map.find c !sigma
       with Not_found ->
         let ty = TypeAssignment.UVar (MutableOnce.make c) in
-        sigma := F.Map.add c ty !sigma;
+        sigma := F.Map.add c (TypeAssignment.Val ty) !sigma;
         ty
     and unify t1 t2 =
       let open TypeAssignment in
       match t1, t2 with
       | Any, _ -> true
       | _, Any -> true
-      | UVar m, _ when MutableOnce.is_set m -> unify (MutableOnce.get m) t2
-      | _, UVar m when MutableOnce.is_set m -> unify t1 (MutableOnce.get m)
+      | UVar m, _ when MutableOnce.is_set m -> unify (TypeAssignment.deref m) t2
+      | _, UVar m when MutableOnce.is_set m -> unify t1 (TypeAssignment.deref m)
       | App(c1,x,xs), App(c2,y,ys) ->
           F.equal c1 c2 && unify x y && Util.for_all2 unify xs ys
       | Cons c1, Cons c2 -> F.equal c1 c2    
       | Prop, Prop -> true
-      | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unify s1 s2 && unify t1 t2
+      | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unify s1 s2 && unify t1 t2      
       | Arr(Ast.Structured.Variadic,_,t), _ -> unify t t2
       | _, Arr(Ast.Structured.Variadic,_,t) -> unify t1 t
       | UVar m, _ -> assign m t2
       | _, UVar m -> assign m t1
       | _,_ -> false
 
-    and assign m t = same_var m t || (oc m t && (MutableOnce.set m t; true))
+    and assign m t = same_var m t || (oc m t && (TypeAssignment.set m t; true))
     and same_var m = function
       | UVar n when n == m -> true
-      | UVar n when MutableOnce.is_set n -> same_var m (MutableOnce.get n)
+      | UVar n when MutableOnce.is_set n -> same_var m (TypeAssignment.deref n)
       | _ -> false
     and oc m = function
       | Prop -> true
@@ -902,14 +980,14 @@ end = struct
       | Any -> true
       | Cons _ -> true
       | UVar n when m == n -> false
-      | UVar n when MutableOnce.is_set n -> oc m (MutableOnce.get n)
+      | UVar n when MutableOnce.is_set n -> oc m (TypeAssignment.deref n)
       | UVar _ -> true
     and check_loc ctx { loc; it; ty } =
       let typ = check ctx ~loc it in
-      MutableOnce.set ty typ;
+      TypeAssignment.set ty typ;
       typ
     in
-      check_loc F.Map.empty t
+      TypeAssignment.Val (check_loc F.Map.empty t)
 end
 
 
@@ -926,6 +1004,7 @@ type program = {
   toplevel_macros : macro_declaration;
 }
 and pbody = {
+  kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
@@ -949,6 +1028,7 @@ module Flat = struct
 
 type program = {
   toplevel_macros : macro_declaration;
+  kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
@@ -970,7 +1050,8 @@ module Assembled = struct
 
 type program = {
   (* clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list; for printing *)
-  types : TypeList.t F.Map.t;
+  kinds : Arity.t F.Map.t;
+  types : TypeAssignment.skema F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
 
@@ -990,7 +1071,7 @@ and attribute = {
 [@@deriving show]
 
 let empty () = {
-  types = F.Map.empty; type_abbrevs = F.Map.empty; modes = F.Map.empty;
+  kinds = F.Map.empty; types = F.Map.empty; type_abbrevs = F.Map.empty; modes = F.Map.empty;
   prolog_program = { idx = Ptmap.empty; time = 0; times = StrMap.empty };
   indexing = C.Map.empty;
   chr = CHR.empty;
@@ -1011,7 +1092,8 @@ module WithMain = struct
 
 (* The entire program + query, but still in "printable" format *)
 type 'a query = {
-  types : TypeList.t F.Map.t;
+  kinds : Arity.t F.Map.t;
+  types : TypeAssignment.skema F.Map.t;
   type_abbrevs : ScopedTypeExpression.t F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   (* clauses : (preterm,Assembled.attribute) Ast.Clause.t list; *)
@@ -1107,22 +1189,30 @@ end = struct (* {{{ *)
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
 
 
-  let rec structure_type_expression_aux ~loc t = { t with TypeExpression.tit =
+  let rec structure_type_expression_aux ~loc valid t = { t with TypeExpression.tit =
     match t.TypeExpression.tit with
-    | TypeExpression.TPred([Functional],p) -> TypeExpression.TPred(Function,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc p) p)
-    | TypeExpression.TPred([],p) -> TypeExpression.TPred(Relation,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc p) p)
+    | TypeExpression.TPred(att,p) when valid att <> None -> TypeExpression.TPred(Option.get (valid att),List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p)
+    | TypeExpression.TPred([], _) -> assert false
     | TypeExpression.TPred(a :: _, _) -> error ~loc ("illegal attribute " ^ show_raw_attribute a)
-    | TypeExpression.TArr(s,t) -> TypeExpression.TArr(structure_type_expression_aux ~loc s,structure_type_expression_aux ~loc t) 
-    | TypeExpression.TApp(c,x,xs) -> TypeExpression.TApp(c,structure_type_expression_aux ~loc x,List.map (structure_type_expression_aux ~loc) xs)
+    | TypeExpression.TArr(s,t) -> TypeExpression.TArr(structure_type_expression_aux ~loc valid s,structure_type_expression_aux ~loc valid t) 
+    | TypeExpression.TApp(c,x,xs) -> TypeExpression.TApp(c,structure_type_expression_aux ~loc valid x,List.map (structure_type_expression_aux ~loc valid) xs)
     | TypeExpression.TCData c -> TypeExpression.TCData c
     | TypeExpression.TConst c -> TypeExpression.TConst c
   }
 
-  let structure_type_expression loc toplevel_func t = 
+  let structure_type_expression loc toplevel_func valid t = 
     match t.TypeExpression.tit with
     | TypeExpression.TPred([],p) ->
-      { t with TypeExpression.tit = TypeExpression.TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc p) p) }
-    | x -> structure_type_expression_aux ~loc t
+      { t with TypeExpression.tit = TypeExpression.TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p) }
+    | x -> structure_type_expression_aux ~loc valid t
+
+  let structure_kind_attributes { Type.attributes; loc; name; ty } =
+    let ty = structure_type_expression loc () (function [] -> Some () | _ -> None) ty in
+    match attributes with
+    | [] -> { Type.attributes = (); loc; name; ty }
+    | x :: _ -> error ~loc ("illegal attribute " ^ show_raw_attribute x)
+
+  let valid_functional = function [] -> Some Relation | [Functional] -> Some Function | _ -> None
 
   let structure_type_attributes { Type.attributes; loc; name; ty } =
     let duplicate_err s =
@@ -1158,102 +1248,108 @@ end = struct (* {{{ *)
       match attributes with
       | None -> Structured.Index([1],None)
       | Some x -> x in
-    let ty = structure_type_expression loc toplevel_func ty in
+    let ty = structure_type_expression loc toplevel_func valid_functional ty in
     { Type.attributes; loc; name; ty }
 
   let structure_type_abbreviation { TypeAbbreviation.name; value; nparams; loc } =
     let rec aux = function
       | TypeAbbreviation.Lam(c,loc,t) -> TypeAbbreviation.Lam(c,loc,aux t)
-      | TypeAbbreviation.Ty t -> TypeAbbreviation.Ty (structure_type_expression loc Relation t)
+      | TypeAbbreviation.Ty t -> TypeAbbreviation.Ty (structure_type_expression loc Relation valid_functional t)
   in
   { TypeAbbreviation.name; value = aux value; nparams; loc }
 
   let run _ dl =
-    let rec aux_run ns blocks clauses macros types tabbrs modes chr accs = function
+    let rec aux_run ns blocks clauses macros kinds types tabbrs modes chr accs = function
       | Program.Ignored _ :: rest ->
-          aux_run ns blocks clauses macros types tabbrs modes chr accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs modes chr accs rest
       | (Program.End _ :: _ | []) as rest ->
           { body = List.rev (cl2b clauses @ blocks);
             types = List.rev types;
+            kinds = List.rev kinds;
             type_abbrevs = List.rev tabbrs;
             macros = List.rev macros;
             modes = List.rev modes },
           List.rev chr,
           rest
       | Program.Begin loc :: rest ->
-          let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
+          let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] [] accs rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside an anonymous block";
           aux_end_block loc ns (Accumulated p :: cl2b clauses @ blocks)
-            [] macros types tabbrs modes chr accs rest
+            [] macros kinds types tabbrs modes chr accs rest
       | Program.Constraint (loc, ctx_filter, clique) :: rest ->
           if chr <> [] then
             error "Constraint blocks cannot be nested";
-          let p, chr, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
+          let p, chr, rest = aux_run ns [] [] [] [] [] [] [] [] accs rest in
           aux_end_block loc ns (Constraints({ctx_filter;clique;rules=chr},p) :: cl2b clauses @ blocks)
-            [] macros types tabbrs modes [] accs rest
+            [] macros kinds types tabbrs modes [] accs rest
       | Program.Namespace (loc, n) :: rest ->
-          let p, chr1, rest = aux_run (n::ns) [] [] [] [] [] [] [] StrSet.empty rest in
+          let p, chr1, rest = aux_run (n::ns) [] [] [] [] [] [] [] [] StrSet.empty rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside a namespace block";
           aux_end_block loc ns (Namespace (n,p) :: cl2b clauses @ blocks)
-            [] macros types tabbrs modes chr accs rest
+            [] macros kinds types tabbrs modes chr accs rest
       | Program.Shorten (loc,[]) :: _ ->
           anomaly ~loc "parser returns empty list of shorten directives"
       | Program.Shorten (loc,directives) :: rest ->
           let shorthand (full_name,short_name) = { iloc = loc; full_name; short_name } in
           let shorthands = List.map shorthand directives in
-          let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
+          let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] [] accs rest in
           if chr1 <> [] then
             error "CHR cannot be declared after a shorthand";
           aux_run ns ((Shorten(shorthands,p) :: cl2b clauses @ blocks))
-            [] macros types tabbrs modes chr accs rest
+            [] macros kinds types tabbrs modes chr accs rest
 
       | Program.Accumulated (_,[]) :: rest ->
-          aux_run ns blocks clauses macros types tabbrs modes chr accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs modes chr accs rest
 
       | Program.Accumulated (loc,(filename,digest,a) :: more) :: rest ->
           let rest = Program.Accumulated (loc, more) :: rest in
           let digest = String.concat "." (digest :: List.map F.show ns) in
           if StrSet.mem digest accs then begin
             (* Printf.eprintf "skip: %s\n%!" filename; *)
-            aux_run ns blocks clauses macros types tabbrs modes chr accs rest
+            aux_run ns blocks clauses macros kinds types tabbrs modes chr accs rest
           end else begin
             (* Printf.eprintf "acc: %s -> %d\n%!" filename (List.length a); *)
-            aux_run ns blocks clauses macros types tabbrs modes chr
+            aux_run ns blocks clauses macros kinds types tabbrs modes chr
               (StrSet.add digest accs)
               (Program.Begin loc :: a @ Program.End loc :: rest)
           end
 
       | Program.Clause c :: rest ->
           let c = structure_clause_attributes c in
-          aux_run ns blocks (c::clauses) macros types tabbrs modes chr accs rest
+          aux_run ns blocks (c::clauses) macros kinds types tabbrs modes chr accs rest
       | Program.Macro m :: rest ->
-          aux_run ns blocks clauses (m::macros) types tabbrs modes chr accs rest
+          aux_run ns blocks clauses (m::macros) kinds types tabbrs modes chr accs rest
       | Program.Pred t :: rest ->
           let t = structure_type_attributes t in
-          aux_run ns blocks clauses macros (t :: types) tabbrs (t::modes) chr accs rest
+          aux_run ns blocks clauses macros kinds (t :: types) tabbrs (t::modes) chr accs rest
+      | Program.Kind [] :: rest ->
+          aux_run ns blocks clauses macros kinds types tabbrs modes chr accs rest
+      | Program.Kind (k::ks) :: rest ->          
+          let k = structure_kind_attributes k in
+            aux_run ns blocks clauses macros (k :: kinds) types tabbrs modes chr accs (Program.Kind ks :: rest)
       | Program.Type [] :: rest ->
-          aux_run ns blocks clauses macros types tabbrs modes chr accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs modes chr accs rest
       | Program.Type (t::ts) :: rest ->          
           if List.mem Functional t.attributes then error ~loc:t.loc "functional attribute only applies to pred";
           let t = structure_type_attributes t in
-          aux_run ns blocks clauses macros (t :: types) tabbrs modes chr accs (Program.Type ts :: rest)
+          aux_run ns blocks clauses macros kinds (t :: types) tabbrs modes chr accs (Program.Type ts :: rest)
       | Program.TypeAbbreviation abbr :: rest ->
           let abbr = structure_type_abbreviation abbr in
-          aux_run ns blocks clauses macros types (abbr :: tabbrs) modes chr accs rest
+          aux_run ns blocks clauses macros kinds types (abbr :: tabbrs) modes chr accs rest
       | Program.Chr r :: rest ->
           let r = structure_chr_attributes r in
-          aux_run ns blocks clauses macros types tabbrs modes (r::chr) accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs modes (r::chr) accs rest
 
-    and aux_end_block loc ns blocks clauses macros types tabbrs modes chr accs rest =
+    and aux_end_block loc ns blocks clauses macros kinds types tabbrs modes chr accs rest =
       match rest with
       | Program.End _ :: rest ->
-          aux_run ns blocks clauses macros types tabbrs modes chr accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs modes chr accs rest
       | _ -> error ~loc "matching } is missing"
 
     in
-    let blocks, chr, rest = aux_run [] [] [] [] [] [] [] [] StrSet.empty dl in
+    let blocks, chr, rest = aux_run [] [] [] [] [] [] [] [] [] StrSet.empty dl in
     begin match rest with
     | [] -> ()
     | Program.End loc :: _ -> error ~loc "extra }"
@@ -1363,9 +1459,9 @@ end = struct
   let map_append k v m =
     try
       let l = F.Map.find k m in
-      F.Map.add k (TypeList.append v l) m
+      F.Map.add k (TypeList.merge v l) m
     with Not_found ->
-      F.Map.add k (TypeList.make v) m
+      F.Map.add k v m
 
   let is_uvar_name f =  F.is_uvar_name f
 
@@ -1531,68 +1627,78 @@ end = struct
     let new_goal = Option.map compile_sequent new_goal in
     { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc }
 
-  let run state p =
+  let compile_kind kinds { Ast.Type.name; ty; loc } =
+    let open Ast.TypeExpression in
+    let rec count = function
+      | TArr({ tit = TConst c },t) when c == F.typef -> 1 + count t.tit
+      | TConst c when c == F.typef -> 0
+      | x -> error ~loc "Syntax error: illformed kind.\nExamples:\nkind bool type.\nkind list type -> type.\n"
+    in
+    F.Map.add name (count ty.tit, loc) kinds  
+    
+  let run state p : State.t * Scoped.program =
 
-    let rec compile_program omacros state { Ast.Structured.macros; types; type_abbrevs; modes; body } =
+    let rec compile_program omacros state { Ast.Structured.macros; kinds; types; type_abbrevs; modes; body } =
       (* check_no_overlap_macros omacros macros; *)
       let active_macros = F.Map.empty in
       (* let active_macros =
         List.fold_left compile_macro omacros macros in *)
       let type_abbrevs = List.fold_left compile_type_abbrev F.Map.empty type_abbrevs in
-      let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (compile_type t) m) F.Map.empty types in
+      let kinds = List.fold_left compile_kind F.Map.empty kinds in
+      let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (TypeList.make @@ compile_type t) m) F.Map.empty types in
       let modes = List.fold_left compile_mode F.Map.empty modes in
       let defs_m = defs_of modes in
       let defs_t = defs_of types in
       let defs_ta = defs_of type_abbrevs in
-      let state, types, type_abbrevs, modes, defs_b, body =
-        compile_body active_macros types type_abbrevs modes F.Set.empty state body in
+      let state, kinds, types, type_abbrevs, modes, defs_b, body =
+        compile_body active_macros kinds types type_abbrevs modes F.Set.empty state body in
       let symbols = F.Set.(union (union (union defs_m defs_t) defs_b) defs_ta) in
       (state : State.t), active_macros,
-      { Scoped.types; type_abbrevs; modes; body; symbols }
+      { Scoped.types; kinds; type_abbrevs; modes; body; symbols }
 
-    and compile_body macros types type_abbrevs (modes : (mode * Loc.t) F.Map.t) (defs : F.Set.t) state = function
-      | [] -> state, types, type_abbrevs, modes, defs, []
+    and compile_body macros kinds types type_abbrevs (modes : (mode * Loc.t) F.Map.t) (defs : F.Set.t) state = function
+      | [] -> state, kinds, types, type_abbrevs, modes, defs, []
       | Clauses cl :: rest ->
           let compiled_cl = List.map compile_clause cl in
           let defs = F.Set.union defs (global_hd_symbols_of_clauses compiled_cl) in
-          let state, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros types type_abbrevs modes defs state rest in
+          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs state rest in
           let compiled_rest =
             match compiled_rest with
             | Scoped.Clauses l :: rest -> Scoped.Clauses (compiled_cl @ l) :: rest
             | rest -> Scoped.Clauses compiled_cl :: rest in
-          state, types, type_abbrevs, modes, defs, compiled_rest
+          state, kinds, types, type_abbrevs, modes, defs, compiled_rest
       | Namespace (prefix, p) :: rest ->
           let prefix = F.show prefix in
           let state, _, p = compile_program macros state p in
-          let state, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros types type_abbrevs modes defs state rest in
+          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs state rest in
           let symbols = prepend [prefix] p.Scoped.symbols in
-          state, types, type_abbrevs, modes, F.Set.union defs symbols,
+          state, kinds, types, type_abbrevs, modes, F.Set.union defs symbols,
           Scoped.Namespace(prefix, p) :: compiled_rest
       | Shorten(shorthands,p) :: rest ->
           let shorts = List.fold_left (fun s { Ast.Structured.short_name } ->
             F.Set.add short_name s) F.Set.empty shorthands in
           let state, _, p = compile_program macros state p in
-          let state, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros types type_abbrevs modes defs state rest in
-          state, types, type_abbrevs, modes,
+          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs state rest in
+          state, kinds, types, type_abbrevs, modes,
           F.Set.union defs (F.Set.diff p.Scoped.symbols shorts),
           Scoped.Shorten(shorthands, p) :: compiled_rest
       | Constraints ({ctx_filter; clique; rules}, p) :: rest ->
           (* XXX missing check for nested constraints *)
           let rules = List.map compile_chr_rule rules in
           let state, _, p = compile_program macros state p in
-          let state, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros types type_abbrevs modes defs state rest in
-          state, types, type_abbrevs, modes,
+          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs state rest in
+          state, kinds, types, type_abbrevs, modes,
           F.Set.union defs p.Scoped.symbols,
           Scoped.Constraints({ctx_filter; clique; rules},p) :: compiled_rest
       | Accumulated p :: rest ->
           let state, _, p = compile_program macros state p in
-          let state, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros types type_abbrevs modes defs state rest in
-          state, types, type_abbrevs, modes,
+          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs state rest in
+          state, kinds, types, type_abbrevs, modes,
           F.Set.union defs p.Scoped.symbols,
           Scoped.Accumulated p :: compiled_rest
   
@@ -2564,10 +2670,18 @@ end (* }}} *)
     (mode * Loc.t) F.Map.t ->
     (mode * Loc.t) F.Map.t ->
     (mode * Loc.t) F.Map.t
+  val merge_kinds :
+    Arity.t F.Map.t ->
+    Arity.t F.Map.t ->
+    Arity.t F.Map.t
   val merge_types :
     TypeList.t F.Map.t ->
     TypeList.t F.Map.t ->
     TypeList.t F.Map.t
+  val merge_type_assignments :
+    TypeAssignment.skema F.Map.t ->
+    TypeAssignment.skema F.Map.t ->
+    TypeAssignment.skema F.Map.t
   val merge_type_abbrevs :
     ScopedTypeExpression.t F.Map.t ->
     ScopedTypeExpression.t F.Map.t ->
@@ -2705,20 +2819,32 @@ end (* }}} *)
   let apply_subst_modes s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
 
+  let apply_subst_kinds s l =
+    F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
+
   let apply_subst_type_abbrevs s t = smart_map_scoped_ty (subst_global s) t
   
   let apply_subst_type_abbrevs s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
 
+    let merge_type_assignments t1 t2 =
+      F.Map.union (fun _ l1 l2 -> Some (TypeAssignment.merge_skema l1 l2)) t1 t2
+
     let merge_types t1 t2 =
       F.Map.union (fun _ l1 l2 -> Some (TypeList.merge l1 l2)) t1 t2
-
+  
     let merge_modes m1 m2 =
       if F.Map.is_empty m1 then m2 else
       F.Map.fold (fun k v m ->
         Scope_Quotation_Macro.check_duplicate_mode k v m;
         F.Map.add k v m)
       m2 m1
+
+    let merge_kinds t1 t2 =
+        F.Map.union (fun f (k,loc1 as kdecl) (k',loc2) ->
+          if k == k' then Some kdecl else error ~loc:loc2 ("Duplicate kind declaration for " ^ F.show f ^ ". Previously declared in " ^ Loc.show loc1);
+          ) t1 t2
+  
 
     let add_to_index_type_abbrev m ({ ScopedTypeExpression.name; loc; value; nparams } as x) =
       if F.Map.mem name m then begin
@@ -2738,50 +2864,54 @@ end (* }}} *)
       F.Map.fold (fun _ v m ->
           add_to_index_type_abbrev m v (* BUG timestamp +len *)) m2 m1
 
-  let rec compile_block types type_abbrevs modes clauses chr subst = function
-    | [] -> types, type_abbrevs, modes, clauses, chr
-    | Scoped.Shorten(shorthands, { types = t; type_abbrevs = ta; modes = m; body; symbols = _ }) :: rest ->
+  let rec compile_block kinds types type_abbrevs modes clauses chr subst = function
+    | [] -> kinds, types, type_abbrevs, modes, clauses, chr
+    | Scoped.Shorten(shorthands, { kinds = k; types = t; type_abbrevs = ta; modes = m; body; symbols = _ }) :: rest ->
       let insubst = push_subst_shorthands shorthands subst in
+      let kinds = merge_kinds (apply_subst_kinds insubst k) kinds in
       let types = merge_types (apply_subst_types insubst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs insubst ta) in
       let modes = merge_modes (apply_subst_modes insubst m) modes in
-      let types, type_abbrevs, modes, clauses, chr =
-        compile_block types type_abbrevs modes clauses chr insubst body in
-      compile_block types type_abbrevs modes clauses chr subst rest
-  | Scoped.Namespace (extra, { types = t; type_abbrevs = ta; modes = m; body; symbols = s }) :: rest ->
+      let kinds, types, type_abbrevs, modes, clauses, chr =
+        compile_block kinds types type_abbrevs modes clauses chr insubst body in
+      compile_block kinds types type_abbrevs modes clauses chr subst rest
+  | Scoped.Namespace (extra, { kinds = k; types = t; type_abbrevs = ta; modes = m; body; symbols = s }) :: rest ->
       let new_subst = push_subst extra s subst in
+      let kinds = merge_kinds (apply_subst_kinds new_subst k) kinds in
       let types = merge_types (apply_subst_types new_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs new_subst ta) in
       let modes = merge_modes (apply_subst_modes new_subst m) modes in
-      let types, type_abbrevs, modes, clauses, chr =
-        compile_block types type_abbrevs modes clauses chr new_subst body in
-      compile_block types type_abbrevs modes clauses chr subst rest
+      let kinds, types, type_abbrevs, modes, clauses, chr =
+        compile_block kinds types type_abbrevs modes clauses chr new_subst body in
+      compile_block kinds types type_abbrevs modes clauses chr subst rest
   | Scoped.Clauses cl :: rest ->
       let cl = apply_subst_clauses subst cl in
       let clauses = cl :: clauses in
-      compile_block types type_abbrevs modes clauses chr subst rest
-  | Scoped.Constraints (ch, { types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
+      compile_block kinds types type_abbrevs modes clauses chr subst rest
+  | Scoped.Constraints (ch, { kinds = k; types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
+      let kinds = merge_kinds (apply_subst_kinds subst k) kinds in
       let types = merge_types (apply_subst_types subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs subst ta) in
       let modes = merge_modes (apply_subst_modes subst m) modes in
       let chr = apply_subst_chrs subst ch :: chr in
-      let types, type_abbrevs, modes, clauses, chr =
-        compile_block types type_abbrevs modes clauses chr subst body in
-      compile_block types type_abbrevs modes clauses chr subst rest
-  | Scoped.Accumulated { types = t; type_abbrevs = ta; modes = m; body; symbols = _ } :: rest ->
+      let kinds, types, type_abbrevs, modes, clauses, chr =
+        compile_block kinds types type_abbrevs modes clauses chr subst body in
+      compile_block kinds types type_abbrevs modes clauses chr subst rest
+  | Scoped.Accumulated { kinds=k; types = t; type_abbrevs = ta; modes = m; body; symbols = _ } :: rest ->
+      let kinds = merge_kinds (apply_subst_kinds subst k) kinds in
       let types = merge_types (apply_subst_types subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs subst ta) in
       let modes = merge_modes (apply_subst_modes subst m) modes in
-      let types, type_abbrevs, modes, clauses, chr =
-        compile_block types type_abbrevs modes clauses chr subst body in
-      compile_block types type_abbrevs modes clauses chr subst rest
+      let kinds, types, type_abbrevs, modes, clauses, chr =
+        compile_block kinds types type_abbrevs modes clauses chr subst body in
+      compile_block kinds types type_abbrevs modes clauses chr subst rest
 
-  let compile_body { Scoped.types; type_abbrevs; modes; symbols; body } =
-    compile_block types type_abbrevs modes [] [] empty_subst body
+  let compile_body { Scoped.kinds; types; type_abbrevs; modes; symbols; body } =
+    compile_block kinds types type_abbrevs modes [] [] empty_subst body
 
   let run state { Scoped.pbody; toplevel_macros } =
-    let types, type_abbrevs, modes, clauses_rev, chr_rev = compile_body pbody in
-    { Flat.types; type_abbrevs; modes; clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; toplevel_macros; builtins = [] } (* TODO builtins can be in a unit *)
+    let kinds, types, type_abbrevs, modes, clauses_rev, chr_rev = compile_body pbody in
+    { Flat.kinds; types; type_abbrevs; modes; clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; toplevel_macros; builtins = [] } (* TODO builtins can be in a unit *)
 
 
 end
@@ -3306,10 +3436,16 @@ end = struct
     let chr, clique = CHR.new_clique (SymbolMap.global_name state symbols) ctx_filter clique chr in
     List.fold_left (extend1_chr flags state clique) (symbols,chr) rules
    
-  let extend1 flags (state, { Assembled.symbols; prolog_program; indexing; modes = om; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm }) { version; code = { Flat.toplevel_macros; types; type_abbrevs; modes; clauses; chr; builtins }} =
+  let extend1 flags
+    (state, { Assembled.symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm })
+            { version; code = { Flat.toplevel_macros; kinds; types; type_abbrevs; modes; clauses; chr; builtins }} =
     let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types indexing in
+    let kinds = Flatten.merge_kinds ok kinds in
     let modes = Flatten.merge_modes om modes in
-    let types = Flatten.merge_types ot types in
+
+    let types = F.Map.map (TypeChecker.check_type kinds) types in
+    let types = Flatten.merge_type_assignments ot types in
+
     let type_abbrevs = Flatten.merge_type_abbrevs ota type_abbrevs in
 
     let symbols, state =
@@ -3320,15 +3456,15 @@ end = struct
 
     (* TODO: make this callable on a unit (+ its base) *)
     clauses |> List.iter (fun { Ast.Clause.body; loc } ->
-      if TypeAssignment.Prop <> TypeChecker.check types body then
-        error ~loc "type error");
+      if TypeAssignment.Prop <> TypeAssignment.unval @@ TypeChecker.check types body then
+        error ~loc "Illtyped rule: not a predicate"); (* TODO remove whn bidirectional *)
 
     let symbols, chr =
       List.fold_left (extend1_chr_block flags state) (symbols,ochr) chr in
     let symbols, prolog_program =
       List.fold_left (extend1_clause flags state modes indexing) (symbols, prolog_program) clauses in
 
-    state, { Assembled.symbols; prolog_program; indexing; modes; types; type_abbrevs; chr; toplevel_macros }
+    state, { Assembled.symbols; prolog_program; indexing; modes; kinds; types; type_abbrevs; chr; toplevel_macros }
 
   let extend flags state assembled ul =
     List.fold_left (extend1 flags) (state, assembled) ul
@@ -3514,6 +3650,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let types = assembled_program.Assembled.types in
   let type_abbrevs = assembled_program.Assembled.type_abbrevs in
   let modes = assembled_program.Assembled.modes in
+  let kinds = assembled_program.Assembled.kinds in
 
   let active_macros = assembled_program.Assembled.toplevel_macros in
 
@@ -3524,6 +3661,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
   {
     WithMain.types;
+    kinds;
     modes;
     type_abbrevs;
     prolog_program = assembled_program.Assembled.prolog_program;

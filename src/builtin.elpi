@@ -16,13 +16,13 @@ pred false.
 
 external pred (=) o:A, o:A. % unification
 
-external kind int type.
+kind int type.
 
 
-external kind string type.
+kind string type.
 
 
-external kind float type.
+kind float type.
 
 
 pred (;) i:prop, i:prop.
@@ -263,11 +263,11 @@ type error string -> diagnostic. % Failure
 
 %  -- I/O --
 
-external kind in_stream type.
+kind in_stream type.
 
 type std_in in_stream.
 
-external kind out_stream type.
+kind out_stream type.
 
 type std_out out_stream.
 type std_err out_stream.
@@ -381,7 +381,7 @@ counter C N :- trace.counter C N.
 % the syntax tree
 external pred quote_syntax i:string, i:string, o:list A, o:A.
 
-external kind loc type.
+kind loc type.
 
 
 % [loc.fields Loc File StartChar StopChar Line LineStartsAtChar] Decomposes
@@ -495,7 +495,7 @@ external pred new_int o:int.
 external pred findall_solutions i:prop, o:list prop.
 
 % Holds data across bracktracking; can only contain closed terms
-external kind safe type.
+kind safe type.
 
 
 % [new_safe Safe] creates a safe: a store that persists across backtracking
