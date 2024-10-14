@@ -226,6 +226,7 @@ module Compile : sig
 
   (* then compile the query *)
   val query : program -> Ast.query -> unit query
+  val total_type_checking_time : 'a query -> float
 
   (* finally obtain the executable *)
   val optimize : 'a query -> 'a executable

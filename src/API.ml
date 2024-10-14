@@ -171,6 +171,8 @@ module Compile = struct
   let query s_p t =
     Compiler.query_of_ast s_p t (fun st -> st)
 
+  let total_type_checking_time q = Compiler.total_type_checking_time q
+
   let static_check ~checker q =
     let module R = (val !r) in let open R in
     Compiler.static_check ~exec:(execute_once ~delay_outside_fragment:false) ~checker q

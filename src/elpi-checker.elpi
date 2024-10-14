@@ -24,7 +24,6 @@ kind err type.
 type type-err term -> typ -> typ -> err.
 type wrong-arity term -> typ -> list term -> err.
 type unknown term -> err.
-type assert prop -> err -> prop.
 
 pred error i:list (pair loc string), o:bool.
 

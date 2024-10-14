@@ -272,6 +272,9 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "pred false.";
 
   LPCode "external pred (=) o:A, o:A. % unification";
+
+  LPCode "type pi (A -> prop) -> prop.";
+  LPCode "type sigma (A -> prop) -> prop.";
   
   MLData BuiltInData.int;
   MLData BuiltInData.string;
@@ -783,15 +786,6 @@ rex_split Rx S L :- rex.split Rx S L.|};
 ;;
 
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
-
-let ctype = AlgebraicData.declare {
-  AlgebraicData.ty = TyName "ctyp";
-  doc = "Opaque ML data types";
-  pp = (fun fmt cty -> Format.fprintf fmt "%s" cty);
-  constructors = [
-    K("ctype","",A(BuiltInData.string,N),B (fun x -> x), M (fun ~ok ~ko x -> ok x))  
-  ]
-} |> ContextualConversion.(!<)
    
 let safe = OpaqueData.declare {
   OpaqueData.name = "safe";
@@ -861,8 +855,6 @@ and same_term_list ~depth xs ys =
 let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [ 
 
   LPDoc "== Elpi nonlogical builtins =====================================";
-
-  MLData ctype;
 
   MLCode(Pred("var",
     InOut(ioarg_any, "V",
@@ -1003,8 +995,8 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("is_cdata",
     In(any,     "T",
-    Out(ctype,  "Ctype",
-    Easy        "checks if T is primitive of type Ctype, eg (ctype \"int\")")),
+    Out(string,  "Ctype",
+    Easy        "checks if T is primitive of type Ctype, eg \"int\"")),
   (fun t _ ~depth ->
      match look ~depth t with
      | CData n -> !:(RawOpaqueData.name n)
@@ -1012,7 +1004,7 @@ X == Y :- same_term X Y.
   DocAbove);
 
   LPCode "pred primitive? i:A, i:string.";
-  LPCode "primitive? X S :- is_cdata X (ctype S).";
+  LPCode "primitive? X S :- is_cdata X S.";
 
   MLCode(Pred("new_int",
      Out(int, "N",
@@ -1391,7 +1383,7 @@ let open BuiltIn in let open BuiltInData in
 
 module LocMap : Util.Map.S with type key = Ast.Loc.t = Util.Map.Make(Ast.Loc)
 
-let elpi_map =  let open BuiltIn in [
+(* let elpi_map =  let open BuiltIn in [
   
     LPCode Builtin_map.code
     
@@ -1401,7 +1393,11 @@ let elpi_set =  let open BuiltIn in [
   
     LPCode Builtin_set.code
     
-]
+] *)
+
+(* need spilling *)
+let elpi_set = []
+let elpi_map = []
 
 let string_set, string_set_decl = ocaml_set_conv ~name:"std.string.set" BuiltInData.string (module API.Compile.StrSet)
 let int_set, int_set_decl = ocaml_set_conv ~name:"std.int.set"    BuiltInData.int    (module API.Utils.IntSet)
@@ -1531,11 +1527,11 @@ let std_builtins =
   BuiltIn.declare ~file_name:"builtin.elpi" std_declarations
 
 
-let default_checker () =
+(* let default_checker () =
   try
     let elpi = API.Setup.init ~builtins:[std_builtins] () in
     let ast = API.Parse.program_from ~elpi ~loc:(API.Ast.Loc.initial "(checker)") (Lexing.from_string Builtin_checker.code) in
     API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]
   with
   | API.Parse.ParseError(loc,msg) -> API.Utils.anomaly ~loc msg
-  | API.Compile.CompileError(loc,msg) -> API.Utils.anomaly ?loc msg
+  | API.Compile.CompileError(loc,msg) -> API.Utils.anomaly ?loc msg *)

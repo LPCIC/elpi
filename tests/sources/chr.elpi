@@ -1,5 +1,8 @@
+kind term type.
 type app term -> term -> term.
 type lam (term -> term) -> term.
+
+kind ty type.
 type arr ty -> ty -> ty.
 type nat ty.
 type bool ty.

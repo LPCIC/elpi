@@ -37,6 +37,8 @@ val query_of_term :
 val query_of_data :
   program -> Loc.t -> 'a Query.t -> 'a query
 
+val total_type_checking_time : 'a query -> float
+
 val optimize_query : 'a query -> 'a executable
 
 val term_of_ast : depth:int -> State.t -> string -> State.t * term
