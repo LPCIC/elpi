@@ -1058,8 +1058,8 @@ end = struct
       TypeAssignment.Val (check_loc F.Map.empty t)
 
 
-  let check a b c =
-    try check a b c with CompileError(loc,msg) -> Format.eprintf "%a: %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop)
+  (* let check a b c =
+    try check a b c with CompileError(loc,msg) -> Format.eprintf "%a: %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop) *)
 end
 
 
