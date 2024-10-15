@@ -755,7 +755,11 @@ module TypeAssignment = struct
     | Overloaded xs, Overloaded ys -> Overloaded (xs @ ys)
   
   let unval (Val x) = x
-  let deref m = unval @@ MutableOnce.get m
+  let rec deref m =
+    match unval @@ MutableOnce.get m with
+    | UVar m when MutableOnce.is_set m -> deref m
+    | x -> x
+
   let set m v = MutableOnce.set m (Val v)
 
 
@@ -3584,7 +3588,10 @@ end = struct
         symbols, add_indexing_for ~loc k c None m) modes (symbols, map) in
     symbols, R.CompileTime.update_indexing map index, C.Map.union (fun _ _ _ -> assert false) map old_idx
 
-  let todbl state symb ?(amap = F.Map.empty) t =
+  type spill = { vars : ScopedTerm.t list; vars_names : F.t list; expr : ScopedTerm.t }
+  type spills = spill list
+
+  let todbl ~needs_spilling state symb ?(amap = F.Map.empty) t =
     let symb = ref symb in
     let amap = ref amap in
     let allocate_arg c =
@@ -3607,13 +3614,14 @@ end = struct
       rc in
     let push_bound (n,ctx) c = (n+1,F.Map.add c n ctx) in
     let push_unnamed_bound (n,ctx) = (n+1,ctx) in
+    let push ctx = function
+      | None -> push_unnamed_bound ctx
+      | Some x -> push_bound ctx x in
     let open ScopedTerm in
     let rec todbl ctx t =
       match t.it with
       | CData c -> D.mkCData (CData.hcons c)
-      | Spill(t,{ contents = NoInfo}) -> assert false (* no type checking *)
-      | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
-      | Spill(t,{ contents = (Main _)}) -> assert false (* TODO *)
+      | Spill(t,_) -> assert false (* spill handled before *)
       (* lists *)
       | Const(Global,c) when F.(equal c nilf) -> D.mkNil
       | App(Global,c,x,[y]) when F.(equal c consf) ->
@@ -3633,8 +3641,7 @@ end = struct
           else D.mkApp c x xs
       (* lambda terms *)
       | Const(Local,c) -> allocate_bound_symbol t.loc ctx c
-      | Lam(None,t) -> D.mkLam @@ todbl (push_unnamed_bound ctx) t
-      | Lam(Some c,t) -> D.mkLam @@ todbl (push_bound ctx c) t
+      | Lam(c,t) -> D.mkLam @@ todbl (push ctx c) t
       | App(Local,c,x,xs) ->
           let c = lookup_bound t.loc ctx c in
           let x = todbl ctx x in
@@ -3646,14 +3653,116 @@ end = struct
           R.mkAppArg (allocate_arg c) 0 xs
       | Discard -> D.mkDiscard
     in
+
+    let is_prop x =
+      match TypeAssignment.deref x with
+      | TypeAssignment.Prop -> true
+      | _ -> false in
+
+    let hack ~loc ?(ty = MutableOnce.make (F.from_string "Spill")) it = { ty; it; loc } in (* TODO store the types in Main *)
+
+    let sigma ~loc t n =
+      hack ~loc @@ App(Global,F.sigmaf,hack ~loc (Lam(Some n, t)),[]) in
+
+    let add_spilled l t =
+      if l = [] then t
+      else
+        (* TODO SIGMA *)
+        let t =
+          List.fold_right (fun { expr; vars_names } t ->
+            let t = hack ~loc:t.loc @@ App(Global,F.andf,expr,[t]) in
+             let t = List.fold_left (sigma ~loc:t.loc) t vars_names in
+             t
+             ) l t in
+        t
+    in
+
+
+    let rec apply_to locals c : ScopedTerm.t -> ScopedTerm.t = assert false in
+
+    
+    let app t args =
+      if args = [] then t.it else
+      (* TODO moev under => and , *)
+      match t.it with
+      | Const(g,c) -> App(g,c,List.hd args, List.tl args)
+      | App(g,c,x,xs) -> App(g,c,x,xs @ args)
+      | Var(c,xs) -> Var(c,xs @ args)
+      | _ -> assert false in
+
+    let args = ref 0 in
+
+    let rec mk_spilled ~loc ctx n =
+        if n = 0 then []
+        else
+          let f = incr args; F.from_string (Printf.sprintf "%%arg%d" !args) in
+        let sp = hack ~loc @@ Const(Local,f) in
+        (f,hack ~loc @@ app sp ctx) :: mk_spilled ~loc ctx (n-1) in
+
+    let rec spill ctx ({ loc; ty; it } as t) : spills * ScopedTerm.t list =
+      (* Format.eprintf "spill %a : %a\n" ScopedTerm.pretty t (MutableOnce.pp TypeAssignment.pp) ty; *)
+      match it with
+      | CData _ | Discard | Const _ -> [], [t]
+      | Spill(t,{ contents = NoInfo}) -> assert false (* no type checking *)
+      | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
+      | Spill(t,{ contents = (Main n)}) ->
+          let spills, t = spill1 ctx t in
+          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun c -> hack ~loc @@ Const(Local,c)) ctx) n in
+          let expr = hack ~loc ~ty @@ app t vars in
+          spills @ [{vars; vars_names; expr}], vars
+      (* globals and builtins *)
+      | App(g,c,x,xs) ->
+          let spills, args = List.split @@ List.map (spill ctx) (x :: xs) in
+          let args = List.flatten args in
+          let spilled = List.flatten spills in
+          let it = App(g,c,List.hd args, List.tl args) in
+          if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
+          else spilled, [{ it; loc; ty }]
+      (* lambda terms *)
+      | Lam(None,t) ->
+          let spills, t = spill1 ctx t in
+          spills, [{ it = Lam(None,t); loc; ty }]
+      | Lam(Some c,t) ->
+          let spills, t = spill1 (c :: ctx) t in
+          let (t,_), spills =
+            map_acc (fun (t,n) { vars; vars_names; expr } ->
+              let all_names = vars @ n in
+              let expr = apply_to all_names c expr in
+              let t = apply_to vars c t in
+              (t,all_names), { vars; vars_names; expr = hack ~loc @@ App(Global,F.pif,hack ~loc @@ Lam(Some c,expr),[]) })
+            (t,[]) spills in
+          spills, [{ it = Lam(Some c,t); loc; ty }]
+      (* holes *)
+      | Var(c,xs) ->
+          let spills, args = List.split @@ List.map (spill ctx) xs in
+          let args = List.flatten args in
+          let spilled = List.flatten spills in
+          let it = Var(c,args) in
+          if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
+          else spilled, [{ it; loc; ty }]
+      and spill1 ctx ({ loc } as t) =
+        let spills, t = spill ctx t in
+        let t = if List.length t <> 1 then error ~loc "bad pilling" else List.hd t in
+        spills, t
+  in
+
+    let spills, ts =
+      if needs_spilling then spill [] t
+      else [],[t] in
+    let t =
+      match spills, ts with
+      | [], [t] -> t
+      | [], _ -> assert false
+      | _ :: _, _ -> error ~loc:t.loc "Cannot place spilled expression" in
+    Format.eprintf "spilled %a\n" ScopedTerm.pretty t;
     let t  = todbl (0,F.Map.empty) t in
     (!symb, !amap), t  
 
-  let extend1_clause flags state modes indexing (symbols, index) { Ast.Clause.body; loc; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
+  let extend1_clause flags state modes indexing (symbols, index) (needs_spilling,{ Ast.Clause.body; loc; attributes = { Ast.Structured.insertion = graft; id; ifexpr } }) =
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (symbols, index)
     else
-    let (symbols, amap), body = todbl state symbols body in
+    let (symbols, amap), body = todbl ~needs_spilling state symbols body in
     let modes x = try fst @@ F.Map.find (SymbolMap.global_name state symbols x) modes with Not_found -> [] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
@@ -3677,7 +3786,7 @@ end = struct
     if not @@ filter1_if flags (fun x -> x.Ast.Structured.cifexpr) attributes then
       (symbols,chr)
     else
-    let todbl state (symbols,amap) t = todbl state symbols ~amap t in
+    let todbl state (symbols,amap) t = todbl ~needs_spilling:false (* TODO typecheck *) state symbols ~amap t in
     let sequent_todbl state st { Ast.Chr.eigen; context; conclusion } =
       let st, eigen = todbl state st eigen in
       let st, context = todbl state st context in
@@ -3750,10 +3859,12 @@ end = struct
 
     (* TODO: make this callable on a unit (+ its base) *)
     let t0 = Unix.gettimeofday () in
-    clauses |> List.iter (fun { Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } ->
+    let clauses = clauses |> List.map (fun ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
       if typecheck then
-        ignore @@ TypeChecker.check ~type_abbrevs ~kinds ~env:types body ~exp:TypeAssignment.(Val Prop)
-    );
+        let needs_spill = TypeChecker.check ~type_abbrevs ~kinds ~env:types body ~exp:TypeAssignment.(Val Prop) in
+        needs_spill, c
+      else
+        false, c) in
     let t1 = Unix.gettimeofday () in
     let total_type_checking_time = total_type_checking_time +. t1 -. t0 in
 
@@ -3769,7 +3880,7 @@ end = struct
     List.fold_left (extend1 flags) (state, assembled) ul
 
   let compile_query state { Assembled.symbols; } t =
-    let (symbols, amap), t = todbl state symbols t in
+    let (symbols, amap), t = todbl ~needs_spilling:false (* typecheck *) state symbols t in
     symbols, amap, t 
 
 end
