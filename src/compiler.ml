@@ -777,6 +777,11 @@ end
 module ScopedTerm = struct
   open ScopeContext
 
+  type spill_info =
+    | NoInfo (* before typing *)
+    | Main of int (* how many arguments it stands for *)
+    | Phantom of int (* phantom term used during type checking *)
+  [@@ deriving show]
   type t_ =
    | Const of scope * F.t
    | Discard
@@ -784,7 +789,7 @@ module ScopedTerm = struct
    | App of scope * F.t * t * t list
    | Lam of F.t option * t
    | CData of CData.t
-   | Spill of t * int (* 0 is the original, 1.. its phantoms *)
+   | Spill of t * spill_info ref
    and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
   [@@ deriving show]
 
@@ -801,8 +806,9 @@ module ScopedTerm = struct
     | App(_,f,x,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") (x::xs)
     | Var(f,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") xs
     | CData c -> fprintf fmt "%a" CData.pp c
-    | Spill (t,0) -> fprintf fmt "{%a}" pretty t
-    | Spill (t,n) -> fprintf fmt "{%a}_%d" pretty t n
+    | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
+    | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t
+    | Spill (t,{ contents = Phantom n}) -> fprintf fmt "{%a}/*%d*/" pretty t n
     
 
   let equal t1 t2 =
@@ -982,6 +988,7 @@ end = struct
       TypeAssignment.pretty sk)
 
   type ret = TypeAssignment.t MutableOnce.t TypeAssignment.t_
+  type spilled_phantoms = ScopedTerm.t list
 
   let global_type env ~loc c : ret TypeAssignment.overloading =
     try TypeAssignment.fresh_overloaded @@ F.Map.find c env
@@ -1032,13 +1039,13 @@ end = struct
     let needs_spill = ref false in
     let sigma : TypeAssignment.t F.Map.t ref = ref F.Map.empty in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
-    let rec check ctx ~loc ~tyctx x (ety : ret) : ScopedTerm.t list =
+    let rec check ctx ~loc ~tyctx x (ety : ret) : spilled_phantoms =
       (* Format.eprintf "checking %a\n" ScopedTerm.pretty_ x; *)
       match x with
       | Const(Global,c) -> check_global ctx ~loc ~tyctx c ety
       | Const(Local,c) -> check_local ctx ~loc ~tyctx c ety
       | CData c -> check_cdata ~loc ~tyctx kinds c ety
-      | Spill(sp,n) -> assert(n=0); check_spill ctx ~loc ~tyctx sp ety
+      | Spill(sp,info) -> assert(!info = NoInfo); check_spill ctx ~loc ~tyctx sp info ety
       | App(Global,c,x,xs) -> check_app ctx ~loc ~tyctx c (global_type env ~loc c) (x::xs) ety 
       | App(Local,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc c) (x::xs) ety
       | Lam(c,t) -> check_lam ctx ~loc ~tyctx c t ety
@@ -1077,18 +1084,21 @@ end = struct
       else
         error_bad_function_ety ~loc ~tyctx ~ety c t
 
-    and check_spill ctx ~loc ~tyctx sp ety =
+    and check_spill ctx ~loc ~tyctx sp info ety =
       needs_spill := true;
       let inner_spills = check_loc ~tyctx:None ctx sp ~ety:(mk_uvar "Spill") in (* TODO?? *)
       let phantom_of_spill_ty i ty =
-        { loc; it = Spill(sp,i+1); ty = MutableOnce.create (TypeAssignment.Val ty) } in
+        { loc; it = Spill(sp,ref (Phantom(i+1))); ty = MutableOnce.create (TypeAssignment.Val ty) } in
       match classify_arrow (ScopedTerm.type_of sp) with
       | Simple { srcs; tgt } ->
           if not @@ unify tgt Prop then error ~loc "only predicated can be spilled";
           let spills = srcs in
           let first_spill = List.hd spills in
-          if unify first_spill ety then List.mapi phantom_of_spill_ty @@ List.tl spills
-          else error_bad_ety ~tyctx ~loc ~ety ScopedTerm.pretty_ (Spill(sp,0)) first_spill
+          if unify first_spill ety then begin
+            info := Main (List.length spills);
+            List.mapi phantom_of_spill_ty @@ List.tl spills
+          end
+          else error_bad_ety ~tyctx ~loc ~ety ScopedTerm.pretty_ (Spill(sp,info)) first_spill
       | _ -> error ~loc "hard spill"
 
     and check_app ctx ~loc ~tyctx c cty args ety =
@@ -1162,15 +1172,15 @@ end = struct
               check_app_single ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) consumed (x :: xs)
           | _ -> error_not_a_function ~loc:x.loc c (List.rev consumed) x (* TODO: trim loc up to x *)
 
-    and check_loc ~tyctx ctx { loc; it; ty } ~ety : ScopedTerm.t list =
+    and check_loc ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
       assert (not @@ MutableOnce.is_set ty);
       let extra_spill = check ~tyctx ctx ~loc it ety in
       MutableOnce.set ty (Val ety);
       extra_spill
 
-    and check_loc_if_not_phantom ~tyctx ctx x ~ety : ScopedTerm.t list =
+    and check_loc_if_not_phantom ~tyctx ctx x ~ety : spilled_phantoms =
       match x.it with
-      | Spill(_,n) when n > 0 -> []
+      | Spill(_,{ contents = Phantom _}) -> []
       | _ -> check_loc ~tyctx ctx x ~ety
 
     and check_matches_poly_skema_loc { loc; it } =
@@ -1794,7 +1804,7 @@ end = struct
         else ScopedTerm.(Const(Global,c))
     | App ({ it = App (f,l1) },l2) -> scope_term ctx ~loc (App(f, l1 @ l2))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
-        ScopedTerm.Spill (scope_loc_term ctx x,0)
+        ScopedTerm.Spill (scope_loc_term ctx x,ref ScopedTerm.NoInfo)
     | App({ it = Const c }, x :: xs) ->
          if is_discard c then error ~loc "Applied discard";
          let x = scope_loc_term ctx x in
@@ -3601,7 +3611,9 @@ end = struct
     let rec todbl ctx t =
       match t.it with
       | CData c -> D.mkCData (CData.hcons c)
-      | Spill(t,n) -> assert(n=0); assert false
+      | Spill(t,{ contents = NoInfo}) -> assert false (* no type checking *)
+      | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
+      | Spill(t,{ contents = (Main _)}) -> assert false (* TODO *)
       (* lists *)
       | Const(Global,c) when F.(equal c nilf) -> D.mkNil
       | App(Global,c,x,[y]) when F.(equal c consf) ->
