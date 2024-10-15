@@ -5,6 +5,7 @@ type t = Tokens.token =
   | VDASH
   | USE_SIG
   | USEONLY
+  | UNTYPED
   | TYPEABBREV
   | TYPE
   | STRING of ( string )

@@ -1,7 +1,11 @@
 
+kind tm type.
+type lam (tm -> tm) -> tm.
+
+pred hard i:tm.
 hard (lam x\ _ as P) :- print P.
 
-
+pred simple i:int.
 simple (1 as P) :- print P.
 
 main :-

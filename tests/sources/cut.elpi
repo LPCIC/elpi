@@ -1,4 +1,10 @@
 /* To test: query q X. The only answer should be X = ok. */
+
+kind tm type.
+type two, three, four, ok, ko tm.
+
+type a, b, c, q tm -> prop.
+
 q X :- a X.
 q ok.
 

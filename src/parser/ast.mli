@@ -30,6 +30,7 @@ module Func : sig
   val ctypef : t
   val propf : t
   val typef : t
+  val mainf : t
 
   val dummyname : t
   val spillf : t
@@ -59,6 +60,7 @@ type raw_attribute =
   | External
   | Index of int list * string option
   | Functional
+  | Untyped
 [@@ deriving show]
 
 module TypeExpression : sig
@@ -234,6 +236,7 @@ and attribute = {
   insertion : insertion option;
   id : string option;
   ifexpr : string option;
+  typecheck : bool;
 }
 and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string

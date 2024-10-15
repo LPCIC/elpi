@@ -705,7 +705,6 @@ module TypeAssignment = struct
     | App of F.t * 'a t_ * 'a t_ list
     | Arr of Ast.Structured.variadic * 'a t_ * 'a t_
     | UVar of 'a
-    | Inter of  'a t_ * 'a t_
   [@@ deriving show, fold]
 
   type skema = Lam of F.t * skema | Ty of F.t t_
@@ -725,20 +724,23 @@ module TypeAssignment = struct
     | UVar c -> F.Map.find c map
     | App(c,x,xs) -> App (c,subst map x,List.map (subst map) xs)
     | Arr(v,s,t) -> Arr(v,subst map s, subst map t)
-    | Inter (l,r) -> Inter(subst map l,subst map r)
 
   let fresh sk =
     let rec fresh map = function
       | Lam(c,t) -> fresh (F.Map.add c (UVar (MutableOnce.make c)) map) t
-      | Ty t -> if F.Map.is_empty map then Obj.magic t else subst map t
+      | Ty t -> if F.Map.is_empty map then Obj.magic t, map else subst map t, map
   in
     fresh F.Map.empty sk
 
+  let fresh_overloaded = function
+    | Single sk -> Single (fst @@ fresh sk)
+    | Overloaded l -> Overloaded (List.map (fun x -> fst @@ fresh x) l)
+
   let rec apply m sk args =
     match sk, args with
-    | Ty t, [] -> subst m t
+    | Ty t, [] -> if F.Map.is_empty m then Obj.magic t else subst m t
     | Lam(c,t), x::xs -> apply (F.Map.add c x m) t xs
-    | _ -> assert false
+    | _ -> assert false (* kind checker *)
 
   let apply sk args = apply F.Map.empty sk args
 
@@ -762,56 +764,11 @@ module TypeAssignment = struct
     | Cons c -> F.pp fmt c
     | App(f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist pretty " ") (x::xs)
     | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "%a -> %a" pretty s pretty t
-    | Inter(t1,t2) -> fprintf fmt "%a /\\ %a" pretty t1 pretty t2
     | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" pretty s pretty t
-    | UVar m when MutableOnce.is_set m -> pretty fmt @@ unval @@ MutableOnce.get m
+    | UVar m when MutableOnce.is_set m -> pretty fmt @@ deref m
     | UVar m -> MutableOnce.pretty fmt m
 
   let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
-
-  let rec inter n = function
-  | [] -> assert false
-  | [x] -> x
-  | x :: xs -> Inter (x, inter n xs)
-
-let rec push = function
-  | Inter(Arr(v1,l1,t1),Arr(v2,l2,t2)) when v1 = v2 && l1 = l2 (* TODO ground eq *) -> Arr(v1, l1,push (Inter(t1,t2)))
-  | x -> x
-
-let fresh name = function
-  | Single sk -> fresh sk
-  | Overloaded l -> push @@ inter name @@ List.map fresh l
-
-  (* let rec smart_map_t f orig =
-    match orig with
-    | Prop -> orig
-    | Any -> orig
-    | Cons c -> let c' = f c in if c == c' then orig else Cons c'
-    | App(c,x,xs) ->
-        let c' = f c in
-        let x' = smart_map_t f x in
-        let xs' = smart_map (smart_map_t f) xs in
-        if c == c' && x == x' && xs == xs' then orig
-        else App(c',x',xs')
-    | Arr(v,s,t) ->
-        let s' = smart_map_t f s in
-        let t' = smart_map_t f t in
-        if s' == s && t' == t then orig
-        else Arr(v,s',t')
-    | UVar _ -> orig
-
-  let rec smart_map_skema f orig =
-    match orig with
-    | Lam(c,t) ->
-      let t' = smart_map_skema f t in
-      if t == t' then orig else Lam(c,t')
-    | Ty t ->
-        let t' = smart_map_t f t in
-        if t == t' then orig else Ty t'
-
-  let smart_map f (Val t as orig) =
-    let t' = smart_map_t f t in
-    if t == t' then orig else Val t' *)
 
 end
 module ScopedTerm = struct
@@ -826,6 +783,8 @@ module ScopedTerm = struct
    | CData of CData.t
    and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
   [@@ deriving show]
+
+  let type_of { ty } = assert(MutableOnce.is_set ty); TypeAssignment.deref ty
 
   open Format
   let rec pretty fmt { it } = pretty_ fmt it
@@ -886,7 +845,7 @@ module TypeChecker : sig
   val check_types : type_abbrevs:type_abbrevs -> arities -> TypeList.t -> TypeAssignment.overloaded_skema
 
   type env = TypeAssignment.overloaded_skema F.Map.t
-  val check : type_abbrevs:type_abbrevs-> arities -> env -> ScopedTerm.t -> TypeAssignment.t
+  val check : type_abbrevs:type_abbrevs-> kinds:arities -> env:env -> ScopedTerm.t -> exp:TypeAssignment.t -> unit
 
 end = struct
   type type_abbrevs = TypeAssignment.skema F.Map.t
@@ -955,192 +914,320 @@ end = struct
   let check_type  ~type_abbrevs arities { value; loc } =
     check_type ~type_abbrevs arities ~loc F.Set.empty value
 
+  let arrow_of_args args ety =
+    let rec aux = function
+    | [] -> ety
+    | x :: xs -> TypeAssignment.Arr(Ast.Structured.NotVariadic,ScopedTerm.type_of x,aux xs) in
+    aux args
+  
   type env = TypeAssignment.overloaded_skema F.Map.t
 
   open ScopedTerm
 
-  let error_not_a_function ~loc c ty x =
-    let msg = Format.asprintf "%a has type %a. It is not a function but it is passed the argument %a" F.pp c TypeAssignment.pretty ty ScopedTerm.pretty x in
+  let error_not_a_function ~loc c args x =
+    let t =
+      if args = [] then ScopedTerm.Const(Global,c)
+      else ScopedTerm.(App(Global,c,List.hd args, List.tl args)) in
+    let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ %a@]" ScopedTerm.pretty_ t ScopedTerm.pretty x in
     error ~loc msg
-    let error_bad_argument ~loc ~type_abbrevs c ty x tx =
-      let msg = Format.asprintf "%a has type %a but %a expects an argument of type %a"  ScopedTerm.pretty x TypeAssignment.pretty tx F.pp c TypeAssignment.pretty ty in
-      error ~loc msg
 
-    let error_bad_arguments ~loc c tys x tx =
-      let msg = Format.asprintf "%a has type %a but %a expects an argument of one of the types: %a"
-        ScopedTerm.pretty x TypeAssignment.pretty tx F.pp c
-        (pplist TypeAssignment.pretty "; ") tys in
-      error ~loc msg
+  let pp_tyctx fmt = function
+    | None -> Format.fprintf fmt "its context"
+    | Some c -> F.pp fmt c
+
+  let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
+    let msg = Format.asprintf "@[<hov>literal %a has type %a@ but %a expects a term of type@ %a@]"  CData.pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
+    error ~loc msg
+  
+  let error_bad_ety ~loc ~tyctx ~ety pp c tx =
+    let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@]"  pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
+    error ~loc msg
+
+  let error_bad_function_ety ~loc ~tyctx ~ety c t =
+    let msg = Format.asprintf "@[<hov>%a is a function@ but %a expects a term of type@ %a@]"  ScopedTerm.pretty_ ScopedTerm.(Lam(c,t)) pp_tyctx tyctx TypeAssignment.pretty ety in
+    error ~loc msg
+  
+  let error_bad_const_ety_l ~loc ~tyctx ~ety c txl =
+    let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@]"  F.pp c (pplist ~boxed:true TypeAssignment.pretty " /\\ ") txl pp_tyctx tyctx TypeAssignment.pretty ety in
+    error ~loc msg
+
+  let error_overloaded_app ~loc ~ety c args alltys =
+    let ty = arrow_of_args args ety in
+    let msg = Format.asprintf "@[<hov>%a is overloaded but none of its types@ matches %a.@ @[<v 2>Its types are:@ %a@]@]" F.pp c TypeAssignment.pretty ty (pplist TypeAssignment.pretty " ") alltys in
+    error ~loc msg
+
+  let error_bad_arguments ~loc c tys x tx =
+    let msg = Format.asprintf "%a has type %a but %a expects an argument of one of the types: %a"
+      ScopedTerm.pretty x TypeAssignment.pretty tx F.pp c
+      (pplist TypeAssignment.pretty "; ") tys in
+    error ~loc msg
     
-  let check ~type_abbrevs kinds env (t : ScopedTerm.t) =
+  let error_not_poly ~loc ty sk =
+    error ~loc (Format.asprintf "@[<hv>Type@ %a@ is less general than the declared one@ %a@]"
+      TypeAssignment.pretty ty
+      TypeAssignment.pretty sk)
+
+  type ret = TypeAssignment.t MutableOnce.t TypeAssignment.t_
+
+  let global_type env ~loc c : ret TypeAssignment.overloading =
+    try TypeAssignment.fresh_overloaded @@ F.Map.find c env
+    with Not_found ->
+      if Re.Str.(string_match (regexp ".*\\.aux")) F.(show c) 0 then
+        TypeAssignment.(Single Prop)
+      else
+        error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
+
+  let local_type ctx ~loc c : ret TypeAssignment.overloading =
+    try TypeAssignment.Single (F.Map.find c ctx)
+    with Not_found -> anomaly ~loc "free variable"
+
+  type classification =
+    | Simple of { srcs : ret list; tgt : ret }
+    | Variadic of { srcs : ret list; tgt : ret }
+    | Unknown
+
+  let rec classify_arrow = function
+    | TypeAssignment.Arr(Ast.Structured.Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
+    | UVar _ -> Unknown
+    | (App _ | Prop | Cons _ | Any) as tgt -> Simple { srcs = []; tgt }
+    | TypeAssignment.Arr(Ast.Structured.NotVariadic,x,xs) ->
+        match classify_arrow xs with
+        | Simple {srcs; tgt } -> Simple { srcs = x :: srcs; tgt }
+        | Unknown -> Unknown
+        | Variadic { srcs; tgt } -> Variadic { srcs = x :: srcs; tgt }
+
+  let mk_uvar s = TypeAssignment.UVar(MutableOnce.make (F.from_string s))
+
+  let rec extend l1 l2 =
+    match l1, l2 with
+    | [],_ -> assert false
+    | _, [] -> []
+    | [x], _:: ys -> x :: extend [x] ys
+    | x::xs, _::ys -> x :: extend [x] ys
+
+  let check ~type_abbrevs ~kinds ~env (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
     (* Format.eprintf "checking %a\n" ScopedTerm.pretty t; *)
     let sigma : TypeAssignment.t F.Map.t ref = ref F.Map.empty in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
-    let rec check ctx ~loc x =
+    let rec check ctx ~loc ~tyctx x (ety : ret) : unit =
       match x with
-      | Const(Global,c) ->
-          let sk = global_type env ~loc c in
-          TypeAssignment.fresh c sk
-      | Const(Local,c) -> local_type ctx ~loc c
-      | CData c -> cdata_type ~loc kinds c
-      | App(Global,c,x,xs) -> check_app ctx ~loc c (TypeAssignment.fresh c @@ global_type env ~loc c) (x::xs)
-      | App(Local,c,x,xs) -> check_app ctx ~loc c (local_type ctx ~loc c) (x::xs)
-      | Lam(c,t) -> check_lam ctx ~loc c t
-      | Discard -> TypeAssignment.UVar (MutableOnce.make (F.from_string "Any"))
-      | Var(c,args) -> check_app ctx ~loc c (uvar_type c) args
+      | Const(Global,c) -> check_global ctx ~loc ~tyctx c ety
+      | Const(Local,c) -> check_local ctx ~loc ~tyctx c ety
+      | CData c -> check_cdata ~loc ~tyctx kinds c ety
+      | App(Global,c,x,xs) -> check_app ctx ~loc ~tyctx c (global_type env ~loc c) (x::xs) ety 
+      | App(Local,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc c) (x::xs) ety
+      | Lam(c,t) -> check_lam ctx ~loc ~tyctx c t ety
+      | Discard -> ()
+      | Var(c,args) -> check_app ctx ~loc ~tyctx c (uvar_type c) args ety
 
-    and cdata_type ~loc kinds c =
+    and check_global ctx ~loc ~tyctx c ety =
+      match global_type env ~loc c with
+      | Single ty ->
+          if unify ty ety then ()
+          else error_bad_ety ~tyctx ~loc ~ety F.pp c ty
+      | Overloaded l ->
+          if unify_first l ety then ()
+          else error_bad_const_ety_l ~tyctx ~loc ~ety c l
+
+    and check_local ctx ~loc ~tyctx c ety =
+      match local_type ctx ~loc c with
+      | Single ty ->
+          if unify ty ety then ()
+          else error_bad_ety ~tyctx ~loc ~ety F.pp c ty
+      | Overloaded _ -> assert false
+
+    and check_cdata ~loc ~tyctx kinds c ety =
       let name = F.from_string @@ CData.name c in
       check_global_exists ~loc name type_abbrevs kinds 0;
-      TypeAssignment.Cons name
+      let ty = TypeAssignment.Cons name in
+      if unify ty ety then ()
+      else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
-    and global_type env ~loc c =
-      try F.Map.find c env
-      with Not_found ->
-        if F.show c = "main" || Re.Str.(string_match (regexp ".*\\.aux")) F.(show c) 0 then
-          TypeAssignment.(Single (Ty Prop))
-        else
-          error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
-
-    and local_type ctx ~loc c =
-      try F.Map.find c ctx
-      with Not_found -> anomaly ~loc "free variable"
-
-    and check_lam ctx ~loc c t =
-      let c = match c with Some c -> c | None -> fresh_name () in
-      let src = TypeAssignment.UVar(MutableOnce.make c) in
-      let ctx = F.Map.add c src ctx in
-      TypeAssignment.Arr(Ast.Structured.NotVariadic,src,check_loc ctx t)
-      
-    and check_overloaded_app ctx ~loc c ty x xs =
-      match ty with
-      | TypeAssignment.UVar m when MutableOnce.is_set m -> check_overloaded_app ctx ~loc c (TypeAssignment.deref m) x xs
-      | TypeAssignment.Arr _ | TypeAssignment.UVar _ -> check_app ctx ~loc c ty (x::xs)
-      | TypeAssignment.(Prop|Cons _|App _) -> error_not_a_function ~loc c ty x
-      | TypeAssignment.Any _ -> assert false (* CHECK *)
-      | TypeAssignment.Inter(l,r) ->
-        let targs = List.map (check_loc ctx) (x::xs) in
-        check_overloaded_app_aux ctx ~loc c l r (x::xs) targs
-
-    and flat_arrow = function
-      | TypeAssignment.Arr(Ast.Structured.NotVariadic,x,xs) ->
-          let xs, t = flat_arrow xs in
-          x :: xs, t
-      | x -> [], x
-
-    and check_overloaded_app_aux ctx ~loc c l r xs targs =
-      let largs, tgt = flat_arrow l in
-      if try_unify_l largs targs then tgt
+    and check_lam ctx ~loc ~tyctx c t ety =
+      let name = match c with Some c -> c | None -> fresh_name () in
+      let src = mk_uvar "Src" in
+      let tgt = mk_uvar "Tgt" in
+      if unify (TypeAssignment.Arr(Ast.Structured.NotVariadic,src,tgt)) ety then
+        check_loc ~tyctx (F.Map.add name src ctx) t ~ety:tgt
       else
-        match r with
-        | TypeAssignment.Inter(l,r) -> check_overloaded_app_aux ctx ~loc c l r xs targs
-        | ty -> check_app ctx ~loc c ty xs
+        error_bad_function_ety ~loc ~tyctx ~ety c t
 
-    and check_app ctx ~loc c ty = function
+    and check_app ctx ~loc ~tyctx c cty args ety =
+      match cty with
+      | Overloaded l ->
+        List.iter (fun x -> check_loc ~tyctx:None ctx ~ety:(mk_uvar "Ety") x) args;
+        let targs = List.map ScopedTerm.type_of args in
+        check_app_overloaded ctx ~loc c ety args targs l l
+      | Single ty ->
+          let err () =
+            if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
+            else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Global (* sucks *),c,List.hd args,List.tl args)) ty in
+          match classify_arrow ty with
+          | Unknown ->
+            let tgt = check_app_single ctx ~loc c ty [] args in
+            if unify tgt ety then ()
+            else err ()
+          | Variadic { tgt } | Simple { tgt } ->
+            if unify tgt ety then
+              let _ = check_app_single ctx ~loc c ty [] args in ()
+              else err ()
+
+    and check_app_overloaded ctx ~loc c ety args targs alltys = function
+      | [] -> error_overloaded_app ~loc c args ~ety alltys
+      | t::ts ->
+          match classify_arrow t with
+          | Unknown -> error ~loc "Type too ambiguous to be assigned to an overloaded constant"
+          | Simple { srcs; tgt } ->
+              if try_unify_all (tgt::srcs) (ety::targs) then ()
+              else check_app_overloaded ctx ~loc c ety args targs alltys ts
+          | Variadic { srcs ; tgt } ->
+              let srcs = extend srcs targs in
+              if try_unify_all (tgt::srcs) (ety::targs) then ()
+              else check_app_overloaded ctx ~loc c ety args targs alltys ts
+
+    and check_app_single ctx ~loc c ty consumed args =
+      match args with
       | [] -> ty
       | x :: xs ->
         (* Format.eprintf "checking app %a @ %a\n" F.pp c ScopedTerm.pretty x; *)
         match ty with
           | TypeAssignment.Arr(Ast.Structured.Variadic,s,t) ->
-              let tx = check_loc ctx x in
-              if unify s tx then
-                if xs = [] then t else check_app ctx ~loc c ty xs
-              else error_bad_argument ~loc ~type_abbrevs c s x tx         
+              check_loc ~tyctx:(Some c) ctx x ~ety:s;
+              if xs = [] then t else check_app_single ctx ~loc c ty (x::consumed) xs
           | TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t) ->
-              let tx = check_loc ctx x in
-              if unify s tx then check_app ctx ~loc c t xs
-              else error_bad_argument ~loc ~type_abbrevs c s x tx         
+              check_loc ~tyctx:(Some c) ctx x ~ety:s;
+              check_app_single ctx ~loc c t (x::consumed)  xs
           | TypeAssignment.UVar m when MutableOnce.is_set m ->
-              check_app ctx ~loc c (TypeAssignment.deref m) (x :: xs)
+              check_app_single ctx ~loc c (TypeAssignment.deref m) consumed (x :: xs)
           | TypeAssignment.UVar m ->
-              let s = TypeAssignment.UVar(MutableOnce.make (F.from_string "Src")) in
-              let t = TypeAssignment.UVar(MutableOnce.make (F.from_string "Tgt")) in
-              check_app ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) (x :: xs)
-          | TypeAssignment.Inter _ -> check_overloaded_app ctx ~loc c ty x xs
-          | _ -> error_not_a_function ~loc c ty x (* TODO: trim loc up to x *)
+              let s = mk_uvar "Src" in
+              let t = mk_uvar "Tgt" in
+              check_app_single ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) consumed (x :: xs)
+          | _ -> error_not_a_function ~loc:x.loc c (List.rev consumed) x (* TODO: trim loc up to x *)
 
-    and try_unify_l xl yl =
+    and check_loc ~tyctx ctx { loc; it; ty } ~ety =
+      assert (not @@ MutableOnce.is_set ty);
+      check ~tyctx ctx ~loc it ety;
+      MutableOnce.set ty (Val ety)
+      
+    and check_matches_poly_skema_loc { loc; it } =
+      let c, args =
+        match it with
+        | App(Global,c, { it = App(Global,c',x,xs) },_) when F.equal F.rimplf c -> c', x :: xs
+        | App(Global,c, { it = Const(Global,c') },_) when F.equal F.rimplf c -> c', []
+        | App(Global,c,x,xs) -> c, x :: xs
+        | Const(Global,c) -> c, []
+        | _ -> assert false in
+      (* Format.eprintf "Checking %a\n" F.pp c; *)
+      match F.Map.find c env with
+      | Single (Ty _) -> ()
+      | Single (Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) (arrow_of_args args TypeAssignment.Prop)
+      | Overloaded _ -> ()
+
+    and check_matches_poly_skema ~loc ~pat ty =
+      if try_matching ~pat ty then () else error_not_poly ~loc ty (fst pat)
+
+    and try_unify_all xl yl =
       let vx = List.fold_left (fun xs t -> TypeAssignment.vars_of (Val t) @ xs) [] xl in
       let vy = List.fold_left (fun xs t -> TypeAssignment.vars_of (Val t) @ xs) [] yl in
       let b = Util.for_all2 unify xl yl in
       if not b then (undo vx; undo vy);
       b
     
+    and unify_first l ety =
+      let vars = TypeAssignment.vars_of (Val ety) in
+      let rec aux = function
+        | [] -> false
+        | x::xs -> if unify x ety then true else (undo vars; aux xs)
+      in
+        aux l
+  
     and undo = function
       | [] -> ()
       | m :: ms -> MutableOnce.unset m; undo ms
 
     and uvar_type c =
-      try TypeAssignment.unval @@ F.Map.find c !sigma
+      try TypeAssignment.Single (TypeAssignment.unval @@ F.Map.find c !sigma)
       with Not_found ->
         let ty = TypeAssignment.UVar (MutableOnce.make c) in
         sigma := F.Map.add c (TypeAssignment.Val ty) !sigma;
-        ty
-    and unify t1 t2 =
+        TypeAssignment.Single ty
+    and unif ~matching t1 t2 =
       (* Format.eprintf "%a = %a\n" TypeAssignment.pretty t1 TypeAssignment.pretty t2; *)
       let open TypeAssignment in
       match t1, t2 with
       | Any, _ -> true
       | _, Any -> true
-      | UVar m, _ when MutableOnce.is_set m -> unify (TypeAssignment.deref m) t2
-      | _, UVar m when MutableOnce.is_set m -> unify t1 (TypeAssignment.deref m)
+      | UVar m, _ when MutableOnce.is_set m -> unif ~matching (TypeAssignment.deref m) t2
+      | _, UVar m when MutableOnce.is_set m -> unif ~matching t1 (TypeAssignment.deref m)
       | App(c1,x,xs), App(c2,y,ys) when F.equal c1 c2 ->
-         unify x y && Util.for_all2 unify xs ys
+         unif ~matching x y && Util.for_all2 (unif ~matching) xs ys
       | Cons c1, Cons c2 when F.equal c1 c2 -> true
       | Prop, Prop -> true
-      | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unify s1 s2 && unify t1 t2      
-      | Arr(Ast.Structured.Variadic,_,t), _ -> unify t t2
-      | _, Arr(Ast.Structured.Variadic,_,t) -> unify t1 t
-      | UVar m, _ -> assign m t2
+      | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unif ~matching s1 s2 && unif ~matching t1 t2      
+      | Arr(Ast.Structured.Variadic,_,t), _ -> unif ~matching t t2
+      | _, Arr(Ast.Structured.Variadic,_,t) -> unif ~matching t1 t
+      | UVar m, UVar n when matching -> assign m t2
+      | UVar m, _ when not matching -> assign m t2
       | _, UVar m -> assign m t1
       | Cons c, _ when F.Map.mem c type_abbrevs ->
           let t1 = apply (F.Map.find c type_abbrevs) [] in
-          unify t1 t2
+          unif ~matching t1 t2
       | _, Cons c when F.Map.mem c type_abbrevs ->
           let t2 = apply (F.Map.find c type_abbrevs) [] in
-          unify t1 t2
+          unif ~matching t1 t2
       | App(c,x,xs), _ when F.Map.mem c type_abbrevs ->
           let t1 = apply (F.Map.find c type_abbrevs) (x::xs) in
-          unify t1 t2
+          unif ~matching t1 t2
       | _, App(c,x,xs) when F.Map.mem c type_abbrevs ->
           let t2 = apply (F.Map.find c type_abbrevs) (x::xs) in
-          unify t1 t2
+          unif ~matching t1 t2
       | _,_ -> false
 
+    and unify x y = unif ~matching:false x y
+    and try_matching ~pat:(x,vars) y =
+      let vars = F.Map.bindings vars |> List.map snd |> List.map cell_of in
+      let deref x = cell_of (TypeAssignment.deref x) in
+      if unif ~matching:true x y then
+        if disjoint (List.map deref vars) then true
+        else (undo vars; false)
+      else
+        (undo vars; false)
+
+    and cell_of = function
+      | TypeAssignment.UVar x -> x
+      | _ -> assert false
+
+    and disjoint = function
+        | [] -> true
+        | x :: xs -> not (List.exists (fun y -> same_var y (TypeAssignment.UVar x)) xs) && disjoint xs
+
     and assign m t = same_var m t || (oc m t && ((*Format.eprintf "%a := %a\n" MutableOnce.(pp TypeAssignment.pp) m TypeAssignment.(pp_t_ MutableOnce.(pp TypeAssignment.pp)) t;*)TypeAssignment.set m t; true))
+
     and same_var m = function
       | UVar n when n == m -> true
       | UVar n when MutableOnce.is_set n -> same_var m (TypeAssignment.deref n)
       | _ -> false
+
     and oc m = function
       | Prop -> true
       | Arr(_,x,y) -> oc m x && oc m y
-      | Inter(x,y) -> oc m x && oc m y
       | App(_,x,xs) -> List.for_all (oc m) (x::xs)
       | Any -> true
       | Cons _ -> true
       | UVar n when m == n -> false
       | UVar n when MutableOnce.is_set n -> oc m (TypeAssignment.deref n)
       | UVar _ -> true
-    and check_loc ctx ({ loc; it; ty } as orig) =
-      if MutableOnce.is_set ty then
-        TypeAssignment.unval @@ MutableOnce.get ty
-      else
-        begin
-        (* Format.eprintf "c  %a\n" ScopedTerm.pretty orig; *)
-        let typ = check ctx ~loc it in
-        assert(not @@ MutableOnce.is_set ty); TypeAssignment.set ty typ;
-        typ
-      end
+
     in
-      TypeAssignment.Val (check_loc F.Map.empty t)
+      check_loc ~tyctx:None F.Map.empty t ~ety:(TypeAssignment.unval exp);
+      check_matches_poly_skema_loc t
 
-
-  let check ~type_abbrevs a b c =
+  (* let check ~type_abbrevs a b c =
     try check ~type_abbrevs a b c with
     | CompileError(_,"Unknown global: %spill") -> Printf.eprintf "SPILLING"; exit 1
     | CompileError(_,s) when Re.Str.(string_match (regexp "Unknown global: @")) s 0 -> Printf.eprintf "MACRO"; exit 1
-    | CompileError(loc,msg) -> Format.eprintf "Ignoring type error: %a %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop)
+    | CompileError(loc,msg) -> Format.eprintf "Ignoring type error: %a %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop) *)
 end
 
 
@@ -1225,7 +1312,9 @@ and attribute = {
 [@@deriving show]
 
 let empty () = {
-  kinds = F.Map.empty; types = F.Map.empty; type_abbrevs = F.Map.empty; modes = F.Map.empty;
+  kinds = F.Map.empty;
+  types = F.Map.add F.mainf TypeAssignment.(Single (Ty Prop)) F.Map.empty;
+  type_abbrevs = F.Map.empty; modes = F.Map.empty;
   prolog_program = { idx = Ptmap.empty; time = 0; times = StrMap.empty };
   indexing = C.Map.empty;
   chr = CHR.empty;
@@ -1316,9 +1405,10 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.ifexpr <> None then duplicate_err "if";
          aux_attrs { r with ifexpr = Some s } rest
+      | Untyped :: rest -> aux_attrs { r with typecheck = false } rest
       | (External | Index _ | Functional) as a :: _-> illegal_err a
     in
-    let attributes = aux_attrs { insertion = None; id = None; ifexpr = None } attributes in
+    let attributes = aux_attrs { insertion = None; id = None; ifexpr = None; typecheck = true } attributes in
     begin
       match attributes.insertion, attributes.id with
       | Some (Replace x), Some _ -> illegal_replace x
@@ -1339,7 +1429,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux_chr { r with cifexpr = Some s } rest
-      | (Before _ | After _ | Replace _ | Remove _ | External | Index _ | Functional) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | External | Index _ | Functional | Untyped) as a :: _ -> illegal_err a 
     in
     let cid = Loc.show loc in
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
@@ -1396,7 +1486,7 @@ end = struct (* {{{ *)
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
       | Functional :: rest -> aux_tatt r Structured.Function rest
-      | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _ | Untyped) as a :: _ -> illegal_err a 
     in
     let attributes, toplevel_func = aux_tatt None Structured.Relation attributes in
     let attributes =
@@ -3579,9 +3669,8 @@ end = struct
 
     (* TODO: make this callable on a unit (+ its base) *)
     let t0 = Unix.gettimeofday () in
-    clauses |> List.iter (fun { Ast.Clause.body; loc } ->
-      if TypeAssignment.Prop <> TypeAssignment.unval @@ TypeChecker.check ~type_abbrevs kinds types body then
-        error ~loc "Illtyped rule: not a predicate"); (* TODO remove whn bidirectional *)
+    clauses |> List.iter (fun { Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } ->
+      if typecheck then TypeChecker.check ~type_abbrevs ~kinds ~env:types body ~exp:TypeAssignment.(Val Prop));
     let t1 = Unix.gettimeofday () in
     let total_type_checking_time = total_type_checking_time +. t1 -. t0 in
 

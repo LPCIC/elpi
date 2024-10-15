@@ -270,9 +270,9 @@ let pp_loc_opt = function
   | None -> ""
   | Some loc -> Loc.show loc
 let default_warn ?loc s =
-  Printf.eprintf "Warning: %s%s\n%!" (pp_loc_opt loc) s
+  Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" (pp_loc_opt loc) s
 let default_error ?loc s =
-  Printf.eprintf "Fatal error: %s%s\n%!" (pp_loc_opt loc) s;
+  Format.eprintf "@[<hv>Fatal error: %s@,%s@]\n%!" (pp_loc_opt loc) s;
   exit 1
 let default_anomaly ?loc s =
   let trace =

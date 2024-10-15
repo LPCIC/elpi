@@ -48,6 +48,7 @@ module Func = struct
   let propf = from_string "prop"
 
   let typef = from_string "type"
+  let mainf = from_string "main"
 
   
   let dummyname = from_string "%dummy"
@@ -82,6 +83,7 @@ type raw_attribute =
   | External
   | Index of int list * string option
   | Functional
+  | Untyped
 [@@deriving show, ord]
 
 
@@ -342,6 +344,7 @@ and attribute = {
   insertion : insertion option;
   id : string option;
   ifexpr : string option;
+  typecheck : bool;
 }
 and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string

@@ -172,6 +172,7 @@ and token = parse
 | "sigma" { SIGMA }
 | "after" { AFTER }
 | "functional" { FUNCTIONAL }
+| "untyped" { UNTYPED }
 | "before" { BEFORE }
 | "replace" { REPLACE }
 | "remove" { REMOVE }
