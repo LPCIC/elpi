@@ -793,6 +793,7 @@ module ScopedTerm = struct
     | Discard -> fprintf fmt "_"
     | Lam(None,t) -> fprintf fmt "_\\ %a" pretty t
     | Lam(Some f,t) -> fprintf fmt "%a\\ %a" F.pp f pretty t
+    | App(Global,f,x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App(_,f,x,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") (x::xs)
     | Var(f,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") xs
     | CData c -> fprintf fmt "%a" CData.pp c
@@ -845,7 +846,7 @@ module TypeChecker : sig
   val check_types : type_abbrevs:type_abbrevs -> arities -> TypeList.t -> TypeAssignment.overloaded_skema
 
   type env = TypeAssignment.overloaded_skema F.Map.t
-  val check : type_abbrevs:type_abbrevs-> kinds:arities -> env:env -> ScopedTerm.t -> exp:TypeAssignment.t -> unit
+  val check : type_abbrevs:type_abbrevs-> kinds:arities -> env:env -> ScopedTerm.t -> exp:TypeAssignment.t -> bool
 
 end = struct
   type type_abbrevs = TypeAssignment.skema F.Map.t
@@ -920,6 +921,12 @@ end = struct
     | x :: xs -> TypeAssignment.Arr(Ast.Structured.NotVariadic,ScopedTerm.type_of x,aux xs) in
     aux args
   
+  let arrow_of_tys tys ety =
+    let rec aux = function
+    | [] -> ety
+    | x :: xs -> TypeAssignment.Arr(Ast.Structured.NotVariadic,x,aux xs) in
+    aux tys
+  
   type env = TypeAssignment.overloaded_skema F.Map.t
 
   open ScopedTerm
@@ -985,6 +992,7 @@ end = struct
 
   let rec classify_arrow = function
     | TypeAssignment.Arr(Ast.Structured.Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
+    | UVar m when MutableOnce.is_set m -> classify_arrow (TypeAssignment.deref m)
     | UVar _ -> Unknown
     | (App _ | Prop | Cons _ | Any) as tgt -> Simple { srcs = []; tgt }
     | TypeAssignment.Arr(Ast.Structured.NotVariadic,x,xs) ->
@@ -1002,34 +1010,58 @@ end = struct
     | [x], _:: ys -> x :: extend [x] ys
     | x::xs, _::ys -> x :: extend [x] ys
 
+  type args_classification = Spill | NoSpill
+
+  let classify_one_arg { it } =
+    match it with
+    | App(Global,c,_,[]) when F.equal c F.spillf -> Spill
+    | _ -> NoSpill
+
+  let rec classify_args = function
+    | [] -> NoSpill
+    | x :: xs -> if classify_one_arg x = Spill then Spill else classify_args xs
+
+
   let check ~type_abbrevs ~kinds ~env (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
     (* Format.eprintf "checking %a\n" ScopedTerm.pretty t; *)
+    let needs_spill = ref false in
     let sigma : TypeAssignment.t F.Map.t ref = ref F.Map.empty in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
-    let rec check ctx ~loc ~tyctx x (ety : ret) : unit =
+    let rec check ctx ~loc ~tyctx x (ety : ret) : ret list =
       match x with
       | Const(Global,c) -> check_global ctx ~loc ~tyctx c ety
       | Const(Local,c) -> check_local ctx ~loc ~tyctx c ety
       | CData c -> check_cdata ~loc ~tyctx kinds c ety
+      | App(Global,c,sp,[]) when F.equal c F.spillf ->
+          needs_spill := true;
+          let inner_spills = check_loc ~tyctx:None ctx sp ~ety:(mk_uvar "Spill") in (* TODO?? *)
+          begin match classify_arrow (ScopedTerm.type_of sp) with
+          | Simple { srcs; tgt } -> 
+              let spills = srcs @ [tgt] in
+              let hd = List.hd spills in
+              if unify hd ety then List.tl spills
+              else error_bad_ety ~tyctx ~loc ~ety ScopedTerm.pretty_ x hd
+          | _ -> error ~loc "hard spill"
+          end
       | App(Global,c,x,xs) -> check_app ctx ~loc ~tyctx c (global_type env ~loc c) (x::xs) ety 
       | App(Local,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc c) (x::xs) ety
       | Lam(c,t) -> check_lam ctx ~loc ~tyctx c t ety
-      | Discard -> ()
+      | Discard -> []
       | Var(c,args) -> check_app ctx ~loc ~tyctx c (uvar_type c) args ety
 
     and check_global ctx ~loc ~tyctx c ety =
       match global_type env ~loc c with
       | Single ty ->
-          if unify ty ety then ()
+          if unify ty ety then []
           else error_bad_ety ~tyctx ~loc ~ety F.pp c ty
       | Overloaded l ->
-          if unify_first l ety then ()
+          if unify_first l ety then []
           else error_bad_const_ety_l ~tyctx ~loc ~ety c l
 
     and check_local ctx ~loc ~tyctx c ety =
       match local_type ctx ~loc c with
       | Single ty ->
-          if unify ty ety then ()
+          if unify ty ety then []
           else error_bad_ety ~tyctx ~loc ~ety F.pp c ty
       | Overloaded _ -> assert false
 
@@ -1037,7 +1069,7 @@ end = struct
       let name = F.from_string @@ CData.name c in
       check_global_exists ~loc name type_abbrevs kinds 0;
       let ty = TypeAssignment.Cons name in
-      if unify ty ety then ()
+      if unify ty ety then []
       else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
     and check_lam ctx ~loc ~tyctx c t ety =
@@ -1049,25 +1081,43 @@ end = struct
       else
         error_bad_function_ety ~loc ~tyctx ~ety c t
 
+    and todo_spill _ = ()
+
     and check_app ctx ~loc ~tyctx c cty args ety =
       match cty with
       | Overloaded l ->
-        List.iter (fun x -> check_loc ~tyctx:None ctx ~ety:(mk_uvar "Ety") x) args;
+        List.iter (fun x -> todo_spill @@ check_loc ~tyctx:None ctx ~ety:(mk_uvar "Ety") x) args;
         let targs = List.map ScopedTerm.type_of args in
         check_app_overloaded ctx ~loc c ety args targs l l
       | Single ty ->
           let err () =
             if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
             else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Global (* sucks *),c,List.hd args,List.tl args)) ty in
-          match classify_arrow ty with
-          | Unknown ->
+          let monodirectional () =
             let tgt = check_app_single ctx ~loc c ty [] args in
-            if unify tgt ety then ()
-            else err ()
-          | Variadic { tgt } | Simple { tgt } ->
-            if unify tgt ety then
-              let _ = check_app_single ctx ~loc c ty [] args in ()
-              else err ()
+            if unify tgt ety then []
+            else err () in
+          let bidirectional srcs tgt =
+            let rec consume args srcs =
+              match args, srcs with
+              | [], srcs -> arrow_of_tys srcs tgt
+              | _ :: args, _ :: srcs -> consume args srcs
+              | _ :: _, [] -> assert false
+            in
+            let rest_tgt = consume args srcs in
+            if unify rest_tgt ety then
+              let _ = check_app_single ctx ~loc c ty [] args in []
+            else err () in
+          match classify_arrow ty with
+          | Unknown | Variadic _ -> monodirectional ()
+          | Simple { srcs; tgt } ->
+            if List.length args > List.length srcs then monodirectional () (* will error *)
+            else
+              match classify_args args with
+              | Spill -> monodirectional ()
+              | NoSpill -> bidirectional srcs tgt
+
+            (* XXX ... look at args, is no spill then build arrow using srcs -> tgt - args .. *)
 
     and check_app_overloaded ctx ~loc c ety args targs alltys = function
       | [] -> error_overloaded_app ~loc c args ~ety alltys
@@ -1075,11 +1125,11 @@ end = struct
           match classify_arrow t with
           | Unknown -> error ~loc "Type too ambiguous to be assigned to an overloaded constant"
           | Simple { srcs; tgt } ->
-              if try_unify_all (tgt::srcs) (ety::targs) then ()
+              if try_unify_all (tgt::srcs) (ety::targs) then []
               else check_app_overloaded ctx ~loc c ety args targs alltys ts
           | Variadic { srcs ; tgt } ->
               let srcs = extend srcs targs in
-              if try_unify_all (tgt::srcs) (ety::targs) then ()
+              if try_unify_all (tgt::srcs) (ety::targs) then []
               else check_app_overloaded ctx ~loc c ety args targs alltys ts
 
     and check_app_single ctx ~loc c ty consumed args =
@@ -1089,10 +1139,10 @@ end = struct
         (* Format.eprintf "checking app %a @ %a\n" F.pp c ScopedTerm.pretty x; *)
         match ty with
           | TypeAssignment.Arr(Ast.Structured.Variadic,s,t) ->
-              check_loc ~tyctx:(Some c) ctx x ~ety:s;
+            todo_spill @@ check_loc ~tyctx:(Some c) ctx x ~ety:s;
               if xs = [] then t else check_app_single ctx ~loc c ty (x::consumed) xs
           | TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t) ->
-              check_loc ~tyctx:(Some c) ctx x ~ety:s;
+            todo_spill @@ check_loc ~tyctx:(Some c) ctx x ~ety:s;
               check_app_single ctx ~loc c t (x::consumed)  xs
           | TypeAssignment.UVar m when MutableOnce.is_set m ->
               check_app_single ctx ~loc c (TypeAssignment.deref m) consumed (x :: xs)
@@ -1102,10 +1152,11 @@ end = struct
               check_app_single ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) consumed (x :: xs)
           | _ -> error_not_a_function ~loc:x.loc c (List.rev consumed) x (* TODO: trim loc up to x *)
 
-    and check_loc ~tyctx ctx { loc; it; ty } ~ety =
+    and check_loc ~tyctx ctx { loc; it; ty } ~ety : ret list =
       assert (not @@ MutableOnce.is_set ty);
-      check ~tyctx ctx ~loc it ety;
-      MutableOnce.set ty (Val ety)
+      let extra_spill = check ~tyctx ctx ~loc it ety in
+      MutableOnce.set ty (Val ety);
+      extra_spill
       
     and check_matches_poly_skema_loc { loc; it } =
       let c, args =
@@ -1217,8 +1268,10 @@ end = struct
       | UVar _ -> true
 
     in
-      check_loc ~tyctx:None F.Map.empty t ~ety:(TypeAssignment.unval exp);
-      check_matches_poly_skema_loc t
+      let spills = check_loc ~tyctx:None F.Map.empty t ~ety:(TypeAssignment.unval exp) in
+      check_matches_poly_skema_loc t;
+      if spills <> [] then error ~loc:t.loc "cannot spill in head";
+      !needs_spill
 
   (* let check ~type_abbrevs a b c =
     try check ~type_abbrevs a b c with
@@ -3668,7 +3721,7 @@ end = struct
     let t0 = Unix.gettimeofday () in
     clauses |> List.iter (fun { Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } ->
       if typecheck then
-        TypeChecker.check ~type_abbrevs ~kinds ~env:types body ~exp:TypeAssignment.(Val Prop)
+        ignore @@ TypeChecker.check ~type_abbrevs ~kinds ~env:types body ~exp:TypeAssignment.(Val Prop)
     );
     let t1 = Unix.gettimeofday () in
     let total_type_checking_time = total_type_checking_time +. t1 -. t0 in
