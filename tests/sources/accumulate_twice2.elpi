@@ -1,4 +1,3 @@
-pred doomed o:int.
 accumulate accumulated.
 namespace other { accumulate accumulated. }
 main :-

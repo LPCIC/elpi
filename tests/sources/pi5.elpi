@@ -1,11 +1,11 @@
 % q X, r X, s X all yields X=ok
 
-of stop.
-of (bam x\x).
-of (lam x\F) :- pi w\ of F.
+:untyped of stop.
+:untyped of (bam x\x).
+:untyped of (lam x\F) :- pi w\ of F.
 
-q X :- of (lam x\ bam y\ y), X = ok.
-r X :- of (bam y\ y), X = ok.
-s X :- of (lam x\ lam y\ stop), X = ok.
+:untyped q X :- of (lam x\ bam y\ y), X = ok.
+:untyped r X :- of (bam y\ y), X = ok.
+:untyped s X :- of (lam x\ lam y\ stop), X = ok.
 
-main :- q X, r S, s T, X = ok, S = ok, T = ok.
+:untyped main :- q X, r S, s T, X = ok, S = ok, T = ok.

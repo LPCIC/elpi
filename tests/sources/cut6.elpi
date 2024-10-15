@@ -1,13 +1,9 @@
 % q X should yield X=ok
 
-q X :- a X, !.
-q X :- b X.
-
-a X :- c X, !.
-
-c ok.
-c ko.
-
-b ko.
-
-main :- q X, X = ok.
+:untyped q X :- a X, !.
+:untyped q X :- b X.
+:untyped a X :- c X, !.
+:untyped c ok.
+:untyped c ko.
+:untyped b ko.
+:untyped main :- q X, X = ok.

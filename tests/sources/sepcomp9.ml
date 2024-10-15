@@ -1,5 +1,6 @@
 let u = {|
 
+pred p i:int.
 main :- not(p 1), p 2.
 
 |};

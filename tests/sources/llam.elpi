@@ -11,16 +11,23 @@ test P T :-
   , print "----------------------------------------"
   .
 
+pred clause o:any.
 clause (x\y\F y x) :- F = a\b\b.
+pred clause1 o:any.
 clause1 (x\y\x).
+pred clause2 o:any.
 clause2 (x\y\X x, F y (X x)) :- F = a\b\b.
+pred clause3 o:any.
 
 type r A -> B.
+pred prune_arg o:any.
+pred prune_arg2 o:any.
+pred prune_arg3 o:any.
 prune_arg (r F).
 prune_arg2 (r (x\F x)).
 prune_arg3 (r (x\y\F y x)).
 
-type whatever A.
+type whatever, h, f, v A.
 
 main :-
   test (eq\F\        pi x\ pi y\ eq (F y x) x)             (a\b\b),

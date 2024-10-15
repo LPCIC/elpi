@@ -1,3 +1,5 @@
+
+:untyped
 main :-
   print (p X :- q X, r x),
   print (X is f Y mod r X),

@@ -1,5 +1,6 @@
 
 kind term type.
+type fun (term -> term) -> term.
 pred f o:(term -> term) o:term.
 f R (fun d\ R d).
 %f R N :- N = (fun d\ R d).

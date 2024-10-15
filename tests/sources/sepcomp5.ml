@@ -2,6 +2,7 @@ let u = {|
 
 type x int.
 type y int.
+pred p.
 main :- p x.
 
 |}

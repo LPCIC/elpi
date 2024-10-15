@@ -972,10 +972,7 @@ end = struct
   let global_type env ~loc c : ret TypeAssignment.overloading =
     try TypeAssignment.fresh_overloaded @@ F.Map.find c env
     with Not_found ->
-      if Re.Str.(string_match (regexp ".*\\.aux")) F.(show c) 0 then
-        TypeAssignment.(Single Prop)
-      else
-        error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
+      error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
 
   let local_type ctx ~loc c : ret TypeAssignment.overloading =
     try TypeAssignment.Single (F.Map.find c ctx)
@@ -3670,7 +3667,9 @@ end = struct
     (* TODO: make this callable on a unit (+ its base) *)
     let t0 = Unix.gettimeofday () in
     clauses |> List.iter (fun { Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } ->
-      if typecheck then TypeChecker.check ~type_abbrevs ~kinds ~env:types body ~exp:TypeAssignment.(Val Prop));
+      if typecheck then
+        TypeChecker.check ~type_abbrevs ~kinds ~env:types body ~exp:TypeAssignment.(Val Prop)
+    );
     let t1 = Unix.gettimeofday () in
     let total_type_checking_time = total_type_checking_time +. t1 -. t0 in
 
