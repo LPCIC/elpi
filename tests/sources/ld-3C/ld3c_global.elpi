@@ -19,12 +19,12 @@ gv+ gtop.
 
 % global devalaration
 gv+ (gdec+2 X G) :-
-  g+line X L U1, print L X,
+  g+line X L U1, % print L X,
   current L => valid_t U1 U2,
   ldec X d_rc U2 => gv+ G.
 
 % global definition
 gv+ (gdef+2 X G) :-
-  g+line X L T1, print L X,
+  g+line X L T1, % print L X,
   current L => valid_t T1 T2,
   ldef X d_rc T2 => gv+ G.

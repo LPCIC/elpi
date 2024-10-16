@@ -915,8 +915,8 @@ module TypeList = struct
     
   let smart_map = smart_map
   
-  let append x t = if List.exists (ScopedTypeExpression.equal x) t then t else x :: t
-  let merge t1 t2 = List.fold_left (fun acc x -> append x acc) t1 t2
+  let append x t = x :: List.filter (fun y -> not @@ ScopedTypeExpression.equal x y) t
+  let merge t1 t2 = List.fold_left (fun acc x -> append x acc) (List.rev t1) t2
 
   let fold = List.fold_left
   
@@ -1057,8 +1057,9 @@ end = struct
       (pplist TypeAssignment.pretty "; ") tys in
     error ~loc msg
     
-  let error_not_poly ~loc ty sk =
-    error ~loc (Format.asprintf "@[<hv>Type@ %a@ is less general than the declared one@ %a@]"
+  let error_not_poly ~loc c ty sk =
+    error ~loc (Format.asprintf "@[<hv>this rule imposes on %a the type@ %a@ is less general than the declared one@ %a@]"
+      F.pp c
       TypeAssignment.pretty ty
       TypeAssignment.pretty sk)
 
@@ -1163,7 +1164,9 @@ end = struct
       let name = match c with Some c -> c | None -> fresh_name () in
       let src = mk_uvar "Src" in
       let tgt = mk_uvar "Tgt" in
+      (* let () = Format.eprintf "lam ety %a\n" TypeAssignment.pretty ety in *)
       if unify (TypeAssignment.Arr(Ast.Structured.NotVariadic,src,tgt)) ety then
+        (* let () = Format.eprintf "add to ctx %a : %a\n" F.pp name TypeAssignment.pretty src in *)
         check_loc ~tyctx (F.Map.add name src ctx) t ~ety:tgt
       else
         error_bad_function_ety ~loc ~tyctx ~ety c t
@@ -1191,7 +1194,8 @@ end = struct
     and check_app ctx ~loc ~tyctx c cty args ety =
       match cty with
       | Overloaded l ->
-        let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar "Ety") x) args in
+        (* Format.eprintf "options: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
+        let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
         let targs = List.map ScopedTerm.type_of args in
         check_app_overloaded ctx ~loc c ety args targs l l
       | Single ty ->
@@ -1251,6 +1255,8 @@ end = struct
           | TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t) ->
               let xs = check_loc_if_not_phantom ~tyctx:(Some c) ctx x ~ety:s @ xs in
               check_app_single ctx ~loc c t (x::consumed)  xs
+          | TypeAssignment.Any ->
+              check_app_single ctx ~loc c ty (x::consumed)  xs
           | TypeAssignment.UVar m when MutableOnce.is_set m ->
               check_app_single ctx ~loc c (TypeAssignment.deref m) consumed (x :: xs)
           | TypeAssignment.UVar m ->
@@ -1260,10 +1266,14 @@ end = struct
           | _ -> error_not_a_function ~loc:x.loc c (List.rev consumed) x (* TODO: trim loc up to x *)
 
     and check_loc ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
-      assert (not @@ MutableOnce.is_set ty);
-      let extra_spill = check ~tyctx ctx ~loc it ety in
-      MutableOnce.set ty (Val ety);
-      extra_spill
+      if MutableOnce.is_set ty then []
+      else
+        begin
+          assert (not @@ MutableOnce.is_set ty);
+          let extra_spill = check ~tyctx ctx ~loc it ety in
+          MutableOnce.set ty (Val ety);
+          extra_spill
+        end
 
     and check_loc_if_not_phantom ~tyctx ctx x ~ety : spilled_phantoms =
       match x.it with
@@ -1308,11 +1318,11 @@ end = struct
       (* Format.eprintf "Checking %a\n" F.pp c; *)
       match F.Map.find c env with
       | Single (Ty _) -> ()
-      | Single (Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) (arrow_of_args args TypeAssignment.Prop)
+      | Single (Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args TypeAssignment.Prop)
       | Overloaded _ -> ()
 
-    and check_matches_poly_skema ~loc ~pat ty =
-      if try_matching ~pat ty then () else error_not_poly ~loc ty (fst pat)
+    and check_matches_poly_skema ~loc ~pat c ty =
+      if try_matching ~pat ty then () else error_not_poly ~loc c ty (fst pat)
 
     and try_unify x y =
       let vx = TypeAssignment.vars_of (Val x) in
@@ -1708,7 +1718,7 @@ end = struct (* {{{ *)
           aux_run ns blocks clauses macros kinds types tabbrs modes chr accs rest
       | (Program.End _ :: _ | []) as rest ->
           { body = List.rev (cl2b clauses @ blocks);
-            types = List.rev types;
+            types = (*List.rev*) types; (* we prefer the last one *)
             kinds = List.rev kinds;
             type_abbrevs = List.rev tabbrs;
             macros = List.rev macros;
@@ -2104,7 +2114,7 @@ end = struct
       let active_macros = List.fold_left compile_macro omacros macros in
       let type_abbrevs = List.map compile_type_abbrev type_abbrevs in
       let kinds = List.fold_left compile_kind F.Map.empty kinds in
-      let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (TypeList.make @@ compile_type t) m) F.Map.empty types in
+      let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (TypeList.make @@ compile_type t) m) F.Map.empty (List.rev types) in
       let modes = List.fold_left compile_mode F.Map.empty modes in
       let defs_m = defs_of_map modes in
       let defs_k = defs_of_map kinds in
@@ -3253,7 +3263,9 @@ end (* }}} *)
     List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
 
     let merge_type_assignments t1 t2 =
-      F.Map.union (fun _ l1 l2 -> Some (TypeAssignment.merge_skema l1 l2)) t1 t2
+      (* We give precedence to recent type declarations over old ones *)
+      F.Map.union (fun f l1 l2 ->
+        Some (TypeAssignment.merge_skema l2 l1)) t1 t2
 
     let merge_types t1 t2 =
       F.Map.union (fun _ l1 l2 -> Some (TypeList.merge l1 l2)) t1 t2
