@@ -1041,6 +1041,10 @@ end = struct
     | [] -> false
     | x :: xs -> is_spill x || any_arg_is_spill xs
 
+  let silence_linear_warn f =
+    let s = F.show f in
+    let len = String.length s in
+    len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
   let check ~type_abbrevs ~kinds ~env (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
     (* Format.eprintf "checking %a\n" ScopedTerm.pretty t; *)
@@ -1341,7 +1345,7 @@ end = struct
       check_matches_poly_skema_loc t;
       if spills <> [] then error ~loc:t.loc "cannot spill in head";
       F.Map.iter (fun k (_,n,loc) ->
-        if n = 1 then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
+        if n = 1 && not @@ silence_linear_warn k then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
           F.pp k F.pp k F.pp k)) !sigma;
       !needs_spill
 

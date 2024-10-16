@@ -1383,7 +1383,7 @@ let open BuiltIn in let open BuiltInData in
 
 module LocMap : Util.Map.S with type key = Ast.Loc.t = Util.Map.Make(Ast.Loc)
 
-(* let elpi_map =  let open BuiltIn in [
+let elpi_map =  let open BuiltIn in [
   
     LPCode Builtin_map.code
     
@@ -1393,11 +1393,7 @@ let elpi_set =  let open BuiltIn in [
   
     LPCode Builtin_set.code
     
-] *)
-
-(* need spilling *)
-let elpi_set = []
-let elpi_map = []
+]
 
 let string_set, string_set_decl = ocaml_set_conv ~name:"std.string.set" BuiltInData.string (module API.Compile.StrSet)
 let int_set, int_set_decl = ocaml_set_conv ~name:"std.int.set"    BuiltInData.int    (module API.Utils.IntSet)
