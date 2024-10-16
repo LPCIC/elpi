@@ -90,12 +90,12 @@ let () = declare "typeabbrv10"
   ()
 let () = declare "typeabbrv11"
   ~source_elpi:"typeabbrv11.elpi"
-  ~expectation:(FailureOutput (Str.regexp "x has type string but f expects an argument of type x"))
+  ~expectation:(FailureOutput (Str.regexp "x has type string but f expects a term of type x"))
   ~description:"type abbreviations and error messages"
   ()
 let () = declare "typeabbrv12"
   ~source_elpi:"typeabbrv12.elpi"
-  ~expectation:(FailureOutput (Str.regexp "x has type string but f expects an argument of type y"))
+  ~expectation:(FailureOutput (Str.regexp "x has type string but f expects a term of type y"))
   ~description:"type abbreviations and error messages"
   ()
 
