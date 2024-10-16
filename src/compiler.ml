@@ -769,11 +769,15 @@ module TypeAssignment = struct
     | Prop -> fprintf fmt "prop"
     | Any -> fprintf fmt "any"
     | Cons c -> F.pp fmt c
-    | App(f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist pretty " ") (x::xs)
-    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "%a -> %a" pretty s pretty t
-    | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" pretty s pretty t
+    | App(f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist pretty_parens " ") (x::xs)
+    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "%a -> %a" pretty_parens s pretty t
+    | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" pretty_parens s pretty t
     | UVar m when MutableOnce.is_set m -> pretty fmt @@ deref m
     | UVar m -> MutableOnce.pretty fmt m
+  and pretty_parens fmt = function
+    | UVar m when MutableOnce.is_set m -> pretty_parens fmt @@ deref m
+    | (App _ | Arr _) as t -> fprintf fmt "(%a)" pretty t
+    | t -> pretty fmt t
 
   let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
 
@@ -1044,7 +1048,7 @@ end = struct
     let sigma : TypeAssignment.t F.Map.t ref = ref F.Map.empty in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
     let rec check ctx ~loc ~tyctx x (ety : ret) : spilled_phantoms =
-      (* Format.eprintf "checking %a\n" ScopedTerm.pretty_ x; *)
+      (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty ety; *)
       match x with
       | Const(Global,c) -> check_global ctx ~loc ~tyctx c ety
       | Const(Local,c) -> check_local ctx ~loc ~tyctx c ety
