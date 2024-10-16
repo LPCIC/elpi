@@ -724,14 +724,17 @@ module TypeAssignment = struct
   
   let rec subst map = function
     | (Prop | Any | Cons _) as x -> x
-    | UVar c -> F.Map.find c map
     | App(c,x,xs) -> App (c,subst map x,List.map (subst map) xs)
     | Arr(v,s,t) -> Arr(v,subst map s, subst map t)
+    | UVar c ->
+        match map c with
+        | Some x -> x
+        | None -> anomaly "TypeAssignment.subst"
 
   let fresh sk =
     let rec fresh map = function
       | Lam(c,t) -> fresh (F.Map.add c (UVar (MutableOnce.make c)) map) t
-      | Ty t -> if F.Map.is_empty map then Obj.magic t, map else subst map t, map
+      | Ty t -> if F.Map.is_empty map then Obj.magic t, map else subst (fun x -> F.Map.find_opt x map) t, map
   in
     fresh F.Map.empty sk
 
@@ -741,7 +744,7 @@ module TypeAssignment = struct
 
   let rec apply m sk args =
     match sk, args with
-    | Ty t, [] -> if F.Map.is_empty m then Obj.magic t else subst m t
+    | Ty t, [] -> if F.Map.is_empty m then Obj.magic t else subst (fun x -> F.Map.find_opt x m) t
     | Lam(c,t), x::xs -> apply (F.Map.add c x m) t xs
     | _ -> assert false (* kind checker *)
 
@@ -925,8 +928,8 @@ module TypeChecker : sig
   type arities = Arity.t F.Map.t
   val check_disjoint : type_abbrevs:ScopedTypeExpression.t F.Map.t -> kinds:arities -> unit
 
-  val check_type : type_abbrevs:type_abbrevs -> arities -> ScopedTypeExpression.t -> TypeAssignment.skema
-  val check_types : type_abbrevs:type_abbrevs -> arities -> TypeList.t -> TypeAssignment.overloaded_skema
+  val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> TypeAssignment.skema
+  val check_types : type_abbrevs:type_abbrevs -> kinds:arities -> TypeList.t -> TypeAssignment.overloaded_skema
 
   type env = TypeAssignment.overloaded_skema F.Map.t
   val check : type_abbrevs:type_abbrevs-> kinds:arities -> env:env -> ScopedTerm.t -> exp:TypeAssignment.t -> bool
@@ -962,41 +965,43 @@ end = struct
     end else
       error ~loc ("Unknown type " ^ F.show c)
 
-  let check_type ~type_abbrevs arities ~loc ctx x =
+  let rec check_loc_tye ~type_abbrevs ~kinds ctx { loc; it } =
+    check_tye ~loc ~type_abbrevs ~kinds ctx it
+  and check_tye ~loc ~type_abbrevs ~kinds ctx = function
+    | Prop -> TypeAssignment.Prop
+    | Any -> TypeAssignment.Any
+    | Const(Local,c) ->
+        check_param_exists ~loc c ctx;
+        TypeAssignment.UVar c
+    | Const(Global,c) ->
+        check_global_exists ~loc c type_abbrevs kinds 0;
+        TypeAssignment.Cons c
+    | App(c,x,xs) ->
+        check_global_exists ~loc c type_abbrevs kinds (1 + List.length xs);
+        TypeAssignment.App(c,check_loc_tye ~type_abbrevs ~kinds ctx x, List.map (check_loc_tye ~type_abbrevs ~kinds ctx) xs)
+    | Arrow(v,s,t) -> TypeAssignment.Arr(v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
+    | Pred(_,[]) -> TypeAssignment.Prop
+    | Pred(f,(_,x)::xs) -> TypeAssignment.Arr(Ast.Structured.NotVariadic,check_loc_tye ~type_abbrevs ~kinds ctx x,check_tye ~type_abbrevs ~kinds ~loc ctx (Pred(f,xs)))
+
+  let check_type ~type_abbrevs ~kinds ~loc ctx x =
     (* Format.eprintf "check_type under %a\n%!" (F.Map.pp (fun fmt (n,_) -> ())) arities;  *)
     (* Format.eprintf "check_type %a\n%!" ScopedTypeExpression.pp_v_ x;  *)
     let rec aux_params ~loc ctx = function
       | Lam(c,t) ->
           check_param_unique ~loc c ctx;
           TypeAssignment.Lam(c,aux_params ~loc (F.Set.add c ctx) t)
-      | Ty t -> TypeAssignment.Ty(aux_loc ctx t)
-    and aux_loc ctx { loc; it } = aux ~loc ctx it
-    and aux ~loc ctx = function
-      | Prop -> TypeAssignment.Prop
-      | Any -> TypeAssignment.Any
-      | Const(Local,c) ->
-          check_param_exists ~loc c ctx;
-          TypeAssignment.UVar c
-      | Const(Global,c) ->
-          check_global_exists ~loc c type_abbrevs arities 0;
-          TypeAssignment.Cons c
-      | App(c,x,xs) ->
-          check_global_exists ~loc c type_abbrevs arities (1 + List.length xs);
-          TypeAssignment.App(c,aux_loc ctx x, List.map (aux_loc ctx) xs)
-      | Arrow(v,s,t) -> TypeAssignment.Arr(v,aux_loc ctx s,aux_loc ctx t)
-      | Pred(_,[]) -> TypeAssignment.Prop
-      | Pred(f,(_,x)::xs) -> TypeAssignment.Arr(Ast.Structured.NotVariadic,aux_loc ctx x,aux ~loc ctx (Pred(f,xs)))
+      | Ty t -> TypeAssignment.Ty(check_loc_tye ~type_abbrevs ~kinds ctx t)
     in
       aux_params ~loc ctx x
 
-  let check_types  ~type_abbrevs arities lst =
-    match List.map (fun { value; loc } -> check_type ~type_abbrevs arities ~loc F.Set.empty value) lst with
+  let check_types  ~type_abbrevs ~kinds lst =
+    match List.map (fun { value; loc } -> check_type ~type_abbrevs ~kinds ~loc F.Set.empty value) lst with
     | [] -> assert false
     | [x] -> TypeAssignment.Single x
     | xs -> TypeAssignment.Overloaded xs
 
-  let check_type  ~type_abbrevs arities { value; loc } =
-    check_type ~type_abbrevs arities ~loc F.Set.empty value
+  let check_type  ~type_abbrevs ~kinds { value; loc } =
+    check_type ~type_abbrevs ~kinds ~loc F.Set.empty value
 
   let arrow_of_args args ety =
     let rec aux = function
@@ -1126,9 +1131,9 @@ end = struct
       | Discard -> []
       | Var(c,args) -> check_app ctx ~loc ~tyctx c (uvar_type ~loc c) args ety
       | Cast(t,ty) ->
-          let ty : ret = check_loc_type_e ~type_abbrevs ~kinds ty in
-          check_loc t ~ety:ty;
-          if unify ty ety then ()
+          let ty : ret = TypeAssignment.subst (fun f -> Some (TypeAssignment.UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty ty in
+          let spills = check_loc ctx ~tyctx:None t ~ety:ty in
+          if unify ty ety then spills
           else error ~loc "cast"
 
     and check_global ctx ~loc ~tyctx c ety =
@@ -1227,11 +1232,11 @@ end = struct
           match classify_arrow t with
           | Unknown -> error ~loc "Type too ambiguous to be assigned to an overloaded constant"
           | Simple { srcs; tgt } ->
-              if try_unify_all (tgt::srcs) (ety::targs) then []
+              if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then []
               else check_app_overloaded ctx ~loc c ety args targs alltys ts
           | Variadic { srcs ; tgt } ->
               let srcs = extend srcs targs in
-              if try_unify_all (tgt::srcs) (ety::targs) then []
+              if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then []
               else check_app_overloaded ctx ~loc c ety args targs alltys ts
 
     and check_app_single ctx ~loc c ty consumed args =
@@ -1279,7 +1284,7 @@ end = struct
           let lhs = mk_uvar "LHS" in
           let spills = check_loc ~tyctx ctx x ~ety:lhs in
           if spills <> [] then error ~loc "Hard spill";
-          if try_unify_all [lhs] [Prop] || try_unify_all [lhs] [App(F.from_string "list",Prop,[])]
+          if try_unify lhs Prop || try_unify lhs (App(F.from_string "list",Prop,[]))
           then check_spill_conclusion_loc ~tyctx ctx y ~ety
           else error ~loc "Bad impl in spill"
       | App(Global,c,x,xs) when F.equal c F.andf ->
@@ -1309,10 +1314,10 @@ end = struct
     and check_matches_poly_skema ~loc ~pat ty =
       if try_matching ~pat ty then () else error_not_poly ~loc ty (fst pat)
 
-    and try_unify_all xl yl =
-      let vx = List.fold_left (fun xs t -> TypeAssignment.vars_of (Val t) @ xs) [] xl in
-      let vy = List.fold_left (fun xs t -> TypeAssignment.vars_of (Val t) @ xs) [] yl in
-      let b = Util.for_all2 unify xl yl in
+    and try_unify x y =
+      let vx = TypeAssignment.vars_of (Val x) in
+      let vy = TypeAssignment.vars_of (Val y) in
+      let b = unify x y in
       if not b then (undo vx; undo vy);
       b
     
@@ -3998,7 +4003,7 @@ end = struct
     let type_abbrevs =
       List.fold_left (fun type_abbrevs (name, ty) ->
         (* TODO check dijoint from kinds and type_abbrevs *)
-        F.Map.add name (TypeChecker.check_type ~type_abbrevs kinds ty) type_abbrevs)
+        F.Map.add name (TypeChecker.check_type ~type_abbrevs ~kinds ty) type_abbrevs)
         ota type_abbrevs in
 
 
@@ -4006,7 +4011,7 @@ end = struct
 
     let t0 = Unix.gettimeofday () in
     (* TypeChecker.check_disjoint ~type_abbrevs ~kinds; *)
-    let types = F.Map.map (TypeChecker.check_types ~type_abbrevs kinds) types in
+    let types = F.Map.map (TypeChecker.check_types ~type_abbrevs ~kinds) types in
     let t1 = Unix.gettimeofday () in
     let total_type_checking_time = total_type_checking_time +. t1 -. t0 in
 
