@@ -527,7 +527,7 @@ let _ = show
    let hash x = x
  end
 
- let counter = ref 0
+ let counter = ref 2
  let make () = incr counter; !counter
 
  module Htbl = Hashtbl.Make(Self)

@@ -141,7 +141,7 @@ filter [_|XS] P YS :- filter XS P YS.
 
 pred mem! i:list A, o:A.
 mem! [X|_] X :- !.
-mem! [_|XS] X :- mem XS X.
+mem! [_|XS] X :- mem! XS X.
 
 % 'uvar X L' is the frozen 'X' and its arguments 'L'
 pred mem i:list tye, i:tye.

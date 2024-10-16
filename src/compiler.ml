@@ -1221,8 +1221,6 @@ end = struct
               if any_arg_is_spill args then monodirectional ()
               else bidirectional srcs tgt
 
-            (* XXX ... look at args, is no spill then build arrow using srcs -> tgt - args .. *)
-
     and check_app_overloaded ctx ~loc c ety args targs alltys = function
       | [] -> error_overloaded_app ~loc c args ~ety alltys
       | t::ts ->
@@ -1281,7 +1279,7 @@ end = struct
       extra_spill
 
     (* This descent to find the spilled term is a bit ad hoc, since it
-    inlined => and , typing... but leaves the rest of the code clean *)
+    inlines => and , typing... but leaves the rest of the code clean *)
     and check_spill_conclusion ~tyctx ctx ~loc it ety =
       match it with
       | App(Global,c,x,[y]) when F.equal c F.implf ->
