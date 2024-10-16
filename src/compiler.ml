@@ -1095,12 +1095,15 @@ end = struct
     and check_spill ctx ~loc ~tyctx sp info ety =
       needs_spill := true;
       let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(mk_uvar "Spill") in (* TODO?? *)
+      assert(inner_spills = []);
       let phantom_of_spill_ty i ty =
         { loc; it = Spill(sp,ref (Phantom(i+1))); ty = MutableOnce.create (TypeAssignment.Val ty) } in
       match classify_arrow (ScopedTerm.type_of sp) with
       | Simple { srcs; tgt } ->
-          if not @@ unify tgt Prop then error ~loc "only predicated can be spilled";
+          if not @@ unify tgt Prop then error ~loc "only predicates can be spilled";
           let spills = srcs in
+          if spills = [] then
+            error ~loc "nothing to spill, the expression lacks no arguments";
           let first_spill = List.hd spills in
           if unify first_spill ety then begin
             info := Main (List.length spills);
@@ -3816,7 +3819,7 @@ end = struct
       | [], [t] -> t
       | [], _ -> assert false
       | _ :: _, _ -> error ~loc:t.loc "Cannot place spilled expression" in
-    (* if needs_spilling then Format.eprintf "spilled %a\n" ScopedTerm.pretty t; *)
+    if needs_spilling then Format.eprintf "spilled %a\n" ScopedTerm.pretty t;
     let t  = todbl (0,F.Map.empty) t in
     (!symb, !amap), t  
 
