@@ -772,8 +772,8 @@ module TypeAssignment = struct
     | Prop -> fprintf fmt "prop"
     | Any -> fprintf fmt "any"
     | Cons c -> F.pp fmt c
-    | App(f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist pretty_parens " ") (x::xs)
-    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "%a -> %a" pretty_parens s pretty t
+    | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist pretty_parens " ") (x::xs)
+    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" pretty_parens s pretty t
     | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" pretty_parens s pretty t
     | UVar m when MutableOnce.is_set m -> pretty fmt @@ deref m
     | UVar m -> MutableOnce.pretty fmt m
@@ -1043,12 +1043,12 @@ end = struct
     error ~loc msg
   
   let error_bad_const_ety_l ~loc ~tyctx ~ety c txl =
-    let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@]"  F.pp c (pplist ~boxed:true TypeAssignment.pretty " /\\ ") txl pp_tyctx tyctx TypeAssignment.pretty ety in
+    let msg = Format.asprintf "@[<hv>%a is overloaded but none of its types matches the type expected by %a:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pp_tyctx tyctx TypeAssignment.pretty ety (pplist ~boxed:true TypeAssignment.pretty ", ") txl in
     error ~loc msg
 
   let error_overloaded_app ~loc ~ety c args alltys =
     let ty = arrow_of_args args ety in
-    let msg = Format.asprintf "@[<hov>%a is overloaded but none of its types@ matches %a.@ @[<v 2>Its types are:@ %a@]@]" F.pp c TypeAssignment.pretty ty (pplist TypeAssignment.pretty " ") alltys in
+    let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c TypeAssignment.pretty ty (pplist TypeAssignment.pretty ", ") alltys in
     error ~loc msg
 
   let error_bad_arguments ~loc c tys x tx =
