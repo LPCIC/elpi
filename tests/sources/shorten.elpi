@@ -23,6 +23,7 @@ namespace a {
   shorten b.{ foo }.
   shorten b.bar.{ baz }.
   
+  pred main.
   main :- foo, b.foo, baz, bar.baz, b.bar.baz.
 
   pred bar.baz.
