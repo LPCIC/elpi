@@ -57,7 +57,7 @@ let print_summary ~total ~ok ~ko_list ~skipped ~timeout =
   print_stat "Skipped" skipped;
   print_stat "Timeout" timeout;
   if ko_list <> [] then 
-    printf [red] "Rerun failed: make tests ONLY=\"'\\(%s\\)'\"\n" (String.concat "\\|" ko_list)
+    printf [red] "Rerun failed: make tests ONLY=\"'^\\(%s\\)'\"\n" (String.concat "\\|" ko_list)
 ;;
 
 let print_file fname =
