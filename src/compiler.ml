@@ -798,6 +798,7 @@ module ScopedTerm = struct
    | Lam of F.t option * t
    | CData of CData.t
    | Spill of t * spill_info ref
+   | Cast of t * ScopedTypeExpression.e
    and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
   [@@ deriving show]
 
@@ -817,6 +818,7 @@ module ScopedTerm = struct
     | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Phantom n}) -> fprintf fmt "{%a}/*%d*/" pretty t n
+    | Cast (t,ty) -> fprintf fmt "(%a : %a)" pretty t ScopedTypeExpression.pp_e ty (* TODO pretty *)
     
 
   let equal t1 t2 =
@@ -866,6 +868,7 @@ module ScopedTerm = struct
         | App(g,c,x,xs) -> App(g,c,subst_loc map x, List.map (subst_loc map) xs)
         | Var(c,xs) -> Var(c,List.map (subst_loc map) xs)
         | Spill(t,i) -> Spill(subst_loc map t,i)
+        | Cast(t,ty) -> Cast(subst_loc map t,ty)
         | Discard | CData _ -> t
       and rename c d t =
         match t with
@@ -877,6 +880,7 @@ module ScopedTerm = struct
         | Lam(Some c',_) when F.equal c c' -> t
         | Lam(v,t) -> Lam(v,rename_loc c d t)
         | Spill(t,i) -> Spill(rename_loc c d t,i)
+        | Cast(t,ty) -> Cast(rename_loc c d t,ty)
         | Var(v,xs) -> Var(v,List.map (rename_loc c d) xs)
         | Discard | CData _ -> t
       and rename_loc c d { it; ty; loc } = { it = rename c d it; ty; loc } 
@@ -891,6 +895,7 @@ module ScopedTerm = struct
         | CData _ -> error ~loc "cannot apply cdata"
         | Spill _ -> error ~loc "cannot apply spill"
         | Discard -> error ~loc "cannot apply discard"
+        | Cast _ -> error ~loc "cannot apply cast"
         | Lam _ -> load_subst ~loc t args F.Map.empty
       in
         load_subst_loc t args F.Map.empty
@@ -1120,6 +1125,11 @@ end = struct
       | Lam(c,t) -> check_lam ctx ~loc ~tyctx c t ety
       | Discard -> []
       | Var(c,args) -> check_app ctx ~loc ~tyctx c (uvar_type ~loc c) args ety
+      | Cast(t,ty) ->
+          let ty : ret = check_loc_type_e ~type_abbrevs ~kinds ty in
+          check_loc t ~ety:ty;
+          if unify ty ety then ()
+          else error ~loc "cast"
 
     and check_global ctx ~loc ~tyctx c ety =
       match global_type env ~loc c with
@@ -1549,6 +1559,7 @@ module RecoverStructure : sig
   (* Reconstructs the structure of the AST (i.e. matches { with }) *)
 
   val run : State.t -> Ast.Program.t -> Ast.Structured.program
+  val structure_type_expression : Loc.t -> 'a -> (Ast.raw_attribute list -> 'a option) -> Ast.raw_attribute list Ast.TypeExpression.t -> 'a Ast.TypeExpression.t
 
 end = struct (* {{{ *)
 
@@ -1902,9 +1913,58 @@ end = struct
       let c = (F.show f).[0] in
       c = '@'
 
+  let rec scope_tye ctx ~loc t =
+    match t with
+    | Ast.TypeExpression.TConst c when F.show c = "prop" -> ScopedTypeExpression.Prop
+    | Ast.TypeExpression.TConst c when F.show c = "any" -> ScopedTypeExpression.Any
+    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(ScopeContext.Local,c))
+    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(ScopeContext.Global,c))
+    | Ast.TypeExpression.TApp(c,x,[y]) when F.show c = "variadic" ->
+        ScopedTypeExpression.Arrow(Ast.Structured.Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
+    | Ast.TypeExpression.TApp(c,x,xs) ->
+        if F.Set.mem c ctx || is_uvar_name c then error ~loc "type schema parameters cannot be type formers";
+        ScopedTypeExpression.App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
+    | Ast.TypeExpression.TPred(m,xs) ->
+        ScopedTypeExpression.Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
+    | Ast.TypeExpression.TArr(s,t) ->
+        ScopedTypeExpression.Arrow(Ast.Structured.NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
+  and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }    
+
+  let compile_type { Ast.Type.name; loc; attributes; ty } =
+    let open ScopedTypeExpression in
+    let value = scope_loc_tye F.Set.empty ty in
+    let vars =
+      let rec aux e { it } =
+        match it with
+        | App(_,x,xs) -> List.fold_left aux e (x :: xs)
+        | Const(Local, _) -> assert false (* there are no binders yet *)
+        | Const(Global,c) when is_uvar_name c -> F.Set.add c e
+        | Const(Global,_) -> e
+        | Prop -> e
+        | Any -> e
+        | Arrow(_,x,y) -> aux (aux e x) y
+        | Pred(_,l) -> List.fold_left aux e (List.map snd l)
+      in
+        aux F.Set.empty value in
+    let value = scope_loc_tye vars ty in
+    let nparams = F.Set.cardinal vars in
+    let value =
+      let rec close s t =
+        if F.Set.is_empty s then t
+        else
+          let c = F.Set.choose s in
+          let s = F.Set.remove c s in
+          close s (Lam(c,t)) in
+      close vars (Ty value) in
+    { ScopedTypeExpression.name; indexing = Some attributes; loc; nparams; value }
+
   let rec scope_term ~macros ctx ~loc t =
     let open Ast.Term in
     match t with
+    | Cast (t,ty) ->
+        let t = scope_loc_term ~macros ctx t in
+        let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty) in
+        ScopedTerm.Cast(t,ty)
     | Const c when is_discard c -> ScopedTerm.Discard
     | Const c when is_macro_name c ->
         if F.Map.mem c macros then ScopedTerm.unlock @@ fst @@ F.Map.find c macros
@@ -1941,28 +2001,13 @@ end = struct
       error ~loc "Applied literal"
     | App ({ it = Quoted _},_) ->
       error ~loc "Applied quotation"
+    | App({ it = Cast _},_) ->
+      error ~loc "Casted app not supported yet"
   and scope_loc_term ~macros ctx { Ast.Term.it; loc } =
     let it = scope_term ~macros ctx ~loc it in
     { ScopedTerm.it; loc; ty = MutableOnce.make (F.from_string "Ty") }
 
   let scope_loc_term ~macros = scope_loc_term ~macros F.Set.empty
-
-  let rec scope_tye ctx ~loc t =
-    match t with
-    | Ast.TypeExpression.TConst c when F.show c = "prop" -> ScopedTypeExpression.Prop
-    | Ast.TypeExpression.TConst c when F.show c = "any" -> ScopedTypeExpression.Any
-    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(ScopeContext.Local,c))
-    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(ScopeContext.Global,c))
-    | Ast.TypeExpression.TApp(c,x,[y]) when F.show c = "variadic" ->
-        ScopedTypeExpression.Arrow(Ast.Structured.Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
-    | Ast.TypeExpression.TApp(c,x,xs) ->
-        if F.Set.mem c ctx || is_uvar_name c then error ~loc "type schema parameters cannot be type formers";
-        ScopedTypeExpression.App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
-    | Ast.TypeExpression.TPred(m,xs) ->
-        ScopedTypeExpression.Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
-    | Ast.TypeExpression.TArr(s,t) ->
-        ScopedTypeExpression.Arrow(Ast.Structured.NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
-  and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
 
   let scope_type_abbrev { Ast.TypeAbbreviation.name; value; nparams; loc } =
     let rec aux ctx = function
@@ -1973,34 +2018,6 @@ end = struct
       | Ast.TypeAbbreviation.Ty t -> ScopedTypeExpression.Ty (scope_loc_tye ctx t)
   in
     { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; indexing = None }
-
-  let compile_type { Ast.Type.name; loc; attributes; ty } =
-    let open ScopedTypeExpression in
-    let value = scope_loc_tye F.Set.empty ty in
-    let vars =
-      let rec aux e { it } =
-        match it with
-        | App(_,x,xs) -> List.fold_left aux e (x :: xs)
-        | Const(Local, _) -> assert false (* there are no binders yet *)
-        | Const(Global,c) when is_uvar_name c -> F.Set.add c e
-        | Const(Global,_) -> e
-        | Prop -> e
-        | Any -> e
-        | Arrow(_,x,y) -> aux (aux e x) y
-        | Pred(_,l) -> List.fold_left aux e (List.map snd l)
-      in
-        aux F.Set.empty value in
-    let value = scope_loc_tye vars ty in
-    let nparams = F.Set.cardinal vars in
-    let value =
-      let rec close s t =
-        if F.Set.is_empty s then t
-        else
-          let c = F.Set.choose s in
-          let s = F.Set.remove c s in
-          close s (Lam(c,t)) in
-      close vars (Ty value) in
-    { ScopedTypeExpression.name; indexing = Some attributes; loc; nparams; value }
 
   let compile_type_abbrev ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
     let ab = scope_type_abbrev ab in
@@ -3166,6 +3183,10 @@ end (* }}} *)
       | Var(c,l) ->
           let l' = smart_map aux_loc l in
           if l == l' then it else Var(c,l')
+      | Cast(t,ty) ->
+          let t' = aux_loc t in
+          let ty' = ScopedTypeExpression.smart_map_scoped_loc_ty f ty in
+          if t' == t && ty' == ty then it else Cast(t',ty')
       | Discard -> it
       | CData _ -> it
     and aux_loc ({ it; loc; ty } as orig) =
@@ -3738,6 +3759,7 @@ end = struct
       match t.it with
       | CData c -> D.mkCData (CData.hcons c)
       | Spill(t,_) -> assert false (* spill handled before *)
+      | Cast(t,_) -> todbl ctx t
       (* lists *)
       | Const(Global,c) when F.(equal c nilf) -> D.mkNil
       | App(Global,c,x,[y]) when F.(equal c consf) ->
@@ -3777,8 +3799,8 @@ end = struct
 
     let mk_loc ~loc ?(ty = MutableOnce.make (F.from_string "Spill")) it = { ty; it; loc } in (* TODO store the types in Main *)
 
-    let sigma ~loc t n =
-      mk_loc ~loc @@ App(Global,F.sigmaf,mk_loc ~loc (Lam(Some n, t)),[]) in
+    (* let sigma ~loc t n =
+      mk_loc ~loc @@ App(Global,F.sigmaf,mk_loc ~loc (Lam(Some n, t)),[]) in *)
 
     let add_spilled l t =
       if l = [] then t
@@ -3803,6 +3825,7 @@ end = struct
       | Var(c,xs) when List.mem c locals -> mk_loc ~loc ~ty @@ Var(c,xs @ [w])
       | Lam(c,t) -> mk_loc ~loc ~ty @@ Lam(c,apply_to locals w t)
       | Const _ | Discard | Var _ | CData _ -> orig
+      | Cast _ -> assert false (* TODO *)
       | Spill _ -> assert false in
     let apply_to locals w t =
       let w = mk_loc ~loc:t.loc @@ Const(Local,w) in
@@ -3841,6 +3864,7 @@ end = struct
       (* Format.eprintf "spill %a : %a\n" ScopedTerm.pretty t (MutableOnce.pp TypeAssignment.pp) ty; *)
       match it with
       | CData _ | Discard | Const _ -> [], [t]
+      | Cast(t,_) -> spill ctx t
       | Spill(t,{ contents = NoInfo}) -> assert false (* no type checking *)
       | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
       | Spill(t,{ contents = (Main n)}) ->

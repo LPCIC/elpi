@@ -107,6 +107,7 @@ module Term = struct
    | Lam of Func.t * t
    | CData of CData.t
    | Quoted of quote
+   | Cast of t * raw_attribute list TypeExpression.t
   and t = { it : t_; loc : Loc.t }
   and quote = { qloc : Loc.t; data : string; kind : string option }
   [@@ deriving show, ord]
@@ -151,6 +152,8 @@ let mkSeq loc (l : t list) =
       { loc = Loc.merge hd.loc tl.loc; it = App({ it = Const Func.consf; loc = hd.loc },[hd;tl]) }
  in
    { (aux loc l) with loc }
+
+let mkCast loc t ty = { loc; it = Cast(t,ty) }
 
 
 let rec best_effort_pp = function

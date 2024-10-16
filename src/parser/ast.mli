@@ -83,6 +83,7 @@ module Term : sig
    | Lam of Func.t * t
    | CData of CData.t
    | Quoted of quote
+   | Cast of t * raw_attribute list TypeExpression.t
   and t = { it : t_; loc : Loc.t }
   and quote = { qloc : Loc.t; data : string; kind : string option }
   [@@ deriving show, ord]
@@ -103,6 +104,7 @@ module Term : sig
   val mkFreshName : Loc.t -> t
   val mkLam : Loc.t -> string -> t -> t
   val mkC : Loc.t -> CData.t -> t
+  val mkCast : Loc.t -> t -> raw_attribute list TypeExpression.t -> t
 
 end
 
