@@ -1023,7 +1023,7 @@ end = struct
     let t =
       if args = [] then ScopedTerm.Const(Global,c)
       else ScopedTerm.(App(Global,c,List.hd args, List.tl args)) in
-    let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ %a@]" ScopedTerm.pretty_ t ScopedTerm.pretty x in
+    let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@,@[<hov>%a@]@]" ScopedTerm.pretty_ t ScopedTerm.pretty x in
     error ~loc msg
 
   let pp_tyctx fmt = function
@@ -1049,12 +1049,6 @@ end = struct
   let error_overloaded_app ~loc ~ety c args alltys =
     let ty = arrow_of_args args ety in
     let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c TypeAssignment.pretty ty (pplist TypeAssignment.pretty ", ") alltys in
-    error ~loc msg
-
-  let error_bad_arguments ~loc c tys x tx =
-    let msg = Format.asprintf "%a has type %a but %a expects an argument of one of the types: %a"
-      ScopedTerm.pretty x TypeAssignment.pretty tx F.pp c
-      (pplist TypeAssignment.pretty "; ") tys in
     error ~loc msg
     
   let error_not_poly ~loc c ty sk =
