@@ -1045,7 +1045,7 @@ end = struct
   let check ~type_abbrevs ~kinds ~env (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
     (* Format.eprintf "checking %a\n" ScopedTerm.pretty t; *)
     let needs_spill = ref false in
-    let sigma : TypeAssignment.t F.Map.t ref = ref F.Map.empty in
+    let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
     let rec check ctx ~loc ~tyctx x (ety : ret) : spilled_phantoms =
       (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty ety; *)
@@ -1058,7 +1058,7 @@ end = struct
       | App(Local,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc c) (x::xs) ety
       | Lam(c,t) -> check_lam ctx ~loc ~tyctx c t ety
       | Discard -> []
-      | Var(c,args) -> check_app ctx ~loc ~tyctx c (uvar_type c) args ety
+      | Var(c,args) -> check_app ctx ~loc ~tyctx c (uvar_type ~loc c) args ety
 
     and check_global ctx ~loc ~tyctx c ety =
       match global_type env ~loc c with
@@ -1254,11 +1254,14 @@ end = struct
       | [] -> ()
       | m :: ms -> MutableOnce.unset m; undo ms
 
-    and uvar_type c =
-      try TypeAssignment.Single (TypeAssignment.unval @@ F.Map.find c !sigma)
+    and uvar_type ~loc c =
+      try
+        let ty, nocc, loc = F.Map.find c !sigma in
+        sigma := F.Map.add c (ty,nocc+1,loc) !sigma;
+        TypeAssignment.Single (TypeAssignment.unval @@ ty)
       with Not_found ->
         let ty = TypeAssignment.UVar (MutableOnce.make c) in
-        sigma := F.Map.add c (TypeAssignment.Val ty) !sigma;
+        sigma := F.Map.add c (TypeAssignment.Val ty,1,loc) !sigma;
         TypeAssignment.Single ty
     and unif ~matching t1 t2 =
       (* Format.eprintf "%a = %a\n" TypeAssignment.pretty t1 TypeAssignment.pretty t2; *)
@@ -1334,6 +1337,9 @@ end = struct
       let spills = check_loc ~tyctx:None F.Map.empty t ~ety:(TypeAssignment.unval exp) in
       check_matches_poly_skema_loc t;
       if spills <> [] then error ~loc:t.loc "cannot spill in head";
+      F.Map.iter (fun k (_,n,loc) ->
+        if n = 1 then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
+          F.pp k F.pp k F.pp k)) !sigma;
       !needs_spill
 
   (* let check ~type_abbrevs a b c =
