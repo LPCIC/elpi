@@ -5,6 +5,7 @@ test-unif T :- T, !, print "--> Unif success" T "\n".
 
 pred p o:A.
 type f A -> B.
+type a A.
 
 main :-
   test-unif ((x\y\X x y) = (x\y\X y x)), !,

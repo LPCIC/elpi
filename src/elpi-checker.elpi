@@ -16,6 +16,7 @@ type ctype string -> typ.
 % --------- utils  ---------------------------------------------------------
 
 kind entry type.
+kind term type.
 type (`:) term -> typ -> entry.
 type (`:=) string -> typ -> entry.
 
@@ -49,9 +50,11 @@ assert _ (wrong-arity T Ty A) :- !,
           " but is applied to " ^ {pp-list A},
   error [pr LOC MSG] _.
 
-pred stash-new i:A, i:B.
+pred stash-new i:safe, i:B.
 stash-new E S :- open_safe E L, ( std.mem! L S ; stash_in_safe E S ), !.
 
+pred report-all-failures-and-fail-if-no-success i:prop, o:bool.
+pred report-all-failures-if-no-success i:prop, o:bool.
 report-all-failures-if-no-success P RC :-
   new_safe E,
   (((pi ML\ error ML _ :- !, std.forall ML (stash-new E), fail) => P)

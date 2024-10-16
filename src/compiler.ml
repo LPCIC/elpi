@@ -1090,7 +1090,7 @@ end = struct
 
     and check_spill ctx ~loc ~tyctx sp info ety =
       needs_spill := true;
-      let inner_spills = check_loc ~tyctx:None ctx sp ~ety:(mk_uvar "Spill") in (* TODO?? *)
+      let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(mk_uvar "Spill") in (* TODO?? *)
       let phantom_of_spill_ty i ty =
         { loc; it = Spill(sp,ref (Phantom(i+1))); ty = MutableOnce.create (TypeAssignment.Val ty) } in
       match classify_arrow (ScopedTerm.type_of sp) with
@@ -1112,14 +1112,14 @@ end = struct
         let targs = List.map ScopedTerm.type_of args in
         check_app_overloaded ctx ~loc c ety args targs l l
       | Single ty ->
-          let err () =
+          let err ty =
             if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
             else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Global (* sucks *),c,List.hd args,List.tl args)) ty in
           let monodirectional () =
             (* Format.eprintf "checking app mono %a\n" F.pp c; *)
             let tgt = check_app_single ctx ~loc c ty [] args in
             if unify tgt ety then []
-            else err () in
+            else err tgt in
           let bidirectional srcs tgt =
             (* Format.eprintf "checking app bidi %a\n" F.pp c; *)
             let rec consume args srcs =
@@ -1131,7 +1131,7 @@ end = struct
             let rest_tgt = consume args srcs in
             if unify rest_tgt ety then
               let _ = check_app_single ctx ~loc c ty [] args in []
-            else err () in
+            else err rest_tgt in
           match classify_arrow ty with
           | Unknown | Variadic _ -> monodirectional ()
           | Simple { srcs; tgt } ->
@@ -1186,6 +1186,33 @@ end = struct
       match x.it with
       | Spill(_,{ contents = Phantom _}) -> []
       | _ -> check_loc ~tyctx ctx x ~ety
+
+    and check_spill_conclusion_loc ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
+      assert (not @@ MutableOnce.is_set ty);
+      let extra_spill = check_spill_conclusion ~tyctx ctx ~loc it ety in
+      MutableOnce.set ty (Val ety);
+      extra_spill
+
+    (* This descent to find the spilled term is a bit ad hoc, since it
+    inlined => and , typing... but leaves the rest of the code clean *)
+    and check_spill_conclusion ~tyctx ctx ~loc it ety =
+      match it with
+      | App(Global,c,x,[y]) when F.equal c F.implf ->
+          let lhs = mk_uvar "LHS" in
+          let spills = check_loc ~tyctx ctx x ~ety:lhs in
+          if spills <> [] then error ~loc "Hard spill";
+          if try_unify_all [lhs] [Prop] || try_unify_all [lhs] [App(F.from_string "list",Prop,[])]
+          then check_spill_conclusion_loc ~tyctx ctx y ~ety
+          else error ~loc "Bad impl in spill"
+      | App(Global,c,x,xs) when F.equal c F.andf ->
+          let spills = check_loc ~tyctx ctx x ~ety:Prop in
+          if spills <> [] then error ~loc "Hard spill";
+          begin match xs with
+          | [] -> assert false
+          | [x] -> check_loc ~tyctx ctx x ~ety
+          | x::xs -> check_spill_conclusion ~tyctx ctx ~loc (App(Global,c,x,xs)) ety
+          end
+      | _ -> check ~tyctx ctx ~loc it ety
 
     and check_matches_poly_skema_loc { loc; it } =
       let c, args =
@@ -3659,45 +3686,67 @@ end = struct
       | TypeAssignment.Prop -> true
       | _ -> false in
 
-    let hack ~loc ?(ty = MutableOnce.make (F.from_string "Spill")) it = { ty; it; loc } in (* TODO store the types in Main *)
+    let mk_loc ~loc ?(ty = MutableOnce.make (F.from_string "Spill")) it = { ty; it; loc } in (* TODO store the types in Main *)
 
     let sigma ~loc t n =
-      hack ~loc @@ App(Global,F.sigmaf,hack ~loc (Lam(Some n, t)),[]) in
+      mk_loc ~loc @@ App(Global,F.sigmaf,mk_loc ~loc (Lam(Some n, t)),[]) in
 
     let add_spilled l t =
       if l = [] then t
       else
-        (* TODO SIGMA *)
         let t =
           List.fold_right (fun { expr; vars_names } t ->
-            let t = hack ~loc:t.loc @@ App(Global,F.andf,expr,[t]) in
-             let t = List.fold_left (sigma ~loc:t.loc) t vars_names in
+            let t = mk_loc ~loc:t.loc @@ App(Global,F.andf,expr,[t]) in
+             (* let t = List.fold_left (sigma ~loc:t.loc) t vars_names in *)
              t
              ) l t in
         t
     in
 
+    let mkApp g c l =
+      if l = [] then Const(g,c)
+      else App(g,c,List.hd l,List.tl l) in
 
-    let rec apply_to locals c : ScopedTerm.t -> ScopedTerm.t = assert false in
+    let rec apply_to locals w ({ it; loc; ty } as orig) =
+      match it with
+      | App(g,c,x,xs) ->
+        mk_loc ~loc ~ty @@ mkApp g c (List.map (apply_to locals w) (x::xs))
+      | Var(c,xs) when List.mem c locals -> mk_loc ~loc ~ty @@ Var(c,xs @ [w])
+      | Lam(c,t) -> mk_loc ~loc ~ty @@ Lam(c,apply_to locals w t)
+      | Const _ | Discard | Var _ | CData _ -> orig
+      | Spill _ -> assert false in
+    let apply_to locals w t =
+      let w = mk_loc ~loc:t.loc @@ Const(Local,w) in
+      apply_to locals w t in
 
-    
     let app t args =
-      if args = [] then t.it else
-      (* TODO moev under => and , *)
-      match t.it with
-      | Const(g,c) -> App(g,c,List.hd args, List.tl args)
-      | App(g,c,x,xs) -> App(g,c,x,xs @ args)
-      | Var(c,xs) -> Var(c,xs @ args)
-      | _ -> assert false in
+      if args = [] then t else
+      let rec aux { loc; it; ty } : t =
+        mk_loc ~loc ~ty @@
+          match it with
+          | App(Global,c,x,[y]) when F.equal c F.implf ->
+              mkApp Global c [x;aux y]
+          | App(Global,c,x,xs) when F.equal c F.andf ->
+              mkApp Global c (aux_last (x::xs))
+          | Const(g,c) -> mkApp g c args
+          | App(g,c,x,xs) -> mkApp g c (x :: xs @ args)
+          | Var(c,xs) -> Var(c,xs @ args)
+          | _ -> assert false
+      and aux_last = function
+        | [] -> assert false
+        | [x] -> [aux x]
+        | x :: xs -> x :: aux_last xs
+      in
+        aux t in
 
     let args = ref 0 in
 
     let rec mk_spilled ~loc ctx n =
-        if n = 0 then []
-        else
-          let f = incr args; F.from_string (Printf.sprintf "%%arg%d" !args) in
-        let sp = hack ~loc @@ Const(Local,f) in
-        (f,hack ~loc @@ app sp ctx) :: mk_spilled ~loc ctx (n-1) in
+      if n = 0 then []
+      else
+        let f = incr args; F.from_string (Printf.sprintf "%%arg%d" !args) in
+        let sp = mk_loc ~loc @@ Var(f,[]) in
+        (f,app sp ctx) :: mk_spilled ~loc ctx (n-1) in
 
     let rec spill ctx ({ loc; ty; it } as t) : spills * ScopedTerm.t list =
       (* Format.eprintf "spill %a : %a\n" ScopedTerm.pretty t (MutableOnce.pp TypeAssignment.pp) ty; *)
@@ -3707,8 +3756,8 @@ end = struct
       | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
       | Spill(t,{ contents = (Main n)}) ->
           let spills, t = spill1 ctx t in
-          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun c -> hack ~loc @@ Const(Local,c)) ctx) n in
-          let expr = hack ~loc ~ty @@ app t vars in
+          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun c -> mk_loc ~loc @@ Const(Local,c)) ctx) n in
+          let expr = app t vars in
           spills @ [{vars; vars_names; expr}], vars
       (* globals and builtins *)
       | App(g,c,x,xs) ->
@@ -3723,13 +3772,13 @@ end = struct
           let spills, t = spill1 ctx t in
           spills, [{ it = Lam(None,t); loc; ty }]
       | Lam(Some c,t) ->
-          let spills, t = spill1 (c :: ctx) t in
+          let spills, t = spill1 ctx t in
           let (t,_), spills =
             map_acc (fun (t,n) { vars; vars_names; expr } ->
-              let all_names = vars @ n in
+              let all_names = vars_names @ n in
               let expr = apply_to all_names c expr in
-              let t = apply_to vars c t in
-              (t,all_names), { vars; vars_names; expr = hack ~loc @@ App(Global,F.pif,hack ~loc @@ Lam(Some c,expr),[]) })
+              let t = apply_to vars_names c t in
+              (t,all_names), { vars; vars_names; expr = mk_loc ~loc @@ App(Global,F.pif,mk_loc ~loc @@ Lam(Some c,expr),[]) })
             (t,[]) spills in
           spills, [{ it = Lam(Some c,t); loc; ty }]
       (* holes *)
@@ -3754,7 +3803,7 @@ end = struct
       | [], [t] -> t
       | [], _ -> assert false
       | _ :: _, _ -> error ~loc:t.loc "Cannot place spilled expression" in
-    Format.eprintf "spilled %a\n" ScopedTerm.pretty t;
+    (* if needs_spilling then Format.eprintf "spilled %a\n" ScopedTerm.pretty t; *)
     let t  = todbl (0,F.Map.empty) t in
     (!symb, !amap), t  
 
