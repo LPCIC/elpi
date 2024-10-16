@@ -1,5 +1,7 @@
 let u = {|
 
+pred p i:int.
+
 :name "this" p 1.
 
 |}

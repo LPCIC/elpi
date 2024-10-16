@@ -1324,6 +1324,9 @@ end = struct
       | UVar _ -> true
 
     in
+      (* TODO HACK since typing is done too late, the same unit should be checked only once *)
+      if MutableOnce.is_set t.ty then false else
+
       let spills = check_loc ~tyctx:None F.Map.empty t ~ety:(TypeAssignment.unval exp) in
       check_matches_poly_skema_loc t;
       if spills <> [] then error ~loc:t.loc "cannot spill in head";
