@@ -56,7 +56,7 @@ module Ast : sig
       | Discard
       | Var of Name.t * t list
       | App of Scope.t * Name.t * t * t list
-      | Lam of Name.t option * t
+      | Lam of Name.t option * Type.t option * t
       | Opaque of Opaque.t
       | Cast of t * Type.t
     and t = { it : t_; loc : Loc.t; }

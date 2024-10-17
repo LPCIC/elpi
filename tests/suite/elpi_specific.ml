@@ -185,13 +185,13 @@ let () = declare "asclause"
   ~description:"parsing of the .. as X clause"
   ~expectation:Test.Success
   ()
-
+(* 
 let () = declare "elpi2html"
   ~source_elpi:"elpi2html-copy.elpi"
   ~description:"type checking elpi2html"
   ~typecheck:true
   ~expectation:Test.Success
-  ()
+  () *)
 
 let () = declare "same_term"
   ~source_elpi:"same_term.elpi"

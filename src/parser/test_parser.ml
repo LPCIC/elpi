@@ -95,15 +95,19 @@ let (|-) a n ?(bug=false) b =
   mkApp (mkLoc a1 b2 1 0) [mkCon (mkLoc (n + (if bug then -1 else 0)) (n+1) 1 0) ":-";a;b]
 
 
-let lam x n b =
-  let stop = b.loc.source_stop in
-  mkLam (mkLoc n stop 1 0) x b
+let lam x n ?ty ?(parensl=false) ?(parensr=false) b =
+  let stop = b.loc.source_stop + (if parensr then 1 else 0) in
+  mkLam (mkLoc (n + (if parensl then -1 else 0)) stop 1 0) x ty b
 let mkNil ?(bug=false) n = mkNil (mkLoc (n + (if bug then -1 else 0)) n 1 0)
 let mkSeq n m = mkSeq (mkLoc n m 1 0)
 let c ?(bug=false) n ?len s =
   let len = match len with None -> String.length s | Some x -> x in
   mkCon (mkLoc (n + (if bug then -1 else 0)) (n + len - 1) 1 0) s
 
+let ct ?(bug=false) n ?len s =
+  let len = match len with None -> String.length s | Some x -> x in
+  { TypeExpression.tloc = (mkLoc (n + (if bug then -1 else 0)) (n + len - 1) 1 0); tit = TypeExpression.TConst (Func.from_string s) }
+  
 let underscore ?bug ?(len=1)n = c ?bug ~len n Func.(show dummyname)
 
 let minl = List.fold_left (fun n x -> min n x.loc.source_start) max_int
@@ -113,6 +117,8 @@ let app a ?(len=String.length a) n ?(parenl=false) ?(parenr=false) ?(bug=false) 
   let a1 = minl (c :: b) + (if parenl then -1 else 0) in
   let b2 = maxl (c :: b) + (if parenr then 1 else 0) in
   mkApp (mkLoc a1 b2 1 0) (c :: b)
+
+let cast n m t ty = mkCast (mkLoc n m 1 0) t ty
 
 let paren t = { t with loc = Loc.extend 1 t.loc }
 
@@ -204,8 +210,11 @@ let _ =
   (*    01234567890123456789012345 *)
   testF ":nam \"x\" x."     4 "attribute expected";
   testR "rule p (q r)."     1 12 1 0 [] [ss 6 1 (c 6 "p");ss 8 5 (app "q" ~bug 9 [c 11 "r"])] [] None None;
-  testR "rule (E : G ?- r)." 1 17 1 0 [] [s (c ~bug 7 "E") (c 11 "G") (c 16 "r")] [] None None;
+  testR "rule (E :> G ?- r)." 1 18 1 0 [] [s (c ~bug 7 "E") (c 12 "G") (c 17 "r")] [] None None;
   test  "p :- f \".*\\\\.aux\"." 1 17 1 0 [] (app ":-" 3 [c 1 "p";app "f" 6  [str 8 17 ".*\\.aux"]]);
+  test  "p :- (f x : y)."   1 14 1 0 [] (app ":-" 3 [c 1 "p"; cast 6 14 (app "f" 7 ~bug [c 9 "x"]) (ct 13 "y")]);
+  test  "p :- pi x : y \\ z."   1 17 1 0 [] (app ":-" 3 [c 1 "p"; app "pi" 6 [lam "x" 9 ~ty:(ct 13 "y") (c 17 "z")]]);
+  test  "p :- f (x : y \\ z)."   1 18 1 0 [] (app ":-" 3 [c 1 "p"; app "f" 6 ~parenr:true [lam "x" 9 ~parensl:true ~ty:(ct 13 "y") (c 17 "z")]]);
   (*    01234567890123456789012345 *)
 
 ;; 

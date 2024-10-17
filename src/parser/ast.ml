@@ -101,13 +101,15 @@ end
   
 module Term = struct
   
+  type typ = raw_attribute list TypeExpression.t
+  [@@ deriving show, ord]
   type t_ =
    | Const of Func.t
    | App of t * t list
-   | Lam of Func.t * t
+   | Lam of Func.t * typ option * t
    | CData of CData.t
    | Quoted of quote
-   | Cast of t * raw_attribute list TypeExpression.t
+   | Cast of t * typ
   and t = { it : t_; loc : Loc.t }
   and quote = { qloc : Loc.t; data : string; kind : string option }
   [@@ deriving show, ord]
@@ -115,7 +117,7 @@ module Term = struct
 exception NotInProlog of Loc.t * string
 
 let mkC loc x = { loc; it = CData x }
-let mkLam loc x t = { loc; it = Lam (Func.from_string x,t) }
+let mkLam loc x ty t = { loc; it = Lam (Func.from_string x,ty,t) }
 let mkNil loc = {loc; it = Const Func.nilf }
 let mkQuoted loc s =
   let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n;
@@ -157,7 +159,7 @@ let mkCast loc t ty = { loc; it = Cast(t,ty) }
 
 
 let rec best_effort_pp = function
- | Lam (x,t) -> "x\\" ^ best_effort_pp t.it
+ | Lam (x,_,t) -> "x\\" ^ best_effort_pp t.it
  | CData c -> CData.show c
  | Quoted _ -> "{{ .. }}"
  | _ -> ".."

@@ -76,14 +76,15 @@ module TypeExpression : sig
 end
 
 module Term : sig
-
+  type typ = raw_attribute list TypeExpression.t
+  [@@ deriving show, ord]
   type t_ =
    | Const of Func.t
    | App of t * t list
-   | Lam of Func.t * t
+   | Lam of Func.t * typ option * t
    | CData of CData.t
    | Quoted of quote
-   | Cast of t * raw_attribute list TypeExpression.t
+   | Cast of t * typ
   and t = { it : t_; loc : Loc.t }
   and quote = { qloc : Loc.t; data : string; kind : string option }
   [@@ deriving show, ord]
@@ -102,9 +103,9 @@ module Term : sig
   val mkQuoted : Loc.t -> string -> t
   val mkFreshUVar : Loc.t -> t
   val mkFreshName : Loc.t -> t
-  val mkLam : Loc.t -> string -> t -> t
+  val mkLam : Loc.t -> string -> typ option -> t -> t
   val mkC : Loc.t -> CData.t -> t
-  val mkCast : Loc.t -> t -> raw_attribute list TypeExpression.t -> t
+  val mkCast : Loc.t -> t -> typ -> t
 
 end
 

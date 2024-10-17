@@ -129,6 +129,7 @@ and token = parse
 | "." pnum as f { FLOAT (float_of_string f) }
 | '"' { start_token (string (Buffer.create 80)) lexbuf }
 | ":" { COLON }
+| ":>" { RTRI }
 | "\\" { BIND }
 | "(" { LPAREN }
 | ")" { RPAREN }

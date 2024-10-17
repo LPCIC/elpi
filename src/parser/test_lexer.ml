@@ -14,6 +14,7 @@ type t = Tokens.token =
   | SIG
   | SHORTEN
   | RULE
+  | RTRI
   | RPAREN
   | REPLACE
   | REMOVE

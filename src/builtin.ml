@@ -273,8 +273,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
 
   LPCode "external pred (=) o:A, o:A. % unification";
 
-  LPCode "type pi (A -> prop) -> prop.";
-  LPCode "type sigma (A -> prop) -> prop.";
+  LPCode "type (pi)    (A -> prop) -> prop.";
+  LPCode "type (sigma) (A -> prop) -> prop.";
   
   MLData BuiltInData.int;
   MLData BuiltInData.string;

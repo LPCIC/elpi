@@ -675,7 +675,7 @@ end = struct
     error ~loc msg
 
   let error_bad_function_ety ~loc ~tyctx ~ety c t =
-    let msg = Format.asprintf "@[<hov>%a is a function@ but %a expects a term of type@ %a@]"  ScopedTerm.pretty_ ScopedTerm.(Lam(c,t)) pp_tyctx tyctx TypeAssignment.pretty ety in
+    let msg = Format.asprintf "@[<hov>%a is a function@ but %a expects a term of type@ %a@]"  ScopedTerm.pretty_ ScopedTerm.(Lam(c,None,t)) pp_tyctx tyctx TypeAssignment.pretty ety in
     error ~loc msg
   
   let error_bad_const_ety_l ~loc ~tyctx ~ety c txl =
@@ -758,7 +758,7 @@ end = struct
       | Spill(sp,info) -> assert(!info = NoInfo); check_spill ctx ~loc ~tyctx sp info ety
       | App(Global,c,x,xs) -> check_app ctx ~loc ~tyctx c (global_type env ~loc c) (x::xs) ety 
       | App(Local,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc c) (x::xs) ety
-      | Lam(c,t) -> check_lam ctx ~loc ~tyctx c t ety
+      | Lam(c,cty,t) -> check_lam ctx ~loc ~tyctx c cty t ety
       | Discard -> []
       | Var(c,args) -> check_app ctx ~loc ~tyctx c (uvar_type ~loc c) args ety
       | Cast(t,ty) ->
@@ -790,9 +790,12 @@ end = struct
       if unify ty ety then []
       else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
-    and check_lam ctx ~loc ~tyctx c t ety =
+    and check_lam ctx ~loc ~tyctx c cty t ety =
       let name = match c with Some c -> c | None -> fresh_name () in
-      let src = mk_uvar "Src" in
+      let src = match cty with
+        | None -> mk_uvar "Src"
+        | Some x -> 
+           TypeAssignment.subst (fun f -> Some (TypeAssignment.UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty x in
       let tgt = mk_uvar "Tgt" in
       (* let () = Format.eprintf "lam ety %a\n" TypeAssignment.pretty ety in *)
       if unify (TypeAssignment.Arr(Ast.Structured.NotVariadic,src,tgt)) ety then
@@ -1623,10 +1626,6 @@ end = struct
   let rec scope_term ~state ctx ~loc t =
     let open Ast.Term in
     match t with
-    | Cast (t,ty) ->
-        let t = scope_loc_term ~state ctx t in
-        let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty) in
-        ScopedTerm.Cast(t,ty)
     | Const c when is_discard c -> ScopedTerm.Discard
     | Const c when is_macro_name c ->
         let { macros } = get_mtm state in
@@ -1653,10 +1652,17 @@ end = struct
           if bound then ScopedTerm.App(Local, c, x, xs)
           else if is_uvar_name c then ScopedTerm.Var(c,x :: xs)
           else ScopedTerm.App(Global, c, x, xs)
-    | Lam (c,b) when is_discard c -> ScopedTerm.Lam (None,scope_loc_term ~state ctx b)
-    | Lam (c,b) ->
+    | Cast (t,ty) ->
+        let t = scope_loc_term ~state ctx t in
+        let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty) in
+        ScopedTerm.Cast(t,ty)
+    | Lam (c,ty,b) when is_discard c ->
+        let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty)) in
+        ScopedTerm.Lam (None,ty,scope_loc_term ~state ctx b)
+    | Lam (c,ty,b) ->
         if has_dot c then error ~loc "Bound variables cannot contain the namespaec separator '.'";
-        ScopedTerm.Lam (Some c,scope_loc_term ~state (F.Set.add c ctx) b)
+        let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty)) in
+        ScopedTerm.Lam (Some c,ty,scope_loc_term ~state (F.Set.add c ctx) b)
     | CData c -> ScopedTerm.CData c (* CData.hcons *)
     | App ({ it = Const _},[]) -> anomaly "Application node with no arguments"
     | App ({ it = Lam _},_) ->
@@ -2863,9 +2869,10 @@ end (* }}} *)
           let xs' = smart_map aux_loc xs in
           if c == c' && x == x' && xs == xs' then it
           else App(scope,c',x',xs')
-      | Lam(n,b) ->
+      | Lam(n,ty,b) ->
           let b' = aux_loc b in
-          if b == b' then it else Lam(n,b')
+          let ty' = option_smart_map (ScopedTypeExpression.smart_map_scoped_loc_ty f) ty in
+          if b == b' && ty' == ty then it else Lam(n,ty',b')
       | Var(c,l) ->
           let l' = smart_map aux_loc l in
           if l == l' then it else Var(c,l')
@@ -3467,7 +3474,7 @@ end = struct
           else D.mkApp c x xs
       (* lambda terms *)
       | Const(Local,c) -> allocate_bound_symbol t.loc ctx c
-      | Lam(c,t) -> D.mkLam @@ todbl (push ctx c) t
+      | Lam(c,_,t) -> D.mkLam @@ todbl (push ctx c) t
       | App(Local,c,x,xs) ->
           let c = lookup_bound t.loc ctx c in
           let x = todbl ctx x in
@@ -3511,7 +3518,7 @@ end = struct
       | App(g,c,x,xs) ->
         mk_loc ~loc ~ty @@ mkApp g c (List.map (apply_to locals w) (x::xs))
       | Var(c,xs) when List.mem c locals -> mk_loc ~loc ~ty @@ Var(c,xs @ [w])
-      | Lam(c,t) -> mk_loc ~loc ~ty @@ Lam(c,apply_to locals w t)
+      | Lam(c,o,t) -> mk_loc ~loc ~ty @@ Lam(c,o,apply_to locals w t)
       | Const _ | Discard | Var _ | CData _ -> orig
       | Cast _ -> assert false (* TODO *)
       | Spill _ -> assert false in
@@ -3569,19 +3576,19 @@ end = struct
           if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
           else spilled, [{ it; loc; ty }]
       (* lambda terms *)
-      | Lam(None,t) ->
+      | Lam(None,o,t) ->
           let spills, t = spill1 ctx t in
-          spills, [{ it = Lam(None,t); loc; ty }]
-      | Lam(Some c,t) ->
+          spills, [{ it = Lam(None,o,t); loc; ty }]
+      | Lam(Some c,o,t) ->
           let spills, t = spill1 ctx t in
           let (t,_), spills =
             map_acc (fun (t,n) { vars; vars_names; expr } ->
               let all_names = vars_names @ n in
               let expr = apply_to all_names c expr in
               let t = apply_to vars_names c t in
-              (t,all_names), { vars; vars_names; expr = mk_loc ~loc @@ App(Global,F.pif,mk_loc ~loc @@ Lam(Some c,expr),[]) })
+              (t,all_names), { vars; vars_names; expr = mk_loc ~loc @@ App(Global,F.pif,mk_loc ~loc @@ Lam(Some c,o,expr),[]) })
             (t,[]) spills in
-          spills, [{ it = Lam(Some c,t); loc; ty }]
+          spills, [{ it = Lam(Some c,o,t); loc; ty }]
       (* holes *)
       | Var(c,xs) ->
           let spills, args = List.split @@ List.map (spill ctx) xs in

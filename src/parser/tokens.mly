@@ -8,6 +8,7 @@
 %token FRESHUV
 %token CUT
 %token COLON
+%token RTRI
 %token BIND
 %token LPAREN
 %token RPAREN

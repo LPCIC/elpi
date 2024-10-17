@@ -29,9 +29,9 @@ let desugar_multi_binder loc (t : Ast.Term.t) =
   | App( { it = Const hd } as binder,args)
     when Func.equal hd Func.pif || Func.equal hd Func.sigmaf && List.length args > 1 ->
       let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
-      let () = match last.it with
-        | Lam _ -> ()
-        | Const x when Func.is_uvar_name x -> ()
+      let ty = match last.it with
+        | Lam (_,ty,_) -> ty
+        | Const x when Func.is_uvar_name x -> None
         | _ -> raise (ParseError(loc,"The last argument of 'pi' or 'sigma' must be a function or a unification variable, while it is: " ^ Ast.Term.show last)) in
       let names = List.map (function
         | { it = Const x; loc } -> Func.show x, loc
@@ -40,7 +40,7 @@ let desugar_multi_binder loc (t : Ast.Term.t) =
       let body = mkApp (Loc.merge binder.loc last.loc) [binder;last] in
       List.fold_left (fun bo (name,nloc) ->
         let loc = Loc.merge nloc bo.loc in
-        mkApp loc [binder;mkLam loc name bo]) body names
+        mkApp loc [binder;mkLam loc name ty bo]) body names
   | (App _ | Const _ | Lam _ | CData _ | Quoted _ | Cast _) -> t
 ;;
 
@@ -57,7 +57,7 @@ let desugar_macro loc lhs rhs =
         | { it = Const x; loc } -> Func.show x, loc
         | { it = (App _ | Lam _ | CData _ | Quoted _ | Cast _) } ->
               raise (ParseError(loc,"Macro parameters must be names"))) args in
-      name, List.fold_right (fun (name,nloc) b -> mkLam (Loc.merge nloc b.loc) name b) names body
+      name, List.fold_right (fun (name,nloc) b -> mkLam (Loc.merge nloc b.loc) name None b) names body
   | _ ->
         raise (ParseError(loc,"Illformed macro left hand side"))
 ;;
@@ -72,14 +72,22 @@ let mkAppF loc (cloc,c) = function
       mkAppF loc (cloc,c) (a :: args)
   | l -> mkAppF loc (cloc,c) l
 
-let binder l = function
+let binder l (loc,ty,b) =
+  match List.rev l with
+  | (name, bloc) :: rest ->
+      let lloc = Loc.merge bloc b.loc in
+      List.rev_map (fun (n,l) -> mkConst l n) rest @ [mkLam lloc (Func.show name) ty b]
+  | _ -> raise (ParseError(loc,"bind '\\' operator must follow a name"))
+
+let binder1 l = function
   | None -> l
-  | Some (loc,b) ->
+  | Some (loc,ty,b) ->
       match List.rev l with
       | { it = Const name; loc = bloc } :: rest ->
-          let lloc = Loc.merge bloc b.loc in
-          List.rev rest @ [mkLam lloc (Func.show name) b]
+        let lloc = Loc.merge bloc b.loc in
+        List.rev rest @ [mkLam lloc (Func.show name) ty b]
       | _ -> raise (ParseError(loc,"bind '\\' operator must follow a name"))
+
 ;;
 
 let underscore loc = { loc; it = Const Func.dummyname }
@@ -269,7 +277,7 @@ sequent:
     let context, conclusion = decode_sequent (loc $loc) t in
     { Chr.eigen = underscore (loc $loc); context; conclusion }
   }
-| LPAREN; c = closed_term; COLON; t = term; RPAREN {
+| LPAREN; c = closed_term; RTRI; t = term; RPAREN {
     let context, conclusion = decode_sequent (loc $loc) t in
     { Chr.eigen = c; context; conclusion }
   }
@@ -350,29 +358,38 @@ list_items_tail:
 | x = term_noconj; CONJ; xs = list_items_tail { x :: xs }
 
 binder_term:
-| t = constant; b = binder_body { mkLam (loc $loc) (Func.show t) (snd b) }
+| t = constant; b = binder_body { let _,ty,bo = b in mkLam (loc $loc) (Func.show t) ty bo }
+
+binder_body_no_ty:
+| bind = BIND; b = term { (loc $loc(bind), None, b) }
 
 binder_body:
-| bind = BIND; b = term { (loc $loc(bind), b) }
+| bind = BIND; b = term { (loc $loc(bind), None, b) }
+| COLON; ty = type_term; bind = BIND; b = term { (loc $loc(bind), Some ty, b) }
 
 binder_term_noconj:
-| t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) b }
+| t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) None b }
+| t = constant; COLON; ty = type_term; BIND; b = term { mkLam (loc $loc) (Func.show t) (Some ty) b }
 
 open_term:
-| hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
-    let args = binder args b in
+| hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
+| hd = SIGMA; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "sigma") :: binder args b) }
+| hd = head_term; args = nonempty_list(closed_term) ; b = option(binder_body_no_ty) {
+    let args = binder1 args b in
     let t = mkApp (loc $loc) (hd :: args) in
-    desugar_multi_binder (loc $loc(hd)) t
+    t
 } (*%prec OR*)
 | l = term; s = infix;  r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
 | s = prefix; r = term { mkAppF (loc $loc) (loc $loc(s),s) [r] }
 | l = term; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
 open_term_noconj:
-| hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
-    let args = binder args b in
+| hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
+| hd = SIGMA; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "sigma") :: binder args b) }
+| hd = head_term; args = nonempty_list(closed_term); b = option(binder_body_no_ty) {
+    let args = binder1 args b in
     let t = mkApp (loc $loc) (hd :: args) in
-    desugar_multi_binder (loc $loc(hd)) t
+    t
 } (*%prec OR*)
 | l = term_noconj; s = infix_noconj;  r = term_noconj { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
 | s = prefix; r = term_noconj { mkAppF (loc $loc) (loc $loc(s),s) [r] }
@@ -388,10 +405,12 @@ clause_hd_closed_term:
 | LPAREN; t = term; RPAREN { t }
 
 clause_hd_open_term:
-| hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
-    let args = binder args b in
+| hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
+| hd = SIGMA; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "sigma") :: binder args b) }
+| hd = head_term; args = nonempty_list(closed_term); b = option(binder_body_no_ty) {
+    let args = binder1 args b in
     let t = mkApp (loc $loc) (hd :: args) in
-    desugar_multi_binder (loc $loc(hd)) t
+    t
 } (*%prec OR*)
 | l = clause_hd_term; s = infix_novdash; r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
 | s = prefix; r = term { mkAppF (loc $loc) (loc $loc(s),s) [r] }
@@ -413,8 +432,6 @@ constant:
 | UNTYPED { Func.from_string "untyped" }
 | c = IO { Func.from_string @@ String.make 1 c }
 | CUT { Func.cutf }
-| PI { Func.pif }
-| SIGMA { Func.sigmaf }
 | FRESHUV { Func.dummyname }
 | LPAREN; s = mixfix_SYMB; RPAREN { s }
 | LPAREN; AS; RPAREN  { Func.from_string "as" }
@@ -427,6 +444,8 @@ mixfix_SYMB:
 | x = infix { x }
 | x = prefix { x }
 | x = postfix { x }
+| PI { Func.from_string "pi" }
+| SIGMA { Func.from_string "sigma" }
 
 infix_SYMB:
 | x = infix { x }
