@@ -62,15 +62,15 @@ let () = declare "deep_index"
   ~description:"indexing deeper rules out"
   ()
 
-let () = declare "map (rbtree)"
+let () = declare "map_rbtree"
   ~source_elpi:"map.elpi"
   ~description:"stdlib map"
   ()
-  let () = declare "map (defined list)"
+  let () = declare "map_defined_list"
   ~source_elpi:"map_list.elpi"
   ~description:"stdlib map reference"
   ()
-let () = declare "map (builtin list)"
+let () = declare "map_builtin_list"
   ~source_elpi:"map_list_opt.elpi"
   ~description:"stdlib map reference"
   ()

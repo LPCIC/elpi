@@ -1,3 +1,5 @@
+kind label type.
+kind term type.
 type l_imp term.
 type l_mp term.
 type l_refimp term.

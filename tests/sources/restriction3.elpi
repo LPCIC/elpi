@@ -2,6 +2,9 @@ pred  if i:prop, i:prop, i:prop.
 if B T _ :- B, !, T.
 if _ _ E :- E.
 
+kind term type.
+pred foo o:term, o:term.
+
 type debug-print string -> A -> prop.
 debug-print A B :- print A B.
 

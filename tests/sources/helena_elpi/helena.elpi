@@ -56,11 +56,54 @@
 
 % AUXILIARY PREDICATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+type k+0, l+0, m+0 any.
+type k+1, l+1, m+1 any.
+type k+2, l+2, m+2 any.
+type k+y, l+y, m+y any.
+pred m+pred o:any, o:any.
+
 m+pred m+1 m+0.
 
 m+pred m+y m+y.
 
 % EXTENDED REDUCTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+pred maybe+sn o:any,o:any,o:any,o:any,o:any,o:any,o:any,o:any.
+pred age+check o:any,o:any,o:any,o:any,o:any,o:any,o:any,o:any,o:any,o:any.
+pred conv+ o:any,o:any,o:any,o:any,o:any,o:any.
+pred conv+s o:any,o:any.
+pred conv+r o:any,o:any,o:any,o:any,o:any,o:any.
+pred conv+l o:any,o:any,o:any,o:any,o:any,o:any.
+pred conv+0 o:any,o:any,o:any,o:any,o:any,o:any.
+pred k+succ o:any,o:any.
+type k+prop any.
+type k+set any.
+pred l+pred o:any,o:any.
+pred l+zero o:any.
+pred r+exp o:any,o:any,o:any,o:any,o:any.
+type e+sn any.
+type e+dx any.
+pred rtm+0 o:any,o:any, o:any,o:any,o:any,o:any.
+type satom any.
+type appr any -> any -> any.
+type scons any -> any -> any.
+type appr any -> any -> any -> any.
+type appx any -> any -> any -> any.
+type cast any -> any -> any.
+type sort any -> any.
+type abst any -> any -> (any -> any) -> any.
+type abbr any -> (any -> any) -> any.
+type prod any -> any -> (any -> any) -> any.
+pred appl+ o:any,o:any,o:any,o:any.
+pred gv+ o:any.
+pred tv+ o:any.
+type gtop any.
+type gdef+1 any -> any -> (any -> any) -> any.
+type gdef+2 any -> any -> any -> any.
+
+type gdec+1 any -> any -> (any -> any) -> any.
+type gdec+2 any -> any -> any -> any.
+type g+line any -> any -> any -> any.
 
 % rtm+0 T1 S1 M1 M2 S2 T2 :- before, print begin-rtm1 T1 S1 M1, fail.
 

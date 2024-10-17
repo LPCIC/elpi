@@ -4,14 +4,21 @@
    ; A B :- A.
    ; A B :- B
 */
+:untyped
 q X :- c Y, !, x Y X ; e X.
+:untyped
 q ok.
 
+:untyped
 c one.
+:untyped
 c two.
 
+:untyped
 x two ko1.
 
+:untyped
 e ko2.
 
+:untyped
 main :- q X, X = ok.

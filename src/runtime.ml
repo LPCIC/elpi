@@ -59,7 +59,7 @@ let table = Fork.new_local {
 }
 
 let show ?(table = !table) n =
-  try Constants.Map.find n Global_symbols.table.c2s
+  try Ast.Func.show @@ fst @@ Constants.Map.find n Global_symbols.table.c2s
   with Not_found ->
     try Hashtbl.find table.c2s n
     with Not_found ->
@@ -4284,7 +4284,7 @@ let execute_once ?max_steps ?delay_outside_fragment exec =
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
- let { search; next_solution; get; destroy } = make_runtime ?delay_outside_fragment exec in
+ let { search; next_solution; get; destroy = _ } = make_runtime ?delay_outside_fragment exec in
  let k = ref noalts in
  let do_with_infos f =
    let time0 = Unix.gettimeofday() in

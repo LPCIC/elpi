@@ -1,7 +1,9 @@
 % q(a): OK; q(b): FAIL; q(X): exception; q(a,a): OK; q(true): OK.
 
+pred q i:(pred).
 q(X) :- X.
 
+pred a.
 a.
 
 main :- q a, q (a,a), q true.

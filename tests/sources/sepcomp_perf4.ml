@@ -1,6 +1,7 @@
 let us = {|
 
 main :- p0, p1, p2, p3, p4, p5, p6, p7, p8, p9.
+type p0, p1, p2, p3, p4, p5, p6, p7, p8, p9 prop.
 
 |}
 
@@ -39,4 +40,5 @@ let () =
     else extend (i-1) (Compile.extend ~base:p exs) in
   let p = extend 2 p in
   let q = Compile.query p (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "main")) in
+  Printf.eprintf "TC time: %f\n" (Compile.total_type_checking_time q);
   exec q

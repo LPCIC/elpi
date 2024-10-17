@@ -20,7 +20,7 @@ exception CompileError of Loc.t option * string
 type builtins = string * Data.BuiltInPredicate.declaration list
 
 type header
-val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descriptor -> QuotationHooks.descriptor -> HoasHooks.descriptor -> CalcHooks.descriptor -> builtins list -> Ast.Program.t ->  header
+val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descriptor -> Compiler_data.QuotationHooks.descriptor -> HoasHooks.descriptor -> CalcHooks.descriptor -> builtins list -> Ast.Program.t ->  header
 
 type program
 val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program
@@ -37,6 +37,8 @@ val query_of_term :
 val query_of_data :
   program -> Loc.t -> 'a Query.t -> 'a query
 
+val total_type_checking_time : 'a query -> float
+
 val optimize_query : 'a query -> 'a executable
 
 val term_of_ast : depth:int -> State.t -> string -> State.t * term
@@ -47,7 +49,7 @@ val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -
 
 val lookup_query_predicate : program -> string -> program * Data.constant
 
-val lp : QuotationHooks.quotation
+val lp : Compiler_data.QuotationHooks.quotation
 
 val is_Arg : State.t -> term -> bool
 val get_Args : State.t -> term StrMap.t

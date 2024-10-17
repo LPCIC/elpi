@@ -1,5 +1,5 @@
 constraint foo good bad {
-    rule \ ([C1,C2] : D ?- foo G B) <=> ([] : D ?- foo G B).
+    rule \ ([C1,C2] :> D ?- foo G B) <=> ([] :> D ?- foo G B).
 }
 
 pred good i:int.

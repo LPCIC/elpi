@@ -1,5 +1,6 @@
-type transl A -> prop.
-
+type transl any -> prop.
+type p any -> any.
+type pp any -> any.
 transl (y \ _\ M y) :- % strip the hole
  P = (w \ p w),
  transl (z \ M (P z)).
@@ -7,9 +8,11 @@ transl (y \ _\ M y) :- % strip the hole
 transl (x \ pp (X x)).
 
 % with a hole
+pred test1.
 test1 :- transl (x0 \ _ \ pp (p x0)).
 
 % with no hole
+pred test2.
 test2 :- transl (x0 \     pp (p x0)).
 
 main :- test1, test2.
