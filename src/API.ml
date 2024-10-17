@@ -25,12 +25,12 @@ let set_trace argv =
 module Setup = struct
 
 type state_descriptor = Data.State.descriptor
-type quotations_descriptor = Data.QuotationHooks.descriptor ref
+type quotations_descriptor = Compiler_data.QuotationHooks.descriptor ref
 type hoas_descriptor = Data.HoasHooks.descriptor ref
 type calc_descriptor = Data.CalcHooks.descriptor ref
 
 let default_state_descriptor = Data.State.new_descriptor ()
-let default_quotations_descriptor = Data.QuotationHooks.new_descriptor ()
+let default_quotations_descriptor = Compiler_data.QuotationHooks.new_descriptor ()
 let default_hoas_descriptor = Data.HoasHooks.new_descriptor ()
 let default_calc_descriptor = Data.CalcHooks.new_descriptor ()
 
@@ -106,6 +106,11 @@ module Ast = struct
   type query = Ast.Goal.t
   module Loc = Util.Loc
   module Goal = Ast.Goal
+  module Scope = Compiler_data.Scope
+  module Term = Compiler_data.ScopedTerm.SimpleTerm
+  module Type = Compiler_data.ScopedTypeExpression.SimpleType
+  module Name = Ast.Func
+  module Opaque = Util.CData
 end
 
 module Parse = struct
@@ -1092,30 +1097,30 @@ module RawQuery = struct
 end
 
 module Quotation = struct
-  type quotation = ED.QuotationHooks.quotation
+  type quotation = Compiler_data.QuotationHooks.quotation
   include Compiler
   let declare_backtick ?(descriptor=Setup.default_quotations_descriptor) ~name f =
-    ED.QuotationHooks.declare_backtick_compilation ~descriptor name
+    Compiler_data.QuotationHooks.declare_backtick_compilation ~descriptor name
       (fun s x -> f s (EA.Func.show x))
 
   let declare_singlequote ?(descriptor=Setup.default_quotations_descriptor) ~name f =
-    ED.QuotationHooks.declare_singlequote_compilation ~descriptor name
+    Compiler_data.QuotationHooks.declare_singlequote_compilation ~descriptor name
       (fun s x -> f s (EA.Func.show x))
 
-  let set_default_quotation ?(descriptor=Setup.default_quotations_descriptor) x = ED.QuotationHooks.set_default_quotation ~descriptor x
+  let set_default_quotation ?(descriptor=Setup.default_quotations_descriptor) x = Compiler_data.QuotationHooks.set_default_quotation ~descriptor x
 
-  let register_named_quotation ?(descriptor=Setup.default_quotations_descriptor) ~name x  = ED.QuotationHooks.register_named_quotation ~descriptor ~name x
+  let register_named_quotation ?(descriptor=Setup.default_quotations_descriptor) ~name x  = Compiler_data.QuotationHooks.register_named_quotation ~descriptor ~name x
 
-  let term_at ~depth s x = Compiler.term_of_ast ~depth s x
+  (* let term_at ~depth s x = Compiler.term_of_ast ~depth s x *)
 
-  let quote_syntax_runtime s q =
+  (* let quote_syntax_runtime s q =
     let module R = (val !r) in
     Compiler.quote_syntax (`Runtime R.mkConst) s q
   let quote_syntax_compiletime s q =
     let s, l, t = Compiler.quote_syntax `Compiletime s q in
-    s, l, t
+    s, l, t *)
 
-  let new_quotations_descriptor = ED.QuotationHooks.new_descriptor
+  let new_quotations_descriptor = Compiler_data.QuotationHooks.new_descriptor
 
 end
 

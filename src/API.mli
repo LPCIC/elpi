@@ -30,6 +30,38 @@ module Ast : sig
 
     val initial : string -> t
   end
+
+  module Name : sig
+    type t
+  end 
+  module Scope : sig
+    type t = Local | Global
+  end
+  module Opaque : sig
+    type t
+  end
+  
+  module Type : sig
+    type t_ =
+      | Any
+      | Con of Name.t
+      | App of Name.t * t * t list
+      | Arr of t * t
+    and t = { it : t_; loc : Loc.t }
+  end
+
+  module Term : sig
+    type t_ =
+      | Const of Scope.t * Name.t
+      | Discard
+      | Var of Name.t * t list
+      | App of Scope.t * Name.t * t * t list
+      | Lam of Name.t option * t
+      | Opaque of Opaque.t
+      | Cast of t * Type.t
+    and t = { it : t_; loc : Loc.t; }
+  end
+
 end
 
 module Setup : sig
@@ -956,7 +988,7 @@ module RawOpaqueData : sig
   type name = string
   type doc = string
 
-  type t
+  type t = Ast.Opaque.t
 
  (** If the data_hconsed is true, then the [cin] function below will
      automatically hashcons the data using the [eq] and [hash] functions. *)
@@ -1183,8 +1215,7 @@ end
 
 module Quotation : sig
 
-  type quotation =
-    depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
+  type quotation = State.t -> Ast.Loc.t -> string -> Ast.Term.t
 
   (** The default quotation [{{code}}] *)
   val set_default_quotation : ?descriptor:Setup.quotations_descriptor -> quotation -> unit
@@ -1195,13 +1226,14 @@ module Quotation : sig
   (** The anti-quotation to lambda Prolog *)
   val lp : quotation
 
-  (** See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
+  (* TODO decide what to do
+  * See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker)
   val quote_syntax_runtime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
   val quote_syntax_compiletime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
 
   (** To implement the string_to_term built-in (AVOID, makes little sense
    * if depth is non zero, since bound variables have no name!) *)
-  val term_at : depth:int -> State.t -> string -> State.t * Data.term
+  val term_at : depth:int -> State.t -> string -> State.t * Data.term *)
 
   (** Like quotations but for identifiers that begin and end with
    * "`" or "'", e.g. `this` and 'that'. Useful if the object language
@@ -1209,10 +1241,10 @@ module Quotation : sig
    * (e.g. CD.string like but with a case insensitive comparison) *)
 
   val declare_backtick : ?descriptor:Setup.quotations_descriptor -> name:string ->
-    (State.t -> string -> State.t * Data.term) -> unit
+    (State.t -> string -> State.t * Ast.Term.t) -> unit
 
   val declare_singlequote : ?descriptor:Setup.quotations_descriptor -> name:string ->
-    (State.t -> string -> State.t * Data.term) -> unit
+    (State.t -> string -> State.t * Ast.Term.t) -> unit
 
   val new_quotations_descriptor : unit -> Setup.quotations_descriptor
 

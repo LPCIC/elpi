@@ -119,10 +119,10 @@ let mkLam loc x t = { loc; it = Lam (Func.from_string x,t) }
 let mkNil loc = {loc; it = Const Func.nilf }
 let mkQuoted loc s =
   let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n;
-                                 source_stop = loc.Loc.source_stop - m;
-                                 line_starts_at = loc.Loc.line_starts_at - m; } in
+                                 source_stop = loc.Loc.source_stop(* - m*);
+                                 line_starts_at = loc.Loc.line_starts_at(* - m*); } in
   (* {{...}} stripped by the parser *)
-  let loc = strip 2 2 loc in
+  (* let loc = strip 2 2 loc in *)
   let rec find_data i =
     match s.[i] with
     | '{' -> find_data (i+1)
@@ -138,8 +138,8 @@ let mkQuoted loc s =
        let space_after = find_space 0 - 1 in
        let kind = String.sub s (i+1) space_after in
        let data = String.sub s (i+space_after+2) (String.length s - i - i - space_after-2) in
-       { qloc = strip (i+space_after+2) i loc; data; kind = Some kind }
-    | _ -> { qloc = strip i i loc; data = String.sub s i (String.length s - i - i); kind = None }
+       { qloc = strip (i+space_after+1+2) i loc; data; kind = Some kind }
+    | _ -> { qloc = strip (i+2) (i+2) loc; data = String.sub s i (String.length s - i - i); kind = None }
   in
     { loc; it = Quoted (find_data 0) }
 let mkSeq loc (l : t list) =

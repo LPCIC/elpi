@@ -929,45 +929,6 @@ let eval : run Constants.Map.t State.component =
 
 end
 
-module QuotationHooks = struct
-  
-type quotation = depth:int -> State.t -> Loc.t -> string -> State.t * term
-
-type descriptor = {
-  named_quotations : quotation StrMap.t;
-  default_quotation : quotation option;
-  singlequote_compilation : (string * (State.t -> F.t -> State.t * term)) option;
-  backtick_compilation : (string * (State.t -> F.t -> State.t * term)) option;
-}
-
-let new_descriptor () = ref {
-  named_quotations = StrMap.empty;
-  default_quotation = None;
-  singlequote_compilation = None;
-  backtick_compilation = None;
-}
-
-let declare_singlequote_compilation ~descriptor name f =
-  match !descriptor with
-  | { singlequote_compilation = None } ->
-      descriptor := { !descriptor with singlequote_compilation = Some(name,f) }
-  | { singlequote_compilation = Some(oldname,_) } ->
-        error("Only one custom compilation of 'ident' is supported. Current: "
-          ^ oldname ^ ", new: " ^ name)
-let declare_backtick_compilation ~descriptor name f =
-  match !descriptor with
-  | { backtick_compilation = None } ->
-      descriptor := { !descriptor with backtick_compilation = Some(name,f) }
-  | { backtick_compilation = Some(oldname,_) } ->
-        error("Only one custom compilation of `ident` is supported. Current: "
-          ^ oldname ^ ", new: " ^ name)
-
-let set_default_quotation ~descriptor f =
-  descriptor := { !descriptor with default_quotation = Some f }
-let register_named_quotation ~descriptor ~name:n f =
-  descriptor := { !descriptor with named_quotations = StrMap.add n f !descriptor.named_quotations }  
-
-end
 module BuiltInPredicate = struct
 
 type name = string

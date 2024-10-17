@@ -547,6 +547,9 @@ type prechr_rule = {
 
 open Data
 module C = Constants
+module Arity = struct type t = int * Loc.t [@@deriving show, ord] end
+
+open Compiler_data
 
 (* type block_constraint = {
    clique : constant list;
@@ -554,373 +557,6 @@ module C = Constants
    rules : prechr_rule list
 }
 [@@deriving show, ord] *)
-
-module ScopeContext = struct
-
-  type scope = Local | Global
-  [@@ deriving show, ord]
-
-type ctx = { vmap : (F.t * F.t) list; uvmap : (F.t * F.t) list ref }
-let empty () = { vmap = []; uvmap = ref [] }
-
-let eq_var { vmap } c1 c2 = List.mem (c1,c2) vmap
-
-
-let purge f c l = List.filter (fun x -> not @@ F.equal (f x) c) l
-let push_ctx c1 c2 ctx = { ctx with vmap = (c1 , c2) :: (purge fst c1 @@ purge snd c2 ctx.vmap) }
-let eq_uvar ctx c1 c2 =
-  if List.exists (fun (x,_) -> F.equal x c1) !(ctx.uvmap) ||
-     List.exists (fun (_,y) -> F.equal y c2) !(ctx.uvmap) then
-    List.mem (c1,c2) !(ctx.uvmap)
-  else begin
-    ctx.uvmap := (c1,c2) :: !(ctx.uvmap);
-    true
-  end
-end
-
-module Arity = struct type t = int * Loc.t [@@deriving show, ord] end
-
-module ScopedTypeExpression = struct
-  open ScopeContext
-  type t_ =
-    | Prop | Any
-    | Const of scope * F.t
-    | App of F.t * e * e list
-    | Arrow of Ast.Structured.variadic * e * e
-    | Pred of Ast.Structured.functionality * (Ast.Mode.t * e) list
-  and e = { it : t_; loc : Loc.t }
-  [@@ deriving show]
-
-  type v_ =
-    | Lam of F.t * v_
-    | Ty of e
-  [@@ deriving show]
-
-  type t = { name : F.t; value : v_; nparams : int; loc : Loc.t; indexing : Ast.Structured.tattribute option }
-  [@@ deriving show]
-
-  let rec eqt ctx t1 t2 =
-    match t1.it, t2.it with
-    | Const(Global,c1), Const(Global,c2) -> F.equal c1 c2
-    | Const(Local,c1), Const(Local,c2) -> eq_var ctx c1 c2
-    | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
-    | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 == b2 && eqt ctx s1 s2 && eqt ctx t1 t2
-    | Pred(f1,l1), Pred(f2,l2) -> f1 == f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
-    | Prop, Prop -> true
-    | Any, Any -> true
-    | _ -> false
-
-  let rec eq ctx t1 t2 =
-    match t1, t2 with
-    | Lam(c1,b1), Lam(c2,b2) -> eq (push_ctx c1 c2 ctx) b1 b2
-    | Ty t1, Ty t2 -> eqt ctx t1 t2
-    | _ -> false
-
-  let equal { name = n1; value = x } { name = n2; value = y } = F.equal n1 n2 && eq (empty ()) x y
-
-  let compare _ _ = assert false
-
-  let rec smart_map_scoped_loc_ty f ({ it; loc } as orig) =
-    let it' = smart_map_scoped_ty f it in
-    if it' == it then orig else { it = it'; loc }
-  and smart_map_scoped_ty f orig =
-    match orig with
-    | Prop -> orig
-    | Any -> orig
-    | Const(ScopeContext.Local,_) -> orig
-    | Const(ScopeContext.Global,c) ->
-        let c' = f c in
-        if c == c' then orig else Const(ScopeContext.Global,c')
-    | App(c,x,xs) ->
-        let c' = f c in
-        let x' = smart_map_scoped_loc_ty f x in
-        let xs' = smart_map (smart_map_scoped_loc_ty f) xs in
-        if c' == c && x' == x && xs' == xs then orig else App(c',x',xs')
-    | Arrow(v,x,y) ->
-        let x' = smart_map_scoped_loc_ty f x in
-        let y' = smart_map_scoped_loc_ty f y in
-        if x' == x && y' == y then orig else Arrow(v,x',y')
-    | Pred(c,l) ->
-        let l' = smart_map (fun (m,x as orig) ->
-          let x' = smart_map_scoped_loc_ty f x in
-          if x' == x then orig else m,x') l in
-        if l' == l then orig else Pred(c,l')
-
-  let rec smart_map_tye f = function
-    | Lam(c,t) as orig ->
-        let t' = smart_map_tye f t in
-        if t == t' then orig else Lam(c,t')
-    | Ty t as orig ->
-      let t' = smart_map_scoped_loc_ty f t in
-      if t == t' then orig else Ty t'
-
-  let smart_map f ({ name; value; nparams; loc; indexing } as orig) =
-    let name' = f name in
-    let value' = smart_map_tye f value in
-    if name == name' && value' == value then orig
-    else { name = name'; value = value'; nparams; loc; indexing }
-
-end
-
-module MutableOnce : sig 
-  type 'a t
-  [@@ deriving show]
-  val make : F.t -> 'a t
-  val create : 'a -> 'a t
-  val set : 'a t -> 'a -> unit
-  val unset : 'a t -> unit
-  val get : 'a t -> 'a
-  val is_set : 'a t -> bool
-  val pretty : Format.formatter -> 'a t -> unit
-end = struct
-  type 'a t = F.t * 'a option ref
-  [@@ deriving show]
-
-  let make f = f, ref None
-
-  let create t = F.from_string "_", ref (Some t)
-
-  let is_set (_,x) = Option.is_some !x
-  let set (_,r) x =
-    match !r with
-    | None -> r := Some x
-    | Some _ -> anomaly "MutableOnce"
-  
-  let get (_,x) = match !x with Some x -> x | None -> anomaly "get"
-  let unset (_,x) = x := None
-
-  let pretty fmt (f,x) =
-    match !x with
-    | None -> Format.fprintf fmt "%a" F.pp f
-    | Some _ -> anomaly "pp"
-end
-
-module TypeAssignment = struct
-
-  type 'a overloading =
-    | Single of 'a
-    | Overloaded of 'a list
-  [@@ deriving show, fold]
-
-  type 'a t_ =
-    | Prop | Any
-    | Cons of F.t
-    | App of F.t * 'a t_ * 'a t_ list
-    | Arr of Ast.Structured.variadic * 'a t_ * 'a t_
-    | UVar of 'a
-  [@@ deriving show, fold]
-
-  type skema = Lam of F.t * skema | Ty of F.t t_
-  [@@ deriving show]
-  type overloaded_skema = skema overloading
-  [@@ deriving show]
-
-  type t = Val of t MutableOnce.t t_
-  [@@ deriving show]
-
-  let nparams t =
-      let rec aux = function Ty _ -> 0 | Lam(_,t) -> 1 + aux t in
-      aux t
-  
-  let rec subst map = function
-    | (Prop | Any | Cons _) as x -> x
-    | App(c,x,xs) -> App (c,subst map x,List.map (subst map) xs)
-    | Arr(v,s,t) -> Arr(v,subst map s, subst map t)
-    | UVar c ->
-        match map c with
-        | Some x -> x
-        | None -> anomaly "TypeAssignment.subst"
-
-  let fresh sk =
-    let rec fresh map = function
-      | Lam(c,t) -> fresh (F.Map.add c (UVar (MutableOnce.make c)) map) t
-      | Ty t -> if F.Map.is_empty map then Obj.magic t, map else subst (fun x -> F.Map.find_opt x map) t, map
-  in
-    fresh F.Map.empty sk
-
-  let fresh_overloaded = function
-    | Single sk -> Single (fst @@ fresh sk)
-    | Overloaded l -> Overloaded (List.map (fun x -> fst @@ fresh x) l)
-
-  let rec apply m sk args =
-    match sk, args with
-    | Ty t, [] -> if F.Map.is_empty m then Obj.magic t else subst (fun x -> F.Map.find_opt x m) t
-    | Lam(c,t), x::xs -> apply (F.Map.add c x m) t xs
-    | _ -> assert false (* kind checker *)
-
-  let apply sk args = apply F.Map.empty sk args
-
-  let merge_skema x y =
-    match x, y with
-    | Single x, Single y -> Overloaded [x;y]
-    | Single x, Overloaded ys -> Overloaded (x::ys)
-    | Overloaded xs, Single y -> Overloaded(xs@[y])
-    | Overloaded xs, Overloaded ys -> Overloaded (xs @ ys)
-  
-  let unval (Val x) = x
-  let rec deref m =
-    match unval @@ MutableOnce.get m with
-    | UVar m when MutableOnce.is_set m -> deref m
-    | x -> x
-
-  let set m v = MutableOnce.set m (Val v)
-
-
-  open Format
-
-  let rec pretty fmt = function
-    | Prop -> fprintf fmt "prop"
-    | Any -> fprintf fmt "any"
-    | Cons c -> F.pp fmt c
-    | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist pretty_parens " ") (x::xs)
-    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" pretty_parens s pretty t
-    | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" pretty_parens s pretty t
-    | UVar m when MutableOnce.is_set m -> pretty fmt @@ deref m
-    | UVar m -> MutableOnce.pretty fmt m
-  and pretty_parens fmt = function
-    | UVar m when MutableOnce.is_set m -> pretty_parens fmt @@ deref m
-    | (App _ | Arr _) as t -> fprintf fmt "(%a)" pretty t
-    | t -> pretty fmt t
-
-  let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
-
-end
-module ScopedTerm = struct
-  open ScopeContext
-
-  type spill_info =
-    | NoInfo (* before typing *)
-    | Main of int (* how many arguments it stands for *)
-    | Phantom of int (* phantom term used during type checking *)
-  [@@ deriving show]
-  type t_ =
-   | Const of scope * F.t
-   | Discard
-   | Var of F.t * t list
-   | App of scope * F.t * t * t list
-   | Lam of F.t option * t
-   | CData of CData.t
-   | Spill of t * spill_info ref
-   | Cast of t * ScopedTypeExpression.e
-   and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
-  [@@ deriving show]
-
-  let type_of { ty } = assert(MutableOnce.is_set ty); TypeAssignment.deref ty
-
-  open Format
-  let rec pretty fmt { it } = pretty_ fmt it
-  and pretty_ fmt = function
-    | Const(_,f) -> fprintf fmt "%a" F.pp f
-    | Discard -> fprintf fmt "_"
-    | Lam(None,t) -> fprintf fmt "_\\ %a" pretty t
-    | Lam(Some f,t) -> fprintf fmt "%a\\ %a" F.pp f pretty t
-    | App(Global,f,x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
-    | App(_,f,x,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") (x::xs)
-    | Var(f,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") xs
-    | CData c -> fprintf fmt "%a" CData.pp c
-    | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
-    | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t
-    | Spill (t,{ contents = Phantom n}) -> fprintf fmt "{%a}/*%d*/" pretty t n
-    | Cast (t,ty) -> fprintf fmt "(%a : %a)" pretty t ScopedTypeExpression.pp_e ty (* TODO pretty *)
-    
-
-  let equal t1 t2 =
-    let rec eq ctx t1 t2 =
-      match t1.it, t2.it with
-      | Const(Global,c1), Const(Global,c2) -> F.equal c1 c2
-      | Const(Local,c1), Const(Local,c2) -> eq_var ctx c1 c2
-      | Discard, Discard -> true
-      | Var(n1,l1), Var(n2,l2) -> eq_uvar ctx n1 n2 && Util.for_all2 (eq ctx) l1 l2
-      | App(Global,c1,x,xs), App(Global,c2,y,ys) -> F.equal c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
-      | App(Local,c1,x,xs), App(Local,c2,y,ys) -> eq_var ctx c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
-      | Lam(None,b1), Lam (None, b2) -> eq ctx b1 b2
-      | Spill(b1,n1), Spill (b2,n2) -> n1 == n2 && eq ctx b1 b2
-      | Lam(Some c1,b1), Lam(Some c2, b2) -> eq (push_ctx c1 c2 ctx) b1 b2
-      | CData c1, CData c2 -> CData.equal c1 c2
-      | _ -> false
-    in
-      eq (empty ()) t1 t2
-
-    let compare _ _ = assert false
-
-    let unlock { it } = it
-
-    (* naive, but only used by macros *)
-    let fresh = ref 0
-    let fresh () = incr fresh; F.from_string (Format.asprintf "%%bound%d" !fresh)
-
-    let beta t args =
-      let rec load_subst ~loc t (args : t list) map =
-        match t, args with
-        | Lam(None,t), _ :: xs -> load_subst_loc t xs map
-        | Lam(Some c,t), x :: xs -> load_subst_loc t xs (F.Map.add c x map)
-        | t, xs -> app ~loc (subst map t) xs
-      and load_subst_loc { it; loc } args map =
-        load_subst ~loc it args map
-      and subst map t =
-        match t with
-        | Lam(None,t) -> Lam(None,subst_loc map t)
-        | Lam(Some c,t) ->
-            let d = fresh () in
-            Lam(Some d,subst_loc map @@ rename_loc c d t)
-        | Const(Local,c) when F.Map.mem c map -> unlock @@ F.Map.find c map
-        | Const _ -> t
-        | App(Local,c,x,xs) when F.Map.mem c map ->
-            let hd = F.Map.find c map in
-            unlock @@ app_loc hd (List.map (subst_loc map) (x::xs))
-        | App(g,c,x,xs) -> App(g,c,subst_loc map x, List.map (subst_loc map) xs)
-        | Var(c,xs) -> Var(c,List.map (subst_loc map) xs)
-        | Spill(t,i) -> Spill(subst_loc map t,i)
-        | Cast(t,ty) -> Cast(subst_loc map t,ty)
-        | Discard | CData _ -> t
-      and rename c d t =
-        match t with
-        | Const(Local,c') when F.equal c c' -> Const(Local,d)
-        | Const _ -> t
-        | App(Local,c',x,xs) when F.equal c c' ->
-            App(Local,d,rename_loc c d x, List.map (rename_loc c d) xs)
-        | App(g,v,x,xs) -> App(g,v,rename_loc c d x, List.map (rename_loc c d) xs)
-        | Lam(Some c',_) when F.equal c c' -> t
-        | Lam(v,t) -> Lam(v,rename_loc c d t)
-        | Spill(t,i) -> Spill(rename_loc c d t,i)
-        | Cast(t,ty) -> Cast(rename_loc c d t,ty)
-        | Var(v,xs) -> Var(v,List.map (rename_loc c d) xs)
-        | Discard | CData _ -> t
-      and rename_loc c d { it; ty; loc } = { it = rename c d it; ty; loc } 
-      and subst_loc map { it; ty; loc } = { it = subst map it; ty; loc }
-      and app_loc { it; loc; ty } args : t = { it = app ~loc it args; loc; ty }
-      and app ~loc t (args : t list) =
-        if args = [] then t else
-        match t with
-        | Const(g,c) -> App(g,c,List.hd args,List.tl args)
-        | App(g,c,x,xs) -> App(g,c,x,xs @ args)
-        | Var(c,xs) -> Var(c,xs @ args)
-        | CData _ -> error ~loc "cannot apply cdata"
-        | Spill _ -> error ~loc "cannot apply spill"
-        | Discard -> error ~loc "cannot apply discard"
-        | Cast _ -> error ~loc "cannot apply cast"
-        | Lam _ -> load_subst ~loc t args F.Map.empty
-      in
-        load_subst_loc t args F.Map.empty
-
-end
-
-
-module TypeList = struct
-
-  type t = ScopedTypeExpression.t list
-  [@@deriving show, ord]
-  
-  let make t = [t]
-    
-  let smart_map = smart_map
-  
-  let append x t = x :: List.filter (fun y -> not @@ ScopedTypeExpression.equal x y) t
-  let merge t1 t2 = List.fold_left (fun acc x -> append x acc) (List.rev t1) t2
-
-  let fold = List.fold_left
-  
-end
   
 module TypeChecker : sig
 
@@ -1847,7 +1483,7 @@ module CustomFunctorCompilation = struct
     let len = String.length s in
     len > 2 && s.[0] == '`' && s.[len-1] == '`'
 
-  let singlequote : (State.t -> F.t -> State.t * term) option State.component = State.declare
+  let singlequote : (State.t -> F.t -> State.t * ScopedTerm.SimpleTerm.t) option State.component = State.declare
   ~descriptor:elpi_state_descriptor
   ~name:"elpi:singlequote"
   ~pp:(fun _ _ -> ())
@@ -1858,7 +1494,7 @@ module CustomFunctorCompilation = struct
   ~execution_is_over:(fun x -> Some x)
   ~init:(fun () -> None)
 
-  let backtick  : (State.t -> F.t -> State.t * term) option State.component = State.declare
+  let backtick  : (State.t -> F.t -> State.t * ScopedTerm.SimpleTerm.t) option State.component = State.declare
   ~descriptor:elpi_state_descriptor
   ~name:"elpi:backtick"
   ~pp:(fun _ _ -> ())
@@ -1894,12 +1530,31 @@ let has_dot f =
   try let _ = String.index (F.show f) namespace_separatorc in true
   with Not_found -> false
 
+type mtm = {
+  macros : (ScopedTerm.t * Loc.t) F.Map.t;
+  ctx: F.Set.t;
+}
+let empty_mtm = { macros = F.Map.empty; ctx = F.Set.empty }
+let todopp name _fmt _ = error ("pp not implemented for field: "^name)
+
+let get_mtm, set_mtm, drop_mtm, update_mtm =
+  let mtm =
+    State.declare
+     ~name:"elpi:mtm" ~pp:(todopp "elpi:mtm")
+     ~descriptor:D.elpi_state_descriptor
+     ~clause_compilation_is_over:(fun _ -> empty_mtm)
+     ~goal_compilation_begins:(fun x -> x)
+     ~goal_compilation_is_over:(fun ~args:_ _ -> None)
+      ~compilation_is_over:(fun _ -> assert false)
+      ~execution_is_over:(fun _ -> assert false)
+      ~init:(fun () -> empty_mtm) in
+  State.(get mtm, set mtm, drop mtm, update mtm)
 
 module Scope_Quotation_Macro : sig
 
   val run : State.t -> Ast.Structured.program -> State.t * Scoped.program
   val check_duplicate_mode : F.t -> (mode * Loc.t) -> (mode * Loc.t) F.Map.t -> unit
-  val scope_loc_term : macros:(ScopedTerm.t * Loc.t) F.Map.t -> Ast.Term.t -> ScopedTerm.t
+  val scope_loc_term : state:State.t -> Ast.Term.t -> ScopedTerm.t
 
 end = struct
   let map_append k v m =
@@ -1924,8 +1579,8 @@ end = struct
     match t with
     | Ast.TypeExpression.TConst c when F.show c = "prop" -> ScopedTypeExpression.Prop
     | Ast.TypeExpression.TConst c when F.show c = "any" -> ScopedTypeExpression.Any
-    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(ScopeContext.Local,c))
-    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(ScopeContext.Global,c))
+    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(Scope.Local,c))
+    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(Scope.Global,c))
     | Ast.TypeExpression.TApp(c,x,[y]) when F.show c = "variadic" ->
         ScopedTypeExpression.Arrow(Ast.Structured.Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
     | Ast.TypeExpression.TApp(c,x,xs) ->
@@ -1965,29 +1620,32 @@ end = struct
       close vars (Ty value) in
     { ScopedTypeExpression.name; indexing = Some attributes; loc; nparams; value }
 
-  let rec scope_term ~macros ctx ~loc t =
+  let rec scope_term ~state ctx ~loc t =
     let open Ast.Term in
     match t with
     | Cast (t,ty) ->
-        let t = scope_loc_term ~macros ctx t in
+        let t = scope_loc_term ~state ctx t in
         let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty) in
         ScopedTerm.Cast(t,ty)
     | Const c when is_discard c -> ScopedTerm.Discard
     | Const c when is_macro_name c ->
-        if F.Map.mem c macros then ScopedTerm.unlock @@ fst @@ F.Map.find c macros
+        let { macros } = get_mtm state in
+        if F.Map.mem c macros then
+          ScopedTerm.unlock @@ fst @@ F.Map.find c macros
         else error ~loc (Format.asprintf "Unknown macro %a" F.pp c)
     | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Local,c))
     | Const c ->
         if is_uvar_name c then ScopedTerm.Var(c,[])
         else ScopedTerm.(Const(Global,c))
-    | App ({ it = App (f,l1) },l2) -> scope_term ~macros ctx ~loc (App(f, l1 @ l2))
+    | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
-        ScopedTerm.Spill (scope_loc_term ~macros ctx x,ref ScopedTerm.NoInfo)
+        ScopedTerm.Spill (scope_loc_term ~state ctx x,ref ScopedTerm.NoInfo)
     | App({ it = Const c }, x :: xs) ->
          if is_discard c then error ~loc "Applied discard";
-         let x = scope_loc_term ~macros ctx x in
-         let xs = List.map (scope_loc_term ~macros ctx) xs in
+         let x = scope_loc_term ~state ctx x in
+         let xs = List.map (scope_loc_term ~state ctx) xs in
          if is_macro_name c then
+           let { macros } = get_mtm state in
            if F.Map.mem c macros then ScopedTerm.beta (fst @@ F.Map.find c macros) (x::xs)
            else error ~loc (Format.asprintf "Unknown macro %a" F.pp c)
          else
@@ -1995,12 +1653,11 @@ end = struct
           if bound then ScopedTerm.App(Local, c, x, xs)
           else if is_uvar_name c then ScopedTerm.Var(c,x :: xs)
           else ScopedTerm.App(Global, c, x, xs)
-    | Lam (c,b) when is_discard c -> ScopedTerm.Lam (None,scope_loc_term ~macros ctx b)
+    | Lam (c,b) when is_discard c -> ScopedTerm.Lam (None,scope_loc_term ~state ctx b)
     | Lam (c,b) ->
         if has_dot c then error ~loc "Bound variables cannot contain the namespaec separator '.'";
-        ScopedTerm.Lam (Some c,scope_loc_term ~macros (F.Set.add c ctx) b)
+        ScopedTerm.Lam (Some c,scope_loc_term ~state (F.Set.add c ctx) b)
     | CData c -> ScopedTerm.CData c (* CData.hcons *)
-    | Quoted _ -> assert false (* TODO *)
     | App ({ it = Const _},[]) -> anomaly "Application node with no arguments"
     | App ({ it = Lam _},_) ->
       error ~loc "Beta-redexes not allowed, use something like (F = x\\x, F a)"
@@ -2010,11 +1667,31 @@ end = struct
       error ~loc "Applied quotation"
     | App({ it = Cast _},_) ->
       error ~loc "Casted app not supported yet"
-  and scope_loc_term ~macros ctx { Ast.Term.it; loc } =
-    let it = scope_term ~macros ctx ~loc it in
-    { ScopedTerm.it; loc; ty = MutableOnce.make (F.from_string "Ty") }
+    | Quoted _ -> assert false
+  and scope_loc_term ~state ctx { Ast.Term.it; loc } =
+    match it with
+    | Quoted { Ast.Term.data; kind; qloc } ->
+      let unquote =
+        match kind with
+        | None ->
+            let default_quotation = State.get default_quotation state in
+            if Option.is_none default_quotation then
+              anomaly ~loc "No default quotation";
+            option_get default_quotation
+        | Some name ->
+            let named_quotations = State.get named_quotations state in
+            try StrMap.find name named_quotations
+            with Not_found -> anomaly ~loc ("No '"^name^"' quotation") in
+      let state = update_mtm state (fun x -> { x with ctx }) in
+      let simple_t =
+        try unquote state qloc data
+        with Elpi_parser.Parser_config.ParseError(loc,msg) -> error ~loc msg in
+      ScopedTerm.of_simple_term_loc simple_t
+    | _ ->
+      let it = scope_term ~state ctx ~loc it in
+      { ScopedTerm.it; loc; ty = MutableOnce.make (F.from_string "Ty") }
 
-  let scope_loc_term ~macros = scope_loc_term ~macros F.Set.empty
+  let scope_loc_term ~state = scope_loc_term ~state F.Set.empty
 
   let scope_type_abbrev { Ast.TypeAbbreviation.name; value; nparams; loc } =
     let rec aux ctx = function
@@ -2069,18 +1746,20 @@ end = struct
     | x :: xs, _ -> x :: append_body xs b2 *)
 
   
-  let compile_clause macros { Ast.Clause.body; attributes; loc } =
-      { Ast.Clause.body = scope_loc_term ~macros body; attributes; loc }
+  let compile_clause state macros { Ast.Clause.body; attributes; loc } =
+     let state = set_mtm state { empty_mtm with macros } in
+      { Ast.Clause.body = scope_loc_term ~state body; attributes; loc }
 
 
-  let compile_sequent macros { Ast.Chr.eigen; context; conclusion } =
-    { Ast.Chr.eigen = scope_loc_term ~macros eigen; context = scope_loc_term ~macros context; conclusion = scope_loc_term ~macros conclusion }
+  let compile_sequent state macros { Ast.Chr.eigen; context; conclusion } =
+     let state = set_mtm state { empty_mtm with macros } in
+     { Ast.Chr.eigen = scope_loc_term ~state eigen; context = scope_loc_term ~state context; conclusion = scope_loc_term ~state conclusion }
 
-  let compile_chr_rule macros { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } =
-    let to_match = List.map (compile_sequent macros) to_match in
-    let to_remove = List.map (compile_sequent macros) to_remove in
-    let guard = Option.map (scope_loc_term ~macros) guard in
-    let new_goal = Option.map (compile_sequent macros) new_goal in
+  let compile_chr_rule state macros { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } =
+    let to_match = List.map (compile_sequent state macros) to_match in
+    let to_remove = List.map (compile_sequent state macros) to_remove in
+    let guard = Option.map (scope_loc_term ~state:(set_mtm state { empty_mtm with macros })) guard in
+    let new_goal = Option.map (compile_sequent state macros) new_goal in
     { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc }
 
   let compile_kind kinds { Ast.Type.name; ty; loc } =
@@ -2092,18 +1771,18 @@ end = struct
     in
     F.Map.add name (count ty.tit, loc) kinds  
     
-  let compile_macro m { Ast.Macro.loc; name; body } =
+  let compile_macro state m { Ast.Macro.loc; name; body } =
     try
       let _, oloc = F.Map.find name m in
       error ~loc (Format.asprintf "duplicate macro %a, previous declaration %a" F.pp name Loc.pp oloc)
     with Not_found ->
-      let body = scope_loc_term ~macros:m body in
+      let body = scope_loc_term ~state:(set_mtm state { empty_mtm with macros = m }) body in
       F.Map.add name (body,loc) m
 
   let run state p : State.t * Scoped.program =
 
     let rec compile_program omacros state { Ast.Structured.macros; kinds; types; type_abbrevs; modes; body } =
-      let active_macros = List.fold_left compile_macro omacros macros in
+      let active_macros = List.fold_left (compile_macro state) omacros macros in
       let type_abbrevs = List.map compile_type_abbrev type_abbrevs in
       let kinds = List.fold_left compile_kind F.Map.empty kinds in
       let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (TypeList.make @@ compile_type t) m) F.Map.empty (List.rev types) in
@@ -2121,7 +1800,7 @@ end = struct
     and compile_body macros kinds types type_abbrevs (modes : (mode * Loc.t) F.Map.t) (defs : F.Set.t) state = function
       | [] -> state, kinds, types, type_abbrevs, modes, defs, []
       | Clauses cl :: rest ->
-          let compiled_cl = List.map (compile_clause macros) cl in
+          let compiled_cl = List.map (compile_clause state macros) cl in
           let defs = F.Set.union defs (global_hd_symbols_of_clauses compiled_cl) in
           let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
             compile_body macros kinds types type_abbrevs modes defs state rest in
@@ -2149,7 +1828,7 @@ end = struct
           Scoped.Shorten(shorthands, p) :: compiled_rest
       | Constraints ({ctx_filter; clique; rules}, p) :: rest ->
           (* XXX missing check for nested constraints *)
-          let rules = List.map (compile_chr_rule macros) rules in
+          let rules = List.map (compile_chr_rule state macros) rules in
           let state, _, p = compile_program macros state p in
           let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
             compile_body macros kinds types type_abbrevs modes defs state rest in
@@ -4131,7 +3810,7 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
     | Some x ->
         D.State.set D.Conversion.extra_goals_postprocessing state x
     | None -> state in
-  let { D.QuotationHooks.default_quotation;
+  let { Compiler_data.QuotationHooks.default_quotation;
         named_quotations;
         singlequote_compilation;
         backtick_compilation } = quotation_descriptor in
@@ -4236,7 +3915,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let active_macros = assembled_program.Assembled.toplevel_macros in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
 
-  let t = Scope_Quotation_Macro.scope_loc_term ~macros:active_macros t in
+  let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = active_macros }) t in
   (* TODOtypecheck query *)
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program t in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
@@ -4686,7 +4365,15 @@ let static_check ~exec ~checker:(state,program)
   let executable = optimize_query query in
   exec executable <> Failure
 ;;
- *)
+*)
+
+let lp state loc s =
+  let module P = (val option_get ~err:"No parser" (State.get parser state)) in
+  let ast = P.goal ~loc ~text:s in
+  let term = Scope_Quotation_Macro.scope_loc_term ~state ast in
+  { ScopedTerm.SimpleTerm.it = Opaque (ScopedTerm.in_scoped_term term); loc = term.loc }
+
+
  let static_check ~exec ~checker:(state,program) q = true
 let term_of_ast ~depth state text = assert false
 let quote_syntax time new_state _ = assert false
@@ -4695,6 +4382,5 @@ let get_Arg _ ~name:_ ~args:_ = assert false
 let get_Args _ = assert false
 let mk_Arg _ ~name:_ ~args:_ = assert false
 
-let lp ~depth state loc s = assert false
 let relocate_closed_term ~from:_ ~to_:_ _ = assert false
 let lookup_query_predicate _ _ = assert false

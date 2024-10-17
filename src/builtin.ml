@@ -631,7 +631,7 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
      | Sys_error msg -> error msg)),
   DocAbove);
 
-  LPDoc " -- Hacks --";
+  (* LPDoc " -- Hacks --";
 
   MLCode(Pred("string_to_term",
     In(string, "S",
@@ -658,12 +658,12 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
      | Sys_error msg -> error msg
      | Parse.ParseError _ -> raise No_clause)),
   DocAbove);
-
+*)
   LPCode "pred printterm i:out_stream, i:A.";
   LPCode "printterm S T :- term_to_string T T1, output S T1.";
 
-  LPCode "pred read o:A.";
-  LPCode "read S :- flush std_out, input_line std_in X, string_to_term X S.";
+  (* LPCode "pred read o:A.";
+  LPCode "read S :- flush std_out, input_line std_in X, string_to_term X S."; *)
 
   ]
 ;;
@@ -694,7 +694,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
 pred counter i:string, o:int.
 counter C N :- trace.counter C N.|};
 
-   MLCode(Pred("quote_syntax",
+   (* MLCode(Pred("quote_syntax",
      In(string, "FileName",
      In(string, "QueryText",
      Out(list (poly "A"), "QuotedProgram",
@@ -718,7 +718,7 @@ counter C N :- trace.counter C N.|};
       with Parse.ParseError (_,m) | Compile.CompileError (_,m) ->
         Printf.eprintf "%s\n" m;
         raise No_clause)),
-  DocAbove);
+  DocAbove); *)
 
   MLData loc;
 

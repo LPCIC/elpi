@@ -352,21 +352,9 @@ external pred open_string i:string, o:in_stream.
 % [lookahead InStream NextChar] peeks one byte from InStream
 external pred lookahead i:in_stream, o:string.
 
-%  -- Hacks --
-
-% [string_to_term S T] parses a term T from S
-external pred string_to_term i:string, o:any.
-
-% [readterm InStream T] reads T from InStream, ends with \n
-external pred readterm i:in_stream, o:any.
-
 pred printterm i:out_stream, i:A.
 
 printterm S T :- term_to_string T T1, output S T1.
-
-pred read o:A.
-
-read S :- flush std_out, input_line std_in X, string_to_term X S.
 
 % == Elpi builtins =====================================
 
@@ -379,11 +367,6 @@ external type print variadic any prop.
 % Deprecated, use trace.counter
 pred counter i:string, o:int.
 counter C N :- trace.counter C N.
-
-% [quote_syntax FileName QueryText QuotedProgram QuotedQuery] quotes the
-% program from FileName and the QueryText. See elpi-quoted_syntax.elpi for
-% the syntax tree
-external pred quote_syntax i:string, i:string, o:list A, o:A.
 
 kind loc type.
 
