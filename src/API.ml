@@ -603,7 +603,8 @@ module RawData = struct
     | CData of RawOpaqueData.t                    (* external data *)
     (* Unassigned unification variables *)
     | UnifVar of Elpi.t * term list
-
+  [@@warning "-37"]
+  
   let rec look ~depth t =
     let module R = (val !r) in let open R in
     match deref_head ~depth t with
@@ -630,12 +631,23 @@ module RawData = struct
   let mkConst n = let module R = (val !r) in R.mkConst n
   let mkLam = ED.Term.mkLam
   let mkApp = ED.Term.mkApp
+  let mkAppGlobal i x xs =
+    if i >= 0 then Util.anomaly "mkAppGlobal: got a bound variable";
+    ED.Term.mkApp i x xs
+  let mkAppBound i x xs=
+    if i < 0 then Util.anomaly "mkAppBound: got a global constant";
+    ED.Term.mkApp i x xs
   let mkCons = ED.Term.mkCons
   let mkNil = ED.Term.mkNil
   let mkDiscard = ED.Term.mkDiscard
   let mkBuiltin = ED.Term.mkBuiltin
   let mkCData = ED.Term.mkCData
-  let mkAppL x l = let module R = (val !r) in R.mkAppL x l
+  let mkAppBoundL x l =
+    if x < 0 then Util.anomaly "mkAppBoundL: got a global constant";
+    let module R = (val !r) in R.mkAppL x l
+  let mkAppGlobalL x l =
+    if x >= 0 then Util.anomaly "mkAppBoundL: got a bound variable";
+    let module R = (val !r) in R.mkAppL x l
 
   let mkGlobal i =
     if i >= 0 then Util.anomaly "mkGlobal: got a bound variable";

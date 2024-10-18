@@ -35,7 +35,7 @@ module Ast : sig
     type t
   end 
   module Scope : sig
-    type t = Local | Global
+    type t
   end
   module Opaque : sig
     type t
@@ -54,13 +54,22 @@ module Ast : sig
     type t_ =
       | Const of Scope.t * Name.t
       | Discard
-      | Var of Name.t * t list
+      | Var of Name.t * t list (** unification variable *)
       | App of Scope.t * Name.t * t * t list
       | Lam of Name.t option * Type.t option * t
       | Opaque of Opaque.t
       | Cast of t * Type.t
     and t = { it : t_; loc : Loc.t; }
+
+    (* See {!module:RawData.Constants} to allocate global constants *)
+    type constant
+    val mkGlobal : Loc.t -> constant -> t
+    val mkBound : Loc.t -> Name.t -> t
+    val mkAppGlobal : Loc.t -> constant -> t -> t list -> t
+    val mkAppBound : Loc.t -> Name.t -> t -> t list -> t
+
   end
+
 
 end
 
@@ -1081,17 +1090,19 @@ end
    * substitutes assigned unification variables by their value. *)
 module RawData : sig
 
-  type constant = int (** De Bruijn levels (not indexes):
-                          the distance of the binder from the root.
-                          Starts at 0 and grows for bound variables;
-                          global constants have negative values. *)
+  type constant = Ast.Term.constant
+  
+  (** De Bruijn levels (not indexes): the distance of the binder from the root.
+      starts at 0 and grows for bound variables;
+      global constants have negative values. *)
+
   type builtin
   type term = Data.term
   type view = private
     (* Pure subterms *)
-    | Const of constant                   (* global constant or a bound var *)
+    | Const of int                        (* global constant or a bound var *)
     | Lam of term                         (* lambda abstraction, i.e. x\ *)
-    | App of constant * term * term list  (* application (at least 1 arg) *)
+    | App of int * term * term list       (* application (at least 1 arg) *)
     (* Optimizations *)
     | Cons of term * term                 (* :: *)
     | Nil                                 (* [] *)
@@ -1110,7 +1121,7 @@ module RawData : sig
   val kool : view -> term
 
   (** Smart constructors *)
-  val mkBound : constant -> term  (* bound variable, i.e. >= 0 *)
+  val mkBound : int -> term  (* bound variable, i.e. >= 0 *)
   val mkLam : term -> term
   val mkCons : term -> term -> term
   val mkNil : term
@@ -1120,10 +1131,16 @@ module RawData : sig
 
   (** Lower level smart constructors *)
   val mkGlobal : constant -> term (* global constant, i.e. < 0 *)
-  val mkApp : constant -> term -> term list -> term
-  val mkAppL : constant -> term list -> term
+  val mkAppGlobal  : constant -> term -> term list -> term
+  val mkAppGlobalL : constant -> term list -> term
+  val mkAppBound  : int -> term -> term list -> term
+  val mkAppBoundL : int -> term list -> term
+  
   val mkBuiltin : builtin -> term list -> term
-  val mkConst : constant -> term (* no check, works for globals and bound *)
+
+  (** no check, works for globals and bound *)
+  val mkConst : int -> term
+  val mkApp : int -> term -> term list -> term
 
   val cmp_builtin : builtin -> builtin -> int
   type hyp = {

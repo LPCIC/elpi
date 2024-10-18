@@ -606,10 +606,10 @@ end = struct
   and check_tye ~loc ~type_abbrevs ~kinds ctx = function
     | Prop -> TypeAssignment.Prop
     | Any -> TypeAssignment.Any
-    | Const(Local,c) ->
+    | Const(Bound,c) ->
         check_param_exists ~loc c ctx;
         TypeAssignment.UVar c
-    | Const(Global,c) ->
+    | Const(Global _,c) ->
         check_global_exists ~loc c type_abbrevs kinds 0;
         TypeAssignment.Cons c
     | App(c,x,xs) ->
@@ -657,8 +657,8 @@ end = struct
 
   let error_not_a_function ~loc c args x =
     let t =
-      if args = [] then ScopedTerm.Const(Global,c)
-      else ScopedTerm.(App(Global,c,List.hd args, List.tl args)) in
+      if args = [] then ScopedTerm.Const(Global true,c)
+      else ScopedTerm.(App(Global true,c,List.hd args, List.tl args)) in
     let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@,@[<hov>%a@]@]" ScopedTerm.pretty_ t ScopedTerm.pretty x in
     error ~loc msg
 
@@ -752,12 +752,12 @@ end = struct
     let rec check ctx ~loc ~tyctx x (ety : ret) : spilled_phantoms =
       (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty ety; *)
       match x with
-      | Const(Global,c) -> check_global ctx ~loc ~tyctx c ety
-      | Const(Local,c) -> check_local ctx ~loc ~tyctx c ety
+      | Const(Global _,c) -> check_global ctx ~loc ~tyctx c ety
+      | Const(Bound,c) -> check_local ctx ~loc ~tyctx c ety
       | CData c -> check_cdata ~loc ~tyctx kinds c ety
       | Spill(sp,info) -> assert(!info = NoInfo); check_spill ctx ~loc ~tyctx sp info ety
-      | App(Global,c,x,xs) -> check_app ctx ~loc ~tyctx c (global_type env ~loc c) (x::xs) ety 
-      | App(Local,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc c) (x::xs) ety
+      | App(Global _,c,x,xs) -> check_app ctx ~loc ~tyctx c (global_type env ~loc c) (x::xs) ety 
+      | App(Bound,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc c) (x::xs) ety
       | Lam(c,cty,t) -> check_lam ctx ~loc ~tyctx c cty t ety
       | Discard -> []
       | Var(c,args) -> check_app ctx ~loc ~tyctx c (uvar_type ~loc c) args ety
@@ -834,7 +834,7 @@ end = struct
       | Single ty ->
           let err ty =
             if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
-            else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Global (* sucks *),c,List.hd args,List.tl args)) ty in
+            else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Global true(* sucks *),c,List.hd args,List.tl args)) ty in
           let monodirectional () =
             (* Format.eprintf "checking app mono %a\n" F.pp c; *)
             let tgt = check_app_single ctx ~loc c ty [] args in
@@ -921,30 +921,30 @@ end = struct
     inlines => and , typing... but leaves the rest of the code clean *)
     and check_spill_conclusion ~tyctx ctx ~loc it ety =
       match it with
-      | App(Global,c,x,[y]) when F.equal c F.implf ->
+      | App(Global _,c,x,[y]) when F.equal c F.implf ->
           let lhs = mk_uvar "LHS" in
           let spills = check_loc ~tyctx ctx x ~ety:lhs in
           if spills <> [] then error ~loc "Hard spill";
           if try_unify lhs Prop || try_unify lhs (App(F.from_string "list",Prop,[]))
           then check_spill_conclusion_loc ~tyctx ctx y ~ety
           else error ~loc "Bad impl in spill"
-      | App(Global,c,x,xs) when F.equal c F.andf ->
+      | App(Global b,c,x,xs) when F.equal c F.andf ->
           let spills = check_loc ~tyctx ctx x ~ety:Prop in
           if spills <> [] then error ~loc "Hard spill";
           begin match xs with
           | [] -> assert false
           | [x] -> check_loc ~tyctx ctx x ~ety
-          | x::xs -> check_spill_conclusion ~tyctx ctx ~loc (App(Global,c,x,xs)) ety
+          | x::xs -> check_spill_conclusion ~tyctx ctx ~loc (App(Global b,c,x,xs)) ety
           end
       | _ -> check ~tyctx ctx ~loc it ety
 
     and check_matches_poly_skema_loc { loc; it } =
       let c, args =
         match it with
-        | App(Global,c, { it = App(Global,c',x,xs) },_) when F.equal F.rimplf c -> c', x :: xs
-        | App(Global,c, { it = Const(Global,c') },_) when F.equal F.rimplf c -> c', []
-        | App(Global,c,x,xs) -> c, x :: xs
-        | Const(Global,c) -> c, []
+        | App(Global _,c, { it = App(Global _,c',x,xs) },_) when F.equal F.rimplf c -> c', x :: xs
+        | App(Global _,c, { it = Const(Global _,c') },_) when F.equal F.rimplf c -> c', []
+        | App(Global _,c,x,xs) -> c, x :: xs
+        | Const(Global _,c) -> c, []
         | _ -> assert false in
       (* Format.eprintf "Checking %a\n" F.pp c; *)
       match F.Map.find c env with
@@ -1582,8 +1582,8 @@ end = struct
     match t with
     | Ast.TypeExpression.TConst c when F.show c = "prop" -> ScopedTypeExpression.Prop
     | Ast.TypeExpression.TConst c when F.show c = "any" -> ScopedTypeExpression.Any
-    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(Scope.Local,c))
-    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(Scope.Global,c))
+    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(Scope.Bound,c))
+    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(Scope.Global false,c))
     | Ast.TypeExpression.TApp(c,x,[y]) when F.show c = "variadic" ->
         ScopedTypeExpression.Arrow(Ast.Structured.Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
     | Ast.TypeExpression.TApp(c,x,xs) ->
@@ -1602,9 +1602,9 @@ end = struct
       let rec aux e { it } =
         match it with
         | App(_,x,xs) -> List.fold_left aux e (x :: xs)
-        | Const(Local, _) -> assert false (* there are no binders yet *)
-        | Const(Global,c) when is_uvar_name c -> F.Set.add c e
-        | Const(Global,_) -> e
+        | Const(Bound, _) -> assert false (* there are no binders yet *)
+        | Const(Global _,c) when is_uvar_name c -> F.Set.add c e
+        | Const(Global _,_) -> e
         | Prop -> e
         | Any -> e
         | Arrow(_,x,y) -> aux (aux e x) y
@@ -1632,10 +1632,10 @@ end = struct
         if F.Map.mem c macros then
           ScopedTerm.unlock @@ fst @@ F.Map.find c macros
         else error ~loc (Format.asprintf "Unknown macro %a" F.pp c)
-    | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Local,c))
+    | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Bound,c))
     | Const c ->
         if is_uvar_name c then ScopedTerm.Var(c,[])
-        else ScopedTerm.(Const(Global,c))
+        else ScopedTerm.(Const(Global false,c))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
         ScopedTerm.Spill (scope_loc_term ~state ctx x,ref ScopedTerm.NoInfo)
@@ -1649,9 +1649,9 @@ end = struct
            else error ~loc (Format.asprintf "Unknown macro %a" F.pp c)
          else
           let bound = F.Set.mem c ctx in
-          if bound then ScopedTerm.App(Local, c, x, xs)
+          if bound then ScopedTerm.App(Bound, c, x, xs)
           else if is_uvar_name c then ScopedTerm.Var(c,x :: xs)
-          else ScopedTerm.App(Global, c, x, xs)
+          else ScopedTerm.App(Global false, c, x, xs)
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
         let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty) in
@@ -1738,8 +1738,8 @@ end = struct
     let open ScopedTerm in
     List.fold_left (fun s { Ast.Clause.body = { it } } ->
       match it with
-      | (Const(Global,c) | App(Global,c,_,_)) when not @@ F.equal c F.rimplf -> F.Set.add c s
-      | App(Global,ri,{ it = (Const(Global,c) | App(Global,c,_,_)) }, _) when F.equal ri F.rimplf -> F.Set.add c s
+      | (Const(Global _,c) | App(Global _,c,_,_)) when not @@ F.equal c F.rimplf -> F.Set.add c s
+      | App(Global _,ri,{ it = (Const(Global _,c) | App(Global _,c,_,_)) }, _) when F.equal ri F.rimplf -> F.Set.add c s
       (* | (Const _ | App _) -> s *)
       | _ -> assert false)
       F.Set.empty cl
@@ -2860,11 +2860,11 @@ end (* }}} *)
     let open ScopedTerm in
     let rec aux it =
       match it with
-      | Const(Local,_) -> it
-      | Const(Global,c) -> let c' = f c in if c == c' then it else Const(Global,c')
+      | Const((Bound|Global true),_) -> it
+      | Const(Global false,c) -> let c' = f c in if c == c' then it else Const(Global false,c')
       | Spill(t,n) -> let t' = aux_loc t in if t' == t then it else Spill(t',n)
       | App(scope,c,x,xs) ->
-          let c' = if scope = Global then f c else c in
+          let c' = if scope = Global false then f c else c in
           let x' = aux_loc x in
           let xs' = smart_map aux_loc xs in
           if c == c' && x == x' && xs == xs' then it
@@ -3456,26 +3456,26 @@ end = struct
       | Spill(t,_) -> assert false (* spill handled before *)
       | Cast(t,_) -> todbl ctx t
       (* lists *)
-      | Const(Global,c) when F.(equal c nilf) -> D.mkNil
-      | App(Global,c,x,[y]) when F.(equal c consf) ->
+      | Const(Global _,c) when F.(equal c nilf) -> D.mkNil
+      | App(Global _,c,x,[y]) when F.(equal c consf) ->
           let x = todbl ctx x in
           let y = todbl ctx y in
           D.mkCons x y
       (* globals and builtins *)
-      | Const(Global,c) ->
+      | Const(Global _,c) ->
           let c, t = allocate_global_symbol c in
           if Builtins.is_declared state c then D.mkBuiltin c []
           else t
-      | App(Global,c,x,xs) ->
+      | App(Global _,c,x,xs) ->
           let c,_ = allocate_global_symbol c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
           if Builtins.is_declared state c then D.mkBuiltin c (x::xs)
           else D.mkApp c x xs
       (* lambda terms *)
-      | Const(Local,c) -> allocate_bound_symbol t.loc ctx c
+      | Const(Bound,c) -> allocate_bound_symbol t.loc ctx c
       | Lam(c,_,t) -> D.mkLam @@ todbl (push ctx c) t
-      | App(Local,c,x,xs) ->
+      | App(Bound,c,x,xs) ->
           let c = lookup_bound t.loc ctx c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
@@ -3502,7 +3502,7 @@ end = struct
       else
         let t =
           List.fold_right (fun { expr; vars_names } t ->
-            let t = mk_loc ~loc:t.loc @@ App(Global,F.andf,expr,[t]) in
+            let t = mk_loc ~loc:t.loc @@ App(Global true,F.andf,expr,[t]) in
              (* let t = List.fold_left (sigma ~loc:t.loc) t vars_names in *)
              t
              ) l t in
@@ -3523,7 +3523,7 @@ end = struct
       | Cast _ -> assert false (* TODO *)
       | Spill _ -> assert false in
     let apply_to locals w t =
-      let w = mk_loc ~loc:t.loc @@ Const(Local,w) in
+      let w = mk_loc ~loc:t.loc @@ Const(Bound,w) in
       apply_to locals w t in
 
     let app t args =
@@ -3531,10 +3531,10 @@ end = struct
       let rec aux { loc; it; ty } : t =
         mk_loc ~loc ~ty @@
           match it with
-          | App(Global,c,x,[y]) when F.equal c F.implf ->
-              mkApp Global c [x;aux y]
-          | App(Global,c,x,xs) when F.equal c F.andf ->
-              mkApp Global c (aux_last (x::xs))
+          | App(Global _,c,x,[y]) when F.equal c F.implf ->
+              mkApp (Global true) c [x;aux y]
+          | App(Global _,c,x,xs) when F.equal c F.andf ->
+              mkApp (Global true) c (aux_last (x::xs))
           | Const(g,c) -> mkApp g c args
           | App(g,c,x,xs) -> mkApp g c (x :: xs @ args)
           | Var(c,xs) -> Var(c,xs @ args)
@@ -3564,7 +3564,7 @@ end = struct
       | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
       | Spill(t,{ contents = (Main n)}) ->
           let spills, t = spill1 ctx t in
-          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun c -> mk_loc ~loc @@ Const(Local,c)) ctx) n in
+          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun c -> mk_loc ~loc @@ Const(Bound,c)) ctx) n in
           let expr = app t vars in
           spills @ [{vars; vars_names; expr}], vars
       (* globals and builtins *)
@@ -3586,7 +3586,7 @@ end = struct
               let all_names = vars_names @ n in
               let expr = apply_to all_names c expr in
               let t = apply_to vars_names c t in
-              (t,all_names), { vars; vars_names; expr = mk_loc ~loc @@ App(Global,F.pif,mk_loc ~loc @@ Lam(Some c,o,expr),[]) })
+              (t,all_names), { vars; vars_names; expr = mk_loc ~loc @@ App(Global true,F.pif,mk_loc ~loc @@ Lam(Some c,o,expr),[]) })
             (t,[]) spills in
           spills, [{ it = Lam(Some c,o,t); loc; ty }]
       (* holes *)
