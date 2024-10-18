@@ -48,6 +48,8 @@ let declare
 =
   if List.exists (fun { name = x; _ } -> x = name) !tests then
     failwith ("a test named " ^ name ^ " already exists");
+  if String.index_opt name ' ' <> None then
+    failwith ("test name '" ^ name ^ "' contains invalid character");
   begin match source_elpi, source_teyjus, source_dune, source_json with
     | None, None, None, None-> failwith ("test "^name^" has no sources");
     | _ -> ()

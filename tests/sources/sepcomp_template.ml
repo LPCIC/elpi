@@ -14,7 +14,8 @@ let link ~elpi us =
   q
 
 let check q =
-  if not (Compile.static_check ~checker:(Elpi.Builtin.default_checker ()) q) then exit 1
+  ()
+  (* if not (Compile.static_check ~checker:(Elpi.Builtin.default_checker ()) q) then exit 1 *)
 
 let exec q =
     let exe = Compile.optimize q in

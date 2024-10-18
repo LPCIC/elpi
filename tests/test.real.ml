@@ -57,8 +57,7 @@ let print_summary ~total ~ok ~ko_list ~skipped ~timeout =
   print_stat "Skipped" skipped;
   print_stat "Timeout" timeout;
   if ko_list <> [] then 
-    let verb = if List.length ko_list = 1 then "is" else "are" in
-    printf [red] "Failed tests %s [%s]\n" verb (String.concat "," ko_list)
+    printf [red] "Rerun failed: make tests ONLY=\"'^\\(%s\\)'\"\n" (String.concat "\\|" ko_list)
 ;;
 
 let print_file fname =

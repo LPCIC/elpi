@@ -14,5 +14,5 @@ useonly     atom         form -> o.
 type        termp        term -> o.
 
 /* `output' predicates---this module supplies their complete definition */
-exportdef   goal         form -> o.
-exportdef   def_clause   form -> o.
+type   goal         form -> o.
+type   def_clause   form -> o.

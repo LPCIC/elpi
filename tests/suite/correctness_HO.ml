@@ -171,6 +171,7 @@ let () = declare "holp"
   ~description:"HOL programming"
   ()
 
+(* needs readterm
 let () = declare "ndprover"
   ~source_elpi:"ndprover/inter.mod"
   ~source_teyjus:"ndprover/inter.mod"
@@ -183,9 +184,9 @@ let () = declare "ndprover"
   ]
   ~input:"ndprover.stdin"
   ~description:"Natural deduction prover"
-  ()
+  () *)
 
-  let () = declare "ndprover_legacy"
+let () = declare "ndprover_legacy"
   ~source_elpi:"ndprover_legacy/inter.mod"
   ~source_teyjus:"ndprover_legacy/inter.mod"
   ~deps_teyjus:[

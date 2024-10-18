@@ -199,26 +199,19 @@ let _ =
   end;
   
   Format.eprintf "@\nParsing time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_parsing);
-  let query, exec =
+  let query, exec, type_checking_time =
     let t0_compilation = Unix.gettimeofday () in
     try
       let prog = API.Compile.program ~flags ~elpi [p] in
       let query = API.Compile.query prog g in
+      let type_checking_time = API.Compile.total_type_checking_time query in
       let exec = API.Compile.optimize query in
       Format.eprintf "@\nCompilation time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_compilation);
-      query, exec
+      query, exec, type_checking_time
     with API.Compile.CompileError(loc,msg) ->
       API.Utils.error ?loc msg
   in
-  if !typecheck then begin
-    let t0 = Unix.gettimeofday () in
-    let b = API.Compile.static_check ~checker:(Builtin.default_checker ()) query in
-    Format.eprintf "@\nTypechecking time: %5.3f@\n%!" (Unix.gettimeofday () -. t0);
-    if not b then begin
-       Format.eprintf "Type error. To ignore it, pass -no-tc.\n";
-       exit 1
-    end;
-  end;
+  Format.eprintf "@\nTypechecking time: %5.3f@\n%!" type_checking_time;
   if !print_lprolog then begin
     API.Pp.program Format.std_formatter query;
     Format.printf "?- ";

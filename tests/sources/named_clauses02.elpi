@@ -1,3 +1,4 @@
+pred c.
 
 :name "c"
 c :- !, fail.

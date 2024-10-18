@@ -16,7 +16,7 @@ p1 [X_, Y_ | _].
 p1 [X_, Y_].
 
 kind arity-one type.
-type list-wrapper list int.
+type list-wrapper list int -> arity-one.
 
 :index(5)
 pred p2 o:arity-one.

@@ -112,7 +112,7 @@ appl_c (abbr V B) Vs Ws D :- !,
 
 % inner beta 
 appl_c (abst E W B) [V|Vs] Ws D :- !,
-  has_beta E, print "b",
+  has_beta E, % print "b",
   pi x\ ldef x D (cast W V) => appl_c (B x) Vs Ws D.
 
 % outer beta 
@@ -177,12 +177,12 @@ conv_c T1 Vs1 M1 (abbr V2 B2) Vs2 M2 :- !,
 
 % beta (sn)
 conv_c (abst E W1 B1) [V1|Vs1] M1 T2 Vs2 M2 :- 
-  has_beta E, !, print "b",
+  has_beta E, !, % print "b",
   pi x\ ldef x d_sn (cast W1 V1) => conv_c (B1 x) Vs1 M1 T2 Vs2 M2.
 
 % beta (dx)
 conv_c T1 Vs1 M1 (abst E W2 B2) [V2|Vs2] M2 :- 
-  has_beta E, !, print "b",
+  has_beta E, !, % print "b",
   pi x\ ldef x d_dx (cast W2 V2) => conv_c T1 Vs1 M1 (B2 x) Vs2 M2.
 
 % upsilon (sn)

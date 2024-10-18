@@ -16,13 +16,17 @@ pred false.
 
 external pred (=) o:A, o:A. % unification
 
-typeabbrev int (ctype "int").
+type (pi)    (A -> prop) -> prop.
+
+type (sigma) (A -> prop) -> prop.
+
+kind int type.
 
 
-typeabbrev string (ctype "string").
+kind string type.
 
 
-typeabbrev float (ctype "float").
+kind float type.
 
 
 pred (;) i:prop, i:prop.
@@ -263,11 +267,11 @@ type error string -> diagnostic. % Failure
 
 %  -- I/O --
 
-typeabbrev in_stream (ctype "in_stream").
+kind in_stream type.
 
 type std_in in_stream.
 
-typeabbrev out_stream (ctype "out_stream").
+kind out_stream type.
 
 type std_out out_stream.
 type std_err out_stream.
@@ -348,21 +352,9 @@ external pred open_string i:string, o:in_stream.
 % [lookahead InStream NextChar] peeks one byte from InStream
 external pred lookahead i:in_stream, o:string.
 
-%  -- Hacks --
-
-% [string_to_term S T] parses a term T from S
-external pred string_to_term i:string, o:any.
-
-% [readterm InStream T] reads T from InStream, ends with \n
-external pred readterm i:in_stream, o:any.
-
 pred printterm i:out_stream, i:A.
 
 printterm S T :- term_to_string T T1, output S T1.
-
-pred read o:A.
-
-read S :- flush std_out, input_line std_in X, string_to_term X S.
 
 % == Elpi builtins =====================================
 
@@ -376,12 +368,7 @@ external type print variadic any prop.
 pred counter i:string, o:int.
 counter C N :- trace.counter C N.
 
-% [quote_syntax FileName QueryText QuotedProgram QuotedQuery] quotes the
-% program from FileName and the QueryText. See elpi-quoted_syntax.elpi for
-% the syntax tree
-external pred quote_syntax i:string, i:string, o:list A, o:A.
-
-typeabbrev loc (ctype "Loc.t").
+kind loc type.
 
 
 % [loc.fields Loc File StartChar StopChar Line LineStartsAtChar] Decomposes
@@ -416,10 +403,6 @@ pred rex_split i:string, i:string, o:list string.
 rex_split Rx S L :- rex.split Rx S L.
 
 % == Elpi nonlogical builtins =====================================
-
-% Opaque ML data types
-kind ctyp type.
-type ctype string -> ctyp.
 
 % [var V ...] checks if the term V is a variable. When used with tree
 % arguments it relates an applied variable with its head and argument list.
@@ -475,13 +458,12 @@ external pred closed_term o:any.
 % [ground_term T] Checks if T contains unification variables
 external pred ground_term i:any.
 
-% [is_cdata T Ctype] checks if T is primitive of type Ctype, eg (ctype
-% "int")
-external pred is_cdata i:any, o:ctyp.
+% [is_cdata T Ctype] checks if T is primitive of type Ctype, eg "int"
+external pred is_cdata i:any, o:string.
 
 pred primitive? i:A, i:string.
 
-primitive? X S :- is_cdata X (ctype S).
+primitive? X S :- is_cdata X S.
 
 % [new_int N] unifies N with a different int every time it is called. Values
 % of N are guaranteed to be incresing.
@@ -495,7 +477,7 @@ external pred new_int o:int.
 external pred findall_solutions i:prop, o:list prop.
 
 % Holds data across bracktracking; can only contain closed terms
-typeabbrev safe (ctype "safe").
+kind safe type.
 
 
 % [new_safe Safe] creates a safe: a store that persists across backtracking
@@ -530,7 +512,7 @@ external pred random.self_init .
 % (excluded)
 external pred random.int i:int, o:int.
 
-#line 0 "builtin_stdlib.elpi"
+#line 1 "builtin_stdlib.elpi"
 % == stdlib =======================================================
 
 % Conventions:
@@ -595,7 +577,7 @@ spy! P :- debug-print "---->>---- fail: " P, fail.
 
 % to silence the type checker
 pred unsafe-cast o:A, o:B.
-unsafe-cast X X.
+:untyped unsafe-cast X X.
 
 % -- List processing --
 
@@ -692,7 +674,7 @@ map2-filter [] [] _ [].
 map2-filter [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, !, map2-filter XS YS F ZS.
 map2-filter [_|XS] [_|YS] F ZS :- map2-filter XS YS F ZS.
 
-pred map-ok i:list A, i:(pred i:A, i:B, o:diagnostic), o:list A, o:diagnostic.
+pred map-ok i:list A, i:(pred i:A, i:B, o:diagnostic), o:list B, o:diagnostic.
 map-ok [X|L] P [Y|YS] S :- P X Y S0, if (S0 = ok) (map-ok L P YS S) (S = S0).
 map-ok [] _ [] ok.
 
@@ -1140,7 +1122,7 @@ external pred std.loc.set.fold i:std.loc.set, i:A,
 external pred std.loc.set.partition i:std.loc.set, i:loc -> prop, 
                                     o:std.loc.set, o:std.loc.set.
 
-#line 0 "builtin_map.elpi"
+#line 1 "builtin_map.elpi"
 kind std.map type -> type -> type.
 type std.map std.map.private.map K V -> (pred i:K, i:K, o:cmp) -> std.map K V.
 
@@ -1239,7 +1221,7 @@ pred remove i:map K V, i:(pred i:K, i:K, o:cmp), i:K, o:map K V.
 remove empty _ _ empty :- !.
 remove (node L V D R _) Cmp X M :- Cmp X V E, remove.aux E Cmp L R V D X M.
 
-pred remove.aux i:cmp, i:(pred i:K, i:K, o:cmp), i:map K V, i:map K V, i:V, i:K, i:K, o:map K V.
+pred remove.aux i:cmp, i:(pred i:K, i:K, o:cmp), i:map K V, i:map K V, i:K, i:V, i:K, o:map K V.
 remove.aux eq _   L R _ _ _ M :- merge L R M.
 remove.aux lt Cmp L R V D X M :- bal {remove L Cmp X} V D R M.
 remove.aux gt Cmp L R V D X M :- bal L V D {remove R Cmp X} M.
@@ -1254,7 +1236,7 @@ bindings (node L V D R _) X X1 :-
 } % std.map
 
 
-#line 0 "builtin_set.elpi"
+#line 1 "builtin_set.elpi"
 kind std.set type -> type.
 type std.set std.set.private.set E -> (pred i:E, i:E, o:cmp) -> std.set E.
 
