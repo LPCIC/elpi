@@ -165,7 +165,7 @@ module Compile = struct
   type program = Compiler.program
   type 'a query = 'a Compiler.query
   type 'a executable = 'a ED.executable
-  type compilation_unit = Compiler.compilation_unit
+  type compilation_unit = Compiler.checked_compilation_unit
   exception CompileError = Compiler.CompileError
 
   let to_setup_flags x = x
@@ -173,14 +173,12 @@ module Compile = struct
   let program ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } l =
     Compiler.program_of_ast ~flags ~header (List.flatten l)
 
+  let empty_base ~elpi:{ Setup.header } = Compiler.empty_base ~header
+
   let query s_p t =
     Compiler.query_of_ast s_p t (fun st -> st)
 
   let total_type_checking_time q = Compiler.total_type_checking_time q
-
-  let static_check ~checker q =
-    let module R = (val !r) in let open R in
-    Compiler.static_check ~exec:(execute_once ~delay_outside_fragment:false) ~checker q
 
   module StrSet = Util.StrSet
 
@@ -191,9 +189,10 @@ module Compile = struct
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
-  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } x = Compiler.unit_of_ast ~flags ~header x
-  let extend ?(flags=Compiler.default_flags) ~base ul = Compiler.append_units ~flags ~base ul
-  let assemble ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } = Compiler.assemble_units ~flags ~header
+  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base x =
+    Compiler.unit_of_ast ~flags ~header x |> Compiler.check_unit ~base
+
+  let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
 
 end
 

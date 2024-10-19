@@ -568,7 +568,7 @@ module TypeChecker : sig
   val check_types : type_abbrevs:type_abbrevs -> kinds:arities -> TypeList.t -> TypeAssignment.overloaded_skema
 
   type env = TypeAssignment.overloaded_skema F.Map.t
-  val check : type_abbrevs:type_abbrevs-> kinds:arities -> env:env -> ScopedTerm.t -> exp:TypeAssignment.t -> bool
+  val check : type_abbrevs:type_abbrevs-> kinds:arities -> types:env -> ScopedTerm.t -> exp:TypeAssignment.t -> bool
 
 end = struct
   type type_abbrevs = TypeAssignment.skema F.Map.t
@@ -744,7 +744,7 @@ end = struct
     let len = String.length s in
     len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
-  let check ~type_abbrevs ~kinds ~env (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
+  let check ~type_abbrevs ~kinds ~types:env (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
     (* Format.eprintf "checking %a\n" ScopedTerm.pretty t; *)
     let needs_spill = ref false in
     let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
@@ -1119,11 +1119,44 @@ type program = {
 
 end
 
-type compilation_unit = {
+module CheckedFlat = struct
+
+type program = {
+  toplevel_macros : macro_declaration;
+  kinds : Arity.t F.Map.t;
+  types : TypeAssignment.overloaded_skema F.Map.t;
+  types_indexing : (Ast.Structured.tattribute option * Loc.t) list F.Map.t;
+  type_abbrevs :  TypeAssignment.skema F.Map.t;
+  modes : (mode * Loc.t) F.Map.t;
+  clauses : (bool * (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t) list;
+  chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
+  builtins : BuiltInPredicate.t list;
+}
+[@@deriving show]
+
+end
+
+type unchecked_compilation_unit = {
   version : string;
   code : Flat.program;
 }
 [@@deriving show]
+
+(* TODO: proper hack *)
+let hash_base x = string_of_int @@ Hashtbl.hash x 
+
+
+type checked_compilation_unit = {
+  version : string;
+  checked_code : CheckedFlat.program;
+  base_hash : string;
+  precomputed_kinds : Arity.t F.Map.t;
+  precomputed_types : TypeAssignment.overloaded_skema F.Map.t;
+  precomputed_type_abbrevs :  TypeAssignment.skema F.Map.t;
+  type_checking_time : float;
+}
+[@@deriving show]
+
 
 module Assembled = struct
 
@@ -1142,6 +1175,8 @@ type program = {
   symbols : SymbolMap.table;
 
   toplevel_macros : macro_declaration;
+  hash : string;
+
 }
 and attribute = {
   id : string option;
@@ -1160,6 +1195,7 @@ let empty () = {
   symbols = SymbolMap.empty ();
   toplevel_macros = F.Map.empty;
   total_type_checking_time = 0.0;
+  hash = "";
 }
 
 end
@@ -1167,8 +1203,8 @@ end
 
 type builtins = string * Data.BuiltInPredicate.declaration list
 
-type header = State.t * compilation_unit * macro_declaration
 type program = State.t * Assembled.program
+type header = program * macro_declaration
 
 
 module WithMain = struct
@@ -3350,9 +3386,59 @@ end (* }}} *)
 
 (* This is marshalable *)
 
+module Check : sig
+
+  val check : State.t -> base:Assembled.program -> unchecked_compilation_unit -> checked_compilation_unit
+
+end = struct
+
+  let check st ~base u : checked_compilation_unit =
+    let { Assembled.symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time } = base in
+    let { version; code = { Flat.toplevel_macros; kinds; types; type_abbrevs; modes; clauses; chr; builtins }} = u in
+
+    let all_kinds = Flatten.merge_kinds ok kinds in
+
+    let check_k_begin = Unix.gettimeofday () in
+    let all_type_abbrevs, type_abbrevs =
+      List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, ty) ->
+        (* TODO check dijoint from kinds and type_abbrevs *)
+        if F.Map.mem name all_type_abbrevs then
+          error ("Duplicate type abbreviation for " ^ F.show name);
+        let ty = TypeChecker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ty in
+        F.Map.add name ty all_type_abbrevs, F.Map.add name ty type_abbrevs)
+        (ota,F.Map.empty) type_abbrevs in
+    let check_k_end = Unix.gettimeofday () in
+
+    let check_t_begin = Unix.gettimeofday () in
+    (* TypeChecker.check_disjoint ~type_abbrevs ~kinds; *)
+    let types_indexing = F.Map.map (List.map (fun ty -> ty.ScopedTypeExpression.indexing, ty.ScopedTypeExpression.loc)) types in
+    let types = F.Map.map (TypeChecker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds) types in
+    let check_t_end = Unix.gettimeofday () in
+
+    let all_types = Flatten.merge_type_assignments ot types in
+
+    let check_begin = Unix.gettimeofday () in
+    let clauses = clauses |> List.map (fun ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
+      if typecheck then
+        let needs_spill = TypeChecker.check ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:TypeAssignment.(Val Prop) in
+        needs_spill, c
+      else
+        false, c) in
+    let check_end = Unix.gettimeofday () in
+
+    let checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; clauses; chr; builtins } in
+
+  { version; checked_code; base_hash = hash_base base;
+    precomputed_kinds =all_kinds;
+    precomputed_type_abbrevs = all_type_abbrevs;
+    precomputed_types = all_types;
+    type_checking_time = check_end -. check_begin +. check_t_end -. check_t_begin +. check_k_end -. check_k_begin }
+
+end
+
 module Assemble : sig
 
-  val extend : flags -> State.t -> Assembled.program -> compilation_unit list -> State.t * Assembled.program
+  val extend : flags -> State.t -> Assembled.program -> checked_compilation_unit -> State.t * Assembled.program
 
   (* for the query *)
   val compile_query : State.t -> Assembled.program -> ScopedTerm.t -> SymbolMap.table * int F.Map.t * D.term
@@ -3410,7 +3496,7 @@ end = struct
     let symbols, map =
       F.Map.fold (fun tname l (symbols, acc) ->
         let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols tname in
-        symbols, TypeList.fold (fun acc { ScopedTypeExpression.indexing; loc } ->
+        symbols, TypeList.fold (fun acc (indexing, loc) ->
                    add_indexing_for ~loc tname c indexing acc)
                   acc l)
       types (symbols, C.Map.empty) in
@@ -3684,57 +3770,38 @@ end = struct
     F.Map.union (fun k _ _ -> error ("Duplicate type abbreviation for " ^ F.show k)) m1 m2
 
   let extend1 flags
-    (state, { Assembled.symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
-            { version; code = { Flat.toplevel_macros; kinds; types; type_abbrevs; modes; clauses; chr; builtins }} =
-    let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types indexing in
-    let kinds = Flatten.merge_kinds ok kinds in
+    (state, { Assembled.hash; symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
+            { version; base_hash; checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; clauses; chr; builtins}; precomputed_kinds; precomputed_type_abbrevs; precomputed_types; type_checking_time } =
+    let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types_indexing indexing in
+    let kinds, type_abbrevs, types =
+    if hash = base_hash then
+      precomputed_kinds, precomputed_type_abbrevs, precomputed_types
+    else
+      let kinds = Flatten.merge_kinds ok kinds in
+      let type_abbrevs = merge_type_abbrevs ota type_abbrevs in
+      let types = Flatten.merge_type_assignments ot types in
+      kinds, type_abbrevs, types
+    in
     let modes = Flatten.merge_modes om modes in
-
-    let type_abbrevs =
-      List.fold_left (fun type_abbrevs (name, ty) ->
-        (* TODO check dijoint from kinds and type_abbrevs *)
-        F.Map.add name (TypeChecker.check_type ~type_abbrevs ~kinds ty) type_abbrevs)
-        ota type_abbrevs in
-
-
-    let type_abbrevs = merge_type_abbrevs ota type_abbrevs in
-
-    let t0 = Unix.gettimeofday () in
-    (* TypeChecker.check_disjoint ~type_abbrevs ~kinds; *)
-    let types = F.Map.map (TypeChecker.check_types ~type_abbrevs ~kinds) types in
-    let t1 = Unix.gettimeofday () in
-    let total_type_checking_time = total_type_checking_time +. t1 -. t0 in
-
-    let types = Flatten.merge_type_assignments ot types in
-
 
     let symbols, state =
       List.fold_left (fun (symbols,state) (D.BuiltInPredicate.Pred(name,_,_) as p) ->
         let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols (F.from_string name) in
         let state = Builtins.register state p c in
         symbols,state) (symbols,state) builtins in
-
-    (* TODO: make this callable on a unit (+ its base) *)
-    let t0 = Unix.gettimeofday () in
-    let clauses = clauses |> List.map (fun ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
-      if typecheck then
-        let needs_spill = TypeChecker.check ~type_abbrevs ~kinds ~env:types body ~exp:TypeAssignment.(Val Prop) in
-        needs_spill, c
-      else
-        false, c) in
-    let t1 = Unix.gettimeofday () in
-    let total_type_checking_time = total_type_checking_time +. t1 -. t0 in
-
+    let total_type_checking_time = total_type_checking_time +. type_checking_time in
 
     let symbols, chr =
       List.fold_left (extend1_chr_block flags state) (symbols,ochr) chr in
     let symbols, prolog_program =
       List.fold_left (extend1_clause flags state modes indexing) (symbols, prolog_program) clauses in
+  
+    let new_base = 
+      { Assembled.hash; symbols; prolog_program; indexing; modes; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
+    let hash = hash_base new_base in
+    state, { new_base with hash }
 
-    state, { Assembled.symbols; prolog_program; indexing; modes; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time }
-
-  let extend flags state assembled ul =
-    List.fold_left (extend1 flags) (state, assembled) ul
+  let extend flags state assembled u = extend1 flags (state, assembled) u
 
   let compile_query state { Assembled.symbols; } t =
     let (symbols, amap), t = todbl ~needs_spilling:false (* typecheck *) state symbols t in
@@ -3810,6 +3877,20 @@ let print_unit { print_units } x =
         (Bytes.length b1 / 1024) (List.length x.code.Flat.clauses)
 ;;
 
+let assemble_unit ~flags ~header:((s,base),toplevel_macros) units : program =
+
+  let s, p = Assemble.extend flags s base units in
+
+  let { print_passes } = flags in
+
+  if print_passes then
+    Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
+      Assembled.pp_program p;
+
+ s, p
+;;
+
+
 let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor calc_descriptor builtins ast : header =
   let state = D.State.(init (merge_descriptors D.elpi_state_descriptor state_descriptor)) in
   let state =
@@ -3840,30 +3921,22 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
       | _ -> None)) builtins in
   let u = { u with code = { u.code with builtins }} in (* UGLY *)
   print_unit flags u;
-  state, u, toplevel_macros
+  let u = Check.check state ~base:(Assembled.empty ()) u in
+  let init = { (Assembled.empty ()) with toplevel_macros } in
+  let h = assemble_unit ~flags ~header:((state,init),toplevel_macros) u in
+  h, toplevel_macros
 
-let unit_of_ast ~flags ~header:(s, (header : compilation_unit), toplevel_macros) p : compilation_unit =
+let check_unit ~base:(st,base) u = Check.check st ~base u
+
+let empty_base ~header:(b,_) = b
+
+let unit_of_ast ~flags ~header:((s, _), toplevel_macros) p : unchecked_compilation_unit =
   let _, u, _ = unit_or_header_of_ast flags s ~toplevel_macros p in
   print_unit flags u;
   u
 
-let assemble_units ~flags ~header:(s,h,toplevel_macros) units : program =
-
-  let init = { (Assembled.empty ()) with toplevel_macros } in
-
-  let s, p = Assemble.extend flags s init (h :: units) in
-
-  let { print_passes } = flags in
-
-  if print_passes then
-    Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
-      Assembled.pp_program p;
-
- s, p
-;;
-
-let append_units ~flags ~base:(s,p) units : program =
-  let s, p = Assemble.extend flags s p units in
+let append_unit ~flags ~base:(s,p) unit : program =
+  let s, p = Assemble.extend flags s p unit in
   let { print_passes } = flags in
 
   if print_passes then
@@ -3872,9 +3945,10 @@ let append_units ~flags ~base:(s,p) units : program =
 
   s, p
 
-let program_of_ast ~flags ~header p : program =
+let program_of_ast ~flags ~header:((st, base), _ as header) p : program =
   let u = unit_of_ast ~flags ~header p in
-  assemble_units ~flags ~header [u]
+  let u = Check.check st ~base u in
+  assemble_unit ~flags ~header u
 
 let is_builtin state tname =
   Builtins.is_declared state tname

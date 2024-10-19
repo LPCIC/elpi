@@ -261,9 +261,9 @@ module Compile : sig
 
      *)
   type compilation_unit
-  val unit : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> compilation_unit
-  val assemble : ?flags:flags -> elpi:Setup.elpi -> compilation_unit list -> program
-  val extend : ?flags:flags -> base:program -> compilation_unit list -> program
+  val empty_base : elpi:Setup.elpi -> program
+  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> Ast.program -> compilation_unit
+  val extend : ?flags:flags -> base:program -> compilation_unit -> program
 
   (* then compile the query *)
   val query : program -> Ast.query -> unit query
@@ -271,10 +271,6 @@ module Compile : sig
 
   (* finally obtain the executable *)
   val optimize : 'a query -> 'a executable
-
-  (** Runs a checker. Returns true if no errors were found.
-      See also Builtins.default_checker. *)
-  val static_check : checker:program -> 'a query -> bool
 
 end
 

@@ -25,10 +25,12 @@ val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descrip
 type program
 val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program
 
-type compilation_unit
-val unit_of_ast : flags:flags -> header:header -> Ast.Program.t -> compilation_unit
-val assemble_units : flags:flags -> header:header -> compilation_unit list -> program
-val append_units : flags:flags -> base:program -> compilation_unit list -> program
+type checked_compilation_unit
+type unchecked_compilation_unit
+val empty_base : header:header -> program
+val unit_of_ast : flags:flags -> header:header -> Ast.Program.t -> unchecked_compilation_unit
+val append_unit : flags:flags -> base:program -> checked_compilation_unit -> program
+val check_unit : base:program -> unchecked_compilation_unit -> checked_compilation_unit
 
 type 'a query
 val query_of_ast : program -> Ast.Goal.t -> (State.t -> State.t) -> unit query
@@ -60,12 +62,6 @@ val get_Arg : State.t -> name:string -> args:term list -> term
 
 (* Quotes the program and the query, see elpi-quoted_syntax.elpi *)
 val quote_syntax : [ `Compiletime | `Runtime of constant -> term ] -> State.t -> 'a query -> State.t * term list * term
-
-(* false means a type error was found *)
-val static_check :
-  exec:(unit executable -> unit outcome) ->
-  checker:program ->
-  'a query -> bool
 
 module CustomFunctorCompilation : sig
 
