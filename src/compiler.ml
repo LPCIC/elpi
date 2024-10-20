@@ -92,7 +92,10 @@ end = struct
   {
     ast2ct = D.Global_symbols.(table.s2ct);
     last_global = D.Global_symbols.table.last_global;
-    c2t = D.Global_symbols.(table.c2s);
+    c2t = D.Constants.Map.map (fun s ->
+      let s = F.from_string s in
+      let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
+      s, t) D.Global_symbols.(table.c2s);
   }
 
   let allocate_global_symbol_aux x ({ c2t; ast2ct; last_global } as table) =
@@ -1211,10 +1214,10 @@ module WithMain = struct
 
 (* The entire program + query, but still in "printable" format *)
 type 'a query = {
-  kinds : Arity.t F.Map.t;
+  (* kinds : Arity.t F.Map.t;
   types : TypeAssignment.overloaded_skema F.Map.t;
   type_abbrevs : TypeAssignment.skema F.Map.t;
-  modes : (mode * Loc.t) F.Map.t;
+  modes : (mode * Loc.t) F.Map.t; *)
   (* clauses : (preterm,Assembled.attribute) Ast.Clause.t list; *)
   prolog_program : index;
   chr : CHR.t;
@@ -4003,11 +4006,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
   {
-    WithMain.types;
-    kinds;
-    modes;
-    type_abbrevs;
-    prolog_program = assembled_program.Assembled.prolog_program;
+    WithMain.prolog_program = assembled_program.Assembled.prolog_program;
     (* clauses = assembled_program.Assembled.clauses; *)
     chr = assembled_program.Assembled.chr;
     (* initial_depth; *)
@@ -4079,10 +4078,7 @@ end = struct (* {{{ *)
 
 let run
   {
-    WithMain.types;
-    modes;
-    (* clauses = _; *)
-    prolog_program;
+    WithMain.prolog_program;
     chr;
     (* initial_depth; *)
     symbols;
@@ -4092,8 +4088,8 @@ let run
     query_arguments;
   }
 =
-  check_all_builtin_are_typed state types;
-  check_no_regular_types_for_builtins state types;
+  (* check_all_builtin_are_typed state types;
+  check_no_regular_types_for_builtins state types; *)
   (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
   (* let compiler_symbol_table = State.get Symbols.table state in *)
   let builtins = Hashtbl.create 17 in

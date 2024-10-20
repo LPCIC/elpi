@@ -280,9 +280,9 @@ module ScopedTerm = struct
    [@@ deriving show]
 
    type constant = int
-   let mkGlobal loc c = { loc; it = Const(Global true,fst @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s) }
+   let mkGlobal loc c = { loc; it = Const(Global true,F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s) }
    let mkBound loc n = { loc; it = Const(Bound,n)}
-   let mkAppGlobal loc c x xs = { loc; it = App(Global true,fst @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
+   let mkAppGlobal loc c x xs = { loc; it = App(Global true,F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
    let mkAppBound loc n x xs = { loc; it = App(Bound,n,x,xs) }
   end
 

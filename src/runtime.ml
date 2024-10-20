@@ -59,7 +59,7 @@ let table = Fork.new_local {
 }
 
 let show ?(table = !table) n =
-  try Ast.Func.show @@ fst @@ Constants.Map.find n Global_symbols.table.c2s
+  try (*Ast.Func.show @@ fst @@*) Constants.Map.find n Global_symbols.table.c2s
   with Not_found ->
     try Hashtbl.find table.c2s n
     with Not_found ->

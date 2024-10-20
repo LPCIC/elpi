@@ -478,7 +478,7 @@ module Global_symbols : sig
   type t = {
     (* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
     mutable s2ct : (constant * term) Ast.Func.Map.t;
-    mutable c2s : (Ast.Func.t * term) Constants.Map.t;
+    mutable c2s : string Constants.Map.t;
     (* negative *)
     mutable last_global : int;
 
@@ -523,7 +523,7 @@ end = struct
 
 type t = {
   mutable s2ct : (constant * term) Ast.Func.Map.t;
-  mutable c2s : (Ast.Func.t * term) Constants.Map.t;
+  mutable c2s : string Constants.Map.t;
   mutable last_global : int;
   mutable locked : bool;
 }
@@ -536,8 +536,8 @@ let table = {
   locked = false;
 }
 
-let declare_global_symbol x =
-  let x = Ast.Func.from_string x in
+let declare_global_symbol str =
+  let x = Ast.Func.from_string str in
   try fst @@ Ast.Func.Map.find x table.s2ct
   with Not_found ->
     if table.locked then
@@ -546,11 +546,11 @@ let declare_global_symbol x =
     let n = table.last_global in
     let t = Const n in
     table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
-    table.c2s <- Constants.Map.add n (x,t) table.c2s;
+    table.c2s <- Constants.Map.add n str table.c2s;
     n
 
-let declare_global_symbol_for_builtin x =
-  let x = Ast.Func.from_string x in
+let declare_global_symbol_for_builtin str =
+  let x = Ast.Func.from_string str in
   if table.locked then
     Util.anomaly "declare_global_symbol_for_builtin called after initialization";
   try fst @@ Ast.Func.Map.find x table.s2ct
@@ -559,7 +559,7 @@ let declare_global_symbol_for_builtin x =
     let n = table.last_global in
     let t = Builtin(n,[]) in
     table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
-    table.c2s <- Constants.Map.add n (x,t) table.c2s;
+    table.c2s <- Constants.Map.add n str table.c2s;
     n
 
 let lock () = table.locked <- true

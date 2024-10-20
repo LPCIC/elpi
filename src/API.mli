@@ -256,10 +256,9 @@ module Compile : sig
        units
      - macros declared as part of the builtins given to Setup.init are
        visible in all units
-     - types, type abbreviations and mode declarations from all units are
+     - types, type abbreviations and mode declarations from the  units are
        merged at assembly time
-
-     *)
+*)
   type compilation_unit
   val empty_base : elpi:Setup.elpi -> program
   val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> Ast.program -> compilation_unit
@@ -267,11 +266,11 @@ module Compile : sig
 
   (* then compile the query *)
   val query : program -> Ast.query -> unit query
-  val total_type_checking_time : 'a query -> float
-
+  
   (* finally obtain the executable *)
   val optimize : 'a query -> 'a executable
-
+  
+  val total_type_checking_time : 'a query -> float
 end
 
 module Execute : sig
