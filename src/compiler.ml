@@ -82,7 +82,8 @@ end = struct
 
   let compile { last_global; c2t; ast2ct } =
     let t = { D.c2s = Hashtbl.create 37; c2t = Hashtbl.create 37; frozen_constants = last_global; } in
-    (* let xx = F.Map.cardinal ast2ct in
+  (* NO NEED TO COMPILE *)
+  (* let xx = F.Map.cardinal ast2ct in
       F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
     t
     
@@ -3500,7 +3501,7 @@ end = struct
 
     (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
             time   typchk wall   mem
-      with: 14.75   0.53  16.69 2348.4M 
+      with: 14.75   0.53  16.69 2348.4M
       wout: 19.61   0.56  21.72 2789.1M 
     *)
     let symbols =

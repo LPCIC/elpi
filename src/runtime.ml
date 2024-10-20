@@ -58,6 +58,9 @@ let table = Fork.new_local {
   frozen_constants = 0;
 }
 
+let () = at_exit (fun () -> let open Hashtbl in let s = stats !table.c2t in
+  Array.iter (fun i -> Printf.eprintf "%d\n" i) s.bucket_histogram)
+
 let show ?(table = !table) n =
   try (*Ast.Func.show @@ fst @@*) Constants.Map.find n Global_symbols.table.c2s
   with Not_found ->
