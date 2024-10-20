@@ -3498,9 +3498,16 @@ end = struct
         check_if_some_clauses_already_in ~loc name c;
         C.Map.add c (mode,index) map in
 
-    (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory) *)
+    (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
+            time   typchk wall   mem
+      with: 14.75   0.53  16.69 2348.4M 
+      wout: 19.61   0.56  21.72 2789.1M 
+    *)
     let symbols =
-      F.Map.bindings types |> List.map (fun (k,l) -> k,snd (List.hd l)) |> List.sort (fun (_,l1) (_,l2) -> compare l1.Loc.line l2.Loc.line) |> List.map fst |> List.fold_left (fun s k -> fst @@ SymbolMap.allocate_global_symbol state s k) symbols in
+      if F.Map.cardinal types > 2000 then
+        F.Map.bindings types |> List.map (fun (k,l) -> k,snd (List.hd l)) |> List.sort (fun (_,l1) (_,l2) -> compare l1.Loc.line l2.Loc.line) |> List.map fst |> List.fold_left (fun s k -> fst @@ SymbolMap.allocate_global_symbol state s k) symbols
+      else
+        symbols in
 
     let symbols, map =
       F.Map.fold (fun tname l (symbols, acc) ->
