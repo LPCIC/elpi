@@ -82,6 +82,8 @@ let _ =
     API.Quotation.lp
 
 let _ =
+  (* Memtrace.trace_if_requested (); <-- new line *)
+  (* Hashtbl.randomize (); *)
   let test = ref false in
   let exec = ref "" in
   let print_lprolog = ref false in

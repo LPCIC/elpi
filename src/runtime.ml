@@ -76,7 +76,7 @@ let mkConst x =
     Hashtbl.add !table.c2t x xx;
     xx
   [@@inline]
-
+  
 let fresh_global_constant () =
    !table.frozen_constants <- !table.frozen_constants - 1;
    let n = !table.frozen_constants in

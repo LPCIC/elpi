@@ -82,21 +82,10 @@ end = struct
 
   let compile { last_global; c2t; ast2ct } =
     let t = { D.c2s = Hashtbl.create 37; c2t = Hashtbl.create 37; frozen_constants = last_global; } in
-    F.Map.iter (fun k (c,v) -> Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct;
+    (* let xx = F.Map.cardinal ast2ct in
+      F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
     t
     
-
-  let empty () =
-    if not @@ D.Global_symbols.table.locked then
-      anomaly "SymbolMap created before Global_symbols.table is locked";
-  {
-    ast2ct = D.Global_symbols.(table.s2ct);
-    last_global = D.Global_symbols.table.last_global;
-    c2t = D.Constants.Map.map (fun s ->
-      let s = F.from_string s in
-      let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
-      s, t) D.Global_symbols.(table.c2s);
-  }
 
   let allocate_global_symbol_aux x ({ c2t; ast2ct; last_global } as table) =
     try table, F.Map.find x ast2ct
@@ -109,6 +98,19 @@ end = struct
       let ast2ct = F.Map.add x p ast2ct in
       { c2t; ast2ct; last_global }, p
 
+      let empty () =
+        if not @@ D.Global_symbols.table.locked then
+          anomaly "SymbolMap created before Global_symbols.table is locked";
+      let table = {
+        ast2ct = D.Global_symbols.(table.s2ct);
+        last_global = D.Global_symbols.table.last_global;
+        c2t = D.Constants.Map.map (fun s ->
+          let s = F.from_string s in
+          let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
+          s, t) D.Global_symbols.(table.c2s);
+      } in
+      (*T2.go allocate_global_symbol_aux*) table
+    
   let allocate_global_symbol state table x =
     if not (D.State.get D.while_compiling state) then
       anomaly ("global symbols can only be allocated during compilation");
@@ -3495,6 +3497,10 @@ end = struct
       with Not_found ->
         check_if_some_clauses_already_in ~loc name c;
         C.Map.add c (mode,index) map in
+
+    (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory) *)
+    let symbols =
+      F.Map.bindings types |> List.map (fun (k,l) -> k,snd (List.hd l)) |> List.sort (fun (_,l1) (_,l2) -> compare l1.Loc.line l2.Loc.line) |> List.map fst |> List.fold_left (fun s k -> fst @@ SymbolMap.allocate_global_symbol state s k) symbols in
 
     let symbols, map =
       F.Map.fold (fun tname l (symbols, acc) ->
