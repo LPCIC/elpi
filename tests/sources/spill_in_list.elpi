@@ -1,7 +1,9 @@
 pred p o:A, o:A.
+p X X.
 
-pred print-list i:A.
-print-list X :- print X.
+pred print-list i:list A.
+print-list [].
+print-list [X|XS] :- print X, print-list XS.
 
 main :- 
   std.do! [

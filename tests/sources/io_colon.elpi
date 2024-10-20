@@ -1,1 +1,2 @@
+pred f i:int.
 main :- (pi i\ f i :- true) => f 1.

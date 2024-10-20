@@ -118,7 +118,9 @@ val for_all2 : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
 val for_all23 :  argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> bool
 val for_all3b : ('a -> 'a -> bool -> bool) -> 'a list -> 'a list -> bool list -> bool -> bool
 type arg_mode = Input | Output
-and mode_aux =
+[@@deriving show, ord]
+
+type mode_aux =
   | Fo of arg_mode
   | Ho of arg_mode * mode
 and mode = mode_aux list
@@ -142,6 +144,7 @@ val uniq : 'a list -> 'a list
 
 val option_get : ?err:string -> 'a option -> 'a
 val option_map : ('a -> 'b) -> 'a option -> 'b option
+val option_smart_map : ('a -> 'a) -> 'a option -> 'a option
 val pp_option :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
 val option_mapacc :

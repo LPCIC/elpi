@@ -1,5 +1,3 @@
-p F :- F (x\ c x).
-
-q (x\ c x).
-
-main :- p (y\ pi z\ q y).
+:untyped p F :- F (x\ c x).
+:untyped q (x\ c x).
+:untyped main :- p (y\ pi z\ q y).

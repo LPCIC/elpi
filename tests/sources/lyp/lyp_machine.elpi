@@ -159,11 +159,11 @@ whd_t X S M T2 :- def_l X T1, !, % print "d",
 whd_t (appl _ V T1) S M T2 :- whd_t T1 [V|S] M T2.
 
 % full beta
-whd_t (abst _ _ T1) [V|S] M T2 :- print "bf",
+whd_t (abst _ _ T1) [V|S] M T2 :- % print "bf",
   pi x\ def_l x V => whd_t (T1 x) S M T2.
 
 % restricted beta
-whd_t (rest _ _ T1) [V|S] M T2 :- print "br",
+whd_t (rest _ _ T1) [V|S] M T2 :- % print "br",
   pi x\ def_l x V => whd_t (T1 x) S M T2.
 
 % Stack Conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -179,7 +179,7 @@ conv_s [V1|S1] [V2|S2] :- conv_t V1 [] [] V2, conv_s S1 S2.
 type conv_t term -> stack -> stack -> term -> prop.
 
 % reflexivity 
-conv_t T S1 S2 T :- conv_s S1 S2, !. %, print "r".
+conv_t T S1 S2 T :- conv_s S1 S2, !. %, %, %, print "r".
 
 conv_t (abst F W1 T1) [] [] (abst F W2 T2) :- !,
   conv_t W1 [] [] W2,
@@ -202,19 +202,19 @@ conv_t T1 S1 S2 (appl _ V2 T2) :- !,
   conv_t T1 S1 [V2|S2] T2.
 
 % left full beta
-conv_t (abst _ _ T1) [V1|S1] S2 T2 :- !, print "bf",
+conv_t (abst _ _ T1) [V1|S1] S2 T2 :- !, %, %, print "bf",
   pi x\ def_l x V1 => conv_t (T1 x) S1 S2 T2.
 
 % left restricted beta
-conv_t (rest _ _ T1) [V1|S1] S2 T2 :- !, print "br",
+conv_t (rest _ _ T1) [V1|S1] S2 T2 :- !, %, %, print "br",
   pi x\ def_l x V1 => conv_t (T1 x) S1 S2 T2.
 
 % right full beta
-conv_t T1 S1 [V2|S2] (abst _ _ T2) :- !, print "bf",
+conv_t T1 S1 [V2|S2] (abst _ _ T2) :- !, %, %, print "bf",
   pi x\ def_l x V2 => conv_t T1 S1 S2 (T2 x).
 
 % right restricted beta
-conv_t T1 S1 [V2|S2] (rest _ _ T2) :- !, print "br",
+conv_t T1 S1 [V2|S2] (rest _ _ T2) :- !, %, %, print "br",
   pi x\ def_l x V2 => conv_t T1 S1 S2 (T2 x).
 
 % parallel delta
@@ -269,11 +269,11 @@ ac_t X S P :- def_l X T, !, % print "d",
 ac_t (appl _ V T) S P :- ac_t T [V|S] P.
 
 % full beta
-ac_t (abst _ _ T) [V|S] P :- print "bf",
+ac_t (abst _ _ T) [V|S] P :- % print "bf",
   pi x\ def_l x V => ac_t (T x) S P.
 
 % restricted beta
-ac_t (rest _ _ T) [V|S] P :- print "br",
+ac_t (rest _ _ T) [V|S] P :- % print "br",
   pi x\ def_l x V => ac_t (T x) S P.
 
 % Static type assignment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

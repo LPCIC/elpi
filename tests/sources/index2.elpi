@@ -108,6 +108,7 @@ p X X X X X X X X 2.
 p X X X X X X X X 2.
 p X X X X X X X X 1.
 
+pred iter i:int, i:prop.
 iter N P :- N > 0, !, P, M is N - 1, iter M P.
 iter 0 _.
 

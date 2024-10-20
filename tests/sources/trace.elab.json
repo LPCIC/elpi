@@ -28,7 +28,7 @@
                       "filename": "tests/sources/trace.elpi",
                       "line": 6,
                       "column": 0,
-                      "character": 60
+                      "character": 80
                     }
                   ]
                 }
@@ -52,7 +52,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -86,9 +86,9 @@
                     "File",
                     {
                       "filename": "builtin.elpi",
-                      "line": 30,
+                      "line": 34,
                       "column": 0,
-                      "character": 354
+                      "character": 374
                     }
                   ]
                 }
@@ -110,9 +110,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 30,
+                    "line": 34,
                     "column": 0,
-                    "character": 354
+                    "character": 374
                   }
                 ]
               }
@@ -131,7 +131,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -167,7 +167,7 @@
                       "filename": "tests/sources/trace.elpi",
                       "line": 2,
                       "column": 0,
-                      "character": 1
+                      "character": 21
                     }
                   ]
                 }
@@ -191,7 +191,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 2,
                     "column": 0,
-                    "character": 1
+                    "character": 21
                   }
                 ]
               }
@@ -208,9 +208,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 30,
+                    "line": 34,
                     "column": 0,
-                    "character": 354
+                    "character": 374
                   }
                 ]
               }
@@ -229,7 +229,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -263,9 +263,9 @@
                     "File",
                     {
                       "filename": "builtin.elpi",
-                      "line": 75,
+                      "line": 79,
                       "column": 0,
-                      "character": 1089
+                      "character": 1109
                     }
                   ]
                 }
@@ -289,9 +289,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 75,
+                    "line": 79,
                     "column": 0,
-                    "character": 1089
+                    "character": 1109
                   }
                 ]
               }
@@ -310,7 +310,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 2,
                     "column": 0,
-                    "character": 1
+                    "character": 21
                   }
                 ]
               }
@@ -327,9 +327,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 30,
+                    "line": 34,
                     "column": 0,
-                    "character": 354
+                    "character": 374
                   }
                 ]
               }
@@ -348,7 +348,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -397,9 +397,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 75,
+                    "line": 79,
                     "column": 0,
-                    "character": 1089
+                    "character": 1109
                   }
                 ]
               }
@@ -418,7 +418,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 2,
                     "column": 0,
-                    "character": 1
+                    "character": 21
                   }
                 ]
               }
@@ -435,9 +435,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 30,
+                    "line": 34,
                     "column": 0,
-                    "character": 354
+                    "character": 374
                   }
                 ]
               }
@@ -456,7 +456,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -506,9 +506,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 75,
+                    "line": 79,
                     "column": 0,
-                    "character": 1089
+                    "character": 1109
                   }
                 ]
               }
@@ -527,7 +527,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 2,
                     "column": 0,
-                    "character": 1
+                    "character": 21
                   }
                 ]
               }
@@ -544,9 +544,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 30,
+                    "line": 34,
                     "column": 0,
-                    "character": 354
+                    "character": 374
                   }
                 ]
               }
@@ -565,7 +565,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -601,7 +601,7 @@
                       "filename": "tests/sources/trace.elpi",
                       "line": 3,
                       "column": 0,
-                      "character": 22
+                      "character": 42
                     }
                   ]
                 }
@@ -629,7 +629,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 3,
                     "column": 0,
-                    "character": 22
+                    "character": 42
                   }
                 ]
               }
@@ -646,9 +646,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 30,
+                    "line": 34,
                     "column": 0,
-                    "character": 354
+                    "character": 374
                   }
                 ]
               }
@@ -667,7 +667,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -718,7 +718,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 3,
                     "column": 0,
-                    "character": 22
+                    "character": 42
                   }
                 ]
               }
@@ -735,9 +735,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 30,
+                    "line": 34,
                     "column": 0,
-                    "character": 354
+                    "character": 374
                   }
                 ]
               }
@@ -756,7 +756,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -807,7 +807,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 3,
                     "column": 0,
-                    "character": 22
+                    "character": 42
                   }
                 ]
               }
@@ -824,9 +824,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 30,
+                    "line": 34,
                     "column": 0,
-                    "character": 354
+                    "character": 374
                   }
                 ]
               }
@@ -845,7 +845,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -892,7 +892,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 3,
                     "column": 0,
-                    "character": 22
+                    "character": 42
                   }
                 ]
               }
@@ -909,9 +909,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 30,
+                    "line": 34,
                     "column": 0,
-                    "character": 354
+                    "character": 374
                   }
                 ]
               }
@@ -930,7 +930,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -964,9 +964,9 @@
                     "File",
                     {
                       "filename": "builtin.elpi",
-                      "line": 32,
+                      "line": 36,
                       "column": 0,
-                      "character": 369
+                      "character": 389
                     }
                   ]
                 }
@@ -988,9 +988,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 32,
+                    "line": 36,
                     "column": 0,
-                    "character": 369
+                    "character": 389
                   }
                 ]
               }
@@ -1009,7 +1009,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }
@@ -1045,7 +1045,7 @@
                       "filename": "tests/sources/trace.elpi",
                       "line": 4,
                       "column": 0,
-                      "character": 52
+                      "character": 72
                     }
                   ]
                 }
@@ -1069,7 +1069,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 4,
                     "column": 0,
-                    "character": 52
+                    "character": 72
                   }
                 ]
               }
@@ -1086,9 +1086,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 32,
+                    "line": 36,
                     "column": 0,
-                    "character": 369
+                    "character": 389
                   }
                 ]
               }
@@ -1107,7 +1107,7 @@
                     "filename": "tests/sources/trace.elpi",
                     "line": 6,
                     "column": 0,
-                    "character": 60
+                    "character": 80
                   }
                 ]
               }

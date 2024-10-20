@@ -1,11 +1,14 @@
 
 namespace b {
 
+pred foo.
 foo :- true.
+pred baz.
 baz :- fail.
 
   namespace bar {
   
+  pred baz.
   baz :- foo.
 
   }
@@ -20,8 +23,10 @@ namespace a {
   shorten b.{ foo }.
   shorten b.bar.{ baz }.
   
+  pred main.
   main :- foo, b.foo, baz, bar.baz, b.bar.baz.
 
+  pred bar.baz.
   bar.baz :- true.
 
   shorten b.{ baz }.

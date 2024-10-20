@@ -1,1 +1,1 @@
-main :- p (F X) F X => p (f x) f x.
+:untyped main :- p (F X) F X => p (f x) f x.

@@ -1,4 +1,6 @@
+
 accumulate helena.
+accumulate grundlagen_types.
 accumulate grundlagen_2b_ld3.
 
 main :- grundlagen.

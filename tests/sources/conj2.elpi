@@ -1,3 +1,5 @@
+pred test1.
+pred test2.
 main :- test1, test2.
 
 test1 :- true & true & true.
