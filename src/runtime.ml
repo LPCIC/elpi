@@ -2508,8 +2508,8 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
         (*              up to the 30^th elemebt                   *)
         if h > 30 then (Path.emit path mkListEnd; update_current_min_depth path_depth)
         else
-          main ~safe ~depth a path_depth;
-          list_to_trie_path ~depth ~safe ~h:(h+1) path_depth (len+1) b
+          (main ~safe ~depth a path_depth;
+          list_to_trie_path ~depth ~safe ~h:(h+1) path_depth (len+1) b)
     
     (* These cases can come from terms like `[_ | _]`, `[_ | A]` ...  *)
     | UVar _ | AppUVar _ | Arg _ | AppArg _ | Discard -> Path.emit path mkListTailVariable; update_current_min_depth path_depth
