@@ -348,3 +348,11 @@ let () = declare "chr_with_hypotheses"
   ~typecheck:true
   ~expectation:Success
   ()
+
+let () = declare "bug_272"
+  ~source_elpi:"dt_bug272.elpi"
+  ~description:"dt list truncation heuristic"
+  ~typecheck:true
+  ~expectation:Success
+  ()
+
