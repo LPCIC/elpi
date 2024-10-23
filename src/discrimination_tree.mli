@@ -18,6 +18,7 @@ val mkLam : cell
 val mkInputMode : cell
 val mkOutputMode : cell
 val mkListTailVariable : cell
+val mkListTailVariableUnif : cell
 val mkListHead : cell
 val mkListEnd : cell
 val mkPathEnd : cell
@@ -87,5 +88,6 @@ module Internal: sig
   val isListHead : cell -> bool
   val isListEnd : cell -> bool
   val isListTailVariable : cell -> bool
+  val isListTailVariableUnif : cell -> bool
   val isPathEnd : cell -> bool
 end

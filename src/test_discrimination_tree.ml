@@ -80,7 +80,7 @@ let () =
 let () =  
   let get_length dt path = DT.retrieve compare path !dt |> Elpi.Internal.Bl.length in
   let remove dt e = dt := DT.remove (fun x -> x = e) !dt in
-  let index dt path v = dt := DT.index !dt path v in 
+  let index dt path v = dt := DT.index !dt path ~max_list_length:1000 v in 
 
   let constA = mkConstant ~safe:false ~data:~-1 ~arity:~-0 in (* a *)
   let p1 = [mkListHead; constA; mkListTailVariable; constA] in

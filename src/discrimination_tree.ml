@@ -54,6 +54,7 @@ let mkListTailVariable = encode ~k:kOther ~data:3 ~arity:0
 let mkListHead = encode ~k:kOther ~data:4 ~arity:0
 let mkListEnd = encode ~k:kOther ~data:5 ~arity:0 
 let mkPathEnd = encode ~k:kOther ~data:6 ~arity:0
+let mkListTailVariableUnif = encode ~k:kOther ~data:7 ~arity:0
 
 
 let isVariable x = x == mkVariable
@@ -63,6 +64,7 @@ let isOutput x = x == mkOutputMode
 let isListHead x = x == mkListHead
 let isListEnd x = x == mkListEnd
 let isListTailVariable x = x == mkListTailVariable
+let isListTailVariableUnif x = x == mkListTailVariableUnif
 let isPathEnd x = x == mkPathEnd
 
 type cell = int
@@ -82,7 +84,9 @@ let pp_cell fmt n =
        else if isListHead n then "ListHead"
        else if isListEnd n then "ListEnd"
        else if isPathEnd n then "PathEnd"
-       else "Other")
+       else if isListTailVariableUnif n then "ListTailVariableUnif"
+       else if isLam n then "Other"
+       else failwith "Invalid path construct...")
   else if k == kPrimitive then Format.fprintf fmt "Primitive"
   else Format.fprintf fmt "%o" k
 
@@ -184,7 +188,7 @@ module Trie = struct
           let t' = match other with None -> empty | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with other = Some t'' }
-      | Node ({ listTailVariable } as t) when isListTailVariable x ->
+      | Node ({ listTailVariable } as t) when isListTailVariable x || isListTailVariableUnif x ->
           let t' = match listTailVariable with None -> empty | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with listTailVariable = Some t'' }
@@ -222,7 +226,7 @@ end
 
 let update_par_count n k =
   if isListHead k then n + 1 else
-  if isListEnd k || isListTailVariable k then n - 1 else n
+  if isListEnd k || isListTailVariable k || isListTailVariableUnif k then n - 1 else n
 
 let skip ~pos path (*hd tl*) : int =
   let rec aux_list acc p =
@@ -335,8 +339,8 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
   else if isInput hd || isOutput hd then 
     (* next argument, we update the mode *)
      retrieve ~pos:(pos+1) ~add_result hd path tree
-  else if isListTailVariable hd then
-    let sub_tries = skip_to_listEnd mode tree in
+  else if isListTailVariable hd || isListTailVariableUnif hd then
+    let sub_tries = skip_to_listEnd (if isListTailVariableUnif hd then mkOutputMode else mode) tree in
     List.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
   else begin
     (* Here the constructor can be Constant, Primitive, Variable, Other, ListHead, ListEnd *)
@@ -414,6 +418,7 @@ module Internal = struct
   let isListHead = isListHead
   let isListEnd = isListEnd
   let isListTailVariable = isListTailVariable
+  let isListTailVariableUnif = isListTailVariableUnif
   let isPathEnd = isPathEnd
 
 end
