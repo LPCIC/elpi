@@ -100,6 +100,11 @@ module Loc : sig
   val compare : t -> t -> int
 
   val initial : string -> t
+  (* merge left right *)
+  val merge : t -> t -> t
+  (* starts/end n chars before/after*)
+  val extend : int -> t -> t
+
 end
 
 (******************** list ******************)
@@ -113,7 +118,12 @@ val for_all2 : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
 val for_all23 :  argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> bool
 val for_all3b : ('a -> 'a -> bool -> bool) -> 'a list -> 'a list -> bool list -> bool -> bool
 type arg_mode = Input | Output
-val for_all3b3 : argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> arg_mode list -> bool -> bool
+and mode_aux =
+  | Fo of arg_mode
+  | Ho of arg_mode * mode
+and mode = mode_aux list
+
+val for_all3b3 : argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> mode -> bool -> bool
 (*uses physical equality and calls anomaly if the element is not in the list*)
 val remove_from_list : 'a -> 'a list -> 'a list
 (* returns Some t where f x = Some t for the first x in the list s.t.

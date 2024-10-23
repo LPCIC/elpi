@@ -1,0 +1,12 @@
+pred p o:int, o:int.
+pred q o:int.
+
+p 0 0.
+
+:name "0" q 0.
+
+p 0 2.
+
+:before "0" p 0 1.
+
+main :- std.findall (p X Y) [p 0 0, p 0 1, p 0 2].

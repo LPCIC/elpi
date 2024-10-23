@@ -10,6 +10,7 @@ type expectation =
   | Failure
   | SuccessOutput of Str.regexp
   | FailureOutput of Str.regexp
+  | SuccessOutputTxt of (string list -> bool)
   | SuccessOutputFile of { sample : string; adjust : string -> string; reference : string }
 
 type trace = Off | On of string list
@@ -274,6 +275,20 @@ let with_log (_,log) f =
     x
   with e -> close_in cin; raise e
 
+let read_lines fname =
+  let cin = open_in fname in
+  let rec aux () =
+    try
+      let x = input_line cin in
+      x :: aux ()
+    with End_of_file -> close_in cin; []
+  in
+  aux ()
+
+let has_substring ~sub s = 
+  try Str.(search_forward (regexp sub)) s 0 |> ignore; true
+  with Not_found -> false
+
 let option_map f = function None -> None | Some x -> Some (f x)
 
 let strip_cwd file =
@@ -415,6 +430,7 @@ let () = Runner.declare
         | Test.SuccessOutputFile { sample; adjust; reference } when promote ->
             FileUtil.cp [adjust sample] (sources^"/"^reference);
             Runner.Promote { walltime; typechecking; execution; mem }
+        | Test.SuccessOutputTxt f when f (Util.read_lines (snd log)) -> Runner.Success { walltime; typechecking; execution; mem }
         | _ -> Runner.Failure { walltime; typechecking; execution; mem }
         end
 
@@ -479,6 +495,8 @@ module ElpiTraceElab = struct
       let execution = 0.0 in
       let rc =
         match outcome, outcomey, test.Test.expectation with
+        | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputTxt f when f (Util.read_lines (snd log)) -> 
+            Runner.Success { walltime; typechecking; execution; mem }
         | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when match_file ~log sample adjust (sources^"/"^reference) ->
             Runner.Success { walltime; typechecking; execution; mem }
         | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when promote ->

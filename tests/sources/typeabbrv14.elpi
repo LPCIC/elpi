@@ -1,0 +1,6 @@
+typeabbrev (dl A) (dl A).
+
+pred p i:dl (dl A).
+
+main.
+

@@ -1,0 +1,10 @@
+pred p i:int, o:int.
+
+p 1 2.
+p X X. % OK for mode: the output is deduced from the input
+p X Y :- X = Y. % Similar to the test before, with explicit unification
+
+p X Y :- p Y X. % Mh, not good since the input of the premise is flex. 
+                % Moreover the output of the head is not ensured to be ground
+
+main.

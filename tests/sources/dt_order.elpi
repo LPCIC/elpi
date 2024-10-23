@@ -1,0 +1,11 @@
+:index(1 1 _)
+pred f i:bool, i:string, o:int.
+
+:name "a"
+f tt X _ :- halt "what is" X.
+
+:before "a"
+f tt "1" 1.
+
+main :-
+  f tt "1" N.

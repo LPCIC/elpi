@@ -356,3 +356,9 @@ let () = declare "bug_272"
   ~expectation:Success
   ()
 
+let () = declare "bug-256"
+  ~source_elpi:"bug-256.elpi"
+  ~description:"move/unif"
+  ~typecheck:true
+  ~expectation:Success
+  ()

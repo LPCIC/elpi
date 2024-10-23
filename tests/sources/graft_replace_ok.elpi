@@ -1,3 +1,4 @@
+:index (1) % "Hash" "DTree"
 pred p o:int.
 :name "replace_me"
 p 1.
@@ -6,4 +7,5 @@ p 1.
 p 2.
 
 main :-
-  std.findall (p _) [p 2].
+  std.findall (p _) [p 2],
+  std.findall (p 1) [].

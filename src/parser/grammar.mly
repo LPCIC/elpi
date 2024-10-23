@@ -13,6 +13,8 @@ open Parser_config
 open Ast
 open Term
 
+open TypeExpression
+
 
 let loc (startpos, endpos) = {
   Util.Loc.source_name = startpos.Lexing.pos_fname;
@@ -22,69 +24,78 @@ let loc (startpos, endpos) = {
   line_starts_at = startpos.Lexing.pos_bol;
 }
 
-let desugar_multi_binder loc = function
-  | App(Const hd as binder,args)
+let desugar_multi_binder loc t =
+  match t.it with
+  | App( { it = Const hd } as binder,args)
     when Func.equal hd Func.pif || Func.equal hd Func.sigmaf && List.length args > 1 ->
       let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
-      let () = match last with
+      let () = match last.it with
         | Lam _ -> ()
         | Const x when Func.is_uvar_name x -> ()
         | _ -> raise (ParseError(loc,"The last argument of 'pi' or 'sigma' must be a function or a unification variable, while it is: " ^ Ast.Term.show last)) in
       let names = List.map (function
-        | Const x -> Func.show x
-        | (App _ | Lam _ | CData _ | Quoted _) ->
+        | { it = Const x; loc } -> Func.show x, loc
+        | { it = (App _ | Lam _ | CData _ | Quoted _) } ->
             raise (ParseError(loc,"Only names are allowed after 'pi' or 'sigma'"))) rev_rest in
-      let body = mkApp loc [binder;last] in
-      List.fold_left (fun bo name -> mkApp loc [binder;mkLam name bo]) body names
-  | (App _ | Const _ | Lam _ | CData _ | Quoted _) as t -> t
+      let body = mkApp (Loc.merge binder.loc last.loc) [binder;last] in
+      List.fold_left (fun bo (name,nloc) ->
+        let loc = Loc.merge nloc bo.loc in
+        mkApp loc [binder;mkLam loc name bo]) body names
+  | (App _ | Const _ | Lam _ | CData _ | Quoted _) -> t
 ;;
 
 let desugar_macro loc lhs rhs =
   match lhs, rhs with
-  | Const name, body ->
+  | { it = Const name }, body ->
       if ((Func.show name).[0] != '@') then
         raise (ParseError(loc,"Macro name must begin with '@'"));
       name, body
-  | App(Const name,args), body ->
+  | { it = App({ it = Const name },args) }, body ->
       if ((Func.show name).[0] != '@') then
         raise (ParseError(loc,"Macro name must begin with '@'"));
       let names = List.map (function
-        | Const x -> Func.show x
-        | (App _ | Lam _ | CData _ | Quoted _) ->
+        | { it = Const x; loc } -> Func.show x, loc
+        | { it = (App _ | Lam _ | CData _ | Quoted _) } ->
               raise (ParseError(loc,"Macro parameters must be names"))) args in
-      name, List.fold_right mkLam names body
+      name, List.fold_right (fun (name,nloc) b -> mkLam (Loc.merge nloc b.loc) name b) names body
   | _ ->
         raise (ParseError(loc,"Illformed macro left hand side"))
 ;;
 
 let mkApp loc = function
-  | Const c :: a :: App (Const c1, args) :: [] when Func.(equal c andf && equal c1 andf) ->
-      mkAppF loc c (a :: args)
+  | { it = Const c; loc = cloc } :: a :: { it = App ({ it = Const c1 }, args) } :: [] when Func.(equal c andf && equal c1 andf) ->
+      mkAppF loc (cloc,c) (a :: args)
   | l -> mkApp loc l
+
+let mkAppF loc (cloc,c) = function
+  | a :: { it = App ({ it = Const c1 }, args) } :: [] when Func.(equal c andf && equal c1 andf) ->
+      mkAppF loc (cloc,c) (a :: args)
+  | l -> mkAppF loc (cloc,c) l
 
 let binder l = function
   | None -> l
   | Some (loc,b) ->
       match List.rev l with
-      | Const name :: rest ->
-          List.rev rest @ [mkLam (Func.show name) b]
+      | { it = Const name; loc = bloc } :: rest ->
+          let lloc = Loc.merge bloc b.loc in
+          List.rev rest @ [mkLam lloc (Func.show name) b]
       | _ -> raise (ParseError(loc,"bind '\\' operator must follow a name"))
 ;;
 
-let underscore () = Const Func.dummyname
+let underscore loc = { loc; it = Const Func.dummyname }
 
-let decode_sequent t =
-  match t with
-  | App(Const c,[hyps;bo]) when c == Func.sequentf -> hyps, bo
-  | _ -> underscore (), t
+let decode_sequent loc t =
+  match t.it with
+  | App({ it = Const c },[hyps;bo]) when c == Func.sequentf -> hyps, bo
+  | _ -> underscore loc, t
 
 let prop = Func.from_string "prop"
 
 let fix_church x = if Func.show x = "o" then prop else x
 
 let mode_of_IO io =
-  if io = 'i' then true
-  else if io = 'o' then false
+  if io = 'i' then Mode.Input
+  else if io = 'o' then Mode.Output
   else assert false
 
 %}
@@ -121,10 +132,9 @@ program:
 decl:
 | c = clause; FULLSTOP { Program.Clause c }
 | r = chr_rule; FULLSTOP { Program.Chr r }
-| p = pred; FULLSTOP { Program.Pred (snd p, fst p) }
+| p = pred; FULLSTOP { Program.Pred p }
 | t = type_; FULLSTOP { Program.Type t }
 | t = kind; FULLSTOP { Program.Type t }
-| m = mode; FULLSTOP { Program.Mode [m] }
 | m = macro; FULLSTOP { Program.Macro m }
 | CONSTRAINT; hyps = list(constant); QDASH; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, hyps, cl) }
 | CONSTRAINT; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, [], cl) }
@@ -160,20 +170,20 @@ chr_rule:
   to_remove = preceded(BIND,nonempty_list(sequent))?;
   guard = preceded(PIPE,term)?;
   new_goal = preceded(IFF,sequent)? {
-    { Chr.to_match; to_remove = Util.option_default [] to_remove; guard; new_goal; attributes; loc=(loc $sloc) }
+    { Chr.to_match; to_remove = Util.option_default [] to_remove; guard; new_goal; attributes; loc=(loc $loc) }
   }
 
 pred:
 | attributes = attributes; PRED;
-  c = constant; args = separated_list(option(CONJ),pred_item) {
-   let name = c in
-   { Mode.loc=loc $sloc; name; args = List.map fst args },
-   { Type.loc=loc $sloc; attributes; name;
-     ty = List.fold_right (fun (_,t) ty ->
-       mkApp (loc $loc(c)) [mkCon "->";t;ty]) args (mkCon "prop") }
+  name = constant; args = separated_list(option(CONJ),pred_item) {
+   { Type.loc=loc $sloc; name; attributes; ty = TPred ([], args) }
  }
 pred_item:
 | io = IO_COLON; ty = type_term { (mode_of_IO io,ty) }
+
+anonymous_pred:
+| attributes = attributes; PRED;
+  args = separated_list(option(CONJ),pred_item) { TPred (attributes, args) }
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
@@ -188,25 +198,20 @@ type_:
   }
 
 atype_term:
-| c = STRING { mkC (cstring.Util.CData.cin c) }
-| c = constant { Const (fix_church c) }
+| c = STRING { TCData (cstring.Util.CData.cin c) }
+| c = constant { TConst (fix_church c) }
 | LPAREN; t = type_term; RPAREN { t }
+| LPAREN; t = anonymous_pred; RPAREN { t }
 type_term:
-| c = constant { Const (fix_church c) }
-| hd = constant; args = nonempty_list(atype_term) { mkAppF (loc $loc(hd)) hd args }
-| hd = type_term; ARROW; t = type_term { mkApp (loc $loc(hd)) [mkCon "->"; hd; t] }
+| c = constant { TConst (fix_church c) }
+| hd = constant; args = nonempty_list(atype_term) { TApp (hd, List.hd args, List.tl args) }
+| hd = type_term; ARROW; t = type_term { TArr (hd, t) }
+| LPAREN; t = anonymous_pred; RPAREN { t }
 | LPAREN; t = type_term; RPAREN { t }
 
 kind_term:
-| TYPE { mkCon "type" }
-| hd = TYPE; ARROW; t = kind_term { mkApp (loc $loc(hd)) [mkCon "->"; mkCon "type"; t] }
-
-mode:
-| MODE; LPAREN; c = constant; l = nonempty_list(i_o); RPAREN {
-    { Mode.name = c; args = l; loc = loc $sloc } 
-}
-i_o:
-| io = IO { mode_of_IO io }
+| TYPE { TConst (Func.from_string "type") }
+| TYPE; ARROW; t = kind_term { TArr (TConst (Func.from_string "type"), t) }
 
 macro:
 | MACRO; m = term; VDASH; b = term {
@@ -217,18 +222,18 @@ macro:
 typeabbrev:
 | TYPEABBREV; a = abbrevform; t = type_term {
     let name, args = a in
-    let args = List.map Func.show args in
     let nparams = List.length args in
-    let value = List.fold_right mkLam args t in
+    let mkLam (n,_) body =  TypeAbbreviation.Lam (n, body) in
+    let value = List.fold_right mkLam args (Ty t) in
     { TypeAbbreviation.name = name;
       nparams = nparams;
       value = value;
-      loc = loc $sloc }
+      loc = loc $loc }
   }
 
 abbrevform:
 | c = constant { c, [] }
-| LPAREN; hd = constant; args = nonempty_list(constant); RPAREN { hd, args  }
+| LPAREN; hd = constant; args = nonempty_list(constant_w_loc); RPAREN { hd, args  }
 
 
 ignored:
@@ -263,11 +268,11 @@ subtrie:
 
 sequent:
 | t = closed_term {
-    let context, conclusion = decode_sequent t in
-    { Chr.eigen = underscore (); context; conclusion }
+    let context, conclusion = decode_sequent (loc $loc) t in
+    { Chr.eigen = underscore (loc $loc); context; conclusion }
   }
 | LPAREN; c = closed_term; COLON; t = term; RPAREN {
-    let context, conclusion = decode_sequent t in
+    let context, conclusion = decode_sequent (loc $loc) t in
     { Chr.eigen = c; context; conclusion }
   }
 
@@ -282,10 +287,10 @@ clause:
       body;
     }
   }
-| attributes = attributes; l = clause_hd_term; VDASH; r = term { 
+| attributes = attributes; l = clause_hd_term; v = VDASH; r = term { 
     { Clause.loc = loc $sloc;
       attributes;
-      body = App(Const Func.rimplf,[l;r])
+      body = mkApp (loc $sloc) [mkConst (loc $loc(v)) Func.rimplf;l;r]
     }
 }
 
@@ -300,7 +305,9 @@ attribute:
 | AFTER; s = STRING { After s }
 | BEFORE; s = STRING { Before s }
 | REPLACE; s = STRING { Replace s }
+| REMOVE; s = STRING { Remove s }
 | EXTERNAL { External }
+| FUNCTIONAL { Functional }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
 
 indexing:
@@ -318,23 +325,23 @@ term_noconj:
 | t = closed_term { t }
 
 closed_term:
-| x = INTEGER { mkC (cint.Util.CData.cin x)}
-| x = FLOAT { mkC (cfloat.Util.CData.cin x)}
-| x = STRING { mkC (cstring.Util.CData.cin x)}
+| x = INTEGER { mkC (loc $loc) (cint.Util.CData.cin x)}
+| x = FLOAT { mkC (loc $loc) (cfloat.Util.CData.cin x)}
+| x = STRING { mkC (loc $loc) (cstring.Util.CData.cin x)}
 | x = QUOTED { mkQuoted (loc $loc) x }
-| LPAREN; t = term; AS; c = term; RPAREN { App(mkCon "as",[t;c]) }
-| LBRACKET; l = list_items { mkSeq l }
-| LBRACKET; l = list_items_tail;  {  mkSeq l }
-| LCURLY; t = term; RCURLY { App (Const Func.spillf,[t]) }
+| LPAREN; t = term; a = AS; c = term; RPAREN { mkApp (loc $loc) [mkCon (loc $loc(a)) "as";t;c] }
+| LBRACKET; l = list_items { mkSeq (loc $loc) l }
+| LBRACKET; l = list_items_tail;  {  mkSeq (loc $loc) l }
+| l = LCURLY; t = term; RCURLY { mkAppF (loc $loc) (loc $loc(l),Func.spillf) [t] }
 | t = head_term { t }
 
 head_term:
-| t = constant { Const t }
+| t = constant { mkConst (loc $loc) t }
 | LPAREN; t = term; RPAREN { t }
 
 list_items:
-| RBRACKET { [mkNil] }
-| x = term_noconj; RBRACKET { [x;mkNil] }
+| RBRACKET { [mkNil (loc $loc)] }
+| x = term_noconj; r = RBRACKET { [x;mkNil (loc $loc(r))] }
 | x = term_noconj; CONJ; xs = list_items { x :: xs }
 
 list_items_tail:
@@ -343,33 +350,33 @@ list_items_tail:
 | x = term_noconj; CONJ; xs = list_items_tail { x :: xs }
 
 binder_term:
-| t = constant; b = binder_body { mkLam (Func.show t) (snd b) }
+| t = constant; b = binder_body { mkLam (loc $loc) (Func.show t) (snd b) }
 
 binder_body:
 | bind = BIND; b = term { (loc $loc(bind), b) }
 
 binder_term_noconj:
-| t = constant; BIND; b = term { mkLam (Func.show t) b }
+| t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) b }
 
 open_term:
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
     let args = binder args b in
-    let t = mkApp (loc $loc(hd)) (hd :: args) in
+    let t = mkApp (loc $loc) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
-| l = term; s = infix;  r = term { mkApp (loc $loc) [Const s;l;r] }
-| s = prefix; r = term { App(Const s,[r]) }
-| l = term; s = postfix; { App(Const s,[l]) }
+| l = term; s = infix;  r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
+| s = prefix; r = term { mkAppF (loc $loc) (loc $loc(s),s) [r] }
+| l = term; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
 open_term_noconj:
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
     let args = binder args b in
-    let t = mkApp (loc $loc(hd)) (hd :: args) in
+    let t = mkApp (loc $loc) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
-| l = term_noconj; s = infix_noconj;  r = term_noconj { mkApp (loc $loc) [Const s;l;r] }
-| s = prefix; r = term_noconj { App(Const s,[r]) }
-| l = term_noconj; s = postfix; { App(Const s,[l]) }
+| l = term_noconj; s = infix_noconj;  r = term_noconj { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
+| s = prefix; r = term_noconj { mkAppF (loc $loc) (loc $loc(s),s) [r] }
+| l = term_noconj; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
 (* avoids the conflict between `{` (Program.Begin) and `{spilled}` (Program.Clause) *)
 clause_hd_term:
@@ -377,18 +384,18 @@ clause_hd_term:
 | t = clause_hd_closed_term { t }
 
 clause_hd_closed_term:
-| t = constant { Const t }
+| t = constant { mkConst (loc $sloc) t }
 | LPAREN; t = term; RPAREN { t }
 
 clause_hd_open_term:
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body) {
     let args = binder args b in
-    let t = mkApp (loc $loc(hd)) (hd :: args) in
+    let t = mkApp (loc $loc) (hd :: args) in
     desugar_multi_binder (loc $loc(hd)) t
 } (*%prec OR*)
-| l = clause_hd_term; s = infix_novdash; r = term { mkApp (loc $loc) [Const s;l;r] }
-| s = prefix; r = term { App(Const s,[r]) }
-| l = clause_hd_term; s = postfix; { App(Const s,[l]) }
+| l = clause_hd_term; s = infix_novdash; r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
+| s = prefix; r = term { mkAppF (loc $loc) (loc $loc(s),s) [r] }
+| l = clause_hd_term; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
 constant:
 | c = CONSTANT {
@@ -400,6 +407,7 @@ constant:
 | BEFORE { Func.from_string "before" }
 | AFTER { Func.from_string "after" }
 | REPLACE { Func.from_string "replace" }
+| REMOVE { Func.from_string "remove" }
 | INDEX { Func.from_string "index" }
 | c = IO { Func.from_string @@ String.make 1 c }
 | CUT { Func.cutf }
@@ -409,6 +417,9 @@ constant:
 | LPAREN; s = mixfix_SYMB; RPAREN { s }
 | LPAREN; AS; RPAREN  { Func.from_string "as" }
 | NIL { Func.nilf }
+
+constant_w_loc:
+| c = constant { c, loc $loc }
 
 mixfix_SYMB:
 | x = infix { x }

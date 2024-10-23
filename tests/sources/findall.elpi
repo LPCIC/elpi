@@ -1,4 +1,5 @@
 pred p o:int, o:int.
+pred q o:int, o:int.
 p 1 1.
 p 1 2.
 p 2 2.

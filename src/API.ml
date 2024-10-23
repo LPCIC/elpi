@@ -1028,10 +1028,9 @@ module BuiltIn = struct
   let declare ~file_name l = file_name, l
   let document_fmt fmt ?(calc=Setup.default_calc_descriptor) (_,l) =
     ED.BuiltInPredicate.document fmt l (List.rev !calc)
-  let document_file ?(header="") ?(calc=Setup.default_calc_descriptor) (name,l) =
+  let document_file ?header:_ ?(calc=Setup.default_calc_descriptor) (name,l) =
     let oc = open_out name in
     let fmt = Format.formatter_of_out_channel oc in
-    Format.fprintf fmt "%s%!" header;
     ED.BuiltInPredicate.document fmt l (List.rev !calc);
     Format.pp_print_flush fmt ();
     close_out oc
@@ -1344,17 +1343,18 @@ module Utils = struct
     let open EA in
     let module Data = ED.Term in
     let module R = (val !r) in let open R in
+    let buggy_loc = loc in
     let rec aux d ctx t =
       match deref_head ~depth:d t with
       | Data.Const i when i >= 0 && i < depth ->
           error "program_of_term: the term is not closed"
       | Data.Const i when i < 0 ->
-          Term.mkCon (ED.Constants.show i)
+          Term.mkCon buggy_loc (ED.Constants.show i)
       | Data.Const i -> Util.IntMap.find i ctx
       | Data.Lam t ->
           let s = "x" ^ string_of_int d in
-          let ctx = Util.IntMap.add d (Term.mkCon s) ctx in
-          Term.mkLam s (aux (d+1) ctx t)
+          let ctx = Util.IntMap.add d (Term.mkCon buggy_loc s) ctx in
+          Term.mkLam buggy_loc s (aux (d+1) ctx t)
       | Data.App(c,x,xs) ->
           let c = aux d ctx (R.mkConst c) in
           let x = aux d ctx x in
@@ -1364,16 +1364,16 @@ module Utils = struct
       | Data.Cons(hd,tl) ->
           let hd = aux d ctx hd in
           let tl = aux d ctx tl in
-          Term.mkSeq [hd;tl]
-      | Data.Nil -> Term.mkNil
+          Term.mkSeq buggy_loc [hd;tl]
+      | Data.Nil -> Term.mkNil buggy_loc
       | Data.Builtin(c,xs) ->
-          let c = Term.mkCon (ED.Constants.show c) in
+          let c = Term.mkCon buggy_loc (ED.Constants.show c) in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: xs)
-      | Data.CData x -> Term.mkC x
+      | Data.CData x -> Term.mkC buggy_loc x
       | (Data.UVar _ | Data.AppUVar _) ->
           error "program_of_term: the term contains uvars"
-      | Data.Discard -> Term.mkCon "_"
+      | Data.Discard -> Term.mkCon buggy_loc "_"
     in
     let attributes =
       (match name with Some x -> [Name x] | None -> []) @
@@ -1381,6 +1381,7 @@ module Utils = struct
         | Some (`After,x) -> [After x]
         | Some (`Before,x) -> [Before x]
         | Some (`Replace,x) -> [Replace x]
+        | Some (`Remove,x) -> [Remove x]
         | None -> []) in
     [Program.Clause {
       Clause.loc = loc;

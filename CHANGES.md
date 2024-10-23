@@ -1,3 +1,48 @@
+# Unreleased
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+- Compiler:
+  - New syntax: anonymous predicates can be passed to type signatures in order
+    to have more information about modes and attributes of higher-order
+    arguments, eg: `pred p i:(pred i:A, o:B)` tells that the first argument of
+    `p` is a predicate whose first argument is in input and the second in
+    output.
+  - Separated terms from types; the parser generates 
+    - `TypeExpression.t` objects for `pred` and `type` objects
+    - `TypeAbbreviation.closedTypeexpression` objects for `typeabbrev`, that is
+       the `TypeExpression.t` type decorated with the `TLam` constructor
+  - The attribute `:functional` can be passed to predicates (not types),
+    for example, `:functional pred q i:int, o:int` tells the interpreter that `q` is
+    a predicate meant to be functional. Note that, due to anonymous predicates,
+    the `:functional` attributes can be passed to higher-order arguments
+  - The piece of information likes modes and functionality is transmitted to the
+    checker (currently this information is not taken into account) 
+
+    
+
+# v1.20.0 (September 2024)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+- Language:
+  - attribute `:remove` to remove a clause from the program
+
+- Compiler:
+  - Build the index at assembly time, rather than optimization time.
+    This makes compilation slower, but startup faster.
+  - Adding clauses before the type/mode declaration of a predicate
+    is now forbidden, since they are immediately inserted in the index
+    and the type/mode declaration can change the index type
+
+# v1.19.6 (August 2024)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+- Runtime:
+  - Fix bug in unification code for "automatic intro" (as in the intro tactic)
+    of UVar arguments
+
 # v1.19.5 (July 2024)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

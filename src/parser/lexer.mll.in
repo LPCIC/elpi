@@ -12,6 +12,15 @@
       let open Lexing in
       b.lex_curr_p <- { b.lex_curr_p with pos_cnum = b.lex_curr_p.pos_cnum + n }
 
+    let start_token f b =
+      let open Lexing in
+      let start = b.lex_start_pos in
+      let start_p = b.lex_start_p in
+      let r = f b in
+      b.lex_start_pos <- start;
+      b.lex_start_p <- start_p;
+      r
+
 }
 
 let digit = [ '0' - '9' ]
@@ -118,7 +127,7 @@ and token = parse
 | num as i { INTEGER (int_of_string i) }
 | num "." pnum as f { FLOAT (float_of_string f) }
 | "." pnum as f { FLOAT (float_of_string f) }
-| '"' { string (Buffer.create 80) lexbuf }
+| '"' { start_token (string (Buffer.create 80)) lexbuf }
 | ":" { COLON }
 | "\\" { BIND }
 | "(" { LPAREN }
@@ -129,14 +138,13 @@ and token = parse
 | "{" { LCURLY }
 | "}" { RCURLY }
 | "|" { PIPE }
-| "{{" { skip lexbuf 2; quoted 2 lexbuf }
+| "{{" { start_token (fun b -> skip b 2; quoted 2 b) lexbuf }
 | (("i" | "o") as s) ':' { IO_COLON s }
 | ("i" | "o") as s { IO s }
 | "shorten" { SHORTEN }
 | "accumulate" { ACCUMULATE }
 | "local" { LOCAL }
 | "pred" { PRED }
-| "mode" { MODE }
 | "macro" { MACRO }
 | "rule" { RULE }
 | "namespace" { NAMESPACE }
@@ -163,8 +171,10 @@ and token = parse
 | "pi" { PI }
 | "sigma" { SIGMA }
 | "after" { AFTER }
+| "functional" { FUNCTIONAL }
 | "before" { BEFORE }
 | "replace" { REPLACE }
+| "remove" { REMOVE }
 | "name" { NAME }
 | "if" { IF }
 | "index" { INDEX }

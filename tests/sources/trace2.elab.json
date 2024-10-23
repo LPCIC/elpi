@@ -387,9 +387,9 @@
                     "File",
                     {
                       "filename": "builtin.elpi",
-                      "line": 9,
+                      "line": 11,
                       "column": 0,
-                      "character": 89
+                      "character": 147
                     }
                   ]
                 }
@@ -411,9 +411,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 9,
+                    "line": 11,
                     "column": 0,
-                    "character": 89
+                    "character": 147
                   }
                 ]
               }

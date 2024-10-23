@@ -141,7 +141,7 @@ module Loc = struct
     let source =
      if source_name = "" then ""
      else "File \"" ^ source_name ^ "\", " in
-    let chars = Printf.sprintf "character %d" source_start (*source_stop*) in
+    let chars = Printf.sprintf "characters %d-%d" source_start source_stop in
     let pos =
       if line = -1 then chars
       else Printf.sprintf "line %d, column %d, %s"
@@ -161,6 +161,18 @@ module Loc = struct
     line_starts_at = 0;
   }
 
+  let merge l r =
+    assert(l.source_name = r.source_name);
+    {
+    source_name = l.source_name;
+    source_start = l.source_start;
+    source_stop = r.source_stop;
+    line = r.line;
+    line_starts_at = r.line_starts_at;
+  }
+
+  let extend n l = { l with source_start = l.source_start - n; source_stop = l.source_stop + n }
+   
 end
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
@@ -220,14 +232,20 @@ let rec for_all3b p l1 l2 bl b =
 ;;
 
 type arg_mode = Input | Output
+and mode_aux =
+  | Fo of arg_mode
+  | Ho of arg_mode * mode
+and mode = mode_aux list
+
+let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
 
 let rec for_all3b3 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3 l1 l2 bl b =
   match (l1, l2, bl) with
   | ([], [], _) -> true
   | ([a1], [a2], []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b
-  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(b3 == Input)
+  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(get_arg_mode b3 == Input)
   | (a1::l1, a2::l2, []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
-  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(b3 == Input) && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
+  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(get_arg_mode b3 == Input) && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
   | (_, _, _) -> false
 ;;
 

@@ -39,32 +39,11 @@ module Func : sig
   module Map : Map.S with type key = t
 end
 
-module Term : sig
+module Mode : sig
 
-  type t =
-   | Const of Func.t
-   | App of t * t list
-   | Lam of Func.t * t
-   | CData of CData.t
-   | Quoted of quote
-  and quote = { data : string; loc : Loc.t; kind : string option }
-  [@@ deriving show, ord]
+  type mode = Input | Output
+  [@@deriving show, ord]
 
-  exception NotInProlog of Loc.t * string
-
-  (* Can raise NotInProlog *)
-  val mkApp : Loc.t -> t list -> t
-
-  val mkAppF : Loc.t -> Func.t -> t list -> t
-
-  val mkCon : string -> t
-  val mkNil : t
-  val mkSeq : t list -> t
-  val mkQuoted : Loc.t -> string -> t
-  val mkFreshUVar : unit -> t
-  val mkFreshName : unit -> t
-  val mkLam : string -> t -> t
-  val mkC : CData.t -> t
 end
 
 type raw_attribute =
@@ -73,9 +52,66 @@ type raw_attribute =
   | After of string
   | Before of string
   | Replace of string
+  | Remove of string
   | External
   | Index of int list * string option
+  | Functional
 [@@ deriving show]
+
+module TypeExpression : sig
+  type t =
+   | TConst of Func.t
+   | TApp of Func.t * t * t list
+   | TPred of raw_attribute list * ((Mode.mode * t) list)
+   | TArr of t * t
+   | TCData of CData.t
+  [@@ deriving show, ord]
+end
+
+module Term : sig
+
+  type t_ =
+   | Const of Func.t
+   | App of t * t list
+   | Lam of Func.t * t
+   | CData of CData.t
+   | Quoted of quote
+  and t = { it : t_; loc : Loc.t }
+  and quote = { qloc : Loc.t; data : string; kind : string option }
+  [@@ deriving show, ord]
+
+  exception NotInProlog of Loc.t * string
+
+  (* Can raise NotInProlog *)
+  val mkApp : Loc.t -> t list -> t
+
+  val mkAppF : Loc.t -> (Loc.t * Func.t) -> t list -> t
+
+  val mkCon : Loc.t -> string -> t
+  val mkConst : Loc.t -> Func.t -> t
+  val mkNil : Loc.t -> t
+  val mkSeq : Loc.t -> t list -> t
+  val mkQuoted : Loc.t -> string -> t
+  val mkFreshUVar : Loc.t -> t
+  val mkFreshName : Loc.t -> t
+  val mkLam : Loc.t -> string -> t -> t
+  val mkC : Loc.t -> CData.t -> t
+
+end
+
+(* module ScopedTerm : sig
+
+  type t_ =
+   | Global of Func.t
+   | Local of Func.t
+   | Var of Func.t * t list
+   | App of Func.t * t * t list
+   | Lam of Func.t * t
+   | CData of CData.t
+   and t = { it : t; loc : Loc.t }
+  [@@ deriving show, ord]
+  
+end *)
 
 module Clause : sig
 
@@ -119,25 +155,22 @@ module Type : sig
     loc : Loc.t;
     attributes : 'attribute;
     name : Func.t;
-    ty : Term.t;
+    ty : TypeExpression.t;
   }
   [@@ deriving show]
 
 end
 
-module Mode : sig
-
-  type 'name t =
-    { name : 'name; args : bool list; loc : Loc.t }
-  [@@ deriving show, ord]
-
-end
-
 module TypeAbbreviation : sig
 
+  type closedTypeexpression = 
+    | Lam of Func.t * closedTypeexpression 
+    | Ty of TypeExpression.t
+  [@@ deriving show, ord]
+
   type ('name) t =
-    { name : 'name; value : Term.t; nparams : int; loc : Loc.t }
-  [@@ deriving show]
+    { name : 'name; value : closedTypeexpression; nparams : int; loc : Loc.t }
+  [@@ deriving show, ord]
 
 end
 
@@ -156,11 +189,10 @@ module Program : sig
     (* data *)
     | Clause of (Term.t, raw_attribute list) Clause.t
     | Local of Func.t list
-    | Mode of Func.t Mode.t list
     | Chr of raw_attribute list Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Type of raw_attribute list Type.t list
-    | Pred of raw_attribute list Type.t * Func.t Mode.t
+    | Pred of raw_attribute list Type.t
     | TypeAbbreviation of Func.t TypeAbbreviation.t
     | Ignored of Loc.t
   [@@ deriving show]
@@ -194,7 +226,8 @@ type program = {
   macros : (Func.t, Term.t) Macro.t list;
   types : tattribute Type.t list;
   type_abbrevs : Func.t TypeAbbreviation.t list;
-  modes : Func.t Mode.t list;
+  modes : tattribute Type.t list;
+  functionality : Func.t list;
   body : block list;
 }
 and block_constraint = {
@@ -213,7 +246,8 @@ and attribute = {
   id : string option;
   ifexpr : string option;
 }
-and insertion = Before of string | After of string | Replace of string
+and insertion = Insert of insertion_place | Replace of string | Remove of string
+and insertion_place = Before of string | After of string
 and cattribute = {
   cid : string;
   cifexpr : string option
@@ -221,6 +255,7 @@ and cattribute = {
 and tattribute =
   | External
   | Index of int list * tindex option
+  | Functional
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;

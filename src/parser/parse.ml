@@ -96,10 +96,9 @@ let to_lexing_loc { Util.Loc.source_name; line; line_starts_at; source_start; _ 
 let lexing_set_position lexbuf loc =
   let loc = to_lexing_loc loc in
   let open Lexing in
-  lexbuf.lex_curr_p  <- { loc with pos_fname = lexbuf.lex_curr_p.pos_fname };
   lexbuf.lex_abs_pos <- loc.pos_cnum;
   lexbuf.lex_start_p <- loc;
-  lexbuf.lex_curr_p <- loc
+  lexbuf.lex_curr_p <- { loc with pos_cnum = loc.pos_cnum + 1 }
   
 let goal_from ~loc lexbuf =
   lexing_set_position lexbuf loc;

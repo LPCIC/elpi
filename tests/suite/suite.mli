@@ -3,6 +3,8 @@ module Util : sig
 
   val strip_cwd : string -> string
 
+  val has_substring : sub:string -> string -> bool
+
 end
 
 module Test : sig
@@ -14,6 +16,7 @@ type expectation =
   | Failure
   | SuccessOutput of Str.regexp
   | FailureOutput of Str.regexp
+  | SuccessOutputTxt of (string list -> bool)
   | SuccessOutputFile of { sample : string; adjust : string -> string; reference : string }
 
 type trace = Off | On of string list

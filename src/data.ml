@@ -84,6 +84,23 @@ let equal_stuck_goal_kind _ x y = x == y
 type 'unification_def stuck_goal_kind +=
   | Unification of 'unification_def
 
+type arg_mode = Util.arg_mode = Input | Output [@@deriving show, ord]
+
+type mode_aux = Util.mode_aux =
+  | Fo of arg_mode
+  | Ho of arg_mode * mode
+and mode = mode_aux list
+[@@ deriving show, ord]
+
+type ttype =
+  | TConst of constant
+  | TApp of constant * ttype * ttype list
+  | TPred of bool * ((arg_mode * ttype) list) (* The bool is for functionality *)
+  | TArr of ttype * ttype
+  | TCData of CData.t
+  | TLam of ttype (* this is for parametrized typeabbrevs *)
+  [@@ deriving show, ord]
+
 type term =
   (* Pure terms *)
   | Const of constant
@@ -108,6 +125,8 @@ and uvar_body = {
 }
 [@@deriving show, ord]
 
+let cons2tcons ?(loc=Loc.initial"") = function Const t -> TConst t | _ -> anomaly ~loc "Unreachable branch"
+
 (* we use this projection to be sure we ignore the sign *)
 let uvar_id { uid_private } = abs uid_private [@@inline];;
 let uvar_is_a_blocker   { uid_private } = uid_private < 0 [@@inline];;
@@ -116,8 +135,6 @@ let uvar_isnt_a_blocker { uid_private } = uid_private > 0 [@@inline];;
 let uvar_set_blocker r   = r.uid_private <- -(uvar_id r) [@@inline];;
 let uvar_unset_blocker r = r.uid_private <-  (uvar_id r) [@@inline];;
 
-type arg_mode = Util.arg_mode = Input | Output [@@deriving show, ord]
-
 type clause = {
     depth : int;
     args : term list;
@@ -125,13 +142,17 @@ type clause = {
     vars : int;
     mode : mode;        (* CACHE to avoid allocation in get_clauses *)
     loc : Loc.t option; (* debug *)
+    mutable timestamp : int list; (* for grafting *)
 }
-and 
-mode = arg_mode list
 [@@deriving show, ord]
 
-let to_mode = function true -> Input | false -> Output
+let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
+let to_mode = function true -> Fo Input | false -> Fo Output
 
+type grafting_time = int list
+[@@deriving show, ord]
+type times = (grafting_time * constant) StrMap.t
+[@@deriving show, ord]
 
 type stuck_goal = {
   mutable blockers : blockers;
@@ -151,28 +172,39 @@ and prolog_prog = {
   src : clause_src list; (* hypothetical context in original form, for CHR *)
   index : index;
 }
-and index = second_lvl_idx Ptmap.t
+
+(* These two are the same, but the latter should not be mutated *)
+
+and clause_list = clause Bl.t
+and index = first_lvl_idx
+and first_lvl_idx = {
+  idx : second_lvl_idx Ptmap.t;
+  time : int; (* ticking clock, to timestamp clauses so to recover total order after retrieval if necessary. positive at compile time, negative at run time *)
+  times : times; (* timestamp of named clauses, for grafting at compile time *)
+}
 and second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
     argno : int;
-    all_clauses : clause list;        (* when the query is flexible *)
-    flex_arg_clauses : clause list;   (* when the query is rigid but arg_id ha nothing *)
-    arg_idx : clause list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+    all_clauses : clause_list;        (* when the query is flexible *)
+    flex_arg_clauses : clause_list;   (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : clause_list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
     mode : mode;
     args : int list;
-    time : int;                             (* time is used to recover the total order *)
-    args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
+    args_idx : clause_list Ptmap.t; (* clause, insertion time *)
   }
 | IndexWithDiscriminationTree of {
     mode : mode;
     arg_depths : int list;   (* the list of args on which the trie is built *)
-    time : int;         (* time is used to recover the total order *)
     args_idx : clause Discrimination_tree.t; 
 }
 [@@deriving show]
+
+let stop = ref false
+let close_index ({idx; time; times} : index) : index =
+  { idx =idx; time = 0; times = StrMap.empty }
 
 type constraints = stuck_goal list
 type hyps = clause_src list

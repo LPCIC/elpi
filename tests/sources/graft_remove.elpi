@@ -1,0 +1,30 @@
+% Classic index
+:index (1) "Map"
+pred p o:int.
+
+:name "p0" p 0.
+
+:remove "p0" p _.
+
+% Dtree
+:index (1) "DTree" 
+pred q o:int.
+
+:name "q0" q 0.
+
+:remove "q0" q _.
+
+% Hmap
+:index (1) "Hash" 
+pred r o:int.
+
+:name "r0" r 0.
+
+:remove "r0" r _.
+
+
+main :- 
+  std.findall (p _) LP, std.assert! (LP = []) "wrong",
+  std.findall (q _) LQ, std.assert! (LQ = []) "wrong",
+  std.findall (r _) LR, std.assert! (LR = []) "wrong",
+  true.

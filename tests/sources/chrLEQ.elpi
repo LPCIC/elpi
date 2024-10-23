@@ -1,9 +1,9 @@
-mode (leq i i).
+pred leq i:int, i:int.
 leq (uvar as A) (uvar as B) :- !,  declare_constraint (leq A B) [A,B].
 leq A         (uvar as B) :- !,  declare_constraint (leq A B) [B].
 leq (uvar as A) B         :- !,  declare_constraint (leq A B) [A].
 
-mode (ltn i i).
+pred ltn i:int, i:int.
 ltn (uvar as A) (uvar as B) :- !,  declare_constraint (ltn A B) [A,B].
 ltn A         (uvar as B) :- !,  declare_constraint (ltn A B) [B].
 ltn (uvar as A) B         :- !,  declare_constraint (ltn A B) [A].

@@ -32,3 +32,10 @@ let () = declare "sepcomp_perf4"
   ~description:"separate compilation linker perf"
   ~expectation:Test.Success
   ()
+
+let () = declare "sepcomp_perf5"
+  ~source_dune:"sepcomp_perf5.ml"
+  ~after:"sepcomp_perf5"
+  ~description:"separate compilation linker perf and time distribution"
+  ~expectation:Test.Success
+  ()
