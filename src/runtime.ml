@@ -2464,8 +2464,33 @@ let hash_arg_list is_goal hd ~depth args mode spec =
 let hash_clause_arg_list = hash_arg_list false
 let hash_goal_arg_list = hash_arg_list true
 
+(*  returns the maximal length of any sub_list
+    this operation is done at compile time per each clause being index
+    for example the term (app['a','b',app['c','d','e'], 'f', app['a','b','c','d','e','f']])
+    has three lists L1 = ['a','b',app['c','d','e'], 'f', app['a','b','c','d','e','f']
+                    L2 = ['c','d','e']
+                    L3 = app['a','b','c','d','e','f']
+    and the longest one has length 6
+*)
+let rec max_list_length acc = function
+  | Nil -> acc
+  | Cons (a, (UVar (_, _, _) | AppUVar (_, _, _) | Arg (_, _)|AppArg (_, _))) -> 
+      let alen = max_list_length 0 a in
+      max (acc+2) alen
+  | Cons (a, b)-> 
+      let alen = max_list_length 0 a in
+      let blen = max_list_length (acc+1) b in 
+      max blen alen
+  | App (_,x,xs) -> List.fold_left (fun acc x -> max acc (max_list_length 0 x)) acc (x::xs)
+  | Builtin (_, xs) -> List.fold_left (fun acc x -> max acc (max_list_length 0 x)) acc xs
+  | Lam t -> max_list_length acc t
+  | Discard | Const _ |CData _ -> acc
+  | UVar (_, _, _) | AppUVar (_, _, _) | Arg (_, _)|AppArg (_, _) -> acc
+
+let max_lists_length = List.fold_left (fun acc e -> max (max_list_length 0 e) acc) 0
+
 (** 
-  [arg_to_trie_path ~safe ~depth ~is_goal args arg_depths arg_modes]
+  [arg_to_trie_path ~safe ~depth ~is_goal args arg_depths arg_modes mp max_list_length]
   returns the path represetation of a term to be used in indexing with trie.
   args, args_depths and arg_modes are the lists of respectively the arguments, the 
   depths and the modes of the current term to be indexed.
@@ -2474,10 +2499,14 @@ let hash_goal_arg_list = hash_arg_list true
   In the former case, each argument we add a special mkInputMode/mkOutputMode 
   node before each argument to be indexed. This special node is used during 
   instance retrival to know the mode of the current argument
+  - mp is the max_path size of any path in the index used to truncate the goal
+  - max_list_length is the length of the longest sublist in each term of args 
 *)
-let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_modes mp : Discrimination_tree.Path.t =
+let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_modes mp (max_list_length':int) : Discrimination_tree.Path.t =
   let open Discrimination_tree in
-  let path = Path.make (max mp 8) mkPathEnd in
+
+  let path_length = mp + Array.length args_depths_ar + 1 in
+  let path = Path.make path_length mkPathEnd in
   
   let current_ar_pos = ref 0 in
   let current_user_depth = ref 0 in
@@ -2494,7 +2523,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
     end
   in
 
-  let rec list_to_trie_path ~safe ~depth ?(h=0) path_depth (len: int) (t: term) : unit =
+  let rec list_to_trie_path ~safe ~depth ~h path_depth (len: int) (t: term) : unit =
     match deref_head ~depth t with
     | Nil -> Path.emit path mkListEnd; update_current_min_depth path_depth
     | Cons (a, b) ->
@@ -2506,7 +2535,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
         (*              has the node `app` with arity `1` as first*)
         (*              cell, then come the elment of the list    *)
         (*              up to the 30^th elemebt                   *)
-        if h > 30 then (Path.emit path mkListEnd; update_current_min_depth path_depth)
+        if is_goal && h >= max_list_length' then (Path.emit path mkListEnd; update_current_min_depth path_depth)
         else
           (main ~safe ~depth a path_depth;
           list_to_trie_path ~depth ~safe ~h:(h+1) path_depth (len+1) b)
@@ -2535,6 +2564,8 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
   (** gives the path representation of a term *)
   and main ~safe ~depth t path_depth : unit =
     if path_depth = 0 then update_current_min_depth path_depth
+    else if Path.get_builder_pos path >= path_length then 
+      (Path.emit path mkVariable; update_current_min_depth path_depth)
     else
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
@@ -2558,7 +2589,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar arg_mo
       | Cons (x,xs) ->
           Path.emit path mkListHead;
           main ~safe ~depth x (path_depth + 1);
-          list_to_trie_path ~safe ~depth (path_depth + 1) 0 xs
+          list_to_trie_path ~safe ~depth ~h:1 (path_depth + 1) 0 xs
 
   (** builds the sub-path of a sublist of arguments of the current clause  *)
   and make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl = 
@@ -2639,13 +2670,14 @@ let add1clause ~depth m (predicate,clause) =
   | IndexWithDiscriminationTree {mode; arg_depths; args_idx; time } ->
     let max_depths = Discrimination_tree.max_depths args_idx in
     let max_path = Discrimination_tree.max_path args_idx in
-      let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths max_depths mode max_path in
-      [%spy "dev:disc-tree:depth-path" ~rid pp_string "Inst: MaxDepths " (pplist pp_int "") (Array.to_list max_depths)];
-      let args_idx = Discrimination_tree.index args_idx path clause ~time in
-        Ptmap.add predicate (IndexWithDiscriminationTree {
-          mode; arg_depths;
-          time = time+1;
-          args_idx = args_idx
+    let max_list_length = max_lists_length clause.args in
+    let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths max_depths mode max_path max_list_length in
+    let args_idx = Discrimination_tree.index args_idx ~max_list_length path clause ~time in
+    [%spy "dev:disc-tree:depth-path" ~rid pp_string "Inst: MaxDepths " (pplist pp_int "") (Array.to_list max_depths) pp_int (Discrimination_tree.max_path args_idx) pp_int max_list_length];
+      Ptmap.add predicate (IndexWithDiscriminationTree {
+        mode; arg_depths;
+        time = time+1;
+        args_idx = args_idx
         }) m
   | exception Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
@@ -2779,8 +2811,9 @@ let get_clauses ~depth predicate goal { index = m } =
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
         let max_depths = Discrimination_tree.max_depths args_idx in
         let max_path = Discrimination_tree.max_path args_idx in
-        let (path: Discrimination_tree.Path.t) = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths max_depths mode max_path in
-        [%spy "dev:disc-tree:depth-path" ~rid pp_string "Goal: MaxDepths " (pplist pp_int ";") (Array.to_list max_depths)];
+        let max_list_length = Discrimination_tree.max_list_length args_idx in
+        let path = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths max_depths mode max_path max_list_length in
+        [%spy "dev:disc-tree:depth-path" ~rid pp_string "Goal: MaxDepths " (pplist pp_int ";") (Array.to_list max_depths) pp_int (max_path) pp_int max_list_length];
         (* Format.(printf "Goal: MaxDepth is %a\n" (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_int) (Discrimination_tree.max_depths args_idx |> Array.to_list)); *)
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.Path.pp path

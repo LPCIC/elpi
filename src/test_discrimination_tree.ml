@@ -47,7 +47,7 @@ let () =
     (* Format.printf "%a\n" pp_path pathGoal; *)
     let pathInsts = List.map (fun (x,y) -> x @ [mkPathEnd], y) pathInsts in
     let add_to_trie t (key,value) = 
-      index t (Path.of_list key) value ~time:value in
+      index t (Path.of_list key) ~max_list_length:1000 value ~time:value in
     let trie = List.fold_left add_to_trie (empty_dt []) pathInsts in 
     let retrived = retrieve pathGoal trie in
     let retrived_nb = List.length retrived in 
