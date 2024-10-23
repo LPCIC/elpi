@@ -52,7 +52,7 @@ let () =
     (* Format.printf "%a\n" pp_path pathGoal; *)
     let pathInsts = List.map (fun (x,y) -> x @ [mkPathEnd], y) pathInsts in
     let add_to_trie t (key,value) = 
-      index t (Path.of_list key) value in
+      index t (Path.of_list key) ~max_list_length:1000 value in
     let trie = List.fold_left add_to_trie (empty_dt []) pathInsts in 
     let retrived = retrieve (fun x y -> y - x) pathGoal trie in
     let retrived_nb = Elpi.Internal.Bl.length retrived in 

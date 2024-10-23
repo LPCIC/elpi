@@ -4,6 +4,7 @@ module Path : sig
   val pp : Format.formatter -> t -> unit
   val get : t -> int -> cell
   type builder
+  val get_builder_pos : builder -> int
   val make : int -> cell -> builder
   val emit : builder -> cell -> unit
   val stop : builder -> t
@@ -31,9 +32,10 @@ type 'a t
 
     @note: in the elpi runtime, there are no two rule having the same [~time]
 *)
-val index : 'a t -> Path.t -> 'a -> 'a t
+val index : 'a t -> max_list_length:int -> Path.t -> 'a -> 'a t
 
 val max_path : 'a t -> int
+val max_list_length : 'a t -> int
 val max_depths : 'a t -> int array
 
 val empty_dt : 'b list -> 'a t
