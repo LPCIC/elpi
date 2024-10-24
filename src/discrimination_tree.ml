@@ -45,7 +45,7 @@ let mkConstant ~safe ~data ~arity =
 let mkPrimitive c = encode ~k:kPrimitive ~data:(CData.hash c lsl k_bits) ~arity:0
 
 let mkVariable = encode ~k:kVariable ~data:0 ~arity:0
-let mkLam = encode ~k:kOther ~data:0 ~arity:0
+let mkAny = encode ~k:kOther ~data:0 ~arity:0
 
 (* each argument starts with its mode *)
 let mkInputMode = encode ~k:kOther ~data:1 ~arity:0
@@ -58,7 +58,7 @@ let mkListTailVariableUnif = encode ~k:kOther ~data:7 ~arity:0
 
 
 let isVariable x = x == mkVariable
-let isLam x = x == mkLam
+let isAny x = x == mkAny
 let isInput x = x == mkInputMode
 let isOutput x = x == mkOutputMode
 let isListHead x = x == mkListHead
@@ -85,7 +85,7 @@ let pp_cell fmt n =
        else if isListEnd n then "ListEnd"
        else if isPathEnd n then "PathEnd"
        else if isListTailVariableUnif n then "ListTailVariableUnif"
-       else if isLam n then "Other"
+       else if isAny n then "Other"
        else failwith "Invalid path construct...")
   else if k == kPrimitive then Format.fprintf fmt "Primitive"
   else Format.fprintf fmt "%o" k
@@ -184,7 +184,7 @@ module Trie = struct
     let max = ref 0 in
     let rec ins ~pos = let x = Path.get a pos in function
       | Node ({ data } as t) when isPathEnd x -> max := pos; Node { t with data = v :: data }
-      | Node ({ other } as t) when isVariable x || isLam x ->
+      | Node ({ other } as t) when isVariable x || isAny x ->
           let t' = match other with None -> empty | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with other = Some t'' }
@@ -328,7 +328,7 @@ let skip_to_listEnd ~add_result mode (Trie.Node { other; map; listTailVariable }
 
 let skip_to_listEnd mode t = call (skip_to_listEnd mode t)
 
-let get_all_children v mode = isLam v || (isVariable v && isOutput mode)
+let get_all_children v mode = isAny v || (isVariable v && isOutput mode)
 
 let rec retrieve ~pos ~add_result mode path tree : unit =
   let hd = Path.get path pos in
@@ -412,7 +412,7 @@ module Internal = struct
   let data_of = data_of
 
   let isVariable = isVariable
-  let isLam = isLam
+  let isAny = isAny
   let isInput = isInput
   let isOutput = isOutput
   let isListHead = isListHead

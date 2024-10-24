@@ -2607,7 +2607,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
   and main ~safe ~depth t path_depth : unit =
     if path_depth = 0 then update_current_min_depth path_depth
     else if is_goal && Path.get_builder_pos path >= path_length then 
-      (Path.emit path mkLam; update_current_min_depth path_depth)
+      (Path.emit path mkAny; update_current_min_depth path_depth)
     else
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
@@ -2617,7 +2617,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
       | CData d -> Path.emit path @@ mkPrimitive d; update_current_min_depth path_depth
       | App (k,_,_) when k == Global_symbols.uvarc -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
       | App (k,a,_) when k == Global_symbols.asc -> main ~safe ~depth a (path_depth+1)
-      | Lam _ -> Path.emit path @@ mkLam; update_current_min_depth path_depth (* loose indexing to enable eta *)
+      | Lam _ -> Path.emit path mkAny; update_current_min_depth path_depth (* loose indexing to enable eta *)
       | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
       | Builtin (k,tl) ->
         Path.emit path @@ mkConstant ~safe ~data:k ~arity:(if path_depth = 0 then 0 else List.length tl);

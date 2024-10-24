@@ -8,7 +8,7 @@ let test ~expected found =
 
 let () = assert (k_of (mkConstant ~safe:false ~data:~-17 ~arity:0) == kConstant)
 let () = assert (k_of mkVariable == kVariable)
-let () = assert (k_of mkLam == kOther)
+let () = assert (k_of mkAny == kOther)
 let () =
   let open Elpi.API in
   match RawData.look ~depth:0 (RawOpaqueData.of_int 4) with
@@ -18,7 +18,7 @@ let () =
   
 let () = assert (arity_of (mkConstant ~safe:false ~data:~-17 ~arity:3) == 3)
 let () = assert (arity_of mkVariable == 0)
-let () = assert (arity_of mkLam == 0)
+let () = assert (arity_of mkAny == 0)
 let () = assert (arity_of mkInputMode == 0)
 let () = assert (arity_of mkOutputMode == 0)
 let () = assert (arity_of mkListTailVariable == 0)
@@ -67,7 +67,7 @@ let () =
   let p2 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; mkListEnd; constA], 2 in                    (* 2: [a,x0,x1,x3] a *)
   let p3 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; mkListEnd; mkVariable], 3 in                (* 3: [a,x0,x1,x3] X *)
   let p4 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; constA; mkListEnd], 4 in                    (* 4: [a,x0,x1,x3,a] *)
-  let p5 = [mkLam; mkVariable], 5 in                                                                    (* 5: (x\ ...) X *)
+  let p5 = [mkAny; mkVariable], 5 in                                                                    (* 5: (x\ ...) X *)
   let p6 = [mkListHead; constF; mkListHead; mkName 1; mkName 2; mkListTailVariable; constA; mkListEnd], 6 in (* 6: [f [x1, x2 | _] a] f *)
   let p7 = [mkListHead; constA; mkVariable; mkListEnd; constA], 7 in                                      (* 7: [a,X] a *)
   let p8 = [mkListHead; constA; mkName 0; mkListEnd; mkVariable], 8 in                                    (* 8: [a,x0] X *)
