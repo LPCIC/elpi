@@ -2552,7 +2552,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
         (*              has the node `app` with arity `1` as first*)
         (*              cell, then come the elment of the list    *)
         (*              up to the 30^th elemebt                   *)
-        if h > 30 then (Path.emit path mkListEnd; update_current_min_depth path_depth)
+        if h > 31 then (Path.emit path mkListEnd; update_current_min_depth path_depth)
         else
           main ~safe ~depth a path_depth;
           list_to_trie_path ~depth ~safe ~h:(h+1) path_depth (len+1) b

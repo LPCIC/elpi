@@ -109,7 +109,11 @@ module Ast = struct
   module Scope = Compiler_data.Scope
   module Term = Compiler_data.ScopedTerm.SimpleTerm
   module Type = Compiler_data.ScopedTypeExpression.SimpleType
-  module Name = Ast.Func
+  module Name = struct
+    include Ast.Func
+    type constant = int
+    let is_global f i = show f = Data.Constants.Map.find i Data.Global_symbols.table.c2s
+  end
   module Opaque = Util.CData
 end
 
@@ -303,6 +307,7 @@ module RawOpaqueData = struct
   type t = Util.CData.t
   type 'a cdata = {
     cin : 'a -> Data.term;
+    cino : 'a -> Ast.Opaque.t;
     isc : t -> bool;
     cout: t -> 'a;
     name : string;
@@ -311,6 +316,7 @@ module RawOpaqueData = struct
      ~pp ({ Util.CData.cin; isc; cout; name = c } )
   =
   let ty = Conversion.TyName name in
+  let cino x = cin x in
   let cin x =
     let module R = (val !r) in
     try R.mkConst (values_map x)
@@ -335,7 +341,7 @@ module RawOpaqueData = struct
       Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
       constants
     in
-  { cin; cout; isc; name = c },
+  { cin; cino; cout; isc; name = c },
   { Conversion.embed; readback; ty; pp_doc; pp }
 
   let conversion_of_cdata (type a) ~name ?doc ?(constants=[]) ~compare ~pp cd =
@@ -373,25 +379,25 @@ module RawOpaqueData = struct
 
    let int =
      let { Util.CData.cin; cout; isc; name } = ED.C.int in
-     { cin = (fun x -> ED.mkCData (cin x)); cout; isc; name }
+     { cin = (fun x -> ED.mkCData (cin x)); cino = cin; cout; isc; name }
    let is_int = ED.C.is_int
    let to_int = ED.C.to_int
    let of_int = ED.C.of_int
    let float =
      let { Util.CData.cin; cout; isc; name } = ED.C.float in
-     { cin = (fun x -> ED.mkCData (cin x)); cout; isc; name }
+     { cin = (fun x -> ED.mkCData (cin x)); cino = cin; cout; isc; name }
    let is_float = ED.C.is_float
    let to_float = ED.C.to_float
    let of_float = ED.C.of_float
    let string =
      let { Util.CData.cin; cout; isc; name } = ED.C.string in
-     { cin = (fun x -> ED.mkCData (cin x)); cout; isc; name }
+     { cin = (fun x -> ED.mkCData (cin x)); cino = cin; cout; isc; name }
    let is_string = ED.C.is_string
    let to_string = ED.C.to_string
    let of_string = ED.C.of_string
    let loc =
      let { Util.CData.cin; cout; isc; name } = ED.C.loc in
-     { cin = (fun x -> ED.mkCData (cin x)); cout; isc; name }
+     { cin = (fun x -> ED.mkCData (cin x)); cino = cin; cout; isc; name }
    let is_loc = ED.C.is_loc
    let to_loc = ED.C.to_loc
    let of_loc = ED.C.of_loc
@@ -557,6 +563,7 @@ module Elpi = struct
   let fresh_name =
     let i = ref 0 in
     fun () -> incr i; Printf.sprintf "_uvk_%d_" !i
+  let fresh () = Ast.Name.from_string @@ fresh_name ()
 
   let alloc_Elpi name state =
     if ED.State.get ED.while_compiling state then
@@ -1054,7 +1061,7 @@ module BuiltIn = struct
     close_out oc
 end
 
-module Query = struct
+(* module Query = struct
   type name = string
   type 'f arguments = 'f ED.Query.arguments =
     | N : unit arguments
@@ -1067,7 +1074,7 @@ module Query = struct
     let p, predicate = Compiler.lookup_query_predicate p predicate in
     let q = ED.Query.Query{ predicate; arguments } in
     Compiler.query_of_data p loc q
-end
+end *)
 
 module State = struct
   include ED.State
@@ -1095,28 +1102,23 @@ end
 
 
 module RawQuery = struct
-  let mk_Arg state ~name ~args = 
-    if ED.State.get ED.while_compiling state then
-      Compiler.mk_Arg state ~name ~args
-    else
-      Util.anomaly "The API RawQuery.mk_Arg can only be used at compile time"
-  
-  let is_Arg = Compiler.is_Arg
-  let compile = Compiler.query_of_term
+  let compile_term p f = Compiler.query_of_scoped_term p (fun s -> let s, t = f s in s, Compiler_data.ScopedTerm.of_simple_term_loc t)
+  let compile_raw_term p f = Compiler.query_of_raw_term p f
+  let term_to_raw_term s p ~depth t = Compiler.term_to_raw_term s p ~depth @@ Compiler_data.ScopedTerm.of_simple_term_loc t
   let compile_ast = Compiler.query_of_ast
-    
+  let mk_Arg = Compiler.mk_Arg
+  let is_Arg = Compiler.is_Arg
+ 
 end
 
 module Quotation = struct
   type quotation = Compiler_data.QuotationHooks.quotation
   include Compiler
-  let declare_backtick ?(descriptor=Setup.default_quotations_descriptor) ~name f =
-    Compiler_data.QuotationHooks.declare_backtick_compilation ~descriptor name
-      (fun s x -> f s (EA.Func.show x))
+  let declare_backtick ?(descriptor=Setup.default_quotations_descriptor) ~name (f : quotation) =
+    Compiler_data.QuotationHooks.declare_backtick_compilation ~descriptor name f
 
   let declare_singlequote ?(descriptor=Setup.default_quotations_descriptor) ~name f =
-    Compiler_data.QuotationHooks.declare_singlequote_compilation ~descriptor name
-      (fun s x -> f s (EA.Func.show x))
+    Compiler_data.QuotationHooks.declare_singlequote_compilation ~descriptor name f
 
   let set_default_quotation ?(descriptor=Setup.default_quotations_descriptor) x = Compiler_data.QuotationHooks.set_default_quotation ~descriptor x
 

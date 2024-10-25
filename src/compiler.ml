@@ -12,6 +12,8 @@ module D = Data
 
 exception CompileError of Loc.t option * string
 
+let elpi_language = Compiler_data.elpi_language
+
 let error ?loc msg = raise (CompileError(loc,msg))
 
 type flags = {
@@ -63,10 +65,11 @@ let filter_if flags proj l =
 module SymbolMap : sig
   type table
   val pp_table : Format.formatter -> table -> unit
+  val equal : table -> table -> bool
 
   val empty : unit -> table
   val allocate_global_symbol     : D.State.t -> table -> F.t -> table * (D.constant * D.term)
-  val allocate_bound_symbol      : D.State.t -> table -> F.t -> D.constant -> table * D.term
+  val allocate_bound_symbol      : D.State.t -> table -> D.constant -> table * D.term
   val get_canonical              : D.State.t -> table -> D.constant -> D.term
   val global_name : D.State.t -> table -> D.constant -> F.t
   val compile : table -> D.symbol_table
@@ -78,7 +81,9 @@ end = struct
     c2t : (F.t * D.term) D.Constants.Map.t;
     last_global : int;
   }
-  [@@deriving show]
+  [@@deriving show, ord]
+
+  let equal x y = compare x y == 0
 
   let compile { last_global; c2t; ast2ct } =
     let t = { D.c2s = Hashtbl.create 37; c2t = Hashtbl.create 37; frozen_constants = last_global; } in
@@ -117,19 +122,19 @@ end = struct
       anomaly ("global symbols can only be allocated during compilation");
     allocate_global_symbol_aux x table
 
-  let allocate_bound_symbol_aux f n ({ c2t; ast2ct } as table) =
+  let allocate_bound_symbol_aux n ({ c2t; ast2ct } as table) =
     try table, snd @@ D.Constants.Map.find n c2t
     with Not_found ->
       let xx = D.Term.Const n in
-      let c2t = D.Constants.Map.add n (f,xx) c2t in (* TODO: f makes no sense here, use c0 ... cn *)
+      let c2t = D.Constants.Map.add n (F.from_string (Format.asprintf "c%d" n),xx) c2t in
       { table with c2t; ast2ct }, xx
 
-  let allocate_bound_symbol state table f n =
+  let allocate_bound_symbol state table n =
     if not (D.State.get D.while_compiling state) then
       anomaly "bound symbols can only be allocated during compilation";
     if n < 0 then
       anomaly "bound variables are positive";
-    allocate_bound_symbol_aux f n table
+    allocate_bound_symbol_aux n table
   ;;
 
   let get_canonical state table c =
@@ -575,6 +580,7 @@ module TypeChecker : sig
 
   type env = TypeAssignment.overloaded_skema F.Map.t
   val check : type_abbrevs:type_abbrevs-> kinds:arities -> types:env -> ScopedTerm.t -> exp:TypeAssignment.t -> bool
+  val unknown_type_assignment : string -> TypeAssignment.t
 
 end = struct
   type type_abbrevs = TypeAssignment.skema F.Map.t
@@ -612,7 +618,7 @@ end = struct
   and check_tye ~loc ~type_abbrevs ~kinds ctx = function
     | Prop -> TypeAssignment.Prop
     | Any -> TypeAssignment.Any
-    | Const(Bound,c) ->
+    | Const(Bound _,c) ->
         check_param_exists ~loc c ctx;
         TypeAssignment.UVar c
     | Const(Global _,c) ->
@@ -708,7 +714,7 @@ end = struct
       error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
 
   let local_type ctx ~loc c : ret TypeAssignment.overloading =
-    try TypeAssignment.Single (F.Map.find c ctx)
+    try TypeAssignment.Single (Scope.Map.find c ctx)
     with Not_found -> anomaly ~loc "free variable"
 
   type classification =
@@ -728,6 +734,8 @@ end = struct
         | Variadic { srcs; tgt } -> Variadic { srcs = x :: srcs; tgt }
 
   let mk_uvar s = TypeAssignment.UVar(MutableOnce.make (F.from_string s))
+
+  let unknown_type_assignment s = TypeAssignment.Val (mk_uvar s)
 
   let rec extend l1 l2 =
     match l1, l2 with
@@ -755,15 +763,15 @@ end = struct
     let needs_spill = ref false in
     let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
-    let rec check ctx ~loc ~tyctx x (ety : ret) : spilled_phantoms =
+    let rec check (ctx : ret Scope.Map.t) ~loc ~tyctx x (ety : ret) : spilled_phantoms =
       (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty ety; *)
       match x with
       | Const(Global _,c) -> check_global ctx ~loc ~tyctx c ety
-      | Const(Bound,c) -> check_local ctx ~loc ~tyctx c ety
+      | Const(Bound lang,c) -> check_local ctx ~loc ~tyctx (c,lang) ety
       | CData c -> check_cdata ~loc ~tyctx kinds c ety
       | Spill(sp,info) -> assert(!info = NoInfo); check_spill ctx ~loc ~tyctx sp info ety
       | App(Global _,c,x,xs) -> check_app ctx ~loc ~tyctx c (global_type env ~loc c) (x::xs) ety 
-      | App(Bound,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc c) (x::xs) ety
+      | App(Bound lang,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc (c,lang)) (x::xs) ety
       | Lam(c,cty,t) -> check_lam ctx ~loc ~tyctx c cty t ety
       | Discard -> []
       | Var(c,args) -> check_app ctx ~loc ~tyctx c (uvar_type ~loc c) args ety
@@ -786,7 +794,7 @@ end = struct
       match local_type ctx ~loc c with
       | Single ty ->
           if unify ty ety then []
-          else error_bad_ety ~tyctx ~loc ~ety F.pp c ty
+          else error_bad_ety ~tyctx ~loc ~ety F.pp (fst c) ty
       | Overloaded _ -> assert false
 
     and check_cdata ~loc ~tyctx kinds c ety =
@@ -797,7 +805,7 @@ end = struct
       else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
     and check_lam ctx ~loc ~tyctx c cty t ety =
-      let name = match c with Some c -> c | None -> fresh_name () in
+      let name_lang = match c with Some c -> c | None -> fresh_name (), elpi_language in
       let src = match cty with
         | None -> mk_uvar "Src"
         | Some x -> 
@@ -806,7 +814,7 @@ end = struct
       (* let () = Format.eprintf "lam ety %a\n" TypeAssignment.pretty ety in *)
       if unify (TypeAssignment.Arr(Ast.Structured.NotVariadic,src,tgt)) ety then
         (* let () = Format.eprintf "add to ctx %a : %a\n" F.pp name TypeAssignment.pretty src in *)
-        check_loc ~tyctx (F.Map.add name src ctx) t ~ety:tgt
+        check_loc ~tyctx (Scope.Map.add name_lang src ctx) t ~ety:tgt
       else
         error_bad_function_ety ~loc ~tyctx ~ety c t
 
@@ -1060,7 +1068,7 @@ end = struct
       (* TODO HACK since typing is done too late, the same unit should be checked only once *)
       if MutableOnce.is_set t.ty then false else
 
-      let spills = check_loc ~tyctx:None F.Map.empty t ~ety:(TypeAssignment.unval exp) in
+      let spills = check_loc ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
       check_matches_poly_skema_loc t;
       if spills <> [] then error ~loc:t.loc "cannot spill in head";
       F.Map.iter (fun k (_,n,loc) ->
@@ -1528,7 +1536,7 @@ module CustomFunctorCompilation = struct
     let len = String.length s in
     len > 2 && s.[0] == '`' && s.[len-1] == '`'
 
-  let singlequote : (State.t -> F.t -> State.t * ScopedTerm.SimpleTerm.t) option State.component = State.declare
+  let singlequote : (string * QuotationHooks.quotation) option State.component = State.declare
   ~descriptor:elpi_state_descriptor
   ~name:"elpi:singlequote"
   ~pp:(fun _ _ -> ())
@@ -1539,7 +1547,7 @@ module CustomFunctorCompilation = struct
   ~execution_is_over:(fun x -> Some x)
   ~init:(fun () -> None)
 
-  let backtick  : (State.t -> F.t -> State.t * ScopedTerm.SimpleTerm.t) option State.component = State.declare
+  let backtick  : (string * QuotationHooks.quotation) option State.component = State.declare
   ~descriptor:elpi_state_descriptor
   ~name:"elpi:backtick"
   ~pp:(fun _ _ -> ())
@@ -1550,12 +1558,11 @@ module CustomFunctorCompilation = struct
   ~execution_is_over:(fun x -> Some x)
   ~init:(fun () -> None)
 
-  let compile_singlequote state x = assert false
-  (* 
+  (* let compile_singlequote state x = 
     match State.get singlequote state with
     | None -> let state, (_,t) = Symbols.allocate_global_symbol state x in state, t
     | Some f -> f state x *)
-  let compile_backtick state x = assert false (*
+(*  let compile_backtick state x = assert false
     match State.get backtick state with
     | None -> let state, (_,t) = Symbols.allocate_global_symbol state x in state, t
     | Some f -> f state x
@@ -1624,7 +1631,7 @@ end = struct
     match t with
     | Ast.TypeExpression.TConst c when F.show c = "prop" -> ScopedTypeExpression.Prop
     | Ast.TypeExpression.TConst c when F.show c = "any" -> ScopedTypeExpression.Any
-    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(Scope.Bound,c))
+    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(Scope.Bound elpi_language,c))
     | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(Scope.Global false,c))
     | Ast.TypeExpression.TApp(c,x,[y]) when F.show c = "variadic" ->
         ScopedTypeExpression.Arrow(Ast.Structured.Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
@@ -1644,7 +1651,7 @@ end = struct
       let rec aux e { it } =
         match it with
         | App(_,x,xs) -> List.fold_left aux e (x :: xs)
-        | Const(Bound, _) -> assert false (* there are no binders yet *)
+        | Const(Bound _, _) -> assert false (* there are no binders yet *)
         | Const(Global _,c) when is_uvar_name c -> F.Set.add c e
         | Const(Global _,_) -> e
         | Prop -> e
@@ -1674,7 +1681,7 @@ end = struct
         if F.Map.mem c macros then
           ScopedTerm.unlock @@ fst @@ F.Map.find c macros
         else error ~loc (Format.asprintf "Unknown macro %a" F.pp c)
-    | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Bound,c))
+    | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Bound elpi_language,c))
     | Const c ->
         if is_uvar_name c then ScopedTerm.Var(c,[])
         else ScopedTerm.(Const(Global false,c))
@@ -1691,7 +1698,7 @@ end = struct
            else error ~loc (Format.asprintf "Unknown macro %a" F.pp c)
          else
           let bound = F.Set.mem c ctx in
-          if bound then ScopedTerm.App(Bound, c, x, xs)
+          if bound then ScopedTerm.App(Bound elpi_language, c, x, xs)
           else if is_uvar_name c then ScopedTerm.Var(c,x :: xs)
           else ScopedTerm.App(Global false, c, x, xs)
     | Cast (t,ty) ->
@@ -1704,7 +1711,7 @@ end = struct
     | Lam (c,ty,b) ->
         if has_dot c then error ~loc "Bound variables cannot contain the namespaec separator '.'";
         let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty)) in
-        ScopedTerm.Lam (Some c,ty,scope_loc_term ~state (F.Set.add c ctx) b)
+        ScopedTerm.Lam (Some (c,elpi_language),ty,scope_loc_term ~state (F.Set.add c ctx) b)
     | CData c -> ScopedTerm.CData c (* CData.hcons *)
     | App ({ it = Const _},[]) -> anomaly "Application node with no arguments"
     | App ({ it = Lam _},_) ->
@@ -1725,10 +1732,10 @@ end = struct
             let default_quotation = State.get default_quotation state in
             if Option.is_none default_quotation then
               anomaly ~loc "No default quotation";
-            option_get default_quotation
+            option_get default_quotation ~language:"default"
         | Some name ->
             let named_quotations = State.get named_quotations state in
-            try StrMap.find name named_quotations
+            try StrMap.find name named_quotations ~language:name
             with Not_found -> anomaly ~loc ("No '"^name^"' quotation") in
       let state = update_mtm state (fun x -> { x with ctx }) in
       let simple_t =
@@ -2902,7 +2909,7 @@ end (* }}} *)
     let open ScopedTerm in
     let rec aux it =
       match it with
-      | Const((Bound|Global true),_) -> it
+      | Const((Bound _|Global true),_) -> it
       | Const(Global false,c) -> let c' = f c in if c == c' then it else Const(Global false,c')
       | Spill(t,n) -> let t' = aux_loc t in if t' == t then it else Spill(t',n)
       | App(scope,c,x,xs) ->
@@ -3442,12 +3449,64 @@ end = struct
 
 end
 
+
+let todopp name _fmt _ = error ("pp not implemented for field: "^name)
+
+let get_argmap, set_argmap, _update_argmap, drop_argmap =
+  let argmap =
+    State.declare
+      ~name:"elpi:argmap" ~pp:(todopp "elpi:argmap")
+      ~descriptor:D.elpi_state_descriptor
+      ~clause_compilation_is_over:(fun _ -> F.Map.empty)
+      ~goal_compilation_begins:(fun x -> x)
+      ~goal_compilation_is_over:(fun ~args:_ _ -> None)
+      ~compilation_is_over:(fun _ -> None)
+      ~execution_is_over:(fun _ -> None)
+     ~init:(fun () -> F.Map.empty) in
+  State.(get argmap, set argmap, update_return argmap, drop argmap)
+
+  let is_Arg state x = 
+    match x with
+    | Arg _ | AppArg _ -> true
+    | _ -> false
+  
+  let mk_Arg state ~name ~args =
+    let name = F.from_string name in
+    let state, i =
+      let amap = get_argmap state in
+      try state, F.Map.find name amap
+      with Not_found ->
+        let i = F.Map.cardinal amap in
+        let amap = F.Map.add name i amap in
+        set_argmap state amap, i in
+    match args with
+    | [] -> state, mkArg i 0
+    | xs -> state, mkAppArg i xs
+  
+  let get_Arg state ~name ~args =
+    let name = F.from_string name in
+    let amap = get_argmap state in
+    let i =
+      try F.Map.find name amap
+      with Not_found -> error "get_Arg" in
+    match args with
+    | [] -> mkArg i 0
+    | xs -> mkAppArg i xs
+  
+  let fresh_Arg =
+    let qargno = ref 0 in
+    fun state ~name_hint:name ~args ->
+      incr qargno;
+      let name = Printf.sprintf "%s_%d_" name !qargno in
+      mk_Arg state ~name ~args
+
 module Assemble : sig
 
   val extend : flags -> State.t -> Assembled.program -> checked_compilation_unit -> State.t * Assembled.program
 
   (* for the query *)
-  val compile_query : State.t -> Assembled.program -> ScopedTerm.t -> SymbolMap.table * int F.Map.t * D.term
+  val compile_query : State.t -> Assembled.program -> bool * ScopedTerm.t -> SymbolMap.table * int F.Map.t * D.term
+  val compile_query_term : State.t -> Assembled.program -> depth:int -> ScopedTerm.t -> State.t * D.term
 
 end = struct
 
@@ -3526,7 +3585,7 @@ end = struct
   type spill = { vars : ScopedTerm.t list; vars_names : F.t list; expr : ScopedTerm.t }
   type spills = spill list
 
-  let todbl ~needs_spilling state symb ?(amap = F.Map.empty) t =
+  let todbl ~needs_spilling state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let symb = ref symb in
     let amap = ref amap in
     let allocate_arg c =
@@ -3539,21 +3598,21 @@ end = struct
       let s, rc = SymbolMap.allocate_global_symbol state !symb c in
       symb := s;
       rc in
-    let lookup_bound loc (_,ctx) c =
-      try F.Map.find c ctx
-      with Not_found -> error ~loc ("Unbound variable " ^ F.show c) in
+    let lookup_bound loc (_,ctx) (c,l as x) =
+      try Scope.Map.find x ctx
+      with Not_found -> error ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "") in
     let allocate_bound_symbol loc ctx f =
       let c = lookup_bound loc ctx f in
-      let s, rc = SymbolMap.allocate_bound_symbol state !symb f c in
+      let s, rc = SymbolMap.allocate_bound_symbol state !symb c in
       symb := s;
       rc in
-    let push_bound (n,ctx) c = (n+1,F.Map.add c n ctx) in
+    let push_bound (n,ctx) c = (n+1,Scope.Map.add c n ctx) in
     let push_unnamed_bound (n,ctx) = (n+1,ctx) in
     let push ctx = function
       | None -> push_unnamed_bound ctx
       | Some x -> push_bound ctx x in
     let open ScopedTerm in
-    let rec todbl ctx t =
+    let rec todbl (ctx : int * _ Scope.Map.t) t =
       match t.it with
       | CData c -> D.mkCData (CData.hcons c)
       | Spill(t,_) -> assert false (* spill handled before *)
@@ -3576,10 +3635,10 @@ end = struct
           if Builtins.is_declared state c then D.mkBuiltin c (x::xs)
           else D.mkApp c x xs
       (* lambda terms *)
-      | Const(Bound,c) -> allocate_bound_symbol t.loc ctx c
+      | Const(Bound l,c) -> allocate_bound_symbol t.loc ctx (c,l)
       | Lam(c,_,t) -> D.mkLam @@ todbl (push ctx c) t
-      | App(Bound,c,x,xs) ->
-          let c = lookup_bound t.loc ctx c in
+      | App(Bound l,c,x,xs) ->
+          let c = lookup_bound t.loc ctx (c,l) in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
           D.mkApp c x xs
@@ -3625,8 +3684,8 @@ end = struct
       | Const _ | Discard | Var _ | CData _ -> orig
       | Cast _ -> assert false (* TODO *)
       | Spill _ -> assert false in
-    let apply_to locals w t =
-      let w = mk_loc ~loc:t.loc @@ Const(Bound,w) in
+    let apply_to locals (w,l) t =
+      let w = mk_loc ~loc:t.loc @@ Const(Bound l,w) in
       apply_to locals w t in
 
     let app t args =
@@ -3667,7 +3726,7 @@ end = struct
       | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
       | Spill(t,{ contents = (Main n)}) ->
           let spills, t = spill1 ctx t in
-          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun c -> mk_loc ~loc @@ Const(Bound,c)) ctx) n in
+          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun c -> mk_loc ~loc @@ Const(Bound elpi_language,c)) ctx) n in
           let expr = app t vars in
           spills @ [{vars; vars_names; expr}], vars
       (* globals and builtins *)
@@ -3715,7 +3774,7 @@ end = struct
       | [], _ -> assert false
       | _ :: _, _ -> error ~loc:t.loc "Cannot place spilled expression" in
     (* if needs_spilling then Format.eprintf "spilled %a\n" ScopedTerm.pretty t; *)
-    let t  = todbl (0,F.Map.empty) t in
+    let t  = todbl (depth,Scope.Map.empty) t in
     (!symb, !amap), t  
 
   let extend1_clause flags state modes indexing (symbols, index) (needs_spilling,{ Ast.Clause.body; loc; attributes = { Ast.Structured.insertion = graft; id; ifexpr } }) =
@@ -3820,9 +3879,15 @@ end = struct
 
   let extend flags state assembled u = extend1 flags (state, assembled) u
 
-  let compile_query state { Assembled.symbols; } t =
-    let (symbols, amap), t = todbl ~needs_spilling:false (* typecheck *) state symbols t in
+  let compile_query state { Assembled.symbols; } (needs_spilling,t) =
+    let (symbols, amap), t = todbl ~needs_spilling state symbols t in
     symbols, amap, t 
+
+  let compile_query_term state { Assembled.symbols; } ~depth t =
+    let amap = get_argmap state in
+    let (symbols', amap), rt = todbl ~needs_spilling:false state symbols ~depth ~amap t in
+    if SymbolMap.equal symbols' symbols then set_argmap state amap, rt
+    else error ~loc:t.ScopedTerm.loc "cannot allocate new symbols in the query"
 
 end
 
@@ -3920,8 +3985,8 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
         singlequote_compilation;
         backtick_compilation } = quotation_descriptor in
 
-  let state = D.State.set CustomFunctorCompilation.backtick state (Option.map snd backtick_compilation) in
-  let state = D.State.set CustomFunctorCompilation.singlequote state (Option.map snd singlequote_compilation) in
+  let state = D.State.set CustomFunctorCompilation.backtick state backtick_compilation in
+  let state = D.State.set CustomFunctorCompilation.singlequote state singlequote_compilation in
   let state = D.State.set Quotation.default_quotation state default_quotation in
   let state = D.State.set Quotation.named_quotations state named_quotations in
   let state =
@@ -3992,6 +4057,7 @@ let check_no_regular_types_for_builtins state types = () (*
             Symbols.show state tname ^ " must be flagged as external");
  )) types
 *)
+let total_type_checking_time { WithMain.total_type_checking_time = x } = x
 
 let uvbodies_of_assignments assignments =
   (* Clients may add spurious args that, not occurring in the query,
@@ -4005,26 +4071,17 @@ let uvbodies_of_assignments assignments =
 
 let query_of_ast (compiler_state, assembled_program) t state_update =
   let compiler_state = State.begin_goal_compilation compiler_state in
-  let types = assembled_program.Assembled.types in
-  let type_abbrevs = assembled_program.Assembled.type_abbrevs in
-  let modes = assembled_program.Assembled.modes in
-  let kinds = assembled_program.Assembled.kinds in
-
-  let active_macros = assembled_program.Assembled.toplevel_macros in
+  let { Assembled.kinds; types; type_abbrevs; toplevel_macros; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
-
-  let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = active_macros }) t in
-  (* TODOtypecheck query *)
-  let symbols, amap, query = Assemble.compile_query compiler_state assembled_program t in
+  let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros }) t in
+  let needs_spilling = TypeChecker.check ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
   {
-    WithMain.prolog_program = assembled_program.Assembled.prolog_program;
-    (* clauses = assembled_program.Assembled.clauses; *)
-    chr = assembled_program.Assembled.chr;
-    (* initial_depth; *)
-    (* query; *)
+    WithMain.prolog_program;
+    chr;
     symbols;
     query_arguments = Query.N;
     initial_goal;
@@ -4033,48 +4090,62 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
     total_type_checking_time;
   }
 
-let total_type_checking_time { WithMain.total_type_checking_time = x } = x
+let term_to_raw_term state (_, assembled_program) ~depth t =
+  let { Assembled.kinds; types; type_abbrevs; toplevel_macros = _; chr; prolog_program; total_type_checking_time } = assembled_program in
+  let needs_spilling = TypeChecker.check ~type_abbrevs ~kinds ~types t ~exp:(TypeChecker.unknown_type_assignment "Ty") in
+  if needs_spilling then
+    error "spilling not implemented in term_to_raw_term";
+  Assemble.compile_query_term state assembled_program ~depth t
 
-let query_of_term (compiler_state, assembled_program) f = assert false (*
+
+let query_of_scoped_term (compiler_state, assembled_program) f =
   let compiler_state = State.begin_goal_compilation compiler_state in
-  let initial_depth = assembled_program.Assembled.local_names in
-  let types = assembled_program.Assembled.types in
-  let type_abbrevs = assembled_program.Assembled.type_abbrevs in
-  let modes = C.Map.map fst assembled_program.Assembled.modes in
-  let active_macros = assembled_program.Assembled.toplevel_macros in
-  let state, query =
-    ToDBL.query_preterm_of_function
-      ~depth:initial_depth active_macros compiler_state
-      (f ~depth:initial_depth) in
-  let query_env = Array.make query.amap.nargs D.dummy in
-    let state, queryt = stack_term_of_preterm ~depth:initial_depth state query in
-  let initial_goal =
-    R.move ~argsdepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
-      queryt in
-  let assignments = StrMap.map (fun i -> query_env.(i)) query.amap.n2i in
- {
-    WithMain.types;
-    type_abbrevs;
-    modes;
-    clauses = assembled_program.clauses;
-    prolog_program = assembled_program.prolog_program;
-    chr = assembled_program.Assembled.chr;
-    initial_depth;
-    query;
+  let { Assembled.kinds; types; type_abbrevs; toplevel_macros = _; chr; prolog_program; total_type_checking_time } = assembled_program in
+  let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
+  let compiler_state,t = f compiler_state in
+  let needs_spilling = TypeChecker.check ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (needs_spilling,t) in
+  let query_env = Array.make (F.Map.cardinal amap) D.dummy in
+  let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
+  let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
+  {
+    WithMain.prolog_program;
+    chr;
+    symbols;
     query_arguments = Query.N;
     initial_goal;
     assignments;
-    compiler_state = state |> (uvbodies_of_assignments assignments);
+    compiler_state = compiler_state |> (uvbodies_of_assignments assignments);
+    total_type_checking_time;
   }
 
-*)
-
-let query_of_data (state, p) loc (Query.Query { arguments } as descr) = assert false (*
+    
+  let query_of_raw_term (compiler_state, assembled_program) f =
+    let compiler_state = State.begin_goal_compilation compiler_state in
+    let { Assembled.kinds; types; type_abbrevs; toplevel_macros = _; chr; prolog_program; total_type_checking_time } = assembled_program in
+    let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
+    let compiler_state, query = f compiler_state in
+    let amap = get_argmap compiler_state in
+    let query_env = Array.make (F.Map.cardinal amap) D.dummy in
+    let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
+    let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
+    {
+      WithMain.prolog_program;
+      chr;
+      symbols = assembled_program.Assembled.symbols;
+      query_arguments = Query.N;
+      initial_goal;
+      assignments;
+      compiler_state = compiler_state |> (uvbodies_of_assignments assignments);
+      total_type_checking_time;
+    }
+  
+(* let query_of_data (state, p) loc (Query.Query { arguments } as descr) =
   let query = query_of_term (state, p) (fun ~depth state ->
     let state, term, gls = R.embed_query ~mk_Arg ~depth state descr in
     state, (loc, term), gls) in
-  { query with query_arguments = arguments }
-*)
+  { query with query_arguments = arguments } *)
+
 
 (* let lookup_query_predicate (state, p) pred =
   let state, pred = Symbols.allocate_global_symbol_str state pred in
@@ -4458,7 +4529,7 @@ let static_check ~exec ~checker:(state,program)
 ;;
 *)
 
-let lp state loc s =
+let elpi ~language:_ state loc s =
   let module P = (val option_get ~err:"No parser" (State.get parser state)) in
   let ast = P.goal ~loc ~text:s in
   let term = Scope_Quotation_Macro.scope_loc_term ~state ast in
@@ -4468,10 +4539,6 @@ let lp state loc s =
  let static_check ~exec ~checker:(state,program) q = true
 let term_of_ast ~depth state text = assert false
 let quote_syntax time new_state _ = assert false
-let is_Arg _ _ = false
-let get_Arg _ ~name:_ ~args:_ = assert false
-let get_Args _ = assert false
-let mk_Arg _ ~name:_ ~args:_ = assert false
 
 let relocate_closed_term ~from:_ ~to_:_ _ = assert false
 let lookup_query_predicate _ _ = assert false

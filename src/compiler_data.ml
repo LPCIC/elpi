@@ -7,27 +7,36 @@ module Scope = struct
 
   type final = bool
   [@@ deriving show, ord]
-  
+
+  type language = string
+  [@@ deriving show, ord]
+
   (* final = true means not affected by name space elimination, the name is already global, not bound by an enclosing name space *)
   
   type t =
-    | Bound  (* bound by a lambda, says bound *)
+    | Bound  of language (* bound by a lambda, stays bound *)
     | Global of final
   [@@ deriving show, ord]
 
+  module Map = Map.Make(struct
+    type t = F.t * language
+    [@@ deriving show, ord]
+  end)
+
 end
+let elpi_language : Scope.language = "lp"
 
 module ScopeContext = struct
 
 
-type ctx = { vmap : (F.t * F.t) list; uvmap : (F.t * F.t) list ref }
+type ctx = { vmap : (Scope.language * F.t * F.t) list; uvmap : (F.t * F.t) list ref }
 let empty () = { vmap = []; uvmap = ref [] }
 
-let eq_var { vmap } c1 c2 = List.mem (c1,c2) vmap
+let eq_var { vmap } language c1 c2 = List.mem (language,c1,c2) vmap
 
 
-let purge f c l = List.filter (fun x -> not @@ F.equal (f x) c) l
-let push_ctx c1 c2 ctx = { ctx with vmap = (c1 , c2) :: (purge fst c1 @@ purge snd c2 ctx.vmap) }
+let purge language f c l = List.filter (fun (l,x,y) -> l = language && not @@ F.equal (f (x,y)) c) l
+let push_ctx language c1 c2 ctx = { ctx with vmap = (language,c1 , c2) :: (purge language fst c1 @@ purge language snd c2 ctx.vmap) }
 let eq_uvar ctx c1 c2 =
   if List.exists (fun (x,_) -> F.equal x c1) !(ctx.uvmap) ||
      List.exists (fun (_,y) -> F.equal y c2) !(ctx.uvmap) then
@@ -80,7 +89,7 @@ module ScopedTypeExpression = struct
   let rec eqt ctx t1 t2 =
     match t1.it, t2.it with
     | Const(Global b1,c1), Const(Global b2,c2) -> b1 = b2 && F.equal c1 c2
-    | Const(Bound,c1), Const(Bound,c2) -> eq_var ctx c1 c2
+    | Const(Bound l1,c1), Const(Bound l2,c2) -> l1 = l2 && eq_var ctx l1 c1 c2
     | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
     | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 == b2 && eqt ctx s1 s2 && eqt ctx t1 t2
     | Pred(f1,l1), Pred(f2,l2) -> f1 == f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
@@ -90,7 +99,7 @@ module ScopedTypeExpression = struct
 
   let rec eq ctx t1 t2 =
     match t1, t2 with
-    | Lam(c1,b1), Lam(c2,b2) -> eq (push_ctx c1 c2 ctx) b1 b2
+    | Lam(c1,b1), Lam(c2,b2) -> eq (push_ctx "lp" c1 c2 ctx) b1 b2
     | Ty t1, Ty t2 -> eqt ctx t1 t2
     | _ -> false
 
@@ -105,7 +114,7 @@ module ScopedTypeExpression = struct
     match orig with
     | Prop -> orig
     | Any -> orig
-    | Const((Scope.Bound | Scope.Global true),_) -> orig
+    | Const((Scope.Bound _| Scope.Global true),_) -> orig
     | Const(Scope.Global false,c) ->
         let c' = f c in
         if c == c' then orig else Const(Scope.Global false,c')
@@ -263,6 +272,7 @@ module TypeAssignment = struct
   let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
 
 end
+
 module ScopedTerm = struct
   open ScopeContext
 
@@ -273,17 +283,29 @@ module ScopedTerm = struct
       | Discard
       | Var of F.t * t list
       | App of Scope.t * F.t * t * t list
-      | Lam of F.t option * ScopedTypeExpression.SimpleType.t option * t
+      | Lam of (F.t * Scope.language) option * ScopedTypeExpression.SimpleType.t option * t
       | Opaque of CData.t
       | Cast of t * ScopedTypeExpression.SimpleType.t
     and t = { it : t_; loc : Loc.t }
    [@@ deriving show]
 
    type constant = int
-   let mkGlobal loc c = { loc; it = Const(Global true,F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s) }
-   let mkBound loc n = { loc; it = Const(Bound,n)}
-   let mkAppGlobal loc c x xs = { loc; it = App(Global true,F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
-   let mkAppBound loc n x xs = { loc; it = App(Bound,n,x,xs) }
+   let mkGlobal ~loc c = { loc; it = Const(Global true,F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s) }
+   let mkBound ~loc ~language n = { loc; it = Const(Bound language,n)}
+   let mkAppGlobal ~loc c x xs = { loc; it = App(Global true,F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
+   let mkAppBound ~loc ~language n x xs = { loc; it = App(Bound language,n,x,xs) }
+   let mkVar ~loc n l = { loc; it = Var(n,l) }
+   let mkOpaque ~loc o = { loc; it = Opaque o }
+   let mkCast ~loc t ty = { loc; it = Cast(t,ty) }
+   let mkLam ~loc n ?ty t =  { loc; it = Lam(n,ty,t)  }
+   let mkImplication ~loc s t = { loc; it = App(Global true,F.implf,s,[t]) }
+   let mkPi ~loc n ?ty t = { loc; it = App(Global true,F.pif,{ loc; it = Lam (Some (n,elpi_language),ty,t) },[]) }
+   let mkConj ~loc = function
+     | [] -> { loc; it = Const(Global true, F.truef) }
+     | [x] -> x
+     | x :: xs -> { loc; it = App(Global true, F.andf, x, xs)}
+    let mkEq ~loc a b = { loc; it = App(Global true, F.eqf, a,[b]) }
+
   end
 
   type spill_info =
@@ -296,7 +318,7 @@ module ScopedTerm = struct
    | Discard
    | Var of F.t * t list
    | App of Scope.t * F.t * t * t list
-   | Lam of F.t option * ScopedTypeExpression.e option * t
+   | Lam of (F.t * Scope.language) option * ScopedTypeExpression.e option * t
    | CData of CData.t
    | Spill of t * spill_info ref
    | Cast of t * ScopedTypeExpression.e
@@ -312,8 +334,8 @@ module ScopedTerm = struct
     | Discard -> fprintf fmt "_"
     | Lam(None,None,t) -> fprintf fmt "_\\ %a" pretty t
     | Lam(None,Some ty,t) -> fprintf fmt "_ : %a\\ %a" ScopedTypeExpression.pp_e ty pretty t
-    | Lam(Some f,None,t) -> fprintf fmt "%a\\ %a" F.pp f pretty t
-    | Lam(Some f,Some ty,t) -> fprintf fmt "%a : %a\\ %a" F.pp f ScopedTypeExpression.pp_e ty pretty t
+    | Lam(Some (f,_),None,t) -> fprintf fmt "%a\\ %a" F.pp f pretty t
+    | Lam(Some (f,_),Some ty,t) -> fprintf fmt "%a : %a\\ %a" F.pp f ScopedTypeExpression.pp_e ty pretty t
     | App(Global _,f,x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App(_,f,x,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") (x::xs)
     | Var(f,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") xs
@@ -328,13 +350,13 @@ module ScopedTerm = struct
     let rec eq ctx t1 t2 =
       match t1.it, t2.it with
       | Const(Global b1,c1), Const(Global b2,c2) -> b1 == b2 && F.equal c1 c2
-      | Const(Bound,c1), Const(Bound,c2) -> eq_var ctx c1 c2
+      | Const(Bound l1,c1), Const(Bound l2,c2) -> l1 = l2 && eq_var ctx l1 c1 c2
       | Discard, Discard -> true
       | Var(n1,l1), Var(n2,l2) -> eq_uvar ctx n1 n2 && Util.for_all2 (eq ctx) l1 l2
       | App(Global b1,c1,x,xs), App(Global b2,c2,y,ys) -> b1 == b2 && F.equal c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
-      | App(Bound,c1,x,xs), App(Bound,c2,y,ys) -> eq_var ctx c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
+      | App(Bound l1,c1,x,xs), App(Bound l2,c2,y,ys) -> l1 = l2 && eq_var ctx l1 c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
       | Lam(None,ty1, b1), Lam (None,ty2, b2) -> eq ctx b1 b2 && Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2
-      | Lam(Some c1,ty1,b1), Lam(Some c2,ty2, b2) -> eq (push_ctx c1 c2 ctx) b1 b2 && Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2
+      | Lam(Some (c1,l1),ty1,b1), Lam(Some (c2,l2),ty2, b2) -> l1 = l2 && eq (push_ctx l1 c1 c2 ctx) b1 b2 && Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2
       | Spill(b1,n1), Spill (b2,n2) -> n1 == n2 && eq ctx b1 b2
       | CData c1, CData c2 -> CData.equal c1 c2
       | Cast(t1,ty1), Cast(t2,ty2) -> eq ctx t1 t2 && ScopedTypeExpression.eqt (empty ()) ty1 ty2
@@ -378,40 +400,40 @@ module ScopedTerm = struct
       let rec load_subst ~loc t (args : t list) map =
         match t, args with
         | Lam(None,_,t), _ :: xs -> load_subst_loc t xs map
-        | Lam(Some c,_,t), x :: xs -> load_subst_loc t xs (F.Map.add c x map)
+        | Lam(Some c,_,t), x :: xs -> load_subst_loc t xs (Scope.Map.add c x map)
         | t, xs -> app ~loc (subst map t) xs
       and load_subst_loc { it; loc } args map =
         load_subst ~loc it args map
-      and subst map t =
+      and subst (map : t Scope.Map.t) t =
         match t with
         | Lam(None,ty,t) -> Lam(None,ty,subst_loc map t)
-        | Lam(Some c,ty,t) ->
+        | Lam(Some (c,l),ty,t) ->
             let d = fresh () in
-            Lam(Some d,ty,subst_loc map @@ rename_loc c d t)
-        | Const(Bound,c) when F.Map.mem c map -> unlock @@ F.Map.find c map
+            Lam(Some (d,l),ty,subst_loc map @@ rename_loc l c d t)
+        | Const(Bound l,c) when Scope.Map.mem (c,l) map -> unlock @@ Scope.Map.find (c,l) map
         | Const _ -> t
-        | App(Bound,c,x,xs) when F.Map.mem c map ->
-            let hd = F.Map.find c map in
+        | App(Bound l,c,x,xs) when Scope.Map.mem (c,l) map ->
+            let hd = Scope.Map.find (c,l) map in
             unlock @@ app_loc hd (List.map (subst_loc map) (x::xs))
         | App(g,c,x,xs) -> App(g,c,subst_loc map x, List.map (subst_loc map) xs)
         | Var(c,xs) -> Var(c,List.map (subst_loc map) xs)
         | Spill(t,i) -> Spill(subst_loc map t,i)
         | Cast(t,ty) -> Cast(subst_loc map t,ty)
         | Discard | CData _ -> t
-      and rename c d t =
+      and rename l c d t =
         match t with
-        | Const(Bound,c') when F.equal c c' -> Const(Bound,d)
+        | Const(Bound l',c') when l = l' && F.equal c c' -> Const(Bound l,d)
         | Const _ -> t
-        | App(Bound,c',x,xs) when F.equal c c' ->
-            App(Bound,d,rename_loc c d x, List.map (rename_loc c d) xs)
-        | App(g,v,x,xs) -> App(g,v,rename_loc c d x, List.map (rename_loc c d) xs)
-        | Lam(Some c',_,_) when F.equal c c' -> t
-        | Lam(v,ty,t) -> Lam(v,ty,rename_loc c d t)
-        | Spill(t,i) -> Spill(rename_loc c d t,i)
-        | Cast(t,ty) -> Cast(rename_loc c d t,ty)
-        | Var(v,xs) -> Var(v,List.map (rename_loc c d) xs)
+        | App(Bound l',c',x,xs) when l = l' && F.equal c c' ->
+            App(Bound l,d,rename_loc l c d x, List.map (rename_loc l c d) xs)
+        | App(g,v,x,xs) -> App(g,v,rename_loc l c d x, List.map (rename_loc l c d) xs)
+        | Lam(Some (c',l'),_,_) when l = l' && F.equal c c' -> t
+        | Lam(v,ty,t) -> Lam(v,ty,rename_loc l c d t)
+        | Spill(t,i) -> Spill(rename_loc l c d t,i)
+        | Cast(t,ty) -> Cast(rename_loc l c d t,ty)
+        | Var(v,xs) -> Var(v,List.map (rename_loc l c d) xs)
         | Discard | CData _ -> t
-      and rename_loc c d { it; ty; loc } = { it = rename c d it; ty; loc } 
+      and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
       and subst_loc map { it; ty; loc } = { it = subst map it; ty; loc }
       and app_loc { it; loc; ty } args : t = { it = app ~loc it args; loc; ty }
       and app ~loc t (args : t list) =
@@ -424,9 +446,9 @@ module ScopedTerm = struct
         | Spill _ -> error ~loc "cannot apply spill"
         | Discard -> error ~loc "cannot apply discard"
         | Cast _ -> error ~loc "cannot apply cast"
-        | Lam _ -> load_subst ~loc t args F.Map.empty
+        | Lam _ -> load_subst ~loc t args Scope.Map.empty
       in
-        load_subst_loc t args F.Map.empty
+        load_subst_loc t args Scope.Map.empty
 
 end
 
@@ -451,13 +473,13 @@ module State = Data.State
 
 module QuotationHooks = struct
   
-  type quotation = State.t -> Loc.t -> string -> ScopedTerm.SimpleTerm.t
+  type quotation = language:Scope.language -> State.t -> Ast.Loc.t -> string -> ScopedTerm.SimpleTerm.t
   
   type descriptor = {
     named_quotations : quotation StrMap.t;
     default_quotation : quotation option;
-    singlequote_compilation : (string * (State.t -> F.t -> State.t * ScopedTerm.SimpleTerm.t)) option;
-    backtick_compilation : (string * (State.t -> F.t -> State.t * ScopedTerm.SimpleTerm.t)) option;
+    singlequote_compilation : (string * quotation) option;
+    backtick_compilation : (string * quotation) option;
   }
   
   let new_descriptor () = ref {
@@ -470,14 +492,14 @@ module QuotationHooks = struct
   let declare_singlequote_compilation ~descriptor name f =
     match !descriptor with
     | { singlequote_compilation = None } ->
-        descriptor := { !descriptor with singlequote_compilation = Some(name,f) }
+        descriptor := { !descriptor with singlequote_compilation = Some(name,f) }; name
     | { singlequote_compilation = Some(oldname,_) } ->
           error("Only one custom compilation of 'ident' is supported. Current: "
             ^ oldname ^ ", new: " ^ name)
   let declare_backtick_compilation ~descriptor name f =
     match !descriptor with
     | { backtick_compilation = None } ->
-        descriptor := { !descriptor with backtick_compilation = Some(name,f) }
+        descriptor := { !descriptor with backtick_compilation = Some(name,f) }; name
     | { backtick_compilation = Some(oldname,_) } ->
           error("Only one custom compilation of `ident` is supported. Current: "
             ^ oldname ^ ", new: " ^ name)
@@ -485,7 +507,8 @@ module QuotationHooks = struct
   let set_default_quotation ~descriptor f =
     descriptor := { !descriptor with default_quotation = Some f }
   let register_named_quotation ~descriptor ~name:n f =
-    descriptor := { !descriptor with named_quotations = StrMap.add n f !descriptor.named_quotations }  
+    descriptor := { !descriptor with named_quotations = StrMap.add n f !descriptor.named_quotations };
+    n
   
 end
   

@@ -79,7 +79,7 @@ let usage =
 let quotations = API.Quotation.new_quotations_descriptor ()
 let _ =
   API.Quotation.register_named_quotation ~descriptor:quotations ~name:"elpi"
-    API.Quotation.lp
+    API.Quotation.elpi
 
 let _ =
   (* Memtrace.trace_if_requested (); <-- new line *)

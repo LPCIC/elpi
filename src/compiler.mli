@@ -34,10 +34,9 @@ val check_unit : base:program -> unchecked_compilation_unit -> checked_compilati
 
 type 'a query
 val query_of_ast : program -> Ast.Goal.t -> (State.t -> State.t) -> unit query
-val query_of_term :
-  program -> (depth:int -> State.t -> State.t * (Loc.t * term) * Conversion.extra_goals) -> unit query
-val query_of_data :
-  program -> Loc.t -> 'a Query.t -> 'a query
+val query_of_scoped_term : program -> (State.t -> State.t * Compiler_data.ScopedTerm.t) -> unit query
+val query_of_raw_term : program -> (State.t -> State.t * term) -> unit query
+(* val query_of_data : program -> Loc.t -> 'a Query.t -> 'a query *)
 
 val total_type_checking_time : 'a query -> float
 
@@ -51,22 +50,25 @@ val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -
 
 val lookup_query_predicate : program -> string -> program * Data.constant
 
-val lp : Compiler_data.QuotationHooks.quotation
+val elpi_language : Compiler_data.Scope.language
+val elpi : Compiler_data.QuotationHooks.quotation
 
 val is_Arg : State.t -> term -> bool
-val get_Args : State.t -> term StrMap.t
+(* val get_Args : State.t -> term StrMap.t *)
 val mk_Arg :
   State.t -> name:string -> args:term list ->
     State.t * term
 val get_Arg : State.t -> name:string -> args:term list -> term
+
+val term_to_raw_term : State.t -> program -> depth:int -> Compiler_data.ScopedTerm.t -> State.t * term
 
 (* Quotes the program and the query, see elpi-quoted_syntax.elpi *)
 val quote_syntax : [ `Compiletime | `Runtime of constant -> term ] -> State.t -> 'a query -> State.t * term list * term
 
 module CustomFunctorCompilation : sig
 
-  val compile_singlequote : State.t -> F.t -> State.t * term
-  val compile_backtick : State.t -> F.t -> State.t * term
+  (* val compile_singlequote : State.t -> F.t -> State.t * term
+  val compile_backtick : State.t -> F.t -> State.t * term *)
 
   val is_singlequote : F.t -> bool
   val is_backtick : F.t -> bool
