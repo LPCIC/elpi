@@ -144,17 +144,16 @@ let mkQuoted loc s =
     | _ -> { qloc = strip (i+2) (i+2) loc; data = String.sub s i (String.length s - i - i); kind = None }
   in
     { loc; it = Quoted (find_data 0) }
-let mkSeq loc (l : t list) =
- let rec aux loc =
-  function
+let mkSeq ?loc (l : t list) =
+ let rec aux = function
     [] -> assert false
   | [e] -> e
   | hd::tl ->
-      let tl = aux loc tl in
+      let tl = aux tl in
       { loc = Loc.merge hd.loc tl.loc; it = App({ it = Const Func.consf; loc = hd.loc },[hd;tl]) }
  in
-   { (aux loc l) with loc }
-
+   let l = aux l in
+   match loc with None -> l | Some loc -> { l with loc }
 let mkCast loc t ty = { loc; it = Cast(t,ty) }
 
 

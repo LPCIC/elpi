@@ -337,8 +337,8 @@ closed_term:
 | x = STRING { mkC (loc $loc) (cstring.Util.CData.cin x)}
 | x = QUOTED { mkQuoted (loc $loc) x }
 | LPAREN; t = term; a = AS; c = term; RPAREN { mkApp (loc $loc) [mkCon (loc $loc(a)) "as";t;c] }
-| LBRACKET; l = list_items { mkSeq (loc $loc) l }
-| LBRACKET; l = list_items_tail;  {  mkSeq (loc $loc) l }
+| LBRACKET; l = list_items { mkSeq ~loc:(loc $loc) l }
+| LBRACKET; l = list_items_tail;  {  mkSeq ~loc:(loc $loc) l }
 | l = LCURLY; t = term; RCURLY { mkAppF (loc $loc) (loc $loc(l),Func.spillf) [t] }
 | t = head_term { t }
 

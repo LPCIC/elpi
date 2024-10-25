@@ -305,6 +305,24 @@ module ScopedTerm = struct
      | [x] -> x
      | x :: xs -> { loc; it = App(Global true, F.andf, x, xs)}
     let mkEq ~loc a b = { loc; it = App(Global true, F.eqf, a,[b]) }
+    let list_to_lp_list l =
+        let rec aux = function
+           [] -> assert false
+         | [e] -> e
+         | hd::tl ->
+             let tl = aux tl in
+             { loc = Loc.merge hd.loc tl.loc; it = App(Global true,F.consf,hd,[tl]) }
+        in
+          aux l
+          
+       
+      
+    let rec lp_list_to_list = function
+      | { it = App(Global true, c, x, [xs]) } when F.equal c F.consf  -> x :: lp_list_to_list xs
+      | { it = Const(Global true,c) } when F.equal c F.nilf -> []
+      | { loc; it } -> error ~loc (Format.asprintf "%a is not a list" pp_t_ it)
+    
+
 
   end
 

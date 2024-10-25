@@ -1384,7 +1384,7 @@ module Utils = struct
       | Data.Cons(hd,tl) ->
           let hd = aux d ctx hd in
           let tl = aux d ctx tl in
-          Term.mkSeq buggy_loc [hd;tl]
+          Term.mkSeq [hd;tl]
       | Data.Nil -> Term.mkNil buggy_loc
       | Data.Builtin(c,xs) ->
           let c = Term.mkCon buggy_loc (ED.Constants.show c) in

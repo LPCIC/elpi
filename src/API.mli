@@ -102,6 +102,9 @@ module Ast : sig
     val mkConj : loc:Loc.t -> t list -> t
     val mkEq : loc:Loc.t -> t -> t -> t
 
+    val list_to_lp_list : t list -> t
+    val lp_list_to_list : t -> t list
+  
   end
 
 

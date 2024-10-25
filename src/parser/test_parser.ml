@@ -99,7 +99,7 @@ let lam x n ?ty ?(parensl=false) ?(parensr=false) b =
   let stop = b.loc.source_stop + (if parensr then 1 else 0) in
   mkLam (mkLoc (n + (if parensl then -1 else 0)) stop 1 0) x ty b
 let mkNil ?(bug=false) n = mkNil (mkLoc (n + (if bug then -1 else 0)) n 1 0)
-let mkSeq n m = mkSeq (mkLoc n m 1 0)
+let mkSeq n m = mkSeq ~loc:(mkLoc n m 1 0)
 let c ?(bug=false) n ?len s =
   let len = match len with None -> String.length s | Some x -> x in
   mkCon (mkLoc (n + (if bug then -1 else 0)) (n + len - 1) 1 0) s
