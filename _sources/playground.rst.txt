@@ -103,7 +103,7 @@ This ``elpi`` directive should pass validation:
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.077
    
    Success:
    
@@ -151,7 +151,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.075
    
 **../../tests/sources/accumulate_twice2.elpi
 :**
@@ -195,7 +195,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.079
+   Typechecking time: 0.080
    
 **../../tests/sources/ackermann.elpi
 :**
@@ -224,7 +224,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.088
+   Typechecking time: 0.089
    
    Success:
    
@@ -262,7 +262,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.088
+   Typechecking time: 0.089
    
    Success:
    
@@ -291,7 +291,7 @@ Test Bed
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, characters 0-40: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -301,7 +301,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.085
+   Typechecking time: 0.087
    
    Success:
    
@@ -339,24 +339,24 @@ Test Bed
     Warning: constant len has no declared type. Did you mean std.length ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 29, column 0, characters 769-797: 
     Warning: constant compatible has no declared type.
-   compat [term c1 (uvar frozen--540 []), term c0 (uvar frozen--541 [])] |- 
-    frozen--533 [c1, c0] 
-    arr (uvar frozen--534 [c0, c1]) 
-     (arr (uvar frozen--535 [c0, c1]) (uvar frozen--536 [])) , 
-    [term c3 (uvar frozen--538 []), term c2 (uvar frozen--537 [])] |- frozen--533 
+   compat [term c1 (uvar frozen--544 []), term c0 (uvar frozen--545 [])] |- 
+    frozen--537 [c1, c0] 
+    arr (uvar frozen--538 [c0, c1]) 
+     (arr (uvar frozen--539 [c0, c1]) (uvar frozen--540 [])) , 
+    [term c3 (uvar frozen--542 []), term c2 (uvar frozen--541 [])] |- frozen--537 
     [c2, c3] 
-    arr (uvar frozen--537 []) (arr (uvar frozen--538 []) (uvar frozen--539 []))
+    arr (uvar frozen--541 []) (arr (uvar frozen--542 []) (uvar frozen--543 []))
    NEW [X0 = X1, X2 = X3] arr (X4 c0 c1) (arr (X5 c0 c1) X6) = arr X1 (arr X3 X7)
    1
-   compat [term c0 bool] |- frozen--546 [c0] uvar frozen--547 [] , 
-    [term c1 (uvar frozen--548 [])] |- frozen--546 [c1] nat
+   compat [term c0 bool] |- frozen--550 [c0] uvar frozen--551 [] , 
+    [term c1 (uvar frozen--552 [])] |- frozen--550 [c1] nat
    NEW [bool = X8] X9 = nat
    2
-   compat [term c0 bool] |- frozen--553 [c0] uvar frozen--554 [] , 
-    [term c1 (uvar frozen--554 [])] |- frozen--553 [c1] nat
+   compat [term c0 bool] |- frozen--557 [c0] uvar frozen--558 [] , 
+    [term c1 (uvar frozen--558 [])] |- frozen--557 [c1] nat
    NEW [bool = X10] X10 = nat
-   compat [term c0 bool] |- frozen--559 [c0] uvar frozen--560 [] , [term c1 nat] 
-    |- frozen--559 [c1] nat
+   compat [term c0 bool] |- frozen--563 [c0] uvar frozen--564 [] , [term c1 nat] 
+    |- frozen--563 [c1] nat
    NEW [bool = nat] X11 = nat
    
 
@@ -367,7 +367,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.085
+   Typechecking time: 0.089
    
    Success:
    
@@ -400,7 +400,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.076
    
    Success:
    
@@ -454,7 +454,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.075
    
    Success:
    
@@ -488,7 +488,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.083
+   Typechecking time: 0.082
    
    Success:
    
@@ -530,7 +530,7 @@ Test Bed
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_sem.elpi", line 1, column 0, characters 0-134: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    c
    
 
@@ -575,7 +575,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.082
+   Typechecking time: 0.084
    
    Success:
    
@@ -608,7 +608,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.076
    
    Success:
    
@@ -647,7 +647,7 @@ Test Bed
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 2, column 0, characters 60-70: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -657,7 +657,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.107
+   Typechecking time: 0.109
    
    Success:
    
@@ -705,7 +705,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.107
+   Typechecking time: 0.108
    
    Success:
    
@@ -738,7 +738,7 @@ Test Bed
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, characters 36-54: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -748,7 +748,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.094
+   Typechecking time: 0.096
    
    Success:
    
@@ -774,7 +774,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.075
    
    Success:
    
@@ -816,7 +816,7 @@ Test Bed
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 2, column 0, characters 60-70: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, characters 79-106: 
     Warning: Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
@@ -861,7 +861,7 @@ Test Bed
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut6.elpi", line 3, column 0, characters 25-38: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -871,7 +871,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.094
+   Typechecking time: 0.096
    
    Success:
    
@@ -897,7 +897,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.075
    
    Success:
    
@@ -931,7 +931,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.082
+   Typechecking time: 0.083
    
    Success:
    
@@ -969,12 +969,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.087
+   Typechecking time: 0.086
    Fatal error: Unification problem outside the pattern fragment. ((Data.Term.App (f, (Data.Term.Const x), [])) == (Data.Term.AppUVar (
-      { Data.Term.contents = please extend this printer; uid_private = 42067 },
+      { Data.Term.contents = please extend this printer; uid_private = 42610 },
       0,
       [(Data.Term.UVar (
-          { Data.Term.contents = please extend this printer; uid_private = 42066
+          { Data.Term.contents = please extend this printer; uid_private = 42609
             },
           0, 0))
         ]
@@ -1033,7 +1033,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.086
+   Typechecking time: 0.089
    
    Success:
    
@@ -1119,7 +1119,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.106
+   Typechecking time: 0.107
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/even-odd.elpi
@@ -1142,7 +1142,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.076
    
    Success:
    
@@ -1193,7 +1193,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.098
+   Typechecking time: 0.099
    
    Success:
    
@@ -1230,7 +1230,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.082
+   Typechecking time: 0.083
    
    Success:
    
@@ -1268,7 +1268,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.083
+   Typechecking time: 0.084
    
    Success:
    
@@ -1307,7 +1307,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.086
+   Typechecking time: 0.087
    
    Success:
    
@@ -1350,7 +1350,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.091
+   Typechecking time: 0.092
    
    Success:
    
@@ -1388,7 +1388,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.085
+   Typechecking time: 0.087
    
    Success:
    
@@ -1481,7 +1481,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.120
+   Typechecking time: 0.122
    
    Success:
    
@@ -1507,7 +1507,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.076
    
    Success:
    
@@ -1564,7 +1564,7 @@ Test Bed
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ho.elpi", line 5, column 0, characters 79-80: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -1574,7 +1574,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.080
+   Typechecking time: 0.085
    
    Success:
    
@@ -1682,7 +1682,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.076
    
    Success:
    
@@ -1718,7 +1718,7 @@ Test Bed
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold-right std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find std.map.private.find.aux gc.full std.loc.set.fold std.loc.set.filter std.int.set.fold std.int.set.filter std.string.set.fold std.string.set.filter std.loc.map.fold std.loc.map.filter std.loc.map.find std.int.map.fold std.int.map.filter std.int.map.find std.string.map.fold std.string.map.filter std.string.map.find loc.fields ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, characters 31-59: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -1728,7 +1728,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.099
+   Typechecking time: 0.100
    
    Success:
    
@@ -1762,7 +1762,7 @@ Test Bed
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, characters 19-73: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -1804,11 +1804,11 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.090
+   Typechecking time: 0.093
    
    Success:
    
-   Time: 1.859
+   Time: 1.793
    
    Constraints:
    
@@ -1837,7 +1837,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.077
+   Typechecking time: 0.078
    
    Success:
    
@@ -1873,7 +1873,7 @@ Test Bed
     Warning: constant appl has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 12, column 0, characters 330-376: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -1883,7 +1883,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.103
+   Typechecking time: 0.105
    
    Success:
    
@@ -1925,7 +1925,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.094
+   Typechecking time: 0.096
    
    Success:
    
@@ -1991,7 +1991,7 @@ Test Bed
    
    Success:
    
-   Time: 0.327
+   Time: 0.316
    
    Constraints:
    
@@ -2049,7 +2049,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.077
+   Typechecking time: 0.075
    
    Success:
    
@@ -2283,11 +2283,11 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.128
+   Typechecking time: 0.156
    
    Success:
    
-   Time: 0.003
+   Time: 0.002
    
    Constraints:
    
@@ -2346,7 +2346,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.121
+   Typechecking time: 0.122
    
    Success:
    
@@ -2367,7 +2367,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.331717 + 0.057014 + 0.946037
+   1.307282 + 0.055725 + 0.930823
    
 
 .. code-block:: console
@@ -2377,11 +2377,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.076
+   Typechecking time: 0.084
    
    Success:
    
-   Time: 2.560
+   Time: 2.519
    
    Constraints:
    
@@ -2398,7 +2398,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.412915 + 2.832337 + 0.354904
+   6.398584 + 2.926591 + 0.332229
    
 
 .. code-block:: console
@@ -2408,11 +2408,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.079
+   Typechecking time: 0.078
    
    Success:
    
-   Time: 9.607
+   Time: 9.664
    
    Constraints:
    
@@ -2429,7 +2429,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.858917 + 2.640588 + 0.229287
+   5.867924 + 2.682573 + 0.212790
    
 
 .. code-block:: console
@@ -2437,13 +2437,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.076
+   Typechecking time: 0.078
    
    Success:
    
-   Time: 8.733
+   Time: 8.770
    
    Constraints:
    
@@ -2544,7 +2544,7 @@ Test Bed
 
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, characters 174-238: 
     Warning: 
-    constant aux has no declared type. Did you mean std.rev.aux std.map-i.aux std.iota.aux std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux rev.aux ?
+    constant aux has no declared type. Did you mean std.rev.aux std.map-i.aux std.list.init.aux std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux rev.aux ?
    
 
 .. code-block:: console
@@ -2554,7 +2554,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.078
+   Typechecking time: 0.080
    
    Success:
    
@@ -2590,7 +2590,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.087
+   Typechecking time: 0.088
    
    Success:
    
@@ -2617,7 +2617,7 @@ Test Bed
     Warning: constant x.acc.main has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, characters 174-238: 
     Warning: 
-    constant aux has no declared type. Did you mean x.acc.rev.aux std.rev.aux std.map-i.aux std.iota.aux std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux ?
+    constant aux has no declared type. Did you mean x.acc.rev.aux std.rev.aux std.map-i.aux std.list.init.aux std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux ?
    
 
 .. code-block:: console
@@ -2627,7 +2627,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.087
+   Typechecking time: 0.091
    
    Success:
    
@@ -2697,7 +2697,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.072
+   Typechecking time: 0.074
    
    Success:
    
@@ -2755,7 +2755,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.115
+   Typechecking time: 0.116
    
    Success:
    
@@ -2988,7 +2988,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.082
+   Typechecking time: 0.084
    
    Success:
    
@@ -3032,7 +3032,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.100
+   Typechecking time: 0.102
    
    Success:
    
@@ -3163,7 +3163,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.128
+   Typechecking time: 0.131
    
    Success:
    
@@ -3216,7 +3216,7 @@ Test Bed
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
     Warning: constant ==> has no declared type.
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, characters 0-224: 
@@ -3238,7 +3238,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.114
+   Typechecking time: 0.115
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/queens.elpi
@@ -3294,11 +3294,11 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.120
+   Typechecking time: 0.122
    
    Success:
    
-   Time: 1.574
+   Time: 1.572
    
    Constraints:
    
@@ -3328,7 +3328,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.074
    
    Success:
    
@@ -3349,7 +3349,7 @@ Test Bed
 
 .. code-block:: console
 
-   7
+   1
    
 
 .. code-block:: console
@@ -3405,11 +3405,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.098
+   Typechecking time: 0.100
    
    Success:
    
-   Time: 0.252
+   Time: 0.253
    
    Constraints:
    
@@ -3451,11 +3451,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.098
+   Typechecking time: 0.101
    
    Success:
    
-   Time: 1.863
+   Time: 1.948
    
    Constraints:
    
@@ -3483,7 +3483,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.075
    
 **../../tests/sources/restriction3.elpi
 :**
@@ -3513,7 +3513,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.080
+   Typechecking time: 0.079
    
    Success:
    
@@ -3619,7 +3619,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.077
+   Typechecking time: 0.079
    
    Success:
    
@@ -3671,11 +3671,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.117
+   Typechecking time: 0.116
    
    Success:
    
-   Time: 0.129
+   Time: 0.130
    
    Constraints:
    
@@ -3786,7 +3786,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.082
+   Typechecking time: 0.083
    
    Success:
    
@@ -3807,7 +3807,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.125940 + 0.053114 + 0.791307
+   1.149334 + 0.055328 + 0.796003
    
 
 .. code-block:: console
@@ -3817,11 +3817,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.077
    
    Success:
    
-   Time: 2.067
+   Time: 2.100
    
    Constraints:
    
@@ -3857,7 +3857,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.096
+   Typechecking time: 0.097
    
    Success:
    
@@ -3893,7 +3893,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.085
+   Typechecking time: 0.087
    
    Success:
    
@@ -3925,7 +3925,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.078
+   Typechecking time: 0.080
    
 **../../tests/sources/shorten_aux2.elpi
 :**
@@ -3949,7 +3949,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.082
+   Typechecking time: 0.084
    
 **../../tests/sources/shorten_builtin.elpi
 :**
@@ -3970,7 +3970,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.076
    
    Success:
    
@@ -4043,7 +4043,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.075
    
    Success:
    
@@ -4074,7 +4074,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.074
    
    Success:
    
@@ -4106,7 +4106,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.075
+   Typechecking time: 0.074
    
    Success:
    
@@ -4143,7 +4143,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.077
+   Typechecking time: 0.080
    
    Success:
    
@@ -4200,7 +4200,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.075
    
    Success:
    
@@ -4226,7 +4226,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.076
    
    Success:
    
@@ -4260,7 +4260,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.077
+   Typechecking time: 0.078
    
    Success:
    
@@ -4296,7 +4296,7 @@ Test Bed
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal.aux std.map.private.bal std.set.private.bal.aux std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
    File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 6, column 0, characters 105-108: 
     Warning: 
-    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.iota.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
+    constant a has no declared type. Did you mean std.assert! std.assert-ok! std.rev.aux std.append std.appendR std.map-i.aux std.list.init.aux std.any->string std.map.add std.map.private.add std.map.private.remove.aux std.map.private.find.aux std.map.private.add.aux std.map.private.bal.aux std.set.add std.set.private.add std.set.private.remove.aux std.set.private.add.aux std.set.private.bal.aux std.set.private.mem.aux std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
 
 .. code-block:: console
@@ -4306,7 +4306,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.098
+   Typechecking time: 0.097
    
    Success:
    
@@ -4332,7 +4332,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.075
    
    Success:
    
@@ -4421,7 +4421,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.074
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv12.elpi
@@ -4444,7 +4444,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.075
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv2.elpi
@@ -4500,7 +4500,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.072
+   Typechecking time: 0.075
    
    Success:
    
@@ -4525,7 +4525,7 @@ Test Bed
    Parsing time: 0.000
    
    Compilation time: 0.001
-   Fatal error: exception Elpi__Compiler.CompileError(0, "typeabbrev (Data.Term.TConst SYMBOL-512) uses the undefined y constant at File \"/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv5.elpi\", line 2, column 0, characters 16-30:")
+   Fatal error: exception Elpi__Compiler.CompileError(0, "typeabbrev (Data.Term.TConst SYMBOL-516) uses the undefined y constant at File \"/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv5.elpi\", line 2, column 0, characters 16-30:")
    
 **../../tests/sources/typeabbrv6.elpi
 :**
@@ -4554,7 +4554,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.075
    
    Success:
    
@@ -4580,7 +4580,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.075
    
    Success:
    
@@ -4606,7 +4606,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.075
    
    Success:
    
@@ -4632,7 +4632,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.075
    
    Success:
    
@@ -4733,7 +4733,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.075
    
    Success:
    
