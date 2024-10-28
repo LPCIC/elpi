@@ -243,12 +243,21 @@ flatten []     [].
 pred null i:list A.
 null [].
 
-pred iota i:int, o:list int.
-iota N L :- iota.aux 0 N L.
+% [make N E L] L is [E, ..., E] and L has length N
+pred list.make i:int, i:A, o:list A.
+list.make 0 _ [] :- !.
+list.make N E [E|L] :- N' is N - 1, list.make N' E L.
 
-pred iota.aux i:int, i:int, o:list int.
-iota.aux X X [] :- !.
-iota.aux N X [N|R] :- M is N + 1, iota.aux M X R.
+% [init N F L] L is [F 0, ..., F (N-1)]
+pred list.init i:int, i:(pred i:int, o:A), o:list A.
+list.init N F L :- list.init.aux 0 N F L.
+
+pred list.init.aux i:int, i:int, i:(pred i:int, o:A), o:list A.
+list.init.aux N N _ [] :- !.
+list.init.aux N M F [E|L] :- F N E, N' is N + 1, list.init.aux N' M F L.
+
+pred iota i:int, o:list int.
+iota N L :- list.init N (x\y\ x = y) L.
 
 % [intersperse X L R] R is [L0, X, ..., X, LN]
 :index(_ 1)
