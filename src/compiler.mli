@@ -35,7 +35,7 @@ val check_unit : base:program -> unchecked_compilation_unit -> checked_compilati
 type 'a query
 val query_of_ast : program -> Ast.Goal.t -> (State.t -> State.t) -> unit query
 val query_of_scoped_term : program -> (State.t -> State.t * Compiler_data.ScopedTerm.t) -> unit query
-val query_of_raw_term : program -> (State.t -> State.t * term) -> unit query
+val query_of_raw_term : program -> (State.t -> State.t * term * Conversion.extra_goals) -> unit query
 (* val query_of_data : program -> Loc.t -> 'a Query.t -> 'a query *)
 
 val total_type_checking_time : 'a query -> float

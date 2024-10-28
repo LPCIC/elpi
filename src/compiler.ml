@@ -725,8 +725,7 @@ end = struct
   let rec classify_arrow = function
     | TypeAssignment.Arr(Ast.Structured.Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
     | UVar m when MutableOnce.is_set m -> classify_arrow (TypeAssignment.deref m)
-    | UVar _ -> Unknown
-    | (App _ | Prop | Cons _ | Any) as tgt -> Simple { srcs = []; tgt }
+    | (App _ | Prop | Cons _ | Any | UVar _) as tgt -> Simple { srcs = []; tgt }
     | TypeAssignment.Arr(Ast.Structured.NotVariadic,x,xs) ->
         match classify_arrow xs with
         | Simple {srcs; tgt } -> Simple { srcs = x :: srcs; tgt }
@@ -759,7 +758,7 @@ end = struct
     len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
   let check ~type_abbrevs ~kinds ~types:env (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
-    (* Format.eprintf "checking %a\n" ScopedTerm.pretty t; *)
+    (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
     let needs_spill = ref false in
     let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
@@ -879,7 +878,7 @@ end = struct
       | t::ts ->
           (* Format.eprintf "checking overloaded app %a\n" F.pp c; *)
           match classify_arrow t with
-          | Unknown -> error ~loc "Type too ambiguous to be assigned to an overloaded constant"
+          | Unknown -> error ~loc (Format.asprintf "Type too ambiguous to be assigned to the overloaded constant: %s for type %a" (F.show c) TypeAssignment.pretty t)
           | Simple { srcs; tgt } ->
               if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then []
               else check_app_overloaded ctx ~loc c ety args targs alltys ts
@@ -911,12 +910,12 @@ end = struct
           | _ -> error_not_a_function ~loc:x.loc c (List.rev consumed) x (* TODO: trim loc up to x *)
 
     and check_loc ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
-      if MutableOnce.is_set ty then []
-      else
+      (* if MutableOnce.is_set ty then []
+      else *)
         begin
-          assert (not @@ MutableOnce.is_set ty);
+          (* assert (not @@ MutableOnce.is_set ty); *)
           let extra_spill = check ~tyctx ctx ~loc it ety in
-          MutableOnce.set ty (Val ety);
+          if not @@ MutableOnce.is_set ty then MutableOnce.set ty (Val ety);
           extra_spill
         end
 
@@ -1072,7 +1071,7 @@ end = struct
       check_matches_poly_skema_loc t;
       if spills <> [] then error ~loc:t.loc "cannot spill in head";
       F.Map.iter (fun k (_,n,loc) ->
-        if n = 1 && not @@ silence_linear_warn k then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
+        if n = 1 && not @@ silence_linear_warn k then error ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
           F.pp k F.pp k F.pp k)) !sigma;
       !needs_spill
 
@@ -1218,7 +1217,7 @@ end
 type builtins = string * Data.BuiltInPredicate.declaration list
 
 type program = State.t * Assembled.program
-type header = program * macro_declaration
+type header = program
 
 
 module WithMain = struct
@@ -1604,7 +1603,7 @@ let get_mtm, set_mtm, drop_mtm, update_mtm =
 
 module Scope_Quotation_Macro : sig
 
-  val run : State.t -> Ast.Structured.program -> State.t * Scoped.program
+  val run : State.t -> toplevel_macros:macro_declaration -> Ast.Structured.program -> State.t * Scoped.program
   val check_duplicate_mode : F.t -> (mode * Loc.t) -> (mode * Loc.t) F.Map.t -> unit
   val scope_loc_term : state:State.t -> Ast.Term.t -> ScopedTerm.t
 
@@ -1680,7 +1679,7 @@ end = struct
         let { macros } = get_mtm state in
         if F.Map.mem c macros then
           ScopedTerm.unlock @@ fst @@ F.Map.find c macros
-        else error ~loc (Format.asprintf "Unknown macro %a" F.pp c)
+        else error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@]" F.pp c)
     | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Bound elpi_language,c))
     | Const c ->
         if is_uvar_name c then ScopedTerm.Var(c,[])
@@ -1695,7 +1694,7 @@ end = struct
          if is_macro_name c then
            let { macros } = get_mtm state in
            if F.Map.mem c macros then ScopedTerm.beta (fst @@ F.Map.find c macros) (x::xs)
-           else error ~loc (Format.asprintf "Unknown macro %a" F.pp c)
+           else error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
          else
           let bound = F.Set.mem c ctx in
           if bound then ScopedTerm.App(Bound elpi_language, c, x, xs)
@@ -1834,7 +1833,7 @@ end = struct
       let body = scope_loc_term ~state:(set_mtm state { empty_mtm with macros = m }) body in
       F.Map.add name (body,loc) m
 
-  let run state p : State.t * Scoped.program =
+  let run state ~toplevel_macros p : State.t * Scoped.program =
 
     let rec compile_program omacros state { Ast.Structured.macros; kinds; types; type_abbrevs; modes; body } =
       let active_macros = List.fold_left (compile_macro state) omacros macros in
@@ -1899,8 +1898,8 @@ end = struct
           Scoped.Accumulated p :: compiled_rest
   
     in
-    let state, toplevel_macros, pbody =
-      compile_program F.Map.empty state p in
+    let state, toplevel_macros, pbody = compile_program toplevel_macros state p in
+    Printf.eprintf "run: %d\n%!" (F.Map.cardinal toplevel_macros);
     state, { Scoped.pbody; toplevel_macros }
 
 end
@@ -3934,7 +3933,7 @@ let unit_or_header_of_ast { print_passes } s ?(toplevel_macros=F.Map.empty) p =
     Format.eprintf "== Ast.Structured ================@\n@[<v 0>%a@]@\n"
       Ast.Structured.pp_program p;
 
-  let s, p = Scope_Quotation_Macro.run s p in
+  let s, p = Scope_Quotation_Macro.run ~toplevel_macros s p in
 
   if print_passes then
     Format.eprintf "== Scoped ================@\n@[<v 0>%a@]@\n"
@@ -3949,7 +3948,7 @@ let unit_or_header_of_ast { print_passes } s ?(toplevel_macros=F.Map.empty) p =
   s, {
     version = "%%VERSION_NUM%%";
     code = p;
-  }, toplevel_macros
+  }
 ;;
 
 let print_unit { print_units } x =
@@ -3959,7 +3958,7 @@ let print_unit { print_units } x =
         (Bytes.length b1 / 1024) (List.length x.code.Flat.clauses)
 ;;
 
-let assemble_unit ~flags ~header:((s,base),toplevel_macros) units : program =
+let assemble_unit ~flags ~header:(s,base) units : program =
 
   let s, p = Assemble.extend flags s base units in
 
@@ -3995,7 +3994,7 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let state = D.State.set parser state (Some p) in
   let state = D.State.set D.while_compiling state true in
   (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
-  let state, u, toplevel_macros = unit_or_header_of_ast flags state ast in
+  let state, u = unit_or_header_of_ast flags state ast in
   let builtins =
     List.flatten @@
     List.map (fun (_,decl) -> decl |> List.filter_map (function
@@ -4004,16 +4003,18 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let u = { u with code = { u.code with builtins }} in (* UGLY *)
   print_unit flags u;
   let u = Check.check state ~base:(Assembled.empty ()) u in
-  let init = { (Assembled.empty ()) with toplevel_macros } in
-  let h = assemble_unit ~flags ~header:((state,init),toplevel_macros) u in
-  h, toplevel_macros
+  let init = { (Assembled.empty ()) with toplevel_macros = u.checked_code.toplevel_macros } in
+  let h = assemble_unit ~flags ~header:(state,init) u in
+  Printf.eprintf "header_of_ast: %d\n%!" (F.Map.cardinal (snd h).Assembled.toplevel_macros);
+  h
 
 let check_unit ~base:(st,base) u = Check.check st ~base u
 
-let empty_base ~header:(b,_) = b
+let empty_base ~header:b = b
 
-let unit_of_ast ~flags ~header:((s, _), toplevel_macros) p : unchecked_compilation_unit =
-  let _, u, _ = unit_or_header_of_ast flags s ~toplevel_macros p in
+let unit_of_ast ~flags ~header:(s, u) p : unchecked_compilation_unit =
+  Printf.eprintf "unit_of_ast: %d\n%!" (F.Map.cardinal u.Assembled.toplevel_macros);
+  let _, u = unit_or_header_of_ast flags s ~toplevel_macros:u.Assembled.toplevel_macros p in
   print_unit flags u;
   u
 
@@ -4027,7 +4028,7 @@ let append_unit ~flags ~base:(s,p) unit : program =
 
   s, p
 
-let program_of_ast ~flags ~header:((st, base), _ as header) p : program =
+let program_of_ast ~flags ~header:((st, base) as header) p : program =
   let u = unit_of_ast ~flags ~header p in
   let u = Check.check st ~base u in
   assemble_unit ~flags ~header u
@@ -4118,13 +4119,19 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
     compiler_state = compiler_state |> (uvbodies_of_assignments assignments);
     total_type_checking_time;
   }
-
     
   let query_of_raw_term (compiler_state, assembled_program) f =
     let compiler_state = State.begin_goal_compilation compiler_state in
     let { Assembled.kinds; types; type_abbrevs; toplevel_macros = _; chr; prolog_program; total_type_checking_time } = assembled_program in
     let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
-    let compiler_state, query = f compiler_state in
+    let compiler_state, query, gls = f compiler_state in
+    let compiler_state, gls = Data.State.get Data.Conversion.extra_goals_postprocessing compiler_state gls compiler_state in
+    let gls = List.map Data.Conversion.term_of_extra_goal gls in
+    let query =
+      match gls @ [query] with
+      | [] -> assert false
+      | [g] -> g
+      | x :: xs -> mkApp D.Global_symbols.andc x xs in
     let amap = get_argmap compiler_state in
     let query_env = Array.make (F.Map.cardinal amap) D.dummy in
     let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in

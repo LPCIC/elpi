@@ -1262,7 +1262,7 @@ module RawQuery : sig
   
   (** generate the query term by hand, the result is used as is *)
   val compile_raw_term :
-    Compile.program -> (State.t -> State.t * Data.term) -> unit Compile.query
+    Compile.program -> (State.t -> State.t * Data.term * Conversion.extra_goals) -> unit Compile.query
 
   (** typechecks *)
   val term_to_raw_term : State.t -> Compile.program -> depth:int -> Ast.Term.t -> State.t * Data.term
