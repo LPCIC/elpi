@@ -96,7 +96,7 @@
 {"step" : 13,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["even X1"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:rule:builtin","payload" : ["success"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:CHR:try","payload" : ["File \"tests/sources/trace_chr.elpi\", line 1, column 21, characters 21-66:"," \\ (even A0) (odd A0) | (odd z) <=> (true)"]}
-{"step" : 0,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--518 []"]}
+{"step" : 0,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--522 []"]}
 {"step" : 0,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["odd z"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["odd","odd z"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
@@ -104,7 +104,7 @@
 {"step" : 1,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["fail"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:CHR:rule-failed","payload" : []}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:CHR:try","payload" : ["File \"tests/sources/trace_chr.elpi\", line 2, column 45, characters 67-116:"," \\ (even A0) (odd A0) | (odd (s z)) <=> (fail)"]}
-{"step" : 0,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 2,"name" : "user:assign","payload" : ["A0 := uvar frozen--519 []"]}
+{"step" : 0,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 2,"name" : "user:assign","payload" : ["A0 := uvar frozen--523 []"]}
 {"step" : 0,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 2,"name" : "user:newgoal","payload" : ["odd (s z)"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 2,"name" : "user:curgoal","payload" : ["odd","odd (s z)"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 2,"name" : "user:rule","payload" : ["backchain"]}

@@ -18,8 +18,9 @@ Requires Menhir 20211230 and OCaml 4.08 or above.
     the `:functional` attributes can be passed to higher-order arguments
   - The piece of information likes modes and functionality is transmitted to the
     checker (currently this information is not taken into account) 
-
-    
+- Builtins:
+  - `std.list.init N E L` builds a list `L = [E, ..., E]` with length `N`
+  - `std.list.make N F L` builds the list `L = [F 0, F 1, ..., F (N-1)]`
 
 # v1.20.0 (September 2024)
 
