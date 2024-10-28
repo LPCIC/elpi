@@ -255,18 +255,26 @@ module TypeAssignment = struct
 
   open Format
 
+  let arrs = 0
+  let app = 1
+
+  let lvl_of = function
+    | Arr _ -> arrs
+    | App _ -> app
+    | _ -> 2
+
   let rec pretty fmt = function
     | Prop -> fprintf fmt "prop"
     | Any -> fprintf fmt "any"
     | Cons c -> F.pp fmt c
-    | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist pretty_parens " ") (x::xs)
-    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" pretty_parens s pretty t
-    | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" pretty_parens s pretty t
+    | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
+    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
+    | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_parens ~lvl:arrs) s pretty t
     | UVar m when MutableOnce.is_set m -> pretty fmt @@ deref m
     | UVar m -> MutableOnce.pretty fmt m
-  and pretty_parens fmt = function
-    | UVar m when MutableOnce.is_set m -> pretty_parens fmt @@ deref m
-    | (App _ | Arr _) as t -> fprintf fmt "(%a)" pretty t
+  and pretty_parens ~lvl fmt = function
+    | UVar m when MutableOnce.is_set m -> pretty_parens ~lvl fmt @@ deref m
+    | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
     | t -> pretty fmt t
 
   let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t

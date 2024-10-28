@@ -676,7 +676,7 @@ end = struct
 
   let pp_tyctx fmt = function
     | None -> Format.fprintf fmt "its context"
-    | Some c -> F.pp fmt c
+    | Some c -> Format.fprintf fmt "\"%a\"" F.pp c
 
   let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
     let msg = Format.asprintf "@[<hov>literal %a has type %a@ but %a expects a term of type@ %a@]"  CData.pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
@@ -873,6 +873,7 @@ end = struct
               if any_arg_is_spill args then monodirectional ()
               else bidirectional srcs tgt
 
+    (* REDO PROCESSING ONE SRC at a time *)
     and check_app_overloaded ctx ~loc c ety args targs alltys = function
       | [] -> error_overloaded_app ~loc c args ~ety alltys
       | t::ts ->
@@ -1557,15 +1558,14 @@ module CustomFunctorCompilation = struct
   ~execution_is_over:(fun x -> Some x)
   ~init:(fun () -> None)
 
-  (* let compile_singlequote state x = 
+  let scope_singlequote ~loc state x = 
     match State.get singlequote state with
-    | None -> let state, (_,t) = Symbols.allocate_global_symbol state x in state, t
-    | Some f -> f state x *)
-(*  let compile_backtick state x = assert false
+    | None -> ScopedTerm.(Const(Global false,x))
+    | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
+  let scope_backtick ~loc state x =
     match State.get backtick state with
-    | None -> let state, (_,t) = Symbols.allocate_global_symbol state x in state, t
-    | Some f -> f state x
- *)
+    | None -> ScopedTerm.(Const(Global false,x))
+    | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
 end
 
 let namespace_separatorc = '.'
@@ -1683,6 +1683,8 @@ end = struct
     | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Bound elpi_language,c))
     | Const c ->
         if is_uvar_name c then ScopedTerm.Var(c,[])
+        else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
+        else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
         else ScopedTerm.(Const(Global false,c))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->

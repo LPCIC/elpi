@@ -18,7 +18,7 @@
     builtin_stdlib builtin_map builtin_set
     legacy_parser_proxy)
   (private_modules
-    compiler_data compiler data ptmap runtime_trace_off
+    compiler data ptmap runtime_trace_off
     builtin_stdlib builtin_map builtin_set
     legacy_parser_proxy)
 )
@@ -84,3 +84,4 @@
 (test (name test_discrimination_tree) (libraries elpi) (modules test_discrimination_tree) (preprocess (pps ppx_deriving.std)))
 (test (name test_bl) (libraries elpi) (modules test_bl) (preprocess (pps ppx_deriving.std)))
 (test (name test_lex) (libraries elpi) (modules test_lex) (preprocess (pps ppx_deriving.std)))
+(test (name test_compiler_data) (libraries elpi) (modules test_compiler_data) (preprocess (pps ppx_deriving.std)))
