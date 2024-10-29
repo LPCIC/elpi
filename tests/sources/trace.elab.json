@@ -2,7 +2,7 @@
   {
     "step_id": 0,
     "runtime_id": 0,
-    "step": [ "Init", { "goal_text": "main", "goal_id": 4 } ],
+    "step": [ "Init", { "goal_text": "SYMBOL-370", "goal_id": 4 } ],
     "color": "Grey"
   },
   {
@@ -12,8 +12,8 @@
       "Inference",
       {
         "current_goal_id": 4,
-        "current_goal_text": "main",
-        "current_goal_predicate": "main",
+        "current_goal_text": "SYMBOL-370",
+        "current_goal_predicate": "SYMBOL-370",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -21,7 +21,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                  "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                   "rule_loc": [
                     "File",
                     {
@@ -35,7 +35,12 @@
               ],
               "events": []
             },
-            "siblings": [ { "goal_text": "p 1 X0 ; p 2 X1", "goal_id": 5 } ],
+            "siblings": [
+              {
+                "goal_text": "SYMBOL-369 1 X0 ; SYMBOL-369 2 X1",
+                "goal_id": 5
+              }
+            ],
             "siblings_aggregated_outcome": "Success"
           }
         ],
@@ -45,7 +50,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -72,7 +77,7 @@
       "Inference",
       {
         "current_goal_id": 5,
-        "current_goal_text": "p 1 X0 ; p 2 X1",
+        "current_goal_text": "SYMBOL-369 1 X0 ; SYMBOL-369 2 X1",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -93,9 +98,9 @@
                   ]
                 }
               ],
-              "events": [ [ "Assign", "A0 := p 1 X0" ] ]
+              "events": [ [ "Assign", "A0 := SYMBOL-369 1 X0" ] ]
             },
-            "siblings": [ { "goal_text": "p 1 X0", "goal_id": 6 } ],
+            "siblings": [ { "goal_text": "SYMBOL-369 1 X0", "goal_id": 6 } ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -124,7 +129,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -151,8 +156,8 @@
       "Inference",
       {
         "current_goal_id": 6,
-        "current_goal_text": "p 1 X0",
-        "current_goal_predicate": "p",
+        "current_goal_text": "SYMBOL-369 1 X0",
+        "current_goal_predicate": "SYMBOL-369",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -160,7 +165,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                  "rule_text": "(SYMBOL-369 1 1) :- (SYMBOL-131 1 (2 + 3)).",
                   "rule_loc": [
                     "File",
                     {
@@ -174,7 +179,9 @@
               ],
               "events": [ [ "Assign", "X0 := 1" ] ]
             },
-            "siblings": [ { "goal_text": "1 is 2 + 3", "goal_id": 7 } ],
+            "siblings": [
+              { "goal_text": "SYMBOL-131 1 (2 + 3)", "goal_id": 7 }
+            ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -184,7 +191,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                "rule_text": "(SYMBOL-369 1 1) :- (SYMBOL-131 1 (2 + 3)).",
                 "rule_loc": [
                   "File",
                   {
@@ -222,7 +229,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -249,8 +256,8 @@
       "Inference",
       {
         "current_goal_id": 7,
-        "current_goal_text": "1 is 2 + 3",
-        "current_goal_predicate": "is",
+        "current_goal_text": "SYMBOL-131 1 (2 + 3)",
+        "current_goal_predicate": "SYMBOL-131",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -258,7 +265,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(A0 is A1) :- (calc A1 A0).",
+                  "rule_text": "(SYMBOL-131 A1 A0) :- (SYMBOL-96 A0 A1).",
                   "rule_loc": [
                     "File",
                     {
@@ -271,10 +278,12 @@
                 }
               ],
               "events": [
-                [ "Assign", "A0 := 1" ], [ "Assign", "A1 := 2 + 3" ]
+                [ "Assign", "A1 := 1" ], [ "Assign", "A0 := 2 + 3" ]
               ]
             },
-            "siblings": [ { "goal_text": "calc (2 + 3) 1", "goal_id": 8 } ],
+            "siblings": [
+              { "goal_text": "SYMBOL-96 (2 + 3) 1", "goal_id": 8 }
+            ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -284,7 +293,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(A0 is A1) :- (calc A1 A0).",
+                "rule_text": "(SYMBOL-131 A1 A0) :- (SYMBOL-96 A0 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -303,7 +312,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                "rule_text": "(SYMBOL-369 1 1) :- (SYMBOL-131 1 (2 + 3)).",
                 "rule_loc": [
                   "File",
                   {
@@ -341,7 +350,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -368,13 +377,13 @@
       "Inference",
       {
         "current_goal_id": 8,
-        "current_goal_text": "calc (2 + 3) 1",
-        "current_goal_predicate": "calc",
+        "current_goal_text": "SYMBOL-96 (2 + 3) 1",
+        "current_goal_predicate": "SYMBOL-96",
         "failed_attempts": [],
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "FFI", "calc" ] ],
+              "rule": [ "BuiltinRule", [ "FFI", "SYMBOL-96" ] ],
               "events": []
             },
             "siblings": [ { "goal_text": "1 = 5", "goal_id": 9 } ],
@@ -384,7 +393,7 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "FFI", "calc" ] ],
+            "rule": [ "BuiltinRule", [ "FFI", "SYMBOL-96" ] ],
             "step_id": 5,
             "runtime_id": 0
           },
@@ -392,7 +401,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(A0 is A1) :- (calc A1 A0).",
+                "rule_text": "(SYMBOL-131 A1 A0) :- (SYMBOL-96 A0 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -411,7 +420,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                "rule_text": "(SYMBOL-369 1 1) :- (SYMBOL-131 1 (2 + 3)).",
                 "rule_loc": [
                   "File",
                   {
@@ -449,7 +458,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -493,7 +502,7 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "FFI", "calc" ] ],
+            "rule": [ "BuiltinRule", [ "FFI", "SYMBOL-96" ] ],
             "step_id": 5,
             "runtime_id": 0
           },
@@ -501,7 +510,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(A0 is A1) :- (calc A1 A0).",
+                "rule_text": "(SYMBOL-131 A1 A0) :- (SYMBOL-96 A0 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -520,7 +529,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                "rule_text": "(SYMBOL-369 1 1) :- (SYMBOL-131 1 (2 + 3)).",
                 "rule_loc": [
                   "File",
                   {
@@ -558,7 +567,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -585,8 +594,8 @@
       "Inference",
       {
         "current_goal_id": 6,
-        "current_goal_text": "p 1 X0",
-        "current_goal_predicate": "p",
+        "current_goal_text": "SYMBOL-369 1 X0",
+        "current_goal_predicate": "SYMBOL-369",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -594,7 +603,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                  "rule_text": "(SYMBOL-369 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
                   "rule_loc": [
                     "File",
                     {
@@ -622,7 +631,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                "rule_text": "(SYMBOL-369 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -660,7 +669,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -711,7 +720,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                "rule_text": "(SYMBOL-369 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -749,7 +758,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -800,7 +809,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                "rule_text": "(SYMBOL-369 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -838,7 +847,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -885,7 +894,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                "rule_text": "(SYMBOL-369 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -923,7 +932,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -950,7 +959,7 @@
       "Inference",
       {
         "current_goal_id": 5,
-        "current_goal_text": "p 1 X0 ; p 2 X1",
+        "current_goal_text": "SYMBOL-369 1 X0 ; SYMBOL-369 2 X1",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -971,9 +980,9 @@
                   ]
                 }
               ],
-              "events": [ [ "Assign", "A0 := p 2 X1" ] ]
+              "events": [ [ "Assign", "A0 := SYMBOL-369 2 X1" ] ]
             },
-            "siblings": [ { "goal_text": "p 2 X1", "goal_id": 13 } ],
+            "siblings": [ { "goal_text": "SYMBOL-369 2 X1", "goal_id": 13 } ],
             "siblings_aggregated_outcome": "Success"
           }
         ],
@@ -1002,7 +1011,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -1029,8 +1038,8 @@
       "Inference",
       {
         "current_goal_id": 13,
-        "current_goal_text": "p 2 X1",
-        "current_goal_predicate": "p",
+        "current_goal_text": "SYMBOL-369 2 X1",
+        "current_goal_predicate": "SYMBOL-369",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -1038,7 +1047,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(p 2 3) :- .",
+                  "rule_text": "(SYMBOL-369 2 3) :- .",
                   "rule_loc": [
                     "File",
                     {
@@ -1062,7 +1071,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(p 2 3) :- .",
+                "rule_text": "(SYMBOL-369 2 3) :- .",
                 "rule_loc": [
                   "File",
                   {
@@ -1100,7 +1109,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_text": "SYMBOL-370 :- (SYMBOL-369 1 A0 ; SYMBOL-369 2 A1).",
                 "rule_loc": [
                   "File",
                   {

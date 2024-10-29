@@ -2,7 +2,7 @@
   {
     "step_id": 0,
     "runtime_id": 0,
-    "step": [ "Init", { "goal_text": "main", "goal_id": 4 } ],
+    "step": [ "Init", { "goal_text": "SYMBOL-371", "goal_id": 4 } ],
     "color": "Grey"
   },
   {
@@ -12,8 +12,8 @@
       "Inference",
       {
         "current_goal_id": 4,
-        "current_goal_text": "main",
-        "current_goal_predicate": "main",
+        "current_goal_text": "SYMBOL-371",
+        "current_goal_predicate": "SYMBOL-371",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -21,7 +21,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- p.",
+                  "rule_text": "SYMBOL-371 :- SYMBOL-369.",
                   "rule_loc": [
                     "File",
                     {
@@ -35,7 +35,7 @@
               ],
               "events": []
             },
-            "siblings": [ { "goal_text": "p", "goal_id": 5 } ],
+            "siblings": [ { "goal_text": "SYMBOL-369", "goal_id": 5 } ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -45,7 +45,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- p.",
+                "rule_text": "SYMBOL-371 :- SYMBOL-369.",
                 "rule_loc": [
                   "File",
                   {
@@ -72,8 +72,8 @@
       "Inference",
       {
         "current_goal_id": 5,
-        "current_goal_text": "p",
-        "current_goal_predicate": "p",
+        "current_goal_text": "SYMBOL-369",
+        "current_goal_predicate": "SYMBOL-369",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -81,7 +81,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "p :- fail.",
+                  "rule_text": "SYMBOL-369 :- SYMBOL-106.",
                   "rule_loc": [
                     "File",
                     {
@@ -95,7 +95,7 @@
               ],
               "events": []
             },
-            "siblings": [ { "goal_text": "fail", "goal_id": 6 } ],
+            "siblings": [ { "goal_text": "SYMBOL-106", "goal_id": 6 } ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -105,7 +105,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "p :- fail.",
+                "rule_text": "SYMBOL-369 :- SYMBOL-106.",
                 "rule_loc": [
                   "File",
                   {
@@ -124,7 +124,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- p.",
+                "rule_text": "SYMBOL-371 :- SYMBOL-369.",
                 "rule_loc": [
                   "File",
                   {
@@ -151,8 +151,8 @@
       "Inference",
       {
         "current_goal_id": 6,
-        "current_goal_text": "fail",
-        "current_goal_predicate": "fail",
+        "current_goal_text": "SYMBOL-106",
+        "current_goal_predicate": "SYMBOL-106",
         "failed_attempts": [],
         "successful_attempts": [],
         "more_successful_attempts": [],
@@ -161,7 +161,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "p :- fail.",
+                "rule_text": "SYMBOL-369 :- SYMBOL-106.",
                 "rule_loc": [
                   "File",
                   {
@@ -180,7 +180,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- p.",
+                "rule_text": "SYMBOL-371 :- SYMBOL-369.",
                 "rule_loc": [
                   "File",
                   {
@@ -207,8 +207,8 @@
       "Inference",
       {
         "current_goal_id": 5,
-        "current_goal_text": "p (! !)",
-        "current_goal_predicate": "p",
+        "current_goal_text": "SYMBOL-369 (! !)",
+        "current_goal_predicate": "SYMBOL-369",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -216,7 +216,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "p :- (!), fail.",
+                  "rule_text": "SYMBOL-369 :- (!), SYMBOL-106.",
                   "rule_loc": [
                     "File",
                     {
@@ -232,7 +232,7 @@
             },
             "siblings": [
               { "goal_text": "!", "goal_id": 7 },
-              { "goal_text": "fail", "goal_id": 8 }
+              { "goal_text": "SYMBOL-106", "goal_id": 8 }
             ],
             "siblings_aggregated_outcome": "Fail"
           }
@@ -243,7 +243,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "p :- (!), fail.",
+                "rule_text": "SYMBOL-369 :- (!), SYMBOL-106.",
                 "rule_loc": [
                   "File",
                   {
@@ -262,7 +262,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- p.",
+                "rule_text": "SYMBOL-371 :- SYMBOL-369.",
                 "rule_loc": [
                   "File",
                   {
@@ -291,9 +291,12 @@
         "cut_goal_id": 7,
         "cut_victims": [
           {
-            "cut_branch_for_goal": { "goal_text": "p", "goal_id": 5 },
+            "cut_branch_for_goal": {
+              "goal_text": "SYMBOL-369",
+              "goal_id": 5
+            },
             "cut_branch": {
-              "rule_text": "p :- .",
+              "rule_text": "SYMBOL-369 :- .",
               "rule_loc": [
                 "File",
                 {
@@ -306,9 +309,12 @@
             }
           },
           {
-            "cut_branch_for_goal": { "goal_text": "p", "goal_id": 5 },
+            "cut_branch_for_goal": {
+              "goal_text": "SYMBOL-369",
+              "goal_id": 5
+            },
             "cut_branch": {
-              "rule_text": "p :- (print 1).",
+              "rule_text": "SYMBOL-369 :- (SYMBOL-150 1).",
               "rule_loc": [
                 "File",
                 {
@@ -332,8 +338,8 @@
       "Inference",
       {
         "current_goal_id": 8,
-        "current_goal_text": "fail",
-        "current_goal_predicate": "fail",
+        "current_goal_text": "SYMBOL-106",
+        "current_goal_predicate": "SYMBOL-106",
         "failed_attempts": [],
         "successful_attempts": [],
         "more_successful_attempts": [],
@@ -342,7 +348,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "p :- (!), fail.",
+                "rule_text": "SYMBOL-369 :- (!), SYMBOL-106.",
                 "rule_loc": [
                   "File",
                   {
@@ -361,7 +367,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- p.",
+                "rule_text": "SYMBOL-371 :- SYMBOL-369.",
                 "rule_loc": [
                   "File",
                   {
@@ -388,8 +394,8 @@
       "Inference",
       {
         "current_goal_id": 4,
-        "current_goal_text": "main (! !)",
-        "current_goal_predicate": "main",
+        "current_goal_text": "SYMBOL-371 (! !)",
+        "current_goal_predicate": "SYMBOL-371",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -397,7 +403,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                  "rule_text": "SYMBOL-371 :- SYMBOL-370, (!), \n (SYMBOL-370 => (SYMBOL-370 :- !) => SYMBOL-370).",
                   "rule_loc": [
                     "File",
                     {
@@ -412,9 +418,12 @@
               "events": []
             },
             "siblings": [
-              { "goal_text": "q", "goal_id": 9 },
+              { "goal_text": "SYMBOL-370", "goal_id": 9 },
               { "goal_text": "!", "goal_id": 10 },
-              { "goal_text": "q => (q :- !) => q", "goal_id": 11 }
+              {
+                "goal_text": "SYMBOL-370 => (SYMBOL-370 :- !) => SYMBOL-370",
+                "goal_id": 11
+              }
             ],
             "siblings_aggregated_outcome": "Success"
           }
@@ -425,7 +434,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "SYMBOL-371 :- SYMBOL-370, (!), \n (SYMBOL-370 => (SYMBOL-370 :- !) => SYMBOL-370).",
                 "rule_loc": [
                   "File",
                   {
@@ -452,8 +461,8 @@
       "Inference",
       {
         "current_goal_id": 9,
-        "current_goal_text": "q",
-        "current_goal_predicate": "q",
+        "current_goal_text": "SYMBOL-370",
+        "current_goal_predicate": "SYMBOL-370",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -461,7 +470,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "q :- .",
+                  "rule_text": "SYMBOL-370 :- .",
                   "rule_loc": [
                     "File",
                     {
@@ -485,7 +494,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "q :- .",
+                "rule_text": "SYMBOL-370 :- .",
                 "rule_loc": [
                   "File",
                   {
@@ -504,7 +513,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "SYMBOL-371 :- SYMBOL-370, (!), \n (SYMBOL-370 => (SYMBOL-370 :- !) => SYMBOL-370).",
                 "rule_loc": [
                   "File",
                   {
@@ -533,9 +542,12 @@
         "cut_goal_id": 10,
         "cut_victims": [
           {
-            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 9 },
+            "cut_branch_for_goal": {
+              "goal_text": "SYMBOL-370",
+              "goal_id": 9
+            },
             "cut_branch": {
-              "rule_text": "q :- (print 2).",
+              "rule_text": "SYMBOL-370 :- (SYMBOL-150 2).",
               "rule_loc": [
                 "File",
                 {
@@ -559,7 +571,7 @@
       "Inference",
       {
         "current_goal_id": 11,
-        "current_goal_text": "q => (q :- !) => q",
+        "current_goal_text": "SYMBOL-370 => (SYMBOL-370 :- !) => SYMBOL-370",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -568,7 +580,12 @@
               "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
               "events": []
             },
-            "siblings": [ { "goal_text": "(q :- !) => q", "goal_id": 12 } ],
+            "siblings": [
+              {
+                "goal_text": "(SYMBOL-370 :- !) => SYMBOL-370",
+                "goal_id": 12
+              }
+            ],
             "siblings_aggregated_outcome": "Success"
           }
         ],
@@ -583,7 +600,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "SYMBOL-371 :- SYMBOL-370, (!), \n (SYMBOL-370 => (SYMBOL-370 :- !) => SYMBOL-370).",
                 "rule_loc": [
                   "File",
                   {
@@ -610,7 +627,7 @@
       "Inference",
       {
         "current_goal_id": 12,
-        "current_goal_text": "(q :- !) => q",
+        "current_goal_text": "(SYMBOL-370 :- !) => SYMBOL-370",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -619,7 +636,7 @@
               "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
               "events": []
             },
-            "siblings": [ { "goal_text": "q", "goal_id": 13 } ],
+            "siblings": [ { "goal_text": "SYMBOL-370", "goal_id": 13 } ],
             "siblings_aggregated_outcome": "Success"
           }
         ],
@@ -639,7 +656,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "SYMBOL-371 :- SYMBOL-370, (!), \n (SYMBOL-370 => (SYMBOL-370 :- !) => SYMBOL-370).",
                 "rule_loc": [
                   "File",
                   {
@@ -666,15 +683,18 @@
       "Inference",
       {
         "current_goal_id": 13,
-        "current_goal_text": "q",
-        "current_goal_predicate": "q",
+        "current_goal_text": "SYMBOL-370",
+        "current_goal_predicate": "SYMBOL-370",
         "failed_attempts": [],
         "successful_attempts": [
           {
             "attempt": {
               "rule": [
                 "UserRule",
-                { "rule_text": "q :- (!).", "rule_loc": [ "Context", 11 ] }
+                {
+                  "rule_text": "SYMBOL-370 :- (!).",
+                  "rule_loc": [ "Context", 11 ]
+                }
               ],
               "events": []
             },
@@ -687,7 +707,10 @@
           {
             "rule": [
               "UserRule",
-              { "rule_text": "q :- (!).", "rule_loc": [ "Context", 11 ] }
+              {
+                "rule_text": "SYMBOL-370 :- (!).",
+                "rule_loc": [ "Context", 11 ]
+              }
             ],
             "step_id": 12,
             "runtime_id": 0
@@ -706,7 +729,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "SYMBOL-371 :- SYMBOL-370, (!), \n (SYMBOL-370 => (SYMBOL-370 :- !) => SYMBOL-370).",
                 "rule_loc": [
                   "File",
                   {
@@ -735,16 +758,22 @@
         "cut_goal_id": 14,
         "cut_victims": [
           {
-            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
+            "cut_branch_for_goal": {
+              "goal_text": "SYMBOL-370",
+              "goal_id": 13
+            },
             "cut_branch": {
-              "rule_text": "q :- .",
+              "rule_text": "SYMBOL-370 :- .",
               "rule_loc": [ "Context", 10 ]
             }
           },
           {
-            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
+            "cut_branch_for_goal": {
+              "goal_text": "SYMBOL-370",
+              "goal_id": 13
+            },
             "cut_branch": {
-              "rule_text": "q :- .",
+              "rule_text": "SYMBOL-370 :- .",
               "rule_loc": [
                 "File",
                 {
@@ -757,9 +786,12 @@
             }
           },
           {
-            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
+            "cut_branch_for_goal": {
+              "goal_text": "SYMBOL-370",
+              "goal_id": 13
+            },
             "cut_branch": {
-              "rule_text": "q :- (print 2).",
+              "rule_text": "SYMBOL-370 :- (SYMBOL-150 2).",
               "rule_loc": [
                 "File",
                 {
