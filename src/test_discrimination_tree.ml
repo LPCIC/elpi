@@ -59,7 +59,7 @@ let () =
     Format.printf " Retrived clause number is %d\n%!" retrived_nb;
     (* let pp_sep = fun f _ -> Format.pp_print_string f " " in *)
     (* Format.printf " Found instances are %a\n%!" (Format.pp_print_list ~pp_sep Format.pp_print_int) retrived; *)
-    test retrived_nb nb;
+    test ~expected:retrived_nb nb;
     if (Elpi.Internal.Bl.to_list retrived |> List.sort Int.compare |> List.rev) <> (retrived |> Elpi.Internal.Bl.to_list) then failwith "Test DT error: resultin list is not correctly ordered"
   in
   

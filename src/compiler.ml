@@ -617,19 +617,15 @@ end = struct
     check_tye ~loc ~type_abbrevs ~kinds ctx it
   and check_tye ~loc ~type_abbrevs ~kinds ctx = function
     | Prop -> TypeAssignment.Prop
-    | Any -> TypeAssignment.Any
-    | Const(Bound _,c) ->
-        check_param_exists ~loc c ctx;
-        TypeAssignment.UVar c
-    | Const(Global _,c) ->
-        check_global_exists ~loc c type_abbrevs kinds 0;
-        TypeAssignment.Cons c
+    | Any -> Any
+    | Const(Bound _,c) -> check_param_exists ~loc c ctx; UVar c
+    | Const(Global _,c) -> check_global_exists ~loc c type_abbrevs kinds 0; Cons c
     | App(c,x,xs) ->
         check_global_exists ~loc c type_abbrevs kinds (1 + List.length xs);
-        TypeAssignment.App(c,check_loc_tye ~type_abbrevs ~kinds ctx x, List.map (check_loc_tye ~type_abbrevs ~kinds ctx) xs)
-    | Arrow(v,s,t) -> TypeAssignment.Arr(v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
-    | Pred(_,[]) -> TypeAssignment.Prop
-    | Pred(f,(_,x)::xs) -> TypeAssignment.Arr(Ast.Structured.NotVariadic,check_loc_tye ~type_abbrevs ~kinds ctx x,check_tye ~type_abbrevs ~kinds ~loc ctx (Pred(f,xs)))
+        App(c,check_loc_tye ~type_abbrevs ~kinds ctx x, List.map (check_loc_tye ~type_abbrevs ~kinds ctx) xs)
+    | Arrow(v,s,t) -> Arr(v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
+    | Pred(_,[]) -> Prop
+    | Pred(f,(_,x)::xs) -> Arr(NotVariadic,check_loc_tye ~type_abbrevs ~kinds ctx x,check_tye ~type_abbrevs ~kinds ~loc ctx (Pred(f,xs)))
 
   let check_type ~type_abbrevs ~kinds ~loc ctx x =
     (* Format.eprintf "check_type under %a\n%!" (F.Map.pp (fun fmt (n,_) -> ())) arities;  *)
@@ -723,10 +719,10 @@ end = struct
     | Unknown
 
   let rec classify_arrow = function
-    | TypeAssignment.Arr(Ast.Structured.Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
+    | TypeAssignment.Arr(Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
     | UVar m when MutableOnce.is_set m -> classify_arrow (TypeAssignment.deref m)
     | (App _ | Prop | Cons _ | Any | UVar _) as tgt -> Simple { srcs = []; tgt }
-    | TypeAssignment.Arr(Ast.Structured.NotVariadic,x,xs) ->
+    | TypeAssignment.Arr(NotVariadic,x,xs) ->
         match classify_arrow xs with
         | Simple {srcs; tgt } -> Simple { srcs = x :: srcs; tgt }
         | Unknown -> Unknown
@@ -765,10 +761,12 @@ end = struct
     let rec check (ctx : ret Scope.Map.t) ~loc ~tyctx x (ety : ret) : spilled_phantoms =
       (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty ety; *)
       match x with
+      | Impl(b,t1,t2) -> check_impl ctx ~loc ~tyctx b t1 t2 ety
       | Const(Global _,c) -> check_global ctx ~loc ~tyctx c ety
       | Const(Bound lang,c) -> check_local ctx ~loc ~tyctx (c,lang) ety
       | CData c -> check_cdata ~loc ~tyctx kinds c ety
-      | Spill(sp,info) -> assert(!info = NoInfo); check_spill ctx ~loc ~tyctx sp info ety
+      | Spill(_,{contents = (Main _ | Phantom _)}) -> assert false
+      | Spill(sp,info) -> check_spill ctx ~loc ~tyctx sp info ety
       | App(Global _,c,x,xs) -> check_app ctx ~loc ~tyctx c (global_type env ~loc c) (x::xs) ety 
       | App(Bound lang,c,x,xs) -> check_app ctx ~loc ~tyctx c (local_type ctx ~loc (c,lang)) (x::xs) ety
       | Lam(c,cty,t) -> check_lam ctx ~loc ~tyctx c cty t ety
@@ -779,6 +777,10 @@ end = struct
           let spills = check_loc ctx ~tyctx:None t ~ety:ty in
           if unify ty ety then spills
           else error ~loc "cast"
+
+    and check_impl ctx ~loc ~tyctx b t1 t2 ety =
+      let c = if b then F.implf else F.rimplf in 
+      check_app ctx ~loc ~tyctx c (global_type env ~loc c) [t1; t2] ety
 
     and check_global ctx ~loc ~tyctx c ety =
       match global_type env ~loc c with
@@ -894,17 +896,16 @@ end = struct
       | x :: xs ->
         (* Format.eprintf "checking app %a @ %a\n" F.pp c ScopedTerm.pretty x; *)
         match ty with
-          | TypeAssignment.Arr(Ast.Structured.Variadic,s,t) ->
+          | TypeAssignment.Arr(Variadic,s,t) ->
               let xs = check_loc_if_not_phantom ~tyctx:(Some c) ctx x ~ety:s @ xs in
               if xs = [] then t else check_app_single ctx ~loc c ty (x::consumed) xs
-          | TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t) ->
+          | Arr(NotVariadic,s,t) ->
               let xs = check_loc_if_not_phantom ~tyctx:(Some c) ctx x ~ety:s @ xs in
-              check_app_single ctx ~loc c t (x::consumed)  xs
-          | TypeAssignment.Any ->
-              check_app_single ctx ~loc c ty (x::consumed)  xs
-          | TypeAssignment.UVar m when MutableOnce.is_set m ->
+              check_app_single ctx ~loc c t (x::consumed) xs
+          | Any -> check_app_single ctx ~loc c ty (x::consumed) xs
+          | UVar m when MutableOnce.is_set m ->
               check_app_single ctx ~loc c (TypeAssignment.deref m) consumed (x :: xs)
-          | TypeAssignment.UVar m ->
+          | UVar m ->
               let s = mk_uvar "Src" in
               let t = mk_uvar "Tgt" in
               check_app_single ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) consumed (x :: xs)
@@ -935,7 +936,7 @@ end = struct
     inlines => and , typing... but leaves the rest of the code clean *)
     and check_spill_conclusion ~tyctx ctx ~loc it ety =
       match it with
-      | App(Global _,c,x,[y]) when F.equal c F.implf ->
+      | Impl(true,x,y) ->
           let lhs = mk_uvar "LHS" in
           let spills = check_loc ~tyctx ctx x ~ety:lhs in
           if spills <> [] then error ~loc "Hard spill";
@@ -955,15 +956,15 @@ end = struct
     and check_matches_poly_skema_loc { loc; it } =
       let c, args =
         match it with
-        | App(Global _,c, { it = App(Global _,c',x,xs) },_) when F.equal F.rimplf c -> c', x :: xs
-        | App(Global _,c, { it = Const(Global _,c') },_) when F.equal F.rimplf c -> c', []
+        | Impl(false,{ it = App(Global _,c',x,xs) },_) -> c', x :: xs
+        | Impl(false,{ it = Const(Global _,c') },_) -> c', []
         | App(Global _,c,x,xs) -> c, x :: xs
         | Const(Global _,c) -> c, []
         | _ -> assert false in
       (* Format.eprintf "Checking %a\n" F.pp c; *)
       match F.Map.find c env with
       | Single (Ty _) -> ()
-      | Single (Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args TypeAssignment.Prop)
+      | Single (Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args Prop)
       | Overloaded _ -> ()
 
     and check_matches_poly_skema ~loc ~pat c ty =
@@ -992,11 +993,11 @@ end = struct
       try
         let ty, nocc, loc = F.Map.find c !sigma in
         sigma := F.Map.add c (ty,nocc+1,loc) !sigma;
-        TypeAssignment.Single (TypeAssignment.unval @@ ty)
+        Single (TypeAssignment.unval @@ ty)
       with Not_found ->
         let ty = TypeAssignment.UVar (MutableOnce.make c) in
         sigma := F.Map.add c (TypeAssignment.Val ty,1,loc) !sigma;
-        TypeAssignment.Single ty
+        Single ty
     and unif ~matching t1 t2 =
       (* Format.eprintf "%a = %a\n" TypeAssignment.pretty t1 TypeAssignment.pretty t2; *)
       let open TypeAssignment in
@@ -1010,8 +1011,8 @@ end = struct
       | Cons c1, Cons c2 when F.equal c1 c2 -> true
       | Prop, Prop -> true
       | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unif ~matching s1 s2 && unif ~matching t1 t2      
-      | Arr(Ast.Structured.Variadic,_,t), _ -> unif ~matching t t2
-      | _, Arr(Ast.Structured.Variadic,_,t) -> unif ~matching t1 t
+      | Arr(Variadic,_,t), _ -> unif ~matching t t2
+      | _, Arr(Variadic,_,t) -> unif ~matching t1 t
       | UVar m, UVar n when matching -> assign m t2
       | UVar m, _ when not matching -> assign m t2
       | _, UVar m -> assign m t1
@@ -1083,7 +1084,14 @@ end = struct
     | CompileError(loc,msg) -> Format.eprintf "Ignoring type error: %a %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop) *)
 end
 
-
+module FunctionalityChecker : sig 
+  val check_body : type_abbrevs:TypeChecker.type_abbrevs ->
+    kinds:TypeChecker.arities ->
+    types:TypeChecker.env -> ScopedTerm.t -> exp:TypeAssignment.t -> unit
+end = struct 
+  let check_body ~type_abbrevs ~kinds ~types st ~exp =
+    () (* TODO: @FissoreD *)
+end
 
   
 type macro_declaration = (ScopedTerm.t * Loc.t) F.Map.t
@@ -1626,21 +1634,19 @@ end = struct
       let c = (F.show f).[0] in
       c = '@'
 
-  let rec scope_tye ctx ~loc t =
+  let rec scope_tye ctx ~loc t : ScopedTypeExpression.t_ =
     match t with
-    | Ast.TypeExpression.TConst c when F.show c = "prop" -> ScopedTypeExpression.Prop
-    | Ast.TypeExpression.TConst c when F.show c = "any" -> ScopedTypeExpression.Any
-    | Ast.TypeExpression.TConst c when F.Set.mem c ctx -> ScopedTypeExpression.(Const(Scope.Bound elpi_language,c))
-    | Ast.TypeExpression.TConst c -> ScopedTypeExpression.(Const(Scope.Global false,c))
-    | Ast.TypeExpression.TApp(c,x,[y]) when F.show c = "variadic" ->
-        ScopedTypeExpression.Arrow(Ast.Structured.Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
-    | Ast.TypeExpression.TApp(c,x,xs) ->
+    | Ast.TypeExpression.TConst c when F.show c = "prop" -> Prop
+    | TConst c when F.show c = "any" -> Any
+    | TConst c when F.Set.mem c ctx -> Const(Bound elpi_language,c)
+    | TConst c -> Const(Global false,c)
+    | TApp(c,x,[y]) when F.show c = "variadic" ->
+        Arrow(Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
+    | TApp(c,x,xs) ->
         if F.Set.mem c ctx || is_uvar_name c then error ~loc "type schema parameters cannot be type formers";
-        ScopedTypeExpression.App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
-    | Ast.TypeExpression.TPred(m,xs) ->
-        ScopedTypeExpression.Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
-    | Ast.TypeExpression.TArr(s,t) ->
-        ScopedTypeExpression.Arrow(Ast.Structured.NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
+        App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
+    | TPred(m,xs) -> Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
+    | TArr(s,t) -> Arrow(NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
   and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }    
 
   let compile_type { Ast.Type.name; loc; attributes; ty } =
@@ -1689,6 +1695,11 @@ end = struct
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
         ScopedTerm.Spill (scope_loc_term ~state ctx x,ref ScopedTerm.NoInfo)
+    | App({ it = Const c }, l) when F.equal c F.implf || F.equal c F.rimplf ->
+        begin match l with 
+        | [t1;t2] -> Impl (F.equal c F.implf, scope_loc_term ~state ctx t1, scope_loc_term ~state ctx t2)
+        | _ -> error ~loc "implication is a binary operator"
+        end
     | App({ it = Const c }, x :: xs) ->
          if is_discard c then error ~loc "Applied discard";
          let x = scope_loc_term ~state ctx x in
@@ -1788,8 +1799,8 @@ end = struct
     let open ScopedTerm in
     List.fold_left (fun s { Ast.Clause.body = { it } } ->
       match it with
-      | (Const(Global _,c) | App(Global _,c,_,_)) when not @@ F.equal c F.rimplf -> F.Set.add c s
-      | App(Global _,ri,{ it = (Const(Global _,c) | App(Global _,c,_,_)) }, _) when F.equal ri F.rimplf -> F.Set.add c s
+      | Const(Global _,c) | App(Global _,c,_,_) -> F.Set.add c s
+      | Impl(false,{ it = (Const(Global _,c) | App(Global _,c,_,_)) }, _) -> F.Set.add c s
       (* | (Const _ | App _) -> s *)
       | _ -> assert false)
       F.Set.empty cl
@@ -2910,6 +2921,11 @@ end (* }}} *)
     let open ScopedTerm in
     let rec aux it =
       match it with
+      | Impl(b,t1,t2) -> 
+          let t1' = aux_loc t1 in
+          let t2' = aux_loc t2 in
+          if t1 == t1' && t2 == t2' then it
+          else Impl(b,t1',t2')
       | Const((Bound _|Global true),_) -> it
       | Const(Global false,c) -> let c' = f c in if c == c' then it else Const(Global false,c')
       | Spill(t,n) -> let t' = aux_loc t in if t' == t then it else Spill(t',n)
@@ -3435,6 +3451,7 @@ end = struct
     let clauses = clauses |> List.map (fun ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
       if typecheck then
         let needs_spill = TypeChecker.check ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:TypeAssignment.(Val Prop) in
+        FunctionalityChecker.check_body ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:TypeAssignment.(Val Prop);
         needs_spill, c
       else
         false, c) in
@@ -3615,6 +3632,8 @@ end = struct
     let open ScopedTerm in
     let rec todbl (ctx : int * _ Scope.Map.t) t =
       match t.it with
+      | Impl(b,t1,t2) ->
+          D.mkApp (D.Global_symbols.(if b then implc else rimplc)) (todbl ctx t1) [todbl ctx t2]
       | CData c -> D.mkCData (CData.hcons c)
       | Spill(t,_) -> assert false (* spill handled before *)
       | Cast(t,_) -> todbl ctx t
@@ -3684,6 +3703,7 @@ end = struct
       | Lam(c,o,t) -> mk_loc ~loc ~ty @@ Lam(c,o,apply_to locals w t)
       | Const _ | Discard | Var _ | CData _ -> orig
       | Cast _ -> assert false (* TODO *)
+      | Impl(b,t1,t2) -> mk_loc ~loc ~ty @@ Impl(b, apply_to locals w t1, apply_to locals w t2)
       | Spill _ -> assert false in
     let apply_to locals (w,l) t =
       let w = mk_loc ~loc:t.loc @@ Const(Bound l,w) in
@@ -3694,14 +3714,13 @@ end = struct
       let rec aux { loc; it; ty } : t =
         mk_loc ~loc ~ty @@
           match it with
-          | App(Global _,c,x,[y]) when F.equal c F.implf ->
-              mkApp (Global true) c [x;aux y]
           | App(Global _,c,x,xs) when F.equal c F.andf ->
               mkApp (Global true) c (aux_last (x::xs))
           | Const(g,c) -> mkApp g c args
           | App(g,c,x,xs) -> mkApp g c (x :: xs @ args)
           | Var(c,xs) -> Var(c,xs @ args)
-          | _ -> assert false
+          | Discard | Impl (_, _, _) | Lam (_, _, _)
+          | CData _ | Spill (_, _) | Cast (_, _) -> assert false
       and aux_last = function
         | [] -> assert false
         | [x] -> [aux x]
@@ -3736,6 +3755,23 @@ end = struct
           let args = List.flatten args in
           let spilled = List.flatten spills in
           let it = App(g,c,List.hd args, List.tl args) in
+          if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
+          else spilled, [{ it; loc; ty }]
+      | Impl(b,t1,t2) ->
+          (* TODO: @FissoreD 
+            if _b is true then no spilling in t1 is allowed (or spill before it) 
+            else the spilling in t1 can be put has first arg in t2?
+          *)
+          let spills1, args1 = spill ctx t1 in
+          let spills2, args2 = spill ctx t2 in
+          let spilled = spills1 @ spills2 in
+          let tl = (mkApp (Global true) F.andf args2) in
+          let it = 
+            if List.length args1 = 1 then 
+              Impl(b,List.hd args1,mk_loc ~loc ~ty @@ tl)
+            else (* Here wrong spilling *) 
+              List.fold_right (fun e acc -> Impl(b, e, mk_loc ~loc ~ty acc)) args1 tl
+          in
           if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
           else spilled, [{ it; loc; ty }]
       (* lambda terms *)
@@ -3873,6 +3909,8 @@ end = struct
     let symbols, prolog_program =
       List.fold_left (extend1_clause flags state modes indexing) (symbols, prolog_program) clauses in
   
+    (* TODO: @FissoreD here we have to do mutual excl clauses... *)
+
     let new_base = 
       { Assembled.hash; symbols; prolog_program; indexing; modes; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
     let hash = hash_base new_base in

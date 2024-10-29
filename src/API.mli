@@ -74,6 +74,7 @@ module Ast : sig
 
   module Term : sig
     type t_ =
+      | Impl of bool * t * t
       | Const of Scope.t * Name.t
       | Discard
       | Var of Name.t * t list (** unification variable *)
