@@ -354,6 +354,15 @@ module ScopedTerm = struct
   let type_of { ty } = assert(MutableOnce.is_set ty); TypeAssignment.deref ty
 
   open Format
+
+  let lam = 0
+  let app = 1
+
+  let lvl_of = function
+    | App _ -> app
+    | Lam _ -> lam
+    | _ -> 2
+
   let rec pretty fmt { it } = pretty_ fmt it
   and pretty_ fmt = function
     | Const(_,f) -> fprintf fmt "%a" F.pp f
@@ -363,14 +372,19 @@ module ScopedTerm = struct
     | Lam(Some (f,_),None,t) -> fprintf fmt "%a\\ %a" F.pp f pretty t
     | Lam(Some (f,_),Some ty,t) -> fprintf fmt "%a : %a\\ %a" F.pp f ScopedTypeExpression.pp_e ty pretty t
     | App(Global _,f,x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
-    | App(_,f,x,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") (x::xs)
-    | Var(f,xs) -> fprintf fmt "(%a %a)" F.pp f (Util.pplist pretty " ") xs
+    | App(_,f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
+    | Var(f,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") xs
     | CData c -> fprintf fmt "%a" CData.pp c
     | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Phantom n}) -> fprintf fmt "{%a}/*%d*/" pretty t n
     | Cast (t,ty) -> fprintf fmt "(%a : %a)" pretty t ScopedTypeExpression.pp_e ty (* TODO pretty *)
-    
+  and pretty_parens ~lvl fmt { it } =
+    if lvl >= lvl_of it then fprintf fmt "(%a)" pretty_ it
+    else pretty_ fmt it
+  and pretty_parens_lam ~lvl fmt x =
+    match x.it with Lam _ -> pretty_ fmt x.it | _ -> pretty_parens ~lvl fmt x
+  
 
   let equal t1 t2 =
     let rec eq ctx t1 t2 =
