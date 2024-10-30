@@ -105,6 +105,9 @@ module Ast : sig
 
     val list_to_lp_list : t list -> t
     val lp_list_to_list : t -> t list
+
+    (** See Coq-Elpi's lp:(F x) construct *)
+    val apply_elpi_var_from_quotation : t -> t list -> t
   
   end
 

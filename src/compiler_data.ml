@@ -316,24 +316,22 @@ module ScopedTerm = struct
      | x :: xs -> { loc; it = App(Global true, F.andf, x, xs)}
     let mkEq ~loc a b = { loc; it = App(Global true, F.eqf, a,[b]) }
     let list_to_lp_list l =
+      match List.rev l with
+      | [] -> anomaly "Ast.list_to_lp_list on empty list"
+      | h :: _ ->
         let rec aux = function
-           [] -> assert false
-         | [e] -> e
+         | [] -> { it = Const(Global true,F.nilf); loc = h.loc }
          | hd::tl ->
              let tl = aux tl in
              { loc = Loc.merge hd.loc tl.loc; it = App(Global true,F.consf,hd,[tl]) }
         in
           aux l
-          
-       
       
     let rec lp_list_to_list = function
       | { it = App(Global true, c, x, [xs]) } when F.equal c F.consf  -> x :: lp_list_to_list xs
       | { it = Const(Global true,c) } when F.equal c F.nilf -> []
       | { loc; it } -> error ~loc (Format.asprintf "%a is not a list" pp_t_ it)
     
-
-
   end
 
   type spill_info =
@@ -504,6 +502,19 @@ module ScopedTerm = struct
         | Lam _ -> load_subst ~loc t args Scope.Map.empty
       in
         load_subst_loc t args Scope.Map.empty
+
+  module QTerm = struct
+    include SimpleTerm
+    let apply_elpi_var_from_quotation { SimpleTerm.it; loc } l =
+      match it with
+      | SimpleTerm.Opaque o when is_scoped_term o ->
+          begin match out_scoped_term o with
+          | { it = Var(f,xs); loc = loc'; ty } -> { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = Var(f,xs @ List.map of_simple_term_loc l); loc = loc'; ty }) }
+          | _ -> anomaly ~loc "The term is not an elpi varible coming from a quotation"
+          end
+      | _ -> anomaly ~loc "The term is not an elpi varible coming from a quotation"
+  end
+
 
 end
 

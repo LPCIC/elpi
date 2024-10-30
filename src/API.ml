@@ -107,7 +107,7 @@ module Ast = struct
   module Loc = Util.Loc
   module Goal = Ast.Goal
   module Scope = Compiler_data.Scope
-  module Term = Compiler_data.ScopedTerm.SimpleTerm
+  module Term = Compiler_data.ScopedTerm.QTerm
   module Type = Compiler_data.ScopedTypeExpression.SimpleType
   module Name = struct
     include Ast.Func
