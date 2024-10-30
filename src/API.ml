@@ -107,7 +107,7 @@ module Ast = struct
   module Loc = Util.Loc
   module Goal = Ast.Goal
   module Scope = Compiler_data.Scope
-  module Term = Compiler_data.ScopedTerm.SimpleTerm
+  module Term = Compiler_data.ScopedTerm.QTerm
   module Type = Compiler_data.ScopedTypeExpression.SimpleType
   module Name = struct
     include Ast.Func
@@ -155,7 +155,7 @@ module Data = struct
     state : state;
     output : 'a;
     pp_ctx : pretty_printer_context;
-    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t
+    relocate_assignment_to_runtime : target:Compiler.program -> depth:int -> string -> (term, string) Stdlib.Result.t
   }
   type hyp = Data.clause_src = {
     hdepth : int;
@@ -1363,13 +1363,15 @@ module Utils = struct
     let open EA in
     let module Data = ED.Term in
     let module R = (val !r) in let open R in
+    let show i = Format.asprintf "%a" (R.Pp.pp_constant ?pp_ctx:None) i in
     let buggy_loc = loc in
+    (* Format.eprintf "clause: %a\n" ( Pp.uppterm depth [] ~argsdepth:0 ED.empty_env ) term; *)
     let rec aux d ctx t =
       match deref_head ~depth:d t with
       | Data.Const i when i >= 0 && i < depth ->
           error "program_of_term: the term is not closed"
       | Data.Const i when i < 0 ->
-          Term.mkCon buggy_loc (ED.Constants.show i)
+          Term.mkCon buggy_loc (show i)
       | Data.Const i -> Util.IntMap.find i ctx
       | Data.Lam t ->
           let s = "x" ^ string_of_int d in
@@ -1387,7 +1389,7 @@ module Utils = struct
           Term.mkSeq [hd;tl]
       | Data.Nil -> Term.mkNil buggy_loc
       | Data.Builtin(c,xs) ->
-          let c = Term.mkCon buggy_loc (ED.Constants.show c) in
+          let c = Term.mkCon buggy_loc (show c) in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: xs)
       | Data.CData x -> Term.mkC buggy_loc x

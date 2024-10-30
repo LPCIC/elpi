@@ -9,4 +9,4 @@ p 4 3 :- fail.
 p 5 3.
 
 
-main :- p X 3.
+main :- p X_ 3.

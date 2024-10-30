@@ -96,6 +96,7 @@ module Ast : sig
     val mkOpaque : loc:Loc.t -> Opaque.t -> t
     val mkCast : loc:Loc.t -> t -> Type.t -> t
     val mkLam : loc:Loc.t -> (Name.t *  Scope.language) option -> ?ty:Type.t -> t -> t
+    val mkDiscard : loc:Loc.t -> t
 
     (** Handy constructors to build goals *)
     val mkImplication : loc:Loc.t -> t -> t -> t
@@ -105,6 +106,11 @@ module Ast : sig
 
     val list_to_lp_list : t list -> t
     val lp_list_to_list : t -> t list
+
+    (** See Coq-Elpi's lp:(F x) construct *)
+    val apply_elpi_var_from_quotation : t -> t list -> t
+    val extend_spill_hyp_from_quotation : t -> t list -> t
+    val is_spill_from_quotation : t -> bool
   
   end
 
@@ -212,42 +218,6 @@ module Parse : sig
   exception ParseError of Ast.Loc.t * string
 end
 
-module Data : sig
-
-  module StrMap : sig
-   include Map.S with type key = string
-   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
-   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-  end
-
-  (* what is assigned to the query variables *)
-  type term
-
-  (* goals suspended via the declare_constraint built-in *)
-  type constraints
-
-  (* user defined state (not goals) *)
-  type state
-
-  (* Pass it to function in the Pp module *)
-  type pretty_printer_context
-
-  (* a solution is an assignment map from query variables (name) to terms,
-   * plus the goals that were suspended and the user defined constraints *)
-  type 'a solution = {
-    assignments : term StrMap.t;
-    constraints : constraints;
-    state : state;
-    output : 'a;
-    pp_ctx : pretty_printer_context;
-    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t (* uvars are turned into discard *)
-  }
-
-  (* Hypothetical context *)
-  type hyp
-  type hyps = hyp list
-
-end
 
 module Compile : sig
 
@@ -311,6 +281,43 @@ module Compile : sig
   val total_type_checking_time : 'a query -> float
 end
 
+module Data : sig
+
+  module StrMap : sig
+   include Map.S with type key = string
+   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  end
+
+  (* what is assigned to the query variables *)
+  type term
+
+  (* goals suspended via the declare_constraint built-in *)
+  type constraints
+
+  (* user defined state (not goals) *)
+  type state
+
+  (* Pass it to function in the Pp module *)
+  type pretty_printer_context
+
+  (* a solution is an assignment map from query variables (name) to terms,
+   * plus the goals that were suspended and the user defined constraints *)
+  type 'a solution = {
+    assignments : term StrMap.t;
+    constraints : constraints;
+    state : state;
+    output : 'a;
+    pp_ctx : pretty_printer_context;
+    relocate_assignment_to_runtime : target:Compile.program -> depth:int -> string -> (term, string) Stdlib.Result.t (* uvars are turned into discard *)
+  }
+
+  (* Hypothetical context *)
+  type hyp
+  type hyps = hyp list
+
+end
+
 module Execute : sig
 
   type 'a outcome = Success of 'a Data.solution | Failure | NoMoreSteps
@@ -337,7 +344,7 @@ module Pp : sig
   val constraints : Data.pretty_printer_context -> Format.formatter -> Data.constraints -> unit
   val state : Format.formatter -> Data.state -> unit
 
-  val program : Format.formatter -> 'a Compile.query -> unit
+  val program : Format.formatter -> Compile.program -> unit
   val goal : Format.formatter -> 'a Compile.query -> unit
 
   module Ast : sig

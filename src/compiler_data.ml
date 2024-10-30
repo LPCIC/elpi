@@ -71,6 +71,34 @@ module ScopedTypeExpression = struct
   and e = { it : t_; loc : Loc.t }
   [@@ deriving show]
 
+
+  open Format
+
+  let arrs = 0
+  let app = 1
+
+  let lvl_of = function
+    | Arrow _ | Pred _ -> arrs
+    | App _ -> app
+    | _ -> 2
+
+  let rec pretty_e fmt = function
+    | Prop -> fprintf fmt "prop"
+    | Any -> fprintf fmt "any"
+    | Const(_,c) -> F.pp fmt c
+    | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_e_parens ~lvl:app) " ") (x::xs)
+    | Arrow(NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
+    | Arrow(Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
+    | Pred(_,l) -> fprintf fmt "pred %a" (Util.pplist pretty_ie ", ") l
+  and pretty_ie fmt (i,e) =
+    fprintf fmt "%s:%a" (match i with Ast.Mode.Input -> "i" | Output -> "o") pretty_e_loc e
+  and pretty_e_parens ~lvl fmt = function
+    | t when lvl >= lvl_of t.it -> fprintf fmt "(%a)" pretty_e_loc t
+    | t -> pretty_e_loc fmt t
+  and pretty_e_loc fmt { it } = pretty_e fmt it
+  let pretty_e fmt (t : e) = Format.fprintf fmt "@[%a@]" pretty_e_loc t
+
+
   let rec of_simple_type = function
     | SimpleType.Any -> Any
     | Con c -> Const(Global false,c)
@@ -195,10 +223,10 @@ module TypeAssignment = struct
     | App of F.t * 'a t_ * 'a t_ list
     | Arr of Ast.Structured.variadic * 'a t_ * 'a t_
     | UVar of 'a
-  [@@ deriving show, fold]
+  [@@ deriving show, fold, ord]
 
   type skema = Lam of F.t * skema | Ty of F.t t_
-  [@@ deriving show]
+  [@@ deriving show, ord]
   type overloaded_skema = skema overloading
   [@@ deriving show]
 
@@ -237,12 +265,18 @@ module TypeAssignment = struct
 
   let apply sk args = apply F.Map.empty sk args
 
-  let merge_skema x y =
+  let eq_skema x y = compare_skema x y == 0
+
+  let rec merge_skema x y =
     match x, y with
+    | Single x, Single y when eq_skema x y -> Single x
     | Single x, Single y -> Overloaded [x;y]
+    | Single x, Overloaded ys when List.exists (eq_skema x) ys -> Overloaded (ys)
     | Single x, Overloaded ys -> Overloaded (x::ys)
+    | Overloaded xs, Single y when List.exists (eq_skema y) xs -> Overloaded(xs)
     | Overloaded xs, Single y -> Overloaded(xs@[y])
-    | Overloaded xs, Overloaded ys -> Overloaded (xs @ ys)
+    | Overloaded xs, (Overloaded _ as ys) ->
+        List.fold_right (fun x -> merge_skema (Single x)) xs ys
   
   let unval (Val x) = x
   let rec deref m =
@@ -276,6 +310,7 @@ module TypeAssignment = struct
     | UVar m when MutableOnce.is_set m -> pretty_parens ~lvl fmt @@ deref m
     | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
     | t -> pretty fmt t
+  let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
 
   let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
 
@@ -306,6 +341,7 @@ module ScopedTerm = struct
    let mkVar ~loc n l = { loc; it = Var(n,l) }
    let mkOpaque ~loc o = { loc; it = Opaque o }
    let mkCast ~loc t ty = { loc; it = Cast(t,ty) }
+   let mkDiscard ~loc = { loc; it = Discard }
    let mkLam ~loc n ?ty t =  { loc; it = Lam(n,ty,t)  }
    let mkImplication ~loc s t = { loc; it = Impl(true,s,t) }
    let mkPi ~loc n ?ty t = { loc; it = App(Global true,F.pif,{ loc; it = Lam (Some (n,elpi_language),ty,t) },[]) }
@@ -315,24 +351,22 @@ module ScopedTerm = struct
      | x :: xs -> { loc; it = App(Global true, F.andf, x, xs)}
     let mkEq ~loc a b = { loc; it = App(Global true, F.eqf, a,[b]) }
     let list_to_lp_list l =
+      match List.rev l with
+      | [] -> anomaly "Ast.list_to_lp_list on empty list"
+      | h :: _ ->
         let rec aux = function
-           [] -> assert false
-         | [e] -> e
+         | [] -> { it = Const(Global true,F.nilf); loc = h.loc }
          | hd::tl ->
              let tl = aux tl in
              { loc = Loc.merge hd.loc tl.loc; it = App(Global true,F.consf,hd,[tl]) }
         in
           aux l
-          
-       
       
     let rec lp_list_to_list = function
       | { it = App(Global true, c, x, [xs]) } when F.equal c F.consf  -> x :: lp_list_to_list xs
       | { it = Const(Global true,c) } when F.equal c F.nilf -> []
       | { loc; it } -> error ~loc (Format.asprintf "%a is not a list" pp_t_ it)
     
-
-
   end
 
   type spill_info =
@@ -372,17 +406,18 @@ module ScopedTerm = struct
     | Const(_,f) -> fprintf fmt "%a" F.pp f
     | Discard -> fprintf fmt "_"
     | Lam(None,None,t) -> fprintf fmt "_\\ %a" pretty t
-    | Lam(None,Some ty,t) -> fprintf fmt "_ : %a\\ %a" ScopedTypeExpression.pp_e ty pretty t
+    | Lam(None,Some ty,t) -> fprintf fmt "_ : %a\\ %a" ScopedTypeExpression.pretty_e ty pretty t
     | Lam(Some (f,_),None,t) -> fprintf fmt "%a\\ %a" F.pp f pretty t
-    | Lam(Some (f,_),Some ty,t) -> fprintf fmt "%a : %a\\ %a" F.pp f ScopedTypeExpression.pp_e ty pretty t
+    | Lam(Some (f,_),Some ty,t) -> fprintf fmt "%a : %a\\ %a" F.pp f ScopedTypeExpression.pretty_e ty pretty t
     | App(Global _,f,x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App(_,f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
+    | Var(f,[]) -> fprintf fmt "%a" F.pp f
     | Var(f,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") xs
     | CData c -> fprintf fmt "%a" CData.pp c
     | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Phantom n}) -> fprintf fmt "{%a}/*%d*/" pretty t n
-    | Cast (t,ty) -> fprintf fmt "(%a : %a)" pretty t ScopedTypeExpression.pp_e ty (* TODO pretty *)
+    | Cast (t,ty) -> fprintf fmt "(%a : %a)" pretty t ScopedTypeExpression.pretty_e ty (* TODO pretty *)
   and pretty_parens ~lvl fmt { it } =
     if lvl >= lvl_of it then fprintf fmt "(%a)" pretty_ it
     else pretty_ fmt it
@@ -446,6 +481,22 @@ module ScopedTerm = struct
     let fresh = ref 0
     let fresh () = incr fresh; F.from_string (Format.asprintf "%%bound%d" !fresh)
 
+    let rec rename l c d t =
+      match t with
+      | Impl(b,t1,t2) -> Impl(b,rename_loc l c d t1, rename_loc l c d t2)
+      | Const(Bound l',c') when l = l' && F.equal c c' -> Const(Bound l,d)
+      | Const _ -> t
+      | App(Bound l',c',x,xs) when l = l' && F.equal c c' ->
+          App(Bound l,d,rename_loc l c d x, List.map (rename_loc l c d) xs)
+      | App(g,v,x,xs) -> App(g,v,rename_loc l c d x, List.map (rename_loc l c d) xs)
+      | Lam(Some (c',l'),_,_) when l = l' && F.equal c c' -> t
+      | Lam(v,ty,t) -> Lam(v,ty,rename_loc l c d t)
+      | Spill(t,i) -> Spill(rename_loc l c d t,i)
+      | Cast(t,ty) -> Cast(rename_loc l c d t,ty)
+      | Var(v,xs) -> Var(v,List.map (rename_loc l c d) xs)
+      | Discard | CData _ -> t
+    and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
+
     let beta t args =
       let rec load_subst ~loc t (args : t list) map =
         match t, args with
@@ -471,21 +522,6 @@ module ScopedTerm = struct
         | Spill(t,i) -> Spill(subst_loc map t,i)
         | Cast(t,ty) -> Cast(subst_loc map t,ty)
         | Discard | CData _ -> t
-      and rename l c d t =
-        match t with
-        | Impl(b,t1,t2) -> Impl(b,rename_loc l c d t1, rename_loc l c d t2)
-        | Const(Bound l',c') when l = l' && F.equal c c' -> Const(Bound l,d)
-        | Const _ -> t
-        | App(Bound l',c',x,xs) when l = l' && F.equal c c' ->
-            App(Bound l,d,rename_loc l c d x, List.map (rename_loc l c d) xs)
-        | App(g,v,x,xs) -> App(g,v,rename_loc l c d x, List.map (rename_loc l c d) xs)
-        | Lam(Some (c',l'),_,_) when l = l' && F.equal c c' -> t
-        | Lam(v,ty,t) -> Lam(v,ty,rename_loc l c d t)
-        | Spill(t,i) -> Spill(rename_loc l c d t,i)
-        | Cast(t,ty) -> Cast(rename_loc l c d t,ty)
-        | Var(v,xs) -> Var(v,List.map (rename_loc l c d) xs)
-        | Discard | CData _ -> t
-      and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
       and subst_loc map { it; ty; loc } = { it = subst map it; ty; loc }
       and app_loc { it; loc; ty } args : t = { it = app ~loc it args; loc; ty }
       and app ~loc t (args : t list) =
@@ -503,6 +539,45 @@ module ScopedTerm = struct
       in
         load_subst_loc t args Scope.Map.empty
 
+  module QTerm = struct
+    include SimpleTerm
+    let apply_elpi_var_from_quotation ({ SimpleTerm.it; loc } as o) l =
+      if l = [] then o
+      else
+        let l = List.map of_simple_term_loc l in
+        match it with
+        | SimpleTerm.Opaque o when is_scoped_term o ->
+            begin match out_scoped_term o with
+            | { it = Var(f,xs); loc = loc'; ty } -> { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = Var(f,xs @ l); loc = loc'; ty }) }
+            | { it = Const(Bound g,f); loc = loc'; ty } when g = elpi_language ->
+                { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = App(Bound g,f,List.hd l, List.tl l); loc = loc'; ty }) }
+            | x -> anomaly ~loc (Format.asprintf "The term is not an elpi varible coming from a quotation: @[%a@]" pretty x)
+            end
+        | x -> anomaly ~loc (Format.asprintf "The term is not term coming from a quotation: @[%a@]" pp_t_ x)
+  
+  
+    let extend_spill_hyp_from_quotation { SimpleTerm.it; loc } hyps =
+      match it with
+      | SimpleTerm.Opaque o when is_scoped_term o ->
+          begin match out_scoped_term o with
+          | { it = Spill(t,i); loc } ->
+            let impl = { loc; it = Impl(true, list_to_lp_list hyps, { loc; it = Opaque (in_scoped_term t) }) } in
+            { loc; it = Opaque(in_scoped_term @@ { it = Spill(of_simple_term_loc impl,i); loc; ty = MutableOnce.make (F.from_string "Ty") })}
+          | _ ->
+            anomaly ~loc (Format.asprintf "The term is not a spill coming from a quotation: @[%a@]" pp_t_ it)
+          end
+      | x ->
+         anomaly ~loc (Format.asprintf "The term is not coming from a quotation: @[%a@]" pp_t_ x)
+
+    let is_spill_from_quotation { SimpleTerm.it } =
+      match it with
+      | SimpleTerm.Opaque o when is_scoped_term o ->
+        begin match out_scoped_term o with
+        | { it = Spill _ } -> true 
+        | _ -> false
+        end
+      | _ -> false
+  end
 end
 
 

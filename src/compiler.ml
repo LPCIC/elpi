@@ -14,7 +14,7 @@ exception CompileError of Loc.t option * string
 
 let elpi_language = Compiler_data.elpi_language
 
-let error ?loc msg = raise (CompileError(loc,msg))
+let error ?loc msg = raise (CompileError(loc, msg))
 
 type flags = {
   defined_variables : StrSet.t;
@@ -70,6 +70,7 @@ module SymbolMap : sig
   val empty : unit -> table
   val allocate_global_symbol     : D.State.t -> table -> F.t -> table * (D.constant * D.term)
   val allocate_bound_symbol      : D.State.t -> table -> D.constant -> table * D.term
+  val get_global_symbol          : table -> F.t -> D.constant option
   val get_canonical              : D.State.t -> table -> D.constant -> D.term
   val global_name : D.State.t -> table -> D.constant -> F.t
   val compile : table -> D.symbol_table
@@ -78,44 +79,53 @@ end = struct
 
   type table = {
     ast2ct : (D.constant * D.term) F.Map.t;
-    c2t : (F.t * D.term) D.Constants.Map.t;
+    c2t : D.term D.Constants.Map.t;
+    c2s : string D.Constants.Map.t;
     last_global : int;
   }
   [@@deriving show, ord]
 
   let equal x y = compare x y == 0
 
-  let compile { last_global; c2t; ast2ct } =
-    let t = { D.c2s = Hashtbl.create 37; c2t = Hashtbl.create 37; frozen_constants = last_global; } in
-  (* NO NEED TO COMPILE *)
-  (* let xx = F.Map.cardinal ast2ct in
-      F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
+  let compile { last_global; c2t; c2s; ast2ct } =
+    let t = { D.c2s; c2t = Hashtbl.create (D.Constants.Map.cardinal c2t); frozen_constants = last_global; } in
+  (* We could compile the Map c2t to a Hash table upfront, but there is no need
+     since it is extended at run time anyway *)
+  (* F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
     t
     
 
-  let allocate_global_symbol_aux x ({ c2t; ast2ct; last_global } as table) =
+  let allocate_global_symbol_aux x ({ c2t; c2s; ast2ct; last_global } as table) =
     try table, F.Map.find x ast2ct
     with Not_found ->
       let last_global = last_global - 1 in
       let n = last_global in
       let xx = D.Term.Const n in
       let p = n,xx in
-      let c2t = D.Constants.Map.add n (x,xx) c2t in
+      let c2t = D.Constants.Map.add n xx c2t in
       let ast2ct = F.Map.add x p ast2ct in
-      { c2t; ast2ct; last_global }, p
+      let c2s = D.Constants.Map.add n (F.show x) c2s in
+      { c2t; c2s; ast2ct; last_global }, p
 
-      let empty () =
-        if not @@ D.Global_symbols.table.locked then
-          anomaly "SymbolMap created before Global_symbols.table is locked";
-      let table = {
-        ast2ct = D.Global_symbols.(table.s2ct);
-        last_global = D.Global_symbols.table.last_global;
-        c2t = D.Constants.Map.map (fun s ->
-          let s = F.from_string s in
-          let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
-          s, t) D.Global_symbols.(table.c2s);
-      } in
-      (*T2.go allocate_global_symbol_aux*) table
+  let get_global_symbol { ast2ct } s =
+    try
+      Some (fst @@ F.Map.find s ast2ct)
+    with Not_found ->
+      None
+
+  let empty () =
+    if not @@ D.Global_symbols.table.locked then
+      anomaly "SymbolMap created before Global_symbols.table is locked";
+  let table = {
+    ast2ct = D.Global_symbols.(table.s2ct);
+    last_global = D.Global_symbols.table.last_global;
+    c2s = D.Global_symbols.table.c2s;
+    c2t = D.Constants.Map.map (fun s ->
+      let s = F.from_string s in
+      let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
+      t) D.Global_symbols.(table.c2s);
+  } in
+  (*T2.go allocate_global_symbol_aux*) table
     
   let allocate_global_symbol state table x =
     if not (D.State.get D.while_compiling state) then
@@ -123,10 +133,10 @@ end = struct
     allocate_global_symbol_aux x table
 
   let allocate_bound_symbol_aux n ({ c2t; ast2ct } as table) =
-    try table, snd @@ D.Constants.Map.find n c2t
+    try table, D.Constants.Map.find n c2t
     with Not_found ->
       let xx = D.Term.Const n in
-      let c2t = D.Constants.Map.add n (F.from_string (Format.asprintf "c%d" n),xx) c2t in
+      let c2t = D.Constants.Map.add n xx c2t in
       { table with c2t; ast2ct }, xx
 
   let allocate_bound_symbol state table n =
@@ -140,13 +150,13 @@ end = struct
   let get_canonical state table c =
     if not (D.State.get D.while_compiling state) then
       anomaly "get_canonical can only be used during compilation";
-    try snd @@ D.Constants.Map.find c table.c2t
+    try D.Constants.Map.find c table.c2t
     with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
 
   let global_name state table c =
     if not (D.State.get D.while_compiling state) then
       anomaly "get_canonical can only be used during compilation";
-    try fst @@ D.Constants.Map.find c table.c2t
+    try F.from_string @@ D.Constants.Map.find c table.c2s
     with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
 
 end
@@ -571,7 +581,7 @@ open Compiler_data
   
 module TypeChecker : sig
 
-  type type_abbrevs = TypeAssignment.skema F.Map.t
+  type type_abbrevs = (TypeAssignment.skema * Loc.t) F.Map.t
   type arities = Arity.t F.Map.t
   val check_disjoint : type_abbrevs:ScopedTypeExpression.t F.Map.t -> kinds:arities -> unit
 
@@ -579,11 +589,12 @@ module TypeChecker : sig
   val check_types : type_abbrevs:type_abbrevs -> kinds:arities -> TypeList.t -> TypeAssignment.overloaded_skema
 
   type env = TypeAssignment.overloaded_skema F.Map.t
+  (* type env_undeclared = TypeAssignment.t F.Map.t *)
   val check : type_abbrevs:type_abbrevs-> kinds:arities -> types:env -> ScopedTerm.t -> exp:TypeAssignment.t -> bool
   val unknown_type_assignment : string -> TypeAssignment.t
 
 end = struct
-  type type_abbrevs = TypeAssignment.skema F.Map.t
+  type type_abbrevs = (TypeAssignment.skema * Loc.t) F.Map.t
   type arities = Arity.t F.Map.t
 
   let check_disjoint ~type_abbrevs ~kinds =
@@ -607,7 +618,7 @@ end = struct
       if arity != nargs then
         error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
     end else if F.Map.mem c type_abbrevs then begin
-      let arity = TypeAssignment.nparams @@ F.Map.find c type_abbrevs in
+      let arity = TypeAssignment.nparams @@ fst @@ F.Map.find c type_abbrevs in
       if arity != nargs then
         error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
     end else
@@ -667,19 +678,23 @@ end = struct
     let t =
       if args = [] then ScopedTerm.Const(Global true,c)
       else ScopedTerm.(App(Global true,c,List.hd args, List.tl args)) in
-    let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@,@[<hov>%a@]@]" ScopedTerm.pretty_ t ScopedTerm.pretty x in
+    let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@]@]" ScopedTerm.pretty_ t ScopedTerm.pretty x in
     error ~loc msg
 
   let pp_tyctx fmt = function
     | None -> Format.fprintf fmt "its context"
-    | Some c -> Format.fprintf fmt "\"%a\"" F.pp c
+    | Some c -> Format.fprintf fmt "%a" F.pp c
 
   let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
-    let msg = Format.asprintf "@[<hov>literal %a has type %a@ but %a expects a term of type@ %a@]"  CData.pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
+    let msg = Format.asprintf "@[<hov>literal \"%a\" has type %a@ but %a expects a term of type@ %a@]"  CData.pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
     error ~loc msg
   
   let error_bad_ety ~loc ~tyctx ~ety pp c tx =
     let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@]"  pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
+    error ~loc msg
+
+  let error_bad_ety2 ~loc ~tyctx ~ety1 ~ety2 pp c tx =
+    let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@ or %a@]"  pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety1 TypeAssignment.pretty ety2 in
     error ~loc msg
 
   let error_bad_function_ety ~loc ~tyctx ~ety c t =
@@ -694,7 +709,12 @@ end = struct
     let ty = arrow_of_args args ety in
     let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c TypeAssignment.pretty ty (pplist TypeAssignment.pretty ", ") alltys in
     error ~loc msg
-    
+   
+  let error_overloaded_app_tgt ~loc ~ety c =
+    let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches make it build a term of type @[<hov>%a@]@]" F.pp c TypeAssignment.pretty ety in
+    error ~loc msg
+  
+
   let error_not_poly ~loc c ty sk =
     error ~loc (Format.asprintf "@[<hv>this rule imposes on %a the type@ %a@ is less general than the declared one@ %a@]"
       F.pp c
@@ -704,11 +724,11 @@ end = struct
   type ret = TypeAssignment.t MutableOnce.t TypeAssignment.t_
   type spilled_phantoms = ScopedTerm.t list
 
-  let global_type env ~loc c : ret TypeAssignment.overloading =
-    try TypeAssignment.fresh_overloaded @@ F.Map.find c env
-    with Not_found ->
-      error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
-
+  let check_no_unknown_global = function
+    | None -> ()
+    | Some(loc,c,ty) ->
+        error ~loc (Format.asprintf "@[<v>Unknown global: %a@;Inferred type: %a@]" F.pp c TypeAssignment.pretty ty)
+      
   let local_type ctx ~loc c : ret TypeAssignment.overloading =
     try TypeAssignment.Single (Scope.Map.find c ctx)
     with Not_found -> anomaly ~loc "free variable"
@@ -728,7 +748,9 @@ end = struct
         | Unknown -> Unknown
         | Variadic { srcs; tgt } -> Variadic { srcs = x :: srcs; tgt }
 
-  let mk_uvar s = TypeAssignment.UVar(MutableOnce.make (F.from_string s))
+  let mk_uvar =
+    let i = ref 0 in
+    fun s -> incr i; TypeAssignment.UVar(MutableOnce.make (F.from_string (s ^ string_of_int !i)))
 
   let unknown_type_assignment s = TypeAssignment.Val (mk_uvar s)
 
@@ -757,6 +779,7 @@ end = struct
     (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
     let needs_spill = ref false in
     let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
+    let unknown_global = ref None in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
     let rec check (ctx : ret Scope.Map.t) ~loc ~tyctx x (ety : ret) : spilled_phantoms =
       (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty ety; *)
@@ -776,11 +799,31 @@ end = struct
           let ty : ret = TypeAssignment.subst (fun f -> Some (TypeAssignment.UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty ty in
           let spills = check_loc ctx ~tyctx:None t ~ety:ty in
           if unify ty ety then spills
-          else error ~loc "cast"
+          else error_bad_ety ~loc ~tyctx ScopedTerm.pretty_ x ty ~ety
 
+    and global_type env ~loc c : ret TypeAssignment.overloading =
+      try TypeAssignment.fresh_overloaded @@ F.Map.find c env
+      with Not_found ->
+        match !unknown_global with
+        | None ->
+            let ty = mk_uvar (Format.asprintf "Unknown_%a" F.pp c) in
+            unknown_global := Some (loc,c,ty);
+            Single ty
+        | Some(_,c',ty) when F.equal c c' -> Single ty
+        | Some _ -> error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
+        
     and check_impl ctx ~loc ~tyctx b t1 t2 ety =
-      let c = if b then F.implf else F.rimplf in 
-      check_app ctx ~loc ~tyctx c (global_type env ~loc c) [t1; t2] ety
+      if not @@ unify ety Prop then error_bad_ety ~loc ~tyctx ~ety:Prop ScopedTerm.pretty_ (Impl(b,t1,t2)) ety
+      else
+        let lhs, rhs,c (* of => *) = if b then t1,t2,F.implf else t2,t1,F.rimplf in
+        let spills = check_loc ~tyctx:(Some c) ctx rhs ~ety:Prop in
+        let lhs_ty = mk_uvar (Format.asprintf "LHSty_%a" F.pp c) in
+        let more_spills = check_loc ~tyctx:None ctx ~ety:lhs_ty lhs in
+        let ety1 = TypeAssignment.Prop in
+        let ety2 = TypeAssignment.App(F.from_string "list",Prop,[]) in
+        if try_unify lhs_ty ety1 then spills @ more_spills (* probably an error if not empty *)
+        else if unify lhs_ty ety2 then spills @ more_spills (* probably an error if not empty *)
+        else error_bad_ety2 ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
 
     and check_global ctx ~loc ~tyctx c ety =
       match global_type env ~loc c with
@@ -821,7 +864,7 @@ end = struct
 
     and check_spill ctx ~loc ~tyctx sp info ety =
       needs_spill := true;
-      let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(mk_uvar "Spill") in (* TODO?? *)
+      let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(TypeAssignment.Arr(Ast.Structured.NotVariadic,ety,mk_uvar "Spill")) in
       assert(inner_spills = []);
       let phantom_of_spill_ty i ty =
         { loc; it = Spill(sp,ref (Phantom(i+1))); ty = MutableOnce.create (TypeAssignment.Val ty) } in
@@ -839,13 +882,31 @@ end = struct
           else error_bad_ety ~tyctx ~loc ~ety ScopedTerm.pretty_ (Spill(sp,info)) first_spill
       | _ -> error ~loc "hard spill"
 
+    and unify_tgt_ety n ety t = 
+      match classify_arrow t with
+      | Unknown -> true
+      | Simple { srcs; tgt } ->
+          let nsrcs = List.length srcs in
+          if n > nsrcs then false
+          else
+            let rec drop i l = if i = 0 then l else drop (i-1) (List.tl l) in
+            let srcs = drop n srcs in try_unify (arrow_of_tys srcs tgt) ety
+      | Variadic _ -> true (* TODO *)
+
     and check_app ctx ~loc ~tyctx c cty args ety =
       match cty with
       | Overloaded l ->
-        (* Format.eprintf "options: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
-        let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
-        let targs = List.map ScopedTerm.type_of args in
-        check_app_overloaded ctx ~loc c ety args targs l l
+        (* Format.eprintf "options %a %a %d: %a\n" F.pp c TypeAssignment.pretty ety (List.length args) (pplist TypeAssignment.pretty "; ") l; *)
+        let l = List.filter (unify_tgt_ety (List.length args) ety) l in
+        begin match l with
+        | [] -> error_overloaded_app_tgt ~loc ~ety c
+        | [ty] -> check_app ctx ~loc ~tyctx c (Single ty) args ety
+        | l ->
+        (* Format.eprintf "newoptions: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
+            let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
+            let targs = List.map ScopedTerm.type_of args in
+            check_app_overloaded ctx ~loc c ety args targs l l
+        end
       | Single ty ->
           let err ty =
             if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
@@ -908,7 +969,14 @@ end = struct
           | UVar m ->
               let s = mk_uvar "Src" in
               let t = mk_uvar "Tgt" in
-              check_app_single ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) consumed (x :: xs)
+              let _ = unify ty (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) in
+              check_app_single ctx ~loc c ty consumed (x :: xs)
+          | Cons c when F.Map.mem c type_abbrevs ->
+              let ty = TypeAssignment.apply (fst @@ F.Map.find c type_abbrevs) [] in
+              check_app_single ctx ~loc c ty consumed args
+          | App(c,x,xs) when F.Map.mem c type_abbrevs ->
+              let ty = TypeAssignment.apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
+              check_app_single ctx ~loc c ty consumed args
           | _ -> error_not_a_function ~loc:x.loc c (List.rev consumed) x (* TODO: trim loc up to x *)
 
     and check_loc ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
@@ -955,12 +1023,17 @@ end = struct
 
     and check_matches_poly_skema_loc { loc; it } =
       let c, args =
-        match it with
-        | Impl(false,{ it = App(Global _,c',x,xs) },_) -> c', x :: xs
-        | Impl(false,{ it = Const(Global _,c') },_) -> c', []
-        | App(Global _,c,x,xs) -> c, x :: xs
-        | Const(Global _,c) -> c, []
-        | _ -> assert false in
+        let rec head it =
+          match it with
+          | App(Global _,f,{ it = Lam(_,_,x) },[]) when F.equal F.pif f -> head x.it
+          | Impl(false,{ it = App(Global _,c',x,xs) },_) -> c', x :: xs
+          | Impl(false,{ it = Const(Global _,c') },_) -> c', []
+          | App(Global _,c,x,xs) -> c, x :: xs
+          | Const(Global _,c) -> c, []
+          | _ ->
+            (* Format.eprintf "%a" ScopedTerm.pretty_ it; *)
+            assert false in
+        head it in
       (* Format.eprintf "Checking %a\n" F.pp c; *)
       match F.Map.find c env with
       | Single (Ty _) -> ()
@@ -1017,16 +1090,16 @@ end = struct
       | UVar m, _ when not matching -> assign m t2
       | _, UVar m -> assign m t1
       | Cons c, _ when F.Map.mem c type_abbrevs ->
-          let t1 = apply (F.Map.find c type_abbrevs) [] in
+          let t1 = apply (fst @@ F.Map.find c type_abbrevs) [] in
           unif ~matching t1 t2
       | _, Cons c when F.Map.mem c type_abbrevs ->
-          let t2 = apply (F.Map.find c type_abbrevs) [] in
+          let t2 = apply (fst @@ F.Map.find c type_abbrevs) [] in
           unif ~matching t1 t2
       | App(c,x,xs), _ when F.Map.mem c type_abbrevs ->
-          let t1 = apply (F.Map.find c type_abbrevs) (x::xs) in
+          let t1 = apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
           unif ~matching t1 t2
       | _, App(c,x,xs) when F.Map.mem c type_abbrevs ->
-          let t2 = apply (F.Map.find c type_abbrevs) (x::xs) in
+          let t2 = apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
           unif ~matching t1 t2
       | _,_ -> false
 
@@ -1070,10 +1143,11 @@ end = struct
       if MutableOnce.is_set t.ty then false else
 
       let spills = check_loc ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
+      check_no_unknown_global !unknown_global;
       check_matches_poly_skema_loc t;
       if spills <> [] then error ~loc:t.loc "cannot spill in head";
       F.Map.iter (fun k (_,n,loc) ->
-        if n = 1 && not @@ silence_linear_warn k then error ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
+        if n = 1 && not @@ silence_linear_warn k then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
           F.pp k F.pp k F.pp k)) !sigma;
       !needs_spill
 
@@ -1148,7 +1222,7 @@ type program = {
   kinds : Arity.t F.Map.t;
   types : TypeAssignment.overloaded_skema F.Map.t;
   types_indexing : (Ast.Structured.tattribute option * Loc.t) list F.Map.t;
-  type_abbrevs :  TypeAssignment.skema F.Map.t;
+  type_abbrevs :  (TypeAssignment.skema * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   clauses : (bool * (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t) list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
@@ -1174,7 +1248,7 @@ type checked_compilation_unit = {
   base_hash : string;
   precomputed_kinds : Arity.t F.Map.t;
   precomputed_types : TypeAssignment.overloaded_skema F.Map.t;
-  precomputed_type_abbrevs :  TypeAssignment.skema F.Map.t;
+  precomputed_type_abbrevs :  (TypeAssignment.skema * Loc.t) F.Map.t;
   type_checking_time : float;
 }
 [@@deriving show]
@@ -1183,10 +1257,12 @@ type checked_compilation_unit = {
 module Assembled = struct
 
 type program = {
-  (* clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list; for printing *)
+  (* for printing only *)
+  clauses : (Ast.Structured.insertion option * string option * constant * clause) list;
+
   kinds : Arity.t F.Map.t;
   types : TypeAssignment.overloaded_skema F.Map.t;
-  type_abbrevs : TypeAssignment.skema F.Map.t;
+  type_abbrevs : (TypeAssignment.skema * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   total_type_checking_time : float;
 
@@ -1208,6 +1284,7 @@ and attribute = {
 [@@deriving show]
 
 let empty () = {
+  clauses = [];
   kinds = F.Map.empty;
   types = F.Map.add F.mainf TypeAssignment.(Single (Ty Prop)) F.Map.empty;
   type_abbrevs = F.Map.empty; modes = F.Map.empty;
@@ -1232,12 +1309,7 @@ type header = program
 module WithMain = struct
 
 (* The entire program + query, but still in "printable" format *)
-type 'a query = {
-  (* kinds : Arity.t F.Map.t;
-  types : TypeAssignment.overloaded_skema F.Map.t;
-  type_abbrevs : TypeAssignment.skema F.Map.t;
-  modes : (mode * Loc.t) F.Map.t; *)
-  (* clauses : (preterm,Assembled.attribute) Ast.Clause.t list; *)
+type 'a query = {  
   prolog_program : index;
   chr : CHR.t;
   symbols : SymbolMap.table;
@@ -1625,6 +1697,11 @@ end = struct
 
   let is_uvar_name f =  F.is_uvar_name f
 
+  let is_global f = (F.show f).[0] = '.'
+  let of_global f =
+    let s = F.show f in
+    F.from_string @@ String.sub s 1 (String.length s - 1)
+
   let is_discard f =
     F.(equal f dummyname) ||
     let c = (F.show f).[0] in
@@ -1691,6 +1768,7 @@ end = struct
         if is_uvar_name c then ScopedTerm.Var(c,[])
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
+        else if is_global c then ScopedTerm.(Const(Global false,of_global c))
         else ScopedTerm.(Const(Global false,c))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
@@ -1712,6 +1790,7 @@ end = struct
           let bound = F.Set.mem c ctx in
           if bound then ScopedTerm.App(Bound elpi_language, c, x, xs)
           else if is_uvar_name c then ScopedTerm.Var(c,x :: xs)
+          else if is_global c then ScopedTerm.App(Global true,of_global c,x,xs)
           else ScopedTerm.App(Global false, c, x, xs)
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
@@ -1758,7 +1837,9 @@ end = struct
       let it = scope_term ~state ctx ~loc it in
       { ScopedTerm.it; loc; ty = MutableOnce.make (F.from_string "Ty") }
 
-  let scope_loc_term ~state = scope_loc_term ~state F.Set.empty
+  let scope_loc_term ~state =
+    let { ctx } = get_mtm state in
+    scope_loc_term ~state ctx
 
   let scope_type_abbrev { Ast.TypeAbbreviation.name; value; nparams; loc } =
     let rec aux ctx = function
@@ -1912,7 +1993,7 @@ end = struct
   
     in
     let state, toplevel_macros, pbody = compile_program toplevel_macros state p in
-    Printf.eprintf "run: %d\n%!" (F.Map.cardinal toplevel_macros);
+    (* Printf.eprintf "run: %d\n%!" (F.Map.cardinal toplevel_macros); *)
     state, { Scoped.pbody; toplevel_macros }
 
 end
@@ -3025,21 +3106,8 @@ end (* }}} *)
         F.Map.union (fun f (k,loc1 as kdecl) (k',loc2) ->
           if k == k' then Some kdecl else error ~loc:loc2 ("Duplicate kind declaration for " ^ F.show f ^ ". Previously declared in " ^ Loc.show loc1);
           ) t1 t2
-  
 
-    let add_to_index_type_abbrev m ({ ScopedTypeExpression.name; loc; value; nparams } as x) =
-      if F.Map.mem name m then begin
-        let { ScopedTypeExpression.loc = otherloc; value = othervalue; nparams = otherparams } =
-          F.Map.find name m in
-        if nparams != otherparams || not @@ ScopedTypeExpression.eq (ScopeContext.empty ()) othervalue value then
-        error ~loc
-          ("duplicate type abbreviation for " ^ F.show name ^
-            ". Previous declaration: " ^ Loc.show otherloc)
-      end;
-      F.Map.add name x m
-
-
-    let merge_type_abbrevs m1 m2 = m1 @ m2 (* TODO check duplicates *)
+    let merge_type_abbrevs m1 m2 = m1 @ m2
 
   let rec compile_block kinds types type_abbrevs modes clauses chr subst = function
     | [] -> kinds, types, type_abbrevs, modes, clauses, chr
@@ -3431,11 +3499,17 @@ end = struct
     let check_k_begin = Unix.gettimeofday () in
     let all_type_abbrevs, type_abbrevs =
       List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, ty) ->
-        (* TODO check dijoint from kinds and type_abbrevs *)
-        if F.Map.mem name all_type_abbrevs then
-          error ("Duplicate type abbreviation for " ^ F.show name);
+        (* TODO check dijoint from kinds *)
+        let loc = ty.ScopedTypeExpression.loc in
         let ty = TypeChecker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ty in
-        F.Map.add name ty all_type_abbrevs, F.Map.add name ty type_abbrevs)
+        if F.Map.mem name all_type_abbrevs then begin
+          let sk, otherloc = F.Map.find name all_type_abbrevs in
+          if TypeAssignment.compare_skema sk ty <> 0 then
+          error ~loc
+            ("Duplicate type abbreviation for " ^ F.show name ^
+              ". Previous declaration: " ^ Loc.show otherloc)
+        end;
+        F.Map.add name (ty,loc) all_type_abbrevs, F.Map.add name (ty,loc) type_abbrevs)
         (ota,F.Map.empty) type_abbrevs in
     let check_k_end = Unix.gettimeofday () in
 
@@ -3669,10 +3743,14 @@ end = struct
       | Discard -> D.mkDiscard
     in
 
-    let is_prop x =
-      match TypeAssignment.deref x with
-      | TypeAssignment.Prop -> true
-      | _ -> false in
+    let is_prop ~extra x =
+      let ty = TypeAssignment.deref x in
+      let rec aux extra = function
+          | TypeAssignment.Prop -> true
+          | TypeAssignment.Arr(_,_,t) when extra > 0 -> aux (extra-1) t
+          | TypeAssignment.UVar r when MutableOnce.is_set r -> aux extra (TypeAssignment.deref r)
+          | _ -> false in
+      aux extra ty in
 
     let mk_loc ~loc ?(ty = MutableOnce.make (F.from_string "Spill")) it = { ty; it; loc } in (* TODO store the types in Main *)
 
@@ -3683,6 +3761,7 @@ end = struct
       if l = [] then t
       else
         let t =
+          (* Format.eprintf "adding %d spills\n" (List.length l); *)
           List.fold_right (fun { expr; vars_names } t ->
             let t = mk_loc ~loc:t.loc @@ App(Global true,F.andf,expr,[t]) in
              (* let t = List.fold_left (sigma ~loc:t.loc) t vars_names in *)
@@ -3695,19 +3774,19 @@ end = struct
       if l = [] then Const(g,c)
       else App(g,c,List.hd l,List.tl l) in
 
-    let rec apply_to locals w ({ it; loc; ty } as orig) =
+    (* let rec apply_to locals w ({ it; loc; ty } as orig) =
       match it with
       | App(g,c,x,xs) ->
         mk_loc ~loc ~ty @@ mkApp g c (List.map (apply_to locals w) (x::xs))
-      | Var(c,xs) when List.mem c locals -> mk_loc ~loc ~ty @@ Var(c,xs @ [w])
+      | Var(c,xs) when List.mem c locals -> mk_loc ~loc ~ty @@ Var(c,w :: xs)
       | Lam(c,o,t) -> mk_loc ~loc ~ty @@ Lam(c,o,apply_to locals w t)
       | Const _ | Discard | Var _ | CData _ -> orig
-      | Cast _ -> assert false (* TODO *)
+      | Cast (t,i) -> mk_loc ~loc ~ty @@ Cast(apply_to locals w t,i)
       | Impl(b,t1,t2) -> mk_loc ~loc ~ty @@ Impl(b, apply_to locals w t1, apply_to locals w t2)
       | Spill _ -> assert false in
     let apply_to locals (w,l) t =
       let w = mk_loc ~loc:t.loc @@ Const(Bound l,w) in
-      apply_to locals w t in
+      apply_to locals w t in *)
 
     let app t args =
       if args = [] then t else
@@ -3716,10 +3795,11 @@ end = struct
           match it with
           | App(Global _,c,x,xs) when F.equal c F.andf ->
               mkApp (Global true) c (aux_last (x::xs))
+          | Impl(b,s,t) -> Impl(b,s,aux t)
           | Const(g,c) -> mkApp g c args
           | App(g,c,x,xs) -> mkApp g c (x :: xs @ args)
-          | Var(c,xs) -> Var(c,xs @ args)
-          | Discard | Impl (_, _, _) | Lam (_, _, _)
+          | Var _
+          | Discard | Lam (_, _, _)
           | CData _ | Spill (_, _) | Cast (_, _) -> assert false
       and aux_last = function
         | [] -> assert false
@@ -3734,57 +3814,103 @@ end = struct
       if n = 0 then []
       else
         let f = incr args; F.from_string (Printf.sprintf "%%arg%d" !args) in
-        let sp = mk_loc ~loc @@ Var(f,[]) in
-        (f,app sp ctx) :: mk_spilled ~loc ctx (n-1) in
+        let sp = mk_loc ~loc @@ Var(f,ctx) in
+        (f,sp) :: mk_spilled ~loc ctx (n-1) in
 
-    let rec spill ctx ({ loc; ty; it } as t) : spills * ScopedTerm.t list =
-      (* Format.eprintf "spill %a : %a\n" ScopedTerm.pretty t (MutableOnce.pp TypeAssignment.pp) ty; *)
+    (* barendregt_convention (naive implementation) *)
+    let rec bc ctx t =
+      match t with
+      | Lam(None,o,t) -> Lam(None,o,bc_loc ctx t)
+      | Lam(Some (c,l),o,t) when List.mem (c,l) ctx ->
+        let d = fresh () in
+        bc ctx (Lam(Some (d,l),o,rename_loc l c d t))
+      | Lam(Some c,o,t) -> Lam (Some c,o, bc_loc (c :: ctx) t)
+      | Impl(b,t1,t2) -> Impl(b,bc_loc ctx t1, bc_loc ctx t2)
+      | Cast(t,ty) -> Cast(bc_loc ctx t,ty)
+      | Spill(t,i) -> Spill(bc_loc ctx t,i)
+      | App(g,f,x,xs) -> App(g,f,bc_loc ctx x,List.map (bc_loc ctx) xs)
+      | Const _ | Discard | Var _ | CData _ -> t
+    and bc_loc ctx { loc; ty; it } =
+      { loc; ty; it = bc ctx it }
+    in
+
+    let rec spill ?(extra=0) ctx ({ loc; ty; it } as t) : spills * ScopedTerm.t list =
+      (* Format.eprintf "@[<hov 2>spill %a :@ %a@]\n" ScopedTerm.pretty t TypeAssignment.pretty (TypeAssignment.deref ty); *)
       match it with
-      | CData _ | Discard | Const _ -> [], [t]
+      | CData _ | Discard | Const _ -> [],[t]
       | Cast(t,_) -> spill ctx t
       | Spill(t,{ contents = NoInfo}) -> assert false (* no type checking *)
       | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
       | Spill(t,{ contents = (Main n)}) ->
-          let spills, t = spill1 ctx t in
-          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun c -> mk_loc ~loc @@ Const(Bound elpi_language,c)) ctx) n in
+          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun (c,l) -> mk_loc ~loc @@ Const(Bound l,c)) ctx) n in
+          let spills, t = spill1 ~extra:(List.length vars_names) ctx t in
           let expr = app t vars in
           spills @ [{vars; vars_names; expr}], vars
       (* globals and builtins *)
+      | App(Global f,c,{ it = Lam(Some v,o,t); loc = tloc; ty = tty },[]) when F.equal F.pif c ->
+          let ctx = v :: ctx in
+          let spilled, t = spill1 ctx t in
+          [], [{loc;ty;it = App(Global f,c,{ it = Lam(Some v,o,add_spilled spilled t); loc = tloc; ty = tty },[])}]
+      | App(Global f,c,{ it = Lam(Some v,o,t); loc = tloc; ty = tty },[]) when F.equal F.sigmaf c ->
+            let ctx = ctx in (* not to be put in scope of spills *)
+            let spilled, t = spill1 ctx t in
+            [], [{loc;ty;it = App(Global f,c,{ it = Lam(Some v,o,add_spilled spilled t); loc = tloc; ty = tty },[])}]
       | App(g,c,x,xs) ->
-          let spills, args = List.split @@ List.map (spill ctx) (x :: xs) in
+          let last = if F.equal F.andf c then List.length xs else -1 in
+          let spills, args = List.split @@ List.mapi (fun i -> spill ~extra:(if i = last then extra else 0) ctx) (x :: xs) in
           let args = List.flatten args in
           let spilled = List.flatten spills in
           let it = App(g,c,List.hd args, List.tl args) in
-          if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
+          let extra = extra + List.length args - List.length xs - 1 in
+          (* Format.eprintf "%a\nspill %b %d %a : %a\n" Loc.pp loc (is_prop ~extra ty) extra F.pp c TypeAssignment.pretty (TypeAssignment.UVar ty); *)
+          if is_prop ~extra ty then [], [add_spilled spilled { it; loc; ty }]
           else spilled, [{ it; loc; ty }]
-      | Impl(b,t1,t2) ->
-          (* TODO: @FissoreD 
-            if _b is true then no spilling in t1 is allowed (or spill before it) 
-            else the spilling in t1 can be put has first arg in t2?
-          *)
-          let spills1, args1 = spill ctx t1 in
-          let spills2, args2 = spill ctx t2 in
-          let spilled = spills1 @ spills2 in
-          let tl = (mkApp (Global true) F.andf args2) in
-          let it = 
-            if List.length args1 = 1 then 
-              Impl(b,List.hd args1,mk_loc ~loc ~ty @@ tl)
-            else (* Here wrong spilling *) 
-              List.fold_right (fun e acc -> Impl(b, e, mk_loc ~loc ~ty acc)) args1 tl
+
+          (* TODO
+          let spills, args, is_prop =
+          let (@@@) (s1,a1) (s2,a2,b) = s1 @ s2, a1 @ a2, b in
+          let rec aux_spaux ty args = match ty, args with
+            | (Variadic(_,Prop) | Arrow([],Prop)), [] -> [],[],true
+            | _, [] -> [],[],false
+            | Variadic(Prop,_), a1 :: an ->
+                  ([],spaux1_prop ctx a1) @@@ aux_spaux ty an
+            | Arrow(Prop :: ty,c), a1 :: an ->
+                  ([],spaux1_prop ctx a1) @@@ aux_spaux (Arrow(ty,c)) an
+            | Arrow((_ :: _ as ty),c), a1 :: an ->
+                  let spills, a1 = spaux ctx a1 in
+                  let ty = drop (size_outermost_spill spills ~default:1) ty in
+                  (spills, a1) @@@ aux_spaux (Arrow(ty,c)) an
+            | _, a1 :: an -> spaux ctx a1 @@@ aux_spaux ty an
           in
-          if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
-          else spilled, [{ it; loc; ty }]
+            aux_spaux (type_of_const !state types hd) args in
+        if is_prop then [], [add_spilled spills (mkAppC hd args)]
+        else spills, [mkAppC hd args]
+*)
+
+      (* TODO: positive/negative postion, for now we assume :- and => are used in the obvious way *)
+      | Impl(false,head,premise) -> (* head :- premise *)
+          let spills_head, head = spill1 ctx head in
+          if spills_head <> [] then error ~loc "Spilling in the head of a clause is not supported";
+          let spilled, premise = spill1 ctx premise in
+          let it = Impl(false,head,premise) in
+          [],[add_spilled spilled { it; loc; ty }]
+      | Impl(true,premise,conclusion) -> (* premise => conclusion *)
+          let spills_premise, premise = spill1 ctx premise in
+          if spills_premise <> [] then error ~loc "Spilling in the premise of an implication is not supported";
+          let spilled, conclusion = spill1 ~extra ctx conclusion in
+          let it = Impl(true,premise,conclusion) in
+          [], [add_spilled spilled { it; loc; ty }]
       (* lambda terms *)
       | Lam(None,o,t) ->
           let spills, t = spill1 ctx t in
           spills, [{ it = Lam(None,o,t); loc; ty }]
       | Lam(Some c,o,t) ->
-          let spills, t = spill1 ctx t in
+          let spills, t = spill1 (c::ctx) t in
           let (t,_), spills =
             map_acc (fun (t,n) { vars; vars_names; expr } ->
               let all_names = vars_names @ n in
-              let expr = apply_to all_names c expr in
-              let t = apply_to vars_names c t in
+              (* let expr = apply_to all_names c expr in
+              let t = apply_to vars_names c t in *)
               (t,all_names), { vars; vars_names; expr = mk_loc ~loc @@ App(Global true,F.pif,mk_loc ~loc @@ Lam(Some c,o,expr),[]) })
             (t,[]) spills in
           spills, [{ it = Lam(Some c,o,t); loc; ty }]
@@ -3794,16 +3920,24 @@ end = struct
           let args = List.flatten args in
           let spilled = List.flatten spills in
           let it = Var(c,args) in
-          if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
+          let extra = extra + List.length args - List.length xs in
+          if is_prop ~extra ty then [], [add_spilled spilled { it; loc; ty }]
           else spilled, [{ it; loc; ty }]
-      and spill1 ctx ({ loc } as t) =
-        let spills, t = spill ctx t in
+      and spill1 ?extra ctx ({ loc } as t) =
+        let spills, t = spill ?extra ctx t in
         let t = if List.length t <> 1 then error ~loc "bad pilling" else List.hd t in
         spills, t
   in
+  let spill ctx t =
+    (* Format.eprintf "before spill: %a\n" ScopedTerm.pretty t; *)
+    let s,t = spill ctx t in
+    (* Format.eprintf "after spill: %a\n" ScopedTerm.pretty (List.hd t); *)
+
+    s,t
+in
 
     let spills, ts =
-      if needs_spilling then spill [] t
+      if needs_spilling then spill [] (bc_loc [] t)
       else [],[t] in
     let t =
       match spills, ts with
@@ -3814,9 +3948,9 @@ end = struct
     let t  = todbl (depth,Scope.Map.empty) t in
     (!symb, !amap), t  
 
-  let extend1_clause flags state modes indexing (symbols, index) (needs_spilling,{ Ast.Clause.body; loc; attributes = { Ast.Structured.insertion = graft; id; ifexpr } }) =
+  let extend1_clause flags state modes indexing (clauses,symbols, index) (needs_spilling,{ Ast.Clause.body; loc; attributes = { Ast.Structured.insertion = graft; id; ifexpr } }) =
     if not @@ filter1_if flags (fun x -> x) ifexpr then
-      (symbols, index)
+      (clauses,symbols, index)
     else
     let (symbols, amap), body = todbl ~needs_spilling state symbols body in
     let modes x = try fst @@ F.Map.find (SymbolMap.global_name state symbols x) modes with Not_found -> [] in
@@ -3827,7 +3961,7 @@ end = struct
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
     let index = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index in
-    symbols, index
+    (graft,id,p,cl) :: clauses, symbols, index
 
 
   let check_rule_pattern_in_clique state symbols clique { D.CHR.pattern; rule_name; rule_loc } =
@@ -3883,7 +4017,7 @@ end = struct
     F.Map.union (fun k _ _ -> error ("Duplicate type abbreviation for " ^ F.show k)) m1 m2
 
   let extend1 flags
-    (state, { Assembled.hash; symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
+    (state, { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
             { version; base_hash; checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; clauses; chr; builtins}; precomputed_kinds; precomputed_type_abbrevs; precomputed_types; type_checking_time } =
     let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types_indexing indexing in
     let kinds, type_abbrevs, types =
@@ -3906,13 +4040,13 @@ end = struct
 
     let symbols, chr =
       List.fold_left (extend1_chr_block flags state) (symbols,ochr) chr in
-    let symbols, prolog_program =
-      List.fold_left (extend1_clause flags state modes indexing) (symbols, prolog_program) clauses in
+    let clauses, symbols, prolog_program =
+      List.fold_left (extend1_clause flags state modes indexing) (cl, symbols, prolog_program) clauses in
   
     (* TODO: @FissoreD here we have to do mutual excl clauses... *)
 
     let new_base = 
-      { Assembled.hash; symbols; prolog_program; indexing; modes; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
+      { Assembled.hash; clauses; symbols; prolog_program; indexing; modes; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
     let hash = hash_base new_base in
     state, { new_base with hash }
 
@@ -4045,7 +4179,7 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let u = Check.check state ~base:(Assembled.empty ()) u in
   let init = { (Assembled.empty ()) with toplevel_macros = u.checked_code.toplevel_macros } in
   let h = assemble_unit ~flags ~header:(state,init) u in
-  Printf.eprintf "header_of_ast: %d\n%!" (F.Map.cardinal (snd h).Assembled.toplevel_macros);
+  (* Printf.eprintf "header_of_ast: %d\n%!" (F.Map.cardinal (snd h).Assembled.toplevel_macros); *)
   h
 
 let check_unit ~base:(st,base) u = Check.check st ~base u
@@ -4053,7 +4187,7 @@ let check_unit ~base:(st,base) u = Check.check st ~base u
 let empty_base ~header:b = b
 
 let unit_of_ast ~flags ~header:(s, u) p : unchecked_compilation_unit =
-  Printf.eprintf "unit_of_ast: %d\n%!" (F.Map.cardinal u.Assembled.toplevel_macros);
+  (* Printf.eprintf "unit_of_ast: %d\n%!" (F.Map.cardinal u.Assembled.toplevel_macros); *)
   let _, u = unit_or_header_of_ast flags s ~toplevel_macros:u.Assembled.toplevel_macros p in
   print_unit flags u;
   u
@@ -4200,9 +4334,6 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
 
 module Compiler : sig
 
-  (* Translates preterms in terms and AST clauses into clauses (with a key,
-   * subgoals, etc *)
-
   val run : 'a query -> 'a executable
 
 end = struct (* {{{ *)
@@ -4212,7 +4343,6 @@ let run
   {
     WithMain.prolog_program;
     chr;
-    (* initial_depth; *)
     symbols;
     initial_goal;
     assignments;
@@ -4250,331 +4380,48 @@ end (* }}} *)
 let optimize_query = Compiler.run
 
 let removals l =
-  l |> List.filter_map (fun c -> match c.Ast.Clause.attributes.Assembled.insertion with Some (Remove x) -> Some x | Some (Replace x) -> Some x| _ -> None)
+  List.filter_map (function
+    | (Some (Ast.Structured.Remove x),_,_,_) -> Some x
+    | (Some (Ast.Structured.Replace x),_,_,_) -> Some x
+    | _ -> None) l
 
-let handle_clause_graftin clauses =
-  let clauses = clauses |> List.sort (fun c1 c2 -> R.lex_insertion c1.Ast.Clause.attributes.Assembled.timestamp c2.Ast.Clause.attributes.Assembled.timestamp) in
+let handle_clause_graftin (clauses: (Ast.Structured.insertion option * string option * constant * clause) list) : (string option * constant * clause) list =
+  let clauses = clauses |> List.sort (fun (_,_,_,c1) (_,_,_,c2) -> R.lex_insertion c1.timestamp c2.timestamp) in
   let removals = removals clauses in
-  let clauses = clauses |> List.filter (fun c -> let id = c.Ast.Clause.attributes.Assembled.id in id = None || not(List.exists (fun x -> id = Some x) removals)) in
-  let clauses = clauses |> List.filter (fun c -> match c.Ast.Clause.attributes.Assembled.insertion with Some (Remove _) -> false | _ -> true) in
-  clauses
+  let clauses = clauses |> List.filter (fun (_,id,_,_) -> id = None || not(List.exists (fun x -> id = Some x) removals)) in
+  let clauses = clauses |> List.filter (fun (c,_,_,_) -> match c with Some (Ast.Structured.Remove _) -> false | _ -> true) in
+  List.map (fun (_,a,b,c) -> a,b,c) clauses
 
-let pp_program pp fmt _ = assert false (*{
-    (* WithMain.clauses; *)
-    (* initial_depth; *)
-    compiler_state; } =
+let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Assembled.clauses; symbols }) =
 
   let clauses = handle_clause_graftin clauses in
 
-  let compiler_state, clauses =
-    map_acc (fun state { Ast.Clause.body; loc; attributes = { Assembled.id; timestamp } } ->
-       let state, c = stack_term_of_preterm ~depth:initial_depth state body in
-       state, (c,loc,id,timestamp))
-    compiler_state clauses in
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
-    table = Symbols.compile_table (State.get Symbols.table compiler_state);
+    table = SymbolMap.compile symbols;
   } in
   Format.fprintf fmt "@[<v>";
-  List.iter (fun (body,loc,name,timestamp) ->
-    Format.fprintf fmt "@[<h>%% [%a] %a %a@]@;" Format.(pp_print_list ~pp_sep:(fun fmt () -> pp_print_string fmt "; ") pp_print_int) timestamp Loc.pp loc Format.(pp_print_option (fun fmt x -> pp_print_string fmt x)) name ;
-    Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth) body)
+  List.iter (fun (name,predicate,{ depth; args; hyps; loc; timestamp }) ->
+    Format.fprintf fmt "@[<h>%% %a [%a] %a@]@;"
+      Format.(pp_print_option Loc.pp) loc
+      Format.(pp_print_list ~pp_sep:(fun fmt () -> pp_print_string fmt "; ") pp_print_int) timestamp
+      Format.(pp_print_option pp_print_string) name;
+    Fmt.fprintf fmt "@[<hov 1>%a :- %a.@]@;"
+      (pp ~depth ~pp_ctx) (if args = [] then D.Const predicate else D.mkApp predicate (List.hd args) (List.tl args))
+      (pplist (pp ~depth ~pp_ctx) ", ") hyps)
     clauses;
   Format.fprintf fmt "@]"
-;;*)
-let pp_goal pp fmt _ = assert false (* {
-    WithMain.initial_depth;
-    compiler_state;
-    query; } =
-  let compiler_state, goal = stack_term_of_preterm compiler_state ~depth:initial_depth query in
+;;
+
+let pp_goal pp fmt {  WithMain.compiler_state; initial_goal; symbols } =
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
-    table = Symbols.compile_table (State.get Symbols.table compiler_state);
+    table = SymbolMap.compile symbols;
   } in
   Format.fprintf fmt "@[<v>";
-  Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth) goal;
+  Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:0) initial_goal;
   Format.fprintf fmt "@]"
 ;;
-*)
-
-(****************************************************************************
-  Quotation (for static checkers, see elpi-quoted_syntax.elpi)
- ****************************************************************************)
-
-let constc   = D.Global_symbols.declare_global_symbol "const"
-let tconstc  = D.Global_symbols.declare_global_symbol "tconst"
-let appc     = D.Global_symbols.declare_global_symbol "app"
-let tappc    = D.Global_symbols.declare_global_symbol "tapp"
-let lamc     = D.Global_symbols.declare_global_symbol "lam"
-let cdatac   = D.Global_symbols.declare_global_symbol "cdata"
-let forallc  = D.Global_symbols.declare_global_symbol "forall"
-let arrowc   = D.Global_symbols.declare_global_symbol "arrow"
-let argc     = D.Global_symbols.declare_global_symbol "arg"
-let discardc = D.Global_symbols.declare_global_symbol "discard"
-let clausec  = D.Global_symbols.declare_global_symbol "clause"
-let checkc   = D.Global_symbols.declare_global_symbol "check"
-let colonc   = D.Global_symbols.declare_global_symbol "`:"
-let colonec  = D.Global_symbols.declare_global_symbol "`:="
-let truec    = D.Global_symbols.declare_global_symbol "true"
-let falsec   = D.Global_symbols.declare_global_symbol "false"
-let pairc    = D.Global_symbols.declare_global_symbol "pr"
-
-let modefoc  = D.Global_symbols.declare_global_symbol "mode-fo"
-let modehoc  = D.Global_symbols.declare_global_symbol "mode-ho"
-
-let mkQApp ~on_type l =
-  let c = if on_type then tappc else appc in
-  App(c,R.list_to_lp_list l,[])
-(* 
-let mkQCon time ~compiler_state new_state ~on_type ?(amap=empty_amap) c =
-  let allocate_bound_symbol =
-    match time with
-    | `Compiletime -> Symbols.allocate_bound_symbol
-    | `Runtime f -> (fun s c -> s, f c) in
-  try allocate_bound_symbol new_state (C.Map.find c amap.c2i)
-  with Not_found ->
-    let a = if on_type then tconstc else constc in
-    if c < 0 then new_state, App(a,D.C.of_string (Symbols.show compiler_state c),[])
-    else allocate_bound_symbol new_state (c + amap.nargs)
-
-let quote_preterm time ~compiler_state new_state { term; amap } =
-  let new_state = ref new_state in
-  let mkQApp = mkQApp ~on_type:false in
-  let mkQCon c =
-    let n, x = mkQCon time ~compiler_state !new_state ~on_type:false ~amap c in
-    new_state := n;
-    x in
-  let rec aux_quote depth term = match term with
-    | Const n -> mkQCon n
-    | Builtin(c,[]) -> mkQCon c
-    | Lam x -> App(lamc,Lam (aux_quote (depth+1) x),[])
-    | App(c,x,xs) ->
-        mkQApp (mkQCon c :: List.(map (aux_quote depth) (x :: xs)))
-    | Builtin(c,args) -> mkQApp (mkQCon c :: List.map (aux_quote depth) args)
-
-(*
-    | Arg(id,0) -> D.mkConst id
-    | Arg(id,argno) -> mkQApp (D.mkConst id :: C.mkinterval vars argno 0)
-    | AppArg(id,xs) -> mkQApp (D.mkConst id :: List.map (aux depth) xs)
-*)
-    | Arg _ | AppArg _ -> assert false
-
-(*
-    | UVar ({ contents = g }, from, args) when g != D.dummy ->
-       aux depth (deref_uv ~from ~to_:depth args g)
-    | AppUVar ({contents = t}, from, args) when t != D.dummy ->
-       aux depth (deref_appuv ~from ~to_:depth args t)
-*)
-    | UVar _ | AppUVar _ -> assert false
-
-    | CData _ as x -> App(cdatac,x,[])
-    | Cons(hd,tl) -> mkQApp [mkQCon D.Global_symbols.consc; aux_quote depth hd; aux_quote depth tl]
-    | Nil -> mkQCon D.Global_symbols.nilc
-    | Discard -> mkQCon discardc
-  in
-  let term = aux_quote amap.nargs term in
-  !new_state, term
-
-let quote_pretype time ~compiler_state new_state { tloc; ttype; tamap } =
-  let new_state = ref new_state in
-  let mkQApp = mkQApp ~on_type:true in
-  let mkQCon c =
-    let n, x = mkQCon time ~compiler_state !new_state ~on_type:true ~amap:tamap c in
-    new_state := n;
-    x in
-  let rec aux depth term : term = match term with
-    | TApp(c,TCData s,[]) when c == D.Global_symbols.ctypec && D.C.is_string s -> App(c, CData s, [])
-    | TArr (s, t) -> App(arrowc,aux depth s,[aux depth t])
-    | TConst n when D.Global_symbols.propc = n -> Const n
-    | TConst n -> mkQCon n
-    | TLam x -> App(lamc,Lam (aux (depth+1) x),[])
-    | TApp(c,x,xs) -> mkQApp (mkQCon c :: List.(map (aux depth) (x :: xs)))
-    | TCData x -> App(cdatac, CData x,[])
-    | TPred (f, l) -> 
-        (* TODO: @FissoreD (flemma) for compatibility modes are ignored. Consider them! *)
-        let l = List.rev_map snd l in
-        let t = List.fold_left (fun acc e -> TArr (e, acc)) (TConst D.Global_symbols.propc) l in
-        aux depth t
-  in
-  let term = aux tamap.nargs ttype in
-  !new_state, term
-
-(* FIXME : close_with_pis already exists but unused *)
-let close_w_binder binder t { nargs } =
-  let rec close = function
-    | 0 -> t
-    | n -> App(binder,Lam (close (n-1)),[]) in
-  close nargs
-
-let sorted_names_of_argmap argmap =
-    IntMap.bindings argmap.i2n |>
-    List.map snd |>
-    List.map D.C.of_string
-
-let quote_loc ?id loc =
-  let source_name =
-    match id with
-    | Some x -> loc.Loc.source_name ^ ": " ^ x
-    | None -> loc.Loc.source_name in
-  Ast.cloc.CData.cin { loc with Loc.source_name }
-
-let quote_clause time ~compiler_state new_state { Ast.Clause.loc; attributes = { Assembled.id }; body } =
-  let clloc = quote_loc ?id loc in
-  let new_state, bodyt = quote_preterm time ~compiler_state new_state body in
-  let qt = close_w_binder argc bodyt body.amap in
-  let names = sorted_names_of_argmap body.amap in
-  new_state, App(clausec,CData clloc,[R.list_to_lp_list names; qt])
-;;
-
-let rec lam2forall = function
-  | App(c,x,[]) when c == lamc -> mkApp forallc (lam2forall x) []
-  | App(c,x,xs) -> mkApp c (lam2forall x) (List.map lam2forall xs)
-  | (Const _ | Nil | CData _| Discard) as x -> x
-  | Cons(x,xs) -> mkCons (lam2forall x) (lam2forall xs)
-  | Builtin(c,xs) -> mkBuiltin c (List.map lam2forall xs)
-  | Lam x -> mkLam (lam2forall x)
-  | UVar _ | AppUVar _ -> assert false
-  | Arg _ | AppArg _ -> assert false
-
-let quote_syntax time new_state { WithMain.clauses; query; compiler_state } =
-  let names = sorted_names_of_argmap query.amap in
-  let clauses = handle_clause_graftin clauses in
-  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state clauses in
-  let new_state, queryt = quote_preterm time ~compiler_state new_state query in
-  let q =
-    App(clausec,CData (quote_loc ~id:"query" query.loc),
-      [R.list_to_lp_list names;
-       close_w_binder argc queryt query.amap]) in
-  new_state, clist, q
-
-let unfold_type_abbrevs ~is_typeabbrev ~compiler_state lcs type_abbrevs { ttype; tloc; tamap } ttime =
-  let loc = tloc in
-  let rec subst lvl (args: ttype array) = function
-    | TConst c when c >= 0 -> args.(c)
-    | TConst _ | TCData _ as t -> t
-    | TLam t -> error ~loc "lambdas should be fully applied"
-    | TArr (a, b) -> TArr (subst lvl args a, subst lvl args b)
-    | TPred (f, l) -> TPred (f, List.map (fun (a,b) -> a, subst lvl args b) l)
-    | TApp (a, b, c) -> TApp (a, subst lvl args b, List.map (subst lvl args) c)
-  in
-  let beta t args =
-    let rec aux lvl t xs = 
-    match t, xs with
-    | TLam t', x::xs -> aux (lvl+1) t' xs
-    | t, [] -> 
-      subst 0 (Array.of_list args) t
-    | _, _::_ -> error ~loc "higher-order types do not exist" in
-    aux 0 t args
-  in
-  let error_undefined ~t1 ~t2 c (tavalue: pretype) =
-    if is_typeabbrev && t1 <= t2 then
-      error (Format.asprintf "typeabbrev %a uses the undefined %s constant at %a" pp_ttype tavalue.ttype (Symbols.show compiler_state c) Util.Loc.pp tavalue.tloc);
-  in
-  let find_opt c = C.Map.find_opt c type_abbrevs in
-  (* DEBUG HELPER: Prints the type_abrev dictionary sorted by timestamp *)
-  (* let _ =
-    let x = C.Map.bindings type_abbrevs in
-    let y = List.sort (fun (_, (x: type_abbrev_declaration)) (_, y) -> x.timestamp - y.timestamp) x in
-    print_endline "---------------------------------------------";
-    List.iter (fun (k,(v:type_abbrev_declaration)) ->
-      Format.printf "TIME AND KEY %s -- %d\n%!" (Symbols.show compiler_state k) (v.timestamp)) y;
-  in *)
-  let rec aux_tabbrv ttime = function
-    | Const c as x ->
-        begin match find_opt c with
-        | Some { tavalue; taparams; timestamp=time } ->
-          if taparams > 0 then
-            error ~loc ("type abbreviation " ^ Symbols.show compiler_state c ^ " needs " ^
-              string_of_int taparams ^ " arguments");
-          error_undefined ttime time c tavalue;
-          aux time tavalue.ttype
-        | None -> x
-        end
-    | TApp(c,t,ts) as x ->
-        begin match find_opt c with
-        | Some { tavalue; taparams; timestamp=time } ->
-          let nargs = 1 + List.length ts in
-          if taparams > nargs then
-            error ~loc ("type abbreviation " ^ Symbols.show compiler_state c ^ " needs " ^
-              string_of_int taparams ^ " arguments, only " ^
-              string_of_int nargs ^ " are provided");
-          error_undefined ttime time c tavalue;
-          aux time (beta tavalue.ttype (t::ts))
-        | None ->
-          let t1 = aux seen t in
-          let ts1 = smart_map (aux seen) ts in
-          if t1 == t && ts1 == ts then x
-          else TApp(c,t1,ts1)
-        end
-    | TPred (f, l) -> TPred (f, List.map (fun (a, b) -> a, aux seen b) l)
-    | TArr (a, b) -> TArr (aux seen a, aux seen b)
-    | TCData _ as a -> a
-    | TLam a -> TLam (aux seen a)
-  in
-    { ttype = aux ttime ttype; tloc; tamap }
-
-
-let term_of_ast ~depth state text =
- if State.get D.while_compiling state then
-   anomaly ("term_of_ast cannot be used at compilation time");
- let module P = (val option_get ~err:"No parser" (State.get parser state)) in
- let loc = Ast.Loc.initial "(string_of_term)" in
- let t = P.goal ~loc ~text in
- let state, (t,nargs) = ToDBL.temporary_compilation_at_runtime (fun s x ->
-    let s, x = ToDBL.query_preterm_of_ast ~depth F.Map.empty s x in
-    let s, t = stack_term_of_preterm ~depth s x in
-    s, (t, x.amap.nargs)
-    ) state t in
- let env = Array.make nargs D.dummy in
- let argsdepth = depth in
- state, R.move ~argsdepth ~from:depth ~to_:depth env t
-;;
-
-let is_functional = function TPred (b,_) -> b | _ -> false
-
-let static_check ~exec ~checker:(state,program)
-  ({ WithMain.types; type_abbrevs; modes; initial_depth; compiler_state } as q) =
-  let time = `Compiletime in
-  let state, p,q = quote_syntax time state q in
-
-  (* C.Map.iter (fun k ((v:type_abbrev_declaration),t) -> Format.printf "H %s %a %d\n%!" (Symbols.show state k)
-    pp_term v.tavalue.term t) type_abbrevs; *)
-
-  (* Building type abbrev list *)
-  let state, talist =
-    C.Map.bindings type_abbrevs |>
-    map_acc (fun state (name, { tavalue; timestamp=ttime } ) ->
-      let tavaluet = unfold_type_abbrevs ~is_typeabbrev:true ~compiler_state initial_depth type_abbrevs tavalue ttime in
-      let state, tavaluet = quote_pretype time ~compiler_state state tavaluet in
-      state, App(colonec, D.C.of_string (Symbols.show compiler_state name), [lam2forall tavaluet])) state
-  in
-
-  (* Building types and functionality *)
-  let state, tlist, functionality = C.Map.fold estract_info_from_types types (state,[],[]) in
-  let tlist = List.concat (List.rev tlist) in
-  
-  (* Building modes *)
-  let arg_mode2bool = function Input -> Const truec | Output -> Const falsec in
-
-  let rec mode2elpi = function
-    | D.Fo b -> App(modefoc,arg_mode2bool b,[])
-    | D.Ho (b, l) -> App(modehoc,arg_mode2bool b,[R.list_to_lp_list @@ List.map mode2elpi l]) in
-
-  let state, modes = C.Map.fold (fun tname v (state,tl) -> 
-    let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
-    let m = List.map mode2elpi v in
-    state, (App(pairc, c, [R.list_to_lp_list m])) :: tl) modes (state,[]) in
-
-  let loc = Loc.initial "(static_check)" in
-  let args = q :: List.map R.list_to_lp_list [tlist; talist; modes; functionality] in
-  let query =
-    query_of_term (state, program) (fun ~depth state ->
-      assert(depth=0);
-      state, (loc,App(checkc,R.list_to_lp_list p, args)), []) in
-  let executable = optimize_query query in
-  exec executable <> Failure
-;;
-*)
 
 let elpi ~language:_ state loc s =
   let module P = (val option_get ~err:"No parser" (State.get parser state)) in
@@ -4582,10 +4429,32 @@ let elpi ~language:_ state loc s =
   let term = Scope_Quotation_Macro.scope_loc_term ~state ast in
   { ScopedTerm.SimpleTerm.it = Opaque (ScopedTerm.in_scoped_term term); loc = term.loc }
 
+exception RelocationError of string
 
- let static_check ~exec ~checker:(state,program) q = true
-let term_of_ast ~depth state text = assert false
-let quote_syntax time new_state _ = assert false
+let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols }) (t : term) : term =
+  let relocate c =
+    let s = D.Constants.Map.find c symbol_table.c2s in
+    let c = SymbolMap.get_global_symbol symbols (F.from_string s) in
+    match c with
+    | Some x -> x
+    | None -> raise (RelocationError (Format.asprintf "Relocation: unknown global %s" s))
+    in
+  let rec rel = function
+    | Const c when c < 0 -> Const (relocate c)
+    | Const _ as x -> x
+    | App(c,x,xs) when c < 0 -> App(relocate c,rel x,List.map rel xs)
+    | App(c,x,xs) -> App(c,rel x, List.map rel xs)
+    | Cons(x,y) -> Cons(rel x, rel y)
+    | Lam t -> Lam(rel t)
+    | CData _ as x -> x
+    | Builtin(c,l) -> Builtin(relocate c,List.map rel l)
+    | (Nil | Discard) as x -> x
+    | Arg _ | AppArg _ | UVar _ | AppUVar _ -> assert false
+  in
+    rel t
+  
+let relocate_closed_term ~from ~to_ t =
+  try Result.Ok(relocate_closed_term ~from ~to_ t)
+  with RelocationError s -> Result.Error s
 
-let relocate_closed_term ~from:_ ~to_:_ _ = assert false
 let lookup_query_predicate _ _ = assert false

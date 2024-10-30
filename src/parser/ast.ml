@@ -161,6 +161,7 @@ let rec best_effort_pp = function
  | Lam (x,_,t) -> "x\\" ^ best_effort_pp t.it
  | CData c -> CData.show c
  | Quoted _ -> "{{ .. }}"
+ | Cast _ -> "(.. : ..)"
  | _ -> ".."
 
 let mkApp loc = function

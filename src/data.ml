@@ -1361,7 +1361,7 @@ module Query = struct
 end
 
 type symbol_table = {
-  c2s : (constant, string) Hashtbl.t;
+  mutable c2s : string Constants.Map.t;
   c2t : (constant, term) Hashtbl.t;
   mutable frozen_constants : int;
 }
@@ -1377,7 +1377,7 @@ type 'a executable = {
   initial_goal: term;
   (* constraints coming from compilation *)
   initial_runtime_state : State.t;
-  (* Hashconsed symbols *)
+  (* Hashconsed symbols + their string equivalent *)
   symbol_table : symbol_table;
   (* Indexed FFI entry points *)
   builtins : BuiltInPredicate.builtin_table;
@@ -1398,7 +1398,7 @@ type 'a solution = {
   state : State.t;
   output : 'a;
   pp_ctx : pp_ctx;
-  state_for_relocation : int * State.t;
+  state_for_relocation : int * symbol_table;
 }
 type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
 

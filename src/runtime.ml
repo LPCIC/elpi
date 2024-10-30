@@ -53,18 +53,18 @@ end = struct
   let dummy = Data.dummy
 
 let table = Fork.new_local {
-  c2s = Hashtbl.create 37;
+  c2s = Constants.Map.empty;
   c2t = Hashtbl.create 37;
   frozen_constants = 0;
 }
 
-let () = at_exit (fun () -> let open Hashtbl in let s = stats !table.c2t in
-  Array.iter (fun i -> Printf.eprintf "%d\n" i) s.bucket_histogram)
+(* let () = at_exit (fun () -> let open Hashtbl in let s = stats !table.c2t in
+  Array.iter (fun i -> Printf.eprintf "%d\n" i) s.bucket_histogram) *)
 
 let show ?(table = !table) n =
-  try (*Ast.Func.show @@ fst @@*) Constants.Map.find n Global_symbols.table.c2s
+  try Constants.Map.find n Global_symbols.table.c2s
   with Not_found ->
-    try Hashtbl.find table.c2s n
+    try Constants.Map.find n table.c2s
     with Not_found ->
       if n >= 0 then "c" ^ string_of_int n
       else "SYMBOL" ^ string_of_int n
@@ -84,7 +84,7 @@ let fresh_global_constant () =
    !table.frozen_constants <- !table.frozen_constants - 1;
    let n = !table.frozen_constants in
    let xx = Const n in
-   Hashtbl.add !table.c2s n ("frozen-" ^ string_of_int n);
+   !table.c2s <- Constants.Map.add n ("frozen-" ^ string_of_int n) !table.c2s ;
    Hashtbl.add !table.c2t n xx;
    n, xx
 
@@ -4277,7 +4277,7 @@ let mk_outcome search get_cs assignments depth =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
  try
-   let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get CS.state), get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth) in
+   let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get C.table), get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth) in
    [%end_trace "execute_once" ~rid];
    result
  with e ->
@@ -4291,7 +4291,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
    let time0 = Unix.gettimeofday() in
-   let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get CS.state), get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth in
+   let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get C.table), get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth in
    let time1 = Unix.gettimeofday() in
    k := alts;
    pp (time1 -. time0) o in

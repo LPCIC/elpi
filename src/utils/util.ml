@@ -160,9 +160,11 @@ module Loc = struct
     line = 1;
     line_starts_at = 0;
   }
+  let is_initial { source_start; source_stop; line; line_starts_at } =
+    source_start = 0 && source_stop = 0 &&
+    line = 1 && line_starts_at = 0
 
   let merge l r =
-    assert(l.source_name = r.source_name);
     {
     source_name = l.source_name;
     source_start = l.source_start;
@@ -170,6 +172,12 @@ module Loc = struct
     line = r.line;
     line_starts_at = r.line_starts_at;
   }
+
+
+  let merge l r =
+    if is_initial l then r
+    else if is_initial r then l
+    else merge l r
 
   let extend n l = { l with source_start = l.source_start - n; source_stop = l.source_stop + n }
    
