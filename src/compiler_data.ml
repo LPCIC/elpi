@@ -195,10 +195,10 @@ module TypeAssignment = struct
     | App of F.t * 'a t_ * 'a t_ list
     | Arr of Ast.Structured.variadic * 'a t_ * 'a t_
     | UVar of 'a
-  [@@ deriving show, fold]
+  [@@ deriving show, fold, ord]
 
   type skema = Lam of F.t * skema | Ty of F.t t_
-  [@@ deriving show]
+  [@@ deriving show, ord]
   type overloaded_skema = skema overloading
   [@@ deriving show]
 

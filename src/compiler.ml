@@ -574,7 +574,7 @@ open Compiler_data
   
 module TypeChecker : sig
 
-  type type_abbrevs = TypeAssignment.skema F.Map.t
+  type type_abbrevs = (TypeAssignment.skema * Loc.t) F.Map.t
   type arities = Arity.t F.Map.t
   val check_disjoint : type_abbrevs:ScopedTypeExpression.t F.Map.t -> kinds:arities -> unit
 
@@ -586,7 +586,7 @@ module TypeChecker : sig
   val unknown_type_assignment : string -> TypeAssignment.t
 
 end = struct
-  type type_abbrevs = TypeAssignment.skema F.Map.t
+  type type_abbrevs = (TypeAssignment.skema * Loc.t) F.Map.t
   type arities = Arity.t F.Map.t
 
   let check_disjoint ~type_abbrevs ~kinds =
@@ -610,7 +610,7 @@ end = struct
       if arity != nargs then
         error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
     end else if F.Map.mem c type_abbrevs then begin
-      let arity = TypeAssignment.nparams @@ F.Map.find c type_abbrevs in
+      let arity = TypeAssignment.nparams @@ fst @@ F.Map.find c type_abbrevs in
       if arity != nargs then
         error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
     end else
@@ -675,7 +675,7 @@ end = struct
 
   let pp_tyctx fmt = function
     | None -> Format.fprintf fmt "its context"
-    | Some c -> Format.fprintf fmt "\"%a\"" F.pp c
+    | Some c -> Format.fprintf fmt "%a" F.pp c
 
   let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
     let msg = Format.asprintf "@[<hov>literal %a has type %a@ but %a expects a term of type@ %a@]"  CData.pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
@@ -1020,16 +1020,16 @@ end = struct
       | UVar m, _ when not matching -> assign m t2
       | _, UVar m -> assign m t1
       | Cons c, _ when F.Map.mem c type_abbrevs ->
-          let t1 = apply (F.Map.find c type_abbrevs) [] in
+          let t1 = apply (fst @@ F.Map.find c type_abbrevs) [] in
           unif ~matching t1 t2
       | _, Cons c when F.Map.mem c type_abbrevs ->
-          let t2 = apply (F.Map.find c type_abbrevs) [] in
+          let t2 = apply (fst @@ F.Map.find c type_abbrevs) [] in
           unif ~matching t1 t2
       | App(c,x,xs), _ when F.Map.mem c type_abbrevs ->
-          let t1 = apply (F.Map.find c type_abbrevs) (x::xs) in
+          let t1 = apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
           unif ~matching t1 t2
       | _, App(c,x,xs) when F.Map.mem c type_abbrevs ->
-          let t2 = apply (F.Map.find c type_abbrevs) (x::xs) in
+          let t2 = apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
           unif ~matching t1 t2
       | _,_ -> false
 
@@ -1151,7 +1151,7 @@ type program = {
   kinds : Arity.t F.Map.t;
   types : TypeAssignment.overloaded_skema F.Map.t;
   types_indexing : (Ast.Structured.tattribute option * Loc.t) list F.Map.t;
-  type_abbrevs :  TypeAssignment.skema F.Map.t;
+  type_abbrevs :  (TypeAssignment.skema * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   clauses : (bool * (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t) list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
@@ -1177,7 +1177,7 @@ type checked_compilation_unit = {
   base_hash : string;
   precomputed_kinds : Arity.t F.Map.t;
   precomputed_types : TypeAssignment.overloaded_skema F.Map.t;
-  precomputed_type_abbrevs :  TypeAssignment.skema F.Map.t;
+  precomputed_type_abbrevs :  (TypeAssignment.skema * Loc.t) F.Map.t;
   type_checking_time : float;
 }
 [@@deriving show]
@@ -1189,7 +1189,7 @@ type program = {
   (* clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list; for printing *)
   kinds : Arity.t F.Map.t;
   types : TypeAssignment.overloaded_skema F.Map.t;
-  type_abbrevs : TypeAssignment.skema F.Map.t;
+  type_abbrevs : (TypeAssignment.skema * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
   total_type_checking_time : float;
 
@@ -3028,21 +3028,8 @@ end (* }}} *)
         F.Map.union (fun f (k,loc1 as kdecl) (k',loc2) ->
           if k == k' then Some kdecl else error ~loc:loc2 ("Duplicate kind declaration for " ^ F.show f ^ ". Previously declared in " ^ Loc.show loc1);
           ) t1 t2
-  
 
-    let add_to_index_type_abbrev m ({ ScopedTypeExpression.name; loc; value; nparams } as x) =
-      if F.Map.mem name m then begin
-        let { ScopedTypeExpression.loc = otherloc; value = othervalue; nparams = otherparams } =
-          F.Map.find name m in
-        if nparams != otherparams || not @@ ScopedTypeExpression.eq (ScopeContext.empty ()) othervalue value then
-        error ~loc
-          ("duplicate type abbreviation for " ^ F.show name ^
-            ". Previous declaration: " ^ Loc.show otherloc)
-      end;
-      F.Map.add name x m
-
-
-    let merge_type_abbrevs m1 m2 = m1 @ m2 (* TODO check duplicates *)
+    let merge_type_abbrevs m1 m2 = m1 @ m2
 
   let rec compile_block kinds types type_abbrevs modes clauses chr subst = function
     | [] -> kinds, types, type_abbrevs, modes, clauses, chr
@@ -3434,11 +3421,17 @@ end = struct
     let check_k_begin = Unix.gettimeofday () in
     let all_type_abbrevs, type_abbrevs =
       List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, ty) ->
-        (* TODO check dijoint from kinds and type_abbrevs *)
-        if F.Map.mem name all_type_abbrevs then
-          error ("Duplicate type abbreviation for " ^ F.show name);
+        (* TODO check dijoint from kinds *)
+        let loc = ty.ScopedTypeExpression.loc in
         let ty = TypeChecker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ty in
-        F.Map.add name ty all_type_abbrevs, F.Map.add name ty type_abbrevs)
+        if F.Map.mem name all_type_abbrevs then begin
+          let sk, otherloc = F.Map.find name all_type_abbrevs in
+          if TypeAssignment.compare_skema sk ty <> 0 then
+          error ~loc
+            ("Duplicate type abbreviation for " ^ F.show name ^
+              ". Previous declaration: " ^ Loc.show otherloc)
+        end;
+        F.Map.add name (ty,loc) all_type_abbrevs, F.Map.add name (ty,loc) type_abbrevs)
         (ota,F.Map.empty) type_abbrevs in
     let check_k_end = Unix.gettimeofday () in
 
