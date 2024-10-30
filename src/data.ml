@@ -92,6 +92,12 @@ type mode_aux = Util.mode_aux =
 and mode = mode_aux list
 [@@ deriving show, ord]
 
+type functionality =
+  | Functional of functionality list
+  | Relational
+  | AssumedFunctional (* Currently used for variadic functions, like print, halt... *)
+[@@ deriving show, ord]
+
 type ttype =
   | TConst of constant
   | TApp of constant * ttype * ttype list
