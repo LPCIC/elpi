@@ -670,7 +670,7 @@ end = struct
     let t =
       if args = [] then ScopedTerm.Const(Global true,c)
       else ScopedTerm.(App(Global true,c,List.hd args, List.tl args)) in
-    let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@,@[<hov>%a@]@]" ScopedTerm.pretty_ t ScopedTerm.pretty x in
+    let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@]@]" ScopedTerm.pretty_ t ScopedTerm.pretty x in
     error ~loc msg
 
   let pp_tyctx fmt = function
@@ -683,6 +683,10 @@ end = struct
   
   let error_bad_ety ~loc ~tyctx ~ety pp c tx =
     let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@]"  pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
+    error ~loc msg
+
+  let error_bad_ety2 ~loc ~tyctx ~ety1 ~ety2 pp c tx =
+    let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@ or %a@]"  pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety1 TypeAssignment.pretty ety2 in
     error ~loc msg
 
   let error_bad_function_ety ~loc ~tyctx ~ety c t =
@@ -782,8 +786,17 @@ end = struct
           else error ~loc "cast"
 
     and check_impl ctx ~loc ~tyctx b t1 t2 ety =
-      let c = if b then F.implf else F.rimplf in 
-      check_app ctx ~loc ~tyctx c (global_type env ~loc c) [t1; t2] ety
+      if not @@ unify ety Prop then error_bad_ety ~loc ~tyctx ~ety:Prop ScopedTerm.pretty_ (Impl(b,t1,t2)) ety
+      else
+        let lhs, rhs,c (* of => *) = if b then t1,t2,F.implf else t2,t1,F.rimplf in
+        let spills = check_loc ~tyctx:(Some c) ctx rhs ~ety:Prop in
+        let lhs_ty = mk_uvar (Format.asprintf "LHSty_%a" F.pp c) in
+        let more_spills = check_loc ~tyctx:None ctx ~ety:lhs_ty lhs in
+        let ety1 = TypeAssignment.Prop in
+        let ety2 = TypeAssignment.App(F.from_string "list",Prop,[]) in
+        if try_unify lhs_ty ety1 then spills @ more_spills (* probably an error if not empty *)
+        else if unify lhs_ty ety2 then spills @ more_spills (* probably an error if not empty *)
+        else error_bad_ety2 ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
 
     and check_global ctx ~loc ~tyctx c ety =
       match global_type env ~loc c with
@@ -912,6 +925,12 @@ end = struct
               let s = mk_uvar "Src" in
               let t = mk_uvar "Tgt" in
               check_app_single ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) consumed (x :: xs)
+          | Cons c when F.Map.mem c type_abbrevs ->
+              let ty = TypeAssignment.apply (fst @@ F.Map.find c type_abbrevs) [] in
+              check_app_single ctx ~loc c ty consumed args
+          | App(c,x,xs) when F.Map.mem c type_abbrevs ->
+              let ty = TypeAssignment.apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
+              check_app_single ctx ~loc c ty consumed args
           | _ -> error_not_a_function ~loc:x.loc c (List.rev consumed) x (* TODO: trim loc up to x *)
 
     and check_loc ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =

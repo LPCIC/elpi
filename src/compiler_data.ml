@@ -276,6 +276,7 @@ module TypeAssignment = struct
     | UVar m when MutableOnce.is_set m -> pretty_parens ~lvl fmt @@ deref m
     | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
     | t -> pretty fmt t
+  let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
 
   let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
 
@@ -377,6 +378,7 @@ module ScopedTerm = struct
     | Lam(Some (f,_),Some ty,t) -> fprintf fmt "%a : %a\\ %a" F.pp f ScopedTypeExpression.pp_e ty pretty t
     | App(Global _,f,x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App(_,f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
+    | Var(f,[]) -> fprintf fmt "%a" F.pp f
     | Var(f,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") xs
     | CData c -> fprintf fmt "%a" CData.pp c
     | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
