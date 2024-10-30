@@ -96,6 +96,8 @@ type functionality =
   | Functional of functionality list
   | Relational
   | AssumedFunctional (* Currently used for variadic functions, like print, halt... *)
+  | Lam of Ast.Func.t * functionality
+  | Uvar of Ast.Func.t
 [@@ deriving show, ord]
 
 type ttype =
