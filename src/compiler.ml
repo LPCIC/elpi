@@ -3719,10 +3719,11 @@ end = struct
           match it with
           | App(Global _,c,x,xs) when F.equal c F.andf ->
               mkApp (Global true) c (aux_last (x::xs))
+          | Impl(b,s,t) -> Impl(b,s,aux t)
           | Const(g,c) -> mkApp g c args
           | App(g,c,x,xs) -> mkApp g c (x :: xs @ args)
           | Var(c,xs) -> Var(c,xs @ args)
-          | Discard | Impl (_, _, _) | Lam (_, _, _)
+          | Discard | Lam (_, _, _)
           | CData _ | Spill (_, _) | Cast (_, _) -> assert false
       and aux_last = function
         | [] -> assert false
