@@ -70,6 +70,7 @@ module SymbolMap : sig
   val empty : unit -> table
   val allocate_global_symbol     : D.State.t -> table -> F.t -> table * (D.constant * D.term)
   val allocate_bound_symbol      : D.State.t -> table -> D.constant -> table * D.term
+  val get_global_symbol          : table -> F.t -> D.constant option
   val get_canonical              : D.State.t -> table -> D.constant -> D.term
   val global_name : D.State.t -> table -> D.constant -> F.t
   val compile : table -> D.symbol_table
@@ -105,6 +106,12 @@ end = struct
       let ast2ct = F.Map.add x p ast2ct in
       let c2s = D.Constants.Map.add n (F.show x) c2s in
       { c2t; c2s; ast2ct; last_global }, p
+
+  let get_global_symbol { ast2ct } s =
+    try
+      Some (fst @@ F.Map.find s ast2ct)
+    with Not_found ->
+      None
 
   let empty () =
     if not @@ D.Global_symbols.table.locked then
@@ -4216,9 +4223,6 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
 
 module Compiler : sig
 
-  (* Translates preterms in terms and AST clauses into clauses (with a key,
-   * subgoals, etc *)
-
   val run : 'a query -> 'a executable
 
 end = struct (* {{{ *)
@@ -4275,7 +4279,7 @@ let handle_clause_graftin clauses =
   let clauses = clauses |> List.filter (fun c -> match c.Ast.Clause.attributes.Assembled.insertion with Some (Remove _) -> false | _ -> true) in
   clauses
 
-let pp_program pp fmt _ = assert false (*{
+let pp_program pp fmt _ = () (*{
     (* WithMain.clauses; *)
     (* initial_depth; *)
     compiler_state; } =
@@ -4298,7 +4302,7 @@ let pp_program pp fmt _ = assert false (*{
     clauses;
   Format.fprintf fmt "@]"
 ;;*)
-let pp_goal pp fmt _ = assert false (* {
+let pp_goal pp fmt _ = () (* {
     WithMain.initial_depth;
     compiler_state;
     query; } =
@@ -4603,5 +4607,32 @@ let elpi ~language:_ state loc s =
 let term_of_ast ~depth state text = assert false
 let quote_syntax time new_state _ = assert false
 
-let relocate_closed_term ~from:_ ~to_:_ _ = assert false
+exception RelocationError of string
+
+let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols }) (t : term) : term =
+  let relocate c =
+    let s = D.Constants.Map.find c symbol_table.c2s in
+    let c = SymbolMap.get_global_symbol symbols (F.from_string s) in
+    match c with
+    | Some x -> x
+    | None -> raise (RelocationError (Format.asprintf "Relocation: unknown global %s" s))
+    in
+  let rec rel = function
+    | Const c when c < 0 -> Const (relocate c)
+    | Const _ as x -> x
+    | App(c,x,xs) when c < 0 -> App(relocate c,rel x,List.map rel xs)
+    | App(c,x,xs) -> App(c,rel x, List.map rel xs)
+    | Cons(x,y) -> Cons(rel x, rel y)
+    | Lam t -> Lam(rel t)
+    | CData _ as x -> x
+    | Builtin(c,l) -> Builtin(relocate c,List.map rel l)
+    | (Nil | Discard) as x -> x
+    | Arg _ | AppArg _ | UVar _ | AppUVar _ -> assert false
+  in
+    rel t
+  
+let relocate_closed_term ~from ~to_ t =
+  try Result.Ok(relocate_closed_term ~from ~to_ t)
+  with RelocationError s -> Result.Error s
+
 let lookup_query_predicate _ _ = assert false

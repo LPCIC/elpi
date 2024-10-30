@@ -1398,7 +1398,7 @@ type 'a solution = {
   state : State.t;
   output : 'a;
   pp_ctx : pp_ctx;
-  state_for_relocation : int * State.t;
+  state_for_relocation : int * symbol_table;
 }
 type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
 

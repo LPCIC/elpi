@@ -43,7 +43,7 @@ val total_type_checking_time : 'a query -> float
 val optimize_query : 'a query -> 'a executable
 
 val term_of_ast : depth:int -> State.t -> string -> State.t * term
-val relocate_closed_term : from:State.t -> to_:State.t -> term -> (term, string) Stdlib.Result.t
+val relocate_closed_term : from:symbol_table -> to_:program -> term -> (term, string) Stdlib.Result.t
 
 val pp_program : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
 val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit

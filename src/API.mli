@@ -215,42 +215,6 @@ module Parse : sig
   exception ParseError of Ast.Loc.t * string
 end
 
-module Data : sig
-
-  module StrMap : sig
-   include Map.S with type key = string
-   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
-   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-  end
-
-  (* what is assigned to the query variables *)
-  type term
-
-  (* goals suspended via the declare_constraint built-in *)
-  type constraints
-
-  (* user defined state (not goals) *)
-  type state
-
-  (* Pass it to function in the Pp module *)
-  type pretty_printer_context
-
-  (* a solution is an assignment map from query variables (name) to terms,
-   * plus the goals that were suspended and the user defined constraints *)
-  type 'a solution = {
-    assignments : term StrMap.t;
-    constraints : constraints;
-    state : state;
-    output : 'a;
-    pp_ctx : pretty_printer_context;
-    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t (* uvars are turned into discard *)
-  }
-
-  (* Hypothetical context *)
-  type hyp
-  type hyps = hyp list
-
-end
 
 module Compile : sig
 
@@ -312,6 +276,43 @@ module Compile : sig
   val optimize : 'a query -> 'a executable
   
   val total_type_checking_time : 'a query -> float
+end
+
+module Data : sig
+
+  module StrMap : sig
+   include Map.S with type key = string
+   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  end
+
+  (* what is assigned to the query variables *)
+  type term
+
+  (* goals suspended via the declare_constraint built-in *)
+  type constraints
+
+  (* user defined state (not goals) *)
+  type state
+
+  (* Pass it to function in the Pp module *)
+  type pretty_printer_context
+
+  (* a solution is an assignment map from query variables (name) to terms,
+   * plus the goals that were suspended and the user defined constraints *)
+  type 'a solution = {
+    assignments : term StrMap.t;
+    constraints : constraints;
+    state : state;
+    output : 'a;
+    pp_ctx : pretty_printer_context;
+    relocate_assignment_to_runtime : target:Compile.program -> depth:int -> string -> (term, string) Stdlib.Result.t (* uvars are turned into discard *)
+  }
+
+  (* Hypothetical context *)
+  type hyp
+  type hyps = hyp list
+
 end
 
 module Execute : sig
