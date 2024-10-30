@@ -1159,12 +1159,121 @@ end = struct
 end
 
 module FunctionalityChecker : sig 
+  type func_map = (functionality * Loc.t) F.Map.t
+
   val check_body : type_abbrevs:TypeChecker.type_abbrevs ->
     kinds:TypeChecker.arities ->
     types:TypeChecker.env -> ScopedTerm.t -> exp:TypeAssignment.t -> unit
+
+  val merge_types_and_abbrevs :
+    old:func_map -> 
+    type_abbrevs:(F.t * ScopedTypeExpression.t) list -> 
+    types:TypeList.t F.Map.t -> func_map
+
+  val merge : func_map -> func_map -> func_map
+
+  val pp : Format.formatter -> func_map -> unit
 end = struct 
+  type func_map = (functionality * Loc.t) F.Map.t
+
+  let rec functionality_leq a b = match a, b with
+    | AssumedFunctional, AssumedFunctional -> true
+    | AssumedFunctional, t -> error (Format.asprintf "Cannot compare %a with %a" pp_functionality a pp_functionality b)
+    | _, AssumedFunctional -> error (Format.asprintf "Cannot compare %a with %a" pp_functionality a pp_functionality b)
+    | _, Relational -> true
+    | Relational, _ -> false
+    | Functional xs, Functional ys -> List.for_all2 functionality_leq xs ys
+
+  let is_functional map k = F.Map.mem k map
+
   let check_body ~type_abbrevs ~kinds ~types st ~exp =
     () (* TODO: @FissoreD *)
+
+  let map_snd f = List.map (fun (_, ScopedTypeExpression.{it}) -> f it)
+
+  let rec type2funct (type_abbrevs: func_map) : ScopedTypeExpression.t_ -> functionality = function
+    | ScopedTypeExpression.Pred(b, xs) -> Functional (map_snd (type2funct type_abbrevs) xs)
+    | Const (_,c) -> 
+      begin match F.Map.find_opt c type_abbrevs with
+      | None -> Relational
+      | Some c -> fst c
+      end
+    | Prop | Any -> Relational
+    | App(c,x,xs) ->
+      begin match F.Map.find_opt c type_abbrevs with
+      | None -> Relational
+        (* TODO: @FissoreD typechecking ensures that `c` is a typeabbrev with
+           arity length == length(x::xs), here we do not perfom this length
+           check, but we should apply the functionality of (x::xs) to the bound
+           variables in c... this means that we need to change the datatype of
+           functionality and add one with abstractions and another allowing
+           variable bindings
+
+           For example:
+            typeabbrev x (:functional pred i:A).
+            :functional pred p i:(x (:functional pred i:int)). /* TODO: check if the equivalent :functional pred p i:(x (x int)) is accepted? */
+
+          This is equivalent to:
+          :functional pred p i:(:functional pred i:(:functional pred i:int))
+
+          and we need to pass the functionality property of the argument of x
+          to its unfolded version... now we don't do this: the functionality
+          property of the inner argument is discarded
+
+           *)
+      | Some c -> fst c
+      end
+    | Arrow (Variadic, _, _) -> AssumedFunctional
+    | Arrow (NotVariadic,_,_) -> Relational
+
+  let pp_locs fmt =
+    Format.fprintf fmt "[%a]" (pplist (fun fmt (_,loc) -> Format.fprintf fmt "%a" Loc.pp loc) ",")
+
+  (** 
+    Takes a constant and its type. 
+    - if the type is first-order and is a functional predicate returns this
+      predicate together with its loc
+    - if the type is first-order and is not functional returns None
+    - if the type is higher-order (like polymorphic types) then we go under the
+      lambda
+  *)
+  let rec map_pred name : ScopedTypeExpression.t -> 'a = function
+    | {value = (Ty {it = Pred (Function,_) as it;loc})} -> Some (it,loc)
+    | {value = (Lam (_,value))} as t -> map_pred name {t with value}
+    | _ -> None
+
+  (**
+    Takes a constant name and the list of its types. The list is filtered with
+    [map_pred] and of the result we accepts lists of length 
+    - 0 -> the type is not functional
+    - 1 -> the type is functional
+    - N -> the type has multiple functionality definition: we throw an error
+  *)
+  let map_is_func (func_map: func_map) name (l : ScopedTypeExpression.t list) =
+    match List.filter_map (map_pred name) l with
+    | [] -> None
+    | [it,loc] -> 
+      begin match it with 
+        | Pred(_,_) -> Some (type2funct func_map it, loc)
+        | _ -> anomaly "Unreachable branch"
+      end
+    | l -> error (Format.asprintf "Type %a has multiple functionality definitions, this is not allowed %a" F.pp name pp_locs l)
+
+  let merge = F.Map.union (fun k _ -> error ("Duplicate functionality declaration for " ^ F.show k))
+
+  let merge_type_list types old =
+    merge old (F.Map.filter_map (map_is_func old) types)
+
+  let merge_type_abbrevs type_abbrevs old = 
+    let new_ = List.map (fun (x,y) -> x,[y]) type_abbrevs in
+    let new_ = F.Map.of_seq (List.to_seq new_) in
+    merge_type_list new_ old
+
+  let merge_types_and_abbrevs ~old  ~type_abbrevs ~types =
+    merge_type_abbrevs type_abbrevs old |> merge_type_list types
+
+  let pp (fmt: Format.formatter) (e: func_map) : unit =
+    F.Map.pp (fun fmt (a,b) -> Format.fprintf fmt "(%a,%a)" pp_functionality a Loc.pp b) fmt e
 end
 
   
@@ -1224,6 +1333,7 @@ type program = {
   types_indexing : (Ast.Structured.tattribute option * Loc.t) list F.Map.t;
   type_abbrevs :  (TypeAssignment.skema * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
+  functional_preds: (functionality * Loc.t) F.Map.t;
   clauses : (bool * (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t) list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : BuiltInPredicate.t list;
@@ -1264,6 +1374,7 @@ type program = {
   types : TypeAssignment.overloaded_skema F.Map.t;
   type_abbrevs : (TypeAssignment.skema * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
+  functional_preds : (functionality * Loc.t) F.Map.t;
   total_type_checking_time : float;
 
   prolog_program : index;
@@ -1287,7 +1398,7 @@ let empty () = {
   clauses = [];
   kinds = F.Map.empty;
   types = F.Map.add F.mainf TypeAssignment.(Single (Ty Prop)) F.Map.empty;
-  type_abbrevs = F.Map.empty; modes = F.Map.empty;
+  type_abbrevs = F.Map.empty; modes = F.Map.empty; functional_preds = F.Map.empty;
   prolog_program = { idx = Ptmap.empty; time = 0; times = StrMap.empty };
   indexing = C.Map.empty;
   chr = CHR.empty;
@@ -1407,18 +1518,18 @@ end = struct (* {{{ *)
 
   let rec structure_type_expression_aux ~loc valid t = { t with TypeExpression.tit =
     match t.TypeExpression.tit with
-    | TypeExpression.TPred(att,p) when valid att <> None -> TypeExpression.TPred(Option.get (valid att),List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p)
-    | TypeExpression.TPred([], _) -> assert false
-    | TypeExpression.TPred(a :: _, _) -> error ~loc ("illegal attribute " ^ show_raw_attribute a)
-    | TypeExpression.TArr(s,t) -> TypeExpression.TArr(structure_type_expression_aux ~loc valid s,structure_type_expression_aux ~loc valid t) 
-    | TypeExpression.TApp(c,x,xs) -> TypeExpression.TApp(c,structure_type_expression_aux ~loc valid x,List.map (structure_type_expression_aux ~loc valid) xs)
-    | TypeExpression.TConst c -> TypeExpression.TConst c
+    | TPred(att,p) when valid att <> None -> TPred(Option.get (valid att),List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p)
+    | TPred([], _) -> assert false
+    | TPred(a :: _, _) -> error ~loc ("illegal attribute " ^ show_raw_attribute a)
+    | TArr(s,t) -> TArr(structure_type_expression_aux ~loc valid s,structure_type_expression_aux ~loc valid t) 
+    | TApp(c,x,xs) -> TApp(c,structure_type_expression_aux ~loc valid x,List.map (structure_type_expression_aux ~loc valid) xs)
+    | TConst c -> TConst c
   }
 
   let structure_type_expression loc toplevel_func valid t = 
     match t.TypeExpression.tit with
-    | TypeExpression.TPred([],p) ->
-      { t with TypeExpression.tit = TypeExpression.TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p) }
+    | TPred([],p) ->
+      { t with tit = TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p) }
     | x -> structure_type_expression_aux ~loc valid t
 
   let structure_kind_attributes { Type.attributes; loc; name; ty } =
@@ -3491,11 +3602,17 @@ module Check : sig
 end = struct
 
   let check st ~base u : checked_compilation_unit =
-    let { Assembled.symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time } = base in
+    let { Assembled.symbols; prolog_program; indexing; modes = om; functional_preds = ofp; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time } = base in
     let { version; code = { Flat.toplevel_macros; kinds; types; type_abbrevs; modes; clauses; chr; builtins }} = u in
 
     let all_kinds = Flatten.merge_kinds ok kinds in
 
+    (* Functionality *)
+    let check_func_begin = Unix.gettimeofday () in
+    let functional_preds = FunctionalityChecker.merge_types_and_abbrevs ~old:ofp ~types ~type_abbrevs in
+    let check_func_end = Unix.gettimeofday () in
+
+    (* Typeabbreviation *)
     let check_k_begin = Unix.gettimeofday () in
     let all_type_abbrevs, type_abbrevs =
       List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, ty) ->
@@ -3513,6 +3630,7 @@ end = struct
         (ota,F.Map.empty) type_abbrevs in
     let check_k_end = Unix.gettimeofday () in
 
+    (* Type checking *)
     let check_t_begin = Unix.gettimeofday () in
     (* TypeChecker.check_disjoint ~type_abbrevs ~kinds; *)
     let types_indexing = F.Map.map (List.map (fun ty -> ty.ScopedTypeExpression.indexing, ty.ScopedTypeExpression.loc)) types in
@@ -3522,22 +3640,25 @@ end = struct
     let all_types = Flatten.merge_type_assignments ot types in
 
     let check_begin = Unix.gettimeofday () in
+
+    (* Format.printf "Functional pred are %a\n%!" FunctionalityChecker.pp functional_preds; *)
+
     let clauses = clauses |> List.map (fun ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
       if typecheck then
-        let needs_spill = TypeChecker.check ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:TypeAssignment.(Val Prop) in
-        FunctionalityChecker.check_body ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:TypeAssignment.(Val Prop);
+        let needs_spill = TypeChecker.check ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop) in
+        FunctionalityChecker.check_body ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop);
         needs_spill, c
       else
         false, c) in
     let check_end = Unix.gettimeofday () in
 
-    let checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; clauses; chr; builtins } in
+    let checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; clauses; chr; builtins; functional_preds } in
 
   { version; checked_code; base_hash = hash_base base;
     precomputed_kinds =all_kinds;
     precomputed_type_abbrevs = all_type_abbrevs;
     precomputed_types = all_types;
-    type_checking_time = check_end -. check_begin +. check_t_end -. check_t_begin +. check_k_end -. check_k_begin }
+    type_checking_time = check_end -. check_begin +. check_t_end -. check_t_begin +. check_k_end -. check_k_begin +. check_func_end +. check_func_begin }
 
 end
 
@@ -4017,17 +4138,18 @@ in
     F.Map.union (fun k _ _ -> error ("Duplicate type abbreviation for " ^ F.show k)) m1 m2
 
   let extend1 flags
-    (state, { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
-            { version; base_hash; checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; clauses; chr; builtins}; precomputed_kinds; precomputed_type_abbrevs; precomputed_types; type_checking_time } =
+    (state, { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; modes = om; kinds = ok; functional_preds = ofp; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
+            { version; base_hash; checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; functional_preds; clauses; chr; builtins}; precomputed_kinds; precomputed_type_abbrevs; precomputed_types; type_checking_time } =
     let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types_indexing indexing in
-    let kinds, type_abbrevs, types =
-    if hash = base_hash then
-      precomputed_kinds, precomputed_type_abbrevs, precomputed_types
-    else
-      let kinds = Flatten.merge_kinds ok kinds in
-      let type_abbrevs = merge_type_abbrevs ota type_abbrevs in
-      let types = Flatten.merge_type_assignments ot types in
-      kinds, type_abbrevs, types
+    let kinds, type_abbrevs, types, functional_preds =
+      if hash = base_hash then
+        precomputed_kinds, precomputed_type_abbrevs, precomputed_types, functional_preds
+      else
+        let kinds = Flatten.merge_kinds ok kinds in
+        let type_abbrevs = merge_type_abbrevs ota type_abbrevs in
+        let types = Flatten.merge_type_assignments ot types in
+        let functional_preds = FunctionalityChecker.merge ofp functional_preds in
+        kinds, type_abbrevs, types, functional_preds
     in
     let modes = Flatten.merge_modes om modes in
 
@@ -4046,7 +4168,7 @@ in
     (* TODO: @FissoreD here we have to do mutual excl clauses... *)
 
     let new_base = 
-      { Assembled.hash; clauses; symbols; prolog_program; indexing; modes; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
+      { Assembled.hash; clauses; symbols; prolog_program; indexing; modes; functional_preds; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
     let hash = hash_base new_base in
     state, { new_base with hash }
 
