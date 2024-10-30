@@ -88,9 +88,9 @@ end = struct
 
   let compile { last_global; c2t; c2s; ast2ct } =
     let t = { D.c2s; c2t = Hashtbl.create (D.Constants.Map.cardinal c2t); frozen_constants = last_global; } in
-  (* NO NEED TO COMPILE *)
-  (* let xx = F.Map.cardinal ast2ct in
-      F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
+  (* We could compile the Map c2t to a Hash table upfront, but there is no need
+     since it is extended at run time anyway *)
+  (* F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
     t
     
 
