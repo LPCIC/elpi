@@ -2,7 +2,7 @@
   {
     "step_id": 0,
     "runtime_id": 0,
-    "step": [ "Init", { "goal_text": "main", "goal_id": 4 } ],
+    "step": [ "Init", { "goal_text": "SYMBOL-369", "goal_id": 4 } ],
     "color": "Grey"
   },
   {
@@ -12,8 +12,8 @@
       "Inference",
       {
         "current_goal_id": 4,
-        "current_goal_text": "main",
-        "current_goal_predicate": "main",
+        "current_goal_text": "SYMBOL-369",
+        "current_goal_predicate": "SYMBOL-369",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -21,7 +21,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                  "rule_text": "SYMBOL-369 :- (SYMBOL-150 1), \n (pi (c0 \\ (sigma (c1 \\ (SYMBOL-106 => (true , SYMBOL-106)))))).",
                   "rule_loc": [
                     "File",
                     {
@@ -36,9 +36,9 @@
               "events": []
             },
             "siblings": [
-              { "goal_text": "print 1", "goal_id": 5 },
+              { "goal_text": "SYMBOL-150 1", "goal_id": 5 },
               {
-                "goal_text": "pi c0 \\ sigma c1 \\ fail => (true , fail)",
+                "goal_text": "pi c0 \\ sigma c1 \\ SYMBOL-106 => (true , SYMBOL-106)",
                 "goal_id": 6
               }
             ],
@@ -51,7 +51,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "SYMBOL-369 :- (SYMBOL-150 1), \n (pi (c0 \\ (sigma (c1 \\ (SYMBOL-106 => (true , SYMBOL-106)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -78,13 +78,13 @@
       "Inference",
       {
         "current_goal_id": 5,
-        "current_goal_text": "print 1",
-        "current_goal_predicate": "print",
+        "current_goal_text": "SYMBOL-150 1",
+        "current_goal_predicate": "SYMBOL-150",
         "failed_attempts": [],
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+              "rule": [ "BuiltinRule", [ "FFI", "SYMBOL-150" ] ],
               "events": []
             },
             "siblings": [],
@@ -94,7 +94,7 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+            "rule": [ "BuiltinRule", [ "FFI", "SYMBOL-150" ] ],
             "step_id": 2,
             "runtime_id": 0
           },
@@ -102,7 +102,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "SYMBOL-369 :- (SYMBOL-150 1), \n (pi (c0 \\ (sigma (c1 \\ (SYMBOL-106 => (true , SYMBOL-106)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -129,7 +129,7 @@
       "Inference",
       {
         "current_goal_id": 6,
-        "current_goal_text": "pi c0 \\ sigma c1 \\ fail => (true , fail)",
+        "current_goal_text": "pi c0 \\ sigma c1 \\ SYMBOL-106 => (true , SYMBOL-106)",
         "current_goal_predicate": "pi",
         "failed_attempts": [],
         "successful_attempts": [
@@ -140,7 +140,7 @@
             },
             "siblings": [
               {
-                "goal_text": "sigma c1 \\ fail => (true , fail)",
+                "goal_text": "sigma c1 \\ SYMBOL-106 => (true , SYMBOL-106)",
                 "goal_id": 7
               }
             ],
@@ -158,7 +158,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "SYMBOL-369 :- (SYMBOL-150 1), \n (pi (c0 \\ (sigma (c1 \\ (SYMBOL-106 => (true , SYMBOL-106)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -185,7 +185,7 @@
       "Inference",
       {
         "current_goal_id": 7,
-        "current_goal_text": "sigma c1 \\ fail => (true , fail)",
+        "current_goal_text": "sigma c1 \\ SYMBOL-106 => (true , SYMBOL-106)",
         "current_goal_predicate": "sigma",
         "failed_attempts": [],
         "successful_attempts": [
@@ -195,7 +195,10 @@
               "events": []
             },
             "siblings": [
-              { "goal_text": "fail => (true , fail)", "goal_id": 8 }
+              {
+                "goal_text": "SYMBOL-106 => (true , SYMBOL-106)",
+                "goal_id": 8
+              }
             ],
             "siblings_aggregated_outcome": "Success"
           }
@@ -216,7 +219,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "SYMBOL-369 :- (SYMBOL-150 1), \n (pi (c0 \\ (sigma (c1 \\ (SYMBOL-106 => (true , SYMBOL-106)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -243,7 +246,7 @@
       "Inference",
       {
         "current_goal_id": 8,
-        "current_goal_text": "fail => (true , fail)",
+        "current_goal_text": "SYMBOL-106 => (true , SYMBOL-106)",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -252,7 +255,9 @@
               "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
               "events": []
             },
-            "siblings": [ { "goal_text": "true , fail", "goal_id": 9 } ],
+            "siblings": [
+              { "goal_text": "true , SYMBOL-106", "goal_id": 9 }
+            ],
             "siblings_aggregated_outcome": "Success"
           }
         ],
@@ -277,7 +282,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "SYMBOL-369 :- (SYMBOL-150 1), \n (pi (c0 \\ (sigma (c1 \\ (SYMBOL-106 => (true , SYMBOL-106)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -304,7 +309,7 @@
       "Inference",
       {
         "current_goal_id": 9,
-        "current_goal_text": "true , fail",
+        "current_goal_text": "true , SYMBOL-106",
         "current_goal_predicate": ",",
         "failed_attempts": [],
         "successful_attempts": [
@@ -315,7 +320,7 @@
             },
             "siblings": [
               { "goal_text": "true", "goal_id": 10 },
-              { "goal_text": "fail", "goal_id": 11 }
+              { "goal_text": "SYMBOL-106", "goal_id": 11 }
             ],
             "siblings_aggregated_outcome": "Success"
           }
@@ -346,7 +351,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "SYMBOL-369 :- (SYMBOL-150 1), \n (pi (c0 \\ (sigma (c1 \\ (SYMBOL-106 => (true , SYMBOL-106)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -445,7 +450,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "SYMBOL-369 :- (SYMBOL-150 1), \n (pi (c0 \\ (sigma (c1 \\ (SYMBOL-106 => (true , SYMBOL-106)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -472,15 +477,18 @@
       "Inference",
       {
         "current_goal_id": 11,
-        "current_goal_text": "fail",
-        "current_goal_predicate": "fail",
+        "current_goal_text": "SYMBOL-106",
+        "current_goal_predicate": "SYMBOL-106",
         "failed_attempts": [],
         "successful_attempts": [
           {
             "attempt": {
               "rule": [
                 "UserRule",
-                { "rule_text": "fail :- .", "rule_loc": [ "Context", 5 ] }
+                {
+                  "rule_text": "SYMBOL-106 :- .",
+                  "rule_loc": [ "Context", 5 ]
+                }
               ],
               "events": []
             },
@@ -493,7 +501,10 @@
           {
             "rule": [
               "UserRule",
-              { "rule_text": "fail :- .", "rule_loc": [ "Context", 5 ] }
+              {
+                "rule_text": "SYMBOL-106 :- .",
+                "rule_loc": [ "Context", 5 ]
+              }
             ],
             "step_id": 8,
             "runtime_id": 0
@@ -522,7 +533,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "SYMBOL-369 :- (SYMBOL-150 1), \n (pi (c0 \\ (sigma (c1 \\ (SYMBOL-106 => (true , SYMBOL-106)))))).",
                 "rule_loc": [
                   "File",
                   {

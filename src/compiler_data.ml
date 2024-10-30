@@ -73,9 +73,9 @@ module ScopedTypeExpression = struct
 
   let rec of_simple_type = function
     | SimpleType.Any -> Any
-    | SimpleType.Con c -> Const(Global false,c)
-    | SimpleType.App(c,x,xs) -> App(c,of_simple_type_loc x,List.map of_simple_type_loc xs)
-    | SimpleType.Arr(s,t) -> Arrow(Ast.Structured.NotVariadic,of_simple_type_loc s, of_simple_type_loc t)
+    | Con c -> Const(Global false,c)
+    | App(c,x,xs) -> App(c,of_simple_type_loc x,List.map of_simple_type_loc xs)
+    | Arr(s,t) -> Arrow(NotVariadic,of_simple_type_loc s, of_simple_type_loc t)
   and of_simple_type_loc { it; loc } = { it = of_simple_type it; loc }
 
   type v_ =
@@ -268,8 +268,8 @@ module TypeAssignment = struct
     | Any -> fprintf fmt "any"
     | Cons c -> F.pp fmt c
     | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-    | Arr(Ast.Structured.NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
-    | Arr(Ast.Structured.Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_parens ~lvl:arrs) s pretty t
+    | Arr(NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
+    | Arr(Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_parens ~lvl:arrs) s pretty t
     | UVar m when MutableOnce.is_set m -> pretty fmt @@ deref m
     | UVar m -> MutableOnce.pretty fmt m
   and pretty_parens ~lvl fmt = function
@@ -287,6 +287,7 @@ module ScopedTerm = struct
   (* User Visible *)
   module SimpleTerm = struct
     type t_ =
+      | Impl of bool * t * t (* `Impl(true,t1,t2)` ≡ `t1 => t2` and `Impl(false,t1,t2)` ≡ `t1 :- t2` *)
       | Const of Scope.t * F.t
       | Discard
       | Var of F.t * t list
@@ -306,7 +307,7 @@ module ScopedTerm = struct
    let mkOpaque ~loc o = { loc; it = Opaque o }
    let mkCast ~loc t ty = { loc; it = Cast(t,ty) }
    let mkLam ~loc n ?ty t =  { loc; it = Lam(n,ty,t)  }
-   let mkImplication ~loc s t = { loc; it = App(Global true,F.implf,s,[t]) }
+   let mkImplication ~loc s t = { loc; it = Impl(true,s,t) }
    let mkPi ~loc n ?ty t = { loc; it = App(Global true,F.pif,{ loc; it = Lam (Some (n,elpi_language),ty,t) },[]) }
    let mkConj ~loc = function
      | [] -> { loc; it = Const(Global true, F.truef) }
@@ -340,6 +341,7 @@ module ScopedTerm = struct
     | Phantom of int (* phantom term used during type checking *)
   [@@ deriving show]
   type t_ =
+   | Impl of bool * t * t (* `Impl(true,t1,t2)` ≡ `t1 => t2` and `Impl(false,t1,t2)` ≡ `t1 :- t2` *)
    | Const of Scope.t * F.t
    | Discard
    | Var of F.t * t list
@@ -365,6 +367,8 @@ module ScopedTerm = struct
 
   let rec pretty fmt { it } = pretty_ fmt it
   and pretty_ fmt = function
+    | Impl(true,t1,t2) -> fprintf fmt "(%a => %a)" pretty t1 pretty t2
+    | Impl(_,t1,t2) -> fprintf fmt "(%a :- %a)" pretty t1 pretty t2
     | Const(_,f) -> fprintf fmt "%a" F.pp f
     | Discard -> fprintf fmt "_"
     | Lam(None,None,t) -> fprintf fmt "_\\ %a" pretty t
@@ -417,18 +421,24 @@ module ScopedTerm = struct
       } in
     cin, cout, isc
 
-  let rec of_simple_term = function
+  let rec of_simple_term ~loc = function
     | SimpleTerm.Discard -> Discard
-    | SimpleTerm.Const(s,c) -> Const(s,c)
-    | SimpleTerm.Opaque c -> CData c
-    | SimpleTerm.Cast(t,ty) -> Cast(of_simple_term_loc t, ScopedTypeExpression.of_simple_type_loc ty)
-    | SimpleTerm.Lam(c,ty,t) -> Lam(c,Option.map ScopedTypeExpression.of_simple_type_loc ty,of_simple_term_loc t)
-    | SimpleTerm.App(s,c,x,xs) -> App(s,c,of_simple_term_loc x, List.map of_simple_term_loc xs)
-    | SimpleTerm.Var(c,xs) -> Var(c,List.map of_simple_term_loc xs)
+    | Impl(b,t1,t2) -> Impl(b,of_simple_term_loc t1, of_simple_term_loc t2)
+    | Const(s,c) -> Const(s,c)
+    | Opaque c -> CData c
+    | Cast(t,ty) -> Cast(of_simple_term_loc t, ScopedTypeExpression.of_simple_type_loc ty)
+    | Lam(c,ty,t) -> Lam(c,Option.map ScopedTypeExpression.of_simple_type_loc ty,of_simple_term_loc t)
+    | App(s,c,x,xs) when F.equal c F.implf || F.equal c F.implf -> 
+      begin match xs with
+        | [y] -> Impl(F.equal c F.implf,of_simple_term_loc x, of_simple_term_loc y)
+        | _ -> error ~loc "Use of App for Impl is allowed, but the length of the list in 3rd position must be 1"
+      end
+    | App(s,c,x,xs) -> App(s,c,of_simple_term_loc x, List.map of_simple_term_loc xs)
+    | Var(c,xs) -> Var(c,List.map of_simple_term_loc xs)
   and of_simple_term_loc { SimpleTerm.it; loc } =
     match it with
-    | SimpleTerm.Opaque c when is_scoped_term c -> out_scoped_term c
-    | _ -> { it = of_simple_term it; loc; ty = MutableOnce.make (F.from_string "Ty") }
+    | Opaque c when is_scoped_term c -> out_scoped_term c
+    | _ -> { it = of_simple_term ~loc it; loc; ty = MutableOnce.make (F.from_string "Ty") }
 
     let unlock { it } = it
 
@@ -446,6 +456,7 @@ module ScopedTerm = struct
         load_subst ~loc it args map
       and subst (map : t Scope.Map.t) t =
         match t with
+        | Impl(b,t1,t2) -> Impl(b,subst_loc map t1, subst_loc map t2)
         | Lam(None,ty,t) -> Lam(None,ty,subst_loc map t)
         | Lam(Some (c,l),ty,t) ->
             let d = fresh () in
@@ -462,6 +473,7 @@ module ScopedTerm = struct
         | Discard | CData _ -> t
       and rename l c d t =
         match t with
+        | Impl(b,t1,t2) -> Impl(b,rename_loc l c d t1, rename_loc l c d t2)
         | Const(Bound l',c') when l = l' && F.equal c c' -> Const(Bound l,d)
         | Const _ -> t
         | App(Bound l',c',x,xs) when l = l' && F.equal c c' ->
@@ -482,6 +494,7 @@ module ScopedTerm = struct
         | Const(g,c) -> App(g,c,List.hd args,List.tl args)
         | App(g,c,x,xs) -> App(g,c,x,xs @ args)
         | Var(c,xs) -> Var(c,xs @ args)
+        | Impl(_,_,_) -> error ~loc "cannot apply impl"
         | CData _ -> error ~loc "cannot apply cdata"
         | Spill _ -> error ~loc "cannot apply spill"
         | Discard -> error ~loc "cannot apply discard"
