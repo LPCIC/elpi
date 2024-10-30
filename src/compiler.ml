@@ -78,44 +78,47 @@ end = struct
 
   type table = {
     ast2ct : (D.constant * D.term) F.Map.t;
-    c2t : (F.t * D.term) D.Constants.Map.t;
+    c2t : D.term D.Constants.Map.t;
+    c2s : string D.Constants.Map.t;
     last_global : int;
   }
   [@@deriving show, ord]
 
   let equal x y = compare x y == 0
 
-  let compile { last_global; c2t; ast2ct } =
-    let t = { D.c2s = Hashtbl.create 37; c2t = Hashtbl.create 37; frozen_constants = last_global; } in
+  let compile { last_global; c2t; c2s; ast2ct } =
+    let t = { D.c2s; c2t = Hashtbl.create (D.Constants.Map.cardinal c2t); frozen_constants = last_global; } in
   (* NO NEED TO COMPILE *)
   (* let xx = F.Map.cardinal ast2ct in
       F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
     t
     
 
-  let allocate_global_symbol_aux x ({ c2t; ast2ct; last_global } as table) =
+  let allocate_global_symbol_aux x ({ c2t; c2s; ast2ct; last_global } as table) =
     try table, F.Map.find x ast2ct
     with Not_found ->
       let last_global = last_global - 1 in
       let n = last_global in
       let xx = D.Term.Const n in
       let p = n,xx in
-      let c2t = D.Constants.Map.add n (x,xx) c2t in
+      let c2t = D.Constants.Map.add n xx c2t in
       let ast2ct = F.Map.add x p ast2ct in
-      { c2t; ast2ct; last_global }, p
+      let c2s = D.Constants.Map.add n (F.show x) c2s in
+      { c2t; c2s; ast2ct; last_global }, p
 
-      let empty () =
-        if not @@ D.Global_symbols.table.locked then
-          anomaly "SymbolMap created before Global_symbols.table is locked";
-      let table = {
-        ast2ct = D.Global_symbols.(table.s2ct);
-        last_global = D.Global_symbols.table.last_global;
-        c2t = D.Constants.Map.map (fun s ->
-          let s = F.from_string s in
-          let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
-          s, t) D.Global_symbols.(table.c2s);
-      } in
-      (*T2.go allocate_global_symbol_aux*) table
+  let empty () =
+    if not @@ D.Global_symbols.table.locked then
+      anomaly "SymbolMap created before Global_symbols.table is locked";
+  let table = {
+    ast2ct = D.Global_symbols.(table.s2ct);
+    last_global = D.Global_symbols.table.last_global;
+    c2s = D.Global_symbols.table.c2s;
+    c2t = D.Constants.Map.map (fun s ->
+      let s = F.from_string s in
+      let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
+      t) D.Global_symbols.(table.c2s);
+  } in
+  (*T2.go allocate_global_symbol_aux*) table
     
   let allocate_global_symbol state table x =
     if not (D.State.get D.while_compiling state) then
@@ -123,10 +126,10 @@ end = struct
     allocate_global_symbol_aux x table
 
   let allocate_bound_symbol_aux n ({ c2t; ast2ct } as table) =
-    try table, snd @@ D.Constants.Map.find n c2t
+    try table, D.Constants.Map.find n c2t
     with Not_found ->
       let xx = D.Term.Const n in
-      let c2t = D.Constants.Map.add n (F.from_string (Format.asprintf "c%d" n),xx) c2t in
+      let c2t = D.Constants.Map.add n xx c2t in
       { table with c2t; ast2ct }, xx
 
   let allocate_bound_symbol state table n =
@@ -140,13 +143,13 @@ end = struct
   let get_canonical state table c =
     if not (D.State.get D.while_compiling state) then
       anomaly "get_canonical can only be used during compilation";
-    try snd @@ D.Constants.Map.find c table.c2t
+    try D.Constants.Map.find c table.c2t
     with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
 
   let global_name state table c =
     if not (D.State.get D.while_compiling state) then
       anomaly "get_canonical can only be used during compilation";
-    try fst @@ D.Constants.Map.find c table.c2t
+    try F.from_string @@ D.Constants.Map.find c table.c2s
     with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
 
 end
@@ -1073,7 +1076,7 @@ end = struct
       check_matches_poly_skema_loc t;
       if spills <> [] then error ~loc:t.loc "cannot spill in head";
       F.Map.iter (fun k (_,n,loc) ->
-        if n = 1 && not @@ silence_linear_warn k then error ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
+        if n = 1 && not @@ silence_linear_warn k then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
           F.pp k F.pp k F.pp k)) !sigma;
       !needs_spill
 

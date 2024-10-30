@@ -2,7 +2,7 @@
   {
     "step_id": 0,
     "runtime_id": 0,
-    "step": [ "Init", { "goal_text": "SYMBOL-373", "goal_id": 4 } ],
+    "step": [ "Init", { "goal_text": "main", "goal_id": 4 } ],
     "color": "Grey"
   },
   {
@@ -12,8 +12,8 @@
       "Inference",
       {
         "current_goal_id": 4,
-        "current_goal_text": "SYMBOL-373",
-        "current_goal_predicate": "SYMBOL-373",
+        "current_goal_text": "main",
+        "current_goal_predicate": "main",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -21,7 +21,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                  "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                   "rule_loc": [
                     "File",
                     {
@@ -36,10 +36,10 @@
               "events": []
             },
             "siblings": [
-              { "goal_text": "SYMBOL-369 X0", "goal_id": 5 },
+              { "goal_text": "even X0", "goal_id": 5 },
               { "goal_text": "declare_constraint true X0", "goal_id": 6 },
-              { "goal_text": "X0 = SYMBOL-371 X1", "goal_id": 7 },
-              { "goal_text": "SYMBOL-141 (SYMBOL-369 X1)", "goal_id": 8 }
+              { "goal_text": "X0 = s X1", "goal_id": 7 },
+              { "goal_text": "not (even X1)", "goal_id": 8 }
             ],
             "siblings_aggregated_outcome": "Success"
           }
@@ -50,7 +50,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -77,8 +77,8 @@
       "Inference",
       {
         "current_goal_id": 5,
-        "current_goal_text": "SYMBOL-369 X0",
-        "current_goal_predicate": "SYMBOL-369",
+        "current_goal_text": "even X0",
+        "current_goal_predicate": "even",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -86,7 +86,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(SYMBOL-369 (as uvar A0)) :- (declare_constraint (SYMBOL-369 A0) A0).",
+                  "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                   "rule_loc": [
                     "File",
                     {
@@ -102,7 +102,7 @@
             },
             "siblings": [
               {
-                "goal_text": "declare_constraint (SYMBOL-369 X0) X0",
+                "goal_text": "declare_constraint (even X0) X0",
                 "goal_id": 9
               }
             ],
@@ -115,7 +115,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (as uvar A0)) :- (declare_constraint (SYMBOL-369 A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -134,7 +134,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -161,8 +161,8 @@
       "Suspend",
       {
         "suspend_goal_id": 9,
-        "suspend_goal_text": "declare_constraint (SYMBOL-369 X0) X0",
-        "suspend_sibling": { "goal_text": "SYMBOL-369 X0", "goal_id": 10 },
+        "suspend_goal_text": "declare_constraint (even X0) X0",
+        "suspend_sibling": { "goal_text": "even X0", "goal_id": 10 },
         "suspend_stack": [
           {
             "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
@@ -173,7 +173,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (as uvar A0)) :- (declare_constraint (SYMBOL-369 A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -192,7 +192,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -231,7 +231,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -258,7 +258,7 @@
       "Inference",
       {
         "current_goal_id": 7,
-        "current_goal_text": "X0 = SYMBOL-371 X1",
+        "current_goal_text": "X0 = s X1",
         "current_goal_predicate": "=",
         "failed_attempts": [],
         "successful_attempts": [
@@ -266,8 +266,7 @@
             "attempt": {
               "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
               "events": [
-                [ "Assign", "X0 := SYMBOL-371 X1" ],
-                [ "ResumeGoal", [ 11, 10 ] ]
+                [ "Assign", "X0 := s X1" ], [ "ResumeGoal", [ 11, 10 ] ]
               ]
             },
             "siblings": [],
@@ -285,7 +284,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -312,7 +311,7 @@
       "Resume",
       [
         { "goal_text": "true", "goal_id": 11 },
-        { "goal_text": "SYMBOL-369 (SYMBOL-371 X1)", "goal_id": 10 }
+        { "goal_text": "even (s X1)", "goal_id": 10 }
       ]
     ],
     "color": "Grey"
@@ -386,7 +385,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -413,8 +412,8 @@
       "Inference",
       {
         "current_goal_id": 10,
-        "current_goal_text": "SYMBOL-369 (SYMBOL-371 X1)",
-        "current_goal_predicate": "SYMBOL-369",
+        "current_goal_text": "even (s X1)",
+        "current_goal_predicate": "even",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -422,7 +421,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(SYMBOL-369 (SYMBOL-371 A0)) :- (SYMBOL-370 A0).",
+                  "rule_text": "(even (s A0)) :- (odd A0).",
                   "rule_loc": [
                     "File",
                     {
@@ -436,7 +435,7 @@
               ],
               "events": [ [ "Assign", "A0 := X1" ] ]
             },
-            "siblings": [ { "goal_text": "SYMBOL-370 X1", "goal_id": 12 } ],
+            "siblings": [ { "goal_text": "odd X1", "goal_id": 12 } ],
             "siblings_aggregated_outcome": "Success"
           }
         ],
@@ -446,7 +445,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (SYMBOL-371 A0)) :- (SYMBOL-370 A0).",
+                "rule_text": "(even (s A0)) :- (odd A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -475,7 +474,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (as uvar A0)) :- (declare_constraint (SYMBOL-369 A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -494,7 +493,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -521,8 +520,8 @@
       "Inference",
       {
         "current_goal_id": 12,
-        "current_goal_text": "SYMBOL-370 X1",
-        "current_goal_predicate": "SYMBOL-370",
+        "current_goal_text": "odd X1",
+        "current_goal_predicate": "odd",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -530,7 +529,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(SYMBOL-370 (as uvar A0)) :- (declare_constraint (SYMBOL-370 A0) A0).",
+                  "rule_text": "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
                   "rule_loc": [
                     "File",
                     {
@@ -546,7 +545,7 @@
             },
             "siblings": [
               {
-                "goal_text": "declare_constraint (SYMBOL-370 X1) X1",
+                "goal_text": "declare_constraint (odd X1) X1",
                 "goal_id": 13
               }
             ],
@@ -559,7 +558,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-370 (as uvar A0)) :- (declare_constraint (SYMBOL-370 A0) A0).",
+                "rule_text": "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -578,7 +577,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (SYMBOL-371 A0)) :- (SYMBOL-370 A0).",
+                "rule_text": "(even (s A0)) :- (odd A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -607,7 +606,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (as uvar A0)) :- (declare_constraint (SYMBOL-369 A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -626,7 +625,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -653,8 +652,8 @@
       "Suspend",
       {
         "suspend_goal_id": 13,
-        "suspend_goal_text": "declare_constraint (SYMBOL-370 X1) X1",
-        "suspend_sibling": { "goal_text": "SYMBOL-370 X1", "goal_id": 14 },
+        "suspend_goal_text": "declare_constraint (odd X1) X1",
+        "suspend_sibling": { "goal_text": "odd X1", "goal_id": 14 },
         "suspend_stack": [
           {
             "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
@@ -665,7 +664,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-370 (as uvar A0)) :- (declare_constraint (SYMBOL-370 A0) A0).",
+                "rule_text": "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -684,7 +683,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (SYMBOL-371 A0)) :- (SYMBOL-370 A0).",
+                "rule_text": "(even (s A0)) :- (odd A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -713,7 +712,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (as uvar A0)) :- (declare_constraint (SYMBOL-369 A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -732,7 +731,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -759,8 +758,8 @@
       "Inference",
       {
         "current_goal_id": 8,
-        "current_goal_text": "SYMBOL-141 (SYMBOL-369 X1)",
-        "current_goal_predicate": "SYMBOL-141",
+        "current_goal_text": "not (even X1)",
+        "current_goal_predicate": "not",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -768,7 +767,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(SYMBOL-141 A0) :- A0, (!), SYMBOL-106.",
+                  "rule_text": "(not A0) :- A0, (!), fail.",
                   "rule_loc": [
                     "File",
                     {
@@ -780,12 +779,12 @@
                   ]
                 }
               ],
-              "events": [ [ "Assign", "A0 := SYMBOL-369 X1" ] ]
+              "events": [ [ "Assign", "A0 := even X1" ] ]
             },
             "siblings": [
-              { "goal_text": "SYMBOL-369 X1", "goal_id": 15 },
+              { "goal_text": "even X1", "goal_id": 15 },
               { "goal_text": "!", "goal_id": 16 },
-              { "goal_text": "SYMBOL-106", "goal_id": 17 }
+              { "goal_text": "fail", "goal_id": 17 }
             ],
             "siblings_aggregated_outcome": "Fail"
           }
@@ -796,7 +795,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-141 A0) :- A0, (!), SYMBOL-106.",
+                "rule_text": "(not A0) :- A0, (!), fail.",
                 "rule_loc": [
                   "File",
                   {
@@ -815,7 +814,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -842,8 +841,8 @@
       "Inference",
       {
         "current_goal_id": 15,
-        "current_goal_text": "SYMBOL-369 X1",
-        "current_goal_predicate": "SYMBOL-369",
+        "current_goal_text": "even X1",
+        "current_goal_predicate": "even",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -851,7 +850,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(SYMBOL-369 (as uvar A0)) :- (declare_constraint (SYMBOL-369 A0) A0).",
+                  "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                   "rule_loc": [
                     "File",
                     {
@@ -867,7 +866,7 @@
             },
             "siblings": [
               {
-                "goal_text": "declare_constraint (SYMBOL-369 X1) X1",
+                "goal_text": "declare_constraint (even X1) X1",
                 "goal_id": 18
               }
             ],
@@ -880,7 +879,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (as uvar A0)) :- (declare_constraint (SYMBOL-369 A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -899,7 +898,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-141 A0) :- A0, (!), SYMBOL-106.",
+                "rule_text": "(not A0) :- A0, (!), fail.",
                 "rule_loc": [
                   "File",
                   {
@@ -918,7 +917,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -945,8 +944,8 @@
       "Suspend",
       {
         "suspend_goal_id": 18,
-        "suspend_goal_text": "declare_constraint (SYMBOL-369 X1) X1",
-        "suspend_sibling": { "goal_text": "SYMBOL-369 X1", "goal_id": 19 },
+        "suspend_goal_text": "declare_constraint (even X1) X1",
+        "suspend_sibling": { "goal_text": "even X1", "goal_id": 19 },
         "suspend_stack": [
           {
             "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
@@ -957,7 +956,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-369 (as uvar A0)) :- (declare_constraint (SYMBOL-369 A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -976,7 +975,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-141 A0) :- A0, (!), SYMBOL-106.",
+                "rule_text": "(not A0) :- A0, (!), fail.",
                 "rule_loc": [
                   "File",
                   {
@@ -995,7 +994,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -1023,7 +1022,7 @@
       {
         "chr_failed_attempts": [
           {
-            "chr_text": " \\ (SYMBOL-369 A0) (SYMBOL-370 A0) | (SYMBOL-370 SYMBOL-372) <=> (true)",
+            "chr_text": " \\ (even A0) (odd A0) | (odd z) <=> (true)",
             "chr_loc": {
               "filename": "tests/sources/trace_chr.elpi",
               "line": 1,
@@ -1034,10 +1033,7 @@
               {
                 "step_id": 0,
                 "runtime_id": 1,
-                "step": [
-                  "Init",
-                  { "goal_text": "SYMBOL-370 SYMBOL-372", "goal_id": 20 }
-                ],
+                "step": [ "Init", { "goal_text": "odd z", "goal_id": 20 } ],
                 "color": "Grey"
               },
               {
@@ -1047,8 +1043,8 @@
                   "Inference",
                   {
                     "current_goal_id": 20,
-                    "current_goal_text": "SYMBOL-370 SYMBOL-372",
-                    "current_goal_predicate": "SYMBOL-370",
+                    "current_goal_text": "odd z",
+                    "current_goal_predicate": "odd",
                     "failed_attempts": [],
                     "successful_attempts": [],
                     "more_successful_attempts": [],
@@ -1063,7 +1059,7 @@
         "chr_successful_attempts": [
           {
             "chr_attempt": {
-              "chr_text": " \\ (SYMBOL-369 A0) (SYMBOL-370 A0) | (SYMBOL-370 (SYMBOL-371 SYMBOL-372))\n  <=> (SYMBOL-106)",
+              "chr_text": " \\ (even A0) (odd A0) | (odd (s z)) <=> (fail)",
               "chr_loc": {
                 "filename": "tests/sources/trace_chr.elpi",
                 "line": 2,
@@ -1075,11 +1071,7 @@
                   "step_id": 0,
                   "runtime_id": 2,
                   "step": [
-                    "Init",
-                    {
-                      "goal_text": "SYMBOL-370 (SYMBOL-371 SYMBOL-372)",
-                      "goal_id": 21
-                    }
+                    "Init", { "goal_text": "odd (s z)", "goal_id": 21 }
                   ],
                   "color": "Grey"
                 },
@@ -1090,8 +1082,8 @@
                     "Inference",
                     {
                       "current_goal_id": 21,
-                      "current_goal_text": "SYMBOL-370 (SYMBOL-371 SYMBOL-372)",
-                      "current_goal_predicate": "SYMBOL-370",
+                      "current_goal_text": "odd (s z)",
+                      "current_goal_predicate": "odd",
                       "failed_attempts": [],
                       "successful_attempts": [
                         {
@@ -1099,7 +1091,7 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(SYMBOL-370 (SYMBOL-371 A0)) :- (SYMBOL-369 A0).",
+                                "rule_text": "(odd (s A0)) :- (even A0).",
                                 "rule_loc": [
                                   "File",
                                   {
@@ -1111,13 +1103,10 @@
                                 ]
                               }
                             ],
-                            "events": [ [ "Assign", "A0 := SYMBOL-372" ] ]
+                            "events": [ [ "Assign", "A0 := z" ] ]
                           },
                           "siblings": [
-                            {
-                              "goal_text": "SYMBOL-369 SYMBOL-372",
-                              "goal_id": 22
-                            }
+                            { "goal_text": "even z", "goal_id": 22 }
                           ],
                           "siblings_aggregated_outcome": "Success"
                         }
@@ -1128,7 +1117,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(SYMBOL-370 (SYMBOL-371 A0)) :- (SYMBOL-369 A0).",
+                              "rule_text": "(odd (s A0)) :- (even A0).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -1155,8 +1144,8 @@
                     "Inference",
                     {
                       "current_goal_id": 22,
-                      "current_goal_text": "SYMBOL-369 SYMBOL-372",
-                      "current_goal_predicate": "SYMBOL-369",
+                      "current_goal_text": "even z",
+                      "current_goal_predicate": "even",
                       "failed_attempts": [],
                       "successful_attempts": [
                         {
@@ -1164,7 +1153,7 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(SYMBOL-369 SYMBOL-372) :- .",
+                                "rule_text": "(even z) :- .",
                                 "rule_loc": [
                                   "File",
                                   {
@@ -1188,7 +1177,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(SYMBOL-369 SYMBOL-372) :- .",
+                              "rule_text": "(even z) :- .",
                               "rule_loc": [
                                 "File",
                                 {
@@ -1207,7 +1196,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(SYMBOL-370 (SYMBOL-371 A0)) :- (SYMBOL-369 A0).",
+                              "rule_text": "(odd (s A0)) :- (even A0).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -1230,20 +1219,12 @@
               ]
             },
             "chr_removed_goals": [ 19, 14 ],
-            "chr_new_goals": [
-              { "goal_text": "_ => SYMBOL-106", "goal_id": 23 }
-            ]
+            "chr_new_goals": [ { "goal_text": "_ => fail", "goal_id": 23 } ]
           }
         ],
         "chr_store_before": [
-          {
-            "goal_text": " SYMBOL-369 X1  /* suspended on X1 */",
-            "goal_id": 19
-          },
-          {
-            "goal_text": " SYMBOL-370 X1  /* suspended on X1 */",
-            "goal_id": 14
-          }
+          { "goal_text": " even X1  /* suspended on X1 */", "goal_id": 19 },
+          { "goal_text": " odd X1  /* suspended on X1 */", "goal_id": 14 }
         ],
         "chr_store_after": []
       }
@@ -1257,7 +1238,7 @@
       "Inference",
       {
         "current_goal_id": 23,
-        "current_goal_text": "_ => SYMBOL-106",
+        "current_goal_text": "_ => fail",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -1266,7 +1247,7 @@
               "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
               "events": []
             },
-            "siblings": [ { "goal_text": "SYMBOL-106", "goal_id": 24 } ],
+            "siblings": [ { "goal_text": "fail", "goal_id": 24 } ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -1289,8 +1270,8 @@
       "Inference",
       {
         "current_goal_id": 24,
-        "current_goal_text": "SYMBOL-106",
-        "current_goal_predicate": "SYMBOL-106",
+        "current_goal_text": "fail",
+        "current_goal_predicate": "fail",
         "failed_attempts": [],
         "successful_attempts": [],
         "more_successful_attempts": [],
@@ -1312,8 +1293,8 @@
       "Inference",
       {
         "current_goal_id": 8,
-        "current_goal_text": "SYMBOL-141 (SYMBOL-369 X1)",
-        "current_goal_predicate": "SYMBOL-141",
+        "current_goal_text": "not (even X1)",
+        "current_goal_predicate": "not",
         "failed_attempts": [],
         "successful_attempts": [
           {
@@ -1321,7 +1302,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(SYMBOL-141 _) :- .",
+                  "rule_text": "(not _) :- .",
                   "rule_loc": [
                     "File",
                     {
@@ -1345,7 +1326,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(SYMBOL-141 _) :- .",
+                "rule_text": "(not _) :- .",
                 "rule_loc": [
                   "File",
                   {
@@ -1364,7 +1345,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "SYMBOL-373 :- (SYMBOL-369 A0), (declare_constraint true A0), \n (A0 = SYMBOL-371 A1), (SYMBOL-141 (SYMBOL-369 A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {

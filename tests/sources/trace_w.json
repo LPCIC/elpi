@@ -1,222 +1,222 @@
-{"step" : 0,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-401"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-401","SYMBOL-401"]}
+{"step" : 0,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["main"]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["main","main"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 177, column 0, characters 4795-4814:"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 177, column 0, characters 4795-4814:","SYMBOL-401 :- (SYMBOL-398 [2])."]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 177, column 0, characters 4795-4814:","main :- (tests [2])."]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 4,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["5"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-398 [2]"]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["tests [2]"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-398","SYMBOL-398 [2]"]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["tests","tests [2]"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 175, column 0, characters 4756-4792:"]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 175, column 0, characters 4756-4792:","(SYMBOL-398 [A0]) :- (SYMBOL-397 A0 A1), (SYMBOL-400 A1)."]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 175, column 0, characters 4756-4792:","(tests [A0]) :- (test A0 A1), (typecheck A1)."]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := 2"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 5,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["6"]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-397 2 X0"]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["test 2 X0"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["7"]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-400 X0"]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["typecheck X0"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 3,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-397","SYMBOL-397 2 X0"]}
+{"step" : 3,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["test","test 2 X0"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 184, column 0, characters 4919-4982:"]}
-{"step" : 3,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 184, column 0, characters 4919-4982:","(SYMBOL-397 2 (SYMBOL-388 (lam (c0 \\ c0)) A0 (c0 \\ (app c0 (SYMBOL-386 []))))) :- ."]}
-{"step" : 3,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X0 := SYMBOL-388 (lam c0 \\ c0) X1 c0 \\ app c0 (SYMBOL-386 [])"]}
+{"step" : 3,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 184, column 0, characters 4919-4982:","(test 2 (let (lam (c0 \\ c0)) A0 (c0 \\ (app c0 (global []))))) :- ."]}
+{"step" : 3,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X0 := let (lam c0 \\ c0) X1 c0 \\ app c0 (global [])"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-400","SYMBOL-400 (SYMBOL-388 (lam c0 \\ c0) X1 c0 \\ app c0 (SYMBOL-386 []))"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["typecheck","typecheck (let (lam c0 \\ c0) X1 c0 \\ app c0 (global []))"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 167, column 0, characters 4636-4727:"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 167, column 0, characters 4636-4727:","(SYMBOL-400 A0) :- (SYMBOL-150 Checking: A0), (SYMBOL-399 []), \n (SYMBOL-394 A0 A1), (!), (SYMBOL-150 A0  :  A1), (SYMBOL-150)."]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := SYMBOL-388 (lam c0 \\ c0) X1 c0 \\ app c0 (SYMBOL-386 [])"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 167, column 0, characters 4636-4727:","(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print)."]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := let (lam c0 \\ c0) X1 c0 \\ app c0 (global [])"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["8"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-150 Checking: \n (SYMBOL-388 (lam c0 \\ c0) X1 c0 \\ app c0 (SYMBOL-386 []))"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["print Checking: (let (lam c0 \\ c0) X1 c0 \\ app c0 (global []))"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["9"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-399 []"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["theta []"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["10"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 (SYMBOL-388 (lam c0 \\ c0) X1 c0 \\ app c0 (SYMBOL-386 [])) X2"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of (let (lam c0 \\ c0) X1 c0 \\ app c0 (global [])) X2"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["11"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["!"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["12"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-150 (SYMBOL-388 (lam c0 \\ c0) X1 c0 \\ app c0 (SYMBOL-386 []))  :  X2"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["print (let (lam c0 \\ c0) X1 c0 \\ app c0 (global []))  :  X2"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["13"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-150"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["print"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-150","SYMBOL-150 Checking: \n (SYMBOL-388 (lam c0 \\ c0) X1 c0 \\ app c0 (SYMBOL-386 []))"]}
+{"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["print","print Checking: (let (lam c0 \\ c0) X1 c0 \\ app c0 (global []))"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule","payload" : ["builtin"]}
-{"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["SYMBOL-150"]}
+{"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["print"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:builtin","payload" : ["success"]}
-{"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-399","SYMBOL-399 []"]}
+{"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["theta","theta []"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 76, column 0, characters 1752-1791:"]}
-{"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 76, column 0, characters 1752-1791:","(SYMBOL-399 A0) :- (SYMBOL-393 (SYMBOL-399 A0) [_])."]}
+{"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 76, column 0, characters 1752-1791:","(theta A0) :- (new_constraint (theta A0) [_])."]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := []"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["14"]}
-{"step" : 6,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-393 (SYMBOL-399 []) [_]"]}
+{"step" : 6,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["new_constraint (theta []) [_]"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 7,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-393","SYMBOL-393 (SYMBOL-399 []) [_]"]}
+{"step" : 7,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["new_constraint","new_constraint (theta []) [_]"]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 158, column 0, characters 4345-4389:"]}
-{"step" : 7,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 158, column 0, characters 4345-4389:","(SYMBOL-393 A0 A1) :- (declare_constraint A0 A1)."]}
-{"step" : 7,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := SYMBOL-399 []"]}
+{"step" : 7,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 158, column 0, characters 4345-4389:","(new_constraint A0 A1) :- (declare_constraint A0 A1)."]}
+{"step" : 7,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := theta []"]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A1 := [_]"]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 14,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["15"]}
-{"step" : 7,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["declare_constraint (SYMBOL-399 []) [_]"]}
+{"step" : 7,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["declare_constraint (theta []) [_]"]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 8,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["declare_constraint","declare_constraint (SYMBOL-399 []) [_]"]}
+{"step" : 8,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["declare_constraint","declare_constraint (theta []) [_]"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:rule","payload" : ["builtin"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["declare_constraint"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["16"]}
-{"step" : 8,"kind" : ["Info"],"goal_id" : 16,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-399 []"]}
+{"step" : 8,"kind" : ["Info"],"goal_id" : 16,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["theta []"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:rule:builtin","payload" : ["success"]}
-{"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-394","SYMBOL-394 (SYMBOL-388 (lam c0 \\ c0) X1 c0 \\ app c0 (SYMBOL-386 [])) X2"]}
+{"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of (let (lam c0 \\ c0) X1 c0 \\ app c0 (global [])) X2"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 11, column 0, characters 175-282:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:"]}
-{"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 11, column 0, characters 175-282:","(SYMBOL-394 (SYMBOL-388 A0 A2 A3) (SYMBOL-392 A4)) :- (SYMBOL-394 A0 \n                                                        (SYMBOL-392 A1)), \n (SYMBOL-384 (SYMBOL-392 A1) A2), \n (pi (c0 \\ (SYMBOL-394 c0 A2 => SYMBOL-394 (A3 c0) (SYMBOL-392 A4))))."]}
+{"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 11, column 0, characters 175-282:","(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4))))."]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := lam c0 \\ c0"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A2 := X1"]}
-{"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A3 := c0 \\\napp c0 (SYMBOL-386 [])"]}
-{"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X2 := SYMBOL-392 X3"]}
+{"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A3 := c0 \\\napp c0 (global [])"]}
+{"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X2 := mono X3"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["17"]}
-{"step" : 9,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 (lam c0 \\ c0) (SYMBOL-392 X4)"]}
+{"step" : 9,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of (lam c0 \\ c0) (mono X4)"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["18"]}
-{"step" : 9,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-384 (SYMBOL-392 X4) X1"]}
+{"step" : 9,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["gammabar (mono X4) X1"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["19"]}
-{"step" : 9,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["pi c0 \\\n SYMBOL-394 c0 X1 => SYMBOL-394 (app c0 (SYMBOL-386 [])) (SYMBOL-392 X3)"]}
+{"step" : 9,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["pi c0 \\ of c0 X1 => of (app c0 (global [])) (mono X3)"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-394","SYMBOL-394 (lam c0 \\ c0) (SYMBOL-392 X4)"]}
+{"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of (lam c0 \\ c0) (mono X4)"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 8, column 0, characters 99-172:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:"]}
-{"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 8, column 0, characters 99-172:","(SYMBOL-394 (lam A0) (SYMBOL-392 (SYMBOL-369 A2 A1))) :- (pi (c0 \\\n                                                           (SYMBOL-394 c0 \n                                                             (SYMBOL-392 A2)\n                                                             =>\n                                                             SYMBOL-394\n                                                              (A0 c0) \n                                                              (SYMBOL-392 A1))))."]}
+{"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 8, column 0, characters 99-172:","(of (lam A0) (mono (A2 ==> A1))) :- (pi (c0 \\\n                                      (of c0 (mono A2) =>\n                                        of (A0 c0) (mono A1))))."]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := c0 \\\nc0"]}
-{"step" : 10,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X4 := SYMBOL-369 X5 X6"]}
+{"step" : 10,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X4 := X5 ==> X6"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["20"]}
-{"step" : 10,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["pi c0 \\ SYMBOL-394 c0 (SYMBOL-392 X5) => SYMBOL-394 c0 (SYMBOL-392 X6)"]}
+{"step" : 10,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["pi c0 \\ of c0 (mono X5) => of c0 (mono X6)"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["pi","pi c0 \\ SYMBOL-394 c0 (SYMBOL-392 X5) => SYMBOL-394 c0 (SYMBOL-392 X6)"]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["pi","pi c0 \\ of c0 (mono X5) => of c0 (mono X6)"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 0,"name" : "user:rule","payload" : ["pi"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["21"]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 c0 (SYMBOL-392 X5) => SYMBOL-394 c0 (SYMBOL-392 X6)"]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of c0 (mono X5) => of c0 (mono X6)"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:rule:pi","payload" : ["success"]}
-{"step" : 12,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","SYMBOL-394 c0 (SYMBOL-392 X5) => SYMBOL-394 c0 (SYMBOL-392 X6)"]}
+{"step" : 12,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","of c0 (mono X5) => of c0 (mono X6)"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["22"]}
-{"step" : 12,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 c0 (SYMBOL-392 X6)"]}
+{"step" : 12,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of c0 (mono X6)"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
-{"step" : 13,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-394","SYMBOL-394 c0 (SYMBOL-392 X6)"]}
+{"step" : 13,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of c0 (mono X6)"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"(context step_id:12)\", line 1, column 0, characters 0-0:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:"]}
-{"step" : 13,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:12)\", line 1, column 0, characters 0-0:","(SYMBOL-394 c0 (SYMBOL-392 X5)) :- ."]}
+{"step" : 13,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:12)\", line 1, column 0, characters 0-0:","(of c0 (mono X5)) :- ."]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X5 := X6"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 14,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-384","SYMBOL-384 (SYMBOL-392 (SYMBOL-369 X6 X6)) X1"]}
+{"step" : 14,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["gammabar","gammabar (mono (X6 ==> X6)) X1"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 81, column 0, characters 1872-1939:"]}
-{"step" : 14,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 81, column 0, characters 1872-1939:","(SYMBOL-384 (SYMBOL-392 A0) A1) :- (SYMBOL-393\n                                     (SYMBOL-384 (SYMBOL-392 A0) A1) [\n                                     _])."]}
-{"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := SYMBOL-369 X6 X6"]}
+{"step" : 14,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 81, column 0, characters 1872-1939:","(gammabar (mono A0) A1) :- (new_constraint (gammabar (mono A0) A1) [_])."]}
+{"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := X6 ==> X6"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A1 := X1"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 18,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["23"]}
-{"step" : 14,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-393 (SYMBOL-384 (SYMBOL-392 (SYMBOL-369 X6 X6)) X1) [_]"]}
+{"step" : 14,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["new_constraint (gammabar (mono (X6 ==> X6)) X1) [_]"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 15,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-393","SYMBOL-393 (SYMBOL-384 (SYMBOL-392 (SYMBOL-369 X6 X6)) X1) [_]"]}
+{"step" : 15,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["new_constraint","new_constraint (gammabar (mono (X6 ==> X6)) X1) [_]"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 158, column 0, characters 4345-4389:"]}
-{"step" : 15,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 158, column 0, characters 4345-4389:","(SYMBOL-393 A0 A1) :- (declare_constraint A0 A1)."]}
-{"step" : 15,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := SYMBOL-384 (SYMBOL-392 (SYMBOL-369 X6 X6)) X1"]}
+{"step" : 15,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 158, column 0, characters 4345-4389:","(new_constraint A0 A1) :- (declare_constraint A0 A1)."]}
+{"step" : 15,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := gammabar (mono (X6 ==> X6)) X1"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A1 := [_]"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["24"]}
-{"step" : 15,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["declare_constraint (SYMBOL-384 (SYMBOL-392 (SYMBOL-369 X6 X6)) X1) [_]"]}
+{"step" : 15,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["declare_constraint (gammabar (mono (X6 ==> X6)) X1) [_]"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 16,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["declare_constraint","declare_constraint (SYMBOL-384 (SYMBOL-392 (SYMBOL-369 X6 X6)) X1) [_]"]}
+{"step" : 16,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["declare_constraint","declare_constraint (gammabar (mono (X6 ==> X6)) X1) [_]"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:rule","payload" : ["builtin"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["declare_constraint"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["25"]}
-{"step" : 16,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-384 (SYMBOL-392 (SYMBOL-369 X6 X6)) X1"]}
+{"step" : 16,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["gammabar (mono (X6 ==> X6)) X1"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:rule:builtin","payload" : ["success"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:CHR:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 85, column 36, characters 1999-2171:","(SYMBOL-399 A0) \\ (A1 ?- SYMBOL-384 A2 A3) | (SYMBOL-385 A0 A1 A2 A4)\n  <=> (A3 = A4)"]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:CHR:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 85, column 36, characters 1999-2171:","(theta A0) \\ (A1 ?- gammabar A2 A3) | (generalize A0 A1 A2 A4) <=> (A3 = A4)"]}
 {"step" : 0,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X0 := []"]}
-{"step" : 0,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X1 := SYMBOL-392 (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 []))"]}
+{"step" : 0,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X1 := mono (uvar frozen--402 [] ==> uvar frozen--402 [])"]}
 {"step" : 0,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A3 := uvar frozen--403 []"]}
 {"step" : 0,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X2 := []"]}
-{"step" : 0,"kind" : ["Info"],"goal_id" : 26,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-385 [] [] \n (SYMBOL-392 (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 []))) X3"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 26,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-385","SYMBOL-385 [] [] \n (SYMBOL-392 (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 []))) X3"]}
+{"step" : 0,"kind" : ["Info"],"goal_id" : 26,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["generalize [] [] (mono (uvar frozen--402 [] ==> uvar frozen--402 [])) X3"]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 26,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["generalize","generalize [] [] (mono (uvar frozen--402 [] ==> uvar frozen--402 [])) X3"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 26,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 26,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 97, column 0, characters 2318-2493:"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 26,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 97, column 0, characters 2318-2493:","(SYMBOL-385 A5 A2 (SYMBOL-392 A0) A6) :- (SYMBOL-383 (SYMBOL-392 A0) [] A1), \n (SYMBOL-382 A2 [] A3), \n (SYMBOL-380 A1 (c0 \\ (SYMBOL-141 (SYMBOL-390 A3 c0))) A4), \n (SYMBOL-373 A4 A5 A0 A6)."]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 26,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 97, column 0, characters 2318-2493:","(generalize A5 A2 (mono A0) A6) :- (free-ty (mono A0) [] A1), \n (free-gamma A2 [] A3), (filter A1 (c0 \\ (not (mem A3 c0))) A4), \n (bind A4 A5 A0 A6)."]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A5 := []"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A2 := []"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])"]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--402 [] ==> uvar frozen--402 []"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A6 := X3"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 26,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["27"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-383\n (SYMBOL-392 (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 []))) [] X4"]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["free-ty (mono (uvar frozen--402 [] ==> uvar frozen--402 [])) [] X4"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["28"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 28,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-382 [] [] X5"]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 28,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["free-gamma [] [] X5"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["29"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 29,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-380 X4 (c0 \\ SYMBOL-141 (SYMBOL-390 X5 c0)) X6"]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 29,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["filter X4 (c0 \\ not (mem X5 c0)) X6"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["30"]}
-{"step" : 1,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-373 X6 [] (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) X3"]}
+{"step" : 1,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["bind X6 [] (uvar frozen--402 [] ==> uvar frozen--402 []) X3"]}
 {"step" : 1,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-383","SYMBOL-383\n (SYMBOL-392 (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 []))) [] X4"]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["free-ty","free-ty (mono (uvar frozen--402 [] ==> uvar frozen--402 [])) [] X4"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 105, column 0, characters 2609-2645:"]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 105, column 0, characters 2609-2645:","(SYMBOL-383 (SYMBOL-392 A0) A1 A2) :- (SYMBOL-381 A0 A1 A2)."]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])"]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 105, column 0, characters 2609-2645:","(free-ty (mono A0) A1 A2) :- (free A0 A1 A2)."]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--402 [] ==> uvar frozen--402 []"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := []"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A2 := X4"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 27,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["31"]}
-{"step" : 2,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-381 (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) [] X4"]}
+{"step" : 2,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["free (uvar frozen--402 [] ==> uvar frozen--402 []) [] X4"]}
 {"step" : 2,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 3,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-381","SYMBOL-381 (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) [] X4"]}
+{"step" : 3,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["free","free (uvar frozen--402 [] ==> uvar frozen--402 []) [] X4"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 117, column 0, characters 2995-3043:"]}
-{"step" : 3,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 117, column 0, characters 2995-3043:","(SYMBOL-381 (SYMBOL-369 A0 A3) A1 A4) :- (SYMBOL-381 A0 A1 A2), \n (SYMBOL-381 A3 A2 A4)."]}
+{"step" : 3,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 117, column 0, characters 2995-3043:","(free (A0 ==> A3) A1 A4) :- (free A0 A1 A2), (free A3 A2 A4)."]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--402 []"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A3 := uvar frozen--402 []"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := []"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A4 := X4"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 31,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["32"]}
-{"step" : 3,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-381 (uvar frozen--402 []) [] X7"]}
+{"step" : 3,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["free (uvar frozen--402 []) [] X7"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["33"]}
-{"step" : 3,"kind" : ["Info"],"goal_id" : 33,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-381 (uvar frozen--402 []) X7 X4"]}
+{"step" : 3,"kind" : ["Info"],"goal_id" : 33,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["free (uvar frozen--402 []) X7 X4"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-381","SYMBOL-381 (uvar frozen--402 []) [] X7"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["free","free (uvar frozen--402 []) [] X7"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 118, column 0, characters 3045-3108:"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 118, column 0, characters 3045-3108:","(SYMBOL-381 (as (uvar _ _) A1) A0 A2) :- (SYMBOL-127 (SYMBOL-390 A0 A1) \n                                           (A2 = A0) (A2 = [A1 | A0]))."]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 118, column 0, characters 3045-3108:","(free (as (uvar _ _) A1) A0 A2) :- (if (mem A0 A1) (A2 = A0) (A2 = [A1 | A0]))."]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := uvar frozen--402 []"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := []"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A2 := X7"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 32,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["34"]}
-{"step" : 4,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-127 (SYMBOL-390 [] (uvar frozen--402 [])) (X7 = []) \n (X7 = [uvar frozen--402 []])"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["if (mem [] (uvar frozen--402 [])) (X7 = []) (X7 = [uvar frozen--402 []])"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 5,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-127","SYMBOL-127 (SYMBOL-390 [] (uvar frozen--402 [])) (X7 = []) \n (X7 = [uvar frozen--402 []])"]}
+{"step" : 5,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["if","if (mem [] (uvar frozen--402 [])) (X7 = []) (X7 = [uvar frozen--402 []])"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 496, column 0, characters 12090-12109:","File \"builtin.elpi\", line 497, column 0, characters 12111-12124:"]}
-{"step" : 5,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 496, column 0, characters 12090-12109:","(SYMBOL-127 A0 A1 _) :- A0, (!), A1."]}
-{"step" : 5,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := SYMBOL-390 [] (uvar frozen--402 [])"]}
+{"step" : 5,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 496, column 0, characters 12090-12109:","(if A0 A1 _) :- A0, (!), A1."]}
+{"step" : 5,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := mem [] (uvar frozen--402 [])"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := X7 = []"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["35"]}
-{"step" : 5,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-390 [] (uvar frozen--402 [])"]}
+{"step" : 5,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["mem [] (uvar frozen--402 [])"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["36"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 36,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["!"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["37"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 37,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["X7 = []"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 6,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-390","SYMBOL-390 [] (uvar frozen--402 [])"]}
+{"step" : 6,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["mem","mem [] (uvar frozen--402 [])"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:"]}
-{"step" : 6,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:","(SYMBOL-390 A0 (uvar A1 _)) :- (SYMBOL-391 A0 (uvar A1 A2))."]}
+{"step" : 6,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:","(mem A0 (uvar A1 _)) :- (mem! A0 (uvar A1 A2))."]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := []"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := frozen--402"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 35,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["38"]}
-{"step" : 6,"kind" : ["Info"],"goal_id" : 38,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-391 [] (uvar frozen--402 X8)"]}
+{"step" : 6,"kind" : ["Info"],"goal_id" : 38,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["mem! [] (uvar frozen--402 X8)"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 38,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 7,"kind" : ["Info"],"goal_id" : 38,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-391","SYMBOL-391 [] (uvar frozen--402 X8)"]}
+{"step" : 7,"kind" : ["Info"],"goal_id" : 38,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["mem!","mem! [] (uvar frozen--402 X8)"]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 38,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 38,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : []}
 {"step" : 7,"kind" : ["Info"],"goal_id" : 38,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["fail"]}
-{"step" : 8,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-127","SYMBOL-127 (SYMBOL-390 [] (uvar frozen--402 [])) (X7 = []) \n (X7 = [uvar frozen--402 []])"]}
+{"step" : 8,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["if","if (mem [] (uvar frozen--402 [])) (X7 = []) (X7 = [uvar frozen--402 []])"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 497, column 0, characters 12111-12124:"]}
-{"step" : 8,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 497, column 0, characters 12111-12124:","(SYMBOL-127 _ _ A0) :- A0."]}
+{"step" : 8,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 497, column 0, characters 12111-12124:","(if _ _ A0) :- A0."]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := X7 = [uvar frozen--402 []]"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 34,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["39"]}
 {"step" : 8,"kind" : ["Info"],"goal_id" : 39,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["X7 = [uvar frozen--402 []]"]}
@@ -226,42 +226,42 @@
 {"step" : 9,"kind" : ["Info"],"goal_id" : 39,"runtime_id" : 1,"name" : "user:rule:builtin:name","payload" : ["="]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X7 := [uvar frozen--402 []]"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 39,"runtime_id" : 1,"name" : "user:rule:eq","payload" : ["success"]}
-{"step" : 10,"kind" : ["Info"],"goal_id" : 33,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-381","SYMBOL-381 (uvar frozen--402 []) [uvar frozen--402 []] X4"]}
+{"step" : 10,"kind" : ["Info"],"goal_id" : 33,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["free","free (uvar frozen--402 []) [uvar frozen--402 []] X4"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 33,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 33,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 118, column 0, characters 3045-3108:"]}
-{"step" : 10,"kind" : ["Info"],"goal_id" : 33,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 118, column 0, characters 3045-3108:","(SYMBOL-381 (as (uvar _ _) A1) A0 A2) :- (SYMBOL-127 (SYMBOL-390 A0 A1) \n                                           (A2 = A0) (A2 = [A1 | A0]))."]}
+{"step" : 10,"kind" : ["Info"],"goal_id" : 33,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 118, column 0, characters 3045-3108:","(free (as (uvar _ _) A1) A0 A2) :- (if (mem A0 A1) (A2 = A0) (A2 = [A1 | A0]))."]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := uvar frozen--402 []"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := [uvar frozen--402 []]"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A2 := X4"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 33,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["40"]}
-{"step" : 10,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-127 (SYMBOL-390 [uvar frozen--402 []] (uvar frozen--402 [])) \n (X4 = [uvar frozen--402 []]) \n (X4 = [uvar frozen--402 [], uvar frozen--402 []])"]}
+{"step" : 10,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["if (mem [uvar frozen--402 []] (uvar frozen--402 [])) \n (X4 = [uvar frozen--402 []]) \n (X4 = [uvar frozen--402 [], uvar frozen--402 []])"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-127","SYMBOL-127 (SYMBOL-390 [uvar frozen--402 []] (uvar frozen--402 [])) \n (X4 = [uvar frozen--402 []]) \n (X4 = [uvar frozen--402 [], uvar frozen--402 []])"]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["if","if (mem [uvar frozen--402 []] (uvar frozen--402 [])) \n (X4 = [uvar frozen--402 []]) \n (X4 = [uvar frozen--402 [], uvar frozen--402 []])"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 496, column 0, characters 12090-12109:","File \"builtin.elpi\", line 497, column 0, characters 12111-12124:"]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 496, column 0, characters 12090-12109:","(SYMBOL-127 A0 A1 _) :- A0, (!), A1."]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := SYMBOL-390 [uvar frozen--402 []] (uvar frozen--402 [])"]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 496, column 0, characters 12090-12109:","(if A0 A1 _) :- A0, (!), A1."]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := mem [uvar frozen--402 []] (uvar frozen--402 [])"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := X4 = [uvar frozen--402 []]"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 40,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["41"]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-390 [uvar frozen--402 []] (uvar frozen--402 [])"]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["mem [uvar frozen--402 []] (uvar frozen--402 [])"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["42"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 42,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["!"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["43"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 43,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["X4 = [uvar frozen--402 []]"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 12,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-390","SYMBOL-390 [uvar frozen--402 []] (uvar frozen--402 [])"]}
+{"step" : 12,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["mem","mem [uvar frozen--402 []] (uvar frozen--402 [])"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:"]}
-{"step" : 12,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:","(SYMBOL-390 A0 (uvar A1 _)) :- (SYMBOL-391 A0 (uvar A1 A2))."]}
+{"step" : 12,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:","(mem A0 (uvar A1 _)) :- (mem! A0 (uvar A1 A2))."]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := [uvar frozen--402 []]"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := frozen--402"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 41,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["44"]}
-{"step" : 12,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-391 [uvar frozen--402 []] (uvar frozen--402 X9)"]}
+{"step" : 12,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["mem! [uvar frozen--402 []] (uvar frozen--402 X9)"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 13,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-391","SYMBOL-391 [uvar frozen--402 []] (uvar frozen--402 X9)"]}
+{"step" : 13,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["mem!","mem! [uvar frozen--402 []] (uvar frozen--402 X9)"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 143, column 0, characters 3872-3889:","File \"tests/sources/trace-w/main.elpi\", line 144, column 0, characters 3891-3917:"]}
-{"step" : 13,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 143, column 0, characters 3872-3889:","(SYMBOL-391 [A0 | _] A0) :- (!)."]}
+{"step" : 13,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 143, column 0, characters 3872-3889:","(mem! [A0 | _] A0) :- (!)."]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--402 []"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X9 := []"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 44,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["45"]}
@@ -269,351 +269,351 @@
 {"step" : 13,"kind" : ["Info"],"goal_id" : 45,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 45,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["!","!"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 45,"runtime_id" : 1,"name" : "user:rule","payload" : ["cut"]}
-{"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:rule:cut:branch","payload" : ["44","File \"tests/sources/trace-w/main.elpi\", line 144, column 0, characters 3891-3917:","(SYMBOL-391 [_ | A0] A1) :- (SYMBOL-391 A0 A1)."]}
+{"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:rule:cut:branch","payload" : ["44","File \"tests/sources/trace-w/main.elpi\", line 144, column 0, characters 3891-3917:","(mem! [_ | A0] A1) :- (mem! A0 A1)."]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 45,"runtime_id" : 1,"name" : "user:rule:cut","payload" : ["success"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 42,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["!","!"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 42,"runtime_id" : 1,"name" : "user:rule","payload" : ["cut"]}
-{"step" : 15,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:rule:cut:branch","payload" : ["40","File \"builtin.elpi\", line 497, column 0, characters 12111-12124:","(SYMBOL-127 _ _ A0) :- A0."]}
+{"step" : 15,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:rule:cut:branch","payload" : ["40","File \"builtin.elpi\", line 497, column 0, characters 12111-12124:","(if _ _ A0) :- A0."]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 42,"runtime_id" : 1,"name" : "user:rule:cut","payload" : ["success"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 43,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["=","X4 = [uvar frozen--402 []]"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 43,"runtime_id" : 1,"name" : "user:rule","payload" : ["eq"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 43,"runtime_id" : 1,"name" : "user:rule:builtin:name","payload" : ["="]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X4 := [uvar frozen--402 []]"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 43,"runtime_id" : 1,"name" : "user:rule:eq","payload" : ["success"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 28,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-382","SYMBOL-382 [] [] X5"]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 28,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["free-gamma","free-gamma [] [] X5"]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 28,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 28,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 109, column 0, characters 2753-2770:"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 28,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 109, column 0, characters 2753-2770:","(SYMBOL-382 [] A0 A0) :- ."]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 28,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 109, column 0, characters 2753-2770:","(free-gamma [] A0 A0) :- ."]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := []"]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X5 := []"]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 28,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 18,"kind" : ["Info"],"goal_id" : 29,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-380","SYMBOL-380 [uvar frozen--402 []] (c0 \\ SYMBOL-141 (SYMBOL-390 [] c0)) X6"]}
+{"step" : 18,"kind" : ["Info"],"goal_id" : 29,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["filter","filter [uvar frozen--402 []] (c0 \\ not (mem [] c0)) X6"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 29,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 29,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 139, column 0, characters 3758-3806:","File \"tests/sources/trace-w/main.elpi\", line 140, column 0, characters 3808-3844:"]}
-{"step" : 18,"kind" : ["Info"],"goal_id" : 29,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 139, column 0, characters 3758-3806:","(SYMBOL-380 [A0 | A2] A1 [A0 | A3]) :- (A1 A0), (!), (SYMBOL-380 A2 A1 A3)."]}
+{"step" : 18,"kind" : ["Info"],"goal_id" : 29,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 139, column 0, characters 3758-3806:","(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), (!), (filter A2 A1 A3)."]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--402 []"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A2 := []"]}
-{"step" : 18,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := c0 \\\nSYMBOL-141 (SYMBOL-390 [] c0)"]}
+{"step" : 18,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := c0 \\\nnot (mem [] c0)"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X6 := [uvar frozen--402 [] | X10]"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 29,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["46"]}
-{"step" : 18,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-141 (SYMBOL-390 [] (uvar frozen--402 []))"]}
+{"step" : 18,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["not (mem [] (uvar frozen--402 []))"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["47"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 47,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["!"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["48"]}
-{"step" : 18,"kind" : ["Info"],"goal_id" : 48,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-380 [] (c0 \\ SYMBOL-141 (SYMBOL-390 [] c0)) X10"]}
+{"step" : 18,"kind" : ["Info"],"goal_id" : 48,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["filter [] (c0 \\ not (mem [] c0)) X10"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 19,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-141","SYMBOL-141 (SYMBOL-390 [] (uvar frozen--402 []))"]}
+{"step" : 19,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["not","not (mem [] (uvar frozen--402 []))"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 58, column 0, characters 687-706:","File \"builtin.elpi\", line 60, column 0, characters 709-714:"]}
-{"step" : 19,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 58, column 0, characters 687-706:","(SYMBOL-141 A0) :- A0, (!), SYMBOL-106."]}
-{"step" : 19,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := SYMBOL-390 [] (uvar frozen--402 [])"]}
+{"step" : 19,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 58, column 0, characters 687-706:","(not A0) :- A0, (!), fail."]}
+{"step" : 19,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := mem [] (uvar frozen--402 [])"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["49"]}
-{"step" : 19,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-390 [] (uvar frozen--402 [])"]}
+{"step" : 19,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["mem [] (uvar frozen--402 [])"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["50"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 50,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["!"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["51"]}
-{"step" : 19,"kind" : ["Info"],"goal_id" : 51,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-106"]}
+{"step" : 19,"kind" : ["Info"],"goal_id" : 51,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["fail"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 20,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-390","SYMBOL-390 [] (uvar frozen--402 [])"]}
+{"step" : 20,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["mem","mem [] (uvar frozen--402 [])"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:"]}
-{"step" : 20,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:","(SYMBOL-390 A0 (uvar A1 _)) :- (SYMBOL-391 A0 (uvar A1 A2))."]}
+{"step" : 20,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:","(mem A0 (uvar A1 _)) :- (mem! A0 (uvar A1 A2))."]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := []"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := frozen--402"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 49,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["52"]}
-{"step" : 20,"kind" : ["Info"],"goal_id" : 52,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-391 [] (uvar frozen--402 X11)"]}
+{"step" : 20,"kind" : ["Info"],"goal_id" : 52,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["mem! [] (uvar frozen--402 X11)"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 52,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 21,"kind" : ["Info"],"goal_id" : 52,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-391","SYMBOL-391 [] (uvar frozen--402 X11)"]}
+{"step" : 21,"kind" : ["Info"],"goal_id" : 52,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["mem!","mem! [] (uvar frozen--402 X11)"]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 52,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 52,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : []}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 52,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["fail"]}
-{"step" : 22,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-141","SYMBOL-141 (SYMBOL-390 [] (uvar frozen--402 []))"]}
+{"step" : 22,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["not","not (mem [] (uvar frozen--402 []))"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 60, column 0, characters 709-714:"]}
-{"step" : 22,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 60, column 0, characters 709-714:","(SYMBOL-141 _) :- ."]}
+{"step" : 22,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 60, column 0, characters 709-714:","(not _) :- ."]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 46,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
 {"step" : 23,"kind" : ["Info"],"goal_id" : 47,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["!","!"]}
 {"step" : 23,"kind" : ["Info"],"goal_id" : 47,"runtime_id" : 1,"name" : "user:rule","payload" : ["cut"]}
-{"step" : 23,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:rule:cut:branch","payload" : ["29","File \"tests/sources/trace-w/main.elpi\", line 140, column 0, characters 3808-3844:","(SYMBOL-380 [_ | A0] A1 A2) :- (SYMBOL-380 A0 A1 A2)."]}
+{"step" : 23,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:rule:cut:branch","payload" : ["29","File \"tests/sources/trace-w/main.elpi\", line 140, column 0, characters 3808-3844:","(filter [_ | A0] A1 A2) :- (filter A0 A1 A2)."]}
 {"step" : 23,"kind" : ["Info"],"goal_id" : 47,"runtime_id" : 1,"name" : "user:rule:cut","payload" : ["success"]}
-{"step" : 24,"kind" : ["Info"],"goal_id" : 48,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-380","SYMBOL-380 [] (c0 \\ SYMBOL-141 (SYMBOL-390 [] c0)) X10"]}
+{"step" : 24,"kind" : ["Info"],"goal_id" : 48,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["filter","filter [] (c0 \\ not (mem [] c0)) X10"]}
 {"step" : 24,"kind" : ["Info"],"goal_id" : 48,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 24,"kind" : ["Info"],"goal_id" : 48,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 138, column 0, characters 3742-3756:"]}
-{"step" : 24,"kind" : ["Info"],"goal_id" : 48,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 138, column 0, characters 3742-3756:","(SYMBOL-380 [] _ []) :- ."]}
+{"step" : 24,"kind" : ["Info"],"goal_id" : 48,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 138, column 0, characters 3742-3756:","(filter [] _ []) :- ."]}
 {"step" : 24,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X10 := []"]}
 {"step" : 24,"kind" : ["Info"],"goal_id" : 48,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-373","SYMBOL-373 [uvar frozen--402 []] [] \n (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) X3"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["bind","bind [uvar frozen--402 []] [] (uvar frozen--402 [] ==> uvar frozen--402 []) \n X3"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 123, column 0, characters 3268-3389:"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 123, column 0, characters 3268-3389:","(SYMBOL-373 [A1 | A3] A0 A4 (SYMBOL-370 A2 (c0 \\ (A5 c0)))) :- (SYMBOL-127\n                                                                 (SYMBOL-390\n                                                                   A0 A1) \n                                                                 (A2 =\n                                                                   SYMBOL-377) \n                                                                 (A2 =\n                                                                   SYMBOL-371)), \n (pi (c0 \\ (SYMBOL-375 A1 c0 => SYMBOL-373 A3 A0 A4 (A5 c0))))."]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 123, column 0, characters 3268-3389:","(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))))."]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := uvar frozen--402 []"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A3 := []"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := []"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A4 := SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X3 := SYMBOL-370 X12 c0 \\ X13 c0"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A4 := uvar frozen--402 [] ==> uvar frozen--402 []"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X3 := all X12 c0 \\ X13 c0"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["53"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-127 (SYMBOL-390 [] (uvar frozen--402 [])) (X12 = SYMBOL-377) \n (X12 = SYMBOL-371)"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["if (mem [] (uvar frozen--402 [])) (X12 = eqt) (X12 = any)"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["54"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 54,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["pi c0 \\\n SYMBOL-375 (uvar frozen--402 []) c0 =>\n  SYMBOL-373 [] [] (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) \n   (X13 c0)"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 54,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["pi c0 \\\n copy (uvar frozen--402 []) c0 =>\n  bind [] [] (uvar frozen--402 [] ==> uvar frozen--402 []) (X13 c0)"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 26,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-127","SYMBOL-127 (SYMBOL-390 [] (uvar frozen--402 [])) (X12 = SYMBOL-377) \n (X12 = SYMBOL-371)"]}
+{"step" : 26,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["if","if (mem [] (uvar frozen--402 [])) (X12 = eqt) (X12 = any)"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 496, column 0, characters 12090-12109:","File \"builtin.elpi\", line 497, column 0, characters 12111-12124:"]}
-{"step" : 26,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 496, column 0, characters 12090-12109:","(SYMBOL-127 A0 A1 _) :- A0, (!), A1."]}
-{"step" : 26,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := SYMBOL-390 [] (uvar frozen--402 [])"]}
-{"step" : 26,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := X12 = SYMBOL-377"]}
+{"step" : 26,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 496, column 0, characters 12090-12109:","(if A0 A1 _) :- A0, (!), A1."]}
+{"step" : 26,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := mem [] (uvar frozen--402 [])"]}
+{"step" : 26,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := X12 = eqt"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["55"]}
-{"step" : 26,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-390 [] (uvar frozen--402 [])"]}
+{"step" : 26,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["mem [] (uvar frozen--402 [])"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["56"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 56,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["!"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["57"]}
-{"step" : 26,"kind" : ["Info"],"goal_id" : 57,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["X12 = SYMBOL-377"]}
+{"step" : 26,"kind" : ["Info"],"goal_id" : 57,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["X12 = eqt"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-390","SYMBOL-390 [] (uvar frozen--402 [])"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["mem","mem [] (uvar frozen--402 [])"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:","(SYMBOL-390 A0 (uvar A1 _)) :- (SYMBOL-391 A0 (uvar A1 A2))."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 148, column 0, characters 4001-4043:","(mem A0 (uvar A1 _)) :- (mem! A0 (uvar A1 A2))."]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := []"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := frozen--402"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 55,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["58"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 58,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-391 [] (uvar frozen--402 X14)"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 58,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["mem! [] (uvar frozen--402 X14)"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 58,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 58,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-391","SYMBOL-391 [] (uvar frozen--402 X14)"]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 58,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["mem!","mem! [] (uvar frozen--402 X14)"]}
 {"step" : 28,"kind" : ["Info"],"goal_id" : 58,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 28,"kind" : ["Info"],"goal_id" : 58,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : []}
 {"step" : 28,"kind" : ["Info"],"goal_id" : 58,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["fail"]}
-{"step" : 29,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-127","SYMBOL-127 (SYMBOL-390 [] (uvar frozen--402 [])) (X12 = SYMBOL-377) \n (X12 = SYMBOL-371)"]}
+{"step" : 29,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["if","if (mem [] (uvar frozen--402 [])) (X12 = eqt) (X12 = any)"]}
 {"step" : 29,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 29,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 497, column 0, characters 12111-12124:"]}
-{"step" : 29,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 497, column 0, characters 12111-12124:","(SYMBOL-127 _ _ A0) :- A0."]}
-{"step" : 29,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := X12 = SYMBOL-371"]}
+{"step" : 29,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 497, column 0, characters 12111-12124:","(if _ _ A0) :- A0."]}
+{"step" : 29,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := X12 = any"]}
 {"step" : 29,"kind" : ["Info"],"goal_id" : 53,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["59"]}
-{"step" : 29,"kind" : ["Info"],"goal_id" : 59,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["X12 = SYMBOL-371"]}
+{"step" : 29,"kind" : ["Info"],"goal_id" : 59,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["X12 = any"]}
 {"step" : 29,"kind" : ["Info"],"goal_id" : 59,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 30,"kind" : ["Info"],"goal_id" : 59,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["=","X12 = SYMBOL-371"]}
+{"step" : 30,"kind" : ["Info"],"goal_id" : 59,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["=","X12 = any"]}
 {"step" : 30,"kind" : ["Info"],"goal_id" : 59,"runtime_id" : 1,"name" : "user:rule","payload" : ["eq"]}
 {"step" : 30,"kind" : ["Info"],"goal_id" : 59,"runtime_id" : 1,"name" : "user:rule:builtin:name","payload" : ["="]}
-{"step" : 30,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X12 := SYMBOL-371"]}
+{"step" : 30,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X12 := any"]}
 {"step" : 30,"kind" : ["Info"],"goal_id" : 59,"runtime_id" : 1,"name" : "user:rule:eq","payload" : ["success"]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 54,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["pi","pi c0 \\\n SYMBOL-375 (uvar frozen--402 []) c0 =>\n  SYMBOL-373 [] [] (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) \n   (X13 c0)"]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 54,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["pi","pi c0 \\\n copy (uvar frozen--402 []) c0 =>\n  bind [] [] (uvar frozen--402 [] ==> uvar frozen--402 []) (X13 c0)"]}
 {"step" : 31,"kind" : ["Info"],"goal_id" : 54,"runtime_id" : 1,"name" : "user:rule","payload" : ["pi"]}
 {"step" : 31,"kind" : ["Info"],"goal_id" : 54,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["60"]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-375 (uvar frozen--402 []) c0 =>\n SYMBOL-373 [] [] (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) \n  (X13 c0)"]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["copy (uvar frozen--402 []) c0 =>\n bind [] [] (uvar frozen--402 [] ==> uvar frozen--402 []) (X13 c0)"]}
 {"step" : 31,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:rule:pi","payload" : ["success"]}
-{"step" : 32,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["=>","SYMBOL-375 (uvar frozen--402 []) c0 =>\n SYMBOL-373 [] [] (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) \n  (X13 c0)"]}
+{"step" : 32,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["=>","copy (uvar frozen--402 []) c0 =>\n bind [] [] (uvar frozen--402 [] ==> uvar frozen--402 []) (X13 c0)"]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["61"]}
-{"step" : 32,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-373 [] [] (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) \n (X13 c0)"]}
+{"step" : 32,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["bind [] [] (uvar frozen--402 [] ==> uvar frozen--402 []) (X13 c0)"]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:rule:implication","payload" : ["success"]}
-{"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-373","SYMBOL-373 [] [] (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) \n (X13 c0)"]}
+{"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["bind","bind [] [] (uvar frozen--402 [] ==> uvar frozen--402 []) (X13 c0)"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 122, column 0, characters 3232-3266:"]}
-{"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 122, column 0, characters 3232-3266:","(SYMBOL-373 [] _ A0 (SYMBOL-392 A1)) :- (SYMBOL-375 A0 A1)."]}
-{"step" : 33,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])"]}
+{"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 122, column 0, characters 3232-3266:","(bind [] _ A0 (mono A1)) :- (copy A0 A1)."]}
+{"step" : 33,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--402 [] ==> uvar frozen--402 []"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign:simplify:heap","payload" : ["X13 := c0 \\\nX15 c0"]}
-{"step" : 33,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X15^1 := SYMBOL-392 X16^1"]}
+{"step" : 33,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X15^1 := mono X16^1"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["62"]}
-{"step" : 33,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-375 (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) X16^1"]}
+{"step" : 33,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["copy (uvar frozen--402 [] ==> uvar frozen--402 []) X16^1"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 34,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-375","SYMBOL-375 (SYMBOL-369 (uvar frozen--402 []) (uvar frozen--402 [])) X16^1"]}
+{"step" : 34,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["copy","copy (uvar frozen--402 [] ==> uvar frozen--402 []) X16^1"]}
 {"step" : 34,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 34,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 130, column 0, characters 3446-3496:"]}
-{"step" : 34,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 130, column 0, characters 3446-3496:","(SYMBOL-375 (SYMBOL-369 A0 A2) (SYMBOL-369 A1 A3)) :- (SYMBOL-375 A0 A1), \n (SYMBOL-375 A2 A3)."]}
+{"step" : 34,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 130, column 0, characters 3446-3496:","(copy (A0 ==> A2) (A1 ==> A3)) :- (copy A0 A1), (copy A2 A3)."]}
 {"step" : 34,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := uvar frozen--402 []"]}
 {"step" : 34,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A2 := uvar frozen--402 []"]}
-{"step" : 34,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X16^1 := SYMBOL-369 X17^1 X18^1"]}
+{"step" : 34,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X16^1 := X17^1 ==> X18^1"]}
 {"step" : 34,"kind" : ["Info"],"goal_id" : 62,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["63"]}
-{"step" : 34,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-375 (uvar frozen--402 []) X17^1"]}
+{"step" : 34,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["copy (uvar frozen--402 []) X17^1"]}
 {"step" : 34,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["64"]}
-{"step" : 34,"kind" : ["Info"],"goal_id" : 64,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["SYMBOL-375 (uvar frozen--402 []) X18^1"]}
+{"step" : 34,"kind" : ["Info"],"goal_id" : 64,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["copy (uvar frozen--402 []) X18^1"]}
 {"step" : 34,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 35,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-375","SYMBOL-375 (uvar frozen--402 []) X17^1"]}
+{"step" : 35,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["copy","copy (uvar frozen--402 []) X17^1"]}
 {"step" : 35,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 35,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"(context step_id:32)\", line 1, column 0, characters 0-0:","File \"tests/sources/trace-w/main.elpi\", line 133, column 0, characters 3590-3616:"]}
-{"step" : 35,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:32)\", line 1, column 0, characters 0-0:","(SYMBOL-375 (uvar frozen--402 []) c0) :- ."]}
+{"step" : 35,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:32)\", line 1, column 0, characters 0-0:","(copy (uvar frozen--402 []) c0) :- ."]}
 {"step" : 35,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X17^1 := c0"]}
 {"step" : 35,"kind" : ["Info"],"goal_id" : 63,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 36,"kind" : ["Info"],"goal_id" : 64,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["SYMBOL-375","SYMBOL-375 (uvar frozen--402 []) X18^1"]}
+{"step" : 36,"kind" : ["Info"],"goal_id" : 64,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["copy","copy (uvar frozen--402 []) X18^1"]}
 {"step" : 36,"kind" : ["Info"],"goal_id" : 64,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 36,"kind" : ["Info"],"goal_id" : 64,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"(context step_id:32)\", line 1, column 0, characters 0-0:","File \"tests/sources/trace-w/main.elpi\", line 133, column 0, characters 3590-3616:"]}
-{"step" : 36,"kind" : ["Info"],"goal_id" : 64,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:32)\", line 1, column 0, characters 0-0:","(SYMBOL-375 (uvar frozen--402 []) c0) :- ."]}
+{"step" : 36,"kind" : ["Info"],"goal_id" : 64,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:32)\", line 1, column 0, characters 0-0:","(copy (uvar frozen--402 []) c0) :- ."]}
 {"step" : 36,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["X18^1 := c0"]}
 {"step" : 36,"kind" : ["Info"],"goal_id" : 64,"runtime_id" : 1,"name" : "user:rule:backchain","payload" : ["success"]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["65"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["_ => X1 = SYMBOL-370 SYMBOL-371 c0 \\ SYMBOL-392 (SYMBOL-369 c0 c0)"]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["_ => X1 = all any c0 \\ mono (c0 ==> c0)"]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:CHR:rule-fired","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 85, column 36, characters 1999-2171:"]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:CHR:rule-remove-constraints","payload" : ["25"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:CHR:store:before","payload" : ["25"," SYMBOL-384 (SYMBOL-392 (SYMBOL-369 X6 X6)) X1  /* suspended on X7 */"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:CHR:store:before","payload" : ["16"," SYMBOL-399 []  /* suspended on X7 */"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:CHR:store:after","payload" : ["16"," SYMBOL-399 []  /* suspended on X7 */"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:CHR:resumed","payload" : ["_ => X1 = SYMBOL-370 SYMBOL-371 c0 \\ SYMBOL-392 (SYMBOL-369 c0 c0)"]}
-{"step" : 18,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","_ => X1 = SYMBOL-370 SYMBOL-371 c0 \\ SYMBOL-392 (SYMBOL-369 c0 c0)"]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:CHR:store:before","payload" : ["25"," gammabar (mono (X6 ==> X6)) X1  /* suspended on X7 */"]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:CHR:store:before","payload" : ["16"," theta []  /* suspended on X7 */"]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:CHR:store:after","payload" : ["16"," theta []  /* suspended on X7 */"]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:CHR:resumed","payload" : ["_ => X1 = all any c0 \\ mono (c0 ==> c0)"]}
+{"step" : 18,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","_ => X1 = all any c0 \\ mono (c0 ==> c0)"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["66"]}
-{"step" : 18,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["X1 = SYMBOL-370 SYMBOL-371 c0 \\ SYMBOL-392 (SYMBOL-369 c0 c0)"]}
+{"step" : 18,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["X1 = all any c0 \\ mono (c0 ==> c0)"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
-{"step" : 19,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=","X1 = SYMBOL-370 SYMBOL-371 c0 \\ SYMBOL-392 (SYMBOL-369 c0 c0)"]}
+{"step" : 19,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=","X1 = all any c0 \\ mono (c0 ==> c0)"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:rule","payload" : ["eq"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["="]}
-{"step" : 19,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X1 := SYMBOL-370 SYMBOL-371 c0 \\ SYMBOL-392 (SYMBOL-369 c0 c0)"]}
+{"step" : 19,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X1 := all any c0 \\ mono (c0 ==> c0)"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:rule:eq","payload" : ["success"]}
-{"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["pi","pi c0 \\\n SYMBOL-394 c0 (SYMBOL-370 SYMBOL-371 c1 \\ SYMBOL-392 (SYMBOL-369 c1 c1)) =>\n  SYMBOL-394 (app c0 (SYMBOL-386 [])) (SYMBOL-392 X3)"]}
+{"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["pi","pi c0 \\\n of c0 (all any c1 \\ mono (c1 ==> c1)) => of (app c0 (global [])) (mono X3)"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:rule","payload" : ["pi"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["67"]}
-{"step" : 20,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 c0 (SYMBOL-370 SYMBOL-371 c1 \\ SYMBOL-392 (SYMBOL-369 c1 c1)) =>\n SYMBOL-394 (app c0 (SYMBOL-386 [])) (SYMBOL-392 X3)"]}
+{"step" : 20,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of c0 (all any c1 \\ mono (c1 ==> c1)) => of (app c0 (global [])) (mono X3)"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:rule:pi","payload" : ["success"]}
-{"step" : 21,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","SYMBOL-394 c0 (SYMBOL-370 SYMBOL-371 c1 \\ SYMBOL-392 (SYMBOL-369 c1 c1)) =>\n SYMBOL-394 (app c0 (SYMBOL-386 [])) (SYMBOL-392 X3)"]}
+{"step" : 21,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","of c0 (all any c1 \\ mono (c1 ==> c1)) => of (app c0 (global [])) (mono X3)"]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["68"]}
-{"step" : 21,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 (app c0 (SYMBOL-386 [])) (SYMBOL-392 X3)"]}
+{"step" : 21,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of (app c0 (global [])) (mono X3)"]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
-{"step" : 22,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-394","SYMBOL-394 (app c0 (SYMBOL-386 [])) (SYMBOL-392 X3)"]}
+{"step" : 22,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of (app c0 (global [])) (mono X3)"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 4, column 0, characters 31-96:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:"]}
-{"step" : 22,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 4, column 0, characters 31-96:","(SYMBOL-394 (app A0 A3) (SYMBOL-392 A2)) :- (SYMBOL-394 A0 \n                                              (SYMBOL-392 (SYMBOL-369 A1 A2))), \n (SYMBOL-394 A3 (SYMBOL-392 A1))."]}
+{"step" : 22,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 4, column 0, characters 31-96:","(of (app A0 A3) (mono A2)) :- (of A0 (mono (A1 ==> A2))), (of A3 (mono A1))."]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := c0"]}
-{"step" : 22,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A3 := SYMBOL-386 []"]}
+{"step" : 22,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A3 := global []"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A2 := X3"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["69"]}
-{"step" : 22,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 c0 (SYMBOL-392 (SYMBOL-369 X8^1 X3))"]}
+{"step" : 22,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of c0 (mono (X8^1 ==> X3))"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["70"]}
-{"step" : 22,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 (SYMBOL-386 []) (SYMBOL-392 X8^1)"]}
+{"step" : 22,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of (global []) (mono X8^1)"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-394","SYMBOL-394 c0 (SYMBOL-392 (SYMBOL-369 X8^1 X3))"]}
+{"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of c0 (mono (X8^1 ==> X3))"]}
 {"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"(context step_id:21)\", line 1, column 0, characters 0-0:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:"]}
-{"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:21)\", line 1, column 0, characters 0-0:","(SYMBOL-394 c0 (SYMBOL-370 SYMBOL-371 (c1 \\ (SYMBOL-392 (SYMBOL-369 c1 c1))))) :- ."]}
-{"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["unify SYMBOL-392 (SYMBOL-369 X8^1 X3) with\n  SYMBOL-370 SYMBOL-371 c1 \\ SYMBOL-392 (SYMBOL-369 c1 c1)"]}
-{"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(SYMBOL-394 A0 (SYMBOL-392 A3)) :- (SYMBOL-394 A0 (SYMBOL-370 A1 A2)), \n (SYMBOL-396 (SYMBOL-370 A1 A2) A3)."]}
+{"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:21)\", line 1, column 0, characters 0-0:","(of c0 (all any (c1 \\ (mono (c1 ==> c1))))) :- ."]}
+{"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["unify mono (X8^1 ==> X3) with all any c1 \\ mono (c1 ==> c1)"]}
+{"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(of A0 (mono A3)) :- (of A0 (all A1 A2)), (specialize (all A1 A2) A3)."]}
 {"step" : 23,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := c0"]}
-{"step" : 23,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A3 := SYMBOL-369 X8^1 X3"]}
+{"step" : 23,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A3 := X8^1 ==> X3"]}
 {"step" : 23,"kind" : ["Info"],"goal_id" : 69,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["71"]}
-{"step" : 23,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 c0 (SYMBOL-370 X9^1 X10^1)"]}
+{"step" : 23,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of c0 (all X9^1 X10^1)"]}
 {"step" : 23,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["72"]}
-{"step" : 23,"kind" : ["Info"],"goal_id" : 72,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-396 (SYMBOL-370 X9^1 X10^1) (SYMBOL-369 X8^1 X3)"]}
+{"step" : 23,"kind" : ["Info"],"goal_id" : 72,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["specialize (all X9^1 X10^1) (X8^1 ==> X3)"]}
 {"step" : 23,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 24,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-394","SYMBOL-394 c0 (SYMBOL-370 X9^1 X10^1)"]}
+{"step" : 24,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of c0 (all X9^1 X10^1)"]}
 {"step" : 24,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 24,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"(context step_id:21)\", line 1, column 0, characters 0-0:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:"]}
-{"step" : 24,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:21)\", line 1, column 0, characters 0-0:","(SYMBOL-394 c0 (SYMBOL-370 SYMBOL-371 (c1 \\ (SYMBOL-392 (SYMBOL-369 c1 c1))))) :- ."]}
-{"step" : 24,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X9^1 := SYMBOL-371"]}
-{"step" : 24,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X10^1 := c1 \\\nSYMBOL-392 (SYMBOL-369 c1 c1)"]}
+{"step" : 24,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"(context step_id:21)\", line 1, column 0, characters 0-0:","(of c0 (all any (c1 \\ (mono (c1 ==> c1))))) :- ."]}
+{"step" : 24,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X9^1 := any"]}
+{"step" : 24,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X10^1 := c1 \\\nmono (c1 ==> c1)"]}
 {"step" : 24,"kind" : ["Info"],"goal_id" : 71,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 72,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-396","SYMBOL-396 (SYMBOL-370 SYMBOL-371 c1 \\ SYMBOL-392 (SYMBOL-369 c1 c1)) \n (SYMBOL-369 X8^1 X3)"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 72,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["specialize","specialize (all any c1 \\ mono (c1 ==> c1)) (X8^1 ==> X3)"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 72,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 72,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 57, column 0, characters 1273-1324:","File \"tests/sources/trace-w/main.elpi\", line 58, column 0, characters 1326-1389:"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 72,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 57, column 0, characters 1273-1324:","(SYMBOL-396 (SYMBOL-370 SYMBOL-371 A1) A2) :- (SYMBOL-396 (A1 A0) A2)."]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A1 := c1 \\\nSYMBOL-392 (SYMBOL-369 c1 c1)"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A2 := SYMBOL-369 X8^1 X3"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 72,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 57, column 0, characters 1273-1324:","(specialize (all any A1) A2) :- (specialize (A1 A0) A2)."]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A1 := c1 \\\nmono (c1 ==> c1)"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A2 := X8^1 ==> X3"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 72,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["73"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-396 (SYMBOL-392 (SYMBOL-369 X11^1 X11^1)) (SYMBOL-369 X8^1 X3)"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["specialize (mono (X11^1 ==> X11^1)) (X8^1 ==> X3)"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 26,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-396","SYMBOL-396 (SYMBOL-392 (SYMBOL-369 X11^1 X11^1)) (SYMBOL-369 X8^1 X3)"]}
+{"step" : 26,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["specialize","specialize (mono (X11^1 ==> X11^1)) (X8^1 ==> X3)"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 56, column 0, characters 1250-1271:"]}
-{"step" : 26,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 56, column 0, characters 1250-1271:","(SYMBOL-396 (SYMBOL-392 A0) A0) :- ."]}
-{"step" : 26,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := SYMBOL-369 X11^1 X11^1"]}
+{"step" : 26,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 56, column 0, characters 1250-1271:","(specialize (mono A0) A0) :- ."]}
+{"step" : 26,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := X11^1 ==> X11^1"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X11 c0 := X8 c0"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X8 c0 := X3"]}
 {"step" : 26,"kind" : ["Info"],"goal_id" : 73,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-394","SYMBOL-394 (SYMBOL-386 []) (SYMBOL-392 X3)"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of (global []) (mono X3)"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 38, column 0, characters 655-686:","File \"tests/sources/trace-w/main.elpi\", line 39, column 0, characters 688-719:","File \"tests/sources/trace-w/main.elpi\", line 40, column 0, characters 721-752:","File \"tests/sources/trace-w/main.elpi\", line 41, column 0, characters 754-803:","File \"tests/sources/trace-w/main.elpi\", line 43, column 0, characters 806-852:","File \"tests/sources/trace-w/main.elpi\", line 44, column 0, characters 854-917:","File \"tests/sources/trace-w/main.elpi\", line 45, column 0, characters 919-973:","File \"tests/sources/trace-w/main.elpi\", line 46, column 0, characters 975-1032:","File \"tests/sources/trace-w/main.elpi\", line 48, column 0, characters 1035-1108:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 38, column 0, characters 655-686:","(SYMBOL-394 (SYMBOL-386 1) (SYMBOL-392 SYMBOL-387)) :- ."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 1"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 39, column 0, characters 688-719:","(SYMBOL-394 (SYMBOL-386 2) (SYMBOL-392 SYMBOL-387)) :- ."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 2"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 40, column 0, characters 721-752:","(SYMBOL-394 (SYMBOL-386 3) (SYMBOL-392 SYMBOL-387)) :- ."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 3"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 41, column 0, characters 754-803:","(SYMBOL-394 (SYMBOL-386 plus) \n  (SYMBOL-392 (SYMBOL-369 SYMBOL-387 (SYMBOL-369 SYMBOL-387 SYMBOL-387)))) :- ."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 plus"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 43, column 0, characters 806-852:","(SYMBOL-394 (SYMBOL-386 []) \n  (SYMBOL-370 SYMBOL-371 (c0 \\ (SYMBOL-392 (SYMBOL-389 c0))))) :- ."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["unify SYMBOL-392 X3 with\n  SYMBOL-370 SYMBOL-371 c0 \\ SYMBOL-392 (SYMBOL-389 c0)"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 44, column 0, characters 854-917:","(SYMBOL-394 (SYMBOL-386 ::) \n  (SYMBOL-370 SYMBOL-371 (c0 \\\n    (SYMBOL-392 (SYMBOL-369 c0 (SYMBOL-369 (SYMBOL-389 c0) (SYMBOL-389 c0))))))) :- ."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 ::"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 45, column 0, characters 919-973:","(SYMBOL-394 (SYMBOL-386 size) \n  (SYMBOL-370 SYMBOL-371 (c0 \\\n    (SYMBOL-392 (SYMBOL-369 (SYMBOL-389 c0) SYMBOL-387))))) :- ."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 size"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 46, column 0, characters 975-1032:","(SYMBOL-394 (SYMBOL-386 undup) \n  (SYMBOL-370 SYMBOL-377 (c0 \\\n    (SYMBOL-392 (SYMBOL-369 (SYMBOL-389 c0) (SYMBOL-389 c0)))))) :- ."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 undup"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 48, column 0, characters 1035-1108:","(SYMBOL-394 (SYMBOL-386 ,) \n  (SYMBOL-370 SYMBOL-371 (c0 \\\n    (SYMBOL-370 SYMBOL-371 (c1 \\\n      (SYMBOL-392 (SYMBOL-369 c0 (SYMBOL-369 c1 (SYMBOL-395 c0 c1))))))))) :- ."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 ,"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(SYMBOL-394 A0 (SYMBOL-392 A3)) :- (SYMBOL-394 A0 (SYMBOL-370 A1 A2)), \n (SYMBOL-396 (SYMBOL-370 A1 A2) A3)."]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := SYMBOL-386 []"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 38, column 0, characters 655-686:","(of (global 1) (mono int)) :- ."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global 1"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 39, column 0, characters 688-719:","(of (global 2) (mono int)) :- ."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global 2"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 40, column 0, characters 721-752:","(of (global 3) (mono int)) :- ."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global 3"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 41, column 0, characters 754-803:","(of (global plus) (mono (int ==> int ==> int))) :- ."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global plus"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 43, column 0, characters 806-852:","(of (global []) (all any (c0 \\ (mono (list c0))))) :- ."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["unify mono X3 with all any c0 \\ mono (list c0)"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 44, column 0, characters 854-917:","(of (global ::) (all any (c0 \\ (mono (c0 ==> list c0 ==> list c0))))) :- ."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global ::"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 45, column 0, characters 919-973:","(of (global size) (all any (c0 \\ (mono (list c0 ==> int))))) :- ."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global size"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 46, column 0, characters 975-1032:","(of (global undup) (all eqt (c0 \\ (mono (list c0 ==> list c0))))) :- ."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global undup"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 48, column 0, characters 1035-1108:","(of (global ,) \n  (all any (c0 \\ (all any (c1 \\ (mono (c0 ==> c1 ==> pair c0 c1))))))) :- ."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global ,"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(of A0 (mono A3)) :- (of A0 (all A1 A2)), (specialize (all A1 A2) A3)."]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := global []"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A3 := X3"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 70,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["74"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-394 (SYMBOL-386 []) (SYMBOL-370 X12^1 X13^1)"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of (global []) (all X12^1 X13^1)"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["75"]}
-{"step" : 27,"kind" : ["Info"],"goal_id" : 75,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-396 (SYMBOL-370 X12^1 X13^1) X3"]}
+{"step" : 27,"kind" : ["Info"],"goal_id" : 75,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["specialize (all X12^1 X13^1) X3"]}
 {"step" : 27,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-394","SYMBOL-394 (SYMBOL-386 []) (SYMBOL-370 X12^1 X13^1)"]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of (global []) (all X12^1 X13^1)"]}
 {"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 38, column 0, characters 655-686:","File \"tests/sources/trace-w/main.elpi\", line 39, column 0, characters 688-719:","File \"tests/sources/trace-w/main.elpi\", line 40, column 0, characters 721-752:","File \"tests/sources/trace-w/main.elpi\", line 41, column 0, characters 754-803:","File \"tests/sources/trace-w/main.elpi\", line 43, column 0, characters 806-852:","File \"tests/sources/trace-w/main.elpi\", line 44, column 0, characters 854-917:","File \"tests/sources/trace-w/main.elpi\", line 45, column 0, characters 919-973:","File \"tests/sources/trace-w/main.elpi\", line 46, column 0, characters 975-1032:","File \"tests/sources/trace-w/main.elpi\", line 48, column 0, characters 1035-1108:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:"]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 38, column 0, characters 655-686:","(SYMBOL-394 (SYMBOL-386 1) (SYMBOL-392 SYMBOL-387)) :- ."]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 1"]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 39, column 0, characters 688-719:","(SYMBOL-394 (SYMBOL-386 2) (SYMBOL-392 SYMBOL-387)) :- ."]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 2"]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 40, column 0, characters 721-752:","(SYMBOL-394 (SYMBOL-386 3) (SYMBOL-392 SYMBOL-387)) :- ."]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 3"]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 41, column 0, characters 754-803:","(SYMBOL-394 (SYMBOL-386 plus) \n  (SYMBOL-392 (SYMBOL-369 SYMBOL-387 (SYMBOL-369 SYMBOL-387 SYMBOL-387)))) :- ."]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match SYMBOL-386 [] with SYMBOL-386 plus"]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 43, column 0, characters 806-852:","(SYMBOL-394 (SYMBOL-386 []) \n  (SYMBOL-370 SYMBOL-371 (c0 \\ (SYMBOL-392 (SYMBOL-389 c0))))) :- ."]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X12^1 := SYMBOL-371"]}
-{"step" : 28,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X13^1 := c1 \\\nSYMBOL-392 (SYMBOL-389 c1)"]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 38, column 0, characters 655-686:","(of (global 1) (mono int)) :- ."]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global 1"]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 39, column 0, characters 688-719:","(of (global 2) (mono int)) :- ."]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global 2"]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 40, column 0, characters 721-752:","(of (global 3) (mono int)) :- ."]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global 3"]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 41, column 0, characters 754-803:","(of (global plus) (mono (int ==> int ==> int))) :- ."]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:backchain:fail-to","payload" : ["match global [] with global plus"]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 43, column 0, characters 806-852:","(of (global []) (all any (c0 \\ (mono (list c0))))) :- ."]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X12^1 := any"]}
+{"step" : 28,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X13^1 := c1 \\\nmono (list c1)"]}
 {"step" : 28,"kind" : ["Info"],"goal_id" : 74,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 29,"kind" : ["Info"],"goal_id" : 75,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-396","SYMBOL-396 (SYMBOL-370 SYMBOL-371 c1 \\ SYMBOL-392 (SYMBOL-389 c1)) X3"]}
+{"step" : 29,"kind" : ["Info"],"goal_id" : 75,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["specialize","specialize (all any c1 \\ mono (list c1)) X3"]}
 {"step" : 29,"kind" : ["Info"],"goal_id" : 75,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 29,"kind" : ["Info"],"goal_id" : 75,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 57, column 0, characters 1273-1324:","File \"tests/sources/trace-w/main.elpi\", line 58, column 0, characters 1326-1389:"]}
-{"step" : 29,"kind" : ["Info"],"goal_id" : 75,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 57, column 0, characters 1273-1324:","(SYMBOL-396 (SYMBOL-370 SYMBOL-371 A1) A2) :- (SYMBOL-396 (A1 A0) A2)."]}
-{"step" : 29,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A1 := c1 \\\nSYMBOL-392 (SYMBOL-389 c1)"]}
+{"step" : 29,"kind" : ["Info"],"goal_id" : 75,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 57, column 0, characters 1273-1324:","(specialize (all any A1) A2) :- (specialize (A1 A0) A2)."]}
+{"step" : 29,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A1 := c1 \\\nmono (list c1)"]}
 {"step" : 29,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A2 := X3"]}
 {"step" : 29,"kind" : ["Info"],"goal_id" : 75,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["76"]}
-{"step" : 29,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["SYMBOL-396 (SYMBOL-392 (SYMBOL-389 X14^1)) X3"]}
+{"step" : 29,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["specialize (mono (list X14^1)) X3"]}
 {"step" : 29,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
-{"step" : 30,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-396","SYMBOL-396 (SYMBOL-392 (SYMBOL-389 X14^1)) X3"]}
+{"step" : 30,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["specialize","specialize (mono (list X14^1)) X3"]}
 {"step" : 30,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 30,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 56, column 0, characters 1250-1271:"]}
-{"step" : 30,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 56, column 0, characters 1250-1271:","(SYMBOL-396 (SYMBOL-392 A0) A0) :- ."]}
-{"step" : 30,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := SYMBOL-389 X14^1"]}
+{"step" : 30,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 56, column 0, characters 1250-1271:","(specialize (mono A0) A0) :- ."]}
+{"step" : 30,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := list X14^1"]}
 {"step" : 30,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign:expand","payload" : ["X14^1 := X15 c0"]}
 {"step" : 30,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign:restrict","payload" : ["0 X15 c0 := c0 \\\n.X16"]}
-{"step" : 30,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X3 := SYMBOL-389 X16"]}
+{"step" : 30,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X3 := list X16"]}
 {"step" : 30,"kind" : ["Info"],"goal_id" : 76,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
 {"step" : 31,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["!","!"]}
 {"step" : 31,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:rule","payload" : ["cut"]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["75","File \"tests/sources/trace-w/main.elpi\", line 58, column 0, characters 1326-1389:","(SYMBOL-396 (SYMBOL-370 SYMBOL-377 A1) A2) :- (SYMBOL-396 (A1 A0) A2), \n (SYMBOL-376 A0)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 44, column 0, characters 854-917:","(SYMBOL-394 (SYMBOL-386 ::) \n  (SYMBOL-370 SYMBOL-371 (c0 \\\n    (SYMBOL-392 (SYMBOL-369 c0 (SYMBOL-369 (SYMBOL-389 c0) (SYMBOL-389 c0))))))) :- ."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 45, column 0, characters 919-973:","(SYMBOL-394 (SYMBOL-386 size) \n  (SYMBOL-370 SYMBOL-371 (c0 \\\n    (SYMBOL-392 (SYMBOL-369 (SYMBOL-389 c0) SYMBOL-387))))) :- ."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 46, column 0, characters 975-1032:","(SYMBOL-394 (SYMBOL-386 undup) \n  (SYMBOL-370 SYMBOL-377 (c0 \\\n    (SYMBOL-392 (SYMBOL-369 (SYMBOL-389 c0) (SYMBOL-389 c0)))))) :- ."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 48, column 0, characters 1035-1108:","(SYMBOL-394 (SYMBOL-386 ,) \n  (SYMBOL-370 SYMBOL-371 (c0 \\\n    (SYMBOL-370 SYMBOL-371 (c1 \\\n      (SYMBOL-392 (SYMBOL-369 c0 (SYMBOL-369 c1 (SYMBOL-395 c0 c1))))))))) :- ."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(SYMBOL-394 A0 (SYMBOL-392 A3)) :- (SYMBOL-394 A0 (SYMBOL-370 A1 A2)), \n (SYMBOL-396 (SYMBOL-370 A1 A2) A3)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(SYMBOL-394 A0 (SYMBOL-392 A2)) :- (SYMBOL-141 SYMBOL-379), (!), \n (SYMBOL-379 => SYMBOL-394 A0 (SYMBOL-392 A1)), (SYMBOL-372 A0 A1 A2)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(SYMBOL-394 A0 (SYMBOL-392 _)) :- (SYMBOL-150 KO: term ( A0 ) has no type\n), \n (SYMBOL-122)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["70","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(SYMBOL-394 A0 (SYMBOL-392 A2)) :- (SYMBOL-141 SYMBOL-379), (!), \n (SYMBOL-379 => SYMBOL-394 A0 (SYMBOL-392 A1)), (SYMBOL-372 A0 A1 A2)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["70","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(SYMBOL-394 A0 (SYMBOL-392 _)) :- (SYMBOL-150 KO: term ( A0 ) has no type\n), \n (SYMBOL-122)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["72","File \"tests/sources/trace-w/main.elpi\", line 58, column 0, characters 1326-1389:","(SYMBOL-396 (SYMBOL-370 SYMBOL-377 A1) A2) :- (SYMBOL-396 (A1 A0) A2), \n (SYMBOL-376 A0)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["71","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(SYMBOL-394 A0 (SYMBOL-392 A3)) :- (SYMBOL-394 A0 (SYMBOL-370 A1 A2)), \n (SYMBOL-396 (SYMBOL-370 A1 A2) A3)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["71","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(SYMBOL-394 A0 (SYMBOL-392 A2)) :- (SYMBOL-141 SYMBOL-379), (!), \n (SYMBOL-379 => SYMBOL-394 A0 (SYMBOL-392 A1)), (SYMBOL-372 A0 A1 A2)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["71","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(SYMBOL-394 A0 (SYMBOL-392 _)) :- (SYMBOL-150 KO: term ( A0 ) has no type\n), \n (SYMBOL-122)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["69","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(SYMBOL-394 A0 (SYMBOL-392 A2)) :- (SYMBOL-141 SYMBOL-379), (!), \n (SYMBOL-379 => SYMBOL-394 A0 (SYMBOL-392 A1)), (SYMBOL-372 A0 A1 A2)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["69","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(SYMBOL-394 A0 (SYMBOL-392 _)) :- (SYMBOL-150 KO: term ( A0 ) has no type\n), \n (SYMBOL-122)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["68","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(SYMBOL-394 A0 (SYMBOL-392 A3)) :- (SYMBOL-394 A0 (SYMBOL-370 A1 A2)), \n (SYMBOL-396 (SYMBOL-370 A1 A2) A3)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["68","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(SYMBOL-394 A0 (SYMBOL-392 A2)) :- (SYMBOL-141 SYMBOL-379), (!), \n (SYMBOL-379 => SYMBOL-394 A0 (SYMBOL-392 A1)), (SYMBOL-372 A0 A1 A2)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["68","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(SYMBOL-394 A0 (SYMBOL-392 _)) :- (SYMBOL-150 KO: term ( A0 ) has no type\n), \n (SYMBOL-122)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["22","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(SYMBOL-394 A0 (SYMBOL-392 A3)) :- (SYMBOL-394 A0 (SYMBOL-370 A1 A2)), \n (SYMBOL-396 (SYMBOL-370 A1 A2) A3)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["22","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(SYMBOL-394 A0 (SYMBOL-392 A2)) :- (SYMBOL-141 SYMBOL-379), (!), \n (SYMBOL-379 => SYMBOL-394 A0 (SYMBOL-392 A1)), (SYMBOL-372 A0 A1 A2)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["22","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(SYMBOL-394 A0 (SYMBOL-392 _)) :- (SYMBOL-150 KO: term ( A0 ) has no type\n), \n (SYMBOL-122)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["17","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(SYMBOL-394 A0 (SYMBOL-392 A3)) :- (SYMBOL-394 A0 (SYMBOL-370 A1 A2)), \n (SYMBOL-396 (SYMBOL-370 A1 A2) A3)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["17","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(SYMBOL-394 A0 (SYMBOL-392 A2)) :- (SYMBOL-141 SYMBOL-379), (!), \n (SYMBOL-379 => SYMBOL-394 A0 (SYMBOL-392 A1)), (SYMBOL-372 A0 A1 A2)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["17","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(SYMBOL-394 A0 (SYMBOL-392 _)) :- (SYMBOL-150 KO: term ( A0 ) has no type\n), \n (SYMBOL-122)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["10","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(SYMBOL-394 A0 (SYMBOL-392 A3)) :- (SYMBOL-394 A0 (SYMBOL-370 A1 A2)), \n (SYMBOL-396 (SYMBOL-370 A1 A2) A3)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["10","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(SYMBOL-394 A0 (SYMBOL-392 A2)) :- (SYMBOL-141 SYMBOL-379), (!), \n (SYMBOL-379 => SYMBOL-394 A0 (SYMBOL-392 A1)), (SYMBOL-372 A0 A1 A2)."]}
-{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["10","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(SYMBOL-394 A0 (SYMBOL-392 _)) :- (SYMBOL-150 KO: term ( A0 ) has no type\n), \n (SYMBOL-122)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["75","File \"tests/sources/trace-w/main.elpi\", line 58, column 0, characters 1326-1389:","(specialize (all eqt A1) A2) :- (specialize (A1 A0) A2), (eqbar A0)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 44, column 0, characters 854-917:","(of (global ::) (all any (c0 \\ (mono (c0 ==> list c0 ==> list c0))))) :- ."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 45, column 0, characters 919-973:","(of (global size) (all any (c0 \\ (mono (list c0 ==> int))))) :- ."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 46, column 0, characters 975-1032:","(of (global undup) (all eqt (c0 \\ (mono (list c0 ==> list c0))))) :- ."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 48, column 0, characters 1035-1108:","(of (global ,) \n  (all any (c0 \\ (all any (c1 \\ (mono (c0 ==> c1 ==> pair c0 c1))))))) :- ."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(of A0 (mono A3)) :- (of A0 (all A1 A2)), (specialize (all A1 A2) A3)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["74","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["70","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["70","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["72","File \"tests/sources/trace-w/main.elpi\", line 58, column 0, characters 1326-1389:","(specialize (all eqt A1) A2) :- (specialize (A1 A0) A2), (eqbar A0)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["71","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(of A0 (mono A3)) :- (of A0 (all A1 A2)), (specialize (all A1 A2) A3)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["71","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["71","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["69","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["69","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["68","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(of A0 (mono A3)) :- (of A0 (all A1 A2)), (specialize (all A1 A2) A3)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["68","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["68","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["22","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(of A0 (mono A3)) :- (of A0 (all A1 A2)), (specialize (all A1 A2) A3)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["22","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["22","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["17","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(of A0 (mono A3)) :- (of A0 (all A1 A2)), (specialize (all A1 A2) A3)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["17","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["17","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["10","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 366-427:","(of A0 (mono A3)) :- (of A0 (all A1 A2)), (specialize (all A1 A2) A3)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["10","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4478-4547:","(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2)."]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:cut:branch","payload" : ["10","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4549-4610:","(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt)."]}
 {"step" : 31,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:rule:cut","payload" : ["success"]}
-{"step" : 32,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-150","SYMBOL-150\n (SYMBOL-388 (lam c0 \\ c0) \n   (SYMBOL-370 SYMBOL-371 c0 \\ SYMBOL-392 (SYMBOL-369 c0 c0)) c0 \\\n   app c0 (SYMBOL-386 []))  :  (SYMBOL-392 (SYMBOL-389 X16))"]}
+{"step" : 32,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["print","print\n (let (lam c0 \\ c0) (all any c0 \\ mono (c0 ==> c0)) c0 \\ app c0 (global [])) \n  :  (mono (list X16))"]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:rule","payload" : ["builtin"]}
-{"step" : 32,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["SYMBOL-150"]}
+{"step" : 32,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["print"]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:rule:builtin","payload" : ["success"]}
-{"step" : 33,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["SYMBOL-150","SYMBOL-150"]}
+{"step" : 33,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["print","print"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:rule","payload" : ["builtin"]}
-{"step" : 33,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["SYMBOL-150"]}
+{"step" : 33,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["print"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:rule:builtin","payload" : ["success"]}
