@@ -1174,7 +1174,11 @@ module FunctionalityChecker : sig
 
   val pp : Format.formatter -> func_map -> unit
 end = struct 
-  type func_map = (functionality * Loc.t) F.Map.t
+  module STE = ScopedTypeExpression
+
+  type func_map = (functionality*Loc.t) F.Map.t
+  type v_ = STE.v_
+  type t_ = STE.t_
 
   let rec functionality_leq a b = match a, b with
     | AssumedFunctional, AssumedFunctional -> true
@@ -1183,63 +1187,67 @@ end = struct
     | _, Relational -> true
     | Relational, _ -> false
     | Functional xs, Functional ys -> List.for_all2 functionality_leq xs ys
+    | Lam _, _ | Uvar _, _ | _, Uvar _ | _, Lam _-> failwith "NYI"
 
   let is_functional map k = F.Map.mem k map
 
   let check_body ~type_abbrevs ~kinds ~types st ~exp =
     () (* TODO: @FissoreD *)
 
-  let map_snd f = List.map (fun (_, ScopedTypeExpression.{it}) -> f it)
+  let map_snd f = List.map (fun (_, STE.{it}) -> f it)
 
-  let rec type2funct (type_abbrevs: func_map) : ScopedTypeExpression.t_ -> functionality = function
-    | ScopedTypeExpression.Pred(b, xs) -> Functional (map_snd (type2funct type_abbrevs) xs)
+  let rec subst k v : functionality -> functionality = function
+    | Uvar k' when F.equal k k' -> v
+    | Functional l -> Functional (List.map (subst k v) l)
+    | Lam (k',_) as t when not (F.equal k k') -> Lam (k', subst k v t)
+    | Lam _ | Uvar _ | AssumedFunctional | Relational as t -> t
+
+  let rec bind ctx type_abbrevs : (functionality*'a) -> functionality = function
+    | Lam (n,b), x::xs -> bind ctx type_abbrevs (subst n x b,xs) (* TODO: @FissoreD do only one subst in the base case for efficiency reasons... *)
+    | t, [] -> t
+    | _, (_::_) -> anomaly "Type error"
+
+  and type2funct ctx (type_abbrevs: func_map) : t_ -> functionality = function
+    | STE.Pred(Function, xs) -> Functional (map_snd (type2funct ctx type_abbrevs) xs)
+    | STE.Pred(Relation, xs) -> Relational
+    | Const (_,c) when F.Set.mem c ctx -> Uvar c 
     | Const (_,c) -> 
       begin match F.Map.find_opt c type_abbrevs with
-      | None -> Relational
-      | Some c -> fst c
+        | None -> Relational
+        | Some(f,_) -> f
       end
     | Prop | Any -> Relational
     | App(c,x,xs) ->
       begin match F.Map.find_opt c type_abbrevs with
       | None -> Relational
-        (* TODO: @FissoreD typechecking ensures that `c` is a typeabbrev with
-           arity length == length(x::xs), here we do not perfom this length
-           check, but we should apply the functionality of (x::xs) to the bound
-           variables in c... this means that we need to change the datatype of
-           functionality and add one with abstractions and another allowing
-           variable bindings
-
-           For example:
-            typeabbrev x (:functional pred i:A).
-            :functional pred p i:(x (:functional pred i:int)). /* TODO: check if the equivalent :functional pred p i:(x (x int)) is accepted? */
-
-          This is equivalent to:
-          :functional pred p i:(:functional pred i:(:functional pred i:int))
-
-          and we need to pass the functionality property of the argument of x
-          to its unfolded version... now we don't do this: the functionality
-          property of the inner argument is discarded
-
-           *)
-      | Some c -> fst c
+      | Some c -> 
+        let xxs = List.map (fun STE.{it} -> type2funct ctx type_abbrevs it) (x::xs) in
+        bind ctx type_abbrevs (fst c, xxs)
       end
     | Arrow (Variadic, _, _) -> AssumedFunctional
     | Arrow (NotVariadic,_,_) -> Relational
 
-  let pp_locs fmt =
-    Format.fprintf fmt "[%a]" (pplist (fun fmt (_,loc) -> Format.fprintf fmt "%a" Loc.pp loc) ",")
+  let rec type2funct_lam ctx type_abbrevs : v_ -> functionality*Loc.t = function
+    | Lam (n, t) -> 
+        let body, loc = type2funct_lam (F.Set.add n ctx) type_abbrevs t in
+        Lam (n, body), loc
+    | Ty {it;loc} -> type2funct ctx type_abbrevs it, loc
+
+  let pp_locs fmt (l: v_ list) =
+    let rec go_under_lam = function (Lam (_,x): v_) -> go_under_lam x | Ty {loc} -> loc in
+    Format.fprintf fmt "[%a]" (pplist (fun fmt -> Format.fprintf fmt "%a" Loc.pp) ",") (List.map go_under_lam l)
 
   (** 
-    Takes a constant and its type. 
-    - if the type is first-order and is a functional predicate returns this
-      predicate together with its loc
-    - if the type is first-order and is not functional returns None
-    - if the type is higher-order (like polymorphic types) then we go under the
-      lambda
+    Takes a constant and its type.
+    Returns the type if the type is functional
   *)
-  let rec map_pred name : ScopedTypeExpression.t -> 'a = function
-    | {value = (Ty {it = Pred (Function,_) as it;loc})} -> Some (it,loc)
-    | {value = (Lam (_,value))} as t -> map_pred name {t with value}
+  let rec map_pred name : STE.t -> (STE.v_) option = function
+    | {value = (Ty {it = Pred (Function,_) as it;loc})} -> Some (Ty {it;loc})
+    | {value = (Lam (ag,value))} as t -> 
+      begin match map_pred name {t with value} with
+        | Some e -> Some (Lam (ag,e))
+        | None -> None
+      end
     | _ -> None
 
   (**
@@ -1249,14 +1257,10 @@ end = struct
     - 1 -> the type is functional
     - N -> the type has multiple functionality definition: we throw an error
   *)
-  let map_is_func (func_map: func_map) name (l : ScopedTypeExpression.t list) =
+  let map_is_func (func_map: func_map) name (l : STE.t list) =
     match List.filter_map (map_pred name) l with
-    | [] -> None
-    | [it,loc] -> 
-      begin match it with 
-        | Pred(_,_) -> Some (type2funct func_map it, loc)
-        | _ -> anomaly "Unreachable branch"
-      end
+    | [] -> None (* the type is not functional *)
+    | [t] -> Some (type2funct_lam F.Set.empty func_map t) (* the type is functional *)
     | l -> error (Format.asprintf "Type %a has multiple functionality definitions, this is not allowed %a" F.pp name pp_locs l)
 
   let merge = F.Map.union (fun k _ -> error ("Duplicate functionality declaration for " ^ F.show k))
