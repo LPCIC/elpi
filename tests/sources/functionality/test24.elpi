@@ -1,0 +1,13 @@
+:functional 
+pred f o:int.
+
+:functional 
+pred r o:(:functional pred o:int).
+
+:functional 
+pred r' o:(pred o:int).
+
+f R :- r X, r' X, X R. % This fails since the same variable X has two different
+                       % functionalities.
+
+main.

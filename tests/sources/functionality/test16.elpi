@@ -1,0 +1,13 @@
+:functional 
+pred p i:int, o:int.
+
+pred f o:int, o:int, o:int.
+
+% the variables of f are not used in the output, therefore, p remains functional 
+p 4 Y :- f Z X W, Y = 4.
+
+% case similar to the previous one, where the output is not instantiated 
+% all the variables in the body are never returned
+p 5 Y :- f Z X W, f X Z T.
+
+main.

@@ -1,0 +1,14 @@
+pred q o:int.
+
+:functional 
+pred do i:(:functional pred).
+do X :- X.
+
+:functional
+pred x o:int.
+
+% similar to test18 but with nested 
+% non functional call
+x Y :- do (do (q Y)).
+
+main.

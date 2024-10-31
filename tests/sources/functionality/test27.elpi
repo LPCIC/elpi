@@ -1,0 +1,13 @@
+kind tm type.
+
+type app tm -> tm -> tm.
+type lam (tm -> tm) -> tm.
+type const int -> tm.
+
+:functional
+pred p i:tm, o:tm.
+p (lam (x\ lam (y\ B x y))) (lam (x\ lam (y\ B x y))).
+% Overlap with HO terms: B x y overlaps with A x
+p (lam (x\ lam (A x))) (lam (x\ lam (A x))).
+
+main.

@@ -1,0 +1,18 @@
+:functional
+pred f i:int, o:int.
+
+pred q o:int.
+
+:functional
+pred r i:int, o:int.
+
+q 1.
+q 2.
+
+r X X.
+
+% similar to test14, but this time the non functional variable is the output Y
+f X Y :- q Y, r X Y.
+
+
+main :- std.findall (f _ _) R, print R.
