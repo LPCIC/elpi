@@ -1107,11 +1107,10 @@ end = struct
 end
 
 module FunctionalityChecker : sig 
-  type func_map = (functionality * Loc.t) F.Map.t
+  type func_map = Functionality.t F.Map.t
 
-  val check_body : type_abbrevs:TypeChecker.type_abbrevs ->
-    kinds:TypeChecker.arities ->
-    types:TypeChecker.env -> ScopedTerm.t -> exp:TypeAssignment.t -> unit
+  val check_clause : loc:Loc.t -> functional_preds:func_map -> 
+    ScopedTerm.t -> unit
 
   val merge_types_and_abbrevs :
     old:func_map -> 
@@ -1122,64 +1121,75 @@ module FunctionalityChecker : sig
 
   val pp : Format.formatter -> func_map -> unit
 end = struct 
+  open Functionality
   module STE = ScopedTypeExpression
+  type t = Functionality.t
+  type f = Functionality.f
 
-  type func_map = (functionality*Loc.t) F.Map.t
+  type func_map = t F.Map.t
   type v_ = STE.v_
   type t_ = STE.t_
 
   let rec functionality_leq a b = match a, b with
     | AssumedFunctional, AssumedFunctional -> true
-    | AssumedFunctional, t -> error (Format.asprintf "Cannot compare %a with %a" pp_functionality a pp_functionality b)
-    | _, AssumedFunctional -> error (Format.asprintf "Cannot compare %a with %a" pp_functionality a pp_functionality b)
+    | AssumedFunctional, t -> error (Format.asprintf "Cannot compare %a with %a" pp_f a pp_f b)
+    | _, AssumedFunctional -> error (Format.asprintf "Cannot compare %a with %a" pp_f a pp_f b)
     | _, Relational -> true
     | Relational, _ -> false
     | Functional xs, Functional ys -> List.for_all2 functionality_leq xs ys
-    | Lam _, _ | Uvar _, _ | _, Uvar _ | _, Lam _-> failwith "NYI"
+    | BoundVar _, _ | _, BoundVar _ -> failwith "NYI"
 
+  (* 
+    Invariant every constant in the map is functional:
+    i.e. for each k in the domain, map[k] = Functional [...]
+  *)
   let is_functional map k = F.Map.mem k map
-
-  let check_body ~type_abbrevs ~kinds ~types st ~exp =
-    () (* TODO: @FissoreD *)
 
   let map_snd f = List.map (fun (_, STE.{it}) -> f it)
 
-  let rec subst k v : functionality -> functionality = function
-    | Uvar k' when F.equal k k' -> v
-    | Functional l -> Functional (List.map (subst k v) l)
-    | Lam (k',_) as t when not (F.equal k k') -> Lam (k', subst k v t)
-    | Lam _ | Uvar _ | AssumedFunctional | Relational as t -> t
+  let rec subst (type_abbrevs:func_map) : f -> f = function
+    | BoundVar k as t ->
+      begin match F.Map.find_opt k type_abbrevs with
+      | None -> t
+      | Some (F (f,_)) -> f
+      | Some (Lam (_,b)) -> error ~loc:(get_loc b) "type_abbrev not fully applied"
+      end
+    | Functional l -> Functional (List.map (subst type_abbrevs) l)
+    | AssumedFunctional | Relational as t -> t
 
-  let rec bind ctx type_abbrevs : (functionality*'a) -> functionality = function
-    | Lam (n,b), x::xs -> bind ctx type_abbrevs (subst n x b,xs) (* TODO: @FissoreD do only one subst in the base case for efficiency reasons... *)
-    | t, [] -> t
-    | _, (_::_) -> anomaly "Type error"
+  let rec bind ctx type_abbrevs : (t*'a) -> f = function
+    | Lam (n,b), x::xs -> bind ctx (F.Map.add n (F (x, Loc.initial"")) type_abbrevs) (b,xs)
+    | Lam (_,b), [] -> error ~loc:(get_loc b) "type_abbrev is not fully applied"
+    | F (t,_), [] -> (subst type_abbrevs t)
+    | F (_,loc), _::_ -> anomaly ~loc "type_abbrev is too much applied"
 
-  and type2funct ctx (type_abbrevs: func_map) : t_ -> functionality = function
-    | STE.Pred(Function, xs) -> Functional (map_snd (type2funct ctx type_abbrevs) xs)
+  and type2funct ctx (type_abbrevs: func_map) : t_ -> f = function
+    | STE.Pred(Function, xs) -> (Functional (map_snd (type2funct ctx type_abbrevs) xs))
     | STE.Pred(Relation, xs) -> Relational
-    | Const (_,c) when F.Set.mem c ctx -> Uvar c 
+    | Const (_,c) when F.Set.mem c ctx -> BoundVar c 
     | Const (_,c) -> 
       begin match F.Map.find_opt c type_abbrevs with
         | None -> Relational
-        | Some(f,_) -> f
+        | Some (F f) -> fst f
+        | Some (Lam _) -> error "Not fully applied type_abbrev..."
       end
     | Prop | Any -> Relational
     | App(c,x,xs) ->
+      (* TODO: if we accept polymorphic type with functional arguments, like
+        `:functional pred do i:(list (:functional pred))`, then we should extend
+        this match *)
       begin match F.Map.find_opt c type_abbrevs with
       | None -> Relational
       | Some c -> 
         let xxs = List.map (fun STE.{it} -> type2funct ctx type_abbrevs it) (x::xs) in
-        bind ctx type_abbrevs (fst c, xxs)
+        bind ctx type_abbrevs (c, xxs)
       end
     | Arrow (Variadic, _, _) -> AssumedFunctional
     | Arrow (NotVariadic,_,_) -> Relational
 
-  let rec type2funct_lam ctx type_abbrevs : v_ -> functionality*Loc.t = function
-    | Lam (n, t) -> 
-        let body, loc = type2funct_lam (F.Set.add n ctx) type_abbrevs t in
-        Lam (n, body), loc
-    | Ty {it;loc} -> type2funct ctx type_abbrevs it, loc
+  let rec type2funct_lam ctx type_abbrevs : v_ -> t = function
+    | Lam (n, t) -> Lam (n, type2funct_lam (F.Set.add n ctx) type_abbrevs t)
+    | Ty {it;loc} -> F (type2funct ctx type_abbrevs it, loc)
 
   let pp_locs fmt (l: v_ list) =
     let rec go_under_lam = function (Lam (_,x): v_) -> go_under_lam x | Ty {loc} -> loc in
@@ -1224,8 +1234,19 @@ end = struct
   let merge_types_and_abbrevs ~old  ~type_abbrevs ~types =
     merge_type_abbrevs type_abbrevs old |> merge_type_list types
 
+  let check_head = ()
+     (* failwith "TODO1" *)
+  let check_body =  ()
+    (* failwith "TODO2" *)
+
+  let check_clause ~loc ~functional_preds ScopedTerm.{it} = ()
+    (* match it with
+    | Impl(false, hd, body) -> failwith "TODO3"
+    | App(_,_,_,_) -> failwith "TODO4"
+    | _ -> error ~loc "invalid type" *)
+
   let pp (fmt: Format.formatter) (e: func_map) : unit =
-    F.Map.pp (fun fmt (a,b) -> Format.fprintf fmt "(%a,%a)" pp_functionality a Loc.pp b) fmt e
+    F.Map.pp pp fmt e
 end
 
   
@@ -1285,7 +1306,7 @@ type program = {
   types_indexing : (Ast.Structured.tattribute option * Loc.t) list F.Map.t;
   type_abbrevs :  (TypeAssignment.skema * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
-  functional_preds: (functionality * Loc.t) F.Map.t;
+  functional_preds: Functionality.t F.Map.t;
   clauses : (bool * (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t) list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : BuiltInPredicate.t list;
@@ -1324,7 +1345,7 @@ type program = {
   types : TypeAssignment.overloaded_skema F.Map.t;
   type_abbrevs : (TypeAssignment.skema * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
-  functional_preds : (functionality * Loc.t) F.Map.t;
+  functional_preds : Functionality.t F.Map.t;
   total_type_checking_time : float;
 
   prolog_program : index;
@@ -3586,12 +3607,12 @@ end = struct
 
     let check_begin = Unix.gettimeofday () in
 
-    (* Format.printf "Functional pred are %a\n%!" FunctionalityChecker.pp functional_preds; *)
+    Format.printf "Functional pred are %a\n%!" FunctionalityChecker.pp functional_preds;
 
     let clauses = clauses |> List.map (fun ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
       if typecheck then
         let needs_spill = TypeChecker.check ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop) in
-        FunctionalityChecker.check_body ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop);
+        FunctionalityChecker.check_clause ~loc ~functional_preds body;
         needs_spill, c
       else
         false, c) in
