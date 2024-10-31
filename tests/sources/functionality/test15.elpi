@@ -1,0 +1,22 @@
+:functional
+pred f i:int, o:int.
+
+pred q o:int.
+
+:functional
+pred r i:int, o:int.
+
+q 1.
+q 2.
+
+r X X.
+
+% Recall: q is not functional!
+% This is similar to test14, but in this case, 
+% the output of q is Y (which can have several distinct assignments). 
+% However Y is functionally determined by then 1 Y :- q Y, r 1 Y.
+
+% Here the bang ensures that `Y` is functionally determined by the call to q
+f 2 Y :- q Y, !.
+
+main. 

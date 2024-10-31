@@ -1,0 +1,15 @@
+pred q o:int.
+
+:functional 
+pred do i:(:functional pred).
+do X :- X.
+
+:functional
+pred x o:int.
+
+% this rule is not functional since `do`
+% is functional if its first argument is functional
+% however, q is not functional
+x Y :- do (q Y).
+
+main.

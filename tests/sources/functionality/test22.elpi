@@ -1,0 +1,6 @@
+:functional pred f o:int.
+:functional pred r o:(:functional pred o:int).
+
+f R :- r X, X R.
+
+main.

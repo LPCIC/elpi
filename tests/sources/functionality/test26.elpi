@@ -1,0 +1,14 @@
+kind tm type.
+
+type app tm -> tm -> tm.
+type lam (tm -> tm) -> tm.
+type const int -> tm.
+
+:functional
+pred p i:tm, o:tm.
+p (const A) (const A).
+
+% Overlap with as operator
+p (const _ as A) A.
+
+main.
