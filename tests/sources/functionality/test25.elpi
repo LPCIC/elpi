@@ -1,0 +1,8 @@
+:functional pred f o:int.
+:functional pred r o:(pred o:int).
+
+% similar to test22, but the output of r is non-functional
+% therefore it cannot be called on variable used in the output of f
+f R :- r X, X R.
+
+main.

@@ -1,0 +1,22 @@
+:functional
+pred f i:int, o:int.
+
+pred q o:int.
+
+:functional
+pred r i:int, o:int.
+
+q 1.
+q 2.
+
+r X X.
+
+% Recall: q is not functional!
+% Note: in warren, the following rule is considered functional
+% since the input X should be ground, and therefore, q X does not
+% create any choice point for `r X Y` where Y can be assinged to 2 distinct
+% values.
+% In the implementation using the input mode of elpi this is no more true.
+f X Y :- q X, r X Y.
+
+main :- std.findall (f _ _) L, print L. 

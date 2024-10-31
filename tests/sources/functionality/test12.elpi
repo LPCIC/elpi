@@ -1,0 +1,12 @@
+:functional
+pred p i:int, o:int.
+
+/* this slightly differs from test11.elpi since 
+ * we explicitly put the uvar keyword in place of a unification variable
+ * the input mode will therefore prevent the query `p 1 Y` to unify with 
+ * `p uvar 3.
+ */
+p 1 2.
+p uvar 3.
+
+main.

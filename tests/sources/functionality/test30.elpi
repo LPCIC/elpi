@@ -1,0 +1,8 @@
+pred r i:int, o:int.
+
+:functional pred p i:(:functional pred i:int).
+
+:functional pred q o:int.
+q X :- p (r X).
+
+main.

@@ -1,0 +1,16 @@
+:functional 
+pred p i:int, o:int.
+
+:functional 
+pred s o:int.
+
+% THIS IS OK since a bang preclude distinct outputs 
+p 1 3.
+p 2 3 :- !.
+          /* functional context: everything before the cut is irrelevant for functionality */
+          /* moreover, we have parentheses around commas, i.e. a tree-like ast             */
+p 2 A :- (r 3 A, q A, std.map [] std.rev []), (!, true).
+p 2 X :- !, s X. /* X is a functional output of s */
+p 2 5.
+
+main.
