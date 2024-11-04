@@ -1173,6 +1173,9 @@ module FunctionalityChecker : sig
 
   val pp : Format.formatter -> func_map -> unit
 end = struct 
+
+  exception StopCheck
+
   open Functionality
   module STE = ScopedTypeExpression
   type t = Functionality.t
@@ -1182,20 +1185,49 @@ end = struct
   type v_ = STE.v_
   type t_ = STE.t_
 
-  let rec functionality_leq a b = match a, b with
+  let rec functionalities_leq l1 l2 = match l1, l2 with
+    | _, [] -> true (* l2 can be any length (due to partial application) *)
+    | x::xs, y::ys -> functionality_leq x y && functionalities_leq xs ys
+    | [], _ -> error "the first list of functional args is can't been smaller then the second one: type error"
+
+  and functionality_leq a b = match a, b with
     | AssumedFunctional, AssumedFunctional -> true
     | AssumedFunctional, t -> error (Format.asprintf "Cannot compare %a with %a" pp_f a pp_f b)
     | _, AssumedFunctional -> error (Format.asprintf "Cannot compare %a with %a" pp_f a pp_f b)
     | _, Relational -> true
     | Relational, _ -> false
-    | Functional xs, Functional ys -> List.for_all2 functionality_leq xs ys
+    | Functional xs, Functional ys -> functionalities_leq xs ys
     | BoundVar _, _ | _, BoundVar _ -> failwith "NYI"
+
+  let rec bvars2relation = function 
+    | BoundVar _ -> Relational 
+    | Functional l -> Functional (List.map bvars2relation l) 
+    | e -> e
+
+  let rec bvars2relation_lam = function
+    | Lam (_,b) -> bvars2relation_lam b
+    | F (b,_) -> bvars2relation b
+
+  (* TODO: @FissoreD simplify the map: each type is in the map (Relational or not) to avoid
+     all of these reduntant find_opt. Since all type are in the map we can
+     do find and never get Not_found error *)
+  (* TODO: functionality relation of preds: remove lambdas, i.e. replaces bound_vars with Relational *)
+  let get_functionality map k = 
+    match F.Map.find_opt k map with
+    | Some (F (e, _)) -> e
+    | None -> Relational
+    | Some (Lam _) -> error "not fully applied type_abbrev"
+
+  let get_functionality_bvars map k = 
+    match F.Map.find_opt k map with
+    | Some e -> bvars2relation_lam e
+    | None -> Relational
 
   (* 
     Invariant every constant in the map is functional:
     i.e. for each k in the domain, map[k] = Functional [...]
   *)
-  let is_functional map k = F.Map.mem k map
+  let is_functional map k = not (get_functionality map k = Relational)
 
   let map_snd f = List.map (fun (_, STE.{it}) -> f it)
 
@@ -1209,16 +1241,16 @@ end = struct
     | Functional l -> Functional (List.map (subst type_abbrevs) l)
     | AssumedFunctional | Relational as t -> t
 
-  let rec bind ctx type_abbrevs : (t*'a) -> f = function
-    | Lam (n,b), x::xs -> bind ctx (F.Map.add n (F (x, Loc.initial"")) type_abbrevs) (b,xs)
+  let rec bind type_abbrevs : (t*'a) -> f = function
+    | Lam (n,b), x::xs -> bind (F.Map.add n (F (x, Loc.initial"")) type_abbrevs) (b,xs)
     | Lam (_,b), [] -> error ~loc:(get_loc b) "type_abbrev is not fully applied"
     | F (t,_), [] -> (subst type_abbrevs t)
     | F (_,loc), _::_ -> anomaly ~loc "type_abbrev is too much applied"
 
-  and type2funct ctx (type_abbrevs: func_map) : t_ -> f = function
-    | STE.Pred(Function, xs) -> (Functional (map_snd (type2funct ctx type_abbrevs) xs))
+  and type2funct bound_vars (type_abbrevs: func_map) : t_ -> f = function
+    | STE.Pred(Function, xs) -> (Functional (map_snd (type2funct bound_vars type_abbrevs) xs))
     | STE.Pred(Relation, xs) -> Relational
-    | Const (_,c) when F.Set.mem c ctx -> BoundVar c 
+    | Const (_,c) when F.Set.mem c bound_vars -> BoundVar c 
     | Const (_,c) -> 
       begin match F.Map.find_opt c type_abbrevs with
         | None -> Relational
@@ -1233,15 +1265,20 @@ end = struct
       begin match F.Map.find_opt c type_abbrevs with
       | None -> Relational
       | Some c -> 
-        let xxs = List.map (fun STE.{it} -> type2funct ctx type_abbrevs it) (x::xs) in
-        bind ctx type_abbrevs (c, xxs)
+        let xxs = List.map (fun STE.{it} -> type2funct bound_vars type_abbrevs it) (x::xs) in
+        bind type_abbrevs (c, xxs)
       end
     | Arrow (Variadic, _, _) -> AssumedFunctional
+    (* TODO: This depends on the last element of Arrow, since we can have:
+      :functional pred p i:((:functional pred) -> (:functional pred)).
+      which is equivalent to pred p i:(pred o:(:functional pred) o:(:functional pred))
+    
+    *)
     | Arrow (NotVariadic,_,_) -> Relational
 
-  let rec type2funct_lam ctx type_abbrevs : v_ -> t = function
-    | Lam (n, t) -> Lam (n, type2funct_lam (F.Set.add n ctx) type_abbrevs t)
-    | Ty {it;loc} -> F (type2funct ctx type_abbrevs it, loc)
+  let rec type2funct_lam bound_vars type_abbrevs : v_ -> t = function
+    | Lam (n, t) -> Lam (n, type2funct_lam (F.Set.add n bound_vars) type_abbrevs t)
+    | Ty {it;loc} -> F (type2funct bound_vars type_abbrevs it, loc)
 
   let pp_locs fmt (l: v_ list) =
     let rec go_under_lam = function (Lam (_,x): v_) -> go_under_lam x | Ty {loc} -> loc in
@@ -1286,16 +1323,67 @@ end = struct
   let merge_types_and_abbrevs ~old  ~type_abbrevs ~types =
     merge_type_abbrevs type_abbrevs old |> merge_type_list types
 
-  let check_head = ()
-     (* failwith "TODO1" *)
-  let check_body =  ()
-    (* failwith "TODO2" *)
+  let functionality_leq_err ~loc c f' f =
+    if not (functionality_leq f' f) then
+      error ~loc (Format.asprintf "Functionality of %a is %a and is not included in %a" F.pp c pp_f f' pp_f f)
 
-  let check_clause ~loc ~functional_preds ScopedTerm.{it} = ()
-    (* match it with
-    | Impl(false, hd, body) -> failwith "TODO3"
-    | App(_,_,_,_) -> failwith "TODO4"
-    | _ -> error ~loc "invalid type" *)
+  let rec head_ag_func_pairing functional_preds args fs = 
+    let func_vars = ref F.Map.empty in
+    let rec aux ~loc f = function
+      | ScopedTerm.Const (Global _,c) -> (* Look into type_abbrev for global symbols *)
+        let f' = get_functionality functional_preds c in
+        functionality_leq_err ~loc c f' f      
+      | Const _ -> failwith "TODO"
+      | App(_,hd,x,xs) -> 
+        let f' = get_functionality functional_preds hd in
+        assert (functionality_leq f' f);
+        begin match f' with
+        | Functional l -> aux' (x::xs) l
+        | _ -> ()
+        end
+      | Impl _ -> error "TODO" (* Example p (a => b) *)
+      | Discard -> ()
+      | Var (v, ag) ->
+        begin match F.Map.find_opt v !func_vars with
+        | None -> func_vars := F.Map.add v f !func_vars (* -> First appereance of the variable in the head *)
+        | Some f' -> functionality_leq_err ~loc v f' f
+        end
+      | Lam (None, _type, {it}) -> failwith "TODO"
+      | Lam (Some (e,_), _type, {it}) -> failwith "TODO"
+      | CData _ -> assert (f = Relational) (* note that this is also true, otherwise we would have a type error *)
+      | Spill _ -> error "Spill in the head of a clause forbidden"
+      | Cast ({it},_) -> aux ~loc f it
+    and aux' args fs = match args, fs with
+      | [], [] -> ()
+      | ScopedTerm.{it;loc}::xs, y::ys -> aux ~loc y it; aux' xs ys 
+      | _ -> failwith "Partial application ??" 
+    in
+    aux' args fs;
+    !func_vars
+
+  and check_head functional_preds func_vars head_name head_args =
+    match get_functionality_bvars functional_preds head_name with
+    | Relational -> raise StopCheck
+    | AssumedFunctional -> raise StopCheck
+    | Functional l -> head_ag_func_pairing functional_preds head_args l
+    | BoundVar v -> error "unreachable branch"
+
+  and check_body func_vars = Format.eprintf "Check body todo\n%!"; func_vars
+
+  let rec check_clause ~loc ~functional_preds func_vars ScopedTerm.{it} =
+    match it with
+    | Impl(false, hd, body) -> 
+      check_clause ~loc ~functional_preds func_vars hd |> check_body
+    | App(_,c,x,xs) -> 
+      begin
+        try check_head functional_preds func_vars c (x::xs)
+        with StopCheck -> func_vars 
+      end
+    | Const (_,_) -> func_vars (* a predicate with arity 0 is functional *)
+    | _ -> error ~loc "invalid type"
+
+  let check_clause ~loc ~functional_preds t =
+    check_clause ~loc ~functional_preds F.Map.empty t |> ignore
 
   let pp (fmt: Format.formatter) (e: func_map) : unit =
     F.Map.pp pp fmt e
@@ -1846,6 +1934,13 @@ end = struct
   let is_macro_name f =
       let c = (F.show f).[0] in
       c = '@'
+
+  (* 
+    replaces 
+    - TArr (t1,t2) with t2 = prop with TPred (o:t1),
+    - TArr (t1,t2) with t2 = TPred l with TPred (o:t1, l)
+  *)
+  (* let rec flatten_arrows *)
 
   let rec scope_tye ctx ~loc t : ScopedTypeExpression.t_ =
     match t with

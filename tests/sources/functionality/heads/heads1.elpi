@@ -1,0 +1,7 @@
+:functional pred q.
+
+:functional pred p i:(:functional pred).
+
+p q.
+
+main.
