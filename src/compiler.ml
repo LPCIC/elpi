@@ -619,8 +619,7 @@ end = struct
   let rec check_loc_tye ~type_abbrevs ~kinds ctx { loc; it } =
     check_tye ~loc ~type_abbrevs ~kinds ctx it
   and check_tye ~loc ~type_abbrevs ~kinds ctx = function
-    | Prop -> TypeAssignment.Prop
-    | Any -> Any
+    | Any -> TypeAssignment.Any
     | Const(Bound _,c) -> check_param_exists ~loc c ctx; UVar c
     | Const(Global _,c) -> check_global_exists ~loc c type_abbrevs kinds 0; Cons c
     | App(c,x,xs) ->
@@ -1205,7 +1204,7 @@ end = struct
         | Some (F f) -> fst f
         | Some (Lam _) -> error "Not fully applied type_abbrev..."
       end
-    | Prop | Any -> Relational
+    | Any -> Relational
     | App(c,x,xs) ->
       (* TODO: if we accept polymorphic type with functional arguments, like
         `:functional pred do i:(list (:functional pred))`, then we should extend
@@ -1420,6 +1419,7 @@ type checked_compilation_unit = {
   precomputed_kinds : Arity.t F.Map.t;
   precomputed_types : TypeAssignment.overloaded_skema F.Map.t;
   precomputed_type_abbrevs :  (TypeAssignment.skema * Loc.t) F.Map.t;
+  precomputed_functional_preds : Functionality.t F.Map.t;
   type_checking_time : float;
 }
 [@@deriving show]
@@ -1885,11 +1885,30 @@ end = struct
     - TArr (t1,t2) with t2 = prop with TPred (o:t1),
     - TArr (t1,t2) with t2 = TPred l with TPred (o:t1, l)
   *)
-  (* let rec flatten_arrows *)
+  let flatten_arrows =
+    let rec is_pred = function 
+      | Ast.TypeExpression.TConst a -> F.show a = "prop"
+      | TArr(_,r) -> is_pred r.tit
+      | TApp (_, _, _) | TPred (_, _) -> false
+    in
+    let rec flatten tloc = function
+      | Ast.TypeExpression.TArr (l,r) -> (Ast.Mode.Output, l) :: flatten_loc r 
+      | TConst c when F.equal c F.propf -> [] 
+      | tit -> [Output,{tit;tloc}]
+    and flatten_loc {tit;tloc} = flatten tloc tit
+    and main = function
+      | Ast.TypeExpression.TPred (b, l) -> 
+          Ast.TypeExpression.TPred (b, List.map (fun (a, b) -> a, main_loc b) l)
+      | TConst _ as t -> t
+      | TApp (n, x, xs) -> TApp (n, main_loc x, List.map main_loc xs)
+      | TArr (l, r) when is_pred r.tit -> TPred (Ast.Structured.Relation, (Output, main_loc l) :: flatten_loc r)
+      | TArr (l, r) -> TArr(main_loc l, main_loc r)
+    and main_loc {tit;tloc} = {tit=main tit;tloc}
+    in main_loc
 
   let rec scope_tye ctx ~loc t : ScopedTypeExpression.t_ =
     match t with
-    | Ast.TypeExpression.TConst c when F.show c = "prop" -> Prop
+    | Ast.TypeExpression.TConst c when F.show c = "prop" -> Pred (Relation,[])
     | TConst c when F.show c = "any" -> Any
     | TConst c when F.Set.mem c ctx -> Const(Bound elpi_language,c)
     | TConst c -> Const(Global false,c)
@@ -1900,7 +1919,9 @@ end = struct
         App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
     | TPred(m,xs) -> Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
     | TArr(s,t) -> Arrow(NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
-  and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }    
+  and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
+  let scope_loc_tye ctx (t: Ast.Structured.functionality Ast.TypeExpression.t) =
+    scope_loc_tye ctx @@ flatten_arrows t
 
   let compile_type { Ast.Type.name; loc; attributes; ty } =
     let open ScopedTypeExpression in
@@ -1912,7 +1933,6 @@ end = struct
         | Const(Bound _, _) -> assert false (* there are no binders yet *)
         | Const(Global _,c) when is_uvar_name c -> F.Set.add c e
         | Const(Global _,_) -> e
-        | Prop -> e
         | Any -> e
         | Arrow(_,x,y) -> aux (aux e x) y
         | Pred(_,l) -> List.fold_left aux e (List.map snd l)
@@ -3670,7 +3690,9 @@ end = struct
 
     (* Functionality *)
     let check_func_begin = Unix.gettimeofday () in
-    let functional_preds = FunctionalityChecker.merge_types_and_abbrevs ~old:ofp ~types ~type_abbrevs in
+    let functional_preds = 
+      FunctionalityChecker.merge_types_and_abbrevs ~old:F.Map.empty ~types ~type_abbrevs in
+    let all_functional_preds = FunctionalityChecker.merge ofp functional_preds in
     let check_func_end = Unix.gettimeofday () in
 
     (* Typeabbreviation *)
@@ -3719,6 +3741,7 @@ end = struct
     precomputed_kinds =all_kinds;
     precomputed_type_abbrevs = all_type_abbrevs;
     precomputed_types = all_types;
+    precomputed_functional_preds = all_functional_preds;
     type_checking_time = check_end -. check_begin +. check_t_end -. check_t_begin +. check_k_end -. check_k_begin +. check_func_end +. check_func_begin }
 
 end
@@ -4141,11 +4164,11 @@ end = struct
 
   let extend1 flags
     (state, { Assembled.hash; symbols; prolog_program; indexing; modes = om; kinds = ok; functional_preds = ofp; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
-            { version; base_hash; checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; functional_preds; clauses; chr; builtins}; precomputed_kinds; precomputed_type_abbrevs; precomputed_types; type_checking_time } =
+            { version; base_hash; checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; functional_preds; clauses; chr; builtins}; precomputed_kinds; precomputed_type_abbrevs; precomputed_functional_preds; precomputed_types; type_checking_time; } =
     let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types_indexing indexing in
     let kinds, type_abbrevs, types, functional_preds =
       if hash = base_hash then
-        precomputed_kinds, precomputed_type_abbrevs, precomputed_types, functional_preds
+        precomputed_kinds, precomputed_type_abbrevs, precomputed_types, precomputed_functional_preds
       else
         let kinds = Flatten.merge_kinds ok kinds in
         let type_abbrevs = merge_type_abbrevs ota type_abbrevs in

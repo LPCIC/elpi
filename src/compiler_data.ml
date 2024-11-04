@@ -63,7 +63,7 @@ module ScopedTypeExpression = struct
   end
 
   type t_ =
-    | Prop | Any
+    | Any
     | Const of Scope.t * F.t
     | App of F.t * e * e list
     | Arrow of Ast.Structured.variadic * e * e
@@ -93,7 +93,6 @@ module ScopedTypeExpression = struct
     | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
     | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 == b2 && eqt ctx s1 s2 && eqt ctx t1 t2
     | Pred(f1,l1), Pred(f2,l2) -> f1 == f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
-    | Prop, Prop -> true
     | Any, Any -> true
     | _ -> false
 
@@ -112,7 +111,6 @@ module ScopedTypeExpression = struct
     if it' == it then orig else { it = it'; loc }
   and smart_map_scoped_ty f orig =
     match orig with
-    | Prop -> orig
     | Any -> orig
     | Const((Scope.Bound _| Scope.Global true),_) -> orig
     | Const(Scope.Global false,c) ->
