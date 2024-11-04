@@ -895,14 +895,13 @@ end = struct
     and check_app ctx ~loc ~tyctx c cty args ety =
       match cty with
       | Overloaded l ->
-        Format.eprintf "options %a %a %d: %a\n" F.pp c TypeAssignment.pretty ety (List.length args) (pplist TypeAssignment.pretty "; ") l;
+        (* Format.eprintf "options %a %a %d: %a\n" F.pp c TypeAssignment.pretty ety (List.length args) (pplist TypeAssignment.pretty "; ") l; *)
         let l = List.filter (unify_tgt_ety (List.length args) ety) l in
         begin match l with
         | [] -> error_overloaded_app_tgt ~loc ~ety c
         | [ty] -> check_app ctx ~loc ~tyctx c (Single ty) args ety
         | l ->
-        Format.eprintf "newoptions: %a\n" (pplist TypeAssignment.pretty "; ") l;
-
+        (* Format.eprintf "newoptions: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
             let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
             let targs = List.map ScopedTerm.type_of args in
             check_app_overloaded ctx ~loc c ety args targs l l
