@@ -708,7 +708,12 @@ end = struct
     let ty = arrow_of_args args ety in
     let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c TypeAssignment.pretty ty (pplist TypeAssignment.pretty ", ") alltys in
     error ~loc msg
-    
+   
+  let error_overloaded_app_tgt ~loc ~ety c =
+    let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches make it build a term of type @[<hov>%a@]@]" F.pp c TypeAssignment.pretty ety in
+    error ~loc msg
+  
+
   let error_not_poly ~loc c ty sk =
     error ~loc (Format.asprintf "@[<hv>this rule imposes on %a the type@ %a@ is less general than the declared one@ %a@]"
       F.pp c
@@ -790,7 +795,7 @@ end = struct
           let ty : ret = TypeAssignment.subst (fun f -> Some (TypeAssignment.UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty ty in
           let spills = check_loc ctx ~tyctx:None t ~ety:ty in
           if unify ty ety then spills
-          else error ~loc "cast"
+          else error_bad_ety ~loc ~tyctx ScopedTerm.pretty_ x ty ~ety
 
     and check_impl ctx ~loc ~tyctx b t1 t2 ety =
       if not @@ unify ety Prop then error_bad_ety ~loc ~tyctx ~ety:Prop ScopedTerm.pretty_ (Impl(b,t1,t2)) ety
@@ -862,13 +867,28 @@ end = struct
           else error_bad_ety ~tyctx ~loc ~ety ScopedTerm.pretty_ (Spill(sp,info)) first_spill
       | _ -> error ~loc "hard spill"
 
+    and unify_tgt_ety n ety t = 
+      match classify_arrow t with
+      | Unknown -> true
+      | Simple { srcs; tgt } when List.length srcs = n -> unify tgt ety
+      | Simple _ -> true
+      | Variadic _ -> true (* TODO *)
+
     and check_app ctx ~loc ~tyctx c cty args ety =
       match cty with
       | Overloaded l ->
         (* Format.eprintf "options: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
-        let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
-        let targs = List.map ScopedTerm.type_of args in
-        check_app_overloaded ctx ~loc c ety args targs l l
+        let l = List.filter (unify_tgt_ety (List.length args) ety) l in
+        begin match l with
+        | [] -> error_overloaded_app_tgt ~loc ~ety c
+        | [ty] -> check_app ctx ~loc ~tyctx c (Single ty) args ety
+        | l ->
+        (* Format.eprintf "newoptions: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
+
+            let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
+            let targs = List.map ScopedTerm.type_of args in
+            check_app_overloaded ctx ~loc c ety args targs l l
+        end
       | Single ty ->
           let err ty =
             if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
@@ -1787,7 +1807,9 @@ end = struct
       let it = scope_term ~state ctx ~loc it in
       { ScopedTerm.it; loc; ty = MutableOnce.make (F.from_string "Ty") }
 
-  let scope_loc_term ~state = scope_loc_term ~state F.Set.empty
+  let scope_loc_term ~state =
+    let { ctx } = get_mtm state in
+    scope_loc_term ~state ctx
 
   let scope_type_abbrev { Ast.TypeAbbreviation.name; value; nparams; loc } =
     let rec aux ctx = function
@@ -1941,7 +1963,7 @@ end = struct
   
     in
     let state, toplevel_macros, pbody = compile_program toplevel_macros state p in
-    Printf.eprintf "run: %d\n%!" (F.Map.cardinal toplevel_macros);
+    (* Printf.eprintf "run: %d\n%!" (F.Map.cardinal toplevel_macros); *)
     state, { Scoped.pbody; toplevel_macros }
 
 end
@@ -4068,7 +4090,7 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let u = Check.check state ~base:(Assembled.empty ()) u in
   let init = { (Assembled.empty ()) with toplevel_macros = u.checked_code.toplevel_macros } in
   let h = assemble_unit ~flags ~header:(state,init) u in
-  Printf.eprintf "header_of_ast: %d\n%!" (F.Map.cardinal (snd h).Assembled.toplevel_macros);
+  (* Printf.eprintf "header_of_ast: %d\n%!" (F.Map.cardinal (snd h).Assembled.toplevel_macros); *)
   h
 
 let check_unit ~base:(st,base) u = Check.check st ~base u
@@ -4076,7 +4098,7 @@ let check_unit ~base:(st,base) u = Check.check st ~base u
 let empty_base ~header:b = b
 
 let unit_of_ast ~flags ~header:(s, u) p : unchecked_compilation_unit =
-  Printf.eprintf "unit_of_ast: %d\n%!" (F.Map.cardinal u.Assembled.toplevel_macros);
+  (* Printf.eprintf "unit_of_ast: %d\n%!" (F.Map.cardinal u.Assembled.toplevel_macros); *)
   let _, u = unit_or_header_of_ast flags s ~toplevel_macros:u.Assembled.toplevel_macros p in
   print_unit flags u;
   u

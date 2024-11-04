@@ -358,7 +358,8 @@ list_items_tail:
 | x = term_noconj; CONJ; xs = list_items_tail { x :: xs }
 
 binder_term:
-| t = constant; b = binder_body { let _,ty,bo = b in mkLam (loc $loc) (Func.show t) ty bo }
+| t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) None b }
+// | t = constant; COLON; ty = type_term; BIND; b = term { mkLam (loc $loc) (Func.show t) (Some ty) b }
 
 binder_body_no_ty:
 | bind = BIND; b = term { (loc $loc(bind), None, b) }

@@ -214,7 +214,9 @@ let _ =
   test  "p :- f \".*\\\\.aux\"." 1 17 1 0 [] (app ":-" 3 [c 1 "p";app "f" 6  [str 8 17 ".*\\.aux"]]);
   test  "p :- (f x : y)."   1 14 1 0 [] (app ":-" 3 [c 1 "p"; cast 6 14 (app "f" 7 ~bug [c 9 "x"]) (ct 13 "y")]);
   test  "p :- pi x : y \\ z."   1 17 1 0 [] (app ":-" 3 [c 1 "p"; app "pi" 6 [lam "x" 9 ~ty:(ct 13 "y") (c 17 "z")]]);
-  test  "p :- f (x : y \\ z)."   1 18 1 0 [] (app ":-" 3 [c 1 "p"; app "f" 6 ~parenr:true [lam "x" 9 ~parensl:true ~ty:(ct 13 "y") (c 17 "z")]]);
+  (*    01234567890123456789012345 *)
+  test  "p :- f (x : y)."   1 14 1 0 [] (app ":-" 3 [c 1 "p"; app "f" 6 [cast 8 14 (c ~bug 9 "x") (ct 13 "y")]]);
+  testF "p :- f (x : y \\ z)." 15 "Illformed binder" 
   (*    01234567890123456789012345 *)
 
 ;; 

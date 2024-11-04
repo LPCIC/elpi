@@ -71,6 +71,34 @@ module ScopedTypeExpression = struct
   and e = { it : t_; loc : Loc.t }
   [@@ deriving show]
 
+
+  open Format
+
+  let arrs = 0
+  let app = 1
+
+  let lvl_of = function
+    | Arrow _ | Pred _ -> arrs
+    | App _ -> app
+    | _ -> 2
+
+  let rec pretty_e fmt = function
+    | Prop -> fprintf fmt "prop"
+    | Any -> fprintf fmt "any"
+    | Const(_,c) -> F.pp fmt c
+    | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_e_parens ~lvl:app) " ") (x::xs)
+    | Arrow(NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
+    | Arrow(Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
+    | Pred(_,l) -> fprintf fmt "pred %a" (Util.pplist pretty_ie ", ") l
+  and pretty_ie fmt (i,e) =
+    fprintf fmt "%s:%a" (match i with Ast.Mode.Input -> "i" | Output -> "o") pretty_e_loc e
+  and pretty_e_parens ~lvl fmt = function
+    | t when lvl >= lvl_of t.it -> fprintf fmt "(%a)" pretty_e_loc t
+    | t -> pretty_e_loc fmt t
+  and pretty_e_loc fmt { it } = pretty_e fmt it
+  let pretty_e fmt (t : e) = Format.fprintf fmt "@[%a@]" pretty_e_loc t
+
+
   let rec of_simple_type = function
     | SimpleType.Any -> Any
     | Con c -> Const(Global false,c)
@@ -371,9 +399,9 @@ module ScopedTerm = struct
     | Const(_,f) -> fprintf fmt "%a" F.pp f
     | Discard -> fprintf fmt "_"
     | Lam(None,None,t) -> fprintf fmt "_\\ %a" pretty t
-    | Lam(None,Some ty,t) -> fprintf fmt "_ : %a\\ %a" ScopedTypeExpression.pp_e ty pretty t
+    | Lam(None,Some ty,t) -> fprintf fmt "_ : %a\\ %a" ScopedTypeExpression.pretty_e ty pretty t
     | Lam(Some (f,_),None,t) -> fprintf fmt "%a\\ %a" F.pp f pretty t
-    | Lam(Some (f,_),Some ty,t) -> fprintf fmt "%a : %a\\ %a" F.pp f ScopedTypeExpression.pp_e ty pretty t
+    | Lam(Some (f,_),Some ty,t) -> fprintf fmt "%a : %a\\ %a" F.pp f ScopedTypeExpression.pretty_e ty pretty t
     | App(Global _,f,x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App(_,f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
     | Var(f,[]) -> fprintf fmt "%a" F.pp f
@@ -382,7 +410,7 @@ module ScopedTerm = struct
     | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Phantom n}) -> fprintf fmt "{%a}/*%d*/" pretty t n
-    | Cast (t,ty) -> fprintf fmt "(%a : %a)" pretty t ScopedTypeExpression.pp_e ty (* TODO pretty *)
+    | Cast (t,ty) -> fprintf fmt "(%a : %a)" pretty t ScopedTypeExpression.pretty_e ty (* TODO pretty *)
   and pretty_parens ~lvl fmt { it } =
     if lvl >= lvl_of it then fprintf fmt "(%a)" pretty_ it
     else pretty_ fmt it
@@ -505,14 +533,19 @@ module ScopedTerm = struct
 
   module QTerm = struct
     include SimpleTerm
-    let apply_elpi_var_from_quotation { SimpleTerm.it; loc } l =
-      match it with
-      | SimpleTerm.Opaque o when is_scoped_term o ->
-          begin match out_scoped_term o with
-          | { it = Var(f,xs); loc = loc'; ty } -> { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = Var(f,xs @ List.map of_simple_term_loc l); loc = loc'; ty }) }
-          | _ -> anomaly ~loc "The term is not an elpi varible coming from a quotation"
-          end
-      | _ -> anomaly ~loc "The term is not an elpi varible coming from a quotation"
+    let apply_elpi_var_from_quotation ({ SimpleTerm.it; loc } as o) l =
+      if l = [] then o
+      else
+        let l = List.map of_simple_term_loc l in
+        match it with
+        | SimpleTerm.Opaque o when is_scoped_term o ->
+            begin match out_scoped_term o with
+            | { it = Var(f,xs); loc = loc'; ty } -> { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = Var(f,xs @ l); loc = loc'; ty }) }
+            | { it = Const(Bound g,f); loc = loc'; ty } when g = elpi_language ->
+                { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = App(Bound g,f,List.hd l, List.tl l); loc = loc'; ty }) }
+            | x -> anomaly ~loc (Format.asprintf "The term is not an elpi varible coming from a quotation: @[%a@]" pretty x)
+            end
+        | x -> anomaly ~loc (Format.asprintf "The term is not term coming from a quotation: @[%a@]" pp_t_ x)
   end
 
 
