@@ -12,6 +12,8 @@ help:
 	@echo '  tests ONLY=rex         runs only tests matching rex'
 	@echo '  tests PROMOTE=true     runs and promote tests if different'
 	@echo '                           (can be combined with ONLY)'
+	@echo '  tests LN_NB=nb         sets max number of lines to print of failing tests'
+	@echo '                           (negave numbers means print all file)'
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
 	@echo
@@ -28,6 +30,7 @@ BUILD=_build/default
 SHELL:=/usr/bin/env bash
 TIMEOUT=90.0
 PROMOTE=false
+LN_NB=-1
 PWD=$(shell pwd)
 RUNNERS=\
   dune \
@@ -82,6 +85,7 @@ tests:
 		tests/test.exe \
 		--seed $$RANDOM \
 		--promote $(PROMOTE) \
+		--ln_nb=$(LN_NB) \
 		--timeout $(TIMEOUT) \
 		$(TIME) \
 		--sources=$(PWD)/tests/sources/ \

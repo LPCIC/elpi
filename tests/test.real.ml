@@ -17,7 +17,7 @@ module Printer : sig
     total:int -> ok:int -> ko_list:string list -> skipped:int -> timeout:int -> unit
 
   val print_log :
-    fname:string -> unit
+    ln_nb:int -> fname:string -> unit
 
 end = struct
 open ANSITerminal
@@ -60,22 +60,31 @@ let print_summary ~total ~ok ~ko_list ~skipped ~timeout =
     printf [red] "Rerun failed: make tests ONLY=\"'^\\(%s\\)'\"\n" (String.concat "\\|" ko_list)
 ;;
 
-let print_file fname =
+let print_file ~ln_nb fname =
+  let pos = ref 0 in
+  let arr = Array.init (max 0 ln_nb) (fun _ -> fun () -> ()) in
+  let print_s s () = printf [] "%s\n" s in
+  let print_aux =
+    if ln_nb = 0 then fun _ -> () else
+    if ln_nb > ~-1 then 
+      fun s -> (arr.(!pos) <- print_s s; pos := (!pos + 1) mod ln_nb;)
+    else fun s -> printf [] "%s\n" s in
   try
     let ic = open_in fname in
     while true do
       let s = input_line ic in
-      printf [] "%s\n" s
+      print_aux s
     done
   with
-  | End_of_file -> ()
+  | End_of_file -> for i = 0 to ln_nb - 1 do arr.((i + !pos) mod ln_nb) (); done
   | e -> printf [red] "Error reading %s: %s\n" fname (Printexc.to_string e)
 
-let print_log ~fname =
+
+let print_log ~ln_nb ~fname =
   printf [red] "------------------------------------------------------------------\n";
   printf [blue] "Log of the first failure: "; printf [] "%s\n" fname;
   printf [red] "------------------------------------------------------------------\n";
-  print_file fname;
+  print_file ~ln_nb fname;
   printf [red] "------------------------------------------------------------------\n";
   printf [blue] "End log of the first failure: "; printf [] "%s\n" fname;
   printf [red] "------------------------------------------------------------------\n";
@@ -142,7 +151,7 @@ let rec find_map f = function
       | Some y -> y
       | None -> find_map f xs
 
-let main sources plot timeout promote executables namef catskip timetool seed =
+let main ln_nb sources plot timeout promote executables namef catskip timetool seed =
   Random.init seed;
   let filter_name =
     let rex = Str.regexp (".*"^namef) in
@@ -171,7 +180,7 @@ let main sources plot timeout promote executables namef catskip timetool seed =
       results |> find_map (function
         | Some { Runner.rc = Runner.Failure _; log; _ } -> Some log
         | _ -> None) in
-    Printer.print_log ~fname:log_first_failure
+    Printer.print_log ~ln_nb:ln_nb ~fname:log_first_failure
   with Not_found -> ()
   end;
   if List.length executables > 1 then print_csv plot results;
@@ -222,6 +231,10 @@ let promote =
   let doc = "Promotes the tests (if failing)" in
   Arg.(value & opt bool false & info ["promote"] ~docv:"PATH" ~doc)
 
+let ln_nb =
+  let doc = "Sets the maximum number of lines to print for failing test (-1 means no max)" in
+  Arg.(value & opt int ~-1 & info ["ln_nb"] ~docv:"INT" ~doc)
+
 let info =
   let doc = "run the test suite" in
   let tests = Test.names ()
@@ -233,5 +246,5 @@ let info =
 ;;
 
 let () =
-  (Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ promote $ runners $ namef $ catskip $ mem $ seed),info)) [@ warning "-A"]
+  (Term.exit @@ Term.eval (Term.(const main $ ln_nb $ src $ plot $ timeout $ promote $ runners $ namef $ catskip $ mem $ seed),info)) [@ warning "-A"]
   (* ocaml >= 4.08 | exit @@ Cmd.eval (Cmd.v info Term.(const main $ src $ plot $ timeout $ runners $ namef $ catskip $ mem $ seed)) *)
