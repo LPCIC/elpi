@@ -723,11 +723,11 @@ end = struct
   type ret = TypeAssignment.t MutableOnce.t TypeAssignment.t_
   type spilled_phantoms = ScopedTerm.t list
 
-  let global_type env ~loc c : ret TypeAssignment.overloading =
-    try TypeAssignment.fresh_overloaded @@ F.Map.find c env
-    with Not_found ->
-      error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
-
+  let check_no_unknown_global = function
+    | None -> ()
+    | Some(loc,c,ty) ->
+        error ~loc (Format.asprintf "@[<v>Unknown global: %a@;Inferred type: %a@]" F.pp c TypeAssignment.pretty ty)
+      
   let local_type ctx ~loc c : ret TypeAssignment.overloading =
     try TypeAssignment.Single (Scope.Map.find c ctx)
     with Not_found -> anomaly ~loc "free variable"
@@ -747,7 +747,9 @@ end = struct
         | Unknown -> Unknown
         | Variadic { srcs; tgt } -> Variadic { srcs = x :: srcs; tgt }
 
-  let mk_uvar s = TypeAssignment.UVar(MutableOnce.make (F.from_string s))
+  let mk_uvar =
+    let i = ref 0 in
+    fun s -> incr i; TypeAssignment.UVar(MutableOnce.make (F.from_string (s ^ string_of_int !i)))
 
   let unknown_type_assignment s = TypeAssignment.Val (mk_uvar s)
 
@@ -776,6 +778,7 @@ end = struct
     (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
     let needs_spill = ref false in
     let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
+    let unknown_global = ref None in
     let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
     let rec check (ctx : ret Scope.Map.t) ~loc ~tyctx x (ety : ret) : spilled_phantoms =
       (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty ety; *)
@@ -797,6 +800,17 @@ end = struct
           if unify ty ety then spills
           else error_bad_ety ~loc ~tyctx ScopedTerm.pretty_ x ty ~ety
 
+    and global_type env ~loc c : ret TypeAssignment.overloading =
+      try TypeAssignment.fresh_overloaded @@ F.Map.find c env
+      with Not_found ->
+        match !unknown_global with
+        | None ->
+            let ty = mk_uvar (Format.asprintf "Unknown_%a" F.pp c) in
+            unknown_global := Some (loc,c,ty);
+            Single ty
+        | Some(_,c',ty) when F.equal c c' -> Single ty
+        | Some _ -> error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
+        
     and check_impl ctx ~loc ~tyctx b t1 t2 ety =
       if not @@ unify ety Prop then error_bad_ety ~loc ~tyctx ~ety:Prop ScopedTerm.pretty_ (Impl(b,t1,t2)) ety
       else
@@ -849,7 +863,7 @@ end = struct
 
     and check_spill ctx ~loc ~tyctx sp info ety =
       needs_spill := true;
-      let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(mk_uvar "Spill") in (* TODO?? *)
+      let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(TypeAssignment.Arr(Ast.Structured.NotVariadic,ety,mk_uvar "Spill")) in
       assert(inner_spills = []);
       let phantom_of_spill_ty i ty =
         { loc; it = Spill(sp,ref (Phantom(i+1))); ty = MutableOnce.create (TypeAssignment.Val ty) } in
@@ -951,7 +965,8 @@ end = struct
           | UVar m ->
               let s = mk_uvar "Src" in
               let t = mk_uvar "Tgt" in
-              check_app_single ctx ~loc c (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) consumed (x :: xs)
+              let _ = unify ty (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) in
+              check_app_single ctx ~loc c ty consumed (x :: xs)
           | Cons c when F.Map.mem c type_abbrevs ->
               let ty = TypeAssignment.apply (fst @@ F.Map.find c type_abbrevs) [] in
               check_app_single ctx ~loc c ty consumed args
@@ -1119,6 +1134,7 @@ end = struct
       if MutableOnce.is_set t.ty then false else
 
       let spills = check_loc ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
+      check_no_unknown_global !unknown_global;
       check_matches_poly_skema_loc t;
       if spills <> [] then error ~loc:t.loc "cannot spill in head";
       F.Map.iter (fun k (_,n,loc) ->
@@ -3791,10 +3807,14 @@ end = struct
       | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
       | Spill(t,{ contents = (Main n)}) ->
           let spills, t = spill1 ctx t in
-          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun c -> mk_loc ~loc @@ Const(Bound elpi_language,c)) ctx) n in
+          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun (c,l) -> mk_loc ~loc @@ Const(Bound l,c)) ctx) n in
           let expr = app t vars in
           spills @ [{vars; vars_names; expr}], vars
       (* globals and builtins *)
+      | App(Global f,c,{ it = Lam(Some v,o,t); loc = tloc; ty = tty },[]) when F.equal F.pif c ->
+          let ctx = v :: ctx in
+          let spilled, t = spill1 ctx t in
+          [], [{loc;ty;it = App(Global f,c,{ it = Lam(Some v,o,add_spilled spilled t); loc = tloc; ty = tty },[])}]
       | App(g,c,x,xs) ->
           let spills, args = List.split @@ List.map (spill ctx) (x :: xs) in
           let args = List.flatten args in

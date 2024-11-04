@@ -155,6 +155,11 @@ let () = declare "spilling_in_list"
   ~description:"spilling prem order"
   ()
 
+let () = declare "spill_pi"
+  ~source_elpi:"spill_pi.elpi"
+  ~description:"spilling under pi"
+  ()
+
 let () = declare "block"
   ~source_elpi:"block.elpi"
   ~description:"blocks are closed"
