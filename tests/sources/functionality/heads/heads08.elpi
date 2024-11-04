@@ -1,0 +1,9 @@
+:functional pred p i:((:functional pred) -> prop).
+
+pred q o:(pred).
+
+% functionality relation of q is 
+% (Relational [Relational]) ⊈ (Relational [Functional])
+p q.
+
+main.

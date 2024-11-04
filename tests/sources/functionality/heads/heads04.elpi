@@ -1,0 +1,11 @@
+:functional pred p i:(:functional pred i:(:functional pred)).
+:functional pred r i:(pred).
+
+% THIS FAILS:
+% functionality relation of p is (Functional [Functional [Relational []]])
+% functionality of r is (Functional [Functional []])
+% (p r) is WRONG since first arg of p is `Functional [Functional []]`
+% and Functional [Relational []] ⊈ Functional [Functional []]
+r (p r).
+
+main.

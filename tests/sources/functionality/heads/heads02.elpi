@@ -1,0 +1,11 @@
+pred q.
+
+:functional pred p i:(:functional pred).
+
+% THIS FAILS:
+% functionality relation of q is (Relational [])
+% functionality of first arg of p is (Functional [])
+% Relational [] ⊈ Functional []
+p q.
+
+main.
