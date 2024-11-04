@@ -1,0 +1,6 @@
+:functional pred p i:(:functional pred i:(pred)).
+:functional pred r i:(:functional pred).
+
+r (p r).
+
+main.
