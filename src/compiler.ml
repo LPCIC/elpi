@@ -884,20 +884,24 @@ end = struct
     and unify_tgt_ety n ety t = 
       match classify_arrow t with
       | Unknown -> true
-      | Simple { srcs; tgt } when List.length srcs = n -> unify tgt ety
-      | Simple _ -> true
+      | Simple { srcs; tgt } ->
+          let nsrcs = List.length srcs in
+          if n > nsrcs then false
+          else
+            let rec drop i l = if i = 0 then l else drop (i-1) (List.tl l) in
+            let srcs = drop n srcs in try_unify (arrow_of_tys srcs tgt) ety
       | Variadic _ -> true (* TODO *)
 
     and check_app ctx ~loc ~tyctx c cty args ety =
       match cty with
       | Overloaded l ->
-        (* Format.eprintf "options: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
+        Format.eprintf "options %a %a %d: %a\n" F.pp c TypeAssignment.pretty ety (List.length args) (pplist TypeAssignment.pretty "; ") l;
         let l = List.filter (unify_tgt_ety (List.length args) ety) l in
         begin match l with
         | [] -> error_overloaded_app_tgt ~loc ~ety c
         | [ty] -> check_app ctx ~loc ~tyctx c (Single ty) args ety
         | l ->
-        (* Format.eprintf "newoptions: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
+        Format.eprintf "newoptions: %a\n" (pplist TypeAssignment.pretty "; ") l;
 
             let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
             let targs = List.map ScopedTerm.type_of args in
