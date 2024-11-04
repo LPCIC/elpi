@@ -1,5 +1,0 @@
-:functional pred p i:(pred i:(pred)) i:(:functional pred i:(pred)) .
-
-p A A.
-
-main.
