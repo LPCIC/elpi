@@ -96,6 +96,7 @@ module Ast : sig
     val mkOpaque : loc:Loc.t -> Opaque.t -> t
     val mkCast : loc:Loc.t -> t -> Type.t -> t
     val mkLam : loc:Loc.t -> (Name.t *  Scope.language) option -> ?ty:Type.t -> t -> t
+    val mkDiscard : loc:Loc.t -> t
 
     (** Handy constructors to build goals *)
     val mkImplication : loc:Loc.t -> t -> t -> t
@@ -108,6 +109,8 @@ module Ast : sig
 
     (** See Coq-Elpi's lp:(F x) construct *)
     val apply_elpi_var_from_quotation : t -> t list -> t
+    val extend_spill_hyp_from_quotation : t -> t list -> t
+    val is_spill_from_quotation : t -> bool
   
   end
 

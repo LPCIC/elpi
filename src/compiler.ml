@@ -1022,14 +1022,16 @@ end = struct
 
     and check_matches_poly_skema_loc { loc; it } =
       let c, args =
-        let rec head id =
+        let rec head it =
           match it with
-          | App(Global _,f,x,[]) when F.equal F.pif f -> head x.it
+          | App(Global _,f,{ it = Lam(_,_,x) },[]) when F.equal F.pif f -> head x.it
           | Impl(false,{ it = App(Global _,c',x,xs) },_) -> c', x :: xs
           | Impl(false,{ it = Const(Global _,c') },_) -> c', []
           | App(Global _,c,x,xs) -> c, x :: xs
           | Const(Global _,c) -> c, []
-          | _ -> assert false in
+          | _ ->
+            (* Format.eprintf "%a" ScopedTerm.pretty_ it; *)
+            assert false in
         head it in
       (* Format.eprintf "Checking %a\n" F.pp c; *)
       match F.Map.find c env with
@@ -3776,7 +3778,7 @@ end = struct
       | Var(c,xs) when List.mem c locals -> mk_loc ~loc ~ty @@ Var(c,xs @ [w])
       | Lam(c,o,t) -> mk_loc ~loc ~ty @@ Lam(c,o,apply_to locals w t)
       | Const _ | Discard | Var _ | CData _ -> orig
-      | Cast _ -> assert false (* TODO *)
+      | Cast (t,i) -> mk_loc ~loc ~ty @@ Cast(apply_to locals w t,i)
       | Impl(b,t1,t2) -> mk_loc ~loc ~ty @@ Impl(b, apply_to locals w t1, apply_to locals w t2)
       | Spill _ -> assert false in
     let apply_to locals (w,l) t =
@@ -3853,6 +3855,28 @@ end = struct
           let it = App(g,c,List.hd args, List.tl args) in
           if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
           else spilled, [{ it; loc; ty }]
+
+          (* TODO
+          let spills, args, is_prop =
+          let (@@@) (s1,a1) (s2,a2,b) = s1 @ s2, a1 @ a2, b in
+          let rec aux_spaux ty args = match ty, args with
+            | (Variadic(_,Prop) | Arrow([],Prop)), [] -> [],[],true
+            | _, [] -> [],[],false
+            | Variadic(Prop,_), a1 :: an ->
+                  ([],spaux1_prop ctx a1) @@@ aux_spaux ty an
+            | Arrow(Prop :: ty,c), a1 :: an ->
+                  ([],spaux1_prop ctx a1) @@@ aux_spaux (Arrow(ty,c)) an
+            | Arrow((_ :: _ as ty),c), a1 :: an ->
+                  let spills, a1 = spaux ctx a1 in
+                  let ty = drop (size_outermost_spill spills ~default:1) ty in
+                  (spills, a1) @@@ aux_spaux (Arrow(ty,c)) an
+            | _, a1 :: an -> spaux ctx a1 @@@ aux_spaux ty an
+          in
+            aux_spaux (type_of_const !state types hd) args in
+        if is_prop then [], [add_spilled spills (mkAppC hd args)]
+        else spills, [mkAppC hd args]
+*)
+
       (* TODO: positive/negative postion, for now we assume :- and => are used in the obvious way *)
       | Impl(false,head,premise) -> (* head :- premise *)
           let spills_head, head = spill1 ctx head in

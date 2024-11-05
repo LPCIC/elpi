@@ -341,6 +341,7 @@ module ScopedTerm = struct
    let mkVar ~loc n l = { loc; it = Var(n,l) }
    let mkOpaque ~loc o = { loc; it = Opaque o }
    let mkCast ~loc t ty = { loc; it = Cast(t,ty) }
+   let mkDiscard ~loc = { loc; it = Discard }
    let mkLam ~loc n ?ty t =  { loc; it = Lam(n,ty,t)  }
    let mkImplication ~loc s t = { loc; it = Impl(true,s,t) }
    let mkPi ~loc n ?ty t = { loc; it = App(Global true,F.pif,{ loc; it = Lam (Some (n,elpi_language),ty,t) },[]) }
@@ -553,9 +554,30 @@ module ScopedTerm = struct
             | x -> anomaly ~loc (Format.asprintf "The term is not an elpi varible coming from a quotation: @[%a@]" pretty x)
             end
         | x -> anomaly ~loc (Format.asprintf "The term is not term coming from a quotation: @[%a@]" pp_t_ x)
+  
+  
+    let extend_spill_hyp_from_quotation { SimpleTerm.it; loc } hyps =
+      match it with
+      | SimpleTerm.Opaque o when is_scoped_term o ->
+          begin match out_scoped_term o with
+          | { it = Spill(t,i); loc } ->
+            let impl = { loc; it = Impl(true, list_to_lp_list hyps, { loc; it = Opaque (in_scoped_term t) }) } in
+            { loc; it = Opaque(in_scoped_term @@ { it = Spill(of_simple_term_loc impl,i); loc; ty = MutableOnce.make (F.from_string "Ty") })}
+          | _ ->
+            anomaly ~loc (Format.asprintf "The term is not a spill coming from a quotation: @[%a@]" pp_t_ it)
+          end
+      | x ->
+         anomaly ~loc (Format.asprintf "The term is not coming from a quotation: @[%a@]" pp_t_ x)
+
+    let is_spill_from_quotation { SimpleTerm.it } =
+      match it with
+      | SimpleTerm.Opaque o when is_scoped_term o ->
+        begin match out_scoped_term o with
+        | { it = Spill _ } -> true 
+        | _ -> false
+        end
+      | _ -> false
   end
-
-
 end
 
 
