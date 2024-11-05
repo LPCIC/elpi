@@ -15,7 +15,7 @@ module Scope = struct
   
   type t =
     | Bound  of language (* bound by a lambda, stays bound *)
-    | Global of final
+    | Global of final * int option ref
   [@@ deriving show, ord]
 
   module Map = Map.Make(struct
@@ -73,7 +73,7 @@ module ScopedTypeExpression = struct
 
   let rec of_simple_type = function
     | SimpleType.Any -> Any
-    | Con c -> Const(Global false,c)
+    | Con c -> Const(Global (false, ref None),c)
     | App(c,x,xs) -> App(c,of_simple_type_loc x,List.map of_simple_type_loc xs)
     | Arr(s,t) -> Arrow(NotVariadic,of_simple_type_loc s, of_simple_type_loc t)
   and of_simple_type_loc { it; loc } = { it = of_simple_type it; loc }
@@ -88,7 +88,7 @@ module ScopedTypeExpression = struct
 
   let rec eqt ctx t1 t2 =
     match t1.it, t2.it with
-    | Const(Global b1,c1), Const(Global b2,c2) -> b1 = b2 && F.equal c1 c2
+    | Const(Global (b1,_),c1), Const(Global (b2,_),c2) -> b1 = b2 && F.equal c1 c2 (* TODO: is it sufficient to compare the int option ref ?*)
     | Const(Bound l1,c1), Const(Bound l2,c2) -> l1 = l2 && eq_var ctx l1 c1 c2
     | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
     | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 == b2 && eqt ctx s1 s2 && eqt ctx t1 t2
@@ -112,10 +112,10 @@ module ScopedTypeExpression = struct
   and smart_map_scoped_ty f orig =
     match orig with
     | Any -> orig
-    | Const((Scope.Bound _| Scope.Global true),_) -> orig
-    | Const(Scope.Global false,c) ->
+    | Const((Scope.Bound _| Scope.Global (true,_)),_) -> orig
+    | Const(Scope.Global (false,r),c) ->
         let c' = f c in
-        if c == c' then orig else Const(Scope.Global false,c')
+        if c == c' then orig else Const(Scope.Global (false,r),c')
     | App(c,x,xs) ->
         let c' = f c in
         let x' = smart_map_scoped_loc_ty f x in
@@ -185,7 +185,7 @@ module TypeAssignment = struct
   type 'a overloading =
     | Single of 'a
     | Overloaded of 'a list
-  [@@ deriving show, fold]
+  [@@ deriving show, fold, iter]
 
   type 'a t_ =
     | Prop | Any
@@ -200,10 +200,15 @@ module TypeAssignment = struct
   type overloaded_skema = skema overloading
   [@@ deriving show]
 
+  type skema_w_id = int * skema
+  [@@ deriving show, ord]
+  type overloaded_skema_with_id = skema_w_id overloading
+  [@@ deriving show]
+
   type t = Val of t MutableOnce.t t_
   [@@ deriving show]
 
-  let nparams t =
+  let nparams (_,t : skema_w_id) =
       let rec aux = function Ty _ -> 0 | Lam(_,t) -> 1 + aux t in
       aux t
   
@@ -216,10 +221,10 @@ module TypeAssignment = struct
         | Some x -> x
         | None -> anomaly "TypeAssignment.subst"
 
-  let fresh sk =
+  let fresh ((id,sk): skema_w_id) =
     let rec fresh map = function
       | Lam(c,t) -> fresh (F.Map.add c (UVar (MutableOnce.make c)) map) t
-      | Ty t -> if F.Map.is_empty map then Obj.magic t, map else subst (fun x -> F.Map.find_opt x map) t, map
+      | Ty t -> if F.Map.is_empty map then (id, Obj.magic t), map else (id, subst (fun x -> F.Map.find_opt x map) t), map
   in
     fresh F.Map.empty sk
 
@@ -233,7 +238,7 @@ module TypeAssignment = struct
     | Lam(c,t), x::xs -> apply (F.Map.add c x m) t xs
     | _ -> assert false (* kind checker *)
 
-  let apply sk args = apply F.Map.empty sk args
+  let apply (_,sk:skema_w_id) args = apply F.Map.empty sk args
 
   let merge_skema x y =
     match x, y with
@@ -298,36 +303,36 @@ module ScopedTerm = struct
    [@@ deriving show]
 
    type constant = int
-   let mkGlobal ~loc c = { loc; it = Const(Global true,F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s) }
+   let mkGlobal ~loc c = { loc; it = Const(Global (true, ref None),F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s) }
    let mkBound ~loc ~language n = { loc; it = Const(Bound language,n)}
-   let mkAppGlobal ~loc c x xs = { loc; it = App(Global true,F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
+   let mkAppGlobal ~loc c x xs = { loc; it = App(Global (true, ref None),F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
    let mkAppBound ~loc ~language n x xs = { loc; it = App(Bound language,n,x,xs) }
    let mkVar ~loc n l = { loc; it = Var(n,l) }
    let mkOpaque ~loc o = { loc; it = Opaque o }
    let mkCast ~loc t ty = { loc; it = Cast(t,ty) }
    let mkLam ~loc n ?ty t =  { loc; it = Lam(n,ty,t)  }
    let mkImplication ~loc s t = { loc; it = Impl(true,s,t) }
-   let mkPi ~loc n ?ty t = { loc; it = App(Global true,F.pif,{ loc; it = Lam (Some (n,elpi_language),ty,t) },[]) }
+   let mkPi ~loc n ?ty t = { loc; it = App(Global (true, ref None),F.pif,{ loc; it = Lam (Some (n,elpi_language),ty,t) },[]) }
    let mkConj ~loc = function
-     | [] -> { loc; it = Const(Global true, F.truef) }
+     | [] -> { loc; it = Const(Global (true, ref None), F.truef) }
      | [x] -> x
-     | x :: xs -> { loc; it = App(Global true, F.andf, x, xs)}
-    let mkEq ~loc a b = { loc; it = App(Global true, F.eqf, a,[b]) }
+     | x :: xs -> { loc; it = App(Global (true, ref None), F.andf, x, xs)}
+    let mkEq ~loc a b = { loc; it = App(Global (true, ref None), F.eqf, a,[b]) }
     let list_to_lp_list l =
       match List.rev l with
       | [] -> anomaly "Ast.list_to_lp_list on empty list"
       | h :: _ ->
         let rec aux = function
-         | [] -> { it = Const(Global true,F.nilf); loc = h.loc }
+         | [] -> { it = Const(Global (true, ref None),F.nilf); loc = h.loc }
          | hd::tl ->
              let tl = aux tl in
-             { loc = Loc.merge hd.loc tl.loc; it = App(Global true,F.consf,hd,[tl]) }
+             { loc = Loc.merge hd.loc tl.loc; it = App(Global (true, ref None),F.consf,hd,[tl]) }
         in
           aux l
       
     let rec lp_list_to_list = function
-      | { it = App(Global true, c, x, [xs]) } when F.equal c F.consf  -> x :: lp_list_to_list xs
-      | { it = Const(Global true,c) } when F.equal c F.nilf -> []
+      | { it = App(Global (true, _), c, x, [xs]) } when F.equal c F.consf  -> x :: lp_list_to_list xs
+      | { it = Const(Global (true, _),c) } when F.equal c F.nilf -> []
       | { loc; it } -> error ~loc (Format.asprintf "%a is not a list" pp_t_ it)
     
   end
@@ -391,11 +396,11 @@ module ScopedTerm = struct
   let equal t1 t2 =
     let rec eq ctx t1 t2 =
       match t1.it, t2.it with
-      | Const(Global b1,c1), Const(Global b2,c2) -> b1 == b2 && F.equal c1 c2
+      | Const(Global (b1,_),c1), Const(Global (b2,_),c2) -> b1 == b2 && F.equal c1 c2
       | Const(Bound l1,c1), Const(Bound l2,c2) -> l1 = l2 && eq_var ctx l1 c1 c2
       | Discard, Discard -> true
       | Var(n1,l1), Var(n2,l2) -> eq_uvar ctx n1 n2 && Util.for_all2 (eq ctx) l1 l2
-      | App(Global b1,c1,x,xs), App(Global b2,c2,y,ys) -> b1 == b2 && F.equal c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
+      | App(Global (b1,_),c1,x,xs), App(Global (b2,_),c2,y,ys) -> b1 == b2 && F.equal c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
       | App(Bound l1,c1,x,xs), App(Bound l2,c2,y,ys) -> l1 = l2 && eq_var ctx l1 c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
       | Lam(None,ty1, b1), Lam (None,ty2, b2) -> eq ctx b1 b2 && Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2
       | Lam(Some (c1,l1),ty1,b1), Lam(Some (c2,l2),ty2, b2) -> l1 = l2 && eq (push_ctx l1 c1 c2 ctx) b1 b2 && Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2
