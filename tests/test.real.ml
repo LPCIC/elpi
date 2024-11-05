@@ -87,7 +87,7 @@ let aNSITerminal_move_bol () =
   if Sys.win32 then ANSITerminal.printf [] "\n%!"
   else ANSITerminal.move_bol ()
 
-let run timeout _seed sources promote env { Runner.run; test; executable }  =
+let run stop_on_first_error timeout _seed sources promote env { Runner.run; test; executable }  =
 
   let { Test.name; description; _ } = test in
   let print = Printer.print ~executable:(Filename.basename executable) ~name ~description ~promote in
@@ -143,7 +143,14 @@ let rec find_map f = function
       | Some y -> y
       | None -> find_map f xs
 
-let main sources plot timeout promote executables namef catskip timetool seed =
+let rec map_stop_on_error stop_on_first_error f = function
+  | [] -> []
+  | x :: xs -> 
+    match f x with
+    | Some Runner.{rc=Failure _} as err when stop_on_first_error -> [err]
+    | e -> e :: map_stop_on_error stop_on_first_error f xs
+
+let main sources plot timeout promote executables namef catskip timetool seed stop_on_first_error =
   Random.init seed;
   let filter_name =
     let rex = Str.regexp (".*"^namef) in
@@ -156,7 +163,7 @@ let main sources plot timeout promote executables namef catskip timetool seed =
     tests |> List.map (Suite.Runner.jobs ~timetool ~executables ~promote)
           |> List.concat in
   let results =
-    List.map (run timeout seed sources promote env) jobs in
+    map_stop_on_error stop_on_first_error (run stop_on_first_error timeout seed sources promote env) jobs in
   let total, ok, ko_list, skipped, timeout =
     let rec part total ok ko_list skipped timeout = function
       | [] -> (total, ok, List.rev ko_list, skipped, timeout)
@@ -223,6 +230,10 @@ let promote =
   let doc = "Promotes the tests (if failing)" in
   Arg.(value & opt bool false & info ["promote"] ~docv:"PATH" ~doc)
 
+let stop_on_first_error = 
+  let doc = "Stops test execution on first error" in
+  Arg.(value & opt bool false & info ["stop-on-first-error"] ~docv:"PATH" ~doc)
+
 let info =
   let doc = "run the test suite" in
   let tests = Test.names ()
@@ -234,5 +245,5 @@ let info =
 ;;
 
 let () =
-  (Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ promote $ runners $ namef $ catskip $ mem $ seed),info)) [@ warning "-A"]
+  (Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ promote $ runners $ namef $ catskip $ mem $ seed $ stop_on_first_error),info)) [@ warning "-A"]
   (* ocaml >= 4.08 | exit @@ Cmd.eval (Cmd.v info Term.(const main $ src $ plot $ timeout $ runners $ namef $ catskip $ mem $ seed)) *)

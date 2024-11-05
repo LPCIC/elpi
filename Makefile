@@ -12,6 +12,7 @@ help:
 	@echo '  tests ONLY=rex         runs only tests matching rex'
 	@echo '  tests PROMOTE=true     runs and promote tests if different'
 	@echo '                           (can be combined with ONLY)'
+	@echo '  tests STOP_ON_FST_ERROR=true stops the test suite after first error'
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
 	@echo
@@ -28,6 +29,7 @@ BUILD=_build/default
 SHELL:=/usr/bin/env bash
 TIMEOUT=90.0
 PROMOTE=false
+STOP_ON_FST_ERROR=false
 PWD=$(shell pwd)
 RUNNERS=\
   dune \
@@ -83,6 +85,7 @@ tests:
 		--seed $$RANDOM \
 		--promote $(PROMOTE) \
 		--timeout $(TIMEOUT) \
+		--stop-on-first-error=$(STOP_ON_FST_ERROR) \
 		$(TIME) \
 		--sources=$(PWD)/tests/sources/ \
 		--plot=$(PWD)/tests/plot \
