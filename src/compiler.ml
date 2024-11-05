@@ -685,7 +685,7 @@ end = struct
     | Some c -> Format.fprintf fmt "%a" F.pp c
 
   let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
-    let msg = Format.asprintf "@[<hov>literal %a has type %a@ but %a expects a term of type@ %a@]"  CData.pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
+    let msg = Format.asprintf "@[<hov>literal \"%a\" has type %a@ but %a expects a term of type@ %a@]"  CData.pp c TypeAssignment.pretty tx pp_tyctx tyctx TypeAssignment.pretty ety in
     error ~loc msg
   
   let error_bad_ety ~loc ~tyctx ~ety pp c tx =
@@ -3782,7 +3782,7 @@ end = struct
           | Impl(b,s,t) -> Impl(b,s,aux t)
           | Const(g,c) -> mkApp g c args
           | App(g,c,x,xs) -> mkApp g c (x :: xs @ args)
-          | Var(c,xs) -> Var(c,xs @ args)
+          | Var _
           | Discard | Lam (_, _, _)
           | CData _ | Spill (_, _) | Cast (_, _) -> assert false
       and aux_last = function
@@ -3798,8 +3798,25 @@ end = struct
       if n = 0 then []
       else
         let f = incr args; F.from_string (Printf.sprintf "%%arg%d" !args) in
-        let sp = mk_loc ~loc @@ Var(f,[]) in
-        (f,app sp ctx) :: mk_spilled ~loc ctx (n-1) in
+        let sp = mk_loc ~loc @@ Var(f,ctx) in
+        (f,sp) :: mk_spilled ~loc ctx (n-1) in
+
+    (* barendregt_convention (naive implementation) *)
+    let rec bc ctx t =
+      match t with
+      | Lam(None,o,t) -> Lam(None,o,bc_loc ctx t)
+      | Lam(Some (c,l),o,t) when List.mem (c,l) ctx ->
+        let d = fresh () in
+        bc ctx (Lam(Some (d,l),o,rename_loc l c d t))
+      | Lam(Some c,o,t) -> Lam (Some c,o, bc_loc (c :: ctx) t)
+      | Impl(b,t1,t2) -> Impl(b,bc_loc ctx t1, bc_loc ctx t2)
+      | Cast(t,ty) -> Cast(bc_loc ctx t,ty)
+      | Spill(t,i) -> Spill(bc_loc ctx t,i)
+      | App(g,f,x,xs) -> App(g,f,bc_loc ctx x,List.map (bc_loc ctx) xs)
+      | Const _ | Discard | Var _ | CData _ -> t
+    and bc_loc ctx { loc; ty; it } =
+      { loc; ty; it = bc ctx it }
+    in
 
     let rec spill ctx ({ loc; ty; it } as t) : spills * ScopedTerm.t list =
       (* Format.eprintf "spill %a : %a\n" ScopedTerm.pretty t (MutableOnce.pp TypeAssignment.pp) ty; *)
@@ -3871,7 +3888,7 @@ end = struct
   in
 
     let spills, ts =
-      if needs_spilling then spill [] t
+      if needs_spilling then spill [] (bc_loc [] t)
       else [],[t] in
     let t =
       match spills, ts with

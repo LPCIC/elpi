@@ -1,0 +1,7 @@
+kind tm type.
+type lam (tm -> list tm) -> tm.
+
+main :-
+  pi x\ std.do! [
+    pi x a \ F x = (lam y\ [lam w\{std.append [x] [y]}])
+  ].

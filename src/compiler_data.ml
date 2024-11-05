@@ -474,6 +474,22 @@ module ScopedTerm = struct
     let fresh = ref 0
     let fresh () = incr fresh; F.from_string (Format.asprintf "%%bound%d" !fresh)
 
+    let rec rename l c d t =
+      match t with
+      | Impl(b,t1,t2) -> Impl(b,rename_loc l c d t1, rename_loc l c d t2)
+      | Const(Bound l',c') when l = l' && F.equal c c' -> Const(Bound l,d)
+      | Const _ -> t
+      | App(Bound l',c',x,xs) when l = l' && F.equal c c' ->
+          App(Bound l,d,rename_loc l c d x, List.map (rename_loc l c d) xs)
+      | App(g,v,x,xs) -> App(g,v,rename_loc l c d x, List.map (rename_loc l c d) xs)
+      | Lam(Some (c',l'),_,_) when l = l' && F.equal c c' -> t
+      | Lam(v,ty,t) -> Lam(v,ty,rename_loc l c d t)
+      | Spill(t,i) -> Spill(rename_loc l c d t,i)
+      | Cast(t,ty) -> Cast(rename_loc l c d t,ty)
+      | Var(v,xs) -> Var(v,List.map (rename_loc l c d) xs)
+      | Discard | CData _ -> t
+    and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
+
     let beta t args =
       let rec load_subst ~loc t (args : t list) map =
         match t, args with
@@ -499,21 +515,6 @@ module ScopedTerm = struct
         | Spill(t,i) -> Spill(subst_loc map t,i)
         | Cast(t,ty) -> Cast(subst_loc map t,ty)
         | Discard | CData _ -> t
-      and rename l c d t =
-        match t with
-        | Impl(b,t1,t2) -> Impl(b,rename_loc l c d t1, rename_loc l c d t2)
-        | Const(Bound l',c') when l = l' && F.equal c c' -> Const(Bound l,d)
-        | Const _ -> t
-        | App(Bound l',c',x,xs) when l = l' && F.equal c c' ->
-            App(Bound l,d,rename_loc l c d x, List.map (rename_loc l c d) xs)
-        | App(g,v,x,xs) -> App(g,v,rename_loc l c d x, List.map (rename_loc l c d) xs)
-        | Lam(Some (c',l'),_,_) when l = l' && F.equal c c' -> t
-        | Lam(v,ty,t) -> Lam(v,ty,rename_loc l c d t)
-        | Spill(t,i) -> Spill(rename_loc l c d t,i)
-        | Cast(t,ty) -> Cast(rename_loc l c d t,ty)
-        | Var(v,xs) -> Var(v,List.map (rename_loc l c d) xs)
-        | Discard | CData _ -> t
-      and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
       and subst_loc map { it; ty; loc } = { it = subst map it; ty; loc }
       and app_loc { it; loc; ty } args : t = { it = app ~loc it args; loc; ty }
       and app ~loc t (args : t list) =
