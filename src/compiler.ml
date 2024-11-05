@@ -14,7 +14,7 @@ exception CompileError of Loc.t option * string
 
 let elpi_language = Compiler_data.elpi_language
 
-let error ?loc msg = raise (CompileError(loc,msg))
+let error ?loc msg = raise (CompileError(loc, msg))
 
 type flags = {
   defined_variables : StrSet.t;
@@ -1022,12 +1022,15 @@ end = struct
 
     and check_matches_poly_skema_loc { loc; it } =
       let c, args =
-        match it with
-        | Impl(false,{ it = App(Global _,c',x,xs) },_) -> c', x :: xs
-        | Impl(false,{ it = Const(Global _,c') },_) -> c', []
-        | App(Global _,c,x,xs) -> c, x :: xs
-        | Const(Global _,c) -> c, []
-        | _ -> assert false in
+        let rec head id =
+          match it with
+          | App(Global _,f,x,[]) when F.equal F.pif f -> head x.it
+          | Impl(false,{ it = App(Global _,c',x,xs) },_) -> c', x :: xs
+          | Impl(false,{ it = Const(Global _,c') },_) -> c', []
+          | App(Global _,c,x,xs) -> c, x :: xs
+          | Const(Global _,c) -> c, []
+          | _ -> assert false in
+        head it in
       (* Format.eprintf "Checking %a\n" F.pp c; *)
       match F.Map.find c env with
       | Single (Ty _) -> ()
@@ -1693,6 +1696,11 @@ end = struct
 
   let is_uvar_name f =  F.is_uvar_name f
 
+  let is_global f = (F.show f).[0] = '.'
+  let of_global f =
+    let s = F.show f in
+    F.from_string @@ String.sub s 1 (String.length s - 1)
+
   let is_discard f =
     F.(equal f dummyname) ||
     let c = (F.show f).[0] in
@@ -1759,6 +1767,7 @@ end = struct
         if is_uvar_name c then ScopedTerm.Var(c,[])
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
+        else if is_global c then ScopedTerm.(Const(Global false,of_global c))
         else ScopedTerm.(Const(Global false,c))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
@@ -1780,6 +1789,7 @@ end = struct
           let bound = F.Set.mem c ctx in
           if bound then ScopedTerm.App(Bound elpi_language, c, x, xs)
           else if is_uvar_name c then ScopedTerm.Var(c,x :: xs)
+          else if is_global c then ScopedTerm.App(Global true,of_global c,x,xs)
           else ScopedTerm.App(Global false, c, x, xs)
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in

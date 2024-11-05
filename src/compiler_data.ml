@@ -265,12 +265,18 @@ module TypeAssignment = struct
 
   let apply sk args = apply F.Map.empty sk args
 
-  let merge_skema x y =
+  let eq_skema x y = compare_skema x y == 0
+
+  let rec merge_skema x y =
     match x, y with
+    | Single x, Single y when eq_skema x y -> Single x
     | Single x, Single y -> Overloaded [x;y]
+    | Single x, Overloaded ys when List.exists (eq_skema x) ys -> Overloaded (ys)
     | Single x, Overloaded ys -> Overloaded (x::ys)
+    | Overloaded xs, Single y when List.exists (eq_skema y) xs -> Overloaded(xs)
     | Overloaded xs, Single y -> Overloaded(xs@[y])
-    | Overloaded xs, Overloaded ys -> Overloaded (xs @ ys)
+    | Overloaded xs, (Overloaded _ as ys) ->
+        List.fold_right (fun x -> merge_skema (Single x)) xs ys
   
   let unval (Val x) = x
   let rec deref m =

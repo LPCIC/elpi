@@ -100,6 +100,6 @@ tests-var :-
 
 tests-declare-constraint :-
   declare_constraint false [x\ X x],
-  not(X = 1).
+  not(X = _\1).
 
 main :- tests-uvar, tests-as, tests-unif, tests-var, tests-declare-constraint.

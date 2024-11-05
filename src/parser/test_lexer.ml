@@ -165,7 +165,7 @@ b"|}                                  [T(STRING "a\nb", 2, 3, 5)];
   test  "X1>@!"                       [T(CONSTANT "X1>@!", 1, 0, 5)];
   test  "a.B.c"                       [T(CONSTANT "a.B.c", 1, 0, 5)];
   test  "a.B."                        [T(CONSTANT "a.B", 1, 0, 3); T(FULLSTOP, 1, 0, 4)];
-  test  "a.>"                         [T(CONSTANT "a", 1, 0, 1); T(FULLSTOP, 1, 0, 2); T(FAMILY_GT ">", 1, 0, 3)];
+  test  "a. >"                        [T(CONSTANT "a", 1, 0, 1); T(FULLSTOP, 1, 0, 2); T(FAMILY_GT ">", 1, 0, 4)];
   (*    01234567890123456789012345 *)
   test  "-->"                         [T(FAMILY_MINUS "-->", 1, 0, 3)];
   test  "x.y->z"                      [T(CONSTANT "x.y->z", 1, 0, 6)];
