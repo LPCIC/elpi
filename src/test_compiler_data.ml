@@ -44,7 +44,7 @@ let ty  = MutableOnce.create @@ Val Prop
 let c3 = { loc; it = CData (Ast.cint.cin 3); ty };;
 let lam v t = { loc; ty; it = Lam(Some(F.from_string v,""),None,t)}
 let var v = { loc; ty; it = Const(Bound "",F.from_string v)}
-let app c l = { loc; ty; it = App(Global true,F.from_string c,List.hd l,List.tl l)}
+let app c l = { loc; ty; it = App(Global (true, ref None),F.from_string c,List.hd l,List.tl l)}
 
 let () = pp_t c3 "3";;
 let () = pp_t (app "f" [app "g" [var "x"]]) "f (g x)";;
