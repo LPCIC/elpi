@@ -3756,6 +3756,7 @@ end = struct
       if l = [] then t
       else
         let t =
+          (* Format.eprintf "adding %d spills\n" (List.length l); *)
           List.fold_right (fun { expr; vars_names } t ->
             let t = mk_loc ~loc:t.loc @@ App(Global true,F.andf,expr,[t]) in
              (* let t = List.fold_left (sigma ~loc:t.loc) t vars_names in *)
@@ -3829,7 +3830,7 @@ end = struct
     in
 
     let rec spill ctx ({ loc; ty; it } as t) : spills * ScopedTerm.t list =
-      (* Format.eprintf "spill %a : %a\n" ScopedTerm.pretty t (MutableOnce.pp TypeAssignment.pp) ty; *)
+      (* Format.eprintf "@[<hov 2>spill %a :@ %a@]\n" ScopedTerm.pretty t TypeAssignment.pretty (TypeAssignment.deref ty); *)
       match it with
       | CData _ | Discard | Const _ -> [], [t]
       | Cast(t,_) -> spill ctx t
@@ -3852,23 +3853,19 @@ end = struct
           let it = App(g,c,List.hd args, List.tl args) in
           if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
           else spilled, [{ it; loc; ty }]
-      | Impl(b,t1,t2) ->
-          (* TODO: @FissoreD 
-            if _b is true then no spilling in t1 is allowed (or spill before it) 
-            else the spilling in t1 can be put has first arg in t2?
-          *)
-          let spills1, args1 = spill ctx t1 in
-          let spills2, args2 = spill ctx t2 in
-          let spilled = spills1 @ spills2 in
-          let tl = (mkApp (Global true) F.andf args2) in
-          let it = 
-            if List.length args1 = 1 then 
-              Impl(b,List.hd args1,mk_loc ~loc ~ty @@ tl)
-            else (* Here wrong spilling *) 
-              List.fold_right (fun e acc -> Impl(b, e, mk_loc ~loc ~ty acc)) args1 tl
-          in
-          if is_prop ty then [], [add_spilled spilled { it; loc; ty }]
-          else spilled, [{ it; loc; ty }]
+      (* TODO: positive/negative postion, for now we assume :- and => are used in the obvious way *)
+      | Impl(false,head,premise) -> (* head :- premise *)
+          let spills_head, head = spill1 ctx head in
+          if spills_head <> [] then error ~loc "Spilling in the head of a clause is not supported";
+          let spilled, premise = spill1 ctx premise in
+          let it = Impl(false,head,premise) in
+          [],[add_spilled spilled { it; loc; ty }]
+      | Impl(true,premise,conclusion) -> (* premise => conclusion *)
+          let spills_premise, premise = spill1 ctx premise in
+          if spills_premise <> [] then error ~loc "Spilling in the premise of an implication is not supported";
+          let spilled, conclusion = spill1 ctx conclusion in
+          let it = Impl(true,premise,conclusion) in
+          [], [add_spilled spilled { it; loc; ty }]
       (* lambda terms *)
       | Lam(None,o,t) ->
           let spills, t = spill1 ctx t in
@@ -3896,6 +3893,13 @@ end = struct
         let t = if List.length t <> 1 then error ~loc "bad pilling" else List.hd t in
         spills, t
   in
+  let spill ctx t =
+    (* Format.eprintf "before spill: %a\n" ScopedTerm.pretty t; *)
+    let s,t = spill ctx t in
+    (* Format.eprintf "after spill: %a\n" ScopedTerm.pretty (List.hd t); *)
+
+    s,t
+in
 
     let spills, ts =
       if needs_spilling then spill [] (bc_loc [] t)

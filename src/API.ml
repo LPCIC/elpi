@@ -1365,6 +1365,7 @@ module Utils = struct
     let module R = (val !r) in let open R in
     let show i = Format.asprintf "%a" (R.Pp.pp_constant ?pp_ctx:None) i in
     let buggy_loc = loc in
+    (* Format.eprintf "clause: %a\n" ( Pp.uppterm depth [] ~argsdepth:0 ED.empty_env ) term; *)
     let rec aux d ctx t =
       match deref_head ~depth:d t with
       | Data.Const i when i >= 0 && i < depth ->
