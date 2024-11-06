@@ -1,5 +1,5 @@
 let pp_ta t s =
-  let open Elpi.Internal.Compiler_data in
+  let open Elpi_compiler.Compiler_data in
   let s' = Format.asprintf "@[%a@]" TypeAssignment.pretty t in
   if s <> s' then begin
     Format.eprintf "Unexpected print: %a\nactual: %a\nreference: %s\n"
@@ -9,7 +9,7 @@ let pp_ta t s =
 ;;
 
 let pp_t t s =
-  let open Elpi.Internal.Compiler_data in
+  let open Elpi_compiler.Compiler_data in
   let s' = Format.asprintf "@[%a@]" ScopedTerm.pretty t in
   if s <> s' then begin
     Format.eprintf "Unexpected print: %a\nactual: %a\nreference: %s\n"
@@ -18,8 +18,7 @@ let pp_t t s =
   end
 ;;
 
-open Elpi
-open Internal
+open Elpi_compiler
 open Compiler_data
 open TypeAssignment
 open Elpi_parser

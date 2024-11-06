@@ -40,35 +40,6 @@ open Util
 
 module Term = struct
 
-(* Used by pretty printers, to be later instantiated in module Constants *)
-let pp_const = mk_spaghetti_printer ()
-type constant = int (* De Bruijn levels *) [@@ deriving ord]
-let pp_constant = pp_spaghetti pp_const
-let show_constant = show_spaghetti pp_const
-let equal_constant x y = x == y
-
-module Constants : sig
-  type t = constant
-  module Map : Map.S with type key = constant
-  module Set : Set.S with type elt = constant
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
-  val compare : t -> t -> int
-end = struct
-
-module Self = struct
-  type t = constant
-  let compare x y = x - y
-  let pp = pp_constant
-  let show = show_constant
-end
-module Map = Map.Make(Self)
-module Set = Set.Make(Self)
-include Self
-end
-
-
-
 (* To be instantiated after the dummy term is defined *)
 let pp_oref = mk_spaghetti_printer ()
 
@@ -164,6 +135,7 @@ let to_mode = function true -> Fo Input | false -> Fo Output
 
 type grafting_time = int list
 [@@deriving show, ord]
+let compare_constant = Util.compare_constant
 type times = (grafting_time * constant) StrMap.t
 [@@deriving show, ord]
 

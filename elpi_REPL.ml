@@ -95,16 +95,12 @@ let _ =
   let print_passes = ref false in
   let print_units = ref false in
   let extra_paths = ref [] in
-  let legacy_parser = ref false in
   let parse_term = ref false in
   let vars =
     ref API.Compile.(default_flags.defined_variables) in
   let rec eat_options = function
     | [] -> []
     | "-delay-problems-outside-pattern-fragment" :: rest -> delay_outside_fragment := true; eat_options rest
-    | "-legacy-parser" :: rest -> legacy_parser := true; eat_options rest
-    | "-legacy-parser-available" :: _ ->
-          if API.Setup.legacy_parser_available then exit 0 else exit 1
     | "-test" :: rest -> batch := true; test := true; eat_options rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; eat_options rest
     | "-print" :: rest -> print_lprolog := true; eat_options rest
@@ -140,7 +136,6 @@ let _ =
   } in
   let elpi =
     API.Setup.init
-      ~legacy_parser:!legacy_parser
       ~quotations
       ~flags:(API.Compile.to_setup_flags flags)
       ~builtins:[Builtin.std_builtins]

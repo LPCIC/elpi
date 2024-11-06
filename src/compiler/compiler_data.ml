@@ -1,5 +1,6 @@
 open Elpi_util
 open Elpi_parser
+open Elpi_runtime
 open Util
 module F = Ast.Func
 
@@ -345,9 +346,9 @@ module ScopedTerm = struct
    [@@ deriving show]
 
    type constant = int
-   let mkGlobal ~loc c = { loc; it = Const(Scope.mkGlobal ~escape_ns:true (),F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s) }
+   let mkGlobal ~loc c = { loc; it = Const(Scope.mkGlobal ~escape_ns:true (),F.from_string @@ Constants.Map.find c Data.Global_symbols.table.c2s) }
    let mkBound ~loc ~language n = { loc; it = Const(Bound language,n)}
-   let mkAppGlobal ~loc c x xs = { loc; it = App(Scope.mkGlobal ~escape_ns:true (),F.from_string @@ Data.Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
+   let mkAppGlobal ~loc c x xs = { loc; it = App(Scope.mkGlobal ~escape_ns:true (),F.from_string @@ Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
    let mkAppBound ~loc ~language n x xs = { loc; it = App(Bound language,n,x,xs) }
    let mkVar ~loc n l = { loc; it = Var(n,l) }
    let mkOpaque ~loc o = { loc; it = Opaque o }

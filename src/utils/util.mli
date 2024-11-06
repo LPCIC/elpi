@@ -289,3 +289,18 @@ end
 val std_resolver :
   ?cwd:string -> paths:string list -> unit ->
      (?cwd:string -> unit:string -> unit -> string)
+
+
+type constant = int
+val pp_constant : Format.formatter -> constant -> unit
+val show_constant : constant -> string
+val compare_constant : constant -> constant -> int
+val pp_const : constant spaghetti_printer
+module Constants : sig
+  type t = constant
+  module Map : Map.S with type key = constant
+  module Set : Set.S with type elt = constant
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+  val compare : t -> t -> int
+end
