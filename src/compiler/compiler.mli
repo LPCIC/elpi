@@ -16,8 +16,6 @@ type flags = {
 }
 val default_flags : flags
 
-exception CompileError of Loc.t option * string
-
 type builtins = string * Data.BuiltInPredicate.declaration list
 
 type header
