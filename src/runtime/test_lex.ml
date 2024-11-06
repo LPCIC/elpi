@@ -1,4 +1,4 @@
-open Elpi.Internal.Runtime
+open Elpi_runtime.Runtime
 
 let rec sorted = function
   | [] -> true

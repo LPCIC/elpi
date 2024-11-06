@@ -4,6 +4,8 @@
 
 open Elpi_util
 open Elpi_parser
+open Elpi_runtime
+open Elpi_compiler
 
 module type Runtime = (module type of Runtime_trace_off)
 
@@ -15,7 +17,7 @@ let set_runtime b =
   | false -> r := (module Runtime_trace_off : Runtime)
   end;
   let module R = (val !r) in
-  Util.set_spaghetti_printer Data.pp_const R.Pp.pp_constant
+  Util.set_spaghetti_printer Util.pp_const R.Pp.pp_constant
 
 let set_trace argv =
   let args = Trace_ppx_runtime.Runtime.parse_argv argv in
@@ -42,20 +44,14 @@ type elpi = {
 }
 type flags = Compiler.flags
 
-let init ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver ?(legacy_parser=false) () : elpi =
+let init ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
     | Some x -> x
     | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
-  let parser =
-    if legacy_parser then begin
-      if not Legacy_parser_proxy.valid then
-         Util.error "The legacy parser is not available (disabled at compile time)";
-      (module Legacy_parser_proxy.Make(struct let resolver = file_resolver end) : Parse.Parser)
-    end else
-      (module Parse.Make(struct let resolver = file_resolver end) : Parse.Parser) in
+  let parser = (module Parse.Make(struct let resolver = file_resolver end) : Parse.Parser) in
   Data.Global_symbols.lock ();
   let header_src =
     builtins |> List.map (fun (fname,decls) ->
@@ -96,7 +92,6 @@ let set_std_formatter = Util.set_std_formatter
 let set_err_formatter fmt =
   Util.set_err_formatter fmt; Trace_ppx_runtime.Runtime.(set_trace_output TTY fmt)
 
-let legacy_parser_available = Legacy_parser_proxy.valid
 end
 
 module EA = Ast
@@ -112,7 +107,7 @@ module Ast = struct
   module Name = struct
     include Ast.Func
     type constant = int
-    let is_global f i = show f = Data.Constants.Map.find i Data.Global_symbols.table.c2s
+    let is_global f i = show f = Util.Constants.Map.find i Data.Global_symbols.table.c2s
   end
   module Opaque = Util.CData
 end
@@ -328,7 +323,7 @@ module RawOpaqueData = struct
     match deref_head ~depth t with
     | ED.Term.CData c when isc c -> state, cout c, []
     | ED.Term.Const i as t when i < 0 ->
-        begin try state, ED.Constants.Map.find i constants_map, []
+        begin try state, Util.Constants.Map.find i constants_map, []
         with Not_found -> raise (Conversion.TypeErr(ty,depth,t)) end
     | t -> raise (Conversion.TypeErr(ty,depth,t)) in
   let pp_doc fmt () =
@@ -349,8 +344,8 @@ module RawOpaqueData = struct
     let constants_map, values_map =
       List.fold_right (fun (n,v) (cm,vm) ->
         let c = ED.Global_symbols.declare_global_symbol n in
-        ED.Constants.Map.add c v cm, VM.add v c vm)
-      constants (ED.Constants.Map.empty,VM.empty) in
+        Util.Constants.Map.add c v cm, VM.add v c vm)
+      constants (Util.Constants.Map.empty,VM.empty) in
     let values_map x = VM.find x values_map in
     conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants ~pp cd
 
@@ -593,8 +588,8 @@ end
 
 module RawData = struct
 
-  type constant = ED.Term.constant
-  type builtin = ED.Term.constant
+  type constant = Util.constant
+  type builtin = Util.constant
   type term = ED.Term.term
   type view =
     (* Pure subterms *)
@@ -668,7 +663,7 @@ module RawData = struct
 
     let declare_global_symbol = ED.Global_symbols.declare_global_symbol
 
-    let show c = ED.Constants.show c
+    let show c = Util.Constants.show c
 
     let eqc    = ED.Global_symbols.eqc
     let orc    = ED.Global_symbols.orc
@@ -681,8 +676,8 @@ module RawData = struct
     let ctypec = ED.Global_symbols.ctypec
     let spillc = ED.Global_symbols.spillc
 
-    module Map = ED.Constants.Map
-    module Set = ED.Constants.Set
+    module Map = Util.Constants.Map
+    module Set = Util.Constants.Set
 
   end
 
@@ -1284,7 +1279,7 @@ module Calc = struct
 
   let eval ~depth state x =
    let table = ED.State.get ED.CalcHooks.eval state in
-   let lookup_eval c = ED.Constants.Map.find c table in
+   let lookup_eval c = Util.Constants.Map.find c table in
    let module R = (val !r) in let open R in
    let rec eval depth t =
      match deref_head ~depth t with

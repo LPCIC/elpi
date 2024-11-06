@@ -684,3 +684,31 @@ fun ?(cwd=Sys.getcwd()) ~unit:(origfilename as filename) () ->
   try iter_tjpath (cwd :: dirs)
   with File_not_found f ->
     raise (Failure ("File "^f^" not found in: " ^ String.concat ", " dirs))
+
+
+(* Used by pretty printers, to be later instantiated in module Constants *)
+let pp_const = mk_spaghetti_printer ()
+type constant = int (* De Bruijn levels *) [@@ deriving ord]
+let pp_constant = pp_spaghetti pp_const
+let show_constant = show_spaghetti pp_const
+let equal_constant x y = x == y
+
+module Constants : sig
+  type t = constant
+  module Map : Map.S with type key = constant
+  module Set : Set.S with type elt = constant
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+  val compare : t -> t -> int
+end = struct
+
+module Self = struct
+  type t = constant
+  let compare x y = x - y
+  let pp = pp_constant
+  let show = show_constant
+end
+module Map = Map.Make(Self)
+module Set = Set.Make(Self)
+include Self
+end

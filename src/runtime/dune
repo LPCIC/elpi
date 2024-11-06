@@ -1,0 +1,15 @@
+(library
+  (name elpi_runtime)
+  (public_name elpi.runtime)
+  (preprocess (per_module
+    ((pps ppx_deriving.std) data discrimination_tree bl)
+    ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") runtime)
+    ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"false\"") runtime_trace_off)
+    ))
+  (libraries re.str unix stdlib-shims elpi.parser elpi.util)
+  (modules data ptmap discrimination_tree bl runtime_trace_off runtime)
+)
+
+(test (name test_discrimination_tree) (libraries elpi.runtime) (modules test_discrimination_tree) (preprocess (pps ppx_deriving.std)))
+(test (name test_bl) (libraries elpi.runtime) (modules test_bl) (preprocess (pps ppx_deriving.std)))
+(test (name test_lex) (libraries elpi.runtime) (modules test_lex) (preprocess (pps ppx_deriving.std)))

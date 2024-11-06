@@ -163,7 +163,6 @@ module Setup : sig
     ?calc:calc_descriptor ->
     builtins:builtins list ->
     ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
-    ?legacy_parser:bool ->
     unit ->
     elpi
 
@@ -184,8 +183,6 @@ module Setup : sig
   val set_std_formatter : Format.formatter -> unit
   val set_err_formatter : Format.formatter -> unit
 
-  (** The legacy parser is an optional build dependency *)
-  val legacy_parser_available : bool
 end
 
 module Parse : sig

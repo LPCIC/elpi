@@ -4,6 +4,7 @@
 
 open Elpi_util
 open Elpi_parser
+open Elpi_runtime
 
 open Util
 module F = Ast.Func
@@ -68,19 +69,19 @@ module SymbolMap : sig
   val equal : table -> table -> bool
 
   val empty : unit -> table
-  val allocate_global_symbol     : D.State.t -> table -> F.t -> table * (D.constant * D.term)
-  val allocate_bound_symbol      : D.State.t -> table -> D.constant -> table * D.term
-  val get_global_symbol          : table -> F.t -> D.constant option
-  val get_canonical              : D.State.t -> table -> D.constant -> D.term
-  val global_name : D.State.t -> table -> D.constant -> F.t
+  val allocate_global_symbol     : D.State.t -> table -> F.t -> table * (constant * D.term)
+  val allocate_bound_symbol      : D.State.t -> table -> constant -> table * D.term
+  val get_global_symbol          : table -> F.t -> constant option
+  val get_canonical              : D.State.t -> table -> constant -> D.term
+  val global_name : D.State.t -> table -> constant -> F.t
   val compile : table -> D.symbol_table
 
 end = struct
 
   type table = {
-    ast2ct : (D.constant * D.term) F.Map.t;
-    c2t : D.term D.Constants.Map.t;
-    c2s : string D.Constants.Map.t;
+    ast2ct : (constant * D.term) F.Map.t;
+    c2t : D.term Util.Constants.Map.t;
+    c2s : string Util.Constants.Map.t;
     last_global : int;
   }
   [@@deriving show, ord]
@@ -88,7 +89,7 @@ end = struct
   let equal x y = compare x y == 0
 
   let compile { last_global; c2t; c2s; ast2ct } =
-    let t = { D.c2s; c2t = Hashtbl.create (D.Constants.Map.cardinal c2t); frozen_constants = last_global; } in
+    let t = { D.c2s; c2t = Hashtbl.create (Util.Constants.Map.cardinal c2t); frozen_constants = last_global; } in
   (* We could compile the Map c2t to a Hash table upfront, but there is no need
      since it is extended at run time anyway *)
   (* F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
@@ -102,9 +103,9 @@ end = struct
       let n = last_global in
       let xx = D.Term.Const n in
       let p = n,xx in
-      let c2t = D.Constants.Map.add n xx c2t in
+      let c2t = Util.Constants.Map.add n xx c2t in
       let ast2ct = F.Map.add x p ast2ct in
-      let c2s = D.Constants.Map.add n (F.show x) c2s in
+      let c2s = Util.Constants.Map.add n (F.show x) c2s in
       { c2t; c2s; ast2ct; last_global }, p
 
   let get_global_symbol { ast2ct } s =
@@ -120,7 +121,7 @@ end = struct
     ast2ct = D.Global_symbols.(table.s2ct);
     last_global = D.Global_symbols.table.last_global;
     c2s = D.Global_symbols.table.c2s;
-    c2t = D.Constants.Map.map (fun s ->
+    c2t = Util.Constants.Map.map (fun s ->
       let s = F.from_string s in
       let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
       t) D.Global_symbols.(table.c2s);
@@ -133,10 +134,10 @@ end = struct
     allocate_global_symbol_aux x table
 
   let allocate_bound_symbol_aux n ({ c2t; ast2ct } as table) =
-    try table, D.Constants.Map.find n c2t
+    try table, Util.Constants.Map.find n c2t
     with Not_found ->
       let xx = D.Term.Const n in
-      let c2t = D.Constants.Map.add n xx c2t in
+      let c2t = Util.Constants.Map.add n xx c2t in
       { table with c2t; ast2ct }, xx
 
   let allocate_bound_symbol state table n =
@@ -150,13 +151,13 @@ end = struct
   let get_canonical state table c =
     if not (D.State.get D.while_compiling state) then
       anomaly "get_canonical can only be used during compilation";
-    try D.Constants.Map.find c table.c2t
+    try Util.Constants.Map.find c table.c2t
     with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
 
   let global_name state table c =
     if not (D.State.get D.while_compiling state) then
       anomaly "get_canonical can only be used during compilation";
-    try F.from_string @@ D.Constants.Map.find c table.c2s
+    try F.from_string @@ Util.Constants.Map.find c table.c2s
     with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
 
 end
@@ -164,15 +165,15 @@ end
 module Symbols : sig
 
   (* Compilation phase *)
-  val allocate_global_symbol     : D.State.t -> F.t -> D.State.t * (D.constant * D.term)
-  val allocate_global_symbol_str : D.State.t -> string -> D.State.t * D.constant
-  val allocate_Arg_symbol        : D.State.t -> int -> D.State.t * D.constant
+  val allocate_global_symbol     : D.State.t -> F.t -> D.State.t * (constant * D.term)
+  val allocate_global_symbol_str : D.State.t -> string -> D.State.t * constant
+  val allocate_Arg_symbol        : D.State.t -> int -> D.State.t * constant
   val allocate_bound_symbol      : D.State.t -> int -> D.State.t * D.term
   val get_global_or_allocate_bound_symbol : D.State.t -> int -> D.State.t * D.term
   val get_canonical              : D.State.t -> int -> D.term
-  val get_global_symbol          : D.State.t -> F.t -> D.constant * D.term
-  val get_global_symbol_str      : D.State.t -> string -> D.constant * D.term
-  val show                       : D.State.t -> D.constant -> string
+  val get_global_symbol          : D.State.t -> F.t -> constant * D.term
+  val get_global_symbol_str      : D.State.t -> string -> constant * D.term
+  val show                       : D.State.t -> constant -> string
 
   type table
   type pruned_table
@@ -184,14 +185,14 @@ module Symbols : sig
   val locked : table -> bool
   val equal : table -> table -> bool
   val size : pruned_table -> int
-  val prune : table -> alive:D.Constants.Set.t -> pruned_table
+  val prune : table -> alive:Util.Constants.Set.t -> pruned_table
   (* debug *)
   val symbols : pruned_table -> string list
 
   val global_table : unit -> table
   val uuid : table -> UUID.t
 
-  val build_shift : ?lock_base:bool -> flags:flags -> base:D.State.t -> pruned_table -> (D.State.t * D.constant D.Constants.Map.t, string) Stdlib.Result.t
+  val build_shift : ?lock_base:bool -> flags:flags -> base:D.State.t -> pruned_table -> (D.State.t * constant Util.Constants.Map.t, string) Stdlib.Result.t
 
 end = struct
 
@@ -200,9 +201,9 @@ end = struct
    It is temporary unlocked to compile the query.
 *)
 type table = {
-  ast2ct : (D.constant * D.term) F.Map.t;
-  c2s : string D.Constants.Map.t;
-  c2t : D.term D.Constants.Map.t;
+  ast2ct : (constant * D.term) F.Map.t;
+  c2s : string Util.Constants.Map.t;
+  c2t : D.term Util.Constants.Map.t;
   last_global : int;
   locked : bool; (* prevents new allocation *)
   frozen : bool;
@@ -210,8 +211,8 @@ type table = {
 } [@@deriving show]
 
 type entry =
-| GlobalSymbol of D.constant * string
-| BoundVariable of D.constant * D.term
+| GlobalSymbol of constant * string
+| BoundVariable of constant * D.term
 [@@deriving show]
 
 type pruned_table = entry array [@@deriving show]
@@ -233,13 +234,13 @@ let symbols table =
 
 let prune t ~alive =
   let c2s = t.c2s in
-  let c2t0 = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2t in
+  let c2t0 = Util.Constants.Map.filter (fun k _ -> Util.Constants.Set.mem k alive) t.c2t in
   let map k t =
-    if k < 0 then GlobalSymbol (k, D.Constants.Map.find k c2s)
+    if k < 0 then GlobalSymbol (k, Util.Constants.Map.find k c2s)
     else BoundVariable (k, t)
   in
-  let c2t0 = D.Constants.Map.mapi map c2t0 in
-  Array.of_list @@ List.rev_map snd @@ D.Constants.Map.bindings c2t0
+  let c2t0 = Util.Constants.Map.mapi map c2t0 in
+  Array.of_list @@ List.rev_map snd @@ Util.Constants.Map.bindings c2t0
 
 let table = D.State.declare
   ~descriptor:D.elpi_state_descriptor
@@ -253,8 +254,8 @@ let table = D.State.declare
   ~init:(fun () -> {
     ast2ct = F.Map.empty;
     last_global = D.Global_symbols.table.last_global;
-    c2s = D.Constants.Map.empty;
-    c2t = D.Constants.Map.empty;
+    c2s = Util.Constants.Map.empty;
+    c2t = Util.Constants.Map.empty;
     locked = false;
     uuid = Util.UUID.make ();
     frozen = false;
@@ -263,7 +264,7 @@ let table = D.State.declare
 (* let global_table () =
   {
     ast2ct = StrMap.fold (fun s v m -> F.Map.add (F.from_string s) v m) D.Global_symbols.table.s2ct F.Map.empty;
-    c2t = D.Constants.Map.map (fun x -> snd @@ StrMap.find x D.Global_symbols.table.s2ct) D.Global_symbols.table.c2s;
+    c2t = Util.Constants.Map.map (fun x -> snd @@ StrMap.find x D.Global_symbols.table.s2ct) D.Global_symbols.table.c2s;
     c2s = D.Global_symbols.table.c2s;
     last_global = D.Global_symbols.table.last_global;
     locked = false;
@@ -273,9 +274,9 @@ let table = D.State.declare
 
 let compile_table t =
   let c2s = Hashtbl.create 37 in
-  D.Constants.Map.iter (Hashtbl.add c2s) t.c2s;
+  Util.Constants.Map.iter (Hashtbl.add c2s) t.c2s;
   let c2t = Hashtbl.create 37 in
-  D.Constants.Map.iter (Hashtbl.add c2t) t.c2t;
+  Util.Constants.Map.iter (Hashtbl.add c2t) t.c2t;
   {
     D.c2s;
     c2t;
@@ -293,8 +294,8 @@ let allocate_global_symbol_aux x ({ c2s; c2t; ast2ct; last_global; locked; froze
     let n = last_global in
     let xx = D.Term.Const n in
     let p = n,xx in
-    let c2s = D.Constants.Map.add n (F.show x) c2s in
-    let c2t = D.Constants.Map.add n xx c2t in
+    let c2s = Util.Constants.Map.add n (F.show x) c2s in
+    let c2t = Util.Constants.Map.add n xx c2t in
     let ast2ct = F.Map.add x p ast2ct in
     { c2s; c2t; ast2ct; last_global; locked; frozen; uuid }, p
 
@@ -313,18 +314,18 @@ let allocate_Arg_symbol st n =
   allocate_global_symbol_str st x
 
 let show state n =
-  try D.Constants.Map.find n (D.State.get table state).c2s
+  try Util.Constants.Map.find n (D.State.get table state).c2s
   with Not_found ->
     if n >= 0 then "c" ^ string_of_int n
     else "SYMBOL" ^ string_of_int n
 
 let allocate_bound_symbol_aux n ({ c2s; c2t; ast2ct; last_global; locked; frozen; uuid } as table) =
-  try table, D.Constants.Map.find n c2t
+  try table, Util.Constants.Map.find n c2t
   with Not_found ->
     if frozen then
       error ("allocating new bound symbol 'c"^string_of_int n^"' at runtime");
     let xx = D.Term.Const n in
-    let c2t = D.Constants.Map.add n xx c2t in
+    let c2t = Util.Constants.Map.add n xx c2t in
     { c2s; c2t; ast2ct; last_global; locked; frozen; uuid }, xx
 
 let allocate_bound_symbol state n =
@@ -338,7 +339,7 @@ let allocate_bound_symbol state n =
 let get_canonical state c =
   if not (D.State.get D.while_compiling state) then
     anomaly "get_canonical can only be used during compilation";
-  try D.Constants.Map.find c (D.State.get table state).c2t
+  try Util.Constants.Map.find c (D.State.get table state).c2t
   with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
 
 let get_global_or_allocate_bound_symbol state n =
@@ -356,7 +357,7 @@ let get_global_symbol_str state s = get_global_symbol state (F.from_string s)
 exception Cannot_build_shift of string
 
 let build_shift ?(lock_base=false) ~flags:{ print_units } ~base symbols =
-  let open D.Constants in
+  let open Util.Constants in
   D.State.update_return table base (fun base ->
     (* We try hard to respect the same order if possible, since some tests
        (grundlagen) depend on this order (for performance, the constant-timestamp
@@ -394,14 +395,14 @@ end *)
 
 module Builtins : sig
 
-  val all : D.State.t -> D.Constants.Set.t
-  val register : D.State.t -> D.BuiltInPredicate.t -> D.constant -> D.State.t
-  val is_declared : D.State.t -> D.constant -> bool
+  val all : D.State.t -> Util.Constants.Set.t
+  val register : D.State.t -> D.BuiltInPredicate.t -> constant -> D.State.t
+  val is_declared : D.State.t -> constant -> bool
   (* val is_declared_str : D.State.t -> string -> bool *)
 
   type t = {
     names : StrSet.t;
-    constants : D.Constants.Set.t;
+    constants : Util.Constants.Set.t;
     code : D.BuiltInPredicate.t list;
   }
   val is_empty : t -> bool
@@ -413,16 +414,16 @@ end = struct
 
   type t = {
     names : StrSet.t;
-    constants : D.Constants.Set.t;
+    constants : Util.Constants.Set.t;
     code : D.BuiltInPredicate.t list;
   }
 
   let equal t1 t2 =
     StrSet.equal t1.names t2.names &&
-    D.Constants.Set.equal t1.constants t2.constants
+    Util.Constants.Set.equal t1.constants t2.constants
 
 let is_empty { names } = StrSet.is_empty names
-let empty =  { names = StrSet.empty; constants = D.Constants.Set.empty; code = [] }
+let empty =  { names = StrSet.empty; constants = Util.Constants.Set.empty; code = [] }
 
 let builtins : t D.State.component = D.State.declare
   ~descriptor:D.elpi_state_descriptor
@@ -443,18 +444,18 @@ let register state (D.BuiltInPredicate.Pred(s,_,_) as b) idx =
   if not (D.State.get D.while_compiling state) then
     anomaly "Built-in can only be declared at compile time";
   let declared = (D.State.get builtins state).constants in
-  if D.Constants.Set.mem idx declared then
+  if Util.Constants.Set.mem idx declared then
     anomaly ("Duplicate built-in predicate " ^ s);
   D.State.update builtins state (fun { names; constants; code } ->
     { names = StrSet.add s names;
-      constants = D.Constants.Set.add idx constants;
+      constants = Util.Constants.Set.add idx constants;
       code = b :: code;
     })
 ;;
 
 let is_declared state x =
   let declared = (D.State.get builtins state).constants in
-  D.Constants.Set.mem x declared
+  Util.Constants.Set.mem x declared
   || x == D.Global_symbols.declare_constraintc
   || x == D.Global_symbols.print_constraintsc
   || x == D.Global_symbols.cutc
@@ -464,7 +465,7 @@ let is_declared state x =
 
 (* let is_declared state x =
   let declared = (D.State.get builtins state).constants in
-  D.Constants.Set.mem x declared
+  Util.Constants.Set.mem x declared
   || x == D.Global_symbols.declare_constraintc
   || x == D.Global_symbols.print_constraintsc
   || x == D.Global_symbols.cutc
@@ -482,16 +483,16 @@ end
  * represented with constants as "%Arg3" *)
 type argmap = {
   nargs : int;
-  c2i : int D.Constants.Map.t;
+  c2i : int Util.Constants.Map.t;
   i2n : string IntMap.t;
-  n2t : (D.term * D.Constants.t) StrMap.t;
+  n2t : (D.term * Util.Constants.t) StrMap.t;
   n2i : int StrMap.t;
 }
 [@@ deriving show, ord]
 
 let empty_amap = {
  nargs = 0;
- c2i = D.Constants.Map.empty;
+ c2i = Util.Constants.Map.empty;
  i2n = IntMap.empty;
  n2t = StrMap.empty;
  n2i = StrMap.empty;
@@ -507,7 +508,7 @@ let is_empty_amap { c2i; nargs; i2n; n2t; n2i } =
   let s, nc = Symbols.allocate_Arg_symbol s nargs in
   let n' = Symbols.get_canonical s nc in
   let i2n = IntMap.add nargs n i2n in
-  let c2i = D.Constants.Map.add nc nargs c2i in
+  let c2i = Util.Constants.Map.add nc nargs c2i in
   let n2t = StrMap.add n (n',nc) n2t in
   let n2i = StrMap.add n nargs n2i in
   let nargs = nargs + 1 in
@@ -529,14 +530,14 @@ type pretype = {
 [@@ deriving show, ord]
 
 type type_declaration = {
-  tname : D.constant;
+  tname : constant;
   ttype : pretype;
   tloc : Loc.t;
 }
 [@@ deriving show, ord]
 
 type type_abbrev_declaration = {
-  taname : D.constant;
+  taname : constant;
   tavalue : pretype;
   taparams : int;
   taloc : Loc.t;
@@ -2955,8 +2956,8 @@ module Flatten : sig
 
   val run : State.t -> Structured.program -> C.Set.t * macro_declaration * Flat.program
 
-  val relocate : State.t -> D.constant D.Constants.Map.t -> Flat.program  -> Flat.program
-  val relocate_term : State.t -> D.constant D.Constants.Map.t -> term -> term
+  val relocate : State.t -> constant Util.Constants.Map.t -> Flat.program  -> Flat.program
+  val relocate_term : State.t -> constant Util.Constants.Map.t -> term -> term
 
 end = struct (* {{{ *)
 
@@ -4709,7 +4710,7 @@ exception RelocationError of string
 
 let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols }) (t : term) : term =
   let relocate c =
-    let s = D.Constants.Map.find c symbol_table.c2s in
+    let s = Util.Constants.Map.find c symbol_table.c2s in
     let c = SymbolMap.get_global_symbol symbols (F.from_string s) in
     match c with
     | Some x -> x

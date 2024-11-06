@@ -1,4 +1,4 @@
-open Elpi.Internal.Bl
+open Elpi_runtime.Bl
 let size = 9999999
 
 let test_build () =

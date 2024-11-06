@@ -1,5 +1,7 @@
 (library
   (name elpi_util)
   (public_name elpi.util)
+   (preprocess (per_module
+    ((pps ppx_deriving.std) util)))
   (libraries unix re.str)
   (modules util))

@@ -1,5 +1,5 @@
-open Elpi.Internal.Discrimination_tree
-module DT = Elpi.Internal.Discrimination_tree
+open Elpi_runtime.Discrimination_tree
+module DT = Elpi_runtime.Discrimination_tree
 open Internal
 
 let test ~expected found = 
@@ -10,11 +10,8 @@ let () = assert (k_of (mkConstant ~safe:false ~data:~-17 ~arity:0) == kConstant)
 let () = assert (k_of mkVariable == kVariable)
 let () = assert (k_of mkLam == kOther)
 let () =
-  let open Elpi.API in
-  match RawData.look ~depth:0 (RawOpaqueData.of_int 4) with
-  | RawData.CData c ->
-      assert (k_of (mkPrimitive (Obj.magic c)) == kPrimitive)
-  | _ -> assert false
+  let c = Elpi_runtime.Data.C.in_int 4 in
+  assert (k_of (mkPrimitive (Obj.magic c)) == kPrimitive)
   
 let () = assert (arity_of (mkConstant ~safe:false ~data:~-17 ~arity:3) == 3)
 let () = assert (arity_of mkVariable == 0)
@@ -25,11 +22,8 @@ let () = assert (arity_of mkListTailVariable == 0)
 let () = assert (arity_of mkListHead == 0)
 let () = assert (arity_of mkListEnd == 0)
 let () =
-  let open Elpi.API in
-  match RawData.look ~depth:0 (RawOpaqueData.of_int 4) with
-  | RawData.CData c ->
-      assert (arity_of (mkPrimitive (Obj.magic c)) == 0)
-  | _ -> assert false
+  let c = Elpi_runtime.Data.C.in_int 4 in
+  assert (arity_of (mkPrimitive (Obj.magic c)) == 0)
 
 (* let () = Printf.eprintf "%x %x %x\n" mkInputMode data_mask (data_of mkInputMode) *)
 let () = assert (data_of mkInputMode == 1)
@@ -55,12 +49,12 @@ let () =
       index t (Path.of_list key) value in
     let trie = List.fold_left add_to_trie (empty_dt []) pathInsts in 
     let retrived = retrieve (fun x y -> y - x) pathGoal trie in
-    let retrived_nb = Elpi.Internal.Bl.length retrived in 
+    let retrived_nb = Elpi_runtime.Bl.length retrived in 
     Format.printf " Retrived clause number is %d\n%!" retrived_nb;
     (* let pp_sep = fun f _ -> Format.pp_print_string f " " in *)
     (* Format.printf " Found instances are %a\n%!" (Format.pp_print_list ~pp_sep Format.pp_print_int) retrived; *)
     test ~expected:retrived_nb nb;
-    if (Elpi.Internal.Bl.to_list retrived |> List.sort Int.compare |> List.rev) <> (retrived |> Elpi.Internal.Bl.to_list) then failwith "Test DT error: resultin list is not correctly ordered"
+    if (Elpi_runtime.Bl.to_list retrived |> List.sort Int.compare |> List.rev) <> (retrived |> Elpi_runtime.Bl.to_list) then failwith "Test DT error: resultin list is not correctly ordered"
   in
   
   let p1 = [mkListHead; constA; mkListTailVariable; constA], 1 in                                         (* 1: [a | _] a *)
@@ -78,7 +72,7 @@ let () =
   test [p1; p2; p3; p4; p5; p6; p8] p7 mkInputMode 2
 
 let () =  
-  let get_length dt path = DT.retrieve compare path !dt |> Elpi.Internal.Bl.length in
+  let get_length dt path = DT.retrieve compare path !dt |> Elpi_runtime.Bl.length in
   let remove dt e = dt := DT.remove (fun x -> x = e) !dt in
   let index dt path v = dt := DT.index !dt path v in 
 

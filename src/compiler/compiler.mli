@@ -4,6 +4,7 @@
 
 open Elpi_util
 open Elpi_parser
+open Elpi_runtime
 
 open Util
 open Data
