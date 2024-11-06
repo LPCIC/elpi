@@ -1256,7 +1256,9 @@ type checked_compilation_unit = {
 module Assembled = struct
 
 type program = {
-  (* clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list; for printing *)
+  (* for printing only *)
+  clauses : (Ast.Structured.insertion option * string option * constant * clause) list;
+
   kinds : Arity.t F.Map.t;
   types : TypeAssignment.overloaded_skema F.Map.t;
   type_abbrevs : (TypeAssignment.skema * Loc.t) F.Map.t;
@@ -1281,6 +1283,7 @@ and attribute = {
 [@@deriving show]
 
 let empty () = {
+  clauses = [];
   kinds = F.Map.empty;
   types = F.Map.add F.mainf TypeAssignment.(Single (Ty Prop)) F.Map.empty;
   type_abbrevs = F.Map.empty; modes = F.Map.empty;
@@ -1305,12 +1308,7 @@ type header = program
 module WithMain = struct
 
 (* The entire program + query, but still in "printable" format *)
-type 'a query = {
-  (* kinds : Arity.t F.Map.t;
-  types : TypeAssignment.overloaded_skema F.Map.t;
-  type_abbrevs : TypeAssignment.skema F.Map.t;
-  modes : (mode * Loc.t) F.Map.t; *)
-  (* clauses : (preterm,Assembled.attribute) Ast.Clause.t list; *)
+type 'a query = {  
   prolog_program : index;
   chr : CHR.t;
   symbols : SymbolMap.table;
@@ -3775,7 +3773,7 @@ end = struct
       if l = [] then Const(g,c)
       else App(g,c,List.hd l,List.tl l) in
 
-    let rec apply_to locals w ({ it; loc; ty } as orig) =
+    (* let rec apply_to locals w ({ it; loc; ty } as orig) =
       match it with
       | App(g,c,x,xs) ->
         mk_loc ~loc ~ty @@ mkApp g c (List.map (apply_to locals w) (x::xs))
@@ -3787,7 +3785,7 @@ end = struct
       | Spill _ -> assert false in
     let apply_to locals (w,l) t =
       let w = mk_loc ~loc:t.loc @@ Const(Bound l,w) in
-      apply_to locals w t in
+      apply_to locals w t in *)
 
     let app t args =
       if args = [] then t else
@@ -3838,9 +3836,7 @@ end = struct
     let rec spill ?(extra=0) ctx ({ loc; ty; it } as t) : spills * ScopedTerm.t list =
       (* Format.eprintf "@[<hov 2>spill %a :@ %a@]\n" ScopedTerm.pretty t TypeAssignment.pretty (TypeAssignment.deref ty); *)
       match it with
-      (* TODO: Const could take the spill *)
-      (* TODO: ~extra propagated to andr *)
-      | CData _ | Discard | Const _ -> [], [t]
+      | CData _ | Discard | Const _ -> [],[t]
       | Cast(t,_) -> spill ctx t
       | Spill(t,{ contents = NoInfo}) -> assert false (* no type checking *)
       | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
@@ -3859,7 +3855,8 @@ end = struct
             let spilled, t = spill1 ctx t in
             [], [{loc;ty;it = App(Global f,c,{ it = Lam(Some v,o,add_spilled spilled t); loc = tloc; ty = tty },[])}]
       | App(g,c,x,xs) ->
-          let spills, args = List.split @@ List.map (spill ctx) (x :: xs) in
+          let last = if F.equal F.andf c then List.length xs else -1 in
+          let spills, args = List.split @@ List.mapi (fun i -> spill ~extra:(if i = last then extra else 0) ctx) (x :: xs) in
           let args = List.flatten args in
           let spilled = List.flatten spills in
           let it = App(g,c,List.hd args, List.tl args) in
@@ -3950,9 +3947,9 @@ in
     let t  = todbl (depth,Scope.Map.empty) t in
     (!symb, !amap), t  
 
-  let extend1_clause flags state modes indexing (symbols, index) (needs_spilling,{ Ast.Clause.body; loc; attributes = { Ast.Structured.insertion = graft; id; ifexpr } }) =
+  let extend1_clause flags state modes indexing (clauses,symbols, index) (needs_spilling,{ Ast.Clause.body; loc; attributes = { Ast.Structured.insertion = graft; id; ifexpr } }) =
     if not @@ filter1_if flags (fun x -> x) ifexpr then
-      (symbols, index)
+      (clauses,symbols, index)
     else
     let (symbols, amap), body = todbl ~needs_spilling state symbols body in
     let modes x = try fst @@ F.Map.find (SymbolMap.global_name state symbols x) modes with Not_found -> [] in
@@ -3963,7 +3960,7 @@ in
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
     let index = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index in
-    symbols, index
+    (graft,id,p,cl) :: clauses, symbols, index
 
 
   let check_rule_pattern_in_clique state symbols clique { D.CHR.pattern; rule_name; rule_loc } =
@@ -4019,7 +4016,7 @@ in
     F.Map.union (fun k _ _ -> error ("Duplicate type abbreviation for " ^ F.show k)) m1 m2
 
   let extend1 flags
-    (state, { Assembled.hash; symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
+    (state, { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; modes = om; kinds = ok; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; total_type_checking_time })
             { version; base_hash; checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; clauses; chr; builtins}; precomputed_kinds; precomputed_type_abbrevs; precomputed_types; type_checking_time } =
     let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types_indexing indexing in
     let kinds, type_abbrevs, types =
@@ -4042,13 +4039,13 @@ in
 
     let symbols, chr =
       List.fold_left (extend1_chr_block flags state) (symbols,ochr) chr in
-    let symbols, prolog_program =
-      List.fold_left (extend1_clause flags state modes indexing) (symbols, prolog_program) clauses in
+    let clauses, symbols, prolog_program =
+      List.fold_left (extend1_clause flags state modes indexing) (cl, symbols, prolog_program) clauses in
   
     (* TODO: @FissoreD here we have to do mutual excl clauses... *)
 
     let new_base = 
-      { Assembled.hash; symbols; prolog_program; indexing; modes; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
+      { Assembled.hash; clauses; symbols; prolog_program; indexing; modes; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
     let hash = hash_base new_base in
     state, { new_base with hash }
 
@@ -4383,52 +4380,48 @@ end (* }}} *)
 let optimize_query = Compiler.run
 
 let removals l =
-  l |> List.filter_map (fun c -> match c.Ast.Clause.attributes.Assembled.insertion with Some (Remove x) -> Some x | Some (Replace x) -> Some x| _ -> None)
+  List.filter_map (function
+    | (Some (Ast.Structured.Remove x),_,_,_) -> Some x
+    | (Some (Ast.Structured.Replace x),_,_,_) -> Some x
+    | _ -> None) l
 
-let handle_clause_graftin clauses =
-  let clauses = clauses |> List.sort (fun c1 c2 -> R.lex_insertion c1.Ast.Clause.attributes.Assembled.timestamp c2.Ast.Clause.attributes.Assembled.timestamp) in
+let handle_clause_graftin (clauses: (Ast.Structured.insertion option * string option * constant * clause) list) : (string option * constant * clause) list =
+  let clauses = clauses |> List.sort (fun (_,_,_,c1) (_,_,_,c2) -> R.lex_insertion c1.timestamp c2.timestamp) in
   let removals = removals clauses in
-  let clauses = clauses |> List.filter (fun c -> let id = c.Ast.Clause.attributes.Assembled.id in id = None || not(List.exists (fun x -> id = Some x) removals)) in
-  let clauses = clauses |> List.filter (fun c -> match c.Ast.Clause.attributes.Assembled.insertion with Some (Remove _) -> false | _ -> true) in
-  clauses
+  let clauses = clauses |> List.filter (fun (_,id,_,_) -> id = None || not(List.exists (fun x -> id = Some x) removals)) in
+  let clauses = clauses |> List.filter (fun (c,_,_,_) -> match c with Some (Ast.Structured.Remove _) -> false | _ -> true) in
+  List.map (fun (_,a,b,c) -> a,b,c) clauses
 
-let pp_program pp fmt _ = () (*{
-    (* WithMain.clauses; *)
-    (* initial_depth; *)
-    compiler_state; } =
+let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Assembled.clauses; symbols }) =
 
   let clauses = handle_clause_graftin clauses in
 
-  let compiler_state, clauses =
-    map_acc (fun state { Ast.Clause.body; loc; attributes = { Assembled.id; timestamp } } ->
-       let state, c = stack_term_of_preterm ~depth:initial_depth state body in
-       state, (c,loc,id,timestamp))
-    compiler_state clauses in
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
-    table = Symbols.compile_table (State.get Symbols.table compiler_state);
+    table = SymbolMap.compile symbols;
   } in
   Format.fprintf fmt "@[<v>";
-  List.iter (fun (body,loc,name,timestamp) ->
-    Format.fprintf fmt "@[<h>%% [%a] %a %a@]@;" Format.(pp_print_list ~pp_sep:(fun fmt () -> pp_print_string fmt "; ") pp_print_int) timestamp Loc.pp loc Format.(pp_print_option (fun fmt x -> pp_print_string fmt x)) name ;
-    Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth) body)
+  List.iter (fun (name,predicate,{ depth; args; hyps; loc; timestamp }) ->
+    Format.fprintf fmt "@[<h>%% %a [%a] %a@]@;"
+      Format.(pp_print_option Loc.pp) loc
+      Format.(pp_print_list ~pp_sep:(fun fmt () -> pp_print_string fmt "; ") pp_print_int) timestamp
+      Format.(pp_print_option pp_print_string) name;
+    Fmt.fprintf fmt "@[<hov 1>%a :- %a.@]@;"
+      (pp ~depth ~pp_ctx) (if args = [] then D.Const predicate else D.mkApp predicate (List.hd args) (List.tl args))
+      (pplist (pp ~depth ~pp_ctx) ", ") hyps)
     clauses;
   Format.fprintf fmt "@]"
-;;*)
-let pp_goal pp fmt _ = () (* {
-    WithMain.initial_depth;
-    compiler_state;
-    query; } =
-  let compiler_state, goal = stack_term_of_preterm compiler_state ~depth:initial_depth query in
+;;
+
+let pp_goal pp fmt {  WithMain.compiler_state; initial_goal; symbols } =
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
-    table = Symbols.compile_table (State.get Symbols.table compiler_state);
+    table = SymbolMap.compile symbols;
   } in
   Format.fprintf fmt "@[<v>";
-  Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth) goal;
+  Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:0) initial_goal;
   Format.fprintf fmt "@]"
 ;;
-*)
 
 (****************************************************************************
   Quotation (for static checkers, see elpi-quoted_syntax.elpi)

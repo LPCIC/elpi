@@ -201,7 +201,7 @@ let _ =
   end;
   
   Format.eprintf "@\nParsing time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_parsing);
-  let query, exec, type_checking_time =
+  let query, prog, exec, type_checking_time =
     let t0_compilation = Unix.gettimeofday () in
     try
       let prog = API.Compile.program ~flags ~elpi [p] in
@@ -209,14 +209,14 @@ let _ =
       let type_checking_time = API.Compile.total_type_checking_time query in
       let exec = API.Compile.optimize query in
       Format.eprintf "@\nCompilation time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_compilation);
-      query, exec, type_checking_time
+      query, prog, exec, type_checking_time
     with API.Compile.CompileError(loc,msg) ->
       API.Utils.error ?loc msg
   in
   Format.eprintf "@\nTypechecking time: %5.3f@\n%!" type_checking_time;
   if !print_lprolog then begin
-    API.Pp.program Format.std_formatter query;
-    Format.printf "?- ";
+    API.Pp.program Format.std_formatter prog;
+    Format.printf "\n\n%% query\n?- ";
     API.Pp.goal Format.std_formatter query;
     exit 0;
   end;

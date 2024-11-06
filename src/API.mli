@@ -344,7 +344,7 @@ module Pp : sig
   val constraints : Data.pretty_printer_context -> Format.formatter -> Data.constraints -> unit
   val state : Format.formatter -> Data.state -> unit
 
-  val program : Format.formatter -> 'a Compile.query -> unit
+  val program : Format.formatter -> Compile.program -> unit
   val goal : Format.formatter -> 'a Compile.query -> unit
 
   module Ast : sig

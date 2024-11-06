@@ -45,7 +45,7 @@ val optimize_query : 'a query -> 'a executable
 val term_of_ast : depth:int -> State.t -> string -> State.t * term
 val relocate_closed_term : from:symbol_table -> to_:program -> term -> (term, string) Stdlib.Result.t
 
-val pp_program : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
+val pp_program : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> program -> unit
 val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
 
 val lookup_query_predicate : program -> string -> program * Data.constant
@@ -61,16 +61,3 @@ val mk_Arg :
 val get_Arg : State.t -> name:string -> args:term list -> term
 
 val term_to_raw_term : State.t -> program -> depth:int -> Compiler_data.ScopedTerm.t -> State.t * term
-
-(* Quotes the program and the query, see elpi-quoted_syntax.elpi *)
-val quote_syntax : [ `Compiletime | `Runtime of constant -> term ] -> State.t -> 'a query -> State.t * term list * term
-
-module CustomFunctorCompilation : sig
-
-  (* val compile_singlequote : State.t -> F.t -> State.t * term
-  val compile_backtick : State.t -> F.t -> State.t * term *)
-
-  val is_singlequote : F.t -> bool
-  val is_backtick : F.t -> bool
-
-end
