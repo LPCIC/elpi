@@ -1,0 +1,10 @@
+:functional 
+pred p i:int, o:int.
+
+p 1 3.
+p 2 3.
+
+% The following rule hinders functionality, since `p 2 X` has two solutions for X
+p 2 4.
+
+main.

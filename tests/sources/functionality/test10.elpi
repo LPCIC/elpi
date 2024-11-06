@@ -1,0 +1,11 @@
+:functional 
+pred p i:int, o:int.
+
+:functional
+pred q i:int, o:int.
+
+q 1 1.
+
+p 4 X :- pi x\ sigma Y\ q x Y => q x Y => q 1 X.
+
+main.

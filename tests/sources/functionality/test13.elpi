@@ -1,0 +1,12 @@
+:functional
+pred p i:int, o:int.
+
+/* another version of test11.elpi and test12.elpi
+ * here the query `p 1 X` has clearly one distinct solution,
+ * but `p X Y` has two. Therefore, p is not guaranteed to be functional
+ */
+p 1 2.
+p (uvar as X_) 3.
+p (uvar as Y_) 4.
+
+main.

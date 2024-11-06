@@ -1,0 +1,16 @@
+pred q o:int.
+:functional
+pred q' o:int.
+
+:functional 
+pred do' i:prop, i:(:functional pred).
+do' X Y :- X, !, Y.
+
+:functional
+pred x o:int.
+
+% similar to test19, with non-functional argument
+% The variable Y_ is non
+x Z :- do' (q Y_) (q' Z).
+
+main.
