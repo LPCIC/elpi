@@ -10,53 +10,73 @@
 %spy X :- print start X, X, print ok X.
 %spy X :- print ko X, fail.
 
+kind i type.
+type zero i.
+type not_attack i -> i -> i -> prop.
+type xxx i -> prop.
+type xnil i.
+type xcons i -> i -> i.
+type select i -> i -> i -> prop.
+type s i -> i.
+type range i -> i -> i -> prop.
+type queens_aux i -> i -> i -> prop.
+type queens i -> i -> prop.
+type q i -> prop.
+type plus i -> i -> i -> prop.
+type once prop.
+type not_attack_aux i -> i -> prop.
+type neq i -> i -> prop.
+type mult i -> i -> i -> prop.
+type less i -> i -> prop.
+type iter i -> prop -> prop.
+type exp i -> i -> i -> prop.
 
-:untyped plus zero X X.
-:untyped plus (s X) Y (s S) :- plus X Y S.
-:untyped less zero (s _).
-:untyped less (s X) (s Y) :- less X Y.
-:untyped neq zero (s _).
-:untyped neq (s _) zero.
-:untyped neq (s X) (s Y) :- neq X Y.
-:untyped queens N Qs :- range (s zero) N Ns, queens_aux Ns xnil Qs.
-:untyped queens_aux xnil Qs Qs.
-:untyped queens_aux UnplacedQs SafeQs Qs :- 
+plus zero X X.
+plus (s X) Y (s S) :- plus X Y S.
+less zero (s _).
+less (s X) (s Y) :- less X Y.
+neq zero (s _).
+neq (s _) zero.
+neq (s X) (s Y) :- neq X Y.
+queens N Qs :- range (s zero) N Ns, queens_aux Ns xnil Qs.
+queens_aux xnil Qs Qs.
+queens_aux UnplacedQs SafeQs Qs :- 
         select UnplacedQs UnplacedQs1 Q,
         not_attack SafeQs Q (s zero),
         queens_aux UnplacedQs1 (xcons Q SafeQs) Qs.
 
 
-:untyped not_attack_aux Xs X :- not_attack Xs X (s zero).
-:untyped not_attack xnil DUMMY1 DUMMY2 :- !.
-:untyped not_attack (xcons Y Ys) X N :- plus Y N S1, neq X S1, 
+not_attack_aux Xs X :- not_attack Xs X (s zero).
+not_attack xnil DUMMY1 DUMMY2 :- !.
+not_attack (xcons Y Ys) X N :- plus Y N S1, neq X S1, 
                                plus X N S2, neq Y S2,
                                N1 = (s N), 
                                not_attack Ys X N1.
 
 %select A B C :- print first_clause (select A B C), fail.
-:untyped select (xcons X Xs) Xs X.
+select (xcons X Xs) Xs X.
 %select A B C :- print backtrack (select A B C), fail.
-:untyped select (xcons Y Ys) (xcons Y Zs) X :- select Ys Zs X.
+select (xcons Y Ys) (xcons Y Zs) X :- select Ys Zs X.
 %select A B C :- print no_more_chances (select A B C), fail.
 
-:untyped range N N (xcons N xnil) :- !.
-:untyped range M N (xcons M Ns) :- less M N, M1 = (s M), range M1 N Ns.
+range N N (xcons N xnil) :- !.
+range M N (xcons M Ns) :- less M N, M1 = (s M), range M1 N Ns.
 
-:untyped once :- queens (s (s (s (s zero)))) L, xxx L.
-:untyped xxx (xcons (s (s zero)) (xcons (s (s (s (s zero)))) (xcons (s zero) (xcons (s (s (s zero))) xnil)))).
+once :- queens (s (s (s (s zero)))) L, xxx L.
+xxx (xcons (s (s zero)) (xcons (s (s (s (s zero)))) (xcons (s zero) (xcons (s (s (s zero))) xnil)))).
 
-:untyped q L :- queens (s (s (s (s zero)))) L.
+q L :- queens (s (s (s (s zero)))) L.
 
-:untyped iter zero X.
-:untyped iter (s N) X :- X, iter N X.
+iter zero X.
+iter (s N) X :- X, iter N X.
 
-:untyped mult zero X zero.
-:untyped mult (s X) Y Z :- mult X Y K, plus Y K Z.
+mult zero X zero.
+mult (s X) Y Z :- mult X Y K, plus Y K Z.
 
-:untyped exp zero X (s zero).
-:untyped exp (s X) Y Z :- exp X Y K, mult Y K Z.
+exp zero X (s zero).
+exp (s X) Y Z :- exp X Y K, mult Y K Z.
 
-:untyped main :-
+main :-
  TEN = s (s (s (s (s (s (s (s (s (s zero))))))))),
  exp (s (s (s (s zero)))) TEN TENTHOUSAND,
  iter TENTHOUSAND once.

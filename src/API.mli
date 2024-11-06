@@ -1272,7 +1272,8 @@ module RawQuery : sig
   (** typechecks *)
   val term_to_raw_term : State.t -> Compile.program -> depth:int -> Ast.Term.t -> State.t * Data.term
 
-  
+  (** raises Not_found *)
+  val global_name_to_constant : State.t -> string -> RawData.constant
 end
 
 module Quotation : sig

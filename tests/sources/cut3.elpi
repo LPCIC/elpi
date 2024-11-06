@@ -1,13 +1,21 @@
 % Test with q X; should yield X=ok
 
-:untyped q X :- a X, b, c X.
+kind i type.
+type ko i.
+type ok i.
+type q i -> prop.
+type c i -> prop.
+type b prop.
+type a i -> prop.
 
-:untyped a ko.
-:untyped a ok.
+q X :- a X, b, c X.
 
-:untyped b :- !.
-:untyped b.
+a ko.
+a ok.
 
-:untyped c ok.
+b :- !.
+b.
 
-:untyped main :- q X, X = ok.
+c ok.
+
+main :- q X, X = ok.

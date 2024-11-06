@@ -9,54 +9,84 @@
 %
 %      constant and funnames are distinct lambda-prolog names
 
+kind i type.
+type a i.
+type app i -> i -> i.
+type check list (list i -> i) -> list i -> list i -> prop.
+type union list i -> list i -> list i -> prop.
+type propagate list prop -> list prop -> prop -> prop.
+type mem_ list i -> i -> prop.
+type mem list i -> i -> prop.
+type main2 prop.
+type main1 prop.
+type is_subset_ list i -> list i -> prop.
+type is_subset list i -> list i -> prop.
+type is_ground list i -> prop.
+type inter list i -> list i -> list i -> prop.
+type inputs list i -> list i -> prop.
+type h2 i.
+type h1 i.
+type g i.
+type fun i -> list i -> list i -> i.
+type find list i -> i -> list i -> list i -> prop.
+type f i.
+type e i.
+type d i.
+type check_term i -> list i -> list i -> prop.
+type check_domain list i -> list i -> prop.
+type check_codomain list i -> list i -> list i -> prop.
+type case i -> i -> i.
+type c i.
+type b i.
+
 % check types program types
 % the functions must be listed in the same order in both
 %check A B C :- print (check A B C), fail.
-:untyped check [] [] _.
-:untyped check [fun F B | BTL] [fun F D C | TTL] ORIGTYS :-
+check [] [] _.
+check [fun F B | BTL] [fun F D C | TTL] ORIGTYS :-
  check_domain B D,
  check_codomain B C ORIGTYS,
  check BTL TTL ORIGTYS.
 
 % check_domain body type
 %check_domain A B :- print (check_domain A B), fail.
-:untyped check_domain B T :- inputs B I, is_subset T I.
+check_domain B T :- inputs B I, is_subset T I.
 
 %is_subset A B :- print (is_subset A B), fail.
-:untyped is_subset A B :- var A, !, declare_constraint (is_subset A B) [A].
-:untyped is_subset A B :- var B, !, declare_constraint (is_subset A B) [B].
-:untyped is_subset A B :- is_subset_ A B.
-:untyped is_subset_ [] _.
-:untyped is_subset_ [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
+is_subset A B :- var A, !, declare_constraint (is_subset A B) [A].
+is_subset A B :- var B, !, declare_constraint (is_subset A B) [B].
+is_subset A B :- is_subset_ A B.
+is_subset_ [] _.
+is_subset_ [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
 
-:untyped mem A B :- var A, !, declare_constraint (mem A B) [A].
-:untyped mem A B :- mem_ A B.
-:untyped mem_ [X|_] X :- !.
-:untyped mem_ [Y|TL] X :- mem TL X.
+mem A B :- var A, !, declare_constraint (mem A B) [A].
+mem A B :- mem_ A B.
+mem_ [X|_] X :- !.
+mem_ [Y|TL] X :- mem TL X.
 
 %check_codomain body type types
 %check_codomain A B C :- print (check_codomain A B C), fail.
-:untyped check_codomain [] _ _.
-:untyped check_codomain [case _ T | TL] TYS ORIGTYS :-
+check_codomain [] _ _.
+check_codomain [case _ T | TL] TYS ORIGTYS :-
   check_term T TYS ORIGTYS,
   check_codomain TL TYS ORIGTYS.
 
 %check_term term type
 %check_term A B C :- print "CHECK" (check_term A B C), fail.
-:untyped check_term (app F T) TY ORIGTYS :-
+check_term (app F T) TY ORIGTYS :-
  !,
  find ORIGTYS F D C,
  check_term T D ORIGTYS,
  is_subset C TY.
-:untyped check_term X TY _ :-
+check_term X TY _ :-
  mem TY X.
 
-:untyped find [fun F D C | _] F D C :- !.
-:untyped find [ _ | TL ] F D C :- find TL F D C.
+find [fun F D C | _] F D C :- !.
+find [ _ | TL ] F D C :- find TL F D C.
 
 %inputs A B :- print "INPUT" (inputs A B), fail.
-:untyped inputs [] [].
-:untyped inputs [case A _ | TL] [A | TL'] :- inputs TL TL'.
+inputs [] [].
+inputs [case A _ | TL] [A | TL'] :- inputs TL TL'.
 
 /* Expected output, according to OCaml
 Note: I use ref to kill Hindley-Milner polymorphism
@@ -74,32 +104,32 @@ Note: I use ref to kill Hindley-Milner polymorphism
 %        (is_subset X [a])
 %  2. already unifying the first argument of the rule triggers resumption
 %     but there is confusion between the two runtimes and a mess happens
-:untyped propagate [] [is_subset X [Y]] (X = [Y]).
-:untyped propagate [is_subset X Y,is_subset Y Z] [] (is_subset X Z).
+propagate [] [is_subset X [Y]] (X = [Y]).
+propagate [is_subset X Y,is_subset Y Z] [] (is_subset X Z).
 
-:untyped inter [X | A] L [X | B] :- mem L X, !, inter A L B.
-:untyped inter [X | A] L B :- inter A L B.
-:untyped inter [] _ [].
+inter [X | A] L [X | B] :- mem L X, !, inter A L B.
+inter [X | A] L B :- inter A L B.
+inter [] _ [].
  
-:untyped union [X | XS] L L1  :- mem L X, !, union XS L L1.
-:untyped union [X | XS] L [X | L1]  :- union XS L L1.
-:untyped union [] L L .
+union [X | XS] L L1  :- mem L X, !, union XS L L1.
+union [X | XS] L [X | L1]  :- union XS L L1.
+union [] L L .
 
-:untyped is_ground [].
-:untyped is_ground (_ :: L) :- is_ground L.
+is_ground [].
+is_ground (_ :: L) :- is_ground L.
  
-:untyped propagate [] [is_subset X YS, is_subset X XS] (is_subset X INTER) :-
+propagate [] [is_subset X YS, is_subset X XS] (is_subset X INTER) :-
   is_ground YS, is_ground XS, inter YS XS INTER.
 
-:untyped propagate [X] [X] true.
+propagate [X] [X] true.
 
-:untyped propagate [mem X A,is_subset X Y] [] (mem Y A).
+propagate [mem X A,is_subset X Y] [] (mem Y A).
 
-:untyped propagate [] [mem X A] (is_subset [A] X).
-:untyped propagate [] [is_subset A X, is_subset B X] (is_subset C X) :-
+propagate [] [mem X A] (is_subset [A] X).
+propagate [] [is_subset A X, is_subset B X] (is_subset C X) :-
   is_ground A, is_ground B, union A B C.
 
-:untyped main1 :-
+main1 :-
  P = [ fun f [ case a a
              , case b (app g a) ]
      , fun g [ case a c
@@ -126,7 +156,7 @@ Note: I use ref to kill Hindley-Milner polymorphism
  print ":::" g ":" Ig "->" Og,
  print_constraints.
 
-:untyped main2 :-
+main2 :-
  P' = [ fun f [ case a a
               , case b (app h1 (app g a))
               , case c (app h2 (app g a)) ]
@@ -150,6 +180,6 @@ Note: I use ref to kill Hindley-Milner polymorphism
  print ":::" h1 ":" Ih1' "->" Oh1',
  print ":::" h2 ":" Ih2' "->" Oh2'.
 
-:untyped main :- (main1, print "xxx failing", fail) ; print "xxx failed", main2.
+main :- (main1, print "xxx failing", fail) ; print "xxx failed", main2.
 
 % vim: set ft=lprolog:

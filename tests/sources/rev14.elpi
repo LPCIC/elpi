@@ -1,10 +1,28 @@
-:untyped rev L RL  :- aux L xnil  RL.
-:untyped aux (xcons X XS)  ACC  R :- aux XS (xcons X ACC) R.
-:untyped aux xnil  L  L.
 
-:untyped append (xcons X XS) L (xcons X L1)  :- append XS L L1.
-:untyped append xnil L L.
-:untyped main :-
+kind i type.
+type xnil i.
+type xcons i -> i -> i.
+type x9 i.
+type x8 i.
+type x7 i.
+type x6 i.
+type x5 i.
+type x4 i.
+type x3 i.
+type x2 i.
+type x10 i.
+type x1 i.
+type rev i -> i -> prop.
+type aux i -> i -> i -> prop.
+type append i -> i -> i -> prop.
+
+rev L RL  :- aux L xnil  RL.
+aux (xcons X XS)  ACC  R :- aux XS (xcons X ACC) R.
+aux xnil  L  L.
+
+append (xcons X XS) L (xcons X L1)  :- append XS L L1.
+append xnil L L.
+main :-
     X1 =  (xcons x1 (xcons x2 (xcons x3 (xcons x4 (xcons x5 (xcons x6 (xcons x7 (xcons x8 (xcons x9 (xcons x10 xnil)))))))))),
    append X1 X1 X2  ,
    append X2 X2 X3  ,

@@ -72,6 +72,7 @@ module SymbolMap : sig
   val get_canonical              : D.State.t -> table -> constant -> D.term
   val global_name : D.State.t -> table -> constant -> F.t
   val compile : table -> D.symbol_table
+  val compile_s2c : table -> (constant * D.term) F.Map.t
 
 end = struct
 
@@ -92,6 +93,7 @@ end = struct
   (* F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
     t
     
+  let compile_s2c { ast2ct } = ast2ct
 
   let allocate_global_symbol_aux x ({ c2t; c2s; ast2ct; last_global } as table) =
     try table, F.Map.find x ast2ct
@@ -1552,12 +1554,18 @@ end = struct
 
   let global_hd_symbols_of_clauses cl =
     let open ScopedTerm in
-    List.fold_left (fun s { Ast.Clause.body = { it } } ->
-      match it with
+    let add1 s t =
+      match t.it with
       | Const(Global _,c) | App(Global _,c,_,_) -> F.Set.add c s
       | Impl(false,{ it = (Const(Global _,c) | App(Global _,c,_,_)) }, _) -> F.Set.add c s
-      (* | (Const _ | App _) -> s *)
-      | _ -> assert false)
+      | _ -> assert false in
+    List.fold_left (fun s { Ast.Clause.body } ->
+      match body.it with
+      | App(Global _,c,x,xs) when F.equal F.andf c ->
+        (* since we allow a rule to be of the form (p :- ..., q :- ...) eg
+           via macro expansion, we could have , in head position  *)
+          List.fold_left add1 s (x::xs)
+      | _ -> add1 s body)
       F.Set.empty cl
 
   (* let rec append_body b1 b2 =
@@ -3225,21 +3233,25 @@ end = struct
     (* Util.set_spaghetti_printer pp_const Format.pp_print_int; *)
     (* Format.fprintf (Format.formatter_of_out_channel xxx) "%a@." (C.Map.pp TypeAssignment.pp_skema) !all_ty_id; *)
 
-    let clauses = clauses |> List.map (fun ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
+    let unknown, clauses = clauses |> map_acc (fun unknown ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
       if typecheck then
-        let needs_spill = Type_checker.check ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop) in
+        let needs_spill,unknown = Type_checker.check ~unknown ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop) in
         (* Format.fprintf (Format.formatter_of_out_channel xxx) "%a\n" ScopedTerm.pp body; *)
         FunctionalityChecker.check_clause ~loc ~functional_preds body;
-        needs_spill, c
+        unknown, (needs_spill, c)
       else
-        false, c) in
+        unknown, (false, c)) F.Map.empty in
     let check_end = Unix.gettimeofday () in
+    let more_types = Type_checker.check_undeclared ~unknown in
+    let types = Flatten.merge_type_assignments types more_types in
+    let all_types = Flatten.merge_type_assignments all_types more_types in
+
       (* close_out xxx; *)
     let checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; clauses; chr; builtins; functional_preds; types_ids = !local_ty_id } in
 
 
   { version; checked_code; base_hash = hash_base base;
-    precomputed_kinds =all_kinds;
+    precomputed_kinds = all_kinds;
     precomputed_type_abbrevs = all_type_abbrevs;
     precomputed_types = all_types;
     precomputed_types_ids = !all_ty_id;
@@ -3936,7 +3948,8 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let { Assembled.kinds; types; type_abbrevs; toplevel_macros; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros }) t in
-  let needs_spilling = Type_checker.check ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let needs_spilling, unknown = Type_checker.check ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let _ = Type_checker.check_undeclared ~unknown in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
@@ -3954,9 +3967,10 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
 
 let term_to_raw_term state (_, assembled_program) ~depth t =
   let { Assembled.kinds; types; type_abbrevs; toplevel_macros = _; chr; prolog_program; total_type_checking_time } = assembled_program in
-  let needs_spilling = Type_checker.check ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
+  let needs_spilling, unknown = Type_checker.check ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
   if needs_spilling then
     error "spilling not implemented in term_to_raw_term";
+  let _ = Type_checker.check_undeclared ~unknown in
   Assemble.compile_query_term state assembled_program ~depth t
 
 
@@ -3965,7 +3979,8 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let { Assembled.kinds; types; type_abbrevs; toplevel_macros = _; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let compiler_state,t = f compiler_state in
-  let needs_spilling = Type_checker.check ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let needs_spilling, unknown = Type_checker.check ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let _ = Type_checker.check_undeclared ~unknown in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
@@ -4019,6 +4034,22 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let state, pred = Symbols.allocate_global_symbol_str state pred in
   (state, p), pred *)
 
+let symtab : (constant * D.term) F.Map.t D.State.component = D.State.declare
+  ~descriptor:D.elpi_state_descriptor
+  ~name:"elpi:symbol_table"
+  ~pp:(fun fmt _ -> Format.fprintf fmt "<symbol_table>")
+  ~clause_compilation_is_over:(fun x -> x)
+  ~goal_compilation_begins:(fun x -> x)
+  ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
+  ~compilation_is_over:(fun x -> Some x)
+  ~execution_is_over:(fun _ -> None)
+  ~init:(fun () -> F.Map.empty)
+
+  
+let global_name_to_constant state s =
+  let map = State.get symtab state in
+  fst @@ F.Map.find (F.from_string s) map
+
 module Compiler : sig
 
   val run : 'a query -> 'a executable
@@ -4050,6 +4081,7 @@ let run
       symbols) symbols
     pred_list in
   let symbol_table = SymbolMap.compile symbols in
+  let state = State.set symtab state (SymbolMap.compile_s2c symbols) in
   {
     D.compiled_program = { index = close_index prolog_program; src = [] };
     chr;

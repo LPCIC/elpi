@@ -9,47 +9,69 @@
 %accumulate lists.
 
 %reduce (app (lam F) T) R :- pi x\ copy x T => copy (F x) (R' x), R = R' x.
+kind i type.
+type a i.
+type xcons i -> i -> i.
+type xnil i.
+type try_clause i -> i -> i -> prop.
+type tru i.
+type test2 prop.
+type test1 prop.
+type subst (i -> i) -> i -> i -> prop.
+type perp i.
+type or i -> i -> i.
+type memb i -> i -> prop.
+type imp i -> i -> i.
+type hc_interp i -> i -> prop.
+type f i -> i.
+type copy i -> i -> prop.
+type c i.
+type box (i -> i) -> i.
+type backchain i -> i -> prop.
+type b i.
+type and i -> i -> i.
+type all (i -> i) -> i.
 
-:untyped copy (and B1 C1) (and B2 C2) :- copy B1 B2, copy C1 C2.
-:untyped copy (or B1 C1) (or B2 C2) :- copy B1 B2, copy C1 C2.
-:untyped copy (box F1) (box F2) :- pi x\ copy x x => copy (F1 x) (F2 x).
-:untyped copy a a.
-:untyped copy b b.
-:untyped copy c c.
-:untyped copy (f X) (f Y) :- copy X Y.
-:untyped copy tru tru.
-:untyped copy perp perp.
+copy (and B1 C1) (and B2 C2) :- copy B1 B2, copy C1 C2.
+copy (or B1 C1) (or B2 C2) :- copy B1 B2, copy C1 C2.
+copy (box F1) (box F2) :- pi x\ copy x x => copy (F1 x) (F2 x).
+copy a a.
+copy b b.
+copy c c.
+copy (f X) (f Y) :- copy X Y.
+copy tru tru.
+copy perp perp.
 
 % a[t/b] = a
 
 % b[t/b] = t
 
-:untyped subst B T B1 :- pi x\ copy x T => (copy (B x) (B2 x), B2 x = B1).
+subst B T B1 :- pi x\ copy x T => (copy (B x) (B2 x), B2 x = B1).
  
 % perp is a fail.
 % hc_interp Cs G means Cs |- G
 %hc_interp _ tru.
 
 %hc_interp Cs (box B) :- !, hc_interp Cs (B T).
-:untyped hc_interp Cs (box B)  :- !, subst B T B1, hc_interp Cs B1.
-:untyped hc_interp Cs (and B C) :- !, hc_interp Cs B , hc_interp Cs C.
-:untyped hc_interp Cs (or B C) :- !, (hc_interp Cs B ; hc_interp Cs C).
-:untyped hc_interp Cs A  :-  backchain Cs A.
+hc_interp Cs (box B)  :- !, subst B T B1, hc_interp Cs B1.
+hc_interp Cs (and B C) :- !, hc_interp Cs B , hc_interp Cs C.
+hc_interp Cs (or B C) :- !, (hc_interp Cs B ; hc_interp Cs C).
+hc_interp Cs A  :-  backchain Cs A.
 % why there is no rule in teyjus: hc_interp Cs (all B) :- .... ?
 
-:untyped backchain Cs A :- memb D Cs, try_clause Cs D A.
+backchain Cs A :- memb D Cs, try_clause Cs D A.
 
-:untyped memb X (xcons X _).
-:untyped memb X (xcons Y L) :- memb X L.
+memb X (xcons X _).
+memb X (xcons Y L) :- memb X L.
 
 
 % try_clause Cs A B means Cs, A |- B
-:untyped try_clause Cs (and D1 D2) A :- 
+try_clause Cs (and D1 D2) A :- 
      !, (try_clause Cs D1 A ; try_clause Cs D2 A).
 % try_clause Cs (all D) A :- !, try_clause Cs (D T) A.
-:untyped try_clause Cs (all D) A :- !, subst D T D1, try_clause Cs D1 A.
-:untyped try_clause Cs A A.
-:untyped try_clause Cs (imp G A) A :- hc_interp Cs G.
+try_clause Cs (all D) A :- !, subst D T D1, try_clause Cs D1 A.
+try_clause Cs A A.
+try_clause Cs (imp G A) A :- hc_interp Cs G.
 
 %prog (xcons (adj a b) (xcons (adj b c) (xcons (adj c (f c))
 %      (xcons (all X\ (all Y\ (imp (adj X Y) (path X Y))))
@@ -58,11 +80,11 @@
 
 %pathfroma X :- prog Cs, hc_interp Cs (path a X).
 
-:untyped test1 :- %Cs = (xcons a (xcons b (xcons c xnil))),
+test1 :- %Cs = (xcons a (xcons b (xcons c xnil))),
         %try_clause Cs (and a (or b c)) (or (and a b) (and a c)).
         hc_interp (xcons a (xcons (imp b c) (xcons (imp a b) xnil))) c.
 
-:untyped test2 :- Cs = xcons (f a) xnil, 
+test2 :- Cs = xcons (f a) xnil, 
         hc_interp Cs (box f).
 
-:untyped main :- test1, test2.
+main :- test1, test2.

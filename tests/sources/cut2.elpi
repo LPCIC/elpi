@@ -4,21 +4,24 @@
    ; A B :- A.
    ; A B :- B
 */
-:untyped
+kind i type.
+type one i.
+type x i -> diagnostic -> prop.
+type two i.
+type q diagnostic -> prop.
+type ko2 diagnostic.
+type ko1 diagnostic.
+type e diagnostic -> prop.
+type c i -> prop.
+
 q X :- c Y, !, x Y X ; e X.
-:untyped
 q ok.
 
-:untyped
 c one.
-:untyped
 c two.
 
-:untyped
 x two ko1.
 
-:untyped
 e ko2.
 
-:untyped
 main :- q X, X = ok.

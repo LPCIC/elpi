@@ -1,25 +1,33 @@
+type a.foo4 prop.
+type a.foo3 prop.
+type a.foo2 prop.
+type a.foo1 prop.
+type a.b.foo2 prop.
+type a.b.foo1 prop.
+type a.b.c.foo prop.
+
 namespace a {
 
-  :untyped foo1 :- b.c.foo.
-  :untyped foo2 :- b.foo1, b.foo2.
+  foo1 :- b.c.foo.
+  foo2 :- b.foo1, b.foo2.
 
   namespace b {
 
-     :untyped foo1 :- c.foo.
+     foo1 :- c.foo.
 
     namespace c {
  
-       :untyped foo.
+       foo.
    
     }
 
-     :untyped foo2 :- c.foo.
+     foo2 :- c.foo.
 
   }
 
-   :untyped foo3 :- b.c.foo.
-   :untyped foo4 :- b.foo1, b.foo2.
+   foo3 :- b.c.foo.
+   foo4 :- b.foo1, b.foo2.
 
 }
 
- :untyped main :- a.foo1, a.foo2, a.foo3, a.foo4.
+ main :- a.foo1, a.foo2, a.foo3, a.foo4.

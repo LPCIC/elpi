@@ -1,6 +1,10 @@
-:untyped app F X :- F X. 
-:untyped c.
-:untyped ignore _.
-:untyped foo P :- pi d\ ignore P.
-:untyped main :- app (x\x) c, F = (y\y), F c, (pi d\ F c),
+kind i type.
+type app (prop -> prop) -> prop -> prop.
+type ignore, foo A -> prop.
+type c prop.
+app F X :- F X. 
+c.
+ignore _.
+foo P :- pi d\ ignore P.
+main :- app (x\x) c, F = (y\y), F c, (pi d\ F c),
         foo (G c).
