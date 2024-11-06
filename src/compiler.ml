@@ -637,8 +637,6 @@ end = struct
     | Pred(_,[]) -> Prop
     | Pred(f,(_,x)::xs) -> Arr(NotVariadic,check_loc_tye ~type_abbrevs ~kinds ctx x,check_tye ~type_abbrevs ~kinds ~loc ctx (Pred(f,xs)))
 
-  (* GENERATE A FRESH ID FOR EACH TYPE CONSTANT *)
-  let fresh_id = let i = ref 0 in fun () -> incr i; !i
 
   let check_type ~type_abbrevs ~kinds ~loc ctx x : TypeAssignment.skema_w_id =
     (* Format.eprintf "check_type under %a\n%!" (F.Map.pp (fun fmt (n,_) -> ())) arities;  *)
@@ -649,7 +647,7 @@ end = struct
           TypeAssignment.Lam(c,aux_params ~loc (F.Set.add c ctx) t)
       | Ty t -> TypeAssignment.Ty(check_loc_tye ~type_abbrevs ~kinds ctx t)
     in
-      fresh_id (), aux_params ~loc ctx x
+      Scope.fresh_type_decl_id (), aux_params ~loc ctx x
 
   let check_types  ~type_abbrevs ~kinds lst : TypeAssignment.overloaded_skema_with_id =
     match List.map (fun { value; loc } -> check_type ~type_abbrevs ~kinds ~loc F.Set.empty value) lst with
@@ -678,8 +676,8 @@ end = struct
 
   let error_not_a_function ~loc c args x =
     let t =
-      if args = [] then ScopedTerm.Const(Global (true, ref None),c)
-      else ScopedTerm.(App(Global (true, ref None),c,List.hd args, List.tl args)) in
+      if args = [] then ScopedTerm.Const(Scope.mkGlobal ~escape_ns:true (),c)
+      else ScopedTerm.(App(Scope.mkGlobal ~escape_ns:true (),c,List.hd args, List.tl args)) in
     let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@]@]" ScopedTerm.pretty_ t ScopedTerm.pretty x in
     error ~loc msg
 
@@ -790,21 +788,25 @@ end = struct
       (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty ety; *)
       match x with
       | Impl(b,t1,t2) -> check_impl ctx ~loc ~tyctx b t1 t2 ety
-      | Const(Global (_,gid),c) -> check_global ctx ~loc ~tyctx (gid,c) ety
+      | Const(Global _ as gid,c) -> check_global ctx ~loc ~tyctx (gid,c) ety
       | Const(Bound lang,c) -> check_local ctx ~loc ~tyctx (c,lang) ety
       | CData c -> check_cdata ~loc ~tyctx kinds c ety
       | Spill(_,{contents = (Main _ | Phantom _)}) -> assert false
       | Spill(sp,info) -> check_spill ctx ~loc ~tyctx sp info ety
-      | App(Global (_,id),c,x,xs) -> check_app ctx ~loc ~tyctx (c,id) (global_type env ~loc c) (x::xs) ety 
-      | App(Bound lang,c,x,xs) -> check_app ctx ~loc ~tyctx (c,ref None) (local_type ctx ~loc (c,lang)) (x::xs) ety
+      | App(Global _ as gid,c,x,xs) -> check_app ctx ~loc ~tyctx (c,gid) (global_type env ~loc c) (x::xs) ety 
+      | App(Bound lang as gid,c,x,xs) -> check_app ctx ~loc ~tyctx (c,gid) (local_type ctx ~loc (c,lang)) (x::xs) ety
       | Lam(c,cty,t) -> check_lam ctx ~loc ~tyctx c cty t ety
       | Discard -> []
-      | Var(c,args) -> check_app ctx ~loc ~tyctx (c, ref None) (uvar_type ~loc c) args ety
+      | Var(c,args) -> check_app ctx ~loc ~tyctx (c, Bound elpi_language (*hack*)) (uvar_type ~loc c) args ety
       | Cast(t,ty) ->
           let ty = TypeAssignment.subst (fun f -> Some (TypeAssignment.UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty ty in
           let spills = check_loc ctx ~tyctx:None t ~ety:ty in
           if unify ty ety then spills
           else error_bad_ety ~loc ~tyctx ScopedTerm.pretty_ x ty ~ety
+
+    and resolve_gid id = function
+      | Scope.Global x -> x.decl_id <- id
+      | _ -> ()
 
     and global_type env ~loc c : ret_id TypeAssignment.overloading =
       try TypeAssignment.fresh_overloaded @@ F.Map.find c env
@@ -812,7 +814,7 @@ end = struct
         match !unknown_global with
         | None ->
             let ty = mk_uvar (Format.asprintf "Unknown_%a" F.pp c) in
-            let id = fresh_id () in
+            let id = Scope.fresh_type_decl_id () in
             unknown_global := Some (loc,id,c,ty);
             Single (id,ty)
         | Some(_,id,c',ty) when F.equal c c' -> Single (id,ty)
@@ -834,7 +836,7 @@ end = struct
     and check_global ctx ~loc ~tyctx (gid,c) ety =
       match global_type env ~loc c with
       | Single (id,ty) ->
-          if unify ty ety then (gid := Some id; [])
+          if unify ty ety then (resolve_gid id gid; [])
           else error_bad_ety ~tyctx ~loc ~ety F.pp c ty
       | Overloaded l ->
           if unify_first gid l ety then []
@@ -899,28 +901,28 @@ end = struct
             let srcs = drop n srcs in try_unify (arrow_of_tys srcs tgt) ety
       | Variadic _ -> true (* TODO *)
 
-    and check_app ctx ~loc ~tyctx (c,oid) cty args ety =
+    and check_app ctx ~loc ~tyctx (c,cid) cty args ety =
       match cty with
       | Overloaded l ->
         (* Format.eprintf "options %a %a %d: %a\n" F.pp c TypeAssignment.pretty ety (List.length args) (pplist TypeAssignment.pretty "; ") l; *)
         let l = List.filter (unify_tgt_ety (List.length args) ety) l in
         begin match l with
         | [] -> error_overloaded_app_tgt ~loc ~ety c
-        | [ty] -> check_app ctx ~loc ~tyctx (c,oid) (Single ty) args ety
+        | [ty] -> check_app ctx ~loc ~tyctx (c,cid) (Single ty) args ety
         | l ->
         (* Format.eprintf "newoptions: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
             let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
             let targs = List.map ScopedTerm.type_of args in
-            check_app_overloaded ctx ~loc (c,oid) ety args targs l l
+            check_app_overloaded ctx ~loc (c,cid) ety args targs l l
         end
       | Single (id,ty) ->
           let err ty =
             if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
-            else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Global (true, ref None)(* sucks *),c,List.hd args,List.tl args)) ty in
+            else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Scope.mkGlobal ~escape_ns:true ()(* sucks *),c,List.hd args,List.tl args)) ty in
           let monodirectional () =
             (* Format.eprintf "checking app mono %a\n" F.pp c; *)
             let tgt = check_app_single ctx ~loc c ty [] args in
-            if unify tgt ety then (oid:=Some id; [])
+            if unify tgt ety then (resolve_gid id cid; [])
             else err tgt in
           let bidirectional srcs tgt =
             (* Format.eprintf "checking app bidi %a\n" F.pp c; *)
@@ -932,7 +934,7 @@ end = struct
             in
             let rest_tgt = consume args srcs in
             if unify rest_tgt ety then
-              let _ = check_app_single ctx ~loc c ty [] args in (oid:=Some id; [])
+              let _ = check_app_single ctx ~loc c ty [] args in (resolve_gid id cid; [])
             else err rest_tgt in
           match classify_arrow ty with
           | Unknown | Variadic _ -> monodirectional ()
@@ -1017,13 +1019,13 @@ end = struct
           if try_unify lhs Prop || try_unify lhs (App(F.from_string "list",Prop,[]))
           then check_spill_conclusion_loc ~tyctx ctx y ~ety
           else error ~loc "Bad impl in spill"
-      | App(Global (b,_),c,x,xs) when F.equal c F.andf ->
+      | App(Global _ as g,c,x,xs) when F.equal c F.andf ->
           let spills = check_loc ~tyctx ctx x ~ety:Prop in
           if spills <> [] then error ~loc "Hard spill";
           begin match xs with
           | [] -> assert false
           | [x] -> check_loc ~tyctx ctx x ~ety
-          | x::xs -> check_spill_conclusion ~tyctx ctx ~loc (App(Global (b,ref None),c,x,xs)) ety
+          | x::xs -> check_spill_conclusion ~tyctx ctx ~loc (App(g,c,x,xs)) ety
           end
       | _ -> check ~tyctx ctx ~loc it ety
 
@@ -1060,7 +1062,7 @@ end = struct
       let vars = TypeAssignment.vars_of (Val ety) in
       let rec aux = function
         | [] -> false
-        | (id, x)::xs -> if unify x ety then (gid:=Some id; true) else (undo vars; aux xs)
+        | (id, x)::xs -> if unify x ety then (resolve_gid id gid; true) else (undo vars; aux xs)
       in
         aux l
   
@@ -1875,11 +1877,11 @@ module CustomFunctorCompilation = struct
 
   let scope_singlequote ~loc state x = 
     match State.get singlequote state with
-    | None -> ScopedTerm.(Const(Global (false, ref None),x))
+    | None -> ScopedTerm.(Const(Scope.mkGlobal (),x))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
   let scope_backtick ~loc state x =
     match State.get backtick state with
-    | None -> ScopedTerm.(Const(Global (false, ref None),x))
+    | None -> ScopedTerm.(Const(Scope.mkGlobal (),x))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
 end
 
@@ -1977,7 +1979,7 @@ end = struct
     | Ast.TypeExpression.TConst c when F.show c = "prop" -> Pred (Relation,[])
     | TConst c when F.show c = "any" -> Any
     | TConst c when F.Set.mem c ctx -> Const(Bound elpi_language,c)
-    | TConst c -> Const(Global (false,ref None),c)
+    | TConst c -> Const(Scope.mkGlobal (),c)
     | TApp(c,x,[y]) when F.show c = "variadic" ->
         Arrow(Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
     | TApp(c,x,xs) ->
@@ -2030,8 +2032,8 @@ end = struct
         if is_uvar_name c then ScopedTerm.Var(c,[])
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
-        else if is_global c then ScopedTerm.(Const(Global (false,ref None),of_global c))
-        else ScopedTerm.(Const(Global (false,ref None),c))
+        else if is_global c then ScopedTerm.(Const(Scope.mkGlobal (),of_global c))
+        else ScopedTerm.(Const(Scope.mkGlobal (),c))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
         ScopedTerm.Spill (scope_loc_term ~state ctx x,ref ScopedTerm.NoInfo)
@@ -2052,8 +2054,8 @@ end = struct
           let bound = F.Set.mem c ctx in
           if bound then ScopedTerm.App(Bound elpi_language, c, x, xs)
           else if is_uvar_name c then ScopedTerm.Var(c,x :: xs)
-          else if is_global c then ScopedTerm.App(Global (true,ref None),of_global c,x,xs)
-          else ScopedTerm.App(Global (false, ref None), c, x, xs)
+          else if is_global c then ScopedTerm.App(Scope.mkGlobal ~escape_ns:true (),of_global c,x,xs)
+          else ScopedTerm.App(Scope.mkGlobal (), c, x, xs)
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
         let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty) in
@@ -3269,11 +3271,11 @@ end (* }}} *)
           let t2' = aux_loc t2 in
           if t1 == t1' && t2 == t2' then it
           else Impl(b,t1',t2')
-      | Const((Bound _|Global (true,_)),_) -> it
-      | Const(Global (false,_),c) -> let c' = f c in if c == c' then it else Const(Global (false,ref None),c')
+      | Const((Bound _|Global { escape_ns = true }),_) -> it
+      | Const(Global { escape_ns = false },c) -> let c' = f c in if c == c' then it else Const(Scope.mkGlobal (),c')
       | Spill(t,n) -> let t' = aux_loc t in if t' == t then it else Spill(t',n)
       | App(scope,c,x,xs) ->
-          let c' = if scope = Global (false,ref None) then f c else c in
+          let c' = if scope = Scope.mkGlobal () then f c else c in
           let x' = aux_loc x in
           let xs' = smart_map aux_loc xs in
           if c == c' && x == x' && xs == xs' then it
@@ -4058,7 +4060,7 @@ end = struct
         let t =
           (* Format.eprintf "adding %d spills\n" (List.length l); *)
           List.fold_right (fun { expr; vars_names } t ->
-            let t = mk_loc ~loc:t.loc @@ App(Global (true, ref None),F.andf,expr,[t]) in
+            let t = mk_loc ~loc:t.loc @@ App(Scope.mkGlobal ~escape_ns:true (),F.andf,expr,[t]) in
              (* let t = List.fold_left (sigma ~loc:t.loc) t vars_names in *)
              t
              ) l t in
@@ -4088,8 +4090,8 @@ end = struct
       let rec aux { loc; it; ty } : t =
         mk_loc ~loc ~ty @@
           match it with
-          | App(Global _,c,x,xs) when F.equal c F.andf ->
-              mkApp (Global (true,ref None)) c (aux_last (x::xs))
+          | App(Global _ as g,c,x,xs) when F.equal c F.andf ->
+              mkApp g c (aux_last (x::xs))
           | Impl(b,s,t) -> Impl(b,s,aux t)
           | Const(g,c) -> mkApp g c args
           | App(g,c,x,xs) -> mkApp g c (x :: xs @ args)
@@ -4183,7 +4185,7 @@ end = struct
           let (t,_), spills =
             map_acc (fun (t,n) { vars; vars_names; expr } ->
               let all_names = vars_names @ n in
-              (t,all_names), { vars; vars_names; expr = mk_loc ~loc @@ App(Global (true, ref None),F.pif,mk_loc ~loc @@ Lam(Some c,o,expr),[]) })
+              (t,all_names), { vars; vars_names; expr = mk_loc ~loc @@ App(Scope.mkGlobal ~escape_ns:true (),F.pif,mk_loc ~loc @@ Lam(Some c,o,expr),[]) })
             (t,[]) spills in
           spills, [{ it = Lam(Some c,o,t); loc; ty }]
       (* holes *)
