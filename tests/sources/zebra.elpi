@@ -1,29 +1,54 @@
 % Where does the zebra live?
 % Puzzle solution written by Claude Sammut.
 
-:untyped
+kind i type.
+type blue, chesterfields, coffee, dog, english, zero i.
+type s i -> i.
+type member i -> list i -> prop.
+type zebra i.
+type yellow i.
+type winstons i.
+type water i.
+type ukrainian i.
+type tea i.
+type spanish i.
+type snails i.
+type right_of i -> i -> list i -> prop.
+type red i.
+type print_houses list i -> prop.
+type plus0 i -> i -> i -> prop.
+type parliaments i.
+type orange_juice i.
+type once prop.
+type norwegian i.
+type next_to i -> i -> list i -> prop.
+type mult0 i -> i -> i -> prop.
+type milk i.
+type lucky_strikes i.
+type kools i.
+type japanese i.
+type ivory i.
+type iter0 i -> prop -> prop.
+type houses list i -> prop.
+type house i -> i -> i -> i -> i -> i.
+type horse i.
+type green i.
+type fox i.
+type exp0 i -> i -> i -> prop.
+
 iter0 zero X.
-:untyped
 iter0 (s N) X :- X, iter0 N X.
-:untyped
 plus0 zero X X.
-:untyped
 plus0 (s X) Y (s S) :- plus0 X Y S.
-:untyped
 mult0 zero X zero.
-:untyped
 mult0 (s X) Y Z :- mult0 X Y K, plus0 Y K Z.
-:untyped
 exp0 zero X (s zero).
-:untyped
 exp0 (s X) Y Z :- exp0 X Y K, mult0 Y K Z.
-:untyped
 main :-
  TEN = s (s (s (s (s (s (s (s (s (s zero))))))))),
  mult0 TEN TEN HUNDR,
  iter0 HUNDR once.
 
-:untyped
 once :-
 	houses Houses,
 	member (house red english Dummy1 Dummy2 Dummy3) Houses,
@@ -44,34 +69,24 @@ once :-
 	member (house Dummy77 Dummy78 Dummy79 water Dummy80) Houses,
 	print_houses Houses.
 
-:untyped
 houses ((house Dummy16 Dummy17 Dummy18 Dummy19 Dummy20)::
 	(house Dummy116 Dummy117 Dummy118 Dummy119 Dummy120)::
    (house Dummy216 Dummy217 Dummy218 Dummy219 Dummy220)::
    (house Dummy316 Dummy317 Dummy318 Dummy319 Dummy320)::
    (house Dummy416 Dummy417 Dummy418 Dummy419 Dummy420)::nil).
 
-:untyped
 right_of A B (B::A::Dummy).
-:untyped
 right_of A B (Dummy::Y) :- right_of A B Y.
 
-:untyped
 next_to A B (A::B::Dummy).
-:untyped
 next_to A B (B::A::Dummy).
-:untyped
 next_to A B (Dummy::Y) :- next_to A B Y.
 
-:untyped
 member X (X::Dummy).
-:untyped
 member X (Dummy::Y) :- member X Y.
 
-:untyped
 print_houses (A::B) :- !,
 %	write(A), nl,
 %   print A,
 	print_houses B.
-:untyped
 print_houses nil.

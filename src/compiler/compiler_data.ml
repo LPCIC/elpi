@@ -298,6 +298,22 @@ module TypeAssignment = struct
 
   let set m v = MutableOnce.set m (Val v)
 
+  exception Not_monomorphic
+  let is_monomorphic (Val t) =
+    let rec map = function
+      | UVar r when MutableOnce.is_set r -> map (deref r)
+      | UVar _ -> raise Not_monomorphic
+      | Prop -> Prop
+      | Any -> Any
+      | Cons c -> Cons c
+      | App(c,x,xs) -> App(c,map x, List.map map xs)
+      | Arr(b,s,t) -> Arr(b,map s,map t)
+    in
+    try 
+      let t = map t in
+      Some (Ty (Obj.magic t : F.t t_)) (* No UVar nodes *)
+    with Not_monomorphic -> None
+  
 
   open Format
 

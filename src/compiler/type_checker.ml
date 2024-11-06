@@ -1,4 +1,3 @@
-
 (* elpi: embedded lambda prolog interpreter                                  *)
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
@@ -86,6 +85,7 @@ let arrow_of_tys tys ety =
   aux tys
 
 type env = TypeAssignment.overloaded_skema_with_id F.Map.t
+type env_undeclared = (TypeAssignment.t * Scope.type_decl_id * Ast.Loc.t) F.Map.t
 
 open ScopedTerm
 
@@ -140,11 +140,6 @@ type ret = TypeAssignment.t MutableOnce.t TypeAssignment.t_
 type ret_id = int * TypeAssignment.t MutableOnce.t TypeAssignment.t_
 type spilled_phantoms = ScopedTerm.t list
 
-let check_no_unknown_global = function
-  | None -> ()
-  | Some(loc,_,c,ty) ->
-      error ~loc (Format.asprintf "@[<v>Unknown global: %a@;Inferred type: %a@]" F.pp c TypeAssignment.pretty ty)
-
 let local_type ctx ~loc c : ret_id TypeAssignment.overloading =
   try TypeAssignment.Single (0, Scope.Map.find c ctx) (* local types have no id, 0 is given by default *)
   with Not_found -> anomaly ~loc "free variable"
@@ -191,11 +186,11 @@ let silence_linear_warn f =
   let len = String.length s in
   len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
-let check ~type_abbrevs ~kinds ~types:env (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
+let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
   (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
   let needs_spill = ref false in
   let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
-  let unknown_global = ref None in
+  let unknown_global = ref unknown in
   let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
   (* let set_fresh_id = let i = ref 0 in fun x -> incr i; x := Some !i in *)
 
@@ -226,14 +221,14 @@ let check ~type_abbrevs ~kinds ~types:env (t : ScopedTerm.t) ~(exp : TypeAssignm
   and global_type env ~loc c : ret_id TypeAssignment.overloading =
     try TypeAssignment.fresh_overloaded @@ F.Map.find c env
     with Not_found ->
-      match !unknown_global with
-      | None ->
-          let ty = mk_uvar (Format.asprintf "Unknown_%a" F.pp c) in
-          let id = Scope.fresh_type_decl_id () in
-          unknown_global := Some (loc,id,c,ty);
-          Single (id,ty)
-      | Some(_,id,c',ty) when F.equal c c' -> Single (id,ty)
-      | Some _ -> error ~loc (Format.asprintf "Unknown global: %a" F.pp c)
+      try
+        let ty,id,_ = F.Map.find c !unknown_global in
+        Single (id,TypeAssignment.unval ty)
+      with Not_found ->
+        let ty = TypeAssignment.Val (mk_uvar (Format.asprintf "Unknown_%a" F.pp c)) in
+        let id = Scope.fresh_type_decl_id () in
+        unknown_global := F.Map.add c (ty,id,loc) !unknown_global;
+        Single (id,TypeAssignment.unval ty)
       
   and check_impl ctx ~loc ~tyctx b t1 t2 ety =
     if not @@ unify (ety) Prop then error_bad_ety ~loc ~tyctx ~ety:Prop ScopedTerm.pretty_ (Impl(b,t1,t2)) (ety)
@@ -444,7 +439,7 @@ let check ~type_abbrevs ~kinds ~types:env (t : ScopedTerm.t) ~(exp : TypeAssignm
         end
     | _ -> check ~tyctx ctx ~loc it ety
 
-  and check_matches_poly_skema_loc { loc; it } =
+  and check_matches_poly_skema_loc ~unknown { loc; it } =
     let c, args =
       let rec head it =
         match it with
@@ -462,6 +457,7 @@ let check ~type_abbrevs ~kinds ~types:env (t : ScopedTerm.t) ~(exp : TypeAssignm
     | Single (_id,Ty _) -> () (* TODO: Should use id? *)
     | Single (_id, Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args Prop) (* TODO: should use id? *)
     | Overloaded _ -> ()
+    | exception Not_found -> assert(F.Map.mem c unknown)
 
   and check_matches_poly_skema ~loc ~pat c ty =
     if try_matching ~pat ty then () else error_not_poly ~loc c ty (fst pat |> snd)
@@ -563,16 +559,33 @@ let check ~type_abbrevs ~kinds ~types:env (t : ScopedTerm.t) ~(exp : TypeAssignm
 
   in
     (* TODO HACK since typing is done too late, the same unit should be checked only once *)
-    if MutableOnce.is_set t.ty then false else
+    if MutableOnce.is_set t.ty then false, !unknown_global else
 
     let spills = check_loc ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
-    check_no_unknown_global !unknown_global;
-    check_matches_poly_skema_loc t;
+    check_matches_poly_skema_loc ~unknown:!unknown_global t;
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k (_,n,loc) ->
       if n = 1 && not @@ silence_linear_warn k then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k)) !sigma;
-    !needs_spill
+    !needs_spill, !unknown_global
+
+let check1_undeclared w f (t, id, loc) =
+  match TypeAssignment.is_monomorphic t with
+  | None -> error ~loc Format.(asprintf "@[Unable to infer a closed type for %a:@ %a@]" F.pp f TypeAssignment.pretty (TypeAssignment.unval t))
+  | Some ty ->
+      if not @@ Re.Str.(string_match (regexp "aux[0-9']+$") (F.show f) 0) then
+        w := Format.(f, asprintf "type %a %a." F.pp f TypeAssignment.pretty (TypeAssignment.unval t)) :: !w;
+      TypeAssignment.Single (id, ty)
+
+let check_undeclared ~unknown =
+  let w = ref [] in
+  let env = F.Map.mapi (check1_undeclared w) unknown in
+  if !w <> [] then begin
+    let undeclared, types = List.split !w in
+    warn Format.(asprintf "@[<v>Undeclared globals: @[%a@].@ Please add the following text to your program:@\n%a@]" (pplist F.pp ", ") undeclared
+     (pplist pp_print_string "") types);
+  end;
+  env
 
 (* let check ~type_abbrevs a b c =
   try check ~type_abbrevs a b c with

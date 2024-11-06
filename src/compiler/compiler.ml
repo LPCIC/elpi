@@ -3225,21 +3225,25 @@ end = struct
     (* Util.set_spaghetti_printer pp_const Format.pp_print_int; *)
     (* Format.fprintf (Format.formatter_of_out_channel xxx) "%a@." (C.Map.pp TypeAssignment.pp_skema) !all_ty_id; *)
 
-    let clauses = clauses |> List.map (fun ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
+    let unknown, clauses = clauses |> map_acc (fun unknown ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
       if typecheck then
-        let needs_spill = Type_checker.check ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop) in
+        let needs_spill,unknown = Type_checker.check ~unknown ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop) in
         (* Format.fprintf (Format.formatter_of_out_channel xxx) "%a\n" ScopedTerm.pp body; *)
         FunctionalityChecker.check_clause ~loc ~functional_preds body;
-        needs_spill, c
+        unknown, (needs_spill, c)
       else
-        false, c) in
+        unknown, (false, c)) F.Map.empty in
     let check_end = Unix.gettimeofday () in
+    let more_types = Type_checker.check_undeclared ~unknown in
+    let types = Flatten.merge_type_assignments types more_types in
+    let all_types = Flatten.merge_type_assignments all_types more_types in
+
       (* close_out xxx; *)
     let checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; clauses; chr; builtins; functional_preds; types_ids = !local_ty_id } in
 
 
   { version; checked_code; base_hash = hash_base base;
-    precomputed_kinds =all_kinds;
+    precomputed_kinds = all_kinds;
     precomputed_type_abbrevs = all_type_abbrevs;
     precomputed_types = all_types;
     precomputed_types_ids = !all_ty_id;
@@ -3936,7 +3940,8 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let { Assembled.kinds; types; type_abbrevs; toplevel_macros; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros }) t in
-  let needs_spilling = Type_checker.check ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let needs_spilling, unknown = Type_checker.check ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let _ = Type_checker.check_undeclared ~unknown in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
@@ -3954,9 +3959,10 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
 
 let term_to_raw_term state (_, assembled_program) ~depth t =
   let { Assembled.kinds; types; type_abbrevs; toplevel_macros = _; chr; prolog_program; total_type_checking_time } = assembled_program in
-  let needs_spilling = Type_checker.check ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
+  let needs_spilling, unknown = Type_checker.check ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
   if needs_spilling then
     error "spilling not implemented in term_to_raw_term";
+  let _ = Type_checker.check_undeclared ~unknown in
   Assemble.compile_query_term state assembled_program ~depth t
 
 
@@ -3965,7 +3971,8 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let { Assembled.kinds; types; type_abbrevs; toplevel_macros = _; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let compiler_state,t = f compiler_state in
-  let needs_spilling = Type_checker.check ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let needs_spilling, unknown = Type_checker.check ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let _ = Type_checker.check_undeclared ~unknown in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
