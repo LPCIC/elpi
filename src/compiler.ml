@@ -568,7 +568,6 @@ type prechr_rule = {
 
 open Data
 module C = Constants
-module Arity = struct type t = int * Loc.t [@@deriving show, ord] end
 
 open Compiler_data
 

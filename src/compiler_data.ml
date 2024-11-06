@@ -651,3 +651,4 @@ module QuotationHooks = struct
   
 end
   
+module Arity = struct type t = int * Loc.t [@@deriving show, ord] end
