@@ -76,7 +76,7 @@ let init ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quo
         Util.anomaly ~loc msg) in
   let header =
     try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins (List.concat header_src)
-    with Compiler.CompileError(loc,msg) -> Util.anomaly ?loc msg in
+    with Compiler_data.CompileError(loc,msg) -> Util.anomaly ?loc msg in
   { parser; header; resolver = file_resolver }
 
 let trace = set_trace
@@ -165,7 +165,7 @@ module Compile = struct
   type 'a query = 'a Compiler.query
   type 'a executable = 'a ED.executable
   type compilation_unit = Compiler.checked_compilation_unit
-  exception CompileError = Compiler.CompileError
+  exception CompileError = Compiler_data.CompileError
 
   let to_setup_flags x = x
 

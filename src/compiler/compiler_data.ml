@@ -653,3 +653,7 @@ module QuotationHooks = struct
 end
   
 module Arity = struct type t = int * Loc.t [@@deriving show, ord] end
+
+exception CompileError of Loc.t option * string
+
+let error ?loc msg = raise (CompileError(loc, msg))
