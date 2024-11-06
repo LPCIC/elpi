@@ -3801,7 +3801,7 @@ end = struct
     precomputed_type_abbrevs = all_type_abbrevs;
     precomputed_types = all_types;
     precomputed_functional_preds = all_functional_preds;
-    type_checking_time = check_end -. check_begin +. check_t_end -. check_t_begin +. check_k_end -. check_k_begin +. check_func_end +. check_func_begin }
+    type_checking_time = check_end -. check_begin +. check_t_end -. check_t_begin +. check_k_end -. check_k_begin +. check_func_end -. check_func_begin }
 
 end
 
