@@ -1,0 +1,10 @@
+:functional pred p i:(int -> (:functional pred) -> prop).
+
+pred q i:int, o:(:functional pred).
+
+% THIS IS OK:
+% functionality relation of q is 
+% (Relational [NoProp, Functional[]]) ⊆ (Relational [NoProp, Functional[]])
+p q.
+
+main.

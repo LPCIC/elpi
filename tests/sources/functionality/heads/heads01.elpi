@@ -1,0 +1,11 @@
+:functional pred q.
+
+:functional pred p i:(:functional pred).
+
+% THIS IS OK:
+% functionality relation of q is (Functional [])
+% functionality of first arg of p is (Functional [])
+% Functional [] ⊆ Functional []
+p q.
+
+main.

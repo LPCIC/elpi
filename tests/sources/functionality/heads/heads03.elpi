@@ -1,0 +1,13 @@
+:functional pred p i:(:functional pred i:(pred)).
+:functional pred r i:(:functional pred).
+
+% THIS IS OK:
+% functionality relation of p is (Functional [Functional [Relational []]])
+% functionality of r is (Functional [Functional []])
+% (p r) is GOOD since first arg of p is `Functional [Relational []]`
+% and Functional [Functional []] ⊆ Functional [Relational []]
+% r (p r) is GOOD is first arg of r is `Functional []` and
+% Functional [Functional [Relational []] ⊆ Functional []
+r (p r).
+
+main.

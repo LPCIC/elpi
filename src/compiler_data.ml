@@ -63,7 +63,7 @@ module ScopedTypeExpression = struct
   end
 
   type t_ =
-    | Prop | Any
+    | Any
     | Const of Scope.t * F.t
     | App of F.t * e * e list
     | Arrow of Ast.Structured.variadic * e * e
@@ -83,12 +83,12 @@ module ScopedTypeExpression = struct
     | _ -> 2
 
   let rec pretty_e fmt = function
-    | Prop -> fprintf fmt "prop"
     | Any -> fprintf fmt "any"
     | Const(_,c) -> F.pp fmt c
     | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_e_parens ~lvl:app) " ") (x::xs)
     | Arrow(NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
     | Arrow(Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
+    | Pred(_,[]) -> fprintf fmt "prop"
     | Pred(_,l) -> fprintf fmt "pred %a" (Util.pplist pretty_ie ", ") l
   and pretty_ie fmt (i,e) =
     fprintf fmt "%s:%a" (match i with Ast.Mode.Input -> "i" | Output -> "o") pretty_e_loc e
@@ -121,7 +121,6 @@ module ScopedTypeExpression = struct
     | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
     | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 == b2 && eqt ctx s1 s2 && eqt ctx t1 t2
     | Pred(f1,l1), Pred(f2,l2) -> f1 == f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
-    | Prop, Prop -> true
     | Any, Any -> true
     | _ -> false
 
@@ -140,7 +139,6 @@ module ScopedTypeExpression = struct
     if it' == it then orig else { it = it'; loc }
   and smart_map_scoped_ty f orig =
     match orig with
-    | Prop -> orig
     | Any -> orig
     | Const((Scope.Bound _| Scope.Global true),_) -> orig
     | Const(Scope.Global false,c) ->

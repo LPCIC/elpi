@@ -1,0 +1,6 @@
+:functional
+pred wrong-if i:prop, i:(:functional pred), i:(:functional pred).
+wrong-if P Q _ :- !, P, Q, print "123".
+wrong-if _ _ R :- R.
+
+main.
