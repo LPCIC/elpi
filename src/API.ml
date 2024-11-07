@@ -1103,7 +1103,7 @@ module RawQuery = struct
   let compile_ast = Compiler.query_of_ast
   let mk_Arg = Compiler.mk_Arg
   let is_Arg = Compiler.is_Arg
- 
+  let global_name_to_constant state s = Compiler.global_name_to_constant state s
 end
 
 module Quotation = struct
@@ -1118,15 +1118,6 @@ module Quotation = struct
   let set_default_quotation ?(descriptor=Setup.default_quotations_descriptor) x = Compiler_data.QuotationHooks.set_default_quotation ~descriptor x
 
   let register_named_quotation ?(descriptor=Setup.default_quotations_descriptor) ~name x  = Compiler_data.QuotationHooks.register_named_quotation ~descriptor ~name x
-
-  (* let term_at ~depth s x = Compiler.term_of_ast ~depth s x *)
-
-  (* let quote_syntax_runtime s q =
-    let module R = (val !r) in
-    Compiler.quote_syntax (`Runtime R.mkConst) s q
-  let quote_syntax_compiletime s q =
-    let s, l, t = Compiler.quote_syntax `Compiletime s q in
-    s, l, t *)
 
   let new_quotations_descriptor = Compiler_data.QuotationHooks.new_descriptor
 

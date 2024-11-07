@@ -72,6 +72,7 @@ module SymbolMap : sig
   val get_canonical              : D.State.t -> table -> constant -> D.term
   val global_name : D.State.t -> table -> constant -> F.t
   val compile : table -> D.symbol_table
+  val compile_s2c : table -> (constant * D.term) F.Map.t
 
 end = struct
 
@@ -92,6 +93,7 @@ end = struct
   (* F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
     t
     
+  let compile_s2c { ast2ct } = ast2ct
 
   let allocate_global_symbol_aux x ({ c2t; c2s; ast2ct; last_global } as table) =
     try table, F.Map.find x ast2ct
@@ -1552,12 +1554,18 @@ end = struct
 
   let global_hd_symbols_of_clauses cl =
     let open ScopedTerm in
-    List.fold_left (fun s { Ast.Clause.body = { it } } ->
-      match it with
+    let add1 s t =
+      match t.it with
       | Const(Global _,c) | App(Global _,c,_,_) -> F.Set.add c s
       | Impl(false,{ it = (Const(Global _,c) | App(Global _,c,_,_)) }, _) -> F.Set.add c s
-      (* | (Const _ | App _) -> s *)
-      | _ -> assert false)
+      | _ -> assert false in
+    List.fold_left (fun s { Ast.Clause.body } ->
+      match body.it with
+      | App(Global _,c,x,xs) when F.equal F.andf c ->
+        (* since we allow a rule to be of the form (p :- ..., q :- ...) eg
+           via macro expansion, we could have , in head position  *)
+          List.fold_left add1 s (x::xs)
+      | _ -> add1 s body)
       F.Set.empty cl
 
   (* let rec append_body b1 b2 =
@@ -4026,6 +4034,22 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let state, pred = Symbols.allocate_global_symbol_str state pred in
   (state, p), pred *)
 
+let symtab : (constant * D.term) F.Map.t D.State.component = D.State.declare
+  ~descriptor:D.elpi_state_descriptor
+  ~name:"elpi:symbol_table"
+  ~pp:(fun fmt _ -> Format.fprintf fmt "<symbol_table>")
+  ~clause_compilation_is_over:(fun x -> x)
+  ~goal_compilation_begins:(fun x -> x)
+  ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
+  ~compilation_is_over:(fun x -> Some x)
+  ~execution_is_over:(fun _ -> None)
+  ~init:(fun () -> F.Map.empty)
+
+  
+let global_name_to_constant state s =
+  let map = State.get symtab state in
+  fst @@ F.Map.find (F.from_string s) map
+
 module Compiler : sig
 
   val run : 'a query -> 'a executable
@@ -4057,6 +4081,7 @@ let run
       symbols) symbols
     pred_list in
   let symbol_table = SymbolMap.compile symbols in
+  let state = State.set symtab state (SymbolMap.compile_s2c symbols) in
   {
     D.compiled_program = { index = close_index prolog_program; src = [] };
     chr;

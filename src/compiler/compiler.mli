@@ -58,3 +58,4 @@ val mk_Arg :
 val get_Arg : State.t -> name:string -> args:term list -> term
 
 val term_to_raw_term : State.t -> program -> depth:int -> Compiler_data.ScopedTerm.t -> State.t * term
+val global_name_to_constant : State.t -> string -> constant

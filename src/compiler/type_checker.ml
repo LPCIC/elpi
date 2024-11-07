@@ -201,7 +201,7 @@ let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : Ty
     | Const(Global _ as gid,c) -> check_global ctx ~loc ~tyctx (gid,c) ety
     | Const(Bound lang,c) -> check_local ctx ~loc ~tyctx (c,lang) ety
     | CData c -> check_cdata ~loc ~tyctx kinds c ety
-    | Spill(_,{contents = (Main _ | Phantom _)}) -> assert false
+    | Spill(_,{contents = Phantom _}) -> assert false
     | Spill(sp,info) -> check_spill ctx ~loc ~tyctx sp info ety
     | App(Global _ as gid,c,x,xs) -> check_app ctx ~loc ~tyctx (c,gid) (global_type env ~loc c) (x::xs) ety 
     | App(Bound lang as gid,c,x,xs) -> check_app ctx ~loc ~tyctx (c,gid) (local_type ctx ~loc (c,lang)) (x::xs) ety
@@ -413,9 +413,10 @@ let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : Ty
     | _ -> check_loc ~tyctx ctx x ~ety
 
   and check_spill_conclusion_loc ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
-    assert (not @@ MutableOnce.is_set ty);
+    (* A spill can be duplicate by a macro for example *)
+    let already_typed = MutableOnce.is_set ty in
     let extra_spill = check_spill_conclusion ~tyctx ctx ~loc it ety in
-    MutableOnce.set ty (Val ety);
+    if not already_typed then MutableOnce.set ty (Val ety);
     extra_spill
 
   (* This descent to find the spilled term is a bit ad hoc, since it
