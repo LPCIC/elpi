@@ -635,7 +635,7 @@ type program = {
   types_indexing : (Ast.Structured.tattribute option * Loc.t) list F.Map.t;
   type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
-  functional_preds: Determinacy_checker.func_map;
+  functional_preds: Determinacy_checker.t;
   clauses : (bool * (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t) list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : BuiltInPredicate.t list;
@@ -661,7 +661,7 @@ type checked_compilation_unit = {
   precomputed_kinds : Arity.t F.Map.t;
   precomputed_types : TypeAssignment.overloaded_skema_with_id F.Map.t;
   precomputed_type_abbrevs :  (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
-  precomputed_functional_preds : Determinacy_checker.func_map;
+  precomputed_functional_preds : Determinacy_checker.t;
   (* precomputed_types_ids : TypeAssignment.skema C.Map.t; *)
   type_checking_time : float;
 }
@@ -679,7 +679,7 @@ type program = {
   (* types_ids : TypeAssignment.skema C.Map.t; *)
   type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
   modes : (mode * Loc.t) F.Map.t;
-  functional_preds : Determinacy_checker.func_map;
+  functional_preds : Determinacy_checker.t;
   total_type_checking_time : float;
 
   prolog_program : index;
@@ -2980,13 +2980,14 @@ end = struct
     let check_t_end = Unix.gettimeofday () in
 
     let all_types = Flatten.merge_type_assignments ot types in
+    let all_func = Determinacy_checker.merge func_setter_object#get_all_func func_setter_object#get_local_func in
 
     let check_begin = Unix.gettimeofday () in
 
     let unknown, clauses = clauses |> map_acc (fun unknown ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
       if typecheck then
         let needs_spill, unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop) in
-        (* Determinacy_checker.check_clause ~loc ~functional_preds:func_setter_object#get_all_func body; *)
+        (* Determinacy_checker.check_clause ~loc ~env:all_func body; *)
         unknown, (needs_spill, c)
       else
         unknown, (false, c)) F.Map.empty in
@@ -3003,7 +3004,7 @@ end = struct
     precomputed_kinds = all_kinds;
     precomputed_type_abbrevs = all_type_abbrevs;
     precomputed_types = all_types;
-    precomputed_functional_preds = func_setter_object#get_all_func;
+    precomputed_functional_preds = all_func;
     type_checking_time = check_end -. check_begin +. check_t_end -. check_t_begin +. check_k_end -. check_k_begin }
 
 end
@@ -3472,9 +3473,9 @@ in
         let type_abbrevs = merge_type_abbrevs ota type_abbrevs in
         (* TODO: here we need to correctely merge ids wrt to merge_type_assignments... *)
         let types = Flatten.merge_type_assignments ot types in
-        let functional_preds = Determinacy_checker.merge ofp functional_preds in
+        let env = Determinacy_checker.merge ofp functional_preds in
         (* TODO: this error message is unclear, maybe we should add the name F.t to the map  *)
-        kinds, type_abbrevs, types, functional_preds
+        kinds, type_abbrevs, types, env
     in
     let modes = Flatten.merge_modes om modes in
 

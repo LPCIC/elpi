@@ -7,19 +7,16 @@ open Compiler_data
 
 type t [@@ deriving show, ord]
 
-type func_map [@@ deriving show, ord]
+val empty_fmap : t
 
-val empty_fmap : func_map
+val check_clause : loc:Loc.t -> env:t -> ScopedTerm.t -> unit
 
-val check_clause : loc:Loc.t -> functional_preds:func_map -> 
-  ScopedTerm.t -> unit
+val merge : t -> t -> t
 
-val merge : func_map -> func_map -> func_map
-
-class merger : func_map ->
+class merger : t ->
   object
-    method get_all_func : func_map
-    method get_local_func : func_map
+    method get_all_func : t
+    method get_local_func : t
     method add_ty_abbr : F.t -> Scope.type_decl_id -> ScopedTypeExpression.t -> unit
     method add_func_ty_list : F.t -> TypeList.t -> TypeAssignment.overloaded_skema_with_id -> unit
   end
