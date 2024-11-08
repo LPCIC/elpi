@@ -14,10 +14,6 @@ val empty_fmap : func_map
 val check_clause : loc:Loc.t -> functional_preds:func_map -> 
   ScopedTerm.t -> unit
 
-val type2func : func_map -> Compiler_data.ScopedTypeExpression.t -> t
-
-val pp : Format.formatter -> func_map -> unit
-
 val merge : func_map -> func_map -> func_map
 
 class merger : func_map ->
