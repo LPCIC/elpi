@@ -281,12 +281,18 @@ module TypeAssignment = struct
   let diff_id_check ((id1:int),_) (id2,_) = assert (id1<>id2)
   let diff_ids_check e = List.iter (diff_id_check e)
 
+  let rec remove_mem e acc = function
+    | [] -> List.rev acc
+    | x::xs when eq_skema_w_id e x ->
+      diff_ids_check x xs;
+      List.rev_append acc xs
+    | x::xs -> remove_mem e (x::acc) xs
+
   let rec merge_skema t1 t2 =
     match t1, t2 with
     | Single x, Single y when eq_skema_w_id x y -> t1
     | Single x, Single y -> diff_id_check x y; Overloaded [x;y]
-    | Single x, Overloaded ys when List.exists (eq_skema_w_id x) ys -> t2
-    | Single x, Overloaded ys -> diff_ids_check x ys; Overloaded (x::ys)
+    | Single x, Overloaded ys  -> Overloaded (x :: remove_mem x [] ys)
     | Overloaded xs, Single y when List.exists (eq_skema_w_id y) xs -> t1
     | Overloaded xs, Single y -> diff_ids_check y xs; Overloaded(xs@[y])
     | Overloaded xs, Overloaded _ ->
