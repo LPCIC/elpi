@@ -63,19 +63,6 @@ type mode_aux = Util.mode_aux =
 and mode = mode_aux list
 [@@ deriving show, ord]
 
-module Functionality = struct
-  type f = 
-    | Functional of f list
-    | Relational
-    | AssumedFunctional (* Currently used for variadic functions, like print, halt... *)
-    | BoundVar of F.t
-  
-  and t = Lam of F.t * t | F of (f*Loc.t)
-  [@@ deriving show, ord]
-
-  let rec get_loc = function Lam (_,b) -> get_loc b | F(_,loc) -> loc
-end
-
 type ttype =
   | TConst of constant
   | TApp of constant * ttype * ttype list

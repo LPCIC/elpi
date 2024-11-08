@@ -277,18 +277,20 @@ module TypeAssignment = struct
 
   let apply (_,sk:skema_w_id) args = apply F.Map.empty sk args
 
-  let eq_skema_w_id (_,x) (_,y) = compare_skema x y == 0
+  let eq_skema_w_id (_,x) (_,y) = compare_skema x y = 0
+  let diff_id_check ((id1:int),_) (id2,_) = assert (id1<>id2)
+  let diff_ids_check e = List.iter (diff_id_check e)
 
-  let rec merge_skema x y =
-    match x, y with
-    | Single x, Single y when eq_skema_w_id x y -> Single x
-    | Single x, Single y -> Overloaded [x;y]
-    | Single x, Overloaded ys when List.exists (eq_skema_w_id x) ys -> Overloaded (ys)
-    | Single x, Overloaded ys -> Overloaded (x::ys)
-    | Overloaded xs, Single y when List.exists (eq_skema_w_id y) xs -> Overloaded(xs)
-    | Overloaded xs, Single y -> Overloaded(xs@[y])
-    | Overloaded xs, (Overloaded _ as ys) ->
-        List.fold_right (fun x -> merge_skema (Single x)) xs ys
+  let rec merge_skema t1 t2 =
+    match t1, t2 with
+    | Single x, Single y when eq_skema_w_id x y -> t1
+    | Single x, Single y -> diff_id_check x y; Overloaded [x;y]
+    | Single x, Overloaded ys when List.exists (eq_skema_w_id x) ys -> t2
+    | Single x, Overloaded ys -> diff_ids_check x ys; Overloaded (x::ys)
+    | Overloaded xs, Single y when List.exists (eq_skema_w_id y) xs -> t1
+    | Overloaded xs, Single y -> diff_ids_check y xs; Overloaded(xs@[y])
+    | Overloaded xs, Overloaded _ ->
+        List.fold_right (fun x -> merge_skema (Single x)) xs t2
   
   let unval (Val x) = x
   let rec deref m =
