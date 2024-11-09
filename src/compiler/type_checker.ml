@@ -186,7 +186,7 @@ let silence_linear_warn f =
   let len = String.length s in
   len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
-let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
+let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
   (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
   let needs_spill = ref false in
   let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
@@ -563,7 +563,7 @@ let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : Ty
     if MutableOnce.is_set t.ty then false, !unknown_global else
 
     let spills = check_loc ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
-    check_matches_poly_skema_loc ~unknown:!unknown_global t;
+    if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k (_,n,loc) ->
       if n = 1 && not @@ silence_linear_warn k then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"

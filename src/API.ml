@@ -1099,7 +1099,10 @@ end
 module RawQuery = struct
   let compile_term p f = Compiler.query_of_scoped_term p (fun s -> let s, t = f s in s, Compiler_data.ScopedTerm.of_simple_term_loc t)
   let compile_raw_term p f = Compiler.query_of_raw_term p f
-  let term_to_raw_term s p ~depth t = Compiler.term_to_raw_term s p ~depth @@ Compiler_data.ScopedTerm.of_simple_term_loc t
+  let term_to_raw_term s p ?ctx ~depth t =
+    let check = ED.State.get ED.while_compiling s in
+    Compiler.term_to_raw_term ~check s p ?ctx ~depth @@
+    Compiler_data.ScopedTerm.of_simple_term_loc t
   let compile_ast = Compiler.query_of_ast
   let mk_Arg = Compiler.mk_Arg
   let is_Arg = Compiler.is_Arg
