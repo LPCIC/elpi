@@ -380,17 +380,24 @@ module ScopedTerm = struct
      | [x] -> x
      | x :: xs -> { loc; it = App(Scope.mkGlobal ~escape_ns:true (), F.andf, x, xs)}
     let mkEq ~loc a b = { loc; it = App(Scope.mkGlobal ~escape_ns:true (), F.eqf, a,[b]) }
-    let list_to_lp_list l =
+    let mkNil ~loc = { it = Const(Scope.mkGlobal ~escape_ns:true (),F.nilf); loc }
+    let mkCons ?loc a b =
+      let loc = match loc with Some x -> x | None -> Loc.merge a.loc b.loc in
+      { loc; it = App(Scope.mkGlobal ~escape_ns:true (),F.consf,a,[b]) }
+
+    let list_to_lp_list ~loc l =
+      let rec aux = function
+        | [] -> mkNil ~loc
+        | hd::tl ->
+            let tl = aux tl in
+            mkCons hd tl
+        in
+      aux l
+
+    let ne_list_to_lp_list l =
       match List.rev l with
       | [] -> anomaly "Ast.list_to_lp_list on empty list"
-      | h :: _ ->
-        let rec aux = function
-         | [] -> { it = Const(Scope.mkGlobal ~escape_ns:true (),F.nilf); loc = h.loc }
-         | hd::tl ->
-             let tl = aux tl in
-             { loc = Loc.merge hd.loc tl.loc; it = App(Scope.mkGlobal ~escape_ns:true (),F.consf,hd,[tl]) }
-        in
-          aux l
+      | h :: _ -> list_to_lp_list ~loc:h.loc l
       
     let rec lp_list_to_list = function
       | { it = App(Global { escape_ns = true }, c, x, [xs]) } when F.equal c F.consf  -> x :: lp_list_to_list xs
@@ -591,7 +598,7 @@ module ScopedTerm = struct
       | SimpleTerm.Opaque o when is_scoped_term o ->
           begin match out_scoped_term o with
           | { it = Spill(t,i); loc } ->
-            let impl = { loc; it = Impl(true, list_to_lp_list hyps, { loc; it = Opaque (in_scoped_term t) }) } in
+            let impl = { loc; it = Impl(true, list_to_lp_list ~loc hyps, { loc; it = Opaque (in_scoped_term t) }) } in
             { loc; it = Opaque(in_scoped_term @@ { it = Spill(of_simple_term_loc impl,i); loc; ty = MutableOnce.make (F.from_string "Ty") })}
           | _ ->
             anomaly ~loc (Format.asprintf "The term is not a spill coming from a quotation: @[%a@]" pp_t_ it)

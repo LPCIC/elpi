@@ -186,7 +186,7 @@ let silence_linear_warn f =
   let len = String.length s in
   len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
-let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
+let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
   (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
   let needs_spill = ref false in
   let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
@@ -308,24 +308,27 @@ let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : Ty
         if n > nsrcs then false
         else
           let rec drop i l = if i = 0 then l else drop (i-1) (List.tl l) in
-          let srcs = drop n srcs in try_unify (arrow_of_tys srcs tgt) ety
+          let srcs = drop n srcs in unify_then_undo (arrow_of_tys srcs tgt) ety
     | Variadic _ -> true (* TODO *)
 
   and check_app ctx ~loc ~tyctx (c,cid) cty args ety =
     match cty with
     | Overloaded l ->
-      (* Format.eprintf "options %a %a %d: %a\n" F.pp c TypeAssignment.pretty ety (List.length args) (pplist TypeAssignment.pretty "; ") l; *)
+      (* Format.eprintf "@[options %a %a %d:@ %a@]\n" F.pp c TypeAssignment.pretty ety (List.length args) (pplist (fun fmt (_,x) -> TypeAssignment.pretty fmt x) "; ") l; *)
       let l = List.filter (unify_tgt_ety (List.length args) ety) l in
       begin match l with
       | [] -> error_overloaded_app_tgt ~loc ~ety c
-      | [ty] -> check_app ctx ~loc ~tyctx (c,cid) (Single ty) args ety
+      | [ty] -> 
+      (* Format.eprintf "1option left: %a\n" TypeAssignment.pretty (snd ty); *)
+        check_app ctx ~loc ~tyctx (c,cid) (Single ty) args ety
       | l ->
-      (* Format.eprintf "newoptions: %a\n" (pplist TypeAssignment.pretty "; ") l; *)
+      (* Format.eprintf "newoptions: %a\n" (pplist (fun fmt (_,x) -> TypeAssignment.pretty fmt x) "; ") l; *)
           let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
           let targs = List.map ScopedTerm.type_of args in
           check_app_overloaded ctx ~loc (c,cid) ety args targs l l
       end
     | Single (id,ty) ->
+      (* Format.eprintf "1option: %a\n" TypeAssignment.pretty ty; *)
         let err ty =
           if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
           else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Scope.mkGlobal ~escape_ns:true ()(* sucks *),c,List.hd args,List.tl args)) ty in
@@ -355,19 +358,20 @@ let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : Ty
             else bidirectional srcs tgt
 
   (* REDO PROCESSING ONE SRC at a time *)
-  and check_app_overloaded ctx ~loc (c, id) ety args targs alltys = function
+  and check_app_overloaded ctx ~loc (c, cid as c_w_id) ety args targs alltys = function
     | [] -> error_overloaded_app ~loc c args ~ety alltys
-    | (_,t)::ts ->
+    | (id,t)::ts ->
         (* Format.eprintf "checking overloaded app %a\n" F.pp c; *)
         match classify_arrow t with
         | Unknown -> error ~loc (Format.asprintf "Type too ambiguous to be assigned to the overloaded constant: %s for type %a" (F.show c) TypeAssignment.pretty t)
         | Simple { srcs; tgt } ->
-            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then [] (* TODO: here we should something ? *)
-            else check_app_overloaded ctx ~loc (c, id) ety args targs alltys ts
+          (* Format.eprintf "argsty : %a\n" TypeAssignment.pretty (arrow_of_tys targs ety); *)
+            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then (resolve_gid id cid;[]) (* TODO: here we should something ? *)
+            else check_app_overloaded ctx ~loc c_w_id ety args targs alltys ts
         | Variadic { srcs ; tgt } ->
             let srcs = extend srcs targs in
-            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then [] (* TODO: here we should something ? *)
-            else check_app_overloaded ctx ~loc (c, id) ety args targs alltys ts
+            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then (resolve_gid id cid;[]) (* TODO: here we should something ? *)
+            else check_app_overloaded ctx ~loc c_w_id ety args targs alltys ts
 
   and check_app_single ctx ~loc c ty consumed args =
     match args with
@@ -469,7 +473,14 @@ let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : Ty
     let b = unify x y in
     if not b then (undo vx; undo vy);
     b
-  
+
+  and unify_then_undo x y =
+    let vx = TypeAssignment.vars_of (Val x) in
+    let vy = TypeAssignment.vars_of (Val y) in
+    let b = unify x y in
+    undo vx; undo vy;
+    b
+    
   and unify_first gid l ety =
     let vars = TypeAssignment.vars_of (Val ety) in
     let rec aux = function
@@ -563,18 +574,20 @@ let check ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : Ty
     if MutableOnce.is_set t.ty then false, !unknown_global else
 
     let spills = check_loc ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
-    check_matches_poly_skema_loc ~unknown:!unknown_global t;
+    if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k (_,n,loc) ->
-      if n = 1 && not @@ silence_linear_warn k then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
-        F.pp k F.pp k F.pp k)) !sigma;
+      if n = 1 && not @@ silence_linear_warn k then
+        warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
+        F.pp k F.pp k F.pp k))
+      !sigma;
     !needs_spill, !unknown_global
 
 let check1_undeclared w f (t, id, loc) =
   match TypeAssignment.is_monomorphic t with
   | None -> error ~loc Format.(asprintf "@[Unable to infer a closed type for %a:@ %a@]" F.pp f TypeAssignment.pretty (TypeAssignment.unval t))
   | Some ty ->
-      if not @@ Re.Str.(string_match (regexp "aux[0-9']+$") (F.show f) 0) then
+      if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']+\\|main\\)$") (F.show f) 0) then
         w := Format.(f, asprintf "type %a %a." F.pp f TypeAssignment.pretty (TypeAssignment.unval t)) :: !w;
       TypeAssignment.Single (id, ty)
 

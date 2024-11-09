@@ -54,6 +54,8 @@ module Ast : sig
     val pp_language : Format.formatter -> language -> unit
     val show_language : language -> string
 
+    module Map : Map.S with type key = Name.t * language
+
   end
   module Opaque : sig
     type t
@@ -103,8 +105,13 @@ module Ast : sig
     val mkPi : loc:Loc.t -> Name.t -> ?ty:Type.t -> t -> t
     val mkConj : loc:Loc.t -> t list -> t
     val mkEq : loc:Loc.t -> t -> t -> t
+    val mkNil : loc:Loc.t -> t
+    (** if omitted, the loc is the merge of the hd and tl locs, as if
+        one wrote (hd :: tl), but not as if one wrote [hd|tl] *)
+    val mkCons : ?loc:Loc.t -> t -> t -> t
 
-    val list_to_lp_list : t list -> t
+    val list_to_lp_list : loc:Loc.t -> t list -> t
+    val ne_list_to_lp_list : t list -> t
     val lp_list_to_list : t -> t list
 
     (** See Coq-Elpi's lp:(F x) construct *)
@@ -1180,6 +1187,8 @@ module RawData : sig
   (** no check, works for globals and bound *)
   val mkConst : int -> term
   val mkApp : int -> term -> term list -> term
+  val mkAppMoreArgs : depth:int -> term -> term list -> term
+  val isApp : depth:int -> term -> bool 
 
   val cmp_builtin : builtin -> builtin -> int
   type hyp = {
@@ -1269,8 +1278,8 @@ module RawQuery : sig
   val compile_raw_term :
     Compile.program -> (State.t -> State.t * Data.term * Conversion.extra_goals) -> unit Compile.query
 
-  (** typechecks *)
-  val term_to_raw_term : State.t -> Compile.program -> depth:int -> Ast.Term.t -> State.t * Data.term
+    (** typechecks only at compile time and if ctx is empty *)
+  val term_to_raw_term : State.t -> Compile.program -> ?ctx:RawData.constant Ast.Scope.Map.t -> depth:int -> Ast.Term.t -> State.t * Data.term
 
   (** raises Not_found *)
   val global_name_to_constant : State.t -> string -> RawData.constant
