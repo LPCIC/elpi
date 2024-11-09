@@ -355,19 +355,19 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
             else bidirectional srcs tgt
 
   (* REDO PROCESSING ONE SRC at a time *)
-  and check_app_overloaded ctx ~loc (c, id) ety args targs alltys = function
+  and check_app_overloaded ctx ~loc (c, cid as c_w_id) ety args targs alltys = function
     | [] -> error_overloaded_app ~loc c args ~ety alltys
-    | (_,t)::ts ->
+    | (id,t)::ts ->
         (* Format.eprintf "checking overloaded app %a\n" F.pp c; *)
         match classify_arrow t with
         | Unknown -> error ~loc (Format.asprintf "Type too ambiguous to be assigned to the overloaded constant: %s for type %a" (F.show c) TypeAssignment.pretty t)
         | Simple { srcs; tgt } ->
-            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then [] (* TODO: here we should something ? *)
-            else check_app_overloaded ctx ~loc (c, id) ety args targs alltys ts
+            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then (resolve_gid id cid;[]) (* TODO: here we should something ? *)
+            else check_app_overloaded ctx ~loc c_w_id ety args targs alltys ts
         | Variadic { srcs ; tgt } ->
             let srcs = extend srcs targs in
-            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then [] (* TODO: here we should something ? *)
-            else check_app_overloaded ctx ~loc (c, id) ety args targs alltys ts
+            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then (resolve_gid id cid;[]) (* TODO: here we should something ? *)
+            else check_app_overloaded ctx ~loc c_w_id ety args targs alltys ts
 
   and check_app_single ctx ~loc c ty consumed args =
     match args with
