@@ -187,7 +187,7 @@ let silence_linear_warn f =
   len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
 let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
-  Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t;
+  (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
   let needs_spill = ref false in
   let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
   let unknown_global = ref unknown in
@@ -314,23 +314,21 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
   and check_app ctx ~loc ~tyctx (c,cid) cty args ety =
     match cty with
     | Overloaded l ->
-      Format.eprintf "@[options %a %a %d:@ %a@]\n" F.pp c TypeAssignment.pretty ety (List.length args) (pplist (fun fmt (_,x) -> TypeAssignment.pretty fmt x) "; ") l;
+      (* Format.eprintf "@[options %a %a %d:@ %a@]\n" F.pp c TypeAssignment.pretty ety (List.length args) (pplist (fun fmt (_,x) -> TypeAssignment.pretty fmt x) "; ") l; *)
       let l = List.filter (unify_tgt_ety (List.length args) ety) l in
       begin match l with
       | [] -> error_overloaded_app_tgt ~loc ~ety c
       | [ty] -> 
-      Format.eprintf "1option left: %a\n" TypeAssignment.pretty (snd ty);
-        
+      (* Format.eprintf "1option left: %a\n" TypeAssignment.pretty (snd ty); *)
         check_app ctx ~loc ~tyctx (c,cid) (Single ty) args ety
       | l ->
-      Format.eprintf "newoptions: %a\n" (pplist (fun fmt (_,x) -> TypeAssignment.pretty fmt x) "; ") l;
+      (* Format.eprintf "newoptions: %a\n" (pplist (fun fmt (_,x) -> TypeAssignment.pretty fmt x) "; ") l; *)
           let args = List.concat_map (fun x -> x :: check_loc ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
           let targs = List.map ScopedTerm.type_of args in
           check_app_overloaded ctx ~loc (c,cid) ety args targs l l
       end
     | Single (id,ty) ->
-      Format.eprintf "1option: %a\n" TypeAssignment.pretty ty;
-
+      (* Format.eprintf "1option: %a\n" TypeAssignment.pretty ty; *)
         let err ty =
           if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
           else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Scope.mkGlobal ~escape_ns:true ()(* sucks *),c,List.hd args,List.tl args)) ty in
@@ -367,7 +365,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         match classify_arrow t with
         | Unknown -> error ~loc (Format.asprintf "Type too ambiguous to be assigned to the overloaded constant: %s for type %a" (F.show c) TypeAssignment.pretty t)
         | Simple { srcs; tgt } ->
-          Format.eprintf "argsty : %a\n" TypeAssignment.pretty (arrow_of_tys targs ety);
+          (* Format.eprintf "argsty : %a\n" TypeAssignment.pretty (arrow_of_tys targs ety); *)
             if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys targs ety) then (resolve_gid id cid;[]) (* TODO: here we should something ? *)
             else check_app_overloaded ctx ~loc c_w_id ety args targs alltys ts
         | Variadic { srcs ; tgt } ->
