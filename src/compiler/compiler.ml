@@ -702,7 +702,7 @@ and attribute = {
 let empty () = {
   clauses = [];
   kinds = F.Map.empty;
-  types = F.Map.add F.mainf TypeAssignment.(Single (-1, (Ty Prop))) F.Map.empty;
+  types = F.Map.empty;
   (* types_ids = C.Map.empty; *)
   type_abbrevs = F.Map.empty; modes = F.Map.empty; functional_preds = Determinacy_checker.empty_fmap;
   prolog_program = { idx = Ptmap.empty; time = 0; times = StrMap.empty };
@@ -2986,7 +2986,7 @@ end = struct
     let unknown, clauses = clauses |> map_acc (fun unknown ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
       if typecheck then
         let needs_spill, unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds ~types:all_types body ~exp:(Val Prop) in
-        Determinacy_checker.check_clause ~loc ~functional_preds:func_setter_object#get_all_func body;
+        (* Determinacy_checker.check_clause ~loc ~functional_preds:func_setter_object#get_all_func body; *)
         unknown, (needs_spill, c)
       else
         unknown, (false, c)) F.Map.empty in

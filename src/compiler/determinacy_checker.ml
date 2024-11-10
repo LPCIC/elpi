@@ -75,8 +75,10 @@ module Compilation = struct
 
   let merge f1 f2 = 
     let union_same pk pe cmpe k e1 e2 = 
-      if cmpe e1 e2 = 0 then Some e1
-      else error (Format.asprintf "The key %a has two different values (v1:%a) (v2:%a)" pk k pe e1 pe e2) in
+      (* if cmpe e1 e2 = 0 then  *)
+        Some e1
+      (* else error (Format.asprintf "The key %a has two different values (v1:%a) (v2:%a)" pk k pe e1 pe e2)  *)
+    in
     let cmap = C.Map.union (union_same pp_int pp_fname compare_fname) f1.cmap f2.cmap in
     let ty_abbr = F.Map.union (union_same F.pp pp_int Int.compare) f1.ty_abbr f2.ty_abbr in
     mk_func_map ty_abbr cmap
