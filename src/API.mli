@@ -1187,6 +1187,8 @@ module RawData : sig
   (** no check, works for globals and bound *)
   val mkConst : int -> term
   val mkApp : int -> term -> term list -> term
+  val mkAppMoreArgs : depth:int -> term -> term list -> term
+  val isApp : depth:int -> term -> bool 
 
   val cmp_builtin : builtin -> builtin -> int
   type hyp = {

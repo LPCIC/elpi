@@ -659,6 +659,23 @@ module RawData = struct
 
   let cmp_builtin i j = i - j
 
+  let mkAppMoreArgs ~depth hd args =
+    let module R = (val !r) in let open R in
+    match deref_head ~depth hd, args with
+    | Const c, [] -> hd
+    | Const c, x :: xs -> mkApp c x xs
+    | App(c,x,xs), _ -> mkApp c x (xs@args)
+    | Arg _, [] -> hd
+    | Arg(i,ano), xs -> AppArg(i, mkinterval 0 ano 0 @ xs)
+    | AppArg(i,args), xs -> AppArg(i,args @ xs)
+    | _ -> assert false
+
+  let isApp ~depth hd =
+    let module R = (val !r) in let open R in
+    match deref_head ~depth hd with
+    | App _ -> true
+    | _ -> false
+
   module Constants = struct
 
     let declare_global_symbol = ED.Global_symbols.declare_global_symbol

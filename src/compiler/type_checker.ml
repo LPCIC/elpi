@@ -577,8 +577,10 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k (_,n,loc) ->
-      if n = 1 && not @@ silence_linear_warn k then warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
-        F.pp k F.pp k F.pp k)) !sigma;
+      if n = 1 && not @@ silence_linear_warn k then
+        warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
+        F.pp k F.pp k F.pp k))
+      !sigma;
     !needs_spill, !unknown_global
 
 let check1_undeclared w f (t, id, loc) =
