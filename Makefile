@@ -14,6 +14,7 @@ help:
 	@echo '                           (can be combined with ONLY)'
 	@echo '  tests LN_NB=nb         sets max number of lines to print of failing tests'
 	@echo '                           (negave numbers means print all file)'
+	@echo '  tests STOP_ON_FST_ERROR=true stops the test suite after first error'
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
 	@echo
@@ -31,6 +32,7 @@ SHELL:=/usr/bin/env bash
 TIMEOUT=90.0
 PROMOTE=false
 LN_NB=-1
+STOP_ON_FST_ERROR=false
 PWD=$(shell pwd)
 RUNNERS=\
   dune \
@@ -87,6 +89,7 @@ tests:
 		--promote $(PROMOTE) \
 		--ln_nb=$(LN_NB) \
 		--timeout $(TIMEOUT) \
+		--stop-on-first-error=$(STOP_ON_FST_ERROR) \
 		$(TIME) \
 		--sources=$(PWD)/tests/sources/ \
 		--plot=$(PWD)/tests/plot \

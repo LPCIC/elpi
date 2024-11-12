@@ -8,14 +8,14 @@ let test ~expected found =
 
 let () = assert (k_of (mkConstant ~safe:false ~data:~-17 ~arity:0) == kConstant)
 let () = assert (k_of mkVariable == kVariable)
-let () = assert (k_of mkLam == kOther)
+let () = assert (k_of mkAny == kOther)
 let () =
   let c = Elpi_runtime.Data.C.in_int 4 in
   assert (k_of (mkPrimitive (Obj.magic c)) == kPrimitive)
   
 let () = assert (arity_of (mkConstant ~safe:false ~data:~-17 ~arity:3) == 3)
 let () = assert (arity_of mkVariable == 0)
-let () = assert (arity_of mkLam == 0)
+let () = assert (arity_of mkAny == 0)
 let () = assert (arity_of mkInputMode == 0)
 let () = assert (arity_of mkOutputMode == 0)
 let () = assert (arity_of mkListTailVariable == 0)
@@ -46,7 +46,7 @@ let () =
     (* Format.printf "%a\n" pp_path pathGoal; *)
     let pathInsts = List.map (fun (x,y) -> x @ [mkPathEnd], y) pathInsts in
     let add_to_trie t (key,value) = 
-      index t (Path.of_list key) value in
+      index t (Path.of_list key) ~max_list_length:1000 value in
     let trie = List.fold_left add_to_trie (empty_dt []) pathInsts in 
     let retrived = retrieve (fun x y -> y - x) pathGoal trie in
     let retrived_nb = Elpi_runtime.Bl.length retrived in 
@@ -61,7 +61,7 @@ let () =
   let p2 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; mkListEnd; constA], 2 in                    (* 2: [a,x0,x1,x3] a *)
   let p3 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; mkListEnd; mkVariable], 3 in                (* 3: [a,x0,x1,x3] X *)
   let p4 = [mkListHead; constA; mkName 0; mkName 1; mkName 2; constA; mkListEnd], 4 in                    (* 4: [a,x0,x1,x3,a] *)
-  let p5 = [mkLam; mkVariable], 5 in                                                                    (* 5: (x\ ...) X *)
+  let p5 = [mkAny; mkVariable], 5 in                                                                    (* 5: (x\ ...) X *)
   let p6 = [mkListHead; constF; mkListHead; mkName 1; mkName 2; mkListTailVariable; constA; mkListEnd], 6 in (* 6: [f [x1, x2 | _] a] f *)
   let p7 = [mkListHead; constA; mkVariable; mkListEnd; constA], 7 in                                      (* 7: [a,X] a *)
   let p8 = [mkListHead; constA; mkName 0; mkListEnd; mkVariable], 8 in                                    (* 8: [a,x0] X *)
@@ -74,7 +74,7 @@ let () =
 let () =  
   let get_length dt path = DT.retrieve compare path !dt |> Elpi_runtime.Bl.length in
   let remove dt e = dt := DT.remove (fun x -> x = e) !dt in
-  let index dt path v = dt := DT.index !dt path v in 
+  let index dt path v = dt := DT.index !dt path ~max_list_length:1000 v in 
 
   let constA = mkConstant ~safe:false ~data:~-1 ~arity:~-0 in (* a *)
   let p1 = [mkListHead; constA; mkListTailVariable; constA] in

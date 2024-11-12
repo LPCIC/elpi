@@ -172,8 +172,9 @@ let mkApp loc = function
   | [] -> anomaly ~loc "empty application"
   | x::_ -> raise (NotInProlog(loc,"syntax error: the head of an application must be a constant or a variable, got: " ^ best_effort_pp x.it))
 
-let mkAppF loc (cloc, c) = function
+let rec mkAppF loc (cloc, c) = function
   | [] -> anomaly ~loc "empty application"
+  | { loc; it = App({it=Const ","; loc=cloc}, tl1)} ::tl when c="," -> mkAppF loc (cloc, ",") (tl1@tl)
   | args -> { loc; it = App( { it = Const c; loc = cloc },args) }
 
 

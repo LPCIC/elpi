@@ -45,7 +45,7 @@ let mkConstant ~safe ~data ~arity =
 let mkPrimitive c = encode ~k:kPrimitive ~data:(CData.hash c lsl k_bits) ~arity:0
 
 let mkVariable = encode ~k:kVariable ~data:0 ~arity:0
-let mkLam = encode ~k:kOther ~data:0 ~arity:0
+let mkAny = encode ~k:kOther ~data:0 ~arity:0
 
 (* each argument starts with its mode *)
 let mkInputMode = encode ~k:kOther ~data:1 ~arity:0
@@ -54,15 +54,17 @@ let mkListTailVariable = encode ~k:kOther ~data:3 ~arity:0
 let mkListHead = encode ~k:kOther ~data:4 ~arity:0
 let mkListEnd = encode ~k:kOther ~data:5 ~arity:0 
 let mkPathEnd = encode ~k:kOther ~data:6 ~arity:0
+let mkListTailVariableUnif = encode ~k:kOther ~data:7 ~arity:0
 
 
 let isVariable x = x == mkVariable
-let isLam x = x == mkLam
+let isAny x = x == mkAny
 let isInput x = x == mkInputMode
 let isOutput x = x == mkOutputMode
 let isListHead x = x == mkListHead
 let isListEnd x = x == mkListEnd
 let isListTailVariable x = x == mkListTailVariable
+let isListTailVariableUnif x = x == mkListTailVariableUnif
 let isPathEnd x = x == mkPathEnd
 
 type cell = int
@@ -82,26 +84,21 @@ let pp_cell fmt n =
        else if isListHead n then "ListHead"
        else if isListEnd n then "ListEnd"
        else if isPathEnd n then "PathEnd"
-       else "Other")
+       else if isListTailVariableUnif n then "ListTailVariableUnif"
+       else if isAny n then "Other"
+       else failwith "Invalid path construct...")
   else if k == kPrimitive then Format.fprintf fmt "Primitive"
   else Format.fprintf fmt "%o" k
 
 let show_cell n = Format.asprintf "%a" pp_cell n
-module Path : sig
-  type t
-  val pp : Format.formatter -> t -> unit
-  val get : t -> int -> cell
-  type builder
-  val make : int -> cell -> builder
-  val emit : builder -> cell -> unit
-  val stop : builder -> t
-  val of_list : cell list -> t
 
-end = struct
+module Path = struct
  type t = cell array [@@deriving show]
  let get a i = a.(i)
 
+ 
  type builder = { mutable pos : int; mutable path : cell array }
+ let get_builder_pos {pos} = pos
  let make size e = { pos = 0; path = Array.make size e }
  let rec emit p e = 
     let len = Array.length p.path in
@@ -187,11 +184,11 @@ module Trie = struct
     let max = ref 0 in
     let rec ins ~pos = let x = Path.get a pos in function
       | Node ({ data } as t) when isPathEnd x -> max := pos; Node { t with data = v :: data }
-      | Node ({ other } as t) when isVariable x || isLam x ->
+      | Node ({ other } as t) when isVariable x || isAny x ->
           let t' = match other with None -> empty | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with other = Some t'' }
-      | Node ({ listTailVariable } as t) when isListTailVariable x ->
+      | Node ({ listTailVariable } as t) when isListTailVariable x || isListTailVariableUnif x ->
           let t' = match listTailVariable with None -> empty | Some x -> x in
           let t'' = ins ~pos:(pos+1) t' in
           Node { t with listTailVariable = Some t'' }
@@ -229,7 +226,7 @@ end
 
 let update_par_count n k =
   if isListHead k then n + 1 else
-  if isListEnd k || isListTailVariable k then n - 1 else n
+  if isListEnd k || isListTailVariable k || isListTailVariableUnif k then n - 1 else n
 
 let skip ~pos path (*hd tl*) : int =
   let rec aux_list acc p =
@@ -285,17 +282,18 @@ let skip_listTailVariable ~pos path : int =
     In the example it is no needed to index the goal path to depth 100, but rather considering
     the maximal depth of the first argument, which 4 << 100
   *)
-type 'a t = {t: 'a Trie.t; max_size : int;  max_depths : int array } 
+type 'a t = {t: 'a Trie.t; max_size : int;  max_depths : int array; max_list_length: int } 
 
 let pp pp_a fmt { t } : unit = Trie.pp (fun fmt data -> pp_a fmt data) fmt t
 let show pp_a { t } : string = Trie.show (fun fmt data -> pp_a fmt data) t
 
-let index { t; max_size; max_depths } path data =
+let index { t; max_size; max_depths; max_list_length = mll } ~max_list_length path data =
   let t, m = Trie.add path data t in
-  { t; max_size = max max_size m; max_depths }
+  { t; max_size = max max_size m; max_depths; max_list_length = max max_list_length mll }
 
 let max_path { max_size } = max_size
 let max_depths { max_depths } = max_depths 
+let max_list_length { max_list_length } = max_list_length
 
 (* the equivalent of skip, but on the index, thus the list of trees
     that are rooted just after the term represented by the tree root
@@ -330,7 +328,7 @@ let skip_to_listEnd ~add_result mode (Trie.Node { other; map; listTailVariable }
 
 let skip_to_listEnd mode t = call (skip_to_listEnd mode t)
 
-let get_all_children v mode = isLam v || (isVariable v && isOutput mode)
+let get_all_children v mode = isAny v || (isVariable v && isOutput mode)
 
 let rec retrieve ~pos ~add_result mode path tree : unit =
   let hd = Path.get path pos in
@@ -341,8 +339,8 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
   else if isInput hd || isOutput hd then 
     (* next argument, we update the mode *)
      retrieve ~pos:(pos+1) ~add_result hd path tree
-  else if isListTailVariable hd then
-    let sub_tries = skip_to_listEnd mode tree in
+  else if isListTailVariable hd || isListTailVariableUnif hd then
+    let sub_tries = skip_to_listEnd (if isListTailVariableUnif hd then mkOutputMode else mode) tree in
     List.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
   else begin
     (* Here the constructor can be Constant, Primitive, Variable, Other, ListHead, ListEnd *)
@@ -389,7 +387,7 @@ and on_all_children ~pos ~add_result mode path map =
 
 let empty_dt args_depth : 'a t =
   let max_depths = Array.make (List.length args_depth) 0 in
-  {t = Trie.empty; max_depths; max_size = 0}
+  {t = Trie.empty; max_depths; max_size = 0; max_list_length=0}
 
 let retrieve ~pos ~add_result path index =
   let mode = Path.get path pos in
@@ -414,12 +412,13 @@ module Internal = struct
   let data_of = data_of
 
   let isVariable = isVariable
-  let isLam = isLam
+  let isAny = isAny
   let isInput = isInput
   let isOutput = isOutput
   let isListHead = isListHead
   let isListEnd = isListEnd
   let isListTailVariable = isListTailVariable
+  let isListTailVariableUnif = isListTailVariableUnif
   let isPathEnd = isPathEnd
 
 end
