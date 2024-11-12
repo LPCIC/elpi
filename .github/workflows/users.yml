@@ -26,7 +26,7 @@ jobs:
           env:
             OPAMWITHTEST: false
             
-        - run: opam pin add coq-elpi https://github.com/LPCIC/coq-elpi.git#master
+        - run: opam pin add coq-elpi https://github.com/LPCIC/coq-elpi.git#elpi-new-compiler
         - run: opam pin add coq-hierarchy-builder https://github.com/math-comp/hierarchy-builder.git#fix-elpi-loc
         - run: opam pin add coq-mathcomp-ssreflect https://github.com/math-comp/math-comp.git#master
         - run: opam pin add coq-mathcomp-fingroup https://github.com/math-comp/math-comp.git#master
