@@ -129,7 +129,7 @@ end = struct
     
   let allocate_global_symbol state table x =
     if not (D.State.get D.while_compiling state) then
-      anomaly ("global symbols can only be allocated during compilation");
+      anomaly (Format.asprintf "Cannot allocate a symbol for %a. Global symbols can only be allocated during compilation" F.pp x);
     allocate_global_symbol_aux x table
 
   let allocate_bound_symbol_aux n ({ c2t; ast2ct } as table) =
@@ -140,8 +140,6 @@ end = struct
       { table with c2t; ast2ct }, xx
 
   let allocate_bound_symbol state table n =
-    if not (D.State.get D.while_compiling state) then
-      anomaly "bound symbols can only be allocated during compilation";
     if n < 0 then
       anomaly "bound variables are positive";
     allocate_bound_symbol_aux n table
@@ -149,9 +147,10 @@ end = struct
 
   let get_canonical state table c =
     if not (D.State.get D.while_compiling state) then
-      anomaly "get_canonical can only be used during compilation";
-    try Util.Constants.Map.find c table.c2t
-    with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
+      D.Const c
+    else
+      try Util.Constants.Map.find c table.c2t
+      with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
 
   let global_name state table c =
     if not (D.State.get D.while_compiling state) then
@@ -3065,7 +3064,11 @@ module Assemble : sig
 
   (* for the query *)
   val compile_query : State.t -> Assembled.program -> bool * ScopedTerm.t -> SymbolMap.table * int F.Map.t * D.term
-  val compile_query_term : State.t -> Assembled.program -> ?ctx:constant Scope.Map.t -> depth:int -> ScopedTerm.t -> State.t * D.term
+  val compile_query_term :
+    State.t -> Assembled.program ->
+    ?ctx:constant Scope.Map.t ->
+    ?amap:constant F.Map.t ->
+    depth:int -> ScopedTerm.t -> constant F.Map.t * D.term
 
 end = struct
 
@@ -3153,10 +3156,16 @@ end = struct
         let n = F.Map.cardinal !amap in
         amap := F.Map.add c n !amap;
         n in
+    let lookup_global c =
+      match SymbolMap.get_global_symbol !symb c with
+      | None -> raise Not_found
+      | Some c -> c, SymbolMap.get_canonical state !symb c in
     let allocate_global_symbol c =
-      let s, rc = SymbolMap.allocate_global_symbol state !symb c in
-      symb := s;
-      rc in
+      try lookup_global c
+      with Not_found ->
+        let s, rc = SymbolMap.allocate_global_symbol state !symb c in
+        symb := s;
+        rc in
     let lookup_bound loc (_,ctx) (c,l as x) =
       try Scope.Map.find x ctx
       with Not_found -> error ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "") in
@@ -3503,10 +3512,9 @@ in
     let (symbols, amap), t = todbl ~needs_spilling state symbols t in
     symbols, amap, t 
 
-  let compile_query_term state { Assembled.symbols; } ?ctx ~depth t =
-    let amap = get_argmap state in
+  let compile_query_term state { Assembled.symbols; } ?ctx ?(amap = F.Map.empty) ~depth t =
     let (symbols', amap), rt = todbl ?ctx ~needs_spilling:false state symbols ~depth ~amap t in
-    if SymbolMap.equal symbols' symbols then set_argmap state amap, rt
+    if SymbolMap.equal symbols' symbols then amap, rt
     else error ~loc:t.ScopedTerm.loc "cannot allocate new symbols in the query"
 
 end
@@ -3713,7 +3721,9 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
     total_type_checking_time;
   }
 
-let term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~depth t =
+let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~depth t =
+  if not @@ State.get Data.while_compiling state then
+    anomaly "compile_term_to_raw_term called at run time";
   let { Assembled.kinds; types; type_abbrevs; toplevel_macros = _; chr; prolog_program; total_type_checking_time } = assembled_program in
   if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
     let needs_spilling, unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
@@ -3722,7 +3732,19 @@ let term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~depth t =
     let _ : Type_checker.env = Type_checker.check_undeclared ~unknown in
     ()
   end;
-  Assemble.compile_query_term ?ctx state assembled_program ~depth t
+  let amap = get_argmap state in
+  let amap, t = Assemble.compile_query_term ?ctx ~amap state assembled_program ~depth t in
+  set_argmap state amap,t
+
+let runtime_hack_term_to_raw_term state (_, assembled_program) ?ctx ~depth t =
+  if State.get Data.while_compiling state then
+    anomaly "runtime_hack_term_to_raw_term called at compile time";
+  let amap, t = Assemble.compile_query_term ?ctx state assembled_program ~depth t in
+  if F.Map.is_empty amap then t
+  else 
+    let query_env = Array.make (F.Map.cardinal amap) D.dummy in
+    R.move ~argsdepth:depth ~from:depth ~to_:depth query_env t
+        
 
 let query_of_scoped_term (compiler_state, assembled_program) f =
   let compiler_state = State.begin_goal_compilation compiler_state in

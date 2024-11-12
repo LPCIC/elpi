@@ -1118,7 +1118,7 @@ module RawQuery = struct
   let compile_raw_term p f = Compiler.query_of_raw_term p f
   let term_to_raw_term s p ?ctx ~depth t =
     let check = ED.State.get ED.while_compiling s in
-    Compiler.term_to_raw_term ~check s p ?ctx ~depth @@
+    Compiler.compile_term_to_raw_term ~check s p ?ctx ~depth @@
     Compiler_data.ScopedTerm.of_simple_term_loc t
   let compile_ast = Compiler.query_of_ast
   let mk_Arg = Compiler.mk_Arg
@@ -1416,6 +1416,10 @@ module Utils = struct
       attributes;
       body = aux depth Util.IntMap.empty term;
     }]
+
+  let term_to_raw_term s p ?ctx ~depth t =
+    Compiler.runtime_hack_term_to_raw_term s p ?ctx ~depth @@
+    Compiler_data.ScopedTerm.of_simple_term_loc t
 
   let map_acc = BuiltInData.map_acc
 

@@ -41,6 +41,12 @@ module Ast : sig
       val show : t -> string
       val pp : Format.formatter -> t -> unit
      end
+     module Map : sig
+      include Map.S with type key = t
+      val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+      val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+     end
+
    val from_string : string -> t
 
    type constant = int
@@ -1278,8 +1284,11 @@ module RawQuery : sig
   val compile_raw_term :
     Compile.program -> (State.t -> State.t * Data.term * Conversion.extra_goals) -> unit Compile.query
 
-    (** typechecks only at compile time and if ctx is empty *)
-  val term_to_raw_term : State.t -> Compile.program -> ?ctx:RawData.constant Ast.Scope.Map.t -> depth:int -> Ast.Term.t -> State.t * Data.term
+  (** typechecks only if ctx is empty *)
+  val term_to_raw_term :
+    State.t -> Compile.program ->
+    ?ctx:RawData.constant Ast.Scope.Map.t ->
+    depth:int -> Ast.Term.t -> State.t * Data.term
 
   (** raises Not_found *)
   val global_name_to_constant : State.t -> string -> RawData.constant
@@ -1351,6 +1360,12 @@ module Utils : sig
   val clause_of_term :
     ?name:string -> ?graft:([`After | `Before | `Replace | `Remove] * string) ->
     depth:int -> Ast.Loc.t -> Data.term -> Ast.program
+
+  (** Hackish *)
+  val term_to_raw_term :
+    State.t -> Compile.program ->
+    ?ctx:RawData.constant Ast.Scope.Map.t ->
+    depth:int -> Ast.Term.t -> Data.term
 
   (** Lifting/restriction/beta (LOW LEVEL, don't use) *)
   val move : from:int -> to_:int -> Data.term -> Data.term
