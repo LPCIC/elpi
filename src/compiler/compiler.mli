@@ -31,19 +31,19 @@ val unit_of_ast : flags:flags -> header:header -> Ast.Program.t -> unchecked_com
 val append_unit : flags:flags -> base:program -> checked_compilation_unit -> program
 val check_unit : base:program -> unchecked_compilation_unit -> checked_compilation_unit
 
-type 'a query
-val query_of_ast : program -> Ast.Goal.t -> (State.t -> State.t) -> unit query
-val query_of_scoped_term : program -> (State.t -> State.t * Compiler_data.ScopedTerm.t) -> unit query
-val query_of_raw_term : program -> (State.t -> State.t * term * Conversion.extra_goals) -> unit query
+type query
+val query_of_ast : program -> Ast.Goal.t -> (State.t -> State.t) -> query
+val query_of_scoped_term : program -> (State.t -> State.t * Compiler_data.ScopedTerm.t) -> query
+val query_of_raw_term : program -> (State.t -> State.t * term * Conversion.extra_goals) -> query
 
-val total_type_checking_time : 'a query -> float
+val total_type_checking_time : query -> float
 
-val optimize_query : 'a query -> 'a executable
+val optimize_query : query -> executable
 
 val relocate_closed_term : from:symbol_table -> to_:program -> term -> (term, string) Stdlib.Result.t
 
 val pp_program : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> program -> unit
-val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
+val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> query -> unit
 
 (* val lookup_query_predicate : program -> string -> program * Data.constant *)
 

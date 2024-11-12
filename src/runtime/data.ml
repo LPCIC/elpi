@@ -1317,18 +1317,7 @@ let document fmt l calc_list =
 ;;
 
 type builtin_table = (int, t) Hashtbl.t
-
-end
-
-module Query = struct
-  type name = string
-  type _ arguments =
-    | N : unit arguments
-    | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
-    | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
-
-  type 'x t =
-    | Query of { predicate : constant; arguments : 'x arguments }
+[@@deriving show]
 
 end
 
@@ -1339,7 +1328,7 @@ type symbol_table = {
 }
 [@@deriving show]
 
-type 'a executable = {
+type executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
   compiled_program : prolog_prog;
   (* chr rules *)
@@ -1355,8 +1344,6 @@ type 'a executable = {
   builtins : BuiltInPredicate.builtin_table;
   (* solution *)
   assignments : term Util.StrMap.t;
-  (* type of the query, reified *)
-  query_arguments: 'a Query.arguments;
 }
 
 type pp_ctx = {
@@ -1364,14 +1351,13 @@ type pp_ctx = {
   table : symbol_table;
 }
 
-type 'a solution = {
+type solution = {
   assignments : term StrMap.t;
   constraints : constraints;
   state : State.t;
-  output : 'a;
   pp_ctx : pp_ctx;
   state_for_relocation : int * symbol_table;
 }
-type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
+type 'a outcome = Success of solution | Failure | NoMoreSteps
 
 exception CannotDeclareClauseForBuiltin of Loc.t option * constant

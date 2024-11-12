@@ -120,11 +120,7 @@ let mkC loc x = { loc; it = CData x }
 let mkLam loc x ty t = { loc; it = Lam (Func.from_string x,ty,t) }
 let mkNil loc = {loc; it = Const Func.nilf }
 let mkQuoted loc s =
-  let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n;
-                                 source_stop = loc.Loc.source_stop(* - m*);
-                                 line_starts_at = loc.Loc.line_starts_at(* - m*); } in
-  (* {{...}} stripped by the parser *)
-  (* let loc = strip 2 2 loc in *)
+  let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n } in
   let rec find_data i =
     match s.[i] with
     | '{' -> find_data (i+1)
@@ -260,7 +256,7 @@ module Program = struct
     | Shorten of Loc.t * (Func.t * Func.t) list (* prefix suffix *)
     | End of Loc.t
 
-    | Accumulated of Loc.t * (string * Digest.t * decl list) list
+    | Accumulated of Loc.t * parser_output list
 
     (* data *)
     | Clause of (Term.t, raw_attribute list) Clause.t
@@ -271,6 +267,7 @@ module Program = struct
     | Pred of (raw_attribute list,raw_attribute list) Type.t
     | TypeAbbreviation of (Func.t,raw_attribute list TypeExpression.t) TypeAbbreviation.t
     | Ignored of Loc.t
+  and parser_output = { file_name : string; digest : Digest.t; ast : decl list }
   [@@deriving show]
 
 
@@ -368,3 +365,4 @@ and variadic = Variadic | NotVariadic
 [@@deriving show, ord]
 
 end
+

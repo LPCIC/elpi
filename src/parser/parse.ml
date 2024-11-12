@@ -32,7 +32,7 @@ end
 
 module Make(C : Config) = struct
   
-let parse_ref : (?cwd:string -> string -> (string * Digest.t * Ast.Program.decl list) list) ref =
+let parse_ref : (?cwd:string -> string -> Ast.Program.parser_output list) ref =
   ref (fun ?cwd:_ _ -> assert false)
   
 module Grammar = Grammar.Make(struct
@@ -76,7 +76,7 @@ let () =
     else [filename,digest] in
   to_parse |> List.map (fun (filename,digest) ->
     if Hashtbl.mem already_parsed digest then
-      filename, digest, []
+      { Ast.Program.file_name = filename; digest; ast = [] }
     else
       let ic = open_in filename in
       let lexbuf = Lexing.from_channel ic in
@@ -84,7 +84,7 @@ let () =
       Hashtbl.add already_parsed digest true;
       let ast = parse Grammar.program lexbuf in
       close_in ic;
-      filename, digest,ast))
+      { file_name = filename; digest; ast }))
 
 let to_lexing_loc { Util.Loc.source_name; line; line_starts_at; source_start; _ } =
   { Lexing.pos_fname = source_name;
@@ -114,7 +114,7 @@ let program_from ~loc lexbuf =
 
 let program ~file =
   Hashtbl.clear already_parsed;
-  List.(concat (map (fun (_,_,x) -> x) @@ !parse_ref file))
+  List.(concat (map (fun { Ast.Program.ast = x } -> x) @@ !parse_ref file))
 
 module Internal = struct
 let infix_SYMB = Grammar.infix_SYMB

@@ -28,6 +28,10 @@ module Scope = struct
     type t = F.t * language
     [@@ deriving show, ord]
   end)
+  module Set = Set.Make(struct
+    type t = F.t * language
+    [@@ deriving show, ord]
+  end)
 
   let mkGlobal ?(escape_ns=false) ?(decl_id = dummy_type_decl_id) () =
     Global { escape_ns; decl_id }
@@ -541,31 +545,45 @@ module ScopedTerm = struct
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
 
     let beta t args =
-      let rec load_subst ~loc t (args : t list) map =
+      let rec fv acc { it } =
+        match it with
+        | Const(Bound l,c) -> Scope.Set.add (c,l) acc
+        | Impl(_,a,b) -> List.fold_left fv acc [a;b]
+        | Var (_,args) -> List.fold_left fv acc args
+        | App(Bound l,c,x,xs) -> List.fold_left fv (Scope.Set.add (c,l) acc) (x::xs)
+        | App(Global _,_,x,xs) -> List.fold_left fv acc (x::xs)
+        | Lam(None,_,t) -> fv acc t
+        | Lam(Some (c,l),_,t) -> Scope.Set.union acc @@ Scope.Set.remove (c,l) (fv Scope.Set.empty t)
+        | Spill(t,_) -> fv acc t
+        | Cast(t,_) -> fv acc t
+        | Discard | Const _ | CData _ -> acc in
+      let rec load_subst ~loc t (args : t list) map fvset =
         match t, args with
-        | Lam(None,_,t), _ :: xs -> load_subst_loc t xs map
-        | Lam(Some c,_,t), x :: xs -> load_subst_loc t xs (Scope.Map.add c x map)
-        | t, xs -> app ~loc (subst map t) xs
-      and load_subst_loc { it; loc } args map =
-        load_subst ~loc it args map
-      and subst (map : t Scope.Map.t) t =
+        | Lam(None,_,t), _ :: xs -> load_subst_loc t xs map fvset
+        | Lam(Some c,_,t), x :: xs -> load_subst_loc t xs (Scope.Map.add c x map) (fv fvset x)
+        | t, xs -> app ~loc (subst map fvset t) xs
+      and load_subst_loc { it; loc } args map fvset =
+        load_subst ~loc it args map fvset
+      and subst (map : t Scope.Map.t) fv t =
         match t with
-        | Impl(b,t1,t2) -> Impl(b,subst_loc map t1, subst_loc map t2)
-        | Lam(None,ty,t) -> Lam(None,ty,subst_loc map t)
+        | Impl(b,t1,t2) -> Impl(b,subst_loc map fv t1, subst_loc map fv t2)
+        | Lam(None,ty,t) -> Lam(None,ty,subst_loc map fv t)
+        | Lam(Some (c,l),ty,t) when not @@ Scope.Map.mem (c,l) map && not @@ Scope.Set.mem (c,l) fv ->
+            Lam(Some (c,l),ty,subst_loc map fv @@ t)
         | Lam(Some (c,l),ty,t) ->
             let d = fresh () in
-            Lam(Some (d,l),ty,subst_loc map @@ rename_loc l c d t)
+            Lam(Some (d,l),ty,subst_loc map fv @@ rename_loc l c d t)
         | Const(Bound l,c) when Scope.Map.mem (c,l) map -> unlock @@ Scope.Map.find (c,l) map
         | Const _ -> t
         | App(Bound l,c,x,xs) when Scope.Map.mem (c,l) map ->
             let hd = Scope.Map.find (c,l) map in
-            unlock @@ app_loc hd (List.map (subst_loc map) (x::xs))
-        | App(g,c,x,xs) -> App(g,c,subst_loc map x, List.map (subst_loc map) xs)
-        | Var(c,xs) -> Var(c,List.map (subst_loc map) xs)
-        | Spill(t,i) -> Spill(subst_loc map t,i)
-        | Cast(t,ty) -> Cast(subst_loc map t,ty)
+            unlock @@ app_loc hd (List.map (subst_loc map fv) (x::xs))
+        | App(g,c,x,xs) -> App(g,c,subst_loc map fv x, List.map (subst_loc map fv) xs)
+        | Var(c,xs) -> Var(c,List.map (subst_loc map fv) xs)
+        | Spill(t,i) -> Spill(subst_loc map fv t,i)
+        | Cast(t,ty) -> Cast(subst_loc map fv t,ty)
         | Discard | CData _ -> t
-      and subst_loc map { it; ty; loc } = { it = subst map it; ty; loc }
+      and subst_loc map fv { it; ty; loc } = { it = subst map fv it; ty; loc }
       and app_loc { it; loc; ty } args : t = { it = app ~loc it args; loc; ty }
       and app ~loc t (args : t list) =
         if args = [] then t else
@@ -578,9 +596,9 @@ module ScopedTerm = struct
         | Spill _ -> error ~loc "cannot apply spill"
         | Discard -> error ~loc "cannot apply discard"
         | Cast _ -> error ~loc "cannot apply cast"
-        | Lam _ -> load_subst ~loc t args Scope.Map.empty
+        | Lam _ -> load_subst ~loc t args Scope.Map.empty Scope.Set.empty
       in
-        load_subst_loc t args Scope.Map.empty
+        load_subst_loc t args Scope.Map.empty Scope.Set.empty
 
   module QTerm = struct
     include SimpleTerm

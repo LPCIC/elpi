@@ -144,11 +144,10 @@ module Data = struct
   type state = Data.State.t
   type pretty_printer_context = ED.pp_ctx
   module StrMap = Util.StrMap
-  type 'a solution = {
+  type solution = {
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
-    output : 'a;
     pp_ctx : pretty_printer_context;
     relocate_assignment_to_runtime : target:Compiler.program -> depth:int -> string -> (term, string) Stdlib.Result.t
   }
@@ -162,8 +161,8 @@ end
 module Compile = struct
 
   type program = Compiler.program
-  type 'a query = 'a Compiler.query
-  type 'a executable = 'a ED.executable
+  type query = Compiler.query
+  type executable = ED.executable
   type compilation_unit = Compiler.checked_compilation_unit
   exception CompileError = Compiler_data.CompileError
 
@@ -196,8 +195,8 @@ module Compile = struct
 end
 
 module Execute = struct
-  type 'a outcome =
-    Success of 'a Data.solution | Failure | NoMoreSteps
+  type outcome =
+    Success of Data.solution | Failure | NoMoreSteps
 
   let rec uvar2discard ~depth t =
     let open ED in
@@ -214,8 +213,8 @@ module Execute = struct
   let map_outcome full_deref hmove = function
     | ED.Failure -> Failure
     | ED.NoMoreSteps -> NoMoreSteps
-    | ED.Success { ED.assignments; constraints; state; output; pp_ctx; state_for_relocation = (idepth,from); } -> 
-      Success { assignments; constraints; state; output; pp_ctx;
+    | ED.Success { ED.assignments; constraints; state; pp_ctx; state_for_relocation = (idepth,from); } -> 
+      Success { assignments; constraints; state; pp_ctx;
         relocate_assignment_to_runtime = (fun ~target ~depth s ->
           Compiler.relocate_closed_term ~from
             (Util.StrMap.find s assignments |> full_deref ~depth:idepth |> uvar2discard ~depth:idepth) ~to_:target
@@ -1072,21 +1071,6 @@ module BuiltIn = struct
     Format.pp_print_flush fmt ();
     close_out oc
 end
-
-(* module Query = struct
-  type name = string
-  type 'f arguments = 'f ED.Query.arguments =
-    | N : unit arguments
-    | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
-    | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
-
-  type 'x t = Query of { predicate : name; arguments : 'x arguments }
-
-  let compile p loc (Query { predicate; arguments }) =
-    let p, predicate = Compiler.lookup_query_predicate p predicate in
-    let q = ED.Query.Query{ predicate; arguments } in
-    Compiler.query_of_data p loc q
-end *)
 
 module State = struct
   include ED.State

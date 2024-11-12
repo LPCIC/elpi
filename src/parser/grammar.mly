@@ -185,12 +185,30 @@ pred:
   name = constant; args = separated_list(option(CONJ),pred_item) {
    { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([], args) } }
  }
+| attributes = attributes; FUNC;
+  name = constant; in_args = separated_list(CONJ,fotype_term); ARROW; out_args = separated_list(CONJ,fotype_term) {
+    let args = List.map (fun x -> Mode.Input,x) in_args @ List.map (fun x -> Mode.Output,x) out_args in
+    { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([Functional], args) } }
+  }
+| attributes = attributes; FUNC;
+  name = constant; in_args = separated_list(CONJ,fotype_term) {
+  let args = List.map (fun x -> Mode.Input,x) in_args in
+  { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([Functional], args) } }
+}
+
 pred_item:
 | io = IO_COLON; ty = type_term { (mode_of_IO io,ty) }
 
 anonymous_pred:
-| attributes = attributes; PRED;
-  args = separated_list(option(CONJ),pred_item) { { tloc = loc $loc; tit = TPred (attributes, args) } }
+| PRED; args = separated_list(option(CONJ),pred_item) { { tloc = loc $loc; tit = TPred ([], args) } }
+| FUNC; in_args = separated_list(CONJ,fotype_term); ARROW; out_args = separated_list(CONJ,fotype_term) {
+    let args = List.map (fun x -> Mode.Input,x) in_args @ List.map (fun x -> Mode.Output,x) out_args in
+    { tloc = loc $loc; tit = TPred ([Functional], args) }
+  }
+| FUNC; in_args = separated_list(CONJ,fotype_term) {
+    let args = List.map (fun x -> Mode.Input,x) in_args in
+    { tloc = loc $loc; tit = TPred ([Functional], args) }
+  }
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
@@ -208,12 +226,14 @@ atype_term:
 | c = constant { { tloc = loc $loc; tit = TConst (fix_church c) } }
 | LPAREN; t = type_term; RPAREN { t }
 | LPAREN; t = anonymous_pred; RPAREN { t }
-type_term:
+fotype_term:
 | c = constant { { tloc = loc $loc; tit = TConst (fix_church c) } }
 | hd = constant; args = nonempty_list(atype_term) { { tloc = loc $loc; tit = TApp (hd, List.hd args, List.tl args) } }
-| hd = type_term; ARROW; t = type_term { { tloc = loc $loc; tit = TArr (hd, t) } }
 | LPAREN; t = anonymous_pred; RPAREN { t }
 | LPAREN; t = type_term; RPAREN { t }
+type_term:
+| fo = fotype_term { fo }
+| hd = fotype_term; ARROW; t = type_term { { tloc = loc $loc; tit = TArr (hd, t) } }
 
 kind_term:
 | TYPE { { tloc = loc $loc; tit = TConst (Func.from_string "type") } }

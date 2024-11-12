@@ -57,7 +57,7 @@ let testR s x y w z attributes to_match to_remove guard new_goal =
     Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
     exit 1
      
-let testT s x y w z attributes () =
+let testT s () =
   let lexbuf = Lexing.from_string s in
   let loc = Loc.initial "(input)" in
   try
@@ -203,8 +203,8 @@ let _ =
   testF "x. +"              4 "unexpected start";
   (*    01234567890123456789012345 *)
   test  ":name \"x\" x."    1 11 1 0 [Name "x"] (c 11 "x");
-  testT ":index (1) \"foobar\" pred x." 1 11 1 0 [Index ([1],Some "foobar")] ();
-  testT ":index (1) pred x."     1 11 1 0 [Index ([1], None)] ();
+  testT ":index (1) \"foobar\" pred x." ();
+  testT ":index (1) pred x."     ();
   testF "p :- g (f x) \\ y." 14 ".*bind.*must follow.*name.*";
   testF "foo i:term, o:term. foo A B :- A = [B]." 6 "unexpected keyword";
   (*    01234567890123456789012345 *)
@@ -216,8 +216,13 @@ let _ =
   test  "p :- pi x : y \\ z."   1 17 1 0 [] (app ":-" 3 [c 1 "p"; app "pi" 6 [lam "x" 9 ~ty:(ct 13 "y") (c 17 "z")]]);
   (*    01234567890123456789012345 *)
   test  "p :- f (x : y)."   1 14 1 0 [] (app ":-" 3 [c 1 "p"; app "f" 6 [cast 8 14 (c ~bug 9 "x") (ct 13 "y")]]);
-  testF "p :- f (x : y \\ z)." 15 "Illformed binder" 
+  testF "p :- f (x : y \\ z)." 15 "Illformed binder";
   (*    01234567890123456789012345 *)
+  testT "func x int, int -> bool, bool."          ();
+  testT "func x int, list int -> bool."           ();
+  testT "type x (func int, list int -> bool)."           ();
+  testT "func x int, (func int -> int) -> bool."  ();
+
 
 ;; 
 

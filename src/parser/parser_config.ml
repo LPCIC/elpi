@@ -12,7 +12,7 @@ exception ParseError of Util.Loc.t * string
    resolution is not a parser business *)
 
 module type ParseFile = sig
-  val parse_file : ?cwd:string -> string -> (string * Digest.t * Ast.Program.decl list) list
+  val parse_file : ?cwd:string -> string -> Ast.Program.parser_output list
 end
 
 let rec substrings i len_s s =

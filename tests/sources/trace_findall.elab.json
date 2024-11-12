@@ -39,7 +39,7 @@
               { "goal_text": "std.findall (p _) X0", "goal_id": 5 },
               { "goal_text": "print X0", "goal_id": 6 }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -66,6 +66,465 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "Green"
+  },
+  {
+    "step_id": 2,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 5,
+        "current_goal_text": "std.findall (p _) X0",
+        "current_goal_predicate": "std.findall",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(std.findall A0 A1) :- (findall_solutions A0 A1).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "builtin_stdlib.elpi",
+                      "line": 306,
+                      "column": 0,
+                      "character": 10063
+                    }
+                  ]
+                }
+              ],
+              "events": [
+                [ "Assign", "A0 := p _" ], [ "Assign", "A1 := X0" ]
+              ]
+            },
+            "siblings": [
+              { "goal_text": "findall_solutions (p _) X0", "goal_id": 7 }
+            ],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(std.findall A0 A1) :- (findall_solutions A0 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin_stdlib.elpi",
+                    "line": 306,
+                    "column": 0,
+                    "character": 10063
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (std.findall (p _) A0), (print A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_findall.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 37
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 3,
+    "runtime_id": 0,
+    "step": [
+      "Findall",
+      {
+        "findall_goal_id": 7,
+        "findall_goal_text": "findall_solutions (p _) X0",
+        "findall_cards": [
+          {
+            "step_id": 0,
+            "runtime_id": 1,
+            "step": [ "Init", { "goal_text": "p X0", "goal_id": 8 } ],
+            "color": "Grey"
+          },
+          {
+            "step_id": 1,
+            "runtime_id": 1,
+            "step": [
+              "Inference",
+              {
+                "current_goal_id": 8,
+                "current_goal_text": "p X0",
+                "current_goal_predicate": "p",
+                "failed_attempts": [],
+                "successful_attempts": [
+                  {
+                    "attempt": {
+                      "rule": [
+                        "UserRule",
+                        {
+                          "rule_text": "(p 1) :- .",
+                          "rule_loc": [
+                            "File",
+                            {
+                              "filename": "tests/sources/trace_findall.elpi",
+                              "line": 2,
+                              "column": 0,
+                              "character": 14
+                            }
+                          ]
+                        }
+                      ],
+                      "events": [ [ "Assign", "X0 := 1" ] ]
+                    },
+                    "siblings": [],
+                    "siblings_aggregated_outcome": "Success"
+                  }
+                ],
+                "more_successful_attempts": [ 2, 3 ],
+                "stack": [
+                  {
+                    "rule": [
+                      "UserRule",
+                      {
+                        "rule_text": "(p 1) :- .",
+                        "rule_loc": [
+                          "File",
+                          {
+                            "filename": "tests/sources/trace_findall.elpi",
+                            "line": 2,
+                            "column": 0,
+                            "character": 14
+                          }
+                        ]
+                      }
+                    ],
+                    "step_id": 1,
+                    "runtime_id": 1
+                  }
+                ]
+              }
+            ],
+            "color": "YellowGreen"
+          },
+          {
+            "step_id": 2,
+            "runtime_id": 1,
+            "step": [
+              "Inference",
+              {
+                "current_goal_id": 8,
+                "current_goal_text": "p X0",
+                "current_goal_predicate": "p",
+                "failed_attempts": [],
+                "successful_attempts": [
+                  {
+                    "attempt": {
+                      "rule": [
+                        "UserRule",
+                        {
+                          "rule_text": "(p 2) :- .",
+                          "rule_loc": [
+                            "File",
+                            {
+                              "filename": "tests/sources/trace_findall.elpi",
+                              "line": 3,
+                              "column": 0,
+                              "character": 19
+                            }
+                          ]
+                        }
+                      ],
+                      "events": [ [ "Assign", "X0 := 2" ] ]
+                    },
+                    "siblings": [],
+                    "siblings_aggregated_outcome": "Success"
+                  }
+                ],
+                "more_successful_attempts": [ 3 ],
+                "stack": [
+                  {
+                    "rule": [
+                      "UserRule",
+                      {
+                        "rule_text": "(p 2) :- .",
+                        "rule_loc": [
+                          "File",
+                          {
+                            "filename": "tests/sources/trace_findall.elpi",
+                            "line": 3,
+                            "column": 0,
+                            "character": 19
+                          }
+                        ]
+                      }
+                    ],
+                    "step_id": 2,
+                    "runtime_id": 1
+                  }
+                ]
+              }
+            ],
+            "color": "YellowGreen"
+          },
+          {
+            "step_id": 3,
+            "runtime_id": 1,
+            "step": [
+              "Inference",
+              {
+                "current_goal_id": 8,
+                "current_goal_text": "p X0",
+                "current_goal_predicate": "p",
+                "failed_attempts": [],
+                "successful_attempts": [
+                  {
+                    "attempt": {
+                      "rule": [
+                        "UserRule",
+                        {
+                          "rule_text": "(p 3) :- (p 2).",
+                          "rule_loc": [
+                            "File",
+                            {
+                              "filename": "tests/sources/trace_findall.elpi",
+                              "line": 4,
+                              "column": 0,
+                              "character": 24
+                            }
+                          ]
+                        }
+                      ],
+                      "events": [ [ "Assign", "X0 := 3" ] ]
+                    },
+                    "siblings": [ { "goal_text": "p 2", "goal_id": 9 } ],
+                    "siblings_aggregated_outcome": "Success"
+                  }
+                ],
+                "more_successful_attempts": [],
+                "stack": [
+                  {
+                    "rule": [
+                      "UserRule",
+                      {
+                        "rule_text": "(p 3) :- (p 2).",
+                        "rule_loc": [
+                          "File",
+                          {
+                            "filename": "tests/sources/trace_findall.elpi",
+                            "line": 4,
+                            "column": 0,
+                            "character": 24
+                          }
+                        ]
+                      }
+                    ],
+                    "step_id": 3,
+                    "runtime_id": 1
+                  }
+                ]
+              }
+            ],
+            "color": "Green"
+          },
+          {
+            "step_id": 4,
+            "runtime_id": 1,
+            "step": [
+              "Inference",
+              {
+                "current_goal_id": 9,
+                "current_goal_text": "p 2",
+                "current_goal_predicate": "p",
+                "failed_attempts": [],
+                "successful_attempts": [
+                  {
+                    "attempt": {
+                      "rule": [
+                        "UserRule",
+                        {
+                          "rule_text": "(p 2) :- .",
+                          "rule_loc": [
+                            "File",
+                            {
+                              "filename": "tests/sources/trace_findall.elpi",
+                              "line": 3,
+                              "column": 0,
+                              "character": 19
+                            }
+                          ]
+                        }
+                      ],
+                      "events": []
+                    },
+                    "siblings": [],
+                    "siblings_aggregated_outcome": "Success"
+                  }
+                ],
+                "more_successful_attempts": [],
+                "stack": [
+                  {
+                    "rule": [
+                      "UserRule",
+                      {
+                        "rule_text": "(p 2) :- .",
+                        "rule_loc": [
+                          "File",
+                          {
+                            "filename": "tests/sources/trace_findall.elpi",
+                            "line": 3,
+                            "column": 0,
+                            "character": 19
+                          }
+                        ]
+                      }
+                    ],
+                    "step_id": 4,
+                    "runtime_id": 1
+                  },
+                  {
+                    "rule": [
+                      "UserRule",
+                      {
+                        "rule_text": "(p 3) :- (p 2).",
+                        "rule_loc": [
+                          "File",
+                          {
+                            "filename": "tests/sources/trace_findall.elpi",
+                            "line": 4,
+                            "column": 0,
+                            "character": 24
+                          }
+                        ]
+                      }
+                    ],
+                    "step_id": 3,
+                    "runtime_id": 1
+                  }
+                ]
+              }
+            ],
+            "color": "Green"
+          }
+        ],
+        "findall_solution_text": [ "X0 := [p 1, p 2, p 3]" ],
+        "findall_stack": [
+          {
+            "rule": [ "BuiltinRule", [ "FFI", "findall" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(std.findall A0 A1) :- (findall_solutions A0 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin_stdlib.elpi",
+                    "line": 306,
+                    "column": 0,
+                    "character": 10063
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (std.findall (p _) A0), (print A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_findall.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 37
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 4,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 6,
+        "current_goal_text": "print [p 1, p 2, p 3]",
+        "current_goal_predicate": "print",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+              "events": []
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (std.findall (p _) A0), (print A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_findall.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 37
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
   }
 ]

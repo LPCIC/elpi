@@ -30,6 +30,7 @@
 %token ACCUMULATE
 %token LOCAL
 %token PRED
+%token FUNC
 %token MINUS
 %token MINUSr
 %token MINUSi

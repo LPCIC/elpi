@@ -51,6 +51,7 @@ type t = Tokens.token =
   | IFF
   | IF
   | FUNCTIONAL
+  | FUNC
   | FULLSTOP
   | FRESHUV
   | FLOAT of ( float )
@@ -203,3 +204,4 @@ a|}                                   [T(CONSTANT "b", 2, 1, 2);T(CONSTANT "c", 
   test  "o :"                         [T(IO 'o', 1, 0, 1); T(COLON,1,0,3)];
   test  "i"                           [T(IO 'i', 1, 0, 1)];
   test  "o"                           [T(IO 'o', 1, 0, 1)];
+  test  "func"                        [T(FUNC, 1, 0, 4)];

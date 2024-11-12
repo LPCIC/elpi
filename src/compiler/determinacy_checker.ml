@@ -67,8 +67,8 @@ let rec bind ~loc sigma : (t'*f list) -> f = function
 (* COMPILATION from SCOPE_TYPE_EXPRESSION TO FUNCTIONALITY *)
 module Compilation = struct
   let add_type is_type_abbr fmap ~n ~id v = 
-    if F.Map.mem n fmap.ty_abbr then 
-      error (Format.asprintf "Adding again type_abbrev %a" F.pp n);
+    (* if F.Map.mem n fmap.ty_abbr then 
+      error (Format.asprintf "Adding again type_abbrev %a" F.pp n); *)
     let cmap = C.Map.add id (n,v) fmap.cmap in
     let ty_abbr = if is_type_abbr then F.Map.add n id fmap.ty_abbr else fmap.ty_abbr in
     mk_func_map ty_abbr cmap

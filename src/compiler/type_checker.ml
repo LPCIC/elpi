@@ -235,7 +235,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     else
       let lhs, rhs,c (* of => *) = if b then t1,t2,F.implf else t2,t1,F.rimplf in
       let spills = check_loc ~tyctx:(Some c) ctx rhs ~ety:Prop in
-      let lhs_ty = mk_uvar (Format.asprintf "LHSty_%a" F.pp c) in
+      let lhs_ty = mk_uvar "Src" in
       let more_spills = check_loc ~tyctx:None ctx ~ety:lhs_ty lhs in
       let ety1 = TypeAssignment.Prop in
       let ety2 = TypeAssignment.App(F.from_string "list",Prop,[]) in

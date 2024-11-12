@@ -21,16 +21,11 @@ module Pp : sig
 end
 val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 
-val embed_query :
-  mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) ->
-  depth:int ->
-  State.t -> 'a Query.t -> State.t * term * Conversion.extra_goals
-
 (* Interpreter API *)
 val execute_once :
-  ?max_steps:int -> ?delay_outside_fragment:bool -> 'a executable -> 'a outcome
+  ?max_steps:int -> ?delay_outside_fragment:bool -> executable -> 'a outcome
 val execute_loop :
-  ?delay_outside_fragment:bool -> 'a executable -> more:(unit -> bool) -> pp:(float -> 'a outcome -> unit) -> unit
+  ?delay_outside_fragment:bool -> executable -> more:(unit -> bool) -> pp:(float -> 'a outcome -> unit) -> unit
 
 (* Functions useful to implement built-in predicates and evaluable functions *)
 val deref_uv : ?avoid:uvar_body -> from:constant -> to_:constant -> int -> term -> term

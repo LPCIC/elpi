@@ -249,8 +249,8 @@ module Compile : sig
   val to_setup_flags : flags -> Setup.flags
 
   type program
-  type 'a query
-  type 'a executable
+  type query
+  type executable
 
   exception CompileError of Ast.Loc.t option * string
 
@@ -283,12 +283,12 @@ module Compile : sig
   val extend : ?flags:flags -> base:program -> compilation_unit -> program
 
   (* then compile the query *)
-  val query : program -> Ast.query -> unit query
+  val query : program -> Ast.query -> query
   
   (* finally obtain the executable *)
-  val optimize : 'a query -> 'a executable
+  val optimize : query -> executable
   
-  val total_type_checking_time : 'a query -> float
+  val total_type_checking_time : query -> float
 end
 
 module Data : sig
@@ -313,11 +313,10 @@ module Data : sig
 
   (* a solution is an assignment map from query variables (name) to terms,
    * plus the goals that were suspended and the user defined constraints *)
-  type 'a solution = {
+  type solution = {
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
-    output : 'a;
     pp_ctx : pretty_printer_context;
     relocate_assignment_to_runtime : target:Compile.program -> depth:int -> string -> (term, string) Stdlib.Result.t (* uvars are turned into discard *)
   }
@@ -330,22 +329,22 @@ end
 
 module Execute : sig
 
-  type 'a outcome = Success of 'a Data.solution | Failure | NoMoreSteps
+  type outcome = Success of Data.solution | Failure | NoMoreSteps
 
   (* Returns the first solution, if any, within the optional steps bound.
    * Setting delay_outside_fragment (false by default) results in unification
    * outside the pattern fragment to be delayed (behavior of Teyjus), rather
    * than abort the execution (default behavior) *)
   val once : ?max_steps:int -> ?delay_outside_fragment:bool ->
-    'a Compile.executable -> 'a outcome
+    Compile.executable -> outcome
 
   (** Prolog's REPL.
     [pp] is called on all solutions.
     [more] is called to know if another solution has to be searched for. *)
   val loop :
     ?delay_outside_fragment:bool ->
-    'a Compile.executable ->
-    more:(unit -> bool) -> pp:(float -> 'a outcome -> unit) -> unit
+    Compile.executable ->
+    more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 end
 
 module Pp : sig
@@ -355,7 +354,7 @@ module Pp : sig
   val state : Format.formatter -> Data.state -> unit
 
   val program : Format.formatter -> Compile.program -> unit
-  val goal : Format.formatter -> 'a Compile.query -> unit
+  val goal : Format.formatter -> Compile.query -> unit
 
   module Ast : sig
     val program : Format.formatter -> Ast.program -> unit
@@ -851,45 +850,7 @@ module BuiltIn : sig
 
 end
 
-(** Commodity module to build a simple query
-    and extract the output from the solution found by Elpi.
 
-    Example: "foo data Output" where [data] has type [t] ([a] is [t Conversion.t])
-    and [Output] has type [v] ([b] is a [v Conversion.t]) can be described as:
-{[
-
-      let q : (v * unit) t = Query {
-        predicate = "foo";
-        arguments = D(a, data,
-                    Q(b, "Output",
-                    N))
-      }
-
-   ]}
-
-   Then [compile q] can be used to obtain the compiled query such that the
-   resulting solution has a fied output of type [(v * unit)]. Example:
-{[
-
-     Query.compile q |> Compile.link |> Execute.once |> function
-       | Execute.Success { output } -> output
-       | _ -> ...
-
-   ]} *)
-(* module Query : sig
-
-  type name = string
-  type _ arguments =
-    | N : unit arguments
-    | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
-    | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
-
-  type 'x t = Query of { predicate : name; arguments : 'x arguments }
-
-  val compile : Compile.program -> Ast.Loc.t -> 'a t -> 'a Compile.query
-
-end
- *)
 (* ************************************************************************* *)
 (* ********************* Advanced Extension API **************************** *)
 (* ************************************************************************* *)
@@ -1274,15 +1235,15 @@ module RawQuery : sig
 
   (** with the possibility to update the state in which the query will run *)
   val compile_ast :
-    Compile.program -> Ast.query -> (State.t -> State.t) -> unit Compile.query
+    Compile.program -> Ast.query -> (State.t -> State.t) -> Compile.query
 
   (** generate the query ast term with a function. The resulting term is typed, spilled, etc *)
   val compile_term :
-    Compile.program -> (State.t -> State.t * Ast.Term.t) -> unit Compile.query
+    Compile.program -> (State.t -> State.t * Ast.Term.t) -> Compile.query
   
   (** generate the query term by hand, the result is used as is *)
   val compile_raw_term :
-    Compile.program -> (State.t -> State.t * Data.term * Conversion.extra_goals) -> unit Compile.query
+    Compile.program -> (State.t -> State.t * Data.term * Conversion.extra_goals) -> Compile.query
 
   (** typechecks only if ctx is empty *)
   val term_to_raw_term :
@@ -1307,15 +1268,6 @@ module Quotation : sig
   (** The anti-quotation to lambda Prolog *)
   val elpi_language : Ast.Scope.language
   val elpi : quotation
-
-  (* TODO decide what to do
-  * See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker)
-  val quote_syntax_runtime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
-  val quote_syntax_compiletime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
-
-  (** To implement the string_to_term built-in (AVOID, makes little sense
-   * if depth is non zero, since bound variables have no name!) *)
-  val term_at : depth:int -> State.t -> string -> State.t * Data.term *)
 
   (** Like quotations but for identifiers that begin and end with
    * "`" or "'", e.g. `this` and 'that'. Useful if the object language

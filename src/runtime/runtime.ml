@@ -1405,10 +1405,10 @@ let bind ~argsdepth r gamma l a d delta b left t e =
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
     | Const c -> let n = cst c b delta in if n < 0 then mkConst n else Const n
     | Lam t -> Lam (bind b delta (w+1) t)
-    | App (c,t,ts) -> App (cst c b delta, bind b delta w t, List.map (bind b delta w) ts)
+    | App (c,t,ts) -> App (cst c b delta, bind b delta w t, smart_map (bind b delta w) ts)
     | Cons(hd,tl) -> Cons(bind b delta w hd, bind b delta w tl)
     | Nil -> t
-    | Builtin (c, tl) -> Builtin(c, List.map (bind b delta w) tl)
+    | Builtin (c, tl) -> Builtin(c, smart_map (bind b delta w) tl)
     | CData _ -> t
     (* deref_uv *)
     | Arg (i,args) when e.(i) != C.dummy ->
@@ -1510,7 +1510,7 @@ let bind ~argsdepth r gamma l a d delta b left t e =
                 with RestrictionFailure -> acc) args ([],[]) in
             if n_args = List.length args_here then
               (* no pruning, just binding the args as a normal App *)
-              mkAppUVar r lvl (List.map (bind b delta w) orig_args)
+              mkAppUVar r lvl (smart_map (bind b delta w) orig_args)
             else
               (* we need to project away some of the args *)
               let r' = oref C.dummy in
@@ -1520,7 +1520,7 @@ let bind ~argsdepth r gamma l a d delta b left t e =
                * return the non reduced but bound as in the other if branch *)
               mkAppUVar r' lvl args_here
         end else begin
-          mkAppUVar r lvl (List.map (bind b delta w) orig_args)
+          mkAppUVar r lvl (smart_map (bind b delta w) orig_args)
         end
   end] in
     let v = mknLam new_lams (bind b delta 0 t) in
@@ -1584,7 +1584,7 @@ let rec eta_contract_args ~orig_depth ~depth r args eat ~argsdepth e =
   match args, eat with
   | _, [] -> [%spy "eta_contract_flex" ~rid (fun fmt () -> Fmt.fprintf fmt "all eaten") ()];
       begin
-        try Some (AppUVar(r,0,List.map (move ~argsdepth ~from:depth ~to_:orig_depth e) (List.rev args)))
+        try Some (AppUVar(r,0,smart_map (move ~argsdepth ~from:depth ~to_:orig_depth e) (List.rev args)))
         with RestrictionFailure -> None
       end
   | Const x::xs, y::ys when x == y && not (List.exists (occurs y depth argsdepth e) xs) ->
@@ -1703,7 +1703,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
          the clause is at 0 and we are under a pi x\. As a result we do the
          deref to and the rec call at adepth *)
       let args =
-        List.map (move ~argsdepth ~from:bdepth ~to_:adepth e) args in
+        smart_map (move ~argsdepth ~from:bdepth ~to_:adepth e) args in
       unif argsdepth matching depth adepth a adepth
         (deref_appuv ~from:argsdepth ~to_:(adepth+depth) args e.(i)) empty_env
 
@@ -2302,35 +2302,6 @@ let call (Data.BuiltInPredicate.Pred(bname,ffi,compute)) ~once ~depth hyps const
 
 end
 
-let rec embed_query_aux : type a. mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) -> depth:int -> predicate:constant -> Conversion.extra_goals -> term list -> State.t -> a Query.arguments -> State.t * term * Conversion.extra_goals
-  = fun ~mk_Arg ~depth ~predicate gls args state descr ->
-    match descr with
-    | Data.Query.D(d,x,rest) ->
-        let state, x, glsx = d.Conversion.embed ~depth state x in
-        embed_query_aux ~mk_Arg ~depth ~predicate (gls @ glsx) (x :: args) state rest
-    | Data.Query.Q(d,name,rest) ->
-        let state, x = mk_Arg state ~name ~args:[] in
-        embed_query_aux ~mk_Arg ~depth ~predicate gls (x :: args) state rest
-    | Data.Query.N ->
-        let args = List.rev args in
-        state, C.mkAppL predicate args, gls
-;;
-
-let embed_query ~mk_Arg ~depth state (Query.Query { predicate; arguments }) =
-    embed_query_aux  ~mk_Arg ~depth ~predicate [] [] state arguments
-
-let rec query_solution_aux : type a. a Query.arguments -> term StrMap.t -> State.t -> a
- = fun args assignments state ->
-     match args with
-     | Data.Query.N -> ()
-     | Data.Query.D(_,_,args) -> query_solution_aux args assignments state
-     | Data.Query.Q(d,name,args) ->
-         let x = StrMap.find name assignments in
-         let state, x, _gls = d.Conversion.readback ~depth:0 state x in
-         x, query_solution_aux args assignments state
-
-let output arguments assignments state =
-  query_solution_aux arguments assignments state
 
 (******************************************************************************
   Indexing
@@ -3249,7 +3220,7 @@ let noalts : alternative = Obj.magic (Sys.opaque_identity 0)
  *   destroy       optional, 1 time, useful in nested runtimes
  *)
 
-type 'x runtime = {
+type runtime = {
   search : unit -> alternative;
   next_solution : alternative -> alternative;
 
@@ -3260,7 +3231,7 @@ type 'x runtime = {
 }
 
 
-let do_make_runtime : (?max_steps:int -> ?delay_outside_fragment:bool -> 'x executable -> 'x runtime) ref =
+let do_make_runtime : (?max_steps:int -> ?delay_outside_fragment:bool -> executable -> runtime) ref =
  ref (fun ?max_steps ?delay_outside_fragment _ -> anomaly "do_make_runtime not initialized")
 
 module Constraints : sig
@@ -3699,7 +3670,6 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
     assignments = StrMap.empty;
     initial_depth = max_depth;
     initial_runtime_state = !CS.initial_state;
-    query_arguments = Query.N;
     symbol_table = !C.table;
     builtins = !FFI.builtins;
   } in
@@ -3875,7 +3845,7 @@ end (* }}} *)
 
 module Mainloop : sig
 
-  val make_runtime : ?max_steps:int -> ?delay_outside_fragment:bool -> 'x executable -> 'x runtime
+  val make_runtime : ?max_steps:int -> ?delay_outside_fragment:bool -> executable -> runtime
 
 end = struct (* {{{ *)
 
@@ -3910,7 +3880,7 @@ let pp_CHR_resumed_goal { depth; program; goal; gid = gid[@trace] } =
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x executable -> 'x runtime =
+let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executable -> runtime =
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g (gid[@trace]) gs (next : frame) alts cutto_alts =
@@ -4106,7 +4076,6 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       assignments = StrMap.empty;
       initial_depth = depth;
       initial_runtime_state = !CS.initial_state;
-      query_arguments = Query.N;
       symbol_table = !C.table;
       builtins = !FFI.builtins;
     } in
@@ -4294,12 +4263,11 @@ open Mainloop
 let mk_outcome search get_cs assignments depth =
  try
    let alts = search () in
-   let syn_csts, reloc_state, final_state, qargs, pp_ctx = get_cs () in
+   let syn_csts, reloc_state, final_state, pp_ctx = get_cs () in
    let solution = {
      assignments;
      constraints = syn_csts;
      state = final_state;
-     output = output qargs assignments final_state;
      pp_ctx = pp_ctx;
      state_for_relocation = reloc_state;
    } in
@@ -4311,7 +4279,7 @@ let mk_outcome search get_cs assignments depth =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
  try
-   let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get C.table), get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth) in
+   let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get C.table), get CS.state |> State.end_execution, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth) in
    [%end_trace "execute_once" ~rid];
    result
  with e ->
@@ -4325,7 +4293,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
    let time0 = Unix.gettimeofday() in
-   let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get C.table), get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth in
+   let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get C.table), get CS.state |> State.end_execution, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth in
    let time1 = Unix.gettimeofday() in
    k := alts;
    pp (time1 -. time0) o in

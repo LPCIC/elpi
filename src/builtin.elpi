@@ -16,9 +16,9 @@ pred false.
 
 external pred (=) o:A, o:A. % unification
 
-type (pi)    (A -> prop) -> prop.
+external pred (pi) i:A -> prop.
 
-type (sigma) (A -> prop) -> prop.
+external pred (sigma) i:A -> prop.
 
 kind int type.
 
