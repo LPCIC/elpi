@@ -1271,6 +1271,8 @@ module Utils : sig
     module type S = sig
       include Map.S
       include Show1 with type 'a t := 'a t
+      val pp_key : Format.formatter -> key -> unit
+      val show_key : key -> string
     end
 
     module type OrderedType = sig
