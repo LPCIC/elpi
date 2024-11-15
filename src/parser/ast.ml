@@ -336,7 +336,7 @@ let cstring =
   })
 let cloc =
   CData.(declare {
-    data_name = "Loc.t";
+    data_name = "loc";
     data_pp = Util.Loc.pp;
     data_compare = Stdlib.compare;
     data_hash = Hashtbl.hash;
