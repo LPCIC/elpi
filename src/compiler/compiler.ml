@@ -63,7 +63,8 @@ let filter_if flags proj l =
 module SymbolMap : sig
   type table
   val pp_table : Format.formatter -> table -> unit
-  val equal : table -> table -> bool
+  val equal_globals : table -> table -> bool
+  val diff : table -> table -> table
 
   val empty : unit -> table
   val allocate_global_symbol     : D.State.t -> table -> F.t -> table * (constant * D.term)
@@ -83,6 +84,14 @@ end = struct
     last_global : int;
   }
   [@@deriving show, ord]
+
+  let equal_globals m1 m2 = m1.last_global = m2.last_global
+
+
+  let diff big small =
+    Util.Constants.Map.fold (fun c s m ->
+      { m with c2s = Util.Constants.Map.remove c m.c2s; c2t = Util.Constants.Map.remove c m.c2t; ast2ct = F.Map.remove (F.from_string s) m.ast2ct}
+      ) small.c2s big
 
   let equal x y = compare x y == 0
 
@@ -1894,8 +1903,8 @@ in
 
   let compile_query_term state { Assembled.symbols; builtins } ?ctx ?(amap = F.Map.empty) ~depth t =
     let (symbols', amap), rt = todbl ~builtins ?ctx ~needs_spilling:false state symbols ~depth ~amap t in
-    if SymbolMap.equal symbols' symbols then amap, rt
-    else error ~loc:t.ScopedTerm.loc "cannot allocate new symbols in the query"
+    if SymbolMap.equal_globals symbols' symbols then amap, rt
+    else error ~loc:t.ScopedTerm.loc (Format.asprintf "cannot allocate new symbol %a in the query" SymbolMap.pp_table (SymbolMap.diff symbols' symbols))
 
 end
 
