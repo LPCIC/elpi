@@ -187,6 +187,7 @@ let warn_impl { it; loc } =
 let warn_impl_conj_precedence = function
   | App({ it = Const "," }, args ) ->
       begin match List.rev args with
+      | { it = Const "!"} :: args_but_last -> ()
       | _ :: args_but_last -> List.iter warn_impl args_but_last
       | _ -> ()
       end
