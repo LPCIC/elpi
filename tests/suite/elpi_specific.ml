@@ -514,3 +514,13 @@ let () = declare "trace-browser-w-elab"
   ()
   
   
+let () = declare "impl_prec"
+  ~source_elpi:"impl_prec.elpi"
+  ~description:"warning about A => B, C"
+  ~expectation:(SuccessOutput (Str.regexp "Warning.*line [12],"))
+  ()
+let () = declare "impl_prec_silent"
+  ~source_elpi:"impl_prec_ok.elpi"
+  ~description:"warning about A => B, C"
+  ~expectation:(SuccessOutputTxt (fun l -> l|> List.for_all (fun l -> not @@ Str.string_match (Str.regexp "Warning,") l 0)))
+  ()

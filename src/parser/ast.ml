@@ -110,6 +110,7 @@ module Term = struct
    | CData of CData.t
    | Quoted of quote
    | Cast of t * typ
+   | Parens of t
   and t = { it : t_; loc : Loc.t }
   and quote = { qloc : Loc.t; data : string; kind : string option }
   [@@ deriving show, ord]
@@ -119,6 +120,7 @@ exception NotInProlog of Loc.t * string
 let mkC loc x = { loc; it = CData x }
 let mkLam loc x ty t = { loc; it = Lam (Func.from_string x,ty,t) }
 let mkNil loc = {loc; it = Const Func.nilf }
+let mkParens loc t = { loc; it = Parens t }
 let mkQuoted loc s =
   let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n } in
   let rec find_data i =
@@ -172,6 +174,28 @@ let rec mkAppF loc (cloc, c) = function
   | [] -> anomaly ~loc "empty application"
   | { loc; it = App({it=Const ","; loc=cloc}, tl1)} ::tl when c="," -> mkAppF loc (cloc, ",") (tl1@tl)
   | args -> { loc; it = App( { it = Const c; loc = cloc },args) }
+
+let last_warn_impl = ref (Loc.initial "(dummy)")
+let warn_impl { it; loc } =
+  match it with
+  | App({ it = Const "=>" }, _ ) ->
+      if !last_warn_impl <> loc then
+        warn ~loc "Implication binds stronger than conjunction, eg 'A => B, C' reads '(A => B), C'.\nThis is usually a mistake since A is not available to C.\nIf this is really what you want, please add explicit parentheses around 'A => B'.";
+      last_warn_impl := loc
+  | _ -> ()
+
+let warn_impl_conj_precedence = function
+  | App({ it = Const "," }, args ) ->
+      begin match List.rev args with
+      | _ :: args_but_last -> List.iter warn_impl args_but_last
+      | _ -> ()
+      end
+  | _ -> ()
+
+let mkAppF loc (cloc,c) l =
+  let t = mkAppF loc (cloc,c) l in
+  warn_impl_conj_precedence t.it;
+  t
 
 
 let fresh_uv_names = ref (-1);;

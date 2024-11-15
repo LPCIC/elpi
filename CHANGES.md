@@ -15,9 +15,13 @@ Requires Menhir 20211230 and OCaml 4.08 or above.
   - The attribute `:functional` can be passed to predicates (not types),
     for example, `:functional pred q i:int, o:int` tells the interpreter that `q` is
     a predicate meant to be functional. Note that, due to anonymous predicates,
-    the `:functional` attributes can be passed to higher-order arguments
+    the `:functional` attributes can be passed to higher-order arguments.
+    `:functional pred` can be written `func`.
   - The piece of information likes modes and functionality is transmitted to the
     checker (currently this information is not taken into account) 
+  - New warning for `A => B, C` to be disabled by putting parentheses
+    around `A => B`.
+
 - Builtins:
   - `std.list.init N E L` builds a list `L = [E, ..., E]` with length `N`
   - `std.list.make N F L` builds the list `L = [F 0, F 1, ..., F (N-1)]`

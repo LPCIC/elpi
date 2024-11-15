@@ -85,6 +85,7 @@ module Term : sig
    | CData of CData.t
    | Quoted of quote
    | Cast of t * typ
+   | Parens of t
   and t = { it : t_; loc : Loc.t }
   and quote = { qloc : Loc.t; data : string; kind : string option }
   [@@ deriving show, ord]
@@ -93,7 +94,7 @@ module Term : sig
 
   (* Can raise NotInProlog *)
   val mkApp : Loc.t -> t list -> t
-
+  val mkParens : Loc.t -> t -> t
   val mkAppF : Loc.t -> (Loc.t * Func.t) -> t list -> t
 
   val mkCon : Loc.t -> string -> t

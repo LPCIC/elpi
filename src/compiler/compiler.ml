@@ -855,6 +855,7 @@ end = struct
   let rec scope_term ~state ctx ~loc t =
     let open Ast.Term in
     match t with
+    | Parens { loc; it } -> scope_term ~state ctx ~loc it
     | Const c when is_discard c -> ScopedTerm.Discard
     | Const c when is_macro_name c ->
         let { macros } = get_mtm state in
@@ -869,6 +870,7 @@ end = struct
         else if is_global c then ScopedTerm.(Const(Scope.mkGlobal (),of_global c))
         else ScopedTerm.(Const(Scope.mkGlobal (),c))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
+    | App ({ it = Parens f },l) -> scope_term ~state ctx ~loc (App(f, l))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
         ScopedTerm.Spill (scope_loc_term ~state ctx x,ref ScopedTerm.NoInfo)
     | App({ it = Const c }, l) when F.equal c F.implf || F.equal c F.rimplf ->

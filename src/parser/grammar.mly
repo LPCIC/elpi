@@ -35,13 +35,13 @@ let desugar_multi_binder loc (t : Ast.Term.t) =
         | _ -> raise (ParseError(loc,"The last argument of 'pi' or 'sigma' must be a function or a unification variable, while it is: " ^ Ast.Term.show last)) in
       let names = List.map (function
         | { it = Const x; loc } -> Func.show x, loc
-        | { it = (App _ | Lam _ | CData _ | Quoted _ | Cast _) } ->
+        | { it = (App _ | Lam _ | CData _ | Quoted _ | Cast _ | Parens _) } ->
             raise (ParseError(loc,"Only names are allowed after 'pi' or 'sigma'"))) rev_rest in
       let body = mkApp (Loc.merge binder.loc last.loc) [binder;last] in
       List.fold_left (fun bo (name,nloc) ->
         let loc = Loc.merge nloc bo.loc in
         mkApp loc [binder;mkLam loc name ty bo]) body names
-  | (App _ | Const _ | Lam _ | CData _ | Quoted _ | Cast _) -> t
+  | (App _ | Const _ | Lam _ | CData _ | Quoted _ | Cast _ | Parens _) -> t
 ;;
 
 let desugar_macro loc lhs rhs =
@@ -55,12 +55,17 @@ let desugar_macro loc lhs rhs =
         raise (ParseError(loc,"Macro name must begin with '@'"));
       let names = List.map (function
         | { it = Const x; loc } -> Func.show x, loc
-        | { it = (App _ | Lam _ | CData _ | Quoted _ | Cast _) } ->
+        | { it = (App _ | Lam _ | CData _ | Quoted _ | Cast _ | Parens _) } ->
               raise (ParseError(loc,"Macro parameters must be names"))) args in
       name, List.fold_right (fun (name,nloc) b -> mkLam (Loc.merge nloc b.loc) name None b) names body
   | _ ->
         raise (ParseError(loc,"Illformed macro left hand side"))
 ;;
+
+let mkParens_if_impl loc t =
+  match t.it with
+  | App({ it = Const c},_) when Func.(equal c implf) -> mkParens loc t
+  | _ -> t
 
 let mkApp loc = function
   | { it = Const c; loc = cloc } :: a :: { it = App ({ it = Const c1 }, args) } :: [] when Func.(equal c andf && equal c1 andf) ->
@@ -364,7 +369,7 @@ closed_term:
 
 head_term:
 | t = constant { mkConst (loc $loc) t }
-| LPAREN; t = term; RPAREN { t }
+| LPAREN; t = term; RPAREN { mkParens_if_impl (loc $loc) t }
 | LPAREN; t = term; COLON; ty = type_term RPAREN { mkCast (loc $loc) t ty }
 
 list_items:
