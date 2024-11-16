@@ -272,10 +272,10 @@ module State : sig
     name:string -> pp:(Format.formatter -> 'a -> unit) ->
     init:(unit -> 'a) ->
     clause_compilation_is_over:('a -> 'a) ->
-    goal_compilation_begins:('a -> 'a) ->
-    goal_compilation_is_over:(args:uvar_body StrMap.t -> 'a -> 'a option) ->
+    ?goal_compilation_begins:('a -> 'a) ->
     compilation_is_over:('a -> 'a option) ->
     execution_is_over:('a -> 'a option) ->
+    unit ->
      'a component
 
   (* an instance of the State.t type *)
@@ -284,8 +284,6 @@ module State : sig
   (* Lifetime:
      - init (called once)
      - end_clause_compilation (called after every clause)
-     - begin_goal_compilation (called once just before compiling the goal)
-     - end_goal_compilation (called once just after)
      - end_compilation (just once before running)
      - end_execution (just once after running)
   *)
@@ -293,7 +291,6 @@ module State : sig
   val init : descriptor -> t
   val end_clause_compilation : t -> t
   val begin_goal_compilation : t -> t
-  val end_goal_compilation : uvar_body StrMap.t -> t -> t
   val end_compilation : t -> t
   val end_execution : t -> t
 
@@ -321,7 +318,6 @@ end = struct
     init : unit -> Obj.t;
     end_clause : Obj.t -> Obj.t;
     begin_goal : Obj.t -> Obj.t;
-    end_goal : args:uvar_body StrMap.t -> Obj.t -> Obj.t option;
     end_comp : Obj.t -> Obj.t option;
     end_exec : Obj.t -> Obj.t option;
     pp   : Format.formatter -> Obj.t -> unit;
@@ -357,13 +353,12 @@ end = struct
     let t = set name t x in
     t, res
 
-  let declare ~descriptor:extensions ~name ~pp ~init ~clause_compilation_is_over ~goal_compilation_begins ~goal_compilation_is_over ~compilation_is_over ~execution_is_over =
+  let declare ~descriptor:extensions ~name ~pp ~init ~clause_compilation_is_over ?(goal_compilation_begins = fun x -> x) ~compilation_is_over ~execution_is_over () =
     if StrMap.mem name !extensions then
       anomaly ("Extension "^name^" already declared");
     extensions := StrMap.add name {
         init = (fun x -> Obj.repr (init x));
         pp = (fun fmt x -> pp fmt (Obj.obj x));
-        end_goal = (fun ~args x -> option_map Obj.repr (goal_compilation_is_over ~args (Obj.obj x)));
         end_clause = (fun x -> Obj.repr (clause_compilation_is_over (Obj.obj x)));
         begin_goal = (fun x -> Obj.repr (goal_compilation_begins (Obj.obj x)));
         end_comp = (fun x -> option_map Obj.repr (compilation_is_over (Obj.obj x)));
@@ -399,17 +394,8 @@ end = struct
     stage = Compile_goal;
     extensions }
 
-  let end_goal_compilation args { data = m; stage = s; extensions } : t =
-    assert(s = Compile_goal);
-    { data = StrMap.fold (fun name obj acc ->
-        match (StrMap.find name !extensions).end_goal ~args obj with
-        | None -> acc
-        | Some o -> StrMap.add name o acc) m StrMap.empty;
-      stage =  Link;
-      extensions }
-
   let end_compilation { data = m; stage = s; extensions } : t =
-    assert(s = Link);
+    assert(s = Compile_goal);
     { data = StrMap.fold (fun name obj acc ->
         match (StrMap.find name !extensions).end_comp obj with
         | None -> acc
@@ -706,11 +692,10 @@ module Conversion = struct
     ~name:"elpi:extra_goals_postprocessing"
     ~pp:(fun _ _ -> ())
     ~clause_compilation_is_over:(fun b -> b)
-    ~goal_compilation_begins:(fun b -> b)
-    ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
     ~compilation_is_over:(fun x -> Some x)
     ~execution_is_over:(fun x -> Some x)
     ~init:(fun () -> (); fun x s -> s, x)
+    ()
 
   type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
   [@@deriving show]
@@ -857,11 +842,10 @@ let while_compiling : bool State.component = State.declare
   ~name:"elpi:compiling"
   ~pp:(fun fmt _ -> ())
   ~clause_compilation_is_over:(fun b -> b)
-  ~goal_compilation_begins:(fun b -> b)
-  ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
   ~compilation_is_over:(fun _ -> Some false)
   ~execution_is_over:(fun _ -> Some false) (* we keep it, since API.FlexibleData.Elpi.make needs it *)
   ~init:(fun () -> false)
+  ()
 
 module HoasHooks = struct
 
@@ -892,13 +876,11 @@ let new_descriptor () : descriptor ref = ref []
 let eval : run Constants.Map.t State.component =
   State.declare ~descriptor:elpi_state_descriptor ~name:"elpi:eval"
   ~clause_compilation_is_over:(fun x -> x)
-  ~goal_compilation_begins:(fun x -> x)
-  ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
   ~compilation_is_over:(fun x -> Some x)
   ~execution_is_over:(fun _ -> None)
   ~init:(fun () -> Constants.Map.empty)
   ~pp:(fun fmt t -> Constants.Map.pp (fun _ _ -> ()) fmt t)
-
+  ()
 end
 
 module BuiltInPredicate = struct

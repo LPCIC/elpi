@@ -50,12 +50,8 @@ val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -
 val elpi_language : Compiler_data.Scope.language
 val elpi : Compiler_data.QuotationHooks.quotation
 
-val is_Arg : State.t -> term -> bool
-(* val get_Args : State.t -> term StrMap.t *)
-val mk_Arg :
-  State.t -> name:string -> args:term list ->
-    State.t * term
-val get_Arg : State.t -> name:string -> args:term list -> term
+val uvk : uvar_body StrMap.t State.component
+val pp : Format.formatter -> uvar_body -> unit
 
 val compile_term_to_raw_term :
   ?check:bool -> State.t -> program ->

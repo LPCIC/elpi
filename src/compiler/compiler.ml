@@ -32,11 +32,10 @@ let parser : (module Parse.Parser) option D.State.component = D.State.declare
   ~name:"elpi:parser"
   ~pp:(fun fmt _ -> Format.fprintf fmt "<parser>")
   ~clause_compilation_is_over:(fun x -> x)
-  ~goal_compilation_begins:(fun x -> x)
-  ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
   ~compilation_is_over:(fun x -> Some x)
   ~execution_is_over:(fun _ -> None)
   ~init:(fun () -> None)
+  ()
 
 let filter1_if { defined_variables } proj c =
   match proj c with
@@ -664,21 +663,19 @@ module Quotation = struct
     ~name:"elpi:named_quotations"
     ~pp:(fun _ _ -> ())
     ~clause_compilation_is_over:(fun b -> b)
-    ~goal_compilation_begins:(fun b -> b)
-    ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
     ~compilation_is_over:(fun x -> Some x)
     ~execution_is_over:(fun x -> Some x)
     ~init:(fun () -> StrMap.empty)
+    ()
   let default_quotation : QuotationHooks.quotation option State.component = State.declare
     ~descriptor:elpi_state_descriptor
     ~name:"elpi:default_quotation"
     ~pp:(fun _ _ -> ())
     ~clause_compilation_is_over:(fun b -> b)
-    ~goal_compilation_begins:(fun b -> b)
-    ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
     ~compilation_is_over:(fun x -> Some x)
     ~execution_is_over:(fun x -> Some x)
     ~init:(fun () -> None)
+    ()
 
 end
 
@@ -701,22 +698,20 @@ module CustomFunctorCompilation = struct
   ~name:"elpi:singlequote"
   ~pp:(fun _ _ -> ())
   ~clause_compilation_is_over:(fun b -> b)
-  ~goal_compilation_begins:(fun b -> b)
-  ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
   ~compilation_is_over:(fun x -> Some x)
   ~execution_is_over:(fun x -> Some x)
   ~init:(fun () -> None)
+  ()
 
   let backtick  : (string * QuotationHooks.quotation) option State.component = State.declare
   ~descriptor:elpi_state_descriptor
   ~name:"elpi:backtick"
   ~pp:(fun _ _ -> ())
   ~clause_compilation_is_over:(fun b -> b)
-  ~goal_compilation_begins:(fun b -> b)
-  ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
   ~compilation_is_over:(fun x -> Some x)
   ~execution_is_over:(fun x -> Some x)
   ~init:(fun () -> None)
+  ()
 
   let scope_singlequote ~loc state x = 
     match State.get singlequote state with
@@ -754,11 +749,10 @@ let get_mtm, set_mtm, drop_mtm, update_mtm =
      ~name:"elpi:mtm" ~pp:(todopp "elpi:mtm")
      ~descriptor:D.elpi_state_descriptor
      ~clause_compilation_is_over:(fun _ -> empty_mtm)
-     ~goal_compilation_begins:(fun x -> x)
-     ~goal_compilation_is_over:(fun ~args:_ _ -> None)
-      ~compilation_is_over:(fun _ -> assert false)
-      ~execution_is_over:(fun _ -> assert false)
-      ~init:(fun () -> empty_mtm) in
+      ~compilation_is_over:(fun _ -> None)
+      ~execution_is_over:(fun _ -> None)
+      ~init:(fun () -> empty_mtm) 
+    () in
   State.(get mtm, set mtm, drop mtm, update mtm)
 
 module Scope_Quotation_Macro : sig
@@ -1412,11 +1406,10 @@ let get_argmap, set_argmap, _update_argmap, drop_argmap =
       ~name:"elpi:argmap" ~pp:(todopp "elpi:argmap")
       ~descriptor:D.elpi_state_descriptor
       ~clause_compilation_is_over:(fun _ -> F.Map.empty)
-      ~goal_compilation_begins:(fun x -> x)
-      ~goal_compilation_is_over:(fun ~args:_ _ -> None)
       ~compilation_is_over:(fun _ -> None)
       ~execution_is_over:(fun _ -> None)
-     ~init:(fun () -> F.Map.empty) in
+     ~init:(fun () -> F.Map.empty)
+    () in
   State.(get argmap, set argmap, update_return argmap, drop argmap)
 
   let is_Arg state x = 
@@ -2053,7 +2046,7 @@ let check_no_regular_types_for_builtins state types = () (*
 *)
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x
 
-let uvbodies_of_assignments assignments =
+(* let uvbodies_of_assignments assignments =
   (* Clients may add spurious args that, not occurring in the query,
      are not turned into uvars *)
    let assignments = assignments |> StrMap.filter (fun _ -> function
@@ -2061,7 +2054,17 @@ let uvbodies_of_assignments assignments =
      | _ -> false) in
    State.end_goal_compilation (StrMap.map (function
      | UVar(b,_,_) | AppUVar(b,_,_) -> b
-     | _ -> assert false) assignments)
+     | _ -> assert false) assignments) *)
+
+let pp fmt ub =
+  R.Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
+  
+let uvk = D.State.declare ~descriptor:D.elpi_state_descriptor ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp)
+    ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
+    ~compilation_is_over:(fun x -> Some x)
+    ~execution_is_over:(fun _ -> None)
+    ~init:(fun () -> Util.StrMap.empty)
+    ()
 
 let compile_builtins b = 
   let builtins = Hashtbl.create 17 in
@@ -2079,6 +2082,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
+  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0,0)) m) (State.get uvk compiler_state) assignments in
   let builtins = assembled_program.Assembled.builtins in
   {
     WithMain.prolog_program;
@@ -2086,7 +2090,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
     symbols;
     initial_goal;
     assignments;
-    compiler_state = compiler_state |> (uvbodies_of_assignments assignments) |> state_update;
+    compiler_state = compiler_state |> state_update;
     total_type_checking_time;
     builtins;
   }
@@ -2127,6 +2131,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
+  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0,0)) m) (State.get uvk compiler_state) assignments in
   let builtins = assembled_program.Assembled.builtins in
   {
     WithMain.prolog_program;
@@ -2134,7 +2139,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
     symbols;
     initial_goal;
     assignments;
-    compiler_state = compiler_state |> (uvbodies_of_assignments assignments);
+    compiler_state;
     total_type_checking_time;
     builtins;
   }
@@ -2155,6 +2160,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
     let query_env = Array.make (F.Map.cardinal amap) D.dummy in
     let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
     let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
+    let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0,0)) m) (State.get uvk compiler_state) assignments in
     let builtins = assembled_program.Assembled.builtins in
     {
       WithMain.prolog_program;
@@ -2162,7 +2168,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
       symbols = assembled_program.Assembled.symbols;
       initial_goal;
       assignments;
-      compiler_state = compiler_state |> (uvbodies_of_assignments assignments);
+      compiler_state;
       total_type_checking_time;
       builtins
     }
@@ -2172,11 +2178,10 @@ let symtab : (constant * D.term) F.Map.t D.State.component = D.State.declare
   ~name:"elpi:symbol_table"
   ~pp:(fun fmt _ -> Format.fprintf fmt "<symbol_table>")
   ~clause_compilation_is_over:(fun x -> x)
-  ~goal_compilation_begins:(fun x -> x)
-  ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
   ~compilation_is_over:(fun x -> Some x)
   ~execution_is_over:(fun _ -> None)
   ~init:(fun () -> F.Map.empty)
+  ()
 
   
 let global_name_to_constant state s =

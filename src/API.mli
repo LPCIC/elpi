@@ -1223,16 +1223,6 @@ end
 (** This module lets one generate a query by providing a RawData.term directly *)
 module RawQuery : sig
 
-  (** The output term is to be used to build the query but is *not* the handle
-     to the eventual solution. The compiler transforms it, later on, into
-     a UnifVar. Use the name to fetch the solution. *)
-  val mk_Arg :
-    State.t -> name:string -> args:Data.term list ->
-      State.t * Data.term
-
-  (** Args are parameters of the query (e.g. capital letters). *)
-  val is_Arg : State.t -> Data.term -> bool
-
   (** with the possibility to update the state in which the query will run *)
   val compile_ast :
     Compile.program -> Ast.query -> (State.t -> State.t) -> Compile.query

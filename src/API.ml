@@ -516,43 +516,13 @@ end
 
 module Elpi = struct
 
-  type t = Arg of string | Ref of ED.uvar_body
+  type t = ED.uvar_body
 
-  let pp fmt handle =
-    match handle with
-    | Arg str ->
-        Format.fprintf fmt "%s" str
-    | Ref ub ->
-        let module R = (val !r) in let open R in
-        Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (ED.mkUVar ub 0 0)
-
+  let pp = Compiler.pp
   let show m = Format.asprintf "%a" pp m
 
-  let equal h1 h2  =
-      match h1, h2 with
-      | Ref p1, Ref p2 -> p1 == p2
-      | Arg s1, Arg s2 -> String.equal s1 s2
-      | _ -> false
-
-  let hash = function
-    | Arg s -> Hashtbl.hash s
-    | Ref r -> ED.uvar_id r
-
-  let compilation_is_over ~args k =
-    match k with
-    | Ref _ -> assert false
-    | Arg s -> Ref (Util.StrMap.find s args)
-
-  (* This is to hide to the client the fact that Args change representation
-      after compilation *)
-  let uvk = ED.State.declare ~descriptor:ED.elpi_state_descriptor ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp)
-    ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
-    ~goal_compilation_begins:(fun x -> Util.StrMap.empty)
-    ~goal_compilation_is_over:(fun ~args x ->
-        Some (Util.StrMap.map (compilation_is_over ~args) x))
-    ~compilation_is_over:(fun _ -> None)
-    ~execution_is_over:(fun _ -> None)
-    ~init:(fun () -> Util.StrMap.empty)
+  let equal h1 h2  = h1 == h2
+  let hash = ED.uvar_id 
 
   let fresh_name =
     let i = ref 0 in
@@ -560,27 +530,20 @@ module Elpi = struct
   let fresh () = Ast.Name.from_string @@ fresh_name ()
 
   let alloc_Elpi name state =
-    if ED.State.get ED.while_compiling state then
-      let state, _arg = Compiler.mk_Arg ~name ~args:[] state in
-      state, Arg name
-    else
-      let module R = (val !r) in
-      state, Ref (ED.oref ED.dummy)
+    let module R = (val !r) in
+    state, (ED.oref ED.dummy)
 
   let make ?name state =
     match name with
     | None -> alloc_Elpi (fresh_name ()) state
     | Some name ->
-      if ED.State.get ED.while_compiling state then
-        try state, Util.StrMap.find name (ED.State.get uvk state)
+        try state, Util.StrMap.find name (ED.State.get Compiler.uvk state)
         with Not_found ->
           let state, k = alloc_Elpi name state in
-          ED.State.update uvk state (Util.StrMap.add name k), k
-      else
-        alloc_Elpi name state
+          ED.State.update Compiler.uvk state (Util.StrMap.add name k), k
     
   let get ~name state =
-    try Some (Util.StrMap.find name (ED.State.get uvk state))
+    try Some (Util.StrMap.find name (ED.State.get Compiler.uvk state))
     with Not_found -> None
 
 end
@@ -609,12 +572,12 @@ module RawData = struct
     let module R = (val !r) in let open R in
     match deref_head ~depth t with
     | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
-    | ED.Term.AppUVar(ub,0,args) -> UnifVar (Ref ub,args)
+    | ED.Term.AppUVar(ub,0,args) -> UnifVar (ub,args)
     | ED.Term.AppUVar(ub,lvl,args) -> look ~depth (R.expand_appuv ub ~depth ~lvl ~args)
     | ED.Term.UVar(ub,lvl,ano) -> look ~depth (R.expand_uv ub ~depth ~lvl ~ano)
     | ED.Term.Discard ->
         let ub = ED.oref ED.dummy in
-        UnifVar (Ref ub,R.mkinterval 0 depth 0)
+        UnifVar (ub,R.mkinterval 0 depth 0)
     | ED.Term.Lam _ as t ->
         begin match R.eta_contract_flex ~depth t with
         | None -> Obj.magic t (* HACK: view is a "subtype" of Term.term *)
@@ -623,8 +586,7 @@ module RawData = struct
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
-    | UnifVar(Ref ub,args) -> ED.Term.AppUVar(ub,0,args)
-    | UnifVar(Arg _,_) -> assert false
+    | UnifVar(ub,args) -> ED.Term.AppUVar(ub,0,args)
     | x -> Obj.magic x
   [@@ inline]
 
@@ -718,15 +680,14 @@ module RawData = struct
     Util.map_filter (fun x -> get_suspended_goal x.ED.kind) l
   let no_constraints = []
 
-  let mkUnifVar handle ~args state =
-  match handle with
-  | Elpi.Ref ub -> ED.Term.mkAppUVar ub 0 args
-  | Elpi.Arg name -> Compiler.get_Arg state ~name ~args
+  let mkUnifVar ub ~args state =
+    ED.Term.mkAppUVar ub 0 args
 
   type Conversion.extra_goal +=
   | RawGoal = ED.Conversion.RawGoal
 
-  let set_extra_goals_postprocessing ?(descriptor=Setup.default_hoas_descriptor) x = ED.HoasHooks.set_extra_goals_postprocessing ~descriptor x
+  let set_extra_goals_postprocessing ?(descriptor=Setup.default_hoas_descriptor) x =
+    ED.HoasHooks.set_extra_goals_postprocessing ~descriptor x
 
   let new_hoas_descriptor = ED.HoasHooks.new_descriptor
 
@@ -752,37 +713,25 @@ module FlexibleData = struct
 
     type t = {
         h2e : Elpi.t H2E.t;
-        e2h_compile : T.t StrMap.t;
-        e2h_run : T.t IntMap.t
+        e2h : T.t IntMap.t
     }
 
     let empty = {
       h2e = H2E.empty;
-      e2h_compile = StrMap.empty;
-      e2h_run = IntMap.empty
+      e2h = IntMap.empty
     }
 
-    let add uv v { h2e; e2h_compile; e2h_run } =
+    let add uv v { h2e; e2h } =
       let h2e = H2E.add v uv h2e in
-      match uv with
-      | Elpi.Ref ub ->
-          { h2e; e2h_compile; e2h_run = IntMap.add (ED.uvar_id ub) v e2h_run }
-      | Arg s ->
-          { h2e; e2h_run; e2h_compile = StrMap.add s v e2h_compile }
+      { h2e; e2h = IntMap.add (ED.uvar_id uv) v e2h }
 
     let elpi v { h2e } = H2E.find v h2e
-    let host handle { e2h_compile; e2h_run } =
-      match handle with
-      | Elpi.Ref ub -> IntMap.find (ED.uvar_id ub) e2h_run
-      | Arg s -> StrMap.find s e2h_compile
+    let host ub { e2h } =
+      IntMap.find (ED.uvar_id ub) e2h
 
-    let remove_both handle v { h2e; e2h_compile; e2h_run } = 
+    let remove_both ub v { h2e; e2h } = 
       let h2e = H2E.remove v h2e in
-      match handle with
-      | Elpi.Ref ub ->
-          { h2e; e2h_compile; e2h_run = IntMap.remove (ED.uvar_id ub) e2h_run }
-      | Arg s ->
-          { h2e; e2h_run; e2h_compile = StrMap.remove s e2h_compile }
+      { h2e; e2h = IntMap.remove (ED.uvar_id ub) e2h }
 
     let remove_elpi k m =
       let v = host k m in
@@ -792,20 +741,17 @@ module FlexibleData = struct
       let handle = elpi v m in
       remove_both handle v m
 
-    let filter f { h2e; e2h_compile; e2h_run } =
-      let e2h_compile = StrMap.filter (fun n v -> f v (H2E.find v h2e)) e2h_compile in
-      let e2h_run = IntMap.filter (fun ub v -> f v (H2E.find v h2e)) e2h_run in
+    let filter f { h2e; e2h } =
+      let e2h = IntMap.filter (fun ub v -> f v (H2E.find v h2e)) e2h in
       let h2e = H2E.filter f h2e in
-      { h2e; e2h_compile; e2h_run }
+      { h2e; e2h }
 
     let fold f { h2e } acc =
       let module R = (val !r) in let open R in
-      let get_val = function
-        | Elpi.Ref { ED.Term.contents = ub }
-          when ub != ED.dummy ->
-            Some (deref_head ~depth:0 ub)
-        | Elpi.Ref _ -> None
-        | Elpi.Arg _ -> None in
+      let get_val { ED.Term.contents = ub } =
+         if ub != ED.dummy then Some (deref_head ~depth:0 ub)
+         else None
+      in
       H2E.fold (fun k uk acc -> f k uk (get_val uk) acc) h2e acc
 
     let uvn = incr uvmap_no; !uvmap_no
@@ -826,16 +772,10 @@ module FlexibleData = struct
       ~descriptor:ED.elpi_state_descriptor
       ~name:(Printf.sprintf "elpi:uvm:%d" uvn) ~pp
       ~clause_compilation_is_over:(fun x -> empty)
-      ~goal_compilation_begins:(fun x -> x)
-      ~goal_compilation_is_over:(fun ~args { h2e; e2h_compile; e2h_run } ->
-        let h2e = H2E.map (Elpi.compilation_is_over ~args) h2e in
-        let e2h_run =
-          StrMap.fold (fun k v m ->
-            IntMap.add (ED.uvar_id @@ StrMap.find k args) v m) e2h_compile IntMap.empty in
-        Some { h2e; e2h_compile = StrMap.empty; e2h_run })
       ~compilation_is_over:(fun x -> Some x)
       ~execution_is_over:(fun x -> Some x)
       ~init:(fun () -> empty)
+      ()
 
   end
 
@@ -1082,17 +1022,17 @@ module State = struct
     ED.State.declare ~descriptor:Setup.default_state_descriptor ~name ~pp ~init
       ~clause_compilation_is_over:(fun x -> x)
       ~goal_compilation_begins:(fun x -> start x)
-      ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
       ~compilation_is_over:(fun x -> Some x)
       ~execution_is_over:(fun x -> Some x)
+      ()
 
   let declare_component ?(descriptor=Setup.default_state_descriptor) ~name ~pp ~init ~start () =
     ED.State.declare ~descriptor ~name ~pp ~init
       ~clause_compilation_is_over:(fun x -> x)
       ~goal_compilation_begins:(fun x -> start x)
-      ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
       ~compilation_is_over:(fun x -> Some x)
       ~execution_is_over:(fun x -> Some x)
+      ()
     
 end
 
@@ -1105,8 +1045,8 @@ module RawQuery = struct
     Compiler.compile_term_to_raw_term ~check s p ?ctx ~depth @@
     Compiler_data.ScopedTerm.of_simple_term_loc t
   let compile_ast = Compiler.query_of_ast
-  let mk_Arg = Compiler.mk_Arg
-  let is_Arg = Compiler.is_Arg
+  (* let mk_Arg = Compiler.mk_Arg
+  let is_Arg = Compiler.is_Arg *)
   let global_name_to_constant state s = Compiler.global_name_to_constant state s
 end
 
@@ -1331,12 +1271,10 @@ module Utils = struct
     let module R = (val !r) in let open R in
     list_to_lp_list tl
 
-  let get_assignment = function
-    | Elpi.Arg _ -> assert false
-    | Elpi.Ref { ED.contents = t } ->
-        let module R = (val !r) in
-        if t == ED.dummy then None
-        else Some t
+  let get_assignment { ED.contents = t } =
+    let module R = (val !r) in
+    if t == ED.dummy then None
+    else Some t
 
   let move ~from ~to_ t =
     let module R = (val !r) in let open R in
