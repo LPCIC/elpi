@@ -282,6 +282,9 @@ module Compile : sig
   val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> Ast.program -> compilation_unit
   val extend : ?flags:flags -> base:program -> compilation_unit -> program
 
+  (* only adds the types/modes from the compilation unit, not its code *)
+  val extend_signature : ?flags:flags -> base:program -> compilation_unit -> program
+
   (* then compile the query *)
   val query : program -> Ast.query -> query
   

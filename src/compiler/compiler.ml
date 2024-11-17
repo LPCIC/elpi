@@ -1022,8 +1022,8 @@ end = struct
   let compile_kind kinds { Ast.Type.name; ty; loc } =
     let open Ast.TypeExpression in
     let rec count = function
-      | TArr({ tit = TConst c },t) when c == F.typef -> 1 + count t.tit
-      | TConst c when c == F.typef -> 0
+      | TArr({ tit = TConst c },t) when F.equal c F.typef -> 1 + count t.tit
+      | TConst c when F.equal c F.typef -> 0
       | x -> error ~loc "Syntax error: illformed kind.\nExamples:\nkind bool type.\nkind list type -> type.\n"
     in
     F.Map.add name (count ty.tit, loc) kinds  
@@ -1450,6 +1450,7 @@ let get_argmap, set_argmap, _update_argmap, drop_argmap =
 module Assemble : sig
 
   val extend : flags -> State.t -> Assembled.program -> checked_compilation_unit -> State.t * Assembled.program
+  val extend_signature : flags -> State.t -> Assembled.program -> checked_compilation_unit -> State.t * Assembled.program
 
   (* for the query *)
   val compile_query : State.t -> Assembled.program -> bool * ScopedTerm.t -> SymbolMap.table * int F.Map.t * D.term
@@ -1844,51 +1845,77 @@ in
   let merge_type_abbrevs m1 m2 =
     F.Map.union (fun k _ _ -> error ("Duplicate type abbreviation for " ^ F.show k)) m1 m2
 
-  let extend1 flags
-    (state, { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; modes = om; kinds = ok; functional_preds = ofp; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; builtins = ob; total_type_checking_time })
-            { version; base_hash; checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; functional_preds; clauses; chr; builtins}; precomputed_kinds; precomputed_type_abbrevs; precomputed_functional_preds; precomputed_types; type_checking_time; } =
-    let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types_indexing indexing in
-    let kinds, type_abbrevs, types, functional_preds =
-      if hash = base_hash then
-        precomputed_kinds, precomputed_type_abbrevs, precomputed_types, precomputed_functional_preds
-      else
-        let kinds = Flatten.merge_kinds ok kinds in
-        let type_abbrevs = merge_type_abbrevs ota type_abbrevs in
-        (* TODO: here we need to correctely merge ids wrt to merge_type_assignments... *)
-        let types = Flatten.merge_type_assignments ot types in
-        (* let functional_preds = Determinacy_checker.merge ofp functional_preds in *)
-        (* TODO: this error message is unclear, maybe we should add the name F.t to the map  *)
-        kinds, type_abbrevs, types, functional_preds
-    in
-    let modes = Flatten.merge_modes om modes in
+let extend1_signature flags
+  (state, { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; modes = om; kinds = ok; functional_preds = ofp; types = ot; type_abbrevs = ota; chr = ochr; toplevel_macros = otlm; builtins = ob; total_type_checking_time })
+          { version; base_hash; checked_code = { CheckedFlat.toplevel_macros; kinds; types; types_indexing; type_abbrevs; modes; functional_preds; builtins }; precomputed_kinds; precomputed_type_abbrevs; precomputed_functional_preds; precomputed_types; type_checking_time; } =
+  let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types_indexing indexing in
+  let kinds, type_abbrevs, types, functional_preds =
+    if hash = base_hash then
+      precomputed_kinds, precomputed_type_abbrevs, precomputed_types, precomputed_functional_preds
+    else
+      let kinds = Flatten.merge_kinds ok kinds in
+      let type_abbrevs = merge_type_abbrevs ota type_abbrevs in
+      (* TODO: here we need to correctely merge ids wrt to merge_type_assignments... *)
+      let types = Flatten.merge_type_assignments ot types in
+      (* let functional_preds = Determinacy_checker.merge ofp functional_preds in *)
+      (* TODO: this error message is unclear, maybe we should add the name F.t to the map  *)
+      kinds, type_abbrevs, types, functional_preds
+  in
+  let modes = Flatten.merge_modes om modes in
 
-    let symbols, builtins =
-      List.fold_left (fun (symbols,builtins) (D.BuiltInPredicate.Pred(name,_,_) as p) ->
-        let name = F.from_string name in
-        if not @@ F.Map.mem name types then
-          error (Format.asprintf "Builtin %a has no associated type." F.pp name);
-        List.iter (fun (a,_) ->
-          if a <> Some (Ast.Structured.External) then
-            error (Format.asprintf "Builtin %a accompained by a non-externl type declaration." F.pp name);
-        ) (F.Map.find name types_indexing);
-        let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols name in
-        let builtins = Builtins.register builtins p c in
-        symbols, builtins) (symbols, ob) builtins in
-    let total_type_checking_time = total_type_checking_time +. type_checking_time in
+  let symbols =
+    List.fold_left (fun (symbols) (D.BuiltInPredicate.Pred(name,_,_)) ->
+      let name = F.from_string name in
+      if not @@ F.Map.mem name types then
+        error (Format.asprintf "Builtin %a has no associated type." F.pp name);
+      List.iter (fun (a,_) ->
+        if a <> Some (Ast.Structured.External) then
+          error (Format.asprintf "Builtin %a accompained by a non-externl type declaration." F.pp name);
+      ) (F.Map.find name types_indexing);
+      let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols name in
+      symbols) (symbols) builtins in
+  let total_type_checking_time = total_type_checking_time +. type_checking_time in
 
-    let symbols, chr =
-      List.fold_left (extend1_chr_block ~builtins flags state) (symbols,ochr) chr in
-    let clauses, symbols, prolog_program =
-      List.fold_left (extend1_clause ~builtins flags state modes indexing) (cl, symbols, prolog_program) clauses in
-  
-    (* TODO: @FissoreD here we have to do mutual excl clauses... *)
+  let toplevel_macros = F.Map.union (fun k (m1,l1) (m2,l2) ->
+    if ScopedTerm.equal m1 m2 then Some (m1,l1) else
+      error ~loc:l2 (Format.asprintf "Macro %a already declared at %a" F.pp k Loc.pp l1)
+    ) otlm toplevel_macros in
 
-    let new_base = 
-      { Assembled.hash; clauses; symbols; builtins; prolog_program; indexing; modes; functional_preds; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
-    let hash = hash_base new_base in
-    state, { new_base with hash }
+  let new_base = 
+    { Assembled.hash; clauses = cl; chr = ochr; symbols; builtins = ob; prolog_program; indexing; modes; functional_preds; kinds; types; type_abbrevs; toplevel_macros; total_type_checking_time } in
+  let hash = hash_base new_base in
+  state, { new_base with hash }
+
+let extend1 flags (state, base) unit =
+ 
+  let state, base = extend1_signature flags (state, base) unit in
+
+  let { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; modes; kinds; functional_preds; types; type_abbrevs; chr = ochr; toplevel_macros; builtins = ob; total_type_checking_time } = base in
+  let { version; base_hash; checked_code = { CheckedFlat.clauses; chr; builtins}; type_checking_time; } = unit in
+
+  let builtins =
+    List.fold_left (fun (builtins) (D.BuiltInPredicate.Pred(name,_,_) as p) ->
+      let name = F.from_string name in
+      let c_opt = SymbolMap.get_global_symbol symbols name in
+      let c = Option.get c_opt in (* assert by extend1_signature *)
+      let builtins = Builtins.register builtins p c in
+      builtins) ob builtins in
+  let total_type_checking_time = total_type_checking_time +. type_checking_time in
+
+  let symbols, chr =
+    List.fold_left (extend1_chr_block ~builtins flags state) (symbols,ochr) chr in
+  let clauses, symbols, prolog_program =
+    List.fold_left (extend1_clause ~builtins flags state modes indexing) (cl, symbols, prolog_program) clauses in
+
+  (* TODO: @FissoreD here we have to do mutual excl clauses... *)
+
+  let new_base = 
+    { Assembled.hash; clauses; symbols; builtins; prolog_program; indexing; modes; functional_preds; kinds; types; type_abbrevs; chr; toplevel_macros; total_type_checking_time } in
+  let hash = hash_base new_base in
+  state, { new_base with hash }
 
   let extend flags state assembled u = extend1 flags (state, assembled) u
+  let extend_signature flags state assembled u = extend1_signature flags (state, assembled) u
 
   let compile_query state { Assembled.symbols; builtins } (needs_spilling,t) =
     let (symbols, amap), t = todbl ~builtins ~needs_spilling state symbols t in
@@ -2014,6 +2041,16 @@ let append_unit ~flags ~base:(s,p) unit : program =
 
   s, p
 
+let append_unit_signature ~flags ~base:(s,p) unit : program =
+  let s, p = Assemble.extend_signature flags s p unit in
+  let { print_passes } = flags in
+
+  if print_passes then
+    Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
+      Assembled.pp_program p;
+
+  s, p
+  
 let program_of_ast ~flags ~header:((st, base) as header) p : program =
   let u = unit_of_ast ~flags ~header p in
   let u = Check.check st ~base u in

@@ -383,6 +383,21 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "pred snd  i:pair A B, o:B.";
   LPCode "snd (pr _ B) B.";
 
+  LPCode {|
+kind triple type -> type -> type -> type.
+type triple A -> B -> C -> triple A B C.
+
+pred triple_1 i:triple A B C, o:A.
+triple_1 (triple A _ _) A.
+
+pred triple_2 i:triple A B C, o:B.
+triple_2 (triple _ B _) B.
+
+pred triple_3 i:triple A B C, o:C.
+triple_3 (triple _ _ C) C.
+ 
+|};
+
   MLData (option (BuiltInData.poly "A"));
 
   MLData cmp;

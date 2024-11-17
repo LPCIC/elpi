@@ -29,6 +29,7 @@ type unchecked_compilation_unit
 val empty_base : header:header -> program
 val unit_of_ast : flags:flags -> header:header -> Ast.Program.t -> unchecked_compilation_unit
 val append_unit : flags:flags -> base:program -> checked_compilation_unit -> program
+val append_unit_signature : flags:flags -> base:program -> checked_compilation_unit -> program
 val check_unit : base:program -> unchecked_compilation_unit -> checked_compilation_unit
 
 type query

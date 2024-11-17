@@ -191,6 +191,7 @@ module Compile = struct
     Compiler.unit_of_ast ~flags ~header x |> Compiler.check_unit ~base
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
+  let extend_signature ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit_signature ~flags ~base u
 
 end
 
