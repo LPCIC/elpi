@@ -20,7 +20,7 @@ module Scope = struct
     | Bound  of language (* bound by a lambda, stays bound *)
     | Global of {
         escape_ns : bool; (* when true name space elimination does not touch this constant *)
-        mutable decl_id : type_decl_id; (* type checking assigns a unique id *)
+        mutable decl_id : type_decl_id; [@equal fun _ _ -> true (* XXX since it is broken *) ] (* type checking assigns a unique id *)
       }
   [@@ deriving show, ord]
 
@@ -129,8 +129,8 @@ module ScopedTypeExpression = struct
 
   let rec eqt ctx t1 t2 =
     match t1.it, t2.it with
-    | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> b1 = b2 && F.equal c1 c2
-    | Const(Bound l1,c1), Const(Bound l2,c2) -> l1 = l2 && eq_var ctx l1 c1 c2
+    | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> Scope.compare b1 b2 == 0 && F.equal c1 c2
+    | Const(Bound l1,c1), Const(Bound l2,c2) -> Scope.compare_language l1 l2 == 0 && eq_var ctx l1 c1 c2
     | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
     | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 = b2 && eqt ctx s1 s2 && eqt ctx t1 t2
     | Pred(f1,l1), Pred(f2,l2) -> f1 = f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
@@ -472,7 +472,7 @@ module ScopedTerm = struct
     match x.it with Lam _ -> pretty_ fmt x.it | _ -> pretty_parens ~lvl fmt x
   
 
-  let equal t1 t2 =
+  let equal ?(types=true) t1 t2 =
     let rec eq ctx t1 t2 =
       match t1.it, t2.it with
       | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> b1 = b2 && F.equal c1 c2
@@ -481,11 +481,12 @@ module ScopedTerm = struct
       | Var(n1,l1), Var(n2,l2) -> eq_uvar ctx n1 n2 && Util.for_all2 (eq ctx) l1 l2
       | App(Global _ as b1,c1,x,xs), App(Global _ as b2,c2,y,ys) -> b1 = b2 && F.equal c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
       | App(Bound l1,c1,x,xs), App(Bound l2,c2,y,ys) -> l1 = l2 && eq_var ctx l1 c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
-      | Lam(None,ty1, b1), Lam (None,ty2, b2) -> eq ctx b1 b2 && Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2
-      | Lam(Some (c1,l1),ty1,b1), Lam(Some (c2,l2),ty2, b2) -> l1 = l2 && eq (push_ctx l1 c1 c2 ctx) b1 b2 && Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2
+      | Lam(None,ty1, b1), Lam (None,ty2, b2) -> eq ctx b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2)
+      | Lam(Some (c1,l1),ty1,b1), Lam(Some (c2,l2),ty2, b2) -> l1 = l2 && eq (push_ctx l1 c1 c2 ctx) b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2)
       | Spill(b1,n1), Spill (b2,n2) -> n1 == n2 && eq ctx b1 b2
       | CData c1, CData c2 -> CData.equal c1 c2
-      | Cast(t1,ty1), Cast(t2,ty2) -> eq ctx t1 t2 && ScopedTypeExpression.eqt (empty ()) ty1 ty2
+      | Cast(t1,ty1), Cast(t2,ty2) -> eq ctx t1 t2 && (not types || ScopedTypeExpression.eqt (empty ()) ty1 ty2)
+      | Impl(b1,s1,t1), Impl(b2,s2,t2) -> b1 = b2 && eq ctx t1 t2 && eq ctx s1 s2
       | _ -> false
     in
       eq (empty ()) t1 t2

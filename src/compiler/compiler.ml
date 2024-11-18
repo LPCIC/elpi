@@ -1028,18 +1028,18 @@ end = struct
     in
     F.Map.add name (count ty.tit, loc) kinds  
     
-  let compile_macro state m { Ast.Macro.loc; name; body } =
+  let compile_macro state (am,m) { Ast.Macro.loc; name; body } =
     try
       let _, oloc = F.Map.find name m in
       error ~loc (Format.asprintf "duplicate macro %a, previous declaration %a" F.pp name Loc.pp oloc)
     with Not_found ->
       let body = scope_loc_term ~state:(set_mtm state { empty_mtm with macros = m }) body in
-      F.Map.add name (body,loc) m
+      F.Map.add name (body,loc) am, F.Map.add name (body,loc) m
 
   let run state ~toplevel_macros p : State.t * Scoped.program =
 
     let rec compile_program omacros state { Ast.Structured.macros; kinds; types; type_abbrevs; modes; body } =
-      let active_macros = List.fold_left (compile_macro state) omacros macros in
+      let toplevel_macros, active_macros = List.fold_left (compile_macro state) (F.Map.empty,omacros) macros in
       let type_abbrevs = List.map compile_type_abbrev type_abbrevs in
       let kinds = List.fold_left compile_kind F.Map.empty kinds in
       let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (TypeList.make @@ compile_type t) m) F.Map.empty (List.rev types) in
@@ -1051,7 +1051,7 @@ end = struct
       let state, kinds, types, type_abbrevs, modes, defs_b, body =
         compile_body active_macros kinds types type_abbrevs modes F.Set.empty state body in
       let symbols = F.Set.(union (union (union (union defs_k defs_m) defs_t) defs_b) defs_ta) in
-      (state : State.t), active_macros,
+      (state : State.t), toplevel_macros,
       { Scoped.types; kinds; type_abbrevs; modes; body; symbols }
 
     and compile_body macros kinds types type_abbrevs (modes : (mode * Loc.t) F.Map.t) (defs : F.Set.t) state = function
@@ -1329,7 +1329,7 @@ end = struct
   let check st ~base u : checked_compilation_unit =
     let { Assembled.symbols; prolog_program; indexing; 
       modes = om; functional_preds = ofp; kinds = ok; types = ot; type_abbrevs = ota; 
-      chr = ochr; toplevel_macros = otlm; total_type_checking_time } = base in
+      chr = ochr; toplevel_macros = _; total_type_checking_time } = base in
     let { version; code = { Flat.toplevel_macros; kinds; types; type_abbrevs; modes; clauses; chr; builtins }} = u in
 
     let all_kinds = Flatten.merge_kinds ok kinds in
@@ -1877,8 +1877,8 @@ let extend1_signature flags
   let total_type_checking_time = total_type_checking_time +. type_checking_time in
 
   let toplevel_macros = F.Map.union (fun k (m1,l1) (m2,l2) ->
-    if ScopedTerm.equal m1 m2 then Some (m1,l1) else
-      error ~loc:l2 (Format.asprintf "Macro %a already declared at %a" F.pp k Loc.pp l1)
+    if ScopedTerm.equal ~types:false m1 m2 then Some (m1,l1) else
+      error ~loc:l2 (Format.asprintf "@[<v>Macro %a declared twice.@;@[<hov 2>%a @[%a@]@]@;@[<hov 2>%a @[%a@]@]@]" F.pp k Loc.pp l1 ScopedTerm.pretty m1 Loc.pp l2 ScopedTerm.pretty m2)
     ) otlm toplevel_macros in
 
   let new_base = 
@@ -1934,7 +1934,7 @@ end
  ****************************************************************************)
 
 (* Compiler passes *)
-let unit_or_header_of_ast { print_passes } s ?(toplevel_macros=F.Map.empty) p =
+let unit_or_header_of_ast { print_passes } s ~toplevel_macros p =
 
   if print_passes then
     Format.eprintf "== AST ================@\n@[<v 0>%a@]@\n"
@@ -2007,7 +2007,7 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let state = D.State.set parser state (Some p) in
   let state = D.State.set D.while_compiling state true in
   (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
-  let state, u = unit_or_header_of_ast flags state ast in
+  let state, u = unit_or_header_of_ast ~toplevel_macros:F.Map.empty flags state ast in
   let builtins =
     List.flatten @@
     List.map (fun (_,decl) -> decl |> List.filter_map (function
