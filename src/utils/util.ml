@@ -25,6 +25,8 @@ module Map = struct
   module type S = sig
     include Map.S
     include Show1 with type 'a t := 'a t
+    val pp_key : Format.formatter -> key -> unit
+    val show_key : key -> string
   end
 
   module type OrderedType = sig
@@ -44,6 +46,9 @@ module Map = struct
       pp f fmt m;
       Format.fprintf fmt "@?";
       Buffer.contents b
+
+    let pp_key = Ord.pp
+    let show_key = Ord.show 
   end
 
 end
