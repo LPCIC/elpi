@@ -2,10 +2,10 @@ pred of i:term, o:ty.
 
 % terms
 of (app H A) (mono T) :-
-  of H (mono (S ==> T)),
+  of H (mono (S ===> T)),
   of A (mono S).
 
-of (lam F) (mono (S ==> T)) :-
+of (lam F) (mono (S ===> T)) :-
   pi x\ of x (mono S) => of (F x) (mono T).
 
 of (let E PT B) (mono TB) :-

@@ -428,7 +428,7 @@ clause_hd_term:
 
 clause_hd_closed_term:
 | t = constant { mkConst (loc $sloc) t }
-| LPAREN; t = term; RPAREN { t }
+| LPAREN; t = term; RPAREN { mkParens_if_impl (loc $loc) t }
 
 clause_hd_open_term:
 | hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
@@ -528,6 +528,7 @@ postfix_SYMB:
 | DIV    { Func.from_string "div" }
 | ARROW  { Func.arrowf }
 | DARROW { Func.implf }
+| DDARROW { Func.implf }
 | QDASH  { Func.sequentf }
 | SLASH  { Func.from_string "/" }
 | CONJ2  { Func.andf }

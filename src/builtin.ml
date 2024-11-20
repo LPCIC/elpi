@@ -291,6 +291,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "type (as) A -> A -> A.";
   LPCode "type (=>) prop -> prop -> prop.";
   LPCode "type (=>) list prop -> prop -> prop.";
+  LPCode "type (==>) prop -> prop -> prop."; (* not really needed since the parser emits a => *)
+  LPCode "type (==>) list prop -> prop -> prop.";
 
   LPDoc " -- Control --";
 

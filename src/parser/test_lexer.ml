@@ -76,6 +76,7 @@ type t = Tokens.token =
   | EQ
   | EOF
   | DIV
+  | DDARROW
   | DARROW
   | CUT
   | CONSTRAINT

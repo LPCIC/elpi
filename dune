@@ -1,7 +1,7 @@
 (executable
   (name elpi_REPL)
   (public_name elpi)
-  (libraries elpi ;memtrace
+  (libraries elpi elpi.parser ;memtrace
   )
   (modules elpi_REPL)
   (package elpi)

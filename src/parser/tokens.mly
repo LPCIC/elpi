@@ -23,6 +23,7 @@
 %token <char> IO
 %token ARROW
 %token DARROW
+%token DDARROW
 %token DIV
 %token MOD
 %token < string > QUOTED

@@ -180,7 +180,15 @@ let warn_impl { it; loc } =
   match it with
   | App({ it = Const "=>" }, _ ) ->
       if !last_warn_impl <> loc then
-        warn ~loc "Implication binds stronger than conjunction, eg 'A => B, C' reads '(A => B), C'.\nThis is usually a mistake since A is not available to C.\nIf this is really what you want, please add explicit parentheses around 'A => B'.";
+        warn ~loc
+{|The standard λProlog infix operator for implication => has higher precedence
+than conjunction. This means that 'A => B, C' reads '(A => B), C'.
+This is a common mistake since it makes A only available to B (and not to C
+as many newcomers may expect).
+If this is really what you want write '(A => B), C' to silence this warning.
+Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
+Infix ==>  has lower precedence than conjunction, hence
+'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.|};
       last_warn_impl := loc
   | _ -> ()
 

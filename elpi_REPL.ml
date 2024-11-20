@@ -58,12 +58,11 @@ let usage =
   "\t-exec pred  runs the query \"pred ARGS\"\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
+  "\t-document-infix-syntax Print the documentation for infix operators\n" ^
   "\t-no-tc don't typecheck the program\n" ^ 
   "\t-I PATH  search for accumulated files in PATH\n" ^
   "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
   "\t                                          compatibility)\n" ^
-  "\t-legacy-parser enable the legacy parser (deprecated)\n"^
-  "\t-legacy-parser-available exists with 0 if it is the case\n"^
   "\t--version prints the version of Elpi (also -v or -version)\n" ^ 
   "\t--help prints this help (also -h or -help)\n" ^ 
  API.Setup.usage ^
@@ -91,6 +90,7 @@ let _ =
   let typecheck = ref true in
   let batch = ref false in
   let doc_builtins = ref false in
+  let doc_infix = ref false in
   let delay_outside_fragment = ref false in 
   let print_passes = ref false in
   let print_units = ref false in
@@ -110,6 +110,7 @@ let _ =
     | "-parse-term" :: rest -> parse_term := true; eat_options rest
     | "-no-tc" :: rest -> typecheck := false; eat_options rest
     | "-document-builtins" :: rest -> doc_builtins := true; eat_options rest
+    | "-document-infix-syntax" :: rest -> doc_infix := true; eat_options rest
     | "-D" :: var :: rest -> vars := API.Compile.StrSet.add var !vars; eat_options rest
     | "-I" :: p :: rest -> extra_paths := !extra_paths @ [p]; eat_options rest
     | ("-h" | "--help" | "-help") :: _ -> Printf.eprintf "%s" usage; exit 0
@@ -134,6 +135,10 @@ let _ =
       API.Compile.print_passes = !print_passes;
       API.Compile.print_units = !print_units;
   } in
+  if !doc_infix then begin
+    Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;
+    exit 0
+  end;
   let elpi =
     API.Setup.init
       ~quotations

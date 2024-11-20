@@ -49,6 +49,10 @@ type (=>) prop -> prop -> prop.
 
 type (=>) list prop -> prop -> prop.
 
+type (==>) prop -> prop -> prop.
+
+type (==>) list prop -> prop -> prop.
+
 %  -- Control --
 
 external pred !. % The cut operator

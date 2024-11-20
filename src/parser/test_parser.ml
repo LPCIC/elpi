@@ -33,14 +33,23 @@ let chunk s (p1,p2) =
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
 
 module Parser = Parse.Make(struct let resolver = Elpi_util.Util.std_resolver ~paths:[] () end)
-let test s x y w z att b =
+
+let warn = ref None
+let () = Elpi_util.Util.set_warn (fun ?loc str -> warn := Some str)
+let test s x y w z att ?warns b =
   let loc = Loc.initial "(input)" in
   let exp = [mkClause (mkLoc x y w z) att b] in
   let lexbuf = Lexing.from_string s in
+  warn := None;
   try
     let p = Parser.program_from ~loc lexbuf in
-    if p <> exp then
-      error s p exp
+    if p <> exp then error s p exp;
+    match !warn, warns with
+    | None, None -> ()
+    | Some w, None -> Printf.eprintf "parsing '%s': unexpected warning:\n%s\n" s w; exit 1
+    | None, Some _ -> Printf.eprintf "parsing '%s': expected warning not emitted\n" s; exit 1
+    | Some w, Some rex ->
+        if Str.(string_match (regexp rex) w 0) then () else (Printf.eprintf "parsing '%s': warning does not match:\n%s\n" s w; exit 1)
   with Parse.ParseError(loc,message) ->
     Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
     exit 1
@@ -104,6 +113,10 @@ let c ?(bug=false) n ?len s =
   let len = match len with None -> String.length s | Some x -> x in
   mkCon (mkLoc (n + (if bug then -1 else 0)) (n + len - 1) 1 0) s
 
+let parens t =
+  let loc = mkLoc (t.loc.source_start) (t.loc.source_stop+1) 1 0 in
+  mkParens loc t
+
 let ct ?(bug=false) n ?len s =
   let len = match len with None -> String.length s | Some x -> x in
   { TypeExpression.tloc = (mkLoc (n + (if bug then -1 else 0)) (n + len - 1) 1 0); tit = TypeExpression.TConst (Func.from_string s) }
@@ -165,7 +178,13 @@ let _ =
   test  "p :- q && r = s."  1 15 1 0 [] ((c 1 "p" |- 3) @@ app "=" 13 [app "&&" 8 [c 6 "q"; c 11 "r"]; c 15 "s"]);
   test  "q && r x || s."    1 13 1 0 [] (app "||" 10 [app "&&" 3 [c 1 "q"; app "r" 6 [c 8 "x"]]; c 13 "s"]);
   (*    01234567890123456789012345 *)
-  test  "f x ==> y."        1 9 1 0 []  (app "==>" 5 [app "f" 1 [c 3 "x"]; c 9 "y"]);
+  test  "f x ==> y."        1 9 1 0 []  (app "=>" ~len:3 5 [app "f" 1 [c 3 "x"]; c 9 "y"]);
+  test  "x ==> y, z."       1 10 1 0 []  (app "=>" ~len:3 3 [c 1 "x"; app "," ~bug 8 [c 7 "y"; c 10 "z"]]);
+  test  "x => y, z."        1 9 1 0 [] ~warns:".*infix operator" (app "," ~bug 7 [app "=>" 3 [c 1 "x";c 6 "y"];c 9 "z"]);
+  test  "x => y, !."        1 9 1 0 [] (app "," ~bug 7 [app "=>" 3 [c 1 "x";c 6 "y"];c 9 "!"]);
+  test  "(x => y), z."      1 11 1 0 [] (app "," ~bug 9 [parens @@ app "=>" 4 [c 2 ~bug "x";c 7 "y"];c 11 "z"]);
+  test  "x => (y, z)."      1 11 1 0 [] (app "=>" 3 ~parenr:true [c 1 "x"; app "," ~bug 8 [c 7 ~bug "y"; c 10 "z"]]);
+  (*    01234567890123456789012345 *)
   test  "p :- !, (s X) = X, q." 1 20 1 0 [] ((c 1 "p" |- 3) @@ app "," ~bug 7 [c 6 "!";app "=" 15 [app "s" ~bug 10 [c 12 "X"]; c 17 "X"]; c 20 "q"]);
   test  "p :- [ ]."         1 8  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 8 [mkNil 8]);
   test  "p :- []."          1 7  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 7 [mkNil ~bug 7]);

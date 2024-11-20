@@ -53,7 +53,8 @@ fixity                     | tokens / token families
 -------------------------- + -----------------------------------
 Infix   not   associative  | :-  ?-  
 Infix   right associative  | ;  
-Infix   right associative  | ,  
+Infix   right associative  | ==>  
+Infix   right associative  | ,  &  
 Infix   right associative  | ->  
 Infix   right associative  | =>  
 Infix   not   associative  | =  ==  =<  r<  i<  s<  r=<  i=<  s=< 
