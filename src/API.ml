@@ -164,6 +164,7 @@ module Compile = struct
   type query = Compiler.query
   type executable = ED.executable
   type compilation_unit = Compiler.checked_compilation_unit
+  type compilation_unit_signature = Compiler.checked_compilation_unit_signature
   exception CompileError = Compiler_data.CompileError
 
   let to_setup_flags x = x
@@ -191,6 +192,7 @@ module Compile = struct
     Compiler.unit_of_ast ~flags ~header x |> Compiler.check_unit ~base
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
+  let signature u = Compiler.signature_of_checked_compilation_unit u
   let extend_signature ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit_signature ~flags ~base u
 
 end

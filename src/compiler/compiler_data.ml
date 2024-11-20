@@ -20,7 +20,7 @@ module Scope = struct
     | Bound  of language (* bound by a lambda, stays bound *)
     | Global of {
         escape_ns : bool; (* when true name space elimination does not touch this constant *)
-        mutable decl_id : type_decl_id; [@equal fun _ _ -> true (* XXX since it is broken *) ] (* type checking assigns a unique id *)
+        (* mutable decl_id : type_decl_id; [@equal fun _ _ -> true XXX since it is broken ] type checking assigns a unique id *)
       }
   [@@ deriving show, ord]
 
@@ -34,7 +34,7 @@ module Scope = struct
   end)
 
   let mkGlobal ?(escape_ns=false) ?(decl_id = dummy_type_decl_id) () =
-    Global { escape_ns; decl_id }
+    Global { escape_ns (*; decl_id*) }
 
 end
 let elpi_language : Scope.language = "lp"
@@ -326,6 +326,19 @@ module TypeAssignment = struct
       Some (Ty (Obj.magic t : F.t t_)) (* No UVar nodes *)
     with Not_monomorphic -> None
   
+  let rec is_arrow_to_prop = function
+    | Prop -> true
+    | Any | Cons _ | App _ -> false
+    | Arr(_,_,t) -> is_arrow_to_prop t
+    | UVar _ -> false
+
+  let rec is_predicate = function
+    | Lam (_,t) -> is_predicate t
+    | Ty t -> is_arrow_to_prop t
+
+  let is_predicate = function
+    | Single (_,t) -> is_predicate t
+    | Overloaded l -> List.exists (fun (_,x) -> is_predicate x) l
 
   open Format
 

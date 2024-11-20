@@ -1,6 +1,6 @@
 module control.
 
-type if          o -> o -> o -> o.
+pred if          i:prop, i:prop, i:prop.
 type once        o -> o.
 
 
