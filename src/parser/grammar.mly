@@ -15,9 +15,9 @@ open Term
 
 open TypeExpression
 
-
 let loc (startpos, endpos) = {
-  Util.Loc.source_name = startpos.Lexing.pos_fname;
+  Util.Loc.client_payload = C.get_current_client_loc_payload ();
+  source_name = startpos.Lexing.pos_fname;
   source_start = startpos.Lexing.pos_cnum;
   source_stop = endpos.Lexing.pos_cnum;
   line = startpos.Lexing.pos_lnum;

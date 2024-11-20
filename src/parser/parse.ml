@@ -35,9 +35,17 @@ module Make(C : Config) = struct
 let parse_ref : (?cwd:string -> string -> Ast.Program.parser_output list) ref =
   ref (fun ?cwd:_ _ -> assert false)
   
-module Grammar = Grammar.Make(struct
+
+module ParseFile = struct
   let parse_file ?cwd file = !parse_ref ?cwd file
-end)
+  let client_payload : Obj.t option ref = ref None
+  let set_current_clent_loc_pyload x = client_payload := Some x
+  let get_current_client_loc_payload () = !client_payload
+
+end
+
+module Grammar = Grammar.Make(ParseFile)
+  
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
 let chunk s (p1,p2) =
   String.sub s p1.Lexing.pos_cnum (p2.Lexing.pos_cnum - p1.Lexing.pos_cnum)
@@ -53,7 +61,8 @@ let parse grammar lexbuf =
     let message = message_of_state stateid in
     let loc = lexbuf.Lexing.lex_curr_p in
     let loc = {
-      Util.Loc.source_name = loc.Lexing.pos_fname;
+      Util.Loc.client_payload = None;
+      source_name = loc.Lexing.pos_fname;
       line = loc.Lexing.pos_lnum;
       line_starts_at = loc.Lexing.pos_bol;
       source_start = loc.Lexing.pos_cnum;
@@ -93,6 +102,7 @@ let to_lexing_loc { Util.Loc.source_name; line; line_starts_at; source_start; _ 
     pos_cnum = source_start; }
   
 let lexing_set_position lexbuf loc =
+  Option.iter ParseFile.set_current_clent_loc_pyload loc.Util.Loc.client_payload;
   let loc = to_lexing_loc loc in
   let open Lexing in
   lexbuf.lex_abs_pos <- loc.pos_cnum;

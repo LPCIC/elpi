@@ -24,7 +24,7 @@ let mkClause loc attributes body =
   Clause { loc; attributes; body }
 
 let mkLoc x y w z =
-  { Loc.source_name = "(input)"; source_start = x; source_stop = y; line = w; line_starts_at = z}
+  { Loc.client_payload = None; source_name = "(input)"; source_start = x; source_stop = y; line = w; line_starts_at = z}
   
 
 let chunk s (p1,p2) =

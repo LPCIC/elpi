@@ -1539,11 +1539,18 @@ end = struct
                 ": Map indexes exactly one argument at depth 1")) 0 l
 
   let update_indexing state symbols ({ idx } as index) modes types old_idx =
-    let check_if_some_clauses_already_in ~loc predicate c =
+    let check_if_some_clauses_already_in ~loc predicate c oldi newi =
          if Ptmap.mem c idx then
            error ~loc @@ "Some clauses for " ^ F.show predicate ^
-             " are already in the program, changing the indexing a posteriori is not allowed."
+             " are already in the program, changing the indexing a posteriori is not allowed. " ^
+             show_indexing oldi ^ " <> " ^ show_indexing newi
       in
+      let check_if_some_clauses_already_in2 ~loc predicate c =
+        if Ptmap.mem c idx then
+          error ~loc @@ "2 Some clauses for " ^ F.show predicate ^
+            " are already in the program, changing the indexing a posteriori is not allowed."
+     in
+
     let add_indexing_for ~loc name c tindex map =
       (* Format.eprintf "indexing for %a\n%!" F.pp name; *)
       let mode = try fst @@ F.Map.find name modes with Not_found -> [] in
@@ -1561,14 +1568,16 @@ end = struct
                       F.show name)
           else
             if declare_index then begin
-              (* check_if_some_clauses_already_in ~loc name c; *)
+              check_if_some_clauses_already_in ~loc name c old_tindex index;
                C.Map.add c (mode,index) map
             end else map
         else
           map
       with Not_found ->
-        check_if_some_clauses_already_in ~loc name c;
-        C.Map.add c (mode,index) map in
+        if declare_index then begin
+          check_if_some_clauses_already_in2 ~loc name c;
+        C.Map.add c (mode,index) map
+      end else map in
 
     (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
             time   typchk wall   mem
@@ -1592,7 +1601,7 @@ end = struct
         let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols k in
         symbols, add_indexing_for ~loc k c None m) modes (symbols, map) in
 
-    symbols, R.CompileTime.update_indexing map index, C.Map.union (fun _ _ _ -> assert false) map old_idx
+    symbols, R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
   type spill = { vars : ScopedTerm.t list; vars_names : F.t list; expr : ScopedTerm.t }
   type spills = spill list

@@ -309,7 +309,6 @@ end = struct
     | Dummy
     | Compile_prog
     | Compile_goal
-    | Link
     | Run
     | Halt
 

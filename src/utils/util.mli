@@ -88,6 +88,7 @@ end
 
 module Loc : sig
   type t = {
+    client_payload : Obj.t option;
     source_name : string;
     source_start: int;
     source_stop: int;
@@ -99,9 +100,9 @@ module Loc : sig
   val equal : t -> t -> bool
   val compare : t -> t -> int
 
-  val initial : string -> t
+  val initial : ?client_payload:Obj.t -> string -> t
   (* merge left right *)
-  val merge : t -> t -> t
+  val merge : ?merge_payload:(Obj.t option -> Obj.t option -> Obj.t option) -> t -> t -> t
   (* starts/end n chars before/after*)
   val extend : int -> t -> t
 

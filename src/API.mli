@@ -17,6 +17,7 @@ module Ast : sig
 
   module Loc : sig
     type t = {
+      client_payload : Obj.t option;
       source_name : string;
       source_start: int;
       source_stop: int;
@@ -28,7 +29,7 @@ module Ast : sig
     val equal : t -> t -> bool
     val compare : t -> t -> int
 
-    val initial : string -> t
+    val initial : ?client_payload:Obj.t -> string -> t
   end
 
   module Name : sig

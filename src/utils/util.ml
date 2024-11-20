@@ -124,6 +124,7 @@ end
 
 module Loc = struct
   type t = {
+    client_payload : Obj.t option;
     source_name : string;
     source_start: int;
     source_stop: int;
@@ -148,12 +149,13 @@ module Loc = struct
              line (source_start - line_starts_at) chars in
     Re.(Str.global_replace (Str.regexp_string "\\") "/" source) ^ pos ^ ":"
 
-  let pp fmt l = Fmt.fprintf fmt "%s" (to_string l)
+  let pp fmt l =Fmt.fprintf fmt "%s" (to_string l)
   let show l = to_string l
   let compare = Stdlib.compare
   let equal = (=)
 
-  let initial source_name = {
+  let initial ?client_payload source_name = {
+    client_payload;
     source_name;
     source_start = 0;
     source_stop = 0;
@@ -164,8 +166,14 @@ module Loc = struct
     source_start = 0 && source_stop = 0 &&
     line = 1 && line_starts_at = 0
 
-  let merge l r =
+  let option_append o1 o2 =
+    match o1 with
+    | None -> o2
+    | Some _ -> o1
+
+  let merge ?(merge_payload=option_append) l r =
     {
+    client_payload = merge_payload l.client_payload r.client_payload;
     source_name = l.source_name;
     source_start = l.source_start;
     source_stop = r.source_stop;
@@ -174,10 +182,10 @@ module Loc = struct
   }
 
 
-  let merge l r =
+  let merge ?merge_payload l r =
     if is_initial l then r
     else if is_initial r then l
-    else merge l r
+    else merge ?merge_payload l r
 
   let extend n l = { l with source_start = l.source_start - n; source_stop = l.source_stop + n }
    
