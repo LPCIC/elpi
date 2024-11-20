@@ -1,0 +1,15 @@
+
+
+% simple
+kind simple type.
+type a simple. % A
+type b int -> mut -> simple. % B
+
+% mut
+kind mut type.
+type c mut. % C
+type d simple -> mut. % D
+
+
+
+

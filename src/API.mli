@@ -165,8 +165,22 @@ module Data : sig
   }
 
   (* Hypothetical context *)
-  type hyp
+  type hyp = {
+    hdepth : int;
+    hsrc : term
+  }
   type hyps = hyp list
+
+  type constant = int
+  module Constants : sig
+
+    module Map : sig
+      include Map.S with type key = constant
+      val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+      val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+    end
+
+  end
 
 end
 
@@ -287,6 +301,7 @@ module Conversion : sig
 
   type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
+
   type extra_goal = ..
   type extra_goal +=
     | Unify of Data.term * Data.term
@@ -319,14 +334,20 @@ module ContextualConversion : sig
 
   type ty_ast = Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
+  class ctx : Data.hyps ->
+    object
+      method raw : Data.hyps
+    end
 
   type ('a,'hyps,'constraints) embedding =
     depth:int -> 'hyps -> 'constraints ->
     Data.state -> 'a -> Data.state * Data.term * Conversion.extra_goals
+  constraint 'hyps = #ctx
 
   type ('a,'hyps,'constraints) readback =
     depth:int -> 'hyps -> 'constraints ->
     Data.state -> Data.term -> Data.state * 'a * Conversion.extra_goals
+  constraint 'hyps = #ctx
 
   type ('a,'h,'c) t = {
     ty : ty_ast;
@@ -335,21 +356,40 @@ module ContextualConversion : sig
     embed : ('a,'h,'c) embedding;   (* 'a -> term *)
     readback : ('a,'h,'c) readback; (* term -> 'a *)
   }
+  constraint 'h = #ctx
 
+  val (^^) : ('a, ctx, 'c) t -> ('a, 'x, 'c) t
+
+  type 'a ctx_entry = { entry : 'a; depth : int }
+  val pp_ctx_entry : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a ctx_entry -> unit
+  val show_ctx_entry : (Format.formatter -> 'a -> unit) -> 'a ctx_entry -> string
+
+  type 'a ctx_field = 'a ctx_entry Data.Constants.Map.t
+
+  (* A context that can be read on top of context 'c, made of items 'a indexed by 'k  *)
+  type ('a,'k,'c,'csts) context = {
+    is_entry_for_nominal : Data.hyp -> Data.constant option;
+    to_key : depth:int -> 'a -> 'k;
+    push : depth:int -> Data.state -> 'k -> 'a ctx_entry -> Data.state;
+    pop : depth:int -> Data.state -> 'k -> Data.state;
+    conv : (Data.constant * 'a, #ctx as 'c, 'csts) t;
+    init : Data.state -> Data.state;
+    get : Data.state -> 'a ctx_field
+  }
   type ('hyps,'constraints) ctx_readback =
     depth:int -> Data.hyps -> Data.constraints ->
     Data.state -> Data.state * 'hyps * 'constraints * Conversion.extra_goals
+  constraint 'hyps = #ctx
 
-  val unit_ctx : (unit,unit) ctx_readback
-  val raw_ctx : (Data.hyps,Data.constraints) ctx_readback
+  val unit_ctx : (ctx,unit) ctx_readback
+  val raw_ctx : (ctx,Data.constraints) ctx_readback
+
+  type dummy
+  val in_raw_ctx : (ctx,Data.constraints) ctx_readback
+  val in_raw : (dummy, dummy, #ctx as 'a,'csts) context
 
   (* cast *)
-  val (!<) : ('a,unit,unit) t -> 'a Conversion.t
-
-  (* morphisms *)
-  val (!>)   : 'a Conversion.t -> ('a,'hyps,'constraints) t
-  val (!>>)  : ('a Conversion.t -> 'b Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t
-  val (!>>>) : ('a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t -> ('c,'hyps,'constraints) t
+  val (!<) : ('a,ctx,unit) t -> 'a Conversion.t
 
 end
 
@@ -373,6 +413,28 @@ module BuiltInData : sig
 
   (* any is like poly "X" for X fresh *)
   val any    : Data.term Conversion.t
+
+end
+
+module BuiltInContextualData : sig
+
+  (** See {!module:Elpi.Builtin} for a few more *)
+  val int    : (int,'c,'csts) ContextualConversion.t
+  val float  : (float,'c,'csts) ContextualConversion.t
+  val string : (string,'c,'csts) ContextualConversion.t
+  val list   : ('a,'c,'csts) ContextualConversion.t -> ('a list,'c,'csts) ContextualConversion.t
+  val loc    : (Ast.Loc.t,'c,'csts) ContextualConversion.t
+
+  (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
+  val polyA0   : (Data.term,'c,'csts) ContextualConversion.t
+  val polyA1   : (Data.term,'c,'csts) ContextualConversion.t
+  val polyA2   : (Data.term,'c,'csts) ContextualConversion.t
+  val polyA3   : (Data.term,'c,'csts) ContextualConversion.t
+
+  (* any is like poly "X" for X fresh *)
+  val any    : (Data.term,'c,'csts) ContextualConversion.t
+
+  val nominal : (Data.constant,'c,'csts) ContextualConversion.t
 
 end
 
@@ -560,33 +622,37 @@ module BuiltInPredicate : sig
 
   type 'a oarg = Keep | Discard
   type 'a ioarg = private Data of 'a | NoData
-
   type once
 
-  type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) ffi =
-    (* Arguemnts that are translated independently of the program context *)
-    | In    : 't Conversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
-    | Out   : 't Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
-    | InOut : 't ioarg Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+  (* Arguemnts that are translated independently of the program context *)
+  type ('function_type, 'inernal_outtype_in) ffi =
+    | In    : 't Conversion.t * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
+    | Out   : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
+    | InOut : 't ioarg Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
+    | Easy : doc -> (depth:int -> 'o, 'o) ffi
+    | Read : doc -> (depth:int ->  Data.state -> 'o,'o) ffi
+    | Full : doc -> (depth:int -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o) ffi
+    | FullHO : doc -> (once:once -> depth:int -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o) ffi
+    | VariadicIn    : 't Conversion.t * doc -> ('t list -> depth:int -> Data.state -> Data.state * 'o, 'o) ffi
+    | VariadicOut   : 't Conversion.t * doc -> ('t oarg list -> depth:int -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
+    | VariadicInOut : ('t ioarg) Conversion.t * doc -> ('t ioarg list -> depth:int -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
 
-    (* Arguemnts that are translated looking at the program context *)
-    | CIn    : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
-    | COut   : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
-    | CInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+  (* Arguemnts that are translated looking at the program context *)
+  type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) cffi =
+    | CIn    : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o,'h,'c) cffi -> ('t -> 'i,'o,'h,'c) cffi
+    | COut   : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) cffi -> ('t oarg -> 'i,'o,'h,'c) cffi
+    | CInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) cffi -> ('t ioarg -> 'i,'o,'h,'c) cffi
+    | CEasy : doc -> (depth:int -> 'h -> 'c -> 'o, 'o,'h,'c) cffi
+    | CRead : doc -> (depth:int -> 'h -> 'c -> Data.state -> 'o, 'o,'h,'c) cffi
+    | CFull : doc -> (depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) cffi
+    | CFullHO : doc -> (once:once -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) cffi
+    | CVariadicIn    : ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o, 'o,'h,'c) cffi
+    | CVariadicOut   : ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) cffi
+    | CVariadicInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) cffi
 
-    (* The easy case: all arguments are context independent *)
-    | Easy : doc -> (depth:int -> 'o, 'o, unit, unit) ffi
-
-    (* The advanced case: arguments are context dependent, here we provide the
-      context readback function *)
-    | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> 'o, 'o,'h,'c) ffi
-    | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
-    | FullHO : ('h,'c) ContextualConversion.ctx_readback * doc -> (once:once -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
-    | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o, 'o,'h,'c) ffi
-    | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
-    | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
-
-  type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
+  type t =
+    | Pred : name * ('a,unit) ffi * 'a -> t
+    | CPred : name * ('h,'c) ContextualConversion.ctx_readback * ('a,unit,'h,'c) cffi * 'a -> t
 
   (** Tools for InOut arguments.
    *
@@ -791,8 +857,14 @@ module Query : sig
     | N : unit arguments
     | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
     | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
+  type (_,_,_) carguments =
+    | NC : (unit,'c,'csts) carguments
+    | DC : ('a,'c,'csts) ContextualConversion.t * 'a *    ('x,'c,'csts) carguments -> ('x,'c,'csts) carguments
+    | QC : ('a,'c,'csts) ContextualConversion.t * name * ('x,'c,'csts) carguments -> ('a * 'x,'c,'csts) carguments
 
-  type 'x t = Query of { predicate : name; arguments : 'x arguments }
+  type 'x t =
+    | Query of { predicate : name; arguments : 'x arguments }
+    | CQuery : name * ('x,#ContextualConversion.ctx as 'c,'csts) carguments * (Data.state -> 'c) * 'csts -> 'x t
 
   val compile : Compile.program -> Ast.Loc.t -> 'a t -> 'a Compile.query
 
@@ -978,6 +1050,10 @@ module RawOpaqueData : sig
 
   val declare : 'a declaration -> 'a cdata * 'a Conversion.t
 
+  module PPX : sig
+    val declare : 'a declaration -> 'a cdata * 'a Data.Constants.Map.t * doc
+  end
+
   val pp : Format.formatter -> t -> unit
   val show : t -> string
   val equal : t -> t -> bool
@@ -1048,7 +1124,7 @@ end
    * substitutes assigned unification variables by their value. *)
 module RawData : sig
 
-  type constant = int (** De Bruijn levels (not indexes):
+  type constant = Data.constant (** De Bruijn levels (not indexes):
                           the distance of the binder from the root.
                           Starts at 0 and grows for bound variables;
                           global constants have negative values. *)
@@ -1093,16 +1169,9 @@ module RawData : sig
   val mkConst : constant -> term (* no check, works for globals and bound *)
 
   val cmp_builtin : builtin -> builtin -> int
-  type hyp = {
-    hdepth : int;
-    hsrc : term
-  }
-  type hyps = hyp list
-  val of_hyp : Data.hyp -> hyp
-  val of_hyps : Data.hyp list -> hyps
 
   type suspended_goal = {
-    context : hyps;
+    context : Data.hyps;
     goal : int * term
   }
   val constraints : Data.constraints -> suspended_goal list
@@ -1131,7 +1200,7 @@ module RawData : sig
     (* Marker for spilling function calls, as in [{ rev L }] *)
     val spillc : constant
 
-    module Map : Map.S with type key = constant
+    module Map = Data.Constants.Map
     module Set : Set.S with type elt = constant
 
   end
@@ -1324,6 +1393,39 @@ module RawPp : sig
     val term : (*depth*)int -> Format.formatter -> Data.term -> unit
     val show_term : Data.term -> string
  end
+
+end
+
+module PPX : sig
+
+  module Doc : sig
+    val kind : Format.formatter -> Conversion.ty_ast -> doc:string -> unit
+    val comment : Format.formatter -> string -> unit
+    val constructor : Format.formatter ->
+      name:string -> doc:string ->
+     ty:Conversion.ty_ast ->
+     args:Conversion.ty_ast list -> unit
+    val adt :
+      doc:string ->
+      ty:Conversion.ty_ast ->
+      args:(string * string * Conversion.ty_ast list) list ->
+      Format.formatter -> unit -> unit
+      
+    type prec_level = Arrow | AppArg
+    val show_ty_ast: ?prec:prec_level -> Conversion.ty_ast -> string
+
+  end
+
+  type context_description =
+    | C : ('a,'k,'c,'csts) ContextualConversion.context -> context_description
+
+  val readback_context :
+    ('a,'k,'c,'csts) ContextualConversion.context ->
+    'c ->
+    depth:int ->
+    Data.hyps ->
+    'csts ->
+    Data.state -> Data.state * Conversion.extra_goals
 
 end
 

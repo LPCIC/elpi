@@ -153,6 +153,13 @@ module Data = struct
     hsrc : term
   }
   type hyps = hyp list
+  type constant = int
+  module Constants = struct
+
+    module Map = ED.Constants.Map
+
+  end
+
 end
 
 module Compile = struct
@@ -255,7 +262,6 @@ end
 
 module Conversion = struct
 type ty_ast = ED.Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
-
 type extra_goal = ED.Conversion.extra_goal = ..
 type extra_goal +=
   | Unify = ED.Conversion.Unify
@@ -278,7 +284,13 @@ exception TypeErr = ED.Conversion.TypeErr
 
 end
 
-module ContextualConversion = ED.ContextualConversion
+module ContextualConversion = struct
+  include ED.ContextualConversion
+  let (^^) t = { t with
+    embed = (fun ~depth h c s x -> t.embed ~depth (new ctx h#raw) c s x);
+    readback = (fun ~depth h c s x -> t.readback ~depth (new ctx h#raw) c s x);
+  }
+end
 
 module RawOpaqueData = struct
 
@@ -340,7 +352,7 @@ module RawOpaqueData = struct
         ED.Constants.Map.add c v cm, VM.add v c vm)
       constants (ED.Constants.Map.empty,VM.empty) in
     let values_map x = VM.find x values_map in
-    conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants ~pp cd
+    constants_map, conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants ~pp cd
 
   let declare { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = Util.CData.declare {
@@ -351,6 +363,16 @@ module RawOpaqueData = struct
       data_hconsed = hconsed;
    } in
    conversion_of_cdata ~name ~doc ~constants ~compare ~pp cdata
+
+   module PPX = struct
+     let declare d =
+       let map, (cd, _) = declare d in
+       cd, map, d.doc
+   end
+
+   let declare d = snd @@ declare d
+   let conversion_of_cdata ~name ?doc ?constants ~compare ~pp cd =
+     snd @@ conversion_of_cdata ~name ?doc ?constants ~compare ~pp cd
 
    let morph1 { cin; cout } f x = cin (f (cout x))
    let morph2 { cin; cout } f x y = cin (f (cout x) (cout y))
@@ -411,6 +433,7 @@ module OpaqueData = struct
   let declare x = snd @@ RawOpaqueData.declare x
 
 end
+
 
 module BuiltInData = struct
 
@@ -507,6 +530,113 @@ module BuiltInData = struct
       pp_doc = (fun fmt () -> ()) }
 
 end
+
+module BuiltInContextualData = struct
+
+  let int : 'c 'csts. (int,'c,'csts) ContextualConversion.t =
+    let open ContextualConversion in
+    let it = BuiltInData.int in {
+      ty = it.Conversion.ty; pp = it.Conversion.pp; pp_doc = it.Conversion.pp_doc;
+      embed = (fun ~depth _ _ s x -> it.Conversion.embed ~depth s x);
+      readback = (fun ~depth _ _ s x -> it.Conversion.readback ~depth s x);
+    }
+  let float : 'c 'csts. (float,'c,'csts) ContextualConversion.t =
+    let open ContextualConversion in
+    let it = BuiltInData.float in {
+      ty = it.Conversion.ty; pp = it.Conversion.pp; pp_doc = it.Conversion.pp_doc;
+      embed = (fun ~depth _ _ s x -> it.Conversion.embed ~depth s x);
+      readback = (fun ~depth _ _ s x -> it.Conversion.readback ~depth s x);
+    }
+  let string : 'c 'csts. (string,'c,'csts) ContextualConversion.t =
+    let open ContextualConversion in
+    let it = BuiltInData.string in {
+      ty = it.Conversion.ty; pp = it.Conversion.pp; pp_doc = it.Conversion.pp_doc;
+      embed = (fun ~depth _ _ s x -> it.Conversion.embed ~depth s x);
+      readback = (fun ~depth _ _ s x -> it.Conversion.readback ~depth s x);
+    }
+  let loc : 'c 'csts. (Util.Loc.t,'c,'csts) ContextualConversion.t =
+    let open ContextualConversion in
+    let it = BuiltInData.loc in {
+      ty = it.Conversion.ty; pp = it.Conversion.pp; pp_doc = it.Conversion.pp_doc;
+      embed = (fun ~depth _ _ s x -> it.Conversion.embed ~depth s x);
+      readback = (fun ~depth _ _ s x -> it.Conversion.readback ~depth s x);
+    }
+  
+  
+  let polyA0 =
+    let embed ~depth:_ _ _ state x = state, x, [] in
+    let readback ~depth _ _ state t = state, t, [] in
+    { ContextualConversion.embed; readback; ty = Conversion.TyName "A0";
+      pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
+      pp_doc = (fun fmt () -> ()) }
+  let polyA1 =
+    let embed ~depth:_ _ _ state x = state, x, [] in
+    let readback ~depth _ _ state t = state, t, [] in
+    { ContextualConversion.embed; readback; ty = Conversion.TyName "A1";
+      pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
+      pp_doc = (fun fmt () -> ()) }
+  let polyA2 =
+    let embed ~depth:_ _ _ state x = state, x, [] in
+    let readback ~depth _ _ state t = state, t, [] in
+    { ContextualConversion.embed; readback; ty = Conversion.TyName "A2";
+      pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
+      pp_doc = (fun fmt () -> ()) }
+  let polyA3 =
+    let embed ~depth:_ _ _ state x = state, x, [] in
+    let readback ~depth _ _ state t = state, t, [] in
+    { ContextualConversion.embed; readback; ty = Conversion.TyName "A3";
+      pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
+      pp_doc = (fun fmt () -> ()) }
+                        
+  let any =
+    let embed ~depth:_ _ _ state x = state, x, [] in
+    let readback ~depth _ _ state t = state, t, [] in
+    { ContextualConversion.embed; readback; ty = Conversion.TyName "any";
+      pp = (fun fmt _ -> Format.fprintf fmt "<any>");
+      pp_doc = (fun fmt () -> ()) }
+   
+  let map_acc f s l =
+    let rec aux acc extra s = function
+    | [] -> s, List.rev acc, List.(concat (rev extra))
+    | x :: xs ->
+        let s, x, gls = f s x in
+        aux (x :: acc) (gls :: extra) s xs
+    in
+      aux [] [] s l
+
+  let list d =
+    let embed ~depth h c s l =
+      let module R = (val !r) in let open R in
+      let s, l, eg = map_acc (d.ContextualConversion.embed ~depth h c) s l in
+      s, list_to_lp_list l, eg in
+    let readback ~depth h c s t =
+      let module R = (val !r) in let open R in
+      map_acc (d.ContextualConversion.readback ~depth h c) s
+        (lp_list_to_list ~depth t)
+    in
+    let pp fmt l =
+      Format.fprintf fmt "[%a]" (Util.pplist d.pp ~boxed:true "; ") l in
+    { ContextualConversion.embed; readback;
+      ty = TyApp ("list",d.ty,[]);
+      pp;
+      pp_doc = (fun fmt () -> ()) }
+  
+  let nominal =
+    let embed ~depth:_ _ _ state x =
+        let module R = (val !r) in
+        if x < 0 then Util.type_error "not a bound variable";
+        state, R.mkConst x, [] in
+    let readback ~depth _ _ state t =
+        let module R = (val !r) in
+        match R.deref_head ~depth t with
+        | ED.Const i when i >= 0 -> state, i, []
+        | _ -> Util.type_error "not a bound variable" in
+    { ContextualConversion.embed; readback; ty = TyName "nominal";
+      pp = (fun fmt d -> Format.fprintf fmt "%d" d);
+      pp_doc = (fun fmt () -> ()) }
+
+end
+
 
 module Elpi = struct
 
@@ -656,24 +786,15 @@ module RawData = struct
     let ctypec = ED.Global_symbols.ctypec
     let spillc = ED.Global_symbols.spillc
 
-    module Map = ED.Constants.Map
+    module Map = Data.Constants.Map
     module Set = ED.Constants.Set
 
   end
 
   let of_term x = x
 
-  let of_hyp x = x
-  let of_hyps x = x
-
-  type hyp = Data.hyp = {
-    hdepth : int;
-    hsrc : term
-  }
-  type hyps = hyp list
-
   type suspended_goal = ED.suspended_goal = {
-    context : hyps;
+    context : Data.hyps;
     goal : int * term
   }
 
@@ -1038,17 +1159,30 @@ end
 
 module Query = struct
   type name = string
-  type 'f arguments = 'f ED.Query.arguments =
+  type 'a arguments = 'a ED.Query.arguments =
     | N : unit arguments
     | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
     | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
 
-  type 'x t = Query of { predicate : name; arguments : 'x arguments }
+  type ('a,'b,'c) carguments = ('a,'b,'c) ED.Query.carguments =
+    | NC : (unit,'c,'csts) carguments
+    | DC : ('a,'c,'csts) ContextualConversion.t * 'a *    ('x,'c,'csts) carguments -> ('x,'c,'csts) carguments
+    | QC : ('a,'c,'csts) ContextualConversion.t * name * ('x,'c,'csts) carguments -> ('a * 'x,'c,'csts) carguments
 
-  let compile p loc (Query { predicate; arguments }) =
-    let p, predicate = Compiler.lookup_query_predicate p predicate in
-    let q = ED.Query.Query{ predicate; arguments } in
-    Compiler.query_of_data p loc q
+  type 'x t =
+    | Query of { predicate : name; arguments : 'x arguments }
+    | CQuery : name * ('x,#ContextualConversion.ctx as 'c,'csts) carguments * (ED.State.t -> 'c) * 'csts -> 'x t
+
+  let compile p loc = function
+    | Query { predicate; arguments } ->
+        let p, predicate = Compiler.lookup_query_predicate p predicate in
+        let q = ED.Query.Query{ predicate; arguments } in
+        Compiler.query_of_data p loc q
+    | CQuery(predicate, arguments, ctx, csts) ->
+        let p, predicate = Compiler.lookup_query_predicate p predicate in
+        let q = ED.Query.CQuery(predicate, arguments, ctx, csts) in
+        Compiler.query_of_data p loc q
+
 end
 
 module State = struct
@@ -1293,7 +1427,6 @@ module Calc = struct
 
  let calc =
    let open BuiltIn in
-   let open ContextualConversion in
    let open BuiltInPredicate.Notation in
     [
     LPDoc " -- Evaluation --";
@@ -1304,8 +1437,8 @@ module Calc = struct
     MLCode(Pred("calc",
       In(BuiltInData.poly "A",  "Expr",
       Out(BuiltInData.poly "A", "Out",
-      Read(unit_ctx, "unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]"))),
-        (fun t _ ~depth _ _ state -> !: (eval ~depth state t))),
+      Read("unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]"))),
+        (fun t _ ~depth state -> !: (eval ~depth state t))),
     DocAbove);
     ]
 
@@ -1417,4 +1550,52 @@ module RawPp = struct
        Pp.ppterm depth [] ~argsdepth:0 ED.empty_env fmt t
     let show_term = ED.show_term
   end
+end
+
+module PPX = struct
+  module Doc = struct
+    let comment = ED.BuiltInPredicate.pp_comment
+    let kind fmt ty ~doc = ED.BuiltInPredicate.ADT.document_kind fmt ty doc
+    let constructor fmt ~name ~doc ~ty ~args =
+      ED.BuiltInPredicate.ADT.document_constructor
+        fmt name doc (List.map (fun x -> (false,ED.Conversion.show_ty_ast ~prec:Arrow x,"")) (args @ [ty]))
+    let adt ~doc ~ty ~args =
+      ED.BuiltInPredicate.ADT.document_adt doc ty
+        (List.map (fun (n,s,a) -> n,s,List.map (fun x -> (false,ED.Conversion.show_ty_ast ~prec:Arrow x,"")) (a@[ty])) args)
+    type prec_level = ED.Conversion.prec_level = Arrow | AppArg
+    let show_ty_ast = ED.Conversion.show_ty_ast
+          
+  end
+  
+  type context_description =
+  | C : ('a,'k,'c,'csts) ContextualConversion.context -> context_description
+
+  let readback_context { ContextualConversion.conv; to_key; push; is_entry_for_nominal; init} ctx ~depth hyps constraints state =
+    let module CMap = RawData.Constants.Map in
+    let filtered_hyps =
+      List.fold_left (fun m hyp ->
+          match is_entry_for_nominal hyp with
+          | None -> m
+          | Some idx ->
+              if CMap.mem idx m then
+                  Utils.type_error "more than one context entry for the same nominal";
+              CMap.add idx hyp m) CMap.empty
+        hyps in
+    let rec aux state gls i =
+      if i = depth then state, List.concat (List.rev gls)
+      else
+        if not (CMap.mem i filtered_hyps) then aux state gls (i + 1)
+        else
+          let hyp = CMap.find i filtered_hyps in
+          let hyp_depth = hyp.Data.hdepth in
+          let state, (nominal, t), gls_t =
+            conv.ContextualConversion.readback
+                ~depth:hyp_depth ctx constraints state hyp.Data.hsrc in
+          assert (nominal = i);
+          let s = to_key ~depth:hyp_depth t in
+          let state =
+            push ~depth:i state s { ContextualConversion.entry = t; depth = hyp_depth } in
+          aux state (gls_t :: gls) (i + 1) in
+    let state = init state in
+    aux state [] 0
 end
