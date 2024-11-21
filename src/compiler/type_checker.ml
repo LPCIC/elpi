@@ -589,8 +589,8 @@ let check1_undeclared w f (t, id, loc) =
   match TypeAssignment.is_monomorphic t with
   | None -> error ~loc Format.(asprintf "@[Unable to infer a closed type for %a:@ %a@]" F.pp f TypeAssignment.pretty (TypeAssignment.unval t))
   | Some ty ->
-      if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']+\\|main\\)$") (F.show f) 0) then
-        w := Format.(f, asprintf "type %a %a." F.pp f TypeAssignment.pretty (TypeAssignment.unval t)) :: !w;
+      if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']*\\|main\\)$") (F.show f) 0) then
+        w := Format.((f, loc), asprintf "type %a %a." F.pp f TypeAssignment.pretty (TypeAssignment.unval t)) :: !w;
       TypeAssignment.Single (id, ty)
 
 let check_undeclared ~unknown =
@@ -598,7 +598,7 @@ let check_undeclared ~unknown =
   let env = F.Map.mapi (check1_undeclared w) unknown in
   if !w <> [] then begin
     let undeclared, types = List.split !w in
-    warn Format.(asprintf "@[<v>Undeclared globals: @[%a@].@ Please add the following text to your program:@\n%a@]" (pplist F.pp ", ") undeclared
+    warn Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared
      (pplist pp_print_string "") types);
   end;
   env
