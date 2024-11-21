@@ -52,8 +52,6 @@ val relocate_closed_term : from:symbol_table -> to_:program -> term -> (term, st
 val pp_program : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> program -> unit
 val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> query -> unit
 
-(* val lookup_query_predicate : program -> string -> program * Data.constant *)
-
 val elpi_language : Compiler_data.Scope.language
 val elpi : Compiler_data.QuotationHooks.quotation
 

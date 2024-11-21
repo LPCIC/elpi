@@ -203,36 +203,6 @@ let is_declared t x =
 end
 
 (****************************************************************************
-  Data types
- ****************************************************************************)
-
-(* This is paired with a pre-stack term, i.e. a stack term where args are
- * represented with constants as "%Arg3" *)
-type argmap = {
-  nargs : int;
-  c2i : int Util.Constants.Map.t;
-  i2n : string IntMap.t;
-  n2t : (D.term * Util.Constants.t) StrMap.t;
-  n2i : int StrMap.t;
-}
-[@@ deriving show, ord]
-
-let empty_amap = {
- nargs = 0;
- c2i = Util.Constants.Map.empty;
- i2n = IntMap.empty;
- n2t = StrMap.empty;
- n2i = StrMap.empty;
-}
-
-let is_empty_amap { c2i; nargs; i2n; n2t; n2i } =
-  nargs = 0 &&
-  IntMap.is_empty i2n &&
-  StrMap.is_empty n2t &&
-  StrMap.is_empty n2i
-
-
-(****************************************************************************
   Intermediate program representation
  ****************************************************************************)
 
@@ -311,13 +281,6 @@ module Assembled = struct
     clauses : (Ast.Structured.insertion option * string option * constant * clause) list;
   
     signature : signature;
-    (* kinds : Arity.t F.Map.t;
-    types : TypeAssignment.overloaded_skema_with_id F.Map.t;
-    (* types_ids : TypeAssignment.skema C.Map.t; *)
-    type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
-    modes : (mode * Loc.t) F.Map.t;
-    functional_preds : Determinacy_checker.func_map;
-    toplevel_macros : macro_declaration; *)
 
     total_type_checking_time : float;
   
@@ -330,11 +293,6 @@ module Assembled = struct
   
     hash : string;
   
-  }
-  and attribute = {
-    id : string option;
-    timestamp : grafting_time;
-    insertion : Ast.Structured.insertion option;
   }
   [@@deriving show]
   
@@ -385,7 +343,7 @@ type unchecked_compilation_unit = {
 }
 [@@deriving show]
 
-(* TODO: proper hack *)
+(* TODO: proper hash *)
 let hash_base x = string_of_int @@ Hashtbl.hash x 
 
 
@@ -1666,7 +1624,8 @@ end = struct
       | Impl(b,t1,t2) ->
           D.mkApp (D.Global_symbols.(if b then implc else rimplc)) (todbl ctx t1) [todbl ctx t2]
       | CData c -> D.mkCData (CData.hcons c)
-      | Spill(t,_) -> assert false (* spill handled before *)
+      | Spill(t,_) ->
+          anomaly ~loc:t.loc (Format.asprintf "todbl: term contains spill: %a" ScopedTerm.pretty t)
       | Cast(t,_) -> todbl ctx t
       (* lists *)
       | Const(Global _,c) when F.(equal c nilf) -> D.mkNil
@@ -1711,20 +1670,10 @@ end = struct
 
     let mk_loc ~loc ?(ty = MutableOnce.make (F.from_string "Spill")) it = { ty; it; loc } in (* TODO store the types in Main *)
 
-    (* let sigma ~loc t n =
-      mk_loc ~loc @@ App(Global,F.sigmaf,mk_loc ~loc (Lam(Some n, t)),[]) in *)
-
     let add_spilled l t =
       if l = [] then t
       else
-        let t =
-          (* Format.eprintf "adding %d spills\n" (List.length l); *)
-          List.fold_right (fun { expr; vars_names } t ->
-            let t = mk_loc ~loc:t.loc @@ App(Scope.mkGlobal ~escape_ns:true (),F.andf,expr,[t]) in
-             (* let t = List.fold_left (sigma ~loc:t.loc) t vars_names in *)
-             t
-             ) l t in
-        t
+        List.fold_right (fun { expr; vars_names } t -> mk_loc ~loc:t.loc @@ App(Scope.mkGlobal ~escape_ns:true (),F.andf,expr,[t])) l t
     in
 
     let mkApp g c l =
@@ -2355,5 +2304,3 @@ let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols }) (t : 
 let relocate_closed_term ~from ~to_ t =
   try Result.Ok(relocate_closed_term ~from ~to_ t)
   with RelocationError s -> Result.Error s
-
-let lookup_query_predicate _ _ = assert false
