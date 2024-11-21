@@ -524,3 +524,8 @@ let () = declare "impl_prec_silent"
   ~description:"warning about A => B, C"
   ~expectation:(SuccessOutputTxt (fun l -> l|> List.for_all (fun l -> not @@ Str.string_match (Str.regexp "Warning,") l 0)))
   ()
+
+let () = declare "ifdef"
+~source_elpi:"ifdef.elpi"
+~description:"lexer ifdef"
+()
