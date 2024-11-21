@@ -69,7 +69,6 @@ let usage =
   "\t-parse-term parses a term from standard input and prints it\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
   "\t-print prints files after most compilation passes, then exit\n" ^ 
-  "\t-print-passes prints intermediate data during compilation, then exit\n" ^
   "\t-print-units prints compilation units data, then exit\n"
 ;;
 
@@ -103,7 +102,6 @@ let _ =
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; eat_options rest
     | "-print" :: rest -> print_lprolog := true; eat_options rest
     | "-print-ast" :: rest -> print_ast := true; eat_options rest
-    | "-print-passes" :: rest -> print_passes := true; eat_options rest
     | "-print-units" :: rest -> print_units := true; eat_options rest
     | "-parse-term" :: rest -> parse_term := true; eat_options rest
     | "-document-builtins" :: rest -> doc_builtins := true; eat_options rest
@@ -129,7 +127,6 @@ let _ =
   let paths = tjpath @ installpath @ [execpath] @ !extra_paths in
   let flags = {
       API.Compile.defined_variables = !vars;
-      API.Compile.print_passes = !print_passes;
       API.Compile.print_units = !print_units;
   } in
   if !doc_infix then begin

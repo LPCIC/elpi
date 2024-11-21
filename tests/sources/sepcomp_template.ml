@@ -6,8 +6,9 @@ let init () =
 let cc ~elpi ~flags ~base i u =
   let u =
     Compile.unit ~elpi ~flags ~base
+     (Compile.scope ~elpi ~flags
       (Parse.program_from ~elpi ~loc:(Ast.Loc.initial (Printf.sprintf "<u%d>" i))
-        (Lexing.from_string u)) in
+        (Lexing.from_string u))) in
   Compile.extend ~flags ~base u, u
 
 

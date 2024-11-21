@@ -6,9 +6,9 @@ Requires Menhir 20211230 and OCaml 4.08 or above.
   - Change the pipeline completely to make unit relocation unnecessary. Current
     phases are (roughly):
     1. `Ast.program` —[`RecoverStructure`]—> `Ast.Structured.program`
-    2. `Ast.Structured.program` —[`Scope`,`Quotation`,`Macro`]—> `Scoped.program`
+    2. `Ast.Structured.program` —[`Scope`,`Quotation`,`Macro`]—> `Scoped.program` (aka `API.Compile.scoped_program`)
     3. `Scoped.program` —[`Flatten`]—> `Flat.program`
-    4. `Flat.program` —[`Check`]—> `CheckedFlat.program` (aka `compilation_unit`)
+    4. `Flat.program` —[`Check`]—> `CheckedFlat.program` (aka `API.Compile.compilation_unit`)
     5. `CheckedFlat.program` —[`Spill`,`ToDbl`]—> `Assembled.program`
 
     Steps 4 and 5 operate on a base, that is an `Assembled.program` being

@@ -163,6 +163,7 @@ module Compile = struct
   type program = Compiler.program
   type query = Compiler.query
   type executable = ED.executable
+  type scoped_program = Compiler.scoped_program
   type compilation_unit = Compiler.checked_compilation_unit
   type compilation_unit_signature = Compiler.checked_compilation_unit_signature
   exception CompileError = Compiler_data.CompileError
@@ -183,13 +184,14 @@ module Compile = struct
 
   type flags = Compiler.flags = {
     defined_variables : StrSet.t;
-    print_passes : bool;
     print_units : bool;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
+  let scope ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } a =
+    Compiler.scoped_of_ast ~flags ~header a
   let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base ?builtins x =
-    Compiler.unit_of_ast ~flags ~header ?builtins x |> Compiler.check_unit ~base
+    Compiler.unit_of_scoped ~flags ~header ?builtins x |> Compiler.check_unit ~base
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
   let signature u = Compiler.signature_of_checked_compilation_unit u

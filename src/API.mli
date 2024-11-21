@@ -241,8 +241,6 @@ module Compile : sig
   type flags = {
     (* variables used in conditional compilation, that is :if clauses *)
     defined_variables : StrSet.t;
-    (* debug: print intermediate data during the compilation phase *)
-    print_passes : bool;
     (* debug: print compilation units *)
     print_units : bool;
   }
@@ -267,8 +265,8 @@ module Compile : sig
    *)
   val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program list -> program
 
-  (* separate compilation API: units are marshalable and closed w.r.t.
-     the host application (eg quotations are desugared).
+  (* separate compilation API: scoped_programs and units are marshalable and
+     closed w.r.t. the host application (eg quotations are desugared).
 
      Note:
      - macros and shorten directives part of a unit are not visible in other
@@ -278,10 +276,13 @@ module Compile : sig
      - types, type abbreviations and mode declarations from the  units are
        merged at assembly time
 *)
+  type scoped_program
+  val scope : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> scoped_program
+  
   type compilation_unit
   type compilation_unit_signature
   val empty_base : elpi:Setup.elpi -> program
-  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> ?builtins:Setup.builtins list -> Ast.program -> compilation_unit
+  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> ?builtins:Setup.builtins list -> scoped_program -> compilation_unit
   val extend : ?flags:flags -> base:program -> compilation_unit -> program
 
   (* only adds the types/modes from the compilation unit, not its code *)

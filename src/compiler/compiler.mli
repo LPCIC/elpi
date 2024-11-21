@@ -11,7 +11,6 @@ open Data
 
 type flags = {
   defined_variables : StrSet.t;
-  print_passes : bool; (* debug *)
   print_units : bool; (* debug *)
 }
 val default_flags : flags
@@ -24,10 +23,13 @@ val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descrip
 type program
 val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program
 
+type scoped_program
+val scoped_of_ast : flags:flags -> header:header -> Ast.Program.t -> scoped_program
+
 type checked_compilation_unit
 type unchecked_compilation_unit
 val empty_base : header:header -> program
-val unit_of_ast : flags:flags -> header:header -> ?builtins:builtins list -> Ast.Program.t -> unchecked_compilation_unit
+val unit_of_scoped : flags:flags -> header:header -> ?builtins:builtins list -> scoped_program -> unchecked_compilation_unit
 val append_unit : flags:flags -> base:program -> checked_compilation_unit -> program
 val check_unit : base:program -> unchecked_compilation_unit -> checked_compilation_unit
 

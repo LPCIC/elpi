@@ -16,14 +16,12 @@ let error = Compiler_data.error
 
 type flags = {
   defined_variables : StrSet.t;
-  print_passes : bool;
   print_units : bool;
 }
 [@@deriving show]
 
 let default_flags = {
   defined_variables = StrSet.empty;
-  print_passes = false;
   print_units = false;
 }
 
@@ -374,6 +372,12 @@ type program = {
 [@@deriving show]
 
 end
+
+type scoped_program = {
+  version : string;
+  code : Scoped.program;
+}
+[@@deriving show]
 
 type unchecked_compilation_unit = {
   version : string;
@@ -780,7 +784,7 @@ let get_mtm, set_mtm, drop_mtm, update_mtm =
 
 module Scope_Quotation_Macro : sig
 
-  val run : State.t -> toplevel_macros:macro_declaration -> Ast.Structured.program -> State.t * Scoped.program
+  val run : State.t -> toplevel_macros:macro_declaration -> Ast.Structured.program -> Scoped.program
   val check_duplicate_mode : F.t -> (mode * Loc.t) -> (mode * Loc.t) F.Map.t -> unit
   val scope_loc_term : state:State.t -> Ast.Term.t -> ScopedTerm.t
 
@@ -1059,7 +1063,7 @@ end = struct
       let body = scope_loc_term ~state:(set_mtm state { empty_mtm with macros = m }) body in
       F.Map.add name (body,loc) am, F.Map.add name (body,loc) m
 
-  let run state ~toplevel_macros p : State.t * Scoped.program =
+  let run state ~toplevel_macros p : Scoped.program =
 
     let rec compile_program omacros state { Ast.Structured.macros; kinds; types; type_abbrevs; modes; body } =
       let toplevel_macros, active_macros = List.fold_left (compile_macro state) (F.Map.empty,omacros) macros in
@@ -1071,62 +1075,62 @@ end = struct
       let defs_k = defs_of_map kinds in
       let defs_t = defs_of_map types in
       let defs_ta = defs_of_assoclist type_abbrevs in
-      let state, kinds, types, type_abbrevs, modes, defs_b, body =
+      let kinds, types, type_abbrevs, modes, defs_b, body =
         compile_body active_macros kinds types type_abbrevs modes F.Set.empty state body in
       let symbols = F.Set.(union (union (union (union defs_k defs_m) defs_t) defs_b) defs_ta) in
-      (state : State.t), toplevel_macros,
+      toplevel_macros,
       { Scoped.types; kinds; type_abbrevs; modes; body; symbols }
 
     and compile_body macros kinds types type_abbrevs (modes : (mode * Loc.t) F.Map.t) (defs : F.Set.t) state = function
-      | [] -> state, kinds, types, type_abbrevs, modes, defs, []
+      | [] -> kinds, types, type_abbrevs, modes, defs, []
       | Clauses cl :: rest ->
           let compiled_cl = List.map (compile_clause state macros) cl in
           let defs = F.Set.union defs (global_hd_symbols_of_clauses compiled_cl) in
-          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
             compile_body macros kinds types type_abbrevs modes defs state rest in
           let compiled_rest =
             match compiled_rest with
             | Scoped.Clauses l :: rest -> Scoped.Clauses (compiled_cl @ l) :: rest
             | rest -> Scoped.Clauses compiled_cl :: rest in
-          state, kinds, types, type_abbrevs, modes, defs, compiled_rest
+          kinds, types, type_abbrevs, modes, defs, compiled_rest
       | Namespace (prefix, p) :: rest ->
           let prefix = F.show prefix in
-          let state, _, p = compile_program macros state p in
-          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+          let _, p = compile_program macros state p in
+          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
             compile_body macros kinds types type_abbrevs modes defs state rest in
           let symbols = prepend [prefix] p.Scoped.symbols in
-          state, kinds, types, type_abbrevs, modes, F.Set.union defs symbols,
+          kinds, types, type_abbrevs, modes, F.Set.union defs symbols,
           Scoped.Namespace(prefix, p) :: compiled_rest
       | Shorten(shorthands,p) :: rest ->
           let shorts = List.fold_left (fun s { Ast.Structured.short_name } ->
             F.Set.add short_name s) F.Set.empty shorthands in
-          let state, _, p = compile_program macros state p in
-          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+          let _, p = compile_program macros state p in
+          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
             compile_body macros kinds types type_abbrevs modes defs state rest in
-          state, kinds, types, type_abbrevs, modes,
+          kinds, types, type_abbrevs, modes,
           F.Set.union defs (F.Set.diff p.Scoped.symbols shorts),
           Scoped.Shorten(shorthands, p) :: compiled_rest
       | Constraints ({ctx_filter; clique; rules}, p) :: rest ->
           (* XXX missing check for nested constraints *)
           let rules = List.map (compile_chr_rule state macros) rules in
-          let state, _, p = compile_program macros state p in
-          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+          let _, p = compile_program macros state p in
+          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
             compile_body macros kinds types type_abbrevs modes defs state rest in
-          state, kinds, types, type_abbrevs, modes,
+          kinds, types, type_abbrevs, modes,
           F.Set.union defs p.Scoped.symbols,
           Scoped.Constraints({ctx_filter; clique; rules},p) :: compiled_rest
       | Accumulated p :: rest ->
-          let state, _, p = compile_program macros state p in
-          let state, kinds, types, type_abbrevs, modes, defs, compiled_rest =
+          let _, p = compile_program macros state p in
+          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
             compile_body macros kinds types type_abbrevs modes defs state rest in
-          state, kinds, types, type_abbrevs, modes,
+          kinds, types, type_abbrevs, modes,
           F.Set.union defs p.Scoped.symbols,
           Scoped.Accumulated p :: compiled_rest
   
     in
-    let state, toplevel_macros, pbody = compile_program toplevel_macros state p in
+    let toplevel_macros, pbody = compile_program toplevel_macros state p in
     (* Printf.eprintf "run: %d\n%!" (F.Map.cardinal toplevel_macros); *)
-    state, { Scoped.pbody; toplevel_macros }
+    { Scoped.pbody; toplevel_macros }
 
 end
 
@@ -2005,32 +2009,19 @@ end
   API
  ****************************************************************************)
 
-(* Compiler passes *)
-let unit_or_header_of_ast { print_passes } s ~toplevel_macros ~builtins p =
-
-  if print_passes then
-    Format.eprintf "== AST ================@\n@[<v 0>%a@]@\n"
-      Ast.Program.pp p;
-
+let scope s ~toplevel_macros p : scoped_program =
   let p = RecoverStructure.run s p in
+  let p = Scope_Quotation_Macro.run ~toplevel_macros s p in
+  {
+    version = "%%VERSION_NUM%%";
+    code = p;
+  }
 
-  if print_passes then
-    Format.eprintf "== Ast.Structured ================@\n@[<v 0>%a@]@\n"
-      Ast.Structured.pp_program p;
-
-  let s, p = Scope_Quotation_Macro.run ~toplevel_macros s p in
-
-  if print_passes then
-    Format.eprintf "== Scoped ================@\n@[<v 0>%a@]@\n"
-      Scoped.pp_program p;
-
-  let p = Flatten.run s p in
-
-  if print_passes then
-    Format.eprintf "== Flat ================@\n@[<v 0>%a@]@\n"
-      Flat.pp_program p;
-
-  s, {
+(* Compiler passes *)
+let unit_or_header_of_scoped s ~builtins (p : scoped_program) : unchecked_compilation_unit =
+  assert ("%%VERSION_NUM%%" = p.version);
+  let p = Flatten.run s p.code in
+  {
     version = "%%VERSION_NUM%%";
     code = { p with builtins };
   }
@@ -2046,12 +2037,6 @@ let print_unit { print_units } x =
 let assemble_unit ~flags ~header:(s,base) units : program =
 
   let s, p = Assemble.extend flags s base units in
-
-  let { print_passes } = flags in
-
-  if print_passes then
-    Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
-      Assembled.pp_program p;
 
  s, p
 ;;
@@ -2084,7 +2069,8 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
     List.map (fun (_,decl) -> decl |> List.filter_map (function
       | Data.BuiltInPredicate.MLCode (p,_) -> Some p
       | _ -> None)) builtins in
-  let state, u = unit_or_header_of_ast ~toplevel_macros:F.Map.empty flags state ~builtins ast in
+  let scoped_ast = scope ~toplevel_macros:F.Map.empty state ast in
+  let u = unit_or_header_of_scoped state ~builtins scoped_ast in
   print_unit flags u;
   let base = Assembled.empty () in
   let u = Check.check state ~base u in
@@ -2098,53 +2084,32 @@ let check_unit ~base:(st,base) u = Check.check st ~base u
 
 let empty_base ~header:b = b
 
-let unit_of_ast ~flags ~header:(s, u) ?(builtins=[]) p : unchecked_compilation_unit =
-  (* Printf.eprintf "unit_of_ast: %d\n%!" (F.Map.cardinal u.Assembled.toplevel_macros); *)
+let scoped_of_ast ~flags:_ ~header:(s,u) p =
+  scope ~toplevel_macros:u.Assembled.signature.toplevel_macros s p
+
+let unit_of_scoped ~flags ~header:(s, u) ?(builtins=[]) p : unchecked_compilation_unit =
   let builtins =
     List.flatten @@
     List.map (fun (_,decl) -> decl |> List.filter_map (function
       | Data.BuiltInPredicate.MLCode (p,_) -> Some p
       | _ -> error "Only BuiltInPredicate.MLCode allowed in units")) builtins in
-  let _, u = unit_or_header_of_ast flags s ~toplevel_macros:u.Assembled.signature.toplevel_macros ~builtins p in
+  let u = unit_or_header_of_scoped s ~builtins p in
   print_unit flags u;
   u
 
 let append_unit ~flags ~base:(s,p) unit : program =
-  let s, p = Assemble.extend flags s p unit in
-  let { print_passes } = flags in
-
-  if print_passes then
-    Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
-     Assembled.pp_program p;
-
-  s, p
+  Assemble.extend flags s p unit
 
 let append_unit_signature ~flags ~base:(s,p) unit : program =
-  let s, p = Assemble.extend_signature s p unit in
-  let { print_passes } = flags in
-
-  if print_passes then
-    Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
-      Assembled.pp_program p;
-
-  s, p
+  Assemble.extend_signature s p unit
   
 let program_of_ast ~flags ~header:((st, base) as header : State.t * Assembled.program) p : program =
-  let u = unit_of_ast ~flags ~header p in
+  let p = scoped_of_ast ~flags ~header p in
+  let u = unit_of_scoped ~flags ~header p in
   let u = Check.check st ~base u in
   assemble_unit ~flags ~header u
 
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x
-
-(* let uvbodies_of_assignments assignments =
-  (* Clients may add spurious args that, not occurring in the query,
-     are not turned into uvars *)
-   let assignments = assignments |> StrMap.filter (fun _ -> function
-     | UVar _ | AppUVar _ -> true
-     | _ -> false) in
-   State.end_goal_compilation (StrMap.map (function
-     | UVar(b,_,_) | AppUVar(b,_,_) -> b
-     | _ -> assert false) assignments) *)
 
 let pp fmt ub =
   R.Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
