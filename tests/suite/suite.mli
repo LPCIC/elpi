@@ -30,12 +30,10 @@ val declare :
   ?source_dune:fname ->
   ?source_json:fname ->
   ?after:string ->
-  ?typecheck:bool ->
   ?input:fname -> 
   ?expectation:expectation -> 
   ?outside_llam:bool ->
   ?trace:trace ->
-  ?legacy_parser:bool ->
   ?promote:bool ->
   category:string ->
   unit -> unit
@@ -50,12 +48,10 @@ type t = {
   source_dune : fname option;
   source_json : fname option;
   after : string list;
-  typecheck : bool;
   input : fname option;
   expectation : expectation;
   outside_llam : bool;
   trace: string list;
-  legacy_parser : bool;
 }
 
 val get : catskip:string list -> (name:string -> bool) -> t list

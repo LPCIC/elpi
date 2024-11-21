@@ -115,12 +115,6 @@ let () = declare "conj2"
   ~description:"parsing and evaluation of & (binary conj)"
   ()
 
-let () = declare "conj2_legacy"
-  ~source_elpi:"conj2.elpi"
-  ~description:"parsing and evaluation of & (binary conj)"
-  ~legacy_parser:true
-  ()
-
 (* 
   Note in the following tests with DT, we disable typecheck not to print the
   number of candidates found in the search of clauses done by the elpi typechecker
@@ -128,8 +122,7 @@ let () = declare "conj2_legacy"
 let () = declare "dt_var"
   ~source_elpi:"dt_var.elpi"
   ~description:"discrimination_tree indexing flex"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 2"))
   ()
 
@@ -138,48 +131,42 @@ let () =
   declare "dt_max_depths"
   ~source_elpi:"dt_max_depths.elpi"
   ~description:"discrimination_tree max_depth"
-  ~typecheck:false
-  ~trace:(On["tty";"file://"^sample;"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:depth-path"])
+    ~trace:(On["tty";"file://"^sample;"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:depth-path"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "dt_max_depths.log" })
   ()
 
 let () = declare "dt_var2"
   ~source_elpi:"dt_var2.elpi"
   ~description:"discrimination_tree indexing flex"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 3"))
   ()
 
 let () = declare "dt_multiparam1"
   ~source_elpi:"dt_multiparam1.elpi"
   ~description:"discrimination_tree indexing multi argument"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 1"))
   ()
 
 let () = declare "dt_multiparam2"
   ~source_elpi:"dt_multiparam2.elpi"
   ~description:"discrimination_tree indexing multi with flexible"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 101"))
   ()
 
 let () = declare "dt_multiparam3"
   ~source_elpi:"dt_multiparam3.elpi"
   ~description:"discrimination_tree indexing multi with flexible in input mode"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(FailureOutput (Str.regexp "dev:disc-tree:candidates = 0"))
   ()
 
 let () = declare "dt_multivar"
   ~source_elpi:"dt_multivar.elpi"
   ~description:"discrimination_tree indexing multi with flexible in input mode"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (
       let wanted_length = [5;1;0;1;1;5;4;5;2;5;4;5;6;1] in
       let all_char = "\\(.\\|\n\\)*" in

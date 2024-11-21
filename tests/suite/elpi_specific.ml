@@ -98,17 +98,11 @@ let () = declare "chr_ut"
 let () = declare "chr_even_odd"
   ~source_elpi:"even-odd.elpi"
   ~description:"CHR example at MLWS"
-  ~typecheck:false
   ~trace:(On["json";"stdout";"-trace-at";"1";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutput (Str.regexp "user:CHR:rule-fired"))
   ()
 let () = declare "w"
   ~source_elpi:"w.elpi"
-  ~description:"ELPI example at MLWS"
-  ()
-let () = declare "w_legacy"
-  ~source_elpi:"w_legacy.elpi"
-  ~legacy_parser:true
   ~description:"ELPI example at MLWS"
   ()
 let () = declare "uvar_keyword"
@@ -184,12 +178,6 @@ let () = declare "hollight"
   (* ~expectation:Test.(FailureOutput (Str.regexp "Mode is a no more maintained keyword")) needs advanced modes *)
   ~expectation:Test.Failure
   ()
-let () = declare "hollight_legacy"
-  ~source_elpi:"hollight_legacy.elpi"
-  ~description:"hollight implementation"
-  ~expectation:Test.Failure (* needs advanced modes *)
-  ~legacy_parser:true
-  ()
 
 let () = declare "asclause"
   ~source_elpi:"asclause.elpi"
@@ -200,71 +188,61 @@ let () = declare "asclause"
 let () = declare "elpi2html"
   ~source_elpi:"elpi2html-copy.elpi"
   ~description:"type checking elpi2html"
-  ~typecheck:true
-  ~expectation:Test.Success
+    ~expectation:Test.Success
   () *)
 
 let () = declare "same_term"
   ~source_elpi:"same_term.elpi"
   ~description:"the == operator"
-  ~typecheck:true
-  ~expectation:Test.Success
+    ~expectation:Test.Success
   ()
 
 let () = declare "list_comma"
   ~source_elpi:"list_comma.elpi"
   ~description:"lists with spurious , in there"
-  ~typecheck:true
-  ~expectation:Test.Success
+    ~expectation:Test.Success
   ()
 
 let () = declare "heap_discard"
   ~source_elpi:"heap_discard.elpi"
   ~description:"heapification of _"
-  ~typecheck:true
-  ~expectation:Test.Success
+    ~expectation:Test.Success
   ()
 
 let () = declare "accumulate_twice1"
   ~source_elpi:"accumulate_twice1.elpi"
   ~description:"double accumulate"
-  ~typecheck:true
-  ~expectation:Test.Failure
+    ~expectation:Test.Failure
   ()
 let () = declare "accumulate_twice2"
   ~source_elpi:"accumulate_twice2.elpi"
   ~description:"double accumulate"
-  ~typecheck:true
-  ~expectation:Test.Failure
+    ~expectation:Test.Failure
   ()
 
 let () = declare "CHR_no_clique"
   ~source_elpi:"chr_not_clique.elpi"
   ~description:"CHR rule on a non constraint"
-  ~typecheck:true
-  ~expectation:Test.Failure
+    ~expectation:Test.Failure
   ()
 
 (* needs quote_syntax
 let () = declare "quote_syntax"
  ~source_elpi:"quote_syntax.elpi"
   ~description:"quote_syntax API"
-  ~typecheck:true
-  ~expectation:(Test.SuccessOutput (Str.regexp "const main"))
+    ~expectation:(Test.SuccessOutput (Str.regexp "const main"))
   () *)
 
 let () = declare "var"
   ~source_elpi:"var.elpi"
   ~description:"var API"
-  ~typecheck:true
-  ~expectation:Test.Success
+    ~expectation:Test.Success
   ()
 
 let () = declare "hyp_uvar"
   ~source_elpi:"hyp_uvar.elpi"
   ~description:"uvar at the left of implication"
-  ~typecheck:true
-  ~expectation:Test.Success
+    ~expectation:Test.Success
   ()
 
 let () = declare "trailing_comment"
@@ -288,7 +266,6 @@ let () = declare "notation_error"
 let () = declare "printer"
   ~source_elpi:"printer.elpi"
   ~description:"printing infix"
-  ~typecheck:false
   ~expectation:Test.(SuccessOutput (Str.regexp_string (
     Str.global_replace (Str.regexp_string "\r") "" {|p X0 :- q X0 , r x
 X0 is f X1 mod r X0
@@ -303,54 +280,46 @@ X0 || X2 && X3 ===> X4
 let () = declare "linear"
   ~source_elpi:"linear.elpi"
   ~description:"linear variable check"
-  ~typecheck:true
-  ~expectation:Test.(SuccessOutput (Str.regexp_string "Foo_Bar is linear"))
+    ~expectation:Test.(SuccessOutput (Str.regexp_string "Foo_Bar is linear"))
   ()
 
 
 let () = declare "IO_COLON"
   ~source_elpi:"io_colon.elpi"
   ~description:"IO_COLON token"
-  ~typecheck:true
-  ()
+    ()
 
 let () = declare "graft_replace_ok"
   ~source_elpi:"graft_replace_ok.elpi"
   ~description:"replacing a clase"
-  ~typecheck:true
-  ()
+    ()
 
 let () = declare "graft_replace_err"
   ~source_elpi:"graft_replace_err.elpi"
   ~description:"replacing a clase"
-  ~typecheck:true
-  ~expectation:Test.(FailureOutput (Str.regexp "name attribute"))
+    ~expectation:Test.(FailureOutput (Str.regexp "name attribute"))
   ()
 
 let () = declare "graft_remove"
   ~source_elpi:"graft_remove.elpi"
   ~description:"remove a clase"
-  ~typecheck:true
-  ()
+    ()
 
 
 let () = declare "graft_before"
   ~source_elpi:"graft_before.elpi"
   ~description:"grafting a clause before the clause of another predicate"
-  ~typecheck:true
-  ()
+    ()
 
 let () = declare "graft_before_same"
   ~source_elpi:"graft_before_same.elpi"
   ~description:"grafting a clause before the clause of the same predicate"
-  ~typecheck:true
-  ()
+    ()
 
 let () = declare "mk_uv_meta"
   ~source_elpi:"mk-evar-meta.elpi"
   ~description:"uvar surgery at the meta level"
-  ~typecheck:true
-  ~expectation:Test.Success
+    ~expectation:Test.Success
   ()
 
 let mk_tmp_file =
@@ -365,8 +334,7 @@ let () =
   declare "trace-browser"
   ~source_elpi:"trace.elpi"
   ~description:"trace generation"
-  ~typecheck:false
-  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+    ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace.json" })
   ()
 
@@ -382,8 +350,7 @@ let sample = mk_tmp_file "trace2.json" ".new"
 let () = declare "trace-browser2"
   ~source_elpi:"trace2.elpi"
   ~description:"trace generation"
-  ~typecheck:false
-  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+    ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace2.json" })
   ()
 
@@ -398,8 +365,7 @@ let sample = mk_tmp_file "trace3.json" ".new"
 let () = declare "trace-browser3"
   ~source_elpi:"trace3.elpi"
   ~description:"trace generation"
-  ~typecheck:false
-  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+    ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace3.json" })
   ()
 
@@ -414,8 +380,7 @@ let sample = mk_tmp_file "trace4.json" ".new"
 let () = declare "trace-browser4"
   ~source_elpi:"trace4.elpi"
   ~description:"trace generation"
-  ~typecheck:false
-  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+    ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace4.json" })
   ()
 
@@ -431,8 +396,7 @@ let sample = mk_tmp_file "trace_chr.json" ".new"
 let () = declare "trace-browser-chr"
   ~source_elpi:"trace_chr.elpi"
   ~description:"trace generation"
-  ~typecheck:false
-  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+    ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_chr.json" })
   ()
 
@@ -447,8 +411,7 @@ let sample = mk_tmp_file "trace_findall.json" ".new"
 let () = declare "trace-browser-findall"
   ~source_elpi:"trace_findall.elpi"
   ~description:"trace generation"
-  ~typecheck:false
-  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+    ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_findall.json" })
   ()
 
@@ -463,8 +426,7 @@ let sample = mk_tmp_file "trace_cut.json" ".new"
 let () = declare "trace-browser-cut"
   ~source_elpi:"trace_cut.elpi"
   ~description:"trace generation"
-  ~typecheck:false
-  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+    ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_cut.json" })
   ()
 
@@ -501,8 +463,7 @@ let sample = mk_tmp_file "trace_w.json" ".new"
 let () = declare "trace-browser-w"
   ~source_elpi:"trace-w/main.elpi"
   ~description:"trace generation"
-  ~typecheck:false
-  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+    ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_w.json" })
   ()
 

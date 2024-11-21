@@ -59,7 +59,6 @@ let usage =
   "\t-D var  Define variable (conditional compilation)\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
   "\t-document-infix-syntax Print the documentation for infix operators\n" ^
-  "\t-no-tc don't typecheck the program\n" ^ 
   "\t-I PATH  search for accumulated files in PATH\n" ^
   "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
   "\t                                          compatibility)\n" ^
@@ -87,7 +86,6 @@ let _ =
   let exec = ref "" in
   let print_lprolog = ref false in
   let print_ast = ref false in
-  let typecheck = ref true in
   let batch = ref false in
   let doc_builtins = ref false in
   let doc_infix = ref false in
@@ -108,7 +106,6 @@ let _ =
     | "-print-passes" :: rest -> print_passes := true; eat_options rest
     | "-print-units" :: rest -> print_units := true; eat_options rest
     | "-parse-term" :: rest -> parse_term := true; eat_options rest
-    | "-no-tc" :: rest -> typecheck := false; eat_options rest
     | "-document-builtins" :: rest -> doc_builtins := true; eat_options rest
     | "-document-infix-syntax" :: rest -> doc_infix := true; eat_options rest
     | "-D" :: var :: rest -> vars := API.Compile.StrSet.add var !vars; eat_options rest
