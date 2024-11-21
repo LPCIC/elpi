@@ -188,8 +188,8 @@ module Compile = struct
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
-  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base x =
-    Compiler.unit_of_ast ~flags ~header x |> Compiler.check_unit ~base
+  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base ?builtins x =
+    Compiler.unit_of_ast ~flags ~header ?builtins x |> Compiler.check_unit ~base
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
   let signature u = Compiler.signature_of_checked_compilation_unit u

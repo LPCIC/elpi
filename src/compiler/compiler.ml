@@ -2006,7 +2006,7 @@ end
  ****************************************************************************)
 
 (* Compiler passes *)
-let unit_or_header_of_ast { print_passes } s ~toplevel_macros p =
+let unit_or_header_of_ast { print_passes } s ~toplevel_macros ~builtins p =
 
   if print_passes then
     Format.eprintf "== AST ================@\n@[<v 0>%a@]@\n"
@@ -2032,7 +2032,7 @@ let unit_or_header_of_ast { print_passes } s ~toplevel_macros p =
 
   s, {
     version = "%%VERSION_NUM%%";
-    code = p;
+    code = { p with builtins };
   }
 ;;
 
@@ -2079,13 +2079,12 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let state = D.State.set parser state (Some p) in
   let state = D.State.set D.while_compiling state true in
   (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
-  let state, u = unit_or_header_of_ast ~toplevel_macros:F.Map.empty flags state ast in
   let builtins =
     List.flatten @@
     List.map (fun (_,decl) -> decl |> List.filter_map (function
       | Data.BuiltInPredicate.MLCode (p,_) -> Some p
       | _ -> None)) builtins in
-  let u = { u with code = { u.code with builtins }} in (* UGLY *)
+  let state, u = unit_or_header_of_ast ~toplevel_macros:F.Map.empty flags state ~builtins ast in
   print_unit flags u;
   let base = Assembled.empty () in
   let u = Check.check state ~base u in
@@ -2099,9 +2098,14 @@ let check_unit ~base:(st,base) u = Check.check st ~base u
 
 let empty_base ~header:b = b
 
-let unit_of_ast ~flags ~header:(s, u) p : unchecked_compilation_unit =
+let unit_of_ast ~flags ~header:(s, u) ?(builtins=[]) p : unchecked_compilation_unit =
   (* Printf.eprintf "unit_of_ast: %d\n%!" (F.Map.cardinal u.Assembled.toplevel_macros); *)
-  let _, u = unit_or_header_of_ast flags s ~toplevel_macros:u.Assembled.signature.toplevel_macros p in
+  let builtins =
+    List.flatten @@
+    List.map (fun (_,decl) -> decl |> List.filter_map (function
+      | Data.BuiltInPredicate.MLCode (p,_) -> Some p
+      | _ -> error "Only BuiltInPredicate.MLCode allowed in units")) builtins in
+  let _, u = unit_or_header_of_ast flags s ~toplevel_macros:u.Assembled.signature.toplevel_macros ~builtins p in
   print_unit flags u;
   u
 

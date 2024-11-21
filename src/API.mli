@@ -281,7 +281,7 @@ module Compile : sig
   type compilation_unit
   type compilation_unit_signature
   val empty_base : elpi:Setup.elpi -> program
-  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> Ast.program -> compilation_unit
+  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> ?builtins:Setup.builtins list -> Ast.program -> compilation_unit
   val extend : ?flags:flags -> base:program -> compilation_unit -> program
 
   (* only adds the types/modes from the compilation unit, not its code *)
