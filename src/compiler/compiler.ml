@@ -174,6 +174,7 @@ module Builtins : sig
   val pp : Format.formatter -> t -> unit
   val register : t -> D.BuiltInPredicate.t -> constant -> t
   val is_declared : t -> constant -> bool
+  val is_builtin : t -> constant -> bool (* also for non declared ones, like ! *)
   val fold : (constant -> Data.BuiltInPredicate.t -> 'a -> 'a) -> t -> 'a -> 'a
   val empty : t
 
@@ -190,7 +191,7 @@ let register t (D.BuiltInPredicate.Pred(s,_,_) as b) idx =
   Constants.Map.add idx b t
 ;;
 
-let is_declared t x =
+let is_builtin t x =
   Constants.Map.mem x t
   || x == D.Global_symbols.declare_constraintc
   || x == D.Global_symbols.print_constraintsc
@@ -198,6 +199,8 @@ let is_declared t x =
   || x == D.Global_symbols.eqc
   || x == D.Global_symbols.findall_solutionsc
 ;;
+let is_declared t x =
+  Constants.Map.mem x t
 
 end
 
@@ -1371,7 +1374,7 @@ module Check : sig
 
 end = struct
 
-  let check_signature (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * 'a =
+  let check_signature builtins symbols (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * _=
     let { Assembled.modes = om; functional_preds = ofp; kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
     let { Flat.modes; kinds; types; type_abbrevs; toplevel_macros } = signature in
     let all_kinds = Flatten.merge_kinds ok kinds in
@@ -1407,10 +1410,13 @@ end = struct
       tys) types in
 
     let types_indexing = F.Map.filter_map (fun k tyl ->
+      begin match SymbolMap.get_global_symbol symbols k with
+      | Some c -> if Builtins.is_declared builtins c then error (Format.asprintf "Ascribing a type to an already registered builtin %a" F.pp k);
+      | _ -> () end;
       if TypeAssignment.is_predicate (F.Map.find k types) then
         Some (List.map (fun ty -> ty.ScopedTypeExpression.indexing, ty.ScopedTypeExpression.loc) tyl)
       else None) raw_types in
-
+  
     let check_t_end = Unix.gettimeofday () in
 
     let all_types = Flatten.merge_type_assignments ot types in
@@ -1424,7 +1430,7 @@ end = struct
 
   let check st ~base u : checked_compilation_unit =
 
-    let signature, precomputed_signature, check_sig, types_indexing = check_signature base.Assembled.signature u.code.Flat.signature in
+    let signature, precomputed_signature, check_sig, types_indexing = check_signature base.Assembled.builtins base.Assembled.symbols base.Assembled.signature u.code.Flat.signature in
 
     let { version; code = { Flat.clauses; chr; builtins } } = u in
     let { Assembled.modes; functional_preds; kinds; types; type_abbrevs; toplevel_macros } = precomputed_signature in
@@ -1438,6 +1444,18 @@ end = struct
         unknown, (needs_spill, c)
       else
         unknown, (false, c)) F.Map.empty in
+
+    List.iter (fun (BuiltInPredicate.Pred(name,_,_)) ->
+      if F.Map.mem (F.from_string name) base.Assembled.signature.types then
+        error (Format.asprintf "Builtin %s already exists as a regular predicate" name);
+      if not @@ F.Map.mem (F.from_string name) types_indexing then error (Format.asprintf "No type declared for builtin %s" name);
+      let tyl = F.Map.find (F.from_string name) types_indexing in
+      List.iter (fun (ty,loc) ->
+        match ty with
+        | Some Ast.Structured.External -> ()
+        | _ -> error ~loc (Format.asprintf "Non external type declaration for builtin %s" name)
+        ) tyl;
+    ) builtins;
 
     let more_types = Type_checker.check_undeclared ~unknown in
     let u_types = Flatten.merge_type_assignments signature.Assembled.types more_types in
@@ -1655,13 +1673,13 @@ end = struct
       (* globals and builtins *)
       | Const(Global _,c) ->
           let c, t = allocate_global_symbol c in
-          if Builtins.is_declared builtins c then D.mkBuiltin c []
+          if Builtins.is_builtin builtins c then D.mkBuiltin c []
           else t
       | App(Global _,c,x,xs) ->
           let c,_ = allocate_global_symbol c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
-          if Builtins.is_declared builtins c then D.mkBuiltin c (x::xs)
+          if Builtins.is_builtin builtins c then D.mkBuiltin c (x::xs)
           else D.mkApp c x xs
       (* lambda terms *)
       | Const(Bound l,c) -> allocate_bound_symbol t.loc ctx (c,l)
@@ -2112,31 +2130,6 @@ let program_of_ast ~flags ~header:((st, base) as header : State.t * Assembled.pr
   let u = Check.check st ~base u in
   assemble_unit ~flags ~header u
 
-let is_builtin state tname =
-  Builtins.is_declared state tname
-
-let check_all_builtin_are_typed state types = () (*
-   C.Set.iter (fun c ->
-     if not (match C.Map.find c types with
-     | l -> l |> Types.for_all (fun { Types.tindex;_} -> tindex = Ast.Structured.External)
-     | exception Not_found -> false) then
-       error ("Built-in without external type declaration: " ^ Symbols.show state c))
-   (Builtins.all state);
-  F.Map.iter (fun tname tl -> tl |> Types.iter (fun { Types.tindex; decl = { tname; tloc }} ->
-    if tindex = Ast.Structured.External && not (is_builtin state tname) then
-      error ~loc:tloc ("external type declaration without Built-in: " ^
-            Symbols.show state tname)))
-  types
-;;
-*)
-
-let check_no_regular_types_for_builtins state types = () (*
-  C.Map.iter (fun tname l -> l |> Types.iter (fun {Types.tindex; decl = { tloc } } ->
-    if tindex <> Ast.Structured.External && is_builtin state tname then
-      anomaly ~loc:tloc ("type declaration for Built-in " ^
-            Symbols.show state tname ^ " must be flagged as external");
- )) types
-*)
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x
 
 (* let uvbodies_of_assignments assignments =
