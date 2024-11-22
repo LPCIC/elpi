@@ -1158,7 +1158,7 @@ module Calc = struct
     | [ CData x ] when is_float x -> (map float float sqrt x)
     | _ -> type_error "Wrong arguments to sqrt") ;
    register_eval 1 ("sin",["float"]) (function
-    | [ CData x ] when is_float x -> (map float float sqrt x)
+    | [ CData x ] when is_float x -> (map float float sin x)
     | _ -> type_error "Wrong arguments to sin") ;
    register_eval 1 ("cos",["float"]) (function
     | [ CData x ] when is_float x -> (map float float cos x)
