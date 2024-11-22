@@ -1792,7 +1792,7 @@ Test Bed
    
    Success:
    
-   Time: 1.861
+   Time: 1.813
    
    Constraints:
    
@@ -2167,7 +2167,7 @@ Test Bed
    
    Success:
    
-   Time: 0.003
+   Time: 0.002
    
    Constraints:
    
@@ -2223,7 +2223,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.300788 + 0.058018 + 0.923669
+   1.297625 + 0.059550 + 0.953859
    
 
 .. code-block:: console
@@ -2237,7 +2237,7 @@ Test Bed
    
    Success:
    
-   Time: 2.500
+   Time: 2.534
    
    Constraints:
    
@@ -2254,7 +2254,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.505476 + 3.030576 + 0.359551
+   6.499013 + 3.073124 + 0.377684
    
 
 .. code-block:: console
@@ -2268,7 +2268,7 @@ Test Bed
    
    Success:
    
-   Time: 9.902
+   Time: 9.956
    
    Constraints:
    
@@ -2285,7 +2285,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.804269 + 2.820029 + 0.233417
+   5.767783 + 2.785602 + 0.229297
    
 
 .. code-block:: console
@@ -2299,7 +2299,7 @@ Test Bed
    
    Success:
    
-   Time: 8.863
+   Time: 8.788
    
    Constraints:
    
@@ -2794,7 +2794,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 67, characters 3525-3526:
    F4 is linear: name it _F4 (discard) or F4_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
@@ -2938,7 +2938,7 @@ Test Bed
    
    Success:
    
-   Time: 1.574
+   Time: 1.600
    
    Constraints:
    
@@ -2972,7 +2972,7 @@ Test Bed
 
 .. code-block:: console
 
-   3
+   6
    
 
 .. code-block:: console
@@ -3025,7 +3025,7 @@ Test Bed
    
    Success:
    
-   Time: 0.239
+   Time: 0.254
    
    Constraints:
    
@@ -3064,7 +3064,7 @@ Test Bed
    
    Success:
    
-   Time: 1.478
+   Time: 1.487
    
    Constraints:
    
@@ -3242,7 +3242,7 @@ Test Bed
    
    Success:
    
-   Time: 0.132
+   Time: 0.131
    
    Constraints:
    
@@ -3268,7 +3268,7 @@ Test Bed
    
    Success:
    
-   Time: 0.130
+   Time: 0.136
    
    Constraints:
    
@@ -3337,7 +3337,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.135860 + 0.054602 + 0.786017
+   1.137445 + 0.054384 + 0.769559
    
 
 .. code-block:: console
@@ -3351,7 +3351,7 @@ Test Bed
    
    Success:
    
-   Time: 2.064
+   Time: 2.052
    
    Constraints:
    
