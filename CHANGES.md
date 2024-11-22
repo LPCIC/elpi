@@ -1,4 +1,10 @@
-# Unreleased
+# v2.0.1 (November 2024)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+
+- Fix tests on 32 bits systems
+
+# v2.0.0 (November 2024)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
 
