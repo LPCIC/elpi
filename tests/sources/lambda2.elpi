@@ -1,8 +1,6 @@
 % q X yields X=ok
 
-q X :- r X (x\ p x).
-
-r ko (x\ g x).
-r ok (y\ p y).
-
-main :- q X, X = ok.
+:untyped q X :- r X (x\ p x).
+:untyped r ko (x\ g x).
+:untyped r ok (y\ p y).
+:untyped main :- q X, X = ok.

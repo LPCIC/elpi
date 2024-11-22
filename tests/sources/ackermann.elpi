@@ -10,6 +10,11 @@
 % ack(M, N, V) :- M2 is M - 1, N2 is N - 1, ack(M, N2, V2), ack(M2, V2, V).
 
 
+kind nat type.
+type s nat -> nat.
+type zero nat.
+
+pred ack i:nat, i:nat, o:nat.
 ack zero N V :- !, V = (s N).
 
 ack M zero V :- !, (s M2) = M, ack M2 (s zero) V.

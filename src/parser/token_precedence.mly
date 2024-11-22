@@ -1,6 +1,7 @@
 %right BIND
 %nonassoc VDASH QDASH 
 %right OR 
+%right DDARROW 
 %right CONJ CONJ2 
 %right ARROW 
 %right DARROW 

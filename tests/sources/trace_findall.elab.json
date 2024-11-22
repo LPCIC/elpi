@@ -26,9 +26,9 @@
                     "File",
                     {
                       "filename": "tests/sources/trace_findall.elpi",
-                      "line": 5,
+                      "line": 6,
                       "column": 0,
-                      "character": 23
+                      "character": 37
                     }
                   ]
                 }
@@ -53,9 +53,9 @@
                   "File",
                   {
                     "filename": "tests/sources/trace_findall.elpi",
-                    "line": 5,
+                    "line": 6,
                     "column": 0,
-                    "character": 23
+                    "character": 37
                   }
                 ]
               }
@@ -89,9 +89,9 @@
                     "File",
                     {
                       "filename": "builtin_stdlib.elpi",
-                      "line": 305,
+                      "line": 306,
                       "column": 0,
-                      "character": 10054
+                      "character": 10063
                     }
                   ]
                 }
@@ -117,9 +117,9 @@
                   "File",
                   {
                     "filename": "builtin_stdlib.elpi",
-                    "line": 305,
+                    "line": 306,
                     "column": 0,
-                    "character": 10054
+                    "character": 10063
                   }
                 ]
               }
@@ -136,9 +136,9 @@
                   "File",
                   {
                     "filename": "tests/sources/trace_findall.elpi",
-                    "line": 5,
+                    "line": 6,
                     "column": 0,
-                    "character": 23
+                    "character": 37
                   }
                 ]
               }
@@ -187,9 +187,9 @@
                             "File",
                             {
                               "filename": "tests/sources/trace_findall.elpi",
-                              "line": 1,
+                              "line": 2,
                               "column": 0,
-                              "character": 0
+                              "character": 14
                             }
                           ]
                         }
@@ -211,9 +211,9 @@
                           "File",
                           {
                             "filename": "tests/sources/trace_findall.elpi",
-                            "line": 1,
+                            "line": 2,
                             "column": 0,
-                            "character": 0
+                            "character": 14
                           }
                         ]
                       }
@@ -247,9 +247,9 @@
                             "File",
                             {
                               "filename": "tests/sources/trace_findall.elpi",
-                              "line": 2,
+                              "line": 3,
                               "column": 0,
-                              "character": 5
+                              "character": 19
                             }
                           ]
                         }
@@ -271,9 +271,9 @@
                           "File",
                           {
                             "filename": "tests/sources/trace_findall.elpi",
-                            "line": 2,
+                            "line": 3,
                             "column": 0,
-                            "character": 5
+                            "character": 19
                           }
                         ]
                       }
@@ -307,9 +307,9 @@
                             "File",
                             {
                               "filename": "tests/sources/trace_findall.elpi",
-                              "line": 3,
+                              "line": 4,
                               "column": 0,
-                              "character": 10
+                              "character": 24
                             }
                           ]
                         }
@@ -331,9 +331,9 @@
                           "File",
                           {
                             "filename": "tests/sources/trace_findall.elpi",
-                            "line": 3,
+                            "line": 4,
                             "column": 0,
-                            "character": 10
+                            "character": 24
                           }
                         ]
                       }
@@ -367,9 +367,9 @@
                             "File",
                             {
                               "filename": "tests/sources/trace_findall.elpi",
-                              "line": 2,
+                              "line": 3,
                               "column": 0,
-                              "character": 5
+                              "character": 19
                             }
                           ]
                         }
@@ -391,9 +391,9 @@
                           "File",
                           {
                             "filename": "tests/sources/trace_findall.elpi",
-                            "line": 2,
+                            "line": 3,
                             "column": 0,
-                            "character": 5
+                            "character": 19
                           }
                         ]
                       }
@@ -410,9 +410,9 @@
                           "File",
                           {
                             "filename": "tests/sources/trace_findall.elpi",
-                            "line": 3,
+                            "line": 4,
                             "column": 0,
-                            "character": 10
+                            "character": 24
                           }
                         ]
                       }
@@ -442,9 +442,9 @@
                   "File",
                   {
                     "filename": "builtin_stdlib.elpi",
-                    "line": 305,
+                    "line": 306,
                     "column": 0,
-                    "character": 10054
+                    "character": 10063
                   }
                 ]
               }
@@ -461,9 +461,9 @@
                   "File",
                   {
                     "filename": "tests/sources/trace_findall.elpi",
-                    "line": 5,
+                    "line": 6,
                     "column": 0,
-                    "character": 23
+                    "character": 37
                   }
                 ]
               }
@@ -512,9 +512,9 @@
                   "File",
                   {
                     "filename": "tests/sources/trace_findall.elpi",
-                    "line": 5,
+                    "line": 6,
                     "column": 0,
-                    "character": 23
+                    "character": 37
                   }
                 ]
               }

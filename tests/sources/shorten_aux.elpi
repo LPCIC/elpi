@@ -1,4 +1,5 @@
 namespace a {
+  pred foo.
   foo :- !, fail.
 }
 

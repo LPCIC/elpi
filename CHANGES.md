@@ -3,24 +3,78 @@
 Requires Menhir 20211230 and OCaml 4.08 or above.
 
 - Compiler:
-  - New syntax: anonymous predicates can be passed to type signatures in order
-    to have more information about modes and attributes of higher-order
-    arguments, eg: `pred p i:(pred i:A, o:B)` tells that the first argument of
-    `p` is a predicate whose first argument is in input and the second in
-    output.
-  - Separated terms from types; the parser generates 
-    - `TypeExpression.t` objects for `pred` and `type` objects
-    - `TypeAbbreviation.closedTypeexpression` objects for `typeabbrev`, that is
-       the `TypeExpression.t` type decorated with the `TLam` constructor
-  - The attribute `:functional` can be passed to predicates (not types),
-    for example, `:functional pred q i:int, o:int` tells the interpreter that `q` is
-    a predicate meant to be functional. Note that, due to anonymous predicates,
-    the `:functional` attributes can be passed to higher-order arguments
-  - The piece of information likes modes and functionality is transmitted to the
-    checker (currently this information is not taken into account) 
+  - Change the pipeline completely to make unit relocation unnecessary. Current
+    phases are (roughly):
+    1. `Ast.program` —[`RecoverStructure`]—> `Ast.Structured.program`
+    2. `Ast.Structured.program` —[`Scope`,`Quotation`,`Macro`]—> `Scoped.program` (aka `API.Compile.scoped_program`)
+    3. `Scoped.program` —[`Flatten`]—> `Flat.program`
+    4. `Flat.program` —[`Check`]—> `CheckedFlat.program` (aka `API.Compile.compilation_unit`)
+    5. `CheckedFlat.program` —[`Spill`,`ToDbl`]—> `Assembled.program`
+
+    Steps 4 and 5 operate on a base, that is an `Assembled.program` being
+    extended. `ToDbl` is in charge of allocating constants (numbers) for global
+    names and takes place when the unit is assembled on the base. These
+    constants don't need to be relocated as in the previous backend that
+    would allocate these constants much earlier.
+  - Change compilation units can declare new builtin predicates
+  - Fix macros are hygienic
+  - New type checker written in OCaml. The new type checker is faster,
+    reports error messages with a precise location and performs checking
+    incrementally when the API for separate compilation is used.
+    The new type checker is a bit less permissive since the old one would
+    merged together all types declaration before type checking the entire
+    program, while the new one type checks each unit using the types declared
+    inside the unit or declared in the base it extends, but not the types
+    declared in units that (will) follow it.
+  - Remove the need of `typeabbrv string (ctype "string")` and similar
+  - New type check types and kinds (used to be ignored).
+
+- API:
+  - Change quotations generate `Ast.Term.t` and not `RawData.t`. The data
+    type `Ast.Term.t` contains locations (for locating type errors) and
+    has named (bound) variables and type annotations in `Ast.Type.t`.
+  - New `Compile.extend_signature` and `Compile.signature` to extend a
+    program with the signature (the types, not the code) of a unit
+  - New `Ast.Loc.t` carries a opaque payload defined by the host application
+  - Remove `Query`, only `RawQuery` is available (or `Compile.query`)
+
+- Parser:
+  - Remove legacy parser
+  - New `% elpi:if version op A.B.C` and `% elpi:endif` lexing directives
+  - New warning for `A => B, C` to be disabled by putting parentheses
+    around `A => B`.
+
+- Language:
+  - New infix `==>` standing for application but with "the right precedence™",
+    i.e. `A ==> B, C` means `A => (B, C)`.
+  - New `pred` is allowed in anonymous predicates, eg:
+    `pred map i:list A, i:(pred i:A, o:B), o:list B` declares that the first
+    argument of `map` is a predicate whose first argument is in input and
+    the second in output. Currently the mode checker is still in development,
+    annotations for higher order arguments are ignored.
+  - New attribute `:functional` can be passed to predicates (but not types).
+    For example, `:functional pred map i:list A, i:(:functional pred i:A, o:B), o:list B`
+    declares `map` to be a functional predicate iff its higher order argument is
+    functional. Currently the determinacy checker is still in development, these
+    annotations are ignored.
+  - New `func` keyword standing for `:functional pred`. The declaration above
+    can be shortened to `func map i:list A, i:(func i:A, o:B), o:list B`.
+  - New type annotations on variables quantified by `pi` as in `pi x : term \ ...`
+  - New type casts on terms, as in `f (x : term)`
+  - New attribute `:untyped` to skip the type checking of a rule.
+
+- Stdlib:
+  - New `std.list.init N E L` builds a list `L = [E, ..., E]` with length `N`
+  - New `std.list.make N F L` builds the list `L = [F 0, F 1, ..., F (N-1)]`
+  - New `triple` data type with constructor `triple` and projections `triple_1`...
+
 - Builtins:
-  - `std.list.init N E L` builds a list `L = [E, ..., E]` with length `N`
-  - `std.list.make N F L` builds the list `L = [F 0, F 1, ..., F (N-1)]`
+  - Remove `string_to_term`, `read`, `readterm`, `quote_syntax`
+
+- REPL:
+  - Remove `-no-tc`, `-legacy-parser`, `-legacy-parser-available`
+  - New `-document-infix-syntax`
+
 
 # v1.20.0 (September 2024)
 

@@ -1,12 +1,12 @@
 pred term i:A, o:B.
 
-term (app X Y) B :- term X (arr A B), term Y A.
-term (lam A F) (arr A B) :- pi x\ term x A => term (F x) B.
-term (uvar as X) A :- declare_constraint (term X A) [X].
-term true bool.
-term false bool.
-term zero nat.
-term succ (arr nat nat).
+:untyped term (app X Y) B :- term X (arr A B), term Y A.
+:untyped term (lam A F) (arr A B) :- pi x\ term x A => term (F x) B.
+:untyped term (uvar as X) A :- declare_constraint (term X A) [X].
+:untyped term true bool.
+:untyped term false bool.
+:untyped term zero nat.
+:untyped term succ (arr nat nat).
 
 constraint term {
   rule (GX ?- term (uvar K LX) TX)
@@ -16,24 +16,24 @@ constraint term {
 }
 
 % resilient to dummy ctx variables
-both_or_none P Q :- P, !, Q.
-both_or_none P Q :- not P, not Q.
+:untyped both_or_none P Q :- P, !, Q.
+:untyped both_or_none P Q :- not P, not Q.
 
-compatible _ [] _ [] [] :- !.
-compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
+:untyped compatible _ [] _ [] [] :- !.
+:untyped compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
  both_or_none (GX => term X TX) (GY => term Y TY),
  !,
  compatible GX XS GY YS K.
-compatible _ _ _ _ [false].
+:untyped compatible _ _ _ _ [false].
 
-spy P :- print "[" P, P, print "]ok", !.
-spy P :- print "]fail", fail.
+:untyped spy P :- print "[" P, P, print "]ok", !.
+:untyped spy P :- print "]fail", fail.
 
 pred watch i:A.
 watch (uvar as X) :- declare_constraint (print "watch" X) [X], !.
 watch X :- print "watch" X.
 
-main :- 
+:untyped main :- 
   % this is tricky becasuse X sees w, so CHR has to deal with a dirty context
   pi w\ (sigma X A B C A' B' T1 T2 \ pi v\
     term b2n (arr bool nat) =>

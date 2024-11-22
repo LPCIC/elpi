@@ -57,6 +57,8 @@ let mixfix_symbols : mixfix list = [
     fixity = Infix };
   { tokens = [ mkFix "OR" ";" OR];
     fixity = Infixr };
+  { tokens = [ mkFix "DDARROW" "==>" DDARROW];
+    fixity = Infixr };
   { tokens = [ mkFix "CONJ" "," CONJ;
                mkFix "CONJ2" "&" CONJ2];
     fixity = Infixr };

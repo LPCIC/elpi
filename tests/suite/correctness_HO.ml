@@ -127,12 +127,6 @@ let () = declare "notation"
   ~description:"extensible syntax"
   ()
 
-let () = declare "notation_legacy"
-  ~source_elpi:"notation_legacy.elpi"
-  ~legacy_parser:true
-  ~description:"extensible syntax"
-  ()
-
 let () = declare "pnf"
   ~source_elpi:"pnf.elpi"
   ~description:"some HO programming"
@@ -154,52 +148,6 @@ let () = declare "holp"
   ~description:"HOL programming"
   ()
 
-  let () = declare "holp_legacy"
-  ~source_elpi:"holp_legacy/main.mod"
-  ~source_teyjus:"holp_legacy/main.mod"
-  ~deps_teyjus:[
-    "holp_legacy/hcinterp_examples.mod";
-    "holp_legacy/hc_syntax.mod";
-    "holp_legacy/pnf_examples.mod";
-    "holp_legacy/hc_interp.mod";
-    "holp_legacy/lists.mod";
-    "holp_legacy/pnf.mod";
-    "holp_legacy/hcsyntax_examples.mod";
-    "holp_legacy/refl_syntax.mod";
-  ]
-  ~legacy_parser:true
-  ~description:"HOL programming"
-  ()
-
-let () = declare "ndprover"
-  ~source_elpi:"ndprover/inter.mod"
-  ~source_teyjus:"ndprover/inter.mod"
-  ~deps_teyjus:[
-    "ndprover/formulas.mod";
-    "ndprover/ndtac.mod";
-    "ndprover/goalred.mod";
-    "ndprover/listmanip.mod";
-    "ndprover/tacticals.mod";
-  ]
-  ~input:"ndprover.stdin"
-  ~description:"Natural deduction prover"
-  ()
-
-  let () = declare "ndprover_legacy"
-  ~source_elpi:"ndprover_legacy/inter.mod"
-  ~source_teyjus:"ndprover_legacy/inter.mod"
-  ~deps_teyjus:[
-    "ndprover_legacy/formulas.mod";
-    "ndprover_legacy/ndtac.mod";
-    "ndprover_legacy/goalred.mod";
-    "ndprover_legacy/listmanip.mod";
-    "ndprover_legacy/tacticals.mod";
-  ]
-  ~input:"ndprover.stdin"
-  ~description:"Natural deduction prover"
-  ~legacy_parser:true
-  ()
-
 let () = declare "pcf"
   ~source_elpi:"pcf/pcf.mod"
   ~source_teyjus:"pcf/pcf.mod"
@@ -218,27 +166,6 @@ let () = declare "pcf"
     "pcf/tr_test.mod";
   ]
   ~description:"type inference for PCF"
-  ()
-
-let () = declare "pcf_legacy"
-  ~source_elpi:"pcf_legacy/pcf.mod"
-  ~source_teyjus:"pcf_legacy/pcf.mod"
-  ~deps_teyjus:[
-    "pcf_legacy/control.mod";
-    "pcf_legacy/monoinfer.mod";
-    "pcf_legacy/poly_test.mod";
-    "pcf_legacy/unifytypes.mod";
-    "pcf_legacy/eval.mod";
-    "pcf_legacy/mono_test.mod";
-    "pcf_legacy/refl_syntax.mod";
-    "pcf_legacy/eval_test.mod";
-    "pcf_legacy/tailrec.mod";
-    "pcf_legacy/examples.mod";
-    "pcf_legacy/polyinfer.mod";
-    "pcf_legacy/tr_test.mod";
-  ]
-  ~description:"type inference for PCF"
-  ~legacy_parser:true
   ()
 
 let () = declare "progs"
@@ -291,74 +218,63 @@ let () = declare "hilbert2"
 let () = declare "eta_as"
   ~source_elpi:"eta_as.elpi"
   ~description:"eta expansion of as clause"
-  ~typecheck:false
-  ()
+    ()
 
 let () = declare "hdclause"
   ~source_elpi:"hdclause.elpi"
   ~description:"hdclause unification"
-  ~typecheck:false
-  ()
+    ()
   
 let () = declare "oc_eta"
   ~source_elpi:"oc_eta.elpi"
   ~description:"eta expansion and occur check"
-  ~typecheck:true
-  ~expectation:Failure
+    ~expectation:Failure
   ()
 
 let () = declare "eta_oc"
   ~source_elpi:"eta_oc.elpi"
   ~description:"eta expansion and occur check"
-  ~typecheck:true
-  ~expectation:Success
+    ~expectation:Success
   ()
   
 let () = declare "bug_226"
   ~source_elpi:"bug_226.elpi"
   ~description:"move/unif bug"
-  ~typecheck:true
-  ~expectation:Success
+    ~expectation:Success
   ()
 
 let () = declare "chr-scope"
   ~source_elpi:"chr-scope.elpi"
   ~description:"chr-relocation"
-  ~typecheck:true
-  ~expectation:Success
+    ~expectation:Success
   ()
 
 let () = declare "chr-scope-change"
   ~source_elpi:"chr-scope-change.elpi"
   ~description:"chr-relocation"
-  ~typecheck:true
-  ~expectation:Success
+    ~expectation:Success
   ()
 
 let () = declare "chr-scope-change-err"
   ~source_elpi:"chr-scope-change-failure.elpi"
   ~description:"chr-relocation"
-  ~typecheck:true
-  ~expectation:(FailureOutput (Str.regexp "cannot be put in the desired context"))
+    ~expectation:(FailureOutput (Str.regexp "cannot be put in the desired context"))
   ()
 
 let () = declare "chr_with_hypotheses"
   ~source_elpi:"chr_with_hypotheses.elpi"
   ~description:"chr_with_hypotheses"
-  ~typecheck:true
-  ~expectation:Success
+    ~expectation:Success
   ()
 
 let () = declare "dt_bug_272"
   ~source_elpi:"dt_bug272.elpi"
   ~description:"dt list truncation heuristic"
-  ~typecheck:true
-  ~expectation:Success
+    ~expectation:Success
   ()
 
 let () = declare "bug-256"
   ~source_elpi:"bug-256.elpi"
   ~description:"move/unif"
-  ~typecheck:true
-  ~expectation:Success
+    ~expectation:Success
   ()

@@ -9,10 +9,18 @@ main :-
   t3,
   true.
 
+pred p o:any.
+pred q o:any.
+type f any -> any.
+type g any -> any -> any -> any -> any.
+
+pred t1.
 t1 :- pi x\ u (y\ X x y), std.assert! (X 1 2 = 2) "bug".
 
+pred t2.
 t2 :-
   (pi X\ p ( a\f (X a))) => pi x y\ p ( a\f (g x y a)). 
 
+pred t3.
 t3 :-
   (pi X\ q ( a\b\c\d\f (X a))) => pi x y\ q ( a\b\c\d\f (g x y a)). 

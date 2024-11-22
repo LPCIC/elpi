@@ -29,8 +29,8 @@ eval (intp (c X)) truth :- !.
 eval (intp Y) false.
 eval (prp (pr X Y)) truth :- !.
 eval (prp Y) false.
-eval (fst (pr X Y)) V  :- eval X V.
-eval (snd (pr X Y)) V  :- eval Y V.
+eval (fst (pr X Y : tm)) V  :- eval X V.
+eval (snd (pr X Y : tm)) V  :- eval Y V.
 
 eval (hd L) V :- eval L (cons V Tl).
 eval (tl L) V :- eval L (cons Hd V).

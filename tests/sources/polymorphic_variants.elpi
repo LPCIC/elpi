@@ -9,6 +9,36 @@
 %
 %      constant and funnames are distinct lambda-prolog names
 
+kind i type.
+type a i.
+type app i -> i -> i.
+type check list (list i -> i) -> list i -> list i -> prop.
+type union list i -> list i -> list i -> prop.
+type propagate list prop -> list prop -> prop -> prop.
+type mem_ list i -> i -> prop.
+type mem list i -> i -> prop.
+type main2 prop.
+type main1 prop.
+type is_subset_ list i -> list i -> prop.
+type is_subset list i -> list i -> prop.
+type is_ground list i -> prop.
+type inter list i -> list i -> list i -> prop.
+type inputs list i -> list i -> prop.
+type h2 i.
+type h1 i.
+type g i.
+type fun i -> list i -> list i -> i.
+type find list i -> i -> list i -> list i -> prop.
+type f i.
+type e i.
+type d i.
+type check_term i -> list i -> list i -> prop.
+type check_domain list i -> list i -> prop.
+type check_codomain list i -> list i -> list i -> prop.
+type case i -> i -> i.
+type c i.
+type b i.
+
 % check types program types
 % the functions must be listed in the same order in both
 %check A B C :- print (check A B C), fail.

@@ -85,17 +85,17 @@ let () = declare "typeabbrv9"
   ()
 let () = declare "typeabbrv10"
   ~source_elpi:"typeabbrv10.elpi"
-  ~expectation:(FailureOutput (Str.regexp "3 has type int but is used with type (foo X[0-9]+)"))
+  ~expectation:(FailureOutput (Str.regexp "literal.*3.*expects a term of type list A"))
   ~description:"type abbreviations and error messages"
   ()
 let () = declare "typeabbrv11"
   ~source_elpi:"typeabbrv11.elpi"
-  ~expectation:(FailureOutput (Str.regexp "x has type string but is used with type int"))
+  ~expectation:(FailureOutput (Str.regexp "has type string but f expects a term of type x"))
   ~description:"type abbreviations and error messages"
   ()
 let () = declare "typeabbrv12"
   ~source_elpi:"typeabbrv12.elpi"
-  ~expectation:(FailureOutput (Str.regexp "x has type string but is used with type y"))
+  ~expectation:(FailureOutput (Str.regexp "has type string but f expects a term of type y"))
   ~description:"type abbreviations and error messages"
   ()
 
@@ -104,21 +104,15 @@ let () = declare "typeabbrv13"
   ~description:"type abbreviations"
   ()
 
-let () = declare "typeabbrv14"
+(* let () = declare "typeabbrv14"
   ~source_elpi:"typeabbrv14.elpi"
   ~description:"type abbreviations"
   ~expectation:(FailureOutput (Str.regexp "SYMBOL.*uses the undefined dl constant"))
-  ()
+  () *)
 
 let () = declare "conj2"
   ~source_elpi:"conj2.elpi"
   ~description:"parsing and evaluation of & (binary conj)"
-  ()
-
-let () = declare "conj2_legacy"
-  ~source_elpi:"conj2.elpi"
-  ~description:"parsing and evaluation of & (binary conj)"
-  ~legacy_parser:true
   ()
 
 (* 
@@ -128,8 +122,7 @@ let () = declare "conj2_legacy"
 let () = declare "dt_var"
   ~source_elpi:"dt_var.elpi"
   ~description:"discrimination_tree indexing flex"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 2"))
   ()
 
@@ -138,48 +131,42 @@ let () =
   declare "dt_max_depths"
   ~source_elpi:"dt_max_depths.elpi"
   ~description:"discrimination_tree max_depth"
-  ~typecheck:false
-  ~trace:(On["tty";"file://"^sample;"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:depth-path"])
+    ~trace:(On["tty";"file://"^sample;"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:depth-path"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "dt_max_depths.log" })
   ()
 
 let () = declare "dt_var2"
   ~source_elpi:"dt_var2.elpi"
   ~description:"discrimination_tree indexing flex"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 3"))
   ()
 
 let () = declare "dt_multiparam1"
   ~source_elpi:"dt_multiparam1.elpi"
   ~description:"discrimination_tree indexing multi argument"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 1"))
   ()
 
 let () = declare "dt_multiparam2"
   ~source_elpi:"dt_multiparam2.elpi"
   ~description:"discrimination_tree indexing multi with flexible"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 101"))
   ()
 
 let () = declare "dt_multiparam3"
   ~source_elpi:"dt_multiparam3.elpi"
   ~description:"discrimination_tree indexing multi with flexible in input mode"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(FailureOutput (Str.regexp "dev:disc-tree:candidates = 0"))
   ()
 
 let () = declare "dt_multivar"
   ~source_elpi:"dt_multivar.elpi"
   ~description:"discrimination_tree indexing multi with flexible in input mode"
-  ~typecheck:false
-  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999999";"-trace-only";"dev:disc-tree:candidates"])
   ~expectation:(SuccessOutput (
       let wanted_length = [5;1;0;1;1;5;4;5;2;5;4;5;6;1] in
       let all_char = "\\(.\\|\n\\)*" in

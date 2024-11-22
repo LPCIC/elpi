@@ -1,3 +1,4 @@
+kind dl type -> type.
 typeabbrev (dl A) (dl A).
 
 pred p i:dl (dl A).

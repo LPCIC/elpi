@@ -1,3 +1,7 @@
+type foo any.
+type bar any -> any.
+
 main :- declare_constraint foo [], declare_constraint (bar X) [], X.
 
 constraint foo bar { rule foo (bar _) <=> false. rule (bar X) <=> (X = true). }
+

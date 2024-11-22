@@ -1,12 +1,11 @@
+pred filter i:list A, i:(pred i:A), o:list A.
 filter [] _ [].
 filter [X|XS] P [X|YS] :- P X, !, filter XS P YS.
 filter [_|XS] P YS :- filter XS P YS.
 
+pred mem o:list A, o:A.
 mem [X|_] X :- !.
 mem [_|XS] X :- mem XS X.
-
-if G T _ :- G, !, T.
-if _ _ E :- E.
 
 kind term type.
 type app term -> term -> term.
@@ -15,9 +14,9 @@ type let term -> ty -> (term -> term) -> term.
 
 kind tye type.
 % elpi:skip 2
-infixr ==> 50.
+infixr ===> 50.
 infixl # 60.
-type (==>) tye -> tye -> tye.
+type (===>) tye -> tye -> tye.
 type (#) tye -> tye -> tye.
 
 kind ty type.
@@ -36,18 +35,18 @@ type pair tye.
 
 % constants
 w one    (mono integer).
-w plus   (mono (integer ==> integer ==> integer)).
-w size   (all x\ mono (list # x ==> integer)).
+w plus   (mono (integer ===> integer ===> integer)).
+w size   (all x\ mono (list # x ===> integer)).
 w empty  (all x\ mono (list # x)).
-w comma  (all x\ all y\ mono (x ==> y ==> (pair # x # y))).
+w comma  (all x\ all y\ mono (x ===> y ===> (pair # x # y))).
 
 pred w i:term, o:ty.
 
 w (app F X) (mono R) :-
-  w F (mono (A ==> R)),
+  w F (mono (A ===> R)),
   w X (mono A).
 
-w (lam F) (mono (A ==> R)) :-
+w (lam F) (mono (A ===> R)) :-
   pi x\ w x (mono A) => w (F x) (mono R).
 
 w (let F FP B) (mono TC) :-
@@ -73,30 +72,37 @@ rule \ (G ?- overbar T T1)
 
 rule \ (G ?- overbar T _) <=> (print "overbar" G "|-" T "failed", halt).
 
+pred generalize i:list prop, i:ty, o:ty.
 generalize G (mono T) ALL :-
   free-ty (mono T) [] VT,
   free-gamma G [] VG,
   filter VT (x\ not(mem VG x)) Q,
   quantify Q T ALL.
 
+pred free-ty i:ty, i:list any, o:list any.
 free-ty (mono X) L L1 :- free X L L1.
 free-ty (all F) L L1 :- pi x\ free-ty (F x) L L1.
 
+pred free-gamma i:list prop, i:list any, o:list any. 
 free-gamma [] L L.
 free-gamma [w _ T|X] L L2 :- free-ty T L L1, free-gamma X L1 L2.
 
+pred free i:tye, i:list any, o:list any.
 free (A # B) L L2 :- free A L L1, free B L1 L2.
-free (A ==> B) L L2 :- free A L L1, free B L1 L2.
+free (A ===> B) L L2 :- free A L L1, free B L1 L2.
 free (uvar X _) L L1 :- if (mem L X) (L1 = L) (L1 = [X|L]).
-free X L L.
+free _X L L.
 
+pred copy-ty i:ty, o:ty.
 copy-ty (mono X1) (mono X2) :- copy X1 X2.
 copy-ty (all F1) (all F2) :- pi x\ copy x x => copy-ty (F1 x) (F2 x).
 
-copy (A ==> B) (A1 ==> B1) :- copy A A1, copy B B1.
+pred copy i:tye, o:tye.
+copy (A ===> B) (A1 ===> B1) :- copy A A1, copy B B1.
 copy (A # B) (A1 # B1) :- copy A A1, copy B B1.
 copy X X.
 
+pred quantify i:list tye, i:tye, o:ty.
 quantify [] X (mono X1) :- copy X X1.
 quantify [X|XS] T (all x\ T2 x) :-
   quantify XS T T1,
@@ -124,4 +130,4 @@ main :-
   Q = lam (id\ app (app plus (app id one))
                                   (app size (app id empty))),
   print "Typing" Q,
-  w Q TQ. % should print error
+  w Q _TQ. % should print error

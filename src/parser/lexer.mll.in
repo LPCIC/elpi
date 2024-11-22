@@ -21,6 +21,31 @@
       b.lex_start_p <- start_p;
       r
 
+    let version_ma, version_mi, version_p =
+      let is_number x = try let _ = int_of_string x in true with _ -> false in
+      let v = "%%VERSION_NUM%%" in
+      let v' = Re.Str.(replace_first (regexp "^v") "" v) in    (* v1.20... -> 1.20... *)
+      let v' = Re.Str.(replace_first (regexp "-.*$") "" v') in  (* ...-10-fjdnfs -> ... *)
+      let l = String.split_on_char '.' v' in
+      match l with
+      | [ma;mi;p] when List.for_all is_number l -> int_of_string ma, int_of_string mi, int_of_string p
+      | [_] -> 99, 99, 99
+      | _ -> Elpi_util.Util.error ("lexer: version parser: cannot parse: " ^ v)
+
+    let version_test ops ma mi p =
+      let ma = int_of_string ma in
+      let mi = int_of_string mi in
+      let p  = int_of_string p in
+      let op =
+        match ops with
+        | '<' -> (<)
+        | '=' -> (=)
+        | '>' -> (>)
+        | _ -> assert false in
+      let rc = op (version_ma,version_mi,version_p) (ma,mi,p) in
+      (*Printf.eprintf "%d.%d.%d %c %d.%d.%d = %b\n" version_ma version_mi version_p ops ma mi p rc;*)
+      rc
+
 }
 
 let digit = [ '0' - '9' ]
@@ -40,11 +65,36 @@ let symbchar = lcase | ucase | digit | schar | ':'
 let symbcharstar = symbchar *
 let symbcharplus = symbchar +
 
-rule linecomment skipno = parse
+rule linecomment = parse
+| '\n' { new_line lexbuf; token lexbuf }
+| eof { token lexbuf }
+| "elpi:skip " (pnum as n) { skip lexbuf 10; skip lexbuf (String.length n); linecomment_skip (int_of_string n) lexbuf }
+| "elpi:if" (' '+ as sp1) "version" (' '+ as sp2) (['<' '>' '='] as op) (' '+ as sp3) (pnum as ma) "." (pnum as mi) "." (pnum as p) {
+     skip lexbuf (7+7+1); skip lexbuf String.(length ma + length mi + length p + length sp1 + length sp2 + length sp3);
+     if not @@ version_test op ma mi p then linecomment_if lexbuf else linecomment_drop lexbuf }
+| ' ' { skip lexbuf 1; linecomment lexbuf }
+| _ { skip lexbuf 1; linecomment_drop lexbuf }
+
+and linecomment_drop = parse
+| '\n' { new_line lexbuf; token lexbuf }
+| eof { token lexbuf }
+| _ { skip lexbuf 1; linecomment_drop lexbuf }
+
+and linecomment_skip skipno = parse
 | '\n' { new_line lexbuf; if skipno > 0 then skip_lines skipno lexbuf else token lexbuf }
 | eof { token lexbuf }
-| "elpi:skip " (pnum as n) { skip lexbuf 10; skip lexbuf (String.length n); linecomment (int_of_string n) lexbuf }
-| _ { skip lexbuf 1; linecomment skipno lexbuf }
+| _ { skip lexbuf 1; linecomment_skip skipno lexbuf }
+
+and linecomment_if = parse
+| '\n' { new_line lexbuf; skip_lines_endif lexbuf }
+| eof { token lexbuf }
+| _ { skip lexbuf 1; linecomment_if lexbuf }
+
+and skip_lines_endif = parse
+| '\n' { new_line lexbuf; skip_lines_endif lexbuf }
+| '%' (' '+ as sp) "elpi:endif" { skip lexbuf (1 + (String.length sp) + 10); token lexbuf }
+| eof { token lexbuf }
+| _ { skip lexbuf 1; skip_lines_endif lexbuf }
 
 and skip_lines skipno = parse
 | '\n' { new_line lexbuf; let skipno = skipno - 1 in if skipno > 0 then skip_lines skipno lexbuf else token lexbuf }
@@ -119,7 +169,7 @@ and token = parse
     token lexbuf }
 | ( ' ' | '\t' | '\r' ) { skip lexbuf 1; token lexbuf }
 | '\n' { new_line lexbuf; token lexbuf }
-| '%' { linecomment 0 lexbuf }
+| '%' { linecomment lexbuf }
 | "/*" { multilinecomment 0 lexbuf }
 | "." { FULLSTOP }
 | "_" idchar + as c { CONSTANT c }
@@ -129,6 +179,7 @@ and token = parse
 | "." pnum as f { FLOAT (float_of_string f) }
 | '"' { start_token (string (Buffer.create 80)) lexbuf }
 | ":" { COLON }
+| ":>" { RTRI }
 | "\\" { BIND }
 | "(" { LPAREN }
 | ")" { RPAREN }
@@ -145,6 +196,7 @@ and token = parse
 | "accumulate" { ACCUMULATE }
 | "local" { LOCAL }
 | "pred" { PRED }
+| "func" { FUNC }
 | "macro" { MACRO }
 | "rule" { RULE }
 | "namespace" { NAMESPACE }
@@ -172,6 +224,7 @@ and token = parse
 | "sigma" { SIGMA }
 | "after" { AFTER }
 | "functional" { FUNCTIONAL }
+| "untyped" { UNTYPED }
 | "before" { BEFORE }
 | "replace" { REPLACE }
 | "remove" { REMOVE }
@@ -181,5 +234,6 @@ and token = parse
 @@MIXFIX@@
 | ucase idcharstar as c { CONSTANT c }
 | lcase idcharstarns as c { CONSTANT c }
+| "." idcharstarns as c { CONSTANT c }
 | '@' idcharstar as c { CONSTANT c }
 | eof { EOF }

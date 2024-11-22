@@ -1,13 +1,16 @@
 % q X should yield X=ok
+kind i type.
+type ko i.
+type ok i.
+type q i -> prop.
+type c i -> prop.
+type b i -> prop.
+type a i -> prop.
 
 q X :- a X, !.
 q X :- b X.
-
 a X :- c X, !.
-
 c ok.
 c ko.
-
 b ko.
-
 main :- q X, X = ok.

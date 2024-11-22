@@ -5,6 +5,7 @@ type t = Tokens.token =
   | VDASH
   | USE_SIG
   | USEONLY
+  | UNTYPED
   | TYPEABBREV
   | TYPE
   | STRING of ( string )
@@ -13,6 +14,7 @@ type t = Tokens.token =
   | SIG
   | SHORTEN
   | RULE
+  | RTRI
   | RPAREN
   | REPLACE
   | REMOVE
@@ -49,6 +51,7 @@ type t = Tokens.token =
   | IFF
   | IF
   | FUNCTIONAL
+  | FUNC
   | FULLSTOP
   | FRESHUV
   | FLOAT of ( float )
@@ -73,6 +76,7 @@ type t = Tokens.token =
   | EQ
   | EOF
   | DIV
+  | DDARROW
   | DARROW
   | CUT
   | CONSTRAINT
@@ -163,7 +167,7 @@ b"|}                                  [T(STRING "a\nb", 2, 3, 5)];
   test  "X1>@!"                       [T(CONSTANT "X1>@!", 1, 0, 5)];
   test  "a.B.c"                       [T(CONSTANT "a.B.c", 1, 0, 5)];
   test  "a.B."                        [T(CONSTANT "a.B", 1, 0, 3); T(FULLSTOP, 1, 0, 4)];
-  test  "a.>"                         [T(CONSTANT "a", 1, 0, 1); T(FULLSTOP, 1, 0, 2); T(FAMILY_GT ">", 1, 0, 3)];
+  test  "a. >"                        [T(CONSTANT "a", 1, 0, 1); T(FULLSTOP, 1, 0, 2); T(FAMILY_GT ">", 1, 0, 4)];
   (*    01234567890123456789012345 *)
   test  "-->"                         [T(FAMILY_MINUS "-->", 1, 0, 3)];
   test  "x.y->z"                      [T(CONSTANT "x.y->z", 1, 0, 6)];
@@ -201,3 +205,4 @@ a|}                                   [T(CONSTANT "b", 2, 1, 2);T(CONSTANT "c", 
   test  "o :"                         [T(IO 'o', 1, 0, 1); T(COLON,1,0,3)];
   test  "i"                           [T(IO 'i', 1, 0, 1)];
   test  "o"                           [T(IO 'o', 1, 0, 1)];
+  test  "func"                        [T(FUNC, 1, 0, 4)];

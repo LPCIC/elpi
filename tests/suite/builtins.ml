@@ -9,8 +9,7 @@ let declare = Test.declare
 let () = declare "name"
   ~source_elpi:"name_builtin.elpi"
   ~description:"name builtin"
-  ~typecheck:false
-  ()
+    ()
 let () = declare "nil_cons"
   ~source_elpi:"nil_cons.elpi"
   ~description:"nil = []"

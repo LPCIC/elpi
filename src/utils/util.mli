@@ -90,6 +90,7 @@ end
 
 module Loc : sig
   type t = {
+    client_payload : Obj.t option;
     source_name : string;
     source_start: int;
     source_stop: int;
@@ -101,9 +102,9 @@ module Loc : sig
   val equal : t -> t -> bool
   val compare : t -> t -> int
 
-  val initial : string -> t
+  val initial : ?client_payload:Obj.t -> string -> t
   (* merge left right *)
-  val merge : t -> t -> t
+  val merge : ?merge_payload:(Obj.t option -> Obj.t option -> Obj.t option) -> t -> t -> t
   (* starts/end n chars before/after*)
   val extend : int -> t -> t
 
@@ -120,7 +121,9 @@ val for_all2 : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
 val for_all23 :  argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> bool
 val for_all3b : ('a -> 'a -> bool -> bool) -> 'a list -> 'a list -> bool list -> bool -> bool
 type arg_mode = Input | Output
-and mode_aux =
+[@@deriving show, ord]
+
+type mode_aux =
   | Fo of arg_mode
   | Ho of arg_mode * mode
 and mode = mode_aux list
@@ -144,6 +147,7 @@ val uniq : 'a list -> 'a list
 
 val option_get : ?err:string -> 'a option -> 'a
 val option_map : ('a -> 'b) -> 'a option -> 'b option
+val option_smart_map : ('a -> 'a) -> 'a option -> 'a option
 val pp_option :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
 val option_mapacc :
@@ -288,3 +292,18 @@ end
 val std_resolver :
   ?cwd:string -> paths:string list -> unit ->
      (?cwd:string -> unit:string -> unit -> string)
+
+
+type constant = int
+val pp_constant : Format.formatter -> constant -> unit
+val show_constant : constant -> string
+val compare_constant : constant -> constant -> int
+val pp_const : constant spaghetti_printer
+module Constants : sig
+  type t = constant
+  module Map : Map.S with type key = constant
+  module Set : Set.S with type elt = constant
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+  val compare : t -> t -> int
+end

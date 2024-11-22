@@ -1,4 +1,11 @@
 % q X, r X, s X all yields X=ok
+kind i type.
+type lam, bam (i -> i) -> i.
+type of i -> prop.
+type stop i.
+type s diagnostic -> prop.
+type r diagnostic -> prop.
+type q diagnostic -> prop.
 
 of stop.
 of (bam x\x).

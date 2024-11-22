@@ -1,0 +1,2 @@
+main :-
+  pi x\ print {std.append [x] []}.

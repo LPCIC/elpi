@@ -1,16 +1,24 @@
 /* To test: query q X. The only answer should be X = ok. */
+
+kind i type.
+type ko i.
+type ok i.
+type four i.
+type two i.
+type three i.
+type q i -> prop.
+type d i -> prop.
+type c i -> prop.
+type b i -> prop.
+type a i -> prop.
+
 q X :- a X.
 q ok.
-
 a ko :- b Y, !, d Z, !, c Z.
 a two.
-
 b three.
 b four.
-
 c four.
-
 d three.
 d four.
-
 main :- q X, X = ok.

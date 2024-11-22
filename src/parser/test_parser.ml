@@ -21,10 +21,10 @@ let error s a1 a2 =
 
 let mkClause loc attributes body =
   let open Clause in
-  Clause { loc; attributes; body }
+  Clause { loc; attributes; body; needs_spilling = () }
 
 let mkLoc x y w z =
-  { Loc.source_name = "(input)"; source_start = x; source_stop = y; line = w; line_starts_at = z}
+  { Loc.client_payload = None; source_name = "(input)"; source_start = x; source_stop = y; line = w; line_starts_at = z}
   
 
 let chunk s (p1,p2) =
@@ -33,14 +33,23 @@ let chunk s (p1,p2) =
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
 
 module Parser = Parse.Make(struct let resolver = Elpi_util.Util.std_resolver ~paths:[] () end)
-let test s x y w z att b =
+
+let warn = ref None
+let () = Elpi_util.Util.set_warn (fun ?loc str -> warn := Some str)
+let test s x y w z att ?warns b =
   let loc = Loc.initial "(input)" in
   let exp = [mkClause (mkLoc x y w z) att b] in
   let lexbuf = Lexing.from_string s in
+  warn := None;
   try
     let p = Parser.program_from ~loc lexbuf in
-    if p <> exp then
-      error s p exp
+    if p <> exp then error s p exp;
+    match !warn, warns with
+    | None, None -> ()
+    | Some w, None -> Printf.eprintf "parsing '%s': unexpected warning:\n%s\n" s w; exit 1
+    | None, Some _ -> Printf.eprintf "parsing '%s': expected warning not emitted\n" s; exit 1
+    | Some w, Some rex ->
+        if Str.(string_match (regexp rex) w 0) then () else (Printf.eprintf "parsing '%s': warning does not match:\n%s\n" s w; exit 1)
   with Parse.ParseError(loc,message) ->
     Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
     exit 1
@@ -57,7 +66,7 @@ let testR s x y w z attributes to_match to_remove guard new_goal =
     Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
     exit 1
      
-let testT s x y w z attributes () =
+let testT s () =
   let lexbuf = Lexing.from_string s in
   let loc = Loc.initial "(input)" in
   try
@@ -95,15 +104,23 @@ let (|-) a n ?(bug=false) b =
   mkApp (mkLoc a1 b2 1 0) [mkCon (mkLoc (n + (if bug then -1 else 0)) (n+1) 1 0) ":-";a;b]
 
 
-let lam x n b =
-  let stop = b.loc.source_stop in
-  mkLam (mkLoc n stop 1 0) x b
+let lam x n ?ty ?(parensl=false) ?(parensr=false) b =
+  let stop = b.loc.source_stop + (if parensr then 1 else 0) in
+  mkLam (mkLoc (n + (if parensl then -1 else 0)) stop 1 0) x ty b
 let mkNil ?(bug=false) n = mkNil (mkLoc (n + (if bug then -1 else 0)) n 1 0)
-let mkSeq n m = mkSeq (mkLoc n m 1 0)
+let mkSeq n m = mkSeq ~loc:(mkLoc n m 1 0)
 let c ?(bug=false) n ?len s =
   let len = match len with None -> String.length s | Some x -> x in
   mkCon (mkLoc (n + (if bug then -1 else 0)) (n + len - 1) 1 0) s
 
+let parens t =
+  let loc = mkLoc (t.loc.source_start) (t.loc.source_stop+1) 1 0 in
+  mkParens loc t
+
+let ct ?(bug=false) n ?len s =
+  let len = match len with None -> String.length s | Some x -> x in
+  { TypeExpression.tloc = (mkLoc (n + (if bug then -1 else 0)) (n + len - 1) 1 0); tit = TypeExpression.TConst (Func.from_string s) }
+  
 let underscore ?bug ?(len=1)n = c ?bug ~len n Func.(show dummyname)
 
 let minl = List.fold_left (fun n x -> min n x.loc.source_start) max_int
@@ -113,6 +130,8 @@ let app a ?(len=String.length a) n ?(parenl=false) ?(parenr=false) ?(bug=false) 
   let a1 = minl (c :: b) + (if parenl then -1 else 0) in
   let b2 = maxl (c :: b) + (if parenr then 1 else 0) in
   mkApp (mkLoc a1 b2 1 0) (c :: b)
+
+let cast n m t ty = mkCast (mkLoc n m 1 0) t ty
 
 let paren t = { t with loc = Loc.extend 1 t.loc }
 
@@ -159,7 +178,13 @@ let _ =
   test  "p :- q && r = s."  1 15 1 0 [] ((c 1 "p" |- 3) @@ app "=" 13 [app "&&" 8 [c 6 "q"; c 11 "r"]; c 15 "s"]);
   test  "q && r x || s."    1 13 1 0 [] (app "||" 10 [app "&&" 3 [c 1 "q"; app "r" 6 [c 8 "x"]]; c 13 "s"]);
   (*    01234567890123456789012345 *)
-  test  "f x ==> y."        1 9 1 0 []  (app "==>" 5 [app "f" 1 [c 3 "x"]; c 9 "y"]);
+  test  "f x ==> y."        1 9 1 0 []  (app "=>" ~len:3 5 [app "f" 1 [c 3 "x"]; c 9 "y"]);
+  test  "x ==> y, z."       1 10 1 0 []  (app "=>" ~len:3 3 [c 1 "x"; app "," ~bug 8 [c 7 "y"; c 10 "z"]]);
+  test  "x => y, z."        1 9 1 0 [] ~warns:".*infix operator" (app "," ~bug 7 [app "=>" 3 [c 1 "x";c 6 "y"];c 9 "z"]);
+  test  "x => y, !."        1 9 1 0 [] (app "," ~bug 7 [app "=>" 3 [c 1 "x";c 6 "y"];c 9 "!"]);
+  test  "(x => y), z."      1 11 1 0 [] (app "," ~bug 9 [parens @@ app "=>" 4 [c 2 ~bug "x";c 7 "y"];c 11 "z"]);
+  test  "x => (y, z)."      1 11 1 0 [] (app "=>" 3 ~parenr:true [c 1 "x"; app "," ~bug 8 [c 7 ~bug "y"; c 10 "z"]]);
+  (*    01234567890123456789012345 *)
   test  "p :- !, (s X) = X, q." 1 20 1 0 [] ((c 1 "p" |- 3) @@ app "," ~bug 7 [c 6 "!";app "=" 15 [app "s" ~bug 10 [c 12 "X"]; c 17 "X"]; c 20 "q"]);
   test  "p :- [ ]."         1 8  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 8 [mkNil 8]);
   test  "p :- []."          1 7  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 7 [mkNil ~bug 7]);
@@ -197,16 +222,26 @@ let _ =
   testF "x. +"              4 "unexpected start";
   (*    01234567890123456789012345 *)
   test  ":name \"x\" x."    1 11 1 0 [Name "x"] (c 11 "x");
-  testT ":index (1) \"foobar\" pred x." 1 11 1 0 [Index ([1],Some "foobar")] ();
-  testT ":index (1) pred x."     1 11 1 0 [Index ([1], None)] ();
+  testT ":index (1) \"foobar\" pred x." ();
+  testT ":index (1) pred x."     ();
   testF "p :- g (f x) \\ y." 14 ".*bind.*must follow.*name.*";
   testF "foo i:term, o:term. foo A B :- A = [B]." 6 "unexpected keyword";
   (*    01234567890123456789012345 *)
   testF ":nam \"x\" x."     4 "attribute expected";
   testR "rule p (q r)."     1 12 1 0 [] [ss 6 1 (c 6 "p");ss 8 5 (app "q" ~bug 9 [c 11 "r"])] [] None None;
-  testR "rule (E : G ?- r)." 1 17 1 0 [] [s (c ~bug 7 "E") (c 11 "G") (c 16 "r")] [] None None;
+  testR "rule (E :> G ?- r)." 1 18 1 0 [] [s (c ~bug 7 "E") (c 12 "G") (c 17 "r")] [] None None;
   test  "p :- f \".*\\\\.aux\"." 1 17 1 0 [] (app ":-" 3 [c 1 "p";app "f" 6  [str 8 17 ".*\\.aux"]]);
+  test  "p :- (f x : y)."   1 14 1 0 [] (app ":-" 3 [c 1 "p"; cast 6 14 (app "f" 7 ~bug [c 9 "x"]) (ct 13 "y")]);
+  test  "p :- pi x : y \\ z."   1 17 1 0 [] (app ":-" 3 [c 1 "p"; app "pi" 6 [lam "x" 9 ~ty:(ct 13 "y") (c 17 "z")]]);
   (*    01234567890123456789012345 *)
+  test  "p :- f (x : y)."   1 14 1 0 [] (app ":-" 3 [c 1 "p"; app "f" 6 [cast 8 14 (c ~bug 9 "x") (ct 13 "y")]]);
+  testF "p :- f (x : y \\ z)." 15 "Illformed binder";
+  (*    01234567890123456789012345 *)
+  testT "func x int, int -> bool, bool."          ();
+  testT "func x int, list int -> bool."           ();
+  testT "type x (func int, list int -> bool)."           ();
+  testT "func x int, (func int -> int) -> bool."  ();
+
 
 ;; 
 

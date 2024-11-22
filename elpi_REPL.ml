@@ -58,12 +58,10 @@ let usage =
   "\t-exec pred  runs the query \"pred ARGS\"\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
-  "\t-no-tc don't typecheck the program\n" ^ 
+  "\t-document-infix-syntax Print the documentation for infix operators\n" ^
   "\t-I PATH  search for accumulated files in PATH\n" ^
   "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
   "\t                                          compatibility)\n" ^
-  "\t-legacy-parser enable the legacy parser (deprecated)\n"^
-  "\t-legacy-parser-available exists with 0 if it is the case\n"^
   "\t--version prints the version of Elpi (also -v or -version)\n" ^ 
   "\t--help prints this help (also -h or -help)\n" ^ 
  API.Setup.usage ^
@@ -71,7 +69,6 @@ let usage =
   "\t-parse-term parses a term from standard input and prints it\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
   "\t-print prints files after most compilation passes, then exit\n" ^ 
-  "\t-print-passes prints intermediate data during compilation, then exit\n" ^
   "\t-print-units prints compilation units data, then exit\n"
 ;;
 
@@ -79,39 +76,36 @@ let usage =
 let quotations = API.Quotation.new_quotations_descriptor ()
 let _ =
   API.Quotation.register_named_quotation ~descriptor:quotations ~name:"elpi"
-    API.Quotation.lp
+    API.Quotation.elpi
 
 let _ =
+  (* Memtrace.trace_if_requested (); <-- new line *)
+  (* Hashtbl.randomize (); *)
   let test = ref false in
   let exec = ref "" in
   let print_lprolog = ref false in
   let print_ast = ref false in
-  let typecheck = ref true in
   let batch = ref false in
   let doc_builtins = ref false in
+  let doc_infix = ref false in
   let delay_outside_fragment = ref false in 
   let print_passes = ref false in
   let print_units = ref false in
   let extra_paths = ref [] in
-  let legacy_parser = ref false in
   let parse_term = ref false in
   let vars =
     ref API.Compile.(default_flags.defined_variables) in
   let rec eat_options = function
     | [] -> []
     | "-delay-problems-outside-pattern-fragment" :: rest -> delay_outside_fragment := true; eat_options rest
-    | "-legacy-parser" :: rest -> legacy_parser := true; eat_options rest
-    | "-legacy-parser-available" :: _ ->
-          if API.Setup.legacy_parser_available then exit 0 else exit 1
     | "-test" :: rest -> batch := true; test := true; eat_options rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; eat_options rest
     | "-print" :: rest -> print_lprolog := true; eat_options rest
     | "-print-ast" :: rest -> print_ast := true; eat_options rest
-    | "-print-passes" :: rest -> print_passes := true; eat_options rest
     | "-print-units" :: rest -> print_units := true; eat_options rest
     | "-parse-term" :: rest -> parse_term := true; eat_options rest
-    | "-no-tc" :: rest -> typecheck := false; eat_options rest
     | "-document-builtins" :: rest -> doc_builtins := true; eat_options rest
+    | "-document-infix-syntax" :: rest -> doc_infix := true; eat_options rest
     | "-D" :: var :: rest -> vars := API.Compile.StrSet.add var !vars; eat_options rest
     | "-I" :: p :: rest -> extra_paths := !extra_paths @ [p]; eat_options rest
     | ("-h" | "--help" | "-help") :: _ -> Printf.eprintf "%s" usage; exit 0
@@ -133,12 +127,14 @@ let _ =
   let paths = tjpath @ installpath @ [execpath] @ !extra_paths in
   let flags = {
       API.Compile.defined_variables = !vars;
-      API.Compile.print_passes = !print_passes;
       API.Compile.print_units = !print_units;
   } in
+  if !doc_infix then begin
+    Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;
+    exit 0
+  end;
   let elpi =
     API.Setup.init
-      ~legacy_parser:!legacy_parser
       ~quotations
       ~flags:(API.Compile.to_setup_flags flags)
       ~builtins:[Builtin.std_builtins]
@@ -199,29 +195,22 @@ let _ =
   end;
   
   Format.eprintf "@\nParsing time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_parsing);
-  let query, exec =
+  let query, prog, exec, type_checking_time =
     let t0_compilation = Unix.gettimeofday () in
     try
       let prog = API.Compile.program ~flags ~elpi [p] in
       let query = API.Compile.query prog g in
+      let type_checking_time = API.Compile.total_type_checking_time query in
       let exec = API.Compile.optimize query in
       Format.eprintf "@\nCompilation time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_compilation);
-      query, exec
+      query, prog, exec, type_checking_time
     with API.Compile.CompileError(loc,msg) ->
       API.Utils.error ?loc msg
   in
-  if !typecheck then begin
-    let t0 = Unix.gettimeofday () in
-    let b = API.Compile.static_check ~checker:(Builtin.default_checker ()) query in
-    Format.eprintf "@\nTypechecking time: %5.3f@\n%!" (Unix.gettimeofday () -. t0);
-    if not b then begin
-       Format.eprintf "Type error. To ignore it, pass -no-tc.\n";
-       exit 1
-    end;
-  end;
+  Format.eprintf "@\nTypechecking time: %5.3f@\n%!" type_checking_time;
   if !print_lprolog then begin
-    API.Pp.program Format.std_formatter query;
-    Format.printf "?- ";
+    API.Pp.program Format.std_formatter prog;
+    Format.printf "\n\n%% query\n?- ";
     API.Pp.goal Format.std_formatter query;
     exit 0;
   end;

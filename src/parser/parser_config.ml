@@ -12,7 +12,9 @@ exception ParseError of Util.Loc.t * string
    resolution is not a parser business *)
 
 module type ParseFile = sig
-  val parse_file : ?cwd:string -> string -> (Digest.t * Ast.Program.decl list) list
+  val parse_file : ?cwd:string -> string -> Ast.Program.parser_output list
+  val get_current_client_loc_payload : unit -> Obj.t option
+  val set_current_clent_loc_pyload : Obj.t -> unit
 end
 
 let rec substrings i len_s s =

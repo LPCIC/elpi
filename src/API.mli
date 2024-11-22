@@ -17,6 +17,7 @@ module Ast : sig
 
   module Loc : sig
     type t = {
+      client_payload : Obj.t option;
       source_name : string;
       source_start: int;
       source_stop: int;
@@ -28,8 +29,106 @@ module Ast : sig
     val equal : t -> t -> bool
     val compare : t -> t -> int
 
-    val initial : string -> t
+    val initial : ?client_payload:Obj.t -> string -> t
   end
+
+  module Name : sig
+    type t
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+
+    module Set : sig
+      include Set.S with type elt = t
+      val show : t -> string
+      val pp : Format.formatter -> t -> unit
+     end
+     module Map : sig
+      include Map.S with type key = t
+      val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+      val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+     end
+
+   val from_string : string -> t
+
+   type constant = int
+   val is_global : t -> int -> bool
+  end 
+  module Scope : sig
+    type t
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+    type language
+    val pp_language : Format.formatter -> language -> unit
+    val show_language : language -> string
+
+    module Map : Map.S with type key = Name.t * language
+
+  end
+  module Opaque : sig
+    type t
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+  
+  module Type : sig
+    type t_ =
+      | Any
+      | Con of Name.t
+      | App of Name.t * t * t list
+      | Arr of t * t
+    and t = { it : t_; loc : Loc.t }
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+
+  module Term : sig
+    type t_ =
+      | Impl of bool * t * t
+      | Const of Scope.t * Name.t
+      | Discard
+      | Var of Name.t * t list (** unification variable *)
+      | App of Scope.t * Name.t * t * t list
+      | Lam of (Name.t * Scope.language) option * Type.t option * t
+      | Opaque of Opaque.t
+      | Cast of t * Type.t
+    and t = { it : t_; loc : Loc.t; }
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+
+    (** See {!module:RawData.Constants} to allocate global constants *)
+    type constant = Name.constant
+    val mkGlobal : loc:Loc.t -> constant -> t
+    val mkBound : loc:Loc.t -> language:Scope.language -> Name.t -> t
+    val mkAppGlobal : loc:Loc.t -> constant -> t -> t list -> t
+    val mkAppBound : loc:Loc.t ->  language:Scope.language -> Name.t -> t -> t list -> t
+    val mkVar : loc:Loc.t -> Name.t -> t list -> t
+    val mkOpaque : loc:Loc.t -> Opaque.t -> t
+    val mkCast : loc:Loc.t -> t -> Type.t -> t
+    val mkLam : loc:Loc.t -> (Name.t *  Scope.language) option -> ?ty:Type.t -> t -> t
+    val mkDiscard : loc:Loc.t -> t
+
+    (** Handy constructors to build goals *)
+    val mkImplication : loc:Loc.t -> t -> t -> t
+    val mkPi : loc:Loc.t -> Name.t -> ?ty:Type.t -> t -> t
+    val mkConj : loc:Loc.t -> t list -> t
+    val mkEq : loc:Loc.t -> t -> t -> t
+    val mkNil : loc:Loc.t -> t
+    (** if omitted, the loc is the merge of the hd and tl locs, as if
+        one wrote (hd :: tl), but not as if one wrote [hd|tl] *)
+    val mkCons : ?loc:Loc.t -> t -> t -> t
+
+    val list_to_lp_list : loc:Loc.t -> t list -> t
+    val ne_list_to_lp_list : t list -> t
+    val lp_list_to_list : t -> t list
+
+    (** See Coq-Elpi's lp:(F x) construct *)
+    val apply_elpi_var_from_quotation : t -> t list -> t
+    val extend_spill_hyp_from_quotation : t -> t list -> t
+    val is_spill_from_quotation : t -> bool
+  
+  end
+
+
 end
 
 module Setup : sig
@@ -78,7 +177,6 @@ module Setup : sig
     ?calc:calc_descriptor ->
     builtins:builtins list ->
     ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
-    ?legacy_parser:bool ->
     unit ->
     elpi
 
@@ -99,8 +197,6 @@ module Setup : sig
   val set_std_formatter : Format.formatter -> unit
   val set_err_formatter : Format.formatter -> unit
 
-  (** The legacy parser is an optional build dependency *)
-  val legacy_parser_available : bool
 end
 
 module Parse : sig
@@ -133,6 +229,75 @@ module Parse : sig
   exception ParseError of Ast.Loc.t * string
 end
 
+
+module Compile : sig
+
+  module StrSet : sig
+   include Set.S with type elt = string
+   val show : t -> string
+   val pp : Format.formatter -> t -> unit
+  end
+
+  type flags = {
+    (* variables used in conditional compilation, that is :if clauses *)
+    defined_variables : StrSet.t;
+    (* debug: print compilation units *)
+    print_units : bool;
+  }
+  val default_flags : flags
+  val to_setup_flags : flags -> Setup.flags
+
+  type program
+  type query
+  type executable
+
+  exception CompileError of Ast.Loc.t option * string
+
+  (* basic API: Compile all program files in one go.
+
+     Note:
+     - programs are concatened and compiled together, as if their sources
+       were glued together
+     - unless explicitly delimited via `{` and `}`, shorten directives and
+       macros are globally visible
+     - the `accumulate` directive inserts `{` and `}` around the accumulated
+       code
+   *)
+  val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program list -> program
+
+  (* separate compilation API: scoped_programs and units are marshalable and
+     closed w.r.t. the host application (eg quotations are desugared).
+
+     Note:
+     - macros and shorten directives part of a unit are not visible in other
+       units
+     - macros declared as part of the builtins given to Setup.init are
+       visible in all units
+     - types, type abbreviations and mode declarations from the  units are
+       merged at assembly time
+*)
+  type scoped_program
+  val scope : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> scoped_program
+  
+  type compilation_unit
+  type compilation_unit_signature
+  val empty_base : elpi:Setup.elpi -> program
+  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> ?builtins:Setup.builtins list -> scoped_program -> compilation_unit
+  val extend : ?flags:flags -> base:program -> compilation_unit -> program
+
+  (* only adds the types/modes from the compilation unit, not its code *)
+  val signature : compilation_unit -> compilation_unit_signature
+  val extend_signature : ?flags:flags -> base:program -> compilation_unit_signature -> program
+
+  (* then compile the query *)
+  val query : program -> Ast.query -> query
+  
+  (* finally obtain the executable *)
+  val optimize : query -> executable
+  
+  val total_type_checking_time : query -> float
+end
+
 module Data : sig
 
   module StrMap : sig
@@ -155,13 +320,12 @@ module Data : sig
 
   (* a solution is an assignment map from query variables (name) to terms,
    * plus the goals that were suspended and the user defined constraints *)
-  type 'a solution = {
+  type solution = {
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
-    output : 'a;
     pp_ctx : pretty_printer_context;
-    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t (* uvars are turned into discard *)
+    relocate_assignment_to_runtime : target:Compile.program -> depth:int -> string -> (term, string) Stdlib.Result.t (* uvars are turned into discard *)
   }
 
   (* Hypothetical context *)
@@ -170,90 +334,24 @@ module Data : sig
 
 end
 
-module Compile : sig
-
-  module StrSet : sig
-   include Set.S with type elt = string
-   val show : t -> string
-   val pp : Format.formatter -> t -> unit
-  end
-
-  type flags = {
-    (* variables used in conditional compilation, that is :if clauses *)
-    defined_variables : StrSet.t;
-    (* debug: print intermediate data during the compilation phase *)
-    print_passes : bool;
-    (* debug: print compilation units *)
-    print_units : bool;
-  }
-  val default_flags : flags
-  val to_setup_flags : flags -> Setup.flags
-
-  type program
-  type 'a query
-  type 'a executable
-
-  exception CompileError of Ast.Loc.t option * string
-
-  (* basic API: Compile all program files in one go.
-
-     Note:
-     - programs are concatened and compiled together, as if their sources
-       were glued together
-     - unless explicitly delimited via `{` and `}`, shorten directives and
-       macros are globally visible
-     - the `accumulate` directive inserts `{` and `}` around the accumulated
-       code
-   *)
-  val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program list -> program
-
-  (* separate compilation API: units are marshalable and closed w.r.t.
-     the host application (eg quotations are desugared).
-
-     Note:
-     - macros and shorten directives part of a unit are not visible in other
-       units
-     - macros declared as part of the builtins given to Setup.init are
-       visible in all units
-     - types, type abbreviations and mode declarations from all units are
-       merged at assembly time
-
-     *)
-  type compilation_unit
-  val unit : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> compilation_unit
-  val assemble : ?flags:flags -> elpi:Setup.elpi -> compilation_unit list -> program
-  val extend : ?flags:flags -> base:program -> compilation_unit list -> program
-
-  (* then compile the query *)
-  val query : program -> Ast.query -> unit query
-
-  (* finally obtain the executable *)
-  val optimize : 'a query -> 'a executable
-
-  (** Runs a checker. Returns true if no errors were found.
-      See also Builtins.default_checker. *)
-  val static_check : checker:program -> 'a query -> bool
-
-end
-
 module Execute : sig
 
-  type 'a outcome = Success of 'a Data.solution | Failure | NoMoreSteps
+  type outcome = Success of Data.solution | Failure | NoMoreSteps
 
   (* Returns the first solution, if any, within the optional steps bound.
    * Setting delay_outside_fragment (false by default) results in unification
    * outside the pattern fragment to be delayed (behavior of Teyjus), rather
    * than abort the execution (default behavior) *)
   val once : ?max_steps:int -> ?delay_outside_fragment:bool ->
-    'a Compile.executable -> 'a outcome
+    Compile.executable -> outcome
 
   (** Prolog's REPL.
     [pp] is called on all solutions.
     [more] is called to know if another solution has to be searched for. *)
   val loop :
     ?delay_outside_fragment:bool ->
-    'a Compile.executable ->
-    more:(unit -> bool) -> pp:(float -> 'a outcome -> unit) -> unit
+    Compile.executable ->
+    more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 end
 
 module Pp : sig
@@ -262,8 +360,8 @@ module Pp : sig
   val constraints : Data.pretty_printer_context -> Format.formatter -> Data.constraints -> unit
   val state : Format.formatter -> Data.state -> unit
 
-  val program : Format.formatter -> 'a Compile.query -> unit
-  val goal : Format.formatter -> 'a Compile.query -> unit
+  val program : Format.formatter -> Compile.program -> unit
+  val goal : Format.formatter -> Compile.query -> unit
 
   module Ast : sig
     val program : Format.formatter -> Ast.program -> unit
@@ -759,44 +857,6 @@ module BuiltIn : sig
 
 end
 
-(** Commodity module to build a simple query
-    and extract the output from the solution found by Elpi.
-
-    Example: "foo data Output" where [data] has type [t] ([a] is [t Conversion.t])
-    and [Output] has type [v] ([b] is a [v Conversion.t]) can be described as:
-{[
-
-      let q : (v * unit) t = Query {
-        predicate = "foo";
-        arguments = D(a, data,
-                    Q(b, "Output",
-                    N))
-      }
-
-   ]}
-
-   Then [compile q] can be used to obtain the compiled query such that the
-   resulting solution has a fied output of type [(v * unit)]. Example:
-{[
-
-     Query.compile q |> Compile.link |> Execute.once |> function
-       | Execute.Success { output } -> output
-       | _ -> ...
-
-   ]} *)
-module Query : sig
-
-  type name = string
-  type _ arguments =
-    | N : unit arguments
-    | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
-    | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
-
-  type 'x t = Query of { predicate : name; arguments : 'x arguments }
-
-  val compile : Compile.program -> Ast.Loc.t -> 'a t -> 'a Compile.query
-
-end
 
 (* ************************************************************************* *)
 (* ********************* Advanced Extension API **************************** *)
@@ -866,6 +926,7 @@ module FlexibleData : sig
     val show :  t -> string
     val equal : t -> t -> bool
     val hash : t -> int
+    val fresh : unit -> Ast.Name.t
   end
 
   module type Host = sig
@@ -955,7 +1016,7 @@ module RawOpaqueData : sig
   type name = string
   type doc = string
 
-  type t
+  type t = Ast.Opaque.t
 
  (** If the data_hconsed is true, then the [cin] function below will
      automatically hashcons the data using the [eq] and [hash] functions. *)
@@ -971,6 +1032,7 @@ module RawOpaqueData : sig
 
   type 'a cdata = private {
     cin : 'a -> Data.term;
+    cino : 'a -> Ast.Opaque.t;
     isc : t -> bool;
     cout: t -> 'a;
     name : string;
@@ -1048,17 +1110,19 @@ end
    * substitutes assigned unification variables by their value. *)
 module RawData : sig
 
-  type constant = int (** De Bruijn levels (not indexes):
-                          the distance of the binder from the root.
-                          Starts at 0 and grows for bound variables;
-                          global constants have negative values. *)
+  type constant = Ast.Term.constant
+  
+  (** De Bruijn levels (not indexes): the distance of the binder from the root.
+      starts at 0 and grows for bound variables;
+      global constants have negative values. *)
+
   type builtin
   type term = Data.term
   type view = private
     (* Pure subterms *)
-    | Const of constant                   (* global constant or a bound var *)
+    | Const of int                        (* global constant or a bound var *)
     | Lam of term                         (* lambda abstraction, i.e. x\ *)
-    | App of constant * term * term list  (* application (at least 1 arg) *)
+    | App of int * term * term list       (* application (at least 1 arg) *)
     (* Optimizations *)
     | Cons of term * term                 (* :: *)
     | Nil                                 (* [] *)
@@ -1077,7 +1141,7 @@ module RawData : sig
   val kool : view -> term
 
   (** Smart constructors *)
-  val mkBound : constant -> term  (* bound variable, i.e. >= 0 *)
+  val mkBound : int -> term  (* bound variable, i.e. >= 0 *)
   val mkLam : term -> term
   val mkCons : term -> term -> term
   val mkNil : term
@@ -1087,10 +1151,18 @@ module RawData : sig
 
   (** Lower level smart constructors *)
   val mkGlobal : constant -> term (* global constant, i.e. < 0 *)
-  val mkApp : constant -> term -> term list -> term
-  val mkAppL : constant -> term list -> term
+  val mkAppGlobal  : constant -> term -> term list -> term
+  val mkAppGlobalL : constant -> term list -> term
+  val mkAppBound  : int -> term -> term list -> term
+  val mkAppBoundL : int -> term list -> term
+  
   val mkBuiltin : builtin -> term list -> term
-  val mkConst : constant -> term (* no check, works for globals and bound *)
+
+  (** no check, works for globals and bound *)
+  val mkConst : int -> term
+  val mkApp : int -> term -> term list -> term
+  val mkAppMoreArgs : depth:int -> term -> term list -> term
+  val isApp : depth:int -> term -> bool 
 
   val cmp_builtin : builtin -> builtin -> int
   type hyp = {
@@ -1158,49 +1230,41 @@ end
 (** This module lets one generate a query by providing a RawData.term directly *)
 module RawQuery : sig
 
-  (* The output term is to be used to build the query but is *not* the handle
-     to the eventual solution. The compiler transforms it, later on, into
-     a UnifVar. Use the name to fetch the solution. *)
-  val mk_Arg :
-    State.t -> name:string -> args:Data.term list ->
-      State.t * Data.term
-
-  (* Args are parameters of the query (e.g. capital letters). *)
-  val is_Arg : State.t -> Data.term -> bool
-
-  (* with the possibility to update the state in which the query will run *)
+  (** with the possibility to update the state in which the query will run *)
   val compile_ast :
-    Compile.program -> Ast.query -> (State.t -> State.t) -> unit Compile.query
+    Compile.program -> Ast.query -> (State.t -> State.t) -> Compile.query
 
-  (* generate the query term and initial state by hand *)
-  val compile :
-    Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term) * Conversion.extra_goals) ->
-      unit Compile.query
-
+  (** generate the query ast term with a function. The resulting term is typed, spilled, etc *)
+  val compile_term :
+    Compile.program -> (State.t -> State.t * Ast.Term.t) -> Compile.query
   
+  (** generate the query term by hand, the result is used as is *)
+  val compile_raw_term :
+    Compile.program -> (State.t -> State.t * Data.term * Conversion.extra_goals) -> Compile.query
+
+  (** typechecks only if ctx is empty *)
+  val term_to_raw_term :
+    State.t -> Compile.program ->
+    ?ctx:RawData.constant Ast.Scope.Map.t ->
+    depth:int -> Ast.Term.t -> State.t * Data.term
+
+  (** raises Not_found *)
+  val global_name_to_constant : State.t -> string -> RawData.constant
 end
 
 module Quotation : sig
 
-  type quotation =
-    depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
+  type quotation = language:Ast.Scope.language -> State.t -> Ast.Loc.t -> string -> Ast.Term.t
 
   (** The default quotation [{{code}}] *)
   val set_default_quotation : ?descriptor:Setup.quotations_descriptor -> quotation -> unit
 
   (** Named quotation [{{name:code}}] *)
-  val register_named_quotation : ?descriptor:Setup.quotations_descriptor -> name:string -> quotation -> unit
+  val register_named_quotation : ?descriptor:Setup.quotations_descriptor -> name:string -> quotation -> Ast.Scope.language
 
   (** The anti-quotation to lambda Prolog *)
-  val lp : quotation
-
-  (** See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
-  val quote_syntax_runtime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
-  val quote_syntax_compiletime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
-
-  (** To implement the string_to_term built-in (AVOID, makes little sense
-   * if depth is non zero, since bound variables have no name!) *)
-  val term_at : depth:int -> State.t -> string -> State.t * Data.term
+  val elpi_language : Ast.Scope.language
+  val elpi : quotation
 
   (** Like quotations but for identifiers that begin and end with
    * "`" or "'", e.g. `this` and 'that'. Useful if the object language
@@ -1208,10 +1272,10 @@ module Quotation : sig
    * (e.g. CD.string like but with a case insensitive comparison) *)
 
   val declare_backtick : ?descriptor:Setup.quotations_descriptor -> name:string ->
-    (State.t -> string -> State.t * Data.term) -> unit
+    quotation -> Ast.Scope.language
 
   val declare_singlequote : ?descriptor:Setup.quotations_descriptor -> name:string ->
-    (State.t -> string -> State.t * Data.term) -> unit
+    quotation -> Ast.Scope.language
 
   val new_quotations_descriptor : unit -> Setup.quotations_descriptor
 
@@ -1245,6 +1309,12 @@ module Utils : sig
   val clause_of_term :
     ?name:string -> ?graft:([`After | `Before | `Replace | `Remove] * string) ->
     depth:int -> Ast.Loc.t -> Data.term -> Ast.program
+
+  (** Hackish *)
+  val term_to_raw_term :
+    State.t -> Compile.program ->
+    ?ctx:RawData.constant Ast.Scope.Map.t ->
+    depth:int -> Ast.Term.t -> Data.term
 
   (** Lifting/restriction/beta (LOW LEVEL, don't use) *)
   val move : from:int -> to_:int -> Data.term -> Data.term

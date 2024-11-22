@@ -129,6 +129,7 @@ end
 
 module Loc = struct
   type t = {
+    client_payload : Obj.t option;
     source_name : string;
     source_start: int;
     source_stop: int;
@@ -153,28 +154,43 @@ module Loc = struct
              line (source_start - line_starts_at) chars in
     Re.(Str.global_replace (Str.regexp_string "\\") "/" source) ^ pos ^ ":"
 
-  let pp fmt l = Fmt.fprintf fmt "%s" (to_string l)
+  let pp fmt l =Fmt.fprintf fmt "%s" (to_string l)
   let show l = to_string l
   let compare = Stdlib.compare
   let equal = (=)
 
-  let initial source_name = {
+  let initial ?client_payload source_name = {
+    client_payload;
     source_name;
     source_start = 0;
     source_stop = 0;
     line = 1;
     line_starts_at = 0;
   }
+  let is_initial { source_start; source_stop; line; line_starts_at } =
+    source_start = 0 && source_stop = 0 &&
+    line = 1 && line_starts_at = 0
 
-  let merge l r =
-    assert(l.source_name = r.source_name);
+  let option_append o1 o2 =
+    match o1 with
+    | None -> o2
+    | Some _ -> o1
+
+  let merge ?(merge_payload=option_append) l r =
     {
+    client_payload = merge_payload l.client_payload r.client_payload;
     source_name = l.source_name;
     source_start = l.source_start;
     source_stop = r.source_stop;
     line = r.line;
     line_starts_at = r.line_starts_at;
   }
+
+
+  let merge ?merge_payload l r =
+    if is_initial l then r
+    else if is_initial r then l
+    else merge ?merge_payload l r
 
   let extend n l = { l with source_start = l.source_start - n; source_stop = l.source_stop + n }
    
@@ -237,7 +253,9 @@ let rec for_all3b p l1 l2 bl b =
 ;;
 
 type arg_mode = Input | Output
-and mode_aux =
+[@@deriving show, ord]
+
+type mode_aux =
   | Fo of arg_mode
   | Ho of arg_mode * mode
 and mode = mode_aux list
@@ -273,9 +291,9 @@ let pp_loc_opt = function
   | None -> ""
   | Some loc -> Loc.show loc
 let default_warn ?loc s =
-  Printf.eprintf "Warning: %s%s\n%!" (pp_loc_opt loc) s
+  Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" (pp_loc_opt loc) s
 let default_error ?loc s =
-  Printf.eprintf "Fatal error: %s%s\n%!" (pp_loc_opt loc) s;
+  Format.eprintf "@[<hv>Fatal error: %s@,%s@]\n%!" (pp_loc_opt loc) s;
   exit 1
 let default_anomaly ?loc s =
   let trace =
@@ -337,7 +355,13 @@ let option_get ?err = function
       match err with
       | None -> assert false
       | Some msg -> anomaly msg
-let option_map f = function Some x -> Some (f x) | None -> None
+
+let option_map f = function
+  | Some x -> Some (f x)
+  | None -> None
+let option_smart_map f = function
+  | Some x as orig -> let x' = f x in if x' == x then orig else Some x'
+  | None -> None
 let option_mapacc f acc = function
   | Some x -> let acc, y = f acc x in acc, Some y
   | None -> acc, None
@@ -524,7 +548,7 @@ let _ = show
    let hash x = x
  end
 
- let counter = ref 0
+ let counter = ref 2
  let make () = incr counter; !counter
 
  module Htbl = Hashtbl.Make(Self)
@@ -673,3 +697,31 @@ fun ?(cwd=Sys.getcwd()) ~unit:(origfilename as filename) () ->
   try iter_tjpath (cwd :: dirs)
   with File_not_found f ->
     raise (Failure ("File "^f^" not found in: " ^ String.concat ", " dirs))
+
+
+(* Used by pretty printers, to be later instantiated in module Constants *)
+let pp_const = mk_spaghetti_printer ()
+type constant = int (* De Bruijn levels *) [@@ deriving ord]
+let pp_constant = pp_spaghetti pp_const
+let show_constant = show_spaghetti pp_const
+let equal_constant x y = x == y
+
+module Constants : sig
+  type t = constant
+  module Map : Map.S with type key = constant
+  module Set : Set.S with type elt = constant
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+  val compare : t -> t -> int
+end = struct
+
+module Self = struct
+  type t = constant
+  let compare x y = x - y
+  let pp = pp_constant
+  let show = show_constant
+end
+module Map = Map.Make(Self)
+module Set = Set.Make(Self)
+include Self
+end

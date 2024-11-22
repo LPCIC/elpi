@@ -96,6 +96,9 @@ program: AFTER MINUS VDASH
 program: AFTER EQ2 VDASH
 goal: AFTER CONJ2 VDASH
 program: AFTER CONJ2 VDASH
+goal: AFTER DDARROW VDASH
+goal: LBRACKET AFTER DDARROW VDASH
+program: AFTER DDARROW VDASH
 
 This infix operator expects a right hand side.
 
@@ -157,7 +160,6 @@ goal: LBRACKET AFTER OR FLOAT USE_SIG
 goal: LBRACKET AFTER IS FLOAT USE_SIG
 goal: LBRACKET AFTER EQ FLOAT USE_SIG
 goal: LBRACKET PIPE FLOAT USE_SIG
-goal: LBRACKET FLOAT USE_SIG
 goal: LCURLY FLOAT USE_SIG
 goal: FAMILY_TILDE FLOAT USE_SIG
 goal: LPAREN AFTER AS FLOAT USE_SIG
@@ -218,6 +220,23 @@ program: AFTER MINUS FLOAT USE_SIG
 program: AFTER EQ2 FLOAT USE_SIG
 goal: AFTER CONJ2 FLOAT USE_SIG
 program: AFTER CONJ2 FLOAT USE_SIG
+goal: PI AFTER COLON AFTER BIND FLOAT USE_SIG
+goal: PI AFTER BIND FLOAT USE_SIG
+goal: PI AFTER COLON AFTER BIND VDASH
+goal: PI AFTER BIND VDASH
+goal: LBRACKET AFTER COLON AFTER BIND FLOAT USE_SIG
+goal: PI AFTER COLON AFTER RPAREN
+program: AFTER AFTER RPAREN
+goal: PI AFTER COLON VDASH
+goal: LBRACKET FLOAT USE_SIG
+goal: AFTER AFTER BIND VDASH
+goal: AFTER AFTER BIND FLOAT USE_SIG
+goal: LBRACKET AFTER COLON VDASH
+goal: LBRACKET AFTER COLON AFTER RPAREN
+goal: LBRACKET AFTER COLON AFTER BIND VDASH
+goal: AFTER DDARROW FLOAT USE_SIG
+goal: LBRACKET AFTER DDARROW FLOAT USE_SIG
+program: AFTER DDARROW FLOAT USE_SIG
 
 Term expected, got keyword.
 
@@ -316,19 +335,21 @@ program: RULE LPAREN USE_SIG
 program: RULE VDASH
 program: RULE IFF AFTER VDASH
 program: RULE LPAREN AFTER COLON VDASH
-program: RULE LPAREN AFTER COLON FLOAT USE_SIG
 program: RULE AFTER VDASH
 program: RULE BIND VDASH
 program: RULE BIND AFTER VDASH
 program: RULE PIPE VDASH
 program: RULE PIPE FLOAT USE_SIG
 program: RULE IFF VDASH
+program: RULE LPAREN AFTER RTRI VDASH
+program: RULE LPAREN AFTER RTRI FLOAT USE_SIG
 
 Malformed CHR rule declaration. Examples:
 rule (match this).
 rule (match this) \ (remove that).
 rule (match this) \ (remove that) | (only when).
 rule (match this) \ (remove that) | (only when) <=> (add this).
+rule (E :> Ctx ?- match this goal).
 
 program: ACCUMULATE VDASH
 program: ACCUMULATE AFTER CONJ VDASH
@@ -358,6 +379,7 @@ program: TYPEABBREV LPAREN AFTER AFTER VDASH
 program: TYPEABBREV AFTER VDASH
 program: TYPEABBREV AFTER AFTER RPAREN
 program: TYPEABBREV LPAREN AFTER VDASH
+program: TYPEABBREV LPAREN AFTER AFTER COLON
 
 Type abbreviation expected. Examples:
 typeabbrev context (list term).
@@ -398,6 +420,7 @@ program: KIND VDASH
 program: KIND AFTER SIGMA
 program: KIND AFTER TYPE VDASH
 program: KIND AFTER TYPE ARROW VDASH
+program: KIND AFTER UNTYPED
 
 Kind declaration expected. Examples:
 kind term  type.
@@ -418,20 +441,24 @@ External declaration expected. Examples:
 external type foo term -> prop.
 external pred foo i:term.
 
-program: AFTER AFTER RPAREN
-
-Unexpected keyword.
-
 program: PRED VDASH
 program: PRED AFTER VDASH
 program: PRED AFTER IO_COLON AFTER CONJ VDASH
 program: PRED AFTER IO_COLON VDASH
 program: PRED AFTER IO_COLON AFTER RPAREN
+program: PRED AFTER IO_COLON AFTER BIND
+program: FUNC AFTER AFTER IO_COLON
+program: FUNC AFTER AFTER CONJ VDASH
+program: FUNC VDASH
+program: FUNC AFTER VDASH
+program: FUNC AFTER AFTER RPAREN
+program: FUNC AFTER ARROW VDASH
 
 Predicate declaration expected. Examples:
 pred append i:list A, i:list A, o:list A.
 pred append i:list A i:list A o:list A.
-pred map i:list A, i:(A -> B -> prop), o:list B.
+pred mapR i:list A, i:(pred i:A, o:B), o:list B.
+func map i:list A, i:(func i:A, o:B), o:list B.
 
 program: EXPORTDEF AFTER LPAREN USE_SIG
 program: EXPORTDEF AFTER LPAREN AFTER FULLSTOP
@@ -443,7 +470,12 @@ program: EXPORTDEF AFTER AFTER LPAREN AFTER FULLSTOP
 program: EXPORTDEF AFTER AFTER AFTER VDASH
 program: EXPORTDEF VDASH
 program: EXPORTDEF AFTER TYPE
-program: EXPORTDEF AFTER AFTER RPAREN
+program: EXPORTDEF AFTER LPAREN PRED VDASH
+program: EXPORTDEF AFTER AFTER LPAREN PRED IO_COLON AFTER FULLSTOP
+program: EXPORTDEF AFTER LPAREN PRED IO_COLON AFTER FULLSTOP
+program: EXPORTDEF AFTER LPAREN FUNC VDASH
+program: EXPORTDEF AFTER LPAREN FUNC AFTER FULLSTOP
+program: EXPORTDEF AFTER LPAREN FUNC ARROW VDASH
 
 Definition export directive expected (Teyjus compatibility, ignored by Elpi).
 Examples:
@@ -466,7 +498,6 @@ Examples:
 localkind foo.
 localkind foo, bar.
 
-program: CLOSED AFTER VDASH
 program: CLOSED AFTER CONJ VDASH
 program: CLOSED VDASH
 
@@ -477,7 +508,6 @@ closed foo, bar.
 
 program: USEONLY VDASH
 program: USEONLY AFTER TYPE
-program: USEONLY AFTER AFTER RPAREN
 
 Useonly directive expected (Teyjus compatibility, ignored by Elpi).
 Examples:
@@ -494,3 +524,34 @@ Examples:
 infixl and 30.
 infixr ++ 45.
 prefix - 12.
+
+goal: SIGMA VDASH
+goal: SIGMA AFTER RPAREN
+goal: PI VDASH
+goal: PI AFTER RPAREN
+goal: LPAREN SIGMA VDASH
+goal: LPAREN PI VDASH
+goal: LBRACKET SIGMA VDASH
+goal: LBRACKET SIGMA AFTER RPAREN
+goal: LBRACKET PI VDASH
+goal: LBRACKET PI AFTER RPAREN
+program: SIGMA VDASH
+program: SIGMA AFTER RPAREN
+program: PI VDASH
+program: PI AFTER RPAREN
+
+Illformed pi or sigma.
+Examples:
+pi X\ p X
+pi X Y Z\ p X, q Y Z
+sigma X\ p X
+sigma X Y Z\ p X, q Y Z
+
+goal: LPAREN FLOAT COLON AFTER IO_COLON
+
+Illformed binder after type cast.
+You cannot ascribe a type to bound variables.
+
+program: LPAREN FLOAT COLON AFTER RPAREN VDASH
+
+You cannot ascribe a type on the head predicate.

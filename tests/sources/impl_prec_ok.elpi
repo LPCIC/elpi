@@ -1,0 +1,5 @@
+main :- true, (true => true), true, true.
+main :- true, (true => true), !.
+main :- true, (true => (true,true)), true, true.
+main :- std.do! [ true, true => true, true].
+main :- std.do! [ true, (pi x\ true => true), true].

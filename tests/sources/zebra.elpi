@@ -1,18 +1,49 @@
 % Where does the zebra live?
 % Puzzle solution written by Claude Sammut.
 
+kind i type.
+type blue, chesterfields, coffee, dog, english, zero i.
+type s i -> i.
+type member i -> list i -> prop.
+type zebra i.
+type yellow i.
+type winstons i.
+type water i.
+type ukrainian i.
+type tea i.
+type spanish i.
+type snails i.
+type right_of i -> i -> list i -> prop.
+type red i.
+type print_houses list i -> prop.
+type plus0 i -> i -> i -> prop.
+type parliaments i.
+type orange_juice i.
+type once prop.
+type norwegian i.
+type next_to i -> i -> list i -> prop.
+type mult0 i -> i -> i -> prop.
+type milk i.
+type lucky_strikes i.
+type kools i.
+type japanese i.
+type ivory i.
+type iter0 i -> prop -> prop.
+type houses list i -> prop.
+type house i -> i -> i -> i -> i -> i.
+type horse i.
+type green i.
+type fox i.
+type exp0 i -> i -> i -> prop.
+
 iter0 zero X.
 iter0 (s N) X :- X, iter0 N X.
-
 plus0 zero X X.
 plus0 (s X) Y (s S) :- plus0 X Y S.
-
 mult0 zero X zero.
 mult0 (s X) Y Z :- mult0 X Y K, plus0 Y K Z.
-
 exp0 zero X (s zero).
 exp0 (s X) Y Z :- exp0 X Y K, mult0 Y K Z.
-
 main :-
  TEN = s (s (s (s (s (s (s (s (s (s zero))))))))),
  mult0 TEN TEN HUNDR,

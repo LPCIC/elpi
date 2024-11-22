@@ -1,5 +1,13 @@
 % Test with q X; should yield X=ok
 
+kind i type.
+type ko i.
+type ok i.
+type q i -> prop.
+type c i -> prop.
+type b prop.
+type a i -> prop.
+
 q X :- a X, b, c X.
 
 a ko.

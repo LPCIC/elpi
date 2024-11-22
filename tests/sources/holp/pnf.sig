@@ -13,4 +13,4 @@ useonly  quant_free   form -> o.
 type  termp        term -> o.
 
 /* this definition is exported */
-exportdef  prenex     form -> form -> o.
+type  prenex     form -> form -> o.

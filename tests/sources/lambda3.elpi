@@ -1,15 +1,15 @@
 %%%module lambda3.
 
-of (appl T1 T2) B :- of T1 (impl A B), of T2 A.
-of (lam F) (impl A B) :- pi x\ of x A => of (F x) B.
+:untyped of (appl T1 T2) B :- of T1 (impl A B), of T2 A.
+:untyped of (lam F) (impl A B) :- pi x\ of x A => of (F x) B.
 
-append (xcons X XS) L (xcons X L1)  :- append XS L L1 .
-append xnil L L .
+:untyped append (xcons X XS) L (xcons X L1)  :- append XS L L1 .
+:untyped append xnil L L .
 
-termify xnil (lam x\x).
-termify (xcons X XS) (lam F) :- pi c\ termify XS (F c).
+:untyped termify xnil (lam x\x).
+:untyped termify (xcons X XS) (lam F) :- pi c\ termify XS (F c).
 
-test L :- 
+:untyped test L :- 
   X1 = (xcons x0 (xcons x1 (xcons x2 (xcons x3 (xcons x4 (xcons x5 (xcons x6 (xcons x7 (xcons x8 (xcons x9 (xcons x10 xnil))))))))))), 
   append X1 X1 X2 ,
   append X2 X2 X3 ,
@@ -31,21 +31,21 @@ test L :-
    X = X6 ,
    termify X L.
 
-once L :- of L Z.
+:untyped once L :- of L Z.
 
-iter zero X.
-iter (s N) X :- X, iter N X.
+:untyped iter zero X.
+:untyped iter (s N) X :- X, iter N X.
 
-plus zero X X.
-plus (s X) Y (s S) :- plus X Y S.
+:untyped plus zero X X.
+:untyped plus (s X) Y (s S) :- plus X Y S.
 
-mult zero X zero.
-mult (s X) Y Z :- mult X Y K, plus Y K Z.
+:untyped mult zero X zero.
+:untyped mult (s X) Y Z :- mult X Y K, plus Y K Z.
 
-exp zero X (s zero).
-exp (s X) Y Z :- exp X Y K, mult Y K Z.
+:untyped exp zero X (s zero).
+:untyped exp (s X) Y Z :- exp X Y K, mult Y K Z.
 
-main :-
+:untyped main :-
  TEN = s (s (s (s (s (s (s (s (s (s zero))))))))),
  exp (s (s (s zero))) TEN THOUSAND,
  test L,

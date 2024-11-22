@@ -298,6 +298,30 @@ to `elpi`.
 
 The attribute `:if` can also be used on CHR rules.
 
+### Compatibility ifdefs
+
+It is also possible ask the lexer to discard text before it reaches the parser.
+
+```prolog
+% elpi:if version < 2.0.0
+This text is ignored if the version of Elpi old
+% elpi:endif
+```
+
+Currently the only variable available is `version` and it must be placed
+on the left of the operator (either `<` or `>` or `=`) and ifdefs cannot
+be nested. If not available (e.g. `dune subst` did not run) the version
+defaults to `99.99.99`.
+
+One can also ask the lexer to always skip some text. That can be useful if one
+wants to keep around code that is not meant for Elpi (but for example for Teyjus).
+
+```prolog
+% elpi:skip 2
+infixr ==> 120. % directive not supported by Elpi
+infixr || 120. % last line being skipped
+```
+
 ## Configurable argument indexing
 
 By default the clauses for a predicate are indexed by looking
@@ -939,8 +963,7 @@ A macro is declared with the following syntax
 ```prolog
 macro @name Args :- Body.
 ```
-It is expanded everywhere (even in type declarations)
-at compilation time. 
+It is expanded at compilation time. 
 
 #### Example: literlas
 
@@ -956,39 +979,3 @@ macro @of X N T :- (of X T, pp X N).
 of (lambda Name   F) (arr A B) :-         pi x\ @of x Name A =>            of (F x) B.
 of (let-in Name V F) R         :- of V T, pi x\ @of x Name T => val x V => of (F x) R.
 ```
-
-#### Example: optional cut.
-```prolog
-macro @neck-cut-if P Hd Hyps :- (
-  (Hd :- P,      !, Hyps),
-  (Hd :- not P,     Hyps)
-).
-
-@neck-cut-if greedy 
-(f X)  (X = 1).
- f X :- X = 2.
-```
-
-```
-goal> greedy => f X.
-Success:
-  X = 1
-goal> f X.
-Success:
-  X = 1
-More? (Y/n)
-Success:
-  X = 2 
-```
-
-### Caveat
-Currently macros are not truly "hygienic",
-that is the body of the macro is not lexically analyzed before
-expansion and its free names (of constants) may be captured.
-
-```prolog
-macro @m A :- x = A.
-main :- pi x\ @m x. % works, but should not!
-```
-
-Use with care.

@@ -1,0 +1,12 @@
+% elpi:if version = 100.0.0
+pred pred pred
+% elpi:endif
+% elpi:if  version   >  100.0.0
+pred pred pred
+% elpi:endif
+% elpi:if  version   <  100.0.0
+pred x.
+x.
+% elpi:endif
+
+main :- x.

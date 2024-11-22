@@ -1,0 +1,22 @@
+pred q o:int.
+q 1.
+q 2.
+
+
+:functional
+pred q' o:int.
+
+:functional 
+pred do' i:prop, i:(:functional pred).
+do X Y :- X, !, Y.
+
+:functional
+pred x o:int.
+
+% similar to test20. The non functional argument Y is returned
+% as the output of x. However, a non functional pred passed to a functional
+% predicate is either not called or appears in a functional context.
+% therefore, the output Y has at most one distinct value.
+x Y :- do' (q Y) (q' Z).
+
+main.

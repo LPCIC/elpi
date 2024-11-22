@@ -1,0 +1,10 @@
+:functional
+pred q o:int.
+
+pred t o:int.
+
+
+% TEST 3
+q X :- t X. % This breaks functionality, t is not functional
+
+main.

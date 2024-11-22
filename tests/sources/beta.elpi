@@ -1,1 +1,5 @@
+kind tm type.
+type f tm -> tm -> tm.
+type a, b tm.
+
 main :- X = (x\ y\ f x y), X a b = f a b.

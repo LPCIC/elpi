@@ -9,6 +9,28 @@
 %accumulate lists.
 
 %reduce (app (lam F) T) R :- pi x\ copy x T => copy (F x) (R' x), R = R' x.
+kind i type.
+type a i.
+type xcons i -> i -> i.
+type xnil i.
+type try_clause i -> i -> i -> prop.
+type tru i.
+type test2 prop.
+type test1 prop.
+type subst (i -> i) -> i -> i -> prop.
+type perp i.
+type or i -> i -> i.
+type memb i -> i -> prop.
+type imp i -> i -> i.
+type hc_interp i -> i -> prop.
+type f i -> i.
+type copy i -> i -> prop.
+type c i.
+type box (i -> i) -> i.
+type backchain i -> i -> prop.
+type b i.
+type and i -> i -> i.
+type all (i -> i) -> i.
 
 copy (and B1 C1) (and B2 C2) :- copy B1 B2, copy C1 C2.
 copy (or B1 C1) (or B2 C2) :- copy B1 B2, copy C1 C2.

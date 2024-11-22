@@ -9,11 +9,14 @@ pred uvar_4 i:A.
 pred uvar_5 i:A.
 pred uvar_6 i:A.
 
-pred test-as.
-pred test-uvar.
-pred test-var.
-pred test-declare-constraint.
+pred tests-as.
+pred tests-uvar.
+pred tests-var.
+pred tests-unif.
+pred tests-declare-constraint.
 
+type bar variadic any any.
+type c variadic any any.
 uvar_1 (bar (uvar K Args)) :- std.assert! (var K) "uvar_1 bar X, not a var", print K Args.
 uvar_2 (bar X) :- std.assert! (var X K Args) "uvar_2 bar X, not a var", print K Args.
 uvar_3 (uvar K) :- std.assert! (var K) "uvar_3 X, not a var", print K.
@@ -27,12 +30,13 @@ as_1 (bar (uvar as K)) :- std.assert! (var K) "bar (uvar as_1 X), not a var", pr
 as_2 (uvar as K) :- std.assert! (var K) "uvar as_2 X, not a var", print K.
 as_3 (uvar as K) :- std.assert! (var K) "uvar as_3 X, not a var", print K.
 
-pred unif_1 o:A.
-pred unif_2 o:A.
+pred unif_1 o:any.
+pred unif_2 o:any.
 
 unif_1 (x\ X x).
 unif_2 (x\ y\ X x y).
 
+type u any.
 
 tests-uvar :-
   print "--------- uvar_1",
@@ -70,7 +74,7 @@ tests-as :-
   print "---------- as_3",
   not (as_3 (x \ X0)).
 
-test-unif :-
+tests-unif :-
     print "---------- unif_1",
     unif_1 X,
     print "---------- unif_1 bis",
@@ -86,7 +90,7 @@ test-unif :-
     print "---------- unif_zero",
     (x\ X6 x) = X6.
 
-test-var :-
+tests-var :-
     print "---------- var 1",
    pi x \ (var (y \ X x y)),
     print "---------- var 2",
@@ -94,8 +98,8 @@ test-var :-
     print "---------- var 3",
    pi x z \ (var (y \ X x y)).
 
-test-declare-constraint :-
+tests-declare-constraint :-
   declare_constraint false [x\ X x],
-  not(X = 1).
+  not(X = _\1).
 
-main :- tests-uvar, tests-as, test-unif, test-var, test-declare-constraint.
+main :- tests-uvar, tests-as, tests-unif, tests-var, tests-declare-constraint.

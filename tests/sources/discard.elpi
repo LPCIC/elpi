@@ -1,3 +1,5 @@
+type foo int.
+type bar int.
 main :-
   foo = _,
   _ = 4,

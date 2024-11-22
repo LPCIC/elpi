@@ -8,6 +8,7 @@
 %token FRESHUV
 %token CUT
 %token COLON
+%token RTRI
 %token BIND
 %token LPAREN
 %token RPAREN
@@ -22,6 +23,7 @@
 %token <char> IO
 %token ARROW
 %token DARROW
+%token DDARROW
 %token DIV
 %token MOD
 %token < string > QUOTED
@@ -29,6 +31,7 @@
 %token ACCUMULATE
 %token LOCAL
 %token PRED
+%token FUNC
 %token MINUS
 %token MINUSr
 %token MINUSi
@@ -56,6 +59,7 @@
 %token IF
 %token BEFORE
 %token AFTER
+%token UNTYPED
 %token FUNCTIONAL
 %token REPLACE
 %token REMOVE

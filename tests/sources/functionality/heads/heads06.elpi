@@ -1,0 +1,7 @@
+:functional pred p i:(:functional pred i:(pred)) i:(pred i:(pred)).
+
+% THIS IS OK: first A is functional. The second A is relation.
+% functional ⊆ relational
+p A A.
+
+main.

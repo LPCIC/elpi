@@ -10,19 +10,35 @@
 %spy X :- print start X, X, print ok X.
 %spy X :- print ko X, fail.
 
+kind i type.
+type zero i.
+type not_attack i -> i -> i -> prop.
+type xxx i -> prop.
+type xnil i.
+type xcons i -> i -> i.
+type select i -> i -> i -> prop.
+type s i -> i.
+type range i -> i -> i -> prop.
+type queens_aux i -> i -> i -> prop.
+type queens i -> i -> prop.
+type q i -> prop.
+type plus i -> i -> i -> prop.
+type once prop.
+type not_attack_aux i -> i -> prop.
+type neq i -> i -> prop.
+type mult i -> i -> i -> prop.
+type less i -> i -> prop.
+type iter i -> prop -> prop.
+type exp i -> i -> i -> prop.
 
 plus zero X X.
 plus (s X) Y (s S) :- plus X Y S.
-
 less zero (s _).
 less (s X) (s Y) :- less X Y.
-
 neq zero (s _).
 neq (s _) zero.
 neq (s X) (s Y) :- neq X Y.
-
 queens N Qs :- range (s zero) N Ns, queens_aux Ns xnil Qs.
-
 queens_aux xnil Qs Qs.
 queens_aux UnplacedQs SafeQs Qs :- 
         select UnplacedQs UnplacedQs1 Q,

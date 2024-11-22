@@ -272,6 +272,9 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "pred false.";
 
   LPCode "external pred (=) o:A, o:A. % unification";
+
+  LPCode "external pred (pi) i:A -> prop.";
+  LPCode "external pred (sigma) i:A -> prop.";
   
   MLData BuiltInData.int;
   MLData BuiltInData.string;
@@ -288,6 +291,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "type (as) A -> A -> A.";
   LPCode "type (=>) prop -> prop -> prop.";
   LPCode "type (=>) list prop -> prop -> prop.";
+  LPCode "type (==>) prop -> prop -> prop."; (* not really needed since the parser emits a => *)
+  LPCode "type (==>) list prop -> prop -> prop.";
 
   LPDoc " -- Control --";
 
@@ -379,6 +384,21 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "fst (pr A _) A.";
   LPCode "pred snd  i:pair A B, o:B.";
   LPCode "snd (pr _ B) B.";
+
+  LPCode {|
+kind triple type -> type -> type -> type.
+type triple A -> B -> C -> triple A B C.
+
+pred triple_1 i:triple A B C, o:A.
+triple_1 (triple A _ _) A.
+
+pred triple_2 i:triple A B C, o:B.
+triple_2 (triple _ B _) B.
+
+pred triple_3 i:triple A B C, o:C.
+triple_3 (triple _ _ C) C.
+ 
+|};
 
   MLData (option (BuiltInData.poly "A"));
 
@@ -628,39 +648,8 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
      | Sys_error msg -> error msg)),
   DocAbove);
 
-  LPDoc " -- Hacks --";
-
-  MLCode(Pred("string_to_term",
-    In(string, "S",
-    Out(any,   "T",
-    Full(ContextualConversion.unit_ctx, "parses a term T from S"))),
-  (fun text _ ~depth () () state ->
-     try
-       let state, t = Quotation.term_at ~depth state text in
-       state, !:t, []
-     with
-     | Parse.ParseError _ -> raise No_clause)),
-  DocAbove);
-
-  MLCode(Pred("readterm",
-    In(in_stream, "InStream",
-    Out(any,      "T",
-    Full(ContextualConversion.unit_ctx, "reads T from InStream, ends with \\n"))),
-  (fun (i,source_name) _ ~depth () () state ->
-     try
-       let text = input_line i in
-       let state, t = Quotation.term_at ~depth state text in
-       state, !:t, []
-     with
-     | Sys_error msg -> error msg
-     | Parse.ParseError _ -> raise No_clause)),
-  DocAbove);
-
   LPCode "pred printterm i:out_stream, i:A.";
   LPCode "printterm S T :- term_to_string T T1, output S T1.";
-
-  LPCode "pred read o:A.";
-  LPCode "read S :- flush std_out, input_line std_in X, string_to_term X S.";
 
   ]
 ;;
@@ -690,32 +679,6 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   LPCode {|% Deprecated, use trace.counter
 pred counter i:string, o:int.
 counter C N :- trace.counter C N.|};
-
-   MLCode(Pred("quote_syntax",
-     In(string, "FileName",
-     In(string, "QueryText",
-     Out(list (poly "A"), "QuotedProgram",
-     Out(poly "A",        "QuotedQuery",
-     Full    (unit_ctx, "quotes the program from FileName and the QueryText. "^
-              "See elpi-quoted_syntax.elpi for the syntax tree"))))),
-   (fun f s _ _ ~depth _ _ state ->
-      let elpi =
-        Setup.init
-          ~builtins:[BuiltIn.declare ~file_name:"(dummy)" []]
-          ~file_resolver:(Parse.std_resolver ~paths:[] ())
-          () in
-      try
-        let ap = Parse.program ~elpi ~files:[f] in
-        let loc = Ast.Loc.initial "(quote_syntax)" in
-        let aq = Parse.goal ~elpi ~loc ~text:s in
-        let p = Compile.(program ~flags:default_flags ~elpi [ap]) in
-        let q = API.Compile.query p aq in
-        let state, qp, qq = Quotation.quote_syntax_runtime state q in
-        state, !: qp +! qq, []
-      with Parse.ParseError (_,m) | Compile.CompileError (_,m) ->
-        Printf.eprintf "%s\n" m;
-        raise No_clause)),
-  DocAbove);
 
   MLData loc;
 
@@ -783,15 +746,6 @@ rex_split Rx S L :- rex.split Rx S L.|};
 ;;
 
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
-
-let ctype = AlgebraicData.declare {
-  AlgebraicData.ty = TyName "ctyp";
-  doc = "Opaque ML data types";
-  pp = (fun fmt cty -> Format.fprintf fmt "%s" cty);
-  constructors = [
-    K("ctype","",A(BuiltInData.string,N),B (fun x -> x), M (fun ~ok ~ko x -> ok x))  
-  ]
-} |> ContextualConversion.(!<)
    
 let safe = OpaqueData.declare {
   OpaqueData.name = "safe";
@@ -861,8 +815,6 @@ and same_term_list ~depth xs ys =
 let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [ 
 
   LPDoc "== Elpi nonlogical builtins =====================================";
-
-  MLData ctype;
 
   MLCode(Pred("var",
     InOut(ioarg_any, "V",
@@ -1003,8 +955,8 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("is_cdata",
     In(any,     "T",
-    Out(ctype,  "Ctype",
-    Easy        "checks if T is primitive of type Ctype, eg (ctype \"int\")")),
+    Out(string,  "Ctype",
+    Easy        "checks if T is primitive of type Ctype, eg \"int\"")),
   (fun t _ ~depth ->
      match look ~depth t with
      | CData n -> !:(RawOpaqueData.name n)
@@ -1012,7 +964,7 @@ X == Y :- same_term X Y.
   DocAbove);
 
   LPCode "pred primitive? i:A, i:string.";
-  LPCode "primitive? X S :- is_cdata X (ctype S).";
+  LPCode "primitive? X S :- is_cdata X S.";
 
   MLCode(Pred("new_int",
      Out(int, "N",
@@ -1529,13 +1481,3 @@ let std_declarations =
 
 let std_builtins =
   BuiltIn.declare ~file_name:"builtin.elpi" std_declarations
-
-
-let default_checker () =
-  try
-    let elpi = API.Setup.init ~builtins:[std_builtins] () in
-    let ast = API.Parse.program_from ~elpi ~loc:(API.Ast.Loc.initial "(checker)") (Lexing.from_string Builtin_checker.code) in
-    API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]
-  with
-  | API.Parse.ParseError(loc,msg) -> API.Utils.anomaly ~loc msg
-  | API.Compile.CompileError(loc,msg) -> API.Utils.anomaly ?loc msg

@@ -1,3 +1,7 @@
+kind i type.
+type app (prop -> prop) -> prop -> prop.
+type ignore, foo A -> prop.
+type c prop.
 app F X :- F X. 
 c.
 ignore _.

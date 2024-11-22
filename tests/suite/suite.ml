@@ -25,12 +25,10 @@ type t = {
   source_dune : fname option;
   source_json : fname option;
   after: string list;
-  typecheck : bool;
   input: fname option;
   expectation : expectation;
   outside_llam : bool;
   trace : string list;
-  legacy_parser : bool;
 }
 
 let tests = ref []
@@ -38,16 +36,17 @@ let tests = ref []
 let declare
     name ~description ?source_elpi ?source_teyjus ?(deps_teyjus=[]) ?source_dune ?source_json
     ?after
-    ?(typecheck=true) ?input ?(expectation=Success)
+    ?input ?(expectation=Success)
     ?(outside_llam=false)
     ?(trace=Off)
-    ?(legacy_parser=false)
     ?(promote=false)
     ~category
     ()
 =
   if List.exists (fun { name = x; _ } -> x = name) !tests then
     failwith ("a test named " ^ name ^ " already exists");
+  if String.index_opt name ' ' <> None then
+    failwith ("test name '" ^ name ^ "' contains invalid character");
   begin match source_elpi, source_teyjus, source_dune, source_json with
     | None, None, None, None-> failwith ("test "^name^" has no sources");
     | _ -> ()
@@ -61,12 +60,10 @@ let declare
     source_dune;
     source_json;
     after = (match after with None -> [] | Some x -> [x]);
-    typecheck;
     input;
     expectation;
     category;
     outside_llam;
-    legacy_parser;
     trace = (match trace with Off -> [] | On l -> "-trace-on" :: l)
   } :: !tests
 
@@ -376,20 +373,9 @@ let read_tctime input_line =
   done; !time
   with End_of_file -> !time
 
-let legacy_parser_available executable =
-  let log = Util.open_dummy_log () in
-  let env = Unix.environment () in
-  match
-    Util.exec ~executable ~timeout:1.0 ~env ~log ~args:["-legacy-parser-available"] ()
-  with
-  | Util.Exit(0,_,_) -> true
-  | _ -> false
-
 let () = Runner.declare
-  ~applicable:begin fun ~executable { Test.source_elpi; legacy_parser; _ } ->
-    if is_elpi executable && source_elpi <> None && 
-      (not legacy_parser || legacy_parser_available executable)
-      then Runner.Can_run_it
+  ~applicable:begin fun ~executable { Test.source_elpi; _ } ->
+    if is_elpi executable && source_elpi <> None then Runner.Can_run_it
     else Runner.Not_for_me
   end
   ~run:begin fun ~executable ~timetool ~timeout ~env ~sources ~promote test ->
@@ -402,15 +388,9 @@ let () = Runner.declare
     Util.write log (Printf.sprintf "executable: %s\n" executable);
     let executable_stuff = Filename.dirname executable ^ "/../lib/elpi/" in
 
-    let { Test.expectation; input; outside_llam ; typecheck; trace; legacy_parser; _ } = test in
+    let { Test.expectation; input; outside_llam ; trace; _ } = test in
     let input = Util.option_map (fun x -> sources^x) input in
     let args = ["-test";"-I";executable_stuff;"-I";sources;source] @ trace in
-    let args =
-      if typecheck then args
-      else "-no-tc" :: args in
-    let args =
-      if not legacy_parser then args
-      else "-legacy-parser" :: args in
     let args =
       if outside_llam then "-delay-problems-outside-pattern-fragment"::args
       else args in
@@ -610,7 +590,7 @@ let () = Runner.declare
   else
     let log = Util.open_log ~executable test in
     Util.write log (Printf.sprintf "executable: %s\n" executable);
-    let { Test.expectation; input; outside_llam = _ ; typecheck = _; _ } = test in
+    let { Test.expectation; input; outside_llam = _; _ } = test in
     let sources = Str.global_replace (Str.regexp "^.*tests/sources/") "tests/sources/" sources in
     let source = Filename.remove_extension source ^ ".exe" in
     let args = ["exec"; sources ^ "/" ^ source; "--"; "-I"; "src/"] in

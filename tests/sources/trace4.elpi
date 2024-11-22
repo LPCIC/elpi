@@ -8,4 +8,4 @@ p 4 2.
 p 4 4.
 
 
-main :- p X 3 ; true.
+main :- p X_ 3 ; true.

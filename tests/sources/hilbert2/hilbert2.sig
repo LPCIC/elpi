@@ -8,16 +8,16 @@ kind  i  type.
 %                          (i -> i) -> (i -> i) 
 %  are the Church numerals.
 
-type  zero, one, church     (A -> (i -> i)) -> o.
+type  zero, one, church     (any -> (i -> i)) -> o.
 
 type  plus, mult
-       ((A -> i -> i) -> (A -> i -> i) ->
-        (A -> i -> i)) -> o.
+       ((any -> i -> i) -> (any -> i -> i) ->
+        (any -> i -> i)) -> o.
 
-type  succ  ((A -> i -> i) -> (A -> i -> i)) -> o.
+type  succ  ((any -> i -> i) -> (any -> i -> i)) -> o.
 
-type  problem1   (A -> i -> i) ->  (A -> i -> i) -> 
-                 (A -> i -> i) ->  (A -> i -> i) -> o.
+type  problem1   (any -> i -> i) ->  (any -> i -> i) -> 
+                 (any -> i -> i) ->  (any -> i -> i) -> o.
 
 
 % added by liang.
