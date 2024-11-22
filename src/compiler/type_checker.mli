@@ -23,7 +23,7 @@ val check :
   unknown:env_undeclared ->
   ScopedTerm.t ->
   exp:TypeAssignment.t ->
-  bool * env_undeclared
+  env_undeclared
 
 val check_undeclared : unknown:env_undeclared -> env
 val unknown_type_assignment : string -> TypeAssignment.t

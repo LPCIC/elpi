@@ -230,7 +230,7 @@ and pbody = {
   symbols : F.Set.t;
 }
 and block =
-  | Clauses of (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list (* TODO: use a map : predicate -> clause list to speed up insertion *)
+  | Clauses of (ScopedTerm.t,Ast.Structured.attribute,bool) Ast.Clause.t list (* TODO: use a map : predicate -> clause list to speed up insertion *)
   | Namespace of string * pbody
   | Shorten of F.t Ast.Structured.shorthand list * pbody
   | Constraints of (F.t,ScopedTerm.t) Ast.Structured.block_constraint * pbody
@@ -254,7 +254,7 @@ type unchecked_signature = {
 
 type program = {
   signature : unchecked_signature;
-  clauses : (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t list;
+  clauses : (ScopedTerm.t,Ast.Structured.attribute,bool) Ast.Clause.t list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : BuiltInPredicate.t list;
 }
@@ -323,7 +323,7 @@ type types_indexing = (Ast.Structured.tattribute option * Loc.t) list F.Map.t
 type program = {
   signature : Assembled.signature;
   types_indexing : types_indexing;
-  clauses : (bool * (ScopedTerm.t,Ast.Structured.attribute) Ast.Clause.t) list;
+  clauses : (ScopedTerm.t,Ast.Structured.attribute,bool) Ast.Clause.t list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : BuiltInPredicate.t list;
 }
@@ -724,11 +724,12 @@ let has_dot f =
 type mtm = {
   macros : (ScopedTerm.t * Loc.t) F.Map.t;
   ctx: F.Set.t;
+  needs_spilling : bool ref;
 }
-let empty_mtm = { macros = F.Map.empty; ctx = F.Set.empty }
+let empty_mtm = { macros = F.Map.empty; ctx = F.Set.empty; needs_spilling = ref false }
 let todopp name _fmt _ = error ("pp not implemented for field: "^name)
 
-let get_mtm, set_mtm, drop_mtm, update_mtm =
+let get_mtm, set_mtm, _drop_mtm, update_mtm =
   let mtm =
     State.declare
      ~name:"elpi:mtm" ~pp:(todopp "elpi:mtm")
@@ -860,6 +861,8 @@ end = struct
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App ({ it = Parens f },l) -> scope_term ~state ctx ~loc (App(f, l))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
+        let { needs_spilling } = get_mtm state in
+        needs_spilling := true;
         ScopedTerm.Spill (scope_loc_term ~state ctx x,ref ScopedTerm.NoInfo)
     | App({ it = Const c }, l) when F.equal c F.implf || F.equal c F.rimplf ->
         begin match l with 
@@ -980,17 +983,13 @@ end = struct
       | _ -> add1 s body)
       F.Set.empty cl
 
-  (* let rec append_body b1 b2 =
-    match b1, b2 with
-    | [], _ -> b2
-    | [Scoped.Clauses c1], Scoped.Clauses c2 :: more ->
-      Scoped.Clauses (c1 @ c2) :: more
-    | x :: xs, _ -> x :: append_body xs b2 *)
 
   
-  let compile_clause state macros { Ast.Clause.body; attributes; loc } =
-     let state = set_mtm state { empty_mtm with macros } in
-      { Ast.Clause.body = scope_loc_term ~state body; attributes; loc }
+  let compile_clause state macros { Ast.Clause.body; attributes; loc; needs_spilling = () } =
+     let needs_spilling = ref false in
+     let state = set_mtm state { empty_mtm with macros; needs_spilling } in
+     let body = scope_loc_term ~state body in
+     { Ast.Clause.body; attributes; loc; needs_spilling = !needs_spilling }
 
 
   let compile_sequent state macros { Ast.Chr.eigen; context; conclusion } =
@@ -1399,13 +1398,13 @@ end = struct
 
     let check_begin = Unix.gettimeofday () in
 
-    let unknown, clauses = clauses |> map_acc (fun unknown ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } } as c) ->
+    let unknown = List.fold_left (fun unknown ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } }) ->
       if typecheck then
-        let needs_spill, unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val Prop) in
+        let unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val Prop) in
         (* Determinacy_checker.check_clause ~loc ~functional_preds:func_setter_object#get_all_func body; *)
-        unknown, (needs_spill, c)
+        unknown
       else
-        unknown, (false, c)) F.Map.empty in
+        unknown) F.Map.empty clauses in
 
     List.iter (fun (BuiltInPredicate.Pred(name,_,_)) ->
       if F.Map.mem (F.from_string name) base.Assembled.signature.types then
@@ -1586,7 +1585,7 @@ end = struct
   type spill = { vars : ScopedTerm.t list; vars_names : F.t list; expr : ScopedTerm.t }
   type spills = spill list
 
-  let todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling state symb ?(depth=0) ?(amap = F.Map.empty) t =
+  let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let symb = ref symb in
     let amap = ref amap in
     let allocate_arg c =
@@ -1625,7 +1624,7 @@ end = struct
           D.mkApp (D.Global_symbols.(if b then implc else rimplc)) (todbl ctx t1) [todbl ctx t2]
       | CData c -> D.mkCData (CData.hcons c)
       | Spill(t,_) ->
-          anomaly ~loc:t.loc (Format.asprintf "todbl: term contains spill: %a" ScopedTerm.pretty t)
+          error ~loc:t.loc (Format.asprintf "todbl: term contains spill: %a" ScopedTerm.pretty t)
       | Cast(t,_) -> todbl ctx t
       (* lists *)
       | Const(Global _,c) when F.(equal c nilf) -> D.mkNil
@@ -1803,25 +1802,29 @@ end = struct
     (* Format.eprintf "after spill: %a\n" ScopedTerm.pretty (List.hd t); *)
 
     s,t
-in
+  in
 
-    let spills, ts =
-      if needs_spilling then spill [] (bc_loc [] t)
-      else [],[t] in
-    let t =
-      match spills, ts with
-      | [], [t] -> t
-      | [], _ -> assert false
-      | _ :: _, _ -> error ~loc:t.loc "Cannot place spilled expression" in
-    (* if needs_spilling then Format.eprintf "spilled %a\n" ScopedTerm.pretty t; *)
-    let t  = todbl (depth,ctx) t in
-    (!symb, !amap), t  
+  (* if needs_spilling then Format.eprintf "before %a\n" ScopedTerm.pretty t; *)
 
-  let extend1_clause flags state modes indexing ~builtins (clauses, symbols, index) (needs_spilling,{ Ast.Clause.body; loc; attributes = { Ast.Structured.insertion = graft; id; ifexpr } }) =
+  let spills, ts =
+    if needs_spilling then spill [] (bc_loc [] t)
+    else [],[t] in
+  let t =
+    match spills, ts with
+    | [], [t] -> t
+    | [], _ -> assert false
+    | _ :: _, _ -> error ~loc:t.loc "Cannot place spilled expression" in
+  
+  (* if needs_spilling then Format.eprintf "spilled %a\n" ScopedTerm.pretty t; *)
+
+  let t  = todbl (depth,ctx) t in
+  (!symb, !amap), t  
+
+  let extend1_clause flags state modes indexing ~builtins (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index)
     else
-    let (symbols, amap), body = todbl ~builtins ~needs_spilling state symbols body in
+    let (symbols, amap), body = spill_todbl ~builtins ~needs_spilling state symbols body in
     let modes x = try fst @@ F.Map.find (SymbolMap.global_name state symbols x) modes with Not_found -> [] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
@@ -1845,7 +1848,7 @@ in
     if not @@ filter1_if flags (fun x -> x.Ast.Structured.cifexpr) attributes then
       (symbols,chr)
     else
-    let todbl state (symbols,amap) t = todbl ~needs_spilling:false (* TODO typecheck *) state symbols ~amap t in
+    let todbl state (symbols,amap) t = spill_todbl ~needs_spilling:false (* TODO typecheck *) state symbols ~amap t in
     let sequent_todbl state st { Ast.Chr.eigen; context; conclusion } =
       let st, eigen = todbl ~builtins state st eigen in
       let st, context = todbl ~builtins state st context in
@@ -1943,11 +1946,11 @@ let extend1 flags (state, base) unit =
     state, { base with hash = hash_base base }
 
   let compile_query state { Assembled.symbols; builtins } (needs_spilling,t) =
-    let (symbols, amap), t = todbl ~builtins ~needs_spilling state symbols t in
+    let (symbols, amap), t = spill_todbl ~builtins ~needs_spilling state symbols t in
     symbols, amap, t 
 
   let compile_query_term state { Assembled.symbols; builtins } ?ctx ?(amap = F.Map.empty) ~depth t =
-    let (symbols', amap), rt = todbl ~builtins ?ctx ~needs_spilling:false state symbols ~depth ~amap t in
+    let (symbols', amap), rt = spill_todbl ~builtins ?ctx ~needs_spilling:false state symbols ~depth ~amap t in
     if SymbolMap.equal_globals symbols' symbols then amap, rt
     else error ~loc:t.ScopedTerm.loc (Format.asprintf "cannot allocate new symbol %a in the query" SymbolMap.pp_table (SymbolMap.diff symbols' symbols))
 
@@ -2079,10 +2082,11 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let compiler_state = State.begin_goal_compilation compiler_state in
   let { Assembled.signature = { kinds; types; type_abbrevs; toplevel_macros; }; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
-  let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros }) t in
-  let needs_spilling, unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let needs_spilling = ref false in
+  let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros; needs_spilling }) t in
+  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
   let _ = Type_checker.check_undeclared ~unknown in
-  let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (needs_spilling,t) in
+  let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (!needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
@@ -2104,9 +2108,7 @@ let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~de
     anomaly "compile_term_to_raw_term called at run time";
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
-    let needs_spilling, unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
-    if needs_spilling then
-      error "spilling not implemented in term_to_raw_term";
+    let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
     let _ : Type_checker.env = Type_checker.check_undeclared ~unknown in
     ()
   end;
@@ -2129,9 +2131,9 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let compiler_state,t = f compiler_state in
-  let needs_spilling, unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
   let _ = Type_checker.check_undeclared ~unknown in
-  let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (needs_spilling,t) in
+  let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (false,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in

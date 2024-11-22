@@ -116,7 +116,7 @@ let mode_of_IO io =
 (* non terminals *)
 %type < Program.t > program
 %type < Goal.t > goal
-%type < (Term.t, raw_attribute list) Clause.t > clause
+%type < (Term.t, raw_attribute list, unit) Clause.t > clause
 %type < Term.t > term
 %type < Program.decl > decl
 %type < Func.t > infix_SYMB
@@ -316,12 +316,14 @@ clause:
     { Clause.loc = loc $sloc;
       attributes;
       body;
+      needs_spilling = ();
     }
   }
 | attributes = attributes; l = clause_hd_term; v = VDASH; r = term { 
     { Clause.loc = loc $sloc;
       attributes;
-      body = mkApp (loc $sloc) [mkConst (loc $loc(v)) Func.rimplf;l;r]
+      body = mkApp (loc $sloc) [mkConst (loc $loc(v)) Func.rimplf;l;r];
+      needs_spilling = ();
     }
 }
 

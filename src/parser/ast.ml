@@ -218,10 +218,11 @@ end
 
 module Clause = struct
   
-  type ('term,'attributes) t = {
+  type ('term,'attributes,'spill) t = {
     loc : Loc.t;
     attributes : 'attributes;
     body : 'term;
+    needs_spilling : 'spill;
   }
   [@@deriving show, ord]
 
@@ -292,7 +293,7 @@ module Program = struct
     | Accumulated of Loc.t * parser_output list
 
     (* data *)
-    | Clause of (Term.t, raw_attribute list) Clause.t
+    | Clause of (Term.t, raw_attribute list,unit) Clause.t
     | Chr of (raw_attribute list,Term.t) Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Kind of (raw_attribute list,raw_attribute list) Type.t list
@@ -371,7 +372,7 @@ and ('func,'term) block_constraint = {
    rules : (cattribute,'term) Chr.t list
 }
 and block =
-  | Clauses of (Term.t,attribute) Clause.t list
+  | Clauses of (Term.t,attribute,unit) Clause.t list
   | Namespace of Func.t * program
   | Shorten of Func.t shorthand list * program
   | Constraints of (Func.t,Term.t) block_constraint * program

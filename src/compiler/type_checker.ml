@@ -189,7 +189,6 @@ let silence_linear_warn f =
 
 let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
   (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
-  let needs_spill = ref false in
   let sigma : (TypeAssignment.t * int * Loc.t) F.Map.t ref = ref F.Map.empty in
   let unknown_global = ref unknown in
   let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
@@ -283,7 +282,6 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
       error_bad_function_ety ~loc ~tyctx ~ety c t
 
   and check_spill ctx ~loc ~tyctx sp info ety =
-    needs_spill := true;
     let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(TypeAssignment.Arr(Ast.Structured.NotVariadic,ety,mk_uvar "Spill")) in
     assert(inner_spills = []);
     let phantom_of_spill_ty i ty =
@@ -572,8 +570,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | UVar _ -> true
 
   in
-    (* TODO HACK since typing is done too late, the same unit should be checked only once *)
-    if MutableOnce.is_set t.ty then false, !unknown_global else
+    if MutableOnce.is_set t.ty then !unknown_global else
 
     let spills = check_loc ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
     if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
@@ -583,7 +580,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k))
       !sigma;
-    !needs_spill, !unknown_global
+    !unknown_global
 
 let check1_undeclared w f (t, id, loc) =
   match TypeAssignment.is_monomorphic t with
