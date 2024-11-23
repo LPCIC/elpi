@@ -570,30 +570,21 @@ end
 
 module Dune = struct
 
-let is_dune =
-  let rex = Str.regexp "dune" in
-  fun s -> Str.string_match rex (Filename.basename s) 0
-
-let is_dune_src = function
-  | None -> false
-  | Some s -> Filename.check_suffix s ".ml"
+let same_binary exe pat =
+  match pat with None -> false
+  | Some pat -> Str.string_match (Str.regexp (".*"^pat)) exe 0
 
 let () = Runner.declare
   ~applicable:begin fun ~executable { source_dune; _ } ->
-    if is_dune executable && is_dune_src source_dune then Runner.Can_run_it else Runner.Not_for_me
+    if same_binary executable source_dune then Runner.Can_run_it else Runner.Not_for_me
   end
   ~run:begin fun ~executable ~timetool ~timeout ~env ~sources ~promote test ->
-  let source =
-    match test.Test.source_dune with Some x -> x | _ -> assert false in
   if not (Sys.file_exists executable) then Runner.Skipped
-  else if not (Sys.file_exists (sources^source)) then Runner.Skipped
   else
-    let log = Util.open_log ~executable test in
-    Util.write log (Printf.sprintf "executable: %s\n" executable);
+    let log = Util.open_log ~executable:(Filename.basename executable) test in
     let { Test.expectation; input; outside_llam = _; _ } = test in
-    let sources = Str.global_replace (Str.regexp "^.*tests/sources/") "tests/sources/" sources in
-    let source = Filename.remove_extension source ^ ".exe" in
-    let args = ["exec"; sources ^ "/" ^ source; "--"; "-I"; "src/"] in
+    Util.write log (Printf.sprintf "executable: %s\n" executable);
+    let args = ["-I"; "src/"] in
     Util.write log (Printf.sprintf "args: %s\n" (String.concat " " args));
     let rc =
       let outcome = Util.exec ~timeout ~timetool ?input ~executable ~env ~log ~args () in

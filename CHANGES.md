@@ -1,12 +1,18 @@
+# v2.0.2 (November 2024)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Really fix tests on 32 bits systems
+
 # v2.0.1 (November 2024)
 
-Requires Menhir 20211230 and OCaml 4.08 or above.
+Requires Menhir 20211230 and OCaml 4.13 or above.
 
 - Fix tests on 32 bits systems
 
 # v2.0.0 (November 2024)
 
-Requires Menhir 20211230 and OCaml 4.08 or above.
+Requires Menhir 20211230 and OCaml 4.13 or above.
 
 - Compiler:
   - Change the pipeline completely to make unit relocation unnecessary. Current

@@ -1,6 +1,5 @@
 open Elpi_runtime.Bl
-let size = min Sys.max_array_length 9999999
-
+let size = min (Sys.max_array_length / 2 - 1) 9999999
 let test_build () =
   Gc.minor (); Gc.major ();
 

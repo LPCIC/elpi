@@ -35,7 +35,8 @@ LN_NB=-1
 STOP_ON_FST_ERROR=false
 PWD=$(shell pwd)
 RUNNERS=\
-  dune \
+  $(wildcard $(PWD)/_build/git/*/$(BUILD)/tests/sources/*.exe.git.*.exe) \
+  $(wildcard $(PWD)/$(BUILD)/tests/sources/*.exe) \
   $(PWD)/$(INSTALL)/bin/elpi \
   $(PWD)/$(INSTALL)/bin/elpi-trace-elaborator \
   $(addprefix $(PWD)/,$(wildcard _build/git/*/$(INSTALL)/bin/elpi.git.*)) \
@@ -105,8 +106,8 @@ git/%:
 	cd "_build/git/elpi-$*" && \
 	  if [ -f dune ]; then \
 	    make build DUNE_OPTS="$(DUNE_OPTS) --root .";\
-	    cd _build/install/default/bin/; \
-		ln -sf elpi elpi.git.$*; \
+	    (cd _build/install/default/bin/; ln -sf elpi elpi.git.$*); \
+	    (cd _build/default/tests/sources; for x in *.exe; do ln -sf $$x $$x.git.$*.exe; done) \
 	  else \
 	    make; \
 		mkdir -p _build/install/default/bin/; \

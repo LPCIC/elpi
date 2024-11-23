@@ -66,7 +66,12 @@ module Array = struct
   (* New code, all bugs are mine ;-) *)
   let extend len t a =
     let data = reroot t; match ! t with Array x -> x | Diff _ -> assert false in
-    let newdata = Array.make (2*(max 1 len)) a in
+    let newlength = 2*(max 1 len) in
+    if newlength > Sys.max_array_length then begin
+      Printf.eprintf "bl: too many items: %d > %d (max array length)" newlength Sys.max_array_length;
+      exit 1
+    end;
+    let newdata = Array.make newlength a in
     if len > 0 then
       Array.blit data 0 newdata 0 len;
     ref @@ Array newdata
