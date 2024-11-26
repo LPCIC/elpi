@@ -166,9 +166,6 @@ let mkSeq ?loc (l : t list) =
    match loc with None -> l | Some loc -> { l with loc }
 let mkCast loc t ty = { loc; it = Cast(t,ty) }
 
-let mkCast loc t ty = { loc; it = Cast(t,ty) }
-
-
 let rec best_effort_pp = function
  | Lam (x,_,t) -> "x\\" ^ best_effort_pp t.it
  | CData c -> CData.show c
