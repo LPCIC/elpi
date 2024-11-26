@@ -676,12 +676,6 @@ module ScopedTerm = struct
       | _ -> false
   end
 
-  let rec get_clause_hd = function
-    | Const (_,c) -> c
-    | App(_,n,_,_) -> n
-    | Impl(false,l,_) -> get_clause_hd l.it
-    | _ -> error "Not a clause"
-
   let is_var = function Var _ -> true | _ -> false
 end
 
