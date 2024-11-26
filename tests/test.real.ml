@@ -138,7 +138,9 @@ let print_csv plot results =
           end
       | None -> ());
   close_out oc;
-  if Sys.command "which lua5.1 &>/dev/null" = 0 && Sys.command "which gnuplot &> /dev/null" = 0 then begin
+  let command_exists cmd =
+    Sys.command ("command -v " ^ cmd ^ " 2> /dev/null || exit 1 ") = 0 in
+  if command_exists "lua5.1" && command_exists "gnuplot" then begin
     ignore(Sys.command (plot ^ " data.csv"));
     ignore(Sys.command "gnuplot data.csv.plot")
   end
