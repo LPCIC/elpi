@@ -127,8 +127,8 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi", line 1, column 0, characters 0-17:
-   Duplicate mode declaration for doomed (also at File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/accumulated.elpi", line 1, column 0, characters 0-17:)
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi", line 1, column 0, characters 0-17:
+   Duplicate mode declaration for doomed (also at File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulated.elpi", line 1, column 0, characters 0-17:)
    
 **../../tests/sources/accumulate_twice2.elpi
 :**
@@ -143,13 +143,13 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi", line 5, column 3, characters 93-108: other.doomed.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi", line 5, column 3, characters 93-108: other.doomed.
    Please add the following text to your program:
    type other.doomed int -> prop.
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
 **../../tests/sources/accumulated.elpi
 :**
@@ -165,7 +165,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
 **../../tests/sources/ackermann.elpi
 :**
@@ -178,12 +178,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ackermann.elpi", line 24, column 39, characters 795-795:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 24, column 39, characters 795-795:
    V is linear: name it _V (discard) or V_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -215,7 +215,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -241,7 +241,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -264,7 +264,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/block.elpi", line 1, column 0, characters 0-15:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/block.elpi", line 1, column 0, characters 0-15:
    matching } is missing
    
 **../../tests/sources/chr.elpi
@@ -304,7 +304,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -337,7 +337,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -363,7 +363,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -391,7 +391,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -417,7 +417,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -440,8 +440,8 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr_not_clique.elpi", line 1, column 14, characters 14-24:
-   CHR rule File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr_not_clique.elpi", line 1, column 14, characters 14-24:: matches b which is not a constraint on which it is applied. Check the list of predicates after the "constraint" keyword.
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_not_clique.elpi", line 1, column 14, characters 14-24:
+   CHR rule File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_not_clique.elpi", line 1, column 14, characters 14-24:: matches b which is not a constraint on which it is applied. Check the list of predicates after the "constraint" keyword.
    
 **../../tests/sources/chr_sem.elpi
 :**
@@ -462,7 +462,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -488,7 +488,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -516,7 +516,7 @@ Test Bed
 
 .. code-block:: console
 
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -525,7 +525,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -534,7 +534,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -543,7 +543,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -552,7 +552,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -561,7 +561,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -570,7 +570,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -579,7 +579,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -588,7 +588,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -597,7 +597,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -606,7 +606,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -615,7 +615,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -624,7 +624,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -633,7 +633,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -642,7 +642,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -651,7 +651,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -660,7 +660,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -669,7 +669,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -678,7 +678,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -687,7 +687,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -696,7 +696,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -705,7 +705,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -714,7 +714,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -723,7 +723,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -732,7 +732,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -741,7 +741,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -750,7 +750,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -759,7 +759,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 17, column 3, characters 517-533:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 17, column 3, characters 517-533:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -768,7 +768,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -777,7 +777,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -786,7 +786,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -795,7 +795,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -804,7 +804,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 17, column 3, characters 517-533:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 17, column 3, characters 517-533:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -813,7 +813,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -822,7 +822,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -831,7 +831,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -840,7 +840,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -849,7 +849,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 17, column 3, characters 517-533:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 17, column 3, characters 517-533:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -858,7 +858,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 21, column 3, characters 676-719:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -867,7 +867,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 20, column 3, characters 628-671:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -876,7 +876,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 19, column 3, characters 580-623:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -885,7 +885,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 18, column 3, characters 549-565:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -894,7 +894,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 17, column 3, characters 517-533:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 17, column 3, characters 517-533:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -903,7 +903,7 @@ Test Bed
    Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 16, column 3, characters 486-502:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ctx_loading.elpi", line 16, column 3, characters 486-502:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -917,7 +917,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -943,7 +943,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -969,7 +969,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -995,7 +995,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1021,7 +1021,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1044,12 +1044,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 17, column 11, characters 255-255:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 17, column 11, characters 255-255:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1075,7 +1075,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1101,7 +1101,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1127,7 +1127,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1153,7 +1153,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    Fatal error: 
    Unification problem outside the pattern fragment. ((Data.Term.App (f, (Data.Term.Const x), [])) == (Data.Term.AppUVar (
       { Data.Term.contents = please extend this printer; uid_private = 2 }, 0,
@@ -1177,7 +1177,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1210,7 +1210,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1267,41 +1267,41 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 26, column 8, characters 781-781:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 26, column 8, characters 781-781:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 36, column 12, characters 1112-1114:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 36, column 12, characters 1112-1114:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 15, characters 1132-1136:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 15, characters 1132-1136:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 45, column 24, characters 1276-1279:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 45, column 24, characters 1276-1279:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 47, column 20, characters 1333-1334:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 47, column 20, characters 1333-1334:
    X0 is linear: name it _X0 (discard) or X0_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 49, column 18, characters 1388-1394:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 49, column 18, characters 1388-1394:
    X01 is linear: name it _X01 (discard) or X01_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 51, column 10, characters 1435-1436:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 51, column 10, characters 1435-1436:
    X1 is linear: name it _X1 (discard) or X1_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 53, column 19, characters 1489-1490:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 53, column 19, characters 1489-1490:
    X2 is linear: name it _X2 (discard) or X2_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 55, column 15, characters 1541-1544:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 55, column 15, characters 1541-1544:
    X3 is linear: name it _X3 (discard) or X3_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 57, column 22, characters 1604-1609:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 57, column 22, characters 1604-1609:
    X4 is linear: name it _X4 (discard) or X4_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 59, column 20, characters 1661-1666:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 59, column 20, characters 1661-1666:
    X5 is linear: name it _X5 (discard) or X5_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 75, column 18, characters 2253-2254:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 75, column 18, characters 2253-2254:
    X0 is linear: name it _X0 (discard) or X0_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 79, column 12, characters 2316-2316:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 79, column 12, characters 2316-2316:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 81, column 16, characters 2369-2372:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 81, column 16, characters 2369-2372:
    X1 is linear: name it _X1 (discard) or X1_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 83, column 19, characters 2429-2434:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 83, column 19, characters 2429-2434:
    X2 is linear: name it _X2 (discard) or X2_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 85, column 12, characters 2480-2481:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 85, column 12, characters 2480-2481:
    X3 is linear: name it _X3 (discard) or X3_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 87, column 16, characters 2534-2537:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 87, column 16, characters 2534-2537:
    X4 is linear: name it _X4 (discard) or X4_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 89, column 19, characters 2594-2599:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 89, column 19, characters 2594-2599:
    X5 is linear: name it _X5 (discard) or X5_ (fresh variable)
    
    Compilation time: 0.001
@@ -1329,12 +1329,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/even-odd.elpi", line 19, column 42, characters 437-437:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/even-odd.elpi", line 19, column 42, characters 437-437:
    Z is linear: name it _Z (discard) or Z_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1366,16 +1366,16 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 9, column 25, characters 135-135:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 9, column 25, characters 135-135:
    A is linear: name it _A (discard) or A_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 9, column 27, characters 137-137:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 9, column 27, characters 137-137:
    B is linear: name it _B (discard) or B_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 33, column 25, characters 712-712:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 33, column 25, characters 712-712:
    Z is linear: name it _Z (discard) or Z_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1401,7 +1401,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1427,7 +1427,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1453,7 +1453,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1476,12 +1476,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case.elpi", line 10, column 13, characters 213-216:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case.elpi", line 10, column 13, characters 213-216:
    G is linear: name it _G (discard) or G_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1507,7 +1507,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1533,7 +1533,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1556,18 +1556,18 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 56, column 37, characters 1311-1311:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 56, column 37, characters 1311-1311:
    T is linear: name it _T (discard) or T_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 65, column 15, characters 1644-1644:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 65, column 15, characters 1644-1644:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 72, column 39, characters 1877-1877:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 72, column 39, characters 1877-1877:
    T is linear: name it _T (discard) or T_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 73, column 12, characters 1914-1915:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 73, column 12, characters 1914-1915:
    Cs is linear: name it _Cs (discard) or Cs_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1593,7 +1593,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1616,12 +1616,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/heap_discard.elpi", line 5, column 11, characters 63-65:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/heap_discard.elpi", line 5, column 11, characters 63-65:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1647,7 +1647,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1668,7 +1668,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hollight.elpi", line 28, column 0, characters 756-797:
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hollight.elpi", line 28, column 0, characters 756-797:
    local keyword is no longer supported
    
 **../../tests/sources/hollight_legacy.elpi
@@ -1680,7 +1680,7 @@ Test Bed
 
 .. code-block:: console
 
-   Fatal error: exception Failure("File /home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hollight_legacy.elpi not found in: /home/tassi/LPCIC/elpi/_build/default/../lib/, /home/tassi/LPCIC/elpi/_build/default/../lib/ocaml, /home/tassi/LPCIC/elpi/_build/install/default/lib, /home/tassi/LPCIC/elpi/_build/default")
+   Fatal error: exception Failure("File /home/runner/work/elpi/elpi/docs/source/../../tests/sources/hollight_legacy.elpi not found in: /home/runner/work/elpi/elpi/_build/default/../lib/, /home/runner/work/elpi/elpi/_build/default/../lib/ocaml, /home/runner/work/elpi/elpi/_build/install/default/lib, /home/runner/work/elpi/elpi/_build/default")
    
 **../../tests/sources/hyp_uvar.elpi
 :**
@@ -1696,7 +1696,7 @@ Test Bed
 
 .. code-block:: console
 
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hyp_uvar.elpi", line 5, column 3, characters 27-67:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hyp_uvar.elpi", line 5, column 3, characters 27-67:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -1710,7 +1710,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1736,7 +1736,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1762,7 +1762,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1788,11 +1788,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
-   Time: 1.264
+   Time: 1.803
    
    Constraints:
    
@@ -1814,7 +1814,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1840,7 +1840,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1866,7 +1866,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1892,11 +1892,11 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
-   Time: 0.242
+   Time: 0.322
    
    Constraints:
    
@@ -1925,7 +1925,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1951,7 +1951,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2154,16 +2154,16 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 26, column 14, characters 637-637:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 26, column 14, characters 637-637:
    F is linear: name it _F (discard) or F_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 27, column 17, characters 657-660:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 27, column 17, characters 657-660:
    F is linear: name it _F (discard) or F_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 28, column 19, characters 683-688:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 28, column 19, characters 683-688:
    F is linear: name it _F (discard) or F_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2223,7 +2223,7 @@ Test Bed
 
 .. code-block:: console
 
-   0.939246 + 0.043481 + 0.639915
+   1.288040 + 0.057415 + 0.937377
    
 
 .. code-block:: console
@@ -2237,7 +2237,7 @@ Test Bed
    
    Success:
    
-   Time: 1.789
+   Time: 2.505
    
    Constraints:
    
@@ -2254,7 +2254,7 @@ Test Bed
 
 .. code-block:: console
 
-   4.974702 + 2.041869 + 0.264786
+   6.527046 + 2.969846 + 0.377375
    
 
 .. code-block:: console
@@ -2264,11 +2264,11 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
-   Time: 7.286
+   Time: 9.881
    
    Constraints:
    
@@ -2285,7 +2285,7 @@ Test Bed
 
 .. code-block:: console
 
-   4.492415 + 2.034954 + 0.159308
+   5.830911 + 2.769664 + 0.230508
    
 
 .. code-block:: console
@@ -2295,11 +2295,11 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
-   Time: 6.691
+   Time: 8.837
    
    Constraints:
    
@@ -2327,7 +2327,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2350,7 +2350,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/named_clauses00.elpi", line 6, column 0, characters 29-45:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses00.elpi", line 6, column 0, characters 29-45:
    duplicate clause name name1
    
 **../../tests/sources/named_clauses01.elpi
@@ -2364,7 +2364,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/named_clauses01.elpi", line 6, column 0, characters 27-31:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses01.elpi", line 6, column 0, characters 27-31:
    c1 is not a function but it is passed the argument main.
    The type of c1 is prop
    
@@ -2382,7 +2382,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2408,7 +2408,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2460,7 +2460,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2512,7 +2512,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2540,14 +2540,14 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 6, characters 107-107:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 6, characters 107-107:
    D is linear: name it _D (discard) or D_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 0, characters 101-102:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 0, characters 101-102:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2568,7 +2568,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation_error.elpi", line 1, column 0, characters 0-12:
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation_error.elpi", line 1, column 0, characters 0-12:
    Mixfix directives are not supported by this parser.
    
    The parser is based on token families.
@@ -2633,7 +2633,7 @@ Test Bed
 
 .. code-block:: console
 
-   Fatal error: exception Failure("File /home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation_legacy.elpi not found in: /home/tassi/LPCIC/elpi/_build/default/../lib/, /home/tassi/LPCIC/elpi/_build/default/../lib/ocaml, /home/tassi/LPCIC/elpi/_build/install/default/lib, /home/tassi/LPCIC/elpi/_build/default")
+   Fatal error: exception Failure("File /home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation_legacy.elpi not found in: /home/runner/work/elpi/elpi/_build/default/../lib/, /home/runner/work/elpi/elpi/_build/default/../lib/ocaml, /home/runner/work/elpi/elpi/_build/install/default/lib, /home/runner/work/elpi/elpi/_build/default")
    
 **../../tests/sources/patternunif.elpi
 :**
@@ -2644,7 +2644,7 @@ Test Bed
 
 .. code-block:: console
 
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 29, characters 59-98:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 29, characters 59-98:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -2658,7 +2658,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2684,7 +2684,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2710,7 +2710,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2736,7 +2736,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2762,7 +2762,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2785,16 +2785,16 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 19, characters 3477-3478:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 19, characters 3477-3478:
    F1 is linear: name it _F1 (discard) or F1_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 34, characters 3492-3493:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 34, characters 3492-3493:
    F2 is linear: name it _F2 (discard) or F2_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 51, characters 3509-3510:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 51, characters 3509-3510:
    F3 is linear: name it _F3 (discard) or F3_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 67, characters 3525-3526:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 67, characters 3525-3526:
    F4 is linear: name it _F4 (discard) or F4_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
@@ -2844,14 +2844,14 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 65, column 6, characters 2005-2006:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 65, column 6, characters 2005-2006:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 111, column 7, characters 3545-3546:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 111, column 7, characters 3545-3546:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2898,7 +2898,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2921,24 +2921,24 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 17, characters 1169-1174:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 17, characters 1169-1174:
    DUMMY1 is linear: name it _DUMMY1 (discard) or DUMMY1_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 24, characters 1176-1181:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 24, characters 1176-1181:
    DUMMY2 is linear: name it _DUMMY2 (discard) or DUMMY2_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 70, column 11, characters 1942-1942:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 70, column 11, characters 1942-1942:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 73, column 11, characters 1985-1985:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 73, column 11, characters 1985-1985:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 76, column 10, characters 2045-2045:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 76, column 10, characters 2045-2045:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
-   Time: 1.099
+   Time: 1.603
    
    Constraints:
    
@@ -2957,9 +2957,9 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 2, column 42, characters 50-50:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 2, column 42, characters 50-50:
    A is linear: name it _A (discard) or A_ (fresh variable)
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 2, column 3, characters 11-52:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 2, column 3, characters 11-52:
    Unable to infer a closed type for quote_syntax:
    string -> string -> Src263 -> Src265 -> prop
    
@@ -2972,7 +2972,7 @@ Test Bed
 
 .. code-block:: console
 
-   2
+   8
    
 
 .. code-block:: console
@@ -2982,7 +2982,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3003,7 +3003,7 @@ Test Bed
 
 .. code-block:: console
 
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 21, column 22, characters 728-756:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 21, column 22, characters 728-756:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -3014,9 +3014,9 @@ Test Bed
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 34, column 32, characters 1237-1240:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 34, column 32, characters 1237-1240:
    NINE is linear: name it _NINE (discard) or NINE_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 31, column 31, characters 1129-1134:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 31, column 31, characters 1129-1134:
    TWELVE is linear: name it _TWELVE (discard) or TWELVE_ (fresh variable)
    
    Compilation time: 0.000
@@ -3025,7 +3025,7 @@ Test Bed
    
    Success:
    
-   Time: 0.214
+   Time: 0.245
    
    Constraints:
    
@@ -3042,7 +3042,7 @@ Test Bed
 
 .. code-block:: console
 
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 18, column 9, characters 420-448:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 18, column 9, characters 420-448:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -3053,18 +3053,18 @@ Test Bed
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 33, column 32, characters 961-964:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 33, column 32, characters 961-964:
    NINE is linear: name it _NINE (discard) or NINE_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 30, column 31, characters 853-858:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 30, column 31, characters 853-858:
    TWELVE is linear: name it _TWELVE (discard) or TWELVE_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
-   Time: 1.570
+   Time: 1.766
    
    Constraints:
    
@@ -3083,12 +3083,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction.elpi", line 3, column 22, characters 43-43:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction.elpi", line 3, column 22, characters 43-43:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
 **../../tests/sources/restriction3.elpi
 :**
@@ -3116,7 +3116,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3148,7 +3148,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3180,7 +3180,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3212,7 +3212,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3238,8 +3238,17 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
-   Fatal error: exception Stack overflow
+   Typechecking time: 0.002
+   
+   Success:
+   
+   Time: 0.131
+   
+   Constraints:
+   
+   
+   State:
+   
    
 **../../tests/sources/rev14.elpi
 :**
@@ -3255,8 +3264,17 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
-   Fatal error: exception Stack overflow
+   Typechecking time: 0.002
+   
+   Success:
+   
+   Time: 0.130
+   
+   Constraints:
+   
+   
+   State:
+   
    
 **../../tests/sources/same_term.elpi
 :**
@@ -3272,7 +3290,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3298,7 +3316,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3319,7 +3337,7 @@ Test Bed
 
 .. code-block:: console
 
-   0.776249 + 0.042628 + 0.538601
+   1.135051 + 0.053537 + 0.790602
    
 
 .. code-block:: console
@@ -3329,11 +3347,11 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
-   Time: 1.453
+   Time: 2.068
    
    Constraints:
    
@@ -3355,7 +3373,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3381,7 +3399,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3407,7 +3425,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
 **../../tests/sources/shorten_aux2.elpi
 :**
@@ -3422,13 +3440,13 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 2, column 8, characters 18-20: foo.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 2, column 8, characters 18-20: foo.
    Please add the following text to your program:
    type foo prop.
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
 **../../tests/sources/shorten_builtin.elpi
 :**
@@ -3472,16 +3490,16 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 40, characters 275-276:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 40, characters 275-276:
    AB is linear: name it _AB (discard) or AB_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 57, characters 292-292:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 57, characters 292-292:
    E is linear: name it _E (discard) or E_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 18, characters 253-253:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 18, characters 253-253:
    F is linear: name it _F (discard) or F_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3512,7 +3530,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3543,7 +3561,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3569,7 +3587,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3595,7 +3613,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3626,7 +3644,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3652,7 +3670,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3678,7 +3696,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3709,7 +3727,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3735,7 +3753,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3761,7 +3779,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3787,7 +3805,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3810,7 +3828,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 17, characters 128-128:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 17, characters 128-128:
    literal "3" has type int but std.map expects a term of type list A
    
 **../../tests/sources/typeabbrv11.elpi
@@ -3824,7 +3842,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv11.elpi", line 4, column 3, characters 34-36:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv11.elpi", line 4, column 3, characters 34-36:
    literal "x" has type string but f expects a term of type x
    
 **../../tests/sources/typeabbrv12.elpi
@@ -3838,7 +3856,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv12.elpi", line 4, column 3, characters 41-43:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv12.elpi", line 4, column 3, characters 41-43:
    literal "x" has type string but f expects a term of type y
    
 **../../tests/sources/typeabbrv2.elpi
@@ -3852,8 +3870,8 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 6, column 0, characters 39-57:
-   Duplicate type abbreviation for t1. Previous declaration: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 1, column 0, characters 0-17:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 6, column 0, characters 39-57:
+   Duplicate type abbreviation for t1. Previous declaration: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 1, column 0, characters 0-17:
    
 **../../tests/sources/typeabbrv3.elpi
 :**
@@ -3895,7 +3913,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3918,7 +3936,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv5.elpi", line 1, column 14, characters 14-14:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv5.elpi", line 1, column 14, characters 14-14:
    Unknown type y
    
 **../../tests/sources/typeabbrv6.elpi
@@ -3932,7 +3950,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv6.elpi", line 1, column 22, characters 22-22:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv6.elpi", line 1, column 22, characters 22-22:
    Unknown type A
    
 **../../tests/sources/typeabbrv7.elpi
@@ -3949,7 +3967,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3975,7 +3993,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4001,7 +4019,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4027,7 +4045,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4056,12 +4074,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/uvar_chr.elpi", line 30, column 22, characters 819-821:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/uvar_chr.elpi", line 30, column 22, characters 819-821:
    F is linear: name it _F (discard) or F_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4089,12 +4107,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/var.elpi", line 6, column 29, characters 113-120:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/var.elpi", line 6, column 29, characters 113-120:
    X10 is linear: name it _X10 (discard) or X10_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4117,12 +4135,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/variadic_declare_constraints.elpi", line 5, column 38, characters 96-96:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/variadic_declare_constraints.elpi", line 5, column 38, characters 96-96:
    Z is linear: name it _Z (discard) or Z_ (fresh variable)
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4174,9 +4192,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4197,7 +4215,7 @@ Test Bed
 
 .. code-block:: console
 
-   Fatal error: exception Failure("File /home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w_legacy.elpi not found in: /home/tassi/LPCIC/elpi/_build/default/../lib/, /home/tassi/LPCIC/elpi/_build/default/../lib/ocaml, /home/tassi/LPCIC/elpi/_build/install/default/lib, /home/tassi/LPCIC/elpi/_build/default")
+   Fatal error: exception Failure("File /home/runner/work/elpi/elpi/docs/source/../../tests/sources/w_legacy.elpi not found in: /home/runner/work/elpi/elpi/_build/default/../lib/, /home/runner/work/elpi/elpi/_build/default/../lib/ocaml, /home/runner/work/elpi/elpi/_build/install/default/lib, /home/runner/work/elpi/elpi/_build/default")
    
 **../../tests/sources/zebra.elpi:**
 
@@ -4206,5 +4224,5 @@ Test Bed
 
 .. code-block:: console
 
-   Fatal error: exception Failure("File /home/tassi/LPCIC/elpi/docs/source/../../tests/sources/zebra.elp not found in: /home/tassi/LPCIC/elpi/_build/default/../lib/, /home/tassi/LPCIC/elpi/_build/default/../lib/ocaml, /home/tassi/LPCIC/elpi/_build/install/default/lib, /home/tassi/LPCIC/elpi/_build/default")
+   Fatal error: exception Failure("File /home/runner/work/elpi/elpi/docs/source/../../tests/sources/zebra.elp not found in: /home/runner/work/elpi/elpi/_build/default/../lib/, /home/runner/work/elpi/elpi/_build/default/../lib/ocaml, /home/runner/work/elpi/elpi/_build/install/default/lib, /home/runner/work/elpi/elpi/_build/default")
    
