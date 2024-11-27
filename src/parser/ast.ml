@@ -39,6 +39,7 @@ module Func = struct
   let sigmaf = from_string "sigma"
   let eqf = from_string "="
   let isf = from_string "is"
+  let asf = from_string "as"
   let consf = from_string "::"
   let nilf = from_string "[]"
   let arrowf = from_string "->"
