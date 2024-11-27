@@ -1407,13 +1407,15 @@ end = struct
 
     let check_begin = Unix.gettimeofday () in
 
-    let unknown = List.fold_left (fun unknown ({ Ast.Clause.body; loc; attributes = { Ast.Structured.typecheck } }) ->
-      if typecheck then
-        let unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val Prop) in
-        Determinacy_checker.check_clause ~loc ~env:functional_preds body ~modes;
-        unknown
-      else
-        unknown) F.Map.empty clauses in
+    let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
+      let unknown = 
+        if typecheck then Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val Prop)
+        else unknown in
+      let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
+      if typecheck then Determinacy_checker.check_clause ~loc ~env:functional_preds spilled.body ~modes;
+      unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
+
+    let clauses = List.rev clauses in
 
     List.iter (fun (BuiltInPredicate.Pred(name,_,_)) ->
       if F.Map.mem (F.from_string name) base.Assembled.signature.types then
@@ -1594,7 +1596,7 @@ end = struct
   type spill = { vars : ScopedTerm.t list; vars_names : F.t list; expr : ScopedTerm.t }
   type spills = spill list
 
-  let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling state symb ?(depth=0) ?(amap = F.Map.empty) t =
+  let to_dbl ?(ctx=Scope.Map.empty) ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let symb = ref symb in
     let amap = ref amap in
     let allocate_arg c =
@@ -1667,173 +1669,19 @@ end = struct
       | Discard -> D.mkDiscard
     in
 
-    let is_prop ~extra x =
-      let ty = TypeAssignment.deref x in
-      let rec aux extra = function
-          | TypeAssignment.Prop -> true
-          | TypeAssignment.Arr(_,_,t) when extra > 0 -> aux (extra-1) t
-          | TypeAssignment.UVar r when MutableOnce.is_set r -> aux extra (TypeAssignment.deref r)
-          | _ -> false in
-      aux extra ty in
-
-    let mk_loc ~loc ?(ty = MutableOnce.make (F.from_string "Spill")) it = { ty; it; loc } in (* TODO store the types in Main *)
-
-    let add_spilled l t =
-      if l = [] then t
-      else
-        List.fold_right (fun { expr; vars_names } t -> mk_loc ~loc:t.loc @@ App(Scope.mkGlobal ~escape_ns:true (),F.andf,expr,[t])) l t
-    in
-
-    let mkApp g c l =
-      if l = [] then Const(g,c)
-      else App(g,c,List.hd l,List.tl l) in
-
-    let app t args =
-      if args = [] then t else
-      let rec aux { loc; it; ty } : t =
-        mk_loc ~loc ~ty @@
-          match it with
-          | App(Global _ as g,c,x,xs) when F.equal c F.andf ->
-              mkApp g c (aux_last (x::xs))
-          | Impl(b,s,t) -> Impl(b,s,aux t)
-          | Const(g,c) -> mkApp g c args
-          | App(g,c,x,xs) -> mkApp g c (x :: xs @ args)
-          | Var _
-          | Discard | Lam (_, _, _, _)
-          | CData _ | Spill (_, _) | Cast (_, _) -> assert false
-      and aux_last = function
-        | [] -> assert false
-        | [x] -> [aux x]
-        | x :: xs -> x :: aux_last xs
-      in
-        aux t in
-
-    let args = ref 0 in
-
-    let rec mk_spilled ~loc ctx n =
-      if n = 0 then []
-      else
-        let f = incr args; F.from_string (Printf.sprintf "%%arg%d" !args) in
-        let sp = mk_loc ~loc @@ Var(f,ctx) in
-        (f,sp) :: mk_spilled ~loc ctx (n-1) in
-
-    (* barendregt_convention (naive implementation) *)
-    let rec bc ctx t =
-      match t with
-      | Lam(None,o,tya,t) -> Lam(None,o,tya,bc_loc ctx t)
-      | Lam(Some (c,l),o,tya,t) when List.mem (c,l) ctx ->
-        let d = fresh () in
-        bc ctx (Lam(Some (d,l),o,tya,rename_loc l c d t))
-      | Lam(Some c,o,tya,t) -> Lam (Some c,o,tya, bc_loc (c :: ctx) t)
-      | Impl(b,t1,t2) -> Impl(b,bc_loc ctx t1, bc_loc ctx t2)
-      | Cast(t,ty) -> Cast(bc_loc ctx t,ty)
-      | Spill(t,i) -> Spill(bc_loc ctx t,i)
-      | App(g,f,x,xs) -> App(g,f,bc_loc ctx x,List.map (bc_loc ctx) xs)
-      | Const _ | Discard | Var _ | CData _ -> t
-    and bc_loc ctx { loc; ty; it } =
-      { loc; ty; it = bc ctx it }
-    in
-
-    let rec spill ?(extra=0) ctx ({ loc; ty; it } as t) : spills * ScopedTerm.t list =
-      (* Format.eprintf "@[<hov 2>spill %a :@ %a@]\n" ScopedTerm.pretty t TypeAssignment.pretty (TypeAssignment.deref ty); *)
-      match it with
-      | CData _ | Discard | Const _ -> [],[t]
-      | Cast(t,_) -> spill ctx t
-      | Spill(t,{ contents = NoInfo}) -> assert false (* no type checking *)
-      | Spill(t,{ contents = (Phantom _)}) -> assert false (* escapes type checker *)
-      | Spill(t,{ contents = (Main n)}) ->
-          let vars_names, vars = List.split @@ mk_spilled ~loc (List.rev_map (fun (c,l) -> mk_loc ~loc @@ Const(Bound l,c)) ctx) n in
-          let spills, t = spill1 ~extra:(List.length vars_names) ctx t in
-          let expr = app t vars in
-          spills @ [{vars; vars_names; expr}], vars
-      (* globals and builtins *)
-      | App(Global _ as f,c,{ it = Lam(Some v,o,tya,t); loc = tloc; ty = tty },[]) when F.equal F.pif c ->
-          let ctx = v :: ctx in
-          let spilled, t = spill1 ctx t in
-          [], [{loc;ty;it = App(f,c,{ it = Lam(Some v,o,tya,add_spilled spilled t); loc = tloc; ty = tty },[])}]
-      | App(Global _ as f,c,{ it = Lam(Some v,o,tya,t); loc = tloc; ty = tty },[]) when F.equal F.sigmaf c ->
-            let ctx = ctx in (* not to be put in scope of spills *)
-            let spilled, t = spill1 ctx t in
-            [], [{loc;ty;it = App(f,c,{ it = Lam(Some v,o,tya,add_spilled spilled t); loc = tloc; ty = tty },[])}]
-      | App(g,c,x,xs) ->
-          let last = if F.equal F.andf c then List.length xs else -1 in
-          let spills, args = List.split @@ List.mapi (fun i -> spill ~extra:(if i = last then extra else 0) ctx) (x :: xs) in
-          let args = List.flatten args in
-          let spilled = List.flatten spills in
-          let it = App(g,c,List.hd args, List.tl args) in
-          let extra = extra + List.length args - List.length xs - 1 in
-          (* Format.eprintf "%a\nspill %b %d %a : %a\n" Loc.pp loc (is_prop ~extra ty) extra F.pp c TypeAssignment.pretty (TypeAssignment.UVar ty); *)
-          if is_prop ~extra ty then [], [add_spilled spilled { it; loc; ty }]
-          else spilled, [{ it; loc; ty }]
-
-      (* TODO: positive/negative postion, for now we assume :- and => are used in the obvious way *)
-      | Impl(false,head,premise) -> (* head :- premise *)
-          let spills_head, head = spill1 ctx head in
-          if spills_head <> [] then error ~loc "Spilling in the head of a clause is not supported";
-          let spilled, premise = spill1 ctx premise in
-          let it = Impl(false,head,premise) in
-          [],[add_spilled spilled { it; loc; ty }]
-      | Impl(true,premise,conclusion) -> (* premise => conclusion *)
-          let spills_premise, premise = spill1 ctx premise in
-          if spills_premise <> [] then error ~loc "Spilling in the premise of an implication is not supported";
-          let spilled, conclusion = spill1 ~extra ctx conclusion in
-          let it = Impl(true,premise,conclusion) in
-          [], [add_spilled spilled { it; loc; ty }]
-      (* lambda terms *)
-      | Lam(None,o,tya,t) ->
-          let spills, t = spill1 ctx t in
-          spills, [{ it = Lam(None,o,tya,t); loc; ty }]
-      | Lam(Some c,o,tya,t) ->
-          let spills, t = spill1 (c::ctx) t in
-          let (t,_), spills =
-            map_acc (fun (t,n) { vars; vars_names; expr } ->
-              let all_names = vars_names @ n in
-              (t,all_names), { vars; vars_names; expr = mk_loc ~loc @@ App(Scope.mkGlobal ~escape_ns:true (),F.pif,mk_loc ~loc @@ Lam(Some c,o,tya,expr),[]) })
-            (t,[]) spills in
-          spills, [{ it = Lam(Some c,o,tya,t); loc; ty }]
-      (* holes *)
-      | Var(c,xs) ->
-          let spills, args = List.split @@ List.map (spill ctx) xs in
-          let args = List.flatten args in
-          let spilled = List.flatten spills in
-          let it = Var(c,args) in
-          let extra = extra + List.length args - List.length xs in
-          if is_prop ~extra ty then [], [add_spilled spilled { it; loc; ty }]
-          else spilled, [{ it; loc; ty }]
-      and spill1 ?extra ctx ({ loc } as t) =
-        let spills, t = spill ?extra ctx t in
-        let t = if List.length t <> 1 then error ~loc "bad pilling" else List.hd t in
-        spills, t
-  in
-  let spill ctx t =
-    (* Format.eprintf "before spill: %a\n" ScopedTerm.pretty t; *)
-    let s,t = spill ctx t in
-    (* Format.eprintf "after spill: %a\n" ScopedTerm.pretty (List.hd t); *)
-
-    s,t
-  in
-
-  (* if needs_spilling then Format.eprintf "before %a\n" ScopedTerm.pretty t; *)
-
-  let spills, ts =
-    if needs_spilling then spill [] (bc_loc [] t)
-    else [],[t] in
-  let t =
-    match spills, ts with
-    | [], [t] -> t
-    | [], _ -> assert false
-    | _ :: _, _ -> error ~loc:t.loc "Cannot place spilled expression" in
-  
-  (* if needs_spilling then Format.eprintf "spilled %a\n" ScopedTerm.pretty t; *)
-
   let t  = todbl (depth,ctx) t in
-  (!symb, !amap), t  
+  (!symb, !amap), t
+
+  let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling state symb ?(depth=0) ?(amap = F.Map.empty) t =
+    let t = if needs_spilling then Spilling.main t else t in
+    to_dbl ~ctx ~builtins state symb ~depth ~amap t
 
   let extend1_clause flags state modes indexing ~builtins (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
+    assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index)
     else
-    let (symbols, amap), body = spill_todbl ~builtins ~needs_spilling state symbols body in
+    let (symbols, amap), body = to_dbl ~builtins state symbols body in
     let modes x = try fst @@ F.Map.find (SymbolMap.global_name state symbols x) modes with Not_found -> [] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
@@ -1857,7 +1705,7 @@ end = struct
     if not @@ filter1_if flags (fun x -> x.Ast.Structured.cifexpr) attributes then
       (symbols,chr)
     else
-    let todbl state (symbols,amap) t = spill_todbl ~needs_spilling:false (* TODO typecheck *) state symbols ~amap t in
+    let todbl state (symbols,amap) t = to_dbl (* TODO typecheck *) state symbols ~amap t in
     let sequent_todbl state st { Ast.Chr.eigen; context; conclusion } =
       let st, eigen = todbl ~builtins state st eigen in
       let st, context = todbl ~builtins state st context in
