@@ -165,7 +165,9 @@ module Compilation = struct
       | App (n, x, xs) -> type2func_ty_abbr ~pfile ~loc env n (x :: xs)
       | Arr (Variadic, _, _) -> AssumedFunctional
       | Arr (NotVariadic, l, r) -> arr (type_ass_2func ~pfile ~loc env l) (type_ass_2func ~pfile ~loc env r)
-      | UVar a -> type_ass_2func ~pfile ~loc (env : env) (get_mutable a)
+      | UVar a ->
+          if MutableOnce.is_set a then type_ass_2func ~pfile ~loc (env : env) (get_mutable a)
+          else (BoundVar (MutableOnce.get_name a))
 
     let type_ass_2func ~loc env t = type_ass_2func ~loc env (get_mutable t) ~pfile:None
   end
@@ -612,7 +614,7 @@ module Checker_clause = struct
 
         List.iter
           (fun e ->
-            Format.eprintf "Clause to check is %a@." ScopedTerm.pretty e;
+            Format.eprintf "Check premise %a in env %a@." ScopedTerm.pretty e pp_env ();
             let inferred = infer ctx e in
             Format.eprintf "Checking inferred is %a and expected is %a of @[%a@]@." pp_functionality inferred
               pp_functionality exp ScopedTerm.pretty e;
@@ -672,7 +674,7 @@ end
 let to_check_clause ScopedTerm.{ it; loc } =
   let n = get_namef it in
   not (F.equal n F.mainf)
-&& Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0
+(* && Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0 *)
 
 let check_clause ~loc ~env ~modes t =
   if to_check_clause t then (

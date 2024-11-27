@@ -210,6 +210,7 @@ module MutableOnce : sig
   val set : 'a t -> 'a -> unit
   val unset : 'a t -> unit
   val get : 'a t -> 'a
+  val get_name : 'a t -> F.t
   val is_set : 'a t -> bool
   val pretty : Format.formatter -> 'a t -> unit
 end = struct
@@ -227,6 +228,7 @@ end = struct
     | Some _ -> anomaly "MutableOnce"
   
   let get (_,x) = match !x with Some x -> x | None -> anomaly "get"
+  let get_name (x,_) = x
   let unset (_,x) = x := None
 
   let pretty fmt (f,x) =
