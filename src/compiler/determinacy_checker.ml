@@ -372,18 +372,12 @@ module Checker_clause = struct
                 | Arrow (l, r) -> build_hyps_head_aux ctx (x :: xs, e)))
         | Cast ({ it }, _) -> build_hyp_head ctx assumed it
         | Spill _ -> error ~loc "Spill in the head"
-      and build_hyps_head_modes ctx func args modes = match args, func, modes with
-        | [],_,_ -> ()
-        | arg::args, Arrow (l,r), Input :: modes ->
+      and build_hyps_head_modes ctx =
+        fold_on_modes
+          (fun arg l r ->
           build_hyp_head ctx l arg.ScopedTerm.it;
-          build_hyps_head_modes ctx r args modes
-        | _::args, Arrow (_,r), Output :: modes ->
-          build_hyps_head_modes ctx r args modes
-        | _, _, _ -> error ~loc (Format.asprintf "Type error %a [%a] [%a]" pp_functionality func (pplist ScopedTerm.pretty ",") args (pplist pp_arg_mode ",") modes)
-
-        (* fold_on_modes (fun t l r -> 
-          build_hyp_head ctx l t.ScopedTerm.it; Functional)
-          (fun _ _ _ -> Any) *)
+            r)
+          (fun arg l r -> r)
       and build_hyps_head (ctx : Ctx.t) (t : ScopedTerm.t_) =
         match t with
         | ScopedTerm.Const _ -> ()
@@ -392,7 +386,7 @@ module Checker_clause = struct
             | None -> assert false (* TODO: The functionality is not know... *)
             | Some e -> 
                 Format.eprintf "Before call to build_hyps_head_modes, func is %a@." pp_functionality e;
-                build_hyps_head_modes ctx e (x :: xs) (get_mode f) |> ignore )
+                build_hyps_head_modes ctx e (x :: xs) (get_mode f) |> ignore)
         | App (Bound _, f, _, _) -> error ~loc (Format.asprintf "No signature for predicate %a@." F.pp f)
         | Var _ -> error ~loc "Flex term used has head of a clause"
         | _ -> failwith "type error7"
@@ -400,9 +394,9 @@ module Checker_clause = struct
       build_hyps_head
     in
 
-    let check_body ctxx tm exp : unit =
       let rec func2mode = function Arrow (_, r) -> Output :: func2mode r | _ -> [] in
       let get_mode n f = try get_mode n with _ -> func2mode f in
+
       let rec infer_app n ctx t args =
         to_print (fun () -> Format.eprintf "The global app is %a@." F.pp n);
         match get_funct_of_term ctx t with
@@ -431,13 +425,10 @@ module Checker_clause = struct
         fold_on_modes
           (fun _ _ r -> r)
           (fun e l r ->
-            let inferred = infer ctx e in
             Format.eprintf "Before setting %a and l is %a@." ScopedTerm.pretty e pp_functionality l;
             match e.ScopedTerm.it with
-            | Var (n, []) ->
-                add_env n ~v:l;
-                r
-            | _ -> if functionality_leq ~loc:e.loc inferred l then r else Any)
+          | Var (n, []) -> Fun.const r (add_env n ~v:l)
+          | _ -> if functionality_leq ~loc:e.loc (infer ctx e) l then r else Any)
       and infer_outputs_fail ctx =
         fold_on_modes
           (fun _ _ r -> r)
@@ -470,12 +461,14 @@ module Checker_clause = struct
         | App (_, n, x, xs) -> (
             to_print (fun () -> Format.eprintf "The global app is %a@." F.pp n);
             match get_funct_of_term ctx t with
-            | None ->
-                error ~loc "TODO22" (* TODO: The functionality of t is not known... should be taken into account *)
+          | None -> error ~loc "TODO22" (* TODO: The functionality of t is not known... should be taken into account *)
             | Some e -> infer_app n ctx t (x :: xs))
         | Cast (t, _) -> infer ctx t
         | Spill (a, b) -> error ~loc "TODO3" (* error ~loc "Spill NYI" *)
-      and check ctx (t : ScopedTerm.t) (exp : functionality) : unit =
+    in
+
+    let check_body ctx tm exp : unit =
+      let check ctx (t : ScopedTerm.t) (exp : functionality) : unit =
         let before, after = split_bang t in
         List.iter (fun e -> infer ctx e |> ignore) before;
 
@@ -487,7 +480,29 @@ module Checker_clause = struct
           after
       in
 
-      check ctxx tm exp
+      check ctx tm exp
+    in
+
+    let check_head_output =
+      let build_hyps_head_modes ctx =
+        fold_on_modes
+          (fun _ _ -> Fun.id)
+          (fun arg l ->
+            functionality_leq_error ~loc:arg.loc (infer ctx arg) l;
+            Fun.id)
+      in
+      let build_hyps_head (ctx : Ctx.t) (t : ScopedTerm.t_) =
+        match t with
+        | ScopedTerm.Const _ -> ()
+        | App (Global { decl_id }, f, x, xs) -> (
+            match get_funct_of_term ctx t with
+            | None -> assert false (* TODO: The functionality is not know... *)
+            | Some e -> build_hyps_head_modes ctx e (x :: xs) (get_mode f e) |> ignore)
+        | App (Bound _, f, _, _) -> error ~loc (Format.asprintf "No signature for predicate %a@." F.pp f)
+        | Var _ -> error ~loc "Flex term used has head of a clause"
+        | _ -> failwith "type error7"
+      in
+      build_hyps_head
     in
 
     let main ctx (tm : ScopedTerm.t_) : unit =
@@ -504,7 +519,8 @@ module Checker_clause = struct
       Format.eprintf "END HEAD CHECK@.";
 
       to_print (fun () -> Format.eprintf "The contex_head is %a@." pp_env ());
-      Option.iter (fun body -> check_body ctx body (get_func_hd ctx hd)) body
+      Option.iter (fun body -> check_body ctx body (get_func_hd ctx hd)) body;
+      check_head_output ctx hd
     in
     main Ctx.empty tm.it
 end
