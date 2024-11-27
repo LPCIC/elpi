@@ -1,3 +1,12 @@
+# v2.0.3 (November 2024)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Parser:
+  - Fix parsing of infix `==>` so that `A,B ==> C,D` means `A, (B => (C,D))`
+    as it is intended to be.
+
+
 # v2.0.2 (November 2024)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.

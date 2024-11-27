@@ -179,6 +179,8 @@ let _ =
   test  "q && r x || s."    1 13 1 0 [] (app "||" 10 [app "&&" 3 [c 1 "q"; app "r" 6 [c 8 "x"]]; c 13 "s"]);
   (*    01234567890123456789012345 *)
   test  "f x ==> y."        1 9 1 0 []  (app "=>" ~len:3 5 [app "f" 1 [c 3 "x"]; c 9 "y"]);
+  test  "x, y ==> z, a."    1 13 1 0 [] (app "," 1 [c 1 "x"; app "=>" ~len:3 6 [c 4 "y"; app "," ~bug 11 [c 10 "z";c 13 "a"]]]);
+  test  "(x, y) ==> z, a."  1 15 1 0 [] (app "=>" ~len:3 8 [app "," ~bug 3 [c ~bug 2 "x"; c 5 "y"]; app "," ~bug 13 [c 12 "z";c 15 "a"]]);
   test  "x ==> y, z."       1 10 1 0 []  (app "=>" ~len:3 3 [c 1 "x"; app "," ~bug 8 [c 7 "y"; c 10 "z"]]);
   test  "x => y, z."        1 9 1 0 [] ~warns:".*infix operator" (app "," ~bug 7 [app "=>" 3 [c 1 "x";c 6 "y"];c 9 "z"]);
   test  "x => y, !."        1 9 1 0 [] (app "," ~bug 7 [app "=>" 3 [c 1 "x";c 6 "y"];c 9 "!"]);

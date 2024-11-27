@@ -37,6 +37,7 @@ type fixed = {
   token : string;
   the_token : string;
   mk_token : Tokens.token;
+  comment : (int * string) option;
 }
 
 type mixfix_kind = Fixed of fixed | Extensible of extensible
@@ -46,18 +47,19 @@ type mixfix = {
   fixity : fixity;
 }
 
-let mkFix token the_token mk_token = Fixed { token; the_token; mk_token }
+let mkFix ?comment token the_token mk_token = Fixed { token; the_token; mk_token; comment }
 
 let mkExt token start ?(non_enclosed=false) ?(at_least_one_char=false) ?(fixed=[]) mk_token =
   Extensible { start; mk_token; token; non_enclosed; at_least_one_char; fixed }
 
+let comment = 1, "The LHS of ==> binds stronger than conjunction, hence (a,b ==> c,d) reads a, (b ==> (c,d))" 
 let mixfix_symbols : mixfix list = [
   { tokens = [ mkFix "VDASH" ":-" VDASH;
                mkFix "QDASH" "?-" QDASH];
     fixity = Infix };
   { tokens = [ mkFix "OR" ";" OR];
     fixity = Infixr };
-  { tokens = [ mkFix "DDARROW" "==>" DDARROW];
+  { tokens = [ mkFix ~comment "DDARROW" "==>" DDARROW];
     fixity = Infixr };
   { tokens = [ mkFix "CONJ" "," CONJ;
                mkFix "CONJ2" "&" CONJ2];

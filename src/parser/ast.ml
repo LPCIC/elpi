@@ -146,6 +146,7 @@ let mkSeq ?loc (l : t list) =
  let rec aux = function
     [] -> assert false
   | [e] -> e
+  | { it = Parens it} :: tl -> aux (it :: tl)
   | hd::tl ->
       let tl = aux tl in
       { loc = Loc.merge hd.loc tl.loc; it = App({ it = Const Func.consf; loc = hd.loc },[hd;tl]) }
@@ -170,10 +171,20 @@ let mkApp loc = function
   | [] -> anomaly ~loc "empty application"
   | x::_ -> raise (NotInProlog(loc,"syntax error: the head of an application must be a constant or a variable, got: " ^ best_effort_pp x.it))
 
-let rec mkAppF loc (cloc, c) = function
-  | [] -> anomaly ~loc "empty application"
-  | { loc; it = App({it=Const ","; loc=cloc}, tl1)} ::tl when c="," -> mkAppF loc (cloc, ",") (tl1@tl)
-  | args -> { loc; it = App( { it = Const c; loc = cloc },args) }
+let mkAppF loc (cloc, c) l =
+  if l = [] then anomaly ~loc "empty application";
+  if c = "," then
+      { loc; it =
+        App({ it = Const c; loc = cloc },
+          List.concat_map (function 
+            | { loc; it = Parens { it = App({it=Const ","}, l)}} -> l
+            | { loc; it = App({it=Const ","}, l)} -> l
+            | x -> [x]
+        ) l) }
+  else
+    { loc; it = App({ it = Const c; loc = cloc },l) }
+
+
 
 let last_warn_impl = ref (Loc.initial "(dummy)")
 let warn_impl { it; loc } =
