@@ -390,7 +390,7 @@ let () = Runner.declare
 
     let { Test.expectation; input; outside_llam ; trace; _ } = test in
     let input = Util.option_map (fun x -> sources^x) input in
-    let args = ["-test";"-I";executable_stuff;"-I";sources;source] @ trace in
+    let args = ["-test";"-I";executable_stuff;"-I";sources^source] @ trace in
     let args =
       if outside_llam then "-delay-problems-outside-pattern-fragment"::args
       else args in
