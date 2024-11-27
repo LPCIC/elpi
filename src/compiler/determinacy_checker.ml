@@ -29,8 +29,14 @@ type functionality_loc = Loc.t * functionality_abs [@@deriving show, ord]
 type t = { ty_abbr : functionality_loc F.Map.t; cmap : (F.t * functionality) IdPos.Map.t } [@@deriving show, ord]
 
 let arr a b = Arrow (a, b)
-let rec bvars2any = function Arrow (l, r) -> arr (bvars2any l) (bvars2any r) | BoundVar _ -> Any | e -> e
-let rec eat_lambdas = function Lam (_, b) -> eat_lambdas b | F b -> bvars2any b
+let is_NoProp = function NoProp _ -> true | _ -> false
+
+let get_NoProp_list ~loc = function
+  | NoProp l -> l
+  | e -> error ~loc (Format.asprintf "get_NoProp_list: got %a" pp_functionality e)
+
+(* let rec bvars2any = function Arrow (l, r) -> arr (bvars2any l) (bvars2any r) | BoundVar _ -> Any | e -> e *)
+let rec eat_lambdas = function Lam (_, b) -> eat_lambdas b | F b -> b
 
 type env = t (* This is for the cleaner signatures in this files for objects with type t *)
 
@@ -144,11 +150,11 @@ let merge = Compilation.merge
 
 let rec functionality_leq ~loc a b =
   match (a, b) with
+  | BoundVar _, _ | _, BoundVar _ -> true (* TODO: this is not correct... -> use ref with uvar to make unification *)
   | NoProp _, x -> functionality_leq ~loc Any x
   | x, NoProp _ -> functionality_leq ~loc x Any
   | _, Any -> true
   | Any, _ -> false
-  | BoundVar _, _ | _, BoundVar _ -> true (* TODO: this is not correct... -> use ref with uvar to make unification *)
   | _, Relational -> true
   | Relational, _ -> false
   | Functional, Functional -> true
@@ -232,8 +238,9 @@ module Checker_clause = struct
   let check ~modes ~(global : env) ~loc tm =
     let env = ref Env.empty in
     let pp_env fmt () : unit = Format.fprintf fmt "Env : %a" Env.pp !env in
+    (* let pp_ctx fmt ctx : unit = Format.fprintf fmt "Ctx : %a" Ctx.pp ctx in *)
     let add_env ~v n = env := Env.add ~loc !env ~v n in
-    let not_mem n = Env.mem !env n |> not in
+    (* let not_mem n = Env.mem !env n |> not in *)
     let add_ctx ctx ~v n = Ctx.add ~loc ctx ~v n in
 
     let get_mode c =
@@ -246,7 +253,7 @@ module Checker_clause = struct
       match (args, modes) with
       | [], _ -> acc
       | x :: xs, y :: ys -> fold_left_partial f (f acc x y) xs ys
-      | _ :: _, [] -> error ~loc:tm.ScopedTerm.loc "Invalid application"
+      | _ :: _, [] -> error ~loc:tm.ScopedTerm.loc "fold_left_partial: Invalid application"
     in
 
     let fold_on_modes input output tm args modes =
@@ -270,112 +277,266 @@ module Checker_clause = struct
       | e -> error ~loc (Format.asprintf "get_funct_of_term %a" ScopedTerm.pp_t_ e)
     in
 
-    let get_func_hd ctx t =
-      let rec get_right_most = function Arrow (_, r) -> get_right_most r | e -> e in
-      Option.value ~default:Any (get_funct_of_term ctx t) |> get_right_most
+    let rec get_right_most = function Arrow (_, r) -> get_right_most r | e -> e in
+
+    let get_func_hd ctx t = Option.value ~default:Any (get_funct_of_term ctx t) |> get_right_most in
+
+    (* let functionality_beta f args ctx =
+         Format.eprintf "To be reduced: %a applied to the func of %a in env: %a@." pp_functionality f
+           (pplist ScopedTerm.pretty ",,,, ") args pp_env ();
+         let xs = List.map (fun ScopedTerm.{ it } -> get_funct_of_term ctx it) args in
+         let rec aux = function
+           | Some x :: xs, _ :: args, Arrow (l, r) ->
+               Format.eprintf "x is %a and l is %a\n" pp_functionality x pp_functionality l;
+               if functionality_leq ~loc x l then aux (xs, args, r) else Any
+           | None :: xs, ScopedTerm.{ it = Var (name, _args) } :: args, Arrow ((NoProp _ as np), r) ->
+               (* TODO: consider args... *)
+               add_env name ~v:np;
+               aux (xs, args, r)
+           | None :: xs, _, _ -> Any
+           | [], _, f -> f
+           | _ -> error ~loc "Type error4"
+         in
+         aux (xs, args, f)
+       in *)
+
+    (* the only where the functionality of a term is not known are:
+       - Variables
+       - Application with unkown variables
+       - Lambdas with underlying Variables or Applications
+    *)
+    let unify_force ScopedTerm.{ it; loc } f =
+      match it with
+      | Var (v, []) -> add_env v ~v:f
+      | Var (_v, _args) -> error ~loc (Format.asprintf "Unify force of an applied variable %a" ScopedTerm.pretty_ it)
+      (* | App () *)
+      | _ -> failwith "TODO"
     in
 
-    let functionality_beta f args ctx =
-      Format.eprintf "To be reduced: %a applied to the func of %a in env: %a@." pp_functionality f
-        (pplist ScopedTerm.pretty ",,,, ") args pp_env ();
-      let xs = List.map (fun ScopedTerm.{ it } -> get_funct_of_term ctx it) args in
-      let rec aux = function
-        | Some x :: xs, _ :: args, Arrow (l, r) ->
-            Format.eprintf "x is %a and l is %a\n" pp_functionality x pp_functionality l;
-            if functionality_leq ~loc x l then aux (xs, args, r) else Any
-        | None :: xs, ScopedTerm.{ it = Var (name, _args) } :: args, Arrow ((NoProp _ as np), r) ->
-            (* TODO: consider args... *)
-            add_env name ~v:np;
-            aux (xs, args, r)
-        | None :: xs, _, _ -> Any
-        | [], _, f -> f
-        | _ -> error ~loc "Type error4"
+    let unify_func (t1 : ScopedTerm.t) (t2 : ScopedTerm.t) f1 f2 : unit =
+      match (f1, f2) with
+      | x, y when x = y -> ()
+      | Any, x -> unify_force t1 f2
+      | x, Any -> failwith "TODO"
+      | _, _ ->
+          error ~loc:t1.loc
+            (Format.asprintf "Cannot unify functionality %a with %a at %a, their functionalities are\n 1: %a\n 2: %a"
+               ScopedTerm.pretty t1 ScopedTerm.pretty t2 Loc.pp t2.loc pp_functionality f1 pp_functionality f2)
+    in
+
+    (* let rec unify_func (t1 : ScopedTerm.t_) (t2 : ScopedTerm.t_) (ctx : Ctx.t) : unit =
+         match (t1, t2) with
+         (* No var is set *)
+         | Var (_n, _args), Var (_n1, args1) when not_mem _n && not_mem _n1 ->
+             error ~loc (Format.asprintf "Var-var case in unfy-func v1:%a - v2:%a" ScopedTerm.pp_t_ t1 ScopedTerm.pp_t_ t2)
+         (* Left var is set *)
+         | Var (_n, _args), Var (_n1, args1) when not_mem _n1 ->
+             add_env
+               ~v:(get_funct_of_term ctx t1 |> Option.get)
+               _n1 (* TODO: THIS IS WRONG: SHOULD TAKE INTO ACCOUNT THE ARGS OF BOTH VARS... *)
+         (* Right var is set *)
+         | Var (_n, _args), Var (_n1, args1) when not_mem _n ->
+             add_env
+               ~v:(get_funct_of_term ctx t2 |> Option.get)
+               _n (* TODO: THIS IS WRONG: SHOULD TAKE INTO ACCOUNT THE ARGS OF BOTH VARS... *)
+         (* Both var are set *)
+         | Var (_n, _args), Var (_n1, args1) -> assert (get_funct_of_term ctx t1 = get_funct_of_term ctx t2)
+         (* TODO: THIS IS WRONG: SHOULD TAKE INTO ACCOUNT THE ARGS OF BOTH VARS... *)
+         (* The variable is not set *)
+         | Var (vname, args), App (_, n, x, xs) when not_mem vname ->
+             Format.eprintf "Going to make beta reduction of %a with func = %a@." F.pp n pp_functionality
+               (get_funct_of_term ctx t2 |> Option.get);
+             let v = functionality_beta (get_funct_of_term ctx t2 |> Option.get) (x :: xs) ctx in
+             Format.eprintf "Beta reduced functionality is %a@." pp_functionality v;
+             add_env vname ~v
+         | Var (vname, args), Const _ when not_mem vname -> add_env vname ~v:(get_funct_of_term ctx t2 |> Option.get)
+         | Var (vname, args), CData _ -> add_env vname ~v:(NoProp [])
+         (* The variable is set into the dict *)
+         | Var (vname, args), App (_, n, x, xs) ->
+             let func_t2 = get_funct_of_term ctx t2 |> Option.get in
+             Format.eprintf "Functionality unification of %a and %a@." ScopedTerm.pretty_ t1 ScopedTerm.pretty_ t2;
+             let v = functionality_beta func_t2 (x :: xs) ctx in
+             Format.eprintf "Beta reduced functionality is %a@." pp_functionality v;
+             add_env vname ~v
+         | Var (vname, args), Const _ -> add_env vname ~v:(get_funct_of_term ctx t2 |> Option.get)
+         (* Swap call *)
+         | x, Var _ when not (ScopedTerm.is_var x) -> unify_func t2 t1 ctx
+         | _ ->
+             error ~loc
+               (Format.asprintf "trying to unify \n- %a and \n- %a in \n %a and ctx %a@." ScopedTerm.pp_t_ t1
+                  ScopedTerm.pp_t_ t2 pp_env () pp_ctx ctx)
+       in *)
+    let subst_constructor f l full_constr =
+      let bvars = List.map (function BoundVar n -> n | _ -> assert false) l in
+      Format.eprintf "Going to subst f:[%a] with l:[%a]" (pplist pp_functionality ",") f (pplist F.pp ",") bvars;
+      let add acc bvar f =
+        match F.Map.find_opt bvar acc with
+        | None -> F.Map.add bvar (F f) acc
+        | Some e ->
+            assert (e = F f);
+            acc
       in
-      aux (xs, args, f)
+      let map = List.fold_left2 add F.Map.empty bvars f in
+      subst ~loc map full_constr
     in
 
-    let rec unify_func (t1 : ScopedTerm.t_) (t2 : ScopedTerm.t_) (ctx : Ctx.t) : unit =
-      match (t1, t2) with
-      (* No var is set *)
-      | Var (_n, _args), Var (_n1, args1) when not_mem _n && not_mem _n1 ->
-          error ~loc (Format.asprintf "Var-var case in unfy-func v1:%a - v2:%a" ScopedTerm.pp_t_ t1 ScopedTerm.pp_t_ t2)
-      (* Left var is set *)
-      | Var (_n, _args), Var (_n1, args1) when not_mem _n1 ->
-          add_env
-            ~v:(get_funct_of_term ctx t1 |> Option.get)
-            _n1 (* TODO: THIS IS WRONG: SHOULD TAKE INTO ACCOUNT THE ARGS OF BOTH VARS... *)
-      (* Right var is set *)
-      | Var (_n, _args), Var (_n1, args1) when not_mem _n ->
-          add_env
-            ~v:(get_funct_of_term ctx t2 |> Option.get)
-            _n (* TODO: THIS IS WRONG: SHOULD TAKE INTO ACCOUNT THE ARGS OF BOTH VARS... *)
-      (* Both var are set *)
-      | Var (_n, _args), Var (_n1, args1) -> assert (get_funct_of_term ctx t1 = get_funct_of_term ctx t2)
-      (* TODO: THIS IS WRONG: SHOULD TAKE INTO ACCOUNT THE ARGS OF BOTH VARS... *)
-      (* The variable is not set *)
-      | Var (vname, args), App (_, n, x, xs) when not_mem vname ->
-          Format.eprintf "Going to make beta reduction of %a with func = %a@." F.pp n pp_functionality
-            (get_funct_of_term ctx t2 |> Option.get);
-          let v = functionality_beta (get_funct_of_term ctx t2 |> Option.get) (x :: xs) ctx in
-          Format.eprintf "Beta reduced functionality is %a@." pp_functionality v;
-          add_env vname ~v
-      | Var (vname, args), Const _ when not_mem vname -> add_env vname ~v:(get_funct_of_term ctx t2 |> Option.get)
-      (* The variable is set into the dict *)
-      | Var (vname, args), App (_, n, x, xs) ->
-          let func_t2 = get_funct_of_term ctx t2 |> Option.get in
-          Format.eprintf "Functionality unification of %a and %a@." ScopedTerm.pretty_ t1 ScopedTerm.pretty_ t2;
-          let v = functionality_beta func_t2 (x :: xs) ctx in
-          Format.eprintf "Beta reduced functionality is %a@." pp_functionality v;
-          add_env vname ~v
-      | Var (vname, args), Const _ -> add_env vname ~v:(get_funct_of_term ctx t2 |> Option.get)
-      (* Swap call *)
-      | x, Var _ when not (ScopedTerm.is_var x) -> unify_func t2 t1 ctx
-      | _ ->
-          error ~loc
-            (Format.asprintf "trying to unify \n- %a and \n- %a in \n %a@." ScopedTerm.pretty_ t1 ScopedTerm.pretty_ t2
-               pp_env ())
+    let rec func2mode = function Arrow (_, r) -> Output :: func2mode r | _ -> [] in
+    let get_mode_func n f = try get_mode n with _ -> func2mode f in
+
+    let rec infer_app n ctx t args =
+      to_print (fun () -> Format.eprintf "The global app is %a@." F.pp n);
+      match get_funct_of_term ctx t with
+      | None ->
+          error ~loc (Format.asprintf "TODO2 %a" pp_env ())
+          (* TODO: The functionality of t is not known... should be taken into account *)
+      | Some AssumedFunctional -> Functional
+      | Some e ->
+          let modes = get_mode_func n e in
+
+          Format.eprintf "The functionality of %a is %a@." F.pp n pp_functionality e;
+
+          Format.eprintf "Calling valid call with f:%a, arg:[%a], m:[%a]@." pp_functionality e
+            (pplist ScopedTerm.pretty ",") args (pplist pp_arg_mode ",") modes;
+
+          let valid_call = valid_call ctx e args modes in
+
+          Format.eprintf "Valid call for %a is %a@." F.pp n pp_functionality valid_call;
+
+          if valid_call <> Any then infer_outputs ctx e args modes
+          else (
+            infer_outputs_fail ctx e args modes |> ignore;
+            Any)
+    (* returns Any if the call is not valid *)
+    and valid_call ctx =
+      fold_on_modes
+        (fun e l r ->
+          let inferred = infer ctx e in
+          if functionality_leq ~loc:e.ScopedTerm.loc inferred l then r else Any)
+        (fun _ _ r -> r)
+    and infer_outputs ctx =
+      fold_on_modes
+        (fun _ _ r -> r)
+        (fun e l r ->
+          Format.eprintf "Before setting %a and l is %a@." ScopedTerm.pretty e pp_functionality l;
+          match e.ScopedTerm.it with
+          | Var (n, []) -> Fun.const r (add_env n ~v:l)
+          | _ -> if functionality_leq ~loc:e.loc (infer ctx e) l then r else Any)
+    and infer_outputs_fail ctx =
+      fold_on_modes
+        (fun _ _ r -> r)
+        (fun e l r ->
+          match e.ScopedTerm.it with
+          | Var (n, []) ->
+              add_env n ~v:Any;
+              r
+          | CData _ -> NoProp []
+          | _ ->
+              error ~loc:e.loc
+                (Format.asprintf "Infer_output_fail error with term %a with func: %a" ScopedTerm.pretty e
+                   pp_functionality (arr l r)))
+    and infer ctx ({ it = t; loc } : ScopedTerm.t) : functionality =
+      match t with
+      | ScopedTerm.Const _ | CData _ -> get_funct_of_term ctx t |> Option.get
+      | Discard -> Functional
+      | Var (n, []) -> ( match Env.get !env n with None -> Any | Some e -> e)
+      | Var (n, args) -> infer_app n ctx t args
+      | Lam (None, _, _type, t) -> arr Any (infer ctx t)
+      | Lam (Some vname, _, _type, t) -> arr Any (infer (add_ctx ctx vname ~v:Any) t)
+      | Impl (true, _hd, t) -> infer ctx t (* TODO: hd is ignored *)
+      | Impl (false, _, t) -> infer ctx t (* TODO: this is ignored *)
+      | App (_, n, x, [ y ]) when F.equal F.eqf n || F.equal F.isf n || F.equal F.asf n ->
+          Format.eprintf "Calling inference for unification between \n - (%a)\n - (%a)@." ScopedTerm.pretty x
+            ScopedTerm.pretty y;
+          let f1, f2 = (infer ctx x, infer ctx y) in
+          Format.eprintf "Inferred are \n - %a\n -%a@." pp_functionality f1 pp_functionality f2;
+          unify_func x y f1 f2;
+          Functional
+      | App (_, n, x, xs) when F.equal F.andf n ->
+          let args = x :: xs in
+          List.fold_right (fun e acc -> infer ctx e |> max ~loc:e.ScopedTerm.loc acc) args Functional
+      | App (_, n, x, []) when F.equal F.pif n || F.equal F.sigmaf n -> (
+          match infer ctx x with
+          | Arrow (_, r) -> r
+          | e -> error ~loc (Format.asprintf "Type error (%a is not a function)" ScopedTerm.pretty_ t))
+      | App (_, n, x, xs) -> (
+          match get_funct_of_term ctx t with
+          | None -> error ~loc "TODO22" (* TODO: The functionality of t is not known... should be taken into account *)
+          | Some e -> infer_app n ctx t (x :: xs))
+      | Cast (t, _) -> infer ctx t
+      | Spill (a, { contents = Main spill_nb }) ->
+          let func = infer ctx a in
+
+          (* All spilled vars should be leq of  *)
+          error ~loc (Format.asprintf "Spilled %i func is %a" spill_nb pp_functionality func)
+      | Spill _ -> error ~loc "Spill with no known nb of spilled variables: should be known after typechecking"
     in
 
     let check_head_input =
       let rec build_hyps_head_aux ctx = function
         | [], _ -> ()
-        | ScopedTerm.{ it } :: tl, Arrow (l, r) ->
+        | (it : ScopedTerm.t) :: tl, Arrow (l, r) ->
             build_hyp_head ctx l it;
             build_hyps_head_aux ctx (tl, r)
-        | _ :: _, _ -> anomaly "Type error5"
-      and build_hyp_head (ctx : Ctx.t) (assumed : functionality) (t : ScopedTerm.t_) =
-        match t with
+        | x :: xs, NoProp (f :: fs) ->
+            build_hyp_head ctx f x;
+            build_hyps_head_aux ctx (xs, NoProp fs)
+        | { loc } :: _, _ -> anomaly ~loc "Type error5"
+      and build_hyp_head (ctx : Ctx.t) (assumed : functionality) (t : ScopedTerm.t) =
+        match t.it with
         | ScopedTerm.Const _ | Discard | CData _ -> ()
         | Var (n, _args) -> add_env n ~v:assumed
-        | Lam (None, _, _type, { it }) -> build_hyp_head ctx (eat_abs ~loc assumed |> snd) it
-        | Lam (Some x, _, _type, { it }) ->
+        | Lam (None, _, _type, t) -> build_hyp_head ctx (eat_abs ~loc assumed |> snd) t
+        | Lam (Some x, _, _type, t) ->
             let v, assumed = eat_abs ~loc assumed in
-            build_hyp_head (add_ctx ctx x ~v) assumed it (* TODO: Here I use any instead of Relational ...*)
-        | Impl (true, _hd, { it }) -> () (* TODO: this is ignored *)
+            build_hyp_head (add_ctx ctx x ~v) assumed t (* TODO: Here I use any instead of Relational ...*)
+        | Impl (true, _hd, t) -> () (* TODO: this is ignored *)
         | Impl (false, _, _) -> () (* TODO: this is ignored *)
-        | App (_, n, x, [ y ]) when F.equal F.isf n || F.equal F.eqf n -> unify_func x.it y.it ctx
-        (* | App (_, n, x, [ y ]) when F.equal F.isf n || F.equal F.eqf n -> unify_func x.it y.it ctx *)
+        | App (_, n, x, [ y ]) when F.equal F.isf n || F.equal F.eqf n || F.equal F.asf n ->
+            build_hyp_head ctx assumed x;
+            build_hyp_head ctx assumed y;
+            assert (infer ctx x = infer ctx y) (* error ~loc:x.loc "NYI: Unification in the head of the clause" *)
         | App (_, n, x, xs) -> (
             to_print (fun () ->
                 Format.eprintf ".The global app is %a and its functionality is %a@." F.pp n
                   (Format.pp_print_option pp_functionality)
-                  (get_funct_of_term ctx t));
-            match get_funct_of_term ctx t with
+                  (get_funct_of_term ctx t.it));
+            match get_funct_of_term ctx t.it with
             | None -> () (* TODO: The functionality of t is not already known... should be taken into account *)
             | Some e -> (
-                (* TODO: check functionality of e is leq of exp: otherwise we can raise a warning? *)
-                (* TODO: in the head, if we expect a relational prop, and we destruct a functional term, then all args of the term are relational *)
-                match e with
-                | Any | BoundVar _ | AssumedFunctional ->
+                let rm = get_right_most e in
+                match (rm, assumed) with
+                | NoProp l, NoProp l1 ->
+                    (* We want to map each bound variable in the functionality of the found term with the assumed *)
+                    (* For example:
+                       pred p i:(pr (pred o:int) int).
+                       p (pr X Y) :- X Y.
+
+                       While analyzing p.
+                       The assumed functionality of its first argument is `ass: NoProp[NoProp -> Relational, NoProp]`.
+                       The functionality of the constructor `|` is `fc: A -> B -> pair A B`
+                       We recursively replace in `fc` the bound variable appearing in its conclusion (i.e `[A,B]`)
+                       with the list of functionality in `ass`.
+                       This gives `fc: (NoProp -> Relational) -> NoProp -> NoProp`
+                       This way, build_hyps_head_aux will set the functionality of `X` to `NoProp -> Relational`
+                       and `Y` to `NoProp`.
+                       This way the call `X Y` is meaningful
+                    *)
+                    Format.eprintf "In noProp branch with term: %a and func %a@." ScopedTerm.pretty t pp_functionality
+                      assumed;
+                    let f1 = subst_constructor l1 l e in
+                    Format.eprintf "The subst constructor is %a@." pp_functionality f1;
+                    (* failwith "STOP" |> ignore; *)
+                    build_hyps_head_aux ctx (x :: xs, f1)
+                | _, (Any | BoundVar _ | AssumedFunctional) ->
                     build_hyps_head_aux ctx (x :: xs, List.fold_right (fun _ acc -> arr Any acc) (x :: xs) Any)
-                | Functional | Relational | NoProp _ -> assert false
-                | Arrow (l, r) -> build_hyps_head_aux ctx (x :: xs, e)))
-        | Cast ({ it }, _) -> build_hyp_head ctx assumed it
+                | _, Arrow _ -> build_hyps_head_aux ctx (x :: xs, e)
+                | _, (Functional | Relational | NoProp _) -> assert false))
+        | Cast (t, _) -> build_hyp_head ctx assumed t
         | Spill _ -> error ~loc "Spill in the head"
       and build_hyps_head_modes ctx =
         fold_on_modes
           (fun arg l r ->
-          build_hyp_head ctx l arg.ScopedTerm.it;
+            build_hyp_head ctx l arg;
             r)
           (fun arg l r -> r)
       and build_hyps_head (ctx : Ctx.t) (t : ScopedTerm.t_) =
@@ -384,7 +545,7 @@ module Checker_clause = struct
         | App (Global { decl_id }, f, x, xs) -> (
             match get_funct_of_term ctx t with
             | None -> assert false (* TODO: The functionality is not know... *)
-            | Some e -> 
+            | Some e ->
                 Format.eprintf "Before call to build_hyps_head_modes, func is %a@." pp_functionality e;
                 build_hyps_head_modes ctx e (x :: xs) (get_mode f) |> ignore)
         | App (Bound _, f, _, _) -> error ~loc (Format.asprintf "No signature for predicate %a@." F.pp f)
@@ -392,79 +553,6 @@ module Checker_clause = struct
         | _ -> failwith "type error7"
       in
       build_hyps_head
-    in
-
-      let rec func2mode = function Arrow (_, r) -> Output :: func2mode r | _ -> [] in
-      let get_mode n f = try get_mode n with _ -> func2mode f in
-
-      let rec infer_app n ctx t args =
-        to_print (fun () -> Format.eprintf "The global app is %a@." F.pp n);
-        match get_funct_of_term ctx t with
-        | None ->
-            error ~loc (Format.asprintf "TODO2 %a" pp_env ())
-            (* TODO: The functionality of t is not known... should be taken into account *)
-        | Some e ->
-            let modes = get_mode n e in
-
-            Format.eprintf "The functionality of %a is %a@." F.pp n pp_functionality e;
-            let valid_call = valid_call ctx e args modes in
-
-            Format.eprintf "Valid call for %a is %a@." F.pp n pp_functionality valid_call;
-
-            if valid_call <> Any then infer_outputs ctx e args modes
-            else (
-              infer_outputs_fail ctx e args modes |> ignore;
-              Any)
-      and valid_call ctx =
-        fold_on_modes
-          (fun e l r ->
-            let inferred = infer ctx e in
-            if functionality_leq ~loc:e.ScopedTerm.loc inferred l then r else Any)
-          (fun _ _ r -> r)
-      and infer_outputs ctx =
-        fold_on_modes
-          (fun _ _ r -> r)
-          (fun e l r ->
-            Format.eprintf "Before setting %a and l is %a@." ScopedTerm.pretty e pp_functionality l;
-            match e.ScopedTerm.it with
-          | Var (n, []) -> Fun.const r (add_env n ~v:l)
-          | _ -> if functionality_leq ~loc:e.loc (infer ctx e) l then r else Any)
-      and infer_outputs_fail ctx =
-        fold_on_modes
-          (fun _ _ r -> r)
-          (fun e l r ->
-            match e.ScopedTerm.it with
-            | Var (n, []) ->
-                add_env n ~v:Any;
-                r
-            | _ -> assert false)
-      and infer ctx ({ it = t; loc } : ScopedTerm.t) : functionality =
-        match t with
-        | ScopedTerm.Const _ | CData _ -> get_funct_of_term ctx t |> Option.get
-        | Discard -> Functional
-        | Var (n, []) -> ( match Env.get !env n with None -> Any | Some e -> e)
-        | Var (n, args) -> infer_app n ctx t args
-        | Lam (None, _, _type, t) -> arr Any (infer ctx t)
-        | Lam (Some vname, _, _type, t) -> arr Any (infer (add_ctx ctx vname ~v:Any) t)
-        | Impl (true, _hd, t) -> infer ctx t (* TODO: hd is ignored *)
-        | Impl (false, _, t) -> infer ctx t (* TODO: this is ignored *)
-        | App (_, n, x, [ y ]) when F.equal F.isf n || F.equal F.eqf n ->
-            unify_func x.it y.it ctx;
-            Functional
-        | App (_, n, x, xs) when F.equal F.andf n ->
-            let args = x :: xs in
-            List.fold_right (fun e acc -> infer ctx e |> max ~loc:e.ScopedTerm.loc acc) args Functional
-        | App (_, n, x, []) when F.equal F.pif n || F.equal F.sigmaf n -> (
-            match infer ctx x with
-            | Arrow (_, r) -> r
-            | e -> error ~loc (Format.asprintf "Type error (%a is not a function)" ScopedTerm.pretty_ t))
-        | App (_, n, x, xs) -> (
-            to_print (fun () -> Format.eprintf "The global app is %a@." F.pp n);
-            match get_funct_of_term ctx t with
-          | None -> error ~loc "TODO22" (* TODO: The functionality of t is not known... should be taken into account *)
-            | Some e -> infer_app n ctx t (x :: xs))
-        | Cast (t, _) -> infer ctx t
-        | Spill (a, b) -> error ~loc "TODO3" (* error ~loc "Spill NYI" *)
     in
 
     let check_body ctx tm exp : unit =
@@ -476,7 +564,7 @@ module Checker_clause = struct
           (fun e ->
             let inferred = infer ctx e in
             Format.eprintf "Inferred is %a and expected is %a@." pp_functionality inferred pp_functionality exp;
-            functionality_leq_error ~loc:e.ScopedTerm.loc inferred exp)
+            if inferred = Any then () else functionality_leq_error ~loc:e.ScopedTerm.loc inferred exp)
           after
       in
 
@@ -497,7 +585,7 @@ module Checker_clause = struct
         | App (Global { decl_id }, f, x, xs) -> (
             match get_funct_of_term ctx t with
             | None -> assert false (* TODO: The functionality is not know... *)
-            | Some e -> build_hyps_head_modes ctx e (x :: xs) (get_mode f e) |> ignore)
+            | Some e -> build_hyps_head_modes ctx e (x :: xs) (get_mode_func f e) |> ignore)
         | App (Bound _, f, _, _) -> error ~loc (Format.asprintf "No signature for predicate %a@." F.pp f)
         | Var _ -> error ~loc "Flex term used has head of a clause"
         | _ -> failwith "type error7"
@@ -521,13 +609,14 @@ module Checker_clause = struct
       to_print (fun () -> Format.eprintf "The contex_head is %a@." pp_env ());
       Option.iter (fun body -> check_body ctx body (get_func_hd ctx hd)) body;
       check_head_output ctx hd
+      (* if F.equal (F.from_string "map-ok") (get_namef hd) then failwith "STOP" *)
     in
     main Ctx.empty tm.it
 end
 
 let to_check_clause ScopedTerm.{ it; loc } =
   let n = get_namef it in
-  false && (not (F.equal n F.mainf)) && Re.Str.string_match (Re.Str.regexp ".*test.*") (Loc.show loc) 0
+  (not (F.equal n F.mainf)) && Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0
 
 let check_clause ~loc ~env ~modes t =
   if to_check_clause t then (
@@ -560,46 +649,46 @@ class merger (all_func : env) =
     method merge : env = merge all_func local_func
   end
 
-module Test = struct
-  let global_default = Scope.Global { escape_ns = false; decl_id = Scope.dummy_type_decl_id }
-  let addloc2te it = ScopedTypeExpression.{ it; loc = Loc.initial "" }
+(* module Test = struct
+     let global_default = Scope.Global { escape_ns = false; decl_id = Scope.dummy_type_decl_id }
+     let addloc2te it = ScopedTypeExpression.{ it; loc = Loc.initial "" }
 
-  let build_full_te name value =
-    ScopedTypeExpression.{ value; loc = Loc.initial ""; indexing = None; nparams = 0; name }
+     let build_full_te name value =
+       ScopedTypeExpression.{ value; loc = Loc.initial ""; indexing = None; nparams = 0; name }
 
-  let const e = addloc2te (Const (global_default, e))
-  let mkapp n args = addloc2te @@ App (n, List.hd args, List.tl args)
-  let pred l = addloc2te (Pred (Relation, List.map (fun e -> (Mode.Output, e)) l))
-  let arrta a b = TypeAssignment.Arr (NotVariadic, a, b)
-  let boolf = F.from_string "bool"
+     let const e = addloc2te (Const (global_default, e))
+     let mkapp n args = addloc2te @@ App (n, List.hd args, List.tl args)
+     let pred l = addloc2te (Pred (Relation, List.map (fun e -> (Mode.Output, e)) l))
+     let arrta a b = TypeAssignment.Arr (NotVariadic, a, b)
+     let boolf = F.from_string "bool"
 
-  let%test "test_type2func" =
-    let builder = new merger empty_fmap in
+     let%test "test_type2func" =
+       let builder = new merger empty_fmap in
 
-    (* Typeabbrev ta: (A\ A -> A -> prop) *)
-    let ta_id, ta =
-      let fA = F.from_string "A" in
-      let constA = addloc2te (Const (Bound "elpi", fA)) in
-      let ta_id = IdPos.make_str "ta_id" in
-      let ta_name = F.from_string "ta_name" in
-      let ty = ScopedTypeExpression.(Lam (fA, Ty (pred [ constA; constA ]))) in
-      (ta_id, build_full_te ta_name ty)
-    in
+       (* Typeabbrev ta: (A\ A -> A -> prop) *)
+       let ta_id, ta =
+         let fA = F.from_string "A" in
+         let constA = addloc2te (Const (Bound "elpi", fA)) in
+         let ta_id = IdPos.make_str "ta_id" in
+         let ta_name = F.from_string "ta_name" in
+         let ty = ScopedTypeExpression.(Lam (fA, Ty (pred [ constA; constA ]))) in
+         (ta_id, build_full_te ta_name ty)
+       in
 
-    (* pred p i:(ta bool) *)
-    let ty_id, tyexpr, ty_overloading =
-      let ty = ScopedTypeExpression.Ty (pred [ mkapp ta.name [ const boolf ] ]) in
+       (* pred p i:(ta bool) *)
+       let ty_id, tyexpr, ty_overloading =
+         let ty = ScopedTypeExpression.Ty (pred [ mkapp ta.name [ const boolf ] ]) in
 
-      let ty_name = F.from_string "ty_name" in
-      let ty_id = IdPos.make_str "ty_id" in
+         let ty_name = F.from_string "ty_name" in
+         let ty_id = IdPos.make_str "ty_id" in
 
-      let tyos = TypeAssignment.(Single (ty_id, Ty (arrta (Cons boolf) (arrta (Cons boolf) Prop)))) in
-      (ty_id, [ build_full_te ty_name ty ], tyos)
-    in
+         let tyos = TypeAssignment.(Single (ty_id, Ty (arrta (Cons boolf) (arrta (Cons boolf) Prop)))) in
+         (ty_id, [ build_full_te ty_name ty ], tyos)
+       in
 
-    builder#add_ty_abbr ta_id ta;
-    builder#add_func_ty_list tyexpr ty_overloading;
+       builder#add_ty_abbr ta_id ta;
+       builder#add_func_ty_list tyexpr ty_overloading;
 
-    let all_func = builder#merge in
-    IdPos.Map.find ty_id all_func.cmap |> snd = arr (arr (NoProp []) (arr (NoProp []) Relational)) Relational
-end
+       let all_func = builder#merge in
+       IdPos.Map.find ty_id all_func.cmap |> snd = arr (arr (NoProp []) (arr (NoProp []) Relational)) Relational
+   end *)

@@ -242,7 +242,7 @@ let () =
       Failure; Failure; Success; Success; Failure|] in
   let ignore = [1;5;7;8;9;10;11;13;16;17;20;24;26;27;28;30] in
   (* interesting tests:24 *)
-  for i = 0 to -1 (* Array.length status - 1*) do
+  for i = 0 to Array.length status - 1 do
     if not (List.mem (i+1) ignore) then (
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
     let descr = Printf.sprintf "functionality%d" (i+1) in
