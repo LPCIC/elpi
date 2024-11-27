@@ -62,9 +62,10 @@ let desugar_macro loc lhs rhs =
         raise (ParseError(loc,"Illformed macro left hand side"))
 ;;
 
-let mkParens_if_impl loc t =
+let mkParens_if_impl_or_conj loc t =
   match t.it with
   | App({ it = Const c},_) when Func.(equal c implf) -> mkParens loc t
+  | App({ it = Const c},_) when Func.(equal c andf) -> mkParens loc t
   | _ -> t
 
 let mkApp loc = function
@@ -72,10 +73,25 @@ let mkApp loc = function
       mkAppF loc (cloc,c) (a :: args)
   | l -> mkApp loc l
 
-let mkAppF loc (cloc,c) = function
-  | a :: { it = App ({ it = Const c1 }, args) } :: [] when Func.(equal c andf && equal c1 andf) ->
-      mkAppF loc (cloc,c) (a :: args)
-  | l -> mkAppF loc (cloc,c) l
+let rec unparen = function
+  | [] -> []
+  | { it = Parens { it = App ({ it = Const c1 }, args) } } as x :: xs when Func.(equal c1 implf) -> x :: unparen xs
+  | { it = Parens x} :: xs -> x :: unparen xs
+  | x :: xs -> x :: unparen xs
+
+let mkAppF loc (cloc,c) l =
+  if Func.(equal c implf) then
+    match l with
+    | { it = App ({ it = Const j; loc = jloc }, args) } :: rhs when Func.(equal j andf) ->
+       begin match List.rev args with
+       | last :: ( { loc = dloc } :: _ as rest_rev) ->
+           let jloc = List.fold_left (fun x { loc } -> Loc.merge x loc) dloc rest_rev in
+           let iloc = List.fold_left (fun x { loc } -> Loc.merge x loc) last.loc rhs in
+           { it = App ({ it = Const j; loc = jloc },List.rev rest_rev @ [mkAppF iloc (cloc,c) (last :: rhs)]); loc = loc }
+       | _ -> mkAppF loc (cloc,c) l
+       end
+    | _ -> mkAppF loc (cloc,c) (unparen l)
+  else mkAppF loc (cloc,c) l
 
 let binder l (loc,ty,b) =
   match List.rev l with
@@ -371,7 +387,7 @@ closed_term:
 
 head_term:
 | t = constant { mkConst (loc $loc) t }
-| LPAREN; t = term; RPAREN { mkParens_if_impl (loc $loc) t }
+| LPAREN; t = term; RPAREN { mkParens_if_impl_or_conj (loc $loc) t }
 | LPAREN; t = term; COLON; ty = type_term RPAREN { mkCast (loc $loc) t ty }
 
 list_items:
@@ -430,7 +446,7 @@ clause_hd_term:
 
 clause_hd_closed_term:
 | t = constant { mkConst (loc $sloc) t }
-| LPAREN; t = term; RPAREN { mkParens_if_impl (loc $loc) t }
+| LPAREN; t = term; RPAREN { mkParens_if_impl_or_conj (loc $loc) t }
 
 clause_hd_open_term:
 | hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }

@@ -71,8 +71,17 @@ let pp_non_enclosed fmt = function
 let pp_tok_list fmt l =
   List.iter (function
     | Extensible { start; fixed; non_enclosed; _ } -> Format.fprintf fmt "%a%s..%a @ " pp_fixed fixed start pp_non_enclosed non_enclosed
-    | Fixed { the_token; _ } -> Format.fprintf fmt "%s @ " the_token)
+    | Fixed { the_token; comment = None; _ } -> Format.fprintf fmt "%s @ " the_token
+    | Fixed { the_token; comment = Some (id,_); _ } -> Format.fprintf fmt "%s (* see note %d *) @ " the_token id)
     l
+
+let pp_tok_list_comments fmt l =
+  List.iter (function
+    | Extensible _ -> ()
+    | Fixed { comment = None; _ } -> ()
+    | Fixed { comment = Some (id,txt); _ } -> Format.fprintf fmt "%d: %s@ " id txt)
+    l
+    
 
 let legacy_parser_compat_error =
   let open Format in
@@ -140,6 +149,11 @@ let legacy_parser_compat_error =
   fprintf fmt "%s@;" "verify how the text was parsed. Eg:";
   fprintf fmt "%s@;" "";
   fprintf fmt "%s@;" "echo 'MyFormula = a || b ==> c && d' | elpi -parse-term";
+  fprintf fmt "%s@;" "";
+  fprintf fmt "%s@;" "Notes:";
+  List.iter (fun { tokens; _ } ->
+    fprintf fmt "%a" pp_tok_list_comments tokens;
+  ) mixfix_symbols;
   fprintf fmt "@]";
   pp_print_flush fmt ();
   Buffer.contents b
