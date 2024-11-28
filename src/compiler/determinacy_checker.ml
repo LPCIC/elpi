@@ -210,8 +210,8 @@ let split_bang t =
         split_bang_list bef aft xs
   and split_bang bef aft (ScopedTerm.{ it } as t) =
     match it with
-    | Const (_, t) when F.equal F.cutf t -> (List.append bef (List.rev aft), [])
-    | App (_, hd, x, xs) when F.equal F.andf hd -> split_bang_list bef aft (x :: xs)
+    | Const (Global _, t) when F.equal F.cutf t -> (List.append bef (List.rev aft), [])
+    | App (Global _, hd, x, xs) when F.equal F.andf hd -> split_bang_list bef aft (x :: xs)
     | _ -> (bef, t :: aft)
   and split_bang_loc bef aft t = split_bang bef aft t in
   let bef, aft = split_bang_loc [] [] t in
@@ -501,17 +501,17 @@ module Checker_clause = struct
           arr Any (infer (add_ctx ~loc ctx vname ~v) t)
       | Impl (true, _hd, t) -> infer ctx t (* TODO: hd is ignored *)
       | Impl (false, _, t) -> infer ctx t (* TODO: this is ignored *)
-      | App (_, n, x, [ y ]) when F.equal F.eqf n || F.equal F.isf n || F.equal F.asf n ->
+      | App (Global _, n, x, [ y ]) when F.equal F.eqf n || F.equal F.isf n || F.equal F.asf n ->
           to_print (fun () -> Format.eprintf "Calling inference for unification between \n - (@[%a@])\n - (%a)@." ScopedTerm.pretty x
             ScopedTerm.pretty y);
           let f1, f2 = (infer ctx x, infer ctx y) in
           to_print (fun () -> Format.eprintf "Inferred are \n - %a\n -%a@." pp_functionality f1 pp_functionality f2;);
           unify_func x y f1 f2;
           Functional
-      | App (_, n, x, xs) when F.equal F.andf n ->
+      | App (Global _, n, x, xs) when F.equal F.andf n ->
           let args = x :: xs in
           List.fold_left (fun acc e -> infer ctx e |> max ~loc:e.ScopedTerm.loc acc) Functional args
-      | App (_, n, x, []) when F.equal F.pif n || F.equal F.sigmaf n -> (
+      | App (Global _, n, x, []) when F.equal F.pif n || F.equal F.sigmaf n -> (
           match infer ctx x with
           | Arrow (_, r) -> r
           | e -> error ~loc (Format.asprintf "Type error (%a is not a function)" ScopedTerm.pretty_ it))
@@ -548,7 +548,7 @@ module Checker_clause = struct
             build_hyp_head (add_ctx ~loc ctx x ~v) assumed t (* TODO: Here I use any instead of Relational ...*)
         | Impl (true, _hd, t) -> () (* TODO: this is ignored *)
         | Impl (false, _, _) -> () (* TODO: this is ignored *)
-        | App (_, n, x, [ y ]) when F.equal F.isf n || F.equal F.eqf n || F.equal F.asf n ->
+        | App (Global _, n, x, [ y ]) when F.equal F.isf n || F.equal F.eqf n || F.equal F.asf n ->
             build_hyp_head ctx assumed x;
             build_hyp_head ctx assumed y;
             let f1 = infer ctx x in
