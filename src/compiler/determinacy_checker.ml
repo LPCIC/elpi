@@ -6,7 +6,7 @@ open Elpi_parser.Ast
 open Compiler_data
 module C = Constants
 
-let to_print f = if true then f ()
+let to_print f = if false then f ()
 
 (* TYPE DECLARATION FOR FUNCTIONALITY *)
 
@@ -304,14 +304,14 @@ module Checker_clause = struct
     let get_funct_of_term ctx ScopedTerm.{ it; loc; ty } =
       match it with
       | ScopedTerm.Var (v, args) -> (
-          Format.eprintf "The env is %a and the var is %a@." pp_env () F.pp v;
+          to_print (fun () -> Format.eprintf "The env is %a and the var is %a@." pp_env () F.pp v);
           match Env.get !env v with
           | Some e -> Some e
           | None ->
               let ty = build_var_ty ty args in
-              Format.eprintf "Getting functionality from tm @[%a@] tya \n@[%a@] is @[%a@]@." ScopedTerm.pretty_ it
+              to_print (fun () -> Format.eprintf "Getting functionality from tm @[%a@] tya \n@[%a@] is @[%a@]@." ScopedTerm.pretty_ it
                 (MutableOnce.pp TypeAssignment.pp) ty pp_functionality
-                (Compilation.TypeAssignment.type_ass_2func ~loc global ty);
+                (Compilation.TypeAssignment.type_ass_2func ~loc global ty));
               Some (Compilation.TypeAssignment.type_ass_2func ~loc global ty))
       | Const (Global { decl_id }, _) ->
           Some (match get_functionality ~loc ~env:global decl_id with Relational -> Functional | e -> e)
@@ -413,7 +413,7 @@ module Checker_clause = struct
        in *)
     let subst_constructor ~loc f l full_constr =
       let bvars = List.map (function BoundVar n -> n | _ -> assert false) l in
-      Format.eprintf "Going to subst f:[%a] with l:[%a]" (pplist pp_functionality ",") f (pplist F.pp ",") bvars;
+      to_print(fun () -> Format.eprintf "Going to subst f:[%a] with l:[%a]" (pplist pp_functionality ",") f (pplist F.pp ",") bvars;);
       let add acc bvar f =
         match F.Map.find_opt bvar acc with
         | None -> F.Map.add bvar (F f) acc
@@ -447,14 +447,15 @@ module Checker_clause = struct
       | Some e ->
           let modes = get_mode_func ~loc:t.loc n e in
 
-          Format.eprintf "The functionality of %a is %a@." F.pp n pp_functionality e;
+         to_print (fun () -> Format.eprintf "The functionality of %a is %a@." F.pp n pp_functionality e);
 
-          Format.eprintf "Valid_call with functionality:%a, arg:[%a], mode:[%a]@." pp_functionality e
-            (pplist ScopedTerm.pretty ",") args (pplist pp_arg_mode ",") modes;
+         to_print (fun () -> Format.eprintf "Valid_call with functionality:%a, arg:[%a], mode:[%a]@." pp_functionality e
+            (pplist ScopedTerm.pretty ",") args (pplist pp_arg_mode ",") modes);
 
           let valid_call = valid_call ctx e args modes in
 
-          Format.eprintf "Valid call for %a is %a@." F.pp n pp_functionality valid_call;
+          to_print (fun () -> 
+          Format.eprintf "Valid call for %a is %a@." F.pp n pp_functionality valid_call);
 
           if valid_call <> Any then infer_outputs ctx e args modes
           else (
@@ -471,7 +472,7 @@ module Checker_clause = struct
       fold_on_modes
         (fun _ _ r -> r)
         (fun t l r ->
-          Format.eprintf "Inferring output %a with func %a@." ScopedTerm.pretty t pp_functionality l;
+          to_print (fun () -> Format.eprintf "Inferring output %a with func %a@." ScopedTerm.pretty t pp_functionality l);
           match t.ScopedTerm.it with
           | Var (n, []) ->
               add_env ~loc:t.loc n ~v:l;
@@ -496,15 +497,15 @@ module Checker_clause = struct
       | Lam (None, _, _type, t) -> arr Any (infer ctx t)
       | Lam (Some vname, _, _type, t) ->
           let v = Compilation.TypeAssignment.type_ass_2func ~loc global _type in
-          Format.eprintf "Going under lambda %a with func: %a@." F.pp (fst vname) pp_functionality v;
+          to_print (fun () -> Format.eprintf "Going under lambda %a with func: %a@." F.pp (fst vname) pp_functionality v;);
           arr Any (infer (add_ctx ~loc ctx vname ~v) t)
       | Impl (true, _hd, t) -> infer ctx t (* TODO: hd is ignored *)
       | Impl (false, _, t) -> infer ctx t (* TODO: this is ignored *)
       | App (_, n, x, [ y ]) when F.equal F.eqf n || F.equal F.isf n || F.equal F.asf n ->
-          Format.eprintf "Calling inference for unification between \n - (@[%a@])\n - (%a)@." ScopedTerm.pretty x
-            ScopedTerm.pretty y;
+          to_print (fun () -> Format.eprintf "Calling inference for unification between \n - (@[%a@])\n - (%a)@." ScopedTerm.pretty x
+            ScopedTerm.pretty y);
           let f1, f2 = (infer ctx x, infer ctx y) in
-          Format.eprintf "Inferred are \n - %a\n -%a@." pp_functionality f1 pp_functionality f2;
+          to_print (fun () -> Format.eprintf "Inferred are \n - %a\n -%a@." pp_functionality f1 pp_functionality f2;);
           unify_func x y f1 f2;
           Functional
       | App (_, n, x, xs) when F.equal F.andf n ->
@@ -582,10 +583,10 @@ module Checker_clause = struct
                        and `Y` to `NoProp`.
                        This way the call `X Y` is meaningful
                     *)
-                    Format.eprintf "In noProp branch with term: %a and func %a@." ScopedTerm.pretty t pp_functionality
-                      assumed;
+                    to_print (fun () ->Format.eprintf "In noProp branch with term: %a and func %a@." ScopedTerm.pretty t pp_functionality
+                      assumed);
                     let f1 = subst_constructor ~loc l1 l e in
-                    Format.eprintf "The subst constructor is %a@." pp_functionality f1;
+                    to_print (fun () ->Format.eprintf "The subst constructor is %a@." pp_functionality f1);
                     (* failwith "STOP" |> ignore; *)
                     build_hyps_head_aux ctx (x :: xs, f1)
                 | _, (Any | BoundVar _ | AssumedFunctional) ->
@@ -607,7 +608,7 @@ module Checker_clause = struct
             match get_funct_of_term ctx t with
             | None -> assert false (* TODO: The functionality is not know... *)
             | Some e ->
-                Format.eprintf "Before call to build_hyps_head_modes, func is %a@." pp_functionality e;
+                to_print (fun () ->Format.eprintf "Before call to build_hyps_head_modes, func is %a@." pp_functionality e);
                 build_hyps_head_modes ctx e (x :: xs) (get_mode ~loc f) |> ignore)
         | App (Bound _, f, _, _) -> error ~loc (Format.asprintf "No signature for predicate %a@." F.pp f)
         | Var _ -> error ~loc "Flex term used has head of a clause"
