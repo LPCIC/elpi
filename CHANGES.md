@@ -1,3 +1,11 @@
+# v2.0.4 (November 2024)
+
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Type Checker:
+  - Fix caching issue, units are now type checked every time they are processed
+
 # v2.0.3 (November 2024)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
