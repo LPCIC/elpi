@@ -132,7 +132,7 @@ let mode_of_IO io =
 (* non terminals *)
 %type < Program.t > program
 %type < Goal.t > goal
-%type < (Term.t, raw_attribute list, unit) Clause.t > clause
+%type < (sugar, raw_attribute list, unit) Clause.t > clause
 %type < Term.t > term
 %type < Program.decl > decl
 %type < Func.t > infix_SYMB
@@ -331,17 +331,30 @@ clause:
 | attributes = attributes; body = clause_hd_term; {
     { Clause.loc = loc $sloc;
       attributes;
-      body;
+      body = Logic body;
       needs_spilling = ();
     }
   }
 | attributes = attributes; l = clause_hd_term; v = VDASH; r = term { 
     { Clause.loc = loc $sloc;
       attributes;
-      body = mkApp (loc $sloc) [mkConst (loc $loc(v)) Func.rimplf;l;r];
+      body = Logic (mkApp (loc $sloc) [mkConst (loc $loc(v)) Func.rimplf;l;r]);
       needs_spilling = ();
     }
 }
+| attributes = attributes; l = clause_hd_term; v = EQ; r = expr { 
+    { Clause.loc = loc $sloc;
+      attributes;
+      body = Function (FunctionalTerm.of_term l,r);
+      needs_spilling = ();
+    }
+}
+
+expr:
+| LET; p = closed_term; EQ; e = expr; IN; k = expr { FunctionalTerm.mkLet (loc $sloc) (FunctionalTerm.of_term p) e k }
+| USE; l = closed_term; EQ; e = expr; IN; k = expr { FunctionalTerm.mkUse (loc $sloc) (FunctionalTerm.of_term l) e k }
+| FRESH; x = constant; IN; k = expr { FunctionalTerm.mkFresh (loc $sloc) (Func.show x) None k } 
+| t = closed_term { FunctionalTerm.of_term t }
 
 attributes:
 | { [] }

@@ -74,6 +74,10 @@
 %token IFF
 %token NIL
 %token EOF
+%token LET
+%token USE
+%token FRESH
+%token IN
 
 %token <string> FAMILY_PLUS
 %token <string> FAMILY_TIMES

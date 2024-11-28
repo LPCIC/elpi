@@ -1341,7 +1341,7 @@ module Utils = struct
     [Program.Clause {
       Clause.loc = loc;
       attributes;
-      body = aux depth Util.IntMap.empty term;
+      body = Elpi_parser.Ast.Logic (aux depth Util.IntMap.empty term);
       needs_spilling = ();
     }]
 

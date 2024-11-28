@@ -5,6 +5,7 @@ type t = Tokens.token =
   | VDASH
   | USE_SIG
   | USEONLY
+  | USE
   | UNTYPED
   | TYPEABBREV
   | TYPE
@@ -39,6 +40,7 @@ type t = Tokens.token =
   | LPAREN
   | LOCALKIND
   | LOCAL
+  | LET
   | LCURLY
   | LBRACKET
   | KIND
@@ -47,6 +49,7 @@ type t = Tokens.token =
   | IO of (char)
   | INTEGER of ( int )
   | INDEX
+  | IN
   | IMPORT
   | IFF
   | IF
@@ -54,6 +57,7 @@ type t = Tokens.token =
   | FUNC
   | FULLSTOP
   | FRESHUV
+  | FRESH
   | FLOAT of ( float )
   | FIXITY of (string)
   | FAMILY_TIMES of (string)

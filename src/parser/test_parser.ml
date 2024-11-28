@@ -21,8 +21,11 @@ let error s a1 a2 =
 
 let mkClause loc attributes body =
   let open Clause in
-  Clause { loc; attributes; body; needs_spilling = () }
-
+  Clause { loc; attributes; body = Logic body; needs_spilling = () }
+let mkClauseE loc attributes l r =
+  let open Clause in
+  Clause { loc; attributes; body = Function(l,r); needs_spilling = () }
+  
 let mkLoc x y w z =
   { Loc.client_payload = None; source_name = "(input)"; source_start = x; source_stop = y; line = w; line_starts_at = z}
   
@@ -53,6 +56,25 @@ let test s x y w z att ?warns b =
   with Parse.ParseError(loc,message) ->
     Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
     exit 1
+
+let testE s x y w z att ?warns l r =
+  let loc = Loc.initial "(input)" in
+  let exp = [mkClauseE (mkLoc x y w z) att (Ast.FunctionalTerm.of_term l) (Ast.FunctionalTerm.of_term r)] in
+  let lexbuf = Lexing.from_string s in
+  warn := None;
+  try
+    let p = Parser.program_from ~loc lexbuf in
+    if p <> exp then error s p exp;
+    match !warn, warns with
+    | None, None -> ()
+    | Some w, None -> Printf.eprintf "parsing '%s': unexpected warning:\n%s\n" s w; exit 1
+    | None, Some _ -> Printf.eprintf "parsing '%s': expected warning not emitted\n" s; exit 1
+    | Some w, Some rex ->
+        if Str.(string_match (regexp rex) w 0) then () else (Printf.eprintf "parsing '%s': warning does not match:\n%s\n" s w; exit 1)
+  with Parse.ParseError(loc,message) ->
+    Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
+    exit 1
+    
 
 let testR s x y w z attributes to_match to_remove guard new_goal =
   let exp = [Program.(Chr { Chr.to_match; to_remove; guard; new_goal; loc=(mkLoc x y w z); attributes })] in
@@ -243,7 +265,10 @@ let _ =
   testT "func x int, list int -> bool."           ();
   testT "type x (func int, list int -> bool)."           ();
   testT "func x int, (func int -> int) -> bool."  ();
-
+  (*    01234567890123456789012345678901234567890 *)
+  testE "fst (pr A B) = A." 1 16 1 0 [] (app "fst" 1 ~parenr:true [app "pr" ~bug 6 [c 9 "A"; c 11 "B"]]) (c 16 "A");
+  testE "fst (pr A B) = let A' = A in A'." 1 16 1 0 [] (app "fst" 1 ~parenr:true [app "pr" ~bug 6 [c 9 "A"; c 11 "B"]]) (c 16 "A");
+  (*    01234567890123456789012345678901234567890 *)
 
 ;; 
 

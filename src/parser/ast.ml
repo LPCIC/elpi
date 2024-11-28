@@ -227,6 +227,45 @@ let mkConst loc c = { loc; it = Const c }
 
 end
 
+module FunctionalTerm = struct
+
+  type typ = raw_attribute list TypeExpression.t
+  [@@ deriving show, ord]
+  
+  type t_ =
+  | Const of Func.t
+  | App of t * t list
+  | Lam of Func.t * typ option * t
+  | CData of CData.t
+  | Quoted of Term.quote
+  | Cast of t * typ
+  | Parens of t
+  | Let of t * t * t
+  | Use of t * t * t
+  | Fresh of Func.t * typ option * t
+  and t = { it : t_; loc : Loc.t }
+  [@@ deriving show, ord]
+  
+  let mkLet loc v e k = { loc; it = Let(v,e,k) }
+  let mkUse loc v e k = { loc; it = Use(v,e,k) }
+  let mkFresh loc v ty k = { loc; it = Fresh(v,ty,k) }
+  
+  let rec of_term { Term.loc; it } : t =
+    match it with
+    | Term.Const f -> { loc; it = Const f }
+    | App(x,xs) -> { loc; it = App(of_term x, List.map of_term xs) }
+    | Lam(f,ty,t) -> { loc; it = Lam(f,ty,of_term t) }
+    | CData x -> { loc; it = CData x }
+    | Quoted q -> { loc; it = Quoted q }
+    | Cast (t,ty) -> { loc; it = Cast(of_term t,ty) }
+    | Parens t -> { loc; it = Parens(of_term t) }
+
+end
+  
+
+type sugar = Logic of Term.t | Function of FunctionalTerm.t * FunctionalTerm.t
+[@@ deriving show, ord]
+
 module Clause = struct
   
   type ('term,'attributes,'spill) t = {
@@ -304,7 +343,7 @@ module Program = struct
     | Accumulated of Loc.t * parser_output list
 
     (* data *)
-    | Clause of (Term.t, raw_attribute list,unit) Clause.t
+    | Clause of (sugar, raw_attribute list,unit) Clause.t
     | Chr of (raw_attribute list,Term.t) Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Kind of (raw_attribute list,raw_attribute list) Type.t list

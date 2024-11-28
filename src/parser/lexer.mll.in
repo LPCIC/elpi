@@ -215,6 +215,10 @@ and token = parse
 | "exportdef" { EXPORTDEF }
 | "closed" { CLOSED }
 | "as" { AS }
+| "let" { LET }
+| "use" { USE }
+| "fresh" { FRESH }
+| "in" { IN }
 | "<=>" { IFF }
 | ("infix" | "infixl" | "infixr" | "prefix" | "prefixr" | "postfix" | "postfixl" ) as x { FIXITY x }
 | '\'' symbcharstar '\'' as s { CONSTANT s }

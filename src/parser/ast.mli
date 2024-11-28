@@ -110,6 +110,35 @@ module Term : sig
 
 end
 
+module FunctionalTerm : sig
+
+type typ = raw_attribute list TypeExpression.t
+[@@ deriving show, ord]
+
+type t_ =
+| Const of Func.t
+| App of t * t list
+| Lam of Func.t * typ option * t
+| CData of CData.t
+| Quoted of Term.quote
+| Cast of t * typ
+| Parens of t
+| Let of t * t * t
+| Use of t * t * t
+| Fresh of Func.t * typ option * t
+and t = { it : t_; loc : Loc.t }
+[@@ deriving show, ord]
+
+val mkLet : Loc.t -> t -> t -> t -> t
+val mkUse : Loc.t -> t -> t -> t -> t
+val mkFresh : Loc.t -> string -> typ option -> t  -> t
+
+val of_term : Term.t -> t
+end
+
+type sugar = Logic of Term.t | Function of FunctionalTerm.t * FunctionalTerm.t
+[@@ deriving show, ord]
+
 module Clause : sig
 
   type ('term,'attributes,'spill) t = {
@@ -185,7 +214,7 @@ module Program : sig
     | Accumulated of Loc.t * parser_output list
 
     (* data *)
-    | Clause of (Term.t, raw_attribute list, unit) Clause.t
+    | Clause of (sugar, raw_attribute list, unit) Clause.t
     | Chr of (raw_attribute list,Term.t) Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Kind of (raw_attribute list,raw_attribute list) Type.t list

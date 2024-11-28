@@ -410,7 +410,7 @@ end = struct (* {{{ *)
     | [] -> []
     | clauses -> [Clauses (List.rev clauses)]
 
-  let structure_clause_attributes ({ Clause.attributes; loc } as c) =
+  let structure_clause_attributes { Clause.attributes; loc; body; needs_spilling } =
     let duplicate_err s =
       error ~loc ("duplicate attribute " ^ s) in
     let illegal_err a =
@@ -449,8 +449,10 @@ end = struct (* {{{ *)
       | Some (Remove x), Some _ -> illegal_remove_id x
       | _ -> ()
     end;
-    { c with Clause.attributes }
-
+    match body with
+    | Ast.Logic body -> { Clause.attributes; loc; body; needs_spilling }
+    | Ast.Function _ -> assert false
+    
   let structure_chr_attributes ({ Chr.attributes; loc } as c) =
     let duplicate_err s =
       error ~loc ("duplicate attribute " ^ s) in
