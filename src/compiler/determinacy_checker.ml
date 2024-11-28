@@ -361,8 +361,8 @@ module Checker_clause = struct
     let unify_func (t1 : ScopedTerm.t) (t2 : ScopedTerm.t) f1 f2 : unit =
       match (f1, f2) with
       | x, y when x = y -> ()
-      | Any, x -> unify_force t1 f2
-      | x, Any -> unify_force t2 f1
+      | (Any|BoundVar _), x -> unify_force t1 f2
+      | x, (Any|BoundVar _) -> unify_force t2 f1
       | _, _ ->
           error ~loc:t1.loc
             (Format.asprintf "Cannot unify functionality of %a with %a at %a, their functionalities are\n 1: %a\n 2: %a"
@@ -502,7 +502,7 @@ module Checker_clause = struct
       | Impl (true, _hd, t) -> infer ctx t (* TODO: hd is ignored *)
       | Impl (false, _, t) -> infer ctx t (* TODO: this is ignored *)
       | App (Global _, n, x, [ y ]) when F.equal F.eqf n || F.equal F.isf n || F.equal F.asf n ->
-          to_print (fun () -> Format.eprintf "Calling inference for unification between \n - (@[%a@])\n - (%a)@." ScopedTerm.pretty x
+          to_print (fun () -> Format.eprintf "Calling inference for unification between \n - (@[%a@])\n - (@[%a@])@." ScopedTerm.pretty x
             ScopedTerm.pretty y);
           let f1, f2 = (infer ctx x, infer ctx y) in
           to_print (fun () -> Format.eprintf "Inferred are \n - %a\n -%a@." pp_functionality f1 pp_functionality f2;);
@@ -553,7 +553,7 @@ module Checker_clause = struct
             build_hyp_head ctx assumed y;
             let f1 = infer ctx x in
             let f2 = infer ctx y in
-            if not (f1 = f2) then
+            if not (functionality_leq ~loc f1 f2 && functionality_leq ~loc f2 f1) then
               error ~loc:x.loc
                 (Format.asprintf "Unification with two different functionalities: \n %a : %a and \n %a : %a"
                    ScopedTerm.pretty x pp_functionality f1 ScopedTerm.pretty y pp_functionality f2)
@@ -625,10 +625,10 @@ module Checker_clause = struct
 
         List.iter
           (fun e ->
-            Format.eprintf "Check premise @[%a@] in env @[%a@]@." ScopedTerm.pretty e pp_env ();
+            to_print (fun () -> Format.eprintf "Check premise @[%a@] in env @[%a@]@." ScopedTerm.pretty e pp_env ());
             let inferred = infer ctx e in
-            Format.eprintf "Checking inferred is %a and expected is %a of @[%a@]@." pp_functionality inferred
-              pp_functionality exp ScopedTerm.pretty e;
+            to_print (fun () -> Format.eprintf "Checking inferred is %a and expected is %a of @[%a@]@." pp_functionality inferred
+              pp_functionality exp ScopedTerm.pretty e);
             if inferred = Any then () else functionality_leq_error ~loc:e.ScopedTerm.loc inferred exp)
           after
       in
@@ -668,10 +668,11 @@ module Checker_clause = struct
         | Var _ -> failwith "flexible clause..."
         | _ -> failwith "Type error8"
       in
-      Format.eprintf "=====================================================@.";
-      to_print (fun () -> Format.eprintf "The head is `%a`@." ScopedTerm.pretty hd);
+      to_print (fun () ->
+        Format.eprintf "=====================================================@.";
+        Format.eprintf "The head is `%a`@." ScopedTerm.pretty hd);
       check_head_input ctx hd;
-      Format.eprintf "END HEAD CHECK@.";
+      to_print (fun () -> Format.eprintf "END HEAD CHECK@.");
 
       to_print (fun () -> Format.eprintf "The contex_head is %a@." pp_env ());
       Option.iter (fun body -> check_body ctx body (get_func_hd ctx hd)) body;
@@ -689,10 +690,11 @@ let to_check_clause ScopedTerm.{ it; loc } =
 
 let check_clause ~loc ~env ~modes t =
   if to_check_clause t then (
+    to_print (fun () -> 
     (* check_clause ~loc ~env F.Map.empty t |> ignore *)
     Format.eprintf "============== STARTING mode checking %a@." Loc.pp t.loc;
     (* Format.eprintf "Modes are [%a]" (F.Map.pp (fun fmt ((e:mode_aux list),_) -> Format.fprintf fmt "%a" pp_mode e)) (modes); *)
-    (* Format.eprintf "Functional preds are %a@." pp env; *)
+    (* Format.eprintf "Functional preds are %a@." pp env; *));
     Checker_clause.check ~modes ~global:env t)
 
 class merger (all_func : env) =
