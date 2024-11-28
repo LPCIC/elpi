@@ -570,7 +570,8 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | UVar _ -> true
 
   in
-    if MutableOnce.is_set t.ty then !unknown_global else
+    (* this is wrong, since the same unit may be checked against different contexts *)
+    (* if MutableOnce.is_set t.ty then !unknown_global else *)
 
     let spills = check_loc ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
     if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
