@@ -504,7 +504,7 @@ module ScopedTerm = struct
     | Lam(n, ste, mta, it) -> pretty_lam fmt n ste mta it
     | App(Global _,f,x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App(_,f,x,xs) when F.equal F.pif f || F.equal F.sigmaf f -> fprintf fmt "%a %a" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
-    | App(g,f,x,xs) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant g f) (x::xs))
+    | App((Global _ as g),f,x,xs) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant g f) (x::xs))
     | App(_,f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
     | Var(f,[]) -> fprintf fmt "%a" F.pp f
     | Var(f,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") xs
