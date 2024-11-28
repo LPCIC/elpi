@@ -167,7 +167,7 @@ module Compilation = struct
       | Arr (NotVariadic, l, r) -> arr (type_ass_2func ~pfile ~loc env l) (type_ass_2func ~pfile ~loc env r)
       | UVar a ->
           if MutableOnce.is_set a then type_ass_2func ~pfile ~loc (env : env) (get_mutable a)
-          else (BoundVar (MutableOnce.get_name a))
+          else BoundVar (MutableOnce.get_name a)
 
     let type_ass_2func ~loc env t = type_ass_2func ~loc env (get_mutable t) ~pfile:None
   end
@@ -449,7 +449,7 @@ module Checker_clause = struct
 
           Format.eprintf "The functionality of %a is %a@." F.pp n pp_functionality e;
 
-          Format.eprintf "Calling valid call with f:%a, arg:[%a], m:[%a]@." pp_functionality e
+          Format.eprintf "Valid_call with functionality:%a, arg:[%a], mode:[%a]@." pp_functionality e
             (pplist ScopedTerm.pretty ",") args (pplist pp_arg_mode ",") modes;
 
           let valid_call = valid_call ctx e args modes in
@@ -470,11 +470,17 @@ module Checker_clause = struct
     and infer_outputs ctx =
       fold_on_modes
         (fun _ _ r -> r)
-        (fun e l r ->
-          Format.eprintf "Before setting %a and l is %a@." ScopedTerm.pretty e pp_functionality l;
-          match e.ScopedTerm.it with
-          | Var (n, []) -> (add_env ~loc:e.loc n ~v:l); r
-          | _ -> if functionality_leq ~loc:e.loc (infer ctx e) l then r else Any)
+        (fun t l r ->
+          Format.eprintf "Inferring output %a with func %a@." ScopedTerm.pretty t pp_functionality l;
+          match t.ScopedTerm.it with
+          | Var (n, []) ->
+              add_env ~loc:t.loc n ~v:l;
+              r
+          | Var (n, args) ->
+              let v = get_funct_of_term ctx t |> Option.get in
+              add_env ~loc:t.loc n ~v;
+              r
+          | _ -> if functionality_leq ~loc:t.loc (infer ctx t) l then r else Any)
     and infer_outputs_fail ctx =
       fold_on_modes
         (fun _ _ r -> r)
@@ -486,13 +492,12 @@ module Checker_clause = struct
       | ScopedTerm.Const _ | CData _ -> get_funct_of_term ctx t |> Option.get
       | Discard -> Functional
       | Var (n, []) -> ( match Env.get !env n with None -> Any | Some e -> e)
-      | Var (n, args) ->
-          (* let v = infer_app n ctx t args in *)
-          let v = get_funct_of_term ctx t |> Option.get in
-          add_env ~loc n ~v;
-          infer_app n ctx t args
+      | Var (n, args) -> infer_app n ctx t args
       | Lam (None, _, _type, t) -> arr Any (infer ctx t)
-      | Lam (Some vname, _, _type, t) -> arr Any (infer (add_ctx ~loc ctx vname ~v:Any) t)
+      | Lam (Some vname, _, _type, t) ->
+          let v = Compilation.TypeAssignment.type_ass_2func ~loc global _type in
+          Format.eprintf "Going under lambda %a with func: %a@." F.pp (fst vname) pp_functionality v;
+          arr Any (infer (add_ctx ~loc ctx vname ~v) t)
       | Impl (true, _hd, t) -> infer ctx t (* TODO: hd is ignored *)
       | Impl (false, _, t) -> infer ctx t (* TODO: this is ignored *)
       | App (_, n, x, [ y ]) when F.equal F.eqf n || F.equal F.isf n || F.equal F.asf n ->
@@ -545,7 +550,12 @@ module Checker_clause = struct
         | App (_, n, x, [ y ]) when F.equal F.isf n || F.equal F.eqf n || F.equal F.asf n ->
             build_hyp_head ctx assumed x;
             build_hyp_head ctx assumed y;
-            assert (infer ctx x = infer ctx y) (* error ~loc:x.loc "NYI: Unification in the head of the clause" *)
+            let f1 = infer ctx x in
+            let f2 = infer ctx y in
+            if not (f1 = f2) then
+              error ~loc:x.loc
+                (Format.asprintf "Unification with two different functionalities: \n %a : %a and \n %a : %a"
+                   ScopedTerm.pretty x pp_functionality f1 ScopedTerm.pretty y pp_functionality f2)
         | App (_, n, x, xs) -> (
             to_print (fun () ->
                 Format.eprintf ".The global app is %a and its functionality is %a@." F.pp n
@@ -614,7 +624,7 @@ module Checker_clause = struct
 
         List.iter
           (fun e ->
-            Format.eprintf "Check premise %a in env %a@." ScopedTerm.pretty e pp_env ();
+            Format.eprintf "Check premise @[%a@] in env @[%a@]@." ScopedTerm.pretty e pp_env ();
             let inferred = infer ctx e in
             Format.eprintf "Checking inferred is %a and expected is %a of @[%a@]@." pp_functionality inferred
               pp_functionality exp ScopedTerm.pretty e;
@@ -674,7 +684,7 @@ end
 let to_check_clause ScopedTerm.{ it; loc } =
   let n = get_namef it in
   not (F.equal n F.mainf)
-(* && Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0 *)
+&& Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0
 
 let check_clause ~loc ~env ~modes t =
   if to_check_clause t then (
