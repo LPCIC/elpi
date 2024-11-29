@@ -352,8 +352,10 @@ clause:
 
 expr:
 | LET; p = closed_term; EQ; e = expr; IN; k = expr { FunctionalTerm.mkLet (loc $sloc) (FunctionalTerm.of_term p) e k }
-| USE; l = closed_term; EQ; e = expr; IN; k = expr { FunctionalTerm.mkUse (loc $sloc) (FunctionalTerm.of_term l) e k }
+| USE; l = clause_hd_term; EQ; e = expr; IN; k = expr { FunctionalTerm.mkUse (loc $sloc) (FunctionalTerm.of_term l) e k }
 | FRESH; x = constant; IN; k = expr { FunctionalTerm.mkFresh (loc $sloc) (Func.show x) None k } 
+| t = open_term_noconj { FunctionalTerm.of_term t }
+| t = binder_term_noconj { FunctionalTerm.of_term t }
 | t = closed_term { FunctionalTerm.of_term t }
 
 attributes:
@@ -469,7 +471,7 @@ clause_hd_open_term:
     let t = mkApp (loc $loc) (hd :: args) in
     t
 } (*%prec OR*)
-| l = clause_hd_term; s = infix_novdash; r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
+| l = clause_hd_term; s = infix_noconj_novdash_noeq; r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
 | s = prefix; r = term { mkAppF (loc $loc) (loc $loc(s),s) [r] }
 | l = clause_hd_term; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
@@ -527,9 +529,13 @@ postfix_SYMB:
 | x = extensible_infix { x }
 | x = non_extensible_infix_noconj { x }
 
-%inline infix_novdash:
+// %inline infix_novdash:
+// | x = extensible_infix { x }
+// | x = non_extensible_infix_novdash { x }
+
+%inline infix_noconj_novdash_noeq:
 | x = extensible_infix { x }
-| x = non_extensible_infix_novdash { x }
+| x = non_extensible_infix_novdash_noconj_noeq { x }
 
 %inline extensible_infix:
 | s = FAMILY_PLUS  { Func.from_string s }
@@ -545,9 +551,8 @@ postfix_SYMB:
 | s = FAMILY_BTICK { Func.from_string s }
 | s = FAMILY_TICK  { Func.from_string s }
 
-%inline non_extensible_infix_novdash_noconj:
+%inline non_extensible_infix_novdash_noconj_noeq:
 | CONS   { Func.consf }
-| EQ     { Func.eqf }
 | MINUS  { Func.from_string "-" }
 | MINUSr { Func.from_string "r-" }
 | MINUSi { Func.from_string "i-" }
@@ -563,6 +568,10 @@ postfix_SYMB:
 | QDASH  { Func.sequentf }
 | SLASH  { Func.from_string "/" }
 | CONJ2  { Func.andf }
+
+%inline non_extensible_infix_novdash_noconj:
+| x = non_extensible_infix_novdash_noconj_noeq { x }
+| EQ     { Func.eqf }
 
 %inline non_extensible_infix_novdash:
 | x = non_extensible_infix_novdash_noconj { x }
