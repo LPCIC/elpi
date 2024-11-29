@@ -308,7 +308,7 @@ Test Bed
    
    Success:
    
-   Time: 0.001
+   Time: 0.000
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -367,7 +367,7 @@ Test Bed
    
    Success:
    
-   Time: 0.001
+   Time: 0.000
    
    Constraints:
     ltn X0 X1  /* suspended on X0, X1 */ leq X0 X1  /* suspended on X0, X1 */
@@ -913,7 +913,7 @@ Test Bed
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
    
-   Parsing time: 0.001
+   Parsing time: 0.000
    
    Compilation time: 0.000
    
@@ -1792,7 +1792,7 @@ Test Bed
    
    Success:
    
-   Time: 1.804
+   Time: 1.741
    
    Constraints:
    
@@ -1896,7 +1896,7 @@ Test Bed
    
    Success:
    
-   Time: 0.325
+   Time: 0.314
    
    Constraints:
    
@@ -2167,7 +2167,7 @@ Test Bed
    
    Success:
    
-   Time: 0.002
+   Time: 0.003
    
    Constraints:
    
@@ -2223,7 +2223,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.300805 + 0.055253 + 0.896564
+   1.259043 + 0.058371 + 0.903103
    
 
 .. code-block:: console
@@ -2237,7 +2237,7 @@ Test Bed
    
    Success:
    
-   Time: 2.468
+   Time: 2.457
    
    Constraints:
    
@@ -2254,7 +2254,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.440048 + 2.915334 + 0.364609
+   6.577912 + 3.057292 + 0.348242
    
 
 .. code-block:: console
@@ -2268,7 +2268,7 @@ Test Bed
    
    Success:
    
-   Time: 9.726
+   Time: 9.990
    
    Constraints:
    
@@ -2285,7 +2285,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.757758 + 2.873501 + 0.230213
+   5.764065 + 2.787647 + 0.215044
    
 
 .. code-block:: console
@@ -2299,7 +2299,7 @@ Test Bed
    
    Success:
    
-   Time: 8.866
+   Time: 8.771
    
    Constraints:
    
@@ -2941,7 +2941,7 @@ Test Bed
    
    Success:
    
-   Time: 1.607
+   Time: 1.691
    
    Constraints:
    
@@ -2975,7 +2975,7 @@ Test Bed
 
 .. code-block:: console
 
-   2
+   7
    
 
 .. code-block:: console
@@ -3067,7 +3067,7 @@ Test Bed
    
    Success:
    
-   Time: 1.691
+   Time: 1.579
    
    Constraints:
    
@@ -3245,7 +3245,7 @@ Test Bed
    
    Success:
    
-   Time: 0.129
+   Time: 0.133
    
    Constraints:
    
@@ -3271,7 +3271,7 @@ Test Bed
    
    Success:
    
-   Time: 0.129
+   Time: 0.131
    
    Constraints:
    
@@ -3340,7 +3340,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.115360 + 0.054763 + 0.764456
+   1.064496 + 0.052695 + 0.744626
    
 
 .. code-block:: console
@@ -3354,7 +3354,7 @@ Test Bed
    
    Success:
    
-   Time: 2.023
+   Time: 1.949
    
    Constraints:
    
