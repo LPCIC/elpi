@@ -2,7 +2,7 @@
 pred q o:int.
 
 :functional 
-pred do i:(:functional pred).
+pred do i:(func).
 do X :- X.
 
 :functional
@@ -10,8 +10,8 @@ pred p i:int, o:int.
 
 :functional
 pred x i:int, o:int.
-x 1 Y :- do (q X), Y = 3.        % ->  `do (q X)` is not functional, but X is not used in the output
-x 2 Z :- p 3 Y, do (q Y), Z = 3. % -> Y is not functional determined, but not used in the output
+% x 1 Y :- do (q X), Y = 3.        % ->  `do (q X)` is not functional, but X is not used in the output
+% x 2 Z :- p 3 Y, do (q Y), Z = 3. % -> Y is not functional determined, but not used in the output
 x 3 Y :- do (q Y), !.            % -> `do (q X)` is not functional, but there is a bang after
 x 4 Y :- do (do (p 1 X)).        % -> nested functional calls 
 
