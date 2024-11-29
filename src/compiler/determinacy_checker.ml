@@ -289,19 +289,24 @@ module Checker_clause = struct
       match (args, modes) with
       | [], _ -> acc
       | a :: xs, m :: ms -> fold_left_partial f (f acc a m) xs ms
-      | a::xs, [] -> fold_left_partial f (f acc a Output) xs [] (* This is the case of variadic functions like var *)
+      (* Below the case of variadic functions like var. We assume all
+         args to be in output mode
+      *)
+      | a :: xs, [] -> fold_left_partial f (f acc a Output) xs []
       (* | _ :: _, [] -> error ~loc:tm.ScopedTerm.loc "fold_left_partial: Invalid application" *)
     in
 
     let fold_on_modes input output tm args modes =
-      Format.eprintf "Folding of @[%a@] with args @[%a@] and modes @[%a@]@." pp_functionality tm (pplist ScopedTerm.pretty ",") args (pplist pp_arg_mode ",") modes;
+      (* Format.eprintf "Folding of @[%a@] with args @[%a@] and modes @[%a@]@." pp_functionality tm
+        (pplist ScopedTerm.pretty ",") args (pplist pp_arg_mode ",") modes; *)
       fold_left_partial
         (fun func arg mode ->
           match func with
-          | Any -> Any
+          | Any | BoundVar _ -> Any
           | Arrow (l, r) -> if mode = Input then input arg l r else output arg l r
+          (* Below, AssumedFunctional is seen as a special arrow where we do not care about args *)
           | AssumedFunctional -> AssumedFunctional
-          | _ -> error ~loc:arg.ScopedTerm.loc "Type error")
+          | _ -> error ~loc:arg.ScopedTerm.loc (Format.asprintf "Type error fold modes, found %a" pp_functionality func))
         tm args modes
     in
 
@@ -371,15 +376,39 @@ module Checker_clause = struct
       | _ -> error ~loc "unify_force TODO"
     in
 
-    let unify_func (t1 : ScopedTerm.t) (t2 : ScopedTerm.t) f1 f2 : unit =
-      match (f1, f2) with
-      | x, y when x = y -> ()
-      | (Any | BoundVar _), x -> unify_force t1 f2
-      | x, (Any | BoundVar _) -> unify_force t2 f1
+    (* TODO: improve *)
+    let functionality_unify ~loc f1 f2 = functionality_leq ~loc f1 f2 && functionality_leq ~loc f1 f2 in
+
+    let unify_func ({ loc } as t1 : ScopedTerm.t) (t2 : ScopedTerm.t) f1 f2 : unit =
+      match (t1.it, t2.it) with
+      | Var _, Var _ -> (
+          match (f1, f2) with
+          | Any, Any -> ()
+          | Any, _ -> unify_force t1 f2
+          | _, Any -> unify_force t2 f1
+          | _, _ ->
+              if not (functionality_unify ~loc f1 f2) then
+                error ~loc
+                  (Format.asprintf "Functionality of %a is %a and of %a is %a: they do not unify" ScopedTerm.pretty t1
+                     pp_functionality f1 ScopedTerm.pretty t2 pp_functionality f2))
+      | Var _, _ -> unify_force t1 f2
+      | _, Var _ -> unify_force t2 f1
       | _, _ ->
-          error ~loc:t1.loc
-            (Format.asprintf "Cannot unify functionality of %a with %a at %a, their functionalities are\n 1: %a\n 2: %a"
-               ScopedTerm.pretty t1 ScopedTerm.pretty t2 Loc.pp t2.loc pp_functionality f1 pp_functionality f2)
+          if not (functionality_unify ~loc f1 f2) then
+            error ~loc
+              (Format.asprintf "Functionality of %a is %a and of %a is %a: they do not unify" ScopedTerm.pretty t1
+                 pp_functionality f1 ScopedTerm.pretty t2 pp_functionality f2)
+      (* if ScopedTerm.is_var t1.it && not (ScopedTerm.is_var t2.it) then
+           unify_force t1 f2
+         else if
+         match (f1, f2) with
+         | x, y when x = y -> ()
+         | (Any | BoundVar _), x -> unify_force t1 f2
+         | x, (Any | BoundVar _) -> unify_force t2 f1
+         | _, _ ->
+             error ~loc:t1.loc
+               (Format.asprintf "Cannot unify functionality of %a with %a at %a, their functionalities are\n 1: %a\n 2: %a"
+                  ScopedTerm.pretty t1 ScopedTerm.pretty t2 Loc.pp t2.loc pp_functionality f1 pp_functionality f2) *)
     in
 
     (* let rec unify_func (t1 : ScopedTerm.t_) (t2 : ScopedTerm.t_) (ctx : Ctx.t) : unit =
@@ -440,7 +469,14 @@ module Checker_clause = struct
     in
 
     let rec func2mode = function Arrow (_, r) -> Output :: func2mode r | _ -> [] in
+
+    (* get mode of a constant. if cannot find it, then deduce all output from the functionality
+       Like type, functionality informs about the number of arg of the constant.
+       In tandem with func2mode we build the mode of the constant wrt the number
+       of it Arrows
+    *)
     let get_mode_func ~loc n f = try get_mode ~loc n with _ -> func2mode f in
+
     let rec all_vars2any ScopedTerm.{ it; loc } =
       match it with
       | ScopedTerm.Var (n, []) -> add_env ~loc n ~v:Any
@@ -460,8 +496,6 @@ module Checker_clause = struct
       | Some AssumedFunctional -> Functional
       | Some e ->
           let modes = get_mode_func ~loc:t.loc n e in
-
-          to_print (fun () -> Format.eprintf "The functionality of %a is %a@." F.pp n pp_functionality e);
 
           to_print (fun () ->
               Format.eprintf "Valid_call with functionality:%a, arg:[%a], mode:[%a]@." pp_functionality e
@@ -607,10 +641,14 @@ module Checker_clause = struct
                     to_print (fun () -> Format.eprintf "The subst constructor is %a@." pp_functionality f1);
                     (* failwith "STOP" |> ignore; *)
                     build_hyps_head_aux ctx (x :: xs, f1)
-                | _, (Any | BoundVar _ | AssumedFunctional) ->
-                    build_hyps_head_aux ctx (x :: xs, List.fold_right (fun _ acc -> arr Any acc) (x :: xs) Any)
-                | _, Arrow _ -> build_hyps_head_aux ctx (x :: xs, e)
-                | _, (Functional | Relational | NoProp _) -> assert false))
+                | _, _ -> (
+                    match e with
+                    | Any | BoundVar _ | AssumedFunctional ->
+                        build_hyps_head_aux ctx (x :: xs, List.fold_right (fun _ acc -> arr Any acc) (x :: xs) Any)
+                    | Arrow _ -> build_hyps_head_aux ctx (x :: xs, e)
+                    | Functional | Relational | NoProp _ ->
+                        error ~loc (Format.asprintf "Unexpected %a for %a" pp_functionality assumed ScopedTerm.pretty t)
+                    )))
         | Cast (t, _) -> build_hyp_head ctx assumed t
         | Spill _ -> error ~loc "Spill in the head"
       and build_hyps_head_modes ctx =
@@ -628,7 +666,7 @@ module Checker_clause = struct
             | Some e ->
                 to_print (fun () ->
                     Format.eprintf "Before call to build_hyps_head_modes, func is %a@." pp_functionality e);
-                build_hyps_head_modes ctx e (x :: xs) (get_mode ~loc f) |> ignore)
+                build_hyps_head_modes ctx e (x :: xs) (get_mode_func ~loc f e) |> ignore)
         | App (Bound _, f, _, _) -> error ~loc (Format.asprintf "No signature for predicate %a@." F.pp f)
         | Var _ -> error ~loc "Flex term used has head of a clause"
         | _ -> error ~loc (Format.asprintf "Build_hyps_head: type error, found %a" ScopedTerm.pp t)
@@ -710,7 +748,7 @@ end
 let to_check_clause ScopedTerm.{ it; loc } =
   let n = get_namef it in
   not (F.equal n F.mainf)
-&& Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0
+(* && Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0 *)
 
 let check_clause ~loc ~env ~modes t =
   if to_check_clause t then (

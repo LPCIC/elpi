@@ -481,7 +481,7 @@ module ScopedTerm = struct
   let build_infix_constant scope name loc : t = {loc; ty = MutableOnce.create (TypeAssignment.Val (Arr (Variadic, Prop, Prop))); it = Const (scope, name)}
 
   let is_infix_constant f =
-    let infix = [F.andf; F.orf; F.eqf; F.isf; F.asf] in
+    let infix = [F.andf; F.orf; F.eqf; F.isf; F.asf; F.consf] in
     List.mem f infix
 
   let intersperse e : 'a -> t list = function
