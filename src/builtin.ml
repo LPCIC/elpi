@@ -663,7 +663,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   MLCode(Pred("dprint",
     VariadicIn(unit_ctx, !> any, "prints raw terms (debugging)"),
   (fun args ~depth _ _ state ->
-     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
+    Util.printf "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.Debug.term depth) " ") args ;
      state, ())),
   DocAbove);
@@ -671,7 +671,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   MLCode(Pred("print",
     VariadicIn(unit_ctx, !> any,"prints terms"),
   (fun args ~depth _ _ state ->
-     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
+     Util.printf "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.term depth) " ") args ;
      state, ())),
   DocAbove);
