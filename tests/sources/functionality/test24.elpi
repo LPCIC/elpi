@@ -1,14 +1,14 @@
-% NO
+% OK
 :functional 
 pred f o:int.
 
 :functional 
-pred r o:(:functional pred o:int).
+pred r o:(func -> int).
 
 :functional 
 pred r' o:(pred o:int).
 
-f R :- r X, r' X, X R. % This fails since the same variable X has two different
-                       % functionalities.
+f R :- r X, r' X, X R. % X is used 2 times with different functionalities: we
+                       % keep the minimum of them
 
 main.

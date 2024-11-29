@@ -14,6 +14,7 @@ val check_types : type_abbrevs:type_abbrevs -> kinds:arities -> TypeList.t -> Ty
 
 type env = TypeAssignment.overloaded_skema_with_id F.Map.t
 type env_undeclared = (TypeAssignment.t * Scope.type_decl_id * Ast.Loc.t) F.Map.t
+[@@deriving show]
 
 val check :
   is_rule:bool -> (* a rule or a term (eg query) *)

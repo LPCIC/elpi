@@ -8,8 +8,8 @@ q 2.
 pred q' o:int.
 
 :functional 
-pred do' i:prop, i:(:functional pred).
-do X Y :- X, !, Y.
+pred do' i:prop, i:(func).
+do' X Y :- X, !, Y.
 
 :functional
 pred x o:int.
