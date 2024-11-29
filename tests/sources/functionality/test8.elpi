@@ -7,7 +7,7 @@ pred q i:int, o:int.
 
 q 1 1.
 
-% This fails, since the local rules unifies with `r 1 1`
+% This fails, since the local rule unifies with `r 1 1`
 p 5 Y :- sigma X Y\ q X Y => q 1 Y.
 
 main.

@@ -86,6 +86,7 @@ let arrow_of_tys tys ety =
 
 type env = TypeAssignment.overloaded_skema_with_id F.Map.t
 type env_undeclared = (TypeAssignment.t * Scope.type_decl_id * Ast.Loc.t) F.Map.t
+[@@deriving show]
 
 open ScopedTerm
 
