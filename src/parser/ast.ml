@@ -121,11 +121,14 @@ let mkC loc x = { loc; it = CData x }
 let mkLam loc x ty t = { loc; it = Lam (Func.from_string x,ty,t) }
 let mkNil loc = {loc; it = Const Func.nilf }
 let mkParens loc t = { loc; it = Parens t }
-let mkQuoted loc s =
-  let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n } in
-  let rec find_data i =
+let mkQuoted loc pad s =
+  let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n;
+                                 Loc.source_stop = loc.Loc.source_stop - m;
+             } in
+  (* Printf.eprintf "mkQuoted '%s'\n" s; *)
+  let rec find_data i pad =
     match s.[i] with
-    | '{' -> find_data (i+1)
+    (* | '{' -> assert false; find_data (i+1) (pad+1) *)
     | ':' ->
        let len = String.length s in
        let rec find_space i =
@@ -135,13 +138,21 @@ let mkQuoted loc s =
          | ' ' -> i 
          | '\n' -> i 
          | _ -> find_space (i+1) in
-       let space_after = find_space 0 - 1 in
-       let kind = String.sub s (i+1) space_after in
-       let data = String.sub s (i+space_after+2) (String.length s - i - i - space_after-2) in
-       { qloc = strip (i+space_after+1+2) i loc; data; kind = Some kind }
-    | _ -> { qloc = strip (i+2) (i+2) loc; data = String.sub s i (String.length s - i - i); kind = None }
+       let space_after = find_space 0 in
+  (* Printf.eprintf "mkQuoted space_after '%d'\n" space_after; *)
+       let kind = String.sub s 1 (space_after-1) in
+       let data = String.sub s (space_after+1) (String.length s - space_after-1) in
+       let qloc = strip (space_after+1+pad) pad loc in
+  (* Printf.eprintf "mkQuoted data '%s'\n" data;
+  Printf.eprintf "mkQuoted kind '%s'\n" kind;
+  Printf.eprintf "mkQuoted qloc '%s'\n" (Loc.show qloc); *)
+       { qloc; data; kind = Some kind }
+    | _ ->
+      let qloc = strip pad pad loc in
+  (* Printf.eprintf "mkQuoted qloc '%s'\n" (Loc.show qloc); *)
+       { qloc; data = String.sub s i (String.length s - i - i); kind = None }
   in
-    { loc; it = Quoted (find_data 0) }
+    { loc; it = Quoted (find_data 0 pad) }
 let mkSeq ?loc (l : t list) =
  let rec aux = function
     [] -> assert false

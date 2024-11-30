@@ -101,7 +101,7 @@ module Term : sig
   val mkConst : Loc.t -> Func.t -> t
   val mkNil : Loc.t -> t
   val mkSeq : ?loc:Loc.t -> t list -> t
-  val mkQuoted : Loc.t -> string -> t
+  val mkQuoted : Loc.t -> int -> string -> t
   val mkFreshUVar : Loc.t -> t
   val mkFreshName : Loc.t -> t
   val mkLam : Loc.t -> string -> typ option -> t -> t

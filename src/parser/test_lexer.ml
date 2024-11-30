@@ -20,7 +20,7 @@ type t = Tokens.token =
   | REMOVE
   | RCURLY
   | RBRACKET
-  | QUOTED of ( string )
+  | QUOTED of ( int * string )
   | QDASH
   | PRED
   | PIPE
@@ -172,11 +172,11 @@ b"|}                                  [T(STRING "a\nb", 2, 3, 5)];
   test  "-->"                         [T(FAMILY_MINUS "-->", 1, 0, 3)];
   test  "x.y->z"                      [T(CONSTANT "x.y->z", 1, 0, 6)];
   (*    01234567890123456789012345 *)
-  test  "{{{ }} }}}"                  [T(QUOTED " }} ", 1, 0, 10)];
-  test  "{{ {{ } }} }}"               [T(QUOTED " {{ } }} ", 1, 0, 13)];
-  test  "{{ x }}3"                    [T(QUOTED " x ", 1, 0, 7); T(INTEGER 3, 1, 0, 8)];
-  test  "{{{ x }}}3"                  [T(QUOTED " x ", 1, 0, 9); T(INTEGER 3, 1, 0, 10)];
-  test  "{{\n x }}3"                  [T(QUOTED "\n x ", 2, 4, 8); T(INTEGER 3, 2, 4, 9)];
+  test  "{{{ }} }}}"                  [T(QUOTED (3," }} "), 1, 0, 10)];
+  test  "{{ {{ } }} }}"               [T(QUOTED (2," {{ } }} "), 1, 0, 13)];
+  test  "{{ x }}3"                    [T(QUOTED (2," x "), 1, 0, 7); T(INTEGER 3, 1, 0, 8)];
+  test  "{{{ x }}}3"                  [T(QUOTED (3," x "), 1, 0, 9); T(INTEGER 3, 1, 0, 10)];
+  test  "{{\n x }}3"                  [T(QUOTED (2,"\n x "), 2, 4, 8); T(INTEGER 3, 2, 4, 9)];
   (*    01234567890123456789012345 *)
   test  "foo :- bar."                 [T(CONSTANT "foo", 1, 0, 3); T(VDASH, 1, 0, 6); T(CONSTANT "bar", 1, 0, 10); T(FULLSTOP, 1, 0, 11)];
   test  "foo ?- bar."                 [T(CONSTANT "foo", 1, 0, 3); T(QDASH, 1, 0, 6); T(CONSTANT "bar", 1, 0, 10); T(FULLSTOP, 1, 0, 11)];

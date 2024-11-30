@@ -378,7 +378,7 @@ closed_term:
 | x = INTEGER { mkC (loc $loc) (cint.Util.CData.cin x)}
 | x = FLOAT { mkC (loc $loc) (cfloat.Util.CData.cin x)}
 | x = STRING { mkC (loc $loc) (cstring.Util.CData.cin x)}
-| x = QUOTED { mkQuoted (loc $loc) x }
+| x = QUOTED { mkQuoted (loc $loc) (fst x) (snd x) }
 | LPAREN; t = term; a = AS; c = term; RPAREN { mkApp (loc $loc) [mkCon (loc $loc(a)) "as";t;c] }
 | LBRACKET; l = list_items { mkSeq ~loc:(loc $loc) l }
 | LBRACKET; l = list_items_tail;  {  mkSeq ~loc:(loc $loc) l }

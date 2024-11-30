@@ -130,7 +130,7 @@ and quoted_inner b n l = parse
     try lookahead_close b (n-1) lexbuf;
       if l = 0 then begin
         lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_cnum = lexbuf.lex_curr_p.pos_cnum - 1};
-        QUOTED (Buffer.sub b 0 (Buffer.length b -n))
+        QUOTED (n,Buffer.sub b 0 (Buffer.length b -n))
       end
       else quoted_inner b n (l-1) lexbuf
     with Failure _ -> quoted_inner b n l lexbuf

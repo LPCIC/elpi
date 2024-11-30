@@ -26,7 +26,7 @@
 %token DDARROW
 %token DIV
 %token MOD
-%token < string > QUOTED
+%token < int * string > QUOTED
 %token SHORTEN
 %token ACCUMULATE
 %token LOCAL
