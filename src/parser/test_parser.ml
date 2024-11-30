@@ -4,7 +4,9 @@ open Ast.Program
 open Ast.Term
 
 let error s a1 a2 =
-  Printf.eprintf "error parsing '%s':\n%!" s;
+  Printf.eprintf "\n            (*          1         2         3 *)";
+  Printf.eprintf "\n            (* 123456789012345678901234567890 *)";
+  Printf.eprintf "\nerror parsing '%s':\n%!" s;
   let f1 = Filename.temp_file "parser_out" "txt" in
   let f2 = Filename.temp_file "parser_out" "txt" in
   let oc1 = open_out f1 in
@@ -112,7 +114,10 @@ let mkSeq n m = mkSeq ~loc:(mkLoc n m 1 0)
 let c ?(bug=false) n ?len s =
   let len = match len with None -> String.length s | Some x -> x in
   mkCon (mkLoc (n + (if bug then -1 else 0)) (n + len - 1) 1 0) s
-
+let q n m n1 m1 ?kind data =
+  let loc = mkLoc n m 1 0 in
+  let qloc = mkLoc n1 m1 1 0 in
+  { loc; it = Quoted { qloc; data; kind }}
 let parens t =
   let loc = mkLoc (t.loc.source_start) (t.loc.source_stop+1) 1 0 in
   mkParens loc t
@@ -125,10 +130,10 @@ let underscore ?bug ?(len=1)n = c ?bug ~len n Func.(show dummyname)
 
 let minl = List.fold_left (fun n x -> min n x.loc.source_start) max_int
 let maxl = List.fold_left (fun n x -> max n x.loc.source_stop) min_int
-let app a ?(len=String.length a) n ?(parenl=false) ?(parenr=false) ?(bug=false) b =
+let app a ?(len=String.length a) n ?(parenl=false) ?(parenr=0) ?(bug=false) b =
   let c = c ~bug n ~len a in
   let a1 = minl (c :: b) + (if parenl then -1 else 0) in
-  let b2 = maxl (c :: b) + (if parenr then 1 else 0) in
+  let b2 = maxl (c :: b) + (parenr) in
   mkApp (mkLoc a1 b2 1 0) (c :: b)
 
 let cast n m t ty = mkCast (mkLoc n m 1 0) t ty
@@ -185,7 +190,7 @@ let _ =
   test  "x => y, z."        1 9 1 0 [] ~warns:".*infix operator" (app "," ~bug 7 [app "=>" 3 [c 1 "x";c 6 "y"];c 9 "z"]);
   test  "x => y, !."        1 9 1 0 [] (app "," ~bug 7 [app "=>" 3 [c 1 "x";c 6 "y"];c 9 "!"]);
   test  "(x => y), z."      1 11 1 0 [] (app "," ~bug 9 [parens @@ app "=>" 4 [c 2 ~bug "x";c 7 "y"];c 11 "z"]);
-  test  "x => (y, z)."      1 11 1 0 [] (app "=>" 3 ~parenr:true [c 1 "x"; app "," ~bug 8 [c 7 ~bug "y"; c 10 "z"]]);
+  test  "x => (y, z)."      1 11 1 0 [] (app "=>" 3 ~parenr:1 [c 1 "x"; app "," ~bug 8 [c 7 ~bug "y"; c 10 "z"]]);
   (*    01234567890123456789012345 *)
   test  "p :- !, (s X) = X, q." 1 20 1 0 [] ((c 1 "p" |- 3) @@ app "," ~bug 7 [c 6 "!";app "=" 15 [app "s" ~bug 10 [c 12 "X"]; c 17 "X"]; c 20 "q"]);
   test  "p :- [ ]."         1 8  1 0 [] ((c 1 "p" |- 3) @@ mkSeq 6 8 [mkNil 8]);
@@ -214,7 +219,7 @@ let _ =
   testF "X * ."             5 ".*expects a right hand side";
   test  "p :- X is a, Y is b." 1 19 1 0 [] (app ":-" 3 [c 1 "p"; app "," ~bug 12 [app "is" 8 [c 6 "X";c 11 "a"];app "is" 16 [c 14 "Y";c 19 "b"]]]);
   (*    0123456789012345678901234567890 *)
-  test  "p (f x\\ _ as y)." 1 15 1 0 [] (app "p" 1 [app ~parenr:true "as" 11 [app "f" ~bug 4 [lam "x" 6  (underscore 9)]; c 14 "y"]]); (* parenl implied by bug *)
+  test  "p (f x\\ _ as y)." 1 15 1 0 [] (app "p" 1 [app ~parenr:1 "as" 11 [app "f" ~bug 4 [lam "x" 6  (underscore 9)]; c 14 "y"]]); (* parenl implied by bug *)
   (*    01234567890123456789012345 *)
   testF ":-"                2 "unexpected start";
   testF "type ( -> :-"      12 ".*parenthesis.*expected";
@@ -243,7 +248,12 @@ let _ =
   testT "func x int, list int -> bool."           ();
   testT "type x (func int, list int -> bool)."           ();
   testT "func x int, (func int -> int) -> bool."  ();
-
+  (*    01234567890123456789012345 *)
+  test  "p :- f {{{ g }}}."  1 16 1 0 [] (app ":-" 3 [c 1 "p"; app "f" 6 [q 8 16 11 13 " g "]]);
+  test  "p :- f {{ g }}."    1 14 1 0 [] (app ":-" 3 [c 1 "p"; app "f" 6 [q 8 14 10 12 " g "]]);
+  test  "p :- f {{:k g }}."  1 16 1 0 [] (app ":-" 3 [c 1 "p"; app "f" 6 [q 8 16 13 14 ~kind:"k" "g "]]);
+  test  "p :- f {{{:k g }}}."  1 18 1 0 [] (app ":-" 3 [c 1 "p"; app "f" 6 [q 8 18 14 15 ~kind:"k" "g "]]);
+  (*    01234567890123456789012345 *)
 
 ;; 
 
@@ -273,7 +283,11 @@ let sanity_check : unit =
         ignore(Parser.Internal.postfix_SYMB Lexer.token (Lexing.from_string start))
     | Prefix ->
         ignore(Parser.Internal.prefix_SYMB Lexer.token (Lexing.from_string start))
-    with _ -> Printf.eprintf "error parsing %s\n" start; exit 1
+    with _ ->
+      Printf.eprintf "\n           (*          1         2         3 *)";
+      Printf.eprintf "\n           (* 123456789012345678901234567890 *)";
+      Printf.eprintf "\nerror parsing %s\n" start;
+      exit 1
     end;
     begin match enclose with
     | None -> ()
