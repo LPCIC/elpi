@@ -449,9 +449,7 @@ end = struct (* {{{ *)
       | Some (Remove x), Some _ -> illegal_remove_id x
       | _ -> ()
     end;
-    match body with
-    | Ast.Logic body -> { Clause.attributes; loc; body; needs_spilling }
-    | Ast.Function _ -> assert false
+    { Clause.attributes; loc; body; needs_spilling }
     
   let structure_chr_attributes ({ Chr.attributes; loc } as c) =
     let duplicate_err s =
@@ -930,9 +928,113 @@ end = struct
       let it = scope_term ~state ctx ~loc it in
       { ScopedTerm.it; loc; ty = MutableOnce.make (F.from_string "Ty") }
 
-  let scope_loc_term ~state =
+    let rec scope_function ~state ctx ~loc t =
+      let open Ast.FunctionalTerm in
+      match t with
+      | Parens { loc; it } -> scope_function ~state ctx ~loc it
+      | Const c when is_discard c -> ScopedTerm.Discard
+      | Const c when is_macro_name c ->
+          let { macros } = get_mtm state in
+          if F.Map.mem c macros then
+            ScopedTerm.unlock @@ fst @@ F.Map.find c macros
+          else error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@]" F.pp c)
+      | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Bound elpi_language,c))
+      | Const c ->
+          if is_uvar_name c then ScopedTerm.Var(c,[])
+          else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
+          else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
+          else if is_global c then ScopedTerm.(Const(Scope.mkGlobal (),of_global c))
+          else ScopedTerm.(Const(Scope.mkGlobal (),c))
+      | App ({ it = App (f,l1) },l2) -> scope_function ~state ctx ~loc (App(f, l1 @ l2))
+      | App ({ it = Parens f },l) -> scope_function ~state ctx ~loc (App(f, l))
+      | App({ it = Const c }, [x]) when F.equal c F.spillf ->
+          let { needs_spilling } = get_mtm state in
+          needs_spilling := true;
+          ScopedTerm.Spill (scope_loc_function ~state ctx x,ref ScopedTerm.NoInfo)
+      | App({ it = Const c }, l) when F.equal c F.implf || F.equal c F.rimplf ->
+          begin match l with 
+          | [t1;t2] -> Impl (F.equal c F.implf, scope_loc_function ~state ctx t1, scope_loc_function ~state ctx t2)
+          | _ -> error ~loc "implication is a binary operator"
+          end
+      | App({ it = Const c }, x :: xs) ->
+           if is_discard c then error ~loc "Applied discard";
+           let x = scope_loc_function ~state ctx x in
+           let xs = List.map (scope_loc_function ~state ctx) xs in
+           if is_macro_name c then
+             let { macros } = get_mtm state in
+             if F.Map.mem c macros then ScopedTerm.beta (fst @@ F.Map.find c macros) (x::xs)
+             else error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
+           else
+            let bound = F.Set.mem c ctx in
+            if bound then ScopedTerm.App(Bound elpi_language, c, x, xs)
+            else if is_uvar_name c then ScopedTerm.Var(c,x :: xs)
+            else if is_global c then ScopedTerm.App(Scope.mkGlobal ~escape_ns:true (),of_global c,x,xs)
+            else ScopedTerm.App(Scope.mkGlobal (), c, x, xs)
+      | Cast (t,ty) ->
+          let t = scope_loc_function ~state ctx t in
+          let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty) in
+          ScopedTerm.Cast(t,ty)
+      | Lam (c,ty,b) when is_discard c ->
+          let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty)) in
+          ScopedTerm.Lam (None,ty,scope_loc_function ~state ctx b)
+      | Lam (c,ty,b) ->
+          if has_dot c then error ~loc "Bound variables cannot contain the namespaec separator '.'";
+          let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty)) in
+          ScopedTerm.Lam (Some (c,elpi_language),ty,scope_loc_function ~state (F.Set.add c ctx) b)
+      | CData c -> ScopedTerm.CData c (* CData.hcons *)
+      | Let _ -> assert false
+      | Use _ -> assert false
+      | Fresh _ -> assert false
+      | App ({ it = Const _},[]) -> anomaly "Application node with no arguments"
+      | App ({ it = Lam _},_) ->
+        error ~loc "Beta-redexes not allowed, use something like (F = x\\x, F a)"
+      | App ({ it = CData _},_) ->
+        error ~loc "Applied literal"
+      | App ({ it = Quoted _},_) ->
+        error ~loc "Applied quotation"
+      | App ({ it = (Let _ | Use _ | Fresh _)},_) ->
+        error ~loc "Applied let/use/fresh"
+      | App({ it = Cast _},_) ->
+        error ~loc "Casted app not supported yet"
+      | Quoted _ -> assert false
+    and scope_loc_function_def ~state ctx { Ast.FunctionalTerm.it = l; loc = lloc } { Ast.FunctionalTerm.it = r; loc = rloc } =
+      x
+    and scope_loc_function ~state ctx { Ast.FunctionalTerm.it; loc } =
+      match it with
+      | Quoted { Ast.Term.data; kind; qloc } ->
+        let unquote =
+          match kind with
+          | None ->
+              let default_quotation = State.get default_quotation state in
+              if Option.is_none default_quotation then
+                anomaly ~loc "No default quotation";
+              option_get default_quotation ~language:"default"
+          | Some name ->
+              let named_quotations = State.get named_quotations state in
+              try StrMap.find name named_quotations ~language:name
+              with Not_found -> anomaly ~loc ("No '"^name^"' quotation") in
+        let state = update_mtm state (fun x -> { x with ctx }) in
+        let simple_t =
+          try unquote state qloc data
+          with Elpi_parser.Parser_config.ParseError(loc,msg) -> error ~loc msg in
+        ScopedTerm.of_simple_term_loc simple_t
+      | _ ->
+        let it = scope_function ~state ctx ~loc it in
+        { ScopedTerm.it; loc; ty = MutableOnce.make (F.from_string "Ty") }
+  
+
+  let scope_loc_term ~state t =
     let { ctx } = get_mtm state in
-    scope_loc_term ~state ctx
+    scope_loc_term ~state ctx t
+      
+  let scope_loc_functional ~state l r =
+    let { ctx } = get_mtm state in
+    scope_loc_function_def ~state ctx l r
+
+  let scope_loc_term_or_functional_term ~state t =
+    match t with
+    | Ast.Logic t -> scope_loc_term ~state t
+    | Ast.Function(l,r) -> scope_loc_functional ~state l r
 
   let scope_type_abbrev { Ast.TypeAbbreviation.name; value; nparams; loc } =
     let rec aux ctx = function
@@ -990,7 +1092,7 @@ end = struct
   let compile_clause state macros { Ast.Clause.body; attributes; loc; needs_spilling = () } =
      let needs_spilling = ref false in
      let state = set_mtm state { empty_mtm with macros; needs_spilling } in
-     let body = scope_loc_term ~state body in
+     let body = scope_loc_term_or_functional_term ~state body in
      { Ast.Clause.body; attributes; loc; needs_spilling = !needs_spilling }
 
 

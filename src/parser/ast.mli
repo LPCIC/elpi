@@ -262,7 +262,7 @@ and ('func,'term) block_constraint = {
    rules : (cattribute,'term) Chr.t list
 }
 and block =
-  | Clauses of (Term.t,attribute,unit) Clause.t list
+  | Clauses of (sugar,attribute,unit) Clause.t list
   | Namespace of Func.t * program
   | Shorten of Func.t shorthand list * program
   | Constraints of (Func.t,Term.t) block_constraint * program
