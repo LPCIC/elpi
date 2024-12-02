@@ -172,10 +172,19 @@ let (!) = Ast.FunctionalTerm.of_term
 let maxl = List.fold_left (fun n x -> max n x.FunctionalTerm.loc.source_stop) min_int
 
 let l n a b c =
-  let m = maxl (a :: b :: c :: []) in
+  let m = maxl (a @ b :: c :: []) in
   let loc = mkLoc n m 1 0 in
   Ast.FunctionalTerm.mkLet loc a b c
-
+let u n a b c =
+  let m = maxl (a :: b :: c :: []) in
+  let loc = mkLoc n m 1 0 in
+  Ast.FunctionalTerm.mkUse loc a b c
+  
+let f n x a =
+  let m = maxl (a :: []) in
+  let loc = mkLoc n m 1 0 in
+  Ast.FunctionalTerm.mkFresh loc x None a
+  
 (* ~bug:true means that the token starts one char to the left of what is declared
    I could not understand where the bug is, but since it mainly affects infix symbols
    it should not make error reporting too imprecise in practice
@@ -276,8 +285,21 @@ let _ =
   (*    01234567890123456789012345678901234567890 *)
   testE "fst (pr A B) = A." 1 16 1 0 [] !(app "fst" 1 ~parenr:true [app "pr" ~bug 6 [c 9 "A"; c 11 "B"]]) !(c 16 "A");
   testE "fst (pr A B) = let A' = A in A'." 1 31 1 0 [] !(app "fst" 1 ~parenr:true [app "pr" ~bug 6 [c 9 "A"; c 11 "B"]])
-                                                       (l 16 !(c 20 "A'") !(c 25 "A") !(c 30 "A'"));
-  (*    01234567890123456789012345678901234567890 *)
+                                                       (l 16 [!(c 20 "A'")] !(c 25 "A") !(c 30 "A'"));
+  testE "fst (pr A B) = let A', A'' = A in A'." 1 36 1 0 [] !(app "fst" 1 ~parenr:true [app "pr" ~bug 6 [c 9 "A"; c 11 "B"]])
+                                                       (l 16 [!(c 20 "A'");!(c 24 "A''")] !(c 30 "A") !(c 35 "A'"));
+  testE "fst (pr A B) = use f X = x in A." 1 31 1 0 [] !(app "fst" 1 ~parenr:true [app "pr" ~bug 6 [c 9 "A"; c 11 "B"]])
+                                                        (u 16 !(app "f" 20 [c 22 "X"]) !(c 26 "x") !(c 31 "A"));
+    (*  012345678901234567890123456789012345678901234567 *)
+  testE "fst (pr A B) = use f X = use g Y =  Y in x in A." 1 47 1 0 []
+    !(app "fst" 1 ~parenr:true [app "pr" ~bug 6 [c 9 "A"; c 11 "B"]])
+    (u 16 !(app "f" 20 [c 22 "X"])
+      (u 26 !(app "g" 30 [c 32 "Y"]) !(c 37 "Y") !(c 42 "x"))
+      !(c 47 "A"));
+    (*  012345678901234567890123456789012345678901234567 *)
+  testE "p X = fresh x in p (X x)." 1 24 1 0 []
+    !(app "p" 1 [c 3 "X"])
+    (f 7 "x" !(app "p" 18  ~parenr:true [app "X" ~bug 21 [c 23 "x"]]))
 
 ;; 
 

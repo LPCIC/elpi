@@ -351,7 +351,7 @@ clause:
 }
 
 expr:
-| LET; p = closed_term; EQ; e = expr; IN; k = expr { FunctionalTerm.mkLet (loc $sloc) (FunctionalTerm.of_term p) e k }
+| LET; p = separated_nonempty_list(CONJ,clause_hd_term); EQ; e = expr; IN; k = expr { FunctionalTerm.mkLet (loc $sloc) (List.map FunctionalTerm.of_term p) e k }
 | USE; l = clause_hd_term; EQ; e = expr; IN; k = expr { FunctionalTerm.mkUse (loc $sloc) (FunctionalTerm.of_term l) e k }
 | FRESH; x = constant; IN; k = expr { FunctionalTerm.mkFresh (loc $sloc) (Func.show x) None k } 
 | t = open_term_noconj { FunctionalTerm.of_term t }
@@ -464,10 +464,12 @@ clause_hd_closed_term:
 | LPAREN; t = term; RPAREN { mkParens_if_impl_or_conj (loc $loc) t }
 
 clause_hd_open_term:
+(*
 | hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
 | hd = SIGMA; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "sigma") :: binder args b) }
-| hd = head_term; args = nonempty_list(closed_term); b = option(binder_body_no_ty) {
-    let args = binder1 args b in
+*)
+| hd = head_term; args = nonempty_list(closed_term) (*; b = option(binder_body_no_ty)*) {
+    (*let args = binder1 args b in*)
     let t = mkApp (loc $loc) (hd :: args) in
     t
 } (*%prec OR*)

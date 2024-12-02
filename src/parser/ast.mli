@@ -123,13 +123,13 @@ type t_ =
 | Quoted of Term.quote
 | Cast of t * typ
 | Parens of t
-| Let of t * t * t
+| Let of t list * t * t
 | Use of t * t * t
 | Fresh of Func.t * typ option * t
 and t = { it : t_; loc : Loc.t }
 [@@ deriving show, ord]
 
-val mkLet : Loc.t -> t -> t -> t -> t
+val mkLet : Loc.t -> t list -> t -> t -> t
 val mkUse : Loc.t -> t -> t -> t -> t
 val mkFresh : Loc.t -> string -> typ option -> t  -> t
 
