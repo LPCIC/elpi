@@ -11,12 +11,16 @@ module IdPos : sig
 
   val make_loc : Loc.t -> t
   val make_str : string -> t
+  val equal : t -> t -> bool
+  val hash : t -> int
 end = struct
   include Loc
   module Map = Map.Make(Loc)
   module Set = Set.Make(Loc)
   let make_loc loc = loc
   let make_str str = make_loc (Loc.initial str)
+  let equal x y = compare x y = 0
+  let hash t = Hashtbl.hash t
 end
 
 module Scope = struct
@@ -301,22 +305,32 @@ module TypeAssignment = struct
   let diff_id_check ((id1:IdPos.t),_) (id2,_) = assert (id1<>id2)
   let diff_ids_check e = List.iter (diff_id_check e)
 
-  let rec remove_mem e acc = function
-    | [] -> List.rev acc
-    | x::xs when eq_skema_w_id e x ->
-      diff_ids_check x xs;
-      List.rev_append acc xs
-    | x::xs -> remove_mem e (x::acc) xs
-
-  let rec merge_skema t1 t2 =
-    match t1, t2 with
-    | Single x, Single y when eq_skema_w_id x y -> t1
-    | Single x, Single y -> diff_id_check x y; Overloaded [x;y]
-    | Single x, Overloaded ys  -> Overloaded (x :: remove_mem x [] ys)
-    | Overloaded xs, Single y when List.exists (eq_skema_w_id y) xs -> t1
-    | Overloaded xs, Single y -> diff_ids_check y xs; Overloaded(xs@[y])
-    | Overloaded xs, Overloaded _ ->
-        List.fold_right (fun x -> merge_skema (Single x)) xs t2
+  (* returns a pair of ids representing the merged type_ass + the new merge type_ass *)
+  let merge_skema t1 t2 =
+    let removed = ref [] in
+    let add x y = removed := (fst x,fst y) :: !removed in 
+    let rec remove_mem e acc = function
+      | [] -> List.rev acc
+      | x::xs when eq_skema_w_id e x ->
+        diff_ids_check x xs;
+        add x e;
+        List.rev_append acc xs
+      | x::xs -> remove_mem e (x::acc) xs
+    in
+    let rec merge_aux t1 t2 =
+      match t1, t2 with
+      | Single x, Single y when eq_skema_w_id x y -> 
+        add y x;
+        t1
+      | Single x, Single y -> diff_id_check x y; Overloaded [x;y]
+      | Single x, Overloaded ys  -> Overloaded (x :: remove_mem x [] ys)
+      | Overloaded xs, Single y when List.exists (eq_skema_w_id y) xs -> t1
+      | Overloaded xs, Single y -> diff_ids_check y xs; Overloaded(xs@[y])
+      | Overloaded xs, Overloaded _ ->
+          List.fold_right (fun x -> merge_aux (Single x)) xs t2
+      in
+      let res = merge_aux t1 t2 in
+      !removed, res
   
   let unval (Val x) = x
   let rec deref m =
