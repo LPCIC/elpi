@@ -17,11 +17,9 @@ let () =
   let elpi = init () in
   let flags = Compile.default_flags in
   let pmain,_ = cc ~elpi ~flags ~base:(Compile.empty_base ~elpi) 1 maine in
-  let _,unit1 = cc ~elpi ~flags ~base:(Compile.empty_base ~elpi) 2 p1 in
-  let _,unit2 = cc ~elpi ~flags ~base:(Compile.empty_base ~elpi) 3 p2 in
+  let pmain,_ = cc ~elpi ~flags ~base:pmain 2 p1 in
+  let pmain,_ = cc ~elpi ~flags ~base:pmain 3 p2 in
 
-  let cp = Compile.extend ~base:pmain unit1 in
-  let cp = Compile.extend ~base:cp unit2 in
+  let q = Compile.query pmain (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "main")) in
 
-  let q = Compile.query cp (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "main")) in
   exec q

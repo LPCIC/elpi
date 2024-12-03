@@ -8,6 +8,12 @@ module type Show = sig
   val show : t -> string
 end
 
+module type ShowKey = sig
+  type key
+  val pp_key : Format.formatter -> key -> unit
+  val show_key : key -> string
+end
+
 module type Show1 = sig
   type 'a t
   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit

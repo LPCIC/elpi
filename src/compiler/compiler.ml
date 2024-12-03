@@ -211,7 +211,7 @@ module C = Constants
 
 open Compiler_data
 
-module Union_find = Union_find.Make(IdPos)
+module Union_find = Union_find.Make(IdPos.Map)
 
 type macro_declaration = (ScopedTerm.t * Loc.t) F.Map.t
 [@@ deriving show, ord]
@@ -251,6 +251,7 @@ type unchecked_signature = {
   types : TypeList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
   modes : (mode * Loc.t) F.Map.t;
+  type_uf : Union_find.t
 }
 [@@deriving show]
 
@@ -274,7 +275,7 @@ module Assembled = struct
     type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
     modes : (mode * Loc.t) F.Map.t;
     functional_preds: Determinacy_checker.t;
-    type_uf : Union_find.closed
+    type_uf : Union_find.t
   }
   [@@deriving show]
   
@@ -304,7 +305,7 @@ module Assembled = struct
     types = F.Map.empty;
     type_abbrevs = F.Map.empty; modes = F.Map.empty; functional_preds = Determinacy_checker.empty_fmap;
     toplevel_macros = F.Map.empty;
-    type_uf = Union_find.create_close ()
+    type_uf = Union_find.empty
   }
   let empty () = {
     clauses = [];
@@ -1119,10 +1120,10 @@ module Flatten : sig
     Arity.t F.Map.t ->
     Arity.t F.Map.t
   val merge_type_assignments :
-    Union_find.closed ->
+    Union_find.t ->
     TypeAssignment.overloaded_skema_with_id F.Map.t ->
     TypeAssignment.overloaded_skema_with_id F.Map.t ->
-    TypeAssignment.overloaded_skema_with_id F.Map.t
+    IdPos.t list * Union_find.t * TypeAssignment.overloaded_skema_with_id F.Map.t
   val merge_type_abbrevs :
     (F.t * ScopedTypeExpression.t) list ->
     (F.t * ScopedTypeExpression.t) list ->
@@ -1132,10 +1133,10 @@ module Flatten : sig
     (F.t * ScopedTypeExpression.t) list ->
     (F.t * ScopedTypeExpression.t) list
   val merge_checked_type_abbrevs :
-    Union_find.closed ->
+    Union_find.t ->
     ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
     ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
-    ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t
+    IdPos.t list * Union_find.t * ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t
 
   val merge_toplevel_macros :
     (ScopedTerm.t * Loc.t) F.Map.t ->
@@ -1253,11 +1254,33 @@ module Flatten : sig
     List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
 
   let merge_type_assignments uf t1 t2 =
+    let uf = ref uf in
+    let to_remove = ref [] in
     (* We give precedence to recent type declarations over old ones *)
-    F.Map.union (fun f l1 l2 ->
+    let t = F.Map.union (fun f l1 l2 ->
       let to_union, ta = TypeAssignment.merge_skema l2 l1 in
-      List.iter (Union_find.union_c uf) to_union;
-      Some ta) t1 t2
+      List.iter (fun (id1,id2) -> 
+        let rem, uf1 = Union_find.union !uf id1 id2 in
+        uf := uf1;
+        Option.iter (fun x -> to_remove := x :: !to_remove) rem;
+      ) to_union;
+      Some ta) t1 t2 in
+    !to_remove, !uf, t
+
+  let merge_checked_type_abbrevs uf m1 m2 =
+    let uf = ref uf in
+    let to_remove = ref [] in
+    let m = F.Map.union (fun k ((id1,sk),otherloc as x) ((id2,ty),loc) ->
+      if TypeAssignment.compare_skema sk ty <> 0 then
+        error ~loc
+        ("Duplicate type abbreviation for " ^ F.show k ^
+          ". Previous declaration: " ^ Loc.show otherloc)
+      else
+        let rem, uf1 = Union_find.union !uf id1 id2 in
+        uf := uf1;
+        Option.iter (fun x -> to_remove := x :: !to_remove) rem;
+        Some x) m1 m2 in
+      !to_remove, !uf, m
 
   let merge_types t1 t2 =
     F.Map.union (fun _ l1 l2 -> Some (TypeList.merge l1 l2)) t1 t2
@@ -1276,16 +1299,6 @@ module Flatten : sig
         ) t1 t2
 
   let merge_type_abbrevs m1 m2 = m1 @ m2
-
-  let merge_checked_type_abbrevs uf m1 m2 =
-    F.Map.union (fun k ((id1,sk),otherloc as x) ((id2,ty),loc) ->
-      if TypeAssignment.compare_skema sk ty <> 0 then
-        error ~loc
-        ("Duplicate type abbreviation for " ^ F.show k ^
-          ". Previous declaration: " ^ Loc.show otherloc)
-      else 
-        Union_find.union_c uf (id1, id2);
-        Some x) m1 m2
 
   let merge_toplevel_macros otlm toplevel_macros =
     F.Map.union (fun k (m1,l1) (m2,l2) ->
@@ -1341,7 +1354,7 @@ module Flatten : sig
 
   let run state { Scoped.pbody; toplevel_macros } =
     let kinds, types, type_abbrevs, modes, clauses_rev, chr_rev = compile_body pbody in
-    let signature = { Flat.kinds; types; type_abbrevs; modes; toplevel_macros } in
+    let signature = { Flat.kinds; types; type_abbrevs; modes; toplevel_macros; type_uf = Union_find.empty } in
     { Flat.clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; builtins = []; signature } (* TODO builtins can be in a unit *)
 
 
@@ -1358,10 +1371,8 @@ end = struct
   let check_signature builtins symbols (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * _=
     let { Assembled.modes = om; functional_preds = ofp; kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otuf } = base_signature in
     
-    let all_tyuf_opened = Union_find.do_open otuf in
-    let local_tyuf_opened = Union_find.do_open otuf in
-    
-    let { Flat.modes; kinds; types; type_abbrevs; toplevel_macros } = signature in
+    let { Flat.modes; kinds; types; type_abbrevs; toplevel_macros; type_uf } = signature in
+
     let all_kinds = Flatten.merge_kinds ok kinds in
     let func_setter_object = new Determinacy_checker.merger ofp in
     let check_k_begin = Unix.gettimeofday () in
@@ -1378,8 +1389,6 @@ end = struct
               ". Previous declaration: " ^ Loc.show otherloc)
         end
         else func_setter_object#add_ty_abbr id scoped_ty;
-        Union_find.add all_tyuf_opened id;
-        Union_find.add local_tyuf_opened id;
         F.Map.add name ((id, ty),loc) all_type_abbrevs, F.Map.add name ((id,ty),loc) type_abbrevs)
         (ota,F.Map.empty) type_abbrevs in
     let check_k_end = Unix.gettimeofday () in
@@ -1394,8 +1403,6 @@ end = struct
     let types = F.Map.mapi (fun name e -> 
       let tys = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds e in
       let ids = get_ids tys in
-      List.iter (Union_find.add all_tyuf_opened) ids;
-      List.iter (Union_find.add local_tyuf_opened) ids;
       func_setter_object#add_func_ty_list e ids;
       tys) types in
 
@@ -1409,12 +1416,12 @@ end = struct
   
     let check_t_end = Unix.gettimeofday () in
 
-    let all_type_uf = Union_find.do_close all_tyuf_opened in
-    let all_types = Flatten.merge_type_assignments all_type_uf ot types in
+    let all_type_uf = Union_find.merge otuf type_uf in
+    let to_remove, all_type_uf, all_types = Flatten.merge_type_assignments all_type_uf ot types in
     let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
     let all_modes = Flatten.merge_modes om modes in
     let all_functional_preds = func_setter_object#merge in
-    let type_uf = Union_find.do_close local_tyuf_opened in
+    let all_functional_preds = List.fold_left Determinacy_checker.remove all_functional_preds to_remove in
 
     { Assembled.modes; functional_preds = func_setter_object#get_local_func; kinds; types; type_abbrevs; toplevel_macros; type_uf },
     { Assembled.modes = all_modes; functional_preds = all_functional_preds; kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; type_uf = all_type_uf },
@@ -1434,8 +1441,9 @@ end = struct
       let unknown = 
         if typecheck then Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val Prop)
         else unknown in
+      (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
-      if typecheck then Determinacy_checker.check_clause ~loc ~env:functional_preds spilled.body ~modes;
+      if typecheck then Determinacy_checker.check_clause ~uf:type_uf ~loc ~env:functional_preds spilled.body ~modes;
       unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
 
     let clauses = List.rev clauses in
@@ -1453,13 +1461,15 @@ end = struct
     ) builtins;
 
     let more_types = Type_checker.check_undeclared ~unknown in
-    let u_types = Flatten.merge_type_assignments type_uf signature.Assembled.types more_types in
-    let types = Flatten.merge_type_assignments type_uf types more_types in
+    let _, _, u_types = Flatten.merge_type_assignments type_uf signature.types more_types in
+    let _, _, types = Flatten.merge_type_assignments type_uf types more_types in
+
+    (* TODO: forall i in toremove @@ toremove1, remove i from functional preds *)
 
     let check_end = Unix.gettimeofday () in
 
-    let signature = { signature with Assembled.types = u_types } in
-    let precomputed_signature = { precomputed_signature with Assembled.types } in
+    let signature = { signature with types = u_types; type_uf } in
+    let precomputed_signature = { precomputed_signature with types; type_uf } in
 
     let checked_code = { CheckedFlat.signature; clauses; chr; builtins; types_indexing } in
 
@@ -1770,10 +1780,16 @@ let extend1_signature base_signature (signature : checked_compilation_unit_signa
   let { Assembled.toplevel_macros; kinds; types; type_abbrevs; modes; functional_preds; type_uf } = signature in
   let kinds = Flatten.merge_kinds ok kinds in
   let type_uf = Union_find.merge otyuf type_uf in
-  let type_abbrevs = Flatten.merge_checked_type_abbrevs type_uf ota type_abbrevs in
-  let types = Flatten.merge_type_assignments type_uf ot types in
+  let to_remove, type_uf, type_abbrevs = Flatten.merge_checked_type_abbrevs type_uf ota type_abbrevs in
+  let to_remove1, type_uf, types = Flatten.merge_type_assignments type_uf ot types in
   let modes = Flatten.merge_modes om modes in
   let toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
+  let functional_preds =
+    let fp = Determinacy_checker.merge ofp functional_preds in
+    let fp = List.fold_left Determinacy_checker.remove fp to_remove in
+    let fp = List.fold_left Determinacy_checker.remove fp to_remove1 in
+    fp
+  in
 
   { Assembled.kinds; types; type_abbrevs; functional_preds; modes; toplevel_macros; type_uf }
 
