@@ -12,7 +12,7 @@ type spills = spill list
 let is_prop ~extra x =
   let ty = TypeAssignment.deref x in
   let rec aux extra = function
-    | TypeAssignment.Prop -> true
+    | TypeAssignment.Prop _ -> true
     | TypeAssignment.Arr (_, _, t) when extra > 0 -> aux (extra - 1) t
     | TypeAssignment.UVar r when MutableOnce.is_set r -> aux extra (TypeAssignment.deref r)
     | _ -> false
