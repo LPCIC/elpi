@@ -269,13 +269,11 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
 
   and check_lam ctx ~loc ~tyctx c cty tya t ety =
     let name_lang = match c with Some c -> c | None -> fresh_name (), elpi_language in
-    let src = match cty with
-      | None -> 
-        let v = mk_uvar "Src" in
-        MutableOnce.set tya (Val v);
-        v
-      | Some x -> 
-          TypeAssignment.subst (fun f -> Some (TypeAssignment.UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty x in
+    let set_tya_ret f = MutableOnce.set tya (Val f); f in
+    let src = set_tya_ret @@ match cty with
+      | None ->  mk_uvar "Src"
+      | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty x
+    in
     let tgt = mk_uvar "Tgt" in
     (* let () = Format.eprintf "lam ety %a\n" TypeAssignment.pretty ety in *)
     if unify (TypeAssignment.Arr(Ast.Structured.NotVariadic,src,tgt)) ety then
