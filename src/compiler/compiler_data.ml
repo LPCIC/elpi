@@ -8,6 +8,7 @@ module IdPos : sig
   type t [@@deriving show,ord]
   module Map : Map.S with type key = t
   module Set : Set.S with type elt = t
+  module UF : Union_find.S with type key = t and type t = t Map.t
 
   val make_loc : Loc.t -> t
   val make_str : string -> t
@@ -17,6 +18,7 @@ end = struct
   include Loc
   module Map = Map.Make(Loc)
   module Set = Set.Make(Loc)
+  module UF = Union_find.Make(Map)
   let make_loc loc = loc
   let make_str str = make_loc (Loc.initial str)
   let equal x y = compare x y = 0
