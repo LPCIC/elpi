@@ -1259,7 +1259,7 @@ module Flatten : sig
     (* We give precedence to recent type declarations over old ones *)
     let t = F.Map.union (fun f l1 l2 ->
       let to_union, ta = TypeAssignment.merge_skema l2 l1 in
-      List.iter (fun (id1,id2) -> 
+      List.iter (fun (id1,id2) ->
         let rem, uf1 = Union_find.union !uf id1 id2 in
         uf := uf1;
         Option.iter (fun x -> to_remove := x :: !to_remove) rem;
@@ -1439,7 +1439,7 @@ end = struct
 
     let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
       let unknown = 
-        if typecheck then Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val Prop)
+        if typecheck then Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val (Prop Relation)) (* Note: in the tc, there is no difference between Prop Relation and Prop Function*)
         else unknown in
       (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
@@ -1982,7 +1982,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let needs_spilling = ref false in
   let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros; needs_spilling }) t in
-  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ = Type_checker.check_undeclared ~unknown in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (!needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
@@ -2029,7 +2029,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let compiler_state,t = f compiler_state in
-  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val Prop) in
+  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ = Type_checker.check_undeclared ~unknown in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (false,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in

@@ -38,6 +38,7 @@ let check_global_exists ~loc c (type_abbrevs : type_abbrevs) arities nargs =
   end else
     error ~loc ("Unknown type " ^ F.show c)
 
+(* Converts a ScopedTypeExpression into a TypeAssignment *)
 let rec check_loc_tye ~type_abbrevs ~kinds ctx { loc; it } =
   check_tye ~loc ~type_abbrevs ~kinds ctx it
 and check_tye ~loc ~type_abbrevs ~kinds ctx = function
@@ -48,7 +49,8 @@ and check_tye ~loc ~type_abbrevs ~kinds ctx = function
       check_global_exists ~loc c type_abbrevs kinds (1 + List.length xs);
       App(c,check_loc_tye ~type_abbrevs ~kinds ctx x, List.map (check_loc_tye ~type_abbrevs ~kinds ctx) xs)
   | Arrow(v,s,t) -> Arr(v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
-  | Pred(_,[]) -> Prop
+  | Pred(Function,[]) -> Prop Function
+  | Pred(Relation,[]) -> Prop Relation
   | Pred(f,(_,x)::xs) -> Arr(NotVariadic,check_loc_tye ~type_abbrevs ~kinds ctx x,check_tye ~type_abbrevs ~kinds ~loc ctx (Pred(f,xs)))
 
 
@@ -151,10 +153,12 @@ type classification =
   | Variadic of { srcs : ret list; tgt : ret }
   | Unknown
 
+let prop = TypeAssignment.Prop Relation
+
 let rec classify_arrow = function
   | TypeAssignment.Arr(Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
   | UVar m when MutableOnce.is_set m -> classify_arrow (TypeAssignment.deref m)
-  | (App _ | Prop | Cons _ | Any | UVar _) as tgt -> Simple { srcs = []; tgt }
+  | (App _ | Prop _ | Cons _ | Any | UVar _) as tgt -> Simple { srcs = []; tgt }
   | TypeAssignment.Arr(NotVariadic,x,xs) ->
       match classify_arrow xs with
       | Simple {srcs; tgt } -> Simple { srcs = x :: srcs; tgt }
@@ -232,14 +236,14 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         Single (id,TypeAssignment.unval ty)
       
   and check_impl ctx ~loc ~tyctx b t1 t2 ety =
-    if not @@ unify (ety) Prop then error_bad_ety ~loc ~tyctx ~ety:Prop ScopedTerm.pretty_ (Impl(b,t1,t2)) (ety)
+    if not @@ unify (ety) prop then error_bad_ety ~loc ~tyctx ~ety:prop ScopedTerm.pretty_ (Impl(b,t1,t2)) (ety)
     else
       let lhs, rhs,c (* of => *) = if b then t1,t2,F.implf else t2,t1,F.rimplf in
-      let spills = check_loc ~tyctx:(Some c) ctx rhs ~ety:Prop in
+      let spills = check_loc ~tyctx:(Some c) ctx rhs ~ety:prop in
       let lhs_ty = mk_uvar "Src" in
       let more_spills = check_loc ~tyctx:None ctx ~ety:lhs_ty lhs in
-      let ety1 = TypeAssignment.Prop in
-      let ety2 = TypeAssignment.App(F.from_string "list",Prop,[]) in
+      let ety1 = prop in
+      let ety2 = TypeAssignment.App(F.from_string "list",prop,[]) in
       if try_unify lhs_ty ety1 then spills @ more_spills (* probably an error if not empty *)
       else if unify lhs_ty (ety2) then spills @ more_spills (* probably an error if not empty *)
       else error_bad_ety2 ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
@@ -289,7 +293,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
       { loc; it = Spill(sp,ref (Phantom(i+1))); ty = MutableOnce.create (TypeAssignment.Val ty) } in
     match classify_arrow (ScopedTerm.type_of sp) with
     | Simple { srcs; tgt } ->
-        if not @@ unify tgt Prop then error ~loc "only predicates can be spilled";
+        if not @@ unify tgt prop then error ~loc "only predicates can be spilled";
         let spills = srcs in
         if spills = [] then
           error ~loc "nothing to spill, the expression lacks no arguments";
@@ -432,11 +436,11 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         let lhs = mk_uvar "LHS" in
         let spills = check_loc ~tyctx ctx x ~ety:lhs in
         if spills <> [] then error ~loc "Hard spill";
-        if try_unify lhs Prop || try_unify lhs (App(F.from_string "list",Prop,[]))
+        if try_unify lhs prop || try_unify lhs (App(F.from_string "list",prop,[]))
         then check_spill_conclusion_loc ~tyctx ctx y ~ety
         else error ~loc "Bad impl in spill"
     | App(Global _ as g,c,x,xs) when F.equal c F.andf ->
-        let spills = check_loc ~tyctx ctx x ~ety:Prop in
+        let spills = check_loc ~tyctx ctx x ~ety:prop in
         if spills <> [] then error ~loc "Hard spill";
         begin match xs with
         | [] -> assert false
@@ -461,7 +465,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     (* Format.eprintf "Checking %a\n" F.pp c; *)
     match F.Map.find c env with
     | Single (_id,Ty _) -> () (* TODO: Should use id? *)
-    | Single (_id, Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args Prop) (* TODO: should use id? *)
+    | Single (_id, Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args prop) (* TODO: should use id? *)
     | Overloaded _ -> ()
     | exception Not_found -> assert(F.Map.mem c unknown)
 
@@ -514,7 +518,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | App(c1,x,xs), App(c2,y,ys) when F.equal c1 c2 ->
         unif ~matching x y && Util.for_all2 (unif ~matching) xs ys
     | Cons c1, Cons c2 when F.equal c1 c2 -> true
-    | Prop, Prop -> true
+    | Prop _, Prop _ -> true (* unification of prop is correct for tc indipendently of their functionality *)
     | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unif ~matching s1 s2 && unif ~matching t1 t2      
     | Arr(Variadic,_,t), _ -> unif ~matching t t2
     | _, Arr(Variadic,_,t) -> unif ~matching t1 t
@@ -561,7 +565,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | _ -> false
 
   and oc m = function
-    | Prop -> true
+    | Prop _ -> true
     | Arr(_,x,y) -> oc m x && oc m y
     | App(_,x,xs) -> List.for_all (oc m) (x::xs)
     | Any -> true

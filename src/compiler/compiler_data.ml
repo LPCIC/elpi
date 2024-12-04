@@ -249,7 +249,8 @@ module TypeAssignment = struct
   [@@ deriving show, fold, iter]
 
   type 'a t_ =
-    | Prop | Any
+    | Prop of Ast.Structured.functionality
+    | Any
     | Cons of F.t
     | App of F.t * 'a t_ * 'a t_ list
     | Arr of Ast.Structured.variadic * 'a t_ * 'a t_
@@ -274,7 +275,7 @@ module TypeAssignment = struct
       aux t
   
   let rec subst map = function
-    | (Prop | Any | Cons _) as x -> x
+    | (Prop _ | Any | Cons _) as x -> x
     | App(c,x,xs) -> App (c,subst map x,List.map (subst map) xs)
     | Arr(v,s,t) -> Arr(v,subst map s, subst map t)
     | UVar c ->
@@ -345,9 +346,7 @@ module TypeAssignment = struct
     let rec map = function
       | UVar r when MutableOnce.is_set r -> map (deref r)
       | UVar _ -> raise Not_monomorphic
-      | Prop -> Prop
-      | Any -> Any
-      | Cons c -> Cons c
+      | (Prop _ | Any | Cons _) as v -> v
       | App(c,x,xs) -> App(c,map x, List.map map xs)
       | Arr(b,s,t) -> Arr(b,map s,map t)
     in
@@ -357,7 +356,7 @@ module TypeAssignment = struct
     with Not_monomorphic -> None
   
   let rec is_arrow_to_prop = function
-    | Prop -> true
+    | Prop _ -> true
     | Any | Cons _ | App _ -> false
     | Arr(_,_,t) -> is_arrow_to_prop t
     | UVar _ -> false
@@ -381,7 +380,8 @@ module TypeAssignment = struct
     | _ -> 2
 
   let rec pretty fmt = function
-    | Prop -> fprintf fmt "prop"
+    | Prop Relation -> fprintf fmt "prop"
+    | Prop Function -> fprintf fmt "fprop"
     | Any -> fprintf fmt "any"
     | Cons c -> F.pp fmt c
     | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
@@ -492,7 +492,11 @@ module ScopedTerm = struct
   let get_lam_name = function None -> F.from_string "_" | Some (n,_) -> n
   let mk_empty_lam_type name = MutableOnce.make (get_lam_name name)
 
-  let build_infix_constant scope name loc : t = {loc; ty = MutableOnce.create (TypeAssignment.Val (Arr (Variadic, Prop, Prop))); it = Const (scope, name)}
+  (* The type of the object being constructed is irrelevant since 
+    build_infix_constant is used in the pretty printer of term and the type
+    of infix constants is not displayed
+  *)
+  let build_infix_constant scope name loc : t = {loc; ty = MutableOnce.make (F.from_string "dummy"); it = Const (scope, name)}
 
   let is_infix_constant f =
     let infix = [F.andf; F.orf; F.eqf; F.isf; F.asf; F.consf] in
