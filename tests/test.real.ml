@@ -14,7 +14,7 @@ module Printer : sig
     executables:string list -> seed:int -> timeout:float -> unit
     
   val print_summary :
-    total:int -> ok:int -> ko_list:string list -> skipped:int -> timeout:int -> unit
+    total:int -> ok:int -> ko_list:string list -> skipped:int -> timeout:string list -> unit
 
   val print_log :
     ln_nb:int -> fname:string -> unit
@@ -55,9 +55,11 @@ let print_summary ~total ~ok ~ko_list ~skipped ~timeout =
   print_stat ~to_print:true "Passed" ok;
   print_stat ~to_print:true "Failed" (List.length ko_list);
   print_stat "Skipped" skipped;
-  print_stat "Timeout" timeout;
+  print_stat "Timeout" (List.length timeout);
   if ko_list <> [] then 
-    printf [red] "Rerun failed: make tests ONLY=\"'^\\(%s\\)'\"\n" (String.concat "\\|" ko_list)
+    printf [red] "Rerun failed: make tests ONLY=\"'^\\(%s\\)'\"\n" (String.concat "\\|" ko_list);
+  if timeout <> [] then 
+    printf [red] "Rerun timeout: make tests ONLY=\"'^\\(%s\\)'\"\n" (String.concat "\\|" timeout)
 ;;
 
 let print_file ~ln_nb fname =
@@ -175,13 +177,13 @@ let main ln_nb sources plot timeout promote executables namef catskip timetool s
     map_stop_on_error stop_on_first_error (run stop_on_first_error timeout seed sources promote env) jobs in
   let total, ok, ko_list, skipped, timeout =
     let rec part total ok ko_list skipped timeout = function
-      | [] -> (total, ok, List.rev ko_list, skipped, timeout)
+      | [] -> (total, ok, List.rev ko_list, skipped, List.rev timeout)
       | Some {Runner.rc = Success _; _} :: l -> part (total+1) (ok+1) ko_list skipped timeout l
       | Some {rc = Promote _; _} :: l ->        part (total+1) (ok+1) ko_list skipped timeout l
       | Some {rc = Failure _; test} :: l ->        part (total+1) ok (test.name :: ko_list) skipped timeout l
       | None :: l ->                            part (total+1) ok ko_list (skipped+1) timeout l
-      | Some {rc = Timeout _; _} :: l ->        part (total+1) ok ko_list skipped (timeout+1) l
-    in part 0 0 [] 0 0 results in
+      | Some {rc = Timeout _; test} :: l ->        part (total+1) ok ko_list skipped (test.name :: timeout) l
+    in part 0 0 [] 0 [] results in
   Printer.print_summary ~total ~ok ~ko_list ~skipped ~timeout;
   begin try
     let log_first_failure =
