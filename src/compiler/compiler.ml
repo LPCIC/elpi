@@ -982,7 +982,11 @@ end = struct
           let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty)) in
           ScopedTerm.Lam (Some (c,elpi_language),ty,scope_loc_function ~state (F.Set.add c ctx) b)
       | CData c -> ScopedTerm.CData c (* CData.hcons *)
-      | Let _ -> assert false
+      | Let (tl,e,k) ->
+          let e = scope_loc_function ~state ctx e in
+          let ctx' = List.fold_left (scope_binder_loc ~state) ctx tl in
+          let l = scope_loc_function ~state ctx' k in
+          assert false
       | Use _ -> assert false
       | Fresh _ -> assert false
       | App ({ it = Const _},[]) -> anomaly "Application node with no arguments"
@@ -997,8 +1001,18 @@ end = struct
       | App({ it = Cast _},_) ->
         error ~loc "Casted app not supported yet"
       | Quoted _ -> assert false
-    and scope_loc_function_def ~state ctx { Ast.FunctionalTerm.it = l; loc = lloc } { Ast.FunctionalTerm.it = r; loc = rloc } =
-      x
+    and scope_loc_function_def ~state ctx l r =
+      let ctx' = scope_binder_loc ~state ctx l in
+      let l = scope_loc_function ~state ctx l in
+      let r = scope_loc_function ~state ctx' r in
+      l, r
+    and scope_binder_loc ~state ctx { Ast.FunctionalTerm.it; loc } =
+      match it with
+      | Const x when is_uvar_name x-> F.Set.add x ctx
+      | Const _ -> ctx
+      | App({ it = Const x},xs) when is_uvar_name x -> F.Set.add x ctx
+      | App({ it = Const _},xs) -> List.fold_left (scope_binder_loc ~state) ctx xs
+      | _ -> ctx (* TODO *)
     and scope_loc_function ~state ctx { Ast.FunctionalTerm.it; loc } =
       match it with
       | Quoted { Ast.Term.data; kind; qloc } ->
@@ -1034,7 +1048,7 @@ end = struct
   let scope_loc_term_or_functional_term ~state t =
     match t with
     | Ast.Logic t -> scope_loc_term ~state t
-    | Ast.Function(l,r) -> scope_loc_functional ~state l r
+    | Ast.Function(l,r) -> scope_loc_function_def ~state F.Set.empty l r
 
   let scope_type_abbrev { Ast.TypeAbbreviation.name; value; nparams; loc } =
     let rec aux ctx = function

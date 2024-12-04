@@ -444,6 +444,9 @@ module ScopedTerm = struct
    | CData of CData.t
    | Spill of t * spill_info ref
    | Cast of t * ScopedTypeExpression.e
+   (* | Let of t list * t * t
+   | Use of t * t * t
+   | Fresh of F.t * ScopedTypeExpression.e option * t *)
    and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
   [@@ deriving show]
 
