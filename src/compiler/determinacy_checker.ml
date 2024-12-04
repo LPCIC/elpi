@@ -180,7 +180,8 @@ module Compilation = struct
           beta ~loc (f, List.map (type_ass_2func ~pfile ~loc env) args)
 
     and type_ass_2func ~pfile ~loc (env : env) = function
-      | TypeAssignment.Prop -> Relational
+      | TypeAssignment.Prop Function -> Functional
+      | TypeAssignment.Prop Relation -> Relational
       | Any -> Any
       | Cons n -> type2func_ty_abbr ~pfile ~loc env n []
       | App (n, x, xs) -> type2func_ty_abbr ~pfile ~loc env n (x :: xs)
