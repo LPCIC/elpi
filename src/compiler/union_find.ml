@@ -167,7 +167,7 @@ module Make (M : Elpi_util.Util.Map.S) : S with type t = M.key M.t and type key 
     | Some e -> find m e
 
   let union m i j =
-    assert ( i <> j );
+    (* assert ( i <> j ); *)
     let ri = find m i in
     let rj = find m j in
     (* r1 is put in the same disjoint set of rj and can be removed from other

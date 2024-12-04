@@ -27,7 +27,8 @@ let list x = (App(F.from_string "list",x,[]))
 let int = Cons (F.from_string "int")
 let arr s t = Arr(Ast.Structured.NotVariadic,s,t)
 
-let () = pp_ta Prop "prop";;
+let () = pp_ta (Prop Relation) "prop";;
+let () = pp_ta (Prop Function) "fprop";;
 let () = pp_ta (list int) "list int";;
 let () = pp_ta (list (list int)) "list (list int)";;
 let () = pp_ta (arr (list int) int) "list int -> int";;
@@ -39,7 +40,7 @@ let () = pp_ta (list (arr int int)) "list (int -> int)";;
 open ScopedTerm
 
 let loc = Ast.Loc.initial "x"
-let ty  = MutableOnce.create @@ Val Prop
+let ty  = MutableOnce.create @@ Val (Prop Relation)
 let c3 = { loc; it = CData (Ast.cint.cin 3); ty };;
 let lam v t = { loc; ty; it = Lam(Some(F.from_string v,""),None,MutableOnce.make (F.from_string""),t)}
 let var v = { loc; ty; it = Const(Bound "",F.from_string v)}
