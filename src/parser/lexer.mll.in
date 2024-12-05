@@ -5,12 +5,13 @@
     open Elpi_lexer_config.Tokens
     exception Error of string
 
+    let real_skip b n =
+      let open Lexing in
+      b.lex_curr_p <- { b.lex_curr_p with pos_cnum = b.lex_curr_p.pos_cnum + n };
+      b.lex_start_p <- { b.lex_start_p with pos_cnum = b.lex_start_p.pos_cnum + n }
+
     let new_line b =
       Lexing.new_line b
-
-    let skip b n =
-      let open Lexing in
-      b.lex_curr_p <- { b.lex_curr_p with pos_cnum = b.lex_curr_p.pos_cnum + n }
 
     let start_token f b =
       let open Lexing in
@@ -68,65 +69,64 @@ let symbcharplus = symbchar +
 rule linecomment = parse
 | '\n' { new_line lexbuf; token lexbuf }
 | eof { token lexbuf }
-| "elpi:skip " (pnum as n) { skip lexbuf 10; skip lexbuf (String.length n); linecomment_skip (int_of_string n) lexbuf }
-| "elpi:if" (' '+ as sp1) "version" (' '+ as sp2) (['<' '>' '='] as op) (' '+ as sp3) (pnum as ma) "." (pnum as mi) "." (pnum as p) {
-     skip lexbuf (7+7+1); skip lexbuf String.(length ma + length mi + length p + length sp1 + length sp2 + length sp3);
+| "elpi:skip " (pnum as n) { linecomment_skip (int_of_string n) lexbuf }
+| "elpi:if" (' '+) "version" (' '+) (['<' '>' '='] as op) (' '+) (pnum as ma) "." (pnum as mi) "." (pnum as p) {
      if not @@ version_test op ma mi p then linecomment_if lexbuf else linecomment_drop lexbuf }
-| ' ' { skip lexbuf 1; linecomment lexbuf }
-| _ { skip lexbuf 1; linecomment_drop lexbuf }
+| ' ' { linecomment lexbuf }
+| _ { linecomment_drop lexbuf }
 
 and linecomment_drop = parse
 | '\n' { new_line lexbuf; token lexbuf }
 | eof { token lexbuf }
-| _ { skip lexbuf 1; linecomment_drop lexbuf }
+| _ { linecomment_drop lexbuf }
 
 and linecomment_skip skipno = parse
 | '\n' { new_line lexbuf; if skipno > 0 then skip_lines skipno lexbuf else token lexbuf }
 | eof { token lexbuf }
-| _ { skip lexbuf 1; linecomment_skip skipno lexbuf }
+| _ { linecomment_skip skipno lexbuf }
 
 and linecomment_if = parse
 | '\n' { new_line lexbuf; skip_lines_endif lexbuf }
 | eof { token lexbuf }
-| _ { skip lexbuf 1; linecomment_if lexbuf }
+| _ { linecomment_if lexbuf }
 
 and skip_lines_endif = parse
 | '\n' { new_line lexbuf; skip_lines_endif lexbuf }
-| '%' (' '+ as sp) "elpi:endif" { skip lexbuf (1 + (String.length sp) + 10); token lexbuf }
+| '%' (' '+) "elpi:endif" { token lexbuf }
 | eof { token lexbuf }
-| _ { skip lexbuf 1; skip_lines_endif lexbuf }
+| _ { skip_lines_endif lexbuf }
 
 and skip_lines skipno = parse
 | '\n' { new_line lexbuf; let skipno = skipno - 1 in if skipno > 0 then skip_lines skipno lexbuf else token lexbuf }
 | eof { token lexbuf }
-| _ { skip lexbuf 1; skip_lines skipno lexbuf }
+| _ { skip_lines skipno lexbuf }
 
 and multilinecomment nest = parse
 | '\n' { new_line lexbuf; multilinecomment nest lexbuf }
 | "*/" { if nest = 0 then token lexbuf else multilinecomment (nest - 1) lexbuf }
 | "/*" { multilinecomment (nest+1) lexbuf }
-| _ { skip lexbuf 1; multilinecomment nest lexbuf }
+| _ { multilinecomment nest lexbuf }
 
 and string b = parse
 | '\n'     { Buffer.add_char b '\n'; new_line lexbuf; string b lexbuf }
-| '\\' 'n' { Buffer.add_char b '\n'; skip lexbuf 2; string b lexbuf }
-| '\\' 'b' { Buffer.add_char b '\b'; skip lexbuf 2; string b lexbuf }
-| '\\' 't' { Buffer.add_char b '\t'; skip lexbuf 2; string b lexbuf }
-| '\\' 'r' { Buffer.add_char b '\r'; skip lexbuf 2; string b lexbuf }
-| '\\' '\\' { Buffer.add_char b '\\'; skip lexbuf 2; string b lexbuf }
-| '\\' '"' { Buffer.add_char b '"';  skip lexbuf 2; string b lexbuf }
-| '"' '"'  { Buffer.add_char b '"';  skip lexbuf 2; string b lexbuf }
+| '\\' 'n' { Buffer.add_char b '\n'; string b lexbuf }
+| '\\' 'b' { Buffer.add_char b '\b'; string b lexbuf }
+| '\\' 't' { Buffer.add_char b '\t'; string b lexbuf }
+| '\\' 'r' { Buffer.add_char b '\r'; string b lexbuf }
+| '\\' '\\' { Buffer.add_char b '\\'; string b lexbuf }
+| '\\' '"' { Buffer.add_char b '"';  string b lexbuf }
+| '"' '"'  { Buffer.add_char b '"';  string b lexbuf }
 | '"' { STRING (Buffer.contents b) }
-| _ # '"' as c { Buffer.add_char b c; skip lexbuf 1; string b lexbuf }
+| _ # '"' as c { Buffer.add_char b c; string b lexbuf }
 
 and quoted n = parse
-| '{' { skip lexbuf 1; quoted (n+1) lexbuf }
-| '\n' { let b = Buffer.create 80 in Buffer.add_char b '\n'; skip lexbuf 1; new_line lexbuf; quoted_inner b n 0 lexbuf }
-| _ as c { let b = Buffer.create 80 in Buffer.add_char b c; skip lexbuf 1; quoted_inner b n 0 lexbuf }
+| '{' { quoted (n+1) lexbuf }
+| '\n' { let b = Buffer.create 80 in Buffer.add_char b '\n'; new_line lexbuf; quoted_inner b n 0 lexbuf }
+| _ as c { let b = Buffer.create 80 in Buffer.add_char b c; quoted_inner b n 0 lexbuf }
 
 and quoted_inner b n l = parse
 | '}' {
-    Buffer.add_char b '}'; skip lexbuf 1; 
+    Buffer.add_char b '}';
     try lookahead_close b (n-1) lexbuf;
       if l = 0 then begin
         lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_cnum = lexbuf.lex_curr_p.pos_cnum - 1};
@@ -136,7 +136,7 @@ and quoted_inner b n l = parse
     with Failure _ -> quoted_inner b n l lexbuf
   }
 | '{' {
-    Buffer.add_char b '{'; skip lexbuf 1; 
+    Buffer.add_char b '{';
     try lookahead_open b (n-1) lexbuf; quoted_inner b n (l+1) lexbuf
     with Failure _ -> quoted_inner b n l lexbuf
   }
@@ -145,13 +145,13 @@ and quoted_inner b n l = parse
 
 and lookahead_close b n = parse
 | '}' {
-    Buffer.add_char b '}'; skip lexbuf 1; 
+    Buffer.add_char b '}'; real_skip lexbuf 1; 
     if n = 1 then () else lookahead_close b (n-1) lexbuf
   }
 
 and lookahead_open b n = parse
 | '{' {
-    Buffer.add_char b '{'; skip lexbuf 1; 
+    Buffer.add_char b '{'; real_skip lexbuf 1; 
     if n = 1 then () else lookahead_open b (n-1) lexbuf
   }
 
@@ -167,7 +167,7 @@ and token = parse
     lexbuf.lex_abs_pos <- - (String.length x) - lexbuf.lex_start_p.pos_cnum;
     lexbuf.lex_start_p <- lexbuf.lex_curr_p;
     token lexbuf }
-| ( ' ' | '\t' | '\r' ) { skip lexbuf 1; token lexbuf }
+| ( ' ' | '\t' | '\r' ) { token lexbuf }
 | '\n' { new_line lexbuf; token lexbuf }
 | '%' { linecomment lexbuf }
 | "/*" { multilinecomment 0 lexbuf }
@@ -189,7 +189,7 @@ and token = parse
 | "{" { LCURLY }
 | "}" { RCURLY }
 | "|" { PIPE }
-| "{{" { start_token (fun b -> skip b 2; quoted 2 b) lexbuf }
+| "{{" { start_token (fun b -> quoted 2 b) lexbuf }
 | (("i" | "o") as s) ':' { IO_COLON s }
 | ("i" | "o") as s { IO s }
 | "shorten" { SHORTEN }

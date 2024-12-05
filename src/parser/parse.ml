@@ -107,7 +107,7 @@ let lexing_set_position lexbuf loc =
   let open Lexing in
   lexbuf.lex_abs_pos <- loc.pos_cnum;
   lexbuf.lex_start_p <- loc;
-  lexbuf.lex_curr_p <- { loc with pos_cnum = loc.pos_cnum + 1 }
+  lexbuf.lex_curr_p <- loc
   
 let goal_from ~loc lexbuf =
   lexing_set_position lexbuf loc;
