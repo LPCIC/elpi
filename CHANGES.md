@@ -1,3 +1,11 @@
+# v2.0.5 (December 2024)
+
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Parser:
+  - Fix loc issues involving quotations
+
 # v2.0.4 (November 2024)
 
 
