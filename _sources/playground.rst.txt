@@ -215,7 +215,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -308,7 +308,7 @@ Test Bed
    
    Success:
    
-   Time: 0.001
+   Time: 0.000
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -363,7 +363,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -943,7 +943,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -995,7 +995,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1127,7 +1127,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1177,7 +1177,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1593,7 +1593,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1621,7 +1621,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1647,7 +1647,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1792,7 +1792,7 @@ Test Bed
    
    Success:
    
-   Time: 1.760
+   Time: 1.722
    
    Constraints:
    
@@ -1896,7 +1896,7 @@ Test Bed
    
    Success:
    
-   Time: 0.312
+   Time: 0.316
    
    Constraints:
    
@@ -2167,7 +2167,7 @@ Test Bed
    
    Success:
    
-   Time: 0.002
+   Time: 0.003
    
    Constraints:
    
@@ -2200,7 +2200,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.001
    
@@ -2223,7 +2223,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.232293 + 0.056189 + 0.872969
+   1.299367 + 0.056754 + 0.928461
    
 
 .. code-block:: console
@@ -2237,7 +2237,7 @@ Test Bed
    
    Success:
    
-   Time: 2.371
+   Time: 2.508
    
    Constraints:
    
@@ -2254,7 +2254,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.445793 + 2.999899 + 0.360674
+   6.474682 + 3.000368 + 0.323745
    
 
 .. code-block:: console
@@ -2268,7 +2268,7 @@ Test Bed
    
    Success:
    
-   Time: 9.813
+   Time: 9.805
    
    Constraints:
    
@@ -2285,7 +2285,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.728362 + 2.885549 + 0.231370
+   5.664360 + 2.689172 + 0.230745
    
 
 .. code-block:: console
@@ -2299,7 +2299,7 @@ Test Bed
    
    Success:
    
-   Time: 8.852
+   Time: 8.590
    
    Constraints:
    
@@ -2382,7 +2382,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2434,7 +2434,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -2486,7 +2486,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -2941,7 +2941,7 @@ Test Bed
    
    Success:
    
-   Time: 1.574
+   Time: 1.570
    
    Constraints:
    
@@ -2975,7 +2975,7 @@ Test Bed
 
 .. code-block:: console
 
-   2
+   6
    
 
 .. code-block:: console
@@ -3067,7 +3067,7 @@ Test Bed
    
    Success:
    
-   Time: 1.561
+   Time: 1.444
    
    Constraints:
    
@@ -3119,7 +3119,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3265,13 +3265,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
    Success:
    
-   Time: 0.143
+   Time: 0.142
    
    Constraints:
    
@@ -3293,7 +3293,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3340,7 +3340,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.101542 + 0.053069 + 0.772664
+   1.108864 + 0.054724 + 0.769835
    
 
 .. code-block:: console
@@ -3350,11 +3350,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
-   Time: 2.019
+   Time: 2.022
    
    Constraints:
    
@@ -3402,7 +3402,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3502,7 +3502,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3533,7 +3533,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3564,7 +3564,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3590,7 +3590,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4022,7 +4022,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -4143,7 +4143,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
