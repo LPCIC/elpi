@@ -129,7 +129,7 @@ let rec expect s b = function
 let test s spec =
   let s = Str.global_replace (Str.regexp_string "\r") "" s in
   let b = Lexing.from_string s in
-  Printf.eprintf "=============================\n";
+  (* Printf.eprintf "=============================\n"; *)
   expect s b spec
 
 let () =
