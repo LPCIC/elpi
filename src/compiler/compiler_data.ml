@@ -97,10 +97,10 @@ module ScopedTypeExpression = struct
 
   type t_ =
     | Any
+    | Prop of Ast.Structured.functionality
     | Const of Scope.t * F.t
     | App of F.t * e * e list
-    | Arrow of Ast.Structured.variadic * e * e
-    | Pred of Ast.Structured.functionality * (Ast.Mode.t * e) list
+    | Arrow of Mode.t * Ast.Structured.variadic * e * e
   and e = { it : t_; loc : Loc.t }
   [@@ deriving show]
 
@@ -111,20 +111,32 @@ module ScopedTypeExpression = struct
   let app = 1
 
   let lvl_of = function
-    | Arrow _ | Pred _ -> arrs
+    | Arrow _ -> arrs
     | App _ -> app
     | _ -> 2
+
+  let rec is_prop = function
+    | Prop f -> Some f
+    | Any | Const _ | App _ -> None
+    | Arrow(_,_,_,t) -> is_prop t.it
 
   let rec pretty_e fmt = function
     | Any -> fprintf fmt "any"
     | Const(_,c) -> F.pp fmt c
+    | Prop _ -> fprintf fmt "prop"
     | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_e_parens ~lvl:app) " ") (x::xs)
-    | Arrow(NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
-    | Arrow(Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
-    | Pred(_,[]) -> fprintf fmt "prop"
-    | Pred(_,l) -> fprintf fmt "pred %a" (Util.pplist pretty_ie ", ") l
-  and pretty_ie fmt (i,e) =
-    fprintf fmt "%s:%a" (match i with Ast.Mode.Input -> "i" | Output -> "o") pretty_e_loc e
+    | Arrow(m,v,s,t) as p -> 
+      (match is_prop p with
+      | None -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
+      | Some Function -> fprintf fmt "@[<hov 2>func%a@]" (pretty_prop m v s t) ()
+      | Some Relation -> fprintf fmt "@[<hov 2>pred%a@]" (pretty_prop m v s t) ()
+      )
+
+  and pretty_prop m v l r fmt () =
+    let show_var = function Ast.Structured.Variadic -> ".." | _ -> "" in
+    match r.it with
+    | Prop _ -> fprintf fmt "."
+    | _  -> fprintf fmt "%a:%a %s->@ %a" Mode.pp_short m pretty_e_loc l (show_var v) pretty_e_loc r
   and pretty_e_parens ~lvl fmt = function
     | t when lvl >= lvl_of t.it -> fprintf fmt "(%a)" pretty_e_loc t
     | t -> pretty_e_loc fmt t
@@ -136,7 +148,7 @@ module ScopedTypeExpression = struct
     | SimpleType.Any -> Any
     | Con c -> Const(Scope.mkGlobal (),c)
     | App(c,x,xs) -> App(c,of_simple_type_loc x,List.map of_simple_type_loc xs)
-    | Arr(s,t) -> Arrow(NotVariadic,of_simple_type_loc s, of_simple_type_loc t)
+    | Arr(s,t) -> Arrow(Output, NotVariadic,of_simple_type_loc s, of_simple_type_loc t)
   and of_simple_type_loc { it; loc } = { it = of_simple_type it; loc }
 
   type v_ =
@@ -152,9 +164,9 @@ module ScopedTypeExpression = struct
     | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> Scope.compare b1 b2 == 0 && F.equal c1 c2
     | Const(Bound l1,c1), Const(Bound l2,c2) -> Scope.compare_language l1 l2 == 0 && eq_var ctx l1 c1 c2
     | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
-    | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 = b2 && eqt ctx s1 s2 && eqt ctx t1 t2
-    | Pred(f1,l1), Pred(f2,l2) -> f1 = f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
+    | Arrow(m1,b1,s1,t1), Arrow(m2,b2,s2,t2) -> Mode.compare m1 m2 == 0 && b1 = b2 && eqt ctx s1 s2 && eqt ctx t1 t2
     | Any, Any -> true
+    | Prop _, Prop _ -> true
     | _ -> false
 
   let rec eq ctx t1 t2 =
@@ -172,7 +184,7 @@ module ScopedTypeExpression = struct
     if it' == it then orig else { it = it'; loc }
   and smart_map_scoped_ty f orig =
     match orig with
-    | Any -> orig
+    | Any | Prop _ -> orig
     | Const((Scope.Bound _| Scope.Global { escape_ns = true }),_) -> orig
     | Const(Scope.Global _ as g,c) ->
         let c' = f c in
@@ -182,15 +194,10 @@ module ScopedTypeExpression = struct
         let x' = smart_map_scoped_loc_ty f x in
         let xs' = smart_map (smart_map_scoped_loc_ty f) xs in
         if c' == c && x' == x && xs' == xs then orig else App(c',x',xs')
-    | Arrow(v,x,y) ->
+    | Arrow(m,v,x,y) ->
         let x' = smart_map_scoped_loc_ty f x in
         let y' = smart_map_scoped_loc_ty f y in
-        if x' == x && y' == y then orig else Arrow(v,x',y')
-    | Pred(c,l) ->
-        let l' = smart_map (fun (m,x as orig) ->
-          let x' = smart_map_scoped_loc_ty f x in
-          if x' == x then orig else m,x') l in
-        if l' == l then orig else Pred(c,l')
+        if x' == x && y' == y then orig else Arrow(m,v,x',y')
 
   let rec smart_map_tye f = function
     | Lam(c,t) as orig ->
@@ -255,7 +262,7 @@ module TypeAssignment = struct
     | Any
     | Cons of F.t
     | App of F.t * 'a t_ * 'a t_ list
-    | Arr of Ast.Structured.variadic * 'a t_ * 'a t_
+    | Arr of Mode.t * Ast.Structured.variadic * 'a t_ * 'a t_
     | UVar of 'a
   [@@ deriving show, fold, ord]
 
@@ -279,7 +286,7 @@ module TypeAssignment = struct
   let rec subst map = function
     | (Prop _ | Any | Cons _) as x -> x
     | App(c,x,xs) -> App (c,subst map x,List.map (subst map) xs)
-    | Arr(v,s,t) -> Arr(v,subst map s, subst map t)
+    | Arr(m,v,s,t) -> Arr(m,v,subst map s, subst map t)
     | UVar c ->
         match map c with
         | Some x -> x
@@ -350,7 +357,7 @@ module TypeAssignment = struct
       | UVar _ -> raise Not_monomorphic
       | (Prop _ | Any | Cons _) as v -> v
       | App(c,x,xs) -> App(c,map x, List.map map xs)
-      | Arr(b,s,t) -> Arr(b,map s,map t)
+      | Arr(m,b,s,t) -> Arr(m,b,map s,map t)
     in
     try 
       let t = map t in
@@ -360,7 +367,7 @@ module TypeAssignment = struct
   let rec is_arrow_to_prop = function
     | Prop _ -> true
     | Any | Cons _ | App _ -> false
-    | Arr(_,_,t) -> is_arrow_to_prop t
+    | Arr(_,_,_,t) -> is_arrow_to_prop t
     | UVar _ -> false
 
   let rec is_predicate = function
@@ -372,30 +379,33 @@ module TypeAssignment = struct
     | Overloaded l -> List.exists (fun (_,x) -> is_predicate x) l
 
   open Format
+  let pretty fmt tm =
 
-  let arrs = 0
-  let app = 1
+    let arrs = 0 in
+    let app = 1 in
 
-  let lvl_of = function
-    | Arr _ -> arrs
-    | App _ -> app
-    | _ -> 2
+    let lvl_of = function
+      | Arr _ -> arrs
+      | App _ -> app
+      | _ -> 2 in
 
-  let rec pretty fmt = function
-    | Prop Relation -> fprintf fmt "prop"
-    | Prop Function -> fprintf fmt "fprop"
-    | Any -> fprintf fmt "any"
-    | Cons c -> F.pp fmt c
-    | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-    | Arr(NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
-    | Arr(Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_parens ~lvl:arrs) s pretty t
-    | UVar m when MutableOnce.is_set m -> pretty fmt @@ deref m
-    | UVar m -> MutableOnce.pretty fmt m
-  and pretty_parens ~lvl fmt = function
-    | UVar m when MutableOnce.is_set m -> pretty_parens ~lvl fmt @@ deref m
-    | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
-    | t -> pretty fmt t
-  let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
+    let rec pretty fmt = function
+      | Prop Relation -> fprintf fmt "prop"
+      | Prop Function -> fprintf fmt "fprop"
+      | Any -> fprintf fmt "any"
+      | Cons c -> F.pp fmt c
+      | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
+      | Arr(m,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a:%a ->@ %a@]" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,Variadic,s,t) -> fprintf fmt "%a:%a ..-> %a" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
+      | UVar m when MutableOnce.is_set m -> pretty fmt @@ deref m
+      | UVar m -> MutableOnce.pretty fmt m
+    and pretty_parens ~lvl fmt = function
+      | UVar m when MutableOnce.is_set m -> pretty_parens ~lvl fmt @@ deref m
+      | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
+      | t -> pretty fmt t in
+    let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
+  in 
+  pretty fmt tm
 
   let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
 

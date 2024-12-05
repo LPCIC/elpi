@@ -227,7 +227,7 @@ and pbody = {
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
-  modes : (mode * Loc.t) F.Map.t;
+  modes : (Mode.hos * Loc.t) F.Map.t;
   body : block list;
   symbols : F.Set.t;
 }
@@ -250,7 +250,7 @@ type unchecked_signature = {
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
-  modes : (mode * Loc.t) F.Map.t;
+  modes : (Mode.hos * Loc.t) F.Map.t;
   type_uf : IDPosUf.t
 }
 [@@deriving show]
@@ -273,7 +273,7 @@ module Assembled = struct
     kinds : Arity.t F.Map.t;
     types : TypeAssignment.overloaded_skema_with_id F.Map.t;
     type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
-    modes : (mode * Loc.t) F.Map.t;
+    modes : (Mode.hos * Loc.t) F.Map.t;
     functional_preds: Determinacy_checker.t;
     type_uf : IDPosUf.t
   }
@@ -290,7 +290,7 @@ module Assembled = struct
   
     builtins : Builtins.t;
     prolog_program : index;
-    indexing : (mode * indexing) C.Map.t;
+    indexing : (Mode.hos * indexing) C.Map.t;
     chr : CHR.t;
   
     symbols : SymbolMap.table;
@@ -776,7 +776,7 @@ let get_mtm, set_mtm, _drop_mtm, update_mtm =
 module Scope_Quotation_Macro : sig
 
   val run : State.t -> toplevel_macros:macro_declaration -> Ast.Structured.program -> Scoped.program
-  val check_duplicate_mode : F.t -> (mode * Loc.t) -> (mode * Loc.t) F.Map.t -> unit
+  val check_duplicate_mode : F.t -> (Mode.hos * Loc.t) -> (Mode.hos * Loc.t) F.Map.t -> unit
   val scope_loc_term : state:State.t -> Ast.Term.t -> ScopedTerm.t
 
 end = struct
@@ -803,19 +803,25 @@ end = struct
       let c = (F.show f).[0] in
       c = '@'
 
-  let rec scope_tye ctx ~loc t : ScopedTypeExpression.t_ =
+  let rec pred2arr ctx ~loc func = function
+    | [] -> ScopedTypeExpression.Prop func
+    | (m,x)::xs -> Arrow (m,NotVariadic,scope_loc_tye ctx x, {loc; it=pred2arr ctx ~loc func xs})
+
+  and scope_tye ctx ~loc t : ScopedTypeExpression.t_ =
     match t with
-    | Ast.TypeExpression.TConst c when F.show c = "prop" -> Pred (Relation,[])
+    | Ast.TypeExpression.TConst c when F.show c = "prop" -> Prop Relation
     | TConst c when F.show c = "any" -> Any
     | TConst c when F.Set.mem c ctx -> Const(Bound elpi_language,c)
     | TConst c -> Const(Scope.mkGlobal (),c)
     | TApp(c,x,[y]) when F.show c = "variadic" ->
-        Arrow(Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
+        Arrow(Output, Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
     | TApp(c,x,xs) ->
         if F.Set.mem c ctx || is_uvar_name c then error ~loc "type schema parameters cannot be type formers";
         App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
-    | TPred(m,xs) -> Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
-    | TArr(s,t) -> Arrow(NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
+    | TPred((m:Ast.Structured.functionality),xs) -> 
+      pred2arr ctx ~loc m xs
+      (* Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs) *)
+    | TArr(s,t) -> Arrow(Output, NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
   and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
   let scope_loc_tye ctx (t: Ast.Structured.functionality Ast.TypeExpression.t) =
     scope_loc_tye ctx t
@@ -830,9 +836,8 @@ end = struct
         | Const(Bound _, _) -> assert false (* there are no binders yet *)
         | Const(Global _,c) when is_uvar_name c -> F.Set.add c e
         | Const(Global _,_) -> e
-        | Any -> e
-        | Arrow(_,x,y) -> aux (aux e x) y
-        | Pred(_,l) -> List.fold_left aux e (List.map snd l)
+        | Any | Prop _ -> e
+        | Arrow(_,_,x,y) -> aux (aux e x) y
       in
         aux F.Set.empty value in
     let value = scope_loc_tye vars ty in
@@ -957,21 +962,27 @@ end = struct
     match F.Map.find_opt name map with
     | Some (mode2,loc2) when mode2 <> mode ->
       error ~loc
-        (Format.asprintf "Duplicate mode declaration for %a (also at %a)\n Mode1 = %a\n Mode2 = %a" F.pp name Loc.pp loc2 pp_mode mode pp_mode mode2)
+        (Format.asprintf "Duplicate mode declaration for %a (also at %a)\n Mode1 = %a\n Mode2 = %a" F.pp name Loc.pp loc2 Mode.pp_hos mode Mode.pp_hos mode2)
     | _ -> ()
 
   let compile_mode_aux modes ({value;name} :ScopedTypeExpression.t) =
-    let fix_mode = function Ast.Mode.Input -> Util.Input | Ast.Mode.Output -> Util.Output in 
-    let rec type_to_mode = function
-      | m, ScopedTypeExpression.{it = Pred(_,l)} -> Ho(fix_mode m,List.map type_to_mode l)
-      | m, _ -> Fo (fix_mode m) in
+    let rec to_mode_ho (m, ty) = 
+      match flatten_arrow [] ty with
+      | None -> Mode.Fo m
+      | Some l -> Mode.Ho (m, List.rev_map to_mode_ho l)
+    and flatten_arrow acc = function
+      | ScopedTypeExpression.Prop _ -> Some acc
+      | Any | Const _ | App _ -> None
+      | Arrow (m,_,a,b) -> flatten_arrow ((m,a.it)::acc) b.it in
     let rec type_to_mode_under_abs = function
       | ScopedTypeExpression.Lam (_,b) -> type_to_mode_under_abs b
-      | Ty {it = Pred (_,l);loc} -> 
-        let args = List.map type_to_mode l in
-        check_duplicate_mode name (args,loc) modes;
-        F.Map.add name (args,loc) modes
-      | Ty _ -> modes
+      | Ty {it;loc} ->
+        match flatten_arrow [] it with
+        | None -> modes
+        | Some l ->
+          let args = List.rev_map to_mode_ho l in
+          check_duplicate_mode name (args,loc) modes;
+          F.Map.add name (args,loc) modes
       in
     type_to_mode_under_abs value
 
@@ -1053,7 +1064,7 @@ end = struct
       toplevel_macros,
       { Scoped.types; kinds; type_abbrevs; modes; body; symbols }
 
-    and compile_body macros kinds types type_abbrevs (modes : (mode * Loc.t) F.Map.t) (defs : F.Set.t) state = function
+    and compile_body macros kinds types type_abbrevs (modes : (Mode.hos * Loc.t) F.Map.t) (defs : F.Set.t) state = function
       | [] -> kinds, types, type_abbrevs, modes, defs, []
       | Clauses cl :: rest ->
           let compiled_cl = List.map (compile_clause state macros) cl in
@@ -1112,9 +1123,9 @@ module Flatten : sig
 
   val run : State.t -> Scoped.program -> Flat.program
   val merge_modes :
-    (mode * Loc.t) F.Map.t ->
-    (mode * Loc.t) F.Map.t ->
-    (mode * Loc.t) F.Map.t
+    (Mode.hos * Loc.t) F.Map.t ->
+    (Mode.hos * Loc.t) F.Map.t ->
+    (Mode.hos * Loc.t) F.Map.t
   val merge_kinds :
     Arity.t F.Map.t ->
     Arity.t F.Map.t ->
@@ -1443,7 +1454,7 @@ end = struct
         else unknown in
       (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
-      if typecheck then Determinacy_checker.check_clause ~uf:type_uf ~loc ~env:functional_preds spilled.body ~modes;
+      if typecheck then Determinacy_checker.check_clause ~uf:type_uf ~loc ~env:functional_preds spilled.body;
       unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
 
     let clauses = List.rev clauses in

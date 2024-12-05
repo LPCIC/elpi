@@ -43,15 +43,13 @@ let rec check_loc_tye ~type_abbrevs ~kinds ctx { loc; it } =
   check_tye ~loc ~type_abbrevs ~kinds ctx it
 and check_tye ~loc ~type_abbrevs ~kinds ctx = function
   | Any -> TypeAssignment.Any
+  | Prop p -> Prop p
   | Const(Bound _,c) -> check_param_exists ~loc c ctx; UVar c
   | Const(Global _,c) -> check_global_exists ~loc c type_abbrevs kinds 0; Cons c
   | App(c,x,xs) ->
       check_global_exists ~loc c type_abbrevs kinds (1 + List.length xs);
       App(c,check_loc_tye ~type_abbrevs ~kinds ctx x, List.map (check_loc_tye ~type_abbrevs ~kinds ctx) xs)
-  | Arrow(v,s,t) -> Arr(v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
-  | Pred(Function,[]) -> Prop Function
-  | Pred(Relation,[]) -> Prop Relation
-  | Pred(f,(_,x)::xs) -> Arr(NotVariadic,check_loc_tye ~type_abbrevs ~kinds ctx x,check_tye ~type_abbrevs ~kinds ~loc ctx (Pred(f,xs)))
+  | Arrow(m,v,s,t) -> Arr(m,v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
 
 
 let check_type ~type_abbrevs ~kinds ~loc ctx x : TypeAssignment.skema_w_id =
@@ -77,13 +75,13 @@ let check_type  ~type_abbrevs ~kinds { value; loc } : (TypeAssignment.skema_w_id
 let arrow_of_args args ety =
   let rec aux = function
   | [] -> ety
-  | x :: xs -> TypeAssignment.Arr(Ast.Structured.NotVariadic,ScopedTerm.type_of x,aux xs) in
+  | x :: xs -> TypeAssignment.Arr(Output(*TODO: @FissoreD*),NotVariadic,ScopedTerm.type_of x,aux xs) in
   aux args
 
 let arrow_of_tys tys ety =
   let rec aux = function
   | [] -> ety
-  | x :: xs -> TypeAssignment.Arr(Ast.Structured.NotVariadic,x,aux xs) in
+  | x :: xs -> TypeAssignment.Arr(Output(*TODO: @FissoreD*),Ast.Structured.NotVariadic,x,aux xs) in
   aux tys
 
 type env = TypeAssignment.overloaded_skema_with_id F.Map.t
@@ -156,10 +154,10 @@ type classification =
 let prop = TypeAssignment.Prop Relation
 
 let rec classify_arrow = function
-  | TypeAssignment.Arr(Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
+  | TypeAssignment.Arr(_(*TODO: @FissoreD*),Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
   | UVar m when MutableOnce.is_set m -> classify_arrow (TypeAssignment.deref m)
   | (App _ | Prop _ | Cons _ | Any | UVar _) as tgt -> Simple { srcs = []; tgt }
-  | TypeAssignment.Arr(NotVariadic,x,xs) ->
+  | TypeAssignment.Arr(_(*TODO: @FissoreD*),NotVariadic,x,xs) ->
       match classify_arrow xs with
       | Simple {srcs; tgt } -> Simple { srcs = x :: srcs; tgt }
       | Unknown -> Unknown
@@ -280,14 +278,14 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     in
     let tgt = mk_uvar "Tgt" in
     (* let () = Format.eprintf "lam ety %a\n" TypeAssignment.pretty ety in *)
-    if unify (TypeAssignment.Arr(Ast.Structured.NotVariadic,src,tgt)) ety then
+    if unify (TypeAssignment.Arr(Output(*TODO: @FissoreD*), Ast.Structured.NotVariadic,src,tgt)) ety then
       (* let () = Format.eprintf "add to ctx %a : %a\n" F.pp name TypeAssignment.pretty src in *)
       check_loc ~tyctx (Scope.Map.add name_lang src ctx) t ~ety:tgt
     else
       error_bad_function_ety ~loc ~tyctx ~ety c t
 
   and check_spill ctx ~loc ~tyctx sp info ety =
-    let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(TypeAssignment.Arr(Ast.Structured.NotVariadic,ety,mk_uvar "Spill")) in
+    let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(TypeAssignment.Arr(Output, Ast.Structured.NotVariadic,ety,mk_uvar "Spill")) in
     assert(inner_spills = []);
     let phantom_of_spill_ty i ty =
       { loc; it = Spill(sp,ref (Phantom(i+1))); ty = MutableOnce.create (TypeAssignment.Val ty) } in
@@ -384,10 +382,10 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | x :: xs ->
       (* Format.eprintf "checking app %a against %a\n" ScopedTerm.pretty_ (ScopedTerm.App(snd c, fst c,x,xs)) TypeAssignment.pretty ty; *)
       match ty with
-        | TypeAssignment.Arr(Variadic,s,t) ->
+        | TypeAssignment.Arr(_(*TODO: @FissoreD*), Variadic,s,t) ->
             let xs = check_loc_if_not_phantom ~tyctx:(Some (fst c)) ctx x ~ety:s @ xs in
             if xs = [] then t else check_app_single ctx ~loc c ty (x::consumed) xs
-        | Arr(NotVariadic,s,t) ->
+        | Arr(_(*TODO: @FissoreD*),NotVariadic,s,t) ->
             let xs = check_loc_if_not_phantom ~tyctx:(Some (fst c)) ctx x ~ety:s @ xs in
             check_app_single ctx ~loc c t (x::consumed) xs
         | Any -> check_app_single ctx ~loc c ty (x::consumed) xs
@@ -396,7 +394,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         | UVar m ->
             let s = mk_uvar "Src" in
             let t = mk_uvar "Tgt" in
-            let _ = unify ty (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) in
+            let _ = unify ty (TypeAssignment.Arr(Output(*TODO: @FissoreD*),Ast.Structured.NotVariadic,s,t)) in
             check_app_single ctx ~loc c ty consumed (x :: xs)
         | Cons a when F.Map.mem a type_abbrevs ->
             let ty = TypeAssignment.apply (fst @@ F.Map.find a type_abbrevs) [] in
@@ -519,9 +517,9 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         unif ~matching x y && Util.for_all2 (unif ~matching) xs ys
     | Cons c1, Cons c2 when F.equal c1 c2 -> true
     | Prop _, Prop _ -> true (* unification of prop is correct for tc indipendently of their functionality *)
-    | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unif ~matching s1 s2 && unif ~matching t1 t2      
-    | Arr(Variadic,_,t), _ -> unif ~matching t t2
-    | _, Arr(Variadic,_,t) -> unif ~matching t1 t
+    | Arr(_(*TODO: @FissoreD*),b1,s1,t1), Arr(_(*TODO: @FissoreD*),b2,s2,t2) -> b1 == b2 && unif ~matching s1 s2 && unif ~matching t1 t2      
+    | Arr(_(*TODO: @FissoreD*),Variadic,_,t), _ -> unif ~matching t t2
+    | _, Arr(_,Variadic,_,t) -> unif ~matching t1 t
     | UVar m, UVar n when matching -> assign m t2
     | UVar m, _ when not matching -> assign m t2
     | _, UVar m -> assign m t1
@@ -566,7 +564,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
 
   and oc m = function
     | Prop _ -> true
-    | Arr(_,x,y) -> oc m x && oc m y
+    | Arr(_,_,x,y) -> oc m x && oc m y
     | App(_,x,xs) -> List.for_all (oc m) (x::xs)
     | Any -> true
     | Cons _ -> true

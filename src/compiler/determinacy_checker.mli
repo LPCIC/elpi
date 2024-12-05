@@ -8,7 +8,7 @@ module Union_find : Union_find.S with type key = IdPos.t and type t = IdPos.t Id
 type t [@@deriving show, ord]
 
 val empty_fmap : t
-val check_clause : ?uf:Union_find.t -> loc:Loc.t -> env:t -> modes:(mode * Loc.t) F.Map.t -> ScopedTerm.t -> unit
+val check_clause : ?uf:Union_find.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit
 val merge : t -> t -> t
 val remove : t -> IdPos.t -> t
 
