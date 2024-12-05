@@ -135,7 +135,7 @@ let app a ?(len=String.length a) n ?(parenl=false) ?(parenr=0) ?(bug=false) b =
   let c = c n ~len a in
   let a1 = minl (c :: b) + (if parenl then -1 else 0) in
   let b2 = maxl (c :: b) + (parenr) in
-  Printf.eprintf "%s a1=%d\n" a a1;
+  (* Printf.eprintf "%s a1=%d\n" a a1; *)
   mkApp (mkLoc a1 b2 1 0) (c :: b)
 
 let cast n m t ty = mkCast (mkLoc n m 1 0) t ty
