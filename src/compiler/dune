@@ -9,3 +9,4 @@
 
 (test (name test_compiler_data) (libraries elpi.compiler) (modules test_compiler_data) (preprocess (pps ppx_deriving.std)))
 (test (name test_union_find) (libraries elpi.compiler) (modules test_union_find) (preprocess (pps ppx_deriving.std)))
+(test (name test_type_checker) (libraries elpi.compiler) (modules test_type_checker) (preprocess (pps ppx_deriving.std)))
