@@ -23,6 +23,7 @@ module Func : sig
   val sigmaf : t
   val eqf : t
   val isf : t
+  val asf : t
   val nilf : t
   val consf : t
   val arrowf : t
@@ -43,12 +44,7 @@ module Func : sig
   module Set : Set.S with type elt = t
 end
 
-module Mode : sig
-
-  type t = Input | Output
-  [@@deriving show, ord]
-
-end
+module Mode : Mode with type t = Mode.t
 
 type raw_attribute =
   | If of string
@@ -224,7 +220,6 @@ type program = {
   kinds : (unit,unit) Type.t list;
   types : (tattribute,functionality) Type.t list;
   type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
-  modes : (tattribute,functionality) Type.t list;
   body : block list;
 }
 and ('func,'term) block_constraint = {

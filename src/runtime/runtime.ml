@@ -2355,13 +2355,13 @@ let tail_opt = function
   | _ :: xs -> xs
 
 let hd_opt = function
-  | x :: _ -> get_arg_mode x
+  | x :: _ -> Mode.get_head x
   | _ -> Output
 
 type clause_arg_classification =
   | Variable
   | MustBeVariable
-  | Rigid of constant * arg_mode
+  | Rigid of constant * Mode.t
 
 let rec classify_clause_arg ~depth matching t =
   match deref_head ~depth t with
@@ -2608,7 +2608,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
           list_to_trie_path ~safe ~depth ~h:1 (path_depth + 1) 0 xs
 
   (** builds the sub-path of a sublist of arguments of the current clause  *)
-  and make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl mode_hd mode_tl = 
+  and make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl (mode_hd:Mode.t) mode_tl = 
     emit_mode is_goal (match mode_hd with Input -> mkInputMode | _ -> mkOutputMode);
     begin 
       if not is_goal then begin
@@ -2628,7 +2628,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
     | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, [] ->
       make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl Output []
     | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, mode_hd :: mode_tl ->
-      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl (get_arg_mode mode_hd) mode_tl 
+      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl (Mode.get_head mode_hd) mode_tl 
     | _, _ :: _,_ -> anomaly "Invalid Index length" in
   begin
     if args == [] then emit_mode is_goal mkOutputMode
@@ -2805,7 +2805,7 @@ let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate cla
       let idx = Ptmap.add predicate (make_new_Map_snd_level_index 0 []) idx in
       add1clause_compile_time ~depth { idx; time; times } ~graft predicate clause name
 
-let update_indexing (indexing : (mode * indexing) Constants.Map.t) (index : index) : index =
+let update_indexing (indexing : (Mode.hos * indexing) Constants.Map.t) (index : index) : index =
   let idx =
     C.Map.fold (fun predicate (mode, indexing) m ->
       Ptmap.add predicate 
@@ -2876,7 +2876,7 @@ let rec nth_not_found l n = match l with
   | _ :: l -> nth_not_found l (n-1)
 
 let rec nth_not_bool_default l n = match l with 
-  | [] -> Output
+  | [] -> Mode.Output
   | x :: _ when n = 0 -> x 
   | _ :: l -> nth_not_bool_default l (n - 1)
 
@@ -2985,7 +2985,7 @@ module Clausify : sig
 
   val clausify : loc:Loc.t option -> prolog_prog -> depth:int -> term -> (constant*clause) list * clause_src list * int
 
-  val clausify1 : loc:Loc.t -> modes:(constant -> mode) -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
+  val clausify1 : loc:Loc.t -> modes:(constant -> Mode.hos) -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
   
   (* Utilities that deref on the fly *)
   val lp_list_to_list : depth:int -> term -> term list
@@ -4014,7 +4014,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
           | x :: xs -> arg != C.dummy &&
              match c_mode with
              | [] -> unif ~argsdepth:depth ~matching:false (gid[@trace]) depth env c_depth arg x && for_all23 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs
-             | arg_mode :: ms -> unif ~argsdepth:depth ~matching:(get_arg_mode arg_mode == Input) (gid[@trace]) depth env c_depth arg x && for_all3b3 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs ms false
+             | arg_mode :: ms -> unif ~argsdepth:depth ~matching:(Mode.get_head arg_mode == Input) (gid[@trace]) depth env c_depth arg x && for_all3b3 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs ms false
         with
         | false ->
             T.undo ~old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cs]
