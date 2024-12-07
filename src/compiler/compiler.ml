@@ -227,7 +227,8 @@ and pbody = {
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
   modes : (mode * Loc.t) F.Map.t;
   body : block list;
-  symbols : F.Set.t;
+  pred_symbols : F.Set.t;
+  ty_symbols : F.Set.t;
 }
 and block =
   | Clauses of (ScopedTerm.t,Ast.Structured.attribute,bool) Ast.Clause.t list (* TODO: use a map : predicate -> clause list to speed up insertion *)
@@ -802,12 +803,15 @@ end = struct
     | Ast.TypeExpression.TConst c when F.show c = "prop" -> Pred (Relation,[])
     | TConst c when F.show c = "any" -> Any
     | TConst c when F.Set.mem c ctx -> Const(Bound elpi_language,c)
-    | TConst c -> Const(Scope.mkGlobal (),c)
+    | TConst c when is_global c -> Const(Scope.mkGlobal ~escape_ns:true (),of_global c)
+    | TConst c -> Const(Scope.mkGlobal(),c)
     | TApp(c,x,[y]) when F.show c = "variadic" ->
         Arrow(Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
+    | TApp(c,x,xs) when is_global c ->
+      App(Scope.mkGlobal ~escape_ns:true (), of_global c, scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
     | TApp(c,x,xs) ->
         if F.Set.mem c ctx || is_uvar_name c then error ~loc "type schema parameters cannot be type formers";
-        App(c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
+        App(Scope.mkGlobal (),c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
     | TPred(m,xs) -> Pred(m,List.map (fun (m,t) -> m, scope_loc_tye ctx t) xs)
     | TArr(s,t) -> Arrow(NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
   and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
@@ -820,7 +824,7 @@ end = struct
     let vars =
       let rec aux e { it } =
         match it with
-        | App(_,x,xs) -> List.fold_left aux e (x :: xs)
+        | App(_,_,x,xs) -> List.fold_left aux e (x :: xs)
         | Const(Bound _, _) -> assert false (* there are no binders yet *)
         | Const(Global _,c) when is_uvar_name c -> F.Set.add c e
         | Const(Global _,_) -> e
@@ -856,7 +860,7 @@ end = struct
         if is_uvar_name c then ScopedTerm.Var(c,[])
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
-        else if is_global c then ScopedTerm.(Const(Scope.mkGlobal (),of_global c))
+        else if is_global c then ScopedTerm.(Const(Scope.mkGlobal ~escape_ns:true (),of_global c))
         else ScopedTerm.(Const(Scope.mkGlobal (),c))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App ({ it = Parens f },l) -> scope_term ~state ctx ~loc (App(f, l))
@@ -1032,56 +1036,64 @@ end = struct
       let defs_k = defs_of_map kinds in
       let defs_t = defs_of_map types in
       let defs_ta = defs_of_assoclist type_abbrevs in
-      let kinds, types, type_abbrevs, modes, defs_b, body =
-        compile_body active_macros kinds types type_abbrevs modes F.Set.empty state body in
-      let symbols = F.Set.(union (union (union (union defs_k defs_m) defs_t) defs_b) defs_ta) in
+      let kinds, types, type_abbrevs, modes, defs_b, defs_ty, body =
+        compile_body active_macros kinds types type_abbrevs modes F.Set.empty F.Set.empty state body in
+      let ty_symbols = F.Set.(union defs_k (union defs_t (union defs_ta defs_ty))) in
+      let pred_symbols = F.Set.(union defs_t (union defs_m defs_b)) in
+      (* Format.eprintf "CP: types: %d\n" (F.Map.cardinal types);
+      Format.eprintf "CP: ty_sym: %a\n" F.Set.pp ty_symbols; *)
       toplevel_macros,
-      { Scoped.types; kinds; type_abbrevs; modes; body; symbols }
+      { Scoped.types; kinds; type_abbrevs; modes; body; ty_symbols; pred_symbols }
 
-    and compile_body macros kinds types type_abbrevs (modes : (mode * Loc.t) F.Map.t) (defs : F.Set.t) state = function
-      | [] -> kinds, types, type_abbrevs, modes, defs, []
+    and compile_body macros kinds types type_abbrevs (modes : (mode * Loc.t) F.Map.t) (defs : F.Set.t) (ty_defs : F.Set.t) state = function
+      | [] -> kinds, types, type_abbrevs, modes, defs, ty_defs, []
       | Clauses cl :: rest ->
           let compiled_cl = List.map (compile_clause state macros) cl in
           let defs = F.Set.union defs (global_hd_symbols_of_clauses compiled_cl) in
-          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs state rest in
+          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
           let compiled_rest =
             match compiled_rest with
             | Scoped.Clauses l :: rest -> Scoped.Clauses (compiled_cl @ l) :: rest
             | rest -> Scoped.Clauses compiled_cl :: rest in
-          kinds, types, type_abbrevs, modes, defs, compiled_rest
+          kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest
       | Namespace (prefix, p) :: rest ->
           let prefix = F.show prefix in
           let _, p = compile_program macros state p in
-          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs state rest in
-          let symbols = prepend [prefix] p.Scoped.symbols in
-          kinds, types, type_abbrevs, modes, F.Set.union defs symbols,
+          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
+          let ty_symbols = prepend [prefix] p.Scoped.ty_symbols in
+      (* Format.eprintf "CB: ty_sym %s: %a\n" prefix F.Set.pp ty_symbols; *)
+          let pred_symbols = prepend [prefix] p.Scoped.pred_symbols in
+          kinds, types, type_abbrevs, modes, F.Set.union defs pred_symbols, F.Set.union ty_defs ty_symbols,
           Scoped.Namespace(prefix, p) :: compiled_rest
       | Shorten(shorthands,p) :: rest ->
           let shorts = List.fold_left (fun s { Ast.Structured.short_name } ->
             F.Set.add short_name s) F.Set.empty shorthands in
           let _, p = compile_program macros state p in
-          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs state rest in
+          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
           kinds, types, type_abbrevs, modes,
-          F.Set.union defs (F.Set.diff p.Scoped.symbols shorts),
+          F.Set.union defs (F.Set.diff p.Scoped.pred_symbols shorts), (* TODO shorten/ shorten-ty *)
+          F.Set.union ty_defs (F.Set.diff p.Scoped.ty_symbols shorts),
           Scoped.Shorten(shorthands, p) :: compiled_rest
       | Constraints ({ctx_filter; clique; rules}, p) :: rest ->
           (* XXX missing check for nested constraints *)
           let rules = List.map (compile_chr_rule state macros) rules in
           let _, p = compile_program macros state p in
-          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs state rest in
+          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
           kinds, types, type_abbrevs, modes,
-          F.Set.union defs p.Scoped.symbols,
+          F.Set.union defs p.Scoped.pred_symbols,
+          F.Set.union ty_defs p.Scoped.ty_symbols,
           Scoped.Constraints({ctx_filter; clique; rules},p) :: compiled_rest
       | Accumulated p :: rest ->
           let _, p = compile_program macros state p in
-          let kinds, types, type_abbrevs, modes, defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs state rest in
+          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
           kinds, types, type_abbrevs, modes,
-          F.Set.union defs p.Scoped.symbols,
+          F.Set.union defs p.Scoped.pred_symbols,
+          F.Set.union ty_defs p.Scoped.ty_symbols,
           Scoped.Accumulated p :: compiled_rest
   
     in
@@ -1147,7 +1159,7 @@ module Flatten : sig
       { old_prefix; subst = List.fold_left push1 oldsubst shorthands }
 
 
-  let smart_map_scoped_term f t =
+  let smart_map_scoped_term f ~tyf:tyf t =
     let open ScopedTerm in
     let rec aux it =
       match it with
@@ -1167,14 +1179,14 @@ module Flatten : sig
           else App(scope,c',x',xs')
       | Lam(n,ty,b) ->
           let b' = aux_loc b in
-          let ty' = option_smart_map (ScopedTypeExpression.smart_map_scoped_loc_ty f) ty in
+          let ty' = option_smart_map (ScopedTypeExpression.smart_map_scoped_loc_ty tyf) ty in
           if b == b' && ty' == ty then it else Lam(n,ty',b')
       | Var(c,l) ->
           let l' = smart_map aux_loc l in
           if l == l' then it else Var(c,l')
       | Cast(t,ty) ->
           let t' = aux_loc t in
-          let ty' = ScopedTypeExpression.smart_map_scoped_loc_ty f ty in
+          let ty' = ScopedTypeExpression.smart_map_scoped_loc_ty tyf ty in
           if t' == t && ty' == ty then it else Cast(t',ty')
       | Discard -> it
       | CData _ -> it
@@ -1193,32 +1205,32 @@ module Flatten : sig
     try F.Map.find f s
     with Not_found -> f
 
-  let apply_subst_clauses s cl =
-    smart_map (smart_map_clause (smart_map_scoped_term (subst_global s))) cl
+  let apply_subst_clauses s ty_s cl =
+    smart_map (smart_map_clause (smart_map_scoped_term (subst_global s) ~tyf:(subst_global ty_s))) cl
 
-  let smart_map_sequent f ({ Ast.Chr. eigen; context; conclusion } as orig) =
-    let eigen' = smart_map_scoped_term f eigen in
-    let context' = smart_map_scoped_term f context in
-    let conclusion' = smart_map_scoped_term f conclusion in
+  let smart_map_sequent f ~tyf ({ Ast.Chr. eigen; context; conclusion } as orig) =
+    let eigen' = smart_map_scoped_term f ~tyf eigen in
+    let context' = smart_map_scoped_term f ~tyf context in
+    let conclusion' = smart_map_scoped_term f ~tyf conclusion in
     if eigen' == eigen && context' == context && conclusion' == conclusion then orig
     else { Ast.Chr.eigen = eigen'; context = context'; conclusion = conclusion' }
 
-  let smart_map_chr f ({ Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } as orig) =
-    let to_match' = smart_map (smart_map_sequent f) to_match in
-    let to_remove' = smart_map (smart_map_sequent f) to_remove in
-    let guard' = Util.option_map (smart_map_scoped_term f) guard in
-    let new_goal' = Util.option_map (smart_map_sequent f) new_goal in
+  let smart_map_chr f ~tyf ({ Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } as orig) =
+    let to_match' = smart_map (smart_map_sequent f ~tyf) to_match in
+    let to_remove' = smart_map (smart_map_sequent f ~tyf) to_remove in
+    let guard' = Util.option_map (smart_map_scoped_term f ~tyf) guard in
+    let new_goal' = Util.option_map (smart_map_sequent f ~tyf) new_goal in
     if to_match' == to_match && to_remove' == to_remove && guard' == guard && new_goal' == new_goal then orig
     else { Ast.Chr.to_match = to_match'; to_remove = to_remove'; guard = guard'; new_goal = new_goal'; attributes; loc }
 
-  let smart_map_chrs f ({ Ast.Structured.clique; ctx_filter; rules } as orig) =
+  let smart_map_chrs f ~tyf ({ Ast.Structured.clique; ctx_filter; rules } as orig) =
     let clique' = smart_map f clique in
     let ctx_filter' = smart_map f ctx_filter in
-    let rules' = smart_map (smart_map_chr f) rules in
+    let rules' = smart_map (smart_map_chr f ~tyf) rules in
     if clique' == clique && ctx_filter' == ctx_filter && rules' == rules then orig
     else { Ast.Structured.clique = clique'; ctx_filter = ctx_filter'; rules = rules' }
 
-  let apply_subst_chrs s = smart_map_chrs (subst_global s)
+  let apply_subst_chrs s sty = smart_map_chrs (subst_global s) ~tyf:(subst_global sty)
 
 
   let apply_subst_types s = TypeList.smart_map (ScopedTypeExpression.smart_map (subst_global s))
@@ -1274,50 +1286,54 @@ module Flatten : sig
       ) otlm toplevel_macros
       
 
-  let rec compile_block kinds types type_abbrevs modes clauses chr subst = function
+  let rec compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst = function
     | [] -> kinds, types, type_abbrevs, modes, clauses, chr
-    | Scoped.Shorten(shorthands, { kinds = k; types = t; type_abbrevs = ta; modes = m; body; symbols = _ }) :: rest ->
-      let insubst = push_subst_shorthands shorthands subst in
-      let kinds = merge_kinds (apply_subst_kinds insubst k) kinds in
-      let types = merge_types (apply_subst_types insubst t) types in
-      let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs insubst ta) in
-      let modes = merge_modes (apply_subst_modes insubst m) modes in
+    | Scoped.Shorten(shorthands, { kinds = k; types = t; type_abbrevs = ta; modes = m; body; pred_symbols = _; ty_symbols = _ }) :: rest ->
+      let inpsubst = push_subst_shorthands shorthands pred_subst in
+      let intysubst = push_subst_shorthands shorthands ty_subst in
+      let kinds = merge_kinds (apply_subst_kinds intysubst k) kinds in
+      let types = merge_types (apply_subst_types intysubst t) types in
+      let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs intysubst ta) in
+      let modes = merge_modes (apply_subst_modes inpsubst m) modes in
       let kinds, types, type_abbrevs, modes, clauses, chr =
-        compile_block kinds types type_abbrevs modes clauses chr insubst body in
-      compile_block kinds types type_abbrevs modes clauses chr subst rest
-  | Scoped.Namespace (extra, { kinds = k; types = t; type_abbrevs = ta; modes = m; body; symbols = s }) :: rest ->
-      let new_subst = push_subst extra s subst in
-      let kinds = merge_kinds (apply_subst_kinds new_subst k) kinds in
-      let types = merge_types (apply_subst_types new_subst t) types in
-      let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs new_subst ta) in
-      let modes = merge_modes (apply_subst_modes new_subst m) modes in
+        compile_block kinds types type_abbrevs modes clauses chr inpsubst intysubst body in
+      compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst rest
+  | Scoped.Namespace (extra, { kinds = k; types = t; type_abbrevs = ta; modes = m; body; pred_symbols = ps; ty_symbols = ts }) :: rest ->
+      let new_pred_subst = push_subst extra ps pred_subst in
+      let new_ty_subst = push_subst extra ts ty_subst in
+      let kinds = merge_kinds (apply_subst_kinds new_ty_subst k) kinds in
+      (* Format.eprintf "@[<v>Types before:@ %a@]@," F.Map.(pp TypeList.pretty) t; *)
+      let types = merge_types (apply_subst_types new_ty_subst t) types in
+      (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp TypeList.pretty) (apply_subst_types new_ty_subst t); *)
+      let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs new_ty_subst ta) in
+      let modes = merge_modes (apply_subst_modes new_pred_subst m) modes in
       let kinds, types, type_abbrevs, modes, clauses, chr =
-        compile_block kinds types type_abbrevs modes clauses chr new_subst body in
-      compile_block kinds types type_abbrevs modes clauses chr subst rest
+        compile_block kinds types type_abbrevs modes clauses chr new_pred_subst new_ty_subst body in
+      compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst rest
   | Scoped.Clauses cl :: rest ->
-      let cl = apply_subst_clauses subst cl in
+      let cl = apply_subst_clauses pred_subst ty_subst cl in
       let clauses = cl :: clauses in
-      compile_block kinds types type_abbrevs modes clauses chr subst rest
+      compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst rest
   | Scoped.Constraints (ch, { kinds = k; types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
-      let kinds = merge_kinds (apply_subst_kinds subst k) kinds in
-      let types = merge_types (apply_subst_types subst t) types in
-      let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs subst ta) in
-      let modes = merge_modes (apply_subst_modes subst m) modes in
-      let chr = apply_subst_chrs subst ch :: chr in
+      let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
+      let types = merge_types (apply_subst_types ty_subst t) types in
+      let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
+      let modes = merge_modes (apply_subst_modes pred_subst m) modes in
+      let chr = apply_subst_chrs pred_subst  ty_subst ch :: chr in
       let kinds, types, type_abbrevs, modes, clauses, chr =
-        compile_block kinds types type_abbrevs modes clauses chr subst body in
-      compile_block kinds types type_abbrevs modes clauses chr subst rest
-  | Scoped.Accumulated { kinds=k; types = t; type_abbrevs = ta; modes = m; body; symbols = _ } :: rest ->
-      let kinds = merge_kinds (apply_subst_kinds subst k) kinds in
-      let types = merge_types (apply_subst_types subst t) types in
-      let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs subst ta) in
-      let modes = merge_modes (apply_subst_modes subst m) modes in
+        compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst body in
+      compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst rest
+  | Scoped.Accumulated { kinds=k; types = t; type_abbrevs = ta; modes = m; body; pred_symbols = _; ty_symbols = _ } :: rest ->
+      let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
+      let types = merge_types (apply_subst_types ty_subst t) types in
+      let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
+      let modes = merge_modes (apply_subst_modes pred_subst m) modes in
       let kinds, types, type_abbrevs, modes, clauses, chr =
-        compile_block kinds types type_abbrevs modes clauses chr subst body in
-      compile_block kinds types type_abbrevs modes clauses chr subst rest
+        compile_block kinds types type_abbrevs modes clauses chr ty_subst pred_subst body in
+      compile_block kinds types type_abbrevs modes clauses chr ty_subst pred_subst rest
 
-  let compile_body { Scoped.kinds; types; type_abbrevs; modes; symbols; body } =
-    compile_block kinds types type_abbrevs modes [] [] empty_subst body
+  let compile_body { Scoped.kinds; types; type_abbrevs; modes; ty_symbols = _; pred_symbols = _; body } =
+    compile_block kinds types type_abbrevs modes [] [] empty_subst empty_subst body
 
   let run state { Scoped.pbody; toplevel_macros } =
     let kinds, types, type_abbrevs, modes, clauses_rev, chr_rev = compile_body pbody in
@@ -2242,7 +2258,7 @@ let handle_clause_graftin (clauses: (Ast.Structured.insertion option * string op
   let clauses = clauses |> List.filter (fun (c,_,_,_) -> match c with Some (Ast.Structured.Remove _) -> false | _ -> true) in
   List.map (fun (_,a,b,c) -> a,b,c) clauses
 
-let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Assembled.clauses; symbols }) =
+let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Assembled.clauses; signature; symbols }) =
 
   let clauses = handle_clause_graftin clauses in
 
@@ -2251,6 +2267,28 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
     table = SymbolMap.compile symbols;
   } in
   Format.fprintf fmt "@[<v>";
+  F.Map.iter (fun name (ty,_) ->
+    let rec a2k = function
+      | 0 -> "type"
+      | n -> "type -> " ^ a2k (n-1) in
+    Format.fprintf fmt "@[<h>kind %s %s.@]@," (F.show name) (a2k ty))
+    signature.kinds;
+  F.Map.iter (fun name ty ->
+    let tys = 
+      match TypeAssignment.fresh_overloaded ty with
+      | TypeAssignment.Single (_,t) -> [t]
+      | TypeAssignment.Overloaded l -> List.map snd l in
+    let name =
+      match Elpi_parser.Parser_config.precedence_of (F.show name) with
+      | (Some _,_) -> "("^F.show name^")"
+      | _ -> F.show name in
+    List.iter (fun ty -> Format.fprintf fmt "@[<h>type %s %a.@]@," name TypeAssignment.pretty ty) tys;
+    )
+    signature.types;
+  F.Map.iter (fun name (ty,_) ->
+    Format.fprintf fmt "@[<h>typeabbrv %a (%a).@]@," F.pp name TypeAssignment.pretty (snd @@ fst @@ TypeAssignment.fresh ty)
+    )
+    signature.type_abbrevs;
   List.iter (fun (name,predicate,{ depth; args; hyps; loc; timestamp }) ->
     Format.fprintf fmt "@[<h>%% %a [%a] %a@]@;"
       Format.(pp_print_option Loc.pp) loc
