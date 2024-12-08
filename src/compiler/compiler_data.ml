@@ -78,7 +78,7 @@ module ScopedTypeExpression = struct
   type t_ =
     | Any
     | Const of Scope.t * F.t
-    | App of F.t * e * e list
+    | App of Scope.t * F.t * e * e list
     | Arrow of Ast.Structured.variadic * e * e
     | Pred of Ast.Structured.functionality * (Ast.Mode.t * e) list
   and e = { it : t_; loc : Loc.t }
@@ -98,7 +98,7 @@ module ScopedTypeExpression = struct
   let rec pretty_e fmt = function
     | Any -> fprintf fmt "any"
     | Const(_,c) -> F.pp fmt c
-    | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_e_parens ~lvl:app) " ") (x::xs)
+    | App(_,f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_e_parens ~lvl:app) " ") (x::xs)
     | Arrow(NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
     | Arrow(Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
     | Pred(_,[]) -> fprintf fmt "prop"
@@ -115,7 +115,7 @@ module ScopedTypeExpression = struct
   let rec of_simple_type = function
     | SimpleType.Any -> Any
     | Con c -> Const(Scope.mkGlobal (),c)
-    | App(c,x,xs) -> App(c,of_simple_type_loc x,List.map of_simple_type_loc xs)
+    | App(c,x,xs) -> App(Scope.mkGlobal (),c,of_simple_type_loc x,List.map of_simple_type_loc xs)
     | Arr(s,t) -> Arrow(NotVariadic,of_simple_type_loc s, of_simple_type_loc t)
   and of_simple_type_loc { it; loc } = { it = of_simple_type it; loc }
 
@@ -127,11 +127,19 @@ module ScopedTypeExpression = struct
   type t = { name : F.t; value : v_; nparams : int; loc : Loc.t; indexing : Ast.Structured.tattribute option }
   [@@ deriving show]
 
+  let pretty fmt { value } =
+    let rec pretty fmt = function
+      | Lam(_,x) -> pretty fmt x
+      | Ty e -> pretty_e fmt e in
+    Format.fprintf fmt "@[%a@]" pretty value
+
   let rec eqt ctx t1 t2 =
     match t1.it, t2.it with
     | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> Scope.compare b1 b2 == 0 && F.equal c1 c2
     | Const(Bound l1,c1), Const(Bound l2,c2) -> Scope.compare_language l1 l2 == 0 && eq_var ctx l1 c1 c2
-    | App(c1,x,xs), App(c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
+    | App(Global _,c1,x,xs), App(Global _,c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
+    | App(Bound _,_,_,_), _ -> assert false
+    | _, App(Bound _,_,_,_) -> assert false
     | Arrow(b1,s1,t1), Arrow(b2,s2,t2) -> b1 = b2 && eqt ctx s1 s2 && eqt ctx t1 t2
     | Pred(f1,l1), Pred(f2,l2) -> f1 = f2 && Util.for_all2 (fun (m1,t1) (m2,t2) -> Ast.Mode.compare m1 m2 == 0 && eqt ctx t1 t2) l1 l2
     | Any, Any -> true
@@ -157,11 +165,12 @@ module ScopedTypeExpression = struct
     | Const(Scope.Global _ as g,c) ->
         let c' = f c in
         if c == c' then orig else Const(g,c')
-    | App(c,x,xs) ->
-        let c' = f c in
+    | App(Bound _,_,_,_) -> assert false
+    | App(Global g as s, c,x,xs) ->
+        let c' = if g.escape_ns then c else f c in
         let x' = smart_map_scoped_loc_ty f x in
         let xs' = smart_map (smart_map_scoped_loc_ty f) xs in
-        if c' == c && x' == x && xs' == xs then orig else App(c',x',xs')
+        if c' == c && x' == x && xs' == xs then orig else App(s,c',x',xs')
     | Arrow(v,x,y) ->
         let x' = smart_map_scoped_loc_ty f x in
         let y' = smart_map_scoped_loc_ty f y in
@@ -660,6 +669,7 @@ module TypeList = struct
 
   type t = ScopedTypeExpression.t list
   [@@deriving show, ord]
+  let pretty fmt l = pplist ScopedTypeExpression.pretty ";" fmt l
   
   let make t = [t]
     

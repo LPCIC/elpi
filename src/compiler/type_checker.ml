@@ -44,7 +44,7 @@ and check_tye ~loc ~type_abbrevs ~kinds ctx = function
   | Any -> TypeAssignment.Any
   | Const(Bound _,c) -> check_param_exists ~loc c ctx; UVar c
   | Const(Global _,c) -> check_global_exists ~loc c type_abbrevs kinds 0; Cons c
-  | App(c,x,xs) ->
+  | App(_,c,x,xs) ->
       check_global_exists ~loc c type_abbrevs kinds (1 + List.length xs);
       App(c,check_loc_tye ~type_abbrevs ~kinds ctx x, List.map (check_loc_tye ~type_abbrevs ~kinds ctx) xs)
   | Arrow(v,s,t) -> Arr(v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
@@ -222,6 +222,8 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
   and global_type env ~loc c : ret_id TypeAssignment.overloading =
     try TypeAssignment.fresh_overloaded @@ F.Map.find c env
     with Not_found ->
+      (* Printf.eprintf "%s\n" F.(show c);
+      assert false; *)
       try
         let ty,id,_ = F.Map.find c !unknown_global in
         Single (id,TypeAssignment.unval ty)
@@ -328,7 +330,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
           check_app_overloaded ctx ~loc (c,cid) ety args targs l l
       end
     | Single (id,ty) ->
-      (* Format.eprintf "1option: %a\n" TypeAssignment.pretty ty; *)
+      (* Format.eprintf "%a: 1 option: %a\n" F.pp c TypeAssignment.pretty ty; *)
         let err ty =
           if args = [] then error_bad_ety ~loc ~tyctx ~ety F.pp c ty (* uvar *)
           else error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Scope.mkGlobal ~escape_ns:true ()(* sucks *),c,List.hd args,List.tl args)) ty in

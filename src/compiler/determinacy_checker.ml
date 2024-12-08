@@ -96,7 +96,7 @@ module Compilation = struct
     | Pred(Relation, xs) -> Relational (map_snd (type2func ~loc bound_vars fmap) xs)
     | Const (_,c) when F.Set.mem c bound_vars -> BoundVar c
     | Const (_,c) -> type2func_ty_abbr ~loc bound_vars fmap c []
-    | App(c,x,xs) -> type2func_ty_abbr ~loc bound_vars fmap c (x::xs)
+    | App(_,c,x,xs) -> type2func_ty_abbr ~loc bound_vars fmap c (x::xs)
     | Arrow (Variadic, _, _) -> AssumedFunctional
     (* Invariant: the rightmost type in the right branch is not a prop due flatten_arrows in compiler *)
     | Arrow (NotVariadic,_,_) -> NoProp
