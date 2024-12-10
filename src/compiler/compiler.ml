@@ -1653,9 +1653,6 @@ end = struct
 
     symbols, R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
-  type spill = { vars : ScopedTerm.t list; vars_names : F.t list; expr : ScopedTerm.t }
-  type spills = spill list
-
   let to_dbl ?(ctx=Scope.Map.empty) ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let symb = ref symb in
     let amap = ref amap in
