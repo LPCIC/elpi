@@ -53,7 +53,6 @@ let _ =
   in
 
   let _ =
-    (* Format.eprintf "The env is %a@." (F.Map.pp pp_overloaded') types; *)
     let varX = var "X" in
     let varY = var "Y" in
     let term = app "=" (app "f" varY []) [ varX ] in

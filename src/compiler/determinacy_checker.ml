@@ -789,7 +789,7 @@ let to_check_clause ScopedTerm.{ it; loc } =
   let n = get_namef it in
   not (F.equal n F.mainf)
 (* && Re.Str.string_match (Re.Str.regexp ".*test.*") (Loc.show loc) 0 *)
-(* && Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0 *)
+&& Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0
 
 let check_clause ?uf ~loc ~env t =
   if to_check_clause t then (
