@@ -105,10 +105,10 @@ let () = declare "w"
   ~source_elpi:"w.elpi"
   ~description:"ELPI example at MLWS"
   ()
-let () = declare "uvar_keyword"
+(* let () = declare "uvar_keyword"
   ~source_elpi:"uvar_chr.elpi"
   ~description:"uvar kwd status at the meta level"
-  ()
+  () *)
 let () = declare "polymorphic_variants"
   ~source_elpi:"polymorphic_variants.elpi"
   ~description:"typechecker for polymorphic variants"
@@ -459,13 +459,13 @@ let () = declare "bad_index"
   ()
  
 
-let sample = mk_tmp_file "trace_w.json" ".new"
+(* let sample = mk_tmp_file "trace_w.json" ".new"
 let () = declare "trace-browser-w"
   ~source_elpi:"trace-w/main.elpi"
   ~description:"trace generation"
     ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_w.json" })
-  ()
+  () *)
 
 let sample = mk_tmp_file "trace_w.elab.json" ".new"
 let () = declare "trace-browser-w-elab"

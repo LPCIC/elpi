@@ -857,7 +857,6 @@ module BuiltIn : sig
 
 end
 
-
 (* ************************************************************************* *)
 (* ********************* Advanced Extension API **************************** *)
 (* ************************************************************************* *)
@@ -1329,6 +1328,12 @@ module Utils : sig
     type t
     val pp : Format.formatter -> t -> unit
     val show : t -> string
+  end
+
+  module type ShowKey = sig
+    type key
+    val pp_key : Format.formatter -> key -> unit
+    val show_key : key -> string
   end
 
   module type Show1 = sig

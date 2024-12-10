@@ -38,18 +38,18 @@ let check_global_exists ~loc c (type_abbrevs : type_abbrevs) arities nargs =
   end else
     error ~loc ("Unknown type " ^ F.show c)
 
+(* Converts a ScopedTypeExpression into a TypeAssignment *)
 let rec check_loc_tye ~type_abbrevs ~kinds ctx { loc; it } =
   check_tye ~loc ~type_abbrevs ~kinds ctx it
 and check_tye ~loc ~type_abbrevs ~kinds ctx = function
   | Any -> TypeAssignment.Any
+  | Prop p -> Prop p
   | Const(Bound _,c) -> check_param_exists ~loc c ctx; UVar c
   | Const(Global _,c) -> check_global_exists ~loc c type_abbrevs kinds 0; Cons c
   | App(c,x,xs) ->
       check_global_exists ~loc c type_abbrevs kinds (1 + List.length xs);
       App(c,check_loc_tye ~type_abbrevs ~kinds ctx x, List.map (check_loc_tye ~type_abbrevs ~kinds ctx) xs)
-  | Arrow(v,s,t) -> Arr(v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
-  | Pred(_,[]) -> Prop
-  | Pred(f,(_,x)::xs) -> Arr(NotVariadic,check_loc_tye ~type_abbrevs ~kinds ctx x,check_tye ~type_abbrevs ~kinds ~loc ctx (Pred(f,xs)))
+  | Arrow(m,v,s,t) -> Arr(m,v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
 
 
 let check_type ~type_abbrevs ~kinds ~loc ctx x : TypeAssignment.skema_w_id =
@@ -61,7 +61,7 @@ let check_type ~type_abbrevs ~kinds ~loc ctx x : TypeAssignment.skema_w_id =
         TypeAssignment.Lam(c,aux_params ~loc (F.Set.add c ctx) t)
     | Ty t -> TypeAssignment.Ty(check_loc_tye ~type_abbrevs ~kinds ctx t)
   in
-    Scope.fresh_type_decl_id (), aux_params ~loc ctx x
+    Scope.fresh_type_decl_id loc, aux_params ~loc ctx x
 
 let check_types  ~type_abbrevs ~kinds lst : TypeAssignment.overloaded_skema_with_id =
   match List.map (fun { value; loc } -> check_type ~type_abbrevs ~kinds ~loc F.Set.empty value) lst with
@@ -75,17 +75,18 @@ let check_type  ~type_abbrevs ~kinds { value; loc } : (TypeAssignment.skema_w_id
 let arrow_of_args args ety =
   let rec aux = function
   | [] -> ety
-  | x :: xs -> TypeAssignment.Arr(Ast.Structured.NotVariadic,ScopedTerm.type_of x,aux xs) in
+  | x :: xs -> TypeAssignment.Arr(Output(*TODO: @FissoreD*),NotVariadic,ScopedTerm.type_of x,aux xs) in
   aux args
 
 let arrow_of_tys tys ety =
   let rec aux = function
   | [] -> ety
-  | x :: xs -> TypeAssignment.Arr(Ast.Structured.NotVariadic,x,aux xs) in
+  | x :: xs -> TypeAssignment.Arr(Output(*TODO: @FissoreD*),Ast.Structured.NotVariadic,x,aux xs) in
   aux tys
 
 type env = TypeAssignment.overloaded_skema_with_id F.Map.t
 type env_undeclared = (TypeAssignment.t * Scope.type_decl_id * Ast.Loc.t) F.Map.t
+[@@deriving show]
 
 open ScopedTerm
 
@@ -114,7 +115,7 @@ let error_bad_ety2 ~loc ~tyctx ~ety1 ~ety2 pp c tx =
   error ~loc msg
 
 let error_bad_function_ety ~loc ~tyctx ~ety c t =
-  let msg = Format.asprintf "@[<hov>%a is a function@ but %a expects a term of type@ %a@]"  ScopedTerm.pretty_ ScopedTerm.(Lam(c,None,t)) pp_tyctx tyctx TypeAssignment.pretty ety in
+  let msg = Format.asprintf "@[<hov>%a is a function@ but %a expects a term of type@ %a@]"  ScopedTerm.pretty_ ScopedTerm.(Lam(c,None,ScopedTerm.mk_empty_lam_type c,t)) pp_tyctx tyctx TypeAssignment.pretty ety in
   error ~loc msg
 
 let error_bad_const_ety_l ~loc ~tyctx ~ety c txl =
@@ -138,11 +139,11 @@ let error_not_poly ~loc c ty sk =
     TypeAssignment.pretty sk)
 
 type ret = TypeAssignment.t MutableOnce.t TypeAssignment.t_
-type ret_id = int * TypeAssignment.t MutableOnce.t TypeAssignment.t_
+type ret_id = IdPos.t * TypeAssignment.t MutableOnce.t TypeAssignment.t_
 type spilled_phantoms = ScopedTerm.t list
 
 let local_type ctx ~loc c : ret_id TypeAssignment.overloading =
-  try TypeAssignment.Single (0, Scope.Map.find c ctx) (* local types have no id, 0 is given by default *)
+  try TypeAssignment.Single (Scope.dummy_type_decl_id, Scope.Map.find c ctx) (* local types have no id, 0 is given by default *)
   with Not_found -> anomaly ~loc "free variable"
 
 type classification =
@@ -150,11 +151,13 @@ type classification =
   | Variadic of { srcs : ret list; tgt : ret }
   | Unknown
 
+let prop = TypeAssignment.Prop Relation
+
 let rec classify_arrow = function
-  | TypeAssignment.Arr(Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
+  | TypeAssignment.Arr(_(*TODO: @FissoreD*),Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
   | UVar m when MutableOnce.is_set m -> classify_arrow (TypeAssignment.deref m)
-  | (App _ | Prop | Cons _ | Any | UVar _) as tgt -> Simple { srcs = []; tgt }
-  | TypeAssignment.Arr(NotVariadic,x,xs) ->
+  | (App _ | Prop _ | Cons _ | Any | UVar _) as tgt -> Simple { srcs = []; tgt }
+  | TypeAssignment.Arr(_(*TODO: @FissoreD*),NotVariadic,x,xs) ->
       match classify_arrow xs with
       | Simple {srcs; tgt } -> Simple { srcs = x :: srcs; tgt }
       | Unknown -> Unknown
@@ -205,7 +208,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | Spill(sp,info) -> check_spill ctx ~loc ~tyctx sp info ety
     | App(Global _ as gid,c,x,xs) -> check_app ctx ~loc ~tyctx (c,gid) (global_type env ~loc c) (x::xs) ety 
     | App(Bound lang as gid,c,x,xs) -> check_app ctx ~loc ~tyctx (c,gid) (local_type ctx ~loc (c,lang)) (x::xs) ety
-    | Lam(c,cty,t) -> check_lam ctx ~loc ~tyctx c cty t ety
+    | Lam(c,cty,tya,t) -> check_lam ctx ~loc ~tyctx c cty tya t ety
     | Discard -> []
     | Var(c,args) -> check_app ctx ~loc ~tyctx (c, Bound elpi_language (*hack*)) (uvar_type ~loc c) args ety
     | Cast(t,ty) ->
@@ -214,10 +217,9 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         if unify ty ety then spills
         else error_bad_ety ~loc ~tyctx ScopedTerm.pretty_ x ty ~ety
 
-  and resolve_gid id _ = ()
-  (*function
+  and resolve_gid id = function
     | Scope.Global x -> x.decl_id <- id
-    | _ -> ()*)
+    | _ -> ()
 
   and global_type env ~loc c : ret_id TypeAssignment.overloading =
     try TypeAssignment.fresh_overloaded @@ F.Map.find c env
@@ -227,19 +229,19 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         Single (id,TypeAssignment.unval ty)
       with Not_found ->
         let ty = TypeAssignment.Val (mk_uvar (Format.asprintf "Unknown_type_of_%a_" F.pp c)) in
-        let id = Scope.fresh_type_decl_id () in
+        let id = Scope.fresh_type_decl_id loc in
         unknown_global := F.Map.add c (ty,id,loc) !unknown_global;
         Single (id,TypeAssignment.unval ty)
       
   and check_impl ctx ~loc ~tyctx b t1 t2 ety =
-    if not @@ unify (ety) Prop then error_bad_ety ~loc ~tyctx ~ety:Prop ScopedTerm.pretty_ (Impl(b,t1,t2)) (ety)
+    if not @@ unify (ety) prop then error_bad_ety ~loc ~tyctx ~ety:prop ScopedTerm.pretty_ (Impl(b,t1,t2)) (ety)
     else
       let lhs, rhs,c (* of => *) = if b then t1,t2,F.implf else t2,t1,F.rimplf in
-      let spills = check_loc ~tyctx:(Some c) ctx rhs ~ety:Prop in
+      let spills = check_loc ~tyctx:(Some c) ctx rhs ~ety:prop in
       let lhs_ty = mk_uvar "Src" in
       let more_spills = check_loc ~tyctx:None ctx ~ety:lhs_ty lhs in
-      let ety1 = TypeAssignment.Prop in
-      let ety2 = TypeAssignment.App(F.from_string "list",Prop,[]) in
+      let ety1 = prop in
+      let ety2 = TypeAssignment.App(F.from_string "list",prop,[]) in
       if try_unify lhs_ty ety1 then spills @ more_spills (* probably an error if not empty *)
       else if unify lhs_ty (ety2) then spills @ more_spills (* probably an error if not empty *)
       else error_bad_ety2 ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
@@ -267,28 +269,29 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     if unify ty ety then []
     else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
-  and check_lam ctx ~loc ~tyctx c cty t ety =
+  and check_lam ctx ~loc ~tyctx c cty tya t ety =
     let name_lang = match c with Some c -> c | None -> fresh_name (), elpi_language in
-    let src = match cty with
-      | None -> mk_uvar "Src"
-      | Some x -> 
-          TypeAssignment.subst (fun f -> Some (TypeAssignment.UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty x in
+    let set_tya_ret f = MutableOnce.set tya (Val f); f in
+    let src = set_tya_ret @@ match cty with
+      | None ->  mk_uvar "Src"
+      | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty x
+    in
     let tgt = mk_uvar "Tgt" in
     (* let () = Format.eprintf "lam ety %a\n" TypeAssignment.pretty ety in *)
-    if unify (TypeAssignment.Arr(Ast.Structured.NotVariadic,src,tgt)) ety then
+    if unify (TypeAssignment.Arr(Output(*TODO: @FissoreD*), Ast.Structured.NotVariadic,src,tgt)) ety then
       (* let () = Format.eprintf "add to ctx %a : %a\n" F.pp name TypeAssignment.pretty src in *)
       check_loc ~tyctx (Scope.Map.add name_lang src ctx) t ~ety:tgt
     else
       error_bad_function_ety ~loc ~tyctx ~ety c t
 
   and check_spill ctx ~loc ~tyctx sp info ety =
-    let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(TypeAssignment.Arr(Ast.Structured.NotVariadic,ety,mk_uvar "Spill")) in
+    let inner_spills = check_spill_conclusion_loc ~tyctx:None ctx sp ~ety:(TypeAssignment.Arr(Output, Ast.Structured.NotVariadic,ety,mk_uvar "Spill")) in
     assert(inner_spills = []);
     let phantom_of_spill_ty i ty =
       { loc; it = Spill(sp,ref (Phantom(i+1))); ty = MutableOnce.create (TypeAssignment.Val ty) } in
     match classify_arrow (ScopedTerm.type_of sp) with
     | Simple { srcs; tgt } ->
-        if not @@ unify tgt Prop then error ~loc "only predicates can be spilled";
+        if not @@ unify tgt prop then error ~loc "only predicates can be spilled";
         let spills = srcs in
         if spills = [] then
           error ~loc "nothing to spill, the expression lacks no arguments";
@@ -379,10 +382,10 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | x :: xs ->
       (* Format.eprintf "checking app %a against %a\n" ScopedTerm.pretty_ (ScopedTerm.App(snd c, fst c,x,xs)) TypeAssignment.pretty ty; *)
       match ty with
-        | TypeAssignment.Arr(Variadic,s,t) ->
+        | TypeAssignment.Arr(_(*TODO: @FissoreD*), Variadic,s,t) ->
             let xs = check_loc_if_not_phantom ~tyctx:(Some (fst c)) ctx x ~ety:s @ xs in
             if xs = [] then t else check_app_single ctx ~loc c ty (x::consumed) xs
-        | Arr(NotVariadic,s,t) ->
+        | Arr(_(*TODO: @FissoreD*),NotVariadic,s,t) ->
             let xs = check_loc_if_not_phantom ~tyctx:(Some (fst c)) ctx x ~ety:s @ xs in
             check_app_single ctx ~loc c t (x::consumed) xs
         | Any -> check_app_single ctx ~loc c ty (x::consumed) xs
@@ -391,7 +394,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         | UVar m ->
             let s = mk_uvar "Src" in
             let t = mk_uvar "Tgt" in
-            let _ = unify ty (TypeAssignment.Arr(Ast.Structured.NotVariadic,s,t)) in
+            let _ = unify ty (TypeAssignment.Arr(Output(*TODO: @FissoreD*),Ast.Structured.NotVariadic,s,t)) in
             check_app_single ctx ~loc c ty consumed (x :: xs)
         | Cons a when F.Map.mem a type_abbrevs ->
             let ty = TypeAssignment.apply (fst @@ F.Map.find a type_abbrevs) [] in
@@ -431,11 +434,11 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         let lhs = mk_uvar "LHS" in
         let spills = check_loc ~tyctx ctx x ~ety:lhs in
         if spills <> [] then error ~loc "Hard spill";
-        if try_unify lhs Prop || try_unify lhs (App(F.from_string "list",Prop,[]))
+        if try_unify lhs prop || try_unify lhs (App(F.from_string "list",prop,[]))
         then check_spill_conclusion_loc ~tyctx ctx y ~ety
         else error ~loc "Bad impl in spill"
     | App(Global _ as g,c,x,xs) when F.equal c F.andf ->
-        let spills = check_loc ~tyctx ctx x ~ety:Prop in
+        let spills = check_loc ~tyctx ctx x ~ety:prop in
         if spills <> [] then error ~loc "Hard spill";
         begin match xs with
         | [] -> assert false
@@ -448,7 +451,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     let c, args =
       let rec head it =
         match it with
-        | App(Global _,f,{ it = Lam(_,_,x) },[]) when F.equal F.pif f -> head x.it
+        | App(Global _,f,{ it = Lam(_,_,_,x) },[]) when F.equal F.pif f -> head x.it
         | Impl(false,{ it = App(Global _,c',x,xs) },_) -> c', x :: xs
         | Impl(false,{ it = Const(Global _,c') },_) -> c', []
         | App(Global _,c,x,xs) -> c, x :: xs
@@ -460,7 +463,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     (* Format.eprintf "Checking %a\n" F.pp c; *)
     match F.Map.find c env with
     | Single (_id,Ty _) -> () (* TODO: Should use id? *)
-    | Single (_id, Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args Prop) (* TODO: should use id? *)
+    | Single (_id, Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args prop) (* TODO: should use id? *)
     | Overloaded _ -> ()
     | exception Not_found -> assert(F.Map.mem c unknown)
 
@@ -497,11 +500,11 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     try
       let ty, nocc, loc = F.Map.find c !sigma in
       sigma := F.Map.add c (ty,nocc+1,loc) !sigma;
-      Single (0, TypeAssignment.unval @@ ty) (* TODO: not sure of this... *)
+      Single (Scope.dummy_type_decl_id, TypeAssignment.unval @@ ty)
     with Not_found ->
       let ty = TypeAssignment.UVar (MutableOnce.make c) in
       sigma := F.Map.add c (TypeAssignment.Val ty,1,loc) !sigma;
-      Single (0, ty) (* TODO: not sure of this... *)
+      Single (Scope.dummy_type_decl_id, ty)
   and unif ~matching t1 t2 =
     (* Format.eprintf "%a = %a\n" TypeAssignment.pretty t1 TypeAssignment.pretty t2; *)
     let open TypeAssignment in
@@ -513,10 +516,10 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | App(c1,x,xs), App(c2,y,ys) when F.equal c1 c2 ->
         unif ~matching x y && Util.for_all2 (unif ~matching) xs ys
     | Cons c1, Cons c2 when F.equal c1 c2 -> true
-    | Prop, Prop -> true
-    | Arr(b1,s1,t1), Arr(b2,s2,t2) -> b1 == b2 && unif ~matching s1 s2 && unif ~matching t1 t2      
-    | Arr(Variadic,_,t), _ -> unif ~matching t t2
-    | _, Arr(Variadic,_,t) -> unif ~matching t1 t
+    | Prop _, Prop _ -> true (* unification of prop is correct for tc indipendently of their functionality *)
+    | Arr(_(*TODO: @FissoreD*),b1,s1,t1), Arr(_(*TODO: @FissoreD*),b2,s2,t2) -> b1 == b2 && unif ~matching s1 s2 && unif ~matching t1 t2      
+    | Arr(_(*TODO: @FissoreD*),Variadic,_,t), _ -> unif ~matching t t2
+    | _, Arr(_,Variadic,_,t) -> unif ~matching t1 t
     | UVar m, UVar n when matching -> assign m t2
     | UVar m, _ when not matching -> assign m t2
     | _, UVar m -> assign m t1
@@ -560,8 +563,8 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | _ -> false
 
   and oc m = function
-    | Prop -> true
-    | Arr(_,x,y) -> oc m x && oc m y
+    | Prop _ -> true
+    | Arr(_,_,x,y) -> oc m x && oc m y
     | App(_,x,xs) -> List.for_all (oc m) (x::xs)
     | Any -> true
     | Cons _ -> true

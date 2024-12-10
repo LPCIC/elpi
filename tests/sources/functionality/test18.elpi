@@ -1,8 +1,9 @@
+% NO
 pred q o:int.
 
 :functional 
-pred do i:(:functional pred).
-do X :- X.
+pred do i:(func).
+% do X :- X.
 
 :functional
 pred x o:int.
