@@ -458,7 +458,7 @@ Predicate declaration expected. Examples:
 pred append i:list A, i:list A, o:list A.
 pred append i:list A i:list A o:list A.
 pred mapR i:list A, i:(pred i:A, o:B), o:list B.
-func map i:list A, i:(func i:A, o:B), o:list B.
+func map list A, (func A -> B) -> list B.
 
 program: EXPORTDEF AFTER LPAREN USE_SIG
 program: EXPORTDEF AFTER LPAREN AFTER FULLSTOP
