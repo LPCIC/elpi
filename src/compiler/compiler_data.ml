@@ -324,6 +324,60 @@ module TypeAssignment = struct
   type t = Val of t MutableOnce.t t_
   [@@ deriving show]
 
+  let unval (Val x) = x
+
+  let rec deref m =
+    match unval @@ MutableOnce.get m with
+    | UVar m when MutableOnce.is_set m -> deref m
+    | x -> x
+
+  open Format
+  let pretty f fmt tm =
+
+    let arrs = 0 in
+    let app = 1 in
+
+    let lvl_of = function
+      | Arr _ -> arrs
+      | App _ -> app
+      | _ -> 2 in
+
+    let rec pretty fmt = function
+      | Prop Relation -> fprintf fmt "prop"
+      | Prop Function -> fprintf fmt "fprop"
+      | Any -> fprintf fmt "any"
+      | Cons c -> F.pp fmt c
+      | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
+      | Arr(m,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a:%a ->@ %a@]" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,Variadic,s,t) -> fprintf fmt "%a:%a ..-> %a" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
+      | UVar m -> f fmt pretty m
+      (* | UVar m -> MutableOnce.pretty fmt m *)
+    and pretty_parens ~lvl fmt = function
+      | UVar m -> f fmt (pretty_parens ~lvl) m
+      | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
+      | t -> pretty fmt t in
+    let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
+  in 
+  pretty fmt tm
+
+  let pretty_mut_once = 
+    pretty (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
+
+  let pretty_ft =
+    pretty (fun fmt _ (t:F.t) -> F.pp fmt t)
+
+  let pretty_skema fmt sk =
+    let rec aux = function
+      | Lam (_,t) -> aux t
+      | Ty t -> pretty_ft fmt t in
+    aux sk
+
+  let pretty_skema_w_id fmt (_,sk) = pretty_skema fmt sk
+
+  let pretty_overloaded_skema fmt = function
+    | Single t -> pretty_skema_w_id fmt t
+    | Overloaded l -> pplist pretty_skema_w_id "," fmt l
+
   let new_ty () : t MutableOnce.t = MutableOnce.make (F.from_string "Ty")
 
   let nparams (_,t : skema_w_id) =
@@ -362,7 +416,7 @@ module TypeAssignment = struct
     try compare_skema x y = 0
     with InvalidMode -> 
       error ~loc:(IdPos.to_loc loc1) 
-        (Format.asprintf "duplicate mode declaration for %a (second mode found at %a)\nDebug:\n-@[<hov 2>%a@]\n-@[<hov 2>%a@]" F.pp n IdPos.pp loc2 pp_skema x pp_skema y)
+        (Format.asprintf "duplicate mode declaration for %a (second mode found at %a)\nDebug:\n@[<h>-%a@]@.@[<h>-%a@]" F.pp n IdPos.pp loc2 pretty_skema x pretty_skema y)
 
   (* returns a pair of ids representing the merged type_ass + the new merge type_ass *)
   let merge_skema n t1 t2 =
@@ -395,12 +449,6 @@ module TypeAssignment = struct
       in
       let res = merge_aux t1 t2 in
       !removed, res
-  
-  let unval (Val x) = x
-  let rec deref m =
-    match unval @@ MutableOnce.get m with
-    | UVar m when MutableOnce.is_set m -> deref m
-    | x -> x
 
   let set m v = MutableOnce.set m (Val v)
 
@@ -431,52 +479,6 @@ module TypeAssignment = struct
   let is_predicate = function
     | Single (_,t) -> is_predicate t
     | Overloaded l -> List.exists (fun (_,x) -> is_predicate x) l
-
-  open Format
-  let pretty f fmt tm =
-
-    let arrs = 0 in
-    let app = 1 in
-
-    let lvl_of = function
-      | Arr _ -> arrs
-      | App _ -> app
-      | _ -> 2 in
-
-    let rec pretty fmt = function
-      | Prop Relation -> fprintf fmt "prop"
-      | Prop Function -> fprintf fmt "fprop"
-      | Any -> fprintf fmt "any"
-      | Cons c -> F.pp fmt c
-      | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-      | Arr(m,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a:%a ->@ %a@]" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
-      | Arr(m,Variadic,s,t) -> fprintf fmt "%a:%a ..-> %a" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
-      | UVar m -> f fmt pretty m
-      (* | UVar m -> MutableOnce.pretty fmt m *)
-    and pretty_parens ~lvl fmt = function
-      | UVar m -> f fmt (pretty_parens ~lvl) m
-      | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
-      | t -> pretty fmt t in
-    let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
-  in 
-  pretty fmt tm
-
-  let pretty_mut_once = 
-    pretty (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
-
-  let pretty_ft =
-    pretty (fun fmt _ (t:F.t) -> F.pp fmt t)
-
-  let pretty_skema_w_id fmt ((_, sk):skema_w_id) =
-    let rec aux = function
-      | Lam (_,t) -> aux t
-      | Ty t -> pretty_ft fmt t in
-    aux sk
-
-  let pretty_overloaded_skema fmt = function
-    | Single t -> pretty_skema_w_id fmt t
-    | Overloaded l -> pplist pretty_skema_w_id "," fmt l
-
 
   let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
 
