@@ -4,6 +4,7 @@ open Elpi_runtime
 open Util
 module F = Ast.Func
 
+(* Globally unique identifier for symbols with a quotient *)
 module IdPos : sig 
   type t [@@deriving show,ord]
   module Map : Map.S with type key = t
@@ -12,8 +13,7 @@ module IdPos : sig
 
   val make_loc : Loc.t -> t
   val make_str : string -> t
-  val equal : t -> t -> bool
-  val hash : t -> int
+  val equal : UF.t -> t -> t -> bool
   val to_loc : t -> Loc.t
 end = struct
   include Loc
@@ -22,8 +22,7 @@ end = struct
   module UF = Union_find.Make(Map)
   let make_loc loc = loc
   let make_str str = make_loc (Loc.initial str)
-  let equal x y = compare x y = 0
-  let hash t = Hashtbl.hash t
+  let equal u x y = compare (UF.find u x) (UF.find u y) = 0
   let to_loc x = x 
 end
 
@@ -140,7 +139,7 @@ module ScopedTypeExpression = struct
     let show_var = function Ast.Structured.Variadic -> ".." | _ -> "" in
     match r.it with
     | Prop _ -> fprintf fmt "."
-    | _  -> fprintf fmt "%a:%a %s->@ %a" Mode.pp_short m pretty_e_loc l (show_var v) pretty_e_loc r
+    | _  -> fprintf fmt "%a %s->@ %a" (*Mode.pretty m*) pretty_e_loc l (show_var v) pretty_e_loc r
   and pretty_e_parens ~lvl fmt = function
     | t when lvl >= lvl_of t.it -> fprintf fmt "(%a)" pretty_e_loc t
     | t -> pretty_e_loc fmt t
@@ -360,12 +359,12 @@ module TypeAssignment = struct
 
     let rec pretty fmt = function
       | Prop Relation -> fprintf fmt "prop"
-      | Prop Function -> fprintf fmt "fprop"
+      | Prop Function -> fprintf fmt "func"
       | Any -> fprintf fmt "any"
       | Cons c -> F.pp fmt c
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-      | Arr(m,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a:%a ->@ %a@]" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
-      | Arr(m,Variadic,s,t) -> fprintf fmt "%a:%a ..-> %a" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>(*%a:*)%a ->@ %a@]" Mode.pretty m (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,Variadic,s,t) -> fprintf fmt "(*%a:*)%a ..-> %a" Mode.pretty m (pretty_parens ~lvl:arrs) s pretty t
       | UVar m -> f fmt pretty m
       (* | UVar m -> MutableOnce.pretty fmt m *)
     and pretty_parens ~lvl fmt = function

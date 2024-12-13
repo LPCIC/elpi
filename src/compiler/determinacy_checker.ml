@@ -5,7 +5,7 @@ open Elpi_util.Util
 open Elpi_parser.Ast
 open Compiler_data
 module C = Constants
-module Union_find = Union_find.Make (IdPos.Map)
+module UF = IdPos.UF
 
 let to_print f = if false then f ()
 
@@ -38,7 +38,7 @@ let rec pp_functionality fmt = function
   | AssumedFunctional -> Format.fprintf fmt "AF"
   | Any -> Format.fprintf fmt "Any"
   | BoundVar b -> Format.fprintf fmt "BV %a" F.pp b
-  | Arrow (m, a, b) -> Format.fprintf fmt "(%a:%a -> %a)" Mode.pp_short m pp_functionality a pp_functionality b
+  | Arrow (m, a, b) -> Format.fprintf fmt "(%a:%a -> %a)" Mode.pretty m pp_functionality a pp_functionality b
   | NoProp l -> Format.fprintf fmt "Kind [@[%a@]]" (pplist pp_functionality ",") l
 
 let get_NoProp_list ~loc = function
@@ -53,7 +53,7 @@ type env = t (* This is for the cleaner signatures in this files for objects wit
 let compare_functionality_loc a b = compare_functionality_abs (snd a) (snd b)
 let compare_fname a b = compare_functionality_loc (snd a) (snd b)
 let mk_func_map ty_abbr cmap = { ty_abbr; cmap }
-let empty_fmap = { ty_abbr = F.Map.empty; cmap = IdPos.Map.empty }
+let empty = { ty_abbr = F.Map.empty; cmap = IdPos.Map.empty }
 let get_functionality_tabbr_opt map k = F.Map.find_opt k map.ty_abbr
 
 let rec get_namef = function
@@ -196,7 +196,7 @@ let remove t k = { t with cmap = IdPos.Map.remove k t.cmap }
 let get_functionality ~uf ?tyag ~loc ~env id =
   if id = Scope.dummy_type_decl_id then Any
   else
-    let id' = Union_find.find uf id in
+    let id' = UF.find uf id in
     if id <> id' then assert (not (IdPos.Map.mem id env.cmap));
     (* Sanity check *)
     match IdPos.Map.find_opt id' env.cmap with
@@ -321,7 +321,7 @@ let not_functional_call_error ~loc t =
   error ~loc (Format.asprintf "Non functional premise call %a\n" ScopedTerm.pretty_ t)
 
 module Checker_clause = struct
-  let check ?(uf = Union_find.empty) ~(global : env) tm =
+  let check ?(uf = UF.empty) ~(global : env) tm =
     let env = ref Env.empty in
     let pp_env fmt () : unit = Format.fprintf fmt "Env : %a" Env.pp !env in
     (* let pp_ctx fmt ctx : unit = Format.fprintf fmt "Ctx : %a" Ctx.pp ctx in *)
@@ -803,7 +803,7 @@ let check_clause ?uf ~loc ~env t =
 class merger (all_func : env) =
   object (self)
     val mutable all_func = all_func
-    val mutable local_func = empty_fmap
+    val mutable local_func = empty
 
     method private add_func is_ty_abbr id ty =
       let loc, func = Compilation.ScopeTE.type2func all_func ty in
