@@ -4,6 +4,7 @@ Requires Menhir 20211230 and OCaml 4.13 or above.
 
 - Compiler:
   - Store timing info only optionally to restore build reproducibility
+  - Fix collision between kinds and types in namespace handling
 
 # v2.0.5 (December 2024)
 
