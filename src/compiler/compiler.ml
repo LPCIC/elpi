@@ -17,12 +17,14 @@ let error = Compiler_data.error
 type flags = {
   defined_variables : StrSet.t;
   print_units : bool;
+  time_typechecking : bool;
 }
 [@@deriving show]
 
 let default_flags = {
   defined_variables = StrSet.empty;
   print_units = false;
+  time_typechecking = false;
 }
 
 let parser : (module Parse.Parser) option D.State.component = D.State.declare
@@ -1347,11 +1349,11 @@ end
 
 module Check : sig
 
-  val check : State.t -> base:Assembled.program -> unchecked_compilation_unit -> checked_compilation_unit
+  val check : flags:flags -> State.t -> base:Assembled.program -> unchecked_compilation_unit -> checked_compilation_unit
 
 end = struct
 
-  let check_signature builtins symbols (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * _=
+  let check_signature ~flags builtins symbols (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * _=
     let { Assembled.modes = om; functional_preds = ofp; kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
     let { Flat.modes; kinds; types; type_abbrevs; toplevel_macros } = signature in
     let all_kinds = Flatten.merge_kinds ok kinds in
@@ -1402,12 +1404,12 @@ end = struct
   
     { Assembled.modes; functional_preds = (* func_setter_object#get_local_func; *)ofp; kinds; types; type_abbrevs; toplevel_macros },
     { Assembled.modes = all_modes; functional_preds = (* func_setter_object#get_all_func; *)ofp; kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros },
-    check_t_end -. check_t_begin +. check_k_end -. check_k_begin,
+    (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types_indexing
 
-  let check st ~base u : checked_compilation_unit =
+  let check ~flags st ~base u : checked_compilation_unit =
 
-    let signature, precomputed_signature, check_sig, types_indexing = check_signature base.Assembled.builtins base.Assembled.symbols base.Assembled.signature u.code.Flat.signature in
+    let signature, precomputed_signature, check_sig, types_indexing = check_signature ~flags base.Assembled.builtins base.Assembled.symbols base.Assembled.signature u.code.Flat.signature in
 
     let { version; code = { Flat.clauses; chr; builtins } } = u in
     let { Assembled.modes; functional_preds; kinds; types; type_abbrevs; toplevel_macros } = precomputed_signature in
@@ -1447,7 +1449,7 @@ end = struct
 
   { version; checked_code; base_hash = hash_base base;
     precomputed_signature;
-    type_checking_time = check_end -. check_begin +. check_sig }
+    type_checking_time = if flags.time_typechecking then check_end -. check_begin +. check_sig else 0.0 }
 
 end
 
@@ -2041,14 +2043,14 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let u = unit_or_header_of_scoped state ~builtins scoped_ast in
   print_unit flags u;
   let base = Assembled.empty () in
-  let u = Check.check state ~base u in
+  let u = Check.check ~flags state ~base u in
  (* with toplevel_macros = u.checked_code.signature.toplevel_macros } in *)
   (* Printf.eprintf "header_of_ast: types u %d\n%!" (F.Map.cardinal u.checked_code.CheckedFlat.signature.types); *)
   let h = assemble_unit ~flags ~header:(state,base) u in
   (* Printf.eprintf "header_of_ast: types h %d\n%!" (F.Map.cardinal (snd h).Assembled.signature.types); *)
   h
 
-let check_unit ~base:(st,base) u = Check.check st ~base u
+let check_unit ~flags ~base:(st,base) u = Check.check ~flags st ~base u
 
 let empty_base ~header:b = b
 
@@ -2074,7 +2076,7 @@ let append_unit_signature ~flags ~base:(s,p) unit : program =
 let program_of_ast ~flags ~header:((st, base) as header : State.t * Assembled.program) p : program =
   let p = scoped_of_ast ~flags ~header p in
   let u = unit_of_scoped ~flags ~header p in
-  let u = Check.check st ~base u in
+  let u = Check.check ~flags st ~base u in
   assemble_unit ~flags ~header u
 
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x

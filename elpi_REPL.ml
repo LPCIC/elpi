@@ -128,6 +128,7 @@ let _ =
   let flags = {
       API.Compile.defined_variables = !vars;
       API.Compile.print_units = !print_units;
+      API.Compile.time_typechecking = true;
   } in
   if !doc_infix then begin
     Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;

@@ -12,6 +12,7 @@ open Data
 type flags = {
   defined_variables : StrSet.t;
   print_units : bool; (* debug *)
+  time_typechecking : bool; (* bench type checker *)
 }
 val default_flags : flags
 
@@ -31,7 +32,7 @@ type unchecked_compilation_unit
 val empty_base : header:header -> program
 val unit_of_scoped : flags:flags -> header:header -> ?builtins:builtins list -> scoped_program -> unchecked_compilation_unit
 val append_unit : flags:flags -> base:program -> checked_compilation_unit -> program
-val check_unit : base:program -> unchecked_compilation_unit -> checked_compilation_unit
+val check_unit : flags:flags -> base:program -> unchecked_compilation_unit -> checked_compilation_unit
 
 type checked_compilation_unit_signature
 val signature_of_checked_compilation_unit : checked_compilation_unit -> checked_compilation_unit_signature
