@@ -135,8 +135,8 @@ module type Mode = sig
 
   val get_head : ho -> t
   val to_ho : t -> ho
-  val show_short : t -> string
-  val pp_short : Format.formatter -> t -> unit
+  val show_pretty : t -> string
+  val pretty : Format.formatter -> t -> unit
 end
 
 module Mode : Mode

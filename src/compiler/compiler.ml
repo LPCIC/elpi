@@ -73,7 +73,6 @@ module SymbolMap : sig
   val global_name : D.State.t -> table -> constant -> F.t
   val compile : table -> D.symbol_table
   val compile_s2c : table -> (constant * D.term) F.Map.t
-  val compile_c2mode : table -> constant -> Mode.hos
 
 end = struct
 
@@ -81,12 +80,9 @@ end = struct
     ast2ct : (constant * D.term) F.Map.t;
     c2t : D.term Constants.Map.t;
     c2s : string Constants.Map.t;
-    c2mode : Mode.hos Constants.Map.t;
     last_global : int;
   }
   [@@deriving show, ord]
-
-  let compile_c2mode t k = Util.Constants.Map.find k t.c2mode
 
   let equal_globals m1 m2 = m1.last_global = m2.last_global
 
@@ -107,7 +103,7 @@ end = struct
     
   let compile_s2c { ast2ct } = ast2ct
 
-  let allocate_global_symbol_aux x ({ c2t; c2s; ast2ct; last_global; c2mode } as table) =
+  let allocate_global_symbol_aux x ({ c2t; c2s; ast2ct; last_global } as table) =
     try table, F.Map.find x ast2ct
     with Not_found ->
       let last_global = last_global - 1 in
@@ -117,8 +113,7 @@ end = struct
       let c2t = Util.Constants.Map.add n xx c2t in
       let ast2ct = F.Map.add x p ast2ct in
       let c2s = Util.Constants.Map.add n (F.show x) c2s in
-      let c2mode = Util.Constants.Map.add n [] c2mode in
-      { c2t; c2s; ast2ct; last_global; c2mode }, p
+      { c2t; c2s; ast2ct; last_global }, p
 
   let get_global_symbol { ast2ct } s =
     try
@@ -137,7 +132,6 @@ end = struct
       let s = F.from_string s in
       let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
       t) D.Global_symbols.(table.c2s);
-    c2mode = D.Global_symbols.(table.c2mode);
   } in
   (*T2.go allocate_global_symbol_aux*) table
     
@@ -219,7 +213,7 @@ module C = Constants
 
 open Compiler_data
 
-module IDPosUf = IdPos.UF
+module UF = IdPos.UF
 
 type macro_declaration = (ScopedTerm.t * Loc.t) F.Map.t
 [@@ deriving show, ord]
@@ -258,7 +252,7 @@ type unchecked_signature = {
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
-  type_uf : IDPosUf.t
+  type_uf : UF.t
 }
 [@@deriving show]
 
@@ -281,7 +275,7 @@ module Assembled = struct
     types : TypeAssignment.overloaded_skema_with_id F.Map.t;
     type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
     functional_preds: Determinacy_checker.t;
-    type_uf : IDPosUf.t
+    type_uf : UF.t
   }
   [@@deriving show]
   
@@ -309,9 +303,9 @@ module Assembled = struct
   let empty_signature () = {
     kinds = F.Map.empty;
     types = F.Map.empty;
-    type_abbrevs = F.Map.empty; functional_preds = Determinacy_checker.empty_fmap;
+    type_abbrevs = F.Map.empty; functional_preds = Determinacy_checker.empty;
     toplevel_macros = F.Map.empty;
-    type_uf = IDPosUf.empty
+    type_uf = UF.empty
   }
   let empty () = {
     clauses = [];
@@ -404,6 +398,8 @@ type query = WithMain.query
 (****************************************************************************
   Compiler
  ****************************************************************************)
+
+let valid_functional = function [] -> Some Ast.Structured.Relation | [Ast.Functional] -> Some Function | _ -> None
 
 module RecoverStructure : sig
 
@@ -529,8 +525,6 @@ end = struct (* {{{ *)
     match attributes with
     | [] -> { Type.attributes = (); loc; name; ty }
     | x :: _ -> error ~loc ("illegal attribute " ^ show_raw_attribute x)
-
-  let valid_functional = function [] -> Some Relation | [Functional] -> Some Function | _ -> None
 
   let structure_type_attributes { Type.attributes; loc; name; ty } =
     let duplicate_err s =
@@ -904,14 +898,14 @@ end = struct
           else ScopedTerm.App(Scope.mkGlobal (), c, x, xs)
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
-        let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty) in
+        let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty) in
         ScopedTerm.Cast(t,ty)
     | Lam (c,ty,b) when is_discard c ->
-        let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty)) in
+        let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty)) in
         ScopedTerm.Lam (None,ty,ScopedTerm.mk_empty_lam_type None, scope_loc_term ~state ctx b)
     | Lam (c,ty,b) ->
         if has_dot c then error ~loc "Bound variables cannot contain the namespaec separator '.'";
-        let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation (function [] -> Some Ast.Structured.Relation | _ -> None) ty)) in
+        let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty)) in
         let name = Some (c,elpi_language) in
         ScopedTerm.Lam (name,ty, ScopedTerm.mk_empty_lam_type name,scope_loc_term ~state (F.Set.add c ctx) b)
     | CData c -> ScopedTerm.CData c (* CData.hcons *)
@@ -1118,10 +1112,10 @@ module Flatten : sig
     Arity.t F.Map.t ->
     Arity.t F.Map.t
   val merge_type_assignments :
-    IDPosUf.t ->
+    UF.t ->
     TypeAssignment.overloaded_skema_with_id F.Map.t ->
     TypeAssignment.overloaded_skema_with_id F.Map.t ->
-    IdPos.t list * IDPosUf.t * TypeAssignment.overloaded_skema_with_id F.Map.t
+    IdPos.t list * UF.t * TypeAssignment.overloaded_skema_with_id F.Map.t
   val merge_type_abbrevs :
     (F.t * ScopedTypeExpression.t) list ->
     (F.t * ScopedTypeExpression.t) list ->
@@ -1131,10 +1125,10 @@ module Flatten : sig
     (F.t * ScopedTypeExpression.t) list ->
     (F.t * ScopedTypeExpression.t) list
   val merge_checked_type_abbrevs :
-    IDPosUf.t ->
+    UF.t ->
     ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
     ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
-    IdPos.t list * IDPosUf.t * ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t
+    IdPos.t list * UF.t * ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t
 
   val merge_toplevel_macros :
     (ScopedTerm.t * Loc.t) F.Map.t ->
@@ -1258,7 +1252,7 @@ module Flatten : sig
     let t = F.Map.union (fun f l1 l2 ->
       let to_union, ta = TypeAssignment.merge_skema f l2 l1 in
       List.iter (fun (id1,id2) ->
-        let rem, uf1 = IDPosUf.union !uf id1 id2 in
+        let rem, uf1 = UF.union !uf id1 id2 in
         uf := uf1;
         Option.iter (fun x -> to_remove := x :: !to_remove) rem;
       ) to_union;
@@ -1274,7 +1268,7 @@ module Flatten : sig
         ("Duplicate type abbreviation for " ^ F.show k ^
           ". Previous declaration: " ^ Loc.show otherloc)
       else
-        let rem, uf1 = IDPosUf.union !uf id1 id2 in
+        let rem, uf1 = UF.union !uf id1 id2 in
         uf := uf1;
         Option.iter (fun x -> to_remove := x :: !to_remove) rem;
         Some x) m1 m2 in
@@ -1353,7 +1347,7 @@ module Flatten : sig
 
   let run state { Scoped.pbody; toplevel_macros } =
     let kinds, types, type_abbrevs, clauses_rev, chr_rev = compile_body pbody in
-    let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros; type_uf = IDPosUf.empty } in
+    let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros; type_uf = UF.empty } in
     { Flat.clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; builtins = []; signature } (* TODO builtins can be in a unit *)
 
 
@@ -1431,7 +1425,7 @@ end = struct
   
     let check_t_end = Unix.gettimeofday () in
 
-    let all_type_uf = IDPosUf.merge otuf type_uf in
+    let all_type_uf = UF.merge otuf type_uf in
     let to_remove, all_type_uf, all_types = Flatten.merge_type_assignments all_type_uf ot types in
     let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
     let all_functional_preds = func_setter_object#merge in
@@ -1787,7 +1781,7 @@ let extend1_signature base_signature (signature : checked_compilation_unit_signa
   let { Assembled.kinds = ok; functional_preds = ofp; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otyuf } = base_signature in
   let { Assembled.toplevel_macros; kinds; types; type_abbrevs; functional_preds; type_uf } = signature in
   let kinds = Flatten.merge_kinds ok kinds in
-  let type_uf = IDPosUf.merge otyuf type_uf in
+  let type_uf = UF.merge otyuf type_uf in
   let to_remove, type_uf, type_abbrevs = Flatten.merge_checked_type_abbrevs type_uf ota type_abbrevs in
   let to_remove1, type_uf, types = Flatten.merge_type_assignments type_uf ot types in
   let toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
