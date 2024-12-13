@@ -265,8 +265,8 @@ module type Mode = sig
 
   val get_head : ho -> t
   val to_ho : t -> ho
-  val show_short : t -> string
-  val pp_short : Fmt.formatter -> t -> unit
+  val show_pretty : t -> string
+  val pretty : Fmt.formatter -> t -> unit
 end
  
 
@@ -284,8 +284,8 @@ module Mode : Mode = struct
   let get_head = function Fo a -> a | Ho (a,_) -> a
   let to_ho x = Fo x
 
-  let show_short = function Input -> "i" | Output -> "o"
-  let pp_short fmt m = Format.fprintf fmt "%s" (show_short m)
+  let show_pretty = function Input -> "i" | Output -> "o"
+  let pretty fmt m = Format.fprintf fmt "%s" (show_pretty m)
 
 end
 

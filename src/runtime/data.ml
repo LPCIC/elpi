@@ -430,7 +430,6 @@ module Global_symbols : sig
 
     (* Once the system is initialized this shall change no more *)
     mutable locked: bool;
-    mutable c2mode : Mode.hos Constants.Map.t;
   }
   val table : t
 
@@ -473,7 +472,6 @@ type t = {
   mutable c2s : string Constants.Map.t;
   mutable last_global : int;
   mutable locked : bool;
-  mutable c2mode : Mode.hos Constants.Map.t;
 }
 [@@deriving show]
 
@@ -482,7 +480,6 @@ let table = {
   s2ct = Ast.Func.Map.empty;
   c2s = Constants.Map.empty;
   locked = false;
-  c2mode = Constants.Map.empty
 }
 
 let declare_global_symbol str =
@@ -496,7 +493,6 @@ let declare_global_symbol str =
     let t = Const n in
     table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
     table.c2s <- Constants.Map.add n str table.c2s;
-    table.c2mode <- Constants.Map.add n [] table.c2mode;
     n
 
 let declare_global_symbol_for_builtin str =
@@ -510,7 +506,6 @@ let declare_global_symbol_for_builtin str =
     let t = Builtin(n,[]) in
     table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
     table.c2s <- Constants.Map.add n str table.c2s;
-    table.c2mode <- Constants.Map.add n [] table.c2mode;
     n
 
 let lock () = table.locked <- true

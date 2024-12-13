@@ -3,14 +3,14 @@
 (* ------------------------------------------------------------------------- *)
 open Compiler_data
 open Elpi_util.Util
-module Union_find : Union_find.S with type key = IdPos.t and type t = IdPos.t IdPos.Map.t
 
 type t [@@deriving show, ord]
 
-val empty_fmap : t
-val check_clause : ?uf:Union_find.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit
+val empty : t
 val merge : t -> t -> t
 val remove : t -> IdPos.t -> t
+
+val check_clause : ?uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit
 
 class merger : t -> object
   method get_all_func : t
