@@ -243,6 +243,8 @@ module Compile : sig
     defined_variables : StrSet.t;
     (* debug: print compilation units *)
     print_units : bool;
+    (* keep track of the amount of time spent type checking, default false *)
+    time_typechecking : bool;
   }
   val default_flags : flags
   val to_setup_flags : flags -> Setup.flags

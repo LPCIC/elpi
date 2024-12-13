@@ -185,13 +185,14 @@ module Compile = struct
   type flags = Compiler.flags = {
     defined_variables : StrSet.t;
     print_units : bool;
+    time_typechecking : bool;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
   let scope ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } a =
     Compiler.scoped_of_ast ~flags ~header a
   let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base ?builtins x =
-    Compiler.unit_of_scoped ~flags ~header ?builtins x |> Compiler.check_unit ~base
+    Compiler.unit_of_scoped ~flags ~header ?builtins x |> Compiler.check_unit ~flags ~base
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
   let signature u = Compiler.signature_of_checked_compilation_unit u

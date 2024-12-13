@@ -1,3 +1,10 @@
+# v2.0.6 (December 2024)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Compiler:
+  - Store timing info only optionally to restore build reproducibility
+
 # v2.0.5 (December 2024)
 
 
