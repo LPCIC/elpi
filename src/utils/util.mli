@@ -126,16 +126,22 @@ val uniqq: 'a list -> 'a list
 val for_all2 : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
 val for_all23 :  argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> bool
 val for_all3b : ('a -> 'a -> bool -> bool) -> 'a list -> 'a list -> bool list -> bool -> bool
-type arg_mode = Input | Output
-[@@deriving show, ord]
 
-type mode_aux =
-  | Fo of arg_mode
-  | Ho of arg_mode * mode
-and mode = mode_aux list
-[@@deriving show, ord]
+module type Mode = sig
+  type t = Input | Output [@@deriving show, ord]
 
-val for_all3b3 : argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> mode -> bool -> bool
+  type ho = Fo of t | Ho of t * ho list
+  and hos = ho list [@@deriving show, ord]
+
+  val get_head : ho -> t
+  val to_ho : t -> ho
+  val show_short : t -> string
+  val pp_short : Format.formatter -> t -> unit
+end
+
+module Mode : Mode
+
+val for_all3b3 : argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> Mode.ho list -> bool -> bool
 (*uses physical equality and calls anomaly if the element is not in the list*)
 val remove_from_list : 'a -> 'a list -> 'a list
 (* returns Some t where f x = Some t for the first x in the list s.t.
