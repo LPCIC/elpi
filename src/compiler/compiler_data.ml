@@ -245,7 +245,7 @@ end
 
 module MutableOnce : sig 
   type 'a t
-  [@@ deriving show]
+  [@@ deriving show, ord]
   val make : F.t -> 'a t
   val create : 'a -> 'a t
   val set : ?loc:Loc.t -> 'a t -> 'a -> unit
@@ -256,7 +256,7 @@ module MutableOnce : sig
   val pretty : Format.formatter -> 'a t -> unit
 end = struct
   type 'a t = F.t * 'a option ref
-  [@@ deriving show]
+  [@@ deriving show, ord]
 
   let make f = f, ref None
 
@@ -279,19 +279,38 @@ end = struct
 end
 
 module TypeAssignment = struct
+  type tmode = MRef of tmode MutableOnce.t | MVal of Mode.t
+  [@@ deriving show, ord, fold]
+
+  let rec deref_tmode = function
+    | MRef r when MutableOnce.is_set r -> deref_tmode (MutableOnce.get r)
+    | a -> a
+
+  let is_tmode_set t =
+    match deref_tmode t with
+    | MVal _ -> true
+    | _ -> false
+
+  let rec pretty_tmode fmt = function
+    | MRef x when MutableOnce.is_set x -> pretty_tmode fmt (MutableOnce.get x)
+    | MRef x -> Format.fprintf fmt "?"
+    | MVal m -> Mode.pretty fmt m
 
   type 'a overloading =
     | Single of 'a
     | Overloaded of 'a list
   [@@ deriving show, fold, iter]
 
-  type 'a t_ =
+  type ('a,'b) t__ =
     | Prop of Ast.Structured.functionality
     | Any
     | Cons of F.t
-    | App of F.t * 'a t_ * 'a t_ list
-    | Arr of Mode.t * Ast.Structured.variadic * 'a t_ * 'a t_
+    | App of F.t * ('a,'b) t__ * ('a,'b) t__ list
+    | Arr of 'b * Ast.Structured.variadic * ('a,'b) t__ * ('a,'b) t__
     | UVar of 'a
+  [@@ deriving show, fold, ord]
+
+  type 'a t_ = ('a,tmode) t__
   [@@ deriving show, fold, ord]
 
   exception InvalidMode
@@ -358,7 +377,7 @@ module TypeAssignment = struct
       | _ -> 2 in
 
     let show_mode fmt m =
-      if is_raw then (Format.fprintf fmt "%a:" Mode.pretty m) else Format.fprintf fmt ""
+      if is_raw then (Format.fprintf fmt "%a" pretty_tmode m) else Format.fprintf fmt ""
     in
 
     let rec arrow_tail = function
@@ -368,18 +387,18 @@ module TypeAssignment = struct
 
     let rec pretty ?(skip_arrow_tail=false) () fmt = function
       | Prop _ when skip_arrow_tail -> ()
-      | Prop Relation -> fprintf fmt "prop"
-      | Prop Function -> fprintf fmt "%s" (if is_raw then "func" else "pred")
+      | Prop Relation -> fprintf fmt "%s" (if is_raw then "pred" else "prop")
+      | Prop Function -> fprintf fmt "%s" (if is_raw then "func" else "prop")
       | Any -> fprintf fmt "any"
       | Cons c -> F.pp fmt c
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-      | Arr(m,NotVariadic,s,t) when is_raw && skip_arrow_tail -> fprintf fmt "@[<hov 2>,@ %a:%a%a@]" Mode.pretty m (pretty_parens ~lvl:arrs) s (pretty ~skip_arrow_tail ()) t
+      | Arr(m,NotVariadic,s,t) when is_raw && skip_arrow_tail -> fprintf fmt "@[<hov 2>,@ %a:%a%a@]" show_mode m (pretty_parens ~lvl:arrs) s (pretty ~skip_arrow_tail ()) t
       | Arr(m,NotVariadic,s,t) when is_raw ->
           let tail = arrow_tail t in
-          if tail = None then
-            fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s (pretty()) t
+          if true || tail = None then
+            fprintf fmt "@[<hov 2>%a:%a ->@ %a@]" show_mode m (pretty_parens ~lvl:arrs) s (pretty()) t
           else
-            fprintf fmt "@[<hov 2>%a %a:%a%a@]" (pretty()) (Option.get tail) Mode.pretty m (pretty_parens ~lvl:arrs) s (pretty ~skip_arrow_tail:true ()) t
+            fprintf fmt "@[<hov 2>%a %a:%a%a@]" (pretty()) (Option.get tail) show_mode m (pretty_parens ~lvl:arrs) s (pretty ~skip_arrow_tail:true ()) t
       | Arr(_,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s (pretty()) t
       | Arr(m,Variadic,s,t) -> fprintf fmt "%a%a ..-> %a" show_mode m (pretty_parens ~lvl:arrs) s (pretty()) t
       | UVar m -> f fmt (pretty()) m
@@ -523,7 +542,15 @@ module TypeAssignment = struct
     | Single (_,t) -> is_predicate t
     | Overloaded l -> List.exists (fun (_,x) -> is_predicate x) l
 
-  let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
+  let vars_of (Val t)  =
+    fold_t__
+      (fun (xs,acc) (x : t MutableOnce.t) -> if MutableOnce.is_set x then xs, acc else x :: xs, acc)
+      (fun (acc,xs) (x : tmode) ->
+         match x with
+         | MRef x when MutableOnce.is_set x -> acc,xs
+         | MRef x -> acc,x :: xs
+         | MVal _ -> acc,xs)
+      ([],[]) t
 
 end
 
@@ -631,7 +658,8 @@ module ScopedTerm = struct
     List.mem f infix
 
   let intersperse e : 'a -> t list = function
-    | [] | [_] as a -> a
+    | [] -> []
+    | [x] as a -> e x.loc :: a
     | x::xs -> x :: e x.loc :: xs
 
   let rec pretty_lam fmt n ste (mta:TypeAssignment.t MutableOnce.t) it =

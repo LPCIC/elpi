@@ -161,7 +161,7 @@ module Compilation = struct
       | ScopedTerm.{ ty } :: xs ->
           let left = if MutableOnce.is_set ty then get_mutable ty else UVar ty in
           let right = get_mutable @@ build_app_ty ty xs in
-          MutableOnce.create (TypeAssignment.Val (Arr (Output, NotVariadic, left, right)))
+          MutableOnce.create (TypeAssignment.Val (Arr (MVal Mode.Output, NotVariadic, left, right))) (* TODO: what about mode? *)
 
     let rec type2func_ty_abbr ~pfile ~loc (env : env) c args =
       match get_functionality_tabbr_opt env c with
@@ -179,7 +179,9 @@ module Compilation = struct
       | Cons n -> type2func_ty_abbr ~pfile ~loc env n []
       | App (n, x, xs) -> type2func_ty_abbr ~pfile ~loc env n (x :: xs)
       | Arr (_,Variadic, _, _) -> AssumedFunctional
-      | Arr (m,NotVariadic, l, r) -> arr m (type_ass_2func ~pfile ~loc env l) (type_ass_2func ~pfile ~loc env r)
+      | Arr (TypeAssignment.MVal m,NotVariadic, l, r) -> arr m (type_ass_2func ~pfile ~loc env l) (type_ass_2func ~pfile ~loc env r)
+      | Arr (MRef m,NotVariadic, l, r) when MutableOnce.is_set m -> type_ass_2func ~pfile ~loc env (Arr (MutableOnce.get m, NotVariadic, l, r))
+      | Arr (MRef m,NotVariadic, l, r) -> error ~loc "Got type with unknown mode (?)"
       | UVar a ->
           if MutableOnce.is_set a then type_ass_2func ~pfile ~loc (env : env) (get_mutable a)
           else BoundVar (MutableOnce.get_name a)

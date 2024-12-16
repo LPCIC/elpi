@@ -25,8 +25,11 @@ let ( !: ) =
     let id = IdPos.make_str (string_of_int !id) in
     TA.Single (id, (ag : TA.skema))
 
-let ( -->> ) a1 a2 = TA.Arr (Input, NotVariadic, a1, a2)
-let ( --> ) a1 a2 = TA.Arr (Output, NotVariadic, a1, a2)
+let inp = TypeAssignment.MVal Mode.Input
+let out = TypeAssignment.MVal Mode.Output
+
+let ( -->> ) a1 a2 = TA.Arr (inp, NotVariadic, a1, a2)
+let ( --> ) a1 a2 = TA.Arr (out, NotVariadic, a1, a2)
 let uv n = TA.UVar (fs n)
 
 let _ =
@@ -48,7 +51,7 @@ let _ =
     let t = get_uvar @@ TA.unval (MutableOnce.get t.ST.ty) in
     (* let pp = TA.pp_t_ (MutableOnce.pp TA.pp) in *)
     if t <> exp then (
-      Format.eprintf "Unexpected result: \nactual: @[%a@]\nreference: @[%a@]\n" TA.pretty_mut_once t TA.pretty_mut_once exp;
+      Format.eprintf "Unexpected result: \nactual: @[%a@]\nreference: @[%a@]\n" TA.pretty_mut_once_raw t TA.pretty_mut_once_raw exp;
       exit 1)
   in
 
@@ -58,7 +61,7 @@ let _ =
     let term = app "=" (app "f" varY []) [ varX ] in
 
     let _ = Type_checker.check ~is_rule ~types ~unknown ~exp ~kinds ~type_abbrevs term in
-    check_type varX (rprop --> rprop) (*TODO: should be rprop -->> rprop*)
+    check_type varX (rprop -->> rprop) (*TODO: should be rprop -->> rprop*)
   in
 
   let _ =
