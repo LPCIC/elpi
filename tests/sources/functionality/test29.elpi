@@ -1,3 +1,4 @@
+% YES
 :functional pred r o:int, o:int.
 
 :functional pred p i:(pred i:int).

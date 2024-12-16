@@ -127,6 +127,7 @@ type mode_aux =
   | Fo of arg_mode
   | Ho of arg_mode * mode
 and mode = mode_aux list
+[@@deriving show, ord]
 
 val for_all3b3 : argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> mode -> bool -> bool
 (*uses physical equality and calls anomaly if the element is not in the list*)

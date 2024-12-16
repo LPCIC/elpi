@@ -6,13 +6,13 @@ module  tr2_test.
 
 accumulate  terms, general_tr. 
 
-type  test  int -> o.
+type  test_nb  int -> o.
 
-test 1 :- trm trfact1 F, tailrec F. 
+test_nb 1 :- trm trfact1 F, tailrec F. 
 
-test 2 :- trm gcd2 F, tailrec F.
+test_nb 2 :- trm gcd2 F, tailrec F.
 
-test 3 :- trm appnd F, tailrec F.
+test_nb 3 :- trm appnd F, tailrec F.
 
-test 4 :- trm trfact2 F, tailrec F.
+test_nb 4 :- trm trfact2 F, tailrec F.
 

@@ -259,6 +259,7 @@ type mode_aux =
   | Fo of arg_mode
   | Ho of arg_mode * mode
 and mode = mode_aux list
+[@@deriving show, ord]
 
 let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
 

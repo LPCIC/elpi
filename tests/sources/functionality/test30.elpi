@@ -1,3 +1,4 @@
+% NO
 pred r i:int, o:int.
 
 :functional pred p i:(:functional pred i:int).
