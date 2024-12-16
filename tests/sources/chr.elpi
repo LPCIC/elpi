@@ -30,7 +30,7 @@ constraint term {
 
 }
 
-pred compatible o:list prop, o:list term,o:list prop,o:list term,o:list prop.
+pred compatible i:list prop, i:list term,i:list prop,i:list term,o:list prop.
 compatible _ [] _ [] [] :- !.
 compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
  (GX => term X TX),

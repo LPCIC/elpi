@@ -25,9 +25,9 @@ open Elpi_parser
 
 let list x = (App(F.from_string "list",x,[]))
 let int = Cons (F.from_string "int")
-let arr s t = Arr(Output,NotVariadic,s,t)
+let arr s t = Arr(TypeAssignment.MVal Ast.Mode.Output,NotVariadic,s,t)
 
-let () = pp_ta (Prop Relation) "prop";;
+let () = pp_ta (Prop Relation) "pred";;
 let () = pp_ta (Prop Function) "func";;
 let () = pp_ta (list int) "list int";;
 let () = pp_ta (list (list int)) "list (list int)";;
