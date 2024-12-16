@@ -409,12 +409,9 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         | _ -> error_not_a_function ~loc:x.loc (fst c) ty (List.rev consumed) x (* TODO: trim loc up to x *)
 
   and check_loc ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
-    if MutableOnce.is_set ty then []
-    else
       begin
-        (* assert (not @@ MutableOnce.is_set ty); *)
         let extra_spill = check ~tyctx ctx ~loc it ety in
-        MutableOnce.set ty (Val ety);
+        if not @@ MutableOnce.is_set ty then MutableOnce.set ty (Val ety);
         extra_spill
       end
 
