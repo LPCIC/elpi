@@ -224,7 +224,6 @@ type program = {
   kinds : (unit,unit) Type.t list;
   types : (tattribute,functionality) Type.t list;
   type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
-  modes : (tattribute,functionality) Type.t list;
   body : block list;
 }
 and ('func,'term) block_constraint = {

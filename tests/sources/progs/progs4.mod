@@ -4,5 +4,5 @@ accumulate tr2_test.
 
 main4 :- 
         %--- script4 ---
-        test 1, test 2, not (test 3), test 4.
+        test_nb 1, test_nb 2, not (test_nb 3), test_nb 4.
 
