@@ -1366,9 +1366,8 @@ end = struct
     
     let { Flat.kinds; types; type_abbrevs; toplevel_macros; type_uf } = signature in
 
-    let { Flat.kinds; types; type_abbrevs; toplevel_macros } = signature in
     let all_kinds = Flatten.merge_kinds ok kinds in
-    let func_setter_object = new Determinacy_checker.merger ofp in
+    let functionality_builder = new Determinacy_checker.merger ofp in
     let check_k_begin = Unix.gettimeofday () in
     let all_type_abbrevs, type_abbrevs =
       List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, scoped_ty) ->
@@ -1382,7 +1381,7 @@ end = struct
             ("Duplicate type abbreviation for " ^ F.show name ^
               ". Previous declaration: " ^ Loc.show otherloc)
         end
-        else func_setter_object#add_ty_abbr id scoped_ty;
+        else functionality_builder#add_ty_abbr id scoped_ty;
         F.Map.add name ((id, ty),loc) all_type_abbrevs, F.Map.add name ((id,ty),loc) type_abbrevs)
         (ota,F.Map.empty) type_abbrevs in
     let check_k_end = Unix.gettimeofday () in
@@ -1397,7 +1396,7 @@ end = struct
     let types = F.Map.mapi (fun name e -> 
       let tys = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds e in
       let ids = get_ids tys in
-      func_setter_object#add_func_ty_list e ids;
+      functionality_builder#add_func_ty_list e ids;
       tys) types in
 
     let rec is_arrow_to_prop = function
@@ -1428,10 +1427,10 @@ end = struct
     let all_type_uf = UF.merge otuf type_uf in
     let to_remove, all_type_uf, all_types = Flatten.merge_type_assignments all_type_uf ot types in
     let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
-    let all_functional_preds = func_setter_object#merge in
+    let all_functional_preds = functionality_builder#merge in
     let all_functional_preds = List.fold_left Determinacy_checker.remove all_functional_preds to_remove in
 
-    { Assembled.functional_preds = func_setter_object#get_local_func; kinds; types; type_abbrevs; toplevel_macros; type_uf },
+    { Assembled.functional_preds = functionality_builder#get_local_func; kinds; types; type_abbrevs; toplevel_macros; type_uf },
     { Assembled.functional_preds = all_functional_preds; kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; type_uf = all_type_uf },
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types_indexing
@@ -1445,6 +1444,7 @@ end = struct
 
     let check_begin = Unix.gettimeofday () in
 
+    (* returns unkown types + clauses without spilling *)
     let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
       let unknown = 
         if typecheck then Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val (Prop Relation)) (* Note: in the tc, there is no difference between Prop Relation and Prop Function*)
