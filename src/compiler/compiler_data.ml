@@ -14,6 +14,7 @@ module IdPos : sig
   val make_str : string -> t
   val equal : t -> t -> bool
   val hash : t -> int
+  val to_loc : t -> Loc.t
 end = struct
   include Loc
   module Map = Map.Make(Loc)
@@ -23,6 +24,7 @@ end = struct
   let make_str str = make_loc (Loc.initial str)
   let equal x y = compare x y = 0
   let hash t = Hashtbl.hash t
+  let to_loc x = x 
 end
 
 module Scope = struct
@@ -43,6 +45,8 @@ module Scope = struct
         mutable decl_id : type_decl_id;
       }
   [@@ deriving show, ord]
+
+  let clone = function Bound _ as t -> t | Global {escape_ns; decl_id} -> Global {escape_ns; decl_id}
 
   module Map = Map.Make(struct
     type t = F.t * language
@@ -229,7 +233,7 @@ module MutableOnce : sig
   [@@ deriving show]
   val make : F.t -> 'a t
   val create : 'a -> 'a t
-  val set : 'a t -> 'a -> unit
+  val set : ?loc:Loc.t -> 'a t -> 'a -> unit
   val unset : 'a t -> unit
   val get : 'a t -> 'a
   val get_name : 'a t -> F.t
@@ -244,10 +248,10 @@ end = struct
   let create t = F.from_string "_", ref (Some t)
 
   let is_set (_,x) = Option.is_some !x
-  let set (_,r) x =
+  let set ?loc (_,r) x =
     match !r with
     | None -> r := Some x
-    | Some _ -> anomaly "MutableOnce"
+    | Some _ -> anomaly ?loc "MutableOnce"
   
   let get (_,x) = match !x with Some x -> x | None -> anomaly "get"
   let get_name (x,_) = x
@@ -275,6 +279,38 @@ module TypeAssignment = struct
     | UVar of 'a
   [@@ deriving show, fold, ord]
 
+  exception InvalidMode
+
+  let cmp_aux cmp1 k =
+    if cmp1 = 0 then k () else cmp1
+
+  let rec compare_t_ c t1 t2 = match t1, t2 with
+    | Prop _, Prop _ -> 0
+    | Any, Any -> 0
+    | Cons f1, Cons f2 -> F.compare f1 f2
+    | App (f1,hd,tl), App (f2,hd1,tl1) -> 
+      cmp_aux 
+        (F.compare f1 f2)
+        (fun () -> List.compare (compare_t_ c) (hd::tl) (hd1::tl1))
+    | Arr (m1, v1, l1, r1), Arr (m2, v2, l2, r2) when m1 <> m2 ->
+      cmp_aux
+        (Ast.Structured.compare_variadic v1 v2) (fun () -> 
+          cmp_aux (compare_t_ c l1 l2) (fun () -> 
+            let cmp2 = compare_t_ c r1 r2 in
+            if cmp2 = 0 then raise InvalidMode
+            else cmp2))
+    | Arr (_, v1, l1, r1), Arr (_, v2, l2, r2) ->
+      cmp_aux
+        (Ast.Structured.compare_variadic v1 v2) (fun () -> 
+          cmp_aux (compare_t_ c l1 l2) (fun () -> 
+            compare_t_ c r1 r2))
+    | UVar v1, UVar v2 -> c v1 v2
+    | Prop _, _ -> -1 | _, Prop _ -> 1
+    | Any   , _ -> -1 | _, Any    -> 1
+    | Cons _, _ -> -1 | _, Cons _ -> 1
+    | App _ , _ -> -1 | _, App _  -> 1
+    | Arr _ , _ -> -1 | _, Arr _  -> 1
+
   type skema = Lam of F.t * skema | Ty of F.t t_
   [@@ deriving show, ord]
   type overloaded_skema = skema overloading
@@ -287,6 +323,8 @@ module TypeAssignment = struct
 
   type t = Val of t MutableOnce.t t_
   [@@ deriving show]
+
+  let new_ty () : t MutableOnce.t = MutableOnce.make (F.from_string "Ty")
 
   let nparams (_,t : skema_w_id) =
       let rec aux = function Ty _ -> 0 | Lam(_,t) -> 1 + aux t in
@@ -320,17 +358,24 @@ module TypeAssignment = struct
 
   let apply (_,sk:skema_w_id) args = apply F.Map.empty sk args
 
-  let eq_skema_w_id (_,x) (_,y) = compare_skema x y = 0
-  let diff_id_check ((id1:IdPos.t),_) (id2,_) = assert (id1<>id2)
-  let diff_ids_check e = List.iter (diff_id_check e)
+  let eq_skema_w_id n (loc1,x) (loc2,y) = 
+    try compare_skema x y = 0
+    with InvalidMode -> 
+      error ~loc:(IdPos.to_loc loc1) 
+        (Format.asprintf "duplicate mode declaration for %a (second mode found at %a)\nDebug:\n-@[<hov 2>%a@]\n-@[<hov 2>%a@]" F.pp n IdPos.pp loc2 pp_skema x pp_skema y)
 
   (* returns a pair of ids representing the merged type_ass + the new merge type_ass *)
-  let merge_skema t1 t2 =
+  let merge_skema n t1 t2 =
+    let diff_id_check ((id1:IdPos.t),t1) (id2,t2) = 
+      if (id1 = id2) then error ~loc:(IdPos.to_loc id1) 
+        (Format.asprintf "Different constants with same ids (loc2 is:%a)\n%a\n<>\n%a" IdPos.pp id2 pp_skema t1 pp_skema t2) in
+    let diff_ids_check e = List.iter (diff_id_check e) in
+
     let removed = ref [] in
     let add x y = removed := (fst x,fst y) :: !removed in 
     let rec remove_mem e acc = function
       | [] -> List.rev acc
-      | x::xs when eq_skema_w_id e x ->
+      | x::xs when eq_skema_w_id n e x ->
         diff_ids_check x xs;
         add x e;
         List.rev_append acc xs
@@ -338,12 +383,12 @@ module TypeAssignment = struct
     in
     let rec merge_aux t1 t2 =
       match t1, t2 with
-      | Single x, Single y when eq_skema_w_id x y -> 
+      | Single x, Single y when eq_skema_w_id n x y -> 
         add y x;
         t1
       | Single x, Single y -> diff_id_check x y; Overloaded [x;y]
       | Single x, Overloaded ys  -> Overloaded (x :: remove_mem x [] ys)
-      | Overloaded xs, Single y when List.exists (eq_skema_w_id y) xs -> t1
+      | Overloaded xs, Single y when List.exists (eq_skema_w_id n y) xs -> t1
       | Overloaded xs, Single y -> diff_ids_check y xs; Overloaded(xs@[y])
       | Overloaded xs, Overloaded _ ->
           List.fold_right (fun x -> merge_aux (Single x)) xs t2
@@ -388,7 +433,7 @@ module TypeAssignment = struct
     | Overloaded l -> List.exists (fun (_,x) -> is_predicate x) l
 
   open Format
-  let pretty fmt tm =
+  let pretty f fmt tm =
 
     let arrs = 0 in
     let app = 1 in
@@ -406,15 +451,32 @@ module TypeAssignment = struct
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
       | Arr(m,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a:%a ->@ %a@]" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
       | Arr(m,Variadic,s,t) -> fprintf fmt "%a:%a ..-> %a" Mode.pp_short m (pretty_parens ~lvl:arrs) s pretty t
-      | UVar m when MutableOnce.is_set m -> pretty fmt @@ deref m
-      | UVar m -> MutableOnce.pretty fmt m
+      | UVar m -> f fmt pretty m
+      (* | UVar m -> MutableOnce.pretty fmt m *)
     and pretty_parens ~lvl fmt = function
-      | UVar m when MutableOnce.is_set m -> pretty_parens ~lvl fmt @@ deref m
+      | UVar m -> f fmt (pretty_parens ~lvl) m
       | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
       | t -> pretty fmt t in
     let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
   in 
   pretty fmt tm
+
+  let pretty_mut_once = 
+    pretty (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
+
+  let pretty_ft =
+    pretty (fun fmt _ (t:F.t) -> F.pp fmt t)
+
+  let pretty_skema_w_id fmt ((_, sk):skema_w_id) =
+    let rec aux = function
+      | Lam (_,t) -> aux t
+      | Ty t -> pretty_ft fmt t in
+    aux sk
+
+  let pretty_overloaded_skema fmt = function
+    | Single t -> pretty_skema_w_id fmt t
+    | Overloaded l -> pplist pretty_skema_w_id "," fmt l
+
 
   let vars_of (Val t)  = fold_t_ (fun xs x -> if MutableOnce.is_set x then xs else x :: xs) [] t
 
@@ -520,7 +582,7 @@ module ScopedTerm = struct
   let build_infix_constant scope name loc : t = {loc; ty = MutableOnce.make (F.from_string "dummy"); it = Const (scope, name)}
 
   let is_infix_constant f =
-    let infix = [F.andf; F.orf; F.eqf; F.isf; F.asf; F.consf] in
+    let infix = [F.andf; F.orf; F.eqf; F.isf; F.asf; F.consf; F.from_string "^"] in
     List.mem f infix
 
   let intersperse e : 'a -> t list = function
@@ -530,7 +592,7 @@ module ScopedTerm = struct
   let rec pretty_lam fmt n ste (mta:TypeAssignment.t MutableOnce.t) it =
     fprintf fmt "%a" F.pp (get_lam_name n);
     if MutableOnce.is_set mta then
-      fprintf fmt ": %a " TypeAssignment.pretty (match MutableOnce.get mta with Val a -> a)
+      fprintf fmt ": %a " TypeAssignment.pretty_mut_once (match MutableOnce.get mta with Val a -> a)
     else Option.iter (fun e -> fprintf fmt ": %a " ScopedTypeExpression.pretty_e e) ste;
     fprintf fmt "\\ %a" pretty it;
 
@@ -632,6 +694,18 @@ module ScopedTerm = struct
       | Discard | CData _ -> t
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
 
+    let rec clone_loc {it;loc} = {it=clone it;loc;ty=TypeAssignment.new_ty ()} and
+    clone = function
+      | Const (g, x) -> Const (Scope.clone g, x)
+      | Impl (b, l, r) -> Impl(b, clone_loc l, clone_loc r)
+      | Lam (n,ty,_,bo) -> Lam(n,ty,TypeAssignment.new_ty (), clone_loc bo)
+      | Discard -> Discard
+      | Var (v, xs) -> Var (v, List.map clone_loc xs)
+      | App (g, n, x, xs) -> App (Scope.clone g, n, clone_loc x, List.map clone_loc xs)
+      | CData _ as t -> t 
+      | Spill (t, _) -> Spill (clone_loc t, ref NoInfo)
+      | Cast (t, ty) -> Cast (clone_loc t, ty)
+
     let beta t args =
       let rec fv acc { it } =
         match it with
@@ -662,7 +736,7 @@ module ScopedTerm = struct
             let d = fresh () in
             Lam(Some (d,l),ty,tya,subst_loc map fv @@ rename_loc l c d t)
         | Const(Bound l,c) when Scope.Map.mem (c,l) map -> unlock @@ Scope.Map.find (c,l) map
-        | Const _ -> t
+        | Const (x,y) -> Const (x, y)
         | App(Bound l,c,x,xs) when Scope.Map.mem (c,l) map ->
             let hd = Scope.Map.find (c,l) map in
             unlock @@ app_loc hd (List.map (subst_loc map fv) (x::xs))
@@ -671,8 +745,8 @@ module ScopedTerm = struct
         | Spill(t,i) -> Spill(subst_loc map fv t,i)
         | Cast(t,ty) -> Cast(subst_loc map fv t,ty)
         | Discard | CData _ -> t
-      and subst_loc map fv { it; ty; loc } = { it = subst map fv it; ty; loc }
-      and app_loc { it; loc; ty } args : t = { it = app ~loc it args; loc; ty }
+      and subst_loc map fv { it; ty; loc } = {loc; it = (subst map fv it); ty}
+      and app_loc { it; loc; ty } args : t = {loc; it = (app ~loc it args); ty}
       and app ~loc t (args : t list) =
         if args = [] then t else
         match t with
@@ -686,6 +760,7 @@ module ScopedTerm = struct
         | Cast _ -> error ~loc "cannot apply cast"
         | Lam _ -> load_subst ~loc t args Scope.Map.empty Scope.Set.empty
       in
+        if args = [] then unlock t else
         load_subst_loc t args Scope.Map.empty Scope.Set.empty
 
   module QTerm = struct

@@ -115,6 +115,11 @@ let () = declare "conj2"
   ~description:"parsing and evaluation of & (binary conj)"
   ()
 
+let () = declare "macro_type"
+  ~source_elpi:"macro_type.elpi"
+  ~description:"polymorphic macro"
+  ()
+
 (* 
   Note in the following tests with DT, we disable typecheck not to print the
   number of candidates found in the search of clauses done by the elpi typechecker

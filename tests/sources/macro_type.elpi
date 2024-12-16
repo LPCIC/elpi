@@ -1,0 +1,14 @@
+% This tests use the same macro with different types
+% The mutable types of the macro should not be affected by side effect
+% during the typechecking of the rule for p, otherwise
+% the mutable once field would be affected twice with consequent
+% fatal error
+macro @m A :- X.
+
+pred p o:(int -> bool).
+p (@m).
+
+pred q o:(string -> int).
+q (@m).
+
+main.
