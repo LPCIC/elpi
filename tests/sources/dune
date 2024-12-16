@@ -14,3 +14,4 @@
 (executable (name sepcomp_perf4) (modules sepcomp_perf4) (libraries sepcomp))
 (executable (name sepcomp_perf5) (modules sepcomp_perf5) (libraries sepcomp))
 (executable (name sepcomp_tyid)  (modules sepcomp_tyid)  (libraries sepcomp))
+(executable (name sepcomp_tyid2)  (modules sepcomp_tyid2)  (libraries sepcomp))

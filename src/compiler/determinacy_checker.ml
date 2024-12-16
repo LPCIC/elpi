@@ -5,6 +5,7 @@ open Elpi_util.Util
 open Elpi_parser.Ast
 open Compiler_data
 module C = Constants
+module Union_find = Union_find.Make (IdPos.Map)
 
 let to_print f = if false then f ()
 
@@ -16,7 +17,6 @@ type functionality =
   | NoProp of functionality list  (** -> for kinds like list, int, string *)
   | BoundVar of F.t  (** -> in predicates like: std.exists or in parametric type abbreviations. *)
   | AssumedFunctional  (** -> variadic predicates: never backtrack *)
-
   (* pred p i:int *)
   (* Arrow (NoProp[]) (Relation) : NoProp -> Relation *)
 
@@ -197,18 +197,22 @@ module Compilation = struct
 end
 
 let merge = Compilation.merge
+let remove t k = { t with cmap = IdPos.Map.remove k t.cmap }
 
-let get_functionality ?tyag ~loc ~env k =
-  if k = Scope.dummy_type_decl_id then Any
+let get_functionality ~uf ?tyag ~loc ~env id =
+  if id = Scope.dummy_type_decl_id then Any
   else
-    match IdPos.Map.find_opt k env.cmap with
+    let id' = Union_find.find uf id in
+    if id <> id' then assert (not (IdPos.Map.mem id env.cmap));
+    (* Sanity check *)
+    match IdPos.Map.find_opt id' env.cmap with
     | None -> (
         (* TODO: this is temporary: waiting for unknown type to be added in the
             type db After that change, the match becomes useless and ~tyag can
             be removed from the parameters of get_functionality
         *)
         match tyag with
-        | None -> error ~loc (Format.asprintf "Cannot find functionality of id %a\n%!" IdPos.pp k)
+        | None -> error ~loc (Format.asprintf "Cannot find functionality of id %a\n%!" IdPos.pp id')
         | Some (ty, ag) -> Compilation.TypeAssignment.type_ass_2func ~ag ~loc env ty)
     | Some (name, func) -> if F.equal F.pif name || F.equal F.sigmaf name then functionality_pi_sigma else func
 
@@ -223,21 +227,22 @@ let rec all_relational = function
 
 let ( <<= ) ~loc a b =
   let rec aux ~loc a b =
-  match (a, b) with
-  | BoundVar _, _ | _, BoundVar _ -> true (* TODO: this is not correct... -> use ref with uvar to make unification *)
-  | NoProp _, x -> aux Any x ~loc
-  | x, NoProp _ -> aux x Any ~loc
-  | _, Any -> true
-  | Any, _ -> all_relational b
-  | _, Relational -> true
-  | Relational, _ -> false
-  | Functional, Functional -> true
-  | AssumedFunctional, _ -> true
-  | _, AssumedFunctional -> error ~loc (Format.asprintf "Cannot compare AssumedFunctional with different functionality")
-  | Arrow (l1, r1), Arrow (l2, r2) -> aux l2 l1 ~loc && aux r1 r2 ~loc
-  | Arrow _, _ | _, Arrow _ ->
-      error ~loc (Format.asprintf "Type error1 in comparing %a and %a" pp_functionality a pp_functionality b)
-(* | NoProp _, _ | _, NoProp _ -> error ~loc "Type error2" *)
+    match (a, b) with
+    | BoundVar _, _ | _, BoundVar _ -> true (* TODO: this is not correct... -> use ref with uvar to make unification *)
+    | NoProp _, x -> aux Any x ~loc
+    | x, NoProp _ -> aux x Any ~loc
+    | _, Any -> true
+    | Any, _ -> all_relational b
+    | _, Relational -> true
+    | Relational, _ -> false
+    | Functional, Functional -> true
+    | AssumedFunctional, _ -> true
+    | _, AssumedFunctional ->
+        error ~loc (Format.asprintf "Cannot compare AssumedFunctional with different functionality")
+    | Arrow (l1, r1), Arrow (l2, r2) -> aux l2 l1 ~loc && aux r1 r2 ~loc
+    | Arrow _, _ | _, Arrow _ ->
+        error ~loc (Format.asprintf "Type error1 in comparing %a and %a" pp_functionality a pp_functionality b)
+    (* | NoProp _, _ | _, NoProp _ -> error ~loc "Type error2" *)
   in
   let res = aux a b ~loc in
   to_print (fun () -> Format.eprintf "%a <= %a = %b@." pp_functionality a pp_functionality b res);
@@ -272,7 +277,6 @@ let cmp ~loc f1 f2 =
   | false, true -> 1
   | false, false ->
       error ~loc (Format.asprintf "Functionality %a and %a are not comparable" pp_functionality f1 pp_functionality f2)
-
 
 (* R e adesso so che è F -> F *)
 (* p X, q X *)
@@ -323,7 +327,7 @@ let not_functional_call_error ~loc t =
   error ~loc (Format.asprintf "Non functional premise call %a\n" ScopedTerm.pretty_ t)
 
 module Checker_clause = struct
-  let check ~modes ~(global : env) tm =
+  let check ?(uf = Union_find.empty) ~modes ~(global : env) tm =
     let env = ref Env.empty in
     let pp_env fmt () : unit = Format.fprintf fmt "Env : %a" Env.pp !env in
     (* let pp_ctx fmt ctx : unit = Format.fprintf fmt "Ctx : %a" Ctx.pp ctx in *)
@@ -377,8 +381,10 @@ module Checker_clause = struct
               Some (Compilation.TypeAssignment.type_ass_2func ~loc global ty))
       | Const (Global { decl_id }, _) ->
           Some
-            (match get_functionality ~loc ~tyag:(ty, []) ~env:global decl_id with Relational -> Functional | e -> e)
-      | App (Global { decl_id }, _, x, xs) -> Some (get_functionality ~loc ~tyag:(ty, x :: xs) ~env:global decl_id)
+            (match get_functionality ~uf ~loc ~tyag:(ty, []) ~env:global decl_id with
+            | Relational -> Functional
+            | e -> e)
+      | App (Global { decl_id }, _, x, xs) -> Some (get_functionality ~uf ~loc ~tyag:(ty, x :: xs) ~env:global decl_id)
       | App (Bound scope, f, _, _) | Const (Bound scope, f) -> Ctx.get ctx (f, scope)
       | CData _ -> Some (NoProp [])
       | Spill _ -> error ~loc "get_funct_of_term of spilling: "
@@ -578,7 +584,7 @@ module Checker_clause = struct
               let v = get_funct_of_term ctx t |> Option.get in
               add_env ~loc:t.loc n ~v;
               r
-          | _ -> if ((infer ctx t) <<= l) ~loc:t.loc then r else Any)
+          | _ -> if (infer ctx t <<= l) ~loc:t.loc then r else Any)
     and infer_outputs_fail ctx =
       fold_on_modes
         (fun _ _ r -> r)
@@ -781,6 +787,8 @@ module Checker_clause = struct
       to_print (fun () -> Format.eprintf "END HEAD CHECK@.");
 
       to_print (fun () -> Format.eprintf "The contex_head is %a@." pp_env ());
+
+      (* Format.eprintf "Getting the functionality of %a and func hd is %a@." ScopedTerm.pp hd pp_functionality (get_func_hd ctx hd); *)
       Option.iter (fun body -> check_body ctx body (get_func_hd ctx hd)) body;
 
       if body <> None then check_head_output ctx hd
@@ -792,18 +800,18 @@ end
 
 let to_check_clause ScopedTerm.{ it; loc } =
   let n = get_namef it in
-  (not (F.equal n F.mainf)) 
-  (* && Re.Str.string_match (Re.Str.regexp ".*test.*") (Loc.show loc) 0 *)
+  not (F.equal n F.mainf)
+(* && Re.Str.string_match (Re.Str.regexp ".*test.*") (Loc.show loc) 0 *)
 (* && Re.Str.string_match (Re.Str.regexp ".*test.*functionality.*") (Loc.show loc) 0 *)
 
-let check_clause ~loc ~env ~modes t =
+let check_clause ?uf ~loc ~env ~modes t =
   if to_check_clause t then (
     to_print (fun () ->
         (* check_clause ~loc ~env F.Map.empty t |> ignore *)
         Format.eprintf "============== STARTING mode checking %a@." Loc.pp t.loc
         (* Format.eprintf "Modes are [%a]" (F.Map.pp (fun fmt ((e:mode_aux list),_) -> Format.fprintf fmt "%a" pp_mode e)) (modes); *)
         (* Format.eprintf "Functional preds are %a@." pp env; *));
-    Checker_clause.check ~modes ~global:env t)
+    Checker_clause.check ?uf ~modes ~global:env t)
 
 class merger (all_func : env) =
   object (self)
@@ -820,10 +828,7 @@ class merger (all_func : env) =
     method get_all_func = all_func
     method get_local_func = local_func
     method add_ty_abbr = self#add_func true
-
-    method add_func_ty_list ty (id_list : IdPos.t list) =
-      List.iter2 (self#add_func false) id_list ty
-
+    method add_func_ty_list ty id_list = List.iter2 (self#add_func false) id_list ty
     method merge : env = merge all_func local_func
   end
 
