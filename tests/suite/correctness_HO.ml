@@ -215,10 +215,10 @@ let () = declare "hilbert2"
   ~outside_llam:true
   ()
 
-let () = declare "eta_as"
+(* let () = declare "eta_as"
   ~source_elpi:"eta_as.elpi"
   ~description:"eta expansion of as clause"
-    ()
+    () *)
 
 let () = declare "hdclause"
   ~source_elpi:"hdclause.elpi"

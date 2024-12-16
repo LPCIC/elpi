@@ -44,12 +44,7 @@ module Func : sig
   module Set : Set.S with type elt = t
 end
 
-module Mode : sig
-
-  type t = Input | Output
-  [@@deriving show, ord]
-
-end
+module Mode : Mode with type t = Mode.t
 
 type raw_attribute =
   | If of string

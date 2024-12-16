@@ -257,24 +257,45 @@ let rec for_all3b p l1 l2 bl b =
   | (_, _, _) -> false
 ;;
 
-type arg_mode = Input | Output
-[@@deriving show, ord]
+module type Mode = sig
+  type t = Input | Output [@@deriving show, ord]
 
-type mode_aux =
-  | Fo of arg_mode
-  | Ho of arg_mode * mode
-and mode = mode_aux list
-[@@deriving show, ord]
+  type ho = Fo of t | Ho of t * ho list
+  and hos = ho list [@@deriving show, ord]
 
-let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
+  val get_head : ho -> t
+  val to_ho : t -> ho
+  val show_short : t -> string
+  val pp_short : Fmt.formatter -> t -> unit
+end
+ 
+
+module Mode : Mode = struct
+
+  type t = Input | Output
+  [@@deriving show, ord]
+
+  type ho =
+    | Fo of t
+    | Ho of t * hos
+  and hos = ho list
+  [@@deriving show, ord]
+
+  let get_head = function Fo a -> a | Ho (a,_) -> a
+  let to_ho x = Fo x
+
+  let show_short = function Input -> "i" | Output -> "o"
+  let pp_short fmt m = Format.fprintf fmt "%s" (show_short m)
+
+end
 
 let rec for_all3b3 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3 l1 l2 bl b =
   match (l1, l2, bl) with
   | ([], [], _) -> true
   | ([a1], [a2], []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b
-  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(get_arg_mode b3 == Input)
+  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(Mode.get_head b3 == Input)
   | (a1::l1, a2::l2, []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
-  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(get_arg_mode b3 == Input) && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
+  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(Mode.get_head b3 == Input) && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
   | (_, _, _) -> false
 ;;
 

@@ -55,18 +55,10 @@ let equal_stuck_goal_kind _ x y = x == y
 type 'unification_def stuck_goal_kind +=
   | Unification of 'unification_def
 
-type arg_mode = Util.arg_mode = Input | Output [@@deriving show, ord]
-
-type mode_aux = Util.mode_aux =
-  | Fo of arg_mode
-  | Ho of arg_mode * mode
-and mode = mode_aux list
-[@@ deriving show, ord]
-
 type ttype =
   | TConst of constant
   | TApp of constant * ttype * ttype list
-  | TPred of bool * ((arg_mode * ttype) list) (* The bool is for functionality *)
+  | TPred of bool * ((Mode.t * ttype) list) (* The bool is for functionality *)
   | TArr of ttype * ttype
   | TCData of CData.t
   | TLam of ttype (* this is for parametrized typeabbrevs *)
@@ -111,14 +103,11 @@ type clause = {
     args : term list;
     hyps : term list;
     vars : int;
-    mode : mode;        (* CACHE to avoid allocation in get_clauses *)
+    mode : Mode.hos;        (* CACHE to avoid allocation in get_clauses *)
     loc : Loc.t option; (* debug *)
     mutable timestamp : int list; (* for grafting *)
 }
 [@@deriving show, ord]
-
-let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
-let to_mode = function true -> Fo Input | false -> Fo Output
 
 type grafting_time = int list
 [@@deriving show, ord]
@@ -156,19 +145,19 @@ and first_lvl_idx = {
 }
 and second_lvl_idx =
 | TwoLevelIndex of {
-    mode : mode;
+    mode : Mode.hos;
     argno : int;
     all_clauses : clause_list;        (* when the query is flexible *)
     flex_arg_clauses : clause_list;   (* when the query is rigid but arg_id ha nothing *)
     arg_idx : clause_list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
-    mode : mode;
+    mode : Mode.hos;
     args : int list;
     args_idx : clause_list Ptmap.t; (* clause, insertion time *)
   }
 | IndexWithDiscriminationTree of {
-    mode : mode;
+    mode : Mode.hos;
     arg_depths : int list;   (* the list of args on which the trie is built *)
     args_idx : clause Discrimination_tree.t; 
 }

@@ -67,12 +67,7 @@ module Func = struct
 
 end
 
-module Mode = struct
-
-  type t = Util.arg_mode = Input | Output
-  [@@deriving show, ord]
-
-end
+module Mode : Mode with type t = Mode.t = Mode
 
 type raw_attribute =
   | If of string
