@@ -226,6 +226,22 @@ module ScopedTypeExpression = struct
     if name == name' && value' == value then orig
     else { name = name'; value = value'; nparams; loc; indexing }
 
+  let type2mode (value : v_) =
+    let rec to_mode_ho (m, ty) = 
+      match flatten_arrow [] ty with
+      | None -> Mode.Fo m
+      | Some l -> Mode.Ho (m, List.rev_map to_mode_ho l)
+    and flatten_arrow acc = function
+      | Prop _ -> Some acc
+      | Any | Const _ | App _ -> None
+      | Arrow (m,_,a,b) -> flatten_arrow ((m,a.it)::acc) b.it in
+    let rec type_to_mode_under_abs = function
+      | Lam (_,b) -> type_to_mode_under_abs b
+      | Ty {it;loc} -> Option.map (List.rev_map to_mode_ho) (flatten_arrow [] it)
+    in
+    type_to_mode_under_abs value
+
+
 end
 
 module MutableOnce : sig 

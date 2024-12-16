@@ -74,7 +74,6 @@ module SymbolMap : sig
   val compile : table -> D.symbol_table
   val compile_s2c : table -> (constant * D.term) F.Map.t
   val compile_c2mode : table -> constant -> Mode.hos
-  val set_mode : table -> constant -> Mode.hos -> table
 
 end = struct
 
@@ -86,9 +85,6 @@ end = struct
     last_global : int;
   }
   [@@deriving show, ord]
-
-  let set_mode table c mode = 
-    {table with c2mode = Constants.Map.add c mode table.c2mode}
 
   let compile_c2mode t k = Util.Constants.Map.find k t.c2mode
 
@@ -239,7 +235,6 @@ and pbody = {
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
-  (* modes : (Mode.hos * Loc.t) F.Map.t; *)
   body : block list;
   pred_symbols : F.Set.t;
   ty_symbols : F.Set.t;
@@ -263,7 +258,6 @@ type unchecked_signature = {
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
-  (* modes : (Mode.hos * Loc.t) F.Map.t; *)
   type_uf : IDPosUf.t
 }
 [@@deriving show]
@@ -286,7 +280,6 @@ module Assembled = struct
     kinds : Arity.t F.Map.t;
     types : TypeAssignment.overloaded_skema_with_id F.Map.t;
     type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
-    (* modes : (Mode.hos * Loc.t) F.Map.t; *)
     functional_preds: Determinacy_checker.t;
     type_uf : IDPosUf.t
   }
@@ -791,7 +784,6 @@ module Scope_Quotation_Macro : sig
   val run : State.t -> toplevel_macros:macro_declaration -> Ast.Structured.program -> Scoped.program
   val check_duplicate_mode : F.t -> (Mode.hos * Loc.t) -> (Mode.hos * Loc.t) F.Map.t -> unit
   val scope_loc_term : state:State.t -> Ast.Term.t -> ScopedTerm.t
-  val type2mode : ScopedTypeExpression.v_ -> Mode.ho list option
 
 end = struct
   let map_append k v m =
@@ -981,31 +973,6 @@ end = struct
         (Format.asprintf "Duplicate mode declaration for %a (also at %a)\n Mode1 = %a\n Mode2 = %a" F.pp name Loc.pp loc2 Mode.pp_hos mode Mode.pp_hos mode2)
     | _ -> ()
 
-  let type2mode (value : ScopedTypeExpression.v_) =
-    let rec to_mode_ho (m, ty) = 
-      match flatten_arrow [] ty with
-      | None -> Mode.Fo m
-      | Some l -> Mode.Ho (m, List.rev_map to_mode_ho l)
-    and flatten_arrow acc = function
-      | ScopedTypeExpression.Prop _ -> Some acc
-      | Any | Const _ | App _ -> None
-      | Arrow (m,_,a,b) -> flatten_arrow ((m,a.it)::acc) b.it in
-    let rec type_to_mode_under_abs = function
-      | ScopedTypeExpression.Lam (_,b) -> type_to_mode_under_abs b
-      | Ty {it;loc} -> Option.map (List.rev_map to_mode_ho) (flatten_arrow [] it)
-    in
-    type_to_mode_under_abs value
-
-
-  let compile_mode_aux modes ({value;name;loc} :ScopedTypeExpression.t) =
-    match type2mode value with
-    | None -> modes
-    | Some x -> F.Map.add name (x,loc) modes
-
-  let compile_mode name l modes =
-    if F.equal F.rimplf name || F.equal F.implf name then modes
-    else List.fold_left compile_mode_aux modes l
-
   let defs_of_map m = F.Map.bindings m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
   let defs_of_assoclist m = m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
 
@@ -1025,8 +992,6 @@ end = struct
       | _ -> add1 s body)
       F.Set.empty cl
 
-
-  
   let compile_clause state macros { Ast.Clause.body; attributes; loc; needs_spilling = () } =
      let needs_spilling = ref false in
      let state = set_mtm state { empty_mtm with macros; needs_spilling } in
@@ -1069,49 +1034,47 @@ end = struct
       let type_abbrevs = List.map compile_type_abbrev type_abbrevs in
       let kinds = List.fold_left compile_kind F.Map.empty kinds in
       let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (TypeList.make @@ compile_type t) m) F.Map.empty (List.rev types) in
-      let modes = F.Map.fold compile_mode types F.Map.empty in
-      let defs_m = defs_of_map modes in
       let defs_k = defs_of_map kinds in
       let defs_t = defs_of_map types in
       let defs_ta = defs_of_assoclist type_abbrevs in
-      let kinds, types, type_abbrevs, modes, defs_b, defs_ty, body =
-        compile_body active_macros kinds types type_abbrevs modes F.Set.empty F.Set.empty state body in
+      let kinds, types, type_abbrevs, defs_b, defs_ty, body =
+        compile_body active_macros kinds types type_abbrevs F.Set.empty F.Set.empty state body in
       let ty_symbols = F.Set.(union defs_k (union defs_t (union defs_ta defs_ty))) in
-      let pred_symbols = F.Set.(union defs_t (union defs_m defs_b)) in
+      let pred_symbols = F.Set.(union defs_t defs_b) in
       (* Format.eprintf "CP: types: %d\n" (F.Map.cardinal types);
       Format.eprintf "CP: ty_sym: %a\n" F.Set.pp ty_symbols; *)
       toplevel_macros,
       { Scoped.types; kinds; type_abbrevs; body; ty_symbols; pred_symbols }
 
-    and compile_body macros kinds types type_abbrevs (modes : (Mode.hos * Loc.t) F.Map.t) (defs : F.Set.t) (ty_defs : F.Set.t) state = function
-      | [] -> kinds, types, type_abbrevs, modes, defs, ty_defs, []
+    and compile_body macros kinds types type_abbrevs (defs : F.Set.t) (ty_defs : F.Set.t) state = function
+      | [] -> kinds, types, type_abbrevs, defs, ty_defs, []
       | Clauses cl :: rest ->
           let compiled_cl = List.map (compile_clause state macros) cl in
           let defs = F.Set.union defs (global_hd_symbols_of_clauses compiled_cl) in
-          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
+          let kinds, types, type_abbrevs, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs defs ty_defs state rest in
           let compiled_rest =
             match compiled_rest with
             | Scoped.Clauses l :: rest -> Scoped.Clauses (compiled_cl @ l) :: rest
             | rest -> Scoped.Clauses compiled_cl :: rest in
-          kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest
+          kinds, types, type_abbrevs, defs, ty_defs, compiled_rest
       | Namespace (prefix, p) :: rest ->
           let prefix = F.show prefix in
           let _, p = compile_program macros state p in
-          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
+          let kinds, types, type_abbrevs, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs defs ty_defs state rest in
           let ty_symbols = prepend [prefix] p.Scoped.ty_symbols in
       (* Format.eprintf "CB: ty_sym %s: %a\n" prefix F.Set.pp ty_symbols; *)
           let pred_symbols = prepend [prefix] p.Scoped.pred_symbols in
-          kinds, types, type_abbrevs, modes, F.Set.union defs pred_symbols, F.Set.union ty_defs ty_symbols,
+          kinds, types, type_abbrevs, F.Set.union defs pred_symbols, F.Set.union ty_defs ty_symbols,
           Scoped.Namespace(prefix, p) :: compiled_rest
       | Shorten(shorthands,p) :: rest ->
           let shorts = List.fold_left (fun s { Ast.Structured.short_name } ->
             F.Set.add short_name s) F.Set.empty shorthands in
           let _, p = compile_program macros state p in
-          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
-          kinds, types, type_abbrevs, modes,
+          let kinds, types, type_abbrevs, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs defs ty_defs state rest in
+          kinds, types, type_abbrevs,
           F.Set.union defs (F.Set.diff p.Scoped.pred_symbols shorts), (* TODO shorten/ shorten-ty *)
           F.Set.union ty_defs (F.Set.diff p.Scoped.ty_symbols shorts),
           Scoped.Shorten(shorthands, p) :: compiled_rest
@@ -1119,17 +1082,17 @@ end = struct
           (* XXX missing check for nested constraints *)
           let rules = List.map (compile_chr_rule state macros) rules in
           let _, p = compile_program macros state p in
-          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
-          kinds, types, type_abbrevs, modes,
+          let kinds, types, type_abbrevs, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs defs ty_defs state rest in
+          kinds, types, type_abbrevs,
           F.Set.union defs p.Scoped.pred_symbols,
           F.Set.union ty_defs p.Scoped.ty_symbols,
           Scoped.Constraints({ctx_filter; clique; rules},p) :: compiled_rest
       | Accumulated p :: rest ->
           let _, p = compile_program macros state p in
-          let kinds, types, type_abbrevs, modes, defs, ty_defs, compiled_rest =
-            compile_body macros kinds types type_abbrevs modes defs ty_defs state rest in
-          kinds, types, type_abbrevs, modes,
+          let kinds, types, type_abbrevs, defs, ty_defs, compiled_rest =
+            compile_body macros kinds types type_abbrevs defs ty_defs state rest in
+          kinds, types, type_abbrevs,
           F.Set.union defs p.Scoped.pred_symbols,
           F.Set.union ty_defs p.Scoped.ty_symbols,
           Scoped.Accumulated p :: compiled_rest
@@ -1372,11 +1335,12 @@ module Flatten : sig
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
       let types = merge_types (apply_subst_types ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
+      (* let modes = merge_modes (apply_subst_modes subst m) modes in *)
       let chr = apply_subst_chrs pred_subst  ty_subst ch :: chr in
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst body in
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
-  | Scoped.Accumulated { kinds=k; types = t; type_abbrevs = ta; body; pred_symbols = _; ty_symbols = _ } :: rest ->
+  | Scoped.Accumulated { kinds=k; types = t; type_abbrevs = ta; body; ty_symbols = _ } :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
       let types = merge_types (apply_subst_types ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
@@ -1470,7 +1434,6 @@ end = struct
     let all_type_uf = IDPosUf.merge otuf type_uf in
     let to_remove, all_type_uf, all_types = Flatten.merge_type_assignments all_type_uf ot types in
     let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
-    (* let all_modes = Flatten.merge_modes om modes in *)
     let all_functional_preds = func_setter_object#merge in
     let all_functional_preds = List.fold_left Determinacy_checker.remove all_functional_preds to_remove in
 
@@ -1515,8 +1478,6 @@ end = struct
     let more_types = Type_checker.check_undeclared ~unknown in
     let _, _, u_types = Flatten.merge_type_assignments type_uf signature.types more_types in
     let _, _, types = Flatten.merge_type_assignments type_uf types more_types in
-
-    (* TODO: forall i in toremove @@ toremove1, remove i from functional preds *)
 
     let check_end = Unix.gettimeofday () in
 
@@ -1628,7 +1589,7 @@ end = struct
 
     let add_indexing_for name c (ScopedTypeExpression.{loc;indexing;value}) map =
       (* Format.eprintf "indexing for %a\n%!" F.pp name; *)
-      let mode = Scope_Quotation_Macro.type2mode value |> Option.value ~default:[] in
+      let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
       (* Format.eprintf "Mode of %d -- %a is %a@." c F.pp name Mode.pp_hos mode; *)
       let declare_index, index =
         match indexing with
@@ -1652,8 +1613,8 @@ end = struct
       with Not_found ->
         if declare_index then begin
           check_if_some_clauses_already_in2 ~loc name c;
-        C.Map.add c (mode,index) map
-      end else map in
+          C.Map.add c (mode,index) map
+        end else map in
 
     (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
             time   typchk wall   mem
@@ -1756,13 +1717,13 @@ end = struct
     let t = if needs_spilling then Spilling.main t else t in
     to_dbl ~ctx ~builtins state symb ~depth ~amap t
 
-  let extend1_clause flags state modes indexing ~builtins (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
+  let extend1_clause flags state indexing ~builtins (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index)
     else
     let (symbols, amap), body = to_dbl ~builtins state symbols body in
-    let modes x = Constants.Map.find_opt x modes |> Option.map fst |> Option.value ~default:[] in
+    let modes x = Constants.Map.find_opt x indexing |> Option.map fst |> Option.value ~default:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
       with D.CannotDeclareClauseForBuiltin(loc,c) ->
@@ -1829,7 +1790,6 @@ let extend1_signature base_signature (signature : checked_compilation_unit_signa
   let type_uf = IDPosUf.merge otyuf type_uf in
   let to_remove, type_uf, type_abbrevs = Flatten.merge_checked_type_abbrevs type_uf ota type_abbrevs in
   let to_remove1, type_uf, types = Flatten.merge_type_assignments type_uf ot types in
-  (* let modes = Flatten.merge_modes om modes in *)
   let toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
   let functional_preds =
     let fp = Determinacy_checker.merge ofp functional_preds in
@@ -1873,7 +1833,7 @@ let extend1 flags (state, base) unit =
     List.fold_left (extend1_chr_block ~builtins flags state) (symbols,ochr) chr in
   let clauses, symbols, prolog_program =
     (* TODO: pass also typeabbrevs *)
-    List.fold_left (extend1_clause ~builtins flags state indexing indexing) (cl, symbols, prolog_program) clauses in
+    List.fold_left (extend1_clause ~builtins flags state indexing) (cl, symbols, prolog_program) clauses in
 
   (* TODO: @FissoreD here we have to do mutual excl clauses... *)
 
