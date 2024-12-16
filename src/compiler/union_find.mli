@@ -16,4 +16,4 @@ module type S = sig
   val roots : t -> key list
 end
 
-module Make (M : Elpi_util.Util.Map.S) : S with type key = M.key and type t = M.key M.t
+module Make (M : Map.S) : S with type key = M.key and type t = M.key M.t

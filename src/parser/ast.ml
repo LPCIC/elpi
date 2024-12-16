@@ -122,7 +122,7 @@ let mkQuoted loc pad s =
                                  Loc.source_stop = loc.Loc.source_stop - m;
              } in
   (* Printf.eprintf "mkQuoted '%s'\n" s; *)
-  let rec find_data i pad =
+  let find_data i pad =
     match s.[i] with
     (* | '{' -> assert false; find_data (i+1) (pad+1) *)
     | ':' ->
