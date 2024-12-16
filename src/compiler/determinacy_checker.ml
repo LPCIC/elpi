@@ -15,7 +15,13 @@ type functionality =
   | Relational  (** -> for non-functional preds *)
   | NoProp of functionality list  (** -> for kinds like list, int, string *)
   | BoundVar of F.t  (** -> in predicates like: std.exists or in parametric type abbreviations. *)
-  | AssumedFunctional  (** -> variadic predicates: never backtrackc *)
+  | AssumedFunctional  (** -> variadic predicates: never backtrack *)
+
+  (* pred p i:int *)
+  (* Arrow (NoProp[]) (Relation) : NoProp -> Relation *)
+
+  (* pred q i:int, o:int, i:int, o:int *)
+  (*  *)
   | Arrow of functionality * functionality  (** -> abstractions *)
   | Any
 [@@deriving show, ord]
@@ -267,6 +273,11 @@ let cmp ~loc f1 f2 =
   | false, false ->
       error ~loc (Format.asprintf "Functionality %a and %a are not comparable" pp_functionality f1 pp_functionality f2)
 
+
+(* R e adesso so che è F -> F *)
+(* p X, q X *)
+
+(*  *)
 let min ~loc f1 f2 = if cmp ~loc f1 f2 <= 0 then f1 else f2
 let max ~loc f1 f2 = if cmp ~loc f1 f2 <= 0 then f2 else f1
 
@@ -333,23 +344,22 @@ module Checker_clause = struct
       (* Below the case of variadic functions like var. We assume all
          args to be in output mode
       *)
-      | a :: xs, [] -> fold_left_partial f (f acc a Output) xs []
+      | a :: xs, [] -> AssumedFunctional
+      (* | a :: xs, [] -> fold_left_partial f (f acc a Output) xs [] *)
       (* | _ :: _, [] -> error ~loc:tm.ScopedTerm.loc "fold_left_partial: Invalid application" *)
     in
 
-    let fold_on_modes input output tm args modes =
+    let fold_on_modes input output func args modes =
       to_print (fun () ->
-          Format.eprintf "Folding of @[%a@] with args @[%a@] and modes @[%a@]@." pp_functionality tm
+          Format.eprintf "Folding of @[%a@] with args @[%a@] and modes @[%a@]@." pp_functionality func
             (pplist ScopedTerm.pretty ",") args (pplist pp_arg_mode ",") modes);
       fold_left_partial
         (fun func arg mode ->
           match func with
           | Any | BoundVar _ -> Any
           | Arrow (l, r) -> if mode = Input then input arg l r else output arg l r
-          (* Below, AssumedFunctional is seen as a special arrow where we do not care about args *)
-          | AssumedFunctional -> AssumedFunctional
           | _ -> error ~loc:arg.ScopedTerm.loc (Format.asprintf "Type error fold modes, found %a" pp_functionality func))
-        tm args modes
+        func args modes
     in
 
     let get_funct_of_term ctx ScopedTerm.{ it; loc; ty } =
@@ -811,8 +821,7 @@ class merger (all_func : env) =
     method get_local_func = local_func
     method add_ty_abbr = self#add_func true
 
-    method add_func_ty_list ty (ty_w_id : TypeAssignment.overloaded_skema_with_id) =
-      let id_list = match ty_w_id with Single e -> [ fst e ] | Overloaded l -> List.map fst l in
+    method add_func_ty_list ty (id_list : IdPos.t list) =
       List.iter2 (self#add_func false) id_list ty
 
     method merge : env = merge all_func local_func

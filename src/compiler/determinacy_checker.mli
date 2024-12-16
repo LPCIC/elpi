@@ -17,6 +17,6 @@ class merger : t ->
     method get_all_func : t
     method get_local_func : t
     method add_ty_abbr : Scope.type_decl_id -> ScopedTypeExpression.t -> unit
-    method add_func_ty_list : TypeList.t -> TypeAssignment.overloaded_skema_with_id -> unit
+    method add_func_ty_list : TypeList.t -> IdPos.t list -> unit
     method merge : t
   end
