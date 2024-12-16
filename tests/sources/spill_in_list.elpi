@@ -1,4 +1,4 @@
-pred p o:A, o:A.
+pred p i:A, o:A.
 p X X.
 
 pred print-list i:list A.

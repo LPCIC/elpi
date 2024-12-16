@@ -11,6 +11,7 @@ p [1 | X] :- print "OK".
 pred exec i:prop.
 exec P :- (P, fail); true.
 
+:untyped
 main :-
   exec (f X),
   exec (p [1 | Y]).
