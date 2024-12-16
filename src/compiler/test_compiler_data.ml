@@ -1,9 +1,9 @@
 let pp_ta t s =
   let open Elpi_compiler.Compiler_data in
-  let s' = Format.asprintf "@[%a@]" TypeAssignment.pretty_mut_once t in
+  let s' = Format.asprintf "@[%a@]" TypeAssignment.pretty_mut_once_raw t in
   if s <> s' then begin
     Format.eprintf "Unexpected print: %a\nactual: %a\nreference: %s\n"
-      TypeAssignment.pp (Val t) TypeAssignment.pretty_mut_once t s;
+      TypeAssignment.pp (Val t) TypeAssignment.pretty_mut_once_raw t s;
     exit 1
   end
 ;;
@@ -27,24 +27,15 @@ let list x = (App(F.from_string "list",x,[]))
 let int = Cons (F.from_string "int")
 let arr s t = Arr(Output,NotVariadic,s,t)
 
-(* let () = pp_ta (Prop Relation) "prop";;
-let () = pp_ta (Prop Function) "fprop";;
+let () = pp_ta (Prop Relation) "prop";;
+let () = pp_ta (Prop Function) "func";;
 let () = pp_ta (list int) "list int";;
 let () = pp_ta (list (list int)) "list (list int)";;
 let () = pp_ta (arr (list int) int) "o:list int -> int";;
 let () = pp_ta (arr (arr int int) int) "o:(o:int -> int) -> int";;
 let () = pp_ta (arr int (arr int int)) "o:int -> o:int -> int";;
 let () = pp_ta (arr int (arr (list int) int)) "o:int -> o:list int -> int";;
-let () = pp_ta (list (arr int int)) "list (o:int -> int)";; *)
-let () = pp_ta (Prop Relation) "prop";;
-let () = pp_ta (Prop Function) "prop";;
-let () = pp_ta (list int) "list int";;
-let () = pp_ta (list (list int)) "list (list int)";;
-let () = pp_ta (arr (list int) int) "list int -> int";;
-let () = pp_ta (arr (arr int int) int) "(int -> int) -> int";;
-let () = pp_ta (arr int (arr int int)) "int -> int -> int";;
-let () = pp_ta (arr int (arr (list int) int)) "int -> list int -> int";;
-let () = pp_ta (list (arr int int)) "list (int -> int)";;
+let () = pp_ta (list (arr int int)) "list (o:int -> int)";;
 
 open ScopedTerm
 
