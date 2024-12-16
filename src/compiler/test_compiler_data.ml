@@ -1,9 +1,9 @@
 let pp_ta t s =
   let open Elpi_compiler.Compiler_data in
-  let s' = Format.asprintf "@[%a@]" TypeAssignment.pretty t in
+  let s' = Format.asprintf "@[%a@]" TypeAssignment.pretty_mut_once t in
   if s <> s' then begin
     Format.eprintf "Unexpected print: %a\nactual: %a\nreference: %s\n"
-      TypeAssignment.pp (Val t) TypeAssignment.pretty t s;
+      TypeAssignment.pp (Val t) TypeAssignment.pretty_mut_once t s;
     exit 1
   end
 ;;
