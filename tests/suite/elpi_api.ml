@@ -26,7 +26,7 @@ let () = declare "sepcomp3"
 let () = declare "sepcomp4"
   ~source_dune:"sepcomp4.exe"
   ~description:"separate compilation double naming"
-  ~expectation:Test.(FailureOutput (Str.regexp "uplicate mode declaration for p"))
+  ~expectation:Test.(FailureOutput (Str.regexp "duplicate mode declaration for p"))
   ()
 
 let () = declare "sepcomp5"

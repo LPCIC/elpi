@@ -48,7 +48,7 @@ let _ =
     let t = get_uvar @@ TA.unval (MutableOnce.get t.ST.ty) in
     (* let pp = TA.pp_t_ (MutableOnce.pp TA.pp) in *)
     if t <> exp then (
-      Format.eprintf "Unexpected result: \nactual: @[%a@]\nreference: @[%a@]\n" TA.pretty t TA.pretty exp;
+      Format.eprintf "Unexpected result: \nactual: @[%a@]\nreference: @[%a@]\n" TA.pretty_mut_once t TA.pretty_mut_once exp;
       exit 1)
   in
 

@@ -60,7 +60,7 @@ let filter_if flags proj l =
 *)
 
 module SymbolMap : sig
-  type table
+  type table [@@deriving show]
   val pp_table : Format.formatter -> table -> unit
   val equal_globals : table -> table -> bool
   val diff : table -> table -> table
@@ -73,16 +73,24 @@ module SymbolMap : sig
   val global_name : D.State.t -> table -> constant -> F.t
   val compile : table -> D.symbol_table
   val compile_s2c : table -> (constant * D.term) F.Map.t
+  val compile_c2mode : table -> constant -> Mode.hos
+  val set_mode : table -> constant -> Mode.hos -> table
 
 end = struct
 
   type table = {
     ast2ct : (constant * D.term) F.Map.t;
-    c2t : D.term Util.Constants.Map.t;
-    c2s : string Util.Constants.Map.t;
+    c2t : D.term Constants.Map.t;
+    c2s : string Constants.Map.t;
+    c2mode : Mode.hos Constants.Map.t;
     last_global : int;
   }
   [@@deriving show, ord]
+
+  let set_mode table c mode = 
+    {table with c2mode = Constants.Map.add c mode table.c2mode}
+
+  let compile_c2mode t k = Util.Constants.Map.find k t.c2mode
 
   let equal_globals m1 m2 = m1.last_global = m2.last_global
 
@@ -103,7 +111,7 @@ end = struct
     
   let compile_s2c { ast2ct } = ast2ct
 
-  let allocate_global_symbol_aux x ({ c2t; c2s; ast2ct; last_global } as table) =
+  let allocate_global_symbol_aux x ({ c2t; c2s; ast2ct; last_global; c2mode } as table) =
     try table, F.Map.find x ast2ct
     with Not_found ->
       let last_global = last_global - 1 in
@@ -113,7 +121,8 @@ end = struct
       let c2t = Util.Constants.Map.add n xx c2t in
       let ast2ct = F.Map.add x p ast2ct in
       let c2s = Util.Constants.Map.add n (F.show x) c2s in
-      { c2t; c2s; ast2ct; last_global }, p
+      let c2mode = Util.Constants.Map.add n [] c2mode in
+      { c2t; c2s; ast2ct; last_global; c2mode }, p
 
   let get_global_symbol { ast2ct } s =
     try
@@ -132,6 +141,7 @@ end = struct
       let s = F.from_string s in
       let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
       t) D.Global_symbols.(table.c2s);
+    c2mode = D.Global_symbols.(table.c2mode);
   } in
   (*T2.go allocate_global_symbol_aux*) table
     
@@ -229,7 +239,7 @@ and pbody = {
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
-  modes : (Mode.hos * Loc.t) F.Map.t;
+  (* modes : (Mode.hos * Loc.t) F.Map.t; *)
   body : block list;
   pred_symbols : F.Set.t;
   ty_symbols : F.Set.t;
@@ -253,7 +263,7 @@ type unchecked_signature = {
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
-  modes : (Mode.hos * Loc.t) F.Map.t;
+  (* modes : (Mode.hos * Loc.t) F.Map.t; *)
   type_uf : IDPosUf.t
 }
 [@@deriving show]
@@ -276,7 +286,7 @@ module Assembled = struct
     kinds : Arity.t F.Map.t;
     types : TypeAssignment.overloaded_skema_with_id F.Map.t;
     type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
-    modes : (Mode.hos * Loc.t) F.Map.t;
+    (* modes : (Mode.hos * Loc.t) F.Map.t; *)
     functional_preds: Determinacy_checker.t;
     type_uf : IDPosUf.t
   }
@@ -306,7 +316,7 @@ module Assembled = struct
   let empty_signature () = {
     kinds = F.Map.empty;
     types = F.Map.empty;
-    type_abbrevs = F.Map.empty; modes = F.Map.empty; functional_preds = Determinacy_checker.empty_fmap;
+    type_abbrevs = F.Map.empty; functional_preds = Determinacy_checker.empty_fmap;
     toplevel_macros = F.Map.empty;
     type_uf = IDPosUf.empty
   }
@@ -326,7 +336,7 @@ module Assembled = struct
 
 
 module CheckedFlat = struct
-type types_indexing = (Ast.Structured.tattribute option * Loc.t) list F.Map.t
+type types_indexing = ScopedTypeExpression.t list F.Map.t
 [@@deriving show]
 type program = {
   signature : Assembled.signature;
@@ -781,6 +791,7 @@ module Scope_Quotation_Macro : sig
   val run : State.t -> toplevel_macros:macro_declaration -> Ast.Structured.program -> Scoped.program
   val check_duplicate_mode : F.t -> (Mode.hos * Loc.t) -> (Mode.hos * Loc.t) F.Map.t -> unit
   val scope_loc_term : state:State.t -> Ast.Term.t -> ScopedTerm.t
+  val type2mode : ScopedTypeExpression.v_ -> Mode.ho list option
 
 end = struct
   let map_append k v m =
@@ -856,16 +867,19 @@ end = struct
       close vars (Ty value) in
     { ScopedTypeExpression.name; indexing = Some attributes; loc; nparams; value }
 
+  let scope_term_macro ~loc ~state c args =
+    let { macros } = get_mtm state in
+    match F.Map.find_opt c macros with
+    | None -> error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
+    | Some (t, _) -> ScopedTerm.beta (ScopedTerm.clone_loc t) args
+
   let rec scope_term ~state ctx ~loc t =
     let open Ast.Term in
     match t with
     | Parens { loc; it } -> scope_term ~state ctx ~loc it
     | Const c when is_discard c -> ScopedTerm.Discard
     | Const c when is_macro_name c ->
-        let { macros } = get_mtm state in
-        if F.Map.mem c macros then
-          ScopedTerm.unlock @@ fst @@ F.Map.find c macros
-        else error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@]" F.pp c)
+        scope_term_macro ~loc ~state c []
     | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Bound elpi_language,c))
     | Const c ->
         if is_uvar_name c then ScopedTerm.Var(c,[])
@@ -889,9 +903,7 @@ end = struct
          let x = scope_loc_term ~state ctx x in
          let xs = List.map (scope_loc_term ~state ctx) xs in
          if is_macro_name c then
-           let { macros } = get_mtm state in
-           if F.Map.mem c macros then ScopedTerm.beta (fst @@ F.Map.find c macros) (x::xs)
-           else error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
+           scope_term_macro ~loc ~state c (x::xs)
          else
           let bound = F.Set.mem c ctx in
           if bound then ScopedTerm.App(Bound elpi_language, c, x, xs)
@@ -942,7 +954,7 @@ end = struct
       ScopedTerm.of_simple_term_loc simple_t
     | _ ->
       let it = scope_term ~state ctx ~loc it in
-      { ScopedTerm.it; loc; ty = MutableOnce.make (F.from_string "Ty") }
+      { ScopedTerm.it; loc; ty = TypeAssignment.new_ty () }
 
   let scope_loc_term ~state =
     let { ctx } = get_mtm state in
@@ -969,7 +981,7 @@ end = struct
         (Format.asprintf "Duplicate mode declaration for %a (also at %a)\n Mode1 = %a\n Mode2 = %a" F.pp name Loc.pp loc2 Mode.pp_hos mode Mode.pp_hos mode2)
     | _ -> ()
 
-  let compile_mode_aux modes ({value;name} :ScopedTypeExpression.t) =
+  let type2mode (value : ScopedTypeExpression.v_) =
     let rec to_mode_ho (m, ty) = 
       match flatten_arrow [] ty with
       | None -> Mode.Fo m
@@ -980,15 +992,15 @@ end = struct
       | Arrow (m,_,a,b) -> flatten_arrow ((m,a.it)::acc) b.it in
     let rec type_to_mode_under_abs = function
       | ScopedTypeExpression.Lam (_,b) -> type_to_mode_under_abs b
-      | Ty {it;loc} ->
-        match flatten_arrow [] it with
-        | None -> modes
-        | Some l ->
-          let args = List.rev_map to_mode_ho l in
-          check_duplicate_mode name (args,loc) modes;
-          F.Map.add name (args,loc) modes
-      in
+      | Ty {it;loc} -> Option.map (List.rev_map to_mode_ho) (flatten_arrow [] it)
+    in
     type_to_mode_under_abs value
+
+
+  let compile_mode_aux modes ({value;name;loc} :ScopedTypeExpression.t) =
+    match type2mode value with
+    | None -> modes
+    | Some x -> F.Map.add name (x,loc) modes
 
   let compile_mode name l modes =
     if F.equal F.rimplf name || F.equal F.implf name then modes
@@ -1069,7 +1081,7 @@ end = struct
       (* Format.eprintf "CP: types: %d\n" (F.Map.cardinal types);
       Format.eprintf "CP: ty_sym: %a\n" F.Set.pp ty_symbols; *)
       toplevel_macros,
-      { Scoped.types; kinds; type_abbrevs; modes; body; ty_symbols; pred_symbols }
+      { Scoped.types; kinds; type_abbrevs; body; ty_symbols; pred_symbols }
 
     and compile_body macros kinds types type_abbrevs (modes : (Mode.hos * Loc.t) F.Map.t) (defs : F.Set.t) (ty_defs : F.Set.t) state = function
       | [] -> kinds, types, type_abbrevs, modes, defs, ty_defs, []
@@ -1281,7 +1293,7 @@ module Flatten : sig
     let to_remove = ref [] in
     (* We give precedence to recent type declarations over old ones *)
     let t = F.Map.union (fun f l1 l2 ->
-      let to_union, ta = TypeAssignment.merge_skema l2 l1 in
+      let to_union, ta = TypeAssignment.merge_skema f l2 l1 in
       List.iter (fun (id1,id2) ->
         let rem, uf1 = IDPosUf.union !uf id1 id2 in
         uf := uf1;
@@ -1330,19 +1342,18 @@ module Flatten : sig
       ) otlm toplevel_macros
       
 
-  let rec compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst = function
-    | [] -> kinds, types, type_abbrevs, modes, clauses, chr
-    | Scoped.Shorten(shorthands, { kinds = k; types = t; type_abbrevs = ta; modes = m; body; pred_symbols = _; ty_symbols = _ }) :: rest ->
+  let rec compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst = function
+    | [] -> kinds, types, type_abbrevs, clauses, chr
+    | Scoped.Shorten(shorthands, { kinds = k; types = t; type_abbrevs = ta; body; pred_symbols = _; ty_symbols = _ }) :: rest ->
       let inpsubst = push_subst_shorthands shorthands pred_subst in
       let intysubst = push_subst_shorthands shorthands ty_subst in
       let kinds = merge_kinds (apply_subst_kinds intysubst k) kinds in
       let types = merge_types (apply_subst_types intysubst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs intysubst ta) in
-      let modes = merge_modes (apply_subst_modes inpsubst m) modes in
-      let kinds, types, type_abbrevs, modes, clauses, chr =
-        compile_block kinds types type_abbrevs modes clauses chr inpsubst intysubst body in
-      compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst rest
-  | Scoped.Namespace (extra, { kinds = k; types = t; type_abbrevs = ta; modes = m; body; pred_symbols = ps; ty_symbols = ts }) :: rest ->
+      let kinds, types, type_abbrevs, clauses, chr =
+        compile_block kinds types type_abbrevs clauses chr inpsubst intysubst body in
+      compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
+  | Scoped.Namespace (extra, { kinds = k; types = t; type_abbrevs = ta; body; pred_symbols = ps; ty_symbols = ts }) :: rest ->
       let new_pred_subst = push_subst extra ps pred_subst in
       let new_ty_subst = push_subst extra ts ty_subst in
       let kinds = merge_kinds (apply_subst_kinds new_ty_subst k) kinds in
@@ -1350,38 +1361,35 @@ module Flatten : sig
       let types = merge_types (apply_subst_types new_ty_subst t) types in
       (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp TypeList.pretty) (apply_subst_types new_ty_subst t); *)
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs new_ty_subst ta) in
-      let modes = merge_modes (apply_subst_modes new_pred_subst m) modes in
-      let kinds, types, type_abbrevs, modes, clauses, chr =
-        compile_block kinds types type_abbrevs modes clauses chr new_pred_subst new_ty_subst body in
-      compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst rest
+      let kinds, types, type_abbrevs, clauses, chr =
+        compile_block kinds types type_abbrevs clauses chr new_pred_subst new_ty_subst body in
+      compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   | Scoped.Clauses cl :: rest ->
       let cl = apply_subst_clauses pred_subst ty_subst cl in
       let clauses = cl :: clauses in
-      compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst rest
-  | Scoped.Constraints (ch, { kinds = k; types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
+      compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
+  | Scoped.Constraints (ch, { kinds = k; types = t; type_abbrevs = ta; body }) :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
       let types = merge_types (apply_subst_types ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
-      let modes = merge_modes (apply_subst_modes pred_subst m) modes in
       let chr = apply_subst_chrs pred_subst  ty_subst ch :: chr in
-      let kinds, types, type_abbrevs, modes, clauses, chr =
-        compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst body in
-      compile_block kinds types type_abbrevs modes clauses chr pred_subst ty_subst rest
-  | Scoped.Accumulated { kinds=k; types = t; type_abbrevs = ta; modes = m; body; pred_symbols = _; ty_symbols = _ } :: rest ->
+      let kinds, types, type_abbrevs, clauses, chr =
+        compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst body in
+      compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
+  | Scoped.Accumulated { kinds=k; types = t; type_abbrevs = ta; body; pred_symbols = _; ty_symbols = _ } :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
       let types = merge_types (apply_subst_types ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
-      let modes = merge_modes (apply_subst_modes pred_subst m) modes in
-      let kinds, types, type_abbrevs, modes, clauses, chr =
-        compile_block kinds types type_abbrevs modes clauses chr ty_subst pred_subst body in
-      compile_block kinds types type_abbrevs modes clauses chr ty_subst pred_subst rest
+      let kinds, types, type_abbrevs, clauses, chr =
+        compile_block kinds types type_abbrevs clauses chr ty_subst pred_subst body in
+      compile_block kinds types type_abbrevs clauses chr ty_subst pred_subst rest
 
-  let compile_body { Scoped.kinds; types; type_abbrevs; modes; ty_symbols = _; pred_symbols = _; body } =
-    compile_block kinds types type_abbrevs modes [] [] empty_subst empty_subst body
+  let compile_body { Scoped.kinds; types; type_abbrevs; ty_symbols = _; pred_symbols = _; body } =
+    compile_block kinds types type_abbrevs [] [] empty_subst empty_subst body
 
   let run state { Scoped.pbody; toplevel_macros } =
-    let kinds, types, type_abbrevs, modes, clauses_rev, chr_rev = compile_body pbody in
-    let signature = { Flat.kinds; types; type_abbrevs; modes; toplevel_macros; type_uf = IDPosUf.empty } in
+    let kinds, types, type_abbrevs, clauses_rev, chr_rev = compile_body pbody in
+    let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros; type_uf = IDPosUf.empty } in
     { Flat.clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; builtins = []; signature } (* TODO builtins can be in a unit *)
 
 
@@ -1396,10 +1404,11 @@ module Check : sig
 end = struct
 
   let check_signature ~flags builtins symbols (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * _=
-    let { Assembled.modes = om; functional_preds = ofp; kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otuf } = base_signature in
-    let { Flat.modes; kinds; types; type_abbrevs; toplevel_macros; type_uf } = signature in
+    let { Assembled.functional_preds = ofp; kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otuf } = base_signature in
+    
+    let { Flat.kinds; types; type_abbrevs; toplevel_macros; type_uf } = signature in
 
-    let { Flat.modes; kinds; types; type_abbrevs; toplevel_macros } = signature in
+    let { Flat.kinds; types; type_abbrevs; toplevel_macros } = signature in
     let all_kinds = Flatten.merge_kinds ok kinds in
     let func_setter_object = new Determinacy_checker.merger ofp in
     let check_k_begin = Unix.gettimeofday () in
@@ -1433,25 +1442,40 @@ end = struct
       func_setter_object#add_func_ty_list e ids;
       tys) types in
 
-    let types_indexing = F.Map.filter_map (fun k tyl ->
+    let rec is_arrow_to_prop = function
+      | ScopedTypeExpression.Lam (_,x) -> is_arrow_to_prop x
+      | Ty t -> ScopedTypeExpression.is_prop t.it <> None in 
+
+    let rec type2type_idx = function
+      | [] -> []
+      | x :: xs when is_arrow_to_prop x.ScopedTypeExpression.value ->
+        x :: type2type_idx xs
+      | _ :: xs -> type2type_idx xs
+    in
+
+    let (types_indexing:CheckedFlat.types_indexing) = F.Map.fold (fun k tyl acc ->
       begin match SymbolMap.get_global_symbol symbols k with
       | Some c -> if Builtins.is_declared builtins c then error (Format.asprintf "Ascribing a type to an already registered builtin %a" F.pp k);
       | _ -> () end;
-      if TypeAssignment.is_predicate (F.Map.find k types) then
+      match type2type_idx tyl with
+        | [] -> acc
+        | l -> F.Map.add k tyl acc
+      (* if TypeAssignment.is_predicate (F.Map.find k types) then
         Some (List.map (fun ty -> ty.ScopedTypeExpression.indexing, ty.ScopedTypeExpression.loc) tyl)
-      else None) raw_types in
+      else None *)
+      ) raw_types F.Map.empty in
   
     let check_t_end = Unix.gettimeofday () in
 
     let all_type_uf = IDPosUf.merge otuf type_uf in
     let to_remove, all_type_uf, all_types = Flatten.merge_type_assignments all_type_uf ot types in
     let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
-    let all_modes = Flatten.merge_modes om modes in
+    (* let all_modes = Flatten.merge_modes om modes in *)
     let all_functional_preds = func_setter_object#merge in
     let all_functional_preds = List.fold_left Determinacy_checker.remove all_functional_preds to_remove in
 
-    { Assembled.modes; functional_preds = func_setter_object#get_local_func; kinds; types; type_abbrevs; toplevel_macros; type_uf },
-    { Assembled.modes = all_modes; functional_preds = all_functional_preds; kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; type_uf = all_type_uf },
+    { Assembled.functional_preds = func_setter_object#get_local_func; kinds; types; type_abbrevs; toplevel_macros; type_uf },
+    { Assembled.functional_preds = all_functional_preds; kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; type_uf = all_type_uf },
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types_indexing
 
@@ -1460,7 +1484,7 @@ end = struct
     let signature, precomputed_signature, check_sig, types_indexing = check_signature ~flags base.Assembled.builtins base.Assembled.symbols base.Assembled.signature u.code.Flat.signature in
 
     let { version; code = { Flat.clauses; chr; builtins } } = u in
-    let { Assembled.modes; functional_preds; kinds; types; type_abbrevs; toplevel_macros; type_uf } = precomputed_signature in
+    let { Assembled.functional_preds; kinds; types; type_abbrevs; toplevel_macros; type_uf } = precomputed_signature in
 
     let check_begin = Unix.gettimeofday () in
 
@@ -1468,6 +1492,7 @@ end = struct
       let unknown = 
         if typecheck then Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val (Prop Relation)) (* Note: in the tc, there is no difference between Prop Relation and Prop Function*)
         else unknown in
+      (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
       (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
       if typecheck then Determinacy_checker.check_clause ~uf:type_uf ~loc ~env:functional_preds spilled.body;
@@ -1480,8 +1505,8 @@ end = struct
         error (Format.asprintf "Builtin %s already exists as a regular predicate" name);
       if not @@ F.Map.mem (F.from_string name) types_indexing then error (Format.asprintf "No type declared for builtin %s" name);
       let tyl = F.Map.find (F.from_string name) types_indexing in
-      List.iter (fun (ty,loc) ->
-        match ty with
+      List.iter (fun ScopedTypeExpression.{indexing;loc} ->
+        match indexing with
         | Some Ast.Structured.External -> ()
         | _ -> error ~loc (Format.asprintf "Non external type declaration for builtin %s" name)
         ) tyl;
@@ -1588,7 +1613,7 @@ end = struct
         error ("Wrong indexing for " ^ F.show predicate ^
                 ": Map indexes exactly one argument at depth 1")) 0 l
 
-  let update_indexing state symbols ({ idx } as index) modes types old_idx =
+  let update_indexing state symbols ({ idx } as index) types old_idx =
     let check_if_some_clauses_already_in ~loc predicate c oldi newi =
          if Ptmap.mem c idx then
            error ~loc @@ "Some clauses for " ^ F.show predicate ^
@@ -1601,11 +1626,12 @@ end = struct
             " are already in the program, changing the indexing a posteriori is not allowed."
      in
 
-    let add_indexing_for ~loc name c tindex map =
+    let add_indexing_for name c (ScopedTypeExpression.{loc;indexing;value}) map =
       (* Format.eprintf "indexing for %a\n%!" F.pp name; *)
-      let mode = try fst @@ F.Map.find name modes with Not_found -> [] in
+      let mode = Scope_Quotation_Macro.type2mode value |> Option.value ~default:[] in
+      (* Format.eprintf "Mode of %d -- %a is %a@." c F.pp name Mode.pp_hos mode; *)
       let declare_index, index =
-        match tindex with
+        match indexing with
         | Some (Ast.Structured.Index(l,k)) -> true, chose_indexing state name l k
         | _ -> false, chose_indexing state name [1] None in
       try
@@ -1636,21 +1662,18 @@ end = struct
     *)
     let symbols =
       if F.Map.cardinal types > 2000 then
-        F.Map.bindings types |> List.map (fun (k,l) -> k,snd (List.hd l)) |> List.sort (fun (_,l1) (_,l2) -> compare l1.Loc.line l2.Loc.line) |> List.map fst |> List.fold_left (fun s k -> fst @@ SymbolMap.allocate_global_symbol state s k) symbols
+        F.Map.bindings types 
+          |> List.sort (fun (_,l1) (_,l2) -> compare (List.hd l1).ScopedTypeExpression.loc.line (List.hd l2).loc.line) 
+          |> List.fold_left (fun s (k,_) -> fst @@ SymbolMap.allocate_global_symbol state s k) symbols
       else
         symbols in
     let symbols, map =
       F.Map.fold (fun tname l (symbols, acc) ->
         let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols tname in
-        symbols, TypeList.fold (fun acc (indexing, loc) ->
-                   add_indexing_for ~loc tname c indexing acc)
+        symbols, TypeList.fold (fun acc t->
+                   add_indexing_for tname c t acc)
                   acc l)
       types (symbols, C.Map.empty) in
-    let symbols, map =
-      F.Map.fold (fun k (_,loc) (symbols,m) ->
-        let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols k in
-        symbols, add_indexing_for ~loc k c None m) modes (symbols, map) in
-
     symbols, R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
   let to_dbl ?(ctx=Scope.Map.empty) ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
@@ -1739,7 +1762,7 @@ end = struct
       (clauses,symbols, index)
     else
     let (symbols, amap), body = to_dbl ~builtins state symbols body in
-    let modes x = try fst @@ F.Map.find (SymbolMap.global_name state symbols x) modes with Not_found -> [] in
+    let modes x = Constants.Map.find_opt x modes |> Option.map fst |> Option.value ~default:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
       with D.CannotDeclareClauseForBuiltin(loc,c) ->
@@ -1800,13 +1823,13 @@ end = struct
     List.fold_left (extend1_chr ~builtins flags state clique) (symbols,chr) rules
    
 let extend1_signature base_signature (signature : checked_compilation_unit_signature) =
-  let { Assembled.modes = om; kinds = ok; functional_preds = ofp; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otyuf } = base_signature in
-  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; modes; functional_preds; type_uf } = signature in
+  let { Assembled.kinds = ok; functional_preds = ofp; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otyuf } = base_signature in
+  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; functional_preds; type_uf } = signature in
   let kinds = Flatten.merge_kinds ok kinds in
   let type_uf = IDPosUf.merge otyuf type_uf in
   let to_remove, type_uf, type_abbrevs = Flatten.merge_checked_type_abbrevs type_uf ota type_abbrevs in
   let to_remove1, type_uf, types = Flatten.merge_type_assignments type_uf ot types in
-  let modes = Flatten.merge_modes om modes in
+  (* let modes = Flatten.merge_modes om modes in *)
   let toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
   let functional_preds =
     let fp = Determinacy_checker.merge ofp functional_preds in
@@ -1815,7 +1838,7 @@ let extend1_signature base_signature (signature : checked_compilation_unit_signa
     fp
   in
 
-  { Assembled.kinds; types; type_abbrevs; functional_preds; modes; toplevel_macros; type_uf }
+  { Assembled.kinds; types; type_abbrevs; functional_preds; toplevel_macros; type_uf }
 
 let extend1 flags (state, base) unit =
 
@@ -1825,21 +1848,21 @@ let extend1 flags (state, base) unit =
     else extend1_signature base.Assembled.signature unit.checked_code.CheckedFlat.signature in
 
   let { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; signature = _; chr = ochr; builtins = ob; total_type_checking_time } = base in
-  let { version; base_hash; checked_code = { CheckedFlat.clauses; chr; builtins; signature = { modes;types }; types_indexing }; type_checking_time; } = unit in
+  let { version; base_hash; checked_code = { CheckedFlat.clauses; chr; builtins; signature = { types }; types_indexing }; type_checking_time; } = unit in
 
   (* Format.eprintf "extend %a\n%!" (F.Map.pp (fun _ _ -> ())) types_indexing; *)
-  let symbols, prolog_program, indexing = update_indexing state symbols prolog_program modes types_indexing indexing in
+  let symbols, prolog_program, indexing = update_indexing state symbols prolog_program types_indexing indexing in
   (* Format.eprintf "extended\n%!"; *)
   
   let symbols = F.Map.fold (fun k _ symbols -> let symbols, _ = SymbolMap.allocate_global_symbol state symbols k in symbols) types symbols in
-  let symbols = F.Map.fold (fun k _ symbols -> let symbols, _ = SymbolMap.allocate_global_symbol state symbols k in symbols) modes symbols in
+  (* let symbols = F.Map.fold (fun k m symbols -> let symbols = SymbolMap.allocate_global_mode state symbols k in symbols) types symbols in *)
   let symbols, builtins =
     List.fold_left (fun (symbols,builtins) (D.BuiltInPredicate.Pred(name,_,_) as p) ->
       let name = F.from_string name in
       if not @@ F.Map.mem name signature.types then
         error (Format.asprintf "Builtin %a has no associated type." F.pp name);
-      List.iter (fun (a,_) ->
-        if a <> Some (Ast.Structured.External) then
+      List.iter (fun ScopedTypeExpression.{indexing} ->
+        if indexing <> Some (Ast.Structured.External) then
           error (Format.asprintf "Builtin %a accompained by a non-externl type declaration." F.pp name);
       ) (F.Map.find name types_indexing);
       let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols name in
@@ -1849,7 +1872,8 @@ let extend1 flags (state, base) unit =
   let symbols, chr =
     List.fold_left (extend1_chr_block ~builtins flags state) (symbols,ochr) chr in
   let clauses, symbols, prolog_program =
-    List.fold_left (extend1_clause ~builtins flags state signature.modes indexing) (cl, symbols, prolog_program) clauses in
+    (* TODO: pass also typeabbrevs *)
+    List.fold_left (extend1_clause ~builtins flags state indexing indexing) (cl, symbols, prolog_program) clauses in
 
   (* TODO: @FissoreD here we have to do mutual excl clauses... *)
 
@@ -2187,11 +2211,11 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
       match Elpi_parser.Parser_config.precedence_of (F.show name) with
       | (Some _,_) -> "("^F.show name^")"
       | _ -> F.show name in
-    List.iter (fun ty -> Format.fprintf fmt "@[<h>type %s %a.@]@," name TypeAssignment.pretty ty) tys;
+    List.iter (fun ty -> Format.fprintf fmt "@[<h>type %s %a.@]@," name TypeAssignment.pretty_mut_once ty) tys;
     )
     signature.types;
   F.Map.iter (fun name (ty,_) ->
-    Format.fprintf fmt "@[<h>typeabbrv %a (%a).@]@," F.pp name TypeAssignment.pretty (snd @@ fst @@ TypeAssignment.fresh ty)
+    Format.fprintf fmt "@[<h>typeabbrv %a (%a).@]@," F.pp name TypeAssignment.pretty_mut_once (snd @@ fst @@ TypeAssignment.fresh ty)
     )
     signature.type_abbrevs;
   List.iter (fun (name,predicate,{ depth; args; hyps; loc; timestamp }) ->

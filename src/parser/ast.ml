@@ -30,6 +30,7 @@ module Func = struct
   let show x = x
   let equal x y = x == y || x = y (* Resilient to unmarshaling *)
   let truef = from_string "true"
+  let discardf = from_string "_"
   let andf = from_string ","
   let orf = from_string ";"
   let implf = from_string "=>"

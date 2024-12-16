@@ -31,6 +31,7 @@ module Func : sig
   val ctypef : t
   val propf : t
   val typef : t
+  val discardf : t
   val mainf : t
 
   val dummyname : t
