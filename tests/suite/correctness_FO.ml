@@ -252,3 +252,11 @@ let () =
     ~expectation:status.(i)
     ())
   done
+
+
+let () = declare "sepcomp_tyid"
+  ~source_dune:"sepcomp_tyid.exe"
+  ~after:"sepcomp_tyid"
+  ~description:"separate compilation union find on type_id"
+  ~expectation:Test.Success
+  ()
