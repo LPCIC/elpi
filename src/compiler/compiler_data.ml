@@ -347,7 +347,7 @@ module TypeAssignment = struct
     | x -> x
 
   open Format
-  let pretty ?(is_raw=false) f fmt tm =
+  let pretty ?(is_raw=false) (f : formatter -> (formatter -> 'a t_ -> unit) -> 'a -> unit) fmt tm =
 
     let arrs = 0 in
     let app = 1 in
@@ -361,21 +361,34 @@ module TypeAssignment = struct
       if is_raw then (Format.fprintf fmt "%a:" Mode.pretty m) else Format.fprintf fmt ""
     in
 
-    let rec pretty fmt = function
+    let rec arrow_tail = function
+      | Prop _ as x -> Some x
+      | Arr(_,_,_,x) -> arrow_tail x
+      | _ -> None in
+
+    let rec pretty ?(skip_arrow_tail=false) () fmt = function
+      | Prop _ when skip_arrow_tail -> ()
       | Prop Relation -> fprintf fmt "prop"
-      | Prop Function -> fprintf fmt "%s" (if is_raw then "func" else "prop")
+      | Prop Function -> fprintf fmt "%s" (if is_raw then "func" else "pred")
       | Any -> fprintf fmt "any"
       | Cons c -> F.pp fmt c
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-      | Arr(m,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a%a ->@ %a@]" show_mode m (pretty_parens ~lvl:arrs) s pretty t
-      | Arr(m,Variadic,s,t) -> fprintf fmt "%a%a ..-> %a" show_mode m (pretty_parens ~lvl:arrs) s pretty t
-      | UVar m -> f fmt pretty m
+      | Arr(m,NotVariadic,s,t) when is_raw && skip_arrow_tail -> fprintf fmt "@[<hov 2>,@ %a:%a%a@]" Mode.pretty m (pretty_parens ~lvl:arrs) s (pretty ~skip_arrow_tail ()) t
+      | Arr(m,NotVariadic,s,t) when is_raw ->
+          let tail = arrow_tail t in
+          if tail = None then
+            fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s (pretty()) t
+          else
+            fprintf fmt "@[<hov 2>%a %a:%a%a@]" (pretty()) (Option.get tail) Mode.pretty m (pretty_parens ~lvl:arrs) s (pretty ~skip_arrow_tail:true ()) t
+      | Arr(_,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s (pretty()) t
+      | Arr(m,Variadic,s,t) -> fprintf fmt "%a%a ..-> %a" show_mode m (pretty_parens ~lvl:arrs) s (pretty()) t
+      | UVar m -> f fmt (pretty()) m
       (* | UVar m -> MutableOnce.pretty fmt m *)
     and pretty_parens ~lvl fmt = function
       | UVar m -> f fmt (pretty_parens ~lvl) m
-      | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
-      | t -> pretty fmt t in
-    let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
+      | t when lvl >= lvl_of t -> fprintf fmt "(%a)" (pretty()) t
+      | t -> pretty () fmt t in
+    let pretty fmt t = Format.fprintf fmt "@[%a@]" (pretty()) t
   in 
   pretty fmt tm
 
@@ -389,14 +402,18 @@ module TypeAssignment = struct
   let pretty_mut_once_raw = 
     pretty_raw (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
 
-  let pretty_ft =
-    pretty (fun fmt _ (t:F.t) -> F.pp fmt t)
+  let pretty_ft ?(raw=false) fmt t =
+    if raw then pretty_raw (fun fmt _ (t:F.t) -> F.pp fmt t) fmt t
+    else pretty (fun fmt _ (t:F.t) -> F.pp fmt t) fmt t
 
-  let pretty_skema fmt sk =
+  let pretty_skema ?raw fmt sk =
     let rec aux = function
       | Lam (_,t) -> aux t
-      | Ty t -> pretty_ft fmt t in
+      | Ty t -> pretty_ft ?raw fmt t in
     aux sk
+
+  let pretty_skema_raw = pretty_skema ~raw:true
+  let pretty_skema = pretty_skema ~raw:false
 
   let pretty_skema_w_id fmt (_,sk) = pretty_skema fmt sk
 
@@ -442,7 +459,7 @@ module TypeAssignment = struct
     try compare_skema x y = 0
     with InvalidMode -> 
       error ~loc:(IdPos.to_loc loc1) 
-        (Format.asprintf "duplicate mode declaration for %a (second mode found at %a)\nDebug:\n@[<h>-%a@]@.@[<h>-%a@]" F.pp n IdPos.pp loc2 pretty_skema x pretty_skema y)
+        (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n IdPos.pp loc1 pretty_skema_raw x IdPos.pp loc2 pretty_skema_raw y)
 
   (* returns a pair of ids representing the merged type_ass + the new merge type_ass *)
   let merge_skema n t1 t2 =
