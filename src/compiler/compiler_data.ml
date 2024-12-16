@@ -347,7 +347,7 @@ module TypeAssignment = struct
     | x -> x
 
   open Format
-  let pretty f fmt tm =
+  let pretty ?(is_raw=false) f fmt tm =
 
     let arrs = 0 in
     let app = 1 in
@@ -357,14 +357,18 @@ module TypeAssignment = struct
       | App _ -> app
       | _ -> 2 in
 
+    let show_mode fmt m =
+      if is_raw then (Format.fprintf fmt "%a:" Mode.pretty m) else Format.fprintf fmt ""
+    in
+
     let rec pretty fmt = function
       | Prop Relation -> fprintf fmt "prop"
-      | Prop Function -> fprintf fmt "func"
+      | Prop Function -> fprintf fmt "%s" (if is_raw then "func" else "prop")
       | Any -> fprintf fmt "any"
       | Cons c -> F.pp fmt c
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-      | Arr(m,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>(*%a:*)%a ->@ %a@]" Mode.pretty m (pretty_parens ~lvl:arrs) s pretty t
-      | Arr(m,Variadic,s,t) -> fprintf fmt "(*%a:*)%a ..-> %a" Mode.pretty m (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a%a ->@ %a@]" show_mode m (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,Variadic,s,t) -> fprintf fmt "%a%a ..-> %a" show_mode m (pretty_parens ~lvl:arrs) s pretty t
       | UVar m -> f fmt pretty m
       (* | UVar m -> MutableOnce.pretty fmt m *)
     and pretty_parens ~lvl fmt = function
@@ -375,8 +379,15 @@ module TypeAssignment = struct
   in 
   pretty fmt tm
 
+  let pretty_raw fmt = pretty ~is_raw:true fmt
+  let pretty fmt = pretty ~is_raw:false fmt
+
+
   let pretty_mut_once = 
     pretty (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
+
+  let pretty_mut_once_raw = 
+    pretty_raw (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
 
   let pretty_ft =
     pretty (fun fmt _ (t:F.t) -> F.pp fmt t)
