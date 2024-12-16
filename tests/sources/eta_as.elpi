@@ -38,6 +38,7 @@ unif_2 (x\ y\ X x y).
 
 type u any.
 
+:untyped
 tests-uvar :-
   print "--------- uvar_1",
   not(uvar_1 (bar (x \ u))),

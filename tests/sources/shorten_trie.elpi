@@ -1,8 +1,8 @@
-pred std.list.map i:any, i:any.
+pred std.list.map o:any, i:any.
 std.list.map _ _.
-pred std.string.concat1 i:any, i:any, i:any.
+pred std.string.concat1 i:any, i:any, o:any.
 std.string.concat1 _ _ _.
-pred std.string.escape i:any, i:any.
+pred std.string.escape i:any, o:any.
 std.string.escape _ _.
 
 shorten std.{list.map, string.{ concat1, escape }}.
