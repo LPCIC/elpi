@@ -1,5 +1,6 @@
 
 pred f i:any.
 
+:untyped
 main :-
   (f uvar :- print "ok") => (f X, not(f 1)), var X.
