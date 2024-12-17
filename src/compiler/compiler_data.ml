@@ -381,33 +381,42 @@ module TypeAssignment = struct
     in
 
     let rec arrow_tail = function
-      | Prop _ as x -> Some x
+      | Prop x -> Some x
       | Arr(_,_,_,x) -> arrow_tail x
       | _ -> None in
 
-    let rec pretty ?(skip_arrow_tail=false) () fmt = function
+    let skip_arrow_tail = false in
+
+    let rec pretty fmt = function
       | Prop _ when skip_arrow_tail -> ()
       | Prop Relation -> fprintf fmt "%s" (if is_raw then "pred" else "prop")
       | Prop Function -> fprintf fmt "%s" (if is_raw then "func" else "prop")
       | Any -> fprintf fmt "any"
       | Cons c -> F.pp fmt c
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-      | Arr(m,NotVariadic,s,t) when is_raw && skip_arrow_tail -> fprintf fmt "@[<hov 2>,@ %a:%a%a@]" show_mode m (pretty_parens ~lvl:arrs) s (pretty ~skip_arrow_tail ()) t
-      | Arr(m,NotVariadic,s,t) when is_raw ->
-          let tail = arrow_tail t in
-          if true || tail = None then
-            fprintf fmt "@[<hov 2>%a:%a ->@ %a@]" show_mode m (pretty_parens ~lvl:arrs) s (pretty()) t
-          else
-            fprintf fmt "@[<hov 2>%a %a:%a%a@]" (pretty()) (Option.get tail) show_mode m (pretty_parens ~lvl:arrs) s (pretty ~skip_arrow_tail:true ()) t
-      | Arr(_,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s (pretty()) t
-      | Arr(m,Variadic,s,t) -> fprintf fmt "%a%a ..-> %a" show_mode m (pretty_parens ~lvl:arrs) s (pretty()) t
-      | UVar m -> f fmt (pretty()) m
+      | Arr(m,NotVariadic,s,t) when is_raw && skip_arrow_tail -> fprintf fmt "@[<hov 2>,@ %a:%a%a@]" show_mode m (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,NotVariadic,s,t) when is_raw -> 
+          begin match arrow_tail t with
+            | None -> fprintf fmt "@[<hov 2>%a:%a ->@ %a@]" show_mode m (pretty_parens ~lvl:arrs) s pretty t
+            | Some Ast.Structured.Relation -> fprintf fmt "@[<hov 2>pred %a@]" (pretty_pred_mode m) (s, t) 
+            | Some Ast.Structured.Function -> fprintf fmt "@[<hov 2>func %a@]" (pretty_pred_mode m) (s, t)
+          end
+      | Arr(_,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,Variadic,s,t) -> fprintf fmt "%a%a ..-> %a" show_mode m (pretty_parens ~lvl:arrs) s pretty t
+      | UVar m -> f fmt pretty m
       (* | UVar m -> MutableOnce.pretty fmt m *)
     and pretty_parens ~lvl fmt = function
       | UVar m -> f fmt (pretty_parens ~lvl) m
-      | t when lvl >= lvl_of t -> fprintf fmt "(%a)" (pretty()) t
-      | t -> pretty () fmt t in
-    let pretty fmt t = Format.fprintf fmt "@[%a@]" (pretty()) t
+      | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
+      | t -> pretty fmt t
+    and pretty_pred_mode m fmt (s, t) =
+      fprintf fmt "@[<hov 2>%a:%a@]" show_mode m pretty s;
+      match t with
+      | Prop _ -> Format.fprintf fmt "."
+      | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic" else "") (pretty_pred_mode m) (s',r)
+      | _ -> assert false
+    in
+    let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
   in 
   pretty fmt tm
 
