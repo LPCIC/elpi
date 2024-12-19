@@ -147,16 +147,32 @@ type ret = TypeAssignment.t MutableOnce.t TypeAssignment.t_
 type ret_id = IdPos.t * TypeAssignment.t MutableOnce.t TypeAssignment.t_
 [@@deriving show]
 type spilled_phantoms = ScopedTerm.t list
-type groundness = IGround | Unknown
 [@@deriving show]
-type sigma = { ty : TypeAssignment.t; nocc : int; loc : Loc.t; mutable ground : groundness }
+type sigma = { ty : TypeAssignment.t; nocc : int; loc : Loc.t }
 [@@deriving show]
-type ctx = { ret : ret; mode : TypeAssignment.tmode; mutable ground : groundness }
+type ctx = { ret : ret; mode : TypeAssignment.tmode }
 [@@deriving show]
+
+let mk_uvar =
+  let i = ref 0 in
+  fun s -> incr i; TypeAssignment.UVar(MutableOnce.make (F.from_string (s ^ string_of_int !i)))
 
 let local_type ctx ~loc c : ret_id TypeAssignment.overloading =
   try TypeAssignment.Single (Scope.dummy_type_decl_id, (Scope.Map.find c ctx).ret) (* local types have no id, 0 is given by default *)
   with Not_found -> anomaly ~loc "free variable"
+
+let global_type unknown_global env ~loc c : ret_id TypeAssignment.overloading =
+  try TypeAssignment.fresh_overloaded @@ F.Map.find c env
+  with Not_found ->
+    try
+      let ty,id,_ = F.Map.find c !unknown_global in
+      Single (id,TypeAssignment.unval ty)
+    with Not_found ->
+      let ty = TypeAssignment.Val (mk_uvar (Format.asprintf "Unknown_type_of_%a_" F.pp c)) in
+      let id = Scope.fresh_type_decl_id loc in
+      unknown_global := F.Map.add c (ty,id,loc) !unknown_global;
+      Single (id,TypeAssignment.unval ty)
+
 
 type classification =
   | Simple of { srcs : (TypeAssignment.tmode * ret) list; tgt : ret }
@@ -174,10 +190,6 @@ let rec classify_arrow = function
       | Simple {srcs; tgt } -> Simple { srcs = (m,x) :: srcs; tgt }
       | Unknown -> Unknown
       | Variadic { srcs; tgt } -> Variadic { srcs = x :: srcs; tgt }
-
-let mk_uvar =
-  let i = ref 0 in
-  fun s -> incr i; TypeAssignment.UVar(MutableOnce.make (F.from_string (s ^ string_of_int !i)))
 
 let unknown_type_assignment s = TypeAssignment.Val (mk_uvar s)
 
@@ -211,6 +223,14 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
   let fresh_name = let i = ref 0 in fun () -> incr i; F.from_string ("%dummy"^ string_of_int !i) in
   (* let set_fresh_id = let i = ref 0 in fun x -> incr i; x := Some !i in *)
 
+  let global_type = global_type unknown_global in
+
+  let get_type ~loc (scope : Scope.t) ctx env c =
+    match scope with
+    | Global _ -> global_type env ~loc c
+    | Bound lang -> local_type ctx ~loc (c,lang) 
+  in
+
   let rec check ~positive (ctx : ctx Scope.Map.t) ~loc ~tyctx x ety : spilled_phantoms =
     (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty_mut_once ety; *)
     match x with
@@ -220,32 +240,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | CData c -> check_cdata ~loc ~tyctx kinds c ety
     | Spill(_,{contents = Phantom _}) -> assert false
     | Spill(sp,info) -> check_spill ~positive ctx ~loc ~tyctx sp info ety
-    (* | App (Global _ as gid, pi, ({it=Lam (s,cty,tya,bo)} as x), []) when F.equal pi F.pif ->
-        begin
-          let err ty = error_bad_ety ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Scope.mkGlobal ~escape_ns:true ()(*sucks*),pi,x,[])) ty in
-          if unify prop ety then
-            let _ = 
-              let m = TypeAssignment.MVal Input in
-              let s = TypeAssignment.(Arr (MVal Input, NotVariadic,UVar (MutableOnce.make (F.from_string "A")),prop)) in
-              let t = prop in
-              let xs = check_loc_if_not_phantom ~positive ~tyctx:(Some pi) ctx x ~ety:s in
-              Format.eprintf "-- Checked term %a with ety %a; mode is %a@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once s TypeAssignment.pretty_tmode m;
-              begin
-                match TypeAssignment.deref_tmode m with
-                | MVal Input  when positive -> propagate_ground ctx x;
-                | MVal Output when positive ->  () (*check_ground ctx x; BIG TODO*)
-                | MVal Input -> check_ground ctx x;
-                | MVal Output -> propagate_ground ctx x;
-                | _ -> assert (not @@ TypeAssignment.is_arrow_to_prop s)
-              end;
-            infer_mode ctx m x;
-            check_app_single ~positive ctx ~loc (pi,gid) t (x::[]) xs
-            in []
-          else err prop
-        end *)
-    | App(Global _ as gid,c,x,xs) -> check_app ~positive ctx ~loc ~tyctx (c,gid) (global_type env ~loc c) (x::xs) ety 
-    | App(Bound lang as gid,c,x,xs) -> check_app ~positive ctx ~loc ~tyctx (c,gid) (local_type ctx ~loc (c,lang)) (x::xs) ety
-    (* TODO: regola ad hoc "pi (lam x\ ...)" che mette x a ground, eg: chr-scope-change *)
+    | App(gid,c,x,xs) -> check_app ~positive ctx ~loc ~tyctx (c,gid) (get_type ~loc gid ctx env c) (x::xs) ety 
     | Lam(c,cty,tya,t) -> check_lam ~positive ctx ~loc ~tyctx c cty tya t ety
     | Discard -> []
     | Var(c,args) -> check_app ~positive ctx ~loc ~tyctx (c, Bound elpi_language (*hack*)) (uvar_type ~loc c) args ety
@@ -259,20 +254,6 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     | Scope.Global x -> x.decl_id <- id
     | _ -> ()
 
-  and global_type env ~loc c : ret_id TypeAssignment.overloading =
-    try TypeAssignment.fresh_overloaded @@ F.Map.find c env
-    with Not_found ->
-      (* Printf.eprintf "%s\n" F.(show c);
-      assert false; *)
-      try
-        let ty,id,_ = F.Map.find c !unknown_global in
-        Single (id,TypeAssignment.unval ty)
-      with Not_found ->
-        let ty = TypeAssignment.Val (mk_uvar (Format.asprintf "Unknown_type_of_%a_" F.pp c)) in
-        let id = Scope.fresh_type_decl_id loc in
-        unknown_global := F.Map.add c (ty,id,loc) !unknown_global;
-        Single (id,TypeAssignment.unval ty)
-      
   and check_impl ~positive ctx ~loc ~tyctx b t1 t2 ety =
     if not @@ unify (ety) prop then error_bad_ety ~valid_mode ~loc ~tyctx ~ety:prop ScopedTerm.pretty_ (Impl(b,t1,t2)) (ety)
     else
@@ -309,32 +290,20 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     if unify ty ety then []
     else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
-  and deref_ ~loc tya =
-    if true then tya else
-    if MutableOnce.is_set tya then
-      match MutableOnce.get tya |> TypeAssignment.unval with
-      | UVar var -> deref_ ~loc var
-      | _ -> error ~loc "Mutable once cannot be set in a already set term"
-    else tya
-
   and check_lam ~positive ctx ~loc ~tyctx c cty tya t ety =
     let name_lang = match c with Some c -> c | None -> fresh_name (), elpi_language in
-    let set_tya_ret f = MutableOnce.set ~loc (deref_ ~loc tya) (Val f); f in
+    let set_tya_ret f = MutableOnce.set ~loc tya (Val f); f in
     let src = set_tya_ret @@ match cty with
       | None -> mk_uvar "Src"
       | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty x
     in 
-    Format.eprintf "Ty is setted to %a@." (MutableOnce.pp TypeAssignment.pp) (tya);
+    (* Format.eprintf "Ty is setted to %a@." (MutableOnce.pp TypeAssignment.pp) (tya); *)
     let tgt = mk_uvar "Tgt" in
     (* let () = Format.eprintf "lam ety %a\n" TypeAssignment.pretty ety in *)
     let mode = TypeAssignment.MRef (MutableOnce.make F.dummyname) in
     if unify (TypeAssignment.Arr(mode, Ast.Structured.NotVariadic,src,tgt)) ety then
       (* let () = Format.eprintf "add to ctx %a : %a\n" F.pp name TypeAssignment.pretty src in *)
-      let ground =
-        match TypeAssignment.deref_tmode  mode with
-        | TypeAssignment.MVal Input -> IGround
-        | _ -> Unknown in
-      check_loc ~positive ~tyctx (Scope.Map.add name_lang { ret = src; ground; mode } ctx) t ~ety:tgt
+      check_loc ~positive ~tyctx (Scope.Map.add name_lang { ret = src; mode } ctx) t ~ety:tgt
     else
       error_bad_function_ety ~valid_mode ~loc ~tyctx ~ety c t
 
@@ -385,7 +354,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
           check_app_overloaded ~positive ctx ~loc (c,cid) ety args targs l l
       end
     | Single (id,ty) ->
-      Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty;
+      (* Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty; *)
         let err ty =
           if args = [] then error_bad_ety ~valid_mode ~loc ~tyctx ~ety F.pp c ty (* uvar *)
           else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(Scope.mkGlobal ~escape_ns:true ()(* sucks *),c,List.hd args,List.tl args)) ty in
@@ -412,7 +381,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
           if List.length args > List.length srcs then monodirectional () (* will error *)
           else
             if any_arg_is_spill args then monodirectional ()
-            else (Format.eprintf "HERE@."; bidirectional srcs tgt)
+            else bidirectional srcs tgt
 
   (* REDO PROCESSING ONE SRC at a time *)
   and check_app_overloaded ~positive ctx ~loc (c, cid as c_w_id) ety args targs alltys = function
@@ -431,87 +400,6 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
             if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys (decore_with_dummy_mode targs) ety) then (resolve_gid id cid;[]) (* TODO: here we should something ? *)
             else check_app_overloaded ~positive ctx ~loc c_w_id ety args targs alltys ts
 
-  and get_mode m =
-    match TypeAssignment.deref_tmode m with
-    | MVal v -> v
-    | _ -> error "flex mode cannot be get"
-
-  and closed_term ctx {loc; it} = match it with
-    | CData _ | Const _ | Discard -> ()
-    | App (_,_,x,xs) -> List.iter (closed_term ctx) (x::xs)
-    | Impl (_,_,_) -> failwith "TODO"
-    | Cast (t, _) -> closed_term ctx t
-    | Var (_, _) -> failwith "TODO"
-    | Lam (_, _, _, _) -> failwith "TODO"
-    | Spill (_, _) -> failwith "TODO"
-
-  and check_ground_args ctx ty args =
-    match args, ty with
-    | [], _ -> ()
-    | x::xs, TypeAssignment.Arr (m,NotVariadic,l,r) ->
-      let m = get_mode m in
-      if m = Input then check_ground ctx x;
-      check_ground_args ctx r xs
-    | x::xs, Arr (m,Variadic,_,_) ->
-      let m = get_mode m in
-      if m = Input then check_ground ctx x;
-      check_ground_args ctx ty xs
-    | _ -> anomaly "unreachable branch"
-      
-  and check_ground ctx { loc; it } = match it with
-    | Discard | CData _ | Const(Global _,_) -> ()
-    | Const(Bound l,f) ->
-        begin match Scope.Map.find_opt (f,l) ctx with
-        | None ->  anomaly "unbound"
-        | Some { ground = IGround } -> ()
-        | Some _ -> error ~loc (F.show f ^ " not ground " ^ Scope.Map.show pp_ctx ctx)
-        end
-    | Var(f,args) ->
-        begin match F.Map.find_opt f !sigma with
-        | None ->  anomaly "arg already typed"
-        | Some { ground = IGround } -> ()
-        | Some _ -> error ~loc (F.show f ^ " not ground: " ^ F.Map.show pp_sigma !sigma)
-        end
-    | Cast (t, _) -> check_ground ctx t
-    | _ -> ()
-    | App (Global _, c, x, xs) ->
-      let ty = failwith "TODO: should get the type of the constant c, but getting it from the ctx is not good, due to Overloaded symbols..." in
-      check_ground_args ctx ty (x::xs)
-    | App (Bound lang, c, x, xs) ->
-      let ty = failwith "TODO: same problem as 3 lines above..."(*local_type ctx ~loc (c,lang)*) in
-      check_ground_args ctx ty (x::xs)
-    | Lam (s, _, tya, bo) -> failwith "TODO" (* TODO: 
-        here we can use tya to add the type of s into ctx to the recursive call
-        moreover, s is ground or unkown depending on its mode. the mode can
-        be found in the ty from the 2nd argument of check_ground
-      *)
-    | Impl (true, a, b) -> check_ground ctx b (* TODO: check also a*)
-    | Impl (false, a, b) -> failwith "TODO"
-    | Spill (_, _) -> failwith "TODO"
-
-  and propagate_ground ctx { loc ; it } = match it with
-  | Discard | CData _ | Const(Global _,_) -> ()
-  | Const(Scope.Bound l,f) ->
-      begin match Scope.Map.find_opt (f,l) ctx with
-      | None ->  anomaly "unbound"
-      | Some { ground = IGround } -> ()
-      | Some info -> info.ground <- IGround
-      end
-  | Var(f,args) ->
-      begin match F.Map.find_opt f !sigma with
-      | None ->  anomaly "arg already typed"
-      | Some { ground = IGround } -> ()
-      | Some info -> info.ground <- IGround
-      end
-  | App(s,f,x,xs) ->
-      List.iter (propagate_ground ctx) (x::xs)
-  | Cast (t, _) -> propagate_ground ctx t
-  | _ -> ()
-  | Impl (_, _, _) -> failwith "TODO"
-  | Lam (_, _, _, _) -> failwith "TODO"
-  | Spill (_, _) -> failwith "TODO"
-  
- 
   and infer_mode ctx m { loc; it } =
     match it with
     | Const(Scope.Bound l,f) ->
@@ -527,7 +415,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     match args with
     | [] -> ty
     | x :: xs ->
-      Format.eprintf "@[<h>Checking term %a with type %a@]@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once_raw ty;
+      (* Format.eprintf "@[<h>Checking term %a with type %a@]@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once_raw ty; *)
       (* Format.eprintf "checking app %a against %a@." ScopedTerm.pretty_ (ScopedTerm.App(snd c, fst c,x,xs)) TypeAssignment.pretty_mut_once_raw ty; *)
       match ty with
         | TypeAssignment.Arr(_(*TODO: @FissoreD*), Variadic,s,t) ->
@@ -535,16 +423,8 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
             if xs = [] then t else check_app_single ~positive ctx ~loc c ty (x::consumed) xs
         | Arr(m,NotVariadic,s,t) ->
             let xs = check_loc_if_not_phantom ~positive ~tyctx:(Some (fst c)) ctx x ~ety:s @ xs in
-            Format.eprintf "-- Checked term %a with ety %a; mode is %a@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once s TypeAssignment.pretty_tmode m;
-            begin
-              match TypeAssignment.deref_tmode m with
-              | MVal Input  when positive -> propagate_ground ctx x;
-              | MVal Output when positive ->  ()(*check_ground ctx x; BIG TODO*)
-              | MVal Input -> check_ground ctx x;
-              | MVal Output -> propagate_ground ctx x;
-              | _ -> assert (not @@ TypeAssignment.is_arrow_to_prop s) (* TODO: if the conclusion in unknown, fail *)
-            end;
-          infer_mode ctx m x;
+            (* Format.eprintf "-- Checked term %a with ety %a; mode is %a@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once s TypeAssignment.pretty_tmode m; *)
+            infer_mode ctx m x;
           check_app_single ~positive ctx ~loc c t (x::consumed) xs
         | Any -> check_app_single ~positive ctx ~loc c ty (x::consumed) xs
         | UVar m when MutableOnce.is_set m ->
@@ -667,11 +547,11 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
       Single (Scope.dummy_type_decl_id, TypeAssignment.unval @@ ty)
     with Not_found ->
       let ty = TypeAssignment.UVar (MutableOnce.make c) in
-      sigma := F.Map.add c { ty = TypeAssignment.Val ty; nocc = 1; loc; ground = Unknown } !sigma;
+      sigma := F.Map.add c { ty = TypeAssignment.Val ty; nocc = 1; loc } !sigma;
       Single (Scope.dummy_type_decl_id, ty)
   (* matching=true -> X = t fails (X = Y works)*)
   and unif ~matching t1 t2 =
-    Format.eprintf "%a = %a\n" TypeAssignment.pretty_mut_once_raw t1 TypeAssignment.pretty_mut_once_raw t2;
+    (* Format.eprintf "%a = %a\n" TypeAssignment.pretty_mut_once_raw t1 TypeAssignment.pretty_mut_once_raw t2; *)
     let open TypeAssignment in
     match t1, t2 with
     | Any, _ -> true
