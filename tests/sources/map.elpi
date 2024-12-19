@@ -6,14 +6,14 @@ build N M X X1 :-
   std.map.add N N X XR,
   build N1 M XR X1.
 
-pred test i:int, i:int, i:(int -> A -> int -> prop), i:A.
+pred test i:int, i:int, i:(pred i:int, i:A, o:int), i:A.
 test N N _ _ :- !.
 test N M F X :-
   N1 is N + 1,
   std.assert! (F N X N) "not found",
   test N1 M F X.
 
-pred test2 i:int, i:int, i:(int -> A -> A -> prop), i:A.
+pred test2 i:int, i:int, i:(pred i:int, i:A, o:A), i:A.
 test2 N N _ _ :- !.
 test2 N M F X :-
   N1 is N + 1,

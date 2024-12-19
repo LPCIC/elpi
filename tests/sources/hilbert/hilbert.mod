@@ -124,6 +124,7 @@ problem1 X U Y Z :-
 % converts ints to church numerals
 cn 0 Z :- zero Z.
 cn 1 One :- one One.
+:untyped
 cn N (P CNP One) :- N > 1, NP is (N - 1), plus P, one One, cn NP CNP.
 
 % tests:

@@ -39,6 +39,7 @@ module Func = struct
   let sigmaf = from_string "sigma"
   let eqf = from_string "="
   let isf = from_string "is"
+  let asf = from_string "as"
   let consf = from_string "::"
   let nilf = from_string "[]"
   let arrowf = from_string "->"
@@ -66,12 +67,7 @@ module Func = struct
 
 end
 
-module Mode = struct
-
-  type t = Util.arg_mode = Input | Output
-  [@@deriving show, ord]
-
-end
+module Mode : Mode with type t = Mode.t = Mode
 
 type raw_attribute =
   | If of string
@@ -126,7 +122,7 @@ let mkQuoted loc pad s =
                                  Loc.source_stop = loc.Loc.source_stop - m;
              } in
   (* Printf.eprintf "mkQuoted '%s'\n" s; *)
-  let rec find_data i pad =
+  let find_data i pad =
     match s.[i] with
     (* | '{' -> assert false; find_data (i+1) (pad+1) *)
     | ':' ->
@@ -165,7 +161,6 @@ let mkSeq ?loc (l : t list) =
    let l = aux l in
    match loc with None -> l | Some loc -> { l with loc }
 let mkCast loc t ty = { loc; it = Cast(t,ty) }
-
 
 let rec best_effort_pp = function
  | Lam (x,_,t) -> "x\\" ^ best_effort_pp t.it
@@ -381,7 +376,6 @@ type program = {
   kinds : (unit,unit) Type.t list;
   types : (tattribute,functionality) Type.t list;
   type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
-  modes : (tattribute,functionality) Type.t list;
   body : block list;
 }
 and cattribute = {

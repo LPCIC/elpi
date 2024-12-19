@@ -1,9 +1,10 @@
+% NO
 :functional
 pred p i:int, o:int.
 
 % here we have variables in input position, overlap detection,
 % makes the predicate not functional...
-% NOTE: the query p 1 Y has two solution for Y
+% NOTE: the query p 1 Y has two solutions for Y
 p 1 2.
 p X 3.
 
