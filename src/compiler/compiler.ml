@@ -1680,6 +1680,7 @@ end = struct
           D.mkCons x y
       (* globals and builtins *)
       | Const(Global _,c) ->
+          (* TODO: use UF to allocate integers *)
           let c, t = allocate_global_symbol c in
           if Builtins.is_builtin builtins c then D.mkBuiltin c []
           else t
