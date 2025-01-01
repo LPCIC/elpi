@@ -1,0 +1,8 @@
+% Test for the correct parsing of binders with types
+% Similar to test lambda4 but with type_checking error
+% since the lambda term is applied to a term with 
+% an unexpected type
+
+main :-
+  X = (x : bool\ x),
+  Y = X 1. % Here type error

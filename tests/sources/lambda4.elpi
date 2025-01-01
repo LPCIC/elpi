@@ -1,0 +1,17 @@
+% Test for the correct parsing of binders with types
+
+pred test1.
+test1 :-
+  X = (x : bool\ x),
+  Y = X tt,
+  print Y.
+
+pred test2.
+test2 :-
+  _ = (x : bool\ x as Z),
+  Y = Z tt,
+  print Y.
+
+main :-
+  test1,
+  test2.

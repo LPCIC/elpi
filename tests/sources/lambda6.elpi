@@ -1,0 +1,7 @@
+% Test for the correct parsing of binders with types
+% Similar to test lambda5 but with type_checking error
+% using the as constructor
+
+main :-
+  _ = (x : bool\ x as Y),
+  _ = Y 1. % Here type error
