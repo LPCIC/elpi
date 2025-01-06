@@ -202,6 +202,23 @@ let () = declare "lambda_arrow2"
   ~description:"simple type checker"
   ()
 
+let () = declare "lambda4"
+  ~source_elpi:"lambda4.elpi"
+  ~description:"simple type checker"
+  ()
+
+let () = declare "lambda5"
+  ~source_elpi:"lambda5.elpi"
+  ~description:"simple type checker"
+  ~expectation:Failure
+  ()
+
+let () = declare "lambda6"
+  ~source_elpi:"lambda6.elpi"
+  ~description:"simple type checker"
+  ~expectation:Failure
+  ()
+
 let () = declare "hilbert"
   ~source_elpi:"hilbert/hilbert.mod"
   ~source_teyjus:"hilbert/hilbert.mod"

@@ -242,9 +242,10 @@ let _ =
   test  "p :- f \".*\\\\.aux\"." 1 17 1 0 [] (app ":-" 2 [c 0 "p";app "f" 5  [str 7 17 ".*\\.aux"]]);
   test  "p :- (f x : y)."   1 14 1 0 [] (app ":-" 2 [c 0 "p"; cast 5 14 (app "f" 6 [c 8 "x"]) (ct 13 "y")]);
   test  "p :- pi x : y \\ z."   1 17 1 0 [] (app ":-" 2 [c 0 "p"; app "pi" 5 [lam "x" 9 ~ty:(ct 13 "y") (c 16  "z")]]);
-  (*    01234567890123456789012345 *)
+  (*     01234567890123456789012345 *)
   test  "p :- f (x : y)."   1 14 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [cast 7 14 (c 8 "x") (ct 13 "y")]]);
-  testF "p :- f (x : y \\ z)." 15 "Illformed binder";
+  test  "p :- f (x : y \\ z)." 1 18 1 0 [] (app ":-" 2 [c 0 "p"; app ~parenr:1 "f" 5 [lam "x" 9 ~ty:(ct 13 "y") (c 16 "z")]]);
+  test  "p :- f (x : y \\ z as Y)." 1 23 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [app "as" ~parenl:true ~parenr:1 18 [lam "x" 9 ~ty:(ct 13 "y") (c 16 "z"); c 21 "Y"]]]);
   (*    01234567890123456789012345 *)
   testT "func x int, int -> bool, bool."          ();
   testT "func x int, list int -> bool."           ();

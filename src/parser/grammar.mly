@@ -142,6 +142,9 @@ let mode_of_IO io =
 %type < 'a TypeExpression.t > type_term
 %type < 'a TypeExpression.t > atype_term
 
+%nonassoc colon_minus1
+%nonassoc COLON
+
 (* entry points *)
 %start program
 %start goal
@@ -385,9 +388,14 @@ closed_term:
 | l = LCURLY; t = term; RCURLY { mkAppF (loc $loc) (loc $loc(l),Func.spillf) [t] }
 | t = head_term { t }
 
+/*
+Here we set the precedence to the 'constant' production of head_term
+see https://github.com/LPCIC/elpi/pull/304
+*/
 head_term:
-| t = constant { mkConst (loc $loc) t }
+| t = constant %prec colon_minus1 { mkConst (loc $loc) t }
 | LPAREN; t = term; RPAREN { mkParens_if_impl_or_conj (loc $loc) t }
+| LPAREN; t = constant; COLON; ty = type_term RPAREN { mkCast (loc $loc) (mkConst (loc $loc(t)) t) ty }
 | LPAREN; t = term; COLON; ty = type_term RPAREN { mkCast (loc $loc) t ty }
 
 list_items:
@@ -402,7 +410,7 @@ list_items_tail:
 
 binder_term:
 | t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) None b }
-// | t = constant; COLON; ty = type_term; BIND; b = term { mkLam (loc $loc) (Func.show t) (Some ty) b }
+| t = constant; COLON; ty = type_term; BIND; b = term { mkLam (loc $loc) (Func.show t) (Some ty) b }
 
 binder_body_no_ty:
 | bind = BIND; b = term { (loc $loc(bind), None, b) }
