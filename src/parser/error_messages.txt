@@ -547,8 +547,11 @@ sigma X Y Z\ p X, q Y Z
 goal: LPAREN FLOAT COLON AFTER IO_COLON
 goal: LPAREN FLOAT COLON VDASH
 
-Illformed binder after type cast.
-You cannot ascribe a type to bound variables.
+Illformed type cast.
+Examples:
+(x : ty)
+pi x : ty \ t
+lam (x : ty \ t)
 
 program: LPAREN FLOAT COLON AFTER RPAREN VDASH
 
