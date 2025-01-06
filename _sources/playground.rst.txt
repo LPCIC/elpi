@@ -215,7 +215,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -241,7 +241,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -337,7 +337,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -363,7 +363,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -391,7 +391,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -417,7 +417,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -462,7 +462,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -488,7 +488,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -917,7 +917,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -969,7 +969,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -995,7 +995,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1075,7 +1075,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1101,7 +1101,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1127,7 +1127,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1153,7 +1153,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    Fatal error: 
    Unification problem outside the pattern fragment. ((Data.Term.App (f, (Data.Term.Const x), [])) == (Data.Term.AppUVar (
       { Data.Term.contents = please extend this printer; uid_private = 2 }, 0,
@@ -1210,7 +1210,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1453,7 +1453,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1762,7 +1762,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1792,7 +1792,7 @@ Test Bed
    
    Success:
    
-   Time: 1.810
+   Time: 1.792
    
    Constraints:
    
@@ -1840,7 +1840,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1866,7 +1866,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1892,11 +1892,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
-   Time: 0.314
+   Time: 0.331
    
    Constraints:
    
@@ -1951,7 +1951,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2198,7 +2198,7 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.001
    
    Compilation time: 0.000
    
@@ -2223,7 +2223,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.313348 + 0.056941 + 0.939354
+   1.303534 + 0.058142 + 0.914749
    
 
 .. code-block:: console
@@ -2237,7 +2237,7 @@ Test Bed
    
    Success:
    
-   Time: 2.529
+   Time: 2.497
    
    Constraints:
    
@@ -2254,7 +2254,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.328652 + 2.882384 + 0.401003
+   6.401275 + 2.926368 + 0.387892
    
 
 .. code-block:: console
@@ -2268,7 +2268,7 @@ Test Bed
    
    Success:
    
-   Time: 9.618
+   Time: 9.722
    
    Constraints:
    
@@ -2285,7 +2285,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.764627 + 2.731453 + 0.231218
+   5.701716 + 2.697709 + 0.228060
    
 
 .. code-block:: console
@@ -2299,7 +2299,7 @@ Test Bed
    
    Success:
    
-   Time: 8.733
+   Time: 8.633
    
    Constraints:
    
@@ -2382,7 +2382,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2408,7 +2408,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2434,7 +2434,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2458,9 +2458,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2486,7 +2486,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2512,7 +2512,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2797,7 +2797,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 66, characters 3524-3526:
    F4 is linear: name it _F4 (discard) or F4_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
@@ -2901,7 +2901,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2941,7 +2941,7 @@ Test Bed
    
    Success:
    
-   Time: 1.578
+   Time: 1.617
    
    Constraints:
    
@@ -2975,7 +2975,7 @@ Test Bed
 
 .. code-block:: console
 
-   3
+   2
    
 
 .. code-block:: console
@@ -2985,7 +2985,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3028,7 +3028,7 @@ Test Bed
    
    Success:
    
-   Time: 0.251
+   Time: 0.265
    
    Constraints:
    
@@ -3067,7 +3067,7 @@ Test Bed
    
    Success:
    
-   Time: 1.592
+   Time: 1.714
    
    Constraints:
    
@@ -3215,7 +3215,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3245,7 +3245,7 @@ Test Bed
    
    Success:
    
-   Time: 0.138
+   Time: 0.145
    
    Constraints:
    
@@ -3265,13 +3265,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
    Success:
    
-   Time: 0.141
+   Time: 0.144
    
    Constraints:
    
@@ -3293,7 +3293,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3340,7 +3340,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.102111 + 0.052648 + 0.774574
+   1.094963 + 0.052925 + 0.764467
    
 
 .. code-block:: console
@@ -3354,7 +3354,7 @@ Test Bed
    
    Success:
    
-   Time: 2.018
+   Time: 2.003
    
    Constraints:
    
@@ -3376,7 +3376,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3402,7 +3402,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3428,7 +3428,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
 **../../tests/sources/shorten_aux2.elpi
 :**
@@ -3470,7 +3470,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3533,7 +3533,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3590,7 +3590,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3616,7 +3616,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3647,7 +3647,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3673,7 +3673,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3730,7 +3730,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3756,7 +3756,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3782,7 +3782,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3808,7 +3808,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3890,7 +3890,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3916,7 +3916,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3996,7 +3996,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4022,7 +4022,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -4048,7 +4048,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
