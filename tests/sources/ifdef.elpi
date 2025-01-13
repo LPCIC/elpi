@@ -9,4 +9,8 @@ pred x.
 x.
 % elpi:endif
 
+% elpi:if version elpi = 100.0.0
+pred foo. pred pred.
+% elpi:endif
+
 main :- x.

@@ -154,6 +154,12 @@ module Setup : sig
   (* Handle to an elpi instance *)
   type elpi
 
+  module StrMap : sig
+    include Map.S with type key = string
+    val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+    val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  end
+ 
   (** Initialize ELPI.
 
       [init] must be called before invoking the parser.
@@ -170,6 +176,7 @@ module Setup : sig
         [builtins] and where accumulate resolves files with the given
         [file_resolver]. *)
   val init :
+    ?versions:(int * int * int) StrMap.t ->
     ?flags:flags ->
     ?state:state_descriptor ->
     ?quotations:quotations_descriptor ->
@@ -302,11 +309,7 @@ end
 
 module Data : sig
 
-  module StrMap : sig
-   include Map.S with type key = string
-   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
-   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-  end
+  module StrMap = Setup.StrMap
 
   (* what is assigned to the query variables *)
   type term
@@ -1374,6 +1377,17 @@ module Utils : sig
 
   module IntSet : Set.S with type elt = int
   module LocSet : Set.S with type elt = Ast.Loc.t
+
+  (* Parses a version string as it parses the elpi one:
+     - drop leading 'v'
+     - drop trailing '-...' or '+...'
+     - splits on '.'
+       - expects 3 numerical components
+       - or 2 numerical components (third one defaults to 0)
+       - or a single component matching "%%.*%%" (defaults to 99.99.99)
+    On error defaults to 0.0.0
+  *)
+  val version_parser : what:string -> string -> int * int * int
 
 end
 

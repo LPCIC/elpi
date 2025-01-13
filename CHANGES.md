@@ -1,3 +1,15 @@
+# v2.0.7 (January 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Parser:
+  - New `elpi:if version <name> <op> <ma>.<mi>.<p>`
+
+- API:
+  - New `Setup.init` takes a `?versions` dictionary to declare versions
+    of external components
+  - New `Utils.parse_version`
+
 # v2.0.6 (December 2024)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.

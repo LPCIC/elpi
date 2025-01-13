@@ -112,7 +112,7 @@ let rec expect s b = function
   | [] -> ()
   | sp :: spec ->
       begin try
-      let tok2 = Lexer.token b in
+      let tok2 = Lexer.token Elpi_util.Util.StrMap.empty b in
       let open Lexing in
       let p = b.lex_curr_p in
       let lnum2, bol2, bnum2, cnum2 = p.pos_lnum, p.pos_bol, b.lex_start_p.pos_cnum, p.pos_cnum in

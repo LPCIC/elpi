@@ -27,6 +27,7 @@ module type Parser_w_Internals = sig
 end
 
 module type Config = sig
+  val versions : (int * int * int) Util.StrMap.t
   val resolver : ?cwd:string -> unit:string -> unit -> string
 end
 
