@@ -1385,6 +1385,7 @@ module Utils : sig
        - expects 3 numerical components
        - or 2 numerical components (third one defaults to 0)
        - or a single component matching "%%.*%%" (defaults to 99.99.99)
+    On error defaults to 0.0.0
   *)
   val version_parser : what:string -> string -> int * int * int
 

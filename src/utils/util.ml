@@ -342,12 +342,12 @@ let set_type_error f = type_error_f := (Obj.repr f)
 let set_std_formatter f = std_fmt := f
 let set_err_formatter f = err_fmt := f
 
-let warn ?loc s       = Obj.obj !warn_f ?loc s
-let error ?loc s      = Obj.obj !error_f ?loc s
-let anomaly ?loc s    = Obj.obj !anomaly_f ?loc s
+let warn ?loc s : unit = Obj.obj !warn_f ?loc s
+let error ?loc s = Obj.obj !error_f ?loc s
+let anomaly ?loc s = Obj.obj !anomaly_f ?loc s
 let type_error ?loc s = Obj.obj !type_error_f ?loc s
-let printf x     = Format.fprintf !std_fmt x
-let eprintf x    = Format.fprintf !err_fmt x
+let printf x = Format.fprintf !std_fmt x
+let eprintf x = Format.fprintf !err_fmt x
 
 let option_get ?err = function
   | Some x -> x
@@ -737,4 +737,6 @@ let version_parser ~what v =
     | [ma;mi] when List.for_all is_number l -> int_of_string ma, int_of_string mi, 0
     | [v] when Re.Str.(string_match (regexp "^%%.*%%$") v 0) -> 99, 99, 99
     | _ -> raise (Failure "invalid format")
-  with Failure msg -> error ("elpi: version_parser: cannot parse version of "^what^" '" ^ v ^ "': " ^ msg)
+  with Failure msg ->
+    warn ("elpi: version_parser: cannot parse version of "^what^" '" ^ v ^ "': " ^ msg);
+    0,0,0
