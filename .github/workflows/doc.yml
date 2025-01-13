@@ -21,7 +21,7 @@ jobs:
           pip3 install Sphinx sphinx-rtd-theme in-place
 
       - name: Install ocaml
-        uses: avsm/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 4.13.x
           opam-local-packages:
