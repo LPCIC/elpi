@@ -1,3 +1,4 @@
+% NO
 kind tm type.
 
 type app tm -> tm -> tm.

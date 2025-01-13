@@ -11,6 +11,7 @@ constraint c {
       | (move A B T2 T2') <=> (E :> G ?- T1 = T2').
 }
 
+:untyped
 main :-
   pi x\
     declare_constraint (c (X x) (y\f x y)) [X x],

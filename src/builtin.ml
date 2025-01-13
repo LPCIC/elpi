@@ -596,15 +596,18 @@ This API only works reliably since OCaml 4.12.|}))))),
   LPDoc " -- Debugging --";
 
   MLCode(Pred("term_to_string",
-    In(any,     "T",
+    InOut(ioarg_any,     "T",
     Out(string, "S",
     Easy        "prints T to S")),
   (fun t _ ~depth ->
+     match t with
+     | NoData -> ?: None +! "_"
+     | Data t ->
      let b = Buffer.create 1024 in
      let fmt = Format.formatter_of_buffer b in
      Format.fprintf fmt "%a" (RawPp.term depth) t ;
      Format.pp_print_flush fmt ();
-       !:(Buffer.contents b))),
+     ?: None +! (Buffer.contents b))),
   DocAbove);
 
   ]

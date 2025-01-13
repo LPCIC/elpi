@@ -115,6 +115,11 @@ let () = declare "conj2"
   ~description:"parsing and evaluation of & (binary conj)"
   ()
 
+let () = declare "macro_type"
+  ~source_elpi:"macro_type.elpi"
+  ~description:"polymorphic macro"
+  ()
+
 (* 
   Note in the following tests with DT, we disable typecheck not to print the
   number of candidates found in the search of clauses done by the elpi typechecker
@@ -230,4 +235,33 @@ let () = declare "mode_checking_ho"
       |] in
     mode_check expected "mode_checking_ho"
     ))
+  ()
+
+let () =
+  let status = Test.
+    [|Failure; Success; Failure; Success; Failure; (*05*)
+      Success; Failure; Failure; Failure; Failure; (*10*)
+      Failure; Success; Failure; Failure; Success; (*15*)
+      Success; Success; Failure; Failure; Success; (*20*)
+      Failure; Success; Failure; Success; Failure; (*25*)
+      Failure; Failure; Success; Success; Failure|] in
+  let ignore = [1;5;7;8;9;10;11;13;16;26;27] in
+  (* interesting tests:24 *)
+  for i = 0 to Array.length status - 1 do
+    if not (List.mem (i+1) ignore) then (
+    let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
+    let descr = Printf.sprintf "functionality%d" (i+1) in
+    declare descr
+    ~source_elpi:name
+    ~description:descr
+    ~expectation:status.(i)
+    ())
+  done
+
+
+let () = declare "sepcomp_tyid"
+  ~source_dune:"sepcomp_tyid.exe"
+  ~after:"sepcomp_tyid"
+  ~description:"separate compilation union find on type_id"
+  ~expectation:Test.Success
   ()
