@@ -308,9 +308,15 @@ This text is ignored if the version of Elpi old
 % elpi:endif
 ```
 
-Currently the only variable available is `version` and it must be placed
-on the left of the operator (either `<` or `>` or `=`) and ifdefs cannot
-be nested. If not available (e.g. `dune subst` did not run) the version
+Currently the only supported expression is `version <component>` where
+`<component>` defaults to `elpi`. The OCaml APIs let one declare the version
+of other components of the host application that may affect the code to
+be parsed.
+The expression and it must be placed on the left of the operator
+(either `<` or `>` or `=`) and ifdefs cannot
+be nested.
+
+If not available (e.g. `dune subst` did not run) the version of `elpi`
 defaults to `99.99.99`.
 
 One can also ask the lexer to always skip some text. That can be useful if one

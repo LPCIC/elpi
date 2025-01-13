@@ -307,3 +307,5 @@ module Constants : sig
   val show : t -> string
   val compare : t -> t -> int
 end
+
+val version_parser : what:string -> string -> int * int * int

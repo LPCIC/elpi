@@ -34,7 +34,7 @@ let chunk s (p1,p2) =
 
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
 
-module Parser = Parse.Make(struct let resolver = Elpi_util.Util.std_resolver ~paths:[] () end)
+module Parser = Parse.Make(struct let versions = Elpi_util.Util.StrMap.empty let resolver = Elpi_util.Util.std_resolver ~paths:[] () end)
 
 let warn = ref None
 let () = Elpi_util.Util.set_warn (fun ?loc str -> warn := Some str)
@@ -276,16 +276,16 @@ let sanity_check : unit =
           | Extensible ({ start; mk_token; non_enclosed ; at_least_one_char; _ } as e)->
               let start = if at_least_one_char then start ^ "x" else start in
               start, mk_token, (if non_enclosed then Some (fun x -> start ^ x ^ start) else None), Some e in
-    let tok = Lexer.token (Lexing.from_string start) in
+    let tok = Lexer.token Elpi_util.Util.StrMap.empty (Lexing.from_string start) in
     let token = mk_token start in
     assert(tok = token);
     begin try match fixity with
     | Infix | Infixl | Infixr ->
-        ignore(Parser.Internal.infix_SYMB Lexer.token (Lexing.from_string start))
+        ignore(Parser.Internal.infix_SYMB Lexer.(token Elpi_util.Util.StrMap.empty) (Lexing.from_string start))
     | Postfix ->
-        ignore(Parser.Internal.postfix_SYMB Lexer.token (Lexing.from_string start))
+        ignore(Parser.Internal.postfix_SYMB Lexer.(token Elpi_util.Util.StrMap.empty) (Lexing.from_string start))
     | Prefix ->
-        ignore(Parser.Internal.prefix_SYMB Lexer.token (Lexing.from_string start))
+        ignore(Parser.Internal.prefix_SYMB Lexer.(token Elpi_util.Util.StrMap.empty) (Lexing.from_string start))
     with _ ->
       Printf.eprintf "\n           (*          1         2         3 *)";
       Printf.eprintf "\n           (* 123456789012345678901234567890 *)";
@@ -296,7 +296,7 @@ let sanity_check : unit =
     | None -> ()
     | Some f ->
       let v = f "xx" in
-      assert(CONSTANT v = Lexer.token (Lexing.from_string v));
+      assert(CONSTANT v = Lexer.token Elpi_util.Util.StrMap.empty (Lexing.from_string v));
     end;
     x) tokens) |> List.concat |> List.length in
   assert(extensible_SYMB = 14)

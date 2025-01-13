@@ -22,29 +22,25 @@
       b.lex_start_p <- start_p;
       r
 
-    let version_ma, version_mi, version_p =
-      let is_number x = try let _ = int_of_string x in true with _ -> false in
-      let v = "%%VERSION_NUM%%" in
-      let v' = Re.Str.(replace_first (regexp "^v") "" v) in    (* v1.20... -> 1.20... *)
-      let v' = Re.Str.(replace_first (regexp "-.*$") "" v') in  (* ...-10-fjdnfs -> ... *)
-      let l = String.split_on_char '.' v' in
-      match l with
-      | [ma;mi;p] when List.for_all is_number l -> int_of_string ma, int_of_string mi, int_of_string p
-      | [_] -> 99, 99, 99
-      | _ -> Elpi_util.Util.error ("lexer: version parser: cannot parse: " ^ v)
-
-    let version_test ops ma mi p =
+    let version_test v l ops ma mi p =
       let ma = int_of_string ma in
       let mi = int_of_string mi in
       let p  = int_of_string p in
+      let version =
+        match l with
+        | None | Some "elpi" ->
+            Elpi_util.Util.version_parser ~what:"elpi" "%%VERSION_NUM%%"
+        | Some l ->
+            try Elpi_util.Util.StrMap.find l v
+            with Not_found -> raise (Error ("elpi: lexer: no version declared for " ^ l)) in
       let op =
         match ops with
         | '<' -> (<)
         | '=' -> (=)
         | '>' -> (>)
         | _ -> assert false in
-      let rc = op (version_ma,version_mi,version_p) (ma,mi,p) in
-      (*Printf.eprintf "%d.%d.%d %c %d.%d.%d = %b\n" version_ma version_mi version_p ops ma mi p rc;*)
+      let rc = op version (ma,mi,p) in
+      (* let v1 ,v2 ,v3 = version in Printf.eprintf "%d.%d.%d %c %d.%d.%d = %b\n" v1 v2 v3 ops ma mi p rc;*)
       rc
 
 }
@@ -66,46 +62,46 @@ let symbchar = lcase | ucase | digit | schar | ':'
 let symbcharstar = symbchar *
 let symbcharplus = symbchar +
 
-rule linecomment = parse
-| '\n' { new_line lexbuf; token lexbuf }
-| eof { token lexbuf }
-| "elpi:skip " (pnum as n) { linecomment_skip (int_of_string n) lexbuf }
-| "elpi:if" (' '+) "version" (' '+) (['<' '>' '='] as op) (' '+) (pnum as ma) "." (pnum as mi) "." (pnum as p) {
-     if not @@ version_test op ma mi p then linecomment_if lexbuf else linecomment_drop lexbuf }
-| ' ' { linecomment lexbuf }
-| _ { linecomment_drop lexbuf }
+rule linecomment v = parse
+| '\n' { new_line lexbuf; token v lexbuf }
+| eof { token v lexbuf }
+| "elpi:skip " (pnum as n) { linecomment_skip v (int_of_string n) lexbuf }
+| "elpi:if" (' '+) "version" ( ' '+ ([ 'A' - 'Z' 'a' - 'z' '-' '_' '.' ]+ as l) )? (' '+) (['<' '>' '='] as op) (' '+) (pnum as ma) "." (pnum as mi) "." (pnum as p) {
+     if not @@ version_test v l op ma mi p then linecomment_if v lexbuf else linecomment_drop v lexbuf }
+| ' ' { linecomment v lexbuf }
+| _ { linecomment_drop v lexbuf }
 
-and linecomment_drop = parse
-| '\n' { new_line lexbuf; token lexbuf }
-| eof { token lexbuf }
-| _ { linecomment_drop lexbuf }
+and linecomment_drop v = parse
+| '\n' { new_line lexbuf; token v lexbuf }
+| eof { token v lexbuf }
+| _ { linecomment_drop v lexbuf }
 
-and linecomment_skip skipno = parse
-| '\n' { new_line lexbuf; if skipno > 0 then skip_lines skipno lexbuf else token lexbuf }
-| eof { token lexbuf }
-| _ { linecomment_skip skipno lexbuf }
+and linecomment_skip v skipno = parse
+| '\n' { new_line lexbuf; if skipno > 0 then skip_lines v skipno lexbuf else token v lexbuf }
+| eof { token v lexbuf }
+| _ { linecomment_skip v skipno lexbuf }
 
-and linecomment_if = parse
-| '\n' { new_line lexbuf; skip_lines_endif lexbuf }
-| eof { token lexbuf }
-| _ { linecomment_if lexbuf }
+and linecomment_if v = parse
+| '\n' { new_line lexbuf; skip_lines_endif v lexbuf }
+| eof { token v lexbuf }
+| _ { linecomment_if v lexbuf }
 
-and skip_lines_endif = parse
-| '\n' { new_line lexbuf; skip_lines_endif lexbuf }
-| '%' (' '+) "elpi:endif" { token lexbuf }
-| eof { token lexbuf }
-| _ { skip_lines_endif lexbuf }
+and skip_lines_endif v = parse
+| '\n' { new_line lexbuf; skip_lines_endif v lexbuf }
+| '%' (' '+) "elpi:endif" { token v lexbuf }
+| eof { token v lexbuf }
+| _ { skip_lines_endif v lexbuf }
 
-and skip_lines skipno = parse
-| '\n' { new_line lexbuf; let skipno = skipno - 1 in if skipno > 0 then skip_lines skipno lexbuf else token lexbuf }
-| eof { token lexbuf }
-| _ { skip_lines skipno lexbuf }
+and skip_lines v skipno = parse
+| '\n' { new_line lexbuf; let skipno = skipno - 1 in if skipno > 0 then skip_lines v skipno lexbuf else token v lexbuf }
+| eof { token v lexbuf }
+| _ { skip_lines v skipno lexbuf }
 
-and multilinecomment nest = parse
-| '\n' { new_line lexbuf; multilinecomment nest lexbuf }
-| "*/" { if nest = 0 then token lexbuf else multilinecomment (nest - 1) lexbuf }
-| "/*" { multilinecomment (nest+1) lexbuf }
-| _ { multilinecomment nest lexbuf }
+and multilinecomment v nest = parse
+| '\n' { new_line lexbuf; multilinecomment v nest lexbuf }
+| "*/" { if nest = 0 then token v lexbuf else multilinecomment v (nest - 1) lexbuf }
+| "/*" { multilinecomment v (nest+1) lexbuf }
+| _ { multilinecomment v nest lexbuf }
 
 and string b = parse
 | '\n'     { Buffer.add_char b '\n'; new_line lexbuf; string b lexbuf }
@@ -155,7 +151,7 @@ and lookahead_open b n = parse
     if n = 1 then () else lookahead_open b (n-1) lexbuf
   }
 
-and token = parse
+and token v = parse
 | ("#line" " "+ (num as n) " "+ '"' ([^'"']+ as f) '"' " "* '\n' as x) {
     let open Lexing in
     lexbuf.lex_curr_p <- {
@@ -166,11 +162,11 @@ and token = parse
     };
     lexbuf.lex_abs_pos <- - (String.length x) - lexbuf.lex_start_p.pos_cnum;
     lexbuf.lex_start_p <- lexbuf.lex_curr_p;
-    token lexbuf }
-| ( ' ' | '\t' | '\r' ) { token lexbuf }
-| '\n' { new_line lexbuf; token lexbuf }
-| '%' { linecomment lexbuf }
-| "/*" { multilinecomment 0 lexbuf }
+    token v lexbuf }
+| ( ' ' | '\t' | '\r' ) { token v lexbuf }
+| '\n' { new_line lexbuf; token v lexbuf }
+| '%' { linecomment v lexbuf }
+| "/*" { multilinecomment v 0 lexbuf }
 | "." { FULLSTOP }
 | "_" idchar + as c { CONSTANT c }
 | "_" { FRESHUV }

@@ -26,6 +26,7 @@ module type Parser_w_Internals = sig
 end
 
 module type Config = sig
+  val versions : (int * int * int) Util.StrMap.t
   val resolver : ?cwd:string -> unit:string -> unit -> string
 
 end
@@ -51,7 +52,7 @@ let chunk s (p1,p2) =
   String.sub s p1.Lexing.pos_cnum (p2.Lexing.pos_cnum - p1.Lexing.pos_cnum)
 
 let parse grammar lexbuf =
-  let buffer, lexer = MenhirLib.ErrorReports.wrap Lexer.token in
+  let buffer, lexer = MenhirLib.ErrorReports.wrap Lexer.(token C.versions) in
   try
     grammar lexer lexbuf
   with

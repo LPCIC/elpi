@@ -25,7 +25,9 @@ let set_trace argv =
   args
 
 module Setup = struct
-
+  module StrMap = Util.StrMap
+ 
+ 
 type state_descriptor = Data.State.descriptor
 type quotations_descriptor = Compiler_data.QuotationHooks.descriptor ref
 type hoas_descriptor = Data.HoasHooks.descriptor ref
@@ -44,14 +46,14 @@ type elpi = {
 }
 type flags = Compiler.flags
 
-let init ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver () : elpi =
+let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
     | Some x -> x
     | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
-  let parser = (module Parse.Make(struct let resolver = file_resolver end) : Parse.Parser) in
+  let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver end) : Parse.Parser) in
   Data.Global_symbols.lock ();
   let header_src =
     builtins |> List.map (fun (fname,decls) ->
@@ -1358,6 +1360,8 @@ module Utils = struct
   module Set = Util.Set
   module IntSet = Util.IntSet
   module LocSet : Util.Set.S with type elt = Ast.Loc.t = Util.Set.Make(Ast.Loc)
+
+  let version_parser = Util.version_parser
 
 end
 
