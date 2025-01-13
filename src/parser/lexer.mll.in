@@ -35,9 +35,11 @@
             with Not_found -> raise (Error ("elpi: lexer: no version declared for " ^ l)) in
       let op =
         match ops with
-        | '<' -> (<)
-        | '=' -> (=)
-        | '>' -> (>)
+        | "<" -> (<)
+        | "=" -> (=)
+        | ">" -> (>)
+        | ">=" -> (>=)
+        | "<=" -> (<=)
         | _ -> assert false in
       let rc = op version (ma,mi,p) in
       (* let v1 ,v2 ,v3 = version in Printf.eprintf "%d.%d.%d %c %d.%d.%d = %b\n" v1 v2 v3 ops ma mi p rc;*)
@@ -66,7 +68,7 @@ rule linecomment v = parse
 | '\n' { new_line lexbuf; token v lexbuf }
 | eof { token v lexbuf }
 | "elpi:skip " (pnum as n) { linecomment_skip v (int_of_string n) lexbuf }
-| "elpi:if" (' '+) "version" ( ' '+ ([ 'A' - 'Z' 'a' - 'z' '-' '_' '.' ]+ as l) )? (' '+) (['<' '>' '='] as op) (' '+) (pnum as ma) "." (pnum as mi) "." (pnum as p) {
+| "elpi:if" (' '+) "version" ( ' '+ ([ 'A' - 'Z' 'a' - 'z' '-' '_' '.' ]+ as l) )? (' '+) (("<" | ">" | "=" | ">=" | "<=") as op) (' '+) (pnum as ma) "." (pnum as mi) "." (pnum as p) {
      if not @@ version_test v l op ma mi p then linecomment_if v lexbuf else linecomment_drop v lexbuf }
 | ' ' { linecomment v lexbuf }
 | _ { linecomment_drop v lexbuf }

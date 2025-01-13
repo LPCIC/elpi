@@ -1380,10 +1380,11 @@ module Utils : sig
 
   (* Parses a version string as it parses the elpi one:
      - drop leading 'v'
-     - drop trailing '-...'
+     - drop trailing '-...' or '+...'
      - splits on '.'
        - expects 3 numerical components
-       - or a single component (defaults to 99.99.99)
+       - or 2 numerical components (third one defaults to 0)
+       - or a single component matching "%%.*%%" (defaults to 99.99.99)
   *)
   val version_parser : what:string -> string -> int * int * int
 

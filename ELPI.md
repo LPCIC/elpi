@@ -313,7 +313,7 @@ Currently the only supported expression is `version <component>` where
 of other components of the host application that may affect the code to
 be parsed.
 The expression and it must be placed on the left of the operator
-(either `<` or `>` or `=`) and ifdefs cannot
+(either `<` or `>` or `=` or `<=` or `>=`) and ifdefs cannot
 be nested.
 
 If not available (e.g. `dune subst` did not run) the version of `elpi`

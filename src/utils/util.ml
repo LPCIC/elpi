@@ -730,10 +730,11 @@ let version_parser ~what v =
   try
     let is_number x = try let _ = int_of_string x in true with _ -> false in
     let v' = Re.Str.(replace_first (regexp "^v") "" v) in    (* v1.20... -> 1.20... *)
-    let v' = Re.Str.(replace_first (regexp "-.*$") "" v') in  (* ...-10-fjdnfs -> ... *)
+    let v' = Re.Str.(replace_first (regexp "\\(-\\|\\+\\).*$") "" v') in  (* ...-10-fjdnfs -> ... *)
     let l = String.split_on_char '.' v' in
     match l with
     | [ma;mi;p] when List.for_all is_number l -> int_of_string ma, int_of_string mi, int_of_string p
-    | [_] -> 99, 99, 99
+    | [ma;mi] when List.for_all is_number l -> int_of_string ma, int_of_string mi, 0
+    | [v] when Re.Str.(string_match (regexp "^%%.*%%$") v 0) -> 99, 99, 99
     | _ -> raise (Failure "invalid format")
   with Failure msg -> error ("elpi: version_parser: cannot parse version of "^what^" '" ^ v ^ "': " ^ msg)
