@@ -1707,7 +1707,7 @@ end = struct
           | Impl(b,s,t) -> Impl(b,s,aux t)
           | Const(g,c) -> mkApp g c args
           | App(g,c,x,xs) -> mkApp g c (x :: xs @ args)
-          | Var _
+          | Var(c,l) -> Var (c,l @ args)
           | Discard | Lam (_, _, _)
           | CData _ | Spill (_, _) | Cast (_, _) -> assert false
       and aux_last = function

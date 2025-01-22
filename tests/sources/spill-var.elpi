@@ -1,0 +1,4 @@
+    pred iterate    i:(pred i:A, o:A), i:A, o:(list A).
+    iterate F X [X|XS] :- iterate F {F X} XS ; XS = [].
+
+    main.
