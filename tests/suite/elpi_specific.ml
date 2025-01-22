@@ -159,6 +159,10 @@ let () = declare "spill_collision"
   ~description:"spilling under 2 pi named the same"
   ()
 
+let () = declare "spill-var"
+  ~source_elpi:"spill-var.elpi"
+  ~description:"spilling a var"
+  ()
 
 let () = declare "block"
   ~source_elpi:"block.elpi"
