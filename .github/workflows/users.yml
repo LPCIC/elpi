@@ -19,7 +19,7 @@ jobs:
 
         - uses: ocaml/setup-ocaml@v3
           with:
-            ocaml-compiler: 4.14.x
+            ocaml-compiler: 5.3.x
             opam-local-packages:
 
         - run: opam install ./elpi.opam
