@@ -308,7 +308,7 @@ Test Bed
    
    Success:
    
-   Time: 0.000
+   Time: 0.001
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -1153,7 +1153,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    Fatal error: 
    Unification problem outside the pattern fragment. ((Data.Term.App (f, (Data.Term.Const x), [])) == (Data.Term.AppUVar (
       { Data.Term.contents = please extend this printer; uid_private = 2 }, 0,
@@ -1210,7 +1210,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1332,7 +1332,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/even-odd.elpi", line 19, column 41, characters 436-437:
    Z is linear: name it _Z (discard) or Z_ (fresh variable)
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.002
    
@@ -1401,7 +1401,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1453,7 +1453,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1507,7 +1507,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1710,7 +1710,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1736,7 +1736,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1792,7 +1792,7 @@ Test Bed
    
    Success:
    
-   Time: 1.868
+   Time: 1.882
    
    Constraints:
    
@@ -1840,7 +1840,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1866,7 +1866,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1890,13 +1890,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
    Success:
    
-   Time: 0.317
+   Time: 0.327
    
    Constraints:
    
@@ -2167,7 +2167,7 @@ Test Bed
    
    Success:
    
-   Time: 0.003
+   Time: 0.002
    
    Constraints:
    
@@ -2223,7 +2223,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.288068 + 0.058977 + 0.920292
+   1.279686 + 0.058059 + 0.915432
    
 
 .. code-block:: console
@@ -2237,7 +2237,7 @@ Test Bed
    
    Success:
    
-   Time: 2.487
+   Time: 2.472
    
    Constraints:
    
@@ -2254,13 +2254,13 @@ Test Bed
 
 .. code-block:: console
 
-   6.720988 + 3.296102 + 0.337690
+   6.585982 + 3.177479 + 0.333148
    
 
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.001
    
    Compilation time: 0.000
    
@@ -2268,7 +2268,7 @@ Test Bed
    
    Success:
    
-   Time: 10.362
+   Time: 10.104
    
    Constraints:
    
@@ -2285,7 +2285,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.928284 + 2.938939 + 0.230047
+   5.871895 + 2.939855 + 0.228929
    
 
 .. code-block:: console
@@ -2299,7 +2299,7 @@ Test Bed
    
    Success:
    
-   Time: 9.103
+   Time: 9.047
    
    Constraints:
    
@@ -2687,7 +2687,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2713,7 +2713,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2739,7 +2739,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -2901,7 +2901,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -2941,7 +2941,7 @@ Test Bed
    
    Success:
    
-   Time: 1.599
+   Time: 1.597
    
    Constraints:
    
@@ -2975,7 +2975,7 @@ Test Bed
 
 .. code-block:: console
 
-   7
+   2
    
 
 .. code-block:: console
@@ -3028,7 +3028,7 @@ Test Bed
    
    Success:
    
-   Time: 0.262
+   Time: 0.263
    
    Constraints:
    
@@ -3067,7 +3067,7 @@ Test Bed
    
    Success:
    
-   Time: 1.519
+   Time: 1.525
    
    Constraints:
    
@@ -3151,7 +3151,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3215,7 +3215,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3237,7 +3237,7 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.001
    
    Compilation time: 0.000
    
@@ -3245,7 +3245,7 @@ Test Bed
    
    Success:
    
-   Time: 0.142
+   Time: 0.140
    
    Constraints:
    
@@ -3265,13 +3265,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.002
    
    Success:
    
-   Time: 0.142
+   Time: 0.140
    
    Constraints:
    
@@ -3319,7 +3319,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3340,7 +3340,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.105545 + 0.053427 + 0.765838
+   1.118492 + 0.053603 + 0.773860
    
 
 .. code-block:: console
@@ -3354,7 +3354,7 @@ Test Bed
    
    Success:
    
-   Time: 2.013
+   Time: 2.038
    
    Constraints:
    
@@ -3616,7 +3616,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3699,7 +3699,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3916,7 +3916,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
