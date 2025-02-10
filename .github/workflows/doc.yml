@@ -33,7 +33,7 @@ jobs:
           make doc-build
 
       - name: Save doc artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: doc
           path: docs/build
