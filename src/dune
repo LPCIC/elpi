@@ -39,7 +39,7 @@
 (executable
   (name elpi_trace_elaborator)
   (public_name elpi-trace-elaborator)
-  (libraries yojson atdgen re)
+  (libraries yojson atdgen-runtime re)
   (modules elpi_trace_elaborator trace_atd)
   (package elpi)
 )
