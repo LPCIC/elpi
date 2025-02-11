@@ -22,13 +22,13 @@ jobs:
           - dev
         include:
           - os: ubuntu-latest
-            ocaml-compiler: 5.2.x
+            ocaml-compiler: 5.3.x
             profile: fatalwarnings
           - os: macos-latest
-            ocaml-compiler: 5.2.x
+            ocaml-compiler: 5.3.x
             profile: dev
           - os: windows-latest
-            ocaml-compiler: 5.2.x
+            ocaml-compiler: 5.3.x
             profile: dev
 
     runs-on: ${{ matrix.os }}
