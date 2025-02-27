@@ -2,9 +2,9 @@
   (name elpi_compiler)
   (public_name elpi.compiler)
   (preprocess (per_module
-    ((pps ppx_deriving.std) compiler_data type_checker compiler determinacy_checker mode_checker spilling union_find)))
+    ((pps ppx_deriving.std) compiler_data type_checker compiler determinacy_checker spilling union_find)))
   (libraries re.str unix stdlib-shims elpi.parser elpi.util elpi.runtime)
-  (modules compiler_data type_checker determinacy_checker mode_checker compiler spilling union_find)
+  (modules compiler_data type_checker determinacy_checker compiler spilling union_find)
 )
 
 (test (name test_compiler_data) (libraries elpi.compiler) (modules test_compiler_data) (preprocess (pps ppx_deriving.std)))

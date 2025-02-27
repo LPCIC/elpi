@@ -43,7 +43,14 @@ module Scope = struct
         escape_ns : bool; (* when true name space elimination does not touch this constant *)
         mutable decl_id : type_decl_id;
       }
-  [@@ deriving show, ord]
+  [@@ deriving show]
+
+  (* The compare function ignores the decl_id field *)
+  let compare t1 t2 = match t1, t2 with
+    | Bound b1, Bound b2 -> String.compare b1 b2
+    | Global g1, Global g2 -> Bool.compare g1.escape_ns g2.escape_ns
+    | Bound _, Global _ -> 1
+    | Global _, Bound _ -> -1
 
   let clone = function Bound _ as t -> t | Global {escape_ns; decl_id} -> Global {escape_ns; decl_id}
 
@@ -61,6 +68,7 @@ module Scope = struct
 
 end
 let elpi_language : Scope.language = "lp"
+let elpi_var : Scope.language = "lp_var"
 
 module ScopeContext = struct
 
@@ -402,7 +410,7 @@ module TypeAssignment = struct
             | Some Ast.Structured.Function -> fprintf fmt "@[<hov 2>func %a@]" (pretty_pred_mode m) (s, t)
           end
       | Arr(_,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
-      | Arr(m,Variadic,s,t) -> fprintf fmt "%a%a ..-> %a" show_mode m (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_parens ~lvl:arrs) s pretty t
       | UVar m -> f fmt pretty m
       (* | UVar m -> MutableOnce.pretty fmt m *)
     and pretty_parens ~lvl fmt = function
@@ -623,6 +631,17 @@ module ScopedTerm = struct
     
   end
 
+  (* type 'scope name = {name:F.t; scope:'scope; ty: TypeAssignment.t MutableOnce.t} *)
+  type 'scope ty_name = 'scope * F.t * TypeAssignment.t MutableOnce.t
+  [@@ deriving show]
+
+  let mk_ty_name scope name : 'a ty_name = scope, name, MutableOnce.make F.dummyname
+  let mk_ty_name' a b : Scope.t ty_name = mk_ty_name a b
+  let mk_ty_bound_elpi l n = mk_ty_name' (Bound l) n
+  let mk_global name : 'a ty_name = mk_ty_name (Scope.mkGlobal ()) name
+  let clone_ty_name ?(clone_scope = Fun.id) (scope,name,_) = mk_ty_name (clone_scope scope) name
+  let clone_ty_name' a = clone_ty_name ~clone_scope:Scope.clone a
+
   type spill_info =
     | NoInfo (* before typing *)
     | Main of int (* how many arguments it stands for *)
@@ -630,11 +649,12 @@ module ScopedTerm = struct
   [@@ deriving show]
   type t_ =
    | Impl of bool * t * t (* `Impl(true,t1,t2)` ≡ `t1 => t2` and `Impl(false,t1,t2)` ≡ `t1 :- t2` *)
-   | Const of Scope.t * F.t
+   | Const of Scope.t ty_name
    | Discard
-   | Var of F.t * t list
-   | App of Scope.t * F.t * t * t list
-   | Lam of (F.t * Scope.language) option * ScopedTypeExpression.e option * TypeAssignment.t MutableOnce.t * t
+   | Var of Scope.t ty_name * t list
+   | App of Scope.t ty_name * t * t list
+   | Lam of (Scope.language ty_name) option * ScopedTypeExpression.e option * t
+
    | CData of CData.t
    | Spill of t * spill_info ref
    | Cast of t * ScopedTypeExpression.e
@@ -654,16 +674,18 @@ module ScopedTerm = struct
     | _ -> 2
 
   let get_lam_name = function None -> F.from_string "_" | Some (n,_) -> n
-  let mk_empty_lam_type name = MutableOnce.make (get_lam_name name)
+  let mk_empty_lam_type = function
+    | None -> None
+    | Some (sc, n) -> Some (mk_ty_name n sc)
 
   (* The type of the object being constructed is irrelevant since 
     build_infix_constant is used in the pretty printer of term and the type
     of infix constants is not displayed
   *)
-  let build_infix_constant scope name loc : t = {loc; ty = MutableOnce.make (F.from_string "dummy"); it = Const (scope, name)}
+  let build_infix_constant name loc : t = {loc; ty = MutableOnce.make (F.from_string "dummy"); it = Const name}
 
   let is_infix_constant f =
-    let infix = [F.andf; F.orf; F.eqf; F.isf; F.asf; F.consf; F.from_string "^"] in
+    let infix = [F.andf; F.orf; F.eqf; F.isf; F.asf; F.consf] @ List.map F.from_string ["^";"+";"-";"*";"/"] in
     List.mem f infix
 
   let intersperse e : 'a -> t list = function
@@ -671,26 +693,29 @@ module ScopedTerm = struct
     | [x] as a -> e x.loc :: a
     | x::xs -> x :: e x.loc :: xs
 
-  let rec pretty_lam fmt n ste (mta:TypeAssignment.t MutableOnce.t) it =
-    fprintf fmt "%a" F.pp (get_lam_name n);
-    if MutableOnce.is_set mta then
-      fprintf fmt ": %a " TypeAssignment.pretty_mut_once (match MutableOnce.get mta with Val a -> a)
-    else Option.iter (fun e -> fprintf fmt ": %a " ScopedTypeExpression.pretty_e e) ste;
-    fprintf fmt "\\ %a" pretty it;
+  let rec pretty_lam fmt n ste it =
+    match n with
+    | None -> Format.fprintf fmt "_"
+    | Some (scope,name,ty) -> 
+      fprintf fmt "%a" F.pp name;
+      if MutableOnce.is_set ty then
+        fprintf fmt ": %a " TypeAssignment.pretty_mut_once (MutableOnce.get ty |> TypeAssignment.unval)
+      else Option.iter (fprintf fmt ": %a " ScopedTypeExpression.pretty_e) ste;
+      fprintf fmt "\\ %a" pretty it;
 
   and pretty fmt { it } = pretty_ fmt it
   and pretty_ fmt = function
     | Impl(true,t1,t2) -> fprintf fmt "(%a => %a)" pretty t1 pretty t2
     | Impl(_,t1,t2) -> fprintf fmt "(%a :- %a)" pretty t1 pretty t2
-    | Const(_,f) -> fprintf fmt "%a" F.pp f
+    | Const (_,f,_) -> fprintf fmt "%a" F.pp f
     | Discard -> fprintf fmt "_"
-    | Lam(n, ste, mta, it) -> pretty_lam fmt n ste mta it
-    | App(Global _,f,x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
-    | App(_,f,x,xs) when F.equal F.pif f || F.equal F.sigmaf f -> fprintf fmt "%a %a" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
-    | App((Global _ as g),f,x,xs) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant g f) (x::xs))
-    | App(_,f,x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-    | Var(f,[]) -> fprintf fmt "%a" F.pp f
-    | Var(f,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") xs
+    | Lam(n, ste, it) -> pretty_lam fmt n ste it
+    | App((_,f,_),x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
+    | App((_,f,_),x,xs) when F.equal F.pif f || F.equal F.sigmaf f -> fprintf fmt "%a %a" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
+    | App((Global _, f, _ as n),x,xs) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant n) (x::xs))
+    | App((_,f,_),x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
+    | Var((_,f,_),[]) -> fprintf fmt "%a" F.pp f
+    | Var((_,f,_),xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") xs
     | CData c -> fprintf fmt "%a" CData.pp c
     | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t
@@ -701,19 +726,18 @@ module ScopedTerm = struct
     else pretty_ fmt it
   and pretty_parens_lam ~lvl fmt x =
     match x.it with Lam _ -> fprintf fmt "%a" pretty_ x.it | _ -> pretty_parens ~lvl fmt x
-  
 
   let equal ?(types=true) t1 t2 =
     let rec eq ctx t1 t2 =
       match t1.it, t2.it with
-      | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> b1 = b2 && F.equal c1 c2
-      | Const(Bound l1,c1), Const(Bound l2,c2) -> l1 = l2 && eq_var ctx l1 c1 c2
+      | Const(Global _ as b1,c1, _), Const(Global _ as b2,c2,_) -> b1 = b2 && F.equal c1 c2
+      | Const(Bound l1, c1, _), Const(Bound l2, c2, _) -> l1 = l2 && eq_var ctx l1 c1 c2
       | Discard, Discard -> true
-      | Var(n1,l1), Var(n2,l2) -> eq_uvar ctx n1 n2 && Util.for_all2 (eq ctx) l1 l2
-      | App(Global _ as b1,c1,x,xs), App(Global _ as b2,c2,y,ys) -> b1 = b2 && F.equal c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
-      | App(Bound l1,c1,x,xs), App(Bound l2,c2,y,ys) -> l1 = l2 && eq_var ctx l1 c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
-      | Lam(None,ty1, _,b1), Lam (None,ty2,_, b2) -> eq ctx b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2)
-      | Lam(Some (c1,l1),ty1,_,b1), Lam(Some (c2,l2),ty2,_, b2) -> l1 = l2 && eq (push_ctx l1 c1 c2 ctx) b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2)
+      | Var((_,n1,_),l1), Var((_,n2,_),l2) -> eq_uvar ctx n1 n2 && Util.for_all2 (eq ctx) l1 l2
+      | App((Global _ as b1,c1, _),x,xs), App((Global _ as b2, c2 ,_),y,ys) -> Scope.compare b1 b2 = 0 && F.equal c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
+      | App((Bound l1, c1, _),x,xs), App((Bound l2, c2, _),y,ys) -> l1 = l2 && eq_var ctx l1 c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
+      | Lam(None, ty1,b1), Lam (None,ty2, b2) -> eq ctx b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2)
+      | Lam(Some (l1,c1,_),ty1,b1), Lam(Some (l2,c2,_),ty2, b2) -> l1 = l2 && eq (push_ctx l1 c1 c2 ctx) b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2)
       | Spill(b1,n1), Spill (b2,n2) -> n1 == n2 && eq ctx b1 b2
       | CData c1, CData c2 -> CData.equal c1 c2
       | Cast(t1,ty1), Cast(t2,ty2) -> eq ctx t1 t2 && (not types || ScopedTypeExpression.eqt (empty ()) ty1 ty2)
@@ -738,17 +762,17 @@ module ScopedTerm = struct
   let rec of_simple_term ~loc = function
     | SimpleTerm.Discard -> Discard
     | Impl(b,t1,t2) -> Impl(b,of_simple_term_loc t1, of_simple_term_loc t2)
-    | Const(s,c) -> Const(s,c)
+    | Const(s,c) -> Const (mk_ty_name s c)
     | Opaque c -> CData c
     | Cast(t,ty) -> Cast(of_simple_term_loc t, ScopedTypeExpression.of_simple_type_loc ty)
-    | Lam(c,ty,t) -> Lam(c,Option.map ScopedTypeExpression.of_simple_type_loc ty, mk_empty_lam_type c,of_simple_term_loc t)
+    | Lam(c,ty,t) -> Lam(mk_empty_lam_type c,Option.map ScopedTypeExpression.of_simple_type_loc ty, of_simple_term_loc t)
     | App(s,c,x,xs) when F.equal c F.implf || F.equal c F.implf -> 
       begin match xs with
         | [y] -> Impl(F.equal c F.implf,of_simple_term_loc x, of_simple_term_loc y)
         | _ -> error ~loc "Use of App for Impl is allowed, but the length of the list in 3rd position must be 1"
       end
-    | App(s,c,x,xs) -> App(s,c,of_simple_term_loc x, List.map of_simple_term_loc xs)
-    | Var(c,xs) -> Var(c,List.map of_simple_term_loc xs)
+    | App(s,c,x,xs) -> App(mk_ty_name s c, of_simple_term_loc x, List.map of_simple_term_loc xs)
+    | Var(c,xs) -> Var(mk_ty_bound_elpi elpi_var c,List.map of_simple_term_loc xs)
   and of_simple_term_loc { SimpleTerm.it; loc } =
     match it with
     | Opaque c when is_scoped_term c -> out_scoped_term c
@@ -763,13 +787,14 @@ module ScopedTerm = struct
     let rec rename l c d t =
       match t with
       | Impl(b,t1,t2) -> Impl(b,rename_loc l c d t1, rename_loc l c d t2)
-      | Const(Bound l',c') when l = l' && F.equal c c' -> Const(Bound l,d)
+      | Const(Bound l',c', ty) when l = l' && F.equal c c' -> Const(Bound l,d, ty)
       | Const _ -> t
-      | App(Bound l',c',x,xs) when l = l' && F.equal c c' ->
-          App(Bound l,d,rename_loc l c d x, List.map (rename_loc l c d) xs)
-      | App(g,v,x,xs) -> App(g,v,rename_loc l c d x, List.map (rename_loc l c d) xs)
-      | Lam(Some (c',l'),_,_,_) when l = l' && F.equal c c' -> t
-      | Lam(v,ty,tya,t) -> Lam(v,ty,tya,rename_loc l c d t)
+      | App((Bound l',c',ty),x,xs) when l = l' && F.equal c c' ->
+          (* NOTE: the name in mutable once should be renamed *)
+          App((Bound l,d,ty),rename_loc l c d x, List.map (rename_loc l c d) xs)
+      | App(n,x,xs) -> App(n,rename_loc l c d x, List.map (rename_loc l c d) xs)
+      | Lam(Some (l',c',_),_,_) when l = l' && F.equal c c' -> t
+      | Lam(v,tya,t) -> Lam(v,tya,rename_loc l c d t)
       | Spill(t,i) -> Spill(rename_loc l c d t,i)
       | Cast(t,ty) -> Cast(rename_loc l c d t,ty)
       | Var(v,xs) -> Var(v,List.map (rename_loc l c d) xs)
@@ -778,12 +803,12 @@ module ScopedTerm = struct
 
     let rec clone_loc {it;loc} = {it=clone it;loc;ty=TypeAssignment.new_ty ()} and
     clone = function
-      | Const (g, x) -> Const (Scope.clone g, x)
+      | Const g -> Const (clone_ty_name' g)
       | Impl (b, l, r) -> Impl(b, clone_loc l, clone_loc r)
-      | Lam (n,ty,_,bo) -> Lam(n,ty,TypeAssignment.new_ty (), clone_loc bo)
+      | Lam (n,ty,bo) -> Lam(Option.map clone_ty_name n, ty, clone_loc bo)
       | Discard -> Discard
-      | Var (v, xs) -> Var (v, List.map clone_loc xs)
-      | App (g, n, x, xs) -> App (Scope.clone g, n, clone_loc x, List.map clone_loc xs)
+      | Var (v, xs) -> Var (clone_ty_name' v, List.map clone_loc xs)
+      | App (g, x, xs) -> App (clone_ty_name' g, clone_loc x, List.map clone_loc xs)
       | CData _ as t -> t 
       | Spill (t, _) -> Spill (clone_loc t, ref NoInfo)
       | Cast (t, ty) -> Cast (clone_loc t, ty)
@@ -791,38 +816,38 @@ module ScopedTerm = struct
     let beta t args =
       let rec fv acc { it } =
         match it with
-        | Const(Bound l,c) -> Scope.Set.add (c,l) acc
+        | Const(Bound l,c,_) -> Scope.Set.add (c,l) acc
         | Impl(_,a,b) -> List.fold_left fv acc [a;b]
         | Var (_,args) -> List.fold_left fv acc args
-        | App(Bound l,c,x,xs) -> List.fold_left fv (Scope.Set.add (c,l) acc) (x::xs)
-        | App(Global _,_,x,xs) -> List.fold_left fv acc (x::xs)
-        | Lam(None,_,_,t) -> fv acc t
-        | Lam(Some (c,l),_,_,t) -> Scope.Set.union acc @@ Scope.Set.remove (c,l) (fv Scope.Set.empty t)
+        | App((Bound l,c,_),x,xs) -> List.fold_left fv (Scope.Set.add (c,l) acc) (x::xs)
+        | App((Global _,_,_),x,xs) -> List.fold_left fv acc (x::xs)
+        | Lam(None,_,t) -> fv acc t
+        | Lam(Some (c,l,_),_,t) -> Scope.Set.union acc @@ Scope.Set.remove (l,c) (fv Scope.Set.empty t)
         | Spill(t,_) -> fv acc t
         | Cast(t,_) -> fv acc t
         | Discard | Const _ | CData _ -> acc in
       let rec load_subst ~loc t (args : t list) map fvset =
         match t, args with
-        | Lam(None,_,_,t), _ :: xs -> load_subst_loc t xs map fvset
-        | Lam(Some c,_,_,t), x :: xs -> load_subst_loc t xs (Scope.Map.add c x map) (fv fvset x)
+        | Lam(None,_,t), _ :: xs -> load_subst_loc t xs map fvset
+        | Lam(Some (l,c,_),_,t), x :: xs -> load_subst_loc t xs (Scope.Map.add (c,l) x map) (fv fvset x)
         | t, xs -> app ~loc (subst map fvset t) xs
       and load_subst_loc { it; loc } args map fvset =
         load_subst ~loc it args map fvset
       and subst (map : t Scope.Map.t) fv t =
         match t with
         | Impl(b,t1,t2) -> Impl(b,subst_loc map fv t1, subst_loc map fv t2)
-        | Lam(None,ty,tya,t) -> Lam(None,ty,tya,subst_loc map fv t)
-        | Lam(Some (c,l),ty,tya,t) when not @@ Scope.Map.mem (c,l) map && not @@ Scope.Set.mem (c,l) fv ->
-            Lam(Some (c,l),ty,tya,subst_loc map fv @@ t)
-        | Lam(Some (c,l),ty,tya,t) ->
+        | Lam(None,ty,t) -> Lam(None,ty,subst_loc map fv t)
+        | Lam(Some (c,l,_) as n,ty,t) when not @@ Scope.Map.mem (l,c) map && not @@ Scope.Set.mem (l,c) fv ->
+            Lam(n,ty,subst_loc map fv @@ t)
+        | Lam(Some (l,c,tya),ty,t) ->
             let d = fresh () in
-            Lam(Some (d,l),ty,tya,subst_loc map fv @@ rename_loc l c d t)
-        | Const(Bound l,c) when Scope.Map.mem (c,l) map -> unlock @@ Scope.Map.find (c,l) map
-        | Const (x,y) -> Const (x, y)
-        | App(Bound l,c,x,xs) when Scope.Map.mem (c,l) map ->
+            Lam(Some (l,d,tya),ty,subst_loc map fv @@ rename_loc l c d t)
+        | Const(Bound l,c,_) when Scope.Map.mem (c,l) map -> unlock @@ Scope.Map.find (c,l) map
+        | Const c -> Const c
+        | App((Bound l,c,_),x,xs) when Scope.Map.mem (c,l) map ->
             let hd = Scope.Map.find (c,l) map in
             unlock @@ app_loc hd (List.map (subst_loc map fv) (x::xs))
-        | App(g,c,x,xs) -> App(g,c,subst_loc map fv x, List.map (subst_loc map fv) xs)
+        | App(n,x,xs) -> App(n,subst_loc map fv x, List.map (subst_loc map fv) xs)
         | Var(c,xs) -> Var(c,List.map (subst_loc map fv) xs)
         | Spill(t,i) -> Spill(subst_loc map fv t,i)
         | Cast(t,ty) -> Cast(subst_loc map fv t,ty)
@@ -832,8 +857,8 @@ module ScopedTerm = struct
       and app ~loc t (args : t list) =
         if args = [] then t else
         match t with
-        | Const(g,c) -> App(g,c,List.hd args,List.tl args)
-        | App(g,c,x,xs) -> App(g,c,x,xs @ args)
+        | Const(n) -> App(n,List.hd args,List.tl args)
+        | App(n,x,xs) -> App(n,x,xs @ args)
         | Var(c,xs) -> Var(c,xs @ args)
         | Impl(_,_,_) -> error ~loc "cannot apply impl"
         | CData _ -> error ~loc "cannot apply cdata"
@@ -855,8 +880,8 @@ module ScopedTerm = struct
         | SimpleTerm.Opaque o when is_scoped_term o ->
             begin match out_scoped_term o with
             | { it = Var(f,xs); loc = loc'; ty } -> { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = Var(f,xs @ l); loc = loc'; ty }) }
-            | { it = Const(Bound g,f); loc = loc'; ty } when g = elpi_language ->
-                { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = App(Bound g,f,List.hd l, List.tl l); loc = loc'; ty }) }
+            | { it = Const(Bound g,_,_ as n); loc = loc'; ty } when g = elpi_language ->
+                { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = App(n,List.hd l, List.tl l); loc = loc'; ty }) }
             | x -> anomaly ~loc (Format.asprintf "The term is not an elpi varible coming from a quotation: @[%a@]" pretty x)
             end
         | x -> anomaly ~loc (Format.asprintf "The term is not term coming from a quotation: @[%a@]" pp_t_ x)
