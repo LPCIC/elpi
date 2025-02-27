@@ -732,11 +732,11 @@ module CustomFunctorCompilation = struct
 
   let scope_singlequote ~loc state x = 
     match State.get singlequote state with
-    | None -> ScopedTerm.(Const(Scope.mkGlobal (),x))
+    | None -> ScopedTerm.(Const(ScopedTerm.mk_global x))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
   let scope_backtick ~loc state x =
     match State.get backtick state with
-    | None -> ScopedTerm.(Const(Scope.mkGlobal (),x))
+    | None -> ScopedTerm.(Const(ScopedTerm.mk_global x))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
 end
 
@@ -866,13 +866,13 @@ end = struct
     | Const c when is_discard c -> ScopedTerm.Discard
     | Const c when is_macro_name c ->
         scope_term_macro ~loc ~state c []
-    | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(Bound elpi_language,c))
+    | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(ScopedTerm.mk_ty_bound_elpi elpi_language c))
     | Const c ->
-        if is_uvar_name c then ScopedTerm.Var(c,[])
+        if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_ty_bound_elpi elpi_var c,[])
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
-        else if is_global c then ScopedTerm.(Const(Scope.mkGlobal ~escape_ns:true (),of_global c))
-        else ScopedTerm.(Const(Scope.mkGlobal (),c))
+        else if is_global c then ScopedTerm.(Const(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) (of_global c)))
+        else ScopedTerm.(Const(mk_ty_name (Scope.mkGlobal ()) c))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App ({ it = Parens f },l) -> scope_term ~state ctx ~loc (App(f, l))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
@@ -892,22 +892,22 @@ end = struct
            scope_term_macro ~loc ~state c (x::xs)
          else
           let bound = F.Set.mem c ctx in
-          if bound then ScopedTerm.App(Bound elpi_language, c, x, xs)
-          else if is_uvar_name c then ScopedTerm.Var(c,x :: xs)
-          else if is_global c then ScopedTerm.App(Scope.mkGlobal ~escape_ns:true (),of_global c,x,xs)
-          else ScopedTerm.App(Scope.mkGlobal (), c, x, xs)
+          if bound then ScopedTerm.App(ScopedTerm.mk_ty_bound_elpi elpi_language c, x, xs)
+          else if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_ty_bound_elpi elpi_var c,x :: xs)
+          else if is_global c then ScopedTerm.App(ScopedTerm.mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) (of_global c),x,xs)
+          else ScopedTerm.App(ScopedTerm.mk_ty_name (Scope.mkGlobal ()) c, x, xs)
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
         let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty) in
         ScopedTerm.Cast(t,ty)
     | Lam (c,ty,b) when is_discard c ->
         let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty)) in
-        ScopedTerm.Lam (None,ty,ScopedTerm.mk_empty_lam_type None, scope_loc_term ~state ctx b)
+        ScopedTerm.Lam (None,ty, scope_loc_term ~state ctx b)
     | Lam (c,ty,b) ->
         if has_dot c then error ~loc "Bound variables cannot contain the namespaec separator '.'";
         let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty)) in
-        let name = Some (c,elpi_language) in
-        ScopedTerm.Lam (name,ty, ScopedTerm.mk_empty_lam_type name,scope_loc_term ~state (F.Set.add c ctx) b)
+        let name = Some (ScopedTerm.mk_ty_name elpi_language c) in
+        ScopedTerm.Lam (name,ty,scope_loc_term ~state (F.Set.add c ctx) b)
     | CData c -> ScopedTerm.CData c (* CData.hcons *)
     | App ({ it = Const _},[]) -> anomaly "Application node with no arguments"
     | App ({ it = Lam _},_) ->
@@ -974,12 +974,12 @@ end = struct
     let open ScopedTerm in
     let add1 s t =
       match t.it with
-      | Const(Global _,c) | App(Global _,c,_,_) -> F.Set.add c s
-      | Impl(false,{ it = (Const(Global _,c) | App(Global _,c,_,_)) }, _) -> F.Set.add c s
+      | Const(Global _,c,_) | App((Global _,c,_),_,_) -> F.Set.add c s
+      | Impl(false,{ it = (Const(Global _,c,_) | App((Global _,c,_),_,_)) }, _) -> F.Set.add c s
       | _ -> assert false in
     List.fold_left (fun s { Ast.Clause.body } ->
       match body.it with
-      | App(Global _,c,x,xs) when F.equal F.andf c ->
+      | App((Global _,c,_),x,xs) when F.equal F.andf c ->
         (* since we allow a rule to be of the form (p :- ..., q :- ...) eg
            via macro expansion, we could have , in head position  *)
           List.fold_left add1 s (x::xs)
@@ -1165,19 +1165,19 @@ module Flatten : sig
           let t2' = aux_loc t2 in
           if t1 == t1' && t2 == t2' then it
           else Impl(b,t1',t2')
-      | Const((Bound _|Global { escape_ns = true }),_) -> it
-      | Const(Global { escape_ns = false },c) -> let c' = f c in if c == c' then it else Const(Scope.mkGlobal (),c')
+      | Const((Bound _|Global { escape_ns = true }),_,_) -> it
+      | Const(Global { escape_ns = false },c,ty) -> let c' = f c in if c == c' then it else Const(Scope.mkGlobal (),c',ty)
       | Spill(t,n) -> let t' = aux_loc t in if t' == t then it else Spill(t',n)
-      | App(scope,c,x,xs) ->
+      | App((scope,c,ty),x,xs) ->
           let c' = if scope = Scope.mkGlobal () then f c else c in
           let x' = aux_loc x in
           let xs' = smart_map aux_loc xs in
           if c == c' && x == x' && xs == xs' then it
-          else App(scope,c',x',xs')
-      | Lam(n,ty,tya,b) ->
+          else App((scope,c',ty),x',xs')
+      | Lam(n,ty,b) ->
           let b' = aux_loc b in
           let ty' = option_smart_map (ScopedTypeExpression.smart_map_scoped_loc_ty tyf) ty in
-          if b == b' && ty' == ty then it else Lam(n,ty',tya,b')
+          if b == b' && ty' == ty then it else Lam(n,ty',b')
       | Var(c,l) ->
           let l' = smart_map aux_loc l in
           if l == l' then it else Var(c,l')
@@ -1452,6 +1452,7 @@ end = struct
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
       (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
+      (* if typecheck then Mode_checker.check ~is_rule:true ~type_abbrevs ~kinds ~types spilled.body; *)
       if typecheck then Determinacy_checker.check_clause ~uf:type_uf ~loc ~env:functional_preds spilled.body;
       unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
 
@@ -1660,9 +1661,9 @@ end = struct
       rc in
     let push_bound (n,ctx) c = (n+1,Scope.Map.add c n ctx) in
     let push_unnamed_bound (n,ctx) = (n+1,ctx) in
-    let push ctx = function
+    let push ctx : string ScopedTerm.ty_name option -> 'a = function
       | None -> push_unnamed_bound ctx
-      | Some x -> push_bound ctx x in
+      | Some (l,x,_) -> push_bound ctx (x,l) in
     let open ScopedTerm in
     let rec todbl (ctx : int * _ Scope.Map.t) t =
       match t.it with
@@ -1673,32 +1674,32 @@ end = struct
           error ~loc:t.loc (Format.asprintf "todbl: term contains spill: %a" ScopedTerm.pretty t)
       | Cast(t,_) -> todbl ctx t
       (* lists *)
-      | Const(Global _,c) when F.(equal c nilf) -> D.mkNil
-      | App(Global _,c,x,[y]) when F.(equal c consf) ->
+      | Const(Global _,c,_) when F.(equal c nilf) -> D.mkNil
+      | App((Global _,c,_),x,[y]) when F.(equal c consf) ->
           let x = todbl ctx x in
           let y = todbl ctx y in
           D.mkCons x y
       (* globals and builtins *)
-      | Const(Global _,c) ->
+      | Const((Global _,c,_)) ->
           let c, t = allocate_global_symbol c in
           if Builtins.is_builtin builtins c then D.mkBuiltin c []
           else t
-      | App(Global _,c,x,xs) ->
+      | App((Global _,c,_),x,xs) ->
           let c,_ = allocate_global_symbol c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
           if Builtins.is_builtin builtins c then D.mkBuiltin c (x::xs)
           else D.mkApp c x xs
       (* lambda terms *)
-      | Const(Bound l,c) -> allocate_bound_symbol t.loc ctx (c,l)
-      | Lam(c,_,_,t) -> D.mkLam @@ todbl (push ctx c) t
-      | App(Bound l,c,x,xs) ->
+      | Const(Bound l,c,_) -> allocate_bound_symbol t.loc ctx (c,l)
+      | Lam(c,_,t) -> D.mkLam @@ todbl (push ctx c) t
+      | App((Bound l,c,_),x,xs) ->
           let c = lookup_bound t.loc ctx (c,l) in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
           D.mkApp c x xs
       (* holes *)
-      | Var(c,xs) ->
+      | Var((_,c,_),xs) ->
           let xs = List.map (todbl ctx) xs in
           R.mkAppArg (allocate_arg c) 0 xs
       | Discard -> D.mkDiscard

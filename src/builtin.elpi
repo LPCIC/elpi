@@ -697,7 +697,7 @@ pred map-ok i:list A, i:(pred i:A, o:B, o:diagnostic), o:list B, o:diagnostic.
 map-ok [X|L] P [Y|YS] S :- P X Y S0, if (S0 = ok) (map-ok L P YS S) (S = S0).
 map-ok [] _ [] ok.
 
-pred fold-map i:list A, i:B, i:(pred i:A, o:B, o:C, o:B), o:list C, o:B.
+pred fold-map i:list A, i:B, i:(pred i:A, i:B, o:C, o:B), o:list C, o:B.
 fold-map [] A _ [] A.
 fold-map [X|XS] A F [Y|YS] A2 :- F X A Y A1, fold-map XS A1 F YS A2.
 
