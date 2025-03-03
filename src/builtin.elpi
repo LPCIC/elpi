@@ -6,7 +6,7 @@
 
 %  -- Logic --
 
-pred true.
+func true.
 
 true.
 

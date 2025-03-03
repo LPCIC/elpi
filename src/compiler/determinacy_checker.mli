@@ -10,7 +10,7 @@ val empty : t
 val merge : t -> t -> t
 val remove : t -> IdPos.t -> t
 
-val check_clause : ?uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit
+val check_clause : uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit
 
 class merger : t -> object
   method get_all_func : t
