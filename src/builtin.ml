@@ -199,7 +199,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
 
   LPDoc " -- Logic --";
 
-  LPCode "pred true.";
+  LPCode "func true.";
   LPCode "true.";
 
   LPCode "pred fail.";
