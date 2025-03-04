@@ -1,0 +1,11 @@
+% NO
+% Test on func of outputs
+pred twice i:prop.
+twice X :- X; X.
+
+func map (func A -> B), list A -> list B.
+
+pred give-fun o:(func).
+give-fun (map (x\y\ (twice y)) [] []).
+
+main.
