@@ -7,13 +7,9 @@ open Compiler_data
 module C = Constants
 module UF = IdPos.UF
 
-let to_print f = if false then f ()
-
-(* TYPE DECLARATION FOR FUNCTIONALITY *)
-
 type dtype =
-  | Det  (** -> for functional preds *)
-  | Rel  (** -> for non-functional preds *)
+  | Det  (** -> for deterministic preds *)
+  | Rel  (** -> for non-deterministic preds *)
   | Exp of dtype list  (** -> for kinds like list, int, string *)
   | BVar of F.t  (** -> in predicates like: std.exists or in parametric type abbreviations. *)
   | AssumedFunctional  (** -> variadic predicates: never backtrack *)
@@ -40,8 +36,6 @@ type t = { ty_abbr : functionality_loc F.Map.t; cmap : (F.t * dtype) IdPos.Map.t
 
 let arr m a b = Arrow (m, a, b)
 let is_NoProp = function Exp _ -> true | _ -> false
-
-(* let rec bvars2any = function Arrow (l, r) -> arr (bvars2any l) (bvars2any r) | BVar _ -> Any | e -> e *)
 let rec eat_lambdas = function Lam (_, b) -> eat_lambdas b | F b -> b
 
 type env = t (* This is for the cleaner signatures in this files for objects with type t *)
@@ -50,26 +44,20 @@ let compare_functionality_loc a b = compare_functionality_abs (snd a) (snd b)
 let compare_fname a b = compare_functionality_loc (snd a) (snd b)
 let mk_func_map ty_abbr cmap = { ty_abbr; cmap }
 let empty = { ty_abbr = F.Map.empty; cmap = IdPos.Map.empty }
-
-let rec get_namef = function
-  | ScopedTerm.App ((_, n, _), _, _) | Const (_, n, _) | Var ((_, n, _), _) -> n
-  | Impl (false, a, _) -> get_namef a.it
-  | e -> error (Format.asprintf "get_name error is not a clause %a" ScopedTerm.pretty_ e)
-
 let functionality_pi_sigma = arr Output (arr Output Any Det) Det
 
-(* AUXILIARY FUNCTIONS *)
-let rec subst ~loc sigma = function
-  | BVar k as t -> (
-      match F.Map.find_opt k sigma with
-      | None -> t
-      | Some (F f) -> f
-      | Some (Lam (_, b)) -> error ~loc "type_abbrev not fully applied")
-  | Arrow (m, l, r) -> arr m (subst ~loc sigma l) (subst ~loc sigma r)
-  | Exp l -> Exp (List.map (subst ~loc sigma) l)
-  | (AssumedFunctional | Det | Rel | Any) as t -> t
+module Compilation = struct
+  let rec subst ~loc sigma = function
+    | BVar k as t -> (
+        match F.Map.find_opt k sigma with
+        | None -> t
+        | Some (F f) -> f
+        | Some (Lam (_, b)) -> error ~loc "type_abbrev not fully applied")
+    | Arrow (m, l, r) -> arr m (subst ~loc sigma l) (subst ~loc sigma r)
+    | Exp l -> Exp (List.map (subst ~loc sigma) l)
+    | (AssumedFunctional | Det | Rel | Any) as t -> t
 
-(** 
+  (** 
   Used to beta reduce a type abbrev applied to arguments.
   
   Example:
@@ -83,39 +71,14 @@ let rec subst ~loc sigma = function
   
   Note: Type abbrev are always fully applied
 *)
-let det_beta =
-  let rec beta ~loc sigma = function
-    | Lam (n, b), x :: xs -> beta ~loc (F.Map.add n (F x) sigma) (b, xs)
-    | Lam (_, b), [] -> error ~loc "type_abbrev is not fully applied"
-    | F t, [] -> subst ~loc sigma t
-    | F _, _ :: _ -> anomaly ~loc "type_abbrev is too much applied"
-  in
-  beta F.Map.empty
-
-module Compilation = struct
-  let add_type ~loc is_type_abbr env ~n ~id v =
-    if is_type_abbr && F.Map.mem n env.ty_abbr then error (Format.asprintf "Adding again type_abbrev %a" F.pp n);
-    if is_type_abbr then
-      let ty_abbr = F.Map.add n (loc, v) env.ty_abbr in
-      mk_func_map ty_abbr env.cmap
-    else
-      let cmap = IdPos.Map.add id (n, eat_lambdas v) env.cmap in
-      mk_func_map env.ty_abbr cmap
-
-  let merge f1 f2 =
-    let pp_fname fmt (x, y) = Format.fprintf fmt "(%a,%a)" F.pp x pp_functionality_loc y in
-    let compare_fname (x0, y0) (x1, y1) =
-      let cmp = F.compare x0 x1 in
-      if cmp = 0 then compare_functionality_loc y0 y1 else cmp
+  let det_beta =
+    let rec beta ~loc sigma = function
+      | Lam (n, b), x :: xs -> beta ~loc (F.Map.add n (F x) sigma) (b, xs)
+      | Lam (_, b), [] -> error ~loc "type_abbrev is not fully applied"
+      | F t, [] -> subst ~loc sigma t
+      | F _, _ :: _ -> anomaly ~loc "type_abbrev is too much applied"
     in
-    let union_same pk pe cmpe k e1 e2 =
-      (* if cmpe e1 e2 = 0 then  *)
-      Some e1
-      (* else error (Format.asprintf "The key %a has two different values (v1:%a) (v2:%a)" pk k pe e1 pe e2)  *)
-    in
-    let cmap = IdPos.Map.union (union_same pp_int pp_fname compare_fname) f1.cmap f2.cmap in
-    let ty_abbr = F.Map.union (union_same F.pp pp_int Int.compare) f1.ty_abbr f2.ty_abbr in
-    mk_func_map ty_abbr cmap
+    beta F.Map.empty
 
   let scope_type_exp2det env (x : ScopedTypeExpression.t) =
     let rec type2func_app ~loc ~bvars (env : env) hd args =
@@ -213,61 +176,22 @@ module Aux = struct
     let rec aux ~loc a b =
       match (a, b) with
       | BVar _, _ | _, BVar _ -> true (* TODO: this is not correct... -> use ref with uvar to make unification *)
-      | Exp _, x -> aux Any x ~loc
-      | x, Exp _ -> aux x Any ~loc
+      | Exp l1, Exp l2 -> List.for_all2 (aux ~loc) l1 l2
       | _, Any -> true
       | Any, _ -> b = maximize b
-      | _, Rel -> true
-      | Rel, _ -> false
-      | Det, Det -> true
+      | Det, Rel | Rel, Rel | Det, Det -> true
+      | Rel, Det -> false
       | AssumedFunctional, _ -> true
       | _, AssumedFunctional -> error ~loc (Format.asprintf "Cannot compare AssumedFunctional with different dtype")
       | Arrow (m1, l1, r1), Arrow (m2, l2, r2) -> aux l2 l1 ~loc && aux r1 r2 ~loc
-      | Arrow _, _ | _, Arrow _ ->
+      | Arrow _, _ | _, Arrow _ | Exp _, _ | _, Exp _ ->
           error ~loc (Format.asprintf "Type error1 in comparing %a and %a" pp_dtype a pp_dtype b)
-      (* | Exp _, _ | _, Exp _ -> error ~loc "Type error2" *)
     in
     let res = aux a b ~loc in
-    to_print (fun () -> Format.eprintf "%a <= %a = %b@." pp_dtype a pp_dtype b res);
     res
 end
 
-let merge = Compilation.merge
-let remove t k = { t with cmap = IdPos.Map.remove k t.cmap }
-
-let get_functionality ~uf ?tyag ~loc ~env id =
-  if id = Scope.dummy_type_decl_id then Any
-  else
-    let id' = UF.find uf id in
-    if id <> id' then assert (not (IdPos.Map.mem id env.cmap));
-    (* Sanity check *)
-    match IdPos.Map.find_opt id' env.cmap with
-    | None -> (
-        (* TODO: this is temporary: waiting for unknown type to be added in the
-            type db After that change, the match becomes useless and ~tyag can
-            be removed from the parameters of get_functionality
-        *)
-        match tyag with
-        | None -> error ~loc (Format.asprintf "Cannot find dtype of id %a" IdPos.pp id')
-        | Some ty ->
-            Format.eprintf "Converting tyas to dtype @.";
-            Compilation.type_ass_2func ~loc env ty)
-    | Some (name, func) -> if F.equal F.pif name || F.equal F.sigmaf name then functionality_pi_sigma else func
-
-let split_bang t =
-  let rec split_bang_list bef aft = function
-    | [] -> (bef, aft)
-    | x :: xs ->
-        let bef, aft = split_bang bef aft x in
-        split_bang_list bef aft xs
-  and split_bang bef aft (ScopedTerm.{ it } as t) =
-    match it with
-    | Const (Global _, t, _) when F.equal F.cutf t -> (List.append bef (List.rev aft), [])
-    | App ((Global _, hd, _), x, xs) when F.equal F.andf hd -> split_bang_list bef aft (x :: xs)
-    | _ -> (bef, t :: aft)
-  and split_bang_loc bef aft t = split_bang bef aft t in
-  let bef, aft = split_bang_loc [] [] t in
-  (bef, List.rev aft)
+let ( <<= ) = Aux.( <<= )
 
 module EnvMaker (M : Map.S) : sig
   type t [@@deriving show]
@@ -297,43 +221,42 @@ end
 module Env = EnvMaker (F.Map)
 module Ctx = EnvMaker (Scope.Map)
 
-let eat_abs ~loc = function
-  | AssumedFunctional -> (Any, AssumedFunctional)
-  | Any -> (Any, Any)
-  | Arrow (_, l, r) -> (l, r)
-  | BVar _ -> error ~loc "TODO:?"
-  | _ -> error ~loc "Type error3"
+let get_functionality uf ~env ~ctx ~var ~loc is_var (t, name, tya) =
+  Format.eprintf "Getting functionality of %a which is_var? %b@." F.pp name is_var;
+  let get_ctx = function
+    | None -> anomaly ~loc (Format.asprintf "Bound var %a should be in the local map" F.pp name)
+    | Some e -> e
+  in
+  let get_var = function None -> Aux.maximize (Compilation.type_ass_2func ~loc env tya) | Some e -> e in
+  let get_con x =
+    if F.equal name F.mainf then Rel (*TODO: what if the main has arguments?*)
+    else if x = Scope.dummy_type_decl_id then Any
+    else
+      let id' = UF.find uf x in
+      (* The if instruction below is a sanity check: if x has a parent in the uf, then x should
+         not be in the map, othewise the same piece of information would be store
+         twice in the map, which is unwanted *)
+      if x <> id' then assert (not (IdPos.Map.mem x env.cmap));
+      match IdPos.Map.find_opt id' env.cmap with
+      (* find_opt is for types with unkown signature.
+         their type has been inferred by the typechecker *)
+      | None -> Compilation.type_ass_2func ~loc env tya
+      | Some (name, func) -> if F.equal F.pif name || F.equal F.sigmaf name then functionality_pi_sigma else func
+  in
+  let det_head =
+    if is_var then get_var @@ Env.get var name
+    else match t with Scope.Bound b -> get_ctx @@ Ctx.get ctx (name, b) | Global g -> get_con g.decl_id
+  in
+  Format.eprintf "The functionality of %a is %a@." F.pp name pp_dtype det_head;
+  det_head
 
-let ( <<= ) = Aux.( <<= )
 let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
 
 module Checker = struct
   exception UVAR (* TODO: Remove this exception*)
-  exception IGNORE
+  exception IGNORE (* TODO: Remove this exception*)
 
   let rec get_tl = function Arrow (_, _, r) -> get_tl r | e -> e
-
-  let get_functionality_tm uf ~env ~ctx ~var ~loc is_var (t, name, tya) =
-    Format.eprintf "Getting functionality of %a which is_var? %b@." F.pp name is_var;
-    let get_ctx = function
-      | None -> anomaly ~loc (Format.asprintf "Bound var %a should be in the local map" F.pp name)
-      | Some e -> e
-    in
-    let get_var = function
-      | None ->
-          Format.eprintf "Calling type_ass2func before maximize@.";
-          Aux.maximize (Compilation.type_ass_2func ~loc env tya)
-      | Some e -> e
-    in
-    let get_con x =
-      if F.equal name F.mainf then Rel (*TODO: what if the main has arguments?*) else get_functionality ~uf ~env ~loc x
-    in
-    let det_head =
-      if is_var then get_var @@ Env.get var name
-      else match t with Scope.Bound b -> get_ctx @@ Ctx.get ctx (name, b) | Global g -> get_con g.decl_id
-    in
-    Format.eprintf "The functionality of %a is %a@." F.pp name pp_dtype det_head;
-    det_head
 
   (** Checks that all input args are less then the one in the signature *)
   let deduce uf ~env ~ctx ~var =
@@ -358,7 +281,7 @@ module Checker = struct
             (pplist ScopedTerm.pretty ",") tl
           |> anomaly ~loc
     and deduce_app ctx ~loc is_var s tl =
-      deduce_fold ~loc ~is_good:true ctx (get_functionality_tm uf ~env ~ctx ~var ~loc is_var s) tl
+      deduce_fold ~loc ~is_good:true ctx (get_functionality uf ~env ~ctx ~var ~loc is_var s) tl
     and deduce_comma ctx ~loc args d =
       match args with
       | [] -> d
@@ -417,8 +340,9 @@ module Checker = struct
     in
     match it with
     | Const _ -> ()
-    | App (b, x, xs) -> check_output (get_functionality_tm uf ~env ~ctx ~var ~loc false b) (x :: xs)
-    | Var (b, xs) -> check_output (get_functionality_tm uf ~env ~ctx ~var ~loc true b) xs
+    (* TODO: add case for pi, comma and = *)
+    | App (b, x, xs) -> check_output (get_functionality uf ~env ~ctx ~var ~loc false b) (x :: xs)
+    | Var (b, xs) -> check_output (get_functionality uf ~env ~ctx ~var ~loc true b) xs
     | _ -> anomaly ~loc @@ Format.asprintf "Invalid term in deduce output %a." ScopedTerm.pretty_ it
 
   let assume uf ~env ~ctx ~var d t =
@@ -452,7 +376,7 @@ module Checker = struct
            add ~loc ~v:d name)
          else match t with Scope.Bound b -> Ctx.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
        else
-         let det_head = get_functionality_tm uf ~env ~ctx ~var:!var ~loc is_var s in
+         let det_head = get_functionality uf ~env ~ctx ~var:!var ~loc is_var s in
          Format.eprintf "The functionality of %a is %a@." F.pp name pp_dtype det_head;
          Format.eprintf "The dtype in input is %a@." pp_dtype d;
          Format.eprintf "%a <<= %a = %b@." pp_dtype (get_tl det_head) pp_dtype (get_tl d)
@@ -469,6 +393,7 @@ module Checker = struct
       | Var (b, tl) -> assume_app ctx ~loc true d b tl
       | App ((_, uvar, _), _, _) when F.equal uvar (F.from_string "uvar") -> raise UVAR
       | App ((_, uvar, _), _, _) when F.equal uvar (F.from_string "var") -> raise UVAR
+      (* TODO: add case for pif and sigmaf *)
       | App ((_, name, _), x, xs) when name = F.andf -> List.iter (assume ctx d) (x :: xs)
       | App (b, hd, tl) -> assume_app ctx ~loc false d b (hd :: tl)
       | Discard -> ()
@@ -513,7 +438,7 @@ module Checker = struct
       let d', is_good = deduce uf ~env ~ctx ~var:!var tm in
       Format.eprintf "-- Checked term dtype is %a and is_good is %b@." pp_dtype d' is_good;
       if is_good then (
-        let det = get_functionality_tm uf ~env ~ctx ~var:!var is_var b ~loc in
+        let det = get_functionality uf ~env ~ctx ~var:!var is_var b ~loc in
         Format.eprintf "Assuming output of %a with dtype : %a@." ScopedTerm.pretty tm pp_dtype det;
         var := assume_output uf ~env ~ctx ~var:!var det tl);
       if is_good && (d' <<= d) ~loc then Aux.max ~loc (get_tl d) (get_tl d') else Rel
@@ -569,7 +494,7 @@ module Checker = struct
         let _, name, _ = b in
         if do_filter && F.equal name only_check |> not then raise IGNORE
       in
-      let det_hd = get_functionality_tm uf ~env ~ctx ~var ~loc:tm.loc is_var b in
+      let det_hd = get_functionality uf ~env ~ctx ~var ~loc:tm.loc is_var b in
       (det_hd, assume uf ~env ~ctx ~var det_hd tm)
     in
     let (det_hd, var), hd, body =
@@ -599,6 +524,32 @@ let check_clause : uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit =
  fun ~uf ~loc ~env t ->
   try Checker.check_clause uf ~env ~ctx:Ctx.empty ~var:Env.empty t with Checker.UVAR -> () | Checker.IGNORE -> ()
 
+let add_type ~loc is_type_abbr env ~n ~id v =
+  if is_type_abbr && F.Map.mem n env.ty_abbr then error (Format.asprintf "Adding again type_abbrev %a" F.pp n);
+  if is_type_abbr then
+    let ty_abbr = F.Map.add n (loc, v) env.ty_abbr in
+    mk_func_map ty_abbr env.cmap
+  else
+    let cmap = IdPos.Map.add id (n, eat_lambdas v) env.cmap in
+    mk_func_map env.ty_abbr cmap
+
+let remove t k = { t with cmap = IdPos.Map.remove k t.cmap }
+
+let merge f1 f2 =
+  let pp_fname fmt (x, y) = Format.fprintf fmt "(%a,%a)" F.pp x pp_functionality_loc y in
+  let compare_fname (x0, y0) (x1, y1) =
+    let cmp = F.compare x0 x1 in
+    if cmp = 0 then compare_functionality_loc y0 y1 else cmp
+  in
+  let union_same pk pe cmpe k e1 e2 =
+    (* if cmpe e1 e2 = 0 then  *)
+    Some e1
+    (* else error (Format.asprintf "The key %a has two different values (v1:%a) (v2:%a)" pk k pe e1 pe e2)  *)
+  in
+  let cmap = IdPos.Map.union (union_same pp_int pp_fname compare_fname) f1.cmap f2.cmap in
+  let ty_abbr = F.Map.union (union_same F.pp pp_int Int.compare) f1.ty_abbr f2.ty_abbr in
+  mk_func_map ty_abbr cmap
+
 class merger (all_func : env) =
   object (self)
     val mutable all_func = all_func
@@ -607,9 +558,8 @@ class merger (all_func : env) =
     method private add_func is_ty_abbr id ty =
       let loc, func = Compilation.scope_type_exp2det all_func ty in
       let n = ty.name in
-      (* Format.eprintf "Adding constant %a with id %i\n%!" F.pp n id; *)
-      if is_ty_abbr then all_func <- Compilation.add_type ~loc is_ty_abbr ~id ~n all_func func;
-      local_func <- Compilation.add_type ~loc is_ty_abbr ~id ~n local_func func
+      if is_ty_abbr then all_func <- add_type ~loc is_ty_abbr ~id ~n all_func func;
+      local_func <- add_type ~loc is_ty_abbr ~id ~n local_func func
 
     method get_all_func = all_func
     method get_local_func = local_func
