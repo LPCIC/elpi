@@ -332,21 +332,26 @@ module Checker = struct
       if is_var then get_var @@ Env.get var name
       else match t with Scope.Bound b -> get_ctx @@ Ctx.get ctx (name, b) | Global g -> get_con g.decl_id
     in
+    Format.eprintf "The functionality of %a is %a@." F.pp name pp_dtype det_head;
     det_head
 
   (** Checks that all input args are less then the one in the signature *)
   let deduce uf ~env ~ctx ~var =
     let rec deduce_fold ~loc ~is_good ctx d tl : dtype * bool =
       match (d, tl) with
-      | t, [] -> Format.eprintf "base is_good is %b@." is_good; (t, is_good)
+      | t, [] ->
+          Format.eprintf "base is_good is %b@." is_good;
+          (t, is_good)
       | Arrow (_, _, d), _ :: l when not is_good -> deduce_fold ~loc ctx ~is_good d l
       | Arrow (Input, i, d), h :: tl ->
-          Format.eprintf "Deducing of an input term %a with expected func %a@." ScopedTerm.pretty h pp_dtype i;
           let dy, is_good = deduce ctx h in
-          Format.eprintf "After call to deduce in deduce_fold dy:%a and is_good:%b; Expected is %a@." pp_dtype dy is_good pp_dtype i;
-          if (is_good && (dy <<= i) ~loc) then deduce_fold ~loc ~is_good ctx d tl
+          Format.eprintf "After call to deduce in deduce_fold dy:%a and is_good:%b; Expected is %a@." pp_dtype dy
+            is_good pp_dtype i;
+          if is_good && (dy <<= i) ~loc then deduce_fold ~loc ~is_good ctx d tl
           else deduce_fold ~loc ~is_good:false ctx d tl
-      | Arrow (Output, _, d), _ :: tl -> deduce_fold ~loc ~is_good ctx d tl
+      | Arrow (m, _, d), h :: tl ->
+          Format.eprintf "In arrow case with mode %a which skips the head %a@." Mode.pp m ScopedTerm.pretty h;
+          deduce_fold ~loc ~is_good ctx d tl
       | AssumedFunctional, _ -> (AssumedFunctional, true)
       | (Det | Rel | Any | Exp _ | BVar _), _ :: _ ->
           Format.asprintf "deduce: Type error, found dtype %a and arguments %a" pp_dtype d
@@ -360,7 +365,7 @@ module Checker = struct
       | ScopedTerm.{ it = Const (_, cut, _); _ } :: xs when F.equal F.cutf cut -> deduce_comma ctx ~loc xs (Det, true)
       | x :: xs -> deduce_comma ctx ~loc xs (deduce ctx x)
     and deduce ctx ScopedTerm.{ it; ty; loc } : dtype * bool =
-      Format.eprintf "Deduce of %a@." ScopedTerm.pretty_ it;
+      Format.eprintf "--> Deduce of %a@." ScopedTerm.pretty_ it;
       match it with
       | ScopedTerm.Const b -> deduce_app ~loc ctx false b []
       | Var (b, xs) -> deduce_app ~loc ctx true b xs
@@ -397,21 +402,39 @@ module Checker = struct
     in
     deduce ctx
 
-  let assume uf ~env ~ctx ~var d t in_head =
+  let deduce_output uf ~env ~ctx ~var ScopedTerm.{ it; ty; loc } =
+    let rec check_output dtype args =
+      match (dtype, args) with
+      | Arrow (Input, _, r), _ :: tl -> check_output r tl
+      | Arrow (Output, l, r), hd :: tl ->
+          let det, is_good = deduce uf ~env ~ctx ~var hd in
+          if is_good && (det <<= l) ~loc then check_output r tl
+          else
+            anomaly ~loc
+            @@ Format.asprintf "Invalid determinacy of term %a.\n Expected: %a\n Found: %a" ScopedTerm.pretty hd
+                 pp_dtype l pp_dtype r
+      | _ -> ()
+    in
+    match it with
+    | Const _ -> ()
+    | App (b, x, xs) -> check_output (get_functionality_tm uf ~env ~ctx ~var ~loc false b) (x :: xs)
+    | Var (b, xs) -> check_output (get_functionality_tm uf ~env ~ctx ~var ~loc true b) xs
+    | _ -> anomaly ~loc @@ Format.asprintf "Invalid term in deduce output %a." ScopedTerm.pretty_ it
+
+  let assume uf ~env ~ctx ~var d t =
     Format.eprintf "Calling assume on %a@." ScopedTerm.pretty t;
     let var = ref var in
     let add ~loc ~v vname =
       let m = Env.add ~loc !var vname ~v in
-      Format.eprintf "The new var is %a" Env.pp m;
       var := m
     in
     let rec assume_fold ~loc ctx d (tl : ScopedTerm.t list) =
       match (d, tl) with
       | t, [] -> ()
-      | Arrow (m, i, d), h :: tl when (in_head && m = Input) || ((not in_head) && m = Output) ->
+      | Arrow (Input, i, d), h :: tl ->
           assume ctx i h;
           assume_fold ~loc ctx d tl
-      | Arrow (_, _, d), _ :: tl -> assume_fold ~loc ctx d tl
+      | Arrow (Output, _, d), _ :: tl -> assume_fold ~loc ctx d tl
       | AssumedFunctional, _ -> ()
       (* Below the case for hoas constructor, like lam or list *)
       (* | Exp l, x :: xs -> failwith "TODO" *)
@@ -470,16 +493,30 @@ module Checker = struct
     assume ctx d t;
     !var
 
-  let check uf ~env ~ctx ~var t =
+  let assume_output uf ~env ~ctx ~var d tl : Env.t =
+    let rec assume_output dtype args var =
+      match (dtype, args) with
+      | Arrow (Input, _, r), _ :: tl -> assume_output r tl var
+      | Arrow (Output, l, r), hd :: tl ->
+          Format.eprintf "Call assume of %a with dtype:%a@." ScopedTerm.pretty hd pp_dtype l;
+          let var = assume uf ~env ~ctx ~var l hd in
+          assume_output r tl var
+      | _ -> var
+    in
+    assume_output d tl var
+
+  (* returns the updated environment, the dtype of the term and the loc of the term with max dtype *)
+  let check uf ~env ~ctx ~var d t =
     let var = ref var in
-    let rec check_app ctx ~loc d (t, name, tya) tl tm =
+    let rec check_app ctx ~loc d is_var b tl tm =
       Format.eprintf "-- Entering check_app with term %a@." ScopedTerm.pretty tm;
       let d', is_good = deduce uf ~env ~ctx ~var:!var tm in
       Format.eprintf "-- Checked term dtype is %a and is_good is %b@." pp_dtype d' is_good;
-      if is_good && (d' <<= d) ~loc then (
-        var := assume uf ~env ~ctx ~var:!var d' tm false;
-        Aux.max ~loc (get_tl d) (get_tl d'))
-      else Rel
+      if is_good then (
+        let det = get_functionality_tm uf ~env ~ctx ~var:!var is_var b ~loc in
+        Format.eprintf "Assuming output of %a with dtype : %a@." ScopedTerm.pretty tm pp_dtype det;
+        var := assume_output uf ~env ~ctx ~var:!var det tl);
+      if is_good && (d' <<= d) ~loc then Aux.max ~loc (get_tl d) (get_tl d') else Rel
     and check_comma ctx ~loc d args =
       match args with
       | [] -> d
@@ -496,24 +533,25 @@ module Checker = struct
           func f -> int.
           f Y :- (x :- Y = 3) => (x :- Y = 4) => x.
       *)
-      | Const b -> check_app ctx ~loc d b [] t
-      | Var (b, xs) -> check_app ctx ~loc d b xs t
+      | Const b -> check_app ctx ~loc d false b [] t
+      | Var (b, xs) -> check_app ctx ~loc d true b xs t
       | App ((_, name, _), l, [ r ]) when name = F.eqf ->
           let d1, b = deduce uf ~env ~ctx ~var:!var l in
           (if b then
-             let d2, b = deduce uf ~env ~ctx ~var:!var l in
+             let d2, b = deduce uf ~env ~ctx ~var:!var r in
              if b then (
                Format.eprintf "In equality calling min between the two terms %a and %a@." ScopedTerm.pretty l
                  ScopedTerm.pretty r;
                let m = Aux.min ~loc d1 d2 in
-               var := assume uf ~env ~ctx ~var:!var m l false;
-               var := assume uf ~env ~ctx ~var:!var m r false));
+               Format.eprintf "The minimum between %a and %a is %a@." pp_dtype d1 pp_dtype d2 pp_dtype m;
+               var := assume uf ~env ~ctx ~var:!var m l;
+               var := assume uf ~env ~ctx ~var:!var m r));
           d
       | App ((_, name, _), { it = Lam (None, _, b) }, []) when name = F.pif || name = F.sigmaf -> check uf ~ctx d b
       | App ((_, ps, _), { it = Lam (Some (scope, name, tya), _, b) }, []) when ps = F.pif || ps = F.sigmaf ->
           Format.eprintf "Calling type_ass_2func in check app PIF@.";
           check uf ~ctx:(Ctx.add ~loc ctx ~v:(Compilation.type_ass_2func ~loc env tya) (name, scope)) d b
-      | App (b, x, xs) -> check_app ctx ~loc d b (x :: xs) t
+      | App (b, x, xs) -> check_app ctx ~loc d false b (x :: xs) t
       | Cast (b, _) -> check uf ~ctx d b
       | Spill (b, _) -> spill_err ~loc
       | CData _ -> anomaly ~loc "Found CData in prop position"
@@ -521,7 +559,7 @@ module Checker = struct
       | Discard -> anomaly ~loc "Discard found in prop position"
       | Impl (false, hd, tl) -> anomaly ~loc "Found clause in prop position"
     in
-    check uf ~ctx t
+    (!var, check uf ~ctx d t)
 
   let check_clause uf ~env ~ctx ~var ScopedTerm.({ it; ty; loc } as t) =
     let assume_hd b is_var (tm : ScopedTerm.t) =
@@ -532,7 +570,7 @@ module Checker = struct
         if do_filter && F.equal name only_check |> not then raise IGNORE
       in
       let det_hd = get_functionality_tm uf ~env ~ctx ~var ~loc:tm.loc is_var b in
-      (det_hd, assume uf ~env ~ctx ~var det_hd tm true)
+      (det_hd, assume uf ~env ~ctx ~var det_hd tm)
     in
     let (det_hd, var), hd, body =
       match it with
@@ -543,13 +581,18 @@ module Checker = struct
       | Var (b, _) -> (assume_hd b true t, t, None)
       | _ -> failwith "TODO"
     in
-    Format.eprintf "Checking clause %a --> %a@." ScopedTerm.pretty t ScopedTerm.pretty t;
+    Format.eprintf "=================================================@.";
+    Format.eprintf "Checking clause %a@." ScopedTerm.pretty t;
     Format.eprintf "The var map is %a@." Env.pp var;
-    Format.eprintf "START CHECKING THE BODY@.";
-    let det_body = Option.(map (check uf ~env ~ctx ~var Det) body |> value ~default:Det) in
+    Format.eprintf "** START CHECKING THE BODY@.";
+    let var, det_body = Option.(map (check uf ~env ~ctx ~var Det) body |> value ~default:(var, Det)) in
+    Format.eprintf "** END CHECKING THE BODY@.";
+    Format.eprintf "The var map is %a and det_body is %a@." Env.pp var pp_dtype det_body;
 
     if not @@ (det_body <<= get_tl det_hd) ~loc then
-      error ~loc "Determinacy checking error, expected a functional body, but inferred relational"
+      error ~loc "Determinacy checking error, expected a functional body, but inferred relational";
+    Format.eprintf "** Start checking outputs@.";
+    deduce_output uf ~env ~ctx ~var hd
 end
 
 let check_clause : uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit =

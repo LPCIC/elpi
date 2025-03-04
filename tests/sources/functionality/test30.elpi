@@ -1,4 +1,5 @@
 % NO
+% HERE WE HAVE A MODE ERROR
 pred r i:int, o:int.
 
 :functional pred p i:(func int).

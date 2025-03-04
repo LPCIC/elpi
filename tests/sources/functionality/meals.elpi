@@ -1,0 +1,33 @@
+func map (func A -> B), list A -> list B.
+
+map _ [] [].
+map F [X|Xs] [Y|Ys] :- F X Y, map F Xs Ys.
+
+kind guest type.
+kind dish type.
+
+pred likes i:guest, o:dish.
+
+func likes! guest -> dish.
+likes! G D :- likes G D, !.
+
+func meal list guest -> list dish.
+meal Gs M :- map likes! Gs M.
+meal Gs M :- map likes Gs M, !.
+% meal Gs M :- map likes Gs M.
+
+func once (pred i:A, o:B), A -> B.
+once P A B :- P A B, !.
+
+meal Gs M :- map (once likes) Gs M.
+
+func commit (pred i:A, o:B) -> (func A -> B).
+commit P (once P).
+
+func id (func A -> B) -> (func A -> B).
+id F F.
+
+meal Gs M :- commit likes F, map F Gs M. % ok
+% meal Gs M :- id likes F, map F Gs M.   % nope
+
+main.
