@@ -699,7 +699,7 @@ module ScopedTerm = struct
     | Some (scope,name,ty) -> 
       fprintf fmt "%a" F.pp name;
       if MutableOnce.is_set ty then
-        fprintf fmt ": %a " TypeAssignment.pretty_mut_once (MutableOnce.get ty |> TypeAssignment.unval)
+        fprintf fmt ": %a " TypeAssignment.pretty_mut_once (TypeAssignment.deref ty)
       else Option.iter (fprintf fmt ": %a " ScopedTypeExpression.pretty_e) ste;
       fprintf fmt "\\ %a" pretty it;
 
