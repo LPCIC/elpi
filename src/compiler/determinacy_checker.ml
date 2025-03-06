@@ -140,7 +140,8 @@ module Aux = struct
     | a, (Any | BVar _) | (Any | BVar _), a -> a
     | Exp l1, Exp l2 -> Exp (List.map2 (min ~loc) l1 l2)
     | Arrow (m1, _, r1), Arrow (m2, _, _) when m1 <> m2 -> error ~loc "Mode mismatch"
-    | Arrow (m, l1, r1), Arrow (_, l2, r2) -> Arrow (m, max ~loc l1 l2, min ~loc r1 r2)
+    | Arrow (Input, l1, r1), Arrow (_, l2, r2) -> Arrow (Input, max ~loc l1 l2, min ~loc r1 r2)
+    | Arrow (Output, l1, r1), Arrow (_, l2, r2) -> Arrow (Output, min ~loc l1 l2, min ~loc r1 r2)
     | AssumedFunctional, _ | _, AssumedFunctional -> AssumedFunctional
     | a, b -> Format.asprintf "Computing min between %a and %a" pp_dtype a pp_dtype b |> anomaly ~loc
 
@@ -151,7 +152,8 @@ module Aux = struct
     | _, Any | Any, _ -> Any
     | Exp l1, Exp l2 -> Exp (List.map2 (max ~loc) l1 l2)
     | Arrow (m1, _, r1), Arrow (m2, _, _) when m1 <> m2 -> error ~loc "Mode mismatch"
-    | Arrow (m, l1, r1), Arrow (_, l2, r2) -> Arrow (m, min ~loc l1 l2, max ~loc r1 r2)
+    | Arrow (Input, l1, r1), Arrow (_, l2, r2) -> Arrow (Input, min ~loc l1 l2, max ~loc r1 r2)
+    | Arrow (Output, l1, r1), Arrow (_, l2, r2) -> Arrow (Output, max ~loc l1 l2, max ~loc r1 r2)
     | AssumedFunctional, _ | _, AssumedFunctional -> AssumedFunctional
     | BVar _, a | a, BVar _ -> a
     | a, b -> Format.asprintf "Computing max between %a and %a" pp_dtype a pp_dtype b |> anomaly ~loc
@@ -159,7 +161,8 @@ module Aux = struct
   let rec maximize = function
     | Rel | Det -> Rel
     | Exp l -> Exp (List.map maximize l)
-    | Arrow (b, l, r) -> Arrow (b, minimize l, maximize r)
+    | Arrow (Input, l, r) -> Arrow (Input, minimize l, maximize r)
+    | Arrow (Output, l, r) -> Arrow(Output, maximize l, maximize r)
     | AssumedFunctional -> AssumedFunctional
     | Any -> Any
     | BVar b -> BVar b
@@ -167,7 +170,8 @@ module Aux = struct
   and minimize = function
     | Rel | Det -> Det
     | Exp l -> Exp (List.map minimize l)
-    | Arrow (b, l, r) -> Arrow (b, maximize l, minimize r)
+    | Arrow (Input, l, r) -> Arrow (Input, maximize l, minimize r)
+    | Arrow (Output, l, r) -> Arrow(Output, minimize l, minimize r)
     | AssumedFunctional -> AssumedFunctional
     | Any -> Any
     | BVar b -> BVar b
@@ -219,6 +223,14 @@ end
 
 module Env = EnvMaker (F.Map)
 module Ctx = EnvMaker (Scope.Map)
+
+module Format = struct
+  include Format
+  let eprintf : ('a, Format.formatter, unit) format -> 'a =
+    fun e -> 
+      Format.ifprintf Format.std_formatter e
+
+end
 
 let get_functionality uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
   Format.eprintf "Getting functionality of %a which is_var? %b@." F.pp name is_var;
@@ -363,8 +375,6 @@ module Checker = struct
           assume_fold ~loc ctx d tl
       | Arrow (Output, _, d), _ :: tl -> assume_fold ~loc ctx d tl
       | (AssumedFunctional | BVar _ | Any), _ -> ()
-      (* Below the case for hoas constructor, like lam or list *)
-      (* | Exp l, x :: xs -> failwith "TODO" *)
       | (Det | Rel | Exp _), _ :: _ ->
           Format.asprintf "assume: Type error, found dtype %a and arguments %a@." pp_dtype d
             (pplist ScopedTerm.pretty ",") tl
