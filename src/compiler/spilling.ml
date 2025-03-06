@@ -23,14 +23,14 @@ let ( !! ) r = MutableOnce.create (TypeAssignment.Val r)
 let andf_ty = !!(Arr (MVal Input, Variadic, Prop Function, Prop Function))
 let pif_arg_ty = !!(Arr (MVal Input, NotVariadic, UVar (MutableOnce.make F.dummyname), Prop Function))
 
-let pif_ty : TypeAssignment.t MutableOnce.t =
+let pif_ty () : TypeAssignment.t MutableOnce.t =
   !!(Arr
        ( MVal Input,
          NotVariadic,
          Arr (MVal Input, NotVariadic, UVar (MutableOnce.make F.dummyname), Prop Function),
          Prop Function ))
 
-let pif_ty_name : 'a ty_name = (Scope.mkGlobal ~escape_ns:true (), F.pif, pif_ty)
+let pif_ty_name : 'a ty_name = (Scope.mkGlobal ~escape_ns:true (), F.pif, pif_ty ())
 let mk_loc ~loc ~ty it = { ty; it; loc }
 
 (* TODO store the types in Main *)
@@ -60,24 +60,28 @@ let app t args =
     and aux_last = function [] -> assert false | [ x ] -> [ aux x ] | x :: xs -> x :: aux_last xs in
     aux t
 
-(* let args = ref 0  *)
-
-let rec mk_spilled ~loc ~(ty : TypeAssignment.t MutableOnce.t TypeAssignment.t_) ctx args n : (F.t * t) list =
-  if n = 0 then []
-  else
+let mk_spilled ~loc ~ty ctx args n : (F.t * t) list =
+  (* builds the type of the spilled variables, all variables has same type *)
+  let build_ty ty =
+    let rec aux = function
+      | [] -> ty
+      | ScopedTerm.{ ty } :: tl ->
+          TypeAssignment.(Arr (MRef (MutableOnce.make F.dummyname), NotVariadic, deref ty, aux tl))
+    in
+    MutableOnce.create @@ TypeAssignment.Val (aux ctx)
+  in
+  let rec aux ty =
     let f =
       incr args;
       F.from_string (Printf.sprintf "%%arg%d" !args)
     in
-    let mk_tm ty = mk_loc ~loc ~ty @@ Var ((Bound elpi_var, f, ty), ctx) in
-    match ty with
-    | TypeAssignment.Arr (_, _, l, r) ->
-        let sp = mk_tm !!l in
-        (f, sp) :: mk_spilled ~loc ~ty:r ctx args (n - 1)
-    | ty ->
-        assert (n = 1);
-        let sp = mk_tm !!ty in
-        [ (f, sp) ]
+    let built_tm ty =
+      let ty = build_ty ty in
+      mk_loc ~loc ~ty @@ Var ((Bound elpi_var, f, ty), ctx)
+    in
+    match ty with TypeAssignment.Arr (_, _, l, r) -> (f, built_tm l) :: aux r | ty -> [ (f, built_tm ty) ]
+  in
+  aux ty
 
 (* barendregt_convention (naive implementation) *)
 let rec bc ctx t =
@@ -163,7 +167,8 @@ let rec spill ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; it } as 
               {
                 vars;
                 vars_names;
-                expr = mk_loc ~loc ~ty:pif_ty @@ App (pif_ty_name, mk_loc ~loc ~ty:pif_arg_ty @@ Lam (abs, o, expr), []);
+                expr =
+                  mk_loc ~loc ~ty:(pif_ty ()) @@ App (pif_ty_name, mk_loc ~loc ~ty:pif_arg_ty @@ Lam (abs, o, expr), []);
               } ))
           (t, []) spills
       in

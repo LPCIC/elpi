@@ -89,8 +89,8 @@ let _ =
   in
 
   let check_type =
-    let rec get_uvar = function TA.UVar b -> MutableOnce.get b |> TA.unval |> get_uvar | a -> a in
-    let f t = get_uvar @@ TA.unval (MutableOnce.get t.ST.ty) in
+    let rec get_uvar = function TA.UVar b -> TA.deref b |> get_uvar | a -> a in
+    let f t = get_uvar @@ TA.deref t.ST.ty in
     check f
   in
 
