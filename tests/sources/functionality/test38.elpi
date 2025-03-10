@@ -1,0 +1,9 @@
+% NO
+% returns the divisors of an int one by one
+pred divisors i:int, o:int.
+
+pred p o:(func).
+% the output is not functional
+p (pi x\ divisors x Y).
+
+main.

@@ -1,0 +1,8 @@
+% NO
+func succ int -> int.
+
+pred p o:(func).
+% the output is not functional: the body of succ is rel
+p (pi x\ succ x Y :- p _).
+
+main.

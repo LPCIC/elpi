@@ -6,6 +6,7 @@ pred give-fun o:(func).
 give-fun (give-fun X).
 
 func f.
-f :- give-fun (give-fun X), !, X. % Note that X is supposed input-ground since it is an input of an output
+f :- give-fun (give-fun X), !, X. % Note that X is an output of the second give-fun call.
+                                  % This means that X is considered relational
 
 main.
