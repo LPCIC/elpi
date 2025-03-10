@@ -6,6 +6,7 @@ pred give-fun o:(func).
 give-fun (do true).
 
 func f.
-f :- give-fun (do X), !, X. % Note that X is supposed input-ground since it is an input of an output
+f :- give-fun (do X), !, X. % Note that X is an input of do, therefore, assumed
+                            % to have the determinacy in the signature of do
 
 main.
