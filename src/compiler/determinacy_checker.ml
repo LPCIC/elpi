@@ -224,7 +224,15 @@ end = struct
 end
 
 module Var = EnvMaker (F.Map)
-module Ctx = EnvMaker (Scope.Map)
+
+module Ctx = struct
+  include EnvMaker (Scope.Map)
+
+  let add_oname ~loc oname f ctx =
+    match oname with None -> ctx | Some (scope, name, tya) -> add ~loc ctx (name, scope) ~v:(f tya)
+
+  let get_oname oname ctx = match oname with None -> None | Some (scope, name, _) -> get ctx (name, scope)
+end
 
 module Format = struct
   include Format
@@ -242,6 +250,8 @@ let get_functionality uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
   let get_con x =
     if F.equal name F.mainf then Rel (*TODO: what if the main has arguments?*)
     else if x = Scope.dummy_type_decl_id then Any
+    else if F.equal F.eqf name then
+      Arrow (Output, BVar (F.from_string "A"), Arrow (Output, BVar (F.from_string "A"), Det))
     else
       let id' = UF.find uf x in
       (* The if instruction below is a sanity check: if x has a parent in the uf, then x should
@@ -328,18 +338,19 @@ module Checker = struct
           infer ctx b
       | Impl (false, _, _) -> (check_clause uf ~env ~ctx ~var t, new good_call)
       | Lam (oname, _, c) -> (
+          Format.eprintf "In lambda of infer, the ty is %a@." (MutableOnce.pp TypeAssignment.pp) ty;
           let dty = Compilation.type_ass_2func ~loc env ty in
           match dty with
           | Arrow (Input, l, _) ->
-              let ctx = match oname with None -> ctx | Some (scope, name, _) -> Ctx.add ~loc ~v:l ctx (name, scope) in
+              let ctx = Ctx.add_oname ~loc oname (fun _ -> l) ctx in
               let r, b = infer ctx c in
               (Arrow (Input, l, r), b)
           | Arrow (Output, l, _) ->
-              let ctx =
-                match oname with None -> ctx | Some (scope, name, _) -> Ctx.add ~loc ~v:Any ctx (name, scope)
-              in
-              (* TODO: should I check that the dtype of (name,scope) in Ctx is <<= then l?  *)
+              let ctx = Ctx.add_oname ~loc oname (fun _ -> Any) ctx in
               let r, b = infer ctx c in
+              Format.eprintf "The output binder is %a@." (Format.pp_print_option pp_dtype) (Ctx.get_oname oname ctx);
+              (* Option.iter (fun x -> assert ((x <<= l) ~loc)) (Ctx.get_oname oname ctx); *)
+              (* TODO: should I check that the dtype of oname in Ctx is <<= then l?  *)
               (Arrow (Output, l, r), b)
           | Any -> (Any, new good_call)
           | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype dty))
@@ -352,20 +363,20 @@ module Checker = struct
     in
     infer ctx t
 
-  and deduce_output uf ~env ~ctx ~var ScopedTerm.{ it; ty; loc } =
+  and infer_output uf ~env ~ctx ~var ScopedTerm.{ it; ty; loc } =
     Format.eprintf "Calling deduce output on %a@." ScopedTerm.pretty_ it;
-    let rec check_output dtype args =
+    let rec aux dtype args =
       match (dtype, args) with
-      | Arrow (Input, _, r), _ :: tl -> check_output r tl
+      | Arrow (Input, _, r), _ :: tl -> aux r tl
       | Arrow (Output, l, r), hd :: tl ->
           let det, is_good = infer uf ~env ~ctx ~var hd in
-          if is_good#is_good && (det <<= l) ~loc then check_output r tl
+          if is_good#is_good && (det <<= l) ~loc then aux r tl
           else if is_good#is_good then
-            anomaly ~loc:hd.loc
+            error ~loc:hd.loc
             @@ Format.asprintf "Invalid determinacy of output term %a.\n Expected: %a\n Found: %a" ScopedTerm.pretty hd
                  pp_dtype l pp_dtype det
           else
-            anomaly ~loc:is_good#get_loc
+            error ~loc:is_good#get_loc
             @@ Format.asprintf "The term %a has not the right determinacy (it should be %a)" ScopedTerm.pretty hd
                  pp_dtype l
       | _ -> ()
@@ -373,8 +384,8 @@ module Checker = struct
     match it with
     | Const _ -> ()
     (* TODO: add case for pi, comma and = *)
-    | App (b, x, xs) -> check_output (get_functionality uf ~env ~ctx ~var ~loc ~is_var:false b) (x :: xs)
-    | Var (b, xs) -> check_output (get_functionality uf ~env ~ctx ~var ~loc ~is_var:true b) xs
+    | App (b, x, xs) -> aux (get_functionality uf ~env ~ctx ~var ~loc ~is_var:false b) (x :: xs)
+    | Var (b, xs) -> aux (get_functionality uf ~env ~ctx ~var ~loc ~is_var:true b) xs
     | _ -> anomaly ~loc @@ Format.asprintf "Invalid term in deduce output %a." ScopedTerm.pretty_ it
 
   and assume uf ~env ~ctx ~var d t =
@@ -401,9 +412,7 @@ module Checker = struct
         (pplist ~boxed:true ScopedTerm.pretty " ; ")
         tl is_var;
       (if tl = [] then
-         if is_var then (
-           Format.eprintf "Adding %a in vars@." pp_dtype d;
-           add ~loc ~v:d name)
+         if is_var then add ~loc ~v:d name
          else match t with Scope.Bound b -> Ctx.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
        else
          let det_head = get_functionality uf ~env ~ctx ~var:!var ~loc ~is_var s in
@@ -423,19 +432,15 @@ module Checker = struct
           assume ctx d b
       | Impl (false, _H, _B) -> check_clause uf ~env ~ctx ~var:!var t |> ignore
       | Lam (oname, _, c) -> (
-          let dty = Compilation.type_ass_2func ~loc env ty in
-          match dty with
+          match d with
           | Arrow (Input, l, r) ->
-              let ctx = match oname with None -> ctx | Some (scope, name, _) -> Ctx.add ~loc ~v:l ctx (name, scope) in
+              let ctx = Ctx.add_oname ~loc oname (fun _ -> l) ctx in
               assume ctx r c
           | Arrow (Output, l, r) ->
-              let ctx =
-                match oname with None -> ctx | Some (scope, name, _) -> Ctx.add ~loc ~v:Any ctx (name, scope)
-              in
-              (* TODO: should I check that the dtype of (name,scope) in Ctx is <<= then l?  *)
+              let ctx = Ctx.add_oname ~loc oname (fun _ -> l) ctx in
               assume ctx r c
           | Any -> ()
-          | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype dty))
+          | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype d))
       | CData _ -> ()
       | Spill _ -> spill_err ~loc
       | Cast (t, _) -> assume ctx d t
@@ -504,10 +509,9 @@ module Checker = struct
                var := assume uf ~env ~ctx ~var:!var m l;
                var := assume uf ~env ~ctx ~var:!var m r));
           d
-      | App ((Global _, name, _), { it = Lam (None, _, b) }, []) when name = F.pif || name = F.sigmaf -> check ~ctx d b
-      | App ((Global _, ps, _), { it = Lam (Some (scope, name, tya), _, b) }, []) when ps = F.pif || ps = F.sigmaf ->
-          Format.eprintf "Calling type_ass_2func in check app PIF@.";
-          check ~ctx:(Ctx.add ~loc ctx ~v:(Compilation.type_ass_2func ~loc env tya) (name, scope)) d b
+      | App ((Global _, ps, _), { it = Lam (oname, _, b) }, []) when ps = F.pif || ps = F.sigmaf ->
+          let ctx = Ctx.add_oname ~loc oname (Compilation.type_ass_2func ~loc env) ctx in
+          check ~ctx d b
       | App (b, x, xs) -> check_app ctx ~loc d ~is_var:false b (x :: xs) t
       | Cast (b, _) -> check ~ctx d b
       | Spill (b, _) -> spill_err ~loc
@@ -565,7 +569,7 @@ module Checker = struct
     if not @@ (det_body <<= det_pred) ~loc then
       error ~loc "Determinacy checking error, expected a functional body, but inferred relational";
     Format.eprintf "** Start checking outputs@.";
-    deduce_output uf ~env ~ctx:!ctx ~var hd;
+    infer_output uf ~env ~ctx:!ctx ~var hd;
     det_pred
 end
 
