@@ -238,7 +238,7 @@ let get_functionality uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
     | None -> anomaly ~loc (Format.asprintf "Bound var %a should be in the local map" F.pp name)
     | Some e -> e
   in
-  let get_var = function None -> Aux.maximize (Compilation.type_ass_2func ~loc env tya) | Some e -> e in
+  let get_var = function None -> Any | Some e -> e in
   let get_con x =
     if F.equal name F.mainf then Rel (*TODO: what if the main has arguments?*)
     else if x = Scope.dummy_type_decl_id then Any
@@ -286,16 +286,20 @@ module Checker = struct
       let rec aux d tl =
         match (d, tl) with
         | t, [] -> (t, b)
-        | Arrow (_, _, d), _ :: l when b#is_wrong -> aux d l
         | Arrow (Input, i, d), h :: tl ->
             let dy, b' = deduce ctx h in
             Format.eprintf "After call to deduce in aa %a and is_good:%s; Expected is %a@." pp_dtype dy b'#show pp_dtype
               i;
-            if b'#is_wrong then b#set_wrong b'#get_loc else if not ((dy <<= i) ~loc) then b#set_wrong loc;
-            aux d tl
-        | Arrow (m, _, d), h :: tl ->
-            Format.eprintf "In arrow case with mode %a which skips the head %a@." Mode.pp m ScopedTerm.pretty h;
-            aux d tl
+            if b'#is_wrong then (
+              (* If the recursive call is wrong, we stop and return bottom *)
+              b#set_wrong b'#get_loc;
+              (Any, b))
+            else if not ((dy <<= i) ~loc) then (
+              (* If preconditions are not satisfied, we stop and return bottom *)
+              b#set_wrong loc;
+              (Any, b))
+            else aux d tl (* The recursive call is correct *)
+        | Arrow (Output, _, d), _ :: tl -> aux d tl
         | (AssumedFunctional | BVar _ | Any), _ -> (d, new good_call)
         | (Det | Rel | Exp _), _ :: _ ->
             Format.asprintf "deduce: Type error, found dtype %a and arguments %a" pp_dtype d
@@ -342,7 +346,7 @@ module Checker = struct
           | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype dty))
       | Discard ->
           Format.eprintf "Calling type_ass_2func in Discard@.";
-          (Aux.maximize (Compilation.type_ass_2func ~loc env ty), new good_call)
+          (Any, new good_call)
       | CData _ -> (Exp [], new good_call)
       | Cast (t, _) -> deduce ctx t
       | Spill (_, _) -> spill_err ~loc
@@ -405,12 +409,12 @@ module Checker = struct
        else
          let det_head = get_functionality uf ~env ~ctx ~var:!var ~loc ~is_var s in
          (* Format.eprintf "The functionality of %a is %a@." F.pp name pp_dtype det_head;
-         Format.eprintf "The dtype in input is %a@." pp_dtype d;
-         Format.eprintf "%a <<= %a = %b@." pp_dtype (get_tl det_head) pp_dtype (get_tl d)
-           ((get_tl det_head <<= get_tl d) ~loc);
-         if (get_tl det_head <<= get_tl d) ~loc then
-           Format.eprintf "Calling assume_fold with %a and dtype: %a@." (pplist ScopedTerm.pretty ",") tl pp_dtype
-             det_head; *)
+            Format.eprintf "The dtype in input is %a@." pp_dtype d;
+            Format.eprintf "%a <<= %a = %b@." pp_dtype (get_tl det_head) pp_dtype (get_tl d)
+              ((get_tl det_head <<= get_tl d) ~loc);
+            if (get_tl det_head <<= get_tl d) ~loc then
+              Format.eprintf "Calling assume_fold with %a and dtype: %a@." (pplist ScopedTerm.pretty ",") tl pp_dtype
+                det_head; *)
          assume_fold ~loc ctx det_head tl);
       Format.eprintf "The map after call to assume_app is %a@." Var.pp !var
     and assume ctx d ScopedTerm.{ ty; loc; it } : unit =
@@ -434,7 +438,7 @@ module Checker = struct
           match dty with
           | Arrow (m, l, r) ->
               let ctx = Ctx.add ~loc ctx (name, scope) in
-              assume (if m = Input then ctx ~v:l else ctx ~v:(Aux.maximize l)) r c
+              if m = Input then assume (ctx ~v:l) r c
           | Any -> ()
           | dt -> anomaly ~loc @@ Format.asprintf "Error in lam: unexpected dtype. Got %a" pp_dtype dt)
       | CData _ -> ()
