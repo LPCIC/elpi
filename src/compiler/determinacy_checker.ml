@@ -9,7 +9,7 @@ module UF = IdPos.UF
 
 type dtype =
   | Det  (** -> for deterministic preds *)
-  | Rel  (** -> for non-deterministic preds *)
+  | Rel  (** -> for relational preds *)
   | Exp of dtype list  (** -> for kinds like list, int, string *)
   | BVar of F.t  (** -> in predicates like: std.exists or in parametric type abbreviations. *)
   | AssumedFunctional  (** -> variadic predicates: never backtrack *)
@@ -250,8 +250,7 @@ let get_functionality uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
   let get_con x =
     if F.equal name F.mainf then Rel (*TODO: what if the main has arguments?*)
     else if x = Scope.dummy_type_decl_id then Any
-    else if F.equal F.eqf name then
-      Arrow (Output, BVar (F.from_string "A"), Arrow (Output, BVar (F.from_string "A"), Det))
+    else if F.equal F.eqf name then arr Output (BVar (F.from_string "A")) (arr Output (BVar (F.from_string "A")) Det)
     else
       let id' = UF.find uf x in
       (* The if instruction below is a sanity check: if x has a parent in the uf, then x should

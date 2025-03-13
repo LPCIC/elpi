@@ -1,0 +1,13 @@
+% NO
+
+func map (func A -> B), list A -> list B.
+map _ [] [].
+map F [X|Xs] [Y|Ys] :- F X Y, map F Xs Ys.
+
+func map! (pred i:A, o:B), list A -> list B.
+map! _ [] [].
+% This is a good example of failure :-),
+% The det checker, should be map! F Xs Ys
+map! F [X|Xs] [Y|Ys] :- F X Y, !, map F Xs Ys.
+
+main.
