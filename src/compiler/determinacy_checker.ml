@@ -26,13 +26,13 @@ let rec pp_dtype fmt = function
   | AssumedFunctional -> Format.fprintf fmt "AssumedFunctional"
   | Exp l -> Format.fprintf fmt "Exp [%a]" (Format.pp_print_list pp_dtype) l
 
-type functionality_abs =
-  | Lam of F.t * functionality_abs  (** e.g: type abbrev (t X) (list X) becomes: Lam A (F (Arrow A Exp))*)
+type dtype_abs =
+  | Lam of F.t * dtype_abs  (** e.g: type abbrev (t X) (list X) becomes: Lam A (F (Arrow A Exp))*)
   | F of dtype
 [@@deriving show, ord]
 
-type functionality_loc = Loc.t * functionality_abs [@@deriving show, ord]
-type t = { ty_abbr : functionality_loc F.Map.t; cmap : (F.t * dtype) IdPos.Map.t } [@@deriving show, ord]
+type dtype_loc = Loc.t * dtype_abs [@@deriving show, ord]
+type t = { ty_abbr : dtype_loc F.Map.t; cmap : (F.t * dtype_abs) IdPos.Map.t } [@@deriving show, ord]
 
 let arr m a b = Arrow (m, a, b)
 let is_NoProp = function Exp _ -> true | _ -> false
@@ -40,7 +40,7 @@ let rec eat_lambdas = function Lam (_, b) -> eat_lambdas b | F b -> b
 
 type env = t (* This is for the cleaner signatures in this files for objects with type t *)
 
-let compare_functionality_loc a b = compare_functionality_abs (snd a) (snd b)
+let compare_functionality_loc a b = compare_dtype_abs (snd a) (snd b)
 let compare_fname a b = compare_functionality_loc (snd a) (snd b)
 let mk_func_map ty_abbr cmap = { ty_abbr; cmap }
 let empty = { ty_abbr = F.Map.empty; cmap = IdPos.Map.empty }
@@ -237,7 +237,7 @@ end
 module Format = struct
   include Format
 
-  let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e
+  (* let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e *)
 end
 
 let get_functionality uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
@@ -261,7 +261,8 @@ let get_functionality uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
       (* find_opt is for types with unkown signature.
          their type has been inferred by the typechecker *)
       | None -> Compilation.type_ass_2func ~loc env tya
-      | Some (name, func) -> if F.equal F.pif name || F.equal F.sigmaf name then functionality_pi_sigma else func
+      | Some (name, func) ->
+          if F.equal F.pif name || F.equal F.sigmaf name then functionality_pi_sigma else eat_lambdas func
   in
   let det_head =
     if is_var then get_var @@ Var.get var name
@@ -288,7 +289,6 @@ module Checker = struct
 
   exception IGNORE
 
-  (** Checks that all input args are less then the one in the signature *)
   let rec infer uf ~env ~ctx ~var t : dtype * good_call =
     let rec infer_fold ~loc ctx d tl =
       let b = new good_call in
@@ -324,7 +324,7 @@ module Checker = struct
           infer_comma ctx ~loc xs (Det, new good_call)
       | x :: xs -> infer_comma ctx ~loc xs (infer ctx x)
     and infer ctx ScopedTerm.({ it; ty; loc } as t) : dtype * good_call =
-      Format.eprintf "--> Deduce of %a@." ScopedTerm.pretty_ it;
+      Format.eprintf "--> Infer of %a@." ScopedTerm.pretty_ it;
       match it with
       | ScopedTerm.Const b -> infer_app ~loc ctx false b []
       | Var (b, xs) -> infer_app ~loc ctx true b xs
@@ -526,18 +526,19 @@ module Checker = struct
     let add_ctx ~loc k v = ctx := Ctx.add ~loc !ctx k ~v in
     let var = Var.clone var in
     let assume_hd b is_var (tm : ScopedTerm.t) =
-      let _ =
-        let do_filter = false in
-        let only_check = "main" in
-        let loc = ".*test38.elpi.*" in
-        let _, name, _ = b in
-        if
-          do_filter
-          && Re.Str.(string_match (regexp only_check) (F.show name) 0 && string_match (regexp loc) (Loc.show tm.loc) 0)
-             |> not
-        then raise IGNORE
-      in
+      (* let _ =
+           let do_filter = false in
+           let only_check = "main" in
+           let loc = ".*test38.elpi.*" in
+           let _, name, _ = b in
+           if
+             do_filter
+             && Re.Str.(string_match (regexp only_check) (F.show name) 0 && string_match (regexp loc) (Loc.show tm.loc) 0)
+                |> not
+           then raise IGNORE
+         in *)
       let det_hd = get_functionality uf ~env ~ctx:!ctx ~var ~loc:tm.loc ~is_var b in
+      Format.eprintf "Calling assume in hd for terms list %a@." ScopedTerm.pretty tm;
       (det_hd, assume uf ~env ~ctx:!ctx ~var det_hd tm)
     in
     let rec aux ScopedTerm.{ it; loc } =
@@ -555,13 +556,13 @@ module Checker = struct
       | _ -> anomaly ~loc @@ Format.asprintf "Found term %a in prop position" ScopedTerm.pretty_ it
     in
 
-    let (det_hd, var), hd, body = aux t in
     Format.eprintf "=================================================@.";
     Format.eprintf "Checking clause %a@." ScopedTerm.pretty t;
     Format.eprintf "The var map is %a@." Var.pp var;
-    Format.eprintf "** START CHECKING THE BODY@.";
+    Format.eprintf "** START CHECKING THE CLAUSE@.";
+    let (det_hd, var), hd, body = aux t in
     let var, det_body = Option.(map (check uf ~env ~ctx:!ctx ~var Det) body |> value ~default:(var, Det)) in
-    Format.eprintf "** END CHECKING THE BODY@.";
+    Format.eprintf "** END CHECKING THE CLAUSE@.";
     Format.eprintf "The var map is %a and det_body is %a@." Var.pp var pp_dtype det_body;
 
     let det_pred = get_tl det_hd in
@@ -582,13 +583,13 @@ let add_type ~loc is_type_abbr env ~n ~id v =
     let ty_abbr = F.Map.add n (loc, v) env.ty_abbr in
     mk_func_map ty_abbr env.cmap
   else
-    let cmap = IdPos.Map.add id (n, eat_lambdas v) env.cmap in
+    let cmap = IdPos.Map.add id (n, v) env.cmap in
     mk_func_map env.ty_abbr cmap
 
 let remove t k = { t with cmap = IdPos.Map.remove k t.cmap }
 
 let merge f1 f2 =
-  let pp_fname fmt (x, y) = Format.fprintf fmt "(%a,%a)" F.pp x pp_functionality_loc y in
+  let pp_fname fmt (x, y) = Format.fprintf fmt "(%a,%a)" F.pp x pp_dtype_loc y in
   let compare_fname (x0, y0) (x1, y1) =
     let cmp = F.compare x0 x1 in
     if cmp = 0 then compare_functionality_loc y0 y1 else cmp
