@@ -240,7 +240,7 @@ module Format = struct
   (* let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e *)
 end
 
-let get_functionality uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
+let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
   Format.eprintf "Getting functionality of %a which is_var? %b@." F.pp name is_var;
   let get_ctx = function
     | None -> anomaly ~loc (Format.asprintf "Bound var %a should be in the local map" F.pp name)
@@ -269,7 +269,7 @@ let get_functionality uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
     else match t with Scope.Bound b -> get_ctx @@ Ctx.get ctx (name, b) | Global g -> get_con g.decl_id
   in
   Format.eprintf "The functionality of %a is %a (its type is %a)@." F.pp name pp_dtype det_head
-    TypeAssignment.pretty_mut_once (TypeAssignment.deref tya);
+    TypeAssignment.pretty_mut_once_raw (TypeAssignment.deref tya);
   det_head
 
 let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
@@ -316,7 +316,7 @@ module Checker = struct
             |> anomaly ~loc
       in
       aux d tl
-    and infer_app ctx ~loc is_var s tl = infer_fold ~loc ctx (get_functionality uf ~env ~ctx ~var ~loc ~is_var s) tl
+    and infer_app ctx ~loc is_var s tl = infer_fold ~loc ctx (get_dtype uf ~env ~ctx ~var ~loc ~is_var s) tl
     and infer_comma ctx ~loc args d =
       match args with
       | [] -> d
@@ -383,8 +383,8 @@ module Checker = struct
     match it with
     | Const _ -> ()
     (* TODO: add case for pi, comma and = *)
-    | App (b, x, xs) -> aux (get_functionality uf ~env ~ctx ~var ~loc ~is_var:false b) (x :: xs)
-    | Var (b, xs) -> aux (get_functionality uf ~env ~ctx ~var ~loc ~is_var:true b) xs
+    | App (b, x, xs) -> aux (get_dtype uf ~env ~ctx ~var ~loc ~is_var:false b) (x :: xs)
+    | Var (b, xs) -> aux (get_dtype uf ~env ~ctx ~var ~loc ~is_var:true b) xs
     | _ -> anomaly ~loc @@ Format.asprintf "Invalid term in deduce output %a." ScopedTerm.pretty_ it
 
   and assume uf ~env ~ctx ~var d t =
@@ -414,7 +414,7 @@ module Checker = struct
          if is_var then add ~loc ~v:d name
          else match t with Scope.Bound b -> Ctx.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
        else
-         let det_head = get_functionality uf ~env ~ctx ~var:!var ~loc ~is_var s in
+         let det_head = get_dtype uf ~env ~ctx ~var:!var ~loc ~is_var s in
          assume_fold ~loc ctx det_head tl);
       Format.eprintf "The map after call to assume_app is %a@." Var.pp !var
     and assume ctx d ScopedTerm.({ ty; loc; it } as t) : unit =
@@ -467,7 +467,7 @@ module Checker = struct
       let d', is_good = infer uf ~env ~ctx ~var:!var tm in
       Format.eprintf "-- Checked term dtype is %a and is_good is %s@." pp_dtype d' is_good#show;
       if is_good#is_good then (
-        let det = get_functionality uf ~env ~ctx ~var:!var ~is_var b ~loc in
+        let det = get_dtype uf ~env ~ctx ~var:!var ~is_var b ~loc in
         Format.eprintf "Assuming output of %a with dtype : %a@." ScopedTerm.pretty tm pp_dtype det;
         var := assume_output uf ~env ~ctx ~var:!var det tl);
       Format.eprintf "Before error %a <<= %a@." pp_dtype d' pp_dtype d;
@@ -537,7 +537,7 @@ module Checker = struct
                 |> not
            then raise IGNORE
          in *)
-      let det_hd = get_functionality uf ~env ~ctx:!ctx ~var ~loc:tm.loc ~is_var b in
+      let det_hd = get_dtype uf ~env ~ctx:!ctx ~var ~loc:tm.loc ~is_var b in
       Format.eprintf "Calling assume in hd for terms list %a@." ScopedTerm.pretty tm;
       (det_hd, assume uf ~env ~ctx:!ctx ~var det_hd tm)
     in
