@@ -900,7 +900,7 @@ X == Y :- same_term X Y.
      | _ -> raise No_clause)),
   DocAbove);
 
-  LPCode "pred primitive? i:A, i:string.";
+  LPCode "pred primitive? i:any, i:string.";
   LPCode "primitive? X S :- is_cdata X S.";
 
   MLCode(Pred("new_int",
