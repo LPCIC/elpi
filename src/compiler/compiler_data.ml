@@ -309,13 +309,13 @@ module TypeAssignment = struct
     | Overloaded of 'a list
   [@@ deriving show, fold, iter]
 
-  type ('a,'b) t__ =
+  type ('uvar,'mode) t__ =
     | Prop of Ast.Structured.functionality
     | Any
     | Cons of F.t
-    | App of F.t * ('a,'b) t__ * ('a,'b) t__ list
-    | Arr of 'b * Ast.Structured.variadic * ('a,'b) t__ * ('a,'b) t__
-    | UVar of 'a
+    | App of F.t * ('uvar,'mode) t__ * ('uvar,'mode) t__ list
+    | Arr of 'mode * Ast.Structured.variadic * ('uvar,'mode) t__ * ('uvar,'mode) t__
+    | UVar of 'uvar
   [@@ deriving show, fold, ord]
 
   type 'a t_ = ('a,tmode) t__
