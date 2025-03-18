@@ -209,8 +209,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "external func pattern_match A -> A. % matching";
 
   (* LPCode "external func (pi) i:(func i:A)."; *)
-  LPCode "external func (pi) (func A ->) ->.";
-  LPCode "external func (sigma) (func A ->) ->.";
+  LPCode "external func (pi) (func A).";
+  LPCode "external func (sigma) (func A).";
   
   MLData BuiltInData.int;
   MLData BuiltInData.string;
