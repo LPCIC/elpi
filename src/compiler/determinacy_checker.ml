@@ -286,7 +286,7 @@ let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
     TypeAssignment.pretty_mut_once_raw (TypeAssignment.deref tya);
   det_head
 
-let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
+let spill_err ~loc = anomaly ~loc "DetCheck: Everything should have already been spilled"
 
 class good_call =
   object
@@ -507,11 +507,9 @@ module Checker = struct
       | App ((Global _, cons, _), x, [ xs ]) when F.equal F.consf cons -> check ~ctx (check ~ctx d x) xs
       | Const (Global _, nil, _) when F.equal F.nilf nil -> d
       | App ((Global _, comma, _), x, xs) when F.equal F.andf comma -> check_comma ctx ~loc d (x :: xs)
-      (* !! predicate with arity 0, may create choice points, example:
-          pred x.
-          func f -> int.
-          f Y :- (x :- Y = 3) => (x :- Y = 4) => x.
-      *)
+      (* smarter than paper, we assume the min of the inference of both. Equivalent
+         to elaboration t = s ---> eq1 t s, eq1 s t
+         with func eq1 A -> A. *)
       | App ((Global _, name, _), l, [ r ]) when name = F.eqf ->
           let d1, b = infer uf ~env ~ctx ~var:!var l in
           (if b#is_good then
@@ -527,6 +525,27 @@ module Checker = struct
       | App ((Global _, ps, _), { it = Lam (oname, _, b) }, []) when ps = F.pif || ps = F.sigmaf ->
           let ctx = Ctx.add_oname ~loc oname (Compilation.type_ass_2func ~loc env) ctx in
           check ~ctx d b
+
+      (* !! predicate with arity 0 must be checked according to odet: eg
+
+          pred true.
+          true.
+          true.
+          func f.
+          f :- true.
+
+         If we look for Warren's functionality, then the example above could
+         be accepted since there is no output, and more in general a 0-ary
+         predicate cannot unify anything. BUT with implication this is no more
+         true:
+
+          pred x.
+          func f -> int.
+          f Y :- (x :- Y = 3) => (x :- Y = 4) => x.
+        
+        but we accept it if ! follows x.
+
+      *)
       | Const b -> check_app ctx ~loc d ~is_var:false b [] t
       | Var (b, xs) -> check_app ctx ~loc d ~is_var:true b xs t
       | App (b, x, xs) -> check_app ctx ~loc d ~is_var:false b (x :: xs) t
