@@ -44,7 +44,6 @@ let compare_functionality_loc a b = compare_dtype_abs (snd a) (snd b)
 let compare_fname a b = compare_functionality_loc (snd a) (snd b)
 let mk_func_map ty_abbr cmap = { ty_abbr; cmap }
 let empty = { ty_abbr = F.Map.empty; cmap = IdPos.Map.empty }
-let functionality_pi_sigma = arr Input (arr Input Any Det) Det
 
 module Compilation = struct
   let rec subst ~loc sigma = function
@@ -273,10 +272,7 @@ let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
       (* find_opt is for types with unkown signature.
          their type has been inferred by the typechecker *)
       | None -> Compilation.type_ass_2func ~loc env tya
-      | Some (name, func) ->
-          if F.equal F.pif name || F.equal F.sigmaf name then functionality_pi_sigma else 
-            (* eat_lambdas func *)
-            Compilation.type_ass_2func ~loc env tya
+      | Some (name, func) -> Compilation.type_ass_2func ~loc env tya
   in
   let det_head =
     if is_var then get_var @@ Var.get var name

@@ -10,16 +10,17 @@ func true.
 
 true.
 
-pred fail.
+func fail.
 
-pred false.
+func false.
 
-external pred (=) o:A, o:A. % unification
+external func (=) -> A, A. % unification
 
 external func pattern_match A -> A. % matching
-external pred (pi) i:A -> prop.
 
-external pred (sigma) i:A -> prop.
+external func (pi) (func A ->) ->.
+
+external func (sigma) (func A ->) ->.
 
 kind int type.
 
