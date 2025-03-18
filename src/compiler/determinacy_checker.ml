@@ -35,7 +35,7 @@ type dtype_loc = Loc.t * dtype_abs [@@deriving show, ord]
 type t = { ty_abbr : dtype_loc F.Map.t; cmap : (F.t * dtype_abs) IdPos.Map.t } [@@deriving show, ord]
 
 let arr m a b = Arrow (m, a, b)
-let is_NoProp = function Exp _ -> true | _ -> false
+let is_exp = function Exp _ -> true | _ -> false
 let rec eat_lambdas = function Lam (_, b) -> eat_lambdas b | F b -> b
 
 type env = t (* This is for the cleaner signatures in this files for objects with type t *)
@@ -396,19 +396,22 @@ module Checker = struct
       let m = Var.add ~loc !var vname ~v in
       var := m
     in
-    let rec assume_fold ~loc ctx d (tl : ScopedTerm.t list) =
+    let rec assume_fold ~was_input ~was_data ~loc ctx d (tl : ScopedTerm.t list) =
       match (d, tl) with
       | t, [] -> ()
       | Arrow (Input, i, d), h :: tl ->
-          assume ctx i h;
-          assume_fold ~loc ctx d tl
-      | Arrow (Output, _, d), _ :: tl -> assume_fold ~loc ctx d tl
+          assume ~was_input:true ctx i h;
+          assume_fold ~was_input ~was_data ~loc ctx d tl
+      (* NOTE: if Output && is_data && was_input then assume i h; assume_fold ~loc ctx d tl *)
+      | Arrow (Output, i, d), h :: tl -> 
+          if was_input && was_data then assume ~was_input ctx i h;
+          assume_fold ~was_input ~was_data ~loc ctx d tl
       | (AssumedFunctional | BVar _ | Any), _ -> ()
       | (Det | Rel | Exp _), _ :: _ ->
           Format.asprintf "assume: Type error, found dtype %a and arguments %a@." pp_dtype d
             (pplist ScopedTerm.pretty ",") tl
           |> anomaly ~loc
-    and assume_app ctx ~loc ~is_var d ((t, name, _) as s) tl =
+    and assume_app ~was_input ctx ~loc ~is_var d ((t, name, _) as s) tl =
       Format.eprintf "Calling assume_app on: %a with dtype %a with args [%a] and is var:%b@." F.pp name pp_dtype d
         (pplist ~boxed:true ScopedTerm.pretty " ; ")
         tl is_var;
@@ -417,36 +420,37 @@ module Checker = struct
          else match t with Scope.Bound b -> Ctx.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
        else
          let det_head = get_dtype uf ~env ~ctx ~var:!var ~loc ~is_var s in
-         assume_fold ~loc ctx det_head tl);
+         (* NOTE: if d = Exp _ then assume_fold ~is_data:true  *)
+         assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl);
       Format.eprintf "The map after call to assume_app is %a@." Var.pp !var
-    and assume ctx d ScopedTerm.({ ty; loc; it } as t) : unit =
-      Format.eprintf "Assume of %a with dtype %a@." ScopedTerm.pretty_ it pp_dtype d;
+    and assume ~was_input ctx d ScopedTerm.({ ty; loc; it } as t) : unit =
+      Format.eprintf "Assume of %a with dtype %a (was_input:%b)@." ScopedTerm.pretty_ it pp_dtype d was_input;
       match it with
-      | Const b -> assume_app ctx ~loc ~is_var:false d b []
-      | Var (b, tl) -> assume_app ctx ~loc ~is_var:true d b tl
+      | Const b -> assume_app ~was_input ctx ~loc ~is_var:false d b []
+      | Var (b, tl) -> assume_app ~was_input ctx ~loc ~is_var:true d b tl
       (* TODO: add case for pif and sigmaf ? *)
-      | App ((Global _, name, _), x, xs) when name = F.andf -> List.iter (assume ctx d) (x :: xs)
-      | App (b, hd, tl) -> assume_app ctx ~loc ~is_var:false d b (hd :: tl)
+      | App ((Global _, name, _), x, xs) when name = F.andf -> List.iter (assume ~was_input ctx d) (x :: xs)
+      | App (b, hd, tl) -> assume_app ~was_input ctx ~loc ~is_var:false d b (hd :: tl)
       | Discard -> ()
       | Impl (true, h, b) ->
           check_clause uf ~env ~ctx ~var:!var h |> ignore;
-          assume ctx d b
+          assume ~was_input ctx d b
       | Impl (false, _H, _B) -> check_clause uf ~env ~ctx ~var:!var t |> ignore
       | Lam (oname, _, c) -> (
           match d with
           | Arrow (Input, l, r) ->
               let ctx = Ctx.add_oname ~loc oname (fun _ -> l) ctx in
-              assume ctx r c
+              assume ~was_input ctx r c
           | Arrow (Output, l, r) ->
               let ctx = Ctx.add_oname ~loc oname (fun _ -> l) ctx in
-              assume ctx r c
+              assume ~was_input ctx r c
           | Any -> ()
           | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype d))
       | CData _ -> ()
       | Spill _ -> spill_err ~loc
-      | Cast (t, _) -> assume ctx d t
+      | Cast (t, _) -> assume ~was_input ctx d t
     in
-    assume ctx d t;
+    assume ~was_input:false ctx d t;
     !var
 
   and assume_output uf ~env ~ctx ~var d tl : Var.t =
