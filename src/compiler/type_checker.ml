@@ -400,11 +400,11 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         | Unknown -> error ~loc (Format.asprintf "Type too ambiguous to be assigned to the overloaded constant: %s for type %a" (F.show c) pretty_ty t)
         | Simple { srcs; tgt } ->
           (* Format.eprintf "argsty : %a\n" TypeAssignment.pretty (arrow_of_tys targs ety); *)
-            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys (decore_with_dummy_mode targs) ety) then (resolve_gid ~loc id cid t tya;[]) (* TODO: here we should something ? *)
+            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys (decore_with_dummy_mode targs) ety) then (resolve_gid ~loc id cid t tya;[])
             else check_app_overloaded ~positive ctx ~loc c_w_id ety args targs alltys ts
         | Variadic { srcs ; tgt } ->
             let srcs = extend srcs targs |> decore_with_dummy_mode in
-            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys (decore_with_dummy_mode targs) ety) then (resolve_gid ~loc id cid t tya;[]) (* TODO: here we should something ? *)
+            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys (decore_with_dummy_mode targs) ety) then (resolve_gid ~loc id cid t tya;[])
             else check_app_overloaded ~positive ctx ~loc c_w_id ety args targs alltys ts
 
   and infer_mode ctx m { loc; it } =
