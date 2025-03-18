@@ -202,14 +202,15 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "func true.";
   LPCode "true.";
 
-  LPCode "pred fail.";
-  LPCode "pred false.";
+  LPCode "func fail.";
+  LPCode "func false.";
 
-  LPCode "external pred (=) o:A, o:A. % unification";
+  LPCode "external func (=) -> A, A. % unification";
   LPCode "external func pattern_match A -> A. % matching";
 
-  LPCode "external pred (pi) i:A -> prop.";
-  LPCode "external pred (sigma) i:A -> prop.";
+  (* LPCode "external func (pi) i:(func i:A)."; *)
+  LPCode "external func (pi) (func A ->) ->.";
+  LPCode "external func (sigma) (func A ->) ->.";
   
   MLData BuiltInData.int;
   MLData BuiltInData.string;
