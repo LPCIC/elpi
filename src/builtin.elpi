@@ -480,7 +480,7 @@ external pred ground_term i:any.
 % [is_cdata T Ctype] checks if T is primitive of type Ctype, eg "int"
 external pred is_cdata i:any, o:string.
 
-pred primitive? i:A, i:string.
+pred primitive? i:any, i:string.
 
 primitive? X S :- is_cdata X S.
 
@@ -551,11 +551,11 @@ pred fatal-error i:string.
 :name "default-fatal-error"
 fatal-error Msg :- halt Msg.
 
-pred fatal-error-w-data i:string, i:A.
+pred fatal-error-w-data i:string, i:any.
 :name "default-fatal-error-w-data"
 fatal-error-w-data Msg Data :- halt Msg ":" Data.
 
-pred debug-print i:string, i:A.
+pred debug-print i:string, i:any.
 :name "default-debug-print"
 debug-print Msg Data :- print Msg Data.
 

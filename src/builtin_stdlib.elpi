@@ -17,11 +17,11 @@ pred fatal-error i:string.
 :name "default-fatal-error"
 fatal-error Msg :- halt Msg.
 
-pred fatal-error-w-data i:string, i:A.
+pred fatal-error-w-data i:string, i:any.
 :name "default-fatal-error-w-data"
 fatal-error-w-data Msg Data :- halt Msg ":" Data.
 
-pred debug-print i:string, i:A.
+pred debug-print i:string, i:any.
 :name "default-debug-print"
 debug-print Msg Data :- print Msg Data.
 
