@@ -18,9 +18,9 @@ external func (=) -> A, A. % unification
 
 external func pattern_match A -> A. % matching
 
-external func (pi) (func A ->) ->.
+external func (pi) (func A).
 
-external func (sigma) (func A ->) ->.
+external func (sigma) (func A).
 
 kind int type.
 
