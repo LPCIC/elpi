@@ -12,7 +12,7 @@ type dtype =
   | Rel  (** -> for relational preds *)
   | Exp of dtype list  (** -> for kinds like list, int, string *)
   | BVar of F.t  (** -> in predicates like: std.exists or in parametric type abbreviations. *)
-  | AssumedFunctional  (** -> variadic predicates: never backtrack *)
+  | FunctionalVariadic  (** -> variadic predicates: never backtrack *)
   | Arrow of Mode.t * dtype * dtype  (** -> abstractions *)
   | Any
 [@@deriving show, ord]
@@ -23,7 +23,7 @@ let rec pp_dtype fmt = function
   | BVar b -> Format.fprintf fmt "BVar %a" F.pp b
   | Any -> Format.fprintf fmt "Any"
   | Arrow (m, l, r) -> Format.fprintf fmt "(%a %a-> %a)" pp_dtype l Mode.pretty m pp_dtype r
-  | AssumedFunctional -> Format.fprintf fmt "AssumedFunctional"
+  | FunctionalVariadic -> Format.fprintf fmt "FVariadic"
   | Exp l -> Format.fprintf fmt "Exp [%a]" (Format.pp_print_list pp_dtype) l
 
 type dtype_abs =
@@ -55,7 +55,7 @@ module Compilation = struct
         | Some (Lam (_, b)) -> error ~loc "type_abbrev not fully applied")
     | Arrow (m, l, r) -> arr m (subst ~loc sigma l) (subst ~loc sigma r)
     | Exp l -> Exp (List.map (subst ~loc sigma) l)
-    | (AssumedFunctional | Det | Rel | Any) as t -> t
+    | (FunctionalVariadic | Det | Rel | Any) as t -> t
 
   (** 
   Used to beta reduce a type abbrev applied to arguments.
@@ -90,7 +90,7 @@ module Compilation = struct
       | ScopedTypeExpression.Const (_, c) when F.Set.mem c bvars -> BVar c
       | Const (_, c) -> type2func_app ~loc ~bvars env c []
       | App (_, c, x, xs) -> type2func_app ~loc ~bvars env c (x :: xs)
-      | Arrow (_, Variadic, _, _) -> AssumedFunctional
+      | Arrow (_, Variadic, _, _) -> FunctionalVariadic
       | Arrow (m, NotVariadic, l, r) -> arr m (type2func ~bvars env l) (type2func ~bvars env r)
       | Any -> Any
       | Prop Function -> Det
@@ -116,7 +116,7 @@ module Compilation = struct
       | Any -> Any
       | Cons n -> type2func_app ~loc env n []
       | App (n, x, xs) -> type2func_app ~loc env n (x :: xs)
-      | Arr (_, Variadic, _, _) -> AssumedFunctional
+      | Arr (_, Variadic, _, _) -> FunctionalVariadic
       | Arr (TypeAssignment.MVal m, NotVariadic, l, r) -> arr m (type_ass_2func ~loc env l) (type_ass_2func ~loc env r)
       | Arr (MRef m, NotVariadic, l, r) when MutableOnce.is_set m ->
           type_ass_2func ~loc env (Arr (MutableOnce.get m, NotVariadic, l, r))
@@ -142,7 +142,7 @@ module Aux = struct
     | Arrow (m1, _, r1), Arrow (m2, _, _) when m1 <> m2 -> error ~loc "Mode mismatch"
     | Arrow (Input, l1, r1), Arrow (_, l2, r2) -> Arrow (Input, max ~loc l1 l2, min ~loc r1 r2)
     | Arrow (Output, l1, r1), Arrow (_, l2, r2) -> Arrow (Output, min ~loc l1 l2, min ~loc r1 r2)
-    | AssumedFunctional, _ | _, AssumedFunctional -> AssumedFunctional
+    | FunctionalVariadic, _ | _, FunctionalVariadic -> FunctionalVariadic
     | a, b -> Format.asprintf "Computing min between %a and %a" pp_dtype a pp_dtype b |> anomaly ~loc
 
   and max ~loc f1 f2 =
@@ -154,7 +154,7 @@ module Aux = struct
     | Arrow (m1, _, r1), Arrow (m2, _, _) when m1 <> m2 -> error ~loc "Mode mismatch"
     | Arrow (Input, l1, r1), Arrow (_, l2, r2) -> Arrow (Input, min ~loc l1 l2, max ~loc r1 r2)
     | Arrow (Output, l1, r1), Arrow (_, l2, r2) -> Arrow (Output, max ~loc l1 l2, max ~loc r1 r2)
-    | AssumedFunctional, _ | _, AssumedFunctional -> AssumedFunctional
+    | FunctionalVariadic, _ | _, FunctionalVariadic -> FunctionalVariadic
     | BVar _, a | a, BVar _ -> a
     | a, b -> Format.asprintf "Computing max between %a and %a" pp_dtype a pp_dtype b |> anomaly ~loc
 
@@ -163,7 +163,7 @@ module Aux = struct
     | Exp l -> Exp (List.map maximize l)
     | Arrow (Input, l, r) -> Arrow (Input, minimize l, maximize r)
     | Arrow (Output, l, r) -> Arrow (Output, maximize l, maximize r)
-    | AssumedFunctional -> AssumedFunctional
+    | FunctionalVariadic -> FunctionalVariadic
     | Any -> Any
     | BVar b -> BVar b
 
@@ -172,24 +172,36 @@ module Aux = struct
     | Exp l -> Exp (List.map minimize l)
     | Arrow (Input, l, r) -> Arrow (Input, maximize l, minimize r)
     | Arrow (Output, l, r) -> Arrow (Output, minimize l, minimize r)
-    | AssumedFunctional -> AssumedFunctional
+    | FunctionalVariadic -> FunctionalVariadic
     | Any -> Any
     | BVar b -> BVar b
 
   let ( <<= ) ~loc a b =
     let rec aux ~loc a b =
       match (a, b) with
-      | BVar _, _ | _, BVar _ -> true
-      | Exp l1, Exp l2 -> List.for_all2 (aux ~loc) l1 l2
       | _, Any -> true
-      | Any, _ -> b = maximize b
-      | _, Rel | Det, _ | AssumedFunctional, _ -> true
-      | Rel, _ -> false
-      | _, AssumedFunctional -> error ~loc (Format.asprintf "Cannot compare AssumedFunctional with different dtype")
+      | Any, _ -> b = maximize b (* TC may accept A = any, so we do too *)
+
+      | BVar n, BVar m -> F.equal n m || anomaly ~loc "DetCheck: <<=: TC did not unify two unif vars"
+      | BVar _, _ | _, BVar _ -> anomaly ~loc @@ Format.asprintf "DetCheck: Typing invariant broken: %a <<= %a\n%!" pp_dtype a pp_dtype b
+
+      | Exp l1, Exp l2 ->
+          begin try List.for_all2 (aux ~loc) l1 l2
+          with Invalid_argument _ ->
+            anomaly ~loc @@ Format.asprintf "DetCheck: Typing invariant broken: %a <<= %a\n%!" pp_dtype a pp_dtype b
+          end
       | Arrow (m1, l1, r1), Arrow (m2, l2, r2) -> aux l2 l1 ~loc && aux r1 r2 ~loc
+      | Arrow(_,_,tgt), FunctionalVariadic -> aux ~loc tgt b
+
       | Arrow _, _ | _, Arrow _ | Exp _, _ ->
-          anomaly ~loc (Format.asprintf "Type error in comparing %a and %a" pp_dtype a pp_dtype b)
-    in
+        anomaly ~loc @@ Format.asprintf "DetCheck: Typing invariant broken: %a <<= %a\n%!" pp_dtype a pp_dtype b
+
+      | _, Rel -> true (* rel is the sup *)
+      | Rel, _ -> false
+      | Det, _ -> true (* det is the inf *)
+      | FunctionalVariadic, _ -> true (* det is the inf *)
+
+      in
     let res = aux a b ~loc in
     res
 end
@@ -311,7 +323,7 @@ module Checker = struct
               (Any, b))
             else aux d tl (* The recursive call is correct *)
         | Arrow (Output, _, d), _ :: tl -> aux d tl
-        | (AssumedFunctional | BVar _ | Any), _ -> (d, new good_call)
+        | (FunctionalVariadic | BVar _ | Any), _ -> (d, new good_call)
         | (Det | Rel | Exp _), _ :: _ ->
             Format.asprintf "deduce: Type error, found dtype %a and arguments %a" pp_dtype d
               (pplist ScopedTerm.pretty ",") tl
@@ -406,7 +418,7 @@ module Checker = struct
       | Arrow (Output, i, d), h :: tl -> 
           if was_input && was_data then assume ~was_input ctx i h;
           assume_fold ~was_input ~was_data ~loc ctx d tl
-      | (AssumedFunctional | BVar _ | Any), _ -> ()
+      | (FunctionalVariadic | BVar _ | Any), _ -> ()
       | (Det | Rel | Exp _), _ :: _ ->
           Format.asprintf "assume: Type error, found dtype %a and arguments %a@." pp_dtype d
             (pplist ScopedTerm.pretty ",") tl
