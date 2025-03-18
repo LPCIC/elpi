@@ -16,6 +16,7 @@ pred false.
 
 external pred (=) o:A, o:A. % unification
 
+external func pattern_match A -> A. % matching
 external pred (pi) i:A -> prop.
 
 external pred (sigma) i:A -> prop.

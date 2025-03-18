@@ -22,6 +22,7 @@ module Func : sig
   val pif : t
   val sigmaf : t
   val eqf : t
+  val pmf : t
   val isf : t
   val asf : t
   val nilf : t

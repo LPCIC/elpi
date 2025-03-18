@@ -38,6 +38,7 @@ module Func = struct
   let pif = from_string "pi"
   let sigmaf = from_string "sigma"
   let eqf = from_string "="
+  let pmf = from_string "pattern_match"
   let isf = from_string "is"
   let asf = from_string "as"
   let consf = from_string "::"

@@ -445,6 +445,7 @@ module Global_symbols : sig
   val pic      : constant
   val sigmac   : constant
   val eqc      : constant
+  val pmc      : constant
   val rulec    : constant
   val consc    : constant
   val nilc     : constant
@@ -516,6 +517,7 @@ let asc                 = declare_global_symbol "as"
 let consc               = declare_global_symbol F.(show consf)
 let entailsc            = declare_global_symbol "?-"
 let eqc                 = declare_global_symbol F.(show eqf)
+let pmc                 = declare_global_symbol F.(show pmf)
 let uvarc               = declare_global_symbol "uvar"
 let implc               = declare_global_symbol F.(show implf)
 let nablac              = declare_global_symbol "nabla"

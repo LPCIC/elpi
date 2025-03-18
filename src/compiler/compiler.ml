@@ -197,6 +197,7 @@ let is_builtin t x =
   || x == D.Global_symbols.print_constraintsc
   || x == D.Global_symbols.cutc
   || x == D.Global_symbols.eqc
+  || x == D.Global_symbols.pmc
   || x == D.Global_symbols.findall_solutionsc
 ;;
 let is_declared t x =
