@@ -495,7 +495,7 @@ end = struct (* {{{ *)
   *)
   let flatten_arrows toplevel_func =
     let rec is_pred = function 
-      | Ast.TypeExpression.TConst a -> F.show a = "prop"
+      | Ast.TypeExpression.TConst a -> F.show a = "prop" || F.show a = "fprop"
       | TArr(_,r) -> is_pred r.tit
       | TApp (_, _, _) | TPred (_, _) -> false
     in
@@ -811,12 +811,15 @@ end = struct
   and scope_tye ctx ~loc t : ScopedTypeExpression.t_ =
     match t with
     | Ast.TypeExpression.TConst c when F.show c = "prop" -> Prop Relation
+    | Ast.TypeExpression.TConst c when F.show c = "fprop" ->
+      Prop Function
     | TConst c when F.show c = "any" -> Any
     | TConst c when F.Set.mem c ctx -> Const(Bound elpi_language,c)
     | TConst c when is_global c -> Const(Scope.mkGlobal ~escape_ns:true (),of_global c)
     | TConst c -> Const(Scope.mkGlobal(),c)
     | TApp(c,x,[y]) when F.show c = "variadic" ->
-        Arrow(Output, Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
+        (* Convention all arguments of a variadic function are in input *)
+        Arrow(Input, Variadic,scope_loc_tye ctx x,scope_loc_tye ctx y)
     | TApp(c,x,xs) when is_global c ->
         App(Scope.mkGlobal ~escape_ns:true (), of_global c, scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
     | TApp(c,x,xs) ->
