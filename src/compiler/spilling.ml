@@ -21,16 +21,16 @@ let is_prop ~extra x =
 
 let ( !! ) r = MutableOnce.create (TypeAssignment.Val r)
 let andf_ty = !!(Arr (MVal Input, Variadic, Prop Function, Prop Function))
-let pif_arg_ty = !!(Arr (MVal Input, NotVariadic, UVar (MutableOnce.make F.dummyname), Prop Function))
+let pif_arg_ty (_,_,b) = !!(Arr (MVal Input, NotVariadic, UVar b, Prop Function))
 
-let pif_ty () : TypeAssignment.t MutableOnce.t =
+let pif_ty (_,_,ty) : TypeAssignment.t MutableOnce.t =
   !!(Arr
        ( MVal Input,
          NotVariadic,
-         Arr (MVal Input, NotVariadic, UVar (MutableOnce.make F.dummyname), Prop Function),
+         Arr (MVal Input, NotVariadic, UVar ty, Prop Function),
          Prop Function ))
 
-let pif_ty_name : 'a ty_name = (Scope.mkGlobal ~escape_ns:true (), F.pif, pif_ty ())
+let pif_ty_name ty : 'a ty_name = (Scope.mkGlobal ~escape_ns:true (), F.pif, pif_ty ty)
 let mk_loc ~loc ~ty it = { ty; it; loc }
 
 (* TODO store the types in Main *)
@@ -40,7 +40,7 @@ let add_spilled (l : spill list) t =
     List.fold_right
       (fun { expr; vars_names } t ->
         mk_loc ~loc:t.loc ~ty:andf_ty
-        @@ App (ScopedTerm.mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) F.andf, expr, [ t ]))
+        @@ App (((Scope.mkGlobal ~escape_ns:true ()), F.andf, andf_ty), expr, [ t ]))
       l t
 
 let mkApp n l = if l = [] then Const n else App (n, List.hd l, List.tl l)
@@ -168,7 +168,7 @@ let rec spill ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; it } as 
                 vars;
                 vars_names;
                 expr =
-                  mk_loc ~loc ~ty:(pif_ty ()) @@ App (pif_ty_name, mk_loc ~loc ~ty:pif_arg_ty @@ Lam (abs, o, expr), []);
+                  mk_loc ~loc ~ty:(pif_ty c) @@ App (pif_ty_name c, mk_loc ~loc ~ty:(pif_arg_ty c) @@ Lam (abs, o, expr), []);
               } ))
           (t, []) spills
       in

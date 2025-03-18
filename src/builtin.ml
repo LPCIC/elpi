@@ -222,7 +222,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
 
   LPCode "type (:-) prop -> prop -> prop.";
   LPCode "type (:-) prop -> list prop -> prop.";
-  LPCode "type (,) variadic prop prop.";
+  LPCode "type (,) variadic fprop fprop.";
   LPCode "type uvar A.";
   LPCode "type (as) A -> A -> A.";
   LPCode "type (=>) prop -> prop -> prop.";

@@ -263,6 +263,7 @@ let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
     if is_var then get_var @@ Var.get var name
     else match t with Scope.Bound b -> get_ctx @@ Ctx.get ctx (name, b) | Global g -> get_con g.decl_id
   in
+  Format.eprintf "The dtype of %a is %a@." F.pp name pp_dtype det_head;
   Format.eprintf "The functionality of %a is %a (its type is %a)@." F.pp name pp_dtype det_head
     TypeAssignment.pretty_mut_once_raw (TypeAssignment.deref tya);
   det_head
@@ -275,6 +276,7 @@ class good_call =
     method is_good = Option.is_none obj
     method is_wrong = Option.is_some obj
     method set_wrong (l : Loc.t) = obj <- Some l
+    method set_good = obj <- None
     method show = match obj with None -> "true" | Some e -> Format.asprintf "false (%a)" Loc.pp e
     method get_loc : Loc.t = Option.get obj
   end
@@ -284,25 +286,30 @@ module Checker = struct
 
   exception IGNORE
 
+  let is_cut ScopedTerm.{ it } = match it with Const (Global _, name, _) -> F.equal F.cutf name | _ -> false
+
   let rec infer uf ~env ~ctx ~var t : dtype * good_call =
     let rec infer_fold ~loc ctx d tl =
       let b = new good_call in
       let rec aux d tl =
+        Format.eprintf "In recursive call for aux with list [%a], bool is %s@." (pplist ScopedTerm.pretty ", ") tl
+          b#show;
         match (d, tl) with
+        | Arrow (_, Variadic, _, t), [] -> (t, b)
         | t, [] -> (t, b)
         | Arrow (Input, v, l, r), h :: tl ->
-            let dy, b' = infer ctx h in
-            Format.eprintf "After call to deduce in infer_fold.aux %a and is_good:%s; Expected is %a@." pp_dtype dy
-              b'#show pp_dtype l;
-            if b'#is_wrong then (
-              (* If the recursive call is wrong, we stop and return bottom *)
-              b#set_wrong b'#get_loc;
-              (Any, b))
-            else if not ((dy <<= l) ~loc) then (
-              (* If preconditions are not satisfied, we stop and return bottom *)
-              b#set_wrong loc;
-              (Any, b))
-            else aux (choose_variadic v d r) tl (* The recursive call is correct *)
+            (if is_cut h then b#set_good
+             else
+               let dy, b' = infer ctx h in
+               Format.eprintf "After call to deduce in aux %a, its determinacy is %a and is_good:%s; Expected is %a@."
+                 ScopedTerm.pretty h pp_dtype dy b'#show pp_dtype l;
+               if b'#is_wrong then (* If the recursive call is wrong, we stop and return bottom *)
+                 b#set_wrong b'#get_loc
+               else if not ((dy <<= l) ~loc) then (
+                 (* If preconditions are not satisfied, we stop and return bottom *)
+                 b#set_wrong loc;
+                 Format.eprintf "Invalid determinacy set b to wrong (%s)@." b#show));
+            aux (choose_variadic v d r) tl (* The recursive call is correct *)
         | Arrow (Output, v, _, r), _ :: tl -> aux (choose_variadic v d r) tl
         | (BVar _ | Any), _ -> (d, new good_call)
         | (Det | Rel | Exp _), _ :: _ ->
@@ -312,20 +319,20 @@ module Checker = struct
       in
       aux d tl
     and infer_app ctx ~loc is_var s tl = infer_fold ~loc ctx (get_dtype uf ~env ~ctx ~var ~loc ~is_var s) tl
-    and infer_comma ctx ~loc args d =
+    (* and infer_comma ctx ~loc args d =
       match args with
       | [] -> d
       | ScopedTerm.{ it = Const (_, cut, _); _ } :: xs when F.equal F.cutf cut ->
           infer_comma ctx ~loc xs (Det, new good_call)
-      | x :: xs -> infer_comma ctx ~loc xs (infer ctx x)
+      | x :: xs -> infer_comma ctx ~loc xs (infer ctx x) *)
     and infer ctx ScopedTerm.({ it; ty; loc } as t) : dtype * good_call =
       Format.eprintf "--> Infer of %a@." ScopedTerm.pretty_ it;
       match it with
       | ScopedTerm.Const b -> infer_app ~loc ctx false b []
       | Var (b, xs) -> infer_app ~loc ctx true b xs
-      | App ((Global _, name, _), x, xs) when name = F.andf ->
+      (* | App ((Global _, name, _), x, xs) when name = F.andf ->
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
-          infer_comma ctx ~loc (x :: xs) (Det, new good_call)
+          infer_comma ctx ~loc (x :: xs) (Det, new good_call) *)
       | App (b, x, xs) -> infer_app ~loc ctx false b (x :: xs)
       | Impl (true, c, b) ->
           check_clause uf ~env ~ctx ~var c |> ignore;
@@ -395,7 +402,6 @@ module Checker = struct
       | Arrow (Input, v, l, r), h :: tl ->
           assume ~was_input:true ctx l h;
           assume_fold ~was_input ~was_data ~loc ctx (choose_variadic v d r) tl
-      (* NOTE: if Output && is_data && was_input then assume i h; assume_fold ~loc ctx d tl *)
       | Arrow (Output, v, l, r), h :: tl ->
           if was_input && was_data then assume ~was_input ctx l h;
           assume_fold ~was_input ~was_data ~loc ctx (choose_variadic v d r) tl
@@ -413,7 +419,6 @@ module Checker = struct
          else match t with Scope.Bound b -> Ctx.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
        else
          let det_head = get_dtype uf ~env ~ctx ~var:!var ~loc ~is_var s in
-         (* NOTE: if d = Exp _ then assume_fold ~is_data:true  *)
          assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl);
       Format.eprintf "The map after call to assume_app is %a@." Var.pp !var
     and assume ~was_input ctx d ScopedTerm.({ ty; loc; it } as t) : unit =
@@ -421,8 +426,6 @@ module Checker = struct
       match it with
       | Const b -> assume_app ~was_input ctx ~loc ~is_var:false d b []
       | Var (b, tl) -> assume_app ~was_input ctx ~loc ~is_var:true d b tl
-      (* TODO: add case for pif and sigmaf ? *)
-      | App ((Global _, name, _), x, xs) when name = F.andf -> List.iter (assume ~was_input ctx d) (x :: xs)
       | App (b, hd, tl) -> assume_app ~was_input ctx ~loc ~is_var:false d b (hd :: tl)
       | Discard -> ()
       | Impl (true, h, b) ->
@@ -503,9 +506,6 @@ module Checker = struct
                var := assume uf ~env ~ctx ~var:!var m l;
                var := assume uf ~env ~ctx ~var:!var m r));
           d
-      | App ((Global _, ps, _), { it = Lam (oname, _, b) }, []) when ps = F.pif || ps = F.sigmaf ->
-          let ctx = Ctx.add_oname ~loc oname (Compilation.type_ass_2func ~loc env) ctx in
-          check ~ctx d b
       (* !! predicate with arity 0 must be checked according to odet: eg
 
            pred true.
@@ -539,7 +539,6 @@ module Checker = struct
 
   and check_clause uf ~env ~ctx ~var ScopedTerm.({ it; ty; loc } as t) =
     let ctx = ref (Ctx.clone ctx) in
-    let add_ctx ~loc k v = ctx := Ctx.add ~loc !ctx k ~v in
     let var = Var.clone var in
     let assume_hd b is_var (tm : ScopedTerm.t) =
       (* let _ =
@@ -562,10 +561,9 @@ module Checker = struct
       | Impl (false, ({ it = Const b } as hd), bo) -> (assume_hd b false hd, hd, Some bo)
       | Impl (false, ({ it = App (b, _, _) } as hd), bo) -> (assume_hd b false hd, hd, Some bo)
       | Const b -> (assume_hd b false t, t, None)
+      (* For clauses with quantified unification variables *)
       | App ((Global _, n, _), { it = Lam (oname, ty, body) }, []) when F.equal F.pif n || F.equal F.sigmaf n ->
-          Option.iter
-            (fun (scope, name, tya) -> add_ctx ~loc (name, scope) (Compilation.type_ass_2func ~loc env tya))
-            oname;
+          ctx := Ctx.add_oname ~loc oname (Compilation.type_ass_2func ~loc env) !ctx;
           aux body
       | App (b, _, _) -> (assume_hd b false t, t, None)
       | Var (b, _) -> (assume_hd b true t, t, None)
@@ -573,7 +571,7 @@ module Checker = struct
     in
 
     Format.eprintf "=================================================@.";
-    Format.eprintf "Checking clause %a@." ScopedTerm.pretty t;
+    Format.eprintf "Checking clause %a at (%a)@." ScopedTerm.pretty t Loc.pp loc;
     Format.eprintf "The var map is %a@." Var.pp var;
     Format.eprintf "** START CHECKING THE CLAUSE@.";
     let (det_hd, var), hd, body = aux t in

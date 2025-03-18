@@ -41,7 +41,7 @@ type (:-) prop -> prop -> prop.
 
 type (:-) prop -> list prop -> prop.
 
-type (,) variadic prop prop.
+type (,) variadic fprop fprop.
 
 type uvar A.
 
