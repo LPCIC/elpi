@@ -357,7 +357,7 @@ module Checker = struct
           | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype dty))
       | Discard ->
           Format.eprintf "Calling type_ass_2func in Discard@.";
-          (Any, new good_call)
+          (Aux.maximize @@ Compilation.type_ass_2func ~loc env ty, new good_call)
       | CData _ -> (Exp [], new good_call)
       | Cast (t, _) -> infer ctx t
       | Spill (_, _) -> spill_err ~loc
