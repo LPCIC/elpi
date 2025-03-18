@@ -185,7 +185,7 @@ type classification =
 let prop = TypeAssignment.Prop Relation
 
 let rec classify_arrow = function
-  | TypeAssignment.Arr(_(*TODO: @FissoreD*),Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
+  | TypeAssignment.Arr(_,Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
   | UVar m when MutableOnce.is_set m -> classify_arrow (TypeAssignment.deref m)
   | (App _ | Prop _ | Cons _ | Any | UVar _) as tgt -> Simple { srcs = []; tgt }
   | TypeAssignment.Arr(m,NotVariadic,x,xs) ->
@@ -425,7 +425,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
       (* Format.eprintf "@[<h>Checking term %a with type %a@]@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once_raw ty; *)
       (* Format.eprintf "checking app %a against %a@." ScopedTerm.pretty_ (ScopedTerm.App(snd c, fst c,x,xs)) TypeAssignment.pretty_mut_once_raw ty; *)
       match ty with
-        | TypeAssignment.Arr(_(*TODO: @FissoreD*), Variadic,s,t) ->
+        | TypeAssignment.Arr(_, Variadic,s,t) ->
             let xs = check_loc_if_not_phantom ~positive ~tyctx:(Some c) ctx x ~ety:s @ xs in
             if xs = [] then t else check_app_single ~positive ctx ~loc fc ty (x::consumed) xs
         | Arr(m,NotVariadic,s,t) ->

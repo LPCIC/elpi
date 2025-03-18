@@ -262,7 +262,9 @@ let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
          their type has been inferred by the typechecker *)
       | None -> Compilation.type_ass_2func ~loc env tya
       | Some (name, func) ->
-          if F.equal F.pif name || F.equal F.sigmaf name then functionality_pi_sigma else eat_lambdas func
+          if F.equal F.pif name || F.equal F.sigmaf name then functionality_pi_sigma else 
+            (* eat_lambdas func *)
+            Compilation.type_ass_2func ~loc env tya
   in
   let det_head =
     if is_var then get_var @@ Var.get var name
