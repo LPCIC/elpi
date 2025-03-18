@@ -500,8 +500,6 @@ module Checker = struct
           func f -> int.
           f Y :- (x :- Y = 3) => (x :- Y = 4) => x.
       *)
-      | Const b -> check_app ctx ~loc d ~is_var:false b [] t
-      | Var (b, xs) -> check_app ctx ~loc d ~is_var:true b xs t
       | App ((Global _, name, _), l, [ r ]) when name = F.eqf ->
           let d1, b = infer uf ~env ~ctx ~var:!var l in
           (if b#is_good then
@@ -517,6 +515,8 @@ module Checker = struct
       | App ((Global _, ps, _), { it = Lam (oname, _, b) }, []) when ps = F.pif || ps = F.sigmaf ->
           let ctx = Ctx.add_oname ~loc oname (Compilation.type_ass_2func ~loc env) ctx in
           check ~ctx d b
+      | Const b -> check_app ctx ~loc d ~is_var:false b [] t
+      | Var (b, xs) -> check_app ctx ~loc d ~is_var:true b xs t
       | App (b, x, xs) -> check_app ctx ~loc d ~is_var:false b (x :: xs) t
       | Cast (b, _) -> check ~ctx d b
       | Spill (b, _) -> spill_err ~loc
