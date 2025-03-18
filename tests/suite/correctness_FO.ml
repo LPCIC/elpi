@@ -6,6 +6,11 @@ open Suite
 let declare = Test.declare
     ~category:(Filename.(chop_extension (basename __FILE__)))
 
+let () = declare "pm"
+  ~source_elpi:"pm.elpi"
+  ~description:"pattern matching builtin"
+  ()
+
 let () = declare "cut1"
   ~source_elpi:"cut.elpi"
   ~description:"what else"

@@ -206,6 +206,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "pred false.";
 
   LPCode "external pred (=) o:A, o:A. % unification";
+  LPCode "external func pattern_match A -> A. % matching";
 
   LPCode "external pred (pi) i:A -> prop.";
   LPCode "external pred (sigma) i:A -> prop.";

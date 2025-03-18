@@ -3996,6 +3996,17 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
          [%spy "user:rule:eq" ~rid ~gid pp_string "fail"];
          [%tcall next_alt alts]
        end
+    | Builtin(c,[p;r]) when c == Global_symbols.pmc -> [%spy "user:rule" ~rid ~gid pp_string "eq"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (C.show c)];
+       if unif ~argsdepth:depth ~matching:true (gid[@trace]) depth empty_env depth r p then begin
+         [%spy "user:rule:eq" ~rid ~gid pp_string "success"];
+         match gs with
+         | [] -> [%tcall pop_andl alts next cutto_alts]
+         | { depth; program; goal; gid = gid [@trace] } :: gs ->
+           [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts]
+       end else begin
+         [%spy "user:rule:eq" ~rid ~gid pp_string "fail"];
+         [%tcall next_alt alts]
+       end
     | App(c, g2, [g1]) when c == Global_symbols.rimplc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let [@warning "-26"]loc = None in
        let loc[@trace] = Some (Loc.initial ("(context step_id:" ^ string_of_int (Trace_ppx_runtime.Runtime.get_cur_step ~runtime_id:!rid "run") ^")")) in
