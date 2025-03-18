@@ -31,7 +31,7 @@ type dtype_abs =
 [@@deriving show, ord]
 
 type dtype_loc = Loc.t * dtype_abs [@@deriving show, ord]
-type t = { ty_abbr : dtype_loc F.Map.t; cmap : (F.t * dtype_abs) IdPos.Map.t } [@@deriving show, ord]
+type t = dtype_loc F.Map.t [@@deriving show, ord]
 
 let arr m ~v a b = Arrow (m, v, a, b)
 let is_exp = function Exp _ -> true | _ -> false
@@ -42,8 +42,7 @@ type env = t (* This is for the cleaner signatures in this files for objects wit
 
 let compare_dtype_loc a b = compare_dtype_abs (snd a) (snd b)
 let compare_fname a b = compare_dtype_loc (snd a) (snd b)
-let mk_func_map ty_abbr cmap = { ty_abbr; cmap }
-let empty = { ty_abbr = F.Map.empty; cmap = IdPos.Map.empty }
+let empty_env = F.Map.empty
 
 module Compilation = struct
   let rec subst ~loc sigma = function
@@ -81,7 +80,7 @@ module Compilation = struct
 
   let scope_type_exp2det env (x : ScopedTypeExpression.t) =
     let rec type2func_app ~loc ~bvars hd args =
-      match F.Map.find_opt hd env.ty_abbr with
+      match F.Map.find_opt hd env with
       | None -> Exp (List.map (type2func ~bvars) args)
       | Some (_, f) -> det_beta ~loc (f, List.map (type2func ~bvars) args)
     and type2func ~bvars ScopedTypeExpression.{ it; loc } =
@@ -105,7 +104,7 @@ module Compilation = struct
   let type_ass_2func ~loc env (t : TypeAssignment.t MutableOnce.t) =
     let get_mutable v = match MutableOnce.get v with TypeAssignment.Val v -> v in
     let rec type2func_app ~loc c args =
-      match F.Map.find_opt c env.ty_abbr with
+      match F.Map.find_opt c env with
       | None -> Exp (List.map (type_ass_2func ~loc) args)
       | Some (_, f) -> det_beta ~loc (f, List.map (type_ass_2func ~loc) args)
     and type_ass_2func ~loc = function
@@ -122,9 +121,7 @@ module Compilation = struct
          an example can be found in tests/sources/findall.elpi
       *)
       | Arr (MRef m, v, l, r) -> arr ~v Output (type_ass_2func ~loc l) (type_ass_2func ~loc r)
-      | UVar a ->
-          if MutableOnce.is_set a then type_ass_2func ~loc (get_mutable a)
-          else BVar (MutableOnce.get_name a)
+      | UVar a -> if MutableOnce.is_set a then type_ass_2func ~loc (get_mutable a) else BVar (MutableOnce.get_name a)
     in
     type_ass_2func ~loc (get_mutable t)
 end
@@ -260,13 +257,7 @@ let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
   let get_con x =
     if F.equal name F.mainf then Rel (*TODO: what if the main has arguments?*)
     else if x = Scope.dummy_type_decl_id then Any
-    else
-      let id' = UF.find uf x in
-      (* The if instruction below is a sanity check: if x has a parent in the uf, then x should
-         not be in the map, othewise the same piece of information would be store
-         twice in the map, which is unwanted *)
-      if x <> id' then assert (not (IdPos.Map.mem x env.cmap));
-      Compilation.type_ass_2func ~loc env tya
+    else Compilation.type_ass_2func ~loc env tya
   in
   let det_head =
     if is_var then get_var @@ Var.get var name
@@ -602,46 +593,24 @@ let check_clause : uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit =
  fun ~uf ~loc ~env t ->
   try Checker.check_clause uf ~env ~ctx:Ctx.empty ~var:Var.empty t |> ignore with Checker.IGNORE -> ()
 
-let add_type ~loc is_type_abbr env ~n ~id v =
-  if is_type_abbr && F.Map.mem n env.ty_abbr then error (Format.asprintf "Adding again type_abbrev %a" F.pp n);
-  if is_type_abbr then
-    let ty_abbr = F.Map.add n (loc, v) env.ty_abbr in
-    mk_func_map ty_abbr env.cmap
-  else
-    let cmap = IdPos.Map.add id (n, v) env.cmap in
-    mk_func_map env.ty_abbr cmap
+let add_type ~loc env ~n v =
+  if F.Map.mem n env then error (Format.asprintf "Adding again type_abbrev %a" F.pp n);
+  F.Map.add n (loc, v) env
 
-let remove t k = { t with cmap = IdPos.Map.remove k t.cmap }
-
-let merge f1 f2 =
-  let pp_fname fmt (x, y) = Format.fprintf fmt "(%a,%a)" F.pp x pp_dtype_loc y in
-  let compare_fname (x0, y0) (x1, y1) =
-    let cmp = F.compare x0 x1 in
-    if cmp = 0 then compare_dtype_loc y0 y1 else cmp
-  in
-  let union_same pk pe cmpe k e1 e2 =
-    (* if cmpe e1 e2 = 0 then  *)
-    Some e1
-    (* else error (Format.asprintf "The key %a has two different values (v1:%a) (v2:%a)" pk k pe e1 pe e2)  *)
-  in
-  let cmap = IdPos.Map.union (union_same pp_int pp_fname compare_fname) f1.cmap f2.cmap in
-  let ty_abbr = F.Map.union (union_same F.pp pp_int Int.compare) f1.ty_abbr f2.ty_abbr in
-  mk_func_map ty_abbr cmap
+let merge f1 f2 = F.Map.union (fun _ e1 _ -> Some e1) f1 f2
 
 class merger (all_func : env) =
   object (self)
     val mutable all_func = all_func
-    val mutable local_func = empty
-
-    method private add_func is_ty_abbr id ty =
-      let loc, func = Compilation.scope_type_exp2det all_func ty in
-      let n = ty.name in
-      if is_ty_abbr then all_func <- add_type ~loc is_ty_abbr ~id ~n all_func func;
-      local_func <- add_type ~loc is_ty_abbr ~id ~n local_func func
-
+    val mutable local_func = empty_env
     method get_all_func = all_func
     method get_local_func = local_func
-    method add_ty_abbr = self#add_func true
-    method add_func_ty_list ty id_list = List.iter2 (self#add_func false) id_list ty
+
+    method add_ty_abbr ty =
+      let loc, func = Compilation.scope_type_exp2det all_func ty in
+      let n = ty.name in
+      all_func <- add_type ~loc ~n all_func func;
+      local_func <- add_type ~loc ~n local_func func
+
     method merge : env = merge all_func local_func
   end
