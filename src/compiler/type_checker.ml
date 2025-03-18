@@ -275,7 +275,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
   and check_global ctx ~loc ~tyctx (gid,c,tya) ety =
     match global_type env ~loc c with
     | Single (id,ty) ->
-        if unify ty ety then (resolve_gid ~loc id gid ety tya; [])
+        if unify ty ety then (resolve_gid ~loc id gid ty tya; [])
         else error_bad_ety ~valid_mode ~tyctx ~loc ~ety F.pp c ty
     | Overloaded l ->
         if unify_first ~loc gid l ety tya then []
@@ -530,7 +530,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     let vars = TypeAssignment.vars_of (Val ety) in
     let rec aux = function
       | [] -> false
-      | (id, x)::xs -> if unify x ety then (resolve_gid ~loc id gid ety tya; true) else (undo vars; aux xs)
+      | (id, x)::xs -> if unify x ety then (resolve_gid ~loc id gid x tya; true) else (undo vars; aux xs)
     in
       aux l
 
