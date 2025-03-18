@@ -249,7 +249,7 @@ end
 module Format = struct
   include Format
 
-  (* let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e *)
+  let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e
 end
 
 let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
