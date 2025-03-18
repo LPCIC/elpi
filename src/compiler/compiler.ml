@@ -304,7 +304,7 @@ module Assembled = struct
   let empty_signature () = {
     kinds = F.Map.empty;
     types = F.Map.empty;
-    type_abbrevs = F.Map.empty; functional_preds = Determinacy_checker.empty;
+    type_abbrevs = F.Map.empty; functional_preds = Determinacy_checker.empty_env;
     toplevel_macros = F.Map.empty;
     type_uf = UF.empty
   }
@@ -1116,7 +1116,7 @@ module Flatten : sig
     UF.t ->
     TypeAssignment.overloaded_skema_with_id F.Map.t ->
     TypeAssignment.overloaded_skema_with_id F.Map.t ->
-    IdPos.t list * UF.t * TypeAssignment.overloaded_skema_with_id F.Map.t
+    UF.t * TypeAssignment.overloaded_skema_with_id F.Map.t
   val merge_type_abbrevs :
     (F.t * ScopedTypeExpression.t) list ->
     (F.t * ScopedTypeExpression.t) list ->
@@ -1129,7 +1129,7 @@ module Flatten : sig
     UF.t ->
     ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
     ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
-    IdPos.t list * UF.t * ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t
+    UF.t * ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t
 
   val merge_toplevel_macros :
     (ScopedTerm.t * Loc.t) F.Map.t ->
@@ -1248,32 +1248,28 @@ module Flatten : sig
 
   let merge_type_assignments uf t1 t2 =
     let uf = ref uf in
-    let to_remove = ref [] in
     (* We give precedence to recent type declarations over old ones *)
     let t = F.Map.union (fun f l1 l2 ->
       let to_union, ta = TypeAssignment.merge_skema f l2 l1 in
       List.iter (fun (id1,id2) ->
-        let rem, uf1 = UF.union !uf id1 id2 in
+        let _, uf1 = UF.union !uf id1 id2 in
         uf := uf1;
-        Option.iter (fun x -> to_remove := x :: !to_remove) rem;
       ) to_union;
       Some ta) t1 t2 in
-    !to_remove, !uf, t
+    !uf, t
 
   let merge_checked_type_abbrevs uf m1 m2 =
     let uf = ref uf in
-    let to_remove = ref [] in
     let m = F.Map.union (fun k ((id1,sk),otherloc as x) ((id2,ty),loc) ->
       if TypeAssignment.compare_skema sk ty <> 0 then
         error ~loc
         ("Duplicate type abbreviation for " ^ F.show k ^
           ". Previous declaration: " ^ Loc.show otherloc)
       else
-        let rem, uf1 = UF.union !uf id1 id2 in
+        let _, uf1 = UF.union !uf id1 id2 in
         uf := uf1;
-        Option.iter (fun x -> to_remove := x :: !to_remove) rem;
         Some x) m1 m2 in
-      !to_remove, !uf, m
+      !uf, m
 
   let merge_types t1 t2 =
     F.Map.union (fun _ l1 l2 -> Some (TypeList.merge l1 l2)) t1 t2
@@ -1382,7 +1378,7 @@ end = struct
             ("Duplicate type abbreviation for " ^ F.show name ^
               ". Previous declaration: " ^ Loc.show otherloc)
         end
-        else functionality_builder#add_ty_abbr id scoped_ty;
+        else functionality_builder#add_ty_abbr scoped_ty;
         F.Map.add name ((id, ty),loc) all_type_abbrevs, F.Map.add name ((id,ty),loc) type_abbrevs)
         (ota,F.Map.empty) type_abbrevs in
     let check_k_end = Unix.gettimeofday () in
@@ -1391,14 +1387,9 @@ end = struct
     let check_t_begin = Unix.gettimeofday () in
     (* Type_checker.check_disjoint ~type_abbrevs ~kinds; *)
 
-    let get_ids = function TypeAssignment.Single (a,_) -> [a] | Overloaded l -> List.map fst l in
-
     let raw_types = types in
     let types = F.Map.mapi (fun name e -> 
-      let tys = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds e in
-      let ids = get_ids tys in
-      functionality_builder#add_func_ty_list e ids;
-      tys) types in
+      Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds e) types in
 
     let rec is_arrow_to_prop = function
       | ScopedTypeExpression.Lam (_,x) -> is_arrow_to_prop x
@@ -1426,10 +1417,9 @@ end = struct
     let check_t_end = Unix.gettimeofday () in
 
     let all_type_uf = UF.merge otuf type_uf in
-    let to_remove, all_type_uf, all_types = Flatten.merge_type_assignments all_type_uf ot types in
+    let all_type_uf, all_types = Flatten.merge_type_assignments all_type_uf ot types in
     let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
     let all_functional_preds = functionality_builder#merge in
-    let all_functional_preds = List.fold_left Determinacy_checker.remove all_functional_preds to_remove in
 
     { Assembled.functional_preds = functionality_builder#get_local_func; kinds; types; type_abbrevs; toplevel_macros; type_uf },
     { Assembled.functional_preds = all_functional_preds; kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; type_uf = all_type_uf },
@@ -1472,8 +1462,8 @@ end = struct
     ) builtins;
 
     let more_types = Type_checker.check_undeclared ~unknown in
-    let _, _, u_types = Flatten.merge_type_assignments type_uf signature.types more_types in
-    let _, _, types = Flatten.merge_type_assignments type_uf types more_types in
+    let type_uf, u_types = Flatten.merge_type_assignments type_uf signature.types more_types in
+    let type_uf, types = Flatten.merge_type_assignments type_uf types more_types in
 
     let check_end = Unix.gettimeofday () in
 
@@ -1784,15 +1774,9 @@ let extend1_signature base_signature (signature : checked_compilation_unit_signa
   let { Assembled.toplevel_macros; kinds; types; type_abbrevs; functional_preds; type_uf } = signature in
   let kinds = Flatten.merge_kinds ok kinds in
   let type_uf = UF.merge otyuf type_uf in
-  let to_remove, type_uf, type_abbrevs = Flatten.merge_checked_type_abbrevs type_uf ota type_abbrevs in
-  let to_remove1, type_uf, types = Flatten.merge_type_assignments type_uf ot types in
+  let type_uf, type_abbrevs = Flatten.merge_checked_type_abbrevs type_uf ota type_abbrevs in
+  let type_uf, types = Flatten.merge_type_assignments type_uf ot types in
   let toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
-  let functional_preds =
-    let fp = Determinacy_checker.merge ofp functional_preds in
-    let fp = List.fold_left Determinacy_checker.remove fp to_remove in
-    let fp = List.fold_left Determinacy_checker.remove fp to_remove1 in
-    fp
-  in
 
   { Assembled.kinds; types; type_abbrevs; functional_preds; toplevel_macros; type_uf }
 

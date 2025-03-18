@@ -327,7 +327,7 @@ module TypeAssignment = struct
     if cmp1 = 0 then k () else cmp1
 
   let rec compare_t_ c t1 t2 = match t1, t2 with
-    | Prop _, Prop _ -> 0
+    | Prop d1, Prop d2 -> Ast.Structured.compare_functionality d1 d2
     | Any, Any -> 0
     | Cons f1, Cons f2 -> F.compare f1 f2
     | App (f1,hd,tl), App (f2,hd1,tl1) -> 
