@@ -220,21 +220,21 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
-  LPCode "type (:-) prop -> prop -> prop.";
-  LPCode "type (:-) prop -> list prop -> prop.";
+  LPCode "type (:-) fprop -> fprop -> fprop.";
+  LPCode "type (:-) fprop -> list prop -> fprop.";
   LPCode "type (,) variadic fprop fprop.";
   LPCode "type uvar A.";
   LPCode "type (as) A -> A -> A.";
-  LPCode "type (=>) prop -> prop -> prop.";
-  LPCode "type (=>) list prop -> prop -> prop.";
-  LPCode "type (==>) prop -> prop -> prop."; (* not really needed since the parser emits a => *)
-  LPCode "type (==>) list prop -> prop -> prop.";
+  LPCode "type (=>) prop -> fprop -> fprop.";
+  LPCode "type (=>) list prop -> fprop -> fprop.";
+  LPCode "type (==>) prop -> fprop -> fprop."; (* not really needed since the parser emits a => *)
+  LPCode "type (==>) list prop -> fprop -> fprop.";
 
   LPDoc " -- Control --";
 
   (* This is not implemented here, since the API had no access to the
    * choice points *)
-  LPCode "external pred !. % The cut operator";
+  LPCode "external func !. % The cut operator";
 
   LPCode "func not prop.";
   LPCode "not X :- X, !, fail.";
@@ -244,8 +244,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
    * store of syntactic constraints *)
   LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
           "% on Key1 Key2 ... (variables, or lists thereof).\n"^
-          "external type declare_constraint any -> any -> variadic any prop.");
-  LPCode "external pred print_constraints. % prints all constraints";
+          "external type declare_constraint any -> any -> variadic any fprop.");
+  LPCode "external func print_constraints. % prints all constraints";
 
   MLCode(Pred("halt", VariadicIn(unit_ctx, !> BuiltInData.any, "halts the program and print the terms"),
   (fun args ~depth _ _ ->
@@ -316,22 +316,22 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
 
   MLData (pair (BuiltInData.poly "A") (BuiltInData.poly "B"));
 
-  LPCode "pred fst  i:pair A B, o:A.";
+  LPCode "func fst  pair A B -> A.";
   LPCode "fst (pr A _) A.";
-  LPCode "pred snd  i:pair A B, o:B.";
+  LPCode "func snd  pair A B -> B.";
   LPCode "snd (pr _ B) B.";
 
   LPCode {|
 kind triple type -> type -> type -> type.
 type triple A -> B -> C -> triple A B C.
 
-pred triple_1 i:triple A B C, o:A.
+func triple_1 triple A B C -> A.
 triple_1 (triple A _ _) A.
 
-pred triple_2 i:triple A B C, o:B.
+func triple_2 triple A B C -> B.
 triple_2 (triple _ B _) B.
 
-pred triple_3 i:triple A B C, o:C.
+func triple_3 triple A B C -> C.
 triple_3 (triple _ _ C) C.
  
 |};
@@ -616,7 +616,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   DocAbove);
 
   LPCode {|% Deprecated, use trace.counter
-pred counter i:string, o:int.
+func counter string -> int.
 counter C N :- trace.counter C N.|};
 
   MLData loc;
@@ -669,15 +669,15 @@ counter C N :- trace.counter C N.|};
   DocAbove);
 
     LPCode {|% Deprecated, use rex.match
-pred rex_match i:string, i:string.
+func rex_match string, string.
 rex_match Rx S :- rex.match Rx S.|};
 
   LPCode {|% Deprecated, use rex.replace
-pred rex_replace i:string, i:string, i:string, o:string.
+func rex_replace string, string, string -> string.
 rex_replace Rx R S O :- rex.replace Rx R S O.|};
 
   LPCode {|% Deprecated, use rex.split
-pred rex_split i:string, i:string, o:list string.
+func rex_split string, string -> list string.
 rex_split Rx S L :- rex.split Rx S L.|};
 
 
@@ -831,7 +831,7 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
 
   LPCode {|
 % Infix notation for same_term
-pred (==) i:A, i:A.
+func (==) A, A.
 X == Y :- same_term X Y.
 |};
 
@@ -902,7 +902,7 @@ X == Y :- same_term X Y.
      | _ -> raise No_clause)),
   DocAbove);
 
-  LPCode "pred primitive? i:any, i:string.";
+  LPCode "func primitive? any, string.";
   LPCode "primitive? X S :- is_cdata X S.";
 
   MLCode(Pred("new_int",
@@ -915,7 +915,7 @@ X == Y :- same_term X Y.
   DocAbove);
 
   LPDoc  {|[findall_solution P L] finds all the solved instances of P and puts them in L in the order in which they are found. Instances can contain eigenvariables and unification variables. P may or may not be instantiated. Instances should be found in L.|};
-  LPCode "external pred findall_solutions i:prop, o:list prop.";
+  LPCode "external func findall_solutions prop -> list prop.";
 
   MLData safe;
 
@@ -942,12 +942,12 @@ X == Y :- same_term X Y.
   LPCode {|
 % [if C T E] picks the first success of C then runs T (never E).
 % if C has no success it runs E.
-pred if i:prop, i:prop, i:prop.
+func if prop, fprop, fprop.
 if B T _ :- B, !, T.
 if _ _ E :- E.
 
 % [if2 C1 B1 C2 B2 E] like if but with 2 then branches (and one else branch).
-pred if2 i:prop, i:prop, i:prop, i:prop, i:prop.
+func if2 prop, fprop, prop, fprop, fprop.
 if2 G1 P1 _  _  _ :- G1, !, P1.
 if2 _  _  G2 P2 _ :- G2, !, P2.
 if2 _  _  _  _  E :- !, E. |};
