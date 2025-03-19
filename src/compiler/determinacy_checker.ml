@@ -320,11 +320,11 @@ module Checker = struct
       aux d tl
     and infer_app ctx ~loc is_var s tl = infer_fold ~loc ctx (get_dtype uf ~env ~ctx ~var ~loc ~is_var s) tl
     (* and infer_comma ctx ~loc args d =
-      match args with
-      | [] -> d
-      | ScopedTerm.{ it = Const (_, cut, _); _ } :: xs when F.equal F.cutf cut ->
-          infer_comma ctx ~loc xs (Det, new good_call)
-      | x :: xs -> infer_comma ctx ~loc xs (infer ctx x) *)
+       match args with
+       | [] -> d
+       | ScopedTerm.{ it = Const (_, cut, _); _ } :: xs when F.equal F.cutf cut ->
+           infer_comma ctx ~loc xs (Det, new good_call)
+       | x :: xs -> infer_comma ctx ~loc xs (infer ctx x) *)
     and infer ctx ScopedTerm.({ it; ty; loc } as t) : dtype * good_call =
       Format.eprintf "--> Infer of %a@." ScopedTerm.pretty_ it;
       match it with
@@ -541,17 +541,20 @@ module Checker = struct
     let ctx = ref (Ctx.clone ctx) in
     let var = Var.clone var in
     let assume_hd b is_var (tm : ScopedTerm.t) =
-      (* let _ =
-           let do_filter = false in
-           let only_check = "main" in
-           let loc = ".*test38.elpi.*" in
-           let _, name, _ = b in
-           if
-             do_filter
-             && Re.Str.(string_match (regexp only_check) (F.show name) 0 && string_match (regexp loc) (Loc.show tm.loc) 0)
-                |> not
-           then raise IGNORE
-         in *)
+      let _ =
+        let do_filter = false in
+        let only_check = "remove" in
+        let loc = "_map" in
+        let _, name, _ = b in
+        let bregexp s = Re.Str.regexp (".*" ^ s ^ ".*") in
+        if
+          do_filter
+          && Re.Str.(
+               string_match (bregexp only_check) (F.show name) 0 && string_match (bregexp loc) (Loc.show tm.loc) 0)
+             |> not
+        then raise IGNORE
+        (* else assert false *)
+      in
       let det_hd = get_dtype uf ~env ~ctx:!ctx ~var ~loc:tm.loc ~is_var b in
       Format.eprintf "Calling assume in hd for terms list %a@." ScopedTerm.pretty tm;
       (det_hd, assume uf ~env ~ctx:!ctx ~var det_hd tm)
