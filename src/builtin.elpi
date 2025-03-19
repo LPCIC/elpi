@@ -59,7 +59,7 @@ type (==>) list prop -> prop -> prop.
 
 external pred !. % The cut operator
 
-pred not i:prop.
+func not prop.
 
 not X :- X, !, fail.
 
@@ -72,9 +72,9 @@ external type declare_constraint any -> any -> variadic any prop.
 external pred print_constraints. % prints all constraints
 
 % [halt ...] halts the program and print the terms
-external type halt variadic any prop.
+external type halt variadic any fprop.
 
-pred stop.
+func stop.
 
 stop :- halt.
 
@@ -86,7 +86,7 @@ X is Y :- calc Y X.
 
 % [calc Expr Out] unifies Out with the value of Expr. It can be used in
 % tandem with spilling, eg [f {calc (N + 1)}]
-external pred calc i:A, o:A.
+external func calc A -> A.
 
 %  --- Operators ---
 
@@ -169,16 +169,16 @@ type real_to_string float -> string.
 %  -- Arithmetic tests --
 
 % [lt_ X Y] checks if X < Y. Works for string, int and float
-external pred lt_ i:A, i:A.
+external func lt_ A, A.
 
 % [gt_ X Y] checks if X > Y. Works for string, int and float
-external pred gt_ i:A, i:A.
+external func gt_ A, A.
 
 % [le_ X Y] checks if X =< Y. Works for string, int and float
-external pred le_ i:A, i:A.
+external func le_ A, A.
 
 % [ge_ X Y] checks if X >= Y. Works for string, int and float
-external pred ge_ i:A, i:A.
+external func ge_ A, A.
 
 pred (>) i:A, i:A.
 X > Y :- gt_ X Y.
@@ -298,45 +298,45 @@ type std_out out_stream.
 type std_err out_stream.
 
 % [open_in FileName InStream] opens FileName for input
-external pred open_in i:string, o:in_stream.
+external func open_in string -> in_stream.
 
 % [open_out FileName OutStream] opens FileName for output
-external pred open_out i:string, o:out_stream.
+external func open_out string -> out_stream.
 
 % [open_append FileName OutStream] opens FileName for output in append mode
-external pred open_append i:string, o:out_stream.
+external func open_append string -> out_stream.
 
 % [close_in InStream] closes input stream InStream
-external pred close_in i:in_stream.
+external func close_in in_stream.
 
 % [close_out OutStream] closes output stream OutStream
-external pred close_out i:out_stream.
+external func close_out out_stream.
 
 % [output OutStream Data] writes Data to OutStream
-external pred output i:out_stream, i:string.
+external func output out_stream, string.
 
 % [flush OutStream] flush all output not yet finalized to OutStream
-external pred flush i:out_stream.
+external func flush out_stream.
 
 % [input InStream Bytes Data] reads Bytes from InStream
-external pred input i:in_stream, i:int, o:string.
+external func input in_stream, int -> string.
 
 % [input_line InStream Line] reads a full line from InStream
-external pred input_line i:in_stream, o:string.
+external func input_line in_stream -> string.
 
 % [eof InStream] checks if no more data can be read from InStream
-external pred eof i:in_stream.
+external func eof in_stream.
 
 %  -- System --
 
 % [gettimeofday T] sets T to the number of seconds elapsed since 1/1/1970
-external pred gettimeofday o:float.
+external func gettimeofday -> float.
 
 % [getenv VarName Value] Like Sys.getenv
-external pred getenv i:string, o:option string.
+external func getenv string -> option string.
 
 % [system Command RetVal] executes Command and sets RetVal to the exit code
-external pred system i:string, o:int.
+external func system string -> int.
 
 %  -- Unix --
 
@@ -352,26 +352,26 @@ type unix.process out_stream -> in_stream -> in_stream -> unix.process.
 % Environment can be left unspecified, defaults to the current process
 % environment.
 % This API only works reliably since OCaml 4.12.
-external pred unix.process.open i:string, i:list string, i:list string, 
-                                o:unix.process, o:diagnostic.
+external func unix.process.open string, list string, 
+                                list string -> unix.process, diagnostic.
 
 % [unix.process.close P Diagnostic] OCaml's Unix.close_process_full
-external pred unix.process.close i:unix.process, o:diagnostic.
+external func unix.process.close unix.process -> diagnostic.
 
 %  -- Debugging --
 
 % [term_to_string T S] prints T to S
-external pred term_to_string o:any, o:string.
+external func term_to_string -> any, string.
 
 % == Lambda Prolog builtins =====================================
 
 %  -- Extra I/O --
 
 % [open_string DataIn InStream] opens DataIn as an input stream
-external pred open_string i:string, o:in_stream.
+external func open_string string -> in_stream.
 
 % [lookahead InStream NextChar] peeks one byte from InStream
-external pred lookahead i:in_stream, o:string.
+external func lookahead in_stream -> string.
 
 pred printterm i:out_stream, i:A.
 
@@ -380,10 +380,10 @@ printterm S T :- term_to_string T T1, output S T1.
 % == Elpi builtins =====================================
 
 % [dprint ...] prints raw terms (debugging)
-external type dprint variadic any prop.
+external type dprint variadic any fprop.
 
 % [print ...] prints terms
-external type print variadic any prop.
+external type print variadic any fprop.
 
 % Deprecated, use trace.counter
 pred counter i:string, o:int.
@@ -394,22 +394,22 @@ kind loc type.
 
 % [loc.fields Loc File StartChar StopChar Line LineStartsAtChar] Decomposes
 % a loc into its fields
-external pred loc.fields i:loc, o:string, o:int, o:int, o:int, o:int.
+external func loc.fields loc -> string, int, int, int, int.
 
 % == Regular Expressions =====================================
 
 % [rex.match Rex Subject] checks if Subject matches Rex. Matching is based
 % on OCaml's Str library
-external pred rex.match i:string, i:string.
+external func rex.match string, string.
 
 % [rex.replace Rex Replacement Subject Out] Out is obtained by replacing all
 % occurrences of Rex with Replacement in Subject. See also OCaml's
 % Str.global_replace
-external pred rex.replace i:string, i:string, i:string, o:string.
+external func rex.replace string, string, string -> string.
 
 % [rex.split Rex Subject Out] Out is obtained by splitting Subject at all
 % occurrences of Rex. See also OCaml's Str.split
-external pred rex.split i:string, i:string, o:list string.
+external func rex.split string, string -> list string.
 
 % Deprecated, use rex.match
 pred rex_match i:string, i:string.
@@ -427,26 +427,26 @@ rex_split Rx S L :- rex.split Rx S L.
 
 % [var V ...] checks if the term V is a variable. When used with tree
 % arguments it relates an applied variable with its head and argument list.
-external type var any -> variadic any prop.
+external type var any -> variadic any fprop.
 
 % [prune V L] V is pruned to L (V is unified with a variable that only sees
 % the list of names L)
-external pred prune o:any, i:list any.
+external func prune list any -> any.
 
 % [distinct_names L] checks if L is a list of distinct names. If L is the
 % scope of a unification variable (its arguments, as per var predicate) then
 % distinct_names L checks that such variable is in the Miller pattern
 % fragment (L_\lambda)
-external pred distinct_names i:list any.
+external func distinct_names list any.
 
 % [same_var V1 V2] checks if the two terms V1 and V2 are the same variable,
 % ignoring the arguments of the variables
-external pred same_var i:A, i:A.
+external func same_var A, A.
 
 % [same_term T1 T2] checks if the two terms T1 and T2 are syntactically
 % equal (no unification). It behaves differently than same_var since it
 % recursively compares the arguments of the variables
-external pred same_term i:A, i:A.
+external func same_term A, A.
 
 
 % Infix notation for same_term
@@ -455,32 +455,32 @@ X == Y :- same_term X Y.
 
 
 % [cmp_term A B Cmp] Compares A and B. Only works if A and B are ground.
-external pred cmp_term i:any, i:any, o:cmp.
+external func cmp_term any, any -> cmp.
 
 % [name T ...] checks if T is a eigenvariable. When used with tree arguments
 % it relates an applied name with its head and argument list.
-external type name any -> variadic any prop.
+external type name any -> variadic any fprop.
 
 % [constant T ...] checks if T is a (global) constant.  When used with tree
 % arguments it relates an applied constant with its head and argument list.
-external type constant any -> variadic any prop.
+external type constant any -> variadic any fprop.
 
-external pred names % generates the list of eigenvariable
-  o:list any. % list of eigenvariables in order of age (young first)
-  
-external pred occurs % checks if the atom occurs in the term
-  i:any, % an atom, that is a global constant or a bound name (aka eigenvariable)
-  i:any. % a term
+external func names % generates the list of eigenvariable
+  -> list any. % list of eigenvariables in order of age (young first)
+     
+external func occurs % checks if the atom occurs in the term
+  any, % an atom, that is a global constant or a bound name (aka eigenvariable)
+  any. % a term
   
 % [closed_term T] unify T with a variable that has no eigenvariables in
 % scope
-external pred closed_term o:any.
+external func closed_term -> any.
 
 % [ground_term T] Checks if T contains unification variables
-external pred ground_term i:any.
+external func ground_term any.
 
 % [is_cdata T Ctype] checks if T is primitive of type Ctype, eg "int"
-external pred is_cdata i:any, o:string.
+external func is_cdata any -> string.
 
 pred primitive? i:any, i:string.
 
@@ -488,7 +488,7 @@ primitive? X S :- is_cdata X S.
 
 % [new_int N] unifies N with a different int every time it is called. Values
 % of N are guaranteed to be incresing.
-external pred new_int o:int.
+external func new_int -> int.
 
 % [findall_solution P L] finds all the solved instances of P and puts them
 % in L in the order in which they are found. Instances can contain
@@ -502,13 +502,13 @@ kind safe type.
 
 
 % [new_safe Safe] creates a safe: a store that persists across backtracking
-external pred new_safe o:safe.
+external func new_safe -> safe.
 
 % [stash_in_safe Safe Data] stores Data in the Safe
-external pred stash_in_safe i:safe, i:A.
+external func stash_in_safe safe, A.
 
 % [open_safe Safe Data] retrieves the Data stored in Safe
-external pred open_safe i:safe, o:list A.
+external func open_safe safe -> list A.
 
 
 % [if C T E] picks the first success of C then runs T (never E).
@@ -524,14 +524,14 @@ if2 _  _  G2 P2 _ :- G2, !, P2.
 if2 _  _  _  _  E :- !, E. 
 
 % [random.init Seed] Initialize OCaml's PRNG with the given Seed
-external pred random.init i:int.
+external func random.init int.
 
 % [random.self_init] Initialize OCaml's PRNG with some seed
-external pred random.self_init .
+external func random.self_init .
 
 % [random.int Bound N] unifies N with a random int between 0 and Bound
 % (excluded)
-external pred random.int i:int, o:int.
+external func random.int int -> int.
 
 #line 1 "builtin_stdlib.elpi"
 % == stdlib =======================================================
@@ -845,312 +845,301 @@ findall P L :- findall_solutions P L.
 
 % [std.string.concat Separator Items Result] concatenates Items
 % interspersing Separator
-external pred std.string.concat i:string, i:list string, o:string.
+external func std.string.concat string, list string -> string.
 
 % CAVEAT: the type parameter of std.string.map must be a closed term
 
 kind std.string.map type -> type.
 
 % [std.string.map.empty M] The empty map
-external pred std.string.map.empty o:std.string.map A.
+external func std.string.map.empty -> std.string.map A.
 
 % [std.string.map.mem S M] Checks if S is bound in M
-external pred std.string.map.mem i:string, i:std.string.map A.
+external func std.string.map.mem string, std.string.map A.
 
 % [std.string.map.add S V M M1] M1 is M where V is bound to S
-external pred std.string.map.add i:string, i:A, i:std.string.map A, 
-                                 o:std.string.map A.
+external func std.string.map.add string, A, 
+                                 std.string.map A -> std.string.map A.
 
 % [std.string.map.remove S M M1] M1 is M where S is unbound
-external pred std.string.map.remove i:string, i:std.string.map A, 
-                                    o:std.string.map A.
+external func std.string.map.remove string, 
+                                    std.string.map A -> std.string.map A.
 
 % [std.string.map.find S M V] V is the binding of S in M
-external pred std.string.map.find i:string, i:std.string.map A, o:A.
+external func std.string.map.find string, std.string.map A -> A.
 
 % [std.string.map.bindings M L] L is M transformed into an associative list
-external pred std.string.map.bindings i:std.string.map A, 
-                                      o:list (pair string A).
+external func std.string.map.bindings std.string.map A -> list (pair string A).
 
 % [std.string.map.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.string.map.filter i:std.string.map A, 
-                                    i:string -> A -> prop, 
-                                    o:std.string.map A.
+external func std.string.map.filter std.string.map A, 
+                                    (string -> A -> prop) -> std.string.map A.
 
 % [std.string.map.map M F M1] Map M w.r.t. the predicate F
-external pred std.string.map.map i:std.string.map A, 
-                                 i:string -> A -> B -> prop, 
-                                 o:std.string.map B.
+external func std.string.map.map std.string.map A, 
+                                 (string -> A -> B -> prop) -> std.string.map B.
 
 % [std.string.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
-external pred std.string.map.fold i:std.string.map A, i:C, 
-                                  i:string -> A -> C -> C -> prop, o:C.
+external func std.string.map.fold std.string.map A, C, 
+                                  (string -> A -> C -> C -> prop) -> C.
 
 % CAVEAT: the type parameter of std.int.map must be a closed term
 
 kind std.int.map type -> type.
 
 % [std.int.map.empty M] The empty map
-external pred std.int.map.empty o:std.int.map A.
+external func std.int.map.empty -> std.int.map A.
 
 % [std.int.map.mem S M] Checks if S is bound in M
-external pred std.int.map.mem i:int, i:std.int.map A.
+external func std.int.map.mem int, std.int.map A.
 
 % [std.int.map.add S V M M1] M1 is M where V is bound to S
-external pred std.int.map.add i:int, i:A, i:std.int.map A, 
-                              o:std.int.map A.
+external func std.int.map.add int, A, std.int.map A -> std.int.map A.
 
 % [std.int.map.remove S M M1] M1 is M where S is unbound
-external pred std.int.map.remove i:int, i:std.int.map A, o:std.int.map A.
+external func std.int.map.remove int, std.int.map A -> std.int.map A.
 
 % [std.int.map.find S M V] V is the binding of S in M
-external pred std.int.map.find i:int, i:std.int.map A, o:A.
+external func std.int.map.find int, std.int.map A -> A.
 
 % [std.int.map.bindings M L] L is M transformed into an associative list
-external pred std.int.map.bindings i:std.int.map A, o:list (pair int A).
+external func std.int.map.bindings std.int.map A -> list (pair int A).
 
 % [std.int.map.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.int.map.filter i:std.int.map A, i:int -> A -> prop, 
-                                 o:std.int.map A.
+external func std.int.map.filter std.int.map A, 
+                                 (int -> A -> prop) -> std.int.map A.
 
 % [std.int.map.map M F M1] Map M w.r.t. the predicate F
-external pred std.int.map.map i:std.int.map A, i:int -> A -> B -> prop, 
-                              o:std.int.map B.
+external func std.int.map.map std.int.map A, 
+                              (int -> A -> B -> prop) -> std.int.map B.
 
 % [std.int.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
-external pred std.int.map.fold i:std.int.map A, i:C, 
-                               i:int -> A -> C -> C -> prop, o:C.
+external func std.int.map.fold std.int.map A, C, 
+                               (int -> A -> C -> C -> prop) -> C.
 
 % CAVEAT: the type parameter of std.loc.map must be a closed term
 
 kind std.loc.map type -> type.
 
 % [std.loc.map.empty M] The empty map
-external pred std.loc.map.empty o:std.loc.map A.
+external func std.loc.map.empty -> std.loc.map A.
 
 % [std.loc.map.mem S M] Checks if S is bound in M
-external pred std.loc.map.mem i:loc, i:std.loc.map A.
+external func std.loc.map.mem loc, std.loc.map A.
 
 % [std.loc.map.add S V M M1] M1 is M where V is bound to S
-external pred std.loc.map.add i:loc, i:A, i:std.loc.map A, 
-                              o:std.loc.map A.
+external func std.loc.map.add loc, A, std.loc.map A -> std.loc.map A.
 
 % [std.loc.map.remove S M M1] M1 is M where S is unbound
-external pred std.loc.map.remove i:loc, i:std.loc.map A, o:std.loc.map A.
+external func std.loc.map.remove loc, std.loc.map A -> std.loc.map A.
 
 % [std.loc.map.find S M V] V is the binding of S in M
-external pred std.loc.map.find i:loc, i:std.loc.map A, o:A.
+external func std.loc.map.find loc, std.loc.map A -> A.
 
 % [std.loc.map.bindings M L] L is M transformed into an associative list
-external pred std.loc.map.bindings i:std.loc.map A, o:list (pair loc A).
+external func std.loc.map.bindings std.loc.map A -> list (pair loc A).
 
 % [std.loc.map.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.loc.map.filter i:std.loc.map A, i:loc -> A -> prop, 
-                                 o:std.loc.map A.
+external func std.loc.map.filter std.loc.map A, 
+                                 (loc -> A -> prop) -> std.loc.map A.
 
 % [std.loc.map.map M F M1] Map M w.r.t. the predicate F
-external pred std.loc.map.map i:std.loc.map A, i:loc -> A -> B -> prop, 
-                              o:std.loc.map B.
+external func std.loc.map.map std.loc.map A, 
+                              (loc -> A -> B -> prop) -> std.loc.map B.
 
 % [std.loc.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
-external pred std.loc.map.fold i:std.loc.map A, i:C, 
-                               i:loc -> A -> C -> C -> prop, o:C.
+external func std.loc.map.fold std.loc.map A, C, 
+                               (loc -> A -> C -> C -> prop) -> C.
 
 kind std.string.set type.
 
 % [std.string.set.empty A] The empty set
-external pred std.string.set.empty o:std.string.set.
+external func std.string.set.empty -> std.string.set.
 
 % [std.string.set.mem Elem A] Checks if Elem is in a
-external pred std.string.set.mem i:string, i:std.string.set.
+external func std.string.set.mem string, std.string.set.
 
 % [std.string.set.add Elem A B] B is A union {Elem}
-external pred std.string.set.add i:string, i:std.string.set, 
-                                 o:std.string.set.
+external func std.string.set.add string, std.string.set -> std.string.set.
 
 % [std.string.set.remove Elem A B] B is A \ {Elem}
-external pred std.string.set.remove i:string, i:std.string.set, 
-                                    o:std.string.set.
+external func std.string.set.remove string, 
+                                    std.string.set -> std.string.set.
 
 % [std.string.set.union A B X] X is A union B
-external pred std.string.set.union i:std.string.set, i:std.string.set, 
-                                   o:std.string.set.
+external func std.string.set.union std.string.set, 
+                                   std.string.set -> std.string.set.
 
 % [std.string.set.inter A B X] X is A intersection B
-external pred std.string.set.inter i:std.string.set, i:std.string.set, 
-                                   o:std.string.set.
+external func std.string.set.inter std.string.set, 
+                                   std.string.set -> std.string.set.
 
 % [std.string.set.diff A B X] X is A \ B
-external pred std.string.set.diff i:std.string.set, i:std.string.set, 
-                                  o:std.string.set.
+external func std.string.set.diff std.string.set, 
+                                  std.string.set -> std.string.set.
 
 % [std.string.set.equal A B] tests A and B for equality
-external pred std.string.set.equal i:std.string.set, i:std.string.set.
+external func std.string.set.equal std.string.set, std.string.set.
 
 % [std.string.set.subset A B] tests if A is a subset of B
-external pred std.string.set.subset i:std.string.set, i:std.string.set.
+external func std.string.set.subset std.string.set, std.string.set.
 
 % [std.string.set.elements M L] L is M transformed into list
-external pred std.string.set.elements i:std.string.set, o:list string.
+external func std.string.set.elements std.string.set -> list string.
 
 % [std.string.set.choose M X] X is an element of M
-external pred std.string.set.choose i:std.string.set, o:string.
+external func std.string.set.choose std.string.set -> string.
 
 % [std.string.set.min M X] X is the smallest element of M
-external pred std.string.set.min i:std.string.set, o:string.
+external func std.string.set.min std.string.set -> string.
 
 % [std.string.set.max M X] X is the bigger of M
-external pred std.string.set.max i:std.string.set, o:string.
+external func std.string.set.max std.string.set -> string.
 
 % [std.string.set.cardinal M N] N is the number of elements of M
-external pred std.string.set.cardinal i:std.string.set, o:int.
+external func std.string.set.cardinal std.string.set -> int.
 
 % [std.string.set.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.string.set.filter i:std.string.set, i:string -> prop, 
-                                    o:std.string.set.
+external func std.string.set.filter std.string.set, 
+                                    (string -> prop) -> std.string.set.
 
 % [std.string.set.map M F M1] Map M w.r.t. the predicate F
-external pred std.string.set.map i:std.string.set, 
-                                 i:string -> string -> prop, 
-                                 o:std.string.set.
+external func std.string.set.map std.string.set, 
+                                 (string -> string -> prop) -> std.string.set.
 
 % [std.string.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
-external pred std.string.set.fold i:std.string.set, i:A, 
-                                  i:string -> A -> A -> prop, o:A.
+external func std.string.set.fold std.string.set, A, 
+                                  (string -> A -> A -> prop) -> A.
 
 % [std.string.set.partition M F M1 M2] Partitions M w.r.t. the predicate F,
 % M1 is where F holds
-external pred std.string.set.partition i:std.string.set, 
-                                       i:string -> prop, 
-                                       o:std.string.set, o:std.string.set.
+external func std.string.set.partition std.string.set, 
+                                       (string -> prop) -> std.string.set, 
+                                       std.string.set.
 
 kind std.int.set type.
 
 % [std.int.set.empty A] The empty set
-external pred std.int.set.empty o:std.int.set.
+external func std.int.set.empty -> std.int.set.
 
 % [std.int.set.mem Elem A] Checks if Elem is in a
-external pred std.int.set.mem i:int, i:std.int.set.
+external func std.int.set.mem int, std.int.set.
 
 % [std.int.set.add Elem A B] B is A union {Elem}
-external pred std.int.set.add i:int, i:std.int.set, o:std.int.set.
+external func std.int.set.add int, std.int.set -> std.int.set.
 
 % [std.int.set.remove Elem A B] B is A \ {Elem}
-external pred std.int.set.remove i:int, i:std.int.set, o:std.int.set.
+external func std.int.set.remove int, std.int.set -> std.int.set.
 
 % [std.int.set.union A B X] X is A union B
-external pred std.int.set.union i:std.int.set, i:std.int.set, 
-                                o:std.int.set.
+external func std.int.set.union std.int.set, std.int.set -> std.int.set.
 
 % [std.int.set.inter A B X] X is A intersection B
-external pred std.int.set.inter i:std.int.set, i:std.int.set, 
-                                o:std.int.set.
+external func std.int.set.inter std.int.set, std.int.set -> std.int.set.
 
 % [std.int.set.diff A B X] X is A \ B
-external pred std.int.set.diff i:std.int.set, i:std.int.set, 
-                               o:std.int.set.
+external func std.int.set.diff std.int.set, std.int.set -> std.int.set.
 
 % [std.int.set.equal A B] tests A and B for equality
-external pred std.int.set.equal i:std.int.set, i:std.int.set.
+external func std.int.set.equal std.int.set, std.int.set.
 
 % [std.int.set.subset A B] tests if A is a subset of B
-external pred std.int.set.subset i:std.int.set, i:std.int.set.
+external func std.int.set.subset std.int.set, std.int.set.
 
 % [std.int.set.elements M L] L is M transformed into list
-external pred std.int.set.elements i:std.int.set, o:list int.
+external func std.int.set.elements std.int.set -> list int.
 
 % [std.int.set.choose M X] X is an element of M
-external pred std.int.set.choose i:std.int.set, o:int.
+external func std.int.set.choose std.int.set -> int.
 
 % [std.int.set.min M X] X is the smallest element of M
-external pred std.int.set.min i:std.int.set, o:int.
+external func std.int.set.min std.int.set -> int.
 
 % [std.int.set.max M X] X is the bigger of M
-external pred std.int.set.max i:std.int.set, o:int.
+external func std.int.set.max std.int.set -> int.
 
 % [std.int.set.cardinal M N] N is the number of elements of M
-external pred std.int.set.cardinal i:std.int.set, o:int.
+external func std.int.set.cardinal std.int.set -> int.
 
 % [std.int.set.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.int.set.filter i:std.int.set, i:int -> prop, 
-                                 o:std.int.set.
+external func std.int.set.filter std.int.set, 
+                                 (int -> prop) -> std.int.set.
 
 % [std.int.set.map M F M1] Map M w.r.t. the predicate F
-external pred std.int.set.map i:std.int.set, i:int -> int -> prop, 
-                              o:std.int.set.
+external func std.int.set.map std.int.set, 
+                              (int -> int -> prop) -> std.int.set.
 
 % [std.int.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
-external pred std.int.set.fold i:std.int.set, i:A, 
-                               i:int -> A -> A -> prop, o:A.
+external func std.int.set.fold std.int.set, A, 
+                               (int -> A -> A -> prop) -> A.
 
 % [std.int.set.partition M F M1 M2] Partitions M w.r.t. the predicate F, M1
 % is where F holds
-external pred std.int.set.partition i:std.int.set, i:int -> prop, 
-                                    o:std.int.set, o:std.int.set.
+external func std.int.set.partition std.int.set, 
+                                    (int -> prop) -> std.int.set, 
+                                    std.int.set.
 
 kind std.loc.set type.
 
 % [std.loc.set.empty A] The empty set
-external pred std.loc.set.empty o:std.loc.set.
+external func std.loc.set.empty -> std.loc.set.
 
 % [std.loc.set.mem Elem A] Checks if Elem is in a
-external pred std.loc.set.mem i:loc, i:std.loc.set.
+external func std.loc.set.mem loc, std.loc.set.
 
 % [std.loc.set.add Elem A B] B is A union {Elem}
-external pred std.loc.set.add i:loc, i:std.loc.set, o:std.loc.set.
+external func std.loc.set.add loc, std.loc.set -> std.loc.set.
 
 % [std.loc.set.remove Elem A B] B is A \ {Elem}
-external pred std.loc.set.remove i:loc, i:std.loc.set, o:std.loc.set.
+external func std.loc.set.remove loc, std.loc.set -> std.loc.set.
 
 % [std.loc.set.union A B X] X is A union B
-external pred std.loc.set.union i:std.loc.set, i:std.loc.set, 
-                                o:std.loc.set.
+external func std.loc.set.union std.loc.set, std.loc.set -> std.loc.set.
 
 % [std.loc.set.inter A B X] X is A intersection B
-external pred std.loc.set.inter i:std.loc.set, i:std.loc.set, 
-                                o:std.loc.set.
+external func std.loc.set.inter std.loc.set, std.loc.set -> std.loc.set.
 
 % [std.loc.set.diff A B X] X is A \ B
-external pred std.loc.set.diff i:std.loc.set, i:std.loc.set, 
-                               o:std.loc.set.
+external func std.loc.set.diff std.loc.set, std.loc.set -> std.loc.set.
 
 % [std.loc.set.equal A B] tests A and B for equality
-external pred std.loc.set.equal i:std.loc.set, i:std.loc.set.
+external func std.loc.set.equal std.loc.set, std.loc.set.
 
 % [std.loc.set.subset A B] tests if A is a subset of B
-external pred std.loc.set.subset i:std.loc.set, i:std.loc.set.
+external func std.loc.set.subset std.loc.set, std.loc.set.
 
 % [std.loc.set.elements M L] L is M transformed into list
-external pred std.loc.set.elements i:std.loc.set, o:list loc.
+external func std.loc.set.elements std.loc.set -> list loc.
 
 % [std.loc.set.choose M X] X is an element of M
-external pred std.loc.set.choose i:std.loc.set, o:loc.
+external func std.loc.set.choose std.loc.set -> loc.
 
 % [std.loc.set.min M X] X is the smallest element of M
-external pred std.loc.set.min i:std.loc.set, o:loc.
+external func std.loc.set.min std.loc.set -> loc.
 
 % [std.loc.set.max M X] X is the bigger of M
-external pred std.loc.set.max i:std.loc.set, o:loc.
+external func std.loc.set.max std.loc.set -> loc.
 
 % [std.loc.set.cardinal M N] N is the number of elements of M
-external pred std.loc.set.cardinal i:std.loc.set, o:int.
+external func std.loc.set.cardinal std.loc.set -> int.
 
 % [std.loc.set.filter M F M1] Filter M w.r.t. the predicate F
-external pred std.loc.set.filter i:std.loc.set, i:loc -> prop, 
-                                 o:std.loc.set.
+external func std.loc.set.filter std.loc.set, 
+                                 (loc -> prop) -> std.loc.set.
 
 % [std.loc.set.map M F M1] Map M w.r.t. the predicate F
-external pred std.loc.set.map i:std.loc.set, i:loc -> loc -> prop, 
-                              o:std.loc.set.
+external func std.loc.set.map std.loc.set, 
+                              (loc -> loc -> prop) -> std.loc.set.
 
 % [std.loc.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
-external pred std.loc.set.fold i:std.loc.set, i:A, 
-                               i:loc -> A -> A -> prop, o:A.
+external func std.loc.set.fold std.loc.set, A, 
+                               (loc -> A -> A -> prop) -> A.
 
 % [std.loc.set.partition M F M1 M2] Partitions M w.r.t. the predicate F, M1
 % is where F holds
-external pred std.loc.set.partition i:std.loc.set, i:loc -> prop, 
-                                    o:std.loc.set, o:std.loc.set.
+external func std.loc.set.partition std.loc.set, 
+                                    (loc -> prop) -> std.loc.set, 
+                                    std.loc.set.
 
 #line 1 "builtin_map.elpi"
 kind std.map type -> type -> type.
@@ -1389,46 +1378,43 @@ elements (node L E R _) Acc X :-
 % == Elpi runtime builtins =====================================
 
 % [trace.counter Name Value] reads the Value of a trace point Name
-external pred trace.counter i:string, o:int.
+external func trace.counter string -> int.
 
 % [gc.get MinorHeapSize MajorHeapIncrement SpaceOverhead Verbose MaxOverhead
 % StackLimit AllocationPolicy WindowSize] Reads the current settings of the
 % garbage collector. See also OCaml's Gc.control type documentation.
-external pred gc.get o:int, o:int, o:int, o:int, o:int, o:int, o:int, 
-                     o:int.
+external func gc.get -> int, int, int, int, int, int, int, int.
 
 % [gc.set MinorHeapSize MajorHeapIncrement SpaceOverhead Verbose MaxOverhead
 % StackLimit AllocationPolicy WindowSize] Writes the current settings of the
 % garbage collector. Any parameter left unspecificed (eg _) is not changed.
 % See also OCaml's Gc.control type documentation.
-external pred gc.set i:int, i:int, i:int, i:int, i:int, i:int, i:int, 
-                     i:int.
+external func gc.set int, int, int, int, int, int, int, int.
 
 % [gc.minor] See OCaml's Gc.minor documentation.
-external pred gc.minor .
+external func gc.minor .
 
 % [gc.major] See OCaml's Gc.major documentation.
-external pred gc.major .
+external func gc.major .
 
 % [gc.full] See OCaml's Gc.full_major documentation.
-external pred gc.full .
+external func gc.full .
 
 % [gc.compact] See OCaml's Gc.compact documentation.
-external pred gc.compact .
+external func gc.compact .
 
 % [gc.stat MinorWords PromotedWords MajorWords MinorCollections
 % MajorCollections HeapWords HeapChunks LiveWords LiveBlocks FreeWords
 % FreeBlocks LargestFree Fragments Compactions TopHeapWords StackSize] See
 % OCaml's Gc.stat documentation.
-external pred gc.stat o:float, o:float, o:float, o:int, o:int, o:int, 
-                      o:int, o:int, o:int, o:int, o:int, o:int, o:int, 
-                      o:int, o:int, o:int.
+external func gc.stat -> float, float, float, int, int, int, int, int, 
+                      int, int, int, int, int, int, int, int.
 
 % [gc.quick-stat MinorWords PromotedWords MajorWords MinorCollections
 % MajorCollections HeapWords HeapChunks Compactions TopHeapWords StackSize]
 % See OCaml's Gc.quick_stat documentation.
-external pred gc.quick-stat o:float, o:float, o:float, o:int, o:int, 
-                            o:int, o:int, o:int, o:int, o:int.
+external func gc.quick-stat -> float, float, float, int, int, int, int, 
+                            int, int, int.
 
 
 
