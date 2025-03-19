@@ -236,7 +236,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
    * choice points *)
   LPCode "external pred !. % The cut operator";
 
-  LPCode "pred not i:prop.";
+  LPCode "func not prop.";
   LPCode "not X :- X, !, fail.";
   LPCode "not _.";
 
@@ -257,7 +257,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
        error (Buffer.contents b))),
   DocAbove);
 
-  LPCode "pred stop.";
+  LPCode "func stop.";
   LPCode "stop :- halt.";
 
   ] @ Calc.calc @ [
