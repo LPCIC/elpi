@@ -3,6 +3,24 @@
 - API:
   - New `Utils.ground_check` and `Utils.cmp_term` (already available as builtins)
 
+- Parser:
+  - A functional predicate is a predicate that does not create choice points
+    for any call to it
+  - A functional predicate is declared with the signature  
+    `func pred_name (comma_separated (types_of_inputs)*) -> (comma_separated (types_of_outputs*)).`   
+    If the list of output types, the `->` is optional  
+    E.g., the type of map is `func map list A, (func A -> B) -> list B`
+    is says that if the HO predicate is a function then the map predicate
+    is functional.
+  - `fprop` is a synonym for `prop` wrt typechecking, but it is used to
+    represent functional propositions. `prop` captures relational predicates. 
+- Compiler:
+  - The determinacy_checker module is used to statically analyse if
+    a predicate labeled as functional respects its signatures, if it is
+    not the case a fatal error is returned.
+  - The elaboration of spilling is moved in a dedicated file
+
+
 # v2.0.7 (January 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
