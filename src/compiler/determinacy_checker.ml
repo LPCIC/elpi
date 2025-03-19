@@ -170,7 +170,7 @@ module Aux = struct
   let maximize = minimize_maximize ~d1:Rel ~d2:Det
 
   let wrong_type ~loc a b =
-    anomaly ~loc @@ Format.asprintf "DetCheck: Typing1 invariant broken: %a <<= %a\n%!" pp_dtype a pp_dtype b
+    anomaly ~loc @@ Format.asprintf "DetCheck: Typing invariant broken: %a <<= %a\n%!" pp_dtype a pp_dtype b
 
   let wrong_bvars ~loc v1 v2 =
     anomaly ~loc @@ Format.asprintf "DetCheck: <<=: TC did not unify two unif vars (%a and %a)" F.pp v1 F.pp v2

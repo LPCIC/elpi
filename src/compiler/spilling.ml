@@ -70,7 +70,7 @@ let mk_spilled ~loc ~ty ctx args n : (F.t * t) list =
     in
     MutableOnce.create @@ TypeAssignment.Val (aux ctx)
   in
-  let rec aux ty =
+  let rec aux n ty =
     let f =
       incr args;
       F.from_string (Printf.sprintf "%%arg%d" !args)
@@ -79,9 +79,11 @@ let mk_spilled ~loc ~ty ctx args n : (F.t * t) list =
       let ty = build_ty ty in
       mk_loc ~loc ~ty @@ Var ((Bound elpi_var, f, ty), ctx)
     in
-    match ty with TypeAssignment.Arr (_, _, l, r) -> (f, built_tm l) :: aux r | ty -> [ (f, built_tm ty) ]
+    if n = 0 then []
+    else match ty with TypeAssignment.Arr (_, _, l, r) -> (f, built_tm l) :: aux (n-1) r | ty -> 
+      (assert (n =1); [f, built_tm ty])
   in
-  aux ty
+  aux n ty
 
 (* barendregt_convention (naive implementation) *)
 let rec bc ctx t =
@@ -107,6 +109,7 @@ let rec spill ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; it } as 
   | Spill (t, { contents = NoInfo }) -> assert false (* no type checking *)
   | Spill (t, { contents = Phantom _ }) -> assert false (* escapes type checker *)
   | Spill (t, { contents = Main n }) ->
+      let ty = t.ty in
       (* Format.eprintf "Spilling of %a with ty %a@." ScopedTerm.pretty_ it TypeAssignment.pretty_mut_once (UVar ty); *)
       let vars_names, vars =
         List.split
