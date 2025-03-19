@@ -504,8 +504,8 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
       head it in
     (* Format.eprintf "Checking %a\n" F.pp c; *)
     match F.Map.find c env with
-    | Single (_id,Ty _) -> () (* TODO: Should use id? *)
-    | Single (_id, Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args prop) (* TODO: should use id? *)
+    | Single (_id,Ty _) -> ()
+    | Single (_id, Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args prop)
     | Overloaded _ -> ()
     | exception Not_found -> assert(F.Map.mem c unknown)
 
