@@ -1305,6 +1305,12 @@ module Utils : sig
   val list_to_lp_list : Data.term list -> Data.term
   val lp_list_to_list : depth:int -> Data.term -> Data.term list
 
+  (** no uvars, raises No_clause *)
+  val check_ground : depth:int -> Data.term -> unit 
+
+  (** comparison (need terms to be ground) *)
+  val cmp_term : depth:int -> Data.term -> Data.term -> int
+
   (** The body of an assignment, if any (LOW LEVEL).
    * Use [look] and forget about this API since the term you get
    * needs to be moved and/or reduced, and you have no API for this. *)

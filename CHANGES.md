@@ -1,3 +1,8 @@
+# UNRELEASED
+
+- API:
+  - New `Utils.ground_check` and `Utils.cmp_term` (already available as builtins)
+
 # v2.0.7 (January 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
