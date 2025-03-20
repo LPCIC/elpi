@@ -230,9 +230,9 @@ end = struct
   let clone : t -> t = M.map (fun v -> ref !v)
 end
 
-module Var = EnvMaker (F.Map)
+module UVar = EnvMaker (F.Map)
 
-module Ctx = struct
+module BVar = struct
   include EnvMaker (Scope.Map)
 
   let add_oname ~loc oname f ctx =
@@ -244,8 +244,8 @@ end
 module Format = struct
   include Format
 
-  let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e
-    (* let eprintf = eprintf *)
+  (* let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e *)
+  let eprintf = eprintf
 end
 
 let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
@@ -261,8 +261,8 @@ let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
     else Compilation.type_ass_2func ~loc env tya
   in
   let det_head =
-    if is_var then get_var @@ Var.get var name
-    else match t with Scope.Bound b -> get_ctx @@ Ctx.get ctx (name, b) | Global g -> get_con g.decl_id
+    if is_var then get_var @@ UVar.get var name
+    else match t with Scope.Bound b -> get_ctx @@ BVar.get ctx (name, b) | Global g -> get_con g.decl_id
   in
   Format.eprintf "The dtype of %a is %a@." F.pp name pp_dtype det_head;
   Format.eprintf "The functionality of %a is %a (its type is %a)@." F.pp name pp_dtype det_head
@@ -355,14 +355,14 @@ module Checker = struct
           let dty = Compilation.type_ass_2func ~loc env ty in
           match dty with
           | Arrow (Input, NotVariadic, l, _) ->
-              let ctx = Ctx.add_oname ~loc oname (fun _ -> l) ctx in
+              let ctx = BVar.add_oname ~loc oname (fun _ -> l) ctx in
               let r, b = infer ~was_input ctx c in
               (Arrow (Input, NotVariadic, l, r), b)
           | Arrow (Output, NotVariadic, l, _) ->
-              let ctx = Ctx.add_oname ~loc oname (fun _ -> Any) ctx in
+              let ctx = BVar.add_oname ~loc oname (fun _ -> Any) ctx in
               let r, b = infer ~was_input ctx c in
-              Format.eprintf "The output binder is %a@." (Format.pp_print_option pp_dtype) (Ctx.get_oname oname ctx);
-              (* let out_det = Ctx.get_oname oname ctx |> Option.value ~default:Any in
+              Format.eprintf "The output binder is %a@." (Format.pp_print_option pp_dtype) (BVar.get_oname oname ctx);
+              (* let out_det = BVar.get_oname oname ctx |> Option.value ~default:Any in
               (* if the inferred determinacy of the output does not match the expectation, then b is wrong *)
               if not ((out_det <<= l) ~loc) then b#set_wrong loc; *)
               (Arrow (Output, NotVariadic, l, r), b)
@@ -408,7 +408,7 @@ module Checker = struct
     Format.eprintf "Calling assume on %a@." ScopedTerm.pretty t;
     let var = ref var in
     let add ~loc ~v vname =
-      let m = Var.add ~loc !var vname ~v in
+      let m = UVar.add ~loc !var vname ~v in
       var := m
     in
     let rec assume_fold ~was_input ~was_data ~loc ctx d (tl : ScopedTerm.t list) =
@@ -431,11 +431,11 @@ module Checker = struct
         tl is_var;
       (if tl = [] then
          if is_var then add ~loc ~v:d name
-         else match t with Scope.Bound b -> Ctx.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
+         else match t with Scope.Bound b -> BVar.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
        else
          let det_head = get_dtype uf ~env ~ctx ~var:!var ~loc ~is_var s in
          assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl);
-      Format.eprintf "The map after call to assume_app is %a@." Var.pp !var
+      Format.eprintf "The map after call to assume_app is %a@." UVar.pp !var
     and assume ~was_input ctx d ScopedTerm.({ ty; loc; it } as t) : unit =
       Format.eprintf "Assume of %a with dtype %a (was_input:%b)@." ScopedTerm.pretty_ it pp_dtype d was_input;
       match it with
@@ -450,10 +450,10 @@ module Checker = struct
       | Lam (oname, _, c) -> (
           match d with
           | Arrow (Input, NotVariadic, l, r) ->
-              let ctx = Ctx.add_oname ~loc oname (fun _ -> l) ctx in
+              let ctx = BVar.add_oname ~loc oname (fun _ -> l) ctx in
               assume ~was_input ctx r c
           | Arrow (Output, NotVariadic, l, r) ->
-              let ctx = Ctx.add_oname ~loc oname (fun _ -> l) ctx in
+              let ctx = BVar.add_oname ~loc oname (fun _ -> l) ctx in
               assume ~was_input ctx r c
           | Any -> ()
           | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype d))
@@ -464,7 +464,7 @@ module Checker = struct
     assume ~was_input:false ctx d t;
     !var
 
-  and assume_output uf ~env ~ctx ~var d tl : Var.t =
+  and assume_output uf ~env ~ctx ~var d tl : UVar.t =
     let rec assume_output d args var =
       match (d, args) with
       | Arrow (Input, v, _, r), _ :: tl -> assume_output (choose_variadic v d r) tl var
@@ -553,8 +553,8 @@ module Checker = struct
     (!var, check ~ctx d t)
 
   and check_clause uf ~env ~ctx ~var ScopedTerm.({ it; ty; loc } as t) =
-    let ctx = ref (Ctx.clone ctx) in
-    let var = Var.clone var in
+    let ctx = ref (BVar.clone ctx) in
+    let var = UVar.clone var in
     let assume_hd b is_var (tm : ScopedTerm.t) =
       let _ =
         let do_filter = false in
@@ -581,7 +581,7 @@ module Checker = struct
       | Const b -> (assume_hd b false t, t, None)
       (* For clauses with quantified unification variables *)
       | App ((Global _, n, _), { it = Lam (oname, ty, body) }, []) when F.equal F.pif n || F.equal F.sigmaf n ->
-          ctx := Ctx.add_oname ~loc oname (Compilation.type_ass_2func ~loc env) !ctx;
+          ctx := BVar.add_oname ~loc oname (Compilation.type_ass_2func ~loc env) !ctx;
           aux body
       | App (b, _, _) -> (assume_hd b false t, t, None)
       | Var (b, _) -> (assume_hd b true t, t, None)
@@ -590,12 +590,12 @@ module Checker = struct
 
     Format.eprintf "=================================================@.";
     Format.eprintf "Checking clause %a at (%a)@." ScopedTerm.pretty t Loc.pp loc;
-    Format.eprintf "The var map is %a@." Var.pp var;
+    Format.eprintf "The var map is %a@." UVar.pp var;
     Format.eprintf "** START CHECKING THE CLAUSE@.";
     let (det_hd, var), hd, body = aux t in
     let var, det_body = Option.(map (check uf ~env ~ctx:!ctx ~var Det) body |> value ~default:(var, Det)) in
     Format.eprintf "** END CHECKING THE CLAUSE@.";
-    Format.eprintf "The var map is %a and det_body is %a@." Var.pp var pp_dtype det_body;
+    Format.eprintf "The var map is %a and det_body is %a@." UVar.pp var pp_dtype det_body;
 
     let det_pred = get_tl det_hd in
     if not @@ (det_body <<= det_pred) ~loc then
@@ -607,7 +607,7 @@ end
 
 let check_clause : uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit =
  fun ~uf ~loc ~env t ->
-  try Checker.check_clause uf ~env ~ctx:Ctx.empty ~var:Var.empty t |> ignore with Checker.IGNORE -> ()
+  try Checker.check_clause uf ~env ~ctx:BVar.empty ~var:UVar.empty t |> ignore with Checker.IGNORE -> ()
 
 let add_type ~loc env ~n v =
   if F.Map.mem n env then error (Format.asprintf "Adding again type_abbrev %a" F.pp n);
