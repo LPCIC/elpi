@@ -245,6 +245,7 @@ module Format = struct
   include Format
 
   let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e
+    (* let eprintf = eprintf *)
 end
 
 let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
@@ -289,7 +290,7 @@ module Checker = struct
   let is_cut ScopedTerm.{ it } = match it with Const (Global _, name, _) -> F.equal F.cutf name | _ -> false
 
   let rec infer uf ~env ~ctx ~var t : dtype * good_call =
-    let rec infer_fold ~loc ctx d tl =
+    let rec infer_fold ~was_input ~was_data ~loc ctx d tl =
       let b = new good_call in
       let rec aux d tl =
         Format.eprintf "In recursive call for aux with list [%a], bool is %s@." (pplist ScopedTerm.pretty ", ") tl
@@ -300,7 +301,7 @@ module Checker = struct
         | Arrow (Input, v, l, r), h :: tl ->
             (if is_cut h then b#set_good
              else
-               let dy, b' = infer ctx h in
+               let dy, b' = infer ~was_input:true ctx h in
                Format.eprintf "After call to deduce in aux %a, its determinacy is %a and is_good:%s; Expected is %a@."
                  ScopedTerm.pretty h pp_dtype dy b'#show pp_dtype l;
                if b'#is_wrong then (* If the recursive call is wrong, we stop and return bottom *)
@@ -310,7 +311,16 @@ module Checker = struct
                  b#set_wrong loc;
                  Format.eprintf "Invalid determinacy set b to wrong (%s)@." b#show));
             aux (choose_variadic v d r) tl (* The recursive call is correct *)
-        | Arrow (Output, v, _, r), _ :: tl -> aux (choose_variadic v d r) tl
+        | Arrow (Output, v, l, r), hd :: tl ->
+            (if was_input && was_data then
+               let dy, b' = infer ~was_input ctx hd in
+               if b'#is_wrong then (* If the recursive call is wrong, we stop and return bottom *)
+                 b#set_wrong b'#get_loc
+               else if not ((dy <<= l) ~loc) then (
+                 (* If preconditions are not satisfied, we stop and return bottom *)
+                 b#set_wrong loc));
+            Format.eprintf "In output mode for term %a@." ScopedTerm.pretty hd;
+            aux (choose_variadic v d r) tl
         | (BVar _ | Any), _ -> (d, new good_call)
         | (Det | Rel | Exp _), _ :: _ ->
             Format.asprintf "deduce: Type error, found dtype %a and arguments %a" pp_dtype d
@@ -318,25 +328,27 @@ module Checker = struct
             |> anomaly ~loc
       in
       aux d tl
-    and infer_app ctx ~loc is_var s tl = infer_fold ~loc ctx (get_dtype uf ~env ~ctx ~var ~loc ~is_var s) tl
+    and infer_app ctx ~loc is_var ty s tl =
+      let was_data = is_exp (Compilation.type_ass_2func ~loc env ty) in
+      infer_fold ~was_data ~loc ctx (get_dtype uf ~env ~ctx ~var ~loc ~is_var s) tl
     (* and infer_comma ctx ~loc args d =
        match args with
        | [] -> d
        | ScopedTerm.{ it = Const (_, cut, _); _ } :: xs when F.equal F.cutf cut ->
            infer_comma ctx ~loc xs (Det, new good_call)
        | x :: xs -> infer_comma ctx ~loc xs (infer ctx x) *)
-    and infer ctx ScopedTerm.({ it; ty; loc } as t) : dtype * good_call =
+    and infer ~was_input ctx ScopedTerm.({ it; ty; loc } as t) : dtype * good_call =
       Format.eprintf "--> Infer of %a@." ScopedTerm.pretty_ it;
       match it with
-      | ScopedTerm.Const b -> infer_app ~loc ctx false b []
-      | Var (b, xs) -> infer_app ~loc ctx true b xs
+      | ScopedTerm.Const b -> infer_app ~was_input ~loc ctx false ty b []
+      | Var (b, xs) -> infer_app ~was_input ~loc ctx true ty b xs
       (* | App ((Global _, name, _), x, xs) when name = F.andf ->
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
           infer_comma ctx ~loc (x :: xs) (Det, new good_call) *)
-      | App (b, x, xs) -> infer_app ~loc ctx false b (x :: xs)
+      | App (b, x, xs) -> infer_app ~was_input ~loc ctx false ty b (x :: xs)
       | Impl (true, c, b) ->
           check_clause uf ~env ~ctx ~var c |> ignore;
-          infer ctx b
+          infer ~was_input ctx b
       | Impl (false, _, _) -> (check_clause uf ~env ~ctx ~var t, new good_call)
       | Lam (oname, _, c) -> (
           Format.eprintf "In lambda of infer, the ty is %a@." (MutableOnce.pp TypeAssignment.pp) ty;
@@ -344,14 +356,15 @@ module Checker = struct
           match dty with
           | Arrow (Input, NotVariadic, l, _) ->
               let ctx = Ctx.add_oname ~loc oname (fun _ -> l) ctx in
-              let r, b = infer ctx c in
+              let r, b = infer ~was_input ctx c in
               (Arrow (Input, NotVariadic, l, r), b)
           | Arrow (Output, NotVariadic, l, _) ->
               let ctx = Ctx.add_oname ~loc oname (fun _ -> Any) ctx in
-              let r, b = infer ctx c in
+              let r, b = infer ~was_input ctx c in
               Format.eprintf "The output binder is %a@." (Format.pp_print_option pp_dtype) (Ctx.get_oname oname ctx);
-              (* Option.iter (fun x -> assert ((x <<= l) ~loc)) (Ctx.get_oname oname ctx); *)
-              (* TODO: should I check that the dtype of oname in Ctx is <<= then l?  *)
+              (* let out_det = Ctx.get_oname oname ctx |> Option.value ~default:Any in
+              (* if the inferred determinacy of the output does not match the expectation, then b is wrong *)
+              if not ((out_det <<= l) ~loc) then b#set_wrong loc; *)
               (Arrow (Output, NotVariadic, l, r), b)
           | Any -> (Any, new good_call)
           | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype dty))
@@ -359,10 +372,12 @@ module Checker = struct
           Format.eprintf "Calling type_ass_2func in Discard@.";
           (Aux.maximize ~loc @@ Compilation.type_ass_2func ~loc env ty, new good_call)
       | CData _ -> (Exp [], new good_call)
-      | Cast (t, _) -> infer ctx t
+      | Cast (t, _) -> infer ~was_input ctx t
       | Spill (_, _) -> spill_err ~loc
     in
-    infer ctx t
+    let ((det, is_good) as r) = infer ~was_input:false ctx t in
+    Format.eprintf "Result of infer for %a is (%a,%s)@." ScopedTerm.pretty t pp_dtype det is_good#show;
+    r
 
   and infer_output uf ~env ~ctx ~var ScopedTerm.{ it; ty; loc } =
     Format.eprintf "Calling deduce output on %a@." ScopedTerm.pretty_ it;

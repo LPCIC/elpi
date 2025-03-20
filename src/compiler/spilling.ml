@@ -56,7 +56,8 @@ let app t args =
       | Impl (b, s, t) -> Impl (b, s, aux t)
       | Const n -> mkApp n args
       | App (n, x, xs) -> mkApp n ((x :: xs) @ args)
-      | Var _ | Discard | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) -> assert false
+      | Var (c,l) -> Var (c,l @ args)
+      | Discard | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) -> assert false
     and aux_last = function [] -> assert false | [ x ] -> [ aux x ] | x :: xs -> x :: aux_last xs in
     aux t
 
