@@ -531,6 +531,7 @@ let spillc              = declare_global_symbol F.(show spillf)
 let truec               = declare_global_symbol F.(show truef)
 let ctypec              = declare_global_symbol F.(show ctypef)
 let propc               = declare_global_symbol "prop"
+let fpropc               = declare_global_symbol "fprop"
 let variadic            = declare_global_symbol "variadic"
 
 let declare_constraintc = declare_global_symbol "declare_constraint"

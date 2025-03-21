@@ -494,14 +494,15 @@ end = struct (* {{{ *)
     - TArr (t1,t2) when t2 = TPred l -> TPred (o:t1, l)
   *)
   let flatten_arrows toplevel_func =
+    let is_propf f = F.equal F.propf f || F.equal F.fpropf f in
     let rec is_pred = function 
-      | Ast.TypeExpression.TConst a -> F.show a = "prop" || F.show a = "fprop"
+      | Ast.TypeExpression.TConst a -> is_propf a
       | TArr(_,r) -> is_pred r.tit
       | TApp (_, _, _) | TPred (_, _) -> false
     in
     let rec flatten tloc = function
       | Ast.TypeExpression.TArr (l,r) -> (Ast.Mode.Output, l) :: flatten_loc r 
-      | TConst c when F.equal c F.propf -> [] 
+      | TConst c when is_propf c -> [] 
       | tit -> [Output,{tit;tloc}]
     and flatten_loc {tit;tloc} = flatten tloc tit
     and main = function
@@ -810,9 +811,8 @@ end = struct
 
   and scope_tye ctx ~loc t : ScopedTypeExpression.t_ =
     match t with
-    | Ast.TypeExpression.TConst c when F.show c = "prop" -> Prop Relation
-    | Ast.TypeExpression.TConst c when F.show c = "fprop" ->
-      Prop Function
+    | Ast.TypeExpression.TConst c when F.equal F.propf c -> Prop Relation
+    | Ast.TypeExpression.TConst c when F.equal F.fpropf c -> Prop Function
     | TConst c when F.show c = "any" -> Any
     | TConst c when F.Set.mem c ctx -> Const(Bound elpi_language,c)
     | TConst c when is_global c -> Const(Scope.mkGlobal ~escape_ns:true (),of_global c)
