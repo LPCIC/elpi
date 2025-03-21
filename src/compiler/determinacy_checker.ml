@@ -37,7 +37,6 @@ let arr m ~v a b = Arrow (m, v, a, b)
 let is_exp = function Exp _ -> true | _ -> false
 let is_arr = function Arrow _ -> true | _ -> false
 let choose_variadic v full right = if v = Structured.Variadic then full else right
-
 let compare_dtype_loc a b = compare_dtype_abs (snd a) (snd b)
 let compare_fname a b = compare_dtype_loc (snd a) (snd b)
 let empty_env = F.Map.empty
@@ -100,6 +99,7 @@ module Compilation = struct
     type2func_lam ~bvars:F.Set.empty x.value
 
   let get_mutable v = match MutableOnce.get v with TypeAssignment.Val v -> v
+
   let type_ass_2func ~loc (env : t) t =
     let rec type2func_app ~loc c args =
       match F.Map.find_opt c env with
@@ -125,9 +125,7 @@ module Compilation = struct
     in
     type_ass_2func ~loc t
 
-  let type_ass_2func_mut 
-   ~loc (env : t) t = 
-   type_ass_2func ~loc env (get_mutable t)
+  let type_ass_2func_mut ~loc (env : t) t = type_ass_2func ~loc env (get_mutable t)
 end
 
 module Aux = struct
@@ -250,7 +248,7 @@ end
 module Format = struct
   include Format
 
-  (* let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e *)
+  let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e
   let eprintf = eprintf
 end
 
@@ -562,7 +560,7 @@ let check_clause =
     let get_ta n args =
       let ta_sk, _ = F.Map.find n env in
       let ty = TypeAssignment.apply ta_sk args in
-      MutableOnce.create TypeAssignment.(Val ty)
+      TypeAssignment.mk_mut ty
     in
     let otype2term ~loc ty b =
       let it = match b with None -> ScopedTerm.Discard | Some (a, b, c) -> Const (Bound a, b, c) in
@@ -577,25 +575,44 @@ let check_clause =
       let clause = ScopedTerm.{ ty; it = Impl (false, { it = pred_hd; ty; loc }, body); loc } in
       (clause, ctx)
     in
-    let rec aux ~ctx ~args (ScopedTerm.{ it; loc; ty } as t) : dtype =
+    let add_partial_app (ScopedTerm.{ it; loc } as t) args ty =
+      match args with
+      | [] -> t
+      | hd :: tl -> (
+          match it with
+          | Const b -> { it = App (b, hd, tl); ty; loc }
+          | App (b, x, xs) -> { it = App (b, x, xs @ args); ty; loc }
+          | Var (b, xs) -> { it = Var (b, xs @ args); ty; loc }
+          | _ -> assert false)
+    in
+    let rec aux ~ctx ~args ~parial_app (ScopedTerm.{ it; loc; ty } as t) : dtype =
       match (TypeAssignment.deref ty, it) with
-      | Arr (m, v, l, r), Lam (b, _, bo) ->
-          aux ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args:(otype2term ~loc ty b :: args) bo
       | Prop _, Impl (false, _, bo) ->
+          assert (parial_app = []);
           let clause, ctx = build_clause args ~ctx ~loc ~ty bo in
           check_clause uf ~env ~ctx ~var clause
       | Prop _, _ ->
+          let t = add_partial_app t parial_app ty in
           let clause, ctx = build_clause args ~ctx ~loc ~ty t in
           check_clause uf ~env ~ctx ~var clause
-      | Cons b, _ when F.Map.mem b env -> aux ~ctx ~args { t with ty = get_ta b [] }
-      | App (b, x, xs), _ when F.Map.mem b env -> aux ~ctx ~args { t with ty = get_ta b (x::xs) }
+      | Cons b, _ when F.Map.mem b env -> aux ~parial_app ~ctx ~args { t with ty = get_ta b [] }
+      | App (b, x, xs), _ when F.Map.mem b env -> aux ~parial_app ~ctx ~args { t with ty = get_ta b (x :: xs) }
       | Cons b, _ -> Exp []
       (* Below: TODO: check that args have the type expected, for example list prop vs list func *)
-      | App (b, x, xs), _ -> Exp (List.map (Compilation.type_ass_2func env ~loc) (x::xs))
+      | App (b, x, xs), _ -> Exp (List.map (Compilation.type_ass_2func env ~loc) (x :: xs))
       | (UVar _ | Any), _ -> failwith "TODO"
-      | Arr _, _ -> failwith "TODO: partial application"
+      | Arr _, Lam (b, _, bo) ->
+          aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args:(otype2term ~loc ty b :: args) bo
+      | Arr (_, _, l, r), _ ->
+          (* Partial app: type is Arr but body is not Lam *)
+          let b = Some (elpi_language, emit (), TypeAssignment.mk_mut l) in
+          let nt = otype2term ~loc ty b in
+          aux ~parial_app:(nt :: parial_app)
+            ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx)
+            ~args:(nt :: args)
+            { t with ty = TypeAssignment.mk_mut r }
     in
-    aux ~ctx ~args:[] t
+    aux ~ctx ~args:[] ~parial_app:[] t
   and check_clause uf ~env ~ctx ~var ScopedTerm.({ it; ty; loc } as t) =
     let ctx = ref (BVar.clone ctx) in
     let var = UVar.clone var in

@@ -272,7 +272,7 @@ let () =
       Success; Success; Success; Success; Failure; (*50*)
       Success; Failure; Success; Failure; Failure; (*55*)
       Failure; Failure; Failure; Success; Success; (*60*)
-      Failure; Success
+      Failure; Success; Success; Success; Failure
     |] in
   let ignore = [1;5;7;8;9;10;11;13;16;26;27] in
   for i = 0 to Array.length status - 1 do

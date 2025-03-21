@@ -366,6 +366,8 @@ module TypeAssignment = struct
   type t = Val of t MutableOnce.t t_
   [@@ deriving show]
 
+  let mk_mut t = MutableOnce.create (Val t)
+
   let unval (Val x) = x
 
   let rec deref m =
