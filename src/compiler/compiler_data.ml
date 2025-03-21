@@ -398,7 +398,7 @@ module TypeAssignment = struct
     let rec pretty fmt = function
       | Prop _ when skip_arrow_tail -> ()
       | Prop Relation -> fprintf fmt "%s" (if is_raw then "pred" else "prop")
-      | Prop Function -> fprintf fmt "%s" (if is_raw then "func" else "prop")
+      | Prop Function -> fprintf fmt "%s" (if is_raw then "func" else "fprop")
       | Any -> fprintf fmt "any"
       | Cons c -> F.pp fmt c
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)

@@ -48,6 +48,7 @@ module Func = struct
   let ctypef = from_string "ctype"
 
   let propf = from_string "prop"
+  let fpropf = from_string "fprop"
 
   let typef = from_string "type"
   let mainf = from_string "main"
