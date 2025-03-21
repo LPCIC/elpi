@@ -19,7 +19,7 @@ let is_prop ~extra x =
   in
   aux extra ty
 
-let ( !! ) r = MutableOnce.create (TypeAssignment.Val r)
+let ( !! ) r = TypeAssignment.mk_mut r
 let andf_ty = !!(Arr (MVal Input, Variadic, Prop Function, Prop Function))
 let pif_arg_ty (_,_,b) = !!(Arr (MVal Input, NotVariadic, UVar b, Prop Function))
 
@@ -69,7 +69,7 @@ let mk_spilled ~loc ~ty ctx args n : (F.t * t) list =
       | ScopedTerm.{ ty } :: tl ->
           TypeAssignment.(Arr (MRef (MutableOnce.make F.dummyname), NotVariadic, deref ty, aux tl))
     in
-    MutableOnce.create @@ TypeAssignment.Val (aux ctx)
+    TypeAssignment.mk_mut (aux ctx)
   in
   let rec aux n ty =
     let f =

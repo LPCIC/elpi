@@ -317,7 +317,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     let inner_spills = check_spill_conclusion_loc ~positive ~tyctx:None ctx sp ~ety:(TypeAssignment.(Arr(MRef (MutableOnce.make F.dummyname), Ast.Structured.NotVariadic,ety,mk_uvar "Spill"))) in
     assert(inner_spills = []);
     let phantom_of_spill_ty i ty =
-      { loc; it = Spill(sp,ref (Phantom(i+1))); ty = MutableOnce.create (TypeAssignment.Val ty) } in
+      { loc; it = Spill(sp,ref (Phantom(i+1))); ty = TypeAssignment.mk_mut ty } in
     match classify_arrow (ScopedTerm.type_of sp) with
     | Simple { srcs; tgt } ->
         if not @@ unify tgt prop then error ~loc "only predicates can be spilled";

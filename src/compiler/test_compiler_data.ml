@@ -40,7 +40,7 @@ let () = pp_ta (list (arr int int)) "list (o:int -> int)";;
 open ScopedTerm
 
 let loc = Ast.Loc.initial "x"
-let ty  = MutableOnce.create @@ Val (Prop Relation)
+let ty  = TypeAssignment.mk_mut (Prop Relation)
 let c3 = { loc; it = CData (Ast.cint.cin 3); ty };;
 let lam v t = { loc; ty; it = Lam(Some(ScopedTerm.mk_ty_name "" (F.from_string v)),None,t)}
 let var v = { loc; ty; it = Const(ScopedTerm.mk_ty_name' (Bound "") (F.from_string v))}
