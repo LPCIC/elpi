@@ -286,6 +286,10 @@ class good_call =
   end
 
 let check_clause =
+  let is_quantifier (b, f, _) =
+    (match b with Scope.Global _ -> true | _ -> false) && (F.equal F.pif f || F.equal F.sigmaf f)
+  in
+
   let cnt = ref min_int in
   let emit () =
     incr cnt;
@@ -349,6 +353,8 @@ let check_clause =
       match it with
       | ScopedTerm.Const b -> infer_app ~was_input ~loc ctx false ty b []
       | Var (b, xs) -> infer_app ~was_input ~loc ctx true ty b xs
+      | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
+          infer ~was_input (BVar.add_oname ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc env x) ctx) bo
       (* | App ((Global _, name, _), x, xs) when name = F.andf ->
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
           infer_comma ctx ~loc (x :: xs) (Det, new good_call) *)
@@ -446,6 +452,8 @@ let check_clause =
     and assume ~was_input ctx d ScopedTerm.({ ty; loc; it } as t) : unit =
       Format.eprintf "Assume of %a with dtype %a (was_input:%b)@." ScopedTerm.pretty_ it pp_dtype d was_input;
       match it with
+      | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
+          assume ~was_input (BVar.add_oname ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc env x) ctx) d bo
       | Const b -> assume_app ~was_input ctx ~loc ~is_var:false d b []
       | Var (b, tl) -> assume_app ~was_input ctx ~loc ~is_var:true d b tl
       | App (b, hd, tl) -> assume_app ~was_input ctx ~loc ~is_var:false d b (hd :: tl)
@@ -563,6 +571,7 @@ let check_clause =
       TypeAssignment.mk_mut ty
     in
     let otype2term ~loc ty b =
+      let ty = TypeAssignment.mk_mut ty in
       let it = match b with None -> ScopedTerm.Discard | Some (a, b, c) -> Const (Bound a, b, c) in
       ScopedTerm.{ it; ty; loc }
     in
@@ -600,13 +609,14 @@ let check_clause =
       | Cons b, _ -> Exp []
       (* Below: TODO: check that args have the type expected, for example list prop vs list func *)
       | App (b, x, xs), _ -> Exp (List.map (Compilation.type_ass_2func env ~loc) (x :: xs))
-      | (UVar _ | Any), _ -> failwith "TODO"
-      | Arr _, Lam (b, _, bo) ->
-          aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args:(otype2term ~loc ty b :: args) bo
+      (* If we reach a Uvar | Any case no check is needed, i.e. we don't know  *)
+      | ((UVar _ | Any) as t), _ -> Compilation.type_ass_2func env ~loc t
+      | Arr (_, _, l, _), Lam (b, _, bo) ->
+          aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args:(otype2term ~loc l b :: args) bo
       | Arr (_, _, l, r), _ ->
           (* Partial app: type is Arr but body is not Lam *)
           let b = Some (elpi_language, emit (), TypeAssignment.mk_mut l) in
-          let nt = otype2term ~loc ty b in
+          let nt = otype2term ~loc l b in
           aux ~parial_app:(nt :: parial_app)
             ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx)
             ~args:(nt :: args)
@@ -618,7 +628,7 @@ let check_clause =
     let var = UVar.clone var in
     let assume_hd b is_var (tm : ScopedTerm.t) =
       let _ =
-        let do_filter = true in
+        let do_filter = false in
         let only_check = "" in
         let loc = "test" in
         let _, name, _ = b in
