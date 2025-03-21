@@ -31,14 +31,12 @@ type dtype_abs =
 [@@deriving show, ord]
 
 type dtype_loc = Loc.t * dtype_abs [@@deriving show, ord]
-type t = dtype_loc F.Map.t [@@deriving show, ord]
+type t = (TypeAssignment.skema_w_id * Loc.t) F.Map.t [@@deriving show, ord]
 
 let arr m ~v a b = Arrow (m, v, a, b)
 let is_exp = function Exp _ -> true | _ -> false
 let is_arr = function Arrow _ -> true | _ -> false
 let choose_variadic v full right = if v = Structured.Variadic then full else right
-
-type env = t (* This is for the cleaner signatures in this files for objects with type t *)
 
 let compare_dtype_loc a b = compare_dtype_abs (snd a) (snd b)
 let compare_fname a b = compare_dtype_loc (snd a) (snd b)
@@ -101,12 +99,14 @@ module Compilation = struct
     in
     type2func_lam ~bvars:F.Set.empty x.value
 
-  let type_ass_2func ~loc env (t : TypeAssignment.t MutableOnce.t) =
-    let get_mutable v = match MutableOnce.get v with TypeAssignment.Val v -> v in
+  let get_mutable v = match MutableOnce.get v with TypeAssignment.Val v -> v
+  let type_ass_2func ~loc (env : t) t =
     let rec type2func_app ~loc c args =
       match F.Map.find_opt c env with
       | None -> Exp (List.map (type_ass_2func ~loc) args)
-      | Some (_, f) -> det_beta ~loc (f, List.map (type_ass_2func ~loc) args)
+      | Some (f, _) ->
+          let ta_app = TypeAssignment.apply f args in
+          type_ass_2func ~loc ta_app
     and type_ass_2func ~loc = function
       | TypeAssignment.Prop Function -> Det
       | Prop Relation -> Rel
@@ -123,7 +123,11 @@ module Compilation = struct
       | Arr (MRef m, v, l, r) -> arr ~v Output (type_ass_2func ~loc l) (type_ass_2func ~loc r)
       | UVar a -> if MutableOnce.is_set a then type_ass_2func ~loc (get_mutable a) else BVar (MutableOnce.get_name a)
     in
-    type_ass_2func ~loc (get_mutable t)
+    type_ass_2func ~loc t
+
+  let type_ass_2func_mut 
+   ~loc (env : t) t = 
+   type_ass_2func ~loc env (get_mutable t)
 end
 
 module Aux = struct
@@ -210,6 +214,7 @@ module EnvMaker (M : Map.S) : sig
   val get : t -> M.key -> dtype option
   val mem : t -> M.key -> bool
   val clone : t -> t
+  val remove : t -> M.key -> t
   val empty : t
 end = struct
   type t = dtype ref M.t [@@deriving show]
@@ -239,6 +244,7 @@ module BVar = struct
     match oname with None -> ctx | Some (scope, name, tya) -> add ~loc ctx (name, scope) ~v:(f tya)
 
   let get_oname oname ctx = match oname with None -> None | Some (scope, name, _) -> get ctx (name, scope)
+  let remove_oname ctx oname = match oname with None -> ctx | Some (scope, name, _) -> remove ctx (name, scope)
 end
 
 module Format = struct
@@ -249,7 +255,6 @@ module Format = struct
 end
 
 let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
-  Format.eprintf "Getting functionality of %a which is_var? %b@." F.pp name is_var;
   let get_ctx = function
     | None -> anomaly ~loc (Format.asprintf "Bound var %a should be in the local map" F.pp name)
     | Some e -> e
@@ -258,7 +263,7 @@ let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
   let get_con x =
     if F.equal name F.mainf then Rel (*TODO: what if the main has arguments?*)
     else if x = Scope.dummy_type_decl_id then Any
-    else Compilation.type_ass_2func ~loc env tya
+    else Compilation.type_ass_2func_mut ~loc env tya
   in
   let det_head =
     if is_var then get_var @@ UVar.get var name
@@ -282,12 +287,16 @@ class good_call =
     method get_loc : Loc.t = Option.get obj
   end
 
-module Checker = struct
-  let rec get_tl = function Arrow (_, _, _, r) -> get_tl r | e -> e
+let check_clause =
+  let cnt = ref min_int in
+  let emit () =
+    incr cnt;
+    F.from_string ("*dummy" ^ string_of_int !cnt)
+  in
+  let rec get_tl = function Arrow (_, _, _, r) -> get_tl r | e -> e in
 
-  exception IGNORE
-
-  let is_cut ScopedTerm.{ it } = match it with Const (Global _, name, _) -> F.equal F.cutf name | _ -> false
+  let exception IGNORE in
+  let is_cut ScopedTerm.{ it } = match it with Const (Global _, name, _) -> F.equal F.cutf name | _ -> false in
 
   let rec infer uf ~env ~ctx ~var t : dtype * good_call =
     let rec infer_fold ~was_input ~was_data ~loc ctx d tl =
@@ -316,9 +325,9 @@ module Checker = struct
                let dy, b' = infer ~was_input ctx hd in
                if b'#is_wrong then (* If the recursive call is wrong, we stop and return bottom *)
                  b#set_wrong b'#get_loc
-               else if not ((dy <<= l) ~loc) then (
+               else if not ((dy <<= l) ~loc) then
                  (* If preconditions are not satisfied, we stop and return bottom *)
-                 b#set_wrong loc));
+                 b#set_wrong loc);
             Format.eprintf "In output mode for term %a@." ScopedTerm.pretty hd;
             aux (choose_variadic v d r) tl
         | (BVar _ | Any), _ -> (d, new good_call)
@@ -329,7 +338,7 @@ module Checker = struct
       in
       aux d tl
     and infer_app ctx ~loc is_var ty s tl =
-      let was_data = is_exp (Compilation.type_ass_2func ~loc env ty) in
+      let was_data = is_exp (Compilation.type_ass_2func_mut ~loc env ty) in
       infer_fold ~was_data ~loc ctx (get_dtype uf ~env ~ctx ~var ~loc ~is_var s) tl
     (* and infer_comma ctx ~loc args d =
        match args with
@@ -350,27 +359,29 @@ module Checker = struct
           check_clause uf ~env ~ctx ~var c |> ignore;
           infer ~was_input ctx b
       | Impl (false, _, _) -> (check_clause uf ~env ~ctx ~var t, new good_call)
-      | Lam (oname, _, c) -> (
-          Format.eprintf "In lambda of infer, the ty is %a@." (MutableOnce.pp TypeAssignment.pp) ty;
-          let dty = Compilation.type_ass_2func ~loc env ty in
-          match dty with
-          | Arrow (Input, NotVariadic, l, _) ->
-              let ctx = BVar.add_oname ~loc oname (fun _ -> l) ctx in
-              let r, b = infer ~was_input ctx c in
-              (Arrow (Input, NotVariadic, l, r), b)
-          | Arrow (Output, NotVariadic, l, _) ->
-              let ctx = BVar.add_oname ~loc oname (fun _ -> Any) ctx in
-              let r, b = infer ~was_input ctx c in
-              Format.eprintf "The output binder is %a@." (Format.pp_print_option pp_dtype) (BVar.get_oname oname ctx);
-              (* let out_det = BVar.get_oname oname ctx |> Option.value ~default:Any in
-              (* if the inferred determinacy of the output does not match the expectation, then b is wrong *)
-              if not ((out_det <<= l) ~loc) then b#set_wrong loc; *)
-              (Arrow (Output, NotVariadic, l, r), b)
-          | Any -> (Any, new good_call)
-          | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype dty))
+      | Lam (oname, _, c) ->
+          let _ = check_lam uf ~ctx ~env ~var t in
+          (Compilation.type_ass_2func_mut ~loc env ty, new good_call)
+          (* Format.eprintf "In lambda of infer, the ty is %a@." (MutableOnce.pp TypeAssignment.pp) ty;
+             let dty = Compilation.type_ass_2func_mut ~loc env ty in
+             match dty with
+             | Arrow (Input, NotVariadic, l, _) ->
+                 let ctx = BVar.add_oname ~loc oname (fun _ -> l) ctx in
+                 let r, b = infer ~was_input ctx c in
+                 (Arrow (Input, NotVariadic, l, r), b)
+             | Arrow (Output, NotVariadic, l, _) ->
+                 let ctx = BVar.add_oname ~loc oname (fun _ -> Any) ctx in
+                 let r, b = infer ~was_input ctx c in
+                 Format.eprintf "The output binder is %a@." (Format.pp_print_option pp_dtype) (BVar.get_oname oname ctx);
+                 (* let out_det = BVar.get_oname oname ctx |> Option.value ~default:Any in
+                    (* if the inferred determinacy of the output does not match the expectation, then b is wrong *)
+                    if not ((out_det <<= l) ~loc) then b#set_wrong loc; *)
+                 (Arrow (Output, NotVariadic, l, r), b) *)
+          (* | Any -> (Any, new good_call)
+             | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype dty)) *)
       | Discard ->
-          Format.eprintf "Calling type_ass_2func in Discard@.";
-          (Aux.maximize ~loc @@ Compilation.type_ass_2func ~loc env ty, new good_call)
+          Format.eprintf "Calling type_ass_2func_mut in Discard@.";
+          (Aux.maximize ~loc @@ Compilation.type_ass_2func_mut ~loc env ty, new good_call)
       | CData _ -> (Exp [], new good_call)
       | Cast (t, _) -> infer ~was_input ctx t
       | Spill (_, _) -> spill_err ~loc
@@ -378,7 +389,6 @@ module Checker = struct
     let ((det, is_good) as r) = infer ~was_input:false ctx t in
     Format.eprintf "Result of infer for %a is (%a,%s)@." ScopedTerm.pretty t pp_dtype det is_good#show;
     r
-
   and infer_output uf ~env ~ctx ~var ScopedTerm.{ it; ty; loc } =
     Format.eprintf "Calling deduce output on %a@." ScopedTerm.pretty_ it;
     let rec aux d args =
@@ -403,7 +413,6 @@ module Checker = struct
     | App (b, x, xs) -> aux (get_dtype uf ~env ~ctx ~var ~loc ~is_var:false b) (x :: xs)
     | Var (b, xs) -> aux (get_dtype uf ~env ~ctx ~var ~loc ~is_var:true b) xs
     | _ -> anomaly ~loc @@ Format.asprintf "Invalid term in deduce output %a." ScopedTerm.pretty_ it
-
   and assume uf ~env ~ctx ~var d t =
     Format.eprintf "Calling assume on %a@." ScopedTerm.pretty t;
     let var = ref var in
@@ -463,7 +472,6 @@ module Checker = struct
     in
     assume ~was_input:false ctx d t;
     !var
-
   and assume_output uf ~env ~ctx ~var d tl : UVar.t =
     let rec assume_output d args var =
       match (d, args) with
@@ -475,7 +483,6 @@ module Checker = struct
       | _ -> var
     in
     assume_output d tl var
-
   (* returns the updated environment, the dtype of the term and the loc of the term with max dtype *)
   and check uf ~env ~ctx ~var d t =
     let var = ref var in
@@ -551,15 +558,52 @@ module Checker = struct
       | Impl (false, hd, tl) -> anomaly ~loc "Found clause in prop position"
     in
     (!var, check ~ctx d t)
-
+  and check_lam uf ~env ~ctx ~var t : dtype =
+    let get_ta n args =
+      let ta_sk, _ = F.Map.find n env in
+      let ty = TypeAssignment.apply ta_sk args in
+      MutableOnce.create TypeAssignment.(Val ty)
+    in
+    let otype2term ~loc ty b =
+      let it = match b with None -> ScopedTerm.Discard | Some (a, b, c) -> Const (Bound a, b, c) in
+      ScopedTerm.{ it; ty; loc }
+    in
+    let build_clause args ~ctx ~loc ~ty body =
+      let new_pred = emit () in
+      let args = List.rev args in
+      let b = (Scope.Bound elpi_language, new_pred, t.ty) in
+      let pred_hd = ScopedTerm.(App (b, List.hd args, List.tl args)) in
+      let ctx = BVar.add ~loc ctx (new_pred, elpi_language) ~v:(Compilation.type_ass_2func_mut ~loc env t.ty) in
+      let clause = ScopedTerm.{ ty; it = Impl (false, { it = pred_hd; ty; loc }, body); loc } in
+      (clause, ctx)
+    in
+    let rec aux ~ctx ~args (ScopedTerm.{ it; loc; ty } as t) : dtype =
+      match (TypeAssignment.deref ty, it) with
+      | Arr (m, v, l, r), Lam (b, _, bo) ->
+          aux ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args:(otype2term ~loc ty b :: args) bo
+      | Prop _, Impl (false, _, bo) ->
+          let clause, ctx = build_clause args ~ctx ~loc ~ty bo in
+          check_clause uf ~env ~ctx ~var clause
+      | Prop _, _ ->
+          let clause, ctx = build_clause args ~ctx ~loc ~ty t in
+          check_clause uf ~env ~ctx ~var clause
+      | Cons b, _ when F.Map.mem b env -> aux ~ctx ~args { t with ty = get_ta b [] }
+      | App (b, x, xs), _ when F.Map.mem b env -> aux ~ctx ~args { t with ty = get_ta b (x::xs) }
+      | Cons b, _ -> Exp []
+      (* Below: TODO: check that args have the type expected, for example list prop vs list func *)
+      | App (b, x, xs), _ -> Exp (List.map (Compilation.type_ass_2func env ~loc) (x::xs))
+      | (UVar _ | Any), _ -> failwith "TODO"
+      | Arr _, _ -> failwith "TODO: partial application"
+    in
+    aux ~ctx ~args:[] t
   and check_clause uf ~env ~ctx ~var ScopedTerm.({ it; ty; loc } as t) =
     let ctx = ref (BVar.clone ctx) in
     let var = UVar.clone var in
     let assume_hd b is_var (tm : ScopedTerm.t) =
       let _ =
-        let do_filter = false in
-        let only_check = "remove" in
-        let loc = "_map" in
+        let do_filter = true in
+        let only_check = "" in
+        let loc = "test" in
         let _, name, _ = b in
         let bregexp s = Re.Str.regexp (".*" ^ s ^ ".*") in
         if
@@ -574,17 +618,18 @@ module Checker = struct
       Format.eprintf "Calling assume in hd for terms list %a@." ScopedTerm.pretty tm;
       (det_hd, assume uf ~env ~ctx:!ctx ~var det_hd tm)
     in
-    let rec aux ScopedTerm.{ it; loc } =
+    let rec aux ScopedTerm.{ it; loc; ty } =
       match it with
       | Impl (false, ({ it = Const b } as hd), bo) -> (assume_hd b false hd, hd, Some bo)
       | Impl (false, ({ it = App (b, _, _) } as hd), bo) -> (assume_hd b false hd, hd, Some bo)
       | Const b -> (assume_hd b false t, t, None)
       (* For clauses with quantified unification variables *)
       | App ((Global _, n, _), { it = Lam (oname, ty, body) }, []) when F.equal F.pif n || F.equal F.sigmaf n ->
-          ctx := BVar.add_oname ~loc oname (Compilation.type_ass_2func ~loc env) !ctx;
+          ctx := BVar.add_oname ~loc oname (Compilation.type_ass_2func_mut ~loc env) !ctx;
           aux body
       | App (b, _, _) -> (assume_hd b false t, t, None)
-      | Var (b, _) -> (assume_hd b true t, t, None)
+      | Var (b, _) ->
+          error ~loc (Format.asprintf "DetCheck: Cannot load a clause with flex head (found %a)" ScopedTerm.pretty t)
       | _ -> anomaly ~loc @@ Format.asprintf "Found term %a in prop position" ScopedTerm.pretty_ it
     in
 
@@ -603,11 +648,11 @@ module Checker = struct
     Format.eprintf "** Start checking outputs@.";
     infer_output uf ~env ~ctx:!ctx ~var hd;
     det_pred
-end
-
-let check_clause : uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit =
- fun ~uf ~loc ~env t ->
-  try Checker.check_clause uf ~env ~ctx:BVar.empty ~var:UVar.empty t |> ignore with Checker.IGNORE -> ()
+  in
+  let check_clause : uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit =
+   fun ~uf ~loc ~env t -> try check_clause uf ~env ~ctx:BVar.empty ~var:UVar.empty t |> ignore with IGNORE -> ()
+  in
+  check_clause
 
 let add_type ~loc env ~n v =
   if F.Map.mem n env then error (Format.asprintf "Adding again type_abbrev %a" F.pp n);
@@ -615,18 +660,18 @@ let add_type ~loc env ~n v =
 
 let merge f1 f2 = F.Map.union (fun _ e1 _ -> Some e1) f1 f2
 
-class merger (all_func : env) =
-  object (self)
-    val mutable all_func = all_func
-    val mutable local_func = empty_env
-    method get_all_func = all_func
-    method get_local_func = local_func
+(* class merger (all_func : env) =
+   object (self)
+     val mutable all_func = all_func
+     val mutable local_func = empty_env
+     method get_all_func = all_func
+     method get_local_func = local_func
 
-    method add_ty_abbr ty =
-      let loc, func = Compilation.scope_type_exp2det all_func ty in
-      let n = ty.name in
-      all_func <- add_type ~loc ~n all_func func;
-      local_func <- add_type ~loc ~n local_func func
+     method add_ty_abbr ty =
+       let loc, func = Compilation.scope_type_exp2det all_func ty in
+       let n = ty.name in
+       all_func <- add_type ~loc ~n all_func func;
+       local_func <- add_type ~loc ~n local_func func
 
-    method merge : env = merge all_func local_func
-  end
+     method merge : env = merge all_func local_func
+   end *)

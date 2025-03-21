@@ -1,0 +1,12 @@
+% NO
+
+func f.
+func f1 fprop.
+
+pred rel.
+
+f :-
+  X = ((x\ f1 x :- x) : (pred i:fprop)),
+  X rel.
+
+main.

@@ -1,0 +1,14 @@
+% NO
+
+func f.
+func f1 fprop.
+pred rel.
+
+typeabbrev t (func fprop).
+
+f :-
+  X = ((x\ f1 x :- x) : t),
+  % Good lambda in X, but wrongly called below
+  X rel.
+
+main.

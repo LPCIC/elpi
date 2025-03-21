@@ -275,7 +275,6 @@ module Assembled = struct
     kinds : Arity.t F.Map.t;
     types : TypeAssignment.overloaded_skema_with_id F.Map.t;
     type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
-    functional_preds: Determinacy_checker.t;
     type_uf : UF.t
   }
   [@@deriving show]
@@ -304,7 +303,7 @@ module Assembled = struct
   let empty_signature () = {
     kinds = F.Map.empty;
     types = F.Map.empty;
-    type_abbrevs = F.Map.empty; functional_preds = Determinacy_checker.empty_env;
+    type_abbrevs = F.Map.empty;
     toplevel_macros = F.Map.empty;
     type_uf = UF.empty
   }
@@ -1362,12 +1361,11 @@ module Check : sig
 end = struct
 
   let check_signature ~flags builtins symbols (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * _=
-    let { Assembled.functional_preds = ofp; kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otuf } = base_signature in
+    let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otuf } = base_signature in
     
     let { Flat.kinds; types; type_abbrevs; toplevel_macros; type_uf } = signature in
 
     let all_kinds = Flatten.merge_kinds ok kinds in
-    let functionality_builder = new Determinacy_checker.merger ofp in
     let check_k_begin = Unix.gettimeofday () in
     let all_type_abbrevs, type_abbrevs =
       List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, scoped_ty) ->
@@ -1380,8 +1378,7 @@ end = struct
           error ~loc
             ("Duplicate type abbreviation for " ^ F.show name ^
               ". Previous declaration: " ^ Loc.show otherloc)
-        end
-        else functionality_builder#add_ty_abbr scoped_ty;
+        end;
         F.Map.add name ((id, ty),loc) all_type_abbrevs, F.Map.add name ((id,ty),loc) type_abbrevs)
         (ota,F.Map.empty) type_abbrevs in
     let check_k_end = Unix.gettimeofday () in
@@ -1422,10 +1419,9 @@ end = struct
     let all_type_uf = UF.merge otuf type_uf in
     let all_type_uf, all_types = Flatten.merge_type_assignments all_type_uf ot types in
     let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
-    let all_functional_preds = functionality_builder#merge in
 
-    { Assembled.functional_preds = functionality_builder#get_local_func; kinds; types; type_abbrevs; toplevel_macros; type_uf },
-    { Assembled.functional_preds = all_functional_preds; kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; type_uf = all_type_uf },
+    { Assembled.kinds; types; type_abbrevs; toplevel_macros; type_uf },
+    { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; type_uf = all_type_uf },
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types_indexing
 
@@ -1434,7 +1430,7 @@ end = struct
     let signature, precomputed_signature, check_sig, types_indexing = check_signature ~flags base.Assembled.builtins base.Assembled.symbols base.Assembled.signature u.code.Flat.signature in
 
     let { version; code = { Flat.clauses; chr; builtins } } = u in
-    let { Assembled.functional_preds; kinds; types; type_abbrevs; toplevel_macros; type_uf } = precomputed_signature in
+    let { Assembled.kinds; types; type_abbrevs; toplevel_macros; type_uf } = precomputed_signature in
 
     let check_begin = Unix.gettimeofday () in
 
@@ -1447,7 +1443,7 @@ end = struct
       (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
       (* if typecheck then Mode_checker.check ~is_rule:true ~type_abbrevs ~kinds ~types spilled.body; *)
-      if typecheck then Determinacy_checker.check_clause ~uf:type_uf ~loc ~env:functional_preds spilled.body;
+      if typecheck then Determinacy_checker.check_clause ~uf:type_uf ~loc ~env:type_abbrevs spilled.body;
       unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
 
     let clauses = List.rev clauses in
@@ -1773,15 +1769,15 @@ end = struct
     List.fold_left (extend1_chr ~builtins flags state clique) (symbols,chr) rules
    
 let extend1_signature base_signature (signature : checked_compilation_unit_signature) =
-  let { Assembled.kinds = ok; functional_preds = ofp; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otyuf } = base_signature in
-  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; functional_preds; type_uf } = signature in
+  let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otyuf } = base_signature in
+  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; type_uf } = signature in
   let kinds = Flatten.merge_kinds ok kinds in
   let type_uf = UF.merge otyuf type_uf in
   let type_uf, type_abbrevs = Flatten.merge_checked_type_abbrevs type_uf ota type_abbrevs in
   let type_uf, types = Flatten.merge_type_assignments type_uf ot types in
   let toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
 
-  { Assembled.kinds; types; type_abbrevs; functional_preds; toplevel_macros; type_uf }
+  { Assembled.kinds; types; type_abbrevs; toplevel_macros; type_uf }
 
 let extend1 flags (state, base) unit =
 
