@@ -57,7 +57,8 @@ val elpi_language : Compiler_data.Scope.language
 val elpi : Compiler_data.QuotationHooks.quotation
 
 val uvk : uvar_body StrMap.t State.component
-val pp : Format.formatter -> uvar_body -> unit
+val pp_uvar_body : Format.formatter -> uvar_body -> unit
+val pp_uvar_body_raw : Format.formatter -> uvar_body -> unit
 
 val compile_term_to_raw_term :
   ?check:bool -> State.t -> program ->
