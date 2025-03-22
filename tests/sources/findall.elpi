@@ -6,7 +6,7 @@ p 2 2.
 
 type test1, test2, test3, test4, test5 prop.
 
-test1 :- std.findall (p A B) [p 1 1, p 1 2, p 2 2].
+test1 :- std.findall (p _A _B) [p 1 1, p 1 2, p 2 2].
 test2 :- std.findall (p _ _) [p X 1, p 1 2, p 2 2], not(var X).
 test3 :-
   pi q\
@@ -30,7 +30,7 @@ test5 :-
   pi q\
     q 1 A =>
     q 2 A =>
-      (std.findall (q _ Z) [q 2 X, q 1 Y], same_var X Y).
+      (dprint A, std.spy (std.findall (q _ _Z) [q 2 X, q 1 Y]), same_var X Y).
 % this works because there is no restriction
 
 main :- test1, print 1,

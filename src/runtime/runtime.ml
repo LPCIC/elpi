@@ -675,6 +675,9 @@ module HO : sig
 
   val full_deref : adepth:int -> env -> depth:int -> term -> term
 
+  (* freshens all uvars (unless keep_if_outside), discards blocker status *)
+  val copy_heap_drop_csts : depth:int -> ?keep_if_outside:uvar_body IntMap.t -> term -> term * uvar_body IntMap.t
+
   (* Head of an heap term *)
   val deref_head : depth:int -> term -> term
 
@@ -1283,6 +1286,62 @@ and deref_uv ?avoid ~from ~to_ args t =
   end]
 
 ;;
+
+let copy_heap_drop_csts ~depth ?keep_if_outside x =
+  let m : uvar_body IntMap.t ref =
+    match keep_if_outside with
+    | None -> ref IntMap.empty
+    | Some m -> ref m in
+  let alloc_copy r =
+    try IntMap.find (uvar_id r) !m
+    with Not_found ->
+      if keep_if_outside <> None then r
+      else
+        let r' = oref C.dummy in
+        m := IntMap.add (uvar_id r) r' !m;
+        r' in
+  let alloc_copy r =
+    let r' = alloc_copy r in
+    Format.eprintf "  copy uv %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r,0,0)) (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r',0,0));
+    r' in
+  let rec maux depth x =
+  match x with
+  | Const _ -> x
+  | Lam f -> let f' = maux depth f in if f == f' then x else Lam f'
+  | App (c, t, l) ->
+     let t' = maux depth t in 
+     let l' = smart_map2 maux depth l in
+     if t == t' && l == l' then x
+     else App(c,t',l') 
+  | Builtin (c,l) ->
+     let l' = smart_map2 maux depth l in
+     if l == l' then x else Builtin (c,l')
+  | CData _ -> x
+  | Cons(hd,tl) ->
+     let hd' = maux depth hd in
+     let tl' = maux depth tl in
+     if hd == hd' && tl == tl' then x else Cons(hd',tl')
+  | Nil -> x
+  | Discard ->
+     let r = oref C.dummy in
+     UVar(r,depth,0)
+  (* deref *)
+  | UVar ({ contents = t }, vardepth, args) when t != C.dummy ->
+     maux depth (deref_uv ~from:vardepth ~to_:depth args t)
+  | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy ->
+     maux depth (deref_appuv ~from:vardepth ~to_:depth args t)
+  | Arg _
+  | AppArg _ -> anomaly "not a heap term"
+  | UVar (r,vardepth,argsno) ->
+     let r' = alloc_copy r in
+     UVar (r',vardepth,argsno)
+  | AppUVar (r,vardepth,args) ->
+     let r' = alloc_copy r in
+     AppUVar (r',vardepth,smart_map2 maux depth args)
+    in
+    let x' = maux depth x in
+    Format.eprintf "copy %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) x (uppterm depth [] ~argsdepth:0 empty_env) x';
+    x', !m
 
 (* }}} *)
 
@@ -4063,13 +4122,11 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
 
   and findall depth p g s (gid[@trace]) gs next alts cutto_alts =
     [%spy "user:rule" ~rid ~gid pp_string "findall"];
-    let avoid = oref C.dummy in (* to force a copy *)
-    let copy = move ~argsdepth:depth ~from:depth ~to_:depth empty_env ~avoid in
-    let g = copy g in (* so that Discard becomes a variable *)
+    let g, fresh_g = copy_heap_drop_csts ~depth g in (* so that Discard becomes a variable *)
     [%trace "findall" ~rid ("@[<hov 2>query: %a@]" (uppterm depth [] ~argsdepth:0 empty_env) g) begin
     let executable = {
       (* same program *)
-      compiled_program = p; 
+    compiled_program = p; 
       (* no meta meta level *)
       chr = CHR.empty;
       initial_goal = g;
@@ -4084,7 +4141,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     let add_sol () =
       if get CS.Ugly.delayed <> [] then
         error "findall search must not declare constraint(s)";
-      let sol = copy g in
+      let sol, _ = HO.copy_heap_drop_csts ~depth ~keep_if_outside:fresh_g g in
       [%spy "findall solution:" ~rid ~gid (ppterm depth [] ~argsdepth:0 empty_env) g];
       solutions := sol :: !solutions in
     let alternatives = ref noalts in
@@ -4097,9 +4154,10 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
       done;
       raise No_clause
     with No_clause ->
-      destroy ();
       let solutions = list_to_lp_list (List.rev !solutions) in
-      [%spy "findall solutions:" ~rid ~gid (ppterm depth [] ~argsdepth:0 empty_env) solutions];
+      [%spy "findall solutions:" ~rid ~gid (pterm depth [] ~argsdepth:0 empty_env) solutions];
+      destroy ();
+      [%spy "findall solutions:" ~rid ~gid (pterm depth [] ~argsdepth:0 empty_env) solutions];
       match unif ~argsdepth:depth ~matching:false (gid[@trace]) depth empty_env depth s solutions with
       | false ->
         [%spy "user:rule:findall" ~rid ~gid pp_string "fail"];
