@@ -768,7 +768,7 @@ module FlexibleData = struct
       let pp k uv _ () =
            Format.fprintf fmt "@[<h>%a@ <-> %a@]@ " T.pp k Elpi.pp uv
         in
-      Format.fprintf fmt "@[<v>";
+      Format.fprintf fmt "@[<hov>";
       fold pp m ();
       Format.fprintf fmt "@]"
     ;;
