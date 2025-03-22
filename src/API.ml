@@ -1363,6 +1363,76 @@ module Utils = struct
 
   let version_parser = Util.version_parser
 
+  let error_cmp_flex ~depth t1 t2 = error "cmp_term on non-ground terms"
+
+let rec cmp_term ~depth t1 t2 =
+  let open RawData in
+  match look ~depth t1, look ~depth t2 with
+  | Nil, Nil -> 0
+  | Nil, (Cons _ | Const _ | App _ | Lam _ | Builtin _ | CData _ | UnifVar _) -> -1
+
+  | Cons(x,xs), Cons(y,ys) ->
+      let cmp_x = cmp_term ~depth x y in
+      if cmp_x == 0 then cmp_term ~depth xs ys
+      else cmp_x
+  | Cons _, (Const _ | App _ | Lam _ | Builtin _ | CData _ | UnifVar _) -> -1
+  | Cons _, Nil -> 1
+
+  | Const c1, Const c2 -> c1 - c2
+  | Const _, (App _ | Lam _ | Builtin _ | CData _ | UnifVar _) -> -1
+  | Const _, (Cons _ | Nil) -> 1
+
+  | Lam t1, Lam t2 -> cmp_term ~depth:(depth+1) t1 t2
+  | Lam _, (App _ | Builtin _ | CData _ | UnifVar _) -> -1
+  | Lam _, (Const _ | Cons _ | Nil) -> 1
+
+  | App(c1,x,xs), App(c2,y,ys) ->
+      let cmp_c1 = c1 - c2 in
+      if cmp_c1 == 0 then
+        let cmp_x = cmp_term ~depth x y in
+        if cmp_x == 0 then cmp_terms ~depth xs ys else cmp_x
+      else cmp_c1
+  | App _, (Builtin _ | CData _ | UnifVar _) -> -1
+  | App _, (Lam _ | Const _ | Cons _ | Nil) -> 1
+
+  | Builtin(c1,xs), Builtin(c2,ys) ->
+      let cmp_c1 = cmp_builtin c1 c2 in
+      if cmp_c1 == 0 then cmp_terms ~depth xs ys else cmp_c1
+  | Builtin _, (CData _ | UnifVar _) -> -1
+  | Builtin _, (App _ | Lam _ | Const _ | Cons _ | Nil) -> 1
+
+  | CData d1, CData d2 -> RawOpaqueData.compare d1 d2
+  | CData _, UnifVar _ -> -1
+  | CData _, (Builtin _ | App _ | Lam _ | Const _ | Cons _ | Nil) -> 1
+
+  | UnifVar(b1,xs), UnifVar(b2,ys) ->
+      if FlexibleData.Elpi.equal b1 b2 then
+        if cmp_terms ~depth xs ys == 0 then 0
+        else error_cmp_flex ~depth t1 t2
+      else error_cmp_flex ~depth t1 t2
+  | UnifVar _, (CData _ | Builtin _ | App _ | Lam _ | Const _ | Cons _ | Nil) -> 1
+
+and cmp_terms ~depth l1 l2 =
+  match l1, l2 with
+  | [], [] -> 0
+  | [], _ :: _ -> -1
+  | _ :: _, [] -> 1
+  | x :: xs, y :: ys ->
+      let cmp_x = cmp_term ~depth x y in
+      if cmp_x == 0 then cmp_terms ~depth xs ys else cmp_x
+
+let rec check_ground ~depth t =
+  let open RawData in
+  match look ~depth t with
+  | Nil | Const _ | CData _ -> ()
+  | Lam t -> check_ground ~depth:(depth + 1) t
+  | Cons(x,xs) -> check_ground ~depth x; check_ground ~depth xs
+  | Builtin(_,l) -> List.iter (check_ground ~depth) l
+  | App(_,x,xs) -> check_ground ~depth x; List.iter (check_ground ~depth) xs
+  | UnifVar _ -> raise BuiltInPredicate.No_clause
+
+
+
 end
 
 module RawPp = struct
