@@ -290,7 +290,7 @@ let check_clause =
     (match b with Scope.Global _ -> true | _ -> false) && (F.equal F.pif f || F.equal F.sigmaf f)
   in
 
-  let cnt = ref min_int in
+  let cnt = ref 0 in
   let emit () =
     incr cnt;
     F.from_string ("*dummy" ^ string_of_int !cnt)
@@ -613,6 +613,9 @@ let check_clause =
       | ((UVar _ | Any) as t), _ -> Compilation.type_ass_2func env ~loc t
       | Arr (_, _, l, _), Lam (b, _, bo) ->
           aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args:(otype2term ~loc l b :: args) bo
+      | Arr (_, Structured.Variadic, _, r), _ ->
+          let b = Some (elpi_language, emit (), TypeAssignment.mk_mut r) in
+          aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args { t with ty = TypeAssignment.mk_mut r }
       | Arr (_, _, l, r), _ ->
           (* Partial app: type is Arr but body is not Lam *)
           let b = Some (elpi_language, emit (), TypeAssignment.mk_mut l) in
@@ -680,10 +683,6 @@ let check_clause =
    fun ~uf ~loc ~env t -> try check_clause uf ~env ~ctx:BVar.empty ~var:UVar.empty t |> ignore with IGNORE -> ()
   in
   check_clause
-
-let add_type ~loc env ~n v =
-  if F.Map.mem n env then error (Format.asprintf "Adding again type_abbrev %a" F.pp n);
-  F.Map.add n (loc, v) env
 
 let merge f1 f2 = F.Map.union (fun _ e1 _ -> Some e1) f1 f2
 
