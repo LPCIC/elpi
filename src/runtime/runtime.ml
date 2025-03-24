@@ -1697,6 +1697,8 @@ let eta_contract_flex depth xdepth ~argsdepth e t =
   eta_contract_flex depth depth xdepth ~argsdepth e t []
   [@@inline]
 
+let uvar_uvar_assignment_order r1 r2 = uvar_id r1 > uvar_id r2
+
 let isLam = function Lam _ -> true | _ -> false
   
 let rec unif argsdepth matching depth adepth a bdepth b e =
@@ -1805,8 +1807,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       e.(i) <- v;
       true
      with RestrictionFailure -> false end
-   | UVar(r1,_,0), UVar (r2,_,0) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 -> unif argsdepth matching depth bdepth b adepth a e
-   | AppUVar(r1,_,_), UVar (r2,_,0) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 -> unif argsdepth matching depth bdepth b adepth a e
+   | UVar(r1,_,0), UVar (r2,_,0) when uvar_uvar_assignment_order r1 r2-> unif argsdepth matching depth bdepth b adepth a e
+   | AppUVar(r1,_,_), UVar (r2,_,0) when uvar_uvar_assignment_order r1 r2 -> unif argsdepth matching depth bdepth b adepth a e
    | _, UVar (r,origdepth,0) ->
        begin try
          let t =
@@ -1864,8 +1866,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       let bdepth = adepth in (* like in deref for arg *)
       let b = deoptimize_uv_w_args @@ deref_uv ~from:argsdepth ~to_:(bdepth+depth) args v in
       unif argsdepth matching depth adepth a bdepth b e
-   | UVar(r1,_,a1), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a1 + a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
-   | AppUVar(r1,_,_), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e
+   | UVar(r1,_,a1), UVar (r2,_,a2) when uvar_uvar_assignment_order r1 r2 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
+   | AppUVar(r1,_,_), UVar (r2,_,a2) when uvar_uvar_assignment_order r1 r2 -> unif argsdepth matching depth bdepth b adepth a e
 
    | _, UVar (r,origdepth,args) when args > 0 && match a with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = make_lambdas origdepth (args - depth) in
@@ -1905,7 +1907,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        CS.declare_new { kind; blockers };
        true
        end else error (error_msg_hard_unif a b)
-   | AppUVar(r2,_,_), (AppUVar (r1,_,_) | UVar (r1,_,_)) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 ->
+   | AppUVar(r2,_,_), (AppUVar (r1,_,_) | UVar (r1,_,_)) when uvar_uvar_assignment_order r1 r2 ->
        unif argsdepth matching depth bdepth b adepth a e
    | AppUVar (r, lvl,(args as oargs)), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
@@ -4155,9 +4157,9 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
       raise No_clause
     with No_clause ->
       let solutions = list_to_lp_list (List.rev !solutions) in
-      [%spy "findall solutions:" ~rid ~gid (pterm depth [] ~argsdepth:0 empty_env) solutions];
+      [%spy "findall solutions:" ~rid ~gid (ppterm depth [] ~argsdepth:0 empty_env) solutions];
       destroy ();
-      [%spy "findall solutions:" ~rid ~gid (pterm depth [] ~argsdepth:0 empty_env) solutions];
+      [%spy "findall solutions:" ~rid ~gid (ppterm depth [] ~argsdepth:0 empty_env) solutions];
       match unif ~argsdepth:depth ~matching:false (gid[@trace]) depth empty_env depth s solutions with
       | false ->
         [%spy "user:rule:findall" ~rid ~gid pp_string "fail"];

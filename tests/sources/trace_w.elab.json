@@ -1392,7 +1392,7 @@
                   "rule_loc": [ "Context", 12 ]
                 }
               ],
-              "events": [ [ "Assign", "X5 := X6" ] ]
+              "events": [ [ "Assign", "X6 := X5" ] ]
             },
             "siblings": [],
             "siblings_aggregated_outcome": "Success"
@@ -1528,7 +1528,7 @@
       "Inference",
       {
         "current_goal_id": 18,
-        "current_goal_text": "gammabar (mono (X6 ===> X6)) X1",
+        "current_goal_text": "gammabar (mono (X5 ===> X5)) X1",
         "current_goal_predicate": "gammabar",
         "failed_attempts": [],
         "successful_attempts": [
@@ -1550,12 +1550,12 @@
                 }
               ],
               "events": [
-                [ "Assign", "A0 := X6 ===> X6" ], [ "Assign", "A1 := X1" ]
+                [ "Assign", "A0 := X5 ===> X5" ], [ "Assign", "A1 := X1" ]
               ]
             },
             "siblings": [
               {
-                "goal_text": "new_constraint (gammabar (mono (X6 ===> X6)) X1) [_]",
+                "goal_text": "new_constraint (gammabar (mono (X5 ===> X5)) X1) [_]",
                 "goal_id": 23
               }
             ],
@@ -1671,7 +1671,7 @@
       "Inference",
       {
         "current_goal_id": 23,
-        "current_goal_text": "new_constraint (gammabar (mono (X6 ===> X6)) X1) [_]",
+        "current_goal_text": "new_constraint (gammabar (mono (X5 ===> X5)) X1) [_]",
         "current_goal_predicate": "new_constraint",
         "failed_attempts": [],
         "successful_attempts": [
@@ -1693,13 +1693,13 @@
                 }
               ],
               "events": [
-                [ "Assign", "A0 := gammabar (mono (X6 ===> X6)) X1" ],
+                [ "Assign", "A0 := gammabar (mono (X5 ===> X5)) X1" ],
                 [ "Assign", "A1 := [_]" ]
               ]
             },
             "siblings": [
               {
-                "goal_text": "declare_constraint (gammabar (mono (X6 ===> X6)) X1) [_]",
+                "goal_text": "declare_constraint (gammabar (mono (X5 ===> X5)) X1) [_]",
                 "goal_id": 24
               }
             ],
@@ -1834,9 +1834,9 @@
       "Suspend",
       {
         "suspend_goal_id": 24,
-        "suspend_goal_text": "declare_constraint (gammabar (mono (X6 ===> X6)) X1) [_]",
+        "suspend_goal_text": "declare_constraint (gammabar (mono (X5 ===> X5)) X1) [_]",
         "suspend_sibling": {
-          "goal_text": "gammabar (mono (X6 ===> X6)) X1",
+          "goal_text": "gammabar (mono (X5 ===> X5)) X1",
           "goal_id": 25
         },
         "suspend_stack": [
@@ -5987,7 +5987,7 @@
         ],
         "chr_store_before": [
           {
-            "goal_text": " gammabar (mono (X6 ===> X6)) X1  /* suspended on X7 */",
+            "goal_text": " gammabar (mono (X5 ===> X5)) X1  /* suspended on X7 */",
             "goal_id": 25
           },
           { "goal_text": " theta []  /* suspended on X7 */", "goal_id": 16 }
