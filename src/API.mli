@@ -932,6 +932,10 @@ module FlexibleData : sig
     val equal : t -> t -> bool
     val hash : t -> int
     val fresh : unit -> Ast.Name.t
+
+    (** dbug print *)
+    val pp_raw :  Format.formatter -> t -> unit
+    val show_raw :  t -> string
   end
 
   module type Host = sig

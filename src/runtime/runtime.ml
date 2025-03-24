@@ -156,24 +156,24 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     Fmt.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
      (pplist pparg ?pplastelem:pplastarg " ") args in
   let ppconstant f c = Fmt.fprintf f "%s" (C.show ~table:pp_ctx.table c) in
-  let rec pp_uvar prec depth vardepth args f r =
-   if !!r == C.dummy then begin
-    let s =
-     try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
-     with Not_found ->
+  let string_of_uvar_body r =
+    try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
+      with Not_found ->
       let m, n = !(pp_ctx.uv_names) in
       let s = "X" ^ string_of_int n in
       let n = n + 1 in
       let m = IntMap.add (uvar_id r) s m in
       pp_ctx.uv_names := (m,n);
-      s
-    in
+      s in
+  let rec pp_uvar prec depth vardepth args f r =
+   if !!r == C.dummy then begin
+    let s = string_of_uvar_body r in
      Fmt.fprintf f "%s%s%s" s
       (if vardepth=0 then "" else "^" ^ string_of_int vardepth)
       (if args=0 then "" else "+" ^ string_of_int args)
    end else if nice then begin
     aux prec depth f (!do_deref ~from:vardepth ~to_:depth args !!r)
-   end else Fmt.fprintf f "<%a>_%d" (aux min_prec vardepth) !!r vardepth
+   end else Fmt.fprintf f "<%s|%a>_%d" (string_of_uvar_body r) (aux min_prec vardepth) !!r vardepth
   and pp_arg prec depth f n =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
    if try env.(n) == C.dummy with Invalid_argument _ -> true then
@@ -674,6 +674,9 @@ module HO : sig
   val mknLam : int -> term -> term
 
   val full_deref : adepth:int -> env -> depth:int -> term -> term
+
+  (* freshens all uvars (unless keep_if_outside), discards blocker status *)
+  val copy_heap_drop_csts : depth:int -> ?keep_if_outside:uvar_body IntMap.t -> term -> term * uvar_body IntMap.t
 
   (* Head of an heap term *)
   val deref_head : depth:int -> term -> term
@@ -1284,6 +1287,62 @@ and deref_uv ?avoid ~from ~to_ args t =
 
 ;;
 
+let copy_heap_drop_csts ~depth ?keep_if_outside x =
+  let m : uvar_body IntMap.t ref =
+    match keep_if_outside with
+    | None -> ref IntMap.empty
+    | Some m -> ref m in
+  let alloc_copy r =
+    try IntMap.find (uvar_id r) !m
+    with Not_found ->
+      if keep_if_outside <> None then r
+      else
+        let r' = oref C.dummy in
+        m := IntMap.add (uvar_id r) r' !m;
+        r' in
+  let alloc_copy r =
+    let r' = alloc_copy r in
+    Format.eprintf "  copy uv %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r,0,0)) (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r',0,0));
+    r' in
+  let rec maux depth x =
+  match x with
+  | Const _ -> x
+  | Lam f -> let f' = maux depth f in if f == f' then x else Lam f'
+  | App (c, t, l) ->
+     let t' = maux depth t in 
+     let l' = smart_map2 maux depth l in
+     if t == t' && l == l' then x
+     else App(c,t',l') 
+  | Builtin (c,l) ->
+     let l' = smart_map2 maux depth l in
+     if l == l' then x else Builtin (c,l')
+  | CData _ -> x
+  | Cons(hd,tl) ->
+     let hd' = maux depth hd in
+     let tl' = maux depth tl in
+     if hd == hd' && tl == tl' then x else Cons(hd',tl')
+  | Nil -> x
+  | Discard ->
+     let r = oref C.dummy in
+     UVar(r,depth,0)
+  (* deref *)
+  | UVar ({ contents = t }, vardepth, args) when t != C.dummy ->
+     maux depth (deref_uv ~from:vardepth ~to_:depth args t)
+  | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy ->
+     maux depth (deref_appuv ~from:vardepth ~to_:depth args t)
+  | Arg _
+  | AppArg _ -> anomaly "not a heap term"
+  | UVar (r,vardepth,argsno) ->
+     let r' = alloc_copy r in
+     UVar (r',vardepth,argsno)
+  | AppUVar (r,vardepth,args) ->
+     let r' = alloc_copy r in
+     AppUVar (r',vardepth,smart_map2 maux depth args)
+    in
+    let x' = maux depth x in
+    Format.eprintf "copy %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) x (uppterm depth [] ~argsdepth:0 empty_env) x';
+    x', !m
+
 (* }}} *)
 
 (* {{{ ************** unification ******************************* *)
@@ -1638,6 +1697,8 @@ let eta_contract_flex depth xdepth ~argsdepth e t =
   eta_contract_flex depth depth xdepth ~argsdepth e t []
   [@@inline]
 
+let uvar_uvar_assignment_order r1 r2 = uvar_id r1 > uvar_id r2
+
 let isLam = function Lam _ -> true | _ -> false
   
 let rec unif argsdepth matching depth adepth a bdepth b e =
@@ -1746,8 +1807,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       e.(i) <- v;
       true
      with RestrictionFailure -> false end
-   | UVar(r1,_,0), UVar (r2,_,0) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 -> unif argsdepth matching depth bdepth b adepth a e
-   | AppUVar(r1,_,_), UVar (r2,_,0) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 -> unif argsdepth matching depth bdepth b adepth a e
+   | UVar(r1,_,0), UVar (r2,_,0) when uvar_uvar_assignment_order r1 r2-> unif argsdepth matching depth bdepth b adepth a e
+   | AppUVar(r1,_,_), UVar (r2,_,0) when uvar_uvar_assignment_order r1 r2 -> unif argsdepth matching depth bdepth b adepth a e
    | _, UVar (r,origdepth,0) ->
        begin try
          let t =
@@ -1805,8 +1866,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       let bdepth = adepth in (* like in deref for arg *)
       let b = deoptimize_uv_w_args @@ deref_uv ~from:argsdepth ~to_:(bdepth+depth) args v in
       unif argsdepth matching depth adepth a bdepth b e
-   | UVar(r1,_,a1), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a1 + a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
-   | AppUVar(r1,_,_), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e
+   | UVar(r1,_,a1), UVar (r2,_,a2) when uvar_uvar_assignment_order r1 r2 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
+   | AppUVar(r1,_,_), UVar (r2,_,a2) when uvar_uvar_assignment_order r1 r2 -> unif argsdepth matching depth bdepth b adepth a e
 
    | _, UVar (r,origdepth,args) when args > 0 && match a with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = make_lambdas origdepth (args - depth) in
@@ -1846,7 +1907,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        CS.declare_new { kind; blockers };
        true
        end else error (error_msg_hard_unif a b)
-   | AppUVar(r2,_,_), (AppUVar (r1,_,_) | UVar (r1,_,_)) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 ->
+   | AppUVar(r2,_,_), (AppUVar (r1,_,_) | UVar (r1,_,_)) when uvar_uvar_assignment_order r1 r2 ->
        unif argsdepth matching depth bdepth b adepth a e
    | AppUVar (r, lvl,(args as oargs)), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
@@ -4063,13 +4124,11 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
 
   and findall depth p g s (gid[@trace]) gs next alts cutto_alts =
     [%spy "user:rule" ~rid ~gid pp_string "findall"];
-    let avoid = oref C.dummy in (* to force a copy *)
-    let copy = move ~argsdepth:depth ~from:depth ~to_:depth empty_env ~avoid in
-    let g = copy g in (* so that Discard becomes a variable *)
+    let g, fresh_g = copy_heap_drop_csts ~depth g in (* so that Discard becomes a variable *)
     [%trace "findall" ~rid ("@[<hov 2>query: %a@]" (uppterm depth [] ~argsdepth:0 empty_env) g) begin
     let executable = {
       (* same program *)
-      compiled_program = p; 
+    compiled_program = p; 
       (* no meta meta level *)
       chr = CHR.empty;
       initial_goal = g;
@@ -4084,7 +4143,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     let add_sol () =
       if get CS.Ugly.delayed <> [] then
         error "findall search must not declare constraint(s)";
-      let sol = copy g in
+      let sol, _ = HO.copy_heap_drop_csts ~depth ~keep_if_outside:fresh_g g in
       [%spy "findall solution:" ~rid ~gid (ppterm depth [] ~argsdepth:0 empty_env) g];
       solutions := sol :: !solutions in
     let alternatives = ref noalts in
@@ -4097,8 +4156,9 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
       done;
       raise No_clause
     with No_clause ->
-      destroy ();
       let solutions = list_to_lp_list (List.rev !solutions) in
+      [%spy "findall solutions:" ~rid ~gid (ppterm depth [] ~argsdepth:0 empty_env) solutions];
+      destroy ();
       [%spy "findall solutions:" ~rid ~gid (ppterm depth [] ~argsdepth:0 empty_env) solutions];
       match unif ~argsdepth:depth ~matching:false (gid[@trace]) depth empty_env depth s solutions with
       | false ->
