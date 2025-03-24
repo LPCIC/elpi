@@ -1715,7 +1715,27 @@ end = struct
         error ?loc ("Declaring a clause for built in predicate " ^ F.show @@ SymbolMap.global_name state symbols c)
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
+
+    (* TODO: fare solo se è dichiarato funzionale, magari il det check lo scrive nella clausola *)
+
+    let hd_query p { args; mode } =
+      let rec mkpats args mode =
+        match args, mode with
+        | [], [] -> []
+        | a::args, (Mode.Fo Input | Ho(Input,_)) :: mode -> a :: mkpats args mode
+        | _::args, _ :: mode -> mkDiscard :: mkpats args mode
+        | _::args, [] -> warn ~loc ("args/mode mismatch: " ^ String.concat " " ( List.map  show_term args) ^ " != " ^ Mode.show_hos mode); mkDiscard :: mkpats args mode
+        | _ -> assert false
+      in
+      R.mkAppL p @@ mkpats args mode in
+    let overlaps = R.CompileTime.get_clauses ~depth:0 p (hd_query p cl) index in
+    let has_bang { hyps } = List.exists (fun t -> t = mkBuiltin Global_symbols.cutc []) hyps in
+    if (not(List.for_all has_bang (Bl.to_list overlaps))) then warn ~loc "overlap";
+
     let index = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index in
+
+
+
     (graft,id,p,cl) :: clauses, symbols, index
 
 

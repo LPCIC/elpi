@@ -2948,7 +2948,7 @@ let trie_goal_args goal : term list = match goal with
 
 let cmp_timestamp { timestamp = tx } { timestamp = ty } = lex_insertion tx ty
 
-let get_clauses ~depth predicate goal { index = { idx = m } } =
+let get_clauses ~depth predicate goal { idx = m } =
  let rc =
    try
      match Ptmap.find predicate m with
@@ -4040,12 +4040,12 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     | AppUVar ({contents = t}, from, args) when t != C.dummy -> [%spy "user:rule" ~rid ~gid pp_string "deref"]; [%spy "user:rule:deref" ~rid ~gid pp_string "success"];
        [%tcall run depth p (deref_appuv ~from ~to_:depth args t) (gid[@trace]) gs next alts cutto_alts]
     | Const k ->
-       let clauses = get_clauses ~depth k g p in
+       let clauses = get_clauses ~depth k g p.index in
        [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) (Bl.to_list clauses)];
        [%tcall backchain depth p (k, C.dummy, [], gs) (gid[@trace]) next alts cutto_alts clauses]
     | App (k,x,xs) ->
-       let clauses = get_clauses ~depth k g p in
+       let clauses = get_clauses ~depth k g p.index in
        [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) (Bl.to_list clauses)];
        [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts cutto_alts clauses]
@@ -4414,4 +4414,5 @@ module CompileTime = struct
   let update_indexing = update_indexing
   let add_to_index = add_to_index
   let clausify1 = Clausify.clausify1  
+  let get_clauses = get_clauses
 end

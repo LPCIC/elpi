@@ -84,4 +84,6 @@ module CompileTime : sig
     modes:(constant -> Mode.hos) -> (* for caching it in the clause *)
     nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 
+
+  val get_clauses : depth:int -> constant -> term -> index -> clause Bl.scan
 end

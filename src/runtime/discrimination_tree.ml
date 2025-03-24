@@ -295,7 +295,7 @@ let pp pp_a fmt { t } : unit = Trie.pp (fun fmt data -> pp_a fmt data) fmt t
 let show pp_a { t } : string = Trie.show (fun fmt data -> pp_a fmt data) t
 
 let index { t; max_size; max_depths; max_list_length = mll } ~max_list_length path data =
-  let t, m = Trie.add path data t in
+  let t, (m : int) = Trie.add path data t in
   { t; max_size = max max_size m; max_depths; max_list_length = max max_list_length mll }
 
 let max_path { max_size } = max_size
