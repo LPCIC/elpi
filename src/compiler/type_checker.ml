@@ -479,7 +479,9 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         if try_unify lhs prop || try_unify lhs (App(F.from_string "list",prop,[]))
         then check_spill_conclusion_loc ~positive ~tyctx ctx y ~ety
         else error ~loc "Bad impl in spill"
-    | App((Global _,c,_ as sc),x,xs) when F.equal c F.andf ->
+    | App((Global _,c,tya as sc),x,xs) when F.equal c F.andf ->
+        if not @@ MutableOnce.is_set tya then
+          MutableOnce.set ~loc tya (Val (Arr (MVal Input, Variadic, Prop Function, Prop Function)));
         let spills = check_loc ~positive ~tyctx ctx x ~ety:prop in
         if spills <> [] then error ~loc "Hard spill";
         begin match xs with
