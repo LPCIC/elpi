@@ -672,6 +672,7 @@ module ScopedTerm = struct
 
   let lvl_of = function
     | App _ -> app
+    | Var (_, (_::_)) -> app
     | Lam _ -> lam
     | _ -> 2
 
@@ -696,18 +697,18 @@ module ScopedTerm = struct
     | x::xs -> x :: e x.loc :: xs
 
   let rec pretty_lam fmt n ste it =
-    match n with
+    (match n with
     | None -> Format.fprintf fmt "_"
     | Some (scope,name,ty) -> 
       fprintf fmt "%a" F.pp name;
       if MutableOnce.is_set ty then
         fprintf fmt ": %a " TypeAssignment.pretty_mut_once (TypeAssignment.deref ty)
-      else Option.iter (fprintf fmt ": %a " ScopedTypeExpression.pretty_e) ste;
+      else Option.iter (fprintf fmt ": %a " ScopedTypeExpression.pretty_e) ste);
       fprintf fmt "\\ %a" pretty it;
 
   and pretty fmt { it } = pretty_ fmt it
   and pretty_ fmt = function
-    | Impl(true,t1,t2) -> fprintf fmt "(%a => %a)" pretty t1 pretty t2
+    | Impl(true,t1,t2) -> fprintf fmt "(%a => (%a))" pretty t1 pretty t2
     | Impl(_,t1,t2) -> fprintf fmt "(%a :- %a)" pretty t1 pretty t2
     | Const (_,f,_) -> fprintf fmt "%a" F.pp f
     | Discard -> fprintf fmt "_"
