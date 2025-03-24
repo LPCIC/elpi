@@ -7,7 +7,9 @@ width 5.
 
 pred mkt i:int, o:tree.
 mkt 0 (leaf N) :- !, random.int 100 N.
-mkt M (node [leaf M|L]) :- M1 is M - 1, std.iota {random.int {width}} L1, std.map L1 (_\mkt M1) L.
+% mkt M (node [leaf M|L]) :- M1 is M - 1, std.iota {random.int {width}} L1, std.map L1 (_\mkt M1) L.
+mkt M (node [leaf M|L]) :- M1 is M - 1, std.iota {random.int {width}} L1, std.map L1 (_\r\(mkt M1 r )) L. % hard fail
+% mkt M (node [leaf M|L]) :- M1 is M - 1, std.iota {random.int {width}} L1, std.map L1 (_\r\mkt M1 r) L. % bad call, not functional
 
 :index (5) "DTree"
 pred p i:tree.

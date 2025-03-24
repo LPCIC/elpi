@@ -7,6 +7,9 @@ open Compiler_data
 module C = Constants
 module UF = IdPos.UF
 
+exception DetError of string * Loc.t
+exception FatalDetError of string * Loc.t
+
 type dtype =
   | Det  (** -> for deterministic preds *)
   | Rel  (** -> for relational preds *)
@@ -42,62 +45,6 @@ let compare_fname a b = compare_dtype_loc (snd a) (snd b)
 let empty_env = F.Map.empty
 
 module Compilation = struct
-  let rec subst ~loc sigma = function
-    | BVar k as t -> (
-        match F.Map.find_opt k sigma with
-        | None -> t
-        | Some (F f) -> f
-        | Some (Lam (_, b)) -> error ~loc "type_abbrev not fully applied")
-    | Arrow (m, v, l, r) -> arr m ~v (subst ~loc sigma l) (subst ~loc sigma r)
-    | Exp l -> Exp (List.map (subst ~loc sigma) l)
-    | (Det | Rel | Any) as t -> t
-
-  (** 
-  Used to beta reduce a type abbrev applied to arguments.
-  
-  Example:
-  ```
-    typeabbrev (list' A) (list A).  
-    pred p i:(list' int).  
-  ```
-  
-  The type of the input of p is reduced to (list A) after a beta-redex of
-  `(A -> list A) int` where `(A -> list A)` is the unfold of `list'`
-  
-  Note: Type abbrev are always fully applied
-*)
-  let det_beta =
-    let rec beta ~loc sigma = function
-      | Lam (n, b), x :: xs -> beta ~loc (F.Map.add n (F x) sigma) (b, xs)
-      | Lam (_, b), [] -> error ~loc "type_abbrev is not fully applied"
-      | F t, [] -> subst ~loc sigma t
-      | F _, _ :: _ -> anomaly ~loc "type_abbrev is too much applied"
-    in
-    beta F.Map.empty
-
-  let scope_type_exp2det env (x : ScopedTypeExpression.t) =
-    let rec type2func_app ~loc ~bvars hd args =
-      match F.Map.find_opt hd env with
-      | None -> Exp (List.map (type2func ~bvars) args)
-      | Some (_, f) -> det_beta ~loc (f, List.map (type2func ~bvars) args)
-    and type2func ~bvars ScopedTypeExpression.{ it; loc } =
-      match it with
-      | ScopedTypeExpression.Const (_, c) when F.Set.mem c bvars -> BVar c
-      | Const (_, c) -> type2func_app ~loc ~bvars c []
-      | App (_, c, x, xs) -> type2func_app ~loc ~bvars c (x :: xs)
-      | Arrow (m, v, l, r) -> arr m ~v (type2func ~bvars l) (type2func ~bvars r)
-      | Any -> Any
-      | Prop Function -> Det
-      | Prop Relation -> Rel
-    in
-    let rec type2func_lam ~bvars = function
-      | ScopedTypeExpression.Lam (n, t) ->
-          let loc, r = type2func_lam ~bvars:(F.Set.add n bvars) t in
-          (loc, Lam (n, r))
-      | Ty t -> (t.loc, F (type2func ~bvars t))
-    in
-    type2func_lam ~bvars:F.Set.empty x.value
-
   let get_mutable v = match MutableOnce.get v with TypeAssignment.Val v -> v
 
   let type_ass_2func ~loc (env : t) t =
@@ -117,8 +64,8 @@ module Compilation = struct
       | Arr (MRef m, v, l, r) when MutableOnce.is_set m ->
           type_ass_2func ~loc (Arr (MutableOnce.get m, NotVariadic, l, r))
       (*
-         The typical example for the following case is a predicate quantified by a pi,
-         an example can be found in tests/sources/findall.elpi
+          The typical example for the following case is a predicate quantified by a pi,
+          an example can be found in tests/sources/findall.elpi
       *)
       | Arr (MRef m, v, l, r) -> arr ~v Output (type_ass_2func ~loc l) (type_ass_2func ~loc r)
       | UVar a -> if MutableOnce.is_set a then type_ass_2func ~loc (get_mutable a) else BVar (MutableOnce.get_name a)
@@ -126,6 +73,35 @@ module Compilation = struct
     type_ass_2func ~loc t
 
   let type_ass_2func_mut ~loc (env : t) t = type_ass_2func ~loc env (get_mutable t)
+  
+(* 
+  let rec type2func_app (env : t) ~loc ~bvars hd args =
+    match F.Map.find_opt hd env with
+    | None -> Exp (List.map (type2func env ~bvars) args)
+    | Some (f, _) -> TypeAssignment.apply f args |> type_ass_2func
+      
+  and type2func (env : t) ~bvars ScopedTypeExpression.{ it; loc } =
+    match it with
+    | ScopedTypeExpression.Const (_, c) when F.Set.mem c bvars -> BVar c
+    | Const (_, c) -> type2func_app env ~loc ~bvars c []
+    | App (_, c, x, xs) -> type2func_app env ~loc ~bvars c (x :: xs)
+    | Arrow (m, v, l, r) -> arr m ~v (type2func env ~bvars l) (type2func env ~bvars r)
+    | Any -> Any
+    | Prop Function -> Det
+    | Prop Relation -> Rel
+
+  let scope_type2det env (x : ScopedTypeExpression.t) =
+    let rec type2func_lam ~bvars = function
+      | ScopedTypeExpression.Lam (n, t) ->
+          let loc, r = type2func_lam ~bvars:(F.Set.add n bvars) t in
+          (loc, Lam (n, r))
+      | Ty t -> (t.loc, F (type2func env ~bvars t))
+    in
+    type2func_lam ~bvars:F.Set.empty x.value
+
+  let scope_type_exp2det (env : t) (x : ScopedTypeExpression.e) =
+    type2func env ~bvars:F.Set.empty x *)
+
 end
 
 module Aux = struct
@@ -145,8 +121,8 @@ module Aux = struct
       | a, (Any | BVar _) | (Any | BVar _), a -> a
       | Exp l1, Exp l2 -> (
           try Exp (List.map2 (min_max ~loc ~d1 ~d2) l1 l2)
-          with Invalid_argument _ -> anomaly "detCheck: min_max invalid exp_length")
-      | Arrow (m1, _, _, r1), Arrow (m2, _, _, _) when m1 <> m2 -> error ~loc "Mode mismatch"
+          with Invalid_argument _ -> anomaly ~loc "detCheck: min_max invalid exp_length")
+      | Arrow (m1, _, _, r1), Arrow (m2, _, _, _) when m1 <> m2 -> anomaly ~loc "Mode mismatch"
       | Arrow (Input, v1, l1, r1), Arrow (_, v2, l2, r2) ->
           check_variadic (min_max ~loc ~d1:d2 ~d2:d1) (min_max ~loc ~d1 ~d2) Input f1 v1 l1 r1 f2 v2 l2 r2
       | Arrow (Output, v1, l1, r1), Arrow (_, v2, l2, r2) ->
@@ -298,6 +274,7 @@ let check_clause =
   let rec get_tl = function Arrow (_, _, _, r) -> get_tl r | e -> e in
 
   let exception IGNORE in
+
   let is_cut ScopedTerm.{ it } = match it with Const (Global _, name, _) -> F.equal F.cutf name | _ -> false in
 
   let rec infer uf ~env ~ctx ~var t : dtype * good_call =
@@ -364,8 +341,17 @@ let check_clause =
           infer ~was_input ctx b
       | Impl (false, _, _) -> (check_clause uf ~env ~ctx ~var t, new good_call)
       | Lam (oname, _, c) ->
-          let _ = check_lam uf ~ctx ~env ~var t in
-          (Compilation.type_ass_2func_mut ~loc env ty, new good_call)
+          begin
+            let b = new good_call in
+            try
+              let _ = check_lam uf ~ctx ~env ~var t in
+              Compilation.type_ass_2func_mut ~loc env ty, b
+            with _ -> 
+              (* Failure "DetError" -> *)
+              b#set_wrong loc;
+              Compilation.type_ass_2func_mut ~loc env ty, b
+          end
+          (* (Compilation.type_ass_2func_mut ~loc env ty, new good_call) *)
           (* Format.eprintf "In lambda of infer, the ty is %a@." (MutableOnce.pp TypeAssignment.pp) ty;
              let dty = Compilation.type_ass_2func_mut ~loc env ty in
              match dty with
@@ -387,7 +373,10 @@ let check_clause =
           Format.eprintf "Calling type_ass_2func_mut in Discard@.";
           (Aux.maximize ~loc @@ Compilation.type_ass_2func_mut ~loc env ty, new good_call)
       | CData _ -> (Exp [], new good_call)
-      | Cast (t, _) -> infer ~was_input ctx t
+      | Cast (t, _) ->
+          let d, good = infer ~was_input ctx t in
+          if not good#is_good then raise (FatalDetError("invalid determinacy cast",loc));
+          d, good
       | Spill (_, _) -> spill_err ~loc
     in
     let ((det, is_good) as r) = infer ~was_input:false ctx t in
@@ -402,13 +391,13 @@ let check_clause =
           let det, is_good = infer uf ~env ~ctx ~var hd in
           if is_good#is_good && (det <<= l) ~loc then aux (choose_variadic v d r) tl
           else if is_good#is_good then
-            error ~loc:hd.loc
-            @@ Format.asprintf "Invalid determinacy of output term %a.\n Expected: %a\n Found: %a" ScopedTerm.pretty hd
-                 pp_dtype l pp_dtype det
+            raise (DetError(
+              Format.asprintf "Invalid determinacy of output term %a.\n Expected: %a\n Found: %a" ScopedTerm.pretty hd
+                pp_dtype l pp_dtype det, loc))
           else
-            error ~loc:is_good#get_loc
-            @@ Format.asprintf "The term %a has not the right determinacy (it should be %a)" ScopedTerm.pretty hd
-                 pp_dtype l
+            raise (DetError(
+              Format.asprintf "The term %a has not the right determinacy (it should be %a)" ScopedTerm.pretty hd
+                 pp_dtype l, is_good#get_loc))
       | _ -> ()
     in
     match it with
@@ -556,7 +545,15 @@ let check_clause =
       | Const b -> check_app ctx ~loc d ~is_var:false b [] t
       | Var (b, xs) -> check_app ctx ~loc d ~is_var:true b xs t
       | App (b, x, xs) -> check_app ctx ~loc d ~is_var:false b (x :: xs) t
-      | Cast (b, _) -> check ~ctx d b
+      | Cast (b, d') ->
+          begin
+            try
+              let d = check ~ctx d b in
+              let d' = Compilation.type_ass_2func_mut ~loc env ty in
+              if not ((d <<= d') ~loc) then raise (FatalDetError("illegal determinacy cast",loc));
+              d
+            with DetError(msg,loc) -> raise (FatalDetError(msg,loc))
+          end
       | Spill (b, _) -> spill_err ~loc
       | CData _ -> anomaly ~loc "Found CData in prop position"
       | Lam _ -> anomaly ~loc "Lambda-abstractions are not props"
@@ -659,7 +656,8 @@ let check_clause =
           aux body
       | App (b, _, _) -> (assume_hd b false t, t, None)
       | Var (b, _) ->
-          error ~loc (Format.asprintf "DetCheck: Cannot load a clause with flex head (found %a)" ScopedTerm.pretty t)
+          warn ~loc (Format.asprintf "cannot load a clause with flex head (found %a)" ScopedTerm.pretty t);
+          raise IGNORE
       | _ -> anomaly ~loc @@ Format.asprintf "Found term %a in prop position" ScopedTerm.pretty_ it
     in
 
@@ -674,13 +672,18 @@ let check_clause =
 
     let det_pred = get_tl det_hd in
     if not @@ (det_body <<= det_pred) ~loc then
-      error ~loc "Determinacy checking error, expected a functional body, but inferred relational";
+      raise (DetError("expected a functional body, but inferred relational",loc));
     Format.eprintf "** Start checking outputs@.";
     infer_output uf ~env ~ctx:!ctx ~var hd;
     det_pred
   in
   let check_clause : uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit =
-   fun ~uf ~loc ~env t -> try check_clause uf ~env ~ctx:BVar.empty ~var:UVar.empty t |> ignore with IGNORE -> ()
+   fun ~uf ~loc ~env t ->
+    try check_clause uf ~env ~ctx:BVar.empty ~var:UVar.empty t |> ignore
+    with
+    | IGNORE -> ()
+    | FatalDetError(msg,loc) -> error ~loc ("DetCheck: " ^ msg)
+    | DetError(msg,loc) -> error ~loc ("DetCheck: " ^ msg)
   in
   check_clause
 
