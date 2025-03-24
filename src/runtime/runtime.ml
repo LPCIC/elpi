@@ -156,24 +156,24 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     Fmt.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
      (pplist pparg ?pplastelem:pplastarg " ") args in
   let ppconstant f c = Fmt.fprintf f "%s" (C.show ~table:pp_ctx.table c) in
-  let rec pp_uvar prec depth vardepth args f r =
-   if !!r == C.dummy then begin
-    let s =
-     try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
-     with Not_found ->
+  let string_of_uvar_body r =
+    try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
+      with Not_found ->
       let m, n = !(pp_ctx.uv_names) in
       let s = "X" ^ string_of_int n in
       let n = n + 1 in
       let m = IntMap.add (uvar_id r) s m in
       pp_ctx.uv_names := (m,n);
-      s
-    in
+      s in
+  let rec pp_uvar prec depth vardepth args f r =
+   if !!r == C.dummy then begin
+    let s = string_of_uvar_body r in
      Fmt.fprintf f "%s%s%s" s
       (if vardepth=0 then "" else "^" ^ string_of_int vardepth)
       (if args=0 then "" else "+" ^ string_of_int args)
    end else if nice then begin
     aux prec depth f (!do_deref ~from:vardepth ~to_:depth args !!r)
-   end else Fmt.fprintf f "<%a>_%d" (aux min_prec vardepth) !!r vardepth
+   end else Fmt.fprintf f "<%s|%a>_%d" (string_of_uvar_body r) (aux min_prec vardepth) !!r vardepth
   and pp_arg prec depth f n =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
    if try env.(n) == C.dummy with Invalid_argument _ -> true then
