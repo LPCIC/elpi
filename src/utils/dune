@@ -2,6 +2,6 @@
   (name elpi_util)
   (public_name elpi.util)
    (preprocess (per_module
-    ((pps ppx_deriving.std) util)))
+    ((pps ppx_deriving.std) util union_find)))
   (libraries unix re.str)
-  (modules util))
+  (modules util union_find))

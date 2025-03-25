@@ -62,9 +62,9 @@ let table = Fork.new_local {
   Array.iter (fun i -> Printf.eprintf "%d\n" i) s.bucket_histogram) *)
 
 let show ?(table = !table) n =
-  try Constants.Map.find n Global_symbols.table.c2s
+  try (Constants.Map.find n Global_symbols.table.c2s) |> Symbol.get_str
   with Not_found ->
-    try Constants.Map.find n table.c2s
+    try Constants.Map.find n table.c2s |> Symbol.get_str
     with Not_found ->
       if n >= 0 then "c" ^ string_of_int n
       else "SYMBOL" ^ string_of_int n
@@ -84,7 +84,7 @@ let fresh_global_constant () =
    !table.frozen_constants <- !table.frozen_constants - 1;
    let n = !table.frozen_constants in
    let xx = Const n in
-   !table.c2s <- Constants.Map.add n ("frozen-" ^ string_of_int n) !table.c2s ;
+   !table.c2s <- Constants.Map.add n (Symbol.from_str @@ "frozen-" ^ string_of_int n) !table.c2s ;
    Hashtbl.add !table.c2t n xx;
    n, xx
 

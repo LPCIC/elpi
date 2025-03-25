@@ -61,25 +61,27 @@ let filter_if flags proj l =
 
 module SymbolMap : sig
   type table [@@deriving show]
+
   val pp_table : Format.formatter -> table -> unit
   val equal_globals : table -> table -> bool
-  val diff : table -> table -> table
+  (* val diff : table -> table -> table *)
 
   val empty : unit -> table
-  val allocate_global_symbol     : D.State.t -> table -> F.t -> table * (constant * D.term)
+  val allocate_global_symbol     : D.State.t -> table -> D.Symbol.t -> table * (constant * D.term)
   val allocate_bound_symbol      : D.State.t -> table -> constant -> table * D.term
-  val get_global_symbol          : table -> F.t -> constant option
+  val get_global_symbol          : table -> D.Symbol.t -> constant option
   val get_canonical              : D.State.t -> table -> constant -> D.term
   val global_name : D.State.t -> table -> constant -> F.t
   val compile : table -> D.symbol_table
-  val compile_s2c : table -> (constant * D.term) F.Map.t
+  val compile_s2c : table -> (constant * D.term) D.Symbol.RawMap.t
 
 end = struct
+  open Compiler_data
 
   type table = {
-    ast2ct : (constant * D.term) F.Map.t;
+    ast2ct : (constant * D.term) D.Symbol.RawMap.t;
     c2t : D.term Constants.Map.t;
-    c2s : string Constants.Map.t;
+    c2s : Symbol.t Constants.Map.t;
     last_global : int;
   }
   [@@deriving show, ord]
@@ -87,10 +89,10 @@ end = struct
   let equal_globals m1 m2 = m1.last_global = m2.last_global
 
 
-  let diff big small =
+  (* let diff big small =
     Util.Constants.Map.fold (fun c s m ->
-      { m with c2s = Util.Constants.Map.remove c m.c2s; c2t = Util.Constants.Map.remove c m.c2t; ast2ct = F.Map.remove (F.from_string s) m.ast2ct}
-      ) small.c2s big
+      { m with c2s = Util.Constants.Map.remove c m.c2s; c2t = Util.Constants.Map.remove c m.c2t; ast2ct = .Map.remove (F.from_string s) m.ast2ct}
+      ) small.c2s big *)
 
   let equal x y = compare x y == 0
 
@@ -98,46 +100,47 @@ end = struct
     let t = { D.c2s; c2t = Hashtbl.create (Util.Constants.Map.cardinal c2t); frozen_constants = last_global; } in
   (* We could compile the Map c2t to a Hash table upfront, but there is no need
      since it is extended at run time anyway *)
-  (* F.Map.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
+  (* Symbol.RawMap.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
     t
     
   let compile_s2c { ast2ct } = ast2ct
 
-  let allocate_global_symbol_aux x ({ c2t; c2s; ast2ct; last_global } as table) =
-    try table, F.Map.find x ast2ct
+  let allocate_global_symbol_aux (x:D.Symbol.t) ({ c2t; c2s; ast2ct; last_global } as table) =
+    try table, D.Symbol.RawMap.find x ast2ct
     with Not_found ->
       let last_global = last_global - 1 in
       let n = last_global in
       let xx = D.Term.Const n in
       let p = n,xx in
       let c2t = Util.Constants.Map.add n xx c2t in
-      let ast2ct = F.Map.add x p ast2ct in
-      let c2s = Util.Constants.Map.add n (F.show x) c2s in
+      let ast2ct = D.Symbol.RawMap.add x p ast2ct in
+      let c2s = Util.Constants.Map.add n x c2s in
       { c2t; c2s; ast2ct; last_global }, p
 
   let get_global_symbol { ast2ct } s =
     try
-      Some (fst @@ F.Map.find s ast2ct)
+      Some (fst @@ D.Symbol.RawMap.find s ast2ct)
     with Not_found ->
       None
 
   let empty () =
     if not @@ D.Global_symbols.table.locked then
       anomaly "SymbolMap created before Global_symbols.table is locked";
-  let table = {
-    ast2ct = D.Global_symbols.(table.s2ct);
-    last_global = D.Global_symbols.table.last_global;
-    c2s = D.Global_symbols.table.c2s;
-    c2t = Util.Constants.Map.map (fun s ->
-      let s = F.from_string s in
-      let _, t = F.Map.find s D.Global_symbols.(table.s2ct) in
-      t) D.Global_symbols.(table.c2s);
-  } in
-  (*T2.go allocate_global_symbol_aux*) table
+
+    let table = {
+      ast2ct = D.Global_symbols.( table.s2ct);
+      last_global = D.Global_symbols.table.last_global;
+      c2s = D.Global_symbols.table.c2s;
+      c2t = Util.Constants.Map.map (fun s ->
+        let _, t = D.Symbol.RawMap.find s D.Global_symbols.(table.s2ct) in
+        t) D.Global_symbols.(table.c2s);
+    } in
+    (*T2.go allocate_global_symbol_aux*) 
+    table
     
-  let allocate_global_symbol state table x =
+  let allocate_global_symbol state table (x:D.Symbol.t) =
     if not (D.State.get D.while_compiling state) then
-      anomaly (Format.asprintf "Cannot allocate a symbol for %a. Global symbols can only be allocated during compilation" F.pp x);
+      anomaly (Format.asprintf "Cannot allocate a symbol for %a. Global symbols can only be allocated during compilation" D.Symbol.pp x);
     allocate_global_symbol_aux x table
 
   let allocate_bound_symbol_aux n ({ c2t; ast2ct } as table) =
@@ -163,7 +166,7 @@ end = struct
   let global_name state table c =
     if not (D.State.get D.while_compiling state) then
       anomaly "get_canonical can only be used during compilation";
-    try F.from_string @@ Util.Constants.Map.find c table.c2s
+    try Symbol.get_func @@ Util.Constants.Map.find c table.c2s
     with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
 
 end
@@ -214,7 +217,7 @@ module C = Constants
 
 open Compiler_data
 
-module UF = IdPos.UF
+module UF = Symbol.UF
 
 type macro_declaration = (ScopedTerm.t * Loc.t) F.Map.t
 [@@ deriving show, ord]
@@ -240,7 +243,7 @@ and block =
   | Shorten of F.t Ast.Structured.shorthand list * pbody
   | Constraints of (F.t,ScopedTerm.t) Ast.Structured.block_constraint * pbody
   | Accumulated of pbody
-[@@deriving show, ord]
+[@@deriving show]
 
 end
 
@@ -253,7 +256,6 @@ type unchecked_signature = {
   kinds : Arity.t F.Map.t;
   types : TypeList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
-  type_uf : UF.t
 }
 [@@deriving show]
 
@@ -273,8 +275,8 @@ module Assembled = struct
   type signature = {
     toplevel_macros : macro_declaration;
     kinds : Arity.t F.Map.t;
-    types : TypeAssignment.overloaded_skema_with_id F.Map.t;
-    type_abbrevs : (TypeAssignment.skema_w_id * Loc.t) F.Map.t;
+    types : Type_checker.typing_env;
+    type_abbrevs : (TypeAssignment.skema * Loc.t) F.Map.t;
     type_uf : UF.t
   }
   [@@deriving show]
@@ -302,10 +304,9 @@ module Assembled = struct
   
   let empty_signature () = {
     kinds = F.Map.empty;
-    types = F.Map.empty;
+    types = Symbol.QMap.empty;
     type_abbrevs = F.Map.empty;
     toplevel_macros = F.Map.empty;
-    type_uf = UF.empty
   }
   let empty () = {
     clauses = [];
@@ -323,7 +324,7 @@ module Assembled = struct
 
 
 module CheckedFlat = struct
-type types_indexing = ScopedTypeExpression.t list F.Map.t
+type types_indexing = ScopedTypeExpression.t list Symbol.RawMap.t
 [@@deriving show]
 type program = {
   signature : Assembled.signature;
@@ -557,8 +558,8 @@ end = struct (* {{{ *)
       | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _ | Untyped) as a :: _ -> illegal_err a 
     in
     let attributes, toplevel_func = aux_tatt None Structured.Relation attributes in
-    (* if F.equal name (F.from_string "map2-filter") then *)
-    (* Format.eprintf "Type for %a is %a@." F.pp name (TypeExpression.pp (pplist pp_raw_attribute " ")) ty; *)
+    (* if F.equal name (F.from_string "std.map") then
+    Format.eprintf "Type for %a is %a@." F.pp name (TypeExpression.pp (pplist pp_raw_attribute " ")) ty; *)
     let is_functional_from_ty () = match ty.tit with
       | TPred (l, _) -> List.mem Functional l | _ -> false in
     let attributes =
@@ -568,6 +569,7 @@ end = struct (* {{{ *)
         else Structured.Index([1],None)
       | Some x -> x in
     let ty = structure_type_expression loc toplevel_func valid_functional ty in
+    Format.eprintf "Attribute for %a is %a at position %a@." F.pp name pp_tattribute attributes Loc.pp loc;
     { Type.attributes; loc; name; ty }
 
   let structure_type_abbreviation { TypeAbbreviation.name; value; nparams; loc } =
@@ -787,12 +789,13 @@ module Scope_Quotation_Macro : sig
   val scope_loc_term : state:State.t -> Ast.Term.t -> ScopedTerm.t
 
 end = struct
-  let map_append k v m =
+  let map_append Ast.Type.{name;loc} v m =
+    let k = Symbol.make loc name in
     try
-      let l = F.Map.find k m in
-      F.Map.add k (TypeList.merge v l) m
+      let l = Symbol.QMap.find k m in
+      Symbol.QMap.add k (TypeList.merge v l) m
     with Not_found ->
-      F.Map.add k v m
+      Symbol.QMap.add k v m
 
   let is_uvar_name f =  F.is_uvar_name f
 
@@ -977,6 +980,7 @@ end = struct
     | _ -> ()
 
   let defs_of_map m = F.Map.bindings m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
+  let defs_of_qmap m = Symbol.QMap.bindings m |> List.fold_left (fun x (a,_) -> F.Set.add (Symbol.get_func a) x) F.Set.empty
   let defs_of_assoclist m = m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
 
   let global_hd_symbols_of_clauses cl =
@@ -1036,9 +1040,9 @@ end = struct
       let toplevel_macros, active_macros = List.fold_left (compile_macro state) (F.Map.empty,omacros) macros in
       let type_abbrevs = List.map compile_type_abbrev type_abbrevs in
       let kinds = List.fold_left compile_kind F.Map.empty kinds in
-      let types = List.fold_left (fun m t -> map_append t.Ast.Type.name (TypeList.make @@ compile_type t) m) F.Map.empty (List.rev types) in
+      let types = List.fold_left (fun m t -> map_append t (TypeList.make @@ compile_type t) m) Symbol.QMap.empty (List.rev types) in
       let defs_k = defs_of_map kinds in
-      let defs_t = defs_of_map types in
+      let defs_t = defs_of_qmap types in
       let defs_ta = defs_of_assoclist type_abbrevs in
       let kinds, types, type_abbrevs, defs_b, defs_ty, body =
         compile_body active_macros kinds types type_abbrevs F.Set.empty F.Set.empty state body in
@@ -1121,23 +1125,18 @@ module Flatten : sig
     Arity.t F.Map.t ->
     Arity.t F.Map.t
   val merge_type_assignments :
-    UF.t ->
-    TypeAssignment.overloaded_skema_with_id F.Map.t ->
-    TypeAssignment.overloaded_skema_with_id F.Map.t ->
-    UF.t * TypeAssignment.overloaded_skema_with_id F.Map.t
+    TypeAssignment.overloaded_skema_with_id Symbol.QMap.t ->
+    TypeAssignment.overloaded_skema_with_id Symbol.QMap.t ->
+    TypeAssignment.overloaded_skema_with_id Symbol.QMap.t
   val merge_type_abbrevs :
-    (F.t * ScopedTypeExpression.t) list ->
-    (F.t * ScopedTypeExpression.t) list ->
-    (F.t * ScopedTypeExpression.t) list
-    val merge_type_abbrevs :
     (F.t * ScopedTypeExpression.t) list ->
     (F.t * ScopedTypeExpression.t) list ->
     (F.t * ScopedTypeExpression.t) list
   val merge_checked_type_abbrevs :
     UF.t ->
-    ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
-    ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
-    UF.t * ((IdPos.t *TypeAssignment.skema) * Loc.t) F.Map.t
+    ((Symbol.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
+    ((Symbol.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
+    UF.t * ((Symbol.t *TypeAssignment.skema) * Loc.t) F.Map.t
 
   val merge_toplevel_macros :
     (ScopedTerm.t * Loc.t) F.Map.t ->
@@ -1242,8 +1241,7 @@ module Flatten : sig
   let apply_subst_types s = TypeList.smart_map (ScopedTypeExpression.smart_map (subst_global s))
 
   let apply_subst_types s l =
-    F.Map.fold (fun k v m -> F.Map.add (subst_global s k) (apply_subst_types s v) m) l F.Map.empty
-
+    Symbol.QMap.mapi (Symbol.map_func @@ subst_global s) (apply_subst_types s) l
 
   let apply_subst_modes s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
@@ -1254,17 +1252,17 @@ module Flatten : sig
   let apply_subst_type_abbrevs s l =
     List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
 
-  let merge_type_assignments uf t1 t2 =
-    let uf = ref uf in
+  let merge_type_assignments t1 t2 =
     (* We give precedence to recent type declarations over old ones *)
     let t = F.Map.union (fun f l1 l2 ->
       let to_union, ta = TypeAssignment.merge_skema f l2 l1 in
       List.iter (fun (id1,id2) ->
-        let _, uf1 = UF.union !uf id1 id2 in
+        let l, uf1 = UF.union !uf id1 id2 in
         uf := uf1;
+        
       ) to_union;
       Some ta) t1 t2 in
-    !uf, t
+    t
 
   let merge_checked_type_abbrevs uf m1 m2 =
     let uf = ref uf in
@@ -1280,7 +1278,7 @@ module Flatten : sig
       !uf, m
 
   let merge_types t1 t2 =
-    F.Map.union (fun _ l1 l2 -> Some (TypeList.merge l1 l2)) t1 t2
+    Symbol.QMap.union (fun _ l1 l2 -> TypeList.merge l1 l2) t1 t2
 
   let merge_modes m1 m2 =
     if F.Map.is_empty m1 then m2 else
@@ -1352,7 +1350,7 @@ module Flatten : sig
 
   let run state { Scoped.pbody; toplevel_macros } =
     let kinds, types, type_abbrevs, clauses_rev, chr_rev = compile_body pbody in
-    let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros; type_uf = UF.empty } in
+    let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros } in
     { Flat.clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; builtins = []; signature } (* TODO builtins can be in a unit *)
 
 
@@ -1367,9 +1365,9 @@ module Check : sig
 end = struct
 
   let check_signature ~flags builtins symbols (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * _=
-    let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otuf } = base_signature in
+    let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
     
-    let { Flat.kinds; types; type_abbrevs; toplevel_macros; type_uf } = signature in
+    let { Flat.kinds; types; type_abbrevs; toplevel_macros } = signature in
 
     let all_kinds = Flatten.merge_kinds ok kinds in
     let check_k_begin = Unix.gettimeofday () in
@@ -1394,7 +1392,7 @@ end = struct
     (* Type_checker.check_disjoint ~type_abbrevs ~kinds; *)
 
     let raw_types = types in
-    let types = F.Map.mapi (fun name e -> 
+    let types = Symbol.QMap.map (fun e -> 
       Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds e) types in
 
     let rec is_arrow_to_prop = function
@@ -1408,22 +1406,21 @@ end = struct
       | _ :: xs -> type2type_idx xs
     in
 
-    let (types_indexing:CheckedFlat.types_indexing) = F.Map.fold (fun k tyl acc ->
+    let (types_indexing:CheckedFlat.types_indexing) = Symbol.QMap.fold (fun k tyl acc ->
       begin match SymbolMap.get_global_symbol symbols k with
       | Some c -> if Builtins.is_declared builtins c then error (Format.asprintf "Ascribing a type to an already registered builtin %a" F.pp k);
       | _ -> () end;
       match type2type_idx tyl with
         | [] -> acc
-        | l -> F.Map.add k tyl acc
+        | l -> Symbol.RawMap.add k tyl acc
       (* if TypeAssignment.is_predicate (F.Map.find k types) then
         Some (List.map (fun ty -> ty.ScopedTypeExpression.indexing, ty.ScopedTypeExpression.loc) tyl)
       else None *)
-      ) raw_types F.Map.empty in
+      ) raw_types Symbol.RawMap.empty in
   
     let check_t_end = Unix.gettimeofday () in
 
-    let all_type_uf = UF.merge otuf type_uf in
-    let all_type_uf, all_types = Flatten.merge_type_assignments all_type_uf ot types in
+    let all_type_uf, all_types = Flatten.merge_type_assignments ot types in
     let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
 
     { Assembled.kinds; types; type_abbrevs; toplevel_macros; type_uf },
@@ -1582,7 +1579,7 @@ end = struct
      in
 
     let add_indexing_for name c (ScopedTypeExpression.{loc;indexing;value}) map =
-      (* Format.eprintf "indexing for %a\n%!" F.pp name; *)
+      Format.eprintf "indexing for %a with id %a at pos %a\n%!" F.pp name pp_int c Loc.pp loc;
       let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
       (* Format.eprintf "Mode for %a is %a@." F.pp name Mode.pp_hos mode;
       Format.eprintf "its tattribute is %a@." (Format.pp_print_option Ast.Structured.pp_tattribute) indexing; *)
@@ -1632,7 +1629,7 @@ end = struct
                    add_indexing_for tname c t acc)
                   acc l)
       types (symbols, C.Map.empty) in
-    symbols, R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
+    symbols, R.CompileTime.update_indexing map index, Symbol.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
   let to_dbl ?(ctx=Scope.Map.empty) ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let symb = ref symb in

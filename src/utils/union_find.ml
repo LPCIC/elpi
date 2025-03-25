@@ -2,8 +2,6 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-open Elpi_util
-
 module type S = sig
   include Util.Show
   include Util.ShowKey
@@ -14,9 +12,10 @@ module type S = sig
   val union : t -> key -> key -> key option * t
   val merge : t -> t -> t
   val roots : t -> key list
+  val mapi : (key -> key) -> t -> t
 end
 
-module Make (M : Elpi_util.Util.Map.S) : S with type t = M.key M.t and type key = M.key = struct
+module Make (M : Util.Map.S) : S with type t = M.key M.t and type key = M.key = struct
   type key = M.key [@@deriving show]
   type t = key M.t [@@deriving show]
 
@@ -31,7 +30,7 @@ module Make (M : Elpi_util.Util.Map.S) : S with type t = M.key M.t and type key 
     (* assert ( i <> j ); *)
     let ri = find m i in
     let rj = find m j in
-    (* r1 is put in the same disjoint set of rj and can be removed from other
+    (* ri is put in the same disjoint set of rj and can be removed from other
        data structures *)
     if ri <> rj then (Some ri, M.add ri rj m) else (None, m)
 
@@ -42,6 +41,9 @@ module Make (M : Elpi_util.Util.Map.S) : S with type t = M.key M.t and type key 
      let acc = if M.mem father acc then assert false else add acc father in
      union acc k father
      ) u1 u2 *)
+
+  let mapi f t =
+    M.fold (fun k v acc -> M.add (f k) (f v) acc) M.empty t
 
   let is_root acc k = find acc k = k
 

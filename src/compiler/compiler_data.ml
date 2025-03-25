@@ -4,37 +4,17 @@ open Elpi_runtime
 open Util
 module F = Ast.Func
 
-(* Globally unique identifier for symbols with a quotient *)
-module IdPos : sig 
-  type t [@@deriving show,ord]
-  module Map : Map.S with type key = t
-  module Set : Set.S with type elt = t
-  module UF : Union_find.S with type key = t and type t = t Map.t
-
-  val make_loc : Loc.t -> t
-  val make_str : string -> t
-  val equal : UF.t -> t -> t -> bool
-  val to_loc : t -> Loc.t
-end = struct
-  include Loc
-  module Map = Map.Make(Loc)
-  module Set = Set.Make(Loc)
-  module UF = Union_find.Make(Map)
-  let make_loc loc = loc
-  let make_str str = make_loc (Loc.initial str)
-  let equal u x y = compare (UF.find u x) (UF.find u y) = 0
-  let to_loc x = x 
-end
+module Symbol = Data.Symbol
 
 module Scope = struct
 
   type language = string
   [@@ deriving show, ord]
 
-  type type_decl_id = IdPos.t
+  type type_decl_id = Symbol.t
   [@@ deriving show, ord]
-  let dummy_type_decl_id = IdPos.make_str "dummy"
-  let fresh_type_decl_id loc = (IdPos.make_loc loc)
+  let dummy_type_decl_id = Symbol.dummy
+  let fresh_type_decl_id loc = Symbol.fresh loc
   let is_dummy_type_decl_id x = x <= 0
 
   type t =
@@ -355,12 +335,10 @@ module TypeAssignment = struct
 
   type skema = Lam of F.t * skema | Ty of F.t t_
   [@@ deriving show, ord]
-  type overloaded_skema = skema overloading
-  [@@ deriving show]
+  (* type overloaded_skema = skema overloading
+  [@@ deriving show] *)
 
-  type skema_w_id = IdPos.t * skema
-  [@@ deriving show, ord]
-  type overloaded_skema_with_id = skema_w_id overloading
+  type overloaded_symbol = Symbol.t overloading
   [@@ deriving show]
 
   type t = Val of t MutableOnce.t t_
@@ -461,7 +439,7 @@ module TypeAssignment = struct
 
   let new_ty () : t MutableOnce.t = MutableOnce.make (F.from_string "Ty")
 
-  let nparams (_,t : skema_w_id) =
+  let nparams (t : skema) =
       let rec aux = function Ty _ -> 0 | Lam(_,t) -> 1 + aux t in
       aux t
   
@@ -474,10 +452,10 @@ module TypeAssignment = struct
         | Some x -> x
         | None -> anomaly "TypeAssignment.subst"
 
-  let fresh ((id,sk): skema_w_id) =
+  let fresh (sk: skema) =
     let rec fresh map = function
       | Lam(c,t) -> fresh (F.Map.add c (UVar (MutableOnce.make c)) map) t
-      | Ty t -> if F.Map.is_empty map then (id, Obj.magic t), map else (id, subst (fun x -> F.Map.find_opt x map) t), map
+      | Ty t -> if F.Map.is_empty map then (Obj.magic t), map else (subst (fun x -> F.Map.find_opt x map) t), map
   in
     fresh F.Map.empty sk
 
@@ -491,19 +469,19 @@ module TypeAssignment = struct
     | Lam(c,t), x::xs -> apply (F.Map.add c x m) t xs
     | _ -> assert false (* kind checker *)
 
-  let apply (_,sk:skema_w_id) args = apply F.Map.empty sk args
+  let apply (sk:skema) args = apply F.Map.empty sk args
 
-  let eq_skema_w_id n (loc1,x) (loc2,y) = 
+  let eq_skema_w_id n (symb1,x) (symb2,y) = 
     try compare_skema x y = 0
     with InvalidMode -> 
-      error ~loc:(IdPos.to_loc loc1) 
-        (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n IdPos.pp loc1 pretty_skema_raw x IdPos.pp loc2 pretty_skema_raw y)
+      error ~loc:(Symbol.get_loc symb1) 
+        (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n Symbol.pp symb1 pretty_skema_raw x Symbol.pp symb2 pretty_skema_raw y)
 
   (* returns a pair of ids representing the merged type_ass + the new merge type_ass *)
   let merge_skema n t1 t2 =
-    let diff_id_check ((id1:IdPos.t),t1) (id2,t2) = 
-      if (id1 = id2) then error ~loc:(IdPos.to_loc id1) 
-        (Format.asprintf "Different constants with same ids (loc2 is:%a)\n%a\n<>\n%a" IdPos.pp id2 pp_skema t1 pp_skema t2) in
+    let diff_id_check ((id1:Symbol.t),t1) (id2,t2) = 
+      if (id1 = id2) then error ~loc:(Symbol.get_loc id1) 
+        (Format.asprintf "Different constants with same ids (loc2 is:%a)\n%a\n<>\n%a" Symbol.pp id2 pp_skema t1 pp_skema t2) in
     let diff_ids_check e = List.iter (diff_id_check e) in
 
     let removed = ref [] in
@@ -591,9 +569,9 @@ module ScopedTerm = struct
    [@@ deriving show]
 
    type constant = int
-   let mkGlobal ~loc c = { loc; it = Const(Scope.mkGlobal ~escape_ns:true (),F.from_string @@ Constants.Map.find c Data.Global_symbols.table.c2s) }
+   let mkGlobal ~loc c = { loc; it = Const(Scope.mkGlobal ~escape_ns:true (),Data.Symbol.get_func @@ Constants.Map.find c Data.Global_symbols.table.c2s) }
    let mkBound ~loc ~language n = { loc; it = Const(Bound language,n)}
-   let mkAppGlobal ~loc c x xs = { loc; it = App(Scope.mkGlobal ~escape_ns:true (),F.from_string @@ Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
+   let mkAppGlobal ~loc c x xs = { loc; it = App(Scope.mkGlobal ~escape_ns:true (),Data.Symbol.get_func @@ Constants.Map.find c Data.Global_symbols.table.c2s,x,xs) }
    let mkAppBound ~loc ~language n x xs = { loc; it = App(Bound language,n,x,xs) }
    let mkVar ~loc n l = { loc; it = Var(n,l) }
    let mkOpaque ~loc o = { loc; it = Opaque o }

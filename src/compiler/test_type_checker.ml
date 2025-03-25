@@ -27,7 +27,7 @@ let ( !: ) =
   let id = ref 0 in
   fun ag ->
     incr id;
-    let id = IdPos.make_str (string_of_int !id) in
+    let id = Symbol.make_str (string_of_int !id) in
     TA.Single (id, (ag : TA.skema))
 
 let inp = TypeAssignment.MVal Input
