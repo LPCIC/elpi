@@ -123,15 +123,13 @@ func fold-right list B, A, (func B, A -> A) -> A.
 fold-right [] A _ A.
 fold-right [X|XS] A F R :- fold-right XS A F A', F X A' R.
 
-:index(1 1 0 0)
 func fold2 list C, list B, A, (func C, B, A -> A) -> A.
 fold2 [] [_|_] _ _ _ :- fatal-error "fold2 on lists of different length".
 fold2 [_|_] [] _ _ _ :- fatal-error "fold2 on lists of different length".
 fold2 [] [] A _ A.
 fold2 [X|XS] [Y|YS] A F R :- F X Y A A1, fold2 XS YS A1 F R.
 
-:functional
-pred map i:list A, i:(func A -> B), o:list B.
+func map list A, (func A -> B) -> list B.
 map [] _ [].
 map [X|XS] F [Y|YS] :- F X Y, map XS F YS.
 
