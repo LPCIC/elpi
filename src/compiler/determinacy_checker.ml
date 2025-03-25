@@ -28,20 +28,12 @@ let rec pp_dtype fmt = function
   | Arrow (m, _, l, r) -> Format.fprintf fmt "(%a %a-> %a)" pp_dtype l Mode.pretty m pp_dtype r
   | Exp l -> Format.fprintf fmt "Exp [%a]" (Format.pp_print_list pp_dtype) l
 
-type dtype_abs =
-  | Lam of F.t * dtype_abs  (** e.g: type abbrev (t X) (list X) becomes: Lam A (F (Arrow A Exp))*)
-  | F of dtype
-[@@deriving show, ord]
-
-type dtype_loc = Loc.t * dtype_abs [@@deriving show, ord]
 type t = (TypeAssignment.skema_w_id * Loc.t) F.Map.t [@@deriving show, ord]
 
 let arr m ~v a b = Arrow (m, v, a, b)
 let is_exp = function Exp _ -> true | _ -> false
 let is_arr = function Arrow _ -> true | _ -> false
 let choose_variadic v full right = if v = Structured.Variadic then full else right
-let compare_dtype_loc a b = compare_dtype_abs (snd a) (snd b)
-let compare_fname a b = compare_dtype_loc (snd a) (snd b)
 let empty_env = F.Map.empty
 
 module Compilation = struct
@@ -73,35 +65,6 @@ module Compilation = struct
     type_ass_2func ~loc t
 
   let type_ass_2func_mut ~loc (env : t) t = type_ass_2func ~loc env (get_mutable t)
-  
-(* 
-  let rec type2func_app (env : t) ~loc ~bvars hd args =
-    match F.Map.find_opt hd env with
-    | None -> Exp (List.map (type2func env ~bvars) args)
-    | Some (f, _) -> TypeAssignment.apply f args |> type_ass_2func
-      
-  and type2func (env : t) ~bvars ScopedTypeExpression.{ it; loc } =
-    match it with
-    | ScopedTypeExpression.Const (_, c) when F.Set.mem c bvars -> BVar c
-    | Const (_, c) -> type2func_app env ~loc ~bvars c []
-    | App (_, c, x, xs) -> type2func_app env ~loc ~bvars c (x :: xs)
-    | Arrow (m, v, l, r) -> arr m ~v (type2func env ~bvars l) (type2func env ~bvars r)
-    | Any -> Any
-    | Prop Function -> Det
-    | Prop Relation -> Rel
-
-  let scope_type2det env (x : ScopedTypeExpression.t) =
-    let rec type2func_lam ~bvars = function
-      | ScopedTypeExpression.Lam (n, t) ->
-          let loc, r = type2func_lam ~bvars:(F.Set.add n bvars) t in
-          (loc, Lam (n, r))
-      | Ty t -> (t.loc, F (type2func env ~bvars t))
-    in
-    type2func_lam ~bvars:F.Set.empty x.value
-
-  let scope_type_exp2det (env : t) (x : ScopedTypeExpression.e) =
-    type2func env ~bvars:F.Set.empty x *)
-
 end
 
 module Aux = struct
@@ -686,21 +649,3 @@ let check_clause =
     | DetError(msg,loc) -> error ~loc ("DetCheck: " ^ msg)
   in
   check_clause
-
-let merge f1 f2 = F.Map.union (fun _ e1 _ -> Some e1) f1 f2
-
-(* class merger (all_func : env) =
-   object (self)
-     val mutable all_func = all_func
-     val mutable local_func = empty_env
-     method get_all_func = all_func
-     method get_local_func = local_func
-
-     method add_ty_abbr ty =
-       let loc, func = Compilation.scope_type_exp2det all_func ty in
-       let n = ty.name in
-       all_func <- add_type ~loc ~n all_func func;
-       local_func <- add_type ~loc ~n local_func func
-
-     method merge : env = merge all_func local_func
-   end *)
