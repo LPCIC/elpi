@@ -557,9 +557,15 @@ end = struct (* {{{ *)
       | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _ | Untyped) as a :: _ -> illegal_err a 
     in
     let attributes, toplevel_func = aux_tatt None Structured.Relation attributes in
+    (* if F.equal name (F.from_string "map2-filter") then *)
+    (* Format.eprintf "Type for %a is %a@." F.pp name (TypeExpression.pp (pplist pp_raw_attribute " ")) ty; *)
+    let is_functional_from_ty () = match ty.tit with
+      | TPred (l, _) -> List.mem Functional l | _ -> false in
     let attributes =
       match attributes with
-      | None -> Structured.Index([1],None)
+      | None -> 
+        if toplevel_func = Function || is_functional_from_ty () then MaximizeForFunctional
+        else Structured.Index([1],None)
       | Some x -> x in
     let ty = structure_type_expression loc toplevel_func valid_functional ty in
     { Type.attributes; loc; name; ty }
@@ -1558,6 +1564,10 @@ end = struct
         error ("Wrong indexing for " ^ F.show predicate ^
                 ": Map indexes exactly one argument at depth 1")) 0 l
 
+  let maximize_indexing_input modes =
+    let depths = List.map (function Mode.Fo Input | Mode.Ho (Input, _) -> max_int | _ -> 0) modes in
+    DiscriminationTree depths
+
   let update_indexing state symbols ({ idx } as index) types old_idx =
     let check_if_some_clauses_already_in ~loc predicate c oldi newi =
          if Ptmap.mem c idx then
@@ -1574,11 +1584,14 @@ end = struct
     let add_indexing_for name c (ScopedTypeExpression.{loc;indexing;value}) map =
       (* Format.eprintf "indexing for %a\n%!" F.pp name; *)
       let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
-      (* Format.eprintf "Mode of %d -- %a is %a@." c F.pp name Mode.pp_hos mode; *)
+      (* Format.eprintf "Mode for %a is %a@." F.pp name Mode.pp_hos mode;
+      Format.eprintf "its tattribute is %a@." (Format.pp_print_option Ast.Structured.pp_tattribute) indexing; *)
       let declare_index, index =
         match indexing with
         | Some (Ast.Structured.Index(l,k)) -> true, chose_indexing state name l k
+        | Some MaximizeForFunctional -> true, maximize_indexing_input mode
         | _ -> false, chose_indexing state name [1] None in
+      (* Format.eprintf "its indexing is %a@." pp_indexing index; *)
       try
         let _, old_tindex =
           try C.Map.find c map
@@ -1715,8 +1728,6 @@ end = struct
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
 
-    (* TODO: fare solo se è dichiarato funzionale, magari il det check lo scrive nella clausola *)
-
     if is_deterministic then (
       let hd_query p { args; mode } =
         let rec mkpats args mode =
@@ -1729,7 +1740,8 @@ end = struct
         in
         R.mkAppL p @@ mkpats args mode in
       let overlaps = R.CompileTime.get_clauses ~depth:0 p (hd_query p cl) index in
-      let has_no_bang { hyps } = List.for_all (fun t -> t <> mkBuiltin Global_symbols.cutc []) hyps in
+      let bang = mkBuiltin Global_symbols.cutc [] in
+      let has_no_bang { hyps } = List.for_all (fun t -> t <> bang) hyps in
       let overlaps = List.find_opt has_no_bang (Bl.to_list overlaps) in
       Option.iter (fun (cl:clause) ->
         match cl.loc with

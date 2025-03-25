@@ -407,6 +407,7 @@ and insertion_place = Before of string | After of string
 and tattribute =
   | External
   | Index of int list * tindex option
+  | MaximizeForFunctional
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;

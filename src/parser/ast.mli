@@ -251,6 +251,7 @@ and cattribute = {
 and tattribute =
   | External
   | Index of int list * tindex option
+  | MaximizeForFunctional
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;
