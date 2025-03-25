@@ -4,7 +4,7 @@
 open Compiler_data
 open Elpi_util.Util
 
-type t = (TypeAssignment.skema_w_id * Loc.t) F.Map.t [@@deriving show, ord]
+type t = (TypeAssignment.skema * Loc.t) F.Map.t [@@deriving show, ord]
 
 (* returns if the clause is deterministic *)
 val check_clause : env:t -> ScopedTerm.t -> bool

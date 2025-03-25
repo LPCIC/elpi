@@ -52,7 +52,7 @@ and check_tye ~loc ~type_abbrevs ~kinds ctx = function
   | Arrow(m,v,s,t) -> Arr(TypeAssignment.MVal m,v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
 
 
-let check_type ~type_abbrevs ~kinds ~loc ctx x : TypeAssignment.skema_w_id =
+let check_type ~type_abbrevs ~kinds ~loc ctx x : TypeAssignment.skema =
   (* Format.eprintf "check_type under %a\n%!" (F.Map.pp (fun fmt (n,_) -> ())) kinds;
   Format.eprintf "check_type %a\n%!" ScopedTypeExpression.pp_v_ x;  *)
   let rec aux_params ~loc ctx = function
@@ -69,7 +69,7 @@ let check_types  ~type_abbrevs ~kinds lst : TypeAssignment.overloaded_skema_with
   | [x] -> TypeAssignment.Single x
   | xs -> TypeAssignment.Overloaded xs
 
-let check_type  ~type_abbrevs ~kinds { value; loc } : (TypeAssignment.skema_w_id) =
+let check_type  ~type_abbrevs ~kinds { value; loc } : (TypeAssignment.skema) =
   check_type ~type_abbrevs ~kinds ~loc F.Set.empty value
 
 let arrow_of_args args ety =
@@ -146,7 +146,7 @@ let error_not_poly ~loc c ty sk =
 
 type ret = TypeAssignment.t MutableOnce.t TypeAssignment.t_
 [@@deriving show]
-type ret_id = IdPos.t * TypeAssignment.t MutableOnce.t TypeAssignment.t_
+type ret_id = Symbol.t * TypeAssignment.t MutableOnce.t TypeAssignment.t_
 [@@deriving show]
 type spilled_phantoms = ScopedTerm.t list
 [@@deriving show]

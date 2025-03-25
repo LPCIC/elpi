@@ -5,7 +5,7 @@ open Elpi_util.Util
 open Elpi_parser.Ast
 open Compiler_data
 module C = Constants
-module UF = IdPos.UF
+module UF = Symbol.UF
 
 exception DetError of string * Loc.t
 exception FatalDetError of string * Loc.t
@@ -29,7 +29,7 @@ let rec pp_dtype fmt = function
   | Arrow (m, _, l, r) -> Format.fprintf fmt "(%a %a-> %a)" pp_dtype l Mode.pretty m pp_dtype r
   | Exp l -> Format.fprintf fmt "Exp [%a]" (Format.pp_print_list pp_dtype) l
 
-type t = (TypeAssignment.skema_w_id * Loc.t) F.Map.t [@@deriving show, ord]
+type t = (TypeAssignment.skema * Loc.t) F.Map.t [@@deriving show, ord]
 
 let arr m ~v a b = Arrow (m, v, a, b)
 let is_exp = function Exp _ -> true | _ -> false

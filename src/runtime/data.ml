@@ -410,6 +410,108 @@ end
 
 let elpi_state_descriptor = State.new_descriptor ()
 
+(* Globally unique identifier for symbols with a quotient *)
+module Symbol : sig 
+  type symbol [@@deriving show, ord]
+  module UF : Union_find.S with type key = symbol
+  type 'a merge = (symbol -> 'a -> 'a -> 'a)
+  module RawMap : Map.S with type key = symbol
+  module QMap : sig
+    type 'a t [@@deriving show]
+    val empty : 'a t
+    val add : symbol -> 'a -> 'a t -> 'a t
+    val find : symbol -> 'a t -> 'a
+    val union : 'a merge -> 'a t -> 'a t -> 'a t
+    val give_uf : 'a t -> UF.t
+    val unify : 'a merge -> symbol -> symbol -> 'a t -> 'a t
+    val bindings : 'a t -> (symbol * 'a) list
+    val mapi : (symbol -> symbol) -> ('a -> 'a) -> 'a t -> 'a t
+    val map : ('a -> 'b) -> 'a t -> 'b t
+    val fold : (symbol -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+  end 
+
+  type t = symbol [@@deriving show,ord]
+
+  val fresh : Loc.t -> t
+  val dummy : t
+  val get_loc : t -> Loc.t
+  val get_str : t -> string
+  val get_func : t -> F.t
+  val from_name : F.t -> t
+  val from_str : string -> t
+  val make : Loc.t -> F.t -> t
+  val map_func : (F.t -> F.t) -> t -> t
+end = struct
+  type symbol = Loc.t * F.t [@@deriving show, ord]
+  type 'a merge = (symbol -> 'a -> 'a -> 'a)
+  module RawMap = Map.Make(struct type t = symbol [@@deriving show,ord] end)
+  module UF = Elpi_util.Union_find.Make(RawMap)
+  type t = symbol [@@deriving show, ord]
+
+  module QMap = struct
+    
+    type 'a t = UF.t * 'a RawMap.t [@@deriving show]
+    let empty = UF.empty, RawMap.empty
+
+    let unify f s1 s2 (uf,m) = 
+      let x,uf = UF.union uf s1 s2 in
+      match x with
+      | None -> uf, m
+      | Some x -> 
+        let canonic_x = UF.find uf x in
+        match RawMap.find_opt canonic_x m, RawMap.find_opt x m with
+        | None, None -> uf, m
+        | Some canonic_value, None -> uf, m
+        | None, Some value -> uf, RawMap.add canonic_x value m |> RawMap.remove x
+        | Some canonic_value, Some value -> 
+          uf, RawMap.add canonic_x (f canonic_x value canonic_value) m 
+
+    let add s a (uf,m) =
+      let s' = UF.find uf s in
+      uf,RawMap.add s' a m
+
+    let find s (uf,m) =
+      let s' = UF.find uf s in
+      RawMap.find s' m
+
+    let union f (uf1,m1) (uf2,m2) =
+      let uf = UF.merge uf1 uf2 in
+      uf,RawMap.union (fun s a b -> Some (f (UF.find uf s) a b)) m1 m2
+
+    let map mv (uf, m) =
+      uf, RawMap.map mv m
+
+    let mapi mk mv (uf,m) =
+      let uf = UF.mapi mk uf in
+      let m = RawMap.fold (fun k v acc -> RawMap.add (mk k) (mv v) acc) RawMap.empty m in
+      uf,m
+
+    let give_uf (a,_) = a
+    let bindings (_,b) = RawMap.bindings b
+    let fold f (_,m) a = RawMap.fold f m a
+
+  end
+
+  let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
+
+  let fresh = 
+    let i = ref 0 in
+    fun loc -> 
+      incr i; 
+      loc, F.from_string ("%fresh" ^ string_of_int !i)
+
+  let dummy = fresh (Loc.initial "(dummy)")
+  let from_name name = Loc.initial "(dummy)", name
+  let from_str str = Loc.initial "(dummy)", F.from_string str
+  let get_loc (l,_) = l
+  let get_str (_,f) = F.show f
+  let get_func (_,f) = f
+  let make loc name = loc, name
+  let map_func f (x,y) =  x, f y
+
+end
+
+
 (* This module contains the symbols reserved by Elpi and the ones
    declared by the API client via declare_global_symbol statically
    (eg the API must be called in a OCaml toplevel value).
@@ -423,8 +525,8 @@ module Global_symbols : sig
   (* Table used at link time *)
   type t = {
     (* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
-    mutable s2ct : (constant * term) Ast.Func.Map.t;
-    mutable c2s : string Constants.Map.t;
+    mutable s2ct : (constant * term) Symbol.RawMap.t;
+    mutable c2s : Symbol.symbol Constants.Map.t;
     (* negative *)
     mutable last_global : int;
 
@@ -469,8 +571,8 @@ module Global_symbols : sig
 end = struct
 
 type t = {
-  mutable s2ct : (constant * term) Ast.Func.Map.t;
-  mutable c2s : string Constants.Map.t;
+  mutable s2ct : (constant * term) Symbol.RawMap.t;
+  mutable c2s : Symbol.t Constants.Map.t;
   mutable last_global : int;
   mutable locked : bool;
 }
@@ -478,35 +580,37 @@ type t = {
 
 let table = {
   last_global = 0;
-  s2ct = Ast.Func.Map.empty;
+  s2ct = Symbol.RawMap.empty;
   c2s = Constants.Map.empty;
   locked = false;
 }
+let loc = Loc.initial "(ocaml)"
+let symb_from_str str = Symbol.make loc (Ast.Func.from_string str)
 
 let declare_global_symbol str =
-  let x = Ast.Func.from_string str in
-  try fst @@ Ast.Func.Map.find x table.s2ct
+  let symb = symb_from_str str in
+  try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
     if table.locked then
       Util.anomaly "declare_global_symbol called after initialization";
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
     let t = Const n in
-    table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
-    table.c2s <- Constants.Map.add n str table.c2s;
+    table.s2ct <- Symbol.RawMap.add symb (n,t) table.s2ct;
+    table.c2s <- Constants.Map.add n symb table.c2s;
     n
 
 let declare_global_symbol_for_builtin str =
-  let x = Ast.Func.from_string str in
+  let symb = symb_from_str str in
   if table.locked then
     Util.anomaly "declare_global_symbol_for_builtin called after initialization";
-  try fst @@ Ast.Func.Map.find x table.s2ct
+  try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
     let t = Builtin(n,[]) in
-    table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
-    table.c2s <- Constants.Map.add n str table.c2s;
+    table.s2ct <- Symbol.RawMap.add symb (n,t) table.s2ct;
+    table.c2s <- Constants.Map.add n symb table.c2s;
     n
 
 let lock () = table.locked <- true
@@ -1305,7 +1409,7 @@ type builtin_table = (int, t) Hashtbl.t
 end
 
 type symbol_table = {
-  mutable c2s : string Constants.Map.t;
+  mutable c2s : Symbol.t Constants.Map.t;
   c2t : (constant, term) Hashtbl.t;
   mutable frozen_constants : int;
 }

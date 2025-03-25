@@ -109,7 +109,7 @@ module Ast = struct
   module Name = struct
     include Ast.Func
     type constant = int
-    let is_global f i = show f = Util.Constants.Map.find i Data.Global_symbols.table.c2s
+    let is_global f i = equal f (Util.Constants.Map.find i Data.Global_symbols.table.c2s |> Data.Symbol.get_func)
   end
   module Opaque = Util.CData
 end
