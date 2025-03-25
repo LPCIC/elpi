@@ -1346,6 +1346,7 @@ module Utils = struct
       attributes;
       body = aux depth Util.IntMap.empty term;
       needs_spilling = ();
+      is_deterministic = ()
     }]
 
   let term_to_raw_term s p ?ctx ~depth t =

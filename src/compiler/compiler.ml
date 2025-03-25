@@ -235,7 +235,7 @@ and pbody = {
   ty_symbols : F.Set.t;
 }
 and block =
-  | Clauses of (ScopedTerm.t,Ast.Structured.attribute,bool) Ast.Clause.t list (* TODO: use a map : predicate -> clause list to speed up insertion *)
+  | Clauses of (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list (* TODO: use a map : predicate -> clause list to speed up insertion *)
   | Namespace of string * pbody
   | Shorten of F.t Ast.Structured.shorthand list * pbody
   | Constraints of (F.t,ScopedTerm.t) Ast.Structured.block_constraint * pbody
@@ -259,7 +259,7 @@ type unchecked_signature = {
 
 type program = {
   signature : unchecked_signature;
-  clauses : (ScopedTerm.t,Ast.Structured.attribute,bool) Ast.Clause.t list;
+  clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : BuiltInPredicate.t list;
 }
@@ -328,7 +328,7 @@ type types_indexing = ScopedTypeExpression.t list F.Map.t
 type program = {
   signature : Assembled.signature;
   types_indexing : types_indexing;
-  clauses : (ScopedTerm.t,Ast.Structured.attribute,bool) Ast.Clause.t list;
+  clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : BuiltInPredicate.t list;
 }
@@ -993,7 +993,7 @@ end = struct
      let needs_spilling = ref false in
      let state = set_mtm state { empty_mtm with macros; needs_spilling } in
      let body = scope_loc_term ~state body in
-     { Ast.Clause.body; attributes; loc; needs_spilling = !needs_spilling }
+     { Ast.Clause.body; attributes; loc; needs_spilling = !needs_spilling; is_deterministic = false }
 
 
   let compile_sequent state macros { Ast.Chr.eigen; context; conclusion } =
@@ -1443,8 +1443,8 @@ end = struct
       (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
       (* if typecheck then Mode_checker.check ~is_rule:true ~type_abbrevs ~kinds ~types spilled.body; *)
-      if typecheck then Determinacy_checker.check_clause ~uf:type_uf ~loc ~env:type_abbrevs spilled.body;
-      unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
+      let is_deterministic = typecheck && Determinacy_checker.check_clause ~env:type_abbrevs spilled.body in
+      unknown, {spilled with is_deterministic} :: clauses) (F.Map.empty,[]) clauses in
 
     let clauses = List.rev clauses in
 
@@ -1545,7 +1545,6 @@ end = struct
   let chose_indexing state predicate l k =
     let all_zero = List.for_all ((=) 0) in
     let rec check_map default argno = function
-      (* TODO: @FissoreD here we should raise an error if n > arity of the predicate? *)
       | [] -> error ("Wrong indexing for " ^ F.show predicate ^ ": no argument selected.")
       | 0 :: l -> check_map default (argno+1) l
       | 1 :: l when all_zero l -> MapOn argno
@@ -1702,7 +1701,7 @@ end = struct
     let t = if needs_spilling then Spilling.main t else t in
     to_dbl ~ctx ~builtins state symb ~depth ~amap t
 
-  let extend1_clause flags state indexing ~builtins (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
+  let extend1_clause flags state indexing ~builtins (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr }; is_deterministic } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index)
@@ -1718,19 +1717,25 @@ end = struct
 
     (* TODO: fare solo se è dichiarato funzionale, magari il det check lo scrive nella clausola *)
 
-    let hd_query p { args; mode } =
-      let rec mkpats args mode =
-        match args, mode with
-        | [], [] -> []
-        | a::args, (Mode.Fo Input | Ho(Input,_)) :: mode -> a :: mkpats args mode
-        | _::args, _ :: mode -> mkDiscard :: mkpats args mode
-        | _::args, [] -> warn ~loc ("args/mode mismatch: " ^ String.concat " " ( List.map  show_term args) ^ " != " ^ Mode.show_hos mode); mkDiscard :: mkpats args mode
-        | _ -> assert false
-      in
-      R.mkAppL p @@ mkpats args mode in
-    let overlaps = R.CompileTime.get_clauses ~depth:0 p (hd_query p cl) index in
-    let has_bang { hyps } = List.exists (fun t -> t = mkBuiltin Global_symbols.cutc []) hyps in
-    if (not(List.for_all has_bang (Bl.to_list overlaps))) then warn ~loc "overlap";
+    if is_deterministic then (
+      let hd_query p { args; mode } =
+        let rec mkpats args mode =
+          match args, mode with
+          | [], [] -> []
+          | a::args, (Mode.Fo Input | Ho(Input,_)) :: mode -> a :: mkpats args mode
+          | _::args, _ :: mode -> mkDiscard :: mkpats args mode
+          | _::args, [] -> warn ~loc ("args/mode mismatch: " ^ String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode); mkDiscard :: mkpats args mode
+          | _ -> assert false
+        in
+        R.mkAppL p @@ mkpats args mode in
+      let overlaps = R.CompileTime.get_clauses ~depth:0 p (hd_query p cl) index in
+      let has_no_bang { hyps } = List.for_all (fun t -> t <> mkBuiltin Global_symbols.cutc []) hyps in
+      let overlaps = List.find_opt has_no_bang (Bl.to_list overlaps) in
+      Option.iter (fun (cl:clause) ->
+        match cl.loc with
+        | None -> warn ~loc "overlaps with anonymous clause"
+        | Some loc1 -> warn ~loc ("overlaps with clause at " ^ Loc.show loc1)
+      ) overlaps);
 
     let index = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index in
 
