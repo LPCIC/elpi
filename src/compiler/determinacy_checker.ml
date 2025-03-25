@@ -9,6 +9,7 @@ module UF = IdPos.UF
 
 exception DetError of string * Loc.t
 exception FatalDetError of string * Loc.t
+exception LoadFlexClause
 
 type dtype =
   | Det  (** -> for deterministic preds *)
@@ -191,7 +192,7 @@ module Format = struct
   let eprintf = eprintf
 end
 
-let get_dtype uf ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
+let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
   let get_ctx = function
     | None -> anomaly ~loc (Format.asprintf "Bound var %a should be in the local map" F.pp name)
     | Some e -> e
@@ -224,7 +225,7 @@ class good_call =
     method get_loc : Loc.t = Option.get obj
   end
 
-let check_clause =
+let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
   let is_quantifier (b, f, _) =
     (match b with Scope.Global _ -> true | _ -> false) && (F.equal F.pif f || F.equal F.sigmaf f)
   in
@@ -236,11 +237,11 @@ let check_clause =
   in
   let rec get_tl = function Arrow (_, _, _, r) -> get_tl r | e -> e in
 
-  let exception IGNORE in
+  (* let exception IGNORE in *)
 
   let is_cut ScopedTerm.{ it } = match it with Const (Global _, name, _) -> F.equal F.cutf name | _ -> false in
 
-  let rec infer uf ~env ~ctx ~var t : dtype * good_call =
+  let rec infer ~ctx ~var t : dtype * good_call =
     let rec infer_fold ~was_input ~was_data ~loc ctx d tl =
       let b = new good_call in
       let rec aux d tl =
@@ -281,7 +282,7 @@ let check_clause =
       aux d tl
     and infer_app ctx ~loc is_var ty s tl =
       let was_data = is_exp (Compilation.type_ass_2func_mut ~loc env ty) in
-      infer_fold ~was_data ~loc ctx (get_dtype uf ~env ~ctx ~var ~loc ~is_var s) tl
+      infer_fold ~was_data ~loc ctx (get_dtype ~env ~ctx ~var ~loc ~is_var s) tl
     (* and infer_comma ctx ~loc args d =
        match args with
        | [] -> d
@@ -300,14 +301,14 @@ let check_clause =
           infer_comma ctx ~loc (x :: xs) (Det, new good_call) *)
       | App (b, x, xs) -> infer_app ~was_input ~loc ctx false ty b (x :: xs)
       | Impl (true, c, b) ->
-          check_clause uf ~env ~ctx ~var c |> ignore;
+          check_clause ~ctx ~var c |> ignore;
           infer ~was_input ctx b
-      | Impl (false, _, _) -> (check_clause uf ~env ~ctx ~var t, new good_call)
+      | Impl (false, _, _) -> (check_clause ~ctx ~var t, new good_call)
       | Lam (oname, _, c) ->
           begin
             let b = new good_call in
             try
-              let _ = check_lam uf ~ctx ~env ~var t in
+              let _ = check_lam ~ctx ~var t in
               Compilation.type_ass_2func_mut ~loc env ty, b
             with _ -> 
               (* Failure "DetError" -> *)
@@ -345,13 +346,13 @@ let check_clause =
     let ((det, is_good) as r) = infer ~was_input:false ctx t in
     Format.eprintf "Result of infer for %a is (%a,%s)@." ScopedTerm.pretty t pp_dtype det is_good#show;
     r
-  and infer_output uf ~env ~ctx ~var ScopedTerm.{ it; ty; loc } =
+  and infer_output ~ctx ~var ScopedTerm.{ it; ty; loc } =
     Format.eprintf "Calling deduce output on %a@." ScopedTerm.pretty_ it;
     let rec aux d args =
       match (d, args) with
       | Arrow (Input, v, _, r), _ :: tl -> aux (choose_variadic v d r) tl
       | Arrow (Output, v, l, r), hd :: tl ->
-          let det, is_good = infer uf ~env ~ctx ~var hd in
+          let det, is_good = infer ~ctx ~var hd in
           if is_good#is_good && (det <<= l) ~loc then aux (choose_variadic v d r) tl
           else if is_good#is_good then
             raise (DetError(
@@ -366,10 +367,10 @@ let check_clause =
     match it with
     | Const _ -> ()
     (* TODO: add case for pi, comma and = *)
-    | App (b, x, xs) -> aux (get_dtype uf ~env ~ctx ~var ~loc ~is_var:false b) (x :: xs)
-    | Var (b, xs) -> aux (get_dtype uf ~env ~ctx ~var ~loc ~is_var:true b) xs
+    | App (b, x, xs) -> aux (get_dtype ~env ~ctx ~var ~loc ~is_var:false b) (x :: xs)
+    | Var (b, xs) -> aux (get_dtype ~env ~ctx ~var ~loc ~is_var:true b) xs
     | _ -> anomaly ~loc @@ Format.asprintf "Invalid term in deduce output %a." ScopedTerm.pretty_ it
-  and assume uf ~env ~ctx ~var d t =
+  and assume ~ctx ~var d t =
     Format.eprintf "Calling assume on %a@." ScopedTerm.pretty t;
     let var = ref var in
     let add ~loc ~v vname =
@@ -398,7 +399,7 @@ let check_clause =
          if is_var then add ~loc ~v:d name
          else match t with Scope.Bound b -> BVar.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
        else
-         let det_head = get_dtype uf ~env ~ctx ~var:!var ~loc ~is_var s in
+         let det_head = get_dtype ~env ~ctx ~var:!var ~loc ~is_var s in
          assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl);
       Format.eprintf "The map after call to assume_app is %a@." UVar.pp !var
     and assume ~was_input ctx d ScopedTerm.({ ty; loc; it } as t) : unit =
@@ -411,9 +412,9 @@ let check_clause =
       | App (b, hd, tl) -> assume_app ~was_input ctx ~loc ~is_var:false d b (hd :: tl)
       | Discard -> ()
       | Impl (true, h, b) ->
-          check_clause uf ~env ~ctx ~var:!var h |> ignore;
+          check_clause ~ctx ~var:!var h |> ignore;
           assume ~was_input ctx d b
-      | Impl (false, _H, _B) -> check_clause uf ~env ~ctx ~var:!var t |> ignore
+      | Impl (false, _H, _B) -> check_clause ~ctx ~var:!var t |> ignore
       | Lam (oname, _, c) -> (
           match d with
           | Arrow (Input, NotVariadic, l, r) ->
@@ -430,28 +431,28 @@ let check_clause =
     in
     assume ~was_input:false ctx d t;
     !var
-  and assume_output uf ~env ~ctx ~var d tl : UVar.t =
+  and assume_output ~ctx ~var d tl : UVar.t =
     let rec assume_output d args var =
       match (d, args) with
       | Arrow (Input, v, _, r), _ :: tl -> assume_output (choose_variadic v d r) tl var
       | Arrow (Output, v, l, r), hd :: tl ->
           Format.eprintf "Call assume of %a with dtype:%a@." ScopedTerm.pretty hd pp_dtype l;
-          let var = assume uf ~env ~ctx ~var l hd in
+          let var = assume ~ctx ~var l hd in
           assume_output (choose_variadic v d r) tl var
       | _ -> var
     in
     assume_output d tl var
   (* returns the updated environment, the dtype of the term and the loc of the term with max dtype *)
-  and check uf ~env ~ctx ~var d t =
+  and check ~ctx ~var d t =
     let var = ref var in
     let rec check_app ctx ~loc d ~is_var b tl tm =
       Format.eprintf "-- Entering check_app with term %a@." ScopedTerm.pretty tm;
-      let d', is_good = infer uf ~env ~ctx ~var:!var tm in
+      let d', is_good = infer ~ctx ~var:!var tm in
       Format.eprintf "-- Checked term dtype is %a and is_good is %s@." pp_dtype d' is_good#show;
       if is_good#is_good then (
-        let det = get_dtype uf ~env ~ctx ~var:!var ~is_var b ~loc in
+        let det = get_dtype ~env ~ctx ~var:!var ~is_var b ~loc in
         Format.eprintf "Assuming output of %a with dtype : %a@." ScopedTerm.pretty tm pp_dtype det;
-        var := assume_output uf ~env ~ctx ~var:!var det tl);
+        var := assume_output ~ctx ~var:!var det tl);
       Format.eprintf "Before error %a <<= %a@." pp_dtype d' pp_dtype d;
       if is_good#is_good && (d' <<= d) ~loc then Aux.max ~loc (get_tl d) (get_tl d') else Rel
     and check_comma ctx ~loc d args =
@@ -464,7 +465,7 @@ let check_clause =
       match it with
       | Impl (true, h, b) ->
           (* We clone not to change the ctx and var in the call for b *)
-          check_clause uf ~env ~ctx ~var:!var h |> ignore;
+          check_clause ~ctx ~var:!var h |> ignore;
           check ~ctx d b
       | Const (Global _, cut, _) when F.equal F.cutf cut -> Det
       (* Cons and nil case may appear in prop position for example in : `f :- [print a, print b, a].` *)
@@ -475,16 +476,16 @@ let check_clause =
          to elaboration t = s ---> eq1 t s, eq1 s t
          with func eq1 A -> A. *)
       | App ((Global _, name, _), l, [ r ]) when name = F.eqf ->
-          let d1, b = infer uf ~env ~ctx ~var:!var l in
+          let d1, b = infer ~ctx ~var:!var l in
           (if b#is_good then
-             let d2, b = infer uf ~env ~ctx ~var:!var r in
+             let d2, b = infer ~ctx ~var:!var r in
              if b#is_good then (
                Format.eprintf "In equality calling min between the two terms %a and %a@." ScopedTerm.pretty l
                  ScopedTerm.pretty r;
                let m = Aux.min ~loc d1 d2 in
                Format.eprintf "The minimum between %a and %a is %a@." pp_dtype d1 pp_dtype d2 pp_dtype m;
-               var := assume uf ~env ~ctx ~var:!var m l;
-               var := assume uf ~env ~ctx ~var:!var m r));
+               var := assume ~ctx ~var:!var m l;
+               var := assume ~ctx ~var:!var m r));
           d
       (* !! predicate with arity 0 must be checked according to odet: eg
 
@@ -524,7 +525,7 @@ let check_clause =
       | Impl (false, hd, tl) -> anomaly ~loc "Found clause in prop position"
     in
     (!var, check ~ctx d t)
-  and check_lam uf ~env ~ctx ~var t : dtype =
+  and check_lam ~ctx ~var t : dtype =
     let get_ta n args =
       let ta_sk, _ = F.Map.find n env in
       let ty = TypeAssignment.apply ta_sk args in
@@ -559,11 +560,11 @@ let check_clause =
       | Prop _, Impl (false, _, bo) ->
           assert (parial_app = []);
           let clause, ctx = build_clause args ~ctx ~loc ~ty bo in
-          check_clause uf ~env ~ctx ~var clause
+          check_clause ~ctx ~var clause
       | Prop _, _ ->
           let t = add_partial_app t parial_app ty in
           let clause, ctx = build_clause args ~ctx ~loc ~ty t in
-          check_clause uf ~env ~ctx ~var clause
+          check_clause ~ctx ~var clause
       | Cons b, _ when F.Map.mem b env -> aux ~parial_app ~ctx ~args { t with ty = get_ta b [] }
       | App (b, x, xs), _ when F.Map.mem b env -> aux ~parial_app ~ctx ~args { t with ty = get_ta b (x :: xs) }
       | Cons b, _ -> Exp []
@@ -586,11 +587,11 @@ let check_clause =
             { t with ty = TypeAssignment.mk_mut r }
     in
     aux ~ctx ~args:[] ~parial_app:[] t
-  and check_clause uf ~env ~ctx ~var ScopedTerm.({ it; ty; loc } as t) =
+  and check_clause ~ctx ~var ScopedTerm.({ it; ty; loc } as t) =
     let ctx = ref (BVar.clone ctx) in
     let var = UVar.clone var in
     let assume_hd b is_var (tm : ScopedTerm.t) =
-      let _ =
+      (* let _ =
         let do_filter = false in
         let only_check = "" in
         let loc = "test" in
@@ -603,10 +604,10 @@ let check_clause =
              |> not
         then raise IGNORE
         (* else assert false *)
-      in
-      let det_hd = get_dtype uf ~env ~ctx:!ctx ~var ~loc:tm.loc ~is_var b in
+      in *)
+      let det_hd = get_dtype ~env ~ctx:!ctx ~var ~loc:tm.loc ~is_var b in
       Format.eprintf "Calling assume in hd for terms list %a@." ScopedTerm.pretty tm;
-      (det_hd, assume uf ~env ~ctx:!ctx ~var det_hd tm)
+      (det_hd, assume ~ctx:!ctx ~var det_hd tm)
     in
     let rec aux ScopedTerm.{ it; loc; ty } =
       match it with
@@ -620,7 +621,7 @@ let check_clause =
       | App (b, _, _) -> (assume_hd b false t, t, None)
       | Var (b, _) ->
           warn ~loc (Format.asprintf "cannot load a clause with flex head (found %a)" ScopedTerm.pretty t);
-          raise IGNORE
+          raise LoadFlexClause
       | _ -> anomaly ~loc @@ Format.asprintf "Found term %a in prop position" ScopedTerm.pretty_ it
     in
 
@@ -629,7 +630,7 @@ let check_clause =
     Format.eprintf "The var map is %a@." UVar.pp var;
     Format.eprintf "** START CHECKING THE CLAUSE@.";
     let (det_hd, var), hd, body = aux t in
-    let var, det_body = Option.(map (check uf ~env ~ctx:!ctx ~var Det) body |> value ~default:(var, Det)) in
+    let var, det_body = Option.(map (check ~ctx:!ctx ~var Det) body |> value ~default:(var, Det)) in
     Format.eprintf "** END CHECKING THE CLAUSE@.";
     Format.eprintf "The var map is %a and det_body is %a@." UVar.pp var pp_dtype det_body;
 
@@ -637,15 +638,11 @@ let check_clause =
     if not @@ (det_body <<= det_pred) ~loc then
       raise (DetError("expected a functional body, but inferred relational",loc));
     Format.eprintf "** Start checking outputs@.";
-    infer_output uf ~env ~ctx:!ctx ~var hd;
+    infer_output ~ctx:!ctx ~var hd;
     det_pred
   in
-  let check_clause : uf:IdPos.UF.t -> loc:Loc.t -> env:t -> ScopedTerm.t -> unit =
-   fun ~uf ~loc ~env t ->
-    try check_clause uf ~env ~ctx:BVar.empty ~var:UVar.empty t |> ignore
-    with
-    | IGNORE -> ()
-    | FatalDetError(msg,loc) -> error ~loc ("DetCheck: " ^ msg)
-    | DetError(msg,loc) -> error ~loc ("DetCheck: " ^ msg)
-  in
-  check_clause
+  try (check_clause ~ctx:BVar.empty ~var:UVar.empty t) = Det
+  with
+  | LoadFlexClause -> false
+  | FatalDetError(msg,loc) -> error ~loc ("DetCheck: " ^ msg)
+  | DetError(msg,loc) -> error ~loc ("DetCheck: " ^ msg)
