@@ -188,7 +188,7 @@ end
 module Format = struct
   include Format
 
-  let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e
+  (* let eprintf : ('a, Format.formatter, unit) format -> 'a = fun e -> Format.ifprintf Format.std_formatter e *)
   let eprintf = eprintf
 end
 
@@ -207,6 +207,7 @@ let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
     if is_var then get_var @@ UVar.get var name
     else match t with Scope.Bound b -> get_ctx @@ BVar.get ctx (name, b) | Global g -> get_con g.decl_id
   in
+  Format.eprintf "The type of %a is %a@." F.pp name pp_dtype det_head;
   Format.eprintf "The dtype of %a is %a@." F.pp name pp_dtype det_head;
   Format.eprintf "The functionality of %a is %a (its type is %a)@." F.pp name pp_dtype det_head
     TypeAssignment.pretty_mut_once_raw (TypeAssignment.deref tya);

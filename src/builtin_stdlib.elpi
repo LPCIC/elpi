@@ -27,11 +27,11 @@ debug-print Msg Data :- print Msg Data.
 
 %  -- Errors, Debugging, Hacks --
 
-func ignore-failure! prop.
+func ignore-failure! prop ->.
 ignore-failure! P :- P, !.
 ignore-failure! _.
 
-func once prop.
+func once prop ->.
 once P :- P, !.
 
 % [assert! C M] takes the first success of C or fails with message M 

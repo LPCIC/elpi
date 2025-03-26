@@ -377,7 +377,7 @@ module Structured = struct
 type program = {
   macros : (Func.t, Term.t) Macro.t list;
   kinds : (unit,unit) Type.t list;
-  types : (tattribute,functionality) Type.t list;
+  types : (tattribute option,functionality) Type.t list;
   type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
   body : block list;
 }
