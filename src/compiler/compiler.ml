@@ -231,7 +231,7 @@ type program = {
 }
 and pbody = {
   kinds : Arity.t F.Map.t;
-  types : TypeList.t F.Map.t;
+  types : ScopeTypeExpressionUniqueList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
   body : block list;
   pred_symbols : F.Set.t;
@@ -254,7 +254,7 @@ module Flat = struct
 type unchecked_signature = {
   toplevel_macros : macro_declaration;
   kinds : Arity.t F.Map.t;
-  types : TypeList.t F.Map.t;
+  types : ScopeTypeExpressionUniqueList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
 }
 [@@deriving show]
@@ -276,8 +276,7 @@ module Assembled = struct
     toplevel_macros : macro_declaration;
     kinds : Arity.t F.Map.t;
     types : Type_checker.typing_env;
-    type_abbrevs : (TypeAssignment.skema * Loc.t) F.Map.t;
-    type_uf : UF.t
+    type_abbrevs : Type_checker.type_abbrevs;
   }
   [@@deriving show]
   
@@ -304,7 +303,7 @@ module Assembled = struct
   
   let empty_signature () = {
     kinds = F.Map.empty;
-    types = Symbol.QMap.empty;
+    types = { Type_checker.overloading = F.Map.empty; symbols = Symbol.QMap.empty };
     type_abbrevs = F.Map.empty;
     toplevel_macros = F.Map.empty;
   }
@@ -790,12 +789,12 @@ module Scope_Quotation_Macro : sig
 
 end = struct
   let map_append Ast.Type.{name;loc} v m =
-    let k = Symbol.make loc name in
+    let k = name in
     try
-      let l = Symbol.QMap.find k m in
-      Symbol.QMap.add k (TypeList.merge v l) m
+      let l = F.Map.find k m in
+      F.Map.add k (ScopeTypeExpressionUniqueList.merge v l) m
     with Not_found ->
-      Symbol.QMap.add k v m
+      F.Map.add k v m
 
   let is_uvar_name f =  F.is_uvar_name f
 
@@ -980,7 +979,6 @@ end = struct
     | _ -> ()
 
   let defs_of_map m = F.Map.bindings m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
-  let defs_of_qmap m = Symbol.QMap.bindings m |> List.fold_left (fun x (a,_) -> F.Set.add (Symbol.get_func a) x) F.Set.empty
   let defs_of_assoclist m = m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
 
   let global_hd_symbols_of_clauses cl =
@@ -1040,9 +1038,9 @@ end = struct
       let toplevel_macros, active_macros = List.fold_left (compile_macro state) (F.Map.empty,omacros) macros in
       let type_abbrevs = List.map compile_type_abbrev type_abbrevs in
       let kinds = List.fold_left compile_kind F.Map.empty kinds in
-      let types = List.fold_left (fun m t -> map_append t (TypeList.make @@ compile_type t) m) Symbol.QMap.empty (List.rev types) in
+      let types = List.fold_left (fun m t -> map_append t (ScopeTypeExpressionUniqueList.make @@ compile_type t) m) F.Map.empty (List.rev types) in
       let defs_k = defs_of_map kinds in
-      let defs_t = defs_of_qmap types in
+      let defs_t = defs_of_map types in
       let defs_ta = defs_of_assoclist type_abbrevs in
       let kinds, types, type_abbrevs, defs_b, defs_ty, body =
         compile_body active_macros kinds types type_abbrevs F.Set.empty F.Set.empty state body in
@@ -1125,19 +1123,17 @@ module Flatten : sig
     Arity.t F.Map.t ->
     Arity.t F.Map.t
   val merge_type_assignments :
-    TypeAssignment.overloaded_skema_with_id Symbol.QMap.t ->
-    TypeAssignment.overloaded_skema_with_id Symbol.QMap.t ->
-    TypeAssignment.overloaded_skema_with_id Symbol.QMap.t
+    Type_checker.typing_env ->
+    Type_checker.typing_env ->
+      Type_checker.typing_env
   val merge_type_abbrevs :
     (F.t * ScopedTypeExpression.t) list ->
     (F.t * ScopedTypeExpression.t) list ->
     (F.t * ScopedTypeExpression.t) list
   val merge_checked_type_abbrevs :
-    UF.t ->
-    ((Symbol.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
-    ((Symbol.t *TypeAssignment.skema) * Loc.t) F.Map.t ->
-    UF.t * ((Symbol.t *TypeAssignment.skema) * Loc.t) F.Map.t
-
+    Type_checker.type_abbrevs ->
+    Type_checker.type_abbrevs ->
+    Type_checker.type_abbrevs
   val merge_toplevel_macros :
     (ScopedTerm.t * Loc.t) F.Map.t ->
     (ScopedTerm.t * Loc.t) F.Map.t -> (ScopedTerm.t * Loc.t) F.Map.t
@@ -1238,10 +1234,10 @@ module Flatten : sig
   let apply_subst_chrs s sty = smart_map_chrs (subst_global s) ~tyf:(subst_global sty)
 
 
-  let apply_subst_types s = TypeList.smart_map (ScopedTypeExpression.smart_map (subst_global s))
+  let apply_subst_types s = ScopeTypeExpressionUniqueList.smart_map (ScopedTypeExpression.smart_map (subst_global s))
 
   let apply_subst_types s l =
-    Symbol.QMap.mapi (Symbol.map_func @@ subst_global s) (apply_subst_types s) l
+    F.Map.map (apply_subst_types s) l
 
   let apply_subst_modes s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
@@ -1252,33 +1248,34 @@ module Flatten : sig
   let apply_subst_type_abbrevs s l =
     List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
 
-  let merge_type_assignments t1 t2 =
-    (* We give precedence to recent type declarations over old ones *)
-    let t = F.Map.union (fun f l1 l2 ->
-      let to_union, ta = TypeAssignment.merge_skema f l2 l1 in
-      List.iter (fun (id1,id2) ->
-        let l, uf1 = UF.union !uf id1 id2 in
-        uf := uf1;
-        
-      ) to_union;
-      Some ta) t1 t2 in
-    t
+  let merge_type_assignments { Type_checker.symbols = s1; overloading = o1 } { Type_checker.symbols = s2; overloading = o2 } =
+    let symbols = Symbol.QMap.union TypeAssignment.merge_skema s1 s2 in
+    let to_unite = ref [] in
+    let overloading = F.Map.union (fun f l1 l2 ->
+      (* We give precedence to recent type declarations over old ones *)
+      let to_u, l = TypeAssignment.undup_skemas (fun x -> Symbol.QMap.find x symbols) l1 l2 in
+      to_unite := to_u :: !to_unite;
+      Some l
+      ) o1 o2 in
+    let to_unite = List.concat !to_unite in
+    let symbols =
+      List.fold_right (fun (x,y) -> Symbol.QMap.unify TypeAssignment.merge_skema x y) to_unite symbols in
+    { Type_checker.overloading; symbols }
+    let merge_type_assignments t1 t2 =
+      assert false
 
-  let merge_checked_type_abbrevs uf m1 m2 =
-    let uf = ref uf in
-    let m = F.Map.union (fun k ((id1,sk),otherloc as x) ((id2,ty),loc) ->
+  let merge_checked_type_abbrevs m1 m2 =
+    let m = F.Map.union (fun k (sk,otherloc as x) (ty,loc) ->
       if TypeAssignment.compare_skema sk ty <> 0 then
         error ~loc
         ("Duplicate type abbreviation for " ^ F.show k ^
           ". Previous declaration: " ^ Loc.show otherloc)
       else
-        let _, uf1 = UF.union !uf id1 id2 in
-        uf := uf1;
         Some x) m1 m2 in
-      !uf, m
+      m
 
   let merge_types t1 t2 =
-    Symbol.QMap.union (fun _ l1 l2 -> TypeList.merge l1 l2) t1 t2
+    F.Map.union (fun _ l1 l2 -> Some (ScopeTypeExpressionUniqueList.merge l1 l2)) t1 t2
 
   let merge_modes m1 m2 =
     if F.Map.is_empty m1 then m2 else
@@ -1317,9 +1314,9 @@ module Flatten : sig
       let new_pred_subst = push_subst extra ps pred_subst in
       let new_ty_subst = push_subst extra ts ty_subst in
       let kinds = merge_kinds (apply_subst_kinds new_ty_subst k) kinds in
-      (* Format.eprintf "@[<v>Types before:@ %a@]@," F.Map.(pp TypeList.pretty) t; *)
+      (* Format.eprintf "@[<v>Types before:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) t; *)
       let types = merge_types (apply_subst_types new_ty_subst t) types in
-      (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp TypeList.pretty) (apply_subst_types new_ty_subst t); *)
+      (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) (apply_subst_types new_ty_subst t); *)
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs new_ty_subst ta) in
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr new_pred_subst new_ty_subst body in
@@ -1375,15 +1372,15 @@ end = struct
       List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, scoped_ty) ->
         (* TODO check disjoint from kinds *)
         let loc = scoped_ty.ScopedTypeExpression.loc in
-        let id, ty = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
+        let _, ty = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
         if F.Map.mem name all_type_abbrevs then begin
-          let (_,sk), otherloc = F.Map.find name all_type_abbrevs in
+          let sk, otherloc = F.Map.find name all_type_abbrevs in
           if TypeAssignment.compare_skema sk ty <> 0 then
           error ~loc
             ("Duplicate type abbreviation for " ^ F.show name ^
               ". Previous declaration: " ^ Loc.show otherloc)
         end;
-        F.Map.add name ((id, ty),loc) all_type_abbrevs, F.Map.add name ((id,ty),loc) type_abbrevs)
+        F.Map.add name (ty,loc) all_type_abbrevs, F.Map.add name (ty,loc) type_abbrevs)
         (ota,F.Map.empty) type_abbrevs in
     let check_k_end = Unix.gettimeofday () in
 
@@ -1392,8 +1389,7 @@ end = struct
     (* Type_checker.check_disjoint ~type_abbrevs ~kinds; *)
 
     let raw_types = types in
-    let types = Symbol.QMap.map (fun e -> 
-      Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds e) types in
+    let types = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds types in
 
     let rec is_arrow_to_prop = function
       | ScopedTypeExpression.Lam (_,x) -> is_arrow_to_prop x
@@ -1406,8 +1402,8 @@ end = struct
       | _ :: xs -> type2type_idx xs
     in
 
-    let (types_indexing:CheckedFlat.types_indexing) = Symbol.QMap.fold (fun k tyl acc ->
-      begin match SymbolMap.get_global_symbol symbols k with
+    let (types_indexing:CheckedFlat.types_indexing) = F.Map.fold (fun k tyl acc ->
+      begin match SymbolMap.get_global_symbol symbols (Symbol.make (Loc.initial "(ocaml)") k) with
       | Some c -> if Builtins.is_declared builtins c then error (Format.asprintf "Ascribing a type to an already registered builtin %a" F.pp k);
       | _ -> () end;
       match type2type_idx tyl with
@@ -1420,11 +1416,11 @@ end = struct
   
     let check_t_end = Unix.gettimeofday () in
 
-    let all_type_uf, all_types = Flatten.merge_type_assignments ot types in
+    let all_types = Flatten.merge_type_assignments ot types in
     let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
 
-    { Assembled.kinds; types; type_abbrevs; toplevel_macros; type_uf },
-    { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; type_uf = all_type_uf },
+    { Assembled.kinds; types; type_abbrevs; toplevel_macros },
+    { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros },
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types_indexing
 
@@ -1433,7 +1429,7 @@ end = struct
     let signature, precomputed_signature, check_sig, types_indexing = check_signature ~flags base.Assembled.builtins base.Assembled.symbols base.Assembled.signature u.code.Flat.signature in
 
     let { version; code = { Flat.clauses; chr; builtins } } = u in
-    let { Assembled.kinds; types; type_abbrevs; toplevel_macros; type_uf } = precomputed_signature in
+    let { Assembled.kinds; types; type_abbrevs; toplevel_macros } = precomputed_signature in
 
     let check_begin = Unix.gettimeofday () in
 
@@ -1452,7 +1448,7 @@ end = struct
     let clauses = List.rev clauses in
 
     List.iter (fun (BuiltInPredicate.Pred(name,_,_)) ->
-      if F.Map.mem (F.from_string name) base.Assembled.signature.types then
+      if Symbol.QMap.mem (Symbol.make (Loc.initial "(ocaml)") (F.from_string name)) base.Assembled.signature.types.symbols then
         error (Format.asprintf "Builtin %s already exists as a regular predicate" name);
       if not @@ F.Map.mem (F.from_string name) types_indexing then error (Format.asprintf "No type declared for builtin %s" name);
       let tyl = F.Map.find (F.from_string name) types_indexing in
@@ -1464,13 +1460,13 @@ end = struct
     ) builtins;
 
     let more_types = Type_checker.check_undeclared ~unknown in
-    let type_uf, u_types = Flatten.merge_type_assignments type_uf signature.types more_types in
-    let type_uf, types = Flatten.merge_type_assignments type_uf types more_types in
+    let u_types = Flatten.merge_type_assignments signature.types more_types in
+    let types = Flatten.merge_type_assignments types more_types in
 
     let check_end = Unix.gettimeofday () in
 
-    let signature = { signature with types = u_types; type_uf } in
-    let precomputed_signature = { precomputed_signature with types; type_uf } in
+    let signature = { signature with types = u_types } in
+    let precomputed_signature = { precomputed_signature with types } in
 
     let checked_code = { CheckedFlat.signature; clauses; chr; builtins; types_indexing } in
 
@@ -1625,7 +1621,7 @@ end = struct
     let symbols, map =
       F.Map.fold (fun tname l (symbols, acc) ->
         let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols tname in
-        symbols, TypeList.fold (fun acc t->
+        symbols, ScopeTypeExpressionUniqueList.fold (fun acc t->
                    add_indexing_for tname c t acc)
                   acc l)
       types (symbols, C.Map.empty) in
@@ -1803,15 +1799,14 @@ end = struct
     List.fold_left (extend1_chr ~builtins flags state clique) (symbols,chr) rules
    
 let extend1_signature base_signature (signature : checked_compilation_unit_signature) =
-  let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; type_uf = otyuf } = base_signature in
-  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; type_uf } = signature in
+  let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
+  let { Assembled.toplevel_macros; kinds; types; type_abbrevs } = signature in
   let kinds = Flatten.merge_kinds ok kinds in
-  let type_uf = UF.merge otyuf type_uf in
-  let type_uf, type_abbrevs = Flatten.merge_checked_type_abbrevs type_uf ota type_abbrevs in
-  let type_uf, types = Flatten.merge_type_assignments type_uf ot types in
+  let type_abbrevs = Flatten.merge_checked_type_abbrevs ota type_abbrevs in
+  let types = Flatten.merge_type_assignments ot types in
   let toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
 
-  { Assembled.kinds; types; type_abbrevs; toplevel_macros; type_uf }
+  { Assembled.kinds; types; type_abbrevs; toplevel_macros }
 
 let extend1 flags (state, base) unit =
 
@@ -1832,13 +1827,13 @@ let extend1 flags (state, base) unit =
   let symbols, builtins =
     List.fold_left (fun (symbols,builtins) (D.BuiltInPredicate.Pred(name,_,_) as p) ->
       let name = F.from_string name in
-      if not @@ F.Map.mem name signature.types then
+      if not @@ F.Map.mem name signature.types.overloading then
         error (Format.asprintf "Builtin %a has no associated type." F.pp name);
       List.iter (fun ScopedTypeExpression.{indexing} ->
         if indexing <> Some (Ast.Structured.External) then
           error (Format.asprintf "Builtin %a accompained by a non-externl type declaration." F.pp name);
       ) (F.Map.find name types_indexing);
-      let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols name in
+      let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols (Symbol.make (Loc.initial "(ocaml)") name) in
       let builtins = Builtins.register builtins p c in
       symbols, builtins) (symbols, ob) builtins in
 
@@ -2028,7 +2023,7 @@ let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~de
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
     let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
-    let _ : Type_checker.env = Type_checker.check_undeclared ~unknown in
+    let _ : Type_checker.typing_env = Type_checker.check_undeclared ~unknown in
     ()
   end;
   let amap = get_argmap state in
@@ -2098,19 +2093,19 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
       builtins
     }
   
-let symtab : (constant * D.term) F.Map.t D.State.component = D.State.declare
+let symtab : (constant * D.term) Symbol.RawMap.t D.State.component = D.State.declare
   ~descriptor:D.elpi_state_descriptor
   ~name:"elpi:symbol_table"
   ~pp:(fun fmt _ -> Format.fprintf fmt "<symbol_table>")
   ~clause_compilation_is_over:(fun x -> x)
   ~compilation_is_over:(fun x -> Some x)
   ~execution_is_over:(fun _ -> None)
-  ~init:(fun () -> F.Map.empty)
+  ~init:(fun () -> Symbol.RawMap.empty)
   ()
   
 let global_name_to_constant state s =
   let map = State.get symtab state in
-  fst @@ F.Map.find (F.from_string s) map
+  fst @@  Symbol.RawMap.find (Symbol.make (Loc.initial "(ocaml)") (F.from_string s)) map
 
 module Compiler : sig
 
@@ -2175,20 +2170,22 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
       | n -> "type -> " ^ a2k (n-1) in
     Format.fprintf fmt "@[<h>kind %s %s.@]@," (F.show name) (a2k ty))
     signature.kinds;
-  F.Map.iter (fun name ty ->
-    let tys = 
-      match TypeAssignment.fresh_overloaded ty with
-      | TypeAssignment.Single (_,t) -> [t]
-      | TypeAssignment.Overloaded l -> List.map snd l in
+  F.Map.iter (fun name sl ->
+    let f s = TypeAssignment.fresh (Symbol.QMap.find s signature.types.symbols) |> fst in
+    let tys =
+      match sl with
+      | TypeAssignment.Single t -> [f t]
+      | TypeAssignment.Overloaded l -> List.map f l in
     let name =
       match Elpi_parser.Parser_config.precedence_of (F.show name) with
       | (Some _,_) -> "("^F.show name^")"
       | _ -> F.show name in
-    List.iter (fun ty -> Format.fprintf fmt "@[<h>type %s %a.@]@," name TypeAssignment.pretty_mut_once ty) tys;
+    List.iter (fun ty ->
+      Format.fprintf fmt "@[<h>type %s %a.@]@," name TypeAssignment.pretty_mut_once ty) tys;
     )
-    signature.types;
+    signature.types.overloading;
   F.Map.iter (fun name (ty,_) ->
-    Format.fprintf fmt "@[<h>typeabbrv %a (%a).@]@," F.pp name TypeAssignment.pretty_mut_once (snd @@ fst @@ TypeAssignment.fresh ty)
+    Format.fprintf fmt "@[<h>typeabbrv %a (%a).@]@," F.pp name TypeAssignment.pretty_mut_once (fst @@ TypeAssignment.fresh ty)
     )
     signature.type_abbrevs;
   List.iter (fun (name,predicate,{ depth; args; hyps; loc; timestamp }) ->
@@ -2224,10 +2221,10 @@ exception RelocationError of string
 let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols }) (t : term) : term =
   let relocate c =
     let s = Util.Constants.Map.find c symbol_table.c2s in
-    let c = SymbolMap.get_global_symbol symbols (F.from_string s) in
+    let c = SymbolMap.get_global_symbol symbols s in
     match c with
     | Some x -> x
-    | None -> raise (RelocationError (Format.asprintf "Relocation: unknown global %s" s))
+    | None -> raise (RelocationError (Format.asprintf "Relocation: unknown global %a" Symbol.pp s))
     in
   let rec rel = function
     | Const c when c < 0 -> Const (relocate c)

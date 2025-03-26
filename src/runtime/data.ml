@@ -424,10 +424,10 @@ module Symbol : sig
     val union : 'a merge -> 'a t -> 'a t -> 'a t
     val give_uf : 'a t -> UF.t
     val unify : 'a merge -> symbol -> symbol -> 'a t -> 'a t
-    val bindings : 'a t -> (symbol * 'a) list
     val mapi : (symbol -> symbol) -> ('a -> 'a) -> 'a t -> 'a t
     val map : ('a -> 'b) -> 'a t -> 'b t
     val fold : (symbol -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+    val mem : symbol -> 'a t -> bool
   end 
 
   type t = symbol [@@deriving show,ord]
@@ -472,7 +472,8 @@ end = struct
 
     let find s (uf,m) =
       let s' = UF.find uf s in
-      RawMap.find s' m
+      try RawMap.find s' m
+      with Not_found -> anomaly ("Missing entry from QMap: " ^ show_symbol s)
 
     let union f (uf1,m1) (uf2,m2) =
       let uf = UF.merge uf1 uf2 in
@@ -487,8 +488,12 @@ end = struct
       uf,m
 
     let give_uf (a,_) = a
-    let bindings (_,b) = RawMap.bindings b
     let fold f (_,m) a = RawMap.fold f m a
+
+    let mem s (uf,m) =
+      let s' = UF.find uf s in
+      RawMap.mem s' m
+
 
   end
 

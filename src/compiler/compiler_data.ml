@@ -13,15 +13,12 @@ module Scope = struct
 
   type type_decl_id = Symbol.t
   [@@ deriving show, ord]
-  let dummy_type_decl_id = Symbol.dummy
-  let fresh_type_decl_id loc = Symbol.fresh loc
-  let is_dummy_type_decl_id x = x <= 0
 
   type t =
     | Bound  of language (* bound by a lambda, stays bound *)
     | Global of {
         escape_ns : bool; (* when true name space elimination does not touch this constant *)
-        mutable decl_id : type_decl_id;
+        mutable decl_id : type_decl_id option;
       }
   [@@ deriving show]
 
@@ -43,8 +40,8 @@ module Scope = struct
     [@@ deriving show, ord]
   end)
 
-  let mkGlobal ?(escape_ns=false) ?(decl_id = dummy_type_decl_id) () =
-    Global { escape_ns ; decl_id }
+  let mkGlobal ?(escape_ns=false) () =
+    Global { escape_ns ; decl_id = None }
 
 end
 let elpi_language : Scope.language = "lp"
@@ -57,7 +54,11 @@ type ctx = { vmap : (Scope.language * F.t * F.t) list; uvmap : (F.t * F.t) list 
 let empty () = { vmap = []; uvmap = ref [] }
 
 let eq_var { vmap } language c1 c2 = List.mem (language,c1,c2) vmap
-
+let cmp_var ctx language c1 c2 =
+  if eq_var ctx language c1 c2 then 0
+  else
+    let r = F.compare c1 c2 in
+    if r = 0 then -1 else r
 
 let purge language f c l = List.filter (fun (l,x,y) -> l = language && not @@ F.equal (f (x,y)) c) l
 let push_ctx language c1 c2 ctx = { ctx with vmap = (language,c1 , c2) :: (purge language fst c1 @@ purge language snd c2 ctx.vmap) }
@@ -284,7 +285,7 @@ module TypeAssignment = struct
     | MRef x -> Format.fprintf fmt "?"
     | MVal m -> Mode.pretty fmt m
 
-  type 'a overloading =
+  type 'a overloaded =
     | Single of 'a
     | Overloaded of 'a list
   [@@ deriving show, fold, iter]
@@ -334,11 +335,19 @@ module TypeAssignment = struct
     | Arr _ , _ -> -1 | _, Arr _  -> 1
 
   type skema = Lam of F.t * skema | Ty of F.t t_
-  [@@ deriving show, ord]
-  (* type overloaded_skema = skema overloading
-  [@@ deriving show] *)
+  [@@ deriving show]
 
-  type overloaded_symbol = Symbol.t overloading
+  let compare_skema sk1 sk2 =
+    let rec aux ctx sk1 sk2 =
+      match sk1, sk2 with
+      | Lam (f1,sk1), Lam(f2,sk2) -> aux (ScopeContext.push_ctx elpi_language f1 f2 ctx) sk1 sk2
+      | Ty t1, Ty t2 -> compare_t_ (ScopeContext.cmp_var ctx elpi_language) t1 t2
+      | Lam _, Ty _ -> -1
+      | Ty _, Lam _ -> 1
+    in
+      aux (ScopeContext.empty ()) sk1 sk2
+
+  type overloaded_symbol = Symbol.t overloaded
   [@@ deriving show]
 
   type t = Val of t MutableOnce.t t_
@@ -459,9 +468,11 @@ module TypeAssignment = struct
   in
     fresh F.Map.empty sk
 
-  let fresh_overloaded = function
-    | Single sk -> Single (fst @@ fresh sk)
-    | Overloaded l -> Overloaded (List.map (fun x -> fst @@ fresh x) l)
+  let map_overloaded f = function
+    | Single sk -> Single (f sk)
+    | Overloaded l -> Overloaded (List.map f l)
+
+  let fresh_overloaded o = map_overloaded (fun x -> fst @@ fresh x) o
 
   let rec apply m sk args =
     match sk, args with
@@ -508,6 +519,32 @@ module TypeAssignment = struct
       in
       let res = merge_aux t1 t2 in
       !removed, res
+
+  let o2l = function Single x -> [x] | Overloaded l -> l
+
+  let undup_skemas sk_of_s os1 os2 =
+    let l1 = o2l os1 in
+    let l2 = o2l os2 in
+    let l = l1 @ l2 |> List.map (fun x -> x, sk_of_s x) in
+    let filtered = ref [] in
+    let eq_skema (s1,x) (s2,y) = 
+      let b = compare_skema x y = 0 in
+      if b then filtered := (s1,s2) :: !filtered;
+      b in      
+    let l =
+      let rec undup = function
+        | [] -> []
+        | (s, _ as x) :: xs when List.exists (eq_skema x) xs -> undup xs
+        | x :: xs -> x :: undup xs in
+      undup l in
+    match List.map fst l with
+    | [] -> assert false
+    | [x] -> !filtered, Single x
+    | l -> !filtered, Overloaded l
+
+  let merge_skema s sk1 sk2 =
+    if compare_skema sk1 sk2 <> 0 then anomaly "merging different skemas";
+    sk1
 
   let set m v = MutableOnce.set m (Val v)
 
@@ -895,7 +932,7 @@ module ScopedTerm = struct
 end
 
 
-module TypeList = struct
+module ScopeTypeExpressionUniqueList = struct
 
   type t = ScopedTypeExpression.t list
   [@@deriving show, ord]
