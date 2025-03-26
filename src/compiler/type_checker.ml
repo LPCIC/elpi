@@ -8,8 +8,11 @@ open Elpi_parser
 open Ast
 open Compiler_data
 
-type type_abbrevs = (TypeAssignment.skema_w_id * Loc.t) F.Map.t
+type type_abbrevs = (TypeAssignment.skema * Loc.t) F.Map.t
+[@@deriving show]
+
 type arities = Arity.t F.Map.t
+type typed_symbol = Symbol.t * TypeAssignment.skema
 
 let check_disjoint ~type_abbrevs ~kinds =
   kinds |> F.Map.iter (fun k (_,lock) -> if F.Map.mem k type_abbrevs then
@@ -52,7 +55,7 @@ and check_tye ~loc ~type_abbrevs ~kinds ctx = function
   | Arrow(m,v,s,t) -> Arr(TypeAssignment.MVal m,v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
 
 
-let check_type ~type_abbrevs ~kinds ~loc ctx x : TypeAssignment.skema =
+let check_type ~type_abbrevs ~kinds ~loc ~name ctx x : typed_symbol =
   (* Format.eprintf "check_type under %a\n%!" (F.Map.pp (fun fmt (n,_) -> ())) kinds;
   Format.eprintf "check_type %a\n%!" ScopedTypeExpression.pp_v_ x;  *)
   let rec aux_params ~loc ctx = function
@@ -61,16 +64,10 @@ let check_type ~type_abbrevs ~kinds ~loc ctx x : TypeAssignment.skema =
         TypeAssignment.Lam(c,aux_params ~loc (F.Set.add c ctx) t)
     | Ty t -> TypeAssignment.Ty(check_loc_tye ~type_abbrevs ~kinds ctx t)
   in
-    Scope.fresh_type_decl_id loc, aux_params ~loc ctx x
+    Symbol.make loc name, aux_params ~loc ctx x
 
-let check_types  ~type_abbrevs ~kinds lst : TypeAssignment.overloaded_skema_with_id =
-  match List.map (fun { value; loc } -> check_type ~type_abbrevs ~kinds ~loc F.Set.empty value) lst with
-  | [] -> assert false
-  | [x] -> TypeAssignment.Single x
-  | xs -> TypeAssignment.Overloaded xs
-
-let check_type  ~type_abbrevs ~kinds { value; loc } : (TypeAssignment.skema) =
-  check_type ~type_abbrevs ~kinds ~loc F.Set.empty value
+let check_type  ~type_abbrevs ~kinds { value; loc; name } : typed_symbol =
+  check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value
 
 let arrow_of_args args ety =
   let rec aux = function
@@ -84,8 +81,27 @@ let arrow_of_tys tys ety =
   | (m,x) :: xs -> TypeAssignment.Arr(m,Ast.Structured.NotVariadic,x,aux xs) in
   aux tys
 
-type env = TypeAssignment.overloaded_skema_with_id F.Map.t
-type env_undeclared = (TypeAssignment.t * Scope.type_decl_id * Ast.Loc.t) F.Map.t
+type typing_env = {
+  symbols : TypeAssignment.skema Symbol.QMap.t;
+  overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
+}
+[@@deriving show]
+
+let check_1types  ~type_abbrevs ~kinds lst : typed_symbol list * Symbol.t TypeAssignment.overloaded =
+  match List.map (check_type ~type_abbrevs ~kinds) lst with
+  | [] -> assert false
+  | [x,_] as l -> l, TypeAssignment.Single x
+  | xs as l -> l, TypeAssignment.Overloaded (List.map fst xs)
+
+let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
+  let m = F.Map.mapi (fun k tl -> check_1types ~type_abbrevs ~kinds tl) m in
+  let overloading = F.Map.map snd m in
+  let symbols = F.Map.fold (fun _ (l,_) qm ->
+    List.fold_left (fun qm (k, v) -> Symbol.QMap.add k v qm) qm l) m Symbol.QMap.empty in
+  { overloading; symbols }
+
+
+type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 [@@deriving show]
 
 open ScopedTerm
@@ -150,32 +166,38 @@ type ret_id = Symbol.t * TypeAssignment.t MutableOnce.t TypeAssignment.t_
 [@@deriving show]
 type spilled_phantoms = ScopedTerm.t list
 [@@deriving show]
-type sigma = { ty : TypeAssignment.t; nocc : int; loc : Loc.t }
+type sigma = { ty : TypeAssignment.t; nocc : int; binder: Symbol.t }
 [@@deriving show]
-type ctx = { ret : ret; mode : TypeAssignment.tmode }
+type ctx = { ret : ret; binder: Symbol.t; mode : TypeAssignment.tmode }
 [@@deriving show]
 
 let mk_uvar =
   let i = ref 0 in
   fun s -> incr i; TypeAssignment.UVar(MutableOnce.make (F.from_string (s ^ string_of_int !i)))
 
-let local_type ctx ~loc (lang,c,_) : ret_id TypeAssignment.overloading =
+let local_type ctx ~loc (lang,c,_) : ret_id TypeAssignment.overloaded =
   let lang = match lang with Scope.Bound c -> c | _ -> assert false in
-  try TypeAssignment.Single (Scope.dummy_type_decl_id, (Scope.Map.find (c,lang) ctx).ret) (* local types have no id, 0 is given by default *)
+  try
+    let { binder; ret } = Scope.Map.find (c,lang) ctx in
+    TypeAssignment.Single (binder, ret)
   with Not_found -> anomaly ~loc "free variable"
 
-let global_type unknown_global env ~loc c : ret_id TypeAssignment.overloading =
-  try TypeAssignment.fresh_overloaded @@ F.Map.find c env
+let fresh_skema_of_overloaded_symbol c env =
+  let overloaded = F.Map.find c env.overloading in
+  let get_fresh x = x, Symbol.QMap.find x env.symbols |> TypeAssignment.fresh |> fst in
+  TypeAssignment.map_overloaded get_fresh overloaded
+
+let global_type (unknown_global : env_undeclared ref) env ~loc c : ret_id TypeAssignment.overloaded =
+  try fresh_skema_of_overloaded_symbol c env
   with Not_found ->
     try
-      let ty,id,_ = F.Map.find c !unknown_global in
+      let ty,id = F.Map.find c !unknown_global in
       Single (id,TypeAssignment.unval ty)
     with Not_found ->
       let ty = TypeAssignment.Val (mk_uvar (Format.asprintf "Unknown_type_of_%a_" F.pp c)) in
-      let id = Scope.fresh_type_decl_id loc in
-      unknown_global := F.Map.add c (ty,id,loc) !unknown_global;
+      let id = Symbol.make loc c in
+      unknown_global := F.Map.add c (ty,id) !unknown_global;
       Single (id,TypeAssignment.unval ty)
-
 
 type classification =
   | Simple of { srcs : (TypeAssignment.tmode * ret) list; tgt : ret }
@@ -256,7 +278,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
   and resolve_gid ~loc id gid ety ty =
     if not @@ MutableOnce.is_set ty then MutableOnce.set ~loc ty (TypeAssignment.Val ety);
     match gid with
-    | Scope.Global x -> x.decl_id <- id
+    | Scope.Global x -> x.decl_id <- Some id
     | _ -> ()
 
   and check_impl ~positive ctx ~loc ~tyctx b t1 t2 ety =
@@ -309,7 +331,8 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     let mode = TypeAssignment.MRef (MutableOnce.make F.dummyname) in
     if unify (TypeAssignment.Arr(mode, Ast.Structured.NotVariadic,src,tgt)) ety then
       (* let () = Format.eprintf "add to ctx %a : %a\n" F.pp name TypeAssignment.pretty src in *)
-      check_loc ~positive ~tyctx (Scope.Map.add (c,name_lang) { ret = src; mode } ctx) t ~ety:tgt
+      let ctx = Scope.Map.add (c,name_lang) { ret = src; mode; binder = Symbol.make loc c } ctx in
+      check_loc ~positive ~tyctx ctx t ~ety:tgt
     else
       error_bad_function_ety ~valid_mode ~loc ~tyctx ~ety sc t
 
@@ -505,14 +528,17 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
           assert false in
       head it in
     (* Format.eprintf "Checking %a\n" F.pp c; *)
-    match F.Map.find c env with
-    | Single (_id,Ty _) -> ()
-    | Single (_id, Lam _ as sk) -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args prop)
+    match F.Map.find c env.overloading with
+    | Single id ->
+      begin match Symbol.QMap.find id env.symbols with
+      | Ty _ -> ()
+      | Lam _ as sk -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args prop)
+      end
     | Overloaded _ -> ()
     | exception Not_found -> assert(F.Map.mem c unknown)
 
   and check_matches_poly_skema ~loc ~pat c ty =
-    if try_matching ~pat ty then () else error_not_poly ~loc c ty (fst pat |> snd)
+    if try_matching ~pat ty then () else error_not_poly ~loc c ty (fst pat)
 
   and try_unify x y =
     let vx = TypeAssignment.vars_of (Val x) in
@@ -551,13 +577,14 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
 
   and uvar_type ~loc c =
     try
-      let { ty; nocc } as info = F.Map.find c !sigma in
+      let { ty; nocc; binder } as info = F.Map.find c !sigma in
       sigma := F.Map.add c { info with nocc = nocc+1 } !sigma;
-      Single (Scope.dummy_type_decl_id, TypeAssignment.unval @@ ty)
+      Single (binder, TypeAssignment.unval @@ ty)
     with Not_found ->
       let ty = TypeAssignment.UVar (MutableOnce.make c) in
-      sigma := F.Map.add c { ty = TypeAssignment.Val ty; nocc = 1; loc } !sigma;
-      Single (Scope.dummy_type_decl_id, ty)
+      let binder = Symbol.make loc c in
+      sigma := F.Map.add c { ty = TypeAssignment.Val ty; nocc = 1; binder } !sigma;
+      Single (binder, ty)
   (* matching=true -> X = t fails (X = Y works)*)
   and unif ~matching t1 t2 =
     (* Format.eprintf "%a = %a\n" TypeAssignment.pretty_mut_once_raw t1 TypeAssignment.pretty_mut_once_raw t2; *)
@@ -593,8 +620,9 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         unif ~matching t1 t2
     | _,_ -> false
 
-  and unify (x: TypeAssignment.t MutableOnce.t TypeAssignment.t_) (y: TypeAssignment.t MutableOnce.t TypeAssignment.t_) = unif ~matching:false x y
-  and try_matching ~pat:((_,x),vars) y =
+  and unify (x: TypeAssignment.t MutableOnce.t TypeAssignment.t_) (y: TypeAssignment.t MutableOnce.t TypeAssignment.t_) =
+    unif ~matching:false x y
+  and try_matching ~pat:(x,vars) y =
     let vars = F.Map.bindings vars |> List.map snd |> List.map cell_of, [] in
     let deref x = cell_of (TypeAssignment.deref x) in
     if unif ~matching:true x y then
@@ -636,30 +664,33 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
     if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
-    F.Map.iter (fun k { nocc = n; loc } ->
+    F.Map.iter (fun k { nocc = n; binder } ->
       if n = 1 && not @@ silence_linear_warn k then
-        warn ~loc (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
+        warn ~loc:(Symbol.get_loc binder)
+          (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k))
       !sigma;
     !unknown_global
 
-let check1_undeclared w f (t, id, loc) =
+let check1_undeclared w f (t, id) =
   match TypeAssignment.is_monomorphic t with
-  | None -> error ~loc Format.(asprintf "@[Unable to infer a closed type for %a:@ %a@]" F.pp f pretty_ty (TypeAssignment.unval t))
+  | None -> error ~loc:(Symbol.get_loc id) Format.(asprintf "@[Unable to infer a closed type for %a:@ %a@]" F.pp f pretty_ty (TypeAssignment.unval t))
   | Some ty ->
       if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']*\\|main\\)$") (F.show f) 0) then
-        w := Format.((f, loc), asprintf "type %a %a." F.pp f pretty_ty (TypeAssignment.unval t)) :: !w;
-      TypeAssignment.Single (id, ty)
+        w := Format.((f, Symbol.get_loc id), asprintf "type %a %a." F.pp f pretty_ty (TypeAssignment.unval t)) :: !w;
+      id, ty
 
 let check_undeclared ~unknown =
   let w = ref [] in
-  let env = F.Map.mapi (check1_undeclared w) unknown in
+  let unknown = F.Map.mapi (check1_undeclared w) unknown in
   if !w <> [] then begin
     let undeclared, types = List.split !w in
     warn Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared
      (pplist pp_print_string "") types);
   end;
-  env
+  let overloading = F.Map.map (fun (x,_) -> TypeAssignment.Single x) unknown in
+  let symbols = F.Map.fold (fun _ (k,v) m -> Symbol.QMap.add k v m) unknown Symbol.QMap.empty in
+  { overloading; symbols }
 
 (* let check ~type_abbrevs a b c =
   try check ~type_abbrevs a b c with

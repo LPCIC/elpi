@@ -6,14 +6,23 @@ open Elpi_parser
 open Compiler_data
 
 type type_abbrevs = (TypeAssignment.skema * Ast.Loc.t) F.Map.t
+[@@deriving show]
+
 type arities = Arity.t F.Map.t
+type typed_symbol = Symbol.t * TypeAssignment.skema
 
 val check_disjoint : type_abbrevs:ScopedTypeExpression.t F.Map.t -> kinds:arities -> unit
-val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> Symbol.t * TypeAssignment.skema
-val check_types : type_abbrevs:type_abbrevs -> kinds:arities -> TypeList.t -> (Symbol.t * TypeAssignment.skema) list * Symbol.t TypeAssignment.overloading F.Map.t
+val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> typed_symbol
 
-type typing_env = TypeAssignment.skema Symbol.QMap.t * Symbol.t TypeAssignment.overloading F.Map.t
-type env_undeclared = (TypeAssignment.t * Scope.type_decl_id * Ast.Loc.t) F.Map.t
+type typing_env = {
+  symbols : TypeAssignment.skema Symbol.QMap.t;
+  overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
+}
+[@@deriving show]
+
+val check_types : type_abbrevs:type_abbrevs -> kinds:arities -> ScopeTypeExpressionUniqueList.t F.Map.t -> typing_env
+  
+type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 [@@deriving show]
 
 val check :
