@@ -432,15 +432,15 @@ module Symbol : sig
 
   type t = symbol [@@deriving show,ord]
 
-  val fresh : Loc.t -> t
-  val dummy : t
   val get_loc : t -> Loc.t
   val get_str : t -> string
   val get_func : t -> F.t
-  val from_name : F.t -> t
-  val from_str : string -> t
+
   val make : Loc.t -> F.t -> t
-  val map_func : (F.t -> F.t) -> t -> t
+  val make_builtin : F.t -> t
+
+  (* val map_func : (F.t -> F.t) -> t -> t *)
+  
 end = struct
   type symbol = Loc.t * F.t [@@deriving show, ord]
   type 'a merge = (symbol -> 'a -> 'a -> 'a)
@@ -499,21 +499,13 @@ end = struct
 
   let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
 
-  let fresh = 
-    let i = ref 0 in
-    fun loc -> 
-      incr i; 
-      loc, F.from_string ("%fresh" ^ string_of_int !i)
-
-  let dummy = fresh (Loc.initial "(dummy)")
-  let from_name name = Loc.initial "(dummy)", name
-  let from_str str = Loc.initial "(dummy)", F.from_string str
   let get_loc (l,_) = l
   let get_str (_,f) = F.show f
   let get_func (_,f) = f
-  let make loc name = loc, name
   let map_func f (x,y) =  x, f y
-
+  
+  let make loc name = loc, name
+  let make_builtin name = Loc.initial "(ocaml)", name
 end
 
 
@@ -589,11 +581,9 @@ let table = {
   c2s = Constants.Map.empty;
   locked = false;
 }
-let loc = Loc.initial "(ocaml)"
-let symb_from_str str = Symbol.make loc (Ast.Func.from_string str)
 
 let declare_global_symbol str =
-  let symb = symb_from_str str in
+  let symb = Symbol.make_builtin (Ast.Func.from_string str) in
   try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
     if table.locked then
@@ -606,7 +596,7 @@ let declare_global_symbol str =
     n
 
 let declare_global_symbol_for_builtin str =
-  let symb = symb_from_str str in
+  let symb = Symbol.make_builtin (Ast.Func.from_string str) in
   if table.locked then
     Util.anomaly "declare_global_symbol_for_builtin called after initialization";
   try fst @@ Symbol.RawMap.find symb table.s2ct

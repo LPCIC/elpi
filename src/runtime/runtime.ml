@@ -84,7 +84,7 @@ let fresh_global_constant () =
    !table.frozen_constants <- !table.frozen_constants - 1;
    let n = !table.frozen_constants in
    let xx = Const n in
-   !table.c2s <- Constants.Map.add n (Symbol.from_str @@ "frozen-" ^ string_of_int n) !table.c2s ;
+   !table.c2s <- Constants.Map.add n (Symbol.make (Loc.initial "(chr)") (F.from_string @@ "frozen-" ^ string_of_int n)) !table.c2s ;
    Hashtbl.add !table.c2t n xx;
    n, xx
 
