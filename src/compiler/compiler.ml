@@ -1234,7 +1234,7 @@ module Flatten : sig
   let apply_subst_types s = ScopeTypeExpressionUniqueList.smart_map (ScopedTypeExpression.smart_map (subst_global s))
 
   let apply_subst_types s l =
-    F.Map.map (apply_subst_types s) l
+    F.Map.fold (fun k v m -> F.Map.add (subst_global s k) (apply_subst_types s v) m) l F.Map.empty
 
   let apply_subst_modes s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
@@ -1395,6 +1395,7 @@ end = struct
 
     let types = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds types in
 
+
     (* let rec is_arrow_to_prop = function
       | ScopedTypeExpression.Lam (_,x) -> is_arrow_to_prop x
       | Ty t -> ScopedTypeExpression.is_prop t.it <> None in 
@@ -1435,8 +1436,10 @@ end = struct
       (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
       (* if typecheck then Mode_checker.check ~is_rule:true ~type_abbrevs ~kinds ~types spilled.body; *)
+
       let is_deterministic = typecheck && Determinacy_checker.check_clause ~env:type_abbrevs spilled.body in
-      unknown, {spilled with is_deterministic} :: clauses) (F.Map.empty,[]) clauses in
+
+      unknown, {spilled with is_deterministic = false} :: clauses) (F.Map.empty,[]) clauses in
 
     let clauses = List.rev clauses in
 
@@ -1601,7 +1604,7 @@ end = struct
       C.Map.empty in
     R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
-  let to_dbl ?(ctx=Scope.Map.empty) ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
+  let to_dbl ?(ctx=Scope.Map.empty) ~types ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let symb = ref symb in
     let amap = ref amap in
     let allocate_arg c =
@@ -1614,13 +1617,19 @@ end = struct
       match SymbolMap.get_global_symbol !symb c with
       | None -> raise Not_found
       | Some c -> c, SymbolMap.get_canonical state !symb c in
-    let allocate_global_symbol s c =
+    let allocate_global_symbol ~loc s c =
       try match s with Some s -> lookup_global s | None -> raise Not_found
       with Not_found ->
-        let _ = anomaly "untyped and non allocated symbols" in
-        let s, rc = SymbolMap.allocate_global_symbol state !symb (Symbol.make (Loc.initial "(?)") c) in
-        symb := s;
-        rc in
+        match F.Map.find c types.Type_checker.overloading with
+        | TypeAssignment.Single s ->
+          let s, rc = SymbolMap.allocate_global_symbol state !symb s in
+          symb := s;
+          rc
+        | TypeAssignment.Overloaded _ ->
+            error ~loc ("untyped and non allocated symbol " ^ F.show c)
+        | exception Not_found ->
+            error ~loc ("untyped and non allocated symbol " ^ F.show c)
+      in
     let lookup_bound loc (_,ctx) (c,l as x) =
       try Scope.Map.find x ctx
       with Not_found -> error ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "") in
@@ -1651,11 +1660,11 @@ end = struct
           D.mkCons x y
       (* globals and builtins *)
       | Const((Global { decl_id },c,_)) ->
-          let c, t = allocate_global_symbol decl_id c in
+          let c, t = allocate_global_symbol ~loc:t.loc decl_id c in
           if Builtins.is_builtin builtins c then D.mkBuiltin c []
           else t
       | App((Global { decl_id },c,_),x,xs) ->
-          let c,_ = allocate_global_symbol decl_id c in
+          let c,_ = allocate_global_symbol ~loc:t.loc decl_id c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
           if Builtins.is_builtin builtins c then D.mkBuiltin c (x::xs)
@@ -1678,16 +1687,16 @@ end = struct
   let t  = todbl (depth,ctx) t in
   (!symb, !amap), t
 
-  let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling state symb ?(depth=0) ?(amap = F.Map.empty) t =
+  let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let t = if needs_spilling then Spilling.main t else t in
-    to_dbl ~ctx ~builtins state symb ~depth ~amap t
+    to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
-  let extend1_clause flags state indexing ~builtins (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr }; is_deterministic } =
+  let extend1_clause flags state indexing ~builtins ~types (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr }; is_deterministic } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index)
     else
-    let (symbols, amap), body = to_dbl ~builtins state symbols body in
+    let (symbols, amap), body = to_dbl ~builtins ~types state symbols body in
     let modes x = Constants.Map.find_opt x indexing |> Option.map fst |> Option.value ~default:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
@@ -1732,7 +1741,7 @@ end = struct
         " which is not a constraint on which it is applied. Check the list of predicates after the \"constraint\" keyword.");
     with Not_found -> ()
     
-  let extend1_chr flags state clique ~builtins (symbols,chr) { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } =
+  (* let extend1_chr flags state clique ~builtins (symbols,chr) { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } =
     if not @@ filter1_if flags (fun x -> x.Ast.Structured.cifexpr) attributes then
       (symbols,chr)
     else
@@ -1772,7 +1781,7 @@ end = struct
     let symbols, ctx_filter = map_acc (allocate_global_symbol state) symbols ctx_filter in
     let chr, clique = CHR.new_clique (SymbolMap.global_name state symbols) ctx_filter clique chr in
     List.fold_left (extend1_chr ~builtins flags state clique) (symbols,chr) rules
-   
+   *)
 let extend1_signature base_signature (signature : checked_compilation_unit_signature) =
   let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
   let { Assembled.toplevel_macros; kinds; types; type_abbrevs } = signature in
@@ -1829,7 +1838,7 @@ let extend1 flags (state, base) unit =
 
   let clauses, symbols, prolog_program =
     (* TODO: pass also typeabbrevs *)
-    List.fold_left (extend1_clause ~builtins flags state indexing) (cl, symbols, prolog_program) clauses in
+    List.fold_left (extend1_clause ~builtins ~types:signature.types flags state indexing) (cl, symbols, prolog_program) clauses in
 
   (* Printf.eprintf "kinds: %d\n%!" (F.Map.cardinal kinds); *)
 
@@ -1845,12 +1854,12 @@ let extend1 flags (state, base) unit =
     let base = { assembled with signature } in
     state, { base with hash = hash_base base }
 
-  let compile_query state { Assembled.symbols; builtins } (needs_spilling,t) =
-    let (symbols, amap), t = spill_todbl ~builtins ~needs_spilling state symbols t in
+  let compile_query state { Assembled.symbols; builtins; signature = { types } } (needs_spilling,t) =
+    let (symbols, amap), t = spill_todbl ~builtins ~needs_spilling ~types state symbols t in
     symbols, amap, t 
 
-  let compile_query_term state { Assembled.symbols; builtins } ?ctx ?(amap = F.Map.empty) ~depth t =
-    let (symbols', amap), rt = spill_todbl ~builtins ?ctx ~needs_spilling:false state symbols ~depth ~amap t in
+  let compile_query_term state { Assembled.symbols; builtins; signature = { types } } ?ctx ?(amap = F.Map.empty) ~depth t =
+    let (symbols', amap), rt = spill_todbl ~builtins ?ctx ~needs_spilling:false state symbols ~types ~depth ~amap t in
     if SymbolMap.equal_globals symbols' symbols then amap, rt
     else error ~loc:t.ScopedTerm.loc "cannot allocate new symbols in the query"
 

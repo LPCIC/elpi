@@ -146,8 +146,13 @@ let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
   let m = F.Map.mapi (fun k tl -> check_1types ~type_abbrevs ~kinds tl) m in
   let overloading = F.Map.map snd m in
   let symbols = F.Map.fold (fun _ (l,_) qm ->
-    List.fold_left (fun qm (k, v) -> Symbol.QMap.add k v qm) qm l) m Symbol.QMap.empty in
-  { overloading; symbols }
+    List.fold_left (fun acc (k, v) ->
+      Printf.eprintf "AADDD %s\n" (Symbol.get_str k);
+      Symbol.QMap.add k v acc) qm l) m Symbol.QMap.empty in
+      
+  let rc = { overloading; symbols } in
+  Printf.eprintf "TYPES: %s\n" (show_typing_env rc);
+  rc
 
 
 type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
@@ -239,6 +244,8 @@ let fresh_skema_of_overloaded_symbol c env =
 let global_type (unknown_global : env_undeclared ref) env ~loc c : ret_id TypeAssignment.overloaded =
   try fresh_skema_of_overloaded_symbol c env
   with Not_found ->
+    (* Printf.eprintf "FOUND OMAP %s %s\n%!" (F.show c) ; *)
+
     try
       let ty,id = F.Map.find c !unknown_global in
       Single (id,TypeAssignment.unval ty)
@@ -432,13 +439,13 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
           check_app_overloaded ~positive ctx ~loc (c,cid,tya) ety args targs l l
       end
     | Single (id,ty) ->
-      (* Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty; *)
+      Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty;
         let err ty =
           if args = [] then error_bad_ety ~valid_mode ~loc ~tyctx ~ety F.pp c ty (* uvar *)
           else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c,List.hd args,List.tl args)) ty in
         let monodirectional () =
           (* Format.eprintf "checking app mono %a\n" F.pp c; *)
-          let tgt = check_app_single ~positive ctx ~loc (c,cid,tya) ty [] args in
+          let tgt = check_app_single ~positive ctx ~loc (cid,c,tya) ty [] args in
           if unify tgt ety then (resolve_gid ~loc id cid ty tya; [])
           else err tgt in
         let bidirectional srcs tgt =
@@ -452,7 +459,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
           let rest_tgt = consume args srcs in
           (* Format.eprintf "Setting the type of %a to %a old is %a (%a)@." F.pp c TypeAssignment.pretty_mut_once ty (TypeAssignment.pretty_mut_once) (UVar tya) Loc.pp loc; *)
           if unify rest_tgt ety then
-            let _ = check_app_single ~positive ctx ~loc (c,cid,tya) ty [] args in (resolve_gid ~loc id cid ty tya; [])
+            let _ = check_app_single ~positive ctx ~loc (cid,c,tya) ty [] args in (resolve_gid ~loc id cid ty tya; [])
           else err rest_tgt in
         match classify_arrow ty with
         | Unknown | Variadic _ -> monodirectional ()
@@ -490,12 +497,12 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
       end
     | _ -> ()
 
-  and check_app_single ~positive ctx ~loc (c,_,_ as fc) ty consumed args =
+  and check_app_single ~positive ctx ~loc (_,c,_ as fc) ty consumed args =
     match args with
     | [] -> ty
     | x :: xs ->
-      (* Format.eprintf "@[<h>Checking term %a with type %a@]@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once_raw ty; *)
-      (* Format.eprintf "checking app %a against %a@." ScopedTerm.pretty_ (ScopedTerm.App(snd c, fst c,x,xs)) TypeAssignment.pretty_mut_once_raw ty; *)
+      Format.eprintf "@[<h>Checking term %a with type %a@]@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once_raw ty;
+      Format.eprintf "checking app %a against %a@." ScopedTerm.pretty_ (ScopedTerm.App(fc,x,xs)) TypeAssignment.pretty_mut_once_raw ty;
       match ty with
         | TypeAssignment.Arr(_, Variadic,s,t) ->
             let xs = check_loc_if_not_phantom ~positive ~tyctx:(Some c) ctx x ~ety:s @ xs in
