@@ -470,7 +470,7 @@ end = struct
 
     let add s a (uf,m) =
       let s' = UF.find uf s in
-      uf,RawMap.add s' a m
+      uf, RawMap.add s' a m
 
     let find s (uf,m) =
       let s' = UF.find uf s in
