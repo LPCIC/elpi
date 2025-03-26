@@ -3076,7 +3076,7 @@ let rec term_map m = function
   | CData _ as x -> x
 
 let rec split_conj ~depth = function
-  | App(c, hd, args) when c == Global_symbols.andc ->
+  | Builtin(c, hd :: args) when c == Global_symbols.andc ->
       split_conj ~depth hd @ List.(flatten (map (split_conj ~depth) args))
   | Nil -> []
   | Cons(x,xs) -> split_conj ~depth x @ split_conj ~depth xs
@@ -3128,13 +3128,13 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
       (ppterm (depth+lts) [] ~argsdepth:0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
   | Discard -> error ?loc "ill-formed hypothetical clause: discard in head position"
-  | App(c, g2, [g1]) when c == Global_symbols.rimplc ->
+  | Builtin(c, [g2;g1]) when c == Global_symbols.rimplc ->
      claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | App(c, _, _) when c == Global_symbols.rimplc -> error ?loc "ill-formed hypothetical clause"
-  | App(c, g1, [g2]) when c == Global_symbols.implc ->
+  | Builtin(c,  _) when c == Global_symbols.rimplc -> error ?loc "ill-formed hypothetical clause"
+  | Builtin(c, [g1;g2]) when c == Global_symbols.implc ->
      claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | App(c, _, _) when c == Global_symbols.implc -> error ?loc "ill-formed hypothetical clause"
-  | App(c, arg, []) when c == Global_symbols.sigmac ->
+  | Builtin(c, _) when c == Global_symbols.implc -> error ?loc "ill-formed hypothetical clause"
+  | Builtin(c, [arg]) when c == Global_symbols.sigmac ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      let args =
       List.rev (List.filter (function (Arg _) -> true | _ -> false) ts) in
@@ -3143,10 +3143,10 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
      claux1 loc get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
-  | App(c, arg, []) when c == Global_symbols.pic ->
+  | Builtin(c, [arg]) when c == Global_symbols.pic ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      claux1 loc get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
-  | App(c, _, _) when c == Global_symbols.andc ->
+  | Builtin(c, _) when c == Global_symbols.andc ->
      error ?loc "Conjunction in the head of a clause is not supported"
   | Const _
   | App _ as g ->
@@ -3969,7 +3969,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        [%tcall cut (gid[@trace]) gs next (alts[@trace]) cutto_alts]
     | Builtin(c,[q;sol]) when c == Global_symbols.findall_solutionsc ->
        [%tcall findall depth p q sol (gid[@trace]) gs next alts cutto_alts]
-    | App(c, g, gs') when c == Global_symbols.andc -> [%spy "user:rule" ~rid ~gid pp_string "and"];
+    | Builtin(c, g :: gs') when c == Global_symbols.andc -> [%spy "user:rule" ~rid ~gid pp_string "and"];
        let gid'[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
        let gs' = List.map (fun x -> (make_subgoal[@inlined]) ~depth (gid[@trace]) p x) gs' in
        [%spy "user:rule:and" ~rid ~gid pp_string "success"];
@@ -4007,7 +4007,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
          [%spy "user:rule:eq" ~rid ~gid pp_string "fail"];
          [%tcall next_alt alts]
        end
-    | App(c, g2, [g1]) when c == Global_symbols.rimplc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
+    | Builtin(c, [g2;g1]) when c == Global_symbols.rimplc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let [@warning "-26"]loc = None in
        let loc[@trace] = Some (Loc.initial ("(context step_id:" ^ string_of_int (Trace_ppx_runtime.Runtime.get_cur_step ~runtime_id:!rid "run") ^")")) in
        let clauses, pdiff, lcs = clausify ~loc p ~depth g1 in
@@ -4015,7 +4015,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
        [%spy "user:rule:implication" ~rid ~gid pp_string "success"];
        [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts cutto_alts]
-    | App(c, g1, [g2]) when c == Global_symbols.implc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
+    | Builtin(c, [g1; g2]) when c == Global_symbols.implc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let [@warning "-26"]loc = None in
        let loc[@trace] = Some (Loc.initial ("(context step_id:" ^ string_of_int (Trace_ppx_runtime.Runtime.get_cur_step ~runtime_id:!rid "run") ^")")) in
        let clauses, pdiff, lcs = clausify ~loc p ~depth g1 in
@@ -4023,12 +4023,12 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
        [%spy "user:rule:implication" ~rid ~gid pp_string "success"];
        [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts cutto_alts]
-    | App(c, arg, []) when c == Global_symbols.pic -> [%spy "user:rule" ~rid ~gid pp_string "pi"];
+    | Builtin(c, [arg]) when c == Global_symbols.pic -> [%spy "user:rule" ~rid ~gid pp_string "pi"];
        let f = get_lambda_body ~depth arg in
        let gid[@trace] = make_subgoal_id gid ((depth+1,f)[@trace]) in
        [%spy "user:rule:pi" ~rid ~gid pp_string "success"];
        [%tcall run (depth+1) p f (gid[@trace]) gs next alts cutto_alts]
-    | App(c, arg, []) when c == Global_symbols.sigmac -> [%spy "user:rule" ~rid ~gid pp_string "sigma"];
+    | Builtin(c, [arg]) when c == Global_symbols.sigmac -> [%spy "user:rule" ~rid ~gid pp_string "sigma"];
        let f = get_lambda_body ~depth arg in
        let v = UVar(oref C.dummy, depth, 0) in
        let fv = subst depth [v] f in

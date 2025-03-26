@@ -63,7 +63,7 @@ let check_type ~type_abbrevs ~kinds ~loc ~name ctx x =
         TypeAssignment.Lam(c,aux_params ~loc (F.Set.add c ctx) t)
     | Ty t -> TypeAssignment.Ty(check_loc_tye ~type_abbrevs ~kinds ctx t)
   in
-    Symbol.make loc name, aux_params ~loc ctx x
+    aux_params ~loc ctx x
 
 type indexing =
   | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
@@ -114,9 +114,18 @@ let check_indexing ~loc name value ty indexing =
   | _ when is_prop ty -> Index (mode,chose_indexing name [1] None)
   | _ -> DontIndex
 
-let check_type  ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * symbol_metadata =
-  let symb, ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
-  symb, { ty; indexing = check_indexing ~loc name value ty indexing }
+let check_type  ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * Symbol.t option * symbol_metadata =
+  let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
+  let indexing = check_indexing ~loc name value ty indexing in
+  let symb = Symbol.make loc name in
+  let quotient =
+    if indexing = External then
+      let bsymb = Symbol.make_builtin name in
+      match Symbol.RawMap.find bsymb Elpi_runtime.Data.Global_symbols.table.s2ct with
+      | _ -> Some bsymb 
+      | exception Not_found -> None
+    else None in
+  symb, quotient, { ty; indexing }
 
 let arrow_of_args args ety =
   let rec aux = function
@@ -141,19 +150,24 @@ let empty_typing_env = {symbols = Symbol.QMap.empty; overloading = F.Map.empty}
 let check_1types  ~type_abbrevs ~kinds lst : _ * Symbol.t TypeAssignment.overloaded =
   match List.map (check_type ~type_abbrevs ~kinds) lst with
   | [] -> assert false
-  | [x,_] as l -> l, TypeAssignment.Single x
-  | xs as l -> l, TypeAssignment.Overloaded (List.map fst xs)
+  | [x,_,_] as l -> l, TypeAssignment.Single x
+  | xs as l -> l, TypeAssignment.Overloaded (List.map (fun (x,_,_) -> x) xs)
 
 let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
   let m = F.Map.mapi (fun k tl -> check_1types ~type_abbrevs ~kinds tl) m in
   let overloading = F.Map.map snd m in
   let symbols = F.Map.fold (fun _ (l,_) qm ->
-    List.fold_left (fun acc (k, v) ->
-      Printf.eprintf "AADDD %s\n" (Symbol.get_str k);
+    List.fold_left (fun acc (k, q, v) ->
+      let acc =
+        match q with
+        | None -> acc
+        | Some q ->
+            (* Format.eprintf "FOUND builtin %a -> %a\n" Symbol.pp q Symbol.pp k; *)
+            (* CAVEAT: we keep as canonical the (ocaml) one allocated statically in Global_symbols *)
+            Symbol.QMap.unify (fun _ _ _ -> assert false) k q acc in
       Symbol.QMap.add k v acc) qm l) m Symbol.QMap.empty in
       
   let rc = { overloading; symbols } in
-  Printf.eprintf "TYPES: %s\n" (show_typing_env rc);
   rc
 
 
@@ -336,7 +350,9 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
   and resolve_gid ~loc id gid ety ty =
     if not @@ MutableOnce.is_set ty then MutableOnce.set ~loc ty (TypeAssignment.Val ety);
     match gid with
-    | Scope.Global x -> x.decl_id <- Some id
+    | Scope.Global x -> 
+      (* Format.eprintf "resolving %a\n" Symbol.pp id; *)
+      x.decl_id <- Some id
     | _ -> ()
 
   and check_impl ~positive ctx ~loc ~tyctx b t1 t2 ety =
@@ -441,7 +457,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
           check_app_overloaded ~positive ctx ~loc (c,cid,tya) ety args targs l l
       end
     | Single (id,ty) ->
-      Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty;
+      (* Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty; *)
         let err ty =
           if args = [] then error_bad_ety ~valid_mode ~loc ~tyctx ~ety F.pp c ty (* uvar *)
           else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c,List.hd args,List.tl args)) ty in
@@ -503,8 +519,8 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     match args with
     | [] -> ty
     | x :: xs ->
-      Format.eprintf "@[<h>Checking term %a with type %a@]@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once_raw ty;
-      Format.eprintf "checking app %a against %a@." ScopedTerm.pretty_ (ScopedTerm.App(fc,x,xs)) TypeAssignment.pretty_mut_once_raw ty;
+      (* Format.eprintf "@[<h>Checking term %a with type %a@]@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once_raw ty;
+      Format.eprintf "checking app %a against %a@." ScopedTerm.pretty_ (ScopedTerm.App(fc,x,xs)) TypeAssignment.pretty_mut_once_raw ty; *)
       match ty with
         | TypeAssignment.Arr(_, Variadic,s,t) ->
             let xs = check_loc_if_not_phantom ~positive ~tyctx:(Some c) ctx x ~ety:s @ xs in

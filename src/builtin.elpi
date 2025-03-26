@@ -37,23 +37,23 @@ pred (;) i:prop, i:prop.
 
 (_ ; B) :- B.
 
-type (:-) fprop -> fprop -> fprop.
+external type (:-) fprop -> fprop -> fprop.
 
-type (:-) fprop -> list prop -> fprop.
+external type (:-) fprop -> list prop -> fprop.
 
-type (,) variadic fprop fprop.
+external type (,) variadic fprop fprop.
 
 type uvar A.
 
 type (as) A -> A -> A.
 
-type (=>) prop -> fprop -> fprop.
+external type (=>) prop -> fprop -> fprop.
 
-type (=>) list prop -> fprop -> fprop.
+external type (=>) list prop -> fprop -> fprop.
 
-type (==>) prop -> fprop -> fprop.
+external type (==>) prop -> fprop -> fprop.
 
-type (==>) list prop -> fprop -> fprop.
+external type (==>) list prop -> fprop -> fprop.
 
 %  -- Control --
 
