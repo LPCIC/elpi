@@ -190,7 +190,7 @@ type indexing =
   | MapOn of int
   | Hash of int list
   | DiscriminationTree of int list
-[@@deriving show]
+[@@deriving show, ord]
 
 let mkLam x = Lam x [@@inline]
 let mkApp c x xs = App(c,x,xs) [@@inline]
@@ -427,7 +427,9 @@ module Symbol : sig
     val mapi : (symbol -> symbol) -> ('a -> 'a) -> 'a t -> 'a t
     val map : ('a -> 'b) -> 'a t -> 'b t
     val fold : (symbol -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+    val iter : (symbol -> 'a -> unit) -> 'a t -> unit
     val mem : symbol -> 'a t -> bool
+    val bindings : 'a t -> (symbol * 'a) list
   end 
 
   type t = symbol [@@deriving show,ord]
@@ -494,6 +496,9 @@ end = struct
       let s' = UF.find uf s in
       RawMap.mem s' m
 
+    let iter f (_,m) = RawMap.iter f m
+
+    let bindings (_,m) = RawMap.bindings m
 
   end
 

@@ -12,7 +12,6 @@ type type_abbrevs = (TypeAssignment.skema * Loc.t) F.Map.t
 [@@deriving show]
 
 type arities = Arity.t F.Map.t
-type typed_symbol = Symbol.t * TypeAssignment.skema
 
 let check_disjoint ~type_abbrevs ~kinds =
   kinds |> F.Map.iter (fun k (_,lock) -> if F.Map.mem k type_abbrevs then
@@ -55,7 +54,7 @@ and check_tye ~loc ~type_abbrevs ~kinds ctx = function
   | Arrow(m,v,s,t) -> Arr(TypeAssignment.MVal m,v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
 
 
-let check_type ~type_abbrevs ~kinds ~loc ~name ctx x : typed_symbol =
+let check_type ~type_abbrevs ~kinds ~loc ~name ctx x =
   (* Format.eprintf "check_type under %a\n%!" (F.Map.pp (fun fmt (n,_) -> ())) kinds;
   Format.eprintf "check_type %a\n%!" ScopedTypeExpression.pp_v_ x;  *)
   let rec aux_params ~loc ctx = function
@@ -66,8 +65,58 @@ let check_type ~type_abbrevs ~kinds ~loc ~name ctx x : typed_symbol =
   in
     Symbol.make loc name, aux_params ~loc ctx x
 
-let check_type  ~type_abbrevs ~kinds { value; loc; name } : typed_symbol =
-  check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value
+type indexing =
+  | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
+  | DontIndex
+  | External
+[@@deriving show, ord]
+
+type symbol_metadata = {
+  ty : TypeAssignment.skema;
+  indexing : indexing;
+}
+[@@deriving show]
+
+let chose_indexing predicate l k =
+  let open Elpi_runtime.Data in
+  let all_zero = List.for_all ((=) 0) in
+  let rec check_map default argno = function
+    | [] -> error ("Wrong indexing for " ^ F.show predicate ^ ": no argument selected.")
+    | 0 :: l -> check_map default (argno+1) l
+    | 1 :: l when all_zero l -> MapOn argno
+    | _ -> default ()
+  in
+  match k with
+  | Some Ast.Structured.DiscriminationTree -> DiscriminationTree l
+  | Some HashMap -> Hash l
+  | None -> check_map (fun () -> DiscriminationTree l) 0 l
+  | Some Map -> check_map (fun () ->
+      error ("Wrong indexing for " ^ F.show predicate ^
+              ": Map indexes exactly one argument at depth 1")) 0 l
+
+let maximize_indexing_input modes =
+  let open Elpi_runtime.Data in
+  let depths = List.map (function Util.Mode.Fo Input | Util.Mode.Ho (Input, _) -> max_int | _ -> 0) modes in
+  DiscriminationTree depths
+
+let check_indexing ~loc name value ty indexing =
+  let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
+  let rec is_prop = function
+    | TypeAssignment.Lam (_,x) -> is_prop x
+    | Ty t ->  TypeAssignment.is_prop t <> None in
+  let ensure_pred ty =
+    if not (is_prop ty) then
+      error ~loc "Indexing directive is for predicates only" in
+  match indexing with
+  | Some (Ast.Structured.Index(l,k)) -> ensure_pred ty; Index (mode,chose_indexing name l k)
+  | Some MaximizeForFunctional -> ensure_pred ty; Index (mode,maximize_indexing_input mode)
+  | Some Ast.Structured.External -> ensure_pred ty; External
+  | _ when is_prop ty -> Index (mode,chose_indexing name [1] None)
+  | _ -> DontIndex
+
+let check_type  ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * symbol_metadata =
+  let symb, ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
+  symb, { ty; indexing = check_indexing ~loc name value ty indexing }
 
 let arrow_of_args args ety =
   let rec aux = function
@@ -77,17 +126,17 @@ let arrow_of_args args ety =
 
 let arrow_of_tys tys ety =
   let rec aux = function
-  | [] -> ety
-  | (m,x) :: xs -> TypeAssignment.Arr(m,Ast.Structured.NotVariadic,x,aux xs) in
+    | [] -> ety
+    | (m,x) :: xs -> TypeAssignment.Arr(m,Ast.Structured.NotVariadic,x,aux xs) in
   aux tys
 
 type typing_env = {
-  symbols : TypeAssignment.skema Symbol.QMap.t;
+  symbols : symbol_metadata Symbol.QMap.t;
   overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
 }
 [@@deriving show]
 
-let check_1types  ~type_abbrevs ~kinds lst : typed_symbol list * Symbol.t TypeAssignment.overloaded =
+let check_1types  ~type_abbrevs ~kinds lst : _ * Symbol.t TypeAssignment.overloaded =
   match List.map (check_type ~type_abbrevs ~kinds) lst with
   | [] -> assert false
   | [x,_] as l -> l, TypeAssignment.Single x
@@ -184,7 +233,7 @@ let local_type ctx ~loc (lang,c,_) : ret_id TypeAssignment.overloaded =
 
 let fresh_skema_of_overloaded_symbol c env =
   let overloaded = F.Map.find c env.overloading in
-  let get_fresh x = x, Symbol.QMap.find x env.symbols |> TypeAssignment.fresh |> fst in
+  let get_fresh x = x, (Symbol.QMap.find x env.symbols).ty |> TypeAssignment.fresh |> fst in
   TypeAssignment.map_overloaded get_fresh overloaded
 
 let global_type (unknown_global : env_undeclared ref) env ~loc c : ret_id TypeAssignment.overloaded =
@@ -530,7 +579,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     (* Format.eprintf "Checking %a\n" F.pp c; *)
     match F.Map.find c env.overloading with
     | Single id ->
-      begin match Symbol.QMap.find id env.symbols with
+      begin match (Symbol.QMap.find id env.symbols).ty with
       | Ty _ -> ()
       | Lam _ as sk -> check_matches_poly_skema ~loc ~pat:(TypeAssignment.fresh sk) c (arrow_of_args args prop)
       end
@@ -678,7 +727,7 @@ let check1_undeclared w f (t, id) =
   | Some ty ->
       if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']*\\|main\\)$") (F.show f) 0) then
         w := Format.((f, Symbol.get_loc id), asprintf "type %a %a." F.pp f pretty_ty (TypeAssignment.unval t)) :: !w;
-      id, ty
+      id, { ty ; indexing = Index ([],chose_indexing (Symbol.get_func id) [1] None) }
 
 let check_undeclared ~unknown =
   let w = ref [] in

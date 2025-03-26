@@ -9,13 +9,24 @@ type type_abbrevs = (TypeAssignment.skema * Ast.Loc.t) F.Map.t
 [@@deriving show]
 
 type arities = Arity.t F.Map.t
-type typed_symbol = Symbol.t * TypeAssignment.skema
+
+type indexing =
+  | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
+  | DontIndex
+  | External
+[@@deriving show, ord]
+
+type symbol_metadata = {
+  ty : TypeAssignment.skema;
+  indexing : indexing;
+}
+[@@deriving show]
 
 val check_disjoint : type_abbrevs:ScopedTypeExpression.t F.Map.t -> kinds:arities -> unit
-val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> typed_symbol
+val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> Symbol.t * symbol_metadata
 
 type typing_env = {
-  symbols : TypeAssignment.skema Symbol.QMap.t;
+  symbols : symbol_metadata Symbol.QMap.t;
   overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
 }
 [@@deriving show]

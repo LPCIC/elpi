@@ -323,14 +323,12 @@ module Assembled = struct
 
 
 module CheckedFlat = struct
-type types_indexing = ScopedTypeExpression.t list Symbol.RawMap.t
-[@@deriving show]
+
 type program = {
   signature : Assembled.signature;
-  types_indexing : types_indexing;
   clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
-  builtins : BuiltInPredicate.t list;
+  builtins : (Symbol.t * BuiltInPredicate.t) list;
 }
 [@@deriving show]
 
@@ -564,11 +562,10 @@ end = struct (* {{{ *)
     let attributes =
       match attributes with
       | None -> 
-        if toplevel_func = Function || is_functional_from_ty () then MaximizeForFunctional
-        else Structured.Index([1],None)
-      | Some x -> x in
+        if toplevel_func = Function || is_functional_from_ty () then Some MaximizeForFunctional
+        else None
+      | Some _ as x -> x in
     let ty = structure_type_expression loc toplevel_func valid_functional ty in
-    Format.eprintf "Attribute for %a is %a at position %a@." F.pp name pp_tattribute attributes Loc.pp loc;
     { Type.attributes; loc; name; ty }
 
   let structure_type_abbreviation { TypeAbbreviation.name; value; nparams; loc } =
@@ -862,7 +859,7 @@ end = struct
           let s = F.Set.remove c s in
           close s (Lam(c,t)) in
       close vars (Ty value) in
-    { ScopedTypeExpression.name; indexing = Some attributes; loc; nparams; value }
+    { ScopedTypeExpression.name; indexing = attributes; loc; nparams; value }
 
   let scope_term_macro ~loc ~state c args =
     let { macros } = get_mtm state in
@@ -1248,21 +1245,29 @@ module Flatten : sig
   let apply_subst_type_abbrevs s l =
     List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
 
+  let merge_indexing s idx1 idx2 =
+    if Type_checker.compare_indexing idx1 idx2 <> 0 then
+      error ~loc:(Symbol.get_loc s) ("Incompatible indexing options for symbol " ^ Symbol.get_str s);
+    idx1
+
+  let merge_symbol_metadata s { Type_checker.ty = ty1; indexing = idx1 } { Type_checker.ty = ty2; indexing = idx2 } =
+    { Type_checker.ty = TypeAssignment.merge_skema s ty1 ty2;
+      indexing = merge_indexing s idx1 idx2;
+    }
+
   let merge_type_assignments { Type_checker.symbols = s1; overloading = o1 } { Type_checker.symbols = s2; overloading = o2 } =
-    let symbols = Symbol.QMap.union TypeAssignment.merge_skema s1 s2 in
+    let symbols = Symbol.QMap.union merge_symbol_metadata s1 s2 in
     let to_unite = ref [] in
     let overloading = F.Map.union (fun f l1 l2 ->
       (* We give precedence to recent type declarations over old ones *)
-      let to_u, l = TypeAssignment.undup_skemas (fun x -> Symbol.QMap.find x symbols) l1 l2 in
+      let to_u, l = TypeAssignment.undup_skemas (fun x -> (Symbol.QMap.find x symbols).ty) l1 l2 in
       to_unite := to_u :: !to_unite;
       Some l
       ) o1 o2 in
     let to_unite = List.concat !to_unite in
     let symbols =
-      List.fold_right (fun (x,y) -> Symbol.QMap.unify TypeAssignment.merge_skema x y) to_unite symbols in
+      List.fold_right (fun (x,y) -> Symbol.QMap.unify merge_symbol_metadata x y) to_unite symbols in
     { Type_checker.overloading; symbols }
-    let merge_type_assignments t1 t2 =
-      assert false
 
   let merge_checked_type_abbrevs m1 m2 =
     let m = F.Map.union (fun k (sk,otherloc as x) (ty,loc) ->
@@ -1361,7 +1366,7 @@ module Check : sig
 
 end = struct
 
-  let check_signature ~flags builtins symbols (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * _=
+  let check_signature ~flags (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * Type_checker.typing_env =
     let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
     
     let { Flat.kinds; types; type_abbrevs; toplevel_macros } = signature in
@@ -1372,7 +1377,7 @@ end = struct
       List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, scoped_ty) ->
         (* TODO check disjoint from kinds *)
         let loc = scoped_ty.ScopedTypeExpression.loc in
-        let _, ty = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
+        let _, { Type_checker.ty } = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
         if F.Map.mem name all_type_abbrevs then begin
           let sk, otherloc = F.Map.find name all_type_abbrevs in
           if TypeAssignment.compare_skema sk ty <> 0 then
@@ -1388,10 +1393,9 @@ end = struct
     let check_t_begin = Unix.gettimeofday () in
     (* Type_checker.check_disjoint ~type_abbrevs ~kinds; *)
 
-    let raw_types = types in
     let types = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds types in
 
-    let rec is_arrow_to_prop = function
+    (* let rec is_arrow_to_prop = function
       | ScopedTypeExpression.Lam (_,x) -> is_arrow_to_prop x
       | Ty t -> ScopedTypeExpression.is_prop t.it <> None in 
 
@@ -1400,19 +1404,8 @@ end = struct
       | x :: xs when is_arrow_to_prop x.ScopedTypeExpression.value ->
         x :: type2type_idx xs
       | _ :: xs -> type2type_idx xs
-    in
+    in *)
 
-    let (types_indexing:CheckedFlat.types_indexing) = F.Map.fold (fun k tyl acc ->
-      begin match SymbolMap.get_global_symbol symbols (Symbol.make_builtin k) with
-      | Some c -> if Builtins.is_declared builtins c then error (Format.asprintf "Ascribing a type to an already registered builtin %a" F.pp k);
-      | _ -> () end;
-      match type2type_idx tyl with
-        | [] -> acc
-        | l -> Symbol.RawMap.add k tyl acc
-      (* if TypeAssignment.is_predicate (F.Map.find k types) then
-        Some (List.map (fun ty -> ty.ScopedTypeExpression.indexing, ty.ScopedTypeExpression.loc) tyl)
-      else None *)
-      ) raw_types Symbol.RawMap.empty in
   
     let check_t_end = Unix.gettimeofday () in
 
@@ -1422,11 +1415,11 @@ end = struct
     { Assembled.kinds; types; type_abbrevs; toplevel_macros },
     { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros },
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
-    types_indexing
+    types
 
   let check ~flags st ~base u : checked_compilation_unit =
 
-    let signature, precomputed_signature, check_sig, types_indexing = check_signature ~flags base.Assembled.builtins base.Assembled.symbols base.Assembled.signature u.code.Flat.signature in
+    let signature, precomputed_signature, check_sig, new_types = check_signature ~flags base.Assembled.signature u.code.Flat.signature in
 
     let { version; code = { Flat.clauses; chr; builtins } } = u in
     let { Assembled.kinds; types; type_abbrevs; toplevel_macros } = precomputed_signature in
@@ -1447,17 +1440,31 @@ end = struct
 
     let clauses = List.rev clauses in
 
-    List.iter (fun (BuiltInPredicate.Pred(name,_,_)) ->
-      if Symbol.QMap.mem (Symbol.make_builtin (F.from_string name)) base.Assembled.signature.types.symbols then
-        error (Format.asprintf "Builtin %s already exists as a regular predicate" name);
-      if not @@ F.Map.mem (F.from_string name) types_indexing then error (Format.asprintf "No type declared for builtin %s" name);
-      let tyl = F.Map.find (F.from_string name) types_indexing in
-      List.iter (fun ScopedTypeExpression.{indexing;loc} ->
-        match indexing with
-        | Some Ast.Structured.External -> ()
-        | _ -> error ~loc (Format.asprintf "Non external type declaration for builtin %s" name)
-        ) tyl;
-    ) builtins;
+    Symbol.QMap.iter (fun k { Type_checker.indexing; ty } ->
+      match SymbolMap.get_global_symbol base.Assembled.symbols k with
+      | Some c ->
+          if Builtins.is_declared base.Assembled.builtins c then
+            error ~loc:(Symbol.get_loc k)
+              (Format.asprintf "Ascribing a type to an already registered builtin %s" (Symbol.get_str k))
+      | _ -> ()) new_types.symbols;
+
+    let builtins = List.map (fun (BuiltInPredicate.Pred(name,_,_) as p) ->
+      let symb =
+        match F.Map.find (F.from_string name) new_types.overloading with
+        | Single s -> s
+        | Overloaded (s1::s2::_) ->
+            error ~loc:(Symbol.get_loc s2)
+              (Format.asprintf "Multiple signatures for builtin %s\nOther signature: %a" name Symbol.pp s1);
+        | Overloaded _ -> assert false
+        | exception Not_found ->
+            error (Format.asprintf "No signature declared for builtin %s" name) in
+      let { Type_checker.indexing } = Symbol.QMap.find symb new_types.symbols in
+      begin match indexing with
+        | Type_checker.External -> ()
+        | _ -> error ~loc:(Symbol.get_loc symb) (Format.asprintf "Non external type declaration for builtin %s" name)
+      end;
+      symb, p
+    ) builtins in
 
     let more_types = Type_checker.check_undeclared ~unknown in
     let u_types = Flatten.merge_type_assignments signature.types more_types in
@@ -1468,7 +1475,7 @@ end = struct
     let signature = { signature with types = u_types } in
     let precomputed_signature = { precomputed_signature with types } in
 
-    let checked_code = { CheckedFlat.signature; clauses; chr; builtins; types_indexing } in
+    let checked_code = { CheckedFlat.signature; clauses; chr; builtins } in
 
   { version; checked_code; base_hash = hash_base base;
     precomputed_signature;
@@ -1557,75 +1564,42 @@ end = struct
         error ("Wrong indexing for " ^ F.show predicate ^
                 ": Map indexes exactly one argument at depth 1")) 0 l
 
-  let maximize_indexing_input modes =
-    let depths = List.map (function Mode.Fo Input | Mode.Ho (Input, _) -> max_int | _ -> 0) modes in
-    DiscriminationTree depths
 
-  let update_indexing state symbols ({ idx } as index) types old_idx =
-    let check_if_some_clauses_already_in ~loc predicate c oldi newi =
+  let update_indexing state symbols ({ idx } as index) (preds : (Symbol.t * _) list) old_idx =
+    (* let check_if_some_clauses_already_in ~loc predicate c oldi newi =
          if Ptmap.mem c idx then
-           error ~loc @@ "Some clauses for " ^ F.show predicate ^
+           error ~loc @@ "Some clauses for " ^ predicate ^
              " are already in the program, changing the indexing a posteriori is not allowed. " ^
              show_indexing oldi ^ " <> " ^ show_indexing newi
-      in
+      in *)
       let check_if_some_clauses_already_in2 ~loc predicate c =
         if Ptmap.mem c idx then
-          error ~loc @@ "2 Some clauses for " ^ F.show predicate ^
+          error ~loc @@ "2 Some clauses for " ^ predicate ^
             " are already in the program, changing the indexing a posteriori is not allowed."
      in
 
-    let add_indexing_for name c (ScopedTypeExpression.{loc;indexing;value}) map =
-      Format.eprintf "indexing for %a with id %a at pos %a\n%!" F.pp name pp_int c Loc.pp loc;
-      let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
-      (* Format.eprintf "Mode for %a is %a@." F.pp name Mode.pp_hos mode;
-      Format.eprintf "its tattribute is %a@." (Format.pp_print_option Ast.Structured.pp_tattribute) indexing; *)
-      let declare_index, index =
-        match indexing with
-        | Some (Ast.Structured.Index(l,k)) -> true, chose_indexing state name l k
-        | Some MaximizeForFunctional -> true, maximize_indexing_input mode
-        | _ -> false, chose_indexing state name [1] None in
+    let add_indexing_for name loc c index map =
+      Format.eprintf "indexing for %s with id %a at pos %a\n%!" name pp_int c Loc.pp loc;
       (* Format.eprintf "its indexing is %a@." pp_indexing index; *)
       try
-        let _, old_tindex =
+        let old_tindex =
           try C.Map.find c map
           with Not_found -> C.Map.find c old_idx in
         if old_tindex <> index then
-          if old_tindex <> MapOn 1 && declare_index then
-            error ~loc ("multiple and inconsistent indexing attributes for " ^
-                      F.show name)
-          else
-            if declare_index then begin
-              check_if_some_clauses_already_in ~loc name c old_tindex index;
-               C.Map.add c (mode,index) map
-            end else map
-        else
-          map
+            error ("multiple and inconsistent indexing attributes for " ^ name)
+        else map
       with Not_found ->
-        if declare_index then begin
           check_if_some_clauses_already_in2 ~loc name c;
-          C.Map.add c (mode,index) map
-        end else map in
+          C.Map.add c index map
+        in
 
-    (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
-            time   typchk wall   mem
-      with: 14.75   0.53  16.69 2348.4M
-      wout: 19.61   0.56  21.72 2789.1M 
-    *)
-    let symbols =
-      if F.Map.cardinal types > 2000 then
-        F.Map.bindings types 
-          |> List.sort (fun (_,l1) (_,l2) -> compare (List.hd l1).ScopedTypeExpression.loc.line (List.hd l2).loc.line) 
-          |> List.fold_left (fun s (k,_) -> fst @@ SymbolMap.allocate_global_symbol state s k) symbols
-      else
-        symbols in
-    let symbols, map =
-      F.Map.fold (fun tname l (symbols, acc) ->
-        let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols tname in
-        symbols, ScopeTypeExpressionUniqueList.fold (fun acc t->
-                   add_indexing_for tname c t acc)
-                  acc l)
-      types (symbols, C.Map.empty) in
-    symbols, R.CompileTime.update_indexing map index, Symbol.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
+    let map =
+      preds |> List.fold_left (fun acc (symb,indexing) ->
+        match SymbolMap.get_global_symbol symbols symb with
+        | None -> assert false
+        | Some c -> add_indexing_for (Symbol.get_str symb) (Symbol.get_loc symb) c indexing acc)
+      C.Map.empty in
+    R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
   let to_dbl ?(ctx=Scope.Map.empty) ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let symb = ref symb in
@@ -1640,10 +1614,11 @@ end = struct
       match SymbolMap.get_global_symbol !symb c with
       | None -> raise Not_found
       | Some c -> c, SymbolMap.get_canonical state !symb c in
-    let allocate_global_symbol c =
-      try lookup_global c
+    let allocate_global_symbol s c =
+      try match s with Some s -> lookup_global s | None -> raise Not_found
       with Not_found ->
-        let s, rc = SymbolMap.allocate_global_symbol state !symb c in
+        let _ = anomaly "untyped and non allocated symbols" in
+        let s, rc = SymbolMap.allocate_global_symbol state !symb (Symbol.make (Loc.initial "(?)") c) in
         symb := s;
         rc in
     let lookup_bound loc (_,ctx) (c,l as x) =
@@ -1675,12 +1650,12 @@ end = struct
           let y = todbl ctx y in
           D.mkCons x y
       (* globals and builtins *)
-      | Const((Global _,c,_)) ->
-          let c, t = allocate_global_symbol c in
+      | Const((Global { decl_id },c,_)) ->
+          let c, t = allocate_global_symbol decl_id c in
           if Builtins.is_builtin builtins c then D.mkBuiltin c []
           else t
-      | App((Global _,c,_),x,xs) ->
-          let c,_ = allocate_global_symbol c in
+      | App((Global { decl_id },c,_),x,xs) ->
+          let c,_ = allocate_global_symbol decl_id c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
           if Builtins.is_builtin builtins c then D.mkBuiltin c (x::xs)
@@ -1815,35 +1790,46 @@ let extend1 flags (state, base) unit =
     then unit.precomputed_signature
     else extend1_signature base.Assembled.signature unit.checked_code.CheckedFlat.signature in
 
-  let { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; signature = _; chr = ochr; builtins = ob; total_type_checking_time } = base in
-  let { version; base_hash; checked_code = { CheckedFlat.clauses; chr; builtins; signature = { types }; types_indexing }; type_checking_time; } = unit in
+  let { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; signature = bsig; chr = ochr; builtins = ob; total_type_checking_time } = base in
+  let { version; base_hash; checked_code = { CheckedFlat.clauses; chr; builtins; signature = { types = new_types } }; type_checking_time; } = unit in
 
   (* Format.eprintf "extend %a\n%!" (F.Map.pp (fun _ _ -> ())) types_indexing; *)
-  let symbols, prolog_program, indexing = update_indexing state symbols prolog_program types_indexing indexing in
-  (* Format.eprintf "extended\n%!"; *)
   
-  let symbols = F.Map.fold (fun k _ symbols -> let symbols, _ = SymbolMap.allocate_global_symbol state symbols k in symbols) types symbols in
-  (* let symbols = F.Map.fold (fun k m symbols -> let symbols = SymbolMap.allocate_global_mode state symbols k in symbols) types symbols in *)
+  let new_defined_symbols, new_indexable =
+    let symbs = Symbol.QMap.bindings new_types.symbols in
+    symbs |> List.filter_map (fun (symb,_) -> if Symbol.QMap.mem symb bsig.types.symbols then None else Some symb),
+    symbs |> List.filter_map (fun (symb, { Type_checker.indexing } ) -> match indexing with Index(m,i) -> Some (symb,(m,i)) | _ -> None) in
+
+  let symbols =
+    (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
+            time   typchk wall   mem
+      with: 14.75   0.53  16.69 2348.4M
+      wout: 19.61   0.56  21.72 2789.1M 
+    *)
+    let new_defined_symbols =
+      if List.length new_defined_symbols > 2000 then
+        new_defined_symbols |> List.sort (fun s1 s2 -> compare (Symbol.get_loc s1).line (Symbol.get_loc s2).line)
+      else
+        new_defined_symbols in
+    List.fold_left (fun symbols s -> SymbolMap.allocate_global_symbol state symbols s |> fst)
+      symbols new_defined_symbols in
+
+  let prolog_program, indexing = update_indexing state symbols prolog_program new_indexable indexing in
+  (* Format.eprintf "extended\n%!"; *)
+
   let symbols, builtins =
-    List.fold_left (fun (symbols,builtins) (D.BuiltInPredicate.Pred(name,_,_) as p) ->
-      let name = F.from_string name in
-      if not @@ F.Map.mem name signature.types.overloading then
-        error (Format.asprintf "Builtin %a has no associated type." F.pp name);
-      List.iter (fun ScopedTypeExpression.{indexing} ->
-        if indexing <> Some (Ast.Structured.External) then
-          error (Format.asprintf "Builtin %a accompained by a non-externl type declaration." F.pp name);
-      ) (F.Map.find name types_indexing);
-      let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols (Symbol.make_builtin name) in
+    List.fold_left (fun (symbols,builtins) (symb, p) ->
+      let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols symb in
       let builtins = Builtins.register builtins p c in
       symbols, builtins) (symbols, ob) builtins in
 
-  let symbols, chr =
-    List.fold_left (extend1_chr_block ~builtins flags state) (symbols,ochr) chr in
+  (* let symbols, chr =
+    List.fold_left (extend1_chr_block ~builtins flags state) (symbols,ochr) chr in *)
+  let chr = ochr in
+
   let clauses, symbols, prolog_program =
     (* TODO: pass also typeabbrevs *)
     List.fold_left (extend1_clause ~builtins flags state indexing) (cl, symbols, prolog_program) clauses in
-
-  (* TODO: @FissoreD here we have to do mutual excl clauses... *)
 
   (* Printf.eprintf "kinds: %d\n%!" (F.Map.cardinal kinds); *)
 
@@ -1866,7 +1852,7 @@ let extend1 flags (state, base) unit =
   let compile_query_term state { Assembled.symbols; builtins } ?ctx ?(amap = F.Map.empty) ~depth t =
     let (symbols', amap), rt = spill_todbl ~builtins ?ctx ~needs_spilling:false state symbols ~depth ~amap t in
     if SymbolMap.equal_globals symbols' symbols then amap, rt
-    else error ~loc:t.ScopedTerm.loc (Format.asprintf "cannot allocate new symbol %a in the query" SymbolMap.pp_table (SymbolMap.diff symbols' symbols))
+    else error ~loc:t.ScopedTerm.loc "cannot allocate new symbols in the query"
 
 end
 
@@ -2171,7 +2157,7 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
     Format.fprintf fmt "@[<h>kind %s %s.@]@," (F.show name) (a2k ty))
     signature.kinds;
   F.Map.iter (fun name sl ->
-    let f s = TypeAssignment.fresh (Symbol.QMap.find s signature.types.symbols) |> fst in
+    let f s = TypeAssignment.fresh (Symbol.QMap.find s signature.types.symbols).ty |> fst in
     let tys =
       match sl with
       | TypeAssignment.Single t -> [f t]

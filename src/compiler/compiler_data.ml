@@ -11,14 +11,11 @@ module Scope = struct
   type language = string
   [@@ deriving show, ord]
 
-  type type_decl_id = Symbol.t
-  [@@ deriving show, ord]
-
   type t =
     | Bound  of language (* bound by a lambda, stays bound *)
     | Global of {
         escape_ns : bool; (* when true name space elimination does not touch this constant *)
-        mutable decl_id : type_decl_id option;
+        mutable decl_id : Symbol.t option;
       }
   [@@ deriving show]
 
@@ -337,6 +334,11 @@ module TypeAssignment = struct
   type skema = Lam of F.t * skema | Ty of F.t t_
   [@@ deriving show]
 
+  let rec is_prop = function
+  | Prop f -> Some f
+  | Any | Cons _ | App _ | UVar _ -> None
+  | Arr(_,_,_,t) -> is_prop t
+
   let compare_skema sk1 sk2 =
     let rec aux ctx sk1 sk2 =
       match sk1, sk2 with
@@ -488,7 +490,7 @@ module TypeAssignment = struct
       error ~loc:(Symbol.get_loc symb1) 
         (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n Symbol.pp symb1 pretty_skema_raw x Symbol.pp symb2 pretty_skema_raw y)
 
-  (* returns a pair of ids representing the merged type_ass + the new merge type_ass *)
+  (* returns a pair of ids representing the merged type_ass + the new merge type_ass
   let merge_skema n t1 t2 =
     let diff_id_check ((id1:Symbol.t),t1) (id2,t2) = 
       if (id1 = id2) then error ~loc:(Symbol.get_loc id1) 
@@ -518,7 +520,7 @@ module TypeAssignment = struct
           List.fold_right (fun x -> merge_aux (Single x)) xs t2
       in
       let res = merge_aux t1 t2 in
-      !removed, res
+      !removed, res *)
 
   let o2l = function Single x -> [x] | Overloaded l -> l
 
