@@ -27,7 +27,7 @@ let ( !: ) =
   let id = ref 0 in
   fun ag ->
     incr id;
-    let id = Symbol.make_str (string_of_int !id) in
+    let id = Elpi_runtime.Data.Symbol.make_builtin (F.from_string (string_of_int !id)) in
     TA.Single (id, (ag : TA.skema))
 
 let inp = TypeAssignment.MVal Input
@@ -62,15 +62,21 @@ let _ =
 
   let type_abbrevs = F.Map.empty in
   let kinds = F.Map.empty in
-  let types : Type_checker.env = F.Map.empty in
-  let add_ty k v ty = F.Map.add (fs k) v ty in
+  let types : Type_checker.typing_env = Type_checker.empty_typing_env in
+  let build_ty_metadata ty : Type_checker.symbol_metadata =
+    {indexing = External; ty} in
+  let add_ty k v ({overloading; symbols}: Type_checker.typing_env) : Type_checker.typing_env = 
+    let k = fs k in
+    let symb = Elpi_runtime.Data.Symbol.make_builtin k in
+    {overloading = F.Map.add k TA.(Single symb) overloading; 
+    symbols = Elpi_runtime.Data.Symbol.QMap.add symb (build_ty_metadata v) symbols} in
   let types =
-    add_ty "false" !:(Ty rprop) types
-    |> add_ty "f" !:(Ty (rprop @->> rprop @-> rprop))
-    |> add_ty "=" !:(Lam (fs "A", Ty (uv "A" @->> uv "A" @->> rprop)))
-    |> add_ty "ff" !:(Ty bool) |> add_ty "tt" !:(Ty bool)
+    add_ty "false" (Ty rprop) types
+    |> add_ty "f" (Ty (rprop @->> rprop @-> rprop))
+    |> add_ty "=" (Lam (fs "A", Ty (uv "A" @->> uv "A" @->> rprop)))
+    |> add_ty "ff" (Ty bool) |> add_ty "tt" (Ty bool)
     |> (* apply i:T i:P o:R :- if (P T) (R = tt) (R = ff) *)
-    add_ty "apply" !:(Lam (fs "A", Ty (uv "A" @->> (uv "A" @->> rprop) @-> bool @-> rprop)))
+    add_ty "apply" (Lam (fs "A", Ty (uv "A" @->> (uv "A" @->> rprop) @-> bool @-> rprop)))
   in
 
   let unknown = F.Map.empty in

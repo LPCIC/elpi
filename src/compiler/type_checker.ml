@@ -136,6 +136,8 @@ type typing_env = {
 }
 [@@deriving show]
 
+let empty_typing_env = {symbols = Symbol.QMap.empty; overloading = F.Map.empty}
+
 let check_1types  ~type_abbrevs ~kinds lst : _ * Symbol.t TypeAssignment.overloaded =
   match List.map (check_type ~type_abbrevs ~kinds) lst with
   | [] -> assert false
