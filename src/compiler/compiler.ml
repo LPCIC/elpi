@@ -303,7 +303,7 @@ module Assembled = struct
   
   let empty_signature () = {
     kinds = F.Map.empty;
-    types = { Type_checker.overloading = F.Map.empty; symbols = Symbol.QMap.empty };
+    types = Type_checker.empty_typing_env;
     type_abbrevs = F.Map.empty;
     toplevel_macros = F.Map.empty;
   }

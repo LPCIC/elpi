@@ -1,4 +1,4 @@
-open Elpi_compiler.Union_find
+open Elpi_util.Union_find
 
 module M = Make (Elpi_util.Util.IntMap)
 

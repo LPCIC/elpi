@@ -31,6 +31,8 @@ type typing_env = {
 }
 [@@deriving show]
 
+val empty_typing_env : typing_env
+
 val check_types : type_abbrevs:type_abbrevs -> kinds:arities -> ScopeTypeExpressionUniqueList.t F.Map.t -> typing_env
   
 type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
