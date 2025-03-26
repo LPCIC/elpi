@@ -108,6 +108,7 @@ end = struct
   let allocate_global_symbol_aux (x:D.Symbol.t) ({ c2t; c2s; ast2ct; last_global } as table) =
     try table, D.Symbol.RawMap.find x ast2ct
     with Not_found ->
+      (* Format.eprintf "NEW %a -> %d\n" Symbol.pp x last_global; *)
       let last_global = last_global - 1 in
       let n = last_global in
       let xx = D.Term.Const n in
@@ -196,12 +197,18 @@ let register t (D.BuiltInPredicate.Pred(s,_,_) as b) idx =
 
 let is_builtin t x =
   Constants.Map.mem x t
+  (* TODO *)
   || x == D.Global_symbols.declare_constraintc
   || x == D.Global_symbols.print_constraintsc
   || x == D.Global_symbols.cutc
   || x == D.Global_symbols.eqc
   || x == D.Global_symbols.pmc
   || x == D.Global_symbols.findall_solutionsc
+  || x == D.Global_symbols.andc
+  || x == D.Global_symbols.implc
+  || x == D.Global_symbols.rimplc
+  || x == D.Global_symbols.pic
+  || x == D.Global_symbols.sigmac
 ;;
 let is_declared t x =
   Constants.Map.mem x t
@@ -1377,7 +1384,7 @@ end = struct
       List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, scoped_ty) ->
         (* TODO check disjoint from kinds *)
         let loc = scoped_ty.ScopedTypeExpression.loc in
-        let _, { Type_checker.ty } = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
+        let _, _, { Type_checker.ty } = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
         if F.Map.mem name all_type_abbrevs then begin
           let sk, otherloc = F.Map.find name all_type_abbrevs in
           if TypeAssignment.compare_skema sk ty <> 0 then
@@ -1582,7 +1589,7 @@ end = struct
      in
 
     let add_indexing_for name loc c index map =
-      Format.eprintf "indexing for %s with id %a at pos %a\n%!" name pp_int c Loc.pp loc;
+      (* Format.eprintf "indexing for %s with id %a at pos %a\n%!" name pp_int c Loc.pp loc; *)
       (* Format.eprintf "its indexing is %a@." pp_indexing index; *)
       try
         let old_tindex =
@@ -1614,9 +1621,13 @@ end = struct
         amap := F.Map.add c n !amap;
         n in
     let lookup_global c =
+      let c = Symbol.UF.find (Symbol.QMap.get_uf types.Type_checker.symbols) c in
+      (* Format.eprintf "LOOKUP %a\n" Symbol.pp c; *)
       match SymbolMap.get_global_symbol !symb c with
       | None -> raise Not_found
-      | Some c -> c, SymbolMap.get_canonical state !symb c in
+      | Some c ->
+      (* Format.eprintf "  -> andc=%d %d\n" Global_symbols.andc c; *)
+        c, SymbolMap.get_canonical state !symb c in
     let allocate_global_symbol ~loc s c =
       try match s with Some s -> lookup_global s | None -> raise Not_found
       with Not_found ->
@@ -1647,7 +1658,7 @@ end = struct
     let rec todbl (ctx : int * _ Scope.Map.t) t =
       match t.it with
       | Impl(b,t1,t2) ->
-          D.mkApp (D.Global_symbols.(if b then implc else rimplc)) (todbl ctx t1) [todbl ctx t2]
+          D.mkBuiltin (D.Global_symbols.(if b then implc else rimplc)) [todbl ctx t1;todbl ctx t2]
       | CData c -> D.mkCData (CData.hcons c)
       | Spill(t,_) ->
           error ~loc:t.loc (Format.asprintf "todbl: term contains spill: %a" ScopedTerm.pretty t)
@@ -2070,7 +2081,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
       match gls @ [query] with
       | [] -> assert false
       | [g] -> g
-      | x :: xs -> mkApp D.Global_symbols.andc x xs in
+      | x :: xs -> mkBuiltin  D.Global_symbols.andc (x :: xs) in
     let amap = get_argmap compiler_state in
     let query_env = Array.make (F.Map.cardinal amap) D.dummy in
     let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in

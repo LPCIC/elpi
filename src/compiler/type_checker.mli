@@ -23,7 +23,7 @@ type symbol_metadata = {
 [@@deriving show]
 
 val check_disjoint : type_abbrevs:ScopedTypeExpression.t F.Map.t -> kinds:arities -> unit
-val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> Symbol.t * symbol_metadata
+val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> Symbol.t * Symbol.t option * symbol_metadata
 
 type typing_env = {
   symbols : symbol_metadata Symbol.QMap.t;

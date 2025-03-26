@@ -430,6 +430,7 @@ module Symbol : sig
     val iter : (symbol -> 'a -> unit) -> 'a t -> unit
     val mem : symbol -> 'a t -> bool
     val bindings : 'a t -> (symbol * 'a) list
+    val get_uf : 'a t -> UF.t
   end 
 
   type t = symbol [@@deriving show,ord]
@@ -454,6 +455,8 @@ end = struct
     
     type 'a t = UF.t * 'a RawMap.t [@@deriving show]
     let empty = UF.empty, RawMap.empty
+
+    let get_uf (u,_) = u
 
     let unify f s1 s2 (uf,m) = 
       let x,uf = UF.union uf s1 s2 in
