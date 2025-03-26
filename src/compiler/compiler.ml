@@ -1403,7 +1403,7 @@ end = struct
     in
 
     let (types_indexing:CheckedFlat.types_indexing) = F.Map.fold (fun k tyl acc ->
-      begin match SymbolMap.get_global_symbol symbols (Symbol.make (Loc.initial "(ocaml)") k) with
+      begin match SymbolMap.get_global_symbol symbols (Symbol.make_builtin k) with
       | Some c -> if Builtins.is_declared builtins c then error (Format.asprintf "Ascribing a type to an already registered builtin %a" F.pp k);
       | _ -> () end;
       match type2type_idx tyl with
@@ -1448,7 +1448,7 @@ end = struct
     let clauses = List.rev clauses in
 
     List.iter (fun (BuiltInPredicate.Pred(name,_,_)) ->
-      if Symbol.QMap.mem (Symbol.make (Loc.initial "(ocaml)") (F.from_string name)) base.Assembled.signature.types.symbols then
+      if Symbol.QMap.mem (Symbol.make_builtin (F.from_string name)) base.Assembled.signature.types.symbols then
         error (Format.asprintf "Builtin %s already exists as a regular predicate" name);
       if not @@ F.Map.mem (F.from_string name) types_indexing then error (Format.asprintf "No type declared for builtin %s" name);
       let tyl = F.Map.find (F.from_string name) types_indexing in
@@ -1833,7 +1833,7 @@ let extend1 flags (state, base) unit =
         if indexing <> Some (Ast.Structured.External) then
           error (Format.asprintf "Builtin %a accompained by a non-externl type declaration." F.pp name);
       ) (F.Map.find name types_indexing);
-      let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols (Symbol.make (Loc.initial "(ocaml)") name) in
+      let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols (Symbol.make_builtin name) in
       let builtins = Builtins.register builtins p c in
       symbols, builtins) (symbols, ob) builtins in
 
@@ -2105,7 +2105,7 @@ let symtab : (constant * D.term) Symbol.RawMap.t D.State.component = D.State.dec
   
 let global_name_to_constant state s =
   let map = State.get symtab state in
-  fst @@  Symbol.RawMap.find (Symbol.make (Loc.initial "(ocaml)") (F.from_string s)) map
+  fst @@  Symbol.RawMap.find (Symbol.make_builtin (F.from_string s)) map
 
 module Compiler : sig
 
