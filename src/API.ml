@@ -612,7 +612,7 @@ module RawData = struct
   let mkCons = ED.Term.mkCons
   let mkNil = ED.Term.mkNil
   let mkDiscard = ED.Term.mkDiscard
-  let mkBuiltin = ED.Term.mkBuiltin
+  let mkBuiltin c l = ED.Term.mkBuiltin (ED.Host c) l
   let mkCData = ED.Term.mkCData
   let mkAppBoundL x l =
     if x < 0 then Util.anomaly "mkAppBoundL: got a global constant";
@@ -653,14 +653,7 @@ module RawData = struct
 
     let show c = Util.Constants.show c
 
-    let eqc    = ED.Global_symbols.eqc
     let orc    = ED.Global_symbols.orc
-    let andc   = ED.Global_symbols.andc
-    let rimplc = ED.Global_symbols.rimplc
-    let pic    = ED.Global_symbols.pic
-    let sigmac = ED.Global_symbols.sigmac
-    let implc  = ED.Global_symbols.implc
-    let cutc   = ED.Global_symbols.cutc
     let ctypec = ED.Global_symbols.ctypec
     let spillc = ED.Global_symbols.spillc
 
@@ -1329,7 +1322,7 @@ module Utils = struct
           Term.mkSeq [hd;tl]
       | Data.Nil -> Term.mkNil buggy_loc
       | Data.Builtin(c,xs) ->
-          let c = Term.mkCon buggy_loc (show c) in
+          let c = Term.mkCon buggy_loc (ED.show_builtin_predicate (fun ?table -> show) c) in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: xs)
       | Data.CData x -> Term.mkC buggy_loc x

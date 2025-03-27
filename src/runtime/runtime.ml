@@ -84,7 +84,7 @@ let fresh_global_constant () =
    !table.frozen_constants <- !table.frozen_constants - 1;
    let n = !table.frozen_constants in
    let xx = Const n in
-   !table.c2s <- Constants.Map.add n (Symbol.make (Loc.initial "(chr)") (F.from_string @@ "frozen-" ^ string_of_int n)) !table.c2s ;
+   !table.c2s <- Constants.Map.add n (Symbol.make (File (Loc.initial "(chr)")) (F.from_string @@ "frozen-" ^ string_of_int n)) !table.c2s ;
    Hashtbl.add !table.c2t n xx;
    n, xx
 
@@ -156,9 +156,12 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     Fmt.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
      (pplist pparg ?pplastelem:pplastarg " ") args in
   let ppconstant f c = Fmt.fprintf f "%s" (C.show ~table:pp_ctx.table c) in
-  let string_of_uvar_body r =
-    try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
-      with Not_found ->
+  let ppbuiltin f b = Fmt.fprintf f "%s" @@ show_builtin_predicate ~table:pp_ctx.table C.show b in
+  let rec pp_uvar prec depth vardepth args f r =
+   if !!r == C.dummy then begin
+    let s =
+     try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
+     with Not_found ->
       let m, n = !(pp_ctx.uv_names) in
       let s = "X" ^ string_of_int n in
       let n = n + 1 in
@@ -266,24 +269,29 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
          let lastarg = List.nth (x::xs) (List.length xs) in
          let hdlvl =
           if is_lambda depth lastarg then lam_prec
-          else if hd == Global_symbols.andc then 110
           else appl_prec in
          with_parens hdlvl (fun _ ->
-          if hd == Global_symbols.andc then
-            pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) ", " f (x::xs)
-          else pp_app f ppconstant (aux inf_prec depth)
+           pp_app f ppconstant (aux inf_prec depth)
                  ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
-    | Builtin (hd,[a;b]) when hd == Global_symbols.eqc ->
-       let _, hdlvl =
-         Elpi_parser.Parser_config.precedence_of (C.show ~table:pp_ctx.table hd) in
-       with_parens hdlvl (fun _ ->
-         Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
-           (aux (hdlvl+1) depth) a ppconstant hd
-           (aux (hdlvl+1) depth) b)
-    | Builtin (hd,xs) ->
-       with_parens appl_prec (fun _ ->
-        pp_app f ppconstant (aux inf_prec depth)
-         ~pplastarg:(aux_last inf_prec depth) (hd,xs))
+    | Builtin (Eq,[a;b]) ->
+      let _, hdlvl =
+        Elpi_parser.Parser_config.precedence_of (F.show F.eqf) in
+      with_parens hdlvl (fun _ ->
+        Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
+          (aux (hdlvl+1) depth) a F.pp F.eqf
+          (aux (hdlvl+1) depth) b)
+    | Builtin(b,[]) -> Fmt.fprintf f "%a" ppbuiltin b
+    | Builtin(b,x::xs) ->
+      let lastarg = List.nth (x::xs) (List.length xs) in
+      let hdlvl =
+       if is_lambda depth lastarg then lam_prec
+       else if b == And then 110
+       else appl_prec in
+      with_parens hdlvl (fun _ ->
+       if b == And then
+         pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) ", " f (x::xs)
+       else pp_app f ppbuiltin (aux inf_prec depth)
+              ~pplastarg:(aux_last inf_prec depth) (b,x::xs))
     | UVar (r,vardepth,argsno) when not nice ->
        let args = List.map destConst (C.mkinterval vardepth argsno 0) in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
@@ -2433,7 +2441,8 @@ let rec classify_clause_arg ~depth matching t =
   | Cons _ -> Rigid (Global_symbols.consc,matching)
   | App (k,_,_) when k == Global_symbols.uvarc -> MustBeVariable
   | App (k,a,_) when k == Global_symbols.asc -> classify_clause_arg ~depth matching a
-  | (App (k,_,_) | Builtin (k,_)) -> Rigid (k,matching)
+  | App (k,_,_) -> Rigid (k,matching)
+  | Builtin (k,_) -> Rigid (const_of_builtin_predicate k,matching)
   | Lam _ -> Variable (* loose indexing to enable eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
   | CData d ->
@@ -2520,7 +2529,7 @@ let hash_arg_list is_goal hd ~depth args mode spec =
           let size = size / (List.length xs + 1) in
           let self = aux_arg size mode (deep-1) in
           let shift = shift size in
-          (hash size k) lor
+          (hash size (const_of_builtin_predicate k)) lor
           List.(fold_left (lor) 0 (mapi (fun i x -> shift (i+1) (self x)) xs))
     in
     [%spy "dev:index:subhash" ~rid (fun fmt () ->
@@ -2656,7 +2665,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
       | Lam _ -> Path.emit path mkAny; update_current_min_depth path_depth (* loose indexing to enable eta *)
       | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
       | Builtin (k,tl) ->
-        Path.emit path @@ mkConstant ~safe ~data:k ~arity:(if path_depth = 0 then 0 else List.length tl);
+        Path.emit path @@ mkConstant ~safe ~data:(const_of_builtin_predicate k) ~arity:(if path_depth = 0 then 0 else List.length tl);
         arg_to_trie_path_aux ~safe ~depth tl path_depth
       | App (k, x, xs) -> 
         let arg_length = if path_depth = 0 then 0 else List.length xs + 1 in
@@ -2908,7 +2917,8 @@ let rec classify_goal_arg ~depth t =
   | Cons _ -> Rigid (Global_symbols.consc)
   | App (k,_,_) when k == Global_symbols.uvarc -> Rigid mustbevariablec
   | App (k,a,_) when k == Global_symbols.asc -> classify_goal_arg ~depth a
-  | (App (k,_,_) | Builtin (k,_)) -> Rigid (k)
+  | App (k,_,_) -> Rigid (k)
+  | Builtin (k,_) -> Rigid (const_of_builtin_predicate k)
   | Lam t -> classify_goal_arg ~depth:(depth+1) t (* eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
   | CData d -> 
@@ -3031,7 +3041,7 @@ let close_with_pis depth vars t =
     | CData _ as x -> x
   in
   let rec add_pis n t =
-   if n = 0 then t else App(Global_symbols.pic,Lam (add_pis (n-1) t),[]) in
+   if n = 0 then t else Builtin(Pi,[Lam (add_pis (n-1) t)]) in
   add_pis vars (aux t)
 
 let local_prog { src } =  src
@@ -3078,7 +3088,7 @@ let rec term_map m = function
   | CData _ as x -> x
 
 let rec split_conj ~depth = function
-  | Builtin(c, hd :: args) when c == Global_symbols.andc ->
+  | Builtin(And, hd :: args) ->
       split_conj ~depth hd @ List.(flatten (map (split_conj ~depth) args))
   | Nil -> []
   | Cons(x,xs) -> split_conj ~depth x @ split_conj ~depth xs
@@ -3130,13 +3140,13 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
       (ppterm (depth+lts) [] ~argsdepth:0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
   | Discard -> error ?loc "ill-formed hypothetical clause: discard in head position"
-  | Builtin(c, [g2;g1]) when c == Global_symbols.rimplc ->
+  | Builtin(RImpl, [g2;g1]) ->
      claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | Builtin(c,  _) when c == Global_symbols.rimplc -> error ?loc "ill-formed hypothetical clause"
-  | Builtin(c, [g1;g2]) when c == Global_symbols.implc ->
+  | Builtin(RImpl,  _) -> error ?loc "ill-formed hypothetical clause"
+  | Builtin(Impl, [g1;g2])->
      claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | Builtin(c, _) when c == Global_symbols.implc -> error ?loc "ill-formed hypothetical clause"
-  | Builtin(c, [arg]) when c == Global_symbols.sigmac ->
+  | Builtin(Impl, _) -> error ?loc "ill-formed hypothetical clause"
+  | Builtin(Sigma, [arg]) ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      let args =
       List.rev (List.filter (function (Arg _) -> true | _ -> false) ts) in
@@ -3145,10 +3155,10 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
      claux1 loc get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
-  | Builtin(c, [arg]) when c == Global_symbols.pic ->
+  | Builtin(Pi, [arg]) ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      claux1 loc get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
-  | Builtin(c, _) when c == Global_symbols.andc ->
+  | Builtin(And, _) ->
      error ?loc "Conjunction in the head of a clause is not supported"
   | Const _
   | App _ as g ->
@@ -3210,7 +3220,7 @@ let clausify ~loc { index = { idx = index } } ~depth t =
       let clause, program, lcs =
         try claux1 loc get_mode 0 depth [] [] 0 lcs t
         with CannotDeclareClauseForBuiltin(loc,c) ->
-          error ?loc ("Declaring a clause for built in predicate " ^ C.show c)
+          error ?loc ("Declaring a clause for built in predicate " ^ show_builtin_predicate C.show c)
       in
       clause :: clauses, program :: programs, lcs) ([],[],0) l in
   clauses, program, lcs
@@ -3568,11 +3578,11 @@ let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g (gid[@trace]) ~on
 
 let rec head_of = function
   | Const x -> x
-  | App(x,Lam f,_) when x == Global_symbols.pic -> head_of f
-  | App(x,hd,_) when x == Global_symbols.rimplc -> head_of hd
-  | App(x,hd,_) when x == Global_symbols.andc -> head_of hd (* FIXME *)
+  | Builtin(Pi,[Lam f]) -> head_of f
+  | Builtin(RImpl,hd :: _) -> head_of hd
+  | Builtin(And,hd :: _) -> head_of hd (* FIXME *)
   | App(x,_,_) -> x
-  | Builtin(x,_) -> x
+  | Builtin(x,_) -> const_of_builtin_predicate x
   | AppUVar(r,_,_)
   | UVar(r,_,_) when !!r != C.dummy -> head_of !!r
   | CData _ -> type_error "A constraint cannot be a primitive data"
@@ -3795,7 +3805,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
         (0,C.Map.empty) eigen in
       let conclusion =
         Ice.defrost ~from:max_depth ~to_:max_eigen ~map
-          (App(Global_symbols.implc,context,[conclusion])) env m in
+          (Builtin(Impl,[context;conclusion])) env m in
       (* TODO: check things make sense in heigen *)
       let prog = initial_program in
       Some (make_constraint_def ~rid ~gid:((make_subgoal_id gid (max_eigen,conclusion))[@trace]) max_eigen prog [] conclusion) in
@@ -3922,7 +3932,7 @@ let pred_of g =
   match g with
   | App(c,_,_) -> Some(C.show c)
   | Const c -> Some(C.show c)
-  | Builtin(c,_) -> Some(C.show c)
+  | Builtin(c,_) -> Some(show_builtin_predicate C.show c)
   | _ -> None
 
 let pp_candidate ~depth ~k fmt ({ loc } as cl) =
@@ -3933,7 +3943,7 @@ let pp_candidate ~depth ~k fmt ({ loc } as cl) =
 let hd_c_of = function
   | Const _ as x -> x
   | App(x,_,_) -> C.mkConst x
-  | Builtin(x,_) -> C.mkConst x
+  | Builtin(x,_) -> C.mkConst (const_of_builtin_predicate x)
   | _ -> C.dummy
 
 let pp_resumed_goal { depth; program; goal; gid = gid[@trace] } =
@@ -3967,11 +3977,11 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
  | Some [] ->
     [%spyl "user:curgoal" ~rid ~gid (uppterm depth [] ~argsdepth:0 empty_env) [hd_c_of g;g]];
     match g with
-    | Builtin(c,[]) when c == Global_symbols.cutc ->
+    | Builtin(Cut,[]) ->
        [%tcall cut (gid[@trace]) gs next (alts[@trace]) cutto_alts]
-    | Builtin(c,[q;sol]) when c == Global_symbols.findall_solutionsc ->
+    | Builtin(Host c,[q;sol]) when c == Global_symbols.findall_solutionsc ->
        [%tcall findall depth p q sol (gid[@trace]) gs next alts cutto_alts]
-    | Builtin(c, g :: gs') when c == Global_symbols.andc -> [%spy "user:rule" ~rid ~gid pp_string "and"];
+    | Builtin(And, g :: gs') -> [%spy "user:rule" ~rid ~gid pp_string "and"];
        let gid'[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
        let gs' = List.map (fun x -> (make_subgoal[@inlined]) ~depth (gid[@trace]) p x) gs' in
        [%spy "user:rule:and" ~rid ~gid pp_string "success"];
@@ -3987,7 +3997,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
       | { depth; program; goal; gid = gid [@trace] } :: gs ->
         [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts]
       end
-    | Builtin(c,[l;r]) when c == Global_symbols.eqc -> [%spy "user:rule" ~rid ~gid pp_string "eq"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (C.show c)];
+    | Builtin(Eq,[l;r]) -> [%spy "user:rule" ~rid ~gid pp_string "eq"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (show_builtin_predicate C.show Eq)];
        if unif ~argsdepth:depth ~matching:false (gid[@trace]) depth empty_env depth l r then begin
          [%spy "user:rule:eq" ~rid ~gid pp_string "success"];
          match gs with
@@ -3998,7 +4008,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
          [%spy "user:rule:eq" ~rid ~gid pp_string "fail"];
          [%tcall next_alt alts]
        end
-    | Builtin(c,[p;r]) when c == Global_symbols.pmc -> [%spy "user:rule" ~rid ~gid pp_string "eq"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (C.show c)];
+    | Builtin(Match,[p;r]) -> [%spy "user:rule" ~rid ~gid pp_string "eq"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (show_builtin_predicate C.show Match)];
        if unif ~argsdepth:depth ~matching:true (gid[@trace]) depth empty_env depth r p then begin
          [%spy "user:rule:eq" ~rid ~gid pp_string "success"];
          match gs with
@@ -4009,7 +4019,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
          [%spy "user:rule:eq" ~rid ~gid pp_string "fail"];
          [%tcall next_alt alts]
        end
-    | Builtin(c, [g2;g1]) when c == Global_symbols.rimplc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
+    | Builtin(RImpl, [g2;g1]) -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let [@warning "-26"]loc = None in
        let loc[@trace] = Some (Loc.initial ("(context step_id:" ^ string_of_int (Trace_ppx_runtime.Runtime.get_cur_step ~runtime_id:!rid "run") ^")")) in
        let clauses, pdiff, lcs = clausify ~loc p ~depth g1 in
@@ -4017,7 +4027,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
        [%spy "user:rule:implication" ~rid ~gid pp_string "success"];
        [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts cutto_alts]
-    | Builtin(c, [g1; g2]) when c == Global_symbols.implc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
+    | Builtin(Impl, [g1; g2]) -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let [@warning "-26"]loc = None in
        let loc[@trace] = Some (Loc.initial ("(context step_id:" ^ string_of_int (Trace_ppx_runtime.Runtime.get_cur_step ~runtime_id:!rid "run") ^")")) in
        let clauses, pdiff, lcs = clausify ~loc p ~depth g1 in
@@ -4025,12 +4035,12 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
        [%spy "user:rule:implication" ~rid ~gid pp_string "success"];
        [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts cutto_alts]
-    | Builtin(c, [arg]) when c == Global_symbols.pic -> [%spy "user:rule" ~rid ~gid pp_string "pi"];
+    | Builtin(Pi, [arg]) -> [%spy "user:rule" ~rid ~gid pp_string "pi"];
        let f = get_lambda_body ~depth arg in
        let gid[@trace] = make_subgoal_id gid ((depth+1,f)[@trace]) in
        [%spy "user:rule:pi" ~rid ~gid pp_string "success"];
        [%tcall run (depth+1) p f (gid[@trace]) gs next alts cutto_alts]
-    | Builtin(c, [arg]) when c == Global_symbols.sigmac -> [%spy "user:rule" ~rid ~gid pp_string "sigma"];
+    | Builtin(Sigma, [arg]) -> [%spy "user:rule" ~rid ~gid pp_string "sigma"];
        let f = get_lambda_body ~depth arg in
        let v = UVar(oref C.dummy, depth, 0) in
        let fv = subst depth [v] f in
@@ -4051,7 +4061,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) (Bl.to_list clauses)];
        [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts cutto_alts clauses]
-    | Builtin(c, args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (C.show c)];
+    | Builtin(Host c, args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (C.show c)];
        let once ~depth g state =
          CS.state := state;
          let { depth; program; goal; gid = gid [@trace] } = (make_subgoal[@inlined]) (gid[@trace]) ~depth p g in
@@ -4067,6 +4077,14 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
           [%spy "user:rule:builtin" ~rid ~gid pp_string "fail"];
           [%tcall next_alt alts]
        end
+    | Builtin(Cut,_) -> anomaly "cut with arguments"
+    | Builtin(And,[]) -> anomaly "and without arguments"
+    | Builtin(Eq,_) -> anomaly "eq without 2 arguments"
+    | Builtin(Match,_) -> anomaly "match without 2 arguments"
+    | Builtin(Impl,_) -> anomaly "impl without 2 arguments"
+    | Builtin(RImpl,_) -> anomaly "rimpl without 2 arguments"
+    | Builtin(Pi,_) -> anomaly "pi without 1 argument1"
+    | Builtin(Sigma,_) -> anomaly "sigma without 1 argument1"
     | Arg _ | AppArg _ -> anomaly "The goal is not a heap term"
     | Lam _ | CData _ ->
         type_error ("The goal is not a predicate:" ^ (show_term g))

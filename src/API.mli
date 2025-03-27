@@ -1194,14 +1194,7 @@ module RawData : sig
 
     val show : constant -> string
 
-    val eqc    : builtin (* = *)
     val orc    : constant (* ; *)
-    val andc   : constant (* , *)
-    val rimplc : constant (* :- *)
-    val pic    : constant (* pi *)
-    val sigmac : constant (* sigma *)
-    val implc  : constant (* => *)
-    val cutc   : builtin (* ! *)
 
     (* LambdaProlog built-in data types are just instances of CData.
      * The typeabbrev machinery translates [int], [float] and [string]
