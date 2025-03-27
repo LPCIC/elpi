@@ -445,10 +445,12 @@ module Symbol : sig
   (* val map_func : (F.t -> F.t) -> t -> t *)
   
 end = struct
-  type symbol = Loc.t * F.t [@@deriving show, ord]
+  type provenance = Builtin | File of Loc.t [@@deriving show, ord]
+  type symbol = provenance * F.t [@@deriving show, ord]
   type 'a merge = (symbol -> 'a -> 'a -> 'a)
-  module RawMap = Map.Make(struct type t = symbol [@@deriving show,ord] end)
-  module UF = Elpi_util.Union_find.Make(RawMap)
+  module O = struct type t = symbol [@@deriving show,ord] end
+  module RawMap = Map.Make(O)
+  module UF = Elpi_util.Union_find.Make(O)
   type t = symbol [@@deriving show, ord]
 
   module QMap = struct
@@ -459,7 +461,12 @@ end = struct
     let get_uf (u,_) = u
 
     let unify f s1 s2 (uf,m) = 
-      let x,uf = UF.union uf s1 s2 in
+      let x,uf =
+        match fst s1, fst s2 with
+        | Builtin, Builtin -> anomaly "Builtins cannot be declared twice"
+        (* we use the (possibly) pre-allocated builtin as the canonical *)
+        | File _, Builtin -> UF.union uf s1 ~canon:s2
+        | _ -> UF.union uf ~canon:s1 s2 in
       match x with
       | None -> uf, m
       | Some x -> 
@@ -507,13 +514,16 @@ end = struct
 
   let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
 
-  let get_loc (l,_) = l
+  let get_loc (l,_) =
+    match l with
+    | File l -> l
+    | Builtin -> Loc.initial "(ocaml)"
   let get_str (_,f) = F.show f
   let get_func (_,f) = f
   let map_func f (x,y) =  x, f y
   
-  let make loc name = loc, name
-  let make_builtin name = Loc.initial "(ocaml)", name
+  let make loc name = File loc, name
+  let make_builtin name = Builtin, name
 end
 
 

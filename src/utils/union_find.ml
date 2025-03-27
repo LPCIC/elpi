@@ -5,57 +5,67 @@
 module type S = sig
   include Util.Show
   include Util.ShowKey
-
+  module KeySet : Util.Set.S with type elt = key
   val empty : t
   val is_empty : t -> bool
   val find : t -> key -> key
-  val union : t -> key -> key -> key option * t
+  val find_class : t -> key -> key * KeySet.t
+  val union : t -> key -> canon:key -> key option * t
   val merge : t -> t -> t
-  val roots : t -> key list
+  (* val roots : t -> key list *)
   val mapi : (key -> key) -> t -> t
 end
 
-module Make (M : Util.Map.S) : S with type t = M.key M.t and type key = M.key = struct
+module Make (O : Util.Map.OrderedType) : S with type key = O.t = struct
+  module M = Util.Map.Make(O)
+  module KeySet = Util.Set.Make(O)
   type key = M.key [@@deriving show]
-  type t = key M.t [@@deriving show]
+  type t = (key * KeySet.t) M.t [@@deriving show]
 
   let empty = M.empty
   let is_empty = ( = ) M.empty
   let rec find m v = 
     match M.find_opt v m with
     | None -> v
-    | Some e -> find m e
+    | Some (e,_) -> find m e
 
-  let union m i j =
+    let rec find_class m v s = 
+      match M.find_opt v m with
+      | None -> v, KeySet.add v s
+      | Some (e,s1) -> find_class m e (KeySet.add e (KeySet.union s1 s))
+
+    let find_class m v = find_class m v KeySet.empty
+  
+  let union m i ~canon:j =
     (* assert ( i <> j ); *)
-    let ri = find m i in
-    let rj = find m j in
+    let ri, si = find_class m i in
+    let rj, sj = find_class m j in
     (* ri is put in the same disjoint set of rj and can be removed from other
        data structures *)
-    if ri <> rj then (Some ri, M.add ri rj m) else (None, m)
+    if O.compare ri rj != 0 then (Some ri, M.add ri (rj,KeySet.union si sj) m) else (None, m)
 
   let merge u1 u2 =
     (* all disjoint-set in u1 and u2 should be pairwise disjoint *)
-    M.union (fun _ a _ -> Some a) u1 u2
+    M.union (fun _ (a,sa) (_,sb) -> Some (a,KeySet.union sa sb)) u1 u2
   (* M.fold (fun k father acc ->
      let acc = if M.mem father acc then assert false else add acc father in
      union acc k father
      ) u1 u2 *)
 
   let mapi f t =
-    M.fold (fun k v acc -> M.add (f k) (f v) acc) M.empty t
+    M.fold (fun k (v,s) acc -> M.add (f k) (f v,KeySet.map f s) acc) M.empty t
 
-  let is_root acc k = find acc k = k
+  let is_root acc k = O.compare (find acc k) k = 0
 
-  let roots d =
+  (* let roots d =
     let roots = ref [] in
     let add e = if not (List.mem e !roots) then roots := e :: !roots in
     M.iter (fun k v -> add (find d k)) d;
-    !roots
+    !roots *)
 
   let pp fmt v =
     Format.fprintf fmt "{{\n";
-    M.iter (fun k v -> if k <> v then Format.fprintf fmt "@[%a -> %a@]\n" M.pp_key k M.pp_key v) v;
+    M.iter (fun k (v,cl) -> if O.compare k v != 0 then Format.fprintf fmt "@[%a -> %a@]\n" M.pp_key k M.pp_key v) v;
     Format.fprintf fmt "}}@."
 
   let pp_key = M.pp_key
