@@ -492,13 +492,13 @@ module Symbol : sig
 
   type t = symbol [@@deriving show,ord]
   type provenance =
-  | Core of core_symbol (* baked into the elpi runtime *)
-  | Builtin of int (* declared by the user*)
+  | Core (* baked into the elpi runtime *)
+  | Builtin of { variant : int } (* buitin or host declared *)
   | File of Loc.t [@@deriving show, ord]
 
   val make : provenance -> F.t -> t
   val make_builtin : ?variant:int -> F.t -> t
-  val make_new_builtin : F.t -> t * int (* variant *)
+  val make_variant_builtin : F.t -> t * int (* variant *)
 
   val get_loc : t -> Loc.t
   val get_provenance : t -> provenance
@@ -509,8 +509,8 @@ module Symbol : sig
   
 end = struct
   type provenance =
-    | Core of core_symbol (* baked into the elpi runtime *)
-    | Builtin of int (* declared by the user*)
+    | Core (* baked into the elpi runtime *)
+    | Builtin of { variant : int } (* builtin or host declared *)
     | File of Loc.t [@@deriving show, ord]
   type symbol = provenance * F.t [@@deriving show, ord]
   type 'a merge = (symbol -> 'a -> 'a -> 'a)
@@ -581,22 +581,22 @@ end = struct
   let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
 
   let get_provenance (l,_) = l
-  let get_loc (l,_) =
+  let get_loc (l,f) =
     match l with
     | File l -> l
-    | Core _ -> Loc.initial ("("^__FILE__^")")
-    | Builtin n -> Loc.initial ("(ocaml:"^string_of_int n^")")
+    | Core -> Loc.initial ("("^__FILE__^":"^F.show f^")")
+    | Builtin { variant } -> Loc.initial ("(ocaml:"^F.show f^":"^string_of_int variant^")")
   let get_str (_,f) = F.show f
   let get_func (_,f) = f
   let map_func f (x,y) =  x, f y
   
   let make prov name = prov, name
-  let make_builtin ?(variant=0) name = Builtin variant, name
-  let make_new_builtin =
+  let make_builtin ?(variant=0) name = Builtin { variant }, name
+  let make_variant_builtin =
     let n = ref 0 in
     fun name ->
-      let n = incr n; !n in
-      (Builtin n, name), n
+      let variant = incr n; !n in
+      (Builtin { variant }, name), variant
 end
 
 
@@ -695,13 +695,13 @@ let declare_global_symbol symb =
     n
 
 let declare_core_symbol x =
-  let symb = Symbol.(make (Core x) (func_of_core_symbol x)) in
+  let symb = Symbol.(make Core (func_of_core_symbol x)) in
   declare_global_symbol symb
 let uvarc = declare_core_symbol Uv
 let asc = declare_core_symbol As
 
 let declare_overloaded_global_symbol str =
-  let symb, variant = Symbol.make_new_builtin (Ast.Func.from_string str) in
+  let symb, variant = Symbol.make_variant_builtin (Ast.Func.from_string str) in
   declare_global_symbol symb, variant
 
 let declare_global_symbol str =

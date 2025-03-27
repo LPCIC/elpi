@@ -220,15 +220,15 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
-  LPCode "external type (:-) fprop -> fprop -> fprop.";
-  LPCode "external type (:-) fprop -> list prop -> fprop.";
-  LPCode "external type (,) variadic fprop fprop.";
-  LPCode "external 0 type uvar A.";
-  LPCode "external 0 type (as) A -> A -> A.";
-  LPCode "external type (=>) prop -> fprop -> fprop.";
-  LPCode "external type (=>) list prop -> fprop -> fprop.";
-  LPCode "external type (==>) prop -> fprop -> fprop."; (* not really needed since the parser emits a => *)
-  LPCode "external type (==>) list prop -> fprop -> fprop.";
+  LPCode "external symbol (:-)  : fprop -> fprop -> fprop.";
+  LPCode "external symbol (:-)  : fprop -> list prop -> fprop.";
+  LPCode "external symbol (,)   : variadic fprop fprop.";
+  LPCode "external symbol uvar  : A = 0.";
+  LPCode "external symbol (as)  : A -> A -> A = 0.";
+  LPCode "external symbol (=>)  : prop -> fprop -> fprop.";
+  LPCode "external symbol (=>)  : list prop -> fprop -> fprop."; (* HACS in TC to handle this*)
+  LPCode "external symbol (==>) : prop -> fprop -> fprop.";
+  LPCode "external symbol (==>) : list prop -> fprop -> fprop.";
 
   LPDoc " -- Control --";
 
