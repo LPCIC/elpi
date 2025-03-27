@@ -68,7 +68,7 @@ let check_type ~type_abbrevs ~kinds ~loc ~name ctx x =
 type indexing =
   | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
   | DontIndex
-  | External
+  | External of int option
 [@@deriving show, ord]
 
 type symbol_metadata = {
@@ -99,32 +99,38 @@ let maximize_indexing_input modes =
   let depths = List.map (function Util.Mode.Fo Input | Util.Mode.Ho (Input, _) -> max_int | _ -> 0) modes in
   DiscriminationTree depths
 
+let rec is_prop = function
+  | TypeAssignment.Lam (_,x) -> is_prop x
+  | Ty t ->  TypeAssignment.is_prop t <> None
+
 let check_indexing ~loc name value ty indexing =
   let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
-  let rec is_prop = function
-    | TypeAssignment.Lam (_,x) -> is_prop x
-    | Ty t ->  TypeAssignment.is_prop t <> None in
   let ensure_pred ty =
     if not (is_prop ty) then
       error ~loc "Indexing directive is for predicates only" in
   match indexing with
   | Some (Ast.Structured.Index(l,k)) -> ensure_pred ty; Index (mode,chose_indexing name l k)
   | Some MaximizeForFunctional -> ensure_pred ty; Index (mode,maximize_indexing_input mode)
-  | Some Ast.Structured.External -> External
+  | Some Ast.Structured.External (Some i) -> External (Some i)
+  | Some Ast.Structured.External None -> ensure_pred ty; External None
   | _ when is_prop ty -> Index (mode,chose_indexing name [1] None)
   | _ -> DontIndex
 
-let check_type  ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * Symbol.t option * symbol_metadata =
+let check_type ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * Symbol.t option * symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
+  Format.eprintf " - %a\n%!" TypeAssignment.pretty_skema ty;
   let indexing = check_indexing ~loc name value ty indexing in
   let symb = Symbol.make loc name in
   let quotient =
-    if indexing = External then
-      let bsymb = Symbol.make_builtin name in
+    let is_a_predicate = is_prop ty in
+    let to_unify bsymb =
       match Symbol.RawMap.find bsymb Elpi_runtime.Data.Global_symbols.table.s2ct with
       | _ -> Some bsymb 
-      | exception Not_found -> None
-    else None in
+      | exception Not_found -> None in
+    match indexing with
+    | External None when is_a_predicate -> Symbol.make_builtin name |> to_unify
+    | External (Some i) -> Symbol.make_builtin ~variant:i name |> to_unify
+    | _ -> None in
   symb, quotient, { ty; indexing }
 
 let arrow_of_args args ety =
@@ -154,7 +160,8 @@ let check_1types  ~type_abbrevs ~kinds lst : _ * Symbol.t TypeAssignment.overloa
   | xs as l -> l, TypeAssignment.Overloaded (List.map (fun (x,_,_) -> x) xs)
 
 let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
-  let m = F.Map.mapi (fun k tl -> check_1types ~type_abbrevs ~kinds tl) m in
+  let m = F.Map.mapi (fun k tl ->
+    Format.eprintf "Types for %a\n%!" F.pp k; check_1types ~type_abbrevs ~kinds tl) m in
   let overloading = F.Map.map snd m in
   let symbols = F.Map.fold (fun _ (l,_) qm ->
     List.fold_left (fun acc (k, q, v) ->
@@ -219,8 +226,8 @@ let error_overloaded_app ~valid_mode ~loc ~ety c args alltys =
   let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c (prettier valid_mode) ty (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" (prettier valid_mode) x) ", ") alltys in
   error_msg_mode ~loc !valid_mode msg
   
-let error_overloaded_app_tgt ~valid_mode ~loc ~ety c =
-  let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches make it build a term of type @[<hov>%a@]@]" F.pp c (prettier valid_mode) ety in
+let error_overloaded_app_tgt ~valid_mode ~loc ~ety c alltys =
+  let msg = Format.asprintf "@[<v>%a is overloaded but none of its types make it build a term of type @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c (prettier valid_mode) ety (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" (prettier valid_mode) x) ", ") alltys in
   error_msg_mode ~loc !valid_mode msg
 
 
@@ -442,11 +449,11 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
 
   and check_app ~positive ctx ~loc ~tyctx (cid,c,tya) cty args ety =
     match cty with
-    | Overloaded l ->
+    | Overloaded all ->
       (* Format.eprintf "@[options %a %a %d:@ %a@]\n" F.pp c TypeAssignment.pretty_mut_once ety (List.length args) (pplist (fun fmt (_,x) -> TypeAssignment.pretty_mut_once fmt x) "; ") l; *)
-      let l = List.filter (unify_tgt_ety (List.length args) ety) l in
+      let l = List.filter (unify_tgt_ety (List.length args) ety) all in
       begin match l with
-      | [] -> error_overloaded_app_tgt ~valid_mode ~loc ~ety c
+      | [] -> error_overloaded_app_tgt ~valid_mode ~loc ~ety c all
       | [ty] -> 
       (* Format.eprintf "1option left: %a\n" TypeAssignment.pretty (snd ty); *)
         check_app ~positive ctx ~loc ~tyctx (cid,c,tya) (Single ty) args ety

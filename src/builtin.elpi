@@ -43,9 +43,9 @@ external type (:-) fprop -> list prop -> fprop.
 
 external type (,) variadic fprop fprop.
 
-external type uvar A.
+type uvar A.
 
-external type (as) A -> A -> A.
+type (as) A -> A -> A.
 
 external type (=>) prop -> fprop -> fprop.
 
@@ -90,81 +90,87 @@ external func calc A -> A.
 
 %  --- Operators ---
 
-type (-) A -> A -> A.
+external 1 type (-) A -> A -> A.
 
-type (i-) int -> int -> int.
+external 2 type (i-) int -> int -> int.
 
-type (r-) float -> float -> float.
+external 3 type (r-) float -> float -> float.
 
-type (+) int -> int -> int.
-type (+) float -> float -> float.
+external 5 type (+) float -> float -> float.
 
-type (i+) int -> int -> int.
+external 4 type (+) int -> int -> int.
 
-type (r+) float -> float -> float.
+external 6 type (i+) int -> int -> int.
 
-type (*) int -> int -> int.
-type (*) float -> float -> float.
+external 7 type (r+) float -> float -> float.
 
-type (/) float -> float -> float.
+external 9 type (*) float -> float -> float.
 
-type (mod) int -> int -> int.
+external 8 type (*) int -> int -> int.
 
-type (div) int -> int -> int.
+external 10 type (/) float -> float -> float.
 
-type (^) string -> string -> string.
+external 11 type (mod) int -> int -> int.
 
-type (~) int -> int.
-type (~) float -> float.
+external 12 type (div) int -> int -> int.
 
-type (i~) int -> int.
+external 13 type (^) string -> string -> string.
 
-type (r~) float -> float.
+external 15 type (~) float -> float.
 
-type abs int -> int.
-type abs float -> float.
+external 14 type (~) int -> int.
 
-type iabs int -> int.
+external 16 type (i~) int -> int.
 
-type rabs float -> float.
+external 17 type (r~) float -> float.
 
-type max int -> int -> int.
-type max float -> float -> float.
+external 19 type abs float -> float.
 
-type min int -> int -> int.
-type min float -> float -> float.
+external 18 type abs int -> int.
 
-type sqrt float -> float.
+external 20 type iabs int -> int.
 
-type sin float -> float.
+external 21 type rabs float -> float.
 
-type cos float -> float.
+external 23 type max float -> float -> float.
 
-type arctan float -> float.
+external 22 type max int -> int -> int.
 
-type ln float -> float.
+external 25 type min float -> float -> float.
 
-type int_to_real int -> float.
+external 24 type min int -> int -> int.
 
-type floor float -> int.
+external 26 type sqrt float -> float.
 
-type ceil float -> int.
+external 27 type sin float -> float.
 
-type truncate float -> int.
+external 28 type cos float -> float.
 
-type size string -> int.
+external 29 type arctan float -> float.
 
-type chr int -> string.
+external 30 type ln float -> float.
 
-type rhc string -> int.
+external 31 type int_to_real int -> float.
 
-type string_to_int string -> int.
+external 32 type floor float -> int.
 
-type int_to_string int -> string.
+external 33 type ceil float -> int.
 
-type substring string -> int -> int -> string.
+external 34 type truncate float -> int.
 
-type real_to_string float -> string.
+external 35 type size string -> int.
+
+external 36 type chr int -> string.
+
+external 37 type rhc string -> int.
+
+external 38 type string_to_int string -> int.
+
+external 39 type int_to_string int -> string.
+
+external 40 type substring string -> int -> int -> string.
+
+external 41 type real_to_string float -> string.
 
 %  -- Arithmetic tests --
 

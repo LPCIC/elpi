@@ -55,7 +55,7 @@ type raw_attribute =
   | Before of string
   | Replace of string
   | Remove of string
-  | External
+  | External of int option
   | Index of int list * string option
   | Functional
   | Untyped
@@ -249,7 +249,7 @@ and cattribute = {
   cifexpr : string option
 }
 and tattribute =
-  | External
+  | External of int option
   | Index of int list * tindex option
   | MaximizeForFunctional
 and tindex = Map | HashMap | DiscriminationTree

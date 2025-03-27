@@ -208,8 +208,6 @@ let is_builtin t x =
   || x == D.Global_symbols.implc
   || x == D.Global_symbols.rimplc
   || x == D.Global_symbols.pic
-  || x == D.Global_symbols.asc
-  || x == D.Global_symbols.uvarc
   || x == D.Global_symbols.sigmac
 ;;
 let is_declared t x =
@@ -454,7 +452,7 @@ end = struct (* {{{ *)
          if r.ifexpr <> None then duplicate_err "if";
          aux_attrs { r with ifexpr = Some s } rest
       | Untyped :: rest -> aux_attrs { r with typecheck = false } rest
-      | (External | Index _ | Functional) as a :: _-> illegal_err a
+      | (External _ | Index _ | Functional) as a :: _-> illegal_err a
     in
     let attributes = aux_attrs { insertion = None; id = None; ifexpr = None; typecheck = true } attributes in
     begin
@@ -477,7 +475,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux_chr { r with cifexpr = Some s } rest
-      | (Before _ | After _ | Replace _ | Remove _ | External | Index _ | Functional | Untyped) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | External _ | Index _ | Functional | Untyped) as a :: _ -> illegal_err a 
     in
     let cid = Loc.show loc in
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
@@ -541,10 +539,10 @@ end = struct (* {{{ *)
       error ~loc ("illegal attribute " ^ show_raw_attribute a) in
     let rec aux_tatt r f = function
       | [] -> r, f
-      | External :: rest ->
+      | External o :: rest ->
          begin match r with
-           | None -> aux_tatt (Some Structured.External) f rest
-           | Some Structured.External -> duplicate_err "external"
+           | None -> aux_tatt (Some (Structured.External o)) f rest
+           | Some (Structured.External o) -> duplicate_err "external"
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
       | Index(i,index_type) :: rest ->
@@ -1472,7 +1470,7 @@ end = struct
             error (Format.asprintf "No signature declared for builtin %s" name) in
       let { Type_checker.indexing } = Symbol.QMap.find symb new_types.symbols in
       begin match indexing with
-        | Type_checker.External -> ()
+        | Type_checker.External None -> ()
         | _ -> error ~loc:(Symbol.get_loc symb) (Format.asprintf "Non external type declaration for builtin %s" name)
       end;
       symb, p

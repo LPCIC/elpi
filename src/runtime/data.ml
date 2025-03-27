@@ -440,12 +440,13 @@ module Symbol : sig
   val get_func : t -> F.t
 
   val make : Loc.t -> F.t -> t
-  val make_builtin : F.t -> t
+  val make_builtin : ?variant:int -> F.t -> t
+  val make_new_builtin : F.t -> t * int (* variant *)
 
   (* val map_func : (F.t -> F.t) -> t -> t *)
   
 end = struct
-  type provenance = Builtin | File of Loc.t [@@deriving show, ord]
+  type provenance = Builtin of int | File of Loc.t [@@deriving show, ord]
   type symbol = provenance * F.t [@@deriving show, ord]
   type 'a merge = (symbol -> 'a -> 'a -> 'a)
   module O = struct type t = symbol [@@deriving show,ord] end
@@ -463,9 +464,9 @@ end = struct
     let unify f s1 s2 (uf,m) = 
       let x,uf =
         match fst s1, fst s2 with
-        | Builtin, Builtin -> anomaly "Builtins cannot be declared twice"
+        | Builtin _, Builtin _ -> anomaly "Builtins cannot be declared twice"
         (* we use the (possibly) pre-allocated builtin as the canonical *)
-        | File _, Builtin -> UF.union uf s1 ~canon:s2
+        | File _, Builtin _ -> UF.union uf s1 ~canon:s2
         | _ -> UF.union uf ~canon:s1 s2 in
       match x with
       | None -> uf, m
@@ -517,13 +518,18 @@ end = struct
   let get_loc (l,_) =
     match l with
     | File l -> l
-    | Builtin -> Loc.initial "(ocaml)"
+    | Builtin n -> Loc.initial ("(ocaml:"^string_of_int n^")")
   let get_str (_,f) = F.show f
   let get_func (_,f) = f
   let map_func f (x,y) =  x, f y
   
   let make loc name = File loc, name
-  let make_builtin name = Builtin, name
+  let make_builtin ?(variant=0) name = Builtin variant, name
+  let make_new_builtin =
+    let n = ref 0 in
+    fun name ->
+      let n = incr n; !n in
+      (Builtin n, name), n
 end
 
 
@@ -552,6 +558,7 @@ module Global_symbols : sig
 
   (* Static initialization, eg link time *)
   val declare_global_symbol : string -> constant
+  val declare_overloaded_global_symbol : string -> constant * int
   val lock : unit -> unit
 
   val cutc     : constant
@@ -600,8 +607,7 @@ let table = {
   locked = false;
 }
 
-let declare_global_symbol str =
-  let symb = Symbol.make_builtin (Ast.Func.from_string str) in
+let declare_global_symbol symb str =
   try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
     if table.locked then
@@ -612,6 +618,15 @@ let declare_global_symbol str =
     table.s2ct <- Symbol.RawMap.add symb (n,t) table.s2ct;
     table.c2s <- Constants.Map.add n symb table.c2s;
     n
+
+let declare_overloaded_global_symbol str =
+  let symb, variant = Symbol.make_new_builtin (Ast.Func.from_string str) in
+  declare_global_symbol symb str, variant
+
+let declare_global_symbol str =
+  let symb = Symbol.make_builtin (Ast.Func.from_string str) in
+  declare_global_symbol symb str
+
 
 let declare_global_symbol_for_builtin str =
   let symb = Symbol.make_builtin (Ast.Func.from_string str) in
