@@ -2,4 +2,4 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-val main : Compiler_data.ScopedTerm.t -> Compiler_data.ScopedTerm.t
+val main : types:Type_checker.typing_env -> Compiler_data.ScopedTerm.t -> Compiler_data.ScopedTerm.t
