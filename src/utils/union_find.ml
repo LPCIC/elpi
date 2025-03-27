@@ -12,7 +12,7 @@ module type S = sig
   val find_class : t -> key -> key * KeySet.t
   val union : t -> key -> canon:key -> key option * t
   val merge : t -> t -> t
-  (* val roots : t -> key list *)
+  val roots : t -> KeySet.t
   val mapi : (key -> key) -> t -> t
 end
 
@@ -57,11 +57,11 @@ module Make (O : Util.Map.OrderedType) : S with type key = O.t = struct
 
   let is_root acc k = O.compare (find acc k) k = 0
 
-  (* let roots d =
-    let roots = ref [] in
-    let add e = if not (List.mem e !roots) then roots := e :: !roots in
+  let roots d =
+    let roots = ref KeySet.empty in
+    let add e = if not (KeySet.mem e !roots) then roots := KeySet.add e !roots in
     M.iter (fun k v -> add (find d k)) d;
-    !roots *)
+    !roots
 
   let pp fmt v =
     Format.fprintf fmt "{{\n";

@@ -223,8 +223,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "external type (:-) fprop -> fprop -> fprop.";
   LPCode "external type (:-) fprop -> list prop -> fprop.";
   LPCode "external type (,) variadic fprop fprop.";
-  LPCode "type uvar A.";
-  LPCode "type (as) A -> A -> A.";
+  LPCode "external type uvar A.";
+  LPCode "external type (as) A -> A -> A.";
   LPCode "external type (=>) prop -> fprop -> fprop.";
   LPCode "external type (=>) list prop -> fprop -> fprop.";
   LPCode "external type (==>) prop -> fprop -> fprop."; (* not really needed since the parser emits a => *)

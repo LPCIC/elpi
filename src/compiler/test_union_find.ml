@@ -1,6 +1,6 @@
 open Elpi_util.Union_find
 
-module M = Make (Elpi_util.Util.IntMap)
+module M = Make (Elpi_util.Util.Int)
 
 open M
 
@@ -20,9 +20,9 @@ let _ =
 
   union uf 1 6;
   union uf 3 1;
-  assert (roots !uf |> List.length = 1);
+  assert (roots !uf |> M.KeySet.cardinal = 1);
   (* The cloned table is not impacted by the modification in uf *)
-  assert (roots !uf1 |> List.length = 2);
+  assert (roots !uf1 |> M.KeySet.cardinal = 2);
   union uf1 7 8;
-  assert (roots !uf1 |> List.length = 3);
-  assert (roots !uf |> List.length = 1)
+  assert (roots !uf1 |> M.KeySet.cardinal = 3);
+  assert (roots !uf |> M.KeySet.cardinal = 1)

@@ -208,6 +208,8 @@ let is_builtin t x =
   || x == D.Global_symbols.implc
   || x == D.Global_symbols.rimplc
   || x == D.Global_symbols.pic
+  || x == D.Global_symbols.asc
+  || x == D.Global_symbols.uvarc
   || x == D.Global_symbols.sigmac
 ;;
 let is_declared t x =
