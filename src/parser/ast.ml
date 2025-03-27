@@ -78,7 +78,7 @@ type raw_attribute =
   | Before of string
   | Replace of string
   | Remove of string
-  | External
+  | External of int option
   | Index of int list * string option
   | Functional
   | Untyped
@@ -405,7 +405,7 @@ and attribute = {
 and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string
 and tattribute =
-  | External
+  | External of int option
   | Index of int list * tindex option
   | MaximizeForFunctional
 and tindex = Map | HashMap | DiscriminationTree

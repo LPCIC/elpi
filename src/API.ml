@@ -1089,17 +1089,19 @@ module Calc = struct
   }
 
   let compile_operation_declaration { symbol; infix; args; code } =
-    let c = ED.Global_symbols.declare_global_symbol symbol in
     let ty_decl args =
-     if infix then
-       Printf.sprintf "type (%s) %s." symbol (String.concat " -> " args)
-     else
-       Printf.sprintf "type %s %s." symbol (String.concat " -> " args) in
-     c, { ED.CalcHooks.ty_decl = List.map ty_decl args |> String.concat "\n"; code }
+      let c, variant = ED.Global_symbols.declare_overloaded_global_symbol symbol in
+      let ty_decl = if infix then
+        Printf.sprintf "external %d type (%s) %s." variant symbol (String.concat " -> " args)
+      else
+        Printf.sprintf "external %d type %s %s." variant symbol (String.concat " -> " args) in
+      c, { ED.CalcHooks.ty_decl = ty_decl; code }
+    in
+    List.map ty_decl args
 
    let register ~descriptor d =
      let e = compile_operation_declaration d in
-     descriptor := e :: !descriptor
+     descriptor := e @ !descriptor
     
   let register_eval n (symbol,tys) code =
     let infix, n = n < 0, abs n in
