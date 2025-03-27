@@ -616,7 +616,7 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
       | Impl (false, ({ it = App (b, _, _) } as hd), bo) -> (assume_hd b false hd, hd, Some bo)
       | Const b -> (assume_hd b false t, t, None)
       (* For clauses with quantified unification variables *)
-      | App ((Global _, n, _), { it = Lam (oname, ty, body) }, []) when F.equal F.pif n || F.equal F.sigmaf n ->
+      | App (n, { it = Lam (oname, ty, body) }, []) when is_quantifier n ->
           ctx := BVar.add_oname ~loc oname (Compilation.type_ass_2func_mut ~loc env) !ctx;
           aux body
       | App (b, _, _) -> (assume_hd b false t, t, None)
