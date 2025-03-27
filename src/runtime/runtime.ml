@@ -1713,11 +1713,11 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
     | (Discard, _ | _, Discard) -> true
 
    (* _ as X binding *)
-   | _, Builtin(c,[arg;as_this]) when c == Global_symbols.asc ->
+   | _, App(c,arg,[as_this]) when c == Global_symbols.asc ->
       unif argsdepth matching depth adepth a bdepth arg e &&
       unif argsdepth matching depth adepth a bdepth as_this e
-   | _, Builtin(c,_) when c == Global_symbols.asc -> error "syntax error in as"
-   | Builtin(c,arg :: _), _ when c == Global_symbols.asc ->
+   | _, App(c,arg,_) when c == Global_symbols.asc -> error "syntax error in as"
+   | App(c,arg,_), _ when c == Global_symbols.asc ->
       unif argsdepth matching depth adepth arg bdepth b e
 
 (* TODO: test if it is better to deref_uv first or not, i.e. the relative order
@@ -1769,31 +1769,31 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
         (deref_appuv ~from:argsdepth ~to_:(adepth+depth) args e.(i)) empty_env
 
    (* UVar introspection (matching) *)
-   | (UVar _ | AppUVar _), Builtin(c,[]) when c == Global_symbols.uvarc && matching -> true
-   | UVar(r,vd,ano), Builtin(c,[hd]) when c == Global_symbols.uvarc && matching ->
+   | (UVar _ | AppUVar _), Const c when c == Global_symbols.uvarc && matching -> true
+   | UVar(r,vd,ano), App(c,hd,[]) when c == Global_symbols.uvarc && matching ->
       unif argsdepth matching depth adepth (UVar(r,vd,ano)) bdepth hd e
-   | AppUVar(r,vd,_), Builtin(c,[hd]) when c == Global_symbols.uvarc && matching ->
+   | AppUVar(r,vd,_), App(c,hd,[]) when c == Global_symbols.uvarc && matching ->
       unif argsdepth matching depth adepth (UVar(r,vd,0)) bdepth hd e
-   | UVar(r,vd,ano), Builtin(c,[hd;arg]) when c == Global_symbols.uvarc && matching ->
+   | UVar(r,vd,ano), App(c,hd,[arg]) when c == Global_symbols.uvarc && matching ->
       let r_exp = oref C.dummy in
       let exp = UVar(r_exp,0,0) in
       r @:= UVar(r_exp,0,vd);
       unif argsdepth matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 (vd+ano) 0) in
       unif argsdepth matching depth adepth args bdepth arg e
-   | AppUVar(r,vd,args), Builtin(c,[hd;arg]) when c == Global_symbols.uvarc && matching ->
+   | AppUVar(r,vd,args), App(c,hd,[arg]) when c == Global_symbols.uvarc && matching ->
       let r_exp = oref C.dummy in
       let exp = UVar(r_exp,0,0) in
       r @:= UVar(r_exp,0,vd);
       unif argsdepth matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 vd 0 @ args) in
       unif argsdepth matching depth adepth args bdepth arg e
-   | Lam _, Builtin(c,_) when  c == Global_symbols.uvarc && matching ->
+   | Lam _, (Const c | App(c,_,_)) when  c == Global_symbols.uvarc && matching ->
       begin match eta_contract_flex depth adepth ~argsdepth:adepth e a with
       | None -> false
       | Some a -> unif argsdepth matching depth adepth a bdepth b e
       end
-   | (App _ | Const _ | Builtin _ | Nil | Cons _ | CData _), (Builtin(c,_)) when c == Global_symbols.uvarc && matching -> false
+   | (App _ | Const _ | Builtin _ | Nil | Cons _ | CData _), (Const c | App(c,_,[])) when c == Global_symbols.uvarc && matching -> false
 
    (* On purpose we let the fully applied uvarc pass, so that at the
     * meta level one can unify fronzen constants. One can use the var builtin
@@ -2425,12 +2425,14 @@ type clause_arg_classification =
   | Rigid of constant * Mode.t
 
 let rec classify_clause_arg ~depth matching t =
+  (* Format.eprintf "index %a\n%!" (ppterm depth [] ~argsdepth:depth empty_env) t; *)
   match deref_head ~depth t with
+  | Const k when k == Global_symbols.uvarc -> MustBeVariable
   | Const k -> Rigid(k,matching)
   | Nil -> Rigid (Global_symbols.nilc,matching)
   | Cons _ -> Rigid (Global_symbols.consc,matching)
-  | Builtin (k,_) when k == Global_symbols.uvarc -> MustBeVariable
-  | Builtin (k,a :: _) when k == Global_symbols.asc -> classify_clause_arg ~depth matching a
+  | App (k,_,_) when k == Global_symbols.uvarc -> MustBeVariable
+  | App (k,a,_) when k == Global_symbols.asc -> classify_clause_arg ~depth matching a
   | (App (k,_,_) | Builtin (k,_)) -> Rigid (k,matching)
   | Lam _ -> Variable (* loose indexing to enable eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
@@ -2487,8 +2489,10 @@ let hash_arg_list is_goal hd ~depth args mode spec =
   and aux_arg size mode deep arg =
     let h =
       match deref_head ~depth arg with
-      | Builtin (k,a :: _) when k == Global_symbols.asc -> aux_arg size mode deep a
-      | Builtin(k,_) when k == Global_symbols.uvarc ->
+      | App (k,a,_) when k == Global_symbols.asc -> aux_arg size mode deep a
+      | Const k when k == Global_symbols.uvarc ->
+          hash size mustbevariablec
+      | App(k,_,_) when k == Global_symbols.uvarc && deep = 1 ->
           hash size mustbevariablec
       | Const k -> hash size k
       | App(k,_,_) when deep = 1 -> hash size k
@@ -2643,11 +2647,12 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
     else
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
-      | CData d -> Path.emit path @@ mkPrimitive d; update_current_min_depth path_depth
-      | Const k -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
+      | Const k when k == Global_symbols.uvarc -> Path.emit path mkVariable; update_current_min_depth path_depth
       | Const k when safe -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
-      | Builtin (k,_) when k == Global_symbols.uvarc -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
-      | Builtin (k,a :: _) when k == Global_symbols.asc -> main ~safe ~depth a (path_depth+1)
+      | Const k -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
+      | CData d -> Path.emit path @@ mkPrimitive d; update_current_min_depth path_depth
+      | App (k,_,_) when k == Global_symbols.uvarc -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
+      | App (k,a,_) when k == Global_symbols.asc -> main ~safe ~depth a (path_depth+1)
       | Lam _ -> Path.emit path mkAny; update_current_min_depth path_depth (* loose indexing to enable eta *)
       | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
       | Builtin (k,tl) ->
@@ -2895,12 +2900,14 @@ type goal_arg_classification =
   | Rigid of constant
 
 let rec classify_goal_arg ~depth t =
+  (* Format.eprintf "goal %a\n%!" (ppterm depth [] ~argsdepth:depth empty_env) t; *)
   match deref_head ~depth t with
+  | Const k when k == Global_symbols.uvarc -> Rigid mustbevariablec
   | Const k -> Rigid(k)
   | Nil -> Rigid (Global_symbols.nilc)
   | Cons _ -> Rigid (Global_symbols.consc)
-  | Builtin (k,_) when k == Global_symbols.uvarc -> Rigid mustbevariablec
-  | Builtin (k,a :: _) when k == Global_symbols.asc -> classify_goal_arg ~depth a
+  | App (k,_,_) when k == Global_symbols.uvarc -> Rigid mustbevariablec
+  | App (k,a,_) when k == Global_symbols.asc -> classify_goal_arg ~depth a
   | (App (k,_,_) | Builtin (k,_)) -> Rigid (k)
   | Lam t -> classify_goal_arg ~depth:(depth+1) t (* eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
@@ -3395,7 +3402,7 @@ end = struct (* {{{ *)
       (* freeze *)
       | AppUVar(r,0,args) when !!r == C.dummy ->
           let args = smart_map (faux d) args in
-          Builtin(Global_symbols.uvarc, [freeze_uv r;list_to_lp_list args])
+          App(Global_symbols.uvarc, freeze_uv r, [list_to_lp_list args])
       (* expansion *)
       | UVar(r,lvl,ano) when !!r == C.dummy ->
           faux d (log_assignment(expand_uv ~depth:d r ~lvl ~ano))
@@ -3443,14 +3450,14 @@ end = struct (* {{{ *)
           daux d (App(c,deref_uv ~to_:d ~from:lvl ano !!r,a))
       | App(c,AppUVar(r,lvl,args),a) when !!r != C.dummy ->
           daux d (App(c,deref_appuv ~to_:d ~from:lvl args !!r,a))
-      | Builtin(c,[Const x; args]) when c == Global_symbols.uvarc ->
+      | App(c,Const x,[args]) when c == Global_symbols.uvarc ->
           let r = C.Map.find x f.c2uv in
           let args = lp_list_to_list ~depth:d args in
           mkAppUVar r 0 (smart_map (daux d) args)
-      | Builtin(c,[UVar(r,_,_);args]) when c == Global_symbols.uvarc ->
+      | App(c,UVar(r,_,_),[args]) when c == Global_symbols.uvarc ->
           let args = lp_list_to_list ~depth:d args in
           mkAppUVar r 0 (smart_map (daux d) args)
-      | Builtin(c,[AppUVar(r,_,_);args]) when c == Global_symbols.uvarc ->
+      | App(c,AppUVar(r,_,_),[args]) when c == Global_symbols.uvarc ->
           let args = lp_list_to_list ~depth:d args in
           mkAppUVar r 0 (smart_map (daux d) args)
       | App(c,x,xs) as orig ->

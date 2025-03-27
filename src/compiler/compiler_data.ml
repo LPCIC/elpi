@@ -39,7 +39,9 @@ module Scope = struct
 
   let mkGlobal ?(escape_ns=false) () =
     Global { escape_ns ; decl_id = None }
-
+  let mkResolvedGlobal symb =
+    Global { escape_ns = true ; decl_id = Some symb }
+  
 end
 let elpi_language : Scope.language = "lp"
 let elpi_var : Scope.language = "lp_var"
@@ -355,7 +357,7 @@ module TypeAssignment = struct
   type t = Val of t MutableOnce.t t_
   [@@ deriving show]
 
-  let mk_mut t = MutableOnce.create (Val t)
+  let create t = MutableOnce.create (Val t)
 
   let unval (Val x) = x
 

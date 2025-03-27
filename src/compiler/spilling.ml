@@ -19,28 +19,28 @@ let is_prop ~extra x =
   in
   aux extra ty
 
-let ( !! ) r = TypeAssignment.mk_mut r
-let andf_ty = !!(Arr (MVal Input, Variadic, Prop Function, Prop Function))
-let pif_arg_ty (_,_,b) = !!(Arr (MVal Input, NotVariadic, UVar b, Prop Function))
+let mk_global ~types f l =
+  let f = Symbol.make_builtin f in
+  let f_ty = (Symbol.QMap.find f types.Type_checker.symbols).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
+  (Scope.mkResolvedGlobal f), F.andf, f_ty
 
-let pif_ty (_,_,ty) : TypeAssignment.t MutableOnce.t =
-  !!(Arr
-       ( MVal Input,
-         NotVariadic,
-         Arr (MVal Input, NotVariadic, UVar ty, Prop Function),
-         Prop Function ))
+let pif_ty_name ~types (_,_,ty) : 'a ty_name = mk_global ~types F.pif [TypeAssignment.deref ty]
+let pif_ty ~types ty = let _,_,ty = pif_ty_name ~types ty in ty
+let pif_arg_ty ~types ty =
+  match TypeAssignment.deref @@ pif_ty ~types ty with
+  | TypeAssignment.Arr(_,_,x,_) -> TypeAssignment.create x
+  | _ -> assert false
 
-let pif_ty_name ty : 'a ty_name = (Scope.mkGlobal ~escape_ns:true (), F.pif, pif_ty ty)
 let mk_loc ~loc ~ty it = { ty; it; loc }
 
 (* TODO store the types in Main *)
-let add_spilled (l : spill list) t =
+let add_spilled ~types (l : spill list) t =
   if l = [] then t
   else
     List.fold_right
       (fun { expr; vars_names } t ->
-        mk_loc ~loc:t.loc ~ty:andf_ty
-        @@ App (((Scope.mkGlobal ~escape_ns:true ()), F.andf, andf_ty), expr, [ t ]))
+        mk_loc ~loc:t.loc ~ty:TypeAssignment.(create (Prop Elpi_parser.Ast.Structured.Function))
+        @@ App (mk_global ~types F.andf [], expr, [ t ]))
       l t
 
 let mkApp n l = if l = [] then Const n else App (n, List.hd l, List.tl l)
@@ -69,7 +69,7 @@ let mk_spilled ~loc ~ty ctx args n : (F.t * t) list =
       | ScopedTerm.{ ty } :: tl ->
           TypeAssignment.(Arr (MRef (MutableOnce.make F.dummyname), NotVariadic, deref ty, aux tl))
     in
-    TypeAssignment.mk_mut (aux ctx)
+    TypeAssignment.create (aux ctx)
   in
   let rec aux n ty =
     let f =
@@ -102,11 +102,11 @@ let rec bc ctx t =
 
 and bc_loc ctx { loc; ty; it } = { loc; ty; it = bc ctx it }
 
-let rec spill ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; it } as t) : spills * t list =
+let rec spill ~types ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; it } as t) : spills * t list =
   (* Format.eprintf "@[<hov 2>spill %a :@ %a@]\n" pretty t TypeAssignment.pretty (TypeAssignment.deref ty); *)
   match it with
   | CData _ | Discard | Const _ -> ([], [ t ])
-  | Cast (t, _) -> spill ctx args t
+  | Cast (t, _) -> spill ~types ctx args t
   | Spill (t, { contents = NoInfo }) -> assert false (* no type checking *)
   | Spill (t, { contents = Phantom _ }) -> assert false (* escapes type checker *)
   | Spill (t, { contents = Main n }) ->
@@ -118,51 +118,51 @@ let rec spill ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; it } as 
              (List.rev_map (fun (l, c, ty) -> mk_loc ~loc ~ty @@ Const (Bound l, c, ty)) ctx)
              args n
       in
-      let spills, t = spill1 ~extra:(List.length vars_names) ctx args t in
+      let spills, t = spill1 ~types ~extra:(List.length vars_names) ctx args t in
       let expr = app t vars in
       (spills @ [ { vars; vars_names; expr } ], vars)
   (* globals and builtins *)
   | App (((Global _, c, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when F.equal F.pif c ->
       let ctx = v :: ctx in
-      let spilled, t = spill1 ctx args t in
-      ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled spilled t); loc = tloc; ty = tty }, []) } ])
+      let spilled, t = spill1 ~types ctx args t in
+      ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
   | App (((Global _, c, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when F.equal F.sigmaf c ->
       let ctx = ctx in
       (* not to be put in scope of spills *)
-      let spilled, t = spill1 ctx args t in
-      ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled spilled t); loc = tloc; ty = tty }, []) } ])
+      let spilled, t = spill1 ~types ctx args t in
+      ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
   | App (((_, c, _) as hd), x, xs) ->
       let last = if F.equal F.andf c then List.length xs else -1 in
       let spills, args =
-        List.split @@ List.mapi (fun i -> spill ~extra:(if i = last then extra else 0) ctx args) (x :: xs)
+        List.split @@ List.mapi (fun i -> spill ~types ~extra:(if i = last then extra else 0) ctx args) (x :: xs)
       in
       let args = List.flatten args in
       let spilled = List.flatten spills in
       let it = App (hd, List.hd args, List.tl args) in
       let extra = extra + List.length args - List.length xs - 1 in
       (* Format.eprintf "%a\nspill %b %d %a : %a\n" Loc.pp loc (is_prop ~extra ty) extra F.pp c TypeAssignment.pretty (TypeAssignment.UVar ty); *)
-      if is_prop ~extra ty then ([], [ add_spilled spilled { it; loc; ty } ]) else (spilled, [ { it; loc; ty } ])
+      if is_prop ~extra ty then ([], [ add_spilled ~types spilled { it; loc; ty } ]) else (spilled, [ { it; loc; ty } ])
   (* TODO: positive/negative postion, for now we assume :- and => are used in the obvious way *)
   | Impl (false, head, premise) ->
       (* head :- premise *)
-      let spills_head, head = spill1 ctx args head in
+      let spills_head, head = spill1 ~types ctx args head in
       if spills_head <> [] then error ~loc "Spilling in the head of a clause is not supported";
-      let spilled, premise = spill1 ctx args premise in
+      let spilled, premise = spill1 ~types ctx args premise in
       let it = Impl (false, head, premise) in
-      ([], [ add_spilled spilled { it; loc; ty } ])
+      ([], [ add_spilled ~types spilled { it; loc; ty } ])
   | Impl (true, premise, conclusion) ->
       (* premise => conclusion *)
-      let spills_premise, premise = spill1 ctx args premise in
+      let spills_premise, premise = spill1 ~types ctx args premise in
       if spills_premise <> [] then error ~loc "Spilling in the premise of an implication is not supported";
-      let spilled, conclusion = spill1 ~extra ctx args conclusion in
+      let spilled, conclusion = spill1 ~types ~extra ctx args conclusion in
       let it = Impl (true, premise, conclusion) in
-      ([], [ add_spilled spilled { it; loc; ty } ])
+      ([], [ add_spilled ~types spilled { it; loc; ty } ])
   (* lambda terms *)
   | Lam (None, o, t) ->
-      let spills, t = spill1 ctx args t in
+      let spills, t = spill1 ~types ctx args t in
       (spills, [ { it = Lam (None, o, t); loc; ty } ])
   | Lam ((Some c as abs), o, t) ->
-      let spills, t = spill1 (c :: ctx) args t in
+      let spills, t = spill1 ~types (c :: ctx) args t in
       let (t, _), spills =
         map_acc
           (fun (t, n) { vars; vars_names; expr } ->
@@ -172,36 +172,36 @@ let rec spill ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; it } as 
                 vars;
                 vars_names;
                 expr =
-                  mk_loc ~loc ~ty:(pif_ty c) @@ App (pif_ty_name c, mk_loc ~loc ~ty:(pif_arg_ty c) @@ Lam (abs, o, expr), []);
+                  mk_loc ~loc ~ty:(pif_ty ~types  c) @@ App (pif_ty_name ~types c, mk_loc ~loc ~ty:(pif_arg_ty ~types c) @@ Lam (abs, o, expr), []);
               } ))
           (t, []) spills
       in
       (spills, [ { it = Lam (abs, o, t); loc; ty } ])
   (* holes *)
   | Var (c, xs) ->
-      let spills, args = List.split @@ List.map (spill ctx args) xs in
+      let spills, args = List.split @@ List.map (spill ~types ctx args) xs in
       let args = List.flatten args in
       let spilled = List.flatten spills in
       let it = Var (c, args) in
       let extra = extra + List.length args - List.length xs in
-      if is_prop ~extra ty then ([], [ add_spilled spilled { it; loc; ty } ]) else (spilled, [ { it; loc; ty } ])
+      if is_prop ~extra ty then ([], [ add_spilled ~types spilled { it; loc; ty } ]) else (spilled, [ { it; loc; ty } ])
 
-and spill1 ?extra ctx args ({ loc } as t) =
-  let spills, t = spill ?extra ctx args t in
+and spill1 ~types ?extra ctx args ({ loc } as t) =
+  let spills, t = spill ~types ?extra ctx args t in
   let t = if List.length t <> 1 then error ~loc "bad pilling" else List.hd t in
   (spills, t)
 
-let spill ctx t =
+let spill ~types ctx t =
   let args = ref 0 in
   (* Format.eprintf "before spill: %a\n" pretty t; *)
-  let s, t = spill ctx args t in
+  let s, t = spill ~types ctx args t in
 
   (* Format.eprintf "after spill: %a\n" pretty (List.hd t); *)
   (s, t)
 
-let main t =
+let main ~types t =
   (* if needs_spilling then Format.eprintf "before %a\n" pretty t; *)
-  let spills, ts = spill [] (bc_loc [] t) in
+  let spills, ts = spill ~types [] (bc_loc [] t) in
   let t =
     match (spills, ts) with
     | [], [ t ] -> t

@@ -1441,7 +1441,7 @@ end = struct
         else unknown in
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
       (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
-      let spilled = {clause with body = if needs_spilling then Spilling.main body else body; needs_spilling = false} in
+      let spilled = {clause with body = if needs_spilling then Spilling.main ~types body else body; needs_spilling = false} in
       (* if typecheck then Mode_checker.check ~is_rule:true ~type_abbrevs ~kinds ~types spilled.body; *)
 
       let is_deterministic = typecheck && Determinacy_checker.check_clause ~env:type_abbrevs spilled.body in
@@ -1699,7 +1699,7 @@ end = struct
   (!symb, !amap), t
 
   let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
-    let t = if needs_spilling then Spilling.main t else t in
+    let t = if needs_spilling then Spilling.main ~types t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
   let extend1_clause flags state indexing ~builtins ~types (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr }; is_deterministic } =

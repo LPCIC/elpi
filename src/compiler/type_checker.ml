@@ -111,14 +111,13 @@ let check_indexing ~loc name value ty indexing =
   match indexing with
   | Some (Ast.Structured.Index(l,k)) -> ensure_pred ty; Index (mode,chose_indexing name l k)
   | Some MaximizeForFunctional -> ensure_pred ty; Index (mode,maximize_indexing_input mode)
-  | Some Ast.Structured.External (Some i) -> External (Some i)
-  | Some Ast.Structured.External None -> ensure_pred ty; External None
+  | Some Ast.Structured.External i -> External i
   | _ when is_prop ty -> Index (mode,chose_indexing name [1] None)
   | _ -> DontIndex
 
 let check_type ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * Symbol.t option * symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
-  Format.eprintf " - %a\n%!" TypeAssignment.pretty_skema ty;
+  (* Format.eprintf " - %a\n%!" TypeAssignment.pretty_skema ty; *)
   let indexing = check_indexing ~loc name value ty indexing in
   let symb = Symbol.make loc name in
   let quotient =
@@ -161,7 +160,8 @@ let check_1types  ~type_abbrevs ~kinds lst : _ * Symbol.t TypeAssignment.overloa
 
 let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
   let m = F.Map.mapi (fun k tl ->
-    Format.eprintf "Types for %a\n%!" F.pp k; check_1types ~type_abbrevs ~kinds tl) m in
+    (* Format.eprintf "Types for %a\n%!" F.pp k; *)
+    check_1types ~type_abbrevs ~kinds tl) m in
   let overloading = F.Map.map snd m in
   let symbols = F.Map.fold (fun _ (l,_) qm ->
     List.fold_left (fun acc (k, q, v) ->
@@ -171,7 +171,7 @@ let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
         | Some q ->
             (* Format.eprintf "FOUND builtin %a -> %a\n" Symbol.pp q Symbol.pp k; *)
             (* CAVEAT: we keep as canonical the (ocaml) one allocated statically in Global_symbols *)
-            Symbol.QMap.unify (fun _ _ _ -> assert false) k q acc in
+            Symbol.QMap.unify (fun _ _ _ -> anomaly "builtins predicates are unique") k q acc in
       Symbol.QMap.add k v acc) qm l) m Symbol.QMap.empty in
       
   let rc = { overloading; symbols } in
@@ -421,7 +421,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     let inner_spills = check_spill_conclusion_loc ~positive ~tyctx:None ctx sp ~ety:(TypeAssignment.(Arr(MRef (MutableOnce.make F.dummyname), Ast.Structured.NotVariadic,ety,mk_uvar "Spill"))) in
     assert(inner_spills = []);
     let phantom_of_spill_ty i ty =
-      { loc; it = Spill(sp,ref (Phantom(i+1))); ty = TypeAssignment.mk_mut ty } in
+      { loc; it = Spill(sp,ref (Phantom(i+1))); ty = TypeAssignment.create ty } in
     match classify_arrow (ScopedTerm.type_of sp) with
     | Simple { srcs; tgt } ->
         if not @@ unify tgt prop then error ~loc "only predicates can be spilled";

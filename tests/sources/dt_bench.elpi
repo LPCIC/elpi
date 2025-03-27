@@ -21,7 +21,7 @@ iter N P :- P, !, M is N - 1, iter M P.
 main :-
   print "a",
   mkt 6 T, print "b", mkt 6 T1,
-  p T => std.time (iter 300000 (p T)) Time1,
+  p T ==> std.time (iter 300000 (p T)) Time1,
   print "match" Time1,
-  p T => std.time (iter 300000 (p T1 ; true)) Time2,
+  p T ==> std.time (iter 300000 (p T1 ; true)) Time2,
   print "no match" Time2.

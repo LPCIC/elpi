@@ -530,10 +530,10 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
     let get_ta n args =
       let ta_sk, _ = F.Map.find n env in
       let ty = TypeAssignment.apply ta_sk args in
-      TypeAssignment.mk_mut ty
+      TypeAssignment.create ty
     in
     let otype2term ~loc ty b =
-      let ty = TypeAssignment.mk_mut ty in
+      let ty = TypeAssignment.create ty in
       let it = match b with None -> ScopedTerm.Discard | Some (a, b, c) -> Const (Bound a, b, c) in
       ScopedTerm.{ it; ty; loc }
     in
@@ -576,16 +576,16 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
       | Arr (_, _, l, _), Lam (b, _, bo) ->
           aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args:(otype2term ~loc l b :: args) bo
       | Arr (_, Structured.Variadic, _, r), _ ->
-          let b = Some (elpi_language, emit (), TypeAssignment.mk_mut r) in
-          aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args { t with ty = TypeAssignment.mk_mut r }
+          let b = Some (elpi_language, emit (), TypeAssignment.create r) in
+          aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx) ~args { t with ty = TypeAssignment.create r }
       | Arr (_, _, l, r), _ ->
           (* Partial app: type is Arr but body is not Lam *)
-          let b = Some (elpi_language, emit (), TypeAssignment.mk_mut l) in
+          let b = Some (elpi_language, emit (), TypeAssignment.create l) in
           let nt = otype2term ~loc l b in
           aux ~parial_app:(nt :: parial_app)
             ~ctx:(BVar.add_oname ~loc b (fun _ -> Any) ctx)
             ~args:(nt :: args)
-            { t with ty = TypeAssignment.mk_mut r }
+            { t with ty = TypeAssignment.create r }
     in
     aux ~ctx ~args:[] ~parial_app:[] t
   and check_clause ~ctx ~var ScopedTerm.({ it; ty; loc } as t) =
