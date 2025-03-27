@@ -37,23 +37,23 @@ pred (;) i:prop, i:prop.
 
 (_ ; B) :- B.
 
-external type (:-) fprop -> fprop -> fprop.
+external symbol (:-)  : fprop -> fprop -> fprop.
 
-external type (:-) fprop -> list prop -> fprop.
+external symbol (:-)  : fprop -> list prop -> fprop.
 
-external type (,) variadic fprop fprop.
+external symbol (,)   : variadic fprop fprop.
 
-external 0 type uvar A.
+external symbol uvar  : A = 0.
 
-external 0 type (as) A -> A -> A.
+external symbol (as)  : A -> A -> A = 0.
 
-external type (=>) prop -> fprop -> fprop.
+external symbol (=>)  : prop -> fprop -> fprop.
 
-external type (=>) list prop -> fprop -> fprop.
+external symbol (=>)  : list prop -> fprop -> fprop.
 
-external type (==>) prop -> fprop -> fprop.
+external symbol (==>) : prop -> fprop -> fprop.
 
-external type (==>) list prop -> fprop -> fprop.
+external symbol (==>) : list prop -> fprop -> fprop.
 
 %  -- Control --
 
@@ -90,87 +90,87 @@ external func calc A -> A.
 
 %  --- Operators ---
 
-external 1 type (-) A -> A -> A.
+external symbol (-) : A -> A -> A = 1. 
 
-external 2 type (i-) int -> int -> int.
+external symbol (i-) : int -> int -> int = 2. 
 
-external 3 type (r-) float -> float -> float.
+external symbol (r-) : float -> float -> float = 3. 
 
-external 5 type (+) float -> float -> float.
+external symbol (+) : float -> float -> float = 5. 
 
-external 4 type (+) int -> int -> int.
+external symbol (+) : int -> int -> int = 4. 
 
-external 6 type (i+) int -> int -> int.
+external symbol (i+) : int -> int -> int = 6. 
 
-external 7 type (r+) float -> float -> float.
+external symbol (r+) : float -> float -> float = 7. 
 
-external 9 type (*) float -> float -> float.
+external symbol (*) : float -> float -> float = 9. 
 
-external 8 type (*) int -> int -> int.
+external symbol (*) : int -> int -> int = 8. 
 
-external 10 type (/) float -> float -> float.
+external symbol (/) : float -> float -> float = 10. 
 
-external 11 type (mod) int -> int -> int.
+external symbol (mod) : int -> int -> int = 11. 
 
-external 12 type (div) int -> int -> int.
+external symbol (div) : int -> int -> int = 12. 
 
-external 13 type (^) string -> string -> string.
+external symbol (^) : string -> string -> string = 13. 
 
-external 15 type (~) float -> float.
+external symbol (~) : float -> float = 15. 
 
-external 14 type (~) int -> int.
+external symbol (~) : int -> int = 14. 
 
-external 16 type (i~) int -> int.
+external symbol (i~) : int -> int = 16. 
 
-external 17 type (r~) float -> float.
+external symbol (r~) : float -> float = 17. 
 
-external 19 type abs float -> float.
+external symbol abs : float -> float = 19.
 
-external 18 type abs int -> int.
+external symbol abs : int -> int = 18.
 
-external 20 type iabs int -> int.
+external symbol iabs : int -> int = 20.
 
-external 21 type rabs float -> float.
+external symbol rabs : float -> float = 21.
 
-external 23 type max float -> float -> float.
+external symbol max : float -> float -> float = 23.
 
-external 22 type max int -> int -> int.
+external symbol max : int -> int -> int = 22.
 
-external 25 type min float -> float -> float.
+external symbol min : float -> float -> float = 25.
 
-external 24 type min int -> int -> int.
+external symbol min : int -> int -> int = 24.
 
-external 26 type sqrt float -> float.
+external symbol sqrt : float -> float = 26.
 
-external 27 type sin float -> float.
+external symbol sin : float -> float = 27.
 
-external 28 type cos float -> float.
+external symbol cos : float -> float = 28.
 
-external 29 type arctan float -> float.
+external symbol arctan : float -> float = 29.
 
-external 30 type ln float -> float.
+external symbol ln : float -> float = 30.
 
-external 31 type int_to_real int -> float.
+external symbol int_to_real : int -> float = 31.
 
-external 32 type floor float -> int.
+external symbol floor : float -> int = 32.
 
-external 33 type ceil float -> int.
+external symbol ceil : float -> int = 33.
 
-external 34 type truncate float -> int.
+external symbol truncate : float -> int = 34.
 
-external 35 type size string -> int.
+external symbol size : string -> int = 35.
 
-external 36 type chr int -> string.
+external symbol chr : int -> string = 36.
 
-external 37 type rhc string -> int.
+external symbol rhc : string -> int = 37.
 
-external 38 type string_to_int string -> int.
+external symbol string_to_int : string -> int = 38.
 
-external 39 type int_to_string int -> string.
+external symbol int_to_string : int -> string = 39.
 
-external 40 type substring string -> int -> int -> string.
+external symbol substring : string -> int -> int -> string = 40.
 
-external 41 type real_to_string float -> string.
+external symbol real_to_string : float -> string = 41.
 
 %  -- Arithmetic tests --
 
