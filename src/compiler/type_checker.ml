@@ -110,7 +110,7 @@ let check_indexing ~loc name value ty indexing =
   match indexing with
   | Some (Ast.Structured.Index(l,k)) -> ensure_pred ty; Index (mode,chose_indexing name l k)
   | Some MaximizeForFunctional -> ensure_pred ty; Index (mode,maximize_indexing_input mode)
-  | Some Ast.Structured.External -> ensure_pred ty; External
+  | Some Ast.Structured.External -> External
   | _ when is_prop ty -> Index (mode,chose_indexing name [1] None)
   | _ -> DontIndex
 

@@ -43,9 +43,9 @@ external type (:-) fprop -> list prop -> fprop.
 
 external type (,) variadic fprop fprop.
 
-type uvar A.
+external type uvar A.
 
-type (as) A -> A -> A.
+external type (as) A -> A -> A.
 
 external type (=>) prop -> fprop -> fprop.
 

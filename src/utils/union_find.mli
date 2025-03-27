@@ -15,7 +15,7 @@ module type S = sig
   val find_class : t -> key -> key * KeySet.t
   val union : t -> key -> canon:key -> key option * t
   val merge : t -> t -> t
-  (* val roots : t -> key list *)
+  val roots : t -> KeySet.t
   (* The first higher-order function should be injective otherwise the UF is broken *)
   val mapi : (key -> key) -> t -> t 
 end
