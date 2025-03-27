@@ -64,6 +64,58 @@ type ttype =
   | TLam of ttype (* this is for parametrized typeabbrevs *)
   [@@ deriving show, ord]
 
+type builtin_predicate =
+  | Cut | And | Impl | RImpl | Pi | Sigma | Eq | Match | Host of constant [@@deriving ord, show]
+let builtin_predicates = [Cut;And;Impl;RImpl;Pi;Sigma;Eq;Match]
+
+let builtin_predicate_max = List.length builtin_predicates
+let func_of_builtin_predicate f = function
+  | Cut   -> F.cutf
+  | And   -> F.andf
+  | Impl  -> F.implf
+  | RImpl -> F.rimplf
+  | Pi    -> F.pif
+  | Sigma -> F.sigmaf
+  | Eq    -> F.eqf
+  | Match -> F.pmf
+  | Host c -> f c
+
+let show_builtin_predicate ?table f = function
+  | Host c -> f ?table c
+  | x -> F.show (func_of_builtin_predicate (fun _ -> assert false) x)
+
+let const_of_builtin_predicate = function
+  | Cut   -> -1
+  | And   -> -2
+  | Impl  -> -3
+  | RImpl -> -4
+  | Pi    -> -5
+  | Sigma -> -6
+  | Eq    -> -7
+  | Match -> -8
+  | Host c -> c
+  
+let is_builtin_predicate c = - builtin_predicate_max <= c && c <= -1
+
+let builtin_predicate_of_const = function
+  | -1 -> Cut   
+  | -2 -> And   
+  | -3 -> Impl  
+  | -4 -> RImpl 
+  | -5 -> Pi    
+  | -6 -> Sigma 
+  | -7 -> Eq    
+  | -8 -> Match
+  | _ -> assert false
+  
+let () = assert(List.for_all (fun p -> is_builtin_predicate @@ const_of_builtin_predicate p) builtin_predicates)
+let () = assert(List.for_all (fun p -> p = builtin_predicate_of_const @@ const_of_builtin_predicate p) builtin_predicates)
+
+
+let map_builtin_predicate f = function
+  | Host x -> Host (f x)
+  | x -> x
+
 type term =
   (* Pure terms *)
   | Const of constant
@@ -74,7 +126,7 @@ type term =
   | Nil
   | Discard
   (* FFI *)
-  | Builtin of constant * term list
+  | Builtin of builtin_predicate * term list
   | CData of CData.t
   (* Heap terms: unif variables in the query *)
   | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
@@ -410,6 +462,11 @@ end
 
 let elpi_state_descriptor = State.new_descriptor ()
 
+type core_symbol = As | Uv [@@deriving enum, ord, show]
+let func_of_core_symbol = function
+  | As    -> F.asf
+  | Uv    -> F.from_string "uvar"
+
 (* Globally unique identifier for symbols with a quotient *)
 module Symbol : sig 
   type symbol [@@deriving show, ord]
@@ -434,19 +491,27 @@ module Symbol : sig
   end 
 
   type t = symbol [@@deriving show,ord]
+  type provenance =
+  | Core of core_symbol (* baked into the elpi runtime *)
+  | Builtin of int (* declared by the user*)
+  | File of Loc.t [@@deriving show, ord]
 
-  val get_loc : t -> Loc.t
-  val get_str : t -> string
-  val get_func : t -> F.t
-
-  val make : Loc.t -> F.t -> t
+  val make : provenance -> F.t -> t
   val make_builtin : ?variant:int -> F.t -> t
   val make_new_builtin : F.t -> t * int (* variant *)
+
+  val get_loc : t -> Loc.t
+  val get_provenance : t -> provenance
+  val get_str : t -> string
+  val get_func : t -> F.t
 
   (* val map_func : (F.t -> F.t) -> t -> t *)
   
 end = struct
-  type provenance = Builtin of int | File of Loc.t [@@deriving show, ord]
+  type provenance =
+    | Core of core_symbol (* baked into the elpi runtime *)
+    | Builtin of int (* declared by the user*)
+    | File of Loc.t [@@deriving show, ord]
   type symbol = provenance * F.t [@@deriving show, ord]
   type 'a merge = (symbol -> 'a -> 'a -> 'a)
   module O = struct type t = symbol [@@deriving show,ord] end
@@ -515,15 +580,17 @@ end = struct
 
   let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
 
+  let get_provenance (l,_) = l
   let get_loc (l,_) =
     match l with
     | File l -> l
+    | Core _ -> Loc.initial ("("^__FILE__^")")
     | Builtin n -> Loc.initial ("(ocaml:"^string_of_int n^")")
   let get_str (_,f) = F.show f
   let get_func (_,f) = f
   let map_func f (x,y) =  x, f y
   
-  let make loc name = File loc, name
+  let make prov name = prov, name
   let make_builtin ?(variant=0) name = Builtin variant, name
   let make_new_builtin =
     let n = ref 0 in
@@ -561,15 +628,15 @@ module Global_symbols : sig
   val declare_overloaded_global_symbol : string -> constant * int
   val lock : unit -> unit
 
-  val cutc     : constant
-  val andc     : constant
   val orc      : constant
+  (* val cutc     : constant
+  val andc     : constant
   val implc    : constant
   val rimplc   : constant
   val pic      : constant
   val sigmac   : constant
   val eqc      : constant
-  val pmc      : constant
+  val pmc      : constant *)
   val rulec    : constant
   val consc    : constant
   val nilc     : constant
@@ -601,13 +668,21 @@ type t = {
 [@@deriving show]
 
 let table = {
-  last_global = 0;
+  last_global = - builtin_predicate_max;
   s2ct = Symbol.RawMap.empty;
   c2s = Constants.Map.empty;
   locked = false;
 }
 
-let declare_global_symbol symb str =
+let () = builtin_predicates |> List.iter (fun p ->
+  let c = const_of_builtin_predicate p in
+  let s = Symbol.make_builtin (func_of_builtin_predicate (fun _ -> assert false) p) in
+  let t = Const c in
+  table.c2s <- Constants.Map.add c s table.c2s;
+  table.s2ct <- Symbol.RawMap.add s (c,t) table.s2ct
+)
+
+let declare_global_symbol symb =
   try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
     if table.locked then
@@ -619,13 +694,19 @@ let declare_global_symbol symb str =
     table.c2s <- Constants.Map.add n symb table.c2s;
     n
 
+let declare_core_symbol x =
+  let symb = Symbol.(make (Core x) (func_of_core_symbol x)) in
+  declare_global_symbol symb
+let uvarc = declare_core_symbol Uv
+let asc = declare_core_symbol As
+
 let declare_overloaded_global_symbol str =
   let symb, variant = Symbol.make_new_builtin (Ast.Func.from_string str) in
-  declare_global_symbol symb str, variant
+  declare_global_symbol symb, variant
 
 let declare_global_symbol str =
   let symb = Symbol.make_builtin (Ast.Func.from_string str) in
-  declare_global_symbol symb str
+  declare_global_symbol symb
 
 
 let declare_global_symbol_for_builtin str =
@@ -636,29 +717,21 @@ let declare_global_symbol_for_builtin str =
   with Not_found ->
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
-    let t = Builtin(n,[]) in
+    let t = Builtin(Host n,[]) in
     table.s2ct <- Symbol.RawMap.add symb (n,t) table.s2ct;
     table.c2s <- Constants.Map.add n symb table.c2s;
     n
 
 let lock () = table.locked <- true
 
-let andc                = declare_global_symbol F.(show andf)
 let arrowc              = declare_global_symbol F.(show arrowf)
-let asc                 = declare_global_symbol "as"
 let consc               = declare_global_symbol F.(show consf)
 let entailsc            = declare_global_symbol "?-"
-let eqc                 = declare_global_symbol F.(show eqf)
-let pmc                 = declare_global_symbol F.(show pmf)
-let uvarc               = declare_global_symbol "uvar"
 let implc               = declare_global_symbol F.(show implf)
 let nablac              = declare_global_symbol "nabla"
 let nilc                = declare_global_symbol F.(show nilf)
 let orc                 = declare_global_symbol F.(show orf)
-let pic                 = declare_global_symbol F.(show pif)
-let rimplc              = declare_global_symbol F.(show rimplf)
 let rulec               = declare_global_symbol "rule"
-let sigmac              = declare_global_symbol F.(show sigmaf)
 let spillc              = declare_global_symbol F.(show spillf)
 let truec               = declare_global_symbol F.(show truef)
 let ctypec              = declare_global_symbol F.(show ctypef)
@@ -674,7 +747,8 @@ let findall_solutionsc  = declare_global_symbol_for_builtin "findall_solutions"
 end
 
 (* This term is hashconsed here *)
-let dummy = App (Global_symbols.cutc,Const Global_symbols.cutc,[])
+let dummy = App (-1,Const (-1),[])
+
 let dummy_uvar_body = { contents = dummy; uid_private = 0 }
 
 module CHR : sig
@@ -867,7 +941,7 @@ let rec show_ty_ast ?prec = function
       with_par prec AppArg t
 
 let term_of_extra_goal = function
-  | Unify(a,b) -> Builtin(Global_symbols.eqc,[a;b])
+  | Unify(a,b) -> Builtin(Eq,[a;b])
   | RawGoal x -> x
   | x ->
       Util.anomaly (Printf.sprintf "Unprocessed extra_goal: %s.\nOnly %s and %s can be left unprocessed,\nplease call API.RawData.set_extra_goals_postprocessing.\n"
@@ -1475,4 +1549,4 @@ type solution = {
 }
 type 'a outcome = Success of solution | Failure | NoMoreSteps
 
-exception CannotDeclareClauseForBuiltin of Loc.t option * constant
+exception CannotDeclareClauseForBuiltin of Loc.t option * builtin_predicate

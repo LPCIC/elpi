@@ -178,7 +178,7 @@ module Builtins : sig
   val pp : Format.formatter -> t -> unit
   val register : t -> D.BuiltInPredicate.t -> constant -> t
   val is_declared : t -> constant -> bool
-  val is_builtin : t -> constant -> bool (* also for non declared ones, like ! *)
+  val is_host_builtin : t -> constant -> bool (* also for non declared ones like chr ones *)
   val fold : (constant -> Data.BuiltInPredicate.t -> 'a -> 'a) -> t -> 'a -> 'a
   val empty : t
 
@@ -195,20 +195,12 @@ let register t (D.BuiltInPredicate.Pred(s,_,_) as b) idx =
   Constants.Map.add idx b t
 ;;
 
-let is_builtin t x =
+let is_host_builtin t x =
   Constants.Map.mem x t
   (* TODO *)
   || x == D.Global_symbols.declare_constraintc
   || x == D.Global_symbols.print_constraintsc
-  || x == D.Global_symbols.cutc
-  || x == D.Global_symbols.eqc
-  || x == D.Global_symbols.pmc
   || x == D.Global_symbols.findall_solutionsc
-  || x == D.Global_symbols.andc
-  || x == D.Global_symbols.implc
-  || x == D.Global_symbols.rimplc
-  || x == D.Global_symbols.pic
-  || x == D.Global_symbols.sigmac
 ;;
 let is_declared t x =
   Constants.Map.mem x t
@@ -1446,7 +1438,7 @@ end = struct
 
       let is_deterministic = typecheck && Determinacy_checker.check_clause ~env:type_abbrevs spilled.body in
 
-      unknown, {spilled with is_deterministic = false} :: clauses) (F.Map.empty,[]) clauses in
+      unknown, {spilled with is_deterministic } :: clauses) (F.Map.empty,[]) clauses in
 
     let clauses = List.rev clauses in
 
@@ -1658,7 +1650,7 @@ end = struct
     let rec todbl (ctx : int * _ Scope.Map.t) t =
       match t.it with
       | Impl(b,t1,t2) ->
-          D.mkBuiltin (D.Global_symbols.(if b then implc else rimplc)) [todbl ctx t1;todbl ctx t2]
+          D.mkBuiltin (if b then Impl else RImpl) [todbl ctx t1;todbl ctx t2]
       | CData c -> D.mkCData (CData.hcons c)
       | Spill(t,_) ->
           error ~loc:t.loc (Format.asprintf "todbl: term contains spill: %a" ScopedTerm.pretty t)
@@ -1672,13 +1664,15 @@ end = struct
       (* globals and builtins *)
       | Const((Global { decl_id },c,_)) ->
           let c, t = allocate_global_symbol ~loc:t.loc decl_id c in
-          if Builtins.is_builtin builtins c then D.mkBuiltin c []
+          if Builtins.is_host_builtin builtins c then D.mkBuiltin (Host c) []
+          else if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) []
           else t
       | App((Global { decl_id },c,_),x,xs) ->
           let c,_ = allocate_global_symbol ~loc:t.loc decl_id c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
-          if Builtins.is_builtin builtins c then D.mkBuiltin c (x::xs)
+          if Builtins.is_host_builtin builtins c then D.mkBuiltin (Host c) (x::xs)
+          else if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) (x::xs)
           else D.mkApp c x xs
       (* lambda terms *)
       | Const(Bound l,c,_) -> allocate_bound_symbol t.loc ctx (c,l)
@@ -1711,8 +1705,8 @@ end = struct
     let modes x = Constants.Map.find_opt x indexing |> Option.map fst |> Option.value ~default:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
-      with D.CannotDeclareClauseForBuiltin(loc,c) ->
-        error ?loc ("Declaring a clause for built in predicate " ^ F.show @@ SymbolMap.global_name state symbols c)
+      with D.CannotDeclareClauseForBuiltin(loc,_c) ->
+        error ?loc ("Declaring a clause for built in predicate")
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
 
@@ -1728,7 +1722,7 @@ end = struct
         in
         R.mkAppL p @@ mkpats args mode in
       let overlaps = R.CompileTime.get_clauses ~depth:0 p (hd_query p cl) index in
-      let bang = mkBuiltin Global_symbols.cutc [] in
+      let bang = mkBuiltin Cut [] in
       let has_no_bang { hyps } = List.for_all (fun t -> t <> bang) hyps in
       let overlaps = List.find_opt has_no_bang (Bl.to_list overlaps) in
       Option.iter (fun (cl:clause) ->
@@ -2081,7 +2075,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
       match gls @ [query] with
       | [] -> assert false
       | [g] -> g
-      | x :: xs -> mkBuiltin  D.Global_symbols.andc (x :: xs) in
+      | x :: xs -> mkBuiltin And (x :: xs) in
     let amap = get_argmap compiler_state in
     let query_env = Array.make (F.Map.cardinal amap) D.dummy in
     let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
@@ -2240,7 +2234,7 @@ let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols }) (t : 
     | Cons(x,y) -> Cons(rel x, rel y)
     | Lam t -> Lam(rel t)
     | CData _ as x -> x
-    | Builtin(c,l) -> Builtin(relocate c,List.map rel l)
+    | Builtin(c,l) -> Builtin(map_builtin_predicate relocate c,List.map rel l)
     | (Nil | Discard) as x -> x
     | Arg _ | AppArg _ | UVar _ | AppUVar _ -> assert false
   in

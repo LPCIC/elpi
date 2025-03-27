@@ -119,7 +119,7 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * 
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
   (* Format.eprintf " - %a\n%!" TypeAssignment.pretty_skema ty; *)
   let indexing = check_indexing ~loc name value ty indexing in
-  let symb = Symbol.make loc name in
+  let symb = Symbol.make (File loc) name in
   let quotient =
     let is_a_predicate = is_prop ty in
     let to_unify bsymb =
@@ -274,7 +274,7 @@ let global_type (unknown_global : env_undeclared ref) env ~loc c : ret_id TypeAs
       Single (id,TypeAssignment.unval ty)
     with Not_found ->
       let ty = TypeAssignment.Val (mk_uvar (Format.asprintf "Unknown_type_of_%a_" F.pp c)) in
-      let id = Symbol.make loc c in
+      let id = Symbol.make (File loc) c in
       unknown_global := F.Map.add c (ty,id) !unknown_global;
       Single (id,TypeAssignment.unval ty)
 
@@ -412,7 +412,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     let mode = TypeAssignment.MRef (MutableOnce.make F.dummyname) in
     if unify (TypeAssignment.Arr(mode, Ast.Structured.NotVariadic,src,tgt)) ety then
       (* let () = Format.eprintf "add to ctx %a : %a\n" F.pp name TypeAssignment.pretty src in *)
-      let ctx = Scope.Map.add (c,name_lang) { ret = src; mode; binder = Symbol.make loc c } ctx in
+      let ctx = Scope.Map.add (c,name_lang) { ret = src; mode; binder = Symbol.make (File loc) c } ctx in
       check_loc ~positive ~tyctx ctx t ~ety:tgt
     else
       error_bad_function_ety ~valid_mode ~loc ~tyctx ~ety sc t
@@ -663,7 +663,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
       Single (binder, TypeAssignment.unval @@ ty)
     with Not_found ->
       let ty = TypeAssignment.UVar (MutableOnce.make c) in
-      let binder = Symbol.make loc c in
+      let binder = Symbol.make (File loc) c in
       sigma := F.Map.add c { ty = TypeAssignment.Val ty; nocc = 1; binder } !sigma;
       Single (binder, ty)
   (* matching=true -> X = t fails (X = Y works)*)
