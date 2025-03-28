@@ -69,8 +69,6 @@ not _.
 % on Key1 Key2 ... (variables, or lists thereof).
 external type declare_constraint any -> any -> variadic any fprop.
 
-external func print_constraints. % prints all constraints
-
 % [print_constraints] prints all constraints
 external func print_constraints .
 

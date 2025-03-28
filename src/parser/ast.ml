@@ -386,6 +386,7 @@ and cattribute = {
   cifexpr : string option
 }
 and ('func,'term) block_constraint = {
+   loc: Loc.t;
    clique : 'func list;
    ctx_filter : 'func list;
    rules : (cattribute,'term) Chr.t list

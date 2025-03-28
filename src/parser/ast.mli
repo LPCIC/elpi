@@ -226,6 +226,7 @@ type program = {
   body : block list;
 }
 and ('func,'term) block_constraint = {
+   loc: Loc.t;
    clique : 'func list;
    ctx_filter : 'func list;
    rules : (cattribute,'term) Chr.t list

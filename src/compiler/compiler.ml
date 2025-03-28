@@ -317,7 +317,7 @@ module CheckedFlat = struct
 type program = {
   signature : Assembled.signature;
   clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
-  chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
+  chr : (Symbol.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : (Symbol.t * BuiltInPredicate.t) list;
 }
 [@@deriving show]
@@ -587,7 +587,7 @@ end = struct (* {{{ *)
           if chr <> [] then
             error "Constraint blocks cannot be nested";
           let p, chr, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
-          aux_end_block loc ns (Constraints({ctx_filter;clique;rules=chr},p) :: cl2b clauses @ blocks)
+          aux_end_block loc ns (Constraints({loc;ctx_filter;clique;rules=chr},p) :: cl2b clauses @ blocks)
             [] macros kinds types tabbrs [] accs rest
       | Program.Namespace (loc, n) :: rest ->
           let p, chr1, rest = aux_run (n::ns) [] [] [] [] [] [] [] StrSet.empty rest in
@@ -1070,7 +1070,7 @@ end = struct
           F.Set.union defs (F.Set.diff p.Scoped.pred_symbols shorts), (* TODO shorten/ shorten-ty *)
           F.Set.union ty_defs (F.Set.diff p.Scoped.ty_symbols shorts),
           Scoped.Shorten(shorthands, p) :: compiled_rest
-      | Constraints ({ctx_filter; clique; rules}, p) :: rest ->
+      | Constraints ({loc;ctx_filter; clique; rules}, p) :: rest ->
           (* XXX missing check for nested constraints *)
           let rules = List.map (compile_chr_rule state macros) rules in
           let _, p = compile_program macros state p in
@@ -1079,7 +1079,7 @@ end = struct
           kinds, types, type_abbrevs,
           F.Set.union defs p.Scoped.pred_symbols,
           F.Set.union ty_defs p.Scoped.ty_symbols,
-          Scoped.Constraints({ctx_filter; clique; rules},p) :: compiled_rest
+          Scoped.Constraints({loc;ctx_filter; clique; rules},p) :: compiled_rest
       | Accumulated p :: rest ->
           let _, p = compile_program macros state p in
           let kinds, types, type_abbrevs, defs, ty_defs, compiled_rest =
@@ -1211,12 +1211,12 @@ module Flatten : sig
     if to_match' == to_match && to_remove' == to_remove && guard' == guard && new_goal' == new_goal then orig
     else { Ast.Chr.to_match = to_match'; to_remove = to_remove'; guard = guard'; new_goal = new_goal'; attributes; loc }
 
-  let smart_map_chrs f ~tyf ({ Ast.Structured.clique; ctx_filter; rules } as orig) =
+  let smart_map_chrs f ~tyf ({ Ast.Structured.clique; ctx_filter; rules; loc } as orig) =
     let clique' = smart_map f clique in
     let ctx_filter' = smart_map f ctx_filter in
     let rules' = smart_map (smart_map_chr f ~tyf) rules in
     if clique' == clique && ctx_filter' == ctx_filter && rules' == rules then orig
-    else { Ast.Structured.clique = clique'; ctx_filter = ctx_filter'; rules = rules' }
+    else { Ast.Structured.clique = clique'; ctx_filter = ctx_filter'; rules = rules'; loc }
 
   let apply_subst_chrs s sty = smart_map_chrs (subst_global s) ~tyf:(subst_global sty)
 
@@ -1408,6 +1408,22 @@ end = struct
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types
 
+  let check_and_spill_pred ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types t =
+    let unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation)) in
+    unknown, if needs_spilling then Spilling.main ~types t else t
+
+  let check_and_spill_chr ~unknown ~type_abbrevs ~kinds ~types { Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes } =
+    let check_sequent ~needs_spilling unknown { Ast.Chr.context; conclusion; eigen } =
+      let unknown, conclusion = check_and_spill_pred ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types conclusion in
+      let unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types ~exp:(Val (App(F.from_string "list",Prop Relation,[]))) context in
+      let unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types eigen ~exp:(Type_checker.unknown_type_assignment "eigen") in
+      unknown, { Ast.Chr.context; conclusion; eigen } in
+    let unknown, to_match  = map_acc (check_sequent ~needs_spilling:false) unknown to_match in
+    let unknown, to_remove = map_acc (check_sequent ~needs_spilling:false) unknown to_remove in
+    let unknown, new_goal  = option_mapacc (check_sequent ~needs_spilling:true) unknown new_goal in
+    let unknown, guard = option_mapacc (fun unknown -> check_and_spill_pred ~needs_spilling:true ~unknown ~type_abbrevs ~kinds ~types) unknown guard in
+    unknown, { Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes }
+
   let check ~flags st ~base u : checked_compilation_unit =
 
     let signature, precomputed_signature, check_sig, new_types = check_signature ~flags base.Assembled.signature u.code.Flat.signature in
@@ -1419,19 +1435,26 @@ end = struct
 
     (* returns unkown types + clauses without spilling *)
     let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
-      let unknown = 
-        if typecheck then Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types body ~exp:(Val (Prop Relation)) (* Note: in the tc, there is no difference between Prop Relation and Prop Function*)
-        else unknown in
+      let unknown, body = 
+        if typecheck then check_and_spill_pred ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types body
+        else unknown, body in
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
       (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
-      let spilled = {clause with body = if needs_spilling then Spilling.main ~types body else body; needs_spilling = false} in
+      let spilled = {clause with body; needs_spilling = false} in
       (* if typecheck then Mode_checker.check ~is_rule:true ~type_abbrevs ~kinds ~types spilled.body; *)
 
       let is_deterministic = typecheck && Determinacy_checker.check_clause ~env:type_abbrevs spilled.body in
 
       unknown, {spilled with is_deterministic } :: clauses) (F.Map.empty,[]) clauses in
-
     let clauses = List.rev clauses in
+
+    let unknown, chr = List.fold_left (fun (unknown,chr_blocks) { Ast.Structured.clique; ctx_filter; rules; loc } ->
+        let clique = List.map (Type_checker.check_pred_name ~types ~loc) clique in
+        let ctx_filter = List.map (Type_checker.check_pred_name ~types ~loc) ctx_filter in
+        let unknown, rules = map_acc (fun unknown -> check_and_spill_chr ~unknown ~type_abbrevs ~kinds ~types) unknown rules in
+        (unknown, { Ast.Structured.clique; ctx_filter; rules; loc } :: chr_blocks)
+      ) (unknown, []) chr in
+    let chr = List.rev chr in
 
     Symbol.QMap.iter (fun k { Type_checker.indexing; ty } ->
       match SymbolMap.get_global_symbol base.Assembled.symbols k with
@@ -1737,20 +1760,20 @@ end = struct
         " which is not a constraint on which it is applied. Check the list of predicates after the \"constraint\" keyword.");
     with Not_found -> ()
     
-  (* let extend1_chr flags state clique ~builtins (symbols,chr) { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } =
+  let extend1_chr flags state clique ~builtins ~types (symbols,chr) { Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } =
     if not @@ filter1_if flags (fun x -> x.Ast.Structured.cifexpr) attributes then
       (symbols,chr)
     else
-    let todbl state (symbols,amap) t = to_dbl (* TODO typecheck *) state symbols ~amap t in
+    let todbl state (symbols,amap) t = to_dbl ~types ~builtins state symbols ~amap t in
     let sequent_todbl state st { Ast.Chr.eigen; context; conclusion } =
-      let st, eigen = todbl ~builtins state st eigen in
-      let st, context = todbl ~builtins state st context in
-      let st, conclusion = todbl ~builtins state st conclusion in
+      let st, eigen = todbl state st eigen in
+      let st, context = todbl state st context in
+      let st, conclusion = todbl state st conclusion in
       st, { CHR.eigen; context; conclusion } in
     let st = symbols, F.Map.empty in
     let st, to_match = map_acc (sequent_todbl state) st to_match in
     let st, to_remove = map_acc (sequent_todbl state) st to_remove in
-    let st, guard = option_mapacc (todbl ~builtins state) st guard in
+    let st, guard = option_mapacc (todbl state) st guard in
     let st, new_goal = option_mapacc (sequent_todbl state) st new_goal in
     let symbols, amap = st in
 
@@ -1769,15 +1792,15 @@ end = struct
     check_rule_pattern_in_clique state symbols clique rule;
     symbols, CHR.add_rule clique rule chr
 
-  let extend1_chr_block flags state ~builtins (symbols,chr) { Ast.Structured.clique; ctx_filter; rules } =
+  let extend1_chr_block flags state ~builtins ~types (symbols,chr) { Ast.Structured.clique; ctx_filter; rules } =
     let allocate_global_symbol state symbols f =
       let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols f in
       symbols, c in
     let symbols, clique = map_acc (allocate_global_symbol state) symbols clique in
     let symbols, ctx_filter = map_acc (allocate_global_symbol state) symbols ctx_filter in
     let chr, clique = CHR.new_clique (SymbolMap.global_name state symbols) ctx_filter clique chr in
-    List.fold_left (extend1_chr ~builtins flags state clique) (symbols,chr) rules
-   *)
+    List.fold_left (extend1_chr ~builtins ~types flags state clique) (symbols,chr) rules
+
 let extend1_signature base_signature (signature : checked_compilation_unit_signature) =
   let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
   let { Assembled.toplevel_macros; kinds; types; type_abbrevs } = signature in
@@ -1828,9 +1851,8 @@ let extend1 flags (state, base) unit =
       let builtins = Builtins.register builtins p c in
       symbols, builtins) (symbols, ob) builtins in
 
-  (* let symbols, chr =
-    List.fold_left (extend1_chr_block ~builtins flags state) (symbols,ochr) chr in *)
-  let chr = ochr in
+  let symbols, chr =
+    List.fold_left (extend1_chr_block ~builtins ~types:signature.types flags state) (symbols,ochr) chr in
 
   let clauses, symbols, prolog_program =
     (* TODO: pass also typeabbrevs *)

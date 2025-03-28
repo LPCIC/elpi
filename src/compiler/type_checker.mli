@@ -49,4 +49,6 @@ val check :
   env_undeclared
 
 val check_undeclared : unknown:env_undeclared -> typing_env
+
+val check_pred_name : types:typing_env -> loc:Elpi_util.Util.Loc.t -> F.t -> Symbol.t
 val unknown_type_assignment : string -> TypeAssignment.t
