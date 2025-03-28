@@ -395,6 +395,7 @@ let () = Runner.declare
       if outside_llam then "-delay-problems-outside-pattern-fragment"::args
       else args in
     Util.write log (Printf.sprintf "args: %s\n" (String.concat " " args));
+    Util.write log (Printf.sprintf "\ndebug with: dune exec elpi -- %s -trace-on -trace-at run 1 99999 -trace-only user\n\n" (String.concat " " args));
 
     let rc =
       let outcome = Util.exec ~timeout ~timetool ~close_output:false ?input ~executable ~env ~log ~args () in

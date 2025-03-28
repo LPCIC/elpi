@@ -183,7 +183,9 @@ type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 
 open ScopedTerm
 
-let pretty_ty = TypeAssignment.pretty_mut_once
+let pretty_ty valid_mode =
+  if valid_mode then TypeAssignment.pretty_mut_once
+  else TypeAssignment.pretty_mut_once_raw
 
 let error_not_a_function ~loc c tyc args x =
   let t =
@@ -197,41 +199,50 @@ let pp_tyctx fmt = function
   | None -> Format.fprintf fmt "its context"
   | Some c -> Format.fprintf fmt "%a" F.pp c
 
-let prettier valid_mode = if !valid_mode then pretty_ty else TypeAssignment.pretty_mut_once_raw
-let error_msg_mode ~loc valid_mode msg = 
-  error ~loc @@ if valid_mode then msg else "Mode error: " ^ msg
+let error_ambiguous ~loc c alltys =
+  let pretty_ty = pretty_ty true in
+  let msg = Format.asprintf "@[<v>%a is overloaded. Its types are:@,@[<v 2>  %a@]@]" F.pp c (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
+  error ~loc msg
 
 let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
+  let pretty_ty = pretty_ty true in
   let msg = Format.asprintf "@[<hov>literal \"%a\" has type %a@ but %a expects a term of type@ %a@]"  CData.pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety in
   error ~loc msg
 
 let error_bad_ety ~valid_mode ~loc ~tyctx ~ety pp c tx =
-  let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@]"  pp c (prettier valid_mode) tx pp_tyctx tyctx (prettier valid_mode) ety in
-  error_msg_mode ~loc !valid_mode msg
+  let pretty_ty = pretty_ty !valid_mode in
+  let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety in
+  error ~loc msg
 
 let error_bad_ety2 ~valid_mode ~loc ~tyctx ~ety1 ~ety2 pp c tx =
-  let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@ or %a@]"  pp c (prettier valid_mode) tx pp_tyctx tyctx (prettier valid_mode) ety1 (prettier valid_mode) ety2 in
-  error_msg_mode ~loc !valid_mode msg
+  let pretty_ty = pretty_ty !valid_mode in
+  let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@ or %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety1 pretty_ty ety2 in
+  error ~loc msg
 
 let error_bad_function_ety ~valid_mode ~loc ~tyctx ~ety c t =
-  let msg = Format.asprintf "@[<hov>%a is a function@ but %a expects a term of type@ %a@]"  ScopedTerm.pretty_ ScopedTerm.(Lam(c,None,t)) pp_tyctx tyctx (prettier valid_mode) ety in
-  error_msg_mode ~loc !valid_mode msg
+  let pretty_ty = pretty_ty !valid_mode in
+  let msg = Format.asprintf "@[<hov>%a is a function@ but %a expects a term of type@ %a@]"  ScopedTerm.pretty_ ScopedTerm.(Lam(c,None,t)) pp_tyctx tyctx pretty_ty ety in
+  error ~loc msg
 
 let error_bad_const_ety_l ~valid_mode ~loc ~tyctx ~ety c txl =
-  let msg = Format.asprintf "@[<hv>%a is overloaded but none of its types matches the type expected by %a:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pp_tyctx tyctx (prettier valid_mode) ety (pplist ~boxed:true (fun fmt (_,x)-> Format.fprintf fmt "%a" (prettier valid_mode) x) ", ") txl in
-  error_msg_mode ~loc !valid_mode msg
+  let pretty_ty = pretty_ty !valid_mode in
+  let msg = Format.asprintf "@[<hv>%a is overloaded but none of its types matches the type expected by %a:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pp_tyctx tyctx pretty_ty ety (pplist ~boxed:true (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") txl in
+  error ~loc msg
 
 let error_overloaded_app ~valid_mode ~loc ~ety c args alltys =
   let ty = arrow_of_args args ety in
-  let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c (prettier valid_mode) ty (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" (prettier valid_mode) x) ", ") alltys in
-  error_msg_mode ~loc !valid_mode msg
+  let pretty_ty = pretty_ty !valid_mode in
+  let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pretty_ty ty (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
+  error ~loc msg
   
 let error_overloaded_app_tgt ~valid_mode ~loc ~ety c alltys =
-  let msg = Format.asprintf "@[<v>%a is overloaded but none of its types make it build a term of type @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c (prettier valid_mode) ety (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" (prettier valid_mode) x) ", ") alltys in
-  error_msg_mode ~loc !valid_mode msg
+  let pretty_ty = pretty_ty !valid_mode in
+  let msg = Format.asprintf "@[<v>%a is overloaded but none of its types make it build a term of type @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pretty_ty ety (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
+  error ~loc msg
 
 
 let error_not_poly ~loc c ty sk =
+  let pretty_ty = pretty_ty true in
   error ~loc (Format.asprintf "@[<hv>this rule imposes on %a the type@ %a@ is less general than the declared one@ %a@]"
     F.pp c
     pretty_ty ty
@@ -501,7 +512,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         (* Format.eprintf "checking overloaded app %a\n" F.pp c; *)
         let decore_with_dummy_mode =  List.map (fun x -> (TypeAssignment.MRef (MutableOnce.make F.dummyname),x)) in
         match classify_arrow t with
-        | Unknown -> error ~loc (Format.asprintf "Type too ambiguous to be assigned to the overloaded constant: %s for type %a" (F.show c) pretty_ty t)
+        | Unknown -> error ~loc (Format.asprintf "Type too ambiguous to be assigned to the overloaded constant: %s for type %a" (F.show c) (pretty_ty true) t)
         | Simple { srcs; tgt } ->
           (* Format.eprintf "argsty : %a\n" TypeAssignment.pretty (arrow_of_tys targs ety); *)
             if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys (decore_with_dummy_mode targs) ety) then (resolve_gid ~loc id cid t tya;[])
@@ -755,10 +766,10 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
 
 let check1_undeclared w f (t, id) =
   match TypeAssignment.is_monomorphic t with
-  | None -> error ~loc:(Symbol.get_loc id) Format.(asprintf "@[Unable to infer a closed type for %a:@ %a@]" F.pp f pretty_ty (TypeAssignment.unval t))
+  | None -> error ~loc:(Symbol.get_loc id) Format.(asprintf "@[Unable to infer a closed type for %a:@ %a@]" F.pp f (pretty_ty true) (TypeAssignment.unval t))
   | Some ty ->
       if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']*\\|main\\)$") (F.show f) 0) then
-        w := Format.((f, Symbol.get_loc id), asprintf "type %a %a." F.pp f pretty_ty (TypeAssignment.unval t)) :: !w;
+        w := Format.((f, Symbol.get_loc id), asprintf "type %a %a." F.pp f (pretty_ty true) (TypeAssignment.unval t)) :: !w;
       id, { ty ; indexing = Index ([],chose_indexing (Symbol.get_func id) [1] None) }
 
 let check_undeclared ~unknown =
@@ -772,6 +783,12 @@ let check_undeclared ~unknown =
   let overloading = F.Map.map (fun (x,_) -> TypeAssignment.Single x) unknown in
   let symbols = F.Map.fold (fun _ (k,v) m -> Symbol.QMap.add k v m) unknown Symbol.QMap.empty in
   { overloading; symbols }
+
+let check_pred_name ~types ~loc f =
+  let undef = ref F.Map.empty in
+  match global_type undef types ~loc f with
+  | Single s -> fst s
+  | Overloaded alltys -> error_ambiguous ~loc f alltys
 
 (* let check ~type_abbrevs a b c =
   try check ~type_abbrevs a b c with
