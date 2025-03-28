@@ -13,7 +13,7 @@ type arities = Arity.t F.Map.t
 type indexing =
   | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
   | DontIndex
-  | External of int option
+  | External of Elpi_parser.Ast.Structured.provenance option
 [@@deriving show, ord]
 
 type symbol_metadata = {

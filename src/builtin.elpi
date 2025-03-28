@@ -43,9 +43,9 @@ external symbol (:-)  : fprop -> list prop -> fprop.
 
 external symbol (,)   : variadic fprop fprop.
 
-external symbol uvar  : A = 0.
+external symbol uvar  : A = "core".
 
-external symbol (as)  : A -> A -> A = 0.
+external symbol (as)  : A -> A -> A = "core".
 
 external symbol (=>)  : prop -> fprop -> fprop.
 
@@ -91,87 +91,87 @@ external func calc A -> A.
 
 %  --- Operators ---
 
-external symbol (-) : A -> A -> A = 1. 
+external symbol (-) : A -> A -> A = "1". 
 
-external symbol (i-) : int -> int -> int = 2. 
+external symbol (i-) : int -> int -> int = "2". 
 
-external symbol (r-) : float -> float -> float = 3. 
+external symbol (r-) : float -> float -> float = "3". 
 
-external symbol (+) : float -> float -> float = 5. 
+external symbol (+) : float -> float -> float = "5". 
 
-external symbol (+) : int -> int -> int = 4. 
+external symbol (+) : int -> int -> int = "4". 
 
-external symbol (i+) : int -> int -> int = 6. 
+external symbol (i+) : int -> int -> int = "6". 
 
-external symbol (r+) : float -> float -> float = 7. 
+external symbol (r+) : float -> float -> float = "7". 
 
-external symbol (*) : float -> float -> float = 9. 
+external symbol (*) : float -> float -> float = "9". 
 
-external symbol (*) : int -> int -> int = 8. 
+external symbol (*) : int -> int -> int = "8". 
 
-external symbol (/) : float -> float -> float = 10. 
+external symbol (/) : float -> float -> float = "10". 
 
-external symbol (mod) : int -> int -> int = 11. 
+external symbol (mod) : int -> int -> int = "11". 
 
-external symbol (div) : int -> int -> int = 12. 
+external symbol (div) : int -> int -> int = "12". 
 
-external symbol (^) : string -> string -> string = 13. 
+external symbol (^) : string -> string -> string = "13". 
 
-external symbol (~) : float -> float = 15. 
+external symbol (~) : float -> float = "15". 
 
-external symbol (~) : int -> int = 14. 
+external symbol (~) : int -> int = "14". 
 
-external symbol (i~) : int -> int = 16. 
+external symbol (i~) : int -> int = "16". 
 
-external symbol (r~) : float -> float = 17. 
+external symbol (r~) : float -> float = "17". 
 
-external symbol abs : float -> float = 19.
+external symbol abs : float -> float = "19".
 
-external symbol abs : int -> int = 18.
+external symbol abs : int -> int = "18".
 
-external symbol iabs : int -> int = 20.
+external symbol iabs : int -> int = "20".
 
-external symbol rabs : float -> float = 21.
+external symbol rabs : float -> float = "21".
 
-external symbol max : float -> float -> float = 23.
+external symbol max : float -> float -> float = "23".
 
-external symbol max : int -> int -> int = 22.
+external symbol max : int -> int -> int = "22".
 
-external symbol min : float -> float -> float = 25.
+external symbol min : float -> float -> float = "25".
 
-external symbol min : int -> int -> int = 24.
+external symbol min : int -> int -> int = "24".
 
-external symbol sqrt : float -> float = 26.
+external symbol sqrt : float -> float = "26".
 
-external symbol sin : float -> float = 27.
+external symbol sin : float -> float = "27".
 
-external symbol cos : float -> float = 28.
+external symbol cos : float -> float = "28".
 
-external symbol arctan : float -> float = 29.
+external symbol arctan : float -> float = "29".
 
-external symbol ln : float -> float = 30.
+external symbol ln : float -> float = "30".
 
-external symbol int_to_real : int -> float = 31.
+external symbol int_to_real : int -> float = "31".
 
-external symbol floor : float -> int = 32.
+external symbol floor : float -> int = "32".
 
-external symbol ceil : float -> int = 33.
+external symbol ceil : float -> int = "33".
 
-external symbol truncate : float -> int = 34.
+external symbol truncate : float -> int = "34".
 
-external symbol size : string -> int = 35.
+external symbol size : string -> int = "35".
 
-external symbol chr : int -> string = 36.
+external symbol chr : int -> string = "36".
 
-external symbol rhc : string -> int = 37.
+external symbol rhc : string -> int = "37".
 
-external symbol string_to_int : string -> int = 38.
+external symbol string_to_int : string -> int = "38".
 
-external symbol int_to_string : int -> string = 39.
+external symbol int_to_string : int -> string = "39".
 
-external symbol substring : string -> int -> int -> string = 40.
+external symbol substring : string -> int -> int -> string = "40".
 
-external symbol real_to_string : float -> string = 41.
+external symbol real_to_string : float -> string = "41".
 
 %  -- Arithmetic tests --
 
