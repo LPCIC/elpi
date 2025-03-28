@@ -246,7 +246,7 @@ type_:
      { Type.loc=loc $sloc; attributes; name = n; ty = t })
   }
 | attributes = attributes;
-  SYMBOL; names = separated_nonempty_list(CONJ,constant); option(COLON); t = type_term {
+  SYMBOL; names = separated_nonempty_list(CONJ,constant); COLON; t = type_term {
     names |> List.map (fun n ->
       { Type.loc=loc $sloc; attributes; name = n; ty = t })
 }

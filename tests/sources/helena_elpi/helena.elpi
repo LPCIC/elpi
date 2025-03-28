@@ -87,7 +87,7 @@ pred rtm+0 o:any,o:any, o:any,o:any,o:any,o:any.
 type satom any.
 type appr any -> any -> any.
 type scons any -> any -> any.
-type appr any -> any -> any -> any.
+% type appr any -> any -> any -> any.
 type appx any -> any -> any -> any.
 type cast any -> any -> any.
 type sort any -> any.
