@@ -515,6 +515,14 @@ end = struct (* {{{ *)
     | [] -> { Type.attributes = (); loc; name; ty }
     | x :: _ -> error ~loc ("illegal attribute " ^ show_raw_attribute x)
 
+  let structure_external ~loc = function
+    | None -> None
+    | Some "core" -> Some Core
+    | Some s ->
+        try Some (Builtin { variant = int_of_string s })
+        with Invalid_argument _ -> error ~loc ("illegal external attribute")
+
+
   let structure_type_attributes { Type.attributes; loc; name; ty } =
     let duplicate_err s =
       error ~loc ("duplicate attribute " ^ s) in
@@ -524,8 +532,8 @@ end = struct (* {{{ *)
       | [] -> r, f
       | External o :: rest ->
          begin match r with
-           | None -> aux_tatt (Some (Structured.External o)) f rest
-           | Some (Structured.External o) -> duplicate_err "external"
+           | None -> aux_tatt (Some (Structured.External (structure_external ~loc o))) f rest
+           | Some (Structured.External _) -> duplicate_err "external"
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
       | Index(i,index_type) :: rest ->

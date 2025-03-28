@@ -78,7 +78,7 @@ type raw_attribute =
   | Before of string
   | Replace of string
   | Remove of string
-  | External of int option
+  | External of string option
   | Index of int list * string option
   | Functional
   | Untyped
@@ -373,7 +373,12 @@ let cloc =
   })
 
 module Structured = struct
-
+type provenance =
+  | Core (* baked into the elpi runtime *)
+  | Builtin of { variant : int } (* buitin or host declared *)
+  | File of Loc.t
+[@@deriving show, ord]
+  
 type program = {
   macros : (Func.t, Term.t) Macro.t list;
   kinds : (unit,unit) Type.t list;
@@ -406,7 +411,7 @@ and attribute = {
 and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string
 and tattribute =
-  | External of int option
+  | External of provenance option
   | Index of int list * tindex option
   | MaximizeForFunctional
 and tindex = Map | HashMap | DiscriminationTree

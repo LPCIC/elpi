@@ -255,7 +255,7 @@ type_:
 }
 
 external_ref:
-| EQ; i=INTEGER { i }
+| EQ; i=STRING { i }
 
 atype_term:
 | c = constant { { tloc = loc $loc; tit = TConst (fix_church c) } }
@@ -361,7 +361,7 @@ clause:
 
 attributes:
 | { [] }
-| EXTERNAL; o = option(INTEGER) { [ External o ] }
+| EXTERNAL; o = option(STRING) { [ External o ] }
 | COLON; l = separated_nonempty_list(COLON, attribute) { l }
 
 attribute:
@@ -371,7 +371,7 @@ attribute:
 | BEFORE; s = STRING { Before s }
 | REPLACE; s = STRING { Replace s }
 | REMOVE; s = STRING { Remove s }
-| EXTERNAL; o = option(INTEGER) { External o }
+| EXTERNAL; o = option(STRING) { External o }
 | FUNCTIONAL { Functional }
 | UNTYPED { Untyped }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }

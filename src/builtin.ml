@@ -223,8 +223,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "external symbol (:-)  : fprop -> fprop -> fprop.";
   LPCode "external symbol (:-)  : fprop -> list prop -> fprop.";
   LPCode "external symbol (,)   : variadic fprop fprop.";
-  LPCode "external symbol uvar  : A = 0.";
-  LPCode "external symbol (as)  : A -> A -> A = 0.";
+  LPCode "external symbol uvar  : A = \"core\".";
+  LPCode "external symbol (as)  : A -> A -> A = \"core\".";
   LPCode "external symbol (=>)  : prop -> fprop -> fprop.";
   LPCode "external symbol (=>)  : list prop -> fprop -> fprop."; (* HACS in TC to handle this*)
   LPCode "external symbol (==>) : prop -> fprop -> fprop.";

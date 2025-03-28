@@ -68,7 +68,7 @@ let check_type ~type_abbrevs ~kinds ~loc ~name ctx x =
 type indexing =
   | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
   | DontIndex
-  | External of int option
+  | External of Elpi_parser.Ast.Structured.provenance option
 [@@deriving show, ord]
 
 type symbol_metadata = {
@@ -111,7 +111,7 @@ let check_indexing ~loc name value ty indexing =
   match indexing with
   | Some (Ast.Structured.Index(l,k)) -> ensure_pred ty; Index (mode,chose_indexing name l k)
   | Some MaximizeForFunctional -> ensure_pred ty; Index (mode,maximize_indexing_input mode)
-  | Some Ast.Structured.External i -> External i
+  | Some Ast.Structured.External i -> External i 
   | _ when is_prop ty -> Index (mode,chose_indexing name [1] None)
   | _ -> DontIndex
 
@@ -128,7 +128,8 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * 
       | exception Not_found -> None in
     match indexing with
     | External None when is_a_predicate -> Symbol.make_builtin name |> to_unify
-    | External (Some i) -> Symbol.make_builtin ~variant:i name |> to_unify
+    | External (Some (File _)) -> anomaly "provenance File cannot be provided by the user"
+    | External (Some p) -> Symbol.make p name |> to_unify
     | _ -> None in
   symb, quotient, { ty; indexing }
 
@@ -169,7 +170,8 @@ let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
         match q with
         | None -> acc
         | Some q ->
-            (* Format.eprintf "FOUND builtin %a -> %a\n" Symbol.pp q Symbol.pp k; *)
+            if Symbol.get_func k = F.asf then
+            Format.eprintf "FOUND %a -> %a\n" Symbol.pp q Symbol.pp k;
             (* CAVEAT: we keep as canonical the (ocaml) one allocated statically in Global_symbols *)
             Symbol.QMap.unify (fun _ _ _ -> anomaly "builtins predicates are unique") k q acc in
       Symbol.QMap.add k v acc) qm l) m Symbol.QMap.empty in

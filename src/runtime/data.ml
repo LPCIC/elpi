@@ -498,10 +498,7 @@ module Symbol : sig
   end 
 
   type t = symbol [@@deriving show,ord]
-  type provenance =
-  | Core (* baked into the elpi runtime *)
-  | Builtin of { variant : int } (* buitin or host declared *)
-  | File of Loc.t [@@deriving show, ord]
+  type provenance = Elpi_parser.Ast.Structured.provenance [@@deriving show,ord]
 
   val make : provenance -> F.t -> t
   val make_builtin : ?variant:int -> F.t -> t
@@ -515,10 +512,7 @@ module Symbol : sig
   (* val map_func : (F.t -> F.t) -> t -> t *)
   
 end = struct
-  type provenance =
-    | Core (* baked into the elpi runtime *)
-    | Builtin of { variant : int } (* builtin or host declared *)
-    | File of Loc.t [@@deriving show, ord]
+  type provenance = Elpi_parser.Ast.Structured.provenance [@@deriving show,ord]
   type symbol = provenance * F.t [@@deriving show, ord]
   type 'a merge = (symbol -> 'a -> 'a -> 'a)
   module O = struct type t = symbol [@@deriving show,ord] end
@@ -526,6 +520,7 @@ end = struct
   module UF = Elpi_util.Union_find.Make(O)
   type t = symbol [@@deriving show, ord]
 
+  open Elpi_parser.Ast.Structured
   module QMap = struct
     
     type 'a t = UF.t * 'a RawMap.t [@@deriving show]
@@ -537,8 +532,10 @@ end = struct
       let x,uf =
         match fst s1, fst s2 with
         | Builtin _, Builtin _ -> anomaly "Builtins cannot be declared twice"
+        | Core, Core -> anomaly "Core symbols cannot be declared twice"
         (* we use the (possibly) pre-allocated builtin as the canonical *)
         | File _, Builtin _ -> UF.union uf s1 ~canon:s2
+        | File _, Core -> UF.union uf s1 ~canon:s2
         | _ -> UF.union uf ~canon:s1 s2 in
       match x with
       | None -> uf, m
@@ -696,6 +693,7 @@ let declare_global_symbol symb =
     table.s2ct <- Symbol.RawMap.add symb (n,t) table.s2ct;
     table.c2s <- Constants.Map.add n symb table.c2s;
     n
+
 
 let declare_core_symbol x =
   let symb = Symbol.(make Core (func_of_core_symbol x)) in

@@ -55,7 +55,7 @@ type raw_attribute =
   | Before of string
   | Replace of string
   | Remove of string
-  | External of int option
+  | External of string option
   | Index of int list * string option
   | Functional
   | Untyped
@@ -250,7 +250,7 @@ and cattribute = {
   cifexpr : string option
 }
 and tattribute =
-  | External of int option
+  | External of provenance option
   | Index of int list * tindex option
   | MaximizeForFunctional
 and tindex = Map | HashMap | DiscriminationTree
@@ -261,6 +261,10 @@ and 'a shorthand = {
 }
 and functionality = Function | Relation
 and variadic = Variadic | NotVariadic
+and provenance =
+  | Core (* baked into the elpi runtime *)
+  | Builtin of { variant : int } (* buitin or host declared *)
+  | File of Loc.t
 [@@deriving show, ord]
 
 end
