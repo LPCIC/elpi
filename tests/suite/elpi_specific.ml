@@ -494,3 +494,9 @@ let () = declare "ifdef"
 ~source_elpi:"ifdef.elpi"
 ~description:"lexer ifdef"
 ()
+
+let () = declare "tc_ambiguous"
+  ~source_elpi:"tc_ambiguous.elpi"
+  ~description:"tc_ambiguous"
+  ~expectation:(FailureOutput Str.(regexp "too many"))
+  ()

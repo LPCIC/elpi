@@ -230,12 +230,23 @@ let error_bad_const_ety_l ~valid_mode ~loc ~tyctx ~ety c txl =
   let msg = Format.asprintf "@[<hv>%a is overloaded but none of its types matches the type expected by %a:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pp_tyctx tyctx pretty_ty ety (pplist ~boxed:true (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") txl in
   error ~loc msg
 
+let error_too_many_const_ety_l ~valid_mode ~loc ~tyctx ~ety c txl =
+  let pretty_ty = pretty_ty !valid_mode in
+  let msg = Format.asprintf "@[<hv>%a is overloaded but too many of its types match the type expected by %a:@,  @[<hov>%a@]@,Matching types are:@,@[<v 2>  %a@]@]" F.pp c pp_tyctx tyctx pretty_ty ety (pplist ~boxed:true (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") txl in
+  error ~loc msg
+
 let error_overloaded_app ~valid_mode ~loc ~ety c args alltys =
   let ty = arrow_of_args args ety in
   let pretty_ty = pretty_ty !valid_mode in
   let msg = Format.asprintf "@[<v>%a is overloaded but none of its types matches:@,  @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pretty_ty ty (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
   error ~loc msg
   
+let error_overloaded_app_ambiguous ~valid_mode ~loc ~ety c args alltys =
+  let ty = arrow_of_args args ety in
+  let pretty_ty = pretty_ty !valid_mode in
+  let msg = Format.asprintf "@[<v>%a is overloaded but too many of its types match:@,  @[<hov>%a@]@,Matching types are:@,@[<v 2>  %a@]@]" F.pp c pretty_ty ty (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
+  error ~loc msg
+
 let error_overloaded_app_tgt ~valid_mode ~loc ~ety c alltys =
   let pretty_ty = pretty_ty !valid_mode in
   let msg = Format.asprintf "@[<v>%a is overloaded but none of its types make it build a term of type @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pretty_ty ety (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
@@ -396,8 +407,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
         if unify ty ety then (resolve_gid ~loc id gid ty tya; [])
         else error_bad_ety ~valid_mode ~tyctx ~loc ~ety F.pp c ty
     | Overloaded l ->
-        if unify_first ~loc gid l ety tya then []
-        else error_bad_const_ety_l ~valid_mode ~tyctx ~loc ~ety c l
+        only_one_unifies ~loc ~valid_mode ~tyctx gid c tya l ety; []
 
   and check_local ctx ~loc ~tyctx (_,c,tya as t) ety =
     match local_type ctx ~loc t with
@@ -510,8 +520,9 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
             else bidirectional srcs tgt
 
   (* REDO PROCESSING ONE SRC at a time *)
-  and check_app_overloaded ~positive ctx ~loc (c, cid, tya as c_w_id) ety args targs alltys = function
-    | [] -> error_overloaded_app ~valid_mode ~loc c args ~ety alltys
+  and check_app_overloaded ~positive ctx ~loc (c, cid, tya as c_w_id) ety args targs alltys l =
+    let rec filter = function
+    | [] -> []
     | (id,t)::ts ->
         (* Format.eprintf "checking overloaded app %a\n" F.pp c; *)
         let decore_with_dummy_mode =  List.map (fun x -> (TypeAssignment.MRef (MutableOnce.make F.dummyname),x)) in
@@ -519,12 +530,21 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
         | Unknown -> error ~loc (Format.asprintf "Type too ambiguous to be assigned to the overloaded constant: %s for type %a" (F.show c) (pretty_ty true) t)
         | Simple { srcs; tgt } ->
           (* Format.eprintf "argsty : %a\n" TypeAssignment.pretty (arrow_of_tys targs ety); *)
-            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys (decore_with_dummy_mode targs) ety) then (resolve_gid ~loc id cid t tya;[])
-            else check_app_overloaded ~positive ctx ~loc c_w_id ety args targs alltys ts
+            let ul = (arrow_of_tys srcs tgt) in 
+            let ur = (arrow_of_tys (decore_with_dummy_mode targs) ety) in 
+            if unify_then_undo ul ur then  ((id,t),(ul,ur))::filter ts else filter ts
         | Variadic { srcs ; tgt } ->
             let srcs = extend srcs targs |> decore_with_dummy_mode in
-            if try_unify (arrow_of_tys srcs tgt) (arrow_of_tys (decore_with_dummy_mode targs) ety) then (resolve_gid ~loc id cid t tya;[])
-            else check_app_overloaded ~positive ctx ~loc c_w_id ety args targs alltys ts
+            let ul = (arrow_of_tys srcs tgt) in 
+            let ur = (arrow_of_tys (decore_with_dummy_mode targs) ety) in 
+            if unify_then_undo ul ur then ((id,t),(ul,ur))::filter ts else filter ts
+  in
+  match filter l with
+  | [] -> error_overloaded_app ~valid_mode ~loc c args ~ety alltys
+  | [(id,t),(ul,ur)] -> 
+      assert(unify ul ur);
+      resolve_gid ~loc id cid t tya;[]
+  | l -> error_overloaded_app_ambiguous ~valid_mode ~loc c args ~ety (List.map fst l)
 
   and infer_mode ctx m { loc; it } =
     match it with
@@ -648,14 +668,17 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     undo vx; undo vy;
     b
     
-  and unify_first ~loc gid l ety tya =
+  and only_one_unifies ~loc ~valid_mode ~tyctx gid c tya l ety =
     let vars = TypeAssignment.vars_of (Val ety) in
-    let rec aux = function
-      | [] -> false
-      | (id, x)::xs -> if unify x ety then (resolve_gid ~loc id gid x tya; true) else (undo vars; aux xs)
-    in
-      aux l
-
+    let rec filter_unif = function
+      | [] -> []
+      | (id, x) :: xs ->
+        if unify x ety then (undo vars; (id,x) :: filter_unif xs) else (undo vars; filter_unif xs) in
+    match filter_unif l with
+    | [] -> error_bad_const_ety_l ~valid_mode ~tyctx ~loc ~ety c l
+    | [id, x] -> assert(unify x ety); resolve_gid ~loc id gid x tya
+    | l -> error_too_many_const_ety_l ~valid_mode ~tyctx ~loc ~ety c l
+  
   and undo ((l_ty : TypeAssignment.t MutableOnce.t list), (l_m : TypeAssignment.tmode MutableOnce.t list)) =
     List.iter MutableOnce.unset l_ty;
     List.iter MutableOnce.unset l_m
