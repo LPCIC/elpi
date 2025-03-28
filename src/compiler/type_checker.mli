@@ -39,14 +39,22 @@ type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 [@@deriving show]
 
 val check :
+type_abbrevs:type_abbrevs ->
+  kinds:arities ->
+  types:typing_env ->
+  unknown:env_undeclared ->
   is_rule:bool -> (* a rule or a term (eg query) *)
+  ScopedTerm.t ->
+  exp:TypeAssignment.t ->
+  env_undeclared
+
+val check_chr_rule :
   type_abbrevs:type_abbrevs ->
   kinds:arities ->
   types:typing_env ->
   unknown:env_undeclared ->
-  ScopedTerm.t ->
-  exp:TypeAssignment.t ->
-  env_undeclared
+  ('a,ScopedTerm.t) Ast.Chr.t ->
+    env_undeclared
 
 val check_undeclared : unknown:env_undeclared -> typing_env
 

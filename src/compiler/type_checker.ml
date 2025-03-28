@@ -330,7 +330,10 @@ let silence_linear_warn f =
   let len = String.length s in
   len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
-let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~(exp : TypeAssignment.t) =
+let checker ~type_abbrevs ~kinds ~types:env ~unknown :
+  (is_rule:bool -> ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared) * 
+  ((_, ScopedTerm.t) Ast.Chr.t -> env_undeclared)
+=
   let valid_mode = ref true in
 
   (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
@@ -689,6 +692,8 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         unif ~matching x y && Util.for_all2 (unif ~matching) xs ys
     | Cons c1, Cons c2 when F.equal c1 c2 -> true
     | Prop _, Prop _ -> true (* unification of prop is correct for tc indipendently of their functionality *)
+    | App(c,Prop _,[]), Prop _ when F.equal c F.(from_string "list") -> true
+    | Prop _, App(c,Prop _,[]) when F.equal c F.(from_string "list") -> true
     | Arr(m1,b1,s1,t1), Arr(m2,b2,s2,t2) -> 
       valid_mode := unif_mode matching m1 m2;
       !valid_mode && b1 == b2 && unif ~matching s1 s2 && unif ~matching t1 t2
@@ -752,6 +757,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
     (* this is wrong, since the same unit may be checked against different contexts *)
     (* if MutableOnce.is_set t.ty then !unknown_global else *)
 
+  let check ~is_rule t ~exp =
     let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
     if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
@@ -761,7 +767,32 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
           (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k))
       !sigma;
-    !unknown_global
+    !unknown_global in
+  let check_chr { Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes } =
+    let check_sequent { Ast.Chr.context; conclusion; eigen } =
+      let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(mk_uvar "eigen") eigen in
+      if spills <> [] then error ~loc "cannot spill in eigen";
+      let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(Prop Relation) conclusion in
+      if spills <> [] then error ~loc "cannot spill in conclusion";
+      let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(App(F.from_string "list",Prop Relation,[])) context in
+      if spills <> [] then error ~loc "cannot spill in context" in
+    let check_guard t =
+      let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(Prop Relation) t in
+      if spills <> [] then error ~loc "cannot spill in guard" in
+    List.iter check_sequent to_match;
+    List.iter check_sequent to_remove;
+    Option.iter check_guard guard;
+    Option.iter check_sequent new_goal;
+    !unknown_global in
+  check, check_chr
+
+let check ~type_abbrevs ~kinds ~types:env ~unknown ~is_rule t ~exp =
+  let check, _ = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
+  check ~is_rule t ~exp
+
+let check_chr_rule ~type_abbrevs ~kinds ~types:env ~unknown r =
+  let _, check_chr = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
+  check_chr r
 
 let check1_undeclared w f (t, id) =
   match TypeAssignment.is_monomorphic t with
