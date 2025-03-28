@@ -57,7 +57,7 @@ val hmove :
 val subst: depth:int -> term list -> term -> term
 
 (* The projection from the internal notion of constraints in the API one *)
-val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option
+val get_suspended_goal : blockers -> 'a stuck_goal_kind -> suspended_goal option
 
 val full_deref : depth:int -> term -> term
 

@@ -65,34 +65,38 @@ type ttype =
   [@@ deriving show, ord]
 
 type builtin_predicate =
-  | Cut | And | Impl | RImpl | Pi | Sigma | Eq | Match | Host of constant [@@deriving ord, show]
-let builtin_predicates = [Cut;And;Impl;RImpl;Pi;Sigma;Eq;Match]
+  | Cut | And | Impl | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant [@@deriving ord, show]
+let builtin_predicates = [Cut;And;Impl;RImpl;Pi;Sigma;Eq;Match;Findall;Delay]
 
 let builtin_predicate_max = List.length builtin_predicates
 let func_of_builtin_predicate f = function
-  | Cut   -> F.cutf
-  | And   -> F.andf
-  | Impl  -> F.implf
-  | RImpl -> F.rimplf
-  | Pi    -> F.pif
-  | Sigma -> F.sigmaf
-  | Eq    -> F.eqf
-  | Match -> F.pmf
-  | Host c -> f c
+  | Cut     -> F.cutf
+  | And     -> F.andf
+  | Impl    -> F.implf
+  | RImpl   -> F.rimplf
+  | Pi      -> F.pif
+  | Sigma   -> F.sigmaf
+  | Eq      -> F.eqf
+  | Match   -> F.pmf
+  | Findall -> F.from_string "findall_solutions"
+  | Delay   -> F.from_string "declare_constraint"
+  | Host c  -> f c
 
 let show_builtin_predicate ?table f = function
   | Host c -> f ?table c
   | x -> F.show (func_of_builtin_predicate (fun _ -> assert false) x)
 
 let const_of_builtin_predicate = function
-  | Cut   -> -1
-  | And   -> -2
-  | Impl  -> -3
-  | RImpl -> -4
-  | Pi    -> -5
-  | Sigma -> -6
-  | Eq    -> -7
-  | Match -> -8
+  | Cut     -> -1
+  | And     -> -2
+  | Impl    -> -3
+  | RImpl   -> -4
+  | Pi      -> -5
+  | Sigma   -> -6
+  | Eq      -> -7
+  | Match   -> -8
+  | Findall -> -9
+  | Delay   -> -10
   | Host c -> c
   
 let is_builtin_predicate c = - builtin_predicate_max <= c && c <= -1
@@ -106,6 +110,8 @@ let builtin_predicate_of_const = function
   | -6 -> Sigma 
   | -7 -> Eq    
   | -8 -> Match
+  | -9 -> Findall
+  | -10 -> Delay
   | _ -> assert false
   
 let () = assert(List.for_all (fun p -> is_builtin_predicate @@ const_of_builtin_predicate p) builtin_predicates)
@@ -224,7 +230,8 @@ type hyps = clause_src list
 
 type suspended_goal = {
   context : hyps;
-  goal : int * term
+  goal : int * term;
+  blockers : blockers;
 }
 
 (** 
@@ -653,10 +660,6 @@ module Global_symbols : sig
   val spillc   : constant
   val truec    : constant
 
-  val declare_constraintc : constant
-  val print_constraintsc  : constant
-  val findall_solutionsc  : constant
-
 end = struct
 
 type t = {
@@ -739,11 +742,7 @@ let propc               = declare_global_symbol "prop"
 let fpropc               = declare_global_symbol "fprop"
 let variadic            = declare_global_symbol "variadic"
 
-let declare_constraintc = declare_global_symbol "declare_constraint"
 let cutc                = declare_global_symbol_for_builtin F.(show cutf)
-let print_constraintsc  = declare_global_symbol_for_builtin "print_constraints"
-let findall_solutionsc  = declare_global_symbol_for_builtin "findall_solutions"
-
 end
 
 (* This term is hashconsed here *)
