@@ -1423,8 +1423,8 @@ end = struct
   let check_and_spill_chr ~unknown ~type_abbrevs ~kinds ~types { Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes } =
     let check_sequent ~needs_spilling unknown { Ast.Chr.context; conclusion; eigen } =
       let unknown, conclusion = check_and_spill_pred ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types conclusion in
-      let unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types ~exp:(Val (App(F.from_string "list",Prop Relation,[]))) context in
-      let unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types eigen ~exp:(Type_checker.unknown_type_assignment "eigen") in
+      let unknown = Type_checker.check ~is_rule:false ~unknown ~type_abbrevs ~kinds ~types ~exp:(Val (App(F.from_string "list",Prop Relation,[]))) context in
+      let unknown = Type_checker.check ~is_rule:false ~unknown ~type_abbrevs ~kinds ~types eigen ~exp:(Type_checker.unknown_type_assignment "eigen") in
       unknown, { Ast.Chr.context; conclusion; eigen } in
     let unknown, to_match  = map_acc (check_sequent ~needs_spilling:false) unknown to_match in
     let unknown, to_remove = map_acc (check_sequent ~needs_spilling:false) unknown to_remove in

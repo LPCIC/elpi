@@ -170,8 +170,7 @@ let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
         match q with
         | None -> acc
         | Some q ->
-            if Symbol.get_func k = F.asf then
-            Format.eprintf "FOUND %a -> %a\n" Symbol.pp q Symbol.pp k;
+            (* Format.eprintf "FOUND %a -> %a\n" Symbol.pp q Symbol.pp k; *)
             (* CAVEAT: we keep as canonical the (ocaml) one allocated statically in Global_symbols *)
             Symbol.QMap.unify (fun _ _ _ -> anomaly "builtins predicates are unique") k q acc in
       Symbol.QMap.add k v acc) qm l) m Symbol.QMap.empty in
@@ -617,9 +616,7 @@ let check ~is_rule ~type_abbrevs ~kinds ~types:env ~unknown (t : ScopedTerm.t) ~
         | Impl(false,{ it = Const((Global _,c',_)) },_) -> c', []
         | App((Global _,c,_),x,xs) -> c, x :: xs
         | Const((Global _,c,_)) -> c, []
-        | _ ->
-          (* Format.eprintf "%a" ScopedTerm.pretty_ it; *)
-          assert false in
+        | _ -> anomaly ~loc ("not a rule: " ^ ScopedTerm.show_t_ it) in
       head it in
     (* Format.eprintf "Checking %a\n" F.pp c; *)
     match F.Map.find c env.overloading with
