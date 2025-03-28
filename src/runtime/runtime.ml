@@ -3725,7 +3725,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
   let guard =
     match guard with
     | Some g -> g
-    | None -> mkConst Global_symbols.truec
+    | None -> mkBuiltin Eq [mkNil;mkNil]
   in
  
   let initial_program = !orig_prolog_program in

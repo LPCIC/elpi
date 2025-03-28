@@ -1420,17 +1420,11 @@ end = struct
     let unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation)) in
     unknown, if needs_spilling then Spilling.main ~types t else t
 
-  let check_and_spill_chr ~unknown ~type_abbrevs ~kinds ~types { Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes } =
-    let check_sequent ~needs_spilling unknown { Ast.Chr.context; conclusion; eigen } =
-      let unknown, conclusion = check_and_spill_pred ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types conclusion in
-      let unknown = Type_checker.check ~is_rule:false ~unknown ~type_abbrevs ~kinds ~types ~exp:(Val (App(F.from_string "list",Prop Relation,[]))) context in
-      let unknown = Type_checker.check ~is_rule:false ~unknown ~type_abbrevs ~kinds ~types eigen ~exp:(Type_checker.unknown_type_assignment "eigen") in
-      unknown, { Ast.Chr.context; conclusion; eigen } in
-    let unknown, to_match  = map_acc (check_sequent ~needs_spilling:false) unknown to_match in
-    let unknown, to_remove = map_acc (check_sequent ~needs_spilling:false) unknown to_remove in
-    let unknown, new_goal  = option_mapacc (check_sequent ~needs_spilling:true) unknown new_goal in
-    let unknown, guard = option_mapacc (fun unknown -> check_and_spill_pred ~needs_spilling:true ~unknown ~type_abbrevs ~kinds ~types) unknown guard in
-    unknown, { Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes }
+  let check_and_spill_chr ~unknown ~type_abbrevs ~kinds ~types r =
+    let unknown = Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r in
+    let guard = Option.map (Spilling.main ~types) r.guard in
+    let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types conclusion }) r.new_goal in
+    unknown, { r with guard; new_goal }
 
   let check ~flags st ~base u : checked_compilation_unit =
 

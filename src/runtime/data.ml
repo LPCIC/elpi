@@ -655,7 +655,7 @@ module Global_symbols : sig
   val variadic : constant
 
   val spillc   : constant
-  val truec    : constant
+  (* val truec    : constant *)
 
 end = struct
 
@@ -734,7 +734,7 @@ let nilc                = declare_global_symbol F.(show nilf)
 let orc                 = declare_global_symbol F.(show orf)
 let rulec               = declare_global_symbol "rule"
 let spillc              = declare_global_symbol F.(show spillf)
-let truec               = declare_global_symbol F.(show truef)
+(* let truec               = declare_global_symbol F.(show truef) *)
 let ctypec              = declare_global_symbol F.(show ctypef)
 let propc               = declare_global_symbol "prop"
 let fpropc               = declare_global_symbol "fprop"
