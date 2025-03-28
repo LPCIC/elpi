@@ -1,3 +1,4 @@
-:untyped main :-
+pred f o:int, o:int.
+main :-
  (pi c\ sigma X\ pi d\ (X d = f c d, Y c = X)),
  Y = c\ d\ f c d.

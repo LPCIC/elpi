@@ -55,22 +55,72 @@ let equal_stuck_goal_kind _ x y = x == y
 type 'unification_def stuck_goal_kind +=
   | Unification of 'unification_def
 
-type arg_mode = Util.arg_mode = Input | Output [@@deriving show, ord]
-
-type mode_aux = Util.mode_aux =
-  | Fo of arg_mode
-  | Ho of arg_mode * mode
-and mode = mode_aux list
-[@@ deriving show, ord]
-
 type ttype =
   | TConst of constant
   | TApp of constant * ttype * ttype list
-  | TPred of bool * ((arg_mode * ttype) list) (* The bool is for functionality *)
+  | TPred of bool * ((Mode.t * ttype) list) (* The bool is for functionality *)
   | TArr of ttype * ttype
   | TCData of CData.t
   | TLam of ttype (* this is for parametrized typeabbrevs *)
   [@@ deriving show, ord]
+
+type builtin_predicate =
+  | Cut | And | Impl | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant [@@deriving ord, show]
+let builtin_predicates = [Cut;And;Impl;RImpl;Pi;Sigma;Eq;Match;Findall;Delay]
+
+let builtin_predicate_max = List.length builtin_predicates
+let func_of_builtin_predicate f = function
+  | Cut     -> F.cutf
+  | And     -> F.andf
+  | Impl    -> F.implf
+  | RImpl   -> F.rimplf
+  | Pi      -> F.pif
+  | Sigma   -> F.sigmaf
+  | Eq      -> F.eqf
+  | Match   -> F.pmf
+  | Findall -> F.from_string "findall_solutions"
+  | Delay   -> F.from_string "declare_constraint"
+  | Host c  -> f c
+
+let show_builtin_predicate ?table f = function
+  | Host c -> f ?table c
+  | x -> F.show (func_of_builtin_predicate (fun _ -> assert false) x)
+
+let const_of_builtin_predicate = function
+  | Cut     -> -1
+  | And     -> -2
+  | Impl    -> -3
+  | RImpl   -> -4
+  | Pi      -> -5
+  | Sigma   -> -6
+  | Eq      -> -7
+  | Match   -> -8
+  | Findall -> -9
+  | Delay   -> -10
+  | Host c -> c
+  
+let is_builtin_predicate c = - builtin_predicate_max <= c && c <= -1
+
+let builtin_predicate_of_const = function
+  | -1 -> Cut   
+  | -2 -> And   
+  | -3 -> Impl  
+  | -4 -> RImpl 
+  | -5 -> Pi    
+  | -6 -> Sigma 
+  | -7 -> Eq    
+  | -8 -> Match
+  | -9 -> Findall
+  | -10 -> Delay
+  | _ -> assert false
+  
+let () = assert(List.for_all (fun p -> is_builtin_predicate @@ const_of_builtin_predicate p) builtin_predicates)
+let () = assert(List.for_all (fun p -> p = builtin_predicate_of_const @@ const_of_builtin_predicate p) builtin_predicates)
+
+
+let map_builtin_predicate f = function
+  | Host x -> Host (f x)
+  | x -> x
 
 type term =
   (* Pure terms *)
@@ -82,7 +132,7 @@ type term =
   | Nil
   | Discard
   (* FFI *)
-  | Builtin of constant * term list
+  | Builtin of builtin_predicate * term list
   | CData of CData.t
   (* Heap terms: unif variables in the query *)
   | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
@@ -111,14 +161,11 @@ type clause = {
     args : term list;
     hyps : term list;
     vars : int;
-    mode : mode;        (* CACHE to avoid allocation in get_clauses *)
+    mode : Mode.hos;        (* CACHE to avoid allocation in get_clauses *)
     loc : Loc.t option; (* debug *)
     mutable timestamp : int list; (* for grafting *)
 }
 [@@deriving show, ord]
-
-let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
-let to_mode = function true -> Fo Input | false -> Fo Output
 
 type grafting_time = int list
 [@@deriving show, ord]
@@ -156,19 +203,19 @@ and first_lvl_idx = {
 }
 and second_lvl_idx =
 | TwoLevelIndex of {
-    mode : mode;
+    mode : Mode.hos;
     argno : int;
     all_clauses : clause_list;        (* when the query is flexible *)
     flex_arg_clauses : clause_list;   (* when the query is rigid but arg_id ha nothing *)
     arg_idx : clause_list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
-    mode : mode;
+    mode : Mode.hos;
     args : int list;
     args_idx : clause_list Ptmap.t; (* clause, insertion time *)
   }
 | IndexWithDiscriminationTree of {
-    mode : mode;
+    mode : Mode.hos;
     arg_depths : int list;   (* the list of args on which the trie is built *)
     args_idx : clause Discrimination_tree.t; 
 }
@@ -183,7 +230,8 @@ type hyps = clause_src list
 
 type suspended_goal = {
   context : hyps;
-  goal : int * term
+  goal : int * term;
+  blockers : blockers;
 }
 
 (** 
@@ -201,7 +249,7 @@ type indexing =
   | MapOn of int
   | Hash of int list
   | DiscriminationTree of int list
-[@@deriving show]
+[@@deriving show, ord]
 
 let mkLam x = Lam x [@@inline]
 let mkApp c x xs = App(c,x,xs) [@@inline]
@@ -421,6 +469,141 @@ end
 
 let elpi_state_descriptor = State.new_descriptor ()
 
+type core_symbol = As | Uv [@@deriving enum, ord, show]
+let func_of_core_symbol = function
+  | As    -> F.asf
+  | Uv    -> F.from_string "uvar"
+
+(* Globally unique identifier for symbols with a quotient *)
+module Symbol : sig 
+  type symbol [@@deriving show, ord]
+  module UF : Union_find.S with type key = symbol
+  type 'a merge = (symbol -> 'a -> 'a -> 'a)
+  module RawMap : Map.S with type key = symbol
+  module QMap : sig
+    type 'a t [@@deriving show]
+    val empty : 'a t
+    val add : symbol -> 'a -> 'a t -> 'a t
+    val find : symbol -> 'a t -> 'a
+    val union : 'a merge -> 'a t -> 'a t -> 'a t
+    val give_uf : 'a t -> UF.t
+    val unify : 'a merge -> symbol -> symbol -> 'a t -> 'a t
+    val mapi : (symbol -> symbol) -> ('a -> 'a) -> 'a t -> 'a t
+    val map : ('a -> 'b) -> 'a t -> 'b t
+    val fold : (symbol -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+    val iter : (symbol -> 'a -> unit) -> 'a t -> unit
+    val mem : symbol -> 'a t -> bool
+    val bindings : 'a t -> (symbol * 'a) list
+    val get_uf : 'a t -> UF.t
+  end 
+
+  type t = symbol [@@deriving show,ord]
+  type provenance = Elpi_parser.Ast.Structured.provenance [@@deriving show,ord]
+
+  val make : provenance -> F.t -> t
+  val make_builtin : ?variant:int -> F.t -> t
+  val make_variant_builtin : F.t -> t * int (* variant *)
+
+  val get_loc : t -> Loc.t
+  val get_provenance : t -> provenance
+  val get_str : t -> string
+  val get_func : t -> F.t
+
+  (* val map_func : (F.t -> F.t) -> t -> t *)
+  
+end = struct
+  type provenance = Elpi_parser.Ast.Structured.provenance [@@deriving show,ord]
+  type symbol = provenance * F.t [@@deriving show, ord]
+  type 'a merge = (symbol -> 'a -> 'a -> 'a)
+  module O = struct type t = symbol [@@deriving show,ord] end
+  module RawMap = Map.Make(O)
+  module UF = Elpi_util.Union_find.Make(O)
+  type t = symbol [@@deriving show, ord]
+
+  open Elpi_parser.Ast.Structured
+  module QMap = struct
+    
+    type 'a t = UF.t * 'a RawMap.t [@@deriving show]
+    let empty = UF.empty, RawMap.empty
+
+    let get_uf (u,_) = u
+
+    let unify f s1 s2 (uf,m) = 
+      let x,uf =
+        match fst s1, fst s2 with
+        | Builtin _, Builtin _ -> anomaly "Builtins cannot be declared twice"
+        | Core, Core -> anomaly "Core symbols cannot be declared twice"
+        (* we use the (possibly) pre-allocated builtin as the canonical *)
+        | File _, Builtin _ -> UF.union uf s1 ~canon:s2
+        | File _, Core -> UF.union uf s1 ~canon:s2
+        | _ -> UF.union uf ~canon:s1 s2 in
+      match x with
+      | None -> uf, m
+      | Some x -> 
+        let canonic_x = UF.find uf x in
+        match RawMap.find_opt canonic_x m, RawMap.find_opt x m with
+        | None, None -> uf, m
+        | Some canonic_value, None -> uf, m
+        | None, Some value -> uf, RawMap.add canonic_x value m |> RawMap.remove x
+        | Some canonic_value, Some value -> 
+          uf, RawMap.add canonic_x (f canonic_x value canonic_value) m 
+
+    let add s a (uf,m) =
+      let s' = UF.find uf s in
+      uf, RawMap.add s' a m
+
+    let find s (uf,m) =
+      let s' = UF.find uf s in
+      try RawMap.find s' m
+      with Not_found -> anomaly ("Missing entry from QMap: " ^ show_symbol s)
+
+    let union f (uf1,m1) (uf2,m2) =
+      let uf = UF.merge uf1 uf2 in
+      uf,RawMap.union (fun s a b -> Some (f (UF.find uf s) a b)) m1 m2
+
+    let map mv (uf, m) =
+      uf, RawMap.map mv m
+
+    let mapi mk mv (uf,m) =
+      let uf = UF.mapi mk uf in
+      let m = RawMap.fold (fun k v acc -> RawMap.add (mk k) (mv v) acc) RawMap.empty m in
+      uf,m
+
+    let give_uf (a,_) = a
+    let fold f (_,m) a = RawMap.fold f m a
+
+    let mem s (uf,m) =
+      let s' = UF.find uf s in
+      RawMap.mem s' m
+
+    let iter f (_,m) = RawMap.iter f m
+
+    let bindings (_,m) = RawMap.bindings m
+
+  end
+
+  let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
+
+  let get_provenance (l,_) = l
+  let get_loc (l,f) =
+    match l with
+    | File l -> l
+    | Core -> Loc.initial ("("^__FILE__^":"^F.show f^")")
+    | Builtin { variant } -> Loc.initial ("(ocaml:"^F.show f^":"^string_of_int variant^")")
+  let get_str (_,f) = F.show f
+  let get_func (_,f) = f
+  let map_func f (x,y) =  x, f y
+  
+  let make prov name = prov, name
+  let make_builtin ?(variant=0) name = Builtin { variant }, name
+  let make_variant_builtin =
+    let n = ref 0 in
+    fun name ->
+      let variant = incr n; !n in
+      (Builtin { variant }, name), variant
+end
+
+
 (* This module contains the symbols reserved by Elpi and the ones
    declared by the API client via declare_global_symbol statically
    (eg the API must be called in a OCaml toplevel value).
@@ -434,8 +617,8 @@ module Global_symbols : sig
   (* Table used at link time *)
   type t = {
     (* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
-    mutable s2ct : (constant * term) Ast.Func.Map.t;
-    mutable c2s : string Constants.Map.t;
+    mutable s2ct : (constant * term) Symbol.RawMap.t;
+    mutable c2s : Symbol.symbol Constants.Map.t;
     (* negative *)
     mutable last_global : int;
 
@@ -446,16 +629,18 @@ module Global_symbols : sig
 
   (* Static initialization, eg link time *)
   val declare_global_symbol : string -> constant
+  val declare_overloaded_global_symbol : string -> constant * int
   val lock : unit -> unit
 
-  val cutc     : constant
-  val andc     : constant
   val orc      : constant
+  (* val cutc     : constant
+  val andc     : constant
   val implc    : constant
   val rimplc   : constant
   val pic      : constant
   val sigmac   : constant
   val eqc      : constant
+  val pmc      : constant *)
   val rulec    : constant
   val consc    : constant
   val nilc     : constant
@@ -470,87 +655,97 @@ module Global_symbols : sig
   val variadic : constant
 
   val spillc   : constant
-  val truec    : constant
-
-  val declare_constraintc : constant
-  val print_constraintsc  : constant
-  val findall_solutionsc  : constant
+  (* val truec    : constant *)
 
 end = struct
 
 type t = {
-  mutable s2ct : (constant * term) Ast.Func.Map.t;
-  mutable c2s : string Constants.Map.t;
+  mutable s2ct : (constant * term) Symbol.RawMap.t;
+  mutable c2s : Symbol.t Constants.Map.t;
   mutable last_global : int;
   mutable locked : bool;
 }
 [@@deriving show]
 
 let table = {
-  last_global = 0;
-  s2ct = Ast.Func.Map.empty;
+  last_global = - builtin_predicate_max;
+  s2ct = Symbol.RawMap.empty;
   c2s = Constants.Map.empty;
   locked = false;
 }
 
-let declare_global_symbol str =
-  let x = Ast.Func.from_string str in
-  try fst @@ Ast.Func.Map.find x table.s2ct
+let () = builtin_predicates |> List.iter (fun p ->
+  let c = const_of_builtin_predicate p in
+  let s = Symbol.make_builtin (func_of_builtin_predicate (fun _ -> assert false) p) in
+  let t = Const c in
+  table.c2s <- Constants.Map.add c s table.c2s;
+  table.s2ct <- Symbol.RawMap.add s (c,t) table.s2ct
+)
+
+let declare_global_symbol symb =
+  try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
     if table.locked then
       Util.anomaly "declare_global_symbol called after initialization";
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
     let t = Const n in
-    table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
-    table.c2s <- Constants.Map.add n str table.c2s;
+    table.s2ct <- Symbol.RawMap.add symb (n,t) table.s2ct;
+    table.c2s <- Constants.Map.add n symb table.c2s;
     n
 
+
+let declare_core_symbol x =
+  let symb = Symbol.(make Core (func_of_core_symbol x)) in
+  declare_global_symbol symb
+let uvarc = declare_core_symbol Uv
+let asc = declare_core_symbol As
+
+let declare_overloaded_global_symbol str =
+  let symb, variant = Symbol.make_variant_builtin (Ast.Func.from_string str) in
+  declare_global_symbol symb, variant
+
+let declare_global_symbol str =
+  let symb = Symbol.make_builtin (Ast.Func.from_string str) in
+  declare_global_symbol symb
+
+
 let declare_global_symbol_for_builtin str =
-  let x = Ast.Func.from_string str in
+  let symb = Symbol.make_builtin (Ast.Func.from_string str) in
   if table.locked then
     Util.anomaly "declare_global_symbol_for_builtin called after initialization";
-  try fst @@ Ast.Func.Map.find x table.s2ct
+  try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
-    let t = Builtin(n,[]) in
-    table.s2ct <- Ast.Func.Map.add x (n,t) table.s2ct;
-    table.c2s <- Constants.Map.add n str table.c2s;
+    let t = Builtin(Host n,[]) in
+    table.s2ct <- Symbol.RawMap.add symb (n,t) table.s2ct;
+    table.c2s <- Constants.Map.add n symb table.c2s;
     n
 
 let lock () = table.locked <- true
 
-let andc                = declare_global_symbol F.(show andf)
 let arrowc              = declare_global_symbol F.(show arrowf)
-let asc                 = declare_global_symbol "as"
 let consc               = declare_global_symbol F.(show consf)
 let entailsc            = declare_global_symbol "?-"
-let eqc                 = declare_global_symbol F.(show eqf)
-let uvarc               = declare_global_symbol "uvar"
 let implc               = declare_global_symbol F.(show implf)
 let nablac              = declare_global_symbol "nabla"
 let nilc                = declare_global_symbol F.(show nilf)
 let orc                 = declare_global_symbol F.(show orf)
-let pic                 = declare_global_symbol F.(show pif)
-let rimplc              = declare_global_symbol F.(show rimplf)
 let rulec               = declare_global_symbol "rule"
-let sigmac              = declare_global_symbol F.(show sigmaf)
 let spillc              = declare_global_symbol F.(show spillf)
-let truec               = declare_global_symbol F.(show truef)
+(* let truec               = declare_global_symbol F.(show truef) *)
 let ctypec              = declare_global_symbol F.(show ctypef)
 let propc               = declare_global_symbol "prop"
+let fpropc               = declare_global_symbol "fprop"
 let variadic            = declare_global_symbol "variadic"
 
-let declare_constraintc = declare_global_symbol "declare_constraint"
 let cutc                = declare_global_symbol_for_builtin F.(show cutf)
-let print_constraintsc  = declare_global_symbol_for_builtin "print_constraints"
-let findall_solutionsc  = declare_global_symbol_for_builtin "findall_solutions"
-
 end
 
 (* This term is hashconsed here *)
-let dummy = App (Global_symbols.cutc,Const Global_symbols.cutc,[])
+let dummy = App (-1,Const (-1),[])
+
 let dummy_uvar_body = { contents = dummy; uid_private = 0 }
 
 module CHR : sig
@@ -743,7 +938,7 @@ let rec show_ty_ast ?prec = function
       with_par prec AppArg t
 
 let term_of_extra_goal = function
-  | Unify(a,b) -> Builtin(Global_symbols.eqc,[a;b])
+  | Unify(a,b) -> Builtin(Eq,[a;b])
   | RawGoal x -> x
   | x ->
       Util.anomaly (Printf.sprintf "Unprocessed extra_goal: %s.\nOnly %s and %s can be left unprocessed,\nplease call API.RawData.set_extra_goals_postprocessing.\n"
@@ -1201,13 +1396,16 @@ type declaration =
   | LPCode of string
 
 (* doc *)
+let parens ?(sep = " ") str = if Re.Str.(string_match (regexp (".*" ^ sep ^ ".*")) str 0) then "("^str^")" else str
+let parens_arr = parens ~sep:("->")
+
 let ws_to_max fmt max n =
   if n < max then Format.fprintf fmt "%s" (String.make (max - n) ' ')
   else ()
-let pp_tab_arg i max sep fmt (dir,ty,doc) =
-  let dir = if dir then "i" else "o" in
+
+let pp_tab_arg i max sep fmt (_,ty,doc) =
   if i = 0 then Fmt.pp_set_tab fmt () else ();
-  Fmt.fprintf fmt "%s:%s%s" dir ty sep;
+  Fmt.fprintf fmt "%s%s" (parens_arr ty) sep;
   if i = 0 then (ws_to_max fmt max (String.length ty); Fmt.pp_set_tab fmt ()) else Fmt.pp_print_tab fmt ();
   if doc <> "" then begin Fmt.fprintf fmt " %% %s" doc end;
   Fmt.pp_print_tab fmt ()
@@ -1218,36 +1416,43 @@ let pp_tab_args fmt l =
   let max = List.fold_left (fun m (_,s,_) -> max (String.length s) m) 0 l in
   Fmt.pp_open_tbox fmt ();
   if l = [] then Fmt.fprintf fmt ".";
+  let in_input = ref true in
+  let update_in_input (b,_,_) = in_input := b in
+  let print_arr (b,_,_) = b <> !in_input in 
   List.iteri (fun i x ->
+    if print_arr x then Format.fprintf fmt "-> ";
+    update_in_input x;
     let sep = if i = n then "." else "," in
     pp_tab_arg i max sep fmt x) l;
   Fmt.pp_close_tbox fmt ()
 ;;
 
-let pp_arg sep fmt (dir,ty,doc) =
-  let dir = if dir then "i" else "o" in
-  Fmt.fprintf fmt "%s:%s%s" dir ty sep
-;;
+let pp_args fmt l = 
+  let l1, l2 = List.partition (fun (x,_,_) -> x) l in
+  let pp_arg fmt (_,ty,_) = Format.fprintf fmt "%s" (parens_arr ty) in
+  let pp_args = pplist pp_arg ", " ~pplastelem:pp_arg in
+  Format.fprintf fmt "%a" pp_args l1;
+  if l2 = [] then ()
+  else if l1 = [] then Format.fprintf fmt "-> %a" pp_args l2
+  else Format.fprintf fmt " -> %a" pp_args l2
 
-let pp_args = pplist (pp_arg "") ", " ~pplastelem:(pp_arg "")
-
+(* External predicate are functional *)
 let pp_pred fmt docspec name doc_pred args =
   let args = List.rev args in
   match docspec with
   | DocNext ->
-     Fmt.fprintf fmt "@[<v 2>external pred %s %% %s@;%a@]@."
+     Fmt.fprintf fmt "@[<v 2>external func %s %% %s@;%a@]@."
        name doc_pred pp_tab_args args
   | DocAbove ->
     let doc =
        "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
        "] " ^ doc_pred in
-     Fmt.fprintf fmt "@[<v>%% %a@.external pred %s @[<hov>%a.@]@]@.@."
+     Fmt.fprintf fmt "@[<v>%% %a@.external func %s @[<hov>%a.@]@]@.@."
        pp_comment doc name pp_args args
 ;;
 
 let pp_variadictype fmt name doc_pred ty args =
-  let parens s = if String.contains s ' ' then "("^s^")" else s in
-  let args = List.rev ((false,"variadic " ^ parens ty ^ " prop","") :: args) in
+  let args = List.rev ((false,"variadic " ^ parens ty ^ " fprop","") :: args) in
   let doc =
     "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
     "...] " ^ doc_pred in
@@ -1303,7 +1508,7 @@ type builtin_table = (int, t) Hashtbl.t
 end
 
 type symbol_table = {
-  mutable c2s : string Constants.Map.t;
+  mutable c2s : Symbol.t Constants.Map.t;
   c2t : (constant, term) Hashtbl.t;
   mutable frozen_constants : int;
 }
@@ -1341,4 +1546,4 @@ type solution = {
 }
 type 'a outcome = Success of solution | Failure | NoMoreSteps
 
-exception CannotDeclareClauseForBuiltin of Loc.t option * constant
+exception CannotDeclareClauseForBuiltin of Loc.t option * builtin_predicate

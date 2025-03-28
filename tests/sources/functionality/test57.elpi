@@ -1,0 +1,15 @@
+% NO
+
+func f.
+func f1 fprop.
+
+typeabbrev tt fprop -> fprop.
+
+pred rel.
+
+f :-
+  % Here the body of f1 is relational
+  X = ((x\ f1 x :- x) : (func prop)),
+  X rel.
+
+main.

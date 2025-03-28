@@ -1,0 +1,24 @@
+% YES
+
+func map (func A -> B), list A -> list B.
+map _ [] [].
+map F [X|Xs] [Y|Ys] :- F X Y, map F Xs Ys.
+
+pred divisor_help i:int, i:int, o:int.
+divisor_help N N N :- !.
+divisor_help N M N :- 0 is M mod N.
+divisor_help N M R :- N < M, N1 is N + 1, divisor_help N1 M R.
+
+pred divisor i:int, o:int.
+divisor N M :- divisor_help 1 N M.
+
+func commit! (pred i:A, o:B), A -> B.
+commit! F A B :- F A B, !.
+
+func give-div list int -> (list(list int)).
+give-div L L1 :-
+  X = (x\y\x y), % the dtype of X is inferred from the next line
+  F = map X,
+  F [map (commit! divisor) L] L1.
+
+main :- std.findall (give-div [1,2] R) L, map (x\y\ x = give-div _ [y]) L L1, print L1.

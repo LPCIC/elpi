@@ -1,0 +1,8 @@
+% OK
+func succ int -> int.
+
+pred p i:(pred), o:(func).
+p X X :-
+  (p _ X :- X = true) => X = true.
+
+main.

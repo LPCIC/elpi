@@ -6,6 +6,11 @@ open Suite
 let declare = Test.declare
     ~category:(Filename.(chop_extension (basename __FILE__)))
 
+let () = declare "pm"
+  ~source_elpi:"pm.elpi"
+  ~description:"pattern matching builtin"
+  ()
+
 let () = declare "cut1"
   ~source_elpi:"cut.elpi"
   ~description:"what else"
@@ -115,6 +120,11 @@ let () = declare "conj2"
   ~description:"parsing and evaluation of & (binary conj)"
   ()
 
+let () = declare "macro_type"
+  ~source_elpi:"macro_type.elpi"
+  ~description:"polymorphic macro"
+  ()
+
 (* 
   Note in the following tests with DT, we disable typecheck not to print the
   number of candidates found in the search of clauses done by the elpi typechecker
@@ -184,50 +194,39 @@ let () = declare "trie"
   ~description:"discrimination_tree on trees"
   ()
 
-let mode_check expected fname =
-  let is_in_file = Util.has_substring ~sub:fname in
-  let start_warning = String.starts_with ~prefix:"WARNING" in
-  let pos = ref 0 in
-  let check_same x =
-    let res = try Str.(search_forward (regexp expected.(!pos))) x 0 |> ignore; true
-              with Not_found -> false in
-    if not res then Printf.eprintf "Expected [[%s]]; \nFound    [[%s]]\n" expected.(!pos) x;
-    incr pos; 
-    res in
-  let rec f = function
-    | [] | [_] -> true
-    | x :: x' :: xs when start_warning x && is_in_file x' ->
-      check_same x && f xs
-    | x :: x' :: x'' :: xs when start_warning x && is_in_file x'' ->
-      check_same x && check_same x' && f xs
-    | _ :: xs -> f xs in
-    f
+let () =
+  let status = Test.
+    [|Failure; Success; Failure; Success; Failure; (*05*)
+      Success; Failure; Failure; Failure; Failure; (*10*)
+      Failure; Success; Failure; Failure; Success; (*15*)
+      Success; Success; Failure; Failure; Success; (*20*)
+      Failure; Success; Failure; Success; Failure; (*25*)
+      Failure; Failure; Success; Success; Failure; (*30*)
+      Failure; Success; Failure; Failure; Failure; (*35*)
+      Success; Failure; Failure; Success; Success; (*40*)
+      Failure; Failure; Failure; Success; Failure; (*45*)
+      Success; Success; Success; Success; Failure; (*50*)
+      Success; Failure; Success; Failure; Success; (*55*)
+      Failure; Failure; Failure; Success; Success; (*60*)
+      Failure; Success; Success; Success; Failure; (*65*)
+      Success; Failure
+    |] in
+  let ignore = [1;5;7;8;9;10;11;13;16;26;27] in
+  for i = 0 to Array.length status - 1 do
+    if not (List.mem (i+1) ignore) then (
+    let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
+    let descr = Printf.sprintf "functionality%d" (i+1) in
+    declare descr
+    ~source_elpi:name
+    ~description:descr
+    ~expectation:status.(i)
+    ())
+  done
 
-let () = declare "mode_checking_fo"
-  ~source_elpi:"mode_checking_fo.elpi"
-  ~description:"mode_checking_fo"
-  ~expectation:(SuccessOutputTxt (
-    let expected = [|
-      "WARNING: Not ground Y passed to p "; 
-      "WARNING: The variables \\[Y\\] are in output position of the predicate\" "; 
-      "\"and cannot be ensured to be ground "|] in
-    mode_check expected "mode_checking_fo"
-    ))
-  ()
 
-let () = declare "mode_checking_ho"
-  ~source_elpi:"mode_checking_ho.elpi"
-  ~description:"mode_checking_ho"
-  ~expectation:(SuccessOutputTxt (
-    let expected = [|
-      "WARNING: Not ground Z passed to p "; 
-      "WARNING: Not ground (con Z) passed to p ";
-      "WARNING: Not ground X[0-9]+ c[0-9]+ passed to p ";
-      "WARNING: Passed flexible to , ";
-      "WARNING: Not ground C passed to c0 ";
-      "WARNING: The variables \\[C\\] are in output position of the predicate\" ";
-      "\"and cannot be ensured to be ground "
-      |] in
-    mode_check expected "mode_checking_ho"
-    ))
+let () = declare "sepcomp_tyid"
+  ~source_dune:"sepcomp_tyid.exe"
+  ~after:"sepcomp_tyid"
+  ~description:"separate compilation union find on type_id"
+  ~expectation:Test.Success
   ()
