@@ -1,15 +1,29 @@
 %%%module lambda3.
 
-:untyped of (appl T1 T2) B :- of T1 (impl A B), of T2 A.
-:untyped of (lam F) (impl A B) :- pi x\ of x A => of (F x) B.
+kind xlist type.
+kind xint type.
+symbol x1, x2, x3, x4 ,x5 ,x6, x7, x8, x9, x10 : xint.
+symbol xnil : xlist.
+symbol xcons : xint -> xlist -> xlist.
 
-:untyped append (xcons X XS) L (xcons X L1)  :- append XS L L1 .
-:untyped append xnil L L .
+kind tm type.
+symbol app : tm -> tm -> tm.
+symbol lam : (tm -> tm) -> tm.
 
-:untyped termify xnil (lam x\x).
-:untyped termify (xcons X XS) (lam F) :- pi c\ termify XS (F c).
+kind ty type.
+symbol impl : ty -> ty -> ty.
 
-:untyped test L :- 
+of (appl T1 T2) B :- of T1 (impl A B), of T2 A.
+of (lam F) (impl A B) :- pi x\ of x A => of (F x) B.
+
+pred append i:xlist, i:xlist, o:xlist.
+append (xcons X XS) L (xcons X L1)  :- append XS L L1 .
+append xnil L L .
+
+termify xnil (lam x\x).
+termify (xcons X XS) (lam F) :- pi c\ termify XS (F c).
+
+test L :- 
   X1 = (xcons x0 (xcons x1 (xcons x2 (xcons x3 (xcons x4 (xcons x5 (xcons x6 (xcons x7 (xcons x8 (xcons x9 (xcons x10 xnil))))))))))), 
   append X1 X1 X2 ,
   append X2 X2 X3 ,
@@ -31,21 +45,25 @@
    X = X6 ,
    termify X L.
 
-:untyped once L :- of L Z.
+once L :- of L Z.
 
-:untyped iter zero X.
-:untyped iter (s N) X :- X, iter N X.
+kind nat type.
+symbol zero : nat.
+symbol s : nat -> nat.
 
-:untyped plus zero X X.
-:untyped plus (s X) Y (s S) :- plus X Y S.
+iter zero X.
+iter (s N) X :- X, iter N X.
 
-:untyped mult zero X zero.
-:untyped mult (s X) Y Z :- mult X Y K, plus Y K Z.
+plus zero X X.
+plus (s X) Y (s S) :- plus X Y S.
 
-:untyped exp zero X (s zero).
-:untyped exp (s X) Y Z :- exp X Y K, mult Y K Z.
+mult zero X zero.
+mult (s X) Y Z :- mult X Y K, plus Y K Z.
 
-:untyped main :-
+exp zero X (s zero).
+exp (s X) Y Z :- exp X Y K, mult Y K Z.
+
+main :-
  TEN = s (s (s (s (s (s (s (s (s (s zero))))))))),
  exp (s (s (s zero))) TEN THOUSAND,
  test L,

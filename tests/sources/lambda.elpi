@@ -4,9 +4,16 @@
 % Syntax: t ::= appl t t | abs F    where F is a function t -> t
 % Syntax: ty ::= impl ty ty
 
-:untyped of (appl T1 T2) B :- of T1 (impl A B), of T2 A.
-:untyped of (lam F) (impl A B) :- pi x\ of x A => of (F x) B.
+of (appl T1 T2) B :- of T1 (impl A B), of T2 A.
+of (lam F) (impl A B) :- pi x\ of x A => of (F x) B.
 
-:untyped test Z :- of (lam f\ lam a\ appl f a) Z.
+test Z :- of (lam f\ lam a\ appl f a) Z.
 
-:untyped main :- test Z, Z = impl (impl a b) (impl a b).
+kind tm type.
+symbol app : tm -> tm -> tm.
+symbol lam : (tm -> tm) -> tm.
+
+kind ty type.
+symbol impl : ty -> ty -> ty.
+
+main :- test Z, Z = impl (impl a b) (impl a b).

@@ -1,6 +1,6 @@
 kind tm type.
-symbol true tm.
-symbol false tm.
+symbol true : tm.
+symbol false : tm.
 pred term i:tm, o:tm.
 
 term (app X Y) B :- term X (arr A B), term Y A.

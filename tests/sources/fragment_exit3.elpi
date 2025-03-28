@@ -1,2 +1,4 @@
-:untyped ignore _.
-:untyped main :- (pi c\ sigma Y\ X c = Y), ignore (X (f d)).
+pred ignore i:prop.
+pred f i:prop.
+ignore _.
+main :- (pi c\ sigma Y\ X c = Y), ignore (X (f d)).
