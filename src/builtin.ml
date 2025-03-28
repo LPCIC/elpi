@@ -245,7 +245,6 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
           "% on Key1 Key2 ... (variables, or lists thereof).\n"^
           "external type declare_constraint any -> any -> variadic any fprop.");
-  LPCode "external func print_constraints. % prints all constraints";
   MLCode(Pred("print_constraints",
     Full(raw_ctx,"prints all constraints"),
     (fun ~depth _ constraints state ->
