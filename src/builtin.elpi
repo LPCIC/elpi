@@ -71,6 +71,9 @@ external type declare_constraint any -> any -> variadic any fprop.
 
 external func print_constraints. % prints all constraints
 
+% [print_constraints] prints all constraints
+external func print_constraints .
+
 % [halt ...] halts the program and print the terms
 external type halt variadic any fprop.
 

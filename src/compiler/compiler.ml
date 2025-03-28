@@ -178,7 +178,6 @@ module Builtins : sig
   val pp : Format.formatter -> t -> unit
   val register : t -> D.BuiltInPredicate.t -> constant -> t
   val is_declared : t -> constant -> bool
-  val is_host_builtin : t -> constant -> bool (* also for non declared ones like chr ones *)
   val fold : (constant -> Data.BuiltInPredicate.t -> 'a -> 'a) -> t -> 'a -> 'a
   val empty : t
 
@@ -195,15 +194,7 @@ let register t (D.BuiltInPredicate.Pred(s,_,_) as b) idx =
   Constants.Map.add idx b t
 ;;
 
-let is_host_builtin t x =
-  Constants.Map.mem x t
-  (* TODO *)
-  || x == D.Global_symbols.declare_constraintc
-  || x == D.Global_symbols.print_constraintsc
-  || x == D.Global_symbols.findall_solutionsc
-;;
-let is_declared t x =
-  Constants.Map.mem x t
+let is_declared t x = Constants.Map.mem x t
 
 end
 
@@ -1664,15 +1655,15 @@ end = struct
       (* globals and builtins *)
       | Const((Global { decl_id },c,_)) ->
           let c, t = allocate_global_symbol ~loc:t.loc decl_id c in
-          if Builtins.is_host_builtin builtins c then D.mkBuiltin (Host c) []
-          else if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) []
+          if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) []
+          else if Builtins.is_declared builtins c then D.mkBuiltin (Host c) []
           else t
       | App((Global { decl_id },c,_),x,xs) ->
           let c,_ = allocate_global_symbol ~loc:t.loc decl_id c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
-          if Builtins.is_host_builtin builtins c then D.mkBuiltin (Host c) (x::xs)
-          else if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) (x::xs)
+          if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) (x::xs)
+          else if Builtins.is_declared builtins c then D.mkBuiltin (Host c) (x::xs)
           else D.mkApp c x xs
       (* lambda terms *)
       | Const(Bound l,c,_) -> allocate_bound_symbol t.loc ctx (c,l)

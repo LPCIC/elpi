@@ -21,8 +21,8 @@ type constraint_def = {
 }
 type 'unification_def stuck_goal_kind +=
  | Constraint of constraint_def
-let get_suspended_goal = function
-  | Constraint { cdepth; conclusion; context; _ } -> Some { context ; goal = (cdepth, conclusion) }
+let get_suspended_goal blockers = function
+  | Constraint { cdepth; conclusion; context; _ } -> Some { context ; goal = (cdepth, conclusion); blockers }
   | _ -> None
 
 (* Constants *)
@@ -511,12 +511,12 @@ let remove_blocked blocked map r =
     assert(b.uid >= 0);
     map*)
     
-let remove ({ blockers } as sg) =
+let remove ({ blockers } as sg : stuck_goal) =
  [%spy "dev:constraint:remove" ~rid pp_stuck_goal sg];
  delayed := remove_from_list sg !delayed;
  blockers_map := List.fold_left (remove_blocked sg) !blockers_map blockers
 
-let add ({ blockers } as sg) =
+let add ({ blockers } as sg : stuck_goal) =
  [%spy "dev:constraint:add" ~rid pp_stuck_goal sg];
  delayed := sg :: !delayed;
  blockers_map := List.fold_left (append_blocked sg) !blockers_map blockers
@@ -529,7 +529,7 @@ let print_trail fmt =
   Fmt.fprintf fmt "to_resume:%d new_delayed:%d\n%!"
     (List.length !to_resume) (List.length !new_delayed)
 
-let declare_new sg =
+let declare_new (sg : stuck_goal) =
   let blockers = uniqq sg.blockers in
   let sg = { sg with blockers } in
   add sg ;
@@ -3327,6 +3327,8 @@ module Constraints : sig
     once:(depth:int -> term -> State.t -> State.t) ->
     constant -> depth:int -> prolog_prog -> (UUID.t[@trace]) -> term list -> term list
 
+  val declare_constraint : depth:constant -> prolog_prog -> (UUID.t[@trace]) -> term list -> unit
+
 end = struct (* {{{ *)
 
 type new_csts = {
@@ -3626,12 +3628,6 @@ let declare_constraint ~depth prog (gid[@trace]) args =
   | None -> delay_goal ~depth prog ~goal:g (gid[@trace]) ~on:keys
 
 let exect_builtin_predicate ~once c ~depth idx (gid[@trace]) args =
-       if c == Global_symbols.declare_constraintc then begin
-               declare_constraint ~depth idx (gid[@trace]) args; [] end
-  else if c == Global_symbols.print_constraintsc then begin
-               printf "@[<hov 0>%a@]\n%!" (CS.print ?pp_ctx:None) (CS.contents ());
-               [] 
-  end else
     let b =
       try FFI.lookup c
       with Not_found -> 
@@ -3979,24 +3975,13 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     match g with
     | Builtin(Cut,[]) ->
        [%tcall cut (gid[@trace]) gs next (alts[@trace]) cutto_alts]
-    | Builtin(Host c,[q;sol]) when c == Global_symbols.findall_solutionsc ->
+    | Builtin(Findall,[q;sol]) ->
        [%tcall findall depth p q sol (gid[@trace]) gs next alts cutto_alts]
     | Builtin(And, g :: gs') -> [%spy "user:rule" ~rid ~gid pp_string "and"];
        let gid'[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
        let gs' = List.map (fun x -> (make_subgoal[@inlined]) ~depth (gid[@trace]) p x) gs' in
        [%spy "user:rule:and" ~rid ~gid pp_string "success"];
        [%tcall run depth p g (gid'[@trace]) (gs' @ gs) next alts cutto_alts]
-    | Cons (g,gs') -> [%spy "user:rule" ~rid ~gid pp_string "and"];
-       let gid'[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
-       let gs' = (make_subgoal[@inlined]) ~depth (gid[@trace]) p gs' in
-       [%spy "user:rule:and" ~rid ~gid pp_string "success"];
-       [%tcall run depth p g (gid'[@trace]) (gs' :: gs) next alts cutto_alts]
-    | Nil -> [%spy "user:rule" ~rid ~gid pp_string "true"]; [%spy "user:rule:true" ~rid ~gid pp_string "success"];
-      begin match gs with
-      | [] -> [%tcall pop_andl alts next cutto_alts]
-      | { depth; program; goal; gid = gid [@trace] } :: gs ->
-        [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts]
-      end
     | Builtin(Eq,[l;r]) -> [%spy "user:rule" ~rid ~gid pp_string "eq"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (show_builtin_predicate C.show Eq)];
        if unif ~argsdepth:depth ~matching:false (gid[@trace]) depth empty_env depth l r then begin
          [%spy "user:rule:eq" ~rid ~gid pp_string "success"];
@@ -4047,6 +4032,40 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        let gid[@trace] = make_subgoal_id gid ((depth,fv)[@trace]) in
        [%spy "user:rule:sigma" ~rid ~gid pp_string "success"];
        [%tcall run depth p fv (gid[@trace]) gs next alts cutto_alts]
+    | Builtin(Delay,args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (show_builtin_predicate C.show Delay)];
+      begin match Constraints.declare_constraint ~depth p (gid[@trace]) args with
+      | () -> [%spy "user:rule:builtin" ~rid ~gid pp_string "success"];
+              [%tcall pop_andl alts next cutto_alts]
+      | exception No_clause -> 
+              [%spy "user:rule:builtin" ~rid ~gid pp_string "fail"];
+              [%tcall next_alt alts] end
+    | Builtin(Host c, args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (C.show c)];
+      let once ~depth g state =
+        CS.state := state;
+        let { depth; program; goal; gid = gid [@trace] } = (make_subgoal[@inlined]) (gid[@trace]) ~depth p g in
+          let _alts = run depth program goal (gid[@trace]) [] FNil noalts noalts in
+          !CS.state in
+      begin match Constraints.exect_builtin_predicate ~once c ~depth p (gid[@trace]) args with
+      | gs' ->
+         [%spy "user:rule:builtin" ~rid ~gid pp_string "success"];
+         (match List.map (fun g -> (make_subgoal[@inlined]) (gid[@trace]) ~depth p g) gs' @ gs with
+         | [] -> [%tcall pop_andl alts next cutto_alts]
+         | { depth; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts])
+      | exception No_clause ->
+         [%spy "user:rule:builtin" ~rid ~gid pp_string "fail"];
+         [%tcall next_alt alts]
+      end
+   | Cons (g,gs') -> [%spy "user:rule" ~rid ~gid pp_string "and"];
+       let gid'[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
+       let gs' = (make_subgoal[@inlined]) ~depth (gid[@trace]) p gs' in
+       [%spy "user:rule:and" ~rid ~gid pp_string "success"];
+       [%tcall run depth p g (gid'[@trace]) (gs' :: gs) next alts cutto_alts]
+    | Nil -> [%spy "user:rule" ~rid ~gid pp_string "true"]; [%spy "user:rule:true" ~rid ~gid pp_string "success"];
+      begin match gs with
+      | [] -> [%tcall pop_andl alts next cutto_alts]
+      | { depth; program; goal; gid = gid [@trace] } :: gs ->
+        [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts]
+      end
     | UVar ({ contents = g }, from, args) when g != C.dummy -> [%spy "user:rule" ~rid ~gid pp_string "deref"]; [%spy "user:rule:deref" ~rid ~gid pp_string "success"];
        [%tcall run depth p (deref_uv ~from ~to_:depth args g) (gid[@trace]) gs next alts cutto_alts]
     | AppUVar ({contents = t}, from, args) when t != C.dummy -> [%spy "user:rule" ~rid ~gid pp_string "deref"]; [%spy "user:rule:deref" ~rid ~gid pp_string "success"];
@@ -4061,30 +4080,15 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) (Bl.to_list clauses)];
        [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts cutto_alts clauses]
-    | Builtin(Host c, args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (C.show c)];
-       let once ~depth g state =
-         CS.state := state;
-         let { depth; program; goal; gid = gid [@trace] } = (make_subgoal[@inlined]) (gid[@trace]) ~depth p g in
-           let _alts = run depth program goal (gid[@trace]) [] FNil noalts noalts in
-           !CS.state in
-       begin match Constraints.exect_builtin_predicate ~once c ~depth p (gid[@trace]) args with
-       | gs' ->
-          [%spy "user:rule:builtin" ~rid ~gid pp_string "success"];
-          (match List.map (fun g -> (make_subgoal[@inlined]) (gid[@trace]) ~depth p g) gs' @ gs with
-          | [] -> [%tcall pop_andl alts next cutto_alts]
-          | { depth; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts])
-       | exception No_clause ->
-          [%spy "user:rule:builtin" ~rid ~gid pp_string "fail"];
-          [%tcall next_alt alts]
-       end
     | Builtin(Cut,_) -> anomaly "cut with arguments"
     | Builtin(And,[]) -> anomaly "and without arguments"
     | Builtin(Eq,_) -> anomaly "eq without 2 arguments"
     | Builtin(Match,_) -> anomaly "match without 2 arguments"
     | Builtin(Impl,_) -> anomaly "impl without 2 arguments"
     | Builtin(RImpl,_) -> anomaly "rimpl without 2 arguments"
-    | Builtin(Pi,_) -> anomaly "pi without 1 argument1"
-    | Builtin(Sigma,_) -> anomaly "sigma without 1 argument1"
+    | Builtin(Pi,_) -> anomaly "pi without 1 argument"
+    | Builtin(Sigma,_) -> anomaly "sigma without 1 argument"
+    | Builtin(Findall,_) -> anomaly "findall without 2 arguments"
     | Arg _ | AppArg _ -> anomaly "The goal is not a heap term"
     | Lam _ | CData _ ->
         type_error ("The goal is not a predicate:" ^ (show_term g))

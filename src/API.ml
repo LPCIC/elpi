@@ -672,15 +672,16 @@ module RawData = struct
     hsrc : term
   }
   type hyps = hyp list
-
+  type blockers = Elpi.t list
   type suspended_goal = ED.suspended_goal = {
     context : hyps;
-    goal : int * term
+    goal : int * term;
+    blockers : blockers;
   }
 
   let constraints l =
     let module R = (val !r) in let open R in
-    Util.map_filter (fun x -> get_suspended_goal x.ED.kind) l
+    Util.map_filter (fun (x : ED.stuck_goal) -> get_suspended_goal x.ED.blockers x.ED.kind) l
   let no_constraints = []
 
   let mkUnifVar ub ~args state =

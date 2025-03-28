@@ -1181,9 +1181,11 @@ module RawData : sig
   val of_hyp : Data.hyp -> hyp
   val of_hyps : Data.hyp list -> hyps
 
+  type blockers = FlexibleData.Elpi.t list
   type suspended_goal = {
     context : hyps;
-    goal : int * term
+    goal : int * term;
+    blockers : blockers;
   }
   val constraints : Data.constraints -> suspended_goal list
   val no_constraints : Data.constraints

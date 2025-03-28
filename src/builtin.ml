@@ -246,7 +246,12 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
           "% on Key1 Key2 ... (variables, or lists thereof).\n"^
           "external type declare_constraint any -> any -> variadic any fprop.");
   LPCode "external func print_constraints. % prints all constraints";
-
+  MLCode(Pred("print_constraints",
+    Full(raw_ctx,"prints all constraints"),
+    (fun ~depth _ constraints state ->
+      Util.printf "@[<hov 0>%a@]@\n%!" RawPp.constraints constraints;
+      state, (), []
+      )),DocAbove);
   MLCode(Pred("halt", VariadicIn(unit_ctx, !> BuiltInData.any, "halts the program and print the terms"),
   (fun args ~depth _ _ ->
      if args = [] then error "halt"
