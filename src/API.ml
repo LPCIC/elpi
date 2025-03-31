@@ -339,8 +339,8 @@ module RawOpaqueData = struct
       Format.fprintf fmt "@\n";
     end;
     Format.fprintf fmt "@[<hov 2>kind %s type.@]@\n@\n" name;
-    List.iter (fun (c,_) ->
-      Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
+    List.iter (fun (variant,(c,_)) ->
+      Format.fprintf fmt "@[<hov 2>external symbol %s : %s = \"%d\".@]@\n" c name variant)
       constants
     in
   { cin; cino; cout; isc; name = c },
@@ -348,13 +348,13 @@ module RawOpaqueData = struct
 
   let conversion_of_cdata (type a) ~name ?doc ?(constants=[]) ~compare ~pp cd =
     let module VM = Map.Make(struct type t = a let compare = compare end) in
-    let constants_map, values_map =
-      List.fold_right (fun (n,v) (cm,vm) ->
-        let c = ED.Global_symbols.declare_global_symbol n in
-        Util.Constants.Map.add c v cm, VM.add v c vm)
-      constants (Util.Constants.Map.empty,VM.empty) in
+    let constants_map, values_map, constants =
+      List.fold_right (fun (n,v) (cm,vm,cl) ->
+        let c, variant = ED.Global_symbols.declare_overloaded_global_symbol n in
+        Util.Constants.Map.add c v cm, VM.add v c vm,(variant,(n,v)) :: cl)
+      constants (Util.Constants.Map.empty,VM.empty,[]) in
     let values_map x = VM.find x values_map in
-    conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants ~pp cd
+    conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants:(List.rev constants) ~pp cd
 
   let declare { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = Util.CData.declare {
