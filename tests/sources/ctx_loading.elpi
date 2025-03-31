@@ -13,11 +13,11 @@ type c prop.
 type d1, d2, d3, d11, d22, d33 prop -> prop.
 
 main :-
-  p b ==> p a ==> p W, !, W = a,
-  [p a, p b] ==> p Y, !, Y = a, 
-  (p a, p b) ==> p Z, !, Z = a,
-  [a, b, c] ==>   declare_constraint (d1 X) [X],
-  c ==> b ==> a ==> declare_constraint (d2 X) [X],
-  (a, b, c) ==>   declare_constraint (d3 X) [X],
+  (p b ==> p a ==> p W), !, W = a,
+  ([p a, p b] ==> p Y), !, Y = a, 
+  ((p a, p b) ==> p Z), !, Z = a,
+  ([a, b, c] ==>   declare_constraint (d1 X) [X]),
+  (c ==> b ==> a ==> declare_constraint (d2 X) [X]),
+  ((a, b, c) =>   declare_constraint (d3 X) [X]),
   X = a.
 	

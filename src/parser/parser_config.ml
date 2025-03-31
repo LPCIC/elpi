@@ -118,7 +118,7 @@ let legacy_parser_compat_error =
   fprintf fmt "+ -----------------------------------";
   pp_print_tab fmt ();
   List.iter (fun { tokens; fixity; _ } ->
-    fprintf fmt "%a" pp_fixity fixity;
+    fprintf fmt "%a" pp_fixity fixity; 
     pp_print_tab fmt ();
     let s =
       let b = Buffer.create 80 in

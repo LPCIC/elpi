@@ -202,10 +202,10 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     (fun _ ->
      let open Elpi_lexer_config.Lexer_config in
      match prec with
-     | Some Infix when List.length xs = 1 ->
-        Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
-         (aux (hdlvl+1) depth) x pp_p p
-         (aux (hdlvl+1) depth) (List.hd xs)
+     | Some Infix (*when List.length xs = 1*) ->
+        let sep = Fmt.asprintf " %a " pp_p p in
+        Fmt.fprintf f "@[<hov 1>%a@]"
+         (pplist (aux (hdlvl+1) depth) sep) (x::xs)
      | Some Infixl when List.length xs = 1 ->
         Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
          (aux hdlvl depth) x pp_p p
@@ -289,7 +289,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     | Builtin(b,x::xs) ->
       (try
         let pprec, hdlvl =
-          if b == And then Some Elpi_lexer_config.Lexer_config.Infix, 110
+          if b == And then Some Elpi_lexer_config.Lexer_config.Infix, Elpi_parser.Parser_config.comma_precedence
           else
             let hd = func_of_builtin_predicate (fun x -> C.show ~table:pp_ctx.table x |> F.from_string) b in
             Elpi_parser.Parser_config.precedence_of (F.show hd) in
@@ -3193,8 +3193,8 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
            error ?loc "The head of a clause cannot be flexible"
        | Lam _ ->
            type_error ?loc "The head of a clause cannot be a lambda abstraction"
-       | Builtin _ ->
-           error ?loc "The head of a clause cannot be a builtin predicate"
+       | Builtin(c,_) ->
+           raise @@ CannotDeclareClauseForBuiltin(loc,c)
        | CData _ ->
            type_error ?loc "The head of a clause cannot be a builtin data type"
        | Cons _ | Nil -> assert false
@@ -4045,7 +4045,9 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     | Builtin(Delay,args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (show_builtin_predicate C.show Delay)];
       begin match Constraints.declare_constraint ~depth p (gid[@trace]) args with
       | () -> [%spy "user:rule:builtin" ~rid ~gid pp_string "success"];
-              [%tcall pop_andl alts next cutto_alts]
+              (match gs with
+              | [] -> [%tcall pop_andl alts next cutto_alts]
+              | { depth; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts])
       | exception No_clause -> 
               [%spy "user:rule:builtin" ~rid ~gid pp_string "fail"];
               [%tcall next_alt alts] end

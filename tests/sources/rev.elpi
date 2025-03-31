@@ -60,7 +60,6 @@ aux xnil  L  L .
 append (xcons X XS) L (xcons X L1)  :- append XS L L1 .
 append xnil L L .
 
-:untyped
 main :-
     X1 =  (xcons x1 (xcons x2 (xcons x3 (xcons x4 (xcons x5 (xcons x6 (xcons x7 (xcons x8 (xcons x9 (xcons x10 xnil)))))))))),
    append X1 X1 X2  ,

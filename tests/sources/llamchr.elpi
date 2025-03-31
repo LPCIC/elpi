@@ -19,6 +19,7 @@ constraint term {
 }
 
 % resilient to dummy ctx variables
+pred both_or_none i:prop, i:prop.
 both_or_none P Q :- P, !, Q.
 both_or_none P Q :- not P, not Q.
 

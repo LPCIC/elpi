@@ -887,7 +887,9 @@ end = struct
         ScopedTerm.Spill (scope_loc_term ~state ctx x,ref ScopedTerm.NoInfo)
     | App({ it = Const c }, l) when F.equal c F.implf || F.equal c F.rimplf ->
         begin match l with 
-        | [t1;t2] -> Impl (F.equal c F.implf, scope_loc_term ~state ctx t1, scope_loc_term ~state ctx t2)
+        | [t1;t2] ->           
+          (* Printf.eprintf "LHS= %s\n" (Ast.Term.show t1); *)
+          Impl (F.equal c F.implf, scope_loc_term ~state ctx t1, scope_loc_term ~state ctx t2)
         | _ -> error ~loc "implication is a binary operator"
         end
     | App({ it = Const c }, x :: xs) ->
@@ -1620,7 +1622,7 @@ end = struct
     R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
   let to_dbl ?(ctx=Scope.Map.empty) ~types ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
-    Format.eprintf "todbl: term : %a" ScopedTerm.pretty t;
+    (* Format.eprintf "todbl: term : %a" ScopedTerm.pretty t; *)
     let symb = ref symb in
     let amap = ref amap in
     let allocate_arg c =
@@ -1629,28 +1631,29 @@ end = struct
         let n = F.Map.cardinal !amap in
         amap := F.Map.add c n !amap;
         n in
-    let lookup_global c =
-      let c = Symbol.UF.find (Symbol.QMap.get_uf types.Type_checker.symbols) c in
-      Format.eprintf "LOOKUP %a\n" Symbol.pp c;
+    let lookup_global s =
+      let c = Symbol.UF.find (Symbol.QMap.get_uf types.Type_checker.symbols) s in
+      (* Format.eprintf "LOOKUP %a\n" Symbol.pp c; *)
       match SymbolMap.get_global_symbol !symb c with
       | None ->
-      Format.eprintf " NEW\n";
-         raise Not_found
-      | Some c ->
-      Format.eprintf "  FOUND %b\n" (is_builtin_predicate c);
+      (* Format.eprintf " NEW\n"; *)
+      let s, rc = SymbolMap.allocate_global_symbol state !symb s in
+      symb := s;
+      rc
+     | Some c ->
+      (* Format.eprintf "  FOUND %b\n" (is_builtin_predicate c); *)
         c, SymbolMap.get_canonical state !symb c in
     let allocate_global_symbol ~loc s c =
-      try match s with Some s -> lookup_global s | None -> Printf.eprintf "fishy %s\n" (F.show c); raise Not_found
-      with Not_found ->
-        match F.Map.find c types.Type_checker.overloading with
-        | TypeAssignment.Single s ->
-          let s, rc = SymbolMap.allocate_global_symbol state !symb s in
-          symb := s;
-          rc
-        | TypeAssignment.Overloaded _ ->
-            error ~loc ("untyped and non allocated symbol " ^ F.show c)
-        | exception Not_found ->
-            error ~loc ("untyped and non allocated symbol " ^ F.show c)
+      lookup_global @@
+        match s with
+        | Some s -> s
+        | None -> 
+          match F.Map.find c types.Type_checker.overloading with
+          | TypeAssignment.Single s -> s
+          | TypeAssignment.Overloaded _ ->
+              error ~loc ("untyped and non allocated symbol " ^ F.show c)
+          | exception Not_found ->
+              error ~loc ("untyped and non allocated symbol " ^ F.show c)
       in
     let lookup_bound loc (_,ctx) (c,l as x) =
       try Scope.Map.find x ctx
@@ -1721,8 +1724,8 @@ end = struct
       (clauses,symbols, index)
     else
     let (symbols, amap), body = to_dbl ~builtins ~types state symbols body in
-    Format.eprintf "FINAL %a\n" (R.Pp.ppterm 0 [] ~argsdepth:0 empty_env) body;
-    Format.eprintf "FINAL %a\n" (R.Pp.uppterm 0 [] ~argsdepth:0 empty_env) body;
+    (* Format.eprintf "FINAL %a\n" (R.Pp.ppterm 0 [] ~argsdepth:0 empty_env) body;
+    Format.eprintf "FINAL %a\n" (R.Pp.uppterm 0 [] ~argsdepth:0 empty_env) body; *)
     let modes x = Constants.Map.find_opt x indexing |> Option.map fst |> Option.value ~default:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body

@@ -1,4 +1,8 @@
-% q Y should yield Y = \\\f 2
-:untyped q Y :- pi b\ pi c\ (r :- pi a\ s (f a) => s (X b c a)) => r, Y = X.
+kind tm type.
 
-:untyped main :- q Y, Y = x\y\z\f z.
+pred q o:(tm -> tm -> tm -> prop).
+
+% q Y should yield Y = \\\f 2
+q Y :- pi b\ pi c\ (r :- pi a\ s (f a) => s (X b c a)) => r, Y = X.
+
+main :- q Y, Y = x\y\z\f z.
