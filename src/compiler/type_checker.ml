@@ -69,7 +69,15 @@ type indexing =
   | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
   | DontIndex
   | External of Elpi_parser.Ast.Structured.provenance option
-[@@deriving show, ord]
+[@@deriving show]
+
+let compatible_indexing i1 i2 =
+  match i1, i2 with
+  | Index(mode1,idx1), Index(mode2,idx2) -> Elpi_util.Util.Mode.(compare_hos mode1 mode2 == 0) && Elpi_runtime.Data.(compare_indexing idx1 idx2 == 0)
+  | DontIndex, _ -> true
+  | _, DontIndex -> true
+  | External _, External _ -> true
+  | _ -> false
 
 type symbol_metadata = {
   ty : TypeAssignment.skema;

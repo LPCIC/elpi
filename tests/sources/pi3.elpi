@@ -1,8 +1,9 @@
 % q X yields X=\0, i.e. X=b\b
 
-:untyped q X :- pi x\ pi y\ z (w\ X).
+pred z o:any.
+pred q o:any.
+q X :- pi x\ pi y\ z (w\ X).
+z (a\ a).
+z (a\ b\ b).
 
-:untyped z (a\ a).
-:untyped z (a\ b\ b).
-:untyped 
 main :- q X, X = b\b.
