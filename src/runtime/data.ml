@@ -508,6 +508,7 @@ module Symbol : sig
   val get_provenance : t -> provenance
   val get_str : t -> string
   val get_func : t -> F.t
+  val is_builtin : t -> F.t -> bool
 
   (* val map_func : (F.t -> F.t) -> t -> t *)
   
@@ -583,6 +584,9 @@ end = struct
   end
 
   let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
+
+  let is_builtin (p,f) s =
+    F.equal f s && match p with Builtin { variant } -> variant = 0 | _ -> false
 
   let get_provenance (l,_) = l
   let get_loc (l,f) =

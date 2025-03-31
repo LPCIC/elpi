@@ -307,6 +307,7 @@ type classification =
   | Unknown
 
 let prop = TypeAssignment.Prop Relation
+let fprop = TypeAssignment.Prop Function
 
 let rec classify_arrow = function
   | TypeAssignment.Arr(_,Variadic,x,tgt) -> Variadic { srcs = [x]; tgt }
@@ -619,9 +620,8 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
         then check_spill_conclusion_loc ~positive ~tyctx ctx y ~ety
         else error ~loc "Bad impl in spill"
     | App((Global _,c,tya as sc),x,xs) when F.equal c F.andf ->
-        if not @@ MutableOnce.is_set tya then
-          MutableOnce.set ~loc tya (Val (Arr (MVal Input, Variadic, Prop Function, Prop Function)));
-        let spills = check_loc ~positive ~tyctx ctx x ~ety:prop in
+        let _ = check_global ctx ~loc ~tyctx sc (mk_uvar "spill_and") in
+        let spills = check_loc ~positive ~tyctx ctx x ~ety:fprop in
         if spills <> [] then error ~loc "Hard spill";
         begin match xs with
         | [] -> assert false
