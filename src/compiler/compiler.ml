@@ -1246,7 +1246,7 @@ module Flatten : sig
     List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
 
   let merge_indexing s idx1 idx2 =
-    if Type_checker.compare_indexing idx1 idx2 <> 0 then
+    if not @@ Type_checker.compatible_indexing idx1 idx2 then
       error ~loc:(Symbol.get_loc s) ("Incompatible indexing options for symbol " ^ Symbol.get_str s);
     idx1
 

@@ -1,5 +1,5 @@
-symbol a int -> int.
-symbol a bool -> int.
-symbol a bool -> bool.
+symbol a : int -> int.
+symbol a : bool -> int.
+symbol a : bool -> bool.
 
 main :- 3 = a F.

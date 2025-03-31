@@ -1,6 +1,6 @@
 module control.
 
-pred if          i:prop, i:prop, i:prop.
+%pred if          i:prop, i:prop, i:prop.
 type once        o -> o.
 
 
@@ -8,8 +8,8 @@ type once        o -> o.
 % ``if Cond Then Else'' attempts to prove Then if the condition Cond
 % success; otherwise it attempts Else.  Notice the use of !.
 
-if Cond Then Else :- Cond, !, Then.
-if Cond Then Else :- Else.
+% if Cond Then Else :- Cond, !, Then.
+% if Cond Then Else :- Else.
 
 % Attempts to prove its argument and if it succeeds, backtracking is
 % disallowed by using !.

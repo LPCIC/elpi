@@ -68,6 +68,5 @@ eval_special plus  ((in N)::(in M)::nil) (in V) :- V is M + N.
 eval_special times ((in N)::(in M)::nil) (in V) :- V is M * N.
 eval_special zerop ((in N)::nil) V :- if (N = 0) (V = truth) (V = false).
 eval_special equal (B2::B1::nil) V :- if (B1 = B2) (V = truth) (V = false).
-:untyped % M > N wants inputs, but we cannot declare modes for Teyjus
 eval_special greater ((in N)::(in M)::nil) V :- 
   if (M > N) (V = truth) (V = false).
