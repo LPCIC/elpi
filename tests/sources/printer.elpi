@@ -1,10 +1,16 @@
-
-:untyped
+symbol r : int -> prop.
+symbol r : int -> int.
+symbol r : int -> string.
+symbol f : int -> int.
+symbol f : int -> string.
+symbol g : int -> int.
+symbol g : int -> string.
+symbol (,) : variadic int int.
 main :-
-  print (p X :- q X, r x),
+  print (p X :- (q X : prop), r x), % BUG
   print (X is f Y mod r X),
   print (X is f Y + r X * g A),
   print (X is (f Y + r X) * g A),
-  print (X is f Y ^ r X ^ g A),
+  print (X1 is f Y ^ r X ^ g A),
   print (X || A && B ===> G),
-  print [f X, g Y, (a , b), a + b].
+  print [(f X : int), g Y, (a , b), a + b].
