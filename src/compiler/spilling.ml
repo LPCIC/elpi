@@ -20,9 +20,10 @@ let is_prop ~extra x =
   aux extra ty
 
 let mk_global ~types f l =
-  let f = Symbol.make_builtin f in
-  let f_ty = (Symbol.QMap.find f types.Type_checker.symbols).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
-  (Scope.mkResolvedGlobal f), F.andf, f_ty
+  (* TODO: check only builtins *)
+  let s = Symbol.make_builtin f in
+  let f_ty = (Symbol.QMap.find s types.Type_checker.symbols).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
+  (Scope.mkResolvedGlobal s), f, f_ty
 
 let pif_ty_name ~types (_,_,ty) : 'a ty_name = mk_global ~types F.pif [TypeAssignment.deref ty]
 let pif_ty ~types ty = let _,_,ty = pif_ty_name ~types ty in ty
@@ -52,7 +53,7 @@ let app t args =
       mk_loc ~loc ~ty
       @@
       match it with
-      | App (((Global _, c, _) as n), x, xs) when F.equal c F.andf -> mkApp n (aux_last (x :: xs))
+      | App (((s, _, _) as n), x, xs) when Scope.is_builtin F.andf s -> mkApp n (aux_last (x :: xs))
       | Impl (b, s, t) -> Impl (b, s, aux t)
       | Const n -> mkApp n args
       | App (n, x, xs) -> mkApp n ((x :: xs) @ args)
@@ -122,17 +123,17 @@ let rec spill ~types ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; i
       let expr = app t vars in
       (spills @ [ { vars; vars_names; expr } ], vars)
   (* globals and builtins *)
-  | App (((Global _, c, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when F.equal F.pif c ->
+  | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when Scope.is_builtin F.pif s ->
       let ctx = v :: ctx in
       let spilled, t = spill1 ~types ctx args t in
       ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
-  | App (((Global _, c, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when F.equal F.sigmaf c ->
+  | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when Scope.is_builtin F.sigmaf s ->
       let ctx = ctx in
       (* not to be put in scope of spills *)
       let spilled, t = spill1 ~types ctx args t in
       ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
-  | App (((_, c, _) as hd), x, xs) ->
-      let last = if F.equal F.andf c then List.length xs else -1 in
+  | App (((s,_,_) as hd), x, xs) ->
+      let last = if Scope.is_builtin F.andf s then List.length xs else -1 in
       let spills, args =
         List.split @@ List.mapi (fun i -> spill ~types ~extra:(if i = last then extra else 0) ctx args) (x :: xs)
       in

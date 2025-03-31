@@ -1620,6 +1620,7 @@ end = struct
     R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
   let to_dbl ?(ctx=Scope.Map.empty) ~types ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
+    Format.eprintf "todbl: term : %a" ScopedTerm.pretty t;
     let symb = ref symb in
     let amap = ref amap in
     let allocate_arg c =
@@ -1630,14 +1631,16 @@ end = struct
         n in
     let lookup_global c =
       let c = Symbol.UF.find (Symbol.QMap.get_uf types.Type_checker.symbols) c in
-      (* Format.eprintf "LOOKUP %a\n" Symbol.pp c; *)
+      Format.eprintf "LOOKUP %a\n" Symbol.pp c;
       match SymbolMap.get_global_symbol !symb c with
-      | None -> raise Not_found
+      | None ->
+      Format.eprintf " NEW\n";
+         raise Not_found
       | Some c ->
-      (* Format.eprintf "  -> andc=%d %d\n" Global_symbols.andc c; *)
+      Format.eprintf "  FOUND %b\n" (is_builtin_predicate c);
         c, SymbolMap.get_canonical state !symb c in
     let allocate_global_symbol ~loc s c =
-      try match s with Some s -> lookup_global s | None -> raise Not_found
+      try match s with Some s -> lookup_global s | None -> Printf.eprintf "fishy %s\n" (F.show c); raise Not_found
       with Not_found ->
         match F.Map.find c types.Type_checker.overloading with
         | TypeAssignment.Single s ->
@@ -1718,6 +1721,8 @@ end = struct
       (clauses,symbols, index)
     else
     let (symbols, amap), body = to_dbl ~builtins ~types state symbols body in
+    Format.eprintf "FINAL %a\n" (R.Pp.ppterm 0 [] ~argsdepth:0 empty_env) body;
+    Format.eprintf "FINAL %a\n" (R.Pp.uppterm 0 [] ~argsdepth:0 empty_env) body;
     let modes x = Constants.Map.find_opt x indexing |> Option.map fst |> Option.value ~default:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
