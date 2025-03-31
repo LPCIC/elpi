@@ -91,87 +91,87 @@ external func calc A -> A.
 
 %  --- Operators ---
 
-external symbol (-) : A -> A -> A = "1". 
+external symbol (-) : A -> A -> A = "0". 
 
-external symbol (i-) : int -> int -> int = "2". 
+external symbol (i-) : int -> int -> int = "0". 
 
-external symbol (r-) : float -> float -> float = "3". 
+external symbol (r-) : float -> float -> float = "0". 
 
-external symbol (+) : float -> float -> float = "5". 
+external symbol (+) : float -> float -> float = "1". 
 
-external symbol (+) : int -> int -> int = "4". 
+external symbol (+) : int -> int -> int = "0". 
 
-external symbol (i+) : int -> int -> int = "6". 
+external symbol (i+) : int -> int -> int = "0". 
 
-external symbol (r+) : float -> float -> float = "7". 
+external symbol (r+) : float -> float -> float = "0". 
 
-external symbol (*) : float -> float -> float = "9". 
+external symbol (*) : float -> float -> float = "1". 
 
-external symbol (*) : int -> int -> int = "8". 
+external symbol (*) : int -> int -> int = "0". 
 
-external symbol (/) : float -> float -> float = "10". 
+external symbol (/) : float -> float -> float = "0". 
 
-external symbol (mod) : int -> int -> int = "11". 
+external symbol (mod) : int -> int -> int = "0". 
 
-external symbol (div) : int -> int -> int = "12". 
+external symbol (div) : int -> int -> int = "0". 
 
-external symbol (^) : string -> string -> string = "13". 
+external symbol (^) : string -> string -> string = "0". 
 
-external symbol (~) : float -> float = "15". 
+external symbol (~) : float -> float = "1". 
 
-external symbol (~) : int -> int = "14". 
+external symbol (~) : int -> int = "0". 
 
-external symbol (i~) : int -> int = "16". 
+external symbol (i~) : int -> int = "0". 
 
-external symbol (r~) : float -> float = "17". 
+external symbol (r~) : float -> float = "0". 
 
-external symbol abs : float -> float = "19".
+external symbol abs : float -> float = "1".
 
-external symbol abs : int -> int = "18".
+external symbol abs : int -> int = "0".
 
-external symbol iabs : int -> int = "20".
+external symbol iabs : int -> int = "0".
 
-external symbol rabs : float -> float = "21".
+external symbol rabs : float -> float = "0".
 
-external symbol max : float -> float -> float = "23".
+external symbol max : float -> float -> float = "1".
 
-external symbol max : int -> int -> int = "22".
+external symbol max : int -> int -> int = "0".
 
-external symbol min : float -> float -> float = "25".
+external symbol min : float -> float -> float = "1".
 
-external symbol min : int -> int -> int = "24".
+external symbol min : int -> int -> int = "0".
 
-external symbol sqrt : float -> float = "26".
+external symbol sqrt : float -> float = "0".
 
-external symbol sin : float -> float = "27".
+external symbol sin : float -> float = "0".
 
-external symbol cos : float -> float = "28".
+external symbol cos : float -> float = "0".
 
-external symbol arctan : float -> float = "29".
+external symbol arctan : float -> float = "0".
 
-external symbol ln : float -> float = "30".
+external symbol ln : float -> float = "0".
 
-external symbol int_to_real : int -> float = "31".
+external symbol int_to_real : int -> float = "0".
 
-external symbol floor : float -> int = "32".
+external symbol floor : float -> int = "0".
 
-external symbol ceil : float -> int = "33".
+external symbol ceil : float -> int = "0".
 
-external symbol truncate : float -> int = "34".
+external symbol truncate : float -> int = "0".
 
-external symbol size : string -> int = "35".
+external symbol size : string -> int = "0".
 
-external symbol chr : int -> string = "36".
+external symbol chr : int -> string = "0".
 
-external symbol rhc : string -> int = "37".
+external symbol rhc : string -> int = "0".
 
-external symbol string_to_int : string -> int = "38".
+external symbol string_to_int : string -> int = "0".
 
-external symbol int_to_string : int -> string = "39".
+external symbol int_to_string : int -> string = "0".
 
-external symbol substring : string -> int -> int -> string = "40".
+external symbol substring : string -> int -> int -> string = "0".
 
-external symbol real_to_string : float -> string = "41".
+external symbol real_to_string : float -> string = "0".
 
 %  -- Arithmetic tests --
 
@@ -245,12 +245,12 @@ type ([]) list X.
 
 % Boolean values: tt and ff since true and false are predicates
 kind bool type.
-type tt bool.
-type ff bool.
+external symbol tt : bool = "0". 
+external symbol ff : bool = "0". 
 
 % Pair: the constructor is pr, since ',' is for conjunction
 kind pair type -> type -> type.
-type pr A -> B -> pair A B.
+external symbol pr : A -> B -> pair A B = "0". 
 
 func fst  pair A B -> A.
 
@@ -277,19 +277,19 @@ triple_3 (triple _ _ C) C.
 
 % The option type (aka Maybe)
 kind option type -> type.
-type none option A.
-type some A -> option A.
+external symbol none : option A = "0". 
+external symbol some : A -> option A = "0". 
 
 % Result of a comparison
 kind cmp type.
-type eq cmp.
-type lt cmp.
-type gt cmp.
+external symbol eq : cmp = "0". 
+external symbol lt : cmp = "0". 
+external symbol gt : cmp = "0". 
 
 % Used in builtin variants that return Coq's error rather than failing
 kind diagnostic type.
-type ok diagnostic. % Success
-type error string -> diagnostic. % Failure
+external symbol ok : diagnostic = "0".  % Success
+external symbol error : string -> diagnostic = "0".  % Failure
 
 %  == I/O builtins =====================================
 
@@ -297,12 +297,12 @@ type error string -> diagnostic. % Failure
 
 kind in_stream type.
 
-type std_in in_stream.
+external symbol std_in : in_stream = "0".
 
 kind out_stream type.
 
-type std_out out_stream.
-type std_err out_stream.
+external symbol std_err : out_stream = "0".
+external symbol std_out : out_stream = "0".
 
 % [open_in FileName InStream] opens FileName for input
 external func open_in string -> in_stream.
@@ -349,7 +349,8 @@ external func system string -> int.
 
 % gathers the standard file descriptors or a process
 kind unix.process type.
-type unix.process out_stream -> in_stream -> in_stream -> unix.process.
+external symbol unix.process : out_stream -> in_stream -> in_stream ->
+                               unix.process = "0". 
 
 % [unix.process.open Executable Arguments Environment P Diagnostic] OCaml's
 % Unix.open_process_args_full.

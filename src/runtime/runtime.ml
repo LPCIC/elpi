@@ -191,6 +191,39 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
      Fmt.fprintf f "≪%a≫_%d" (aux min_prec argsdepth) env.(n) argsdepth
    end else Fmt.fprintf f "≪%a≫_%d" (aux min_prec argsdepth) env.(n) argsdepth
 
+   and with_parens prec ?(test=true) myprec h =
+    if test && myprec < prec then
+     (Fmt.fprintf f "(" ; h () ; Fmt.fprintf f ")")
+    else h ()
+
+   and pp_mixfix  : type a. int-> int -> _ option -> int -> a -> (Format.formatter -> a -> unit) -> _ =
+    fun depth cprec prec hdlvl p pp_p x xs ->
+    with_parens cprec hdlvl
+    (fun _ ->
+     let open Elpi_lexer_config.Lexer_config in
+     match prec with
+     | Some Infix when List.length xs = 1 ->
+        Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
+         (aux (hdlvl+1) depth) x pp_p p
+         (aux (hdlvl+1) depth) (List.hd xs)
+     | Some Infixl when List.length xs = 1 ->
+        Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
+         (aux hdlvl depth) x pp_p p
+         (aux (hdlvl+1) depth) (List.hd xs)
+     | Some Infixr when List.length xs = 1 ->
+        Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
+         (aux (hdlvl+1) depth) x pp_p p
+         (aux hdlvl depth) (List.hd xs)
+     | Some Prefix when xs = [] ->
+        Fmt.fprintf f "@[<hov 1>%a@ %a@]" pp_p p
+         (aux hdlvl depth) x
+     | Some Postfix when xs = [] ->
+        Fmt.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
+         pp_p p 
+     | _ ->
+        pp_app f pp_p (aux inf_prec depth)
+         ~pplastarg:(aux_last inf_prec depth) (p,x::xs))
+
   (* ::(a, ::(b, nil))  -->  [a,b] *)
   and flat_cons_to_list depth acc t = match t with
       UVar (r,vardepth,terms) when !!r != C.dummy ->
@@ -221,10 +254,6 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
    | _ -> aux prec depth f t
    end else aux inf_prec depth f t
   and aux prec depth f t =
-   let with_parens ?(test=true) myprec h =
-    if test && myprec < prec then
-     (Fmt.fprintf f "(" ; h () ; Fmt.fprintf f ")")
-    else h () in
    match t with
    | (Cons _ | Nil) ->
       let prefix,last = flat_cons_to_list depth [] t in
@@ -238,63 +267,44 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     | Const s -> ppconstant f s
     | App (hd,x,xs) ->
        (try
-         let prec, hdlvl =
+         let pprec, hdlvl =
            Elpi_parser.Parser_config.precedence_of (C.show ~table:pp_ctx.table hd) in
-         with_parens hdlvl
-         (fun _ ->
-          let open Elpi_lexer_config.Lexer_config in
-          match prec with
-          | Some Infix when List.length xs = 1 ->
-             Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
-              (aux (hdlvl+1) depth) x ppconstant hd
-              (aux (hdlvl+1) depth) (List.hd xs)
-          | Some Infixl when List.length xs = 1 ->
-             Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
-              (aux hdlvl depth) x ppconstant hd
-              (aux (hdlvl+1) depth) (List.hd xs)
-          | Some Infixr when List.length xs = 1 ->
-             Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
-              (aux (hdlvl+1) depth) x ppconstant hd
-              (aux hdlvl depth) (List.hd xs)
-          | Some Prefix when xs = [] ->
-             Fmt.fprintf f "@[<hov 1>%a@ %a@]" ppconstant hd
-              (aux hdlvl depth) x
-          | Some Postfix when xs = [] ->
-             Fmt.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
-              ppconstant hd 
-          | _ ->
-             pp_app f ppconstant (aux inf_prec depth)
-              ~pplastarg:(aux_last inf_prec depth) (hd,x::xs))
+         pp_mixfix depth prec pprec hdlvl hd ppconstant x xs
         with Not_found -> 
          let lastarg = List.nth (x::xs) (List.length xs) in
          let hdlvl =
           if is_lambda depth lastarg then lam_prec
           else appl_prec in
-         with_parens hdlvl (fun _ ->
+         with_parens prec hdlvl (fun _ ->
            pp_app f ppconstant (aux inf_prec depth)
                  ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
     | Builtin (Eq,[a;b]) ->
       let _, hdlvl =
         Elpi_parser.Parser_config.precedence_of (F.show F.eqf) in
-      with_parens hdlvl (fun _ ->
+      with_parens prec hdlvl (fun _ ->
         Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
           (aux (hdlvl+1) depth) a F.pp F.eqf
           (aux (hdlvl+1) depth) b)
     | Builtin(b,[]) -> Fmt.fprintf f "%a" ppbuiltin b
     | Builtin(b,x::xs) ->
-      let lastarg = List.nth (x::xs) (List.length xs) in
-      let hdlvl =
-       if is_lambda depth lastarg then lam_prec
-       else if b == And then 110
-       else appl_prec in
-      with_parens hdlvl (fun _ ->
-       if b == And then
-         pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) ", " f (x::xs)
-       else pp_app f ppbuiltin (aux inf_prec depth)
-              ~pplastarg:(aux_last inf_prec depth) (b,x::xs))
+      (try
+        let pprec, hdlvl =
+          if b == And then Some Elpi_lexer_config.Lexer_config.Infix, 110
+          else
+            let hd = func_of_builtin_predicate (fun x -> C.show ~table:pp_ctx.table x |> F.from_string) b in
+            Elpi_parser.Parser_config.precedence_of (F.show hd) in
+          pp_mixfix depth prec pprec hdlvl b ppbuiltin x xs
+       with Not_found -> 
+        let lastarg = List.nth (x::xs) (List.length xs) in
+        let hdlvl =
+         if is_lambda depth lastarg then lam_prec
+         else appl_prec in
+        with_parens prec hdlvl (fun _ ->
+          pp_app f ppbuiltin (aux inf_prec depth)
+                ~pplastarg:(aux_last inf_prec depth) (b,x::xs)))
     | UVar (r,vardepth,argsno) when not nice ->
        let args = List.map destConst (C.mkinterval vardepth argsno 0) in
-       with_parens ~test:(args <> []) appl_prec (fun _ ->
+       with_parens prec  ~test:(args <> []) appl_prec (fun _ ->
         Fmt.fprintf f "." ;
         pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
     | UVar (r,vardepth,argsno) when !!r == C.dummy ->
@@ -303,26 +313,26 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
        let vardepth = vardepth - diff in
        let argsno = argsno + diff in
        let args = List.map destConst (C.mkinterval vardepth argsno 0) in
-       with_parens ~test:(args <> []) appl_prec (fun _ ->
+       with_parens prec ~test:(args <> []) appl_prec (fun _ ->
         pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
     | UVar (r,vardepth,argsno) ->
        pp_uvar prec depth vardepth argsno f r
     | AppUVar (r,vardepth,terms) when !!r != C.dummy && nice ->
        aux prec depth f (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | AppUVar (r,vardepth,terms) -> 
-       with_parens appl_prec (fun _ ->
+       with_parens prec appl_prec (fun _ ->
         pp_app f (pp_uvar inf_prec depth vardepth 0) (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (r,terms))
     | Arg (n,argsno) ->
        let args = List.map destConst (C.mkinterval argsdepth argsno 0) in
-       with_parens ~test:(args <> []) appl_prec (fun _ ->
+       with_parens prec ~test:(args <> []) appl_prec (fun _ ->
         pp_app f (pp_arg prec depth) ppconstant (n,args))
     | AppArg (v,terms) ->
-       with_parens appl_prec (fun _ ->
+       with_parens prec appl_prec (fun _ ->
         pp_app f (pp_arg inf_prec depth) (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (v,terms))
     | Lam t ->
-       with_parens lam_prec (fun _ ->
+       with_parens prec lam_prec (fun _ ->
         let c = mkConst depth in
         Fmt.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux min_prec (depth+1)) t)

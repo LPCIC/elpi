@@ -597,9 +597,14 @@ end = struct
   let make prov name = prov, name
   let make_builtin ?(variant=0) name = Builtin { variant }, name
   let make_variant_builtin =
-    let n = ref 0 in
+    let state = ref F.Map.empty in
+    let incr name =
+      let n = try F.Map.find name !state with Not_found -> -1 in
+      let n = n + 1 in
+      state := F.Map.add name n !state;
+      n in
     fun name ->
-      let variant = incr n; !n in
+      let variant = incr name in
       (Builtin { variant }, name), variant
 end
 
@@ -1338,16 +1343,17 @@ let compile_constructors ty self self_name l =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then
     anomaly ("Duplicate constructors name in ADT: " ^ Conversion.show_ty_ast ty);
-  List.fold_left (fun (acc,sacc) (K(name,_,a,b,m)) ->
-    let c = Global_symbols.declare_global_symbol name in
+  List.fold_left (fun (vacc, acc,sacc) (K(name,_,a,b,m)) ->
+    let c, variant = Global_symbols.declare_overloaded_global_symbol name in
     let args = compile_arguments a self in
+    StrMap.add  name variant vacc,
     Constants.Map.add c (XK(args,compile_builder a b,compile_matcher a m)) acc,
     StrMap.add name (tyargs_of_args self_name args) sacc)
-      (Constants.Map.empty,StrMap.empty) l
+      (StrMap.empty, Constants.Map.empty,StrMap.empty) l
 
-let document_constructor fmt name doc argsdoc =
-  Fmt.fprintf fmt "@[<hov2>type %s@[<hov>%a.%s@]@]@\n"
-    name pp_ty_args argsdoc (if doc = "" then "" else " % " ^ doc)
+let document_constructor fmt name variant doc argsdoc =
+  Fmt.fprintf fmt "@[<hov2>external symbol %s :@[<hov>%a@] = \"%d\". %s@]@\n"
+    name pp_ty_args argsdoc variant (if doc = "" then "" else " % " ^ doc)
 
 let document_kind fmt = function
   | Conversion.TyApp(s,_,l) ->
@@ -1357,31 +1363,33 @@ let document_kind fmt = function
         s (String.concat " -> " (Array.to_list l))
   | Conversion.TyName s -> Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
 
-let document_adt doc ty ks cks fmt () =
+let document_adt doc ty ks cks vks fmt () =
   if doc <> "" then
     begin pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n" end;
   document_kind fmt ty;
   List.iter (fun (K(name,doc,_,_,_)) ->
     if name <> "uvar" then
       let argsdoc = StrMap.find name cks in
-      document_constructor fmt name doc argsdoc) ks
+      document_constructor fmt name (StrMap.find name vks) doc argsdoc) ks
 
 let adt ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar { ty; constructors; doc; pp } =
   let readback_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let embed_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let sconstructors_ref = ref StrMap.empty in
+  let vconstructors_ref = ref StrMap.empty in
   let self = {
     ContextualConversion.ty;
     pp;
     pp_doc = (fun fmt () ->
-      document_adt doc ty constructors !sconstructors_ref fmt ());
+      document_adt doc ty constructors !sconstructors_ref !vconstructors_ref fmt ());
     readback = (fun ~depth hyps constraints state term ->
       !readback_ref ~depth hyps constraints state term);
     embed = (fun ~depth hyps constraints state term ->
       !embed_ref ~depth hyps constraints state term);
   } in
-  let cconstructors, sconstructors = compile_constructors ty self (Conversion.show_ty_ast ty) constructors in
+  let vconstructors, cconstructors, sconstructors = compile_constructors ty self (Conversion.show_ty_ast ty) constructors in
   sconstructors_ref := sconstructors;
+  vconstructors_ref := vconstructors;
   readback_ref := readback ~mkinterval ~look ~alloc ~mkUnifVar ty cconstructors;
   embed_ref := embed ~mkConst ty pp cconstructors;
   self
