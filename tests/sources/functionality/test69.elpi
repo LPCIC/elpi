@@ -1,0 +1,9 @@
+% NO
+
+% Note that in the example, below, due to the load of local clauses,
+% f is not a function.
+pred x.
+func f -> int.
+f Y :- (x :- Y = 3) => (x :- Y = 4) => x.
+
+main.

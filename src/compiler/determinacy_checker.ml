@@ -227,6 +227,8 @@ class good_call =
   end
 
 let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
+  let is_global (b, f, _) name =
+    (match b with Scope.Global _ -> true | _ -> false) && (F.equal name f) in
   let is_quantifier (b, f, _) =
     (match b with Scope.Global _ -> true | _ -> false) && (F.equal F.pif f || F.equal F.sigmaf f)
   in
@@ -240,7 +242,7 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
 
   (* let exception IGNORE in *)
 
-  let is_cut ScopedTerm.{ it } = match it with Const (Global _, name, _) -> F.equal F.cutf name | _ -> false in
+  let is_cut ScopedTerm.{ it } = match it with Const b -> is_global b F.cutf | _ -> false in
 
   let rec infer ~ctx ~var t : dtype * good_call =
     let rec infer_fold ~was_input ~was_data ~loc ctx d tl =
@@ -443,8 +445,9 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
       | _ -> var
     in
     assume_output d tl var
-  (* returns the updated environment, the dtype of the term and the loc of the term with max dtype *)
-  and check ~ctx ~var d t =
+  (* returns the updated environment, the dtype of the term and if it has a top level cut *)
+  and check ~ctx ~var d t : UVar.t * dtype * bool =
+    let has_top_level_cut = ref false in
     let var = ref var in
     let rec check_app ctx ~loc d ~is_var b tl tm =
       Format.eprintf "-- Entering check_app with term %a@." ScopedTerm.pretty tm;
@@ -468,11 +471,13 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
           (* We clone not to change the ctx and var in the call for b *)
           check_clause ~ctx ~var:!var h |> ignore;
           check ~ctx d b
-      | Const (Global _, cut, _) when F.equal F.cutf cut -> Det
+      | Const b when is_global b F.cutf -> Det
+      | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
+        check ~ctx:(BVar.add_oname ~loc b (Compilation.type_ass_2func_mut ~loc env) ctx) d bo
       (* Cons and nil case may appear in prop position for example in : `f :- [print a, print b, a].` *)
-      | App ((Global _, cons, _), x, [ xs ]) when F.equal F.consf cons -> check ~ctx (check ~ctx d x) xs
-      | Const (Global _, nil, _) when F.equal F.nilf nil -> d
-      | App ((Global _, comma, _), x, xs) when F.equal F.andf comma -> check_comma ctx ~loc d (x :: xs)
+      | App (b, x, [ xs ]) when is_global b F.consf -> check ~ctx (check ~ctx d x) xs
+      | Const b when is_global b F.nilf -> d
+      | App (b, x, xs) when is_global b F.andf -> check_comma ctx ~loc d (x :: xs)
       (* smarter than paper, we assume the min of the inference of both. Equivalent
          to elaboration t = s ---> eq1 t s, eq1 s t
          with func eq1 A -> A. *)
@@ -488,25 +493,7 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
                var := assume ~ctx ~var:!var m l;
                var := assume ~ctx ~var:!var m r));
           d
-      (* !! predicate with arity 0 must be checked according to odet: eg
-
-           pred true.
-           true.
-           true.
-           func f.
-           f :- true.
-
-          If we look for Warren's functionality, then the example above could
-          be accepted since there is no output, and more in general a 0-ary
-          predicate cannot unify anything. BUT with implication this is no more
-          true:
-
-           pred x.
-           func f -> int.
-           f Y :- (x :- Y = 3) => (x :- Y = 4) => x.
-
-         but we accept it if ! follows x.
-      *)
+      (* Const are checked due to test68.elpi and test69.elpi *)
       | Const b -> check_app ctx ~loc d ~is_var:false b [] t
       | Var (b, xs) -> check_app ctx ~loc d ~is_var:true b xs t
       | App (b, x, xs) -> check_app ctx ~loc d ~is_var:false b (x :: xs) t
@@ -525,7 +512,7 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
       | Discard -> anomaly ~loc "Discard found in prop position"
       | Impl (false, hd, tl) -> anomaly ~loc "Found clause in prop position"
     in
-    (!var, check ~ctx d t)
+    (!var, check ~ctx d t, !has_top_level_cut)
   and check_lam ~ctx ~var t : dtype =
     let get_ta n args =
       let ta_sk, _ = F.Map.find n env in
@@ -588,13 +575,14 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
             { t with ty = TypeAssignment.create r }
     in
     aux ~ctx ~args:[] ~parial_app:[] t
-  and check_clause ~ctx ~var ScopedTerm.({ it; ty; loc } as t) =
+  (* returns the determinacy of the clause and if the clause has a cut in it *)
+  and check_clause ?(is_toplevel = false) ~ctx ~var ScopedTerm.({ it; ty; loc } as t) : dtype =
     let ctx = ref (BVar.clone ctx) in
     let var = UVar.clone var in
     let assume_hd b is_var (tm : ScopedTerm.t) =
-      (* let _ =
+      let _ =
         let do_filter = false in
-        let only_check = "" in
+        let only_check = "f" in
         let loc = "test" in
         let _, name, _ = b in
         let bregexp s = Re.Str.regexp (".*" ^ s ^ ".*") in
@@ -603,9 +591,14 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
           && Re.Str.(
                string_match (bregexp only_check) (F.show name) 0 && string_match (bregexp loc) (Loc.show tm.loc) 0)
              |> not
-        then raise IGNORE
+        then raise LoadFlexClause;
+        Format.eprintf "=================================================@.";
+        Format.eprintf "Checking clause %a at (%a)@." ScopedTerm.pretty t Loc.pp t.loc;
+        Format.eprintf "The var map is %a@." UVar.pp var;
+        Format.eprintf "** START CHECKING THE CLAUSE@."
         (* else assert false *)
-      in *)
+      in
+
       let det_hd = get_dtype ~env ~ctx:!ctx ~var ~loc:tm.loc ~is_var b in
       Format.eprintf "Calling assume in hd for terms list %a@." ScopedTerm.pretty tm;
       (det_hd, assume ~ctx:!ctx ~var det_hd tm)
@@ -626,13 +619,11 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
       | _ -> anomaly ~loc @@ Format.asprintf "Found term %a in prop position" ScopedTerm.pretty_ it
     in
 
-    Format.eprintf "=================================================@.";
-    Format.eprintf "Checking clause %a at (%a)@." ScopedTerm.pretty t Loc.pp loc;
-    Format.eprintf "The var map is %a@." UVar.pp var;
-    Format.eprintf "** START CHECKING THE CLAUSE@.";
     let (det_hd, var), hd, body = aux t in
-    let var, det_body = Option.(map (check ~ctx:!ctx ~var Det) body |> value ~default:(var, Det)) in
-    Format.eprintf "** END CHECKING THE CLAUSE@.";
+    let var, det_body, has_top_level_cut =
+      Option.(map (check ~ctx:!ctx ~var Det) body |> value ~default:(var, Det, false))
+    in
+    Format.eprintf "** END CHECKING THE CLAUSE @.";
     Format.eprintf "The var map is %a and det_body is %a@." UVar.pp var pp_dtype det_body;
 
     let det_pred = get_tl det_hd in
@@ -642,8 +633,7 @@ let check_clause ~(env:t) (t:ScopedTerm.t) : bool =
     infer_output ~ctx:!ctx ~var hd;
     det_pred
   in
-  try (check_clause ~ctx:BVar.empty ~var:UVar.empty t) = Det
-  with
+  try check_clause ~is_toplevel:true ~ctx:BVar.empty ~var:UVar.empty t = Det with
   | LoadFlexClause -> false
   | FatalDetError(msg,loc) -> error ~loc ("DetCheck: " ^ msg)
   | DetError(msg,loc) -> error ~loc ("DetCheck: " ^ msg)
