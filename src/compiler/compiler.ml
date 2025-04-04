@@ -1734,6 +1734,8 @@ end = struct
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
 
+    let index = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index in
+
     if is_deterministic then (
       let hd_query p { args; mode } =
         let rec mkpats args mode =
@@ -1745,19 +1747,33 @@ end = struct
           | _ -> assert false
         in
         R.mkAppL p @@ mkpats args mode in
-      let overlaps = R.CompileTime.get_clauses ~depth:0 p (hd_query p cl) index in
-      let bang = mkBuiltin Cut [] in
-      let has_no_bang { hyps } = List.for_all (fun t -> t <> bang) hyps in
-      let overlaps = List.find_opt has_no_bang (Bl.to_list overlaps) in
-      Option.iter (fun (cl:clause) ->
-        match cl.loc with
-        | None -> warn ~loc "overlaps with anonymous clause"
-        | Some loc1 -> warn ~loc ("overlaps with clause at " ^ Loc.show loc1)
-      ) overlaps);
-
-    let index = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index in
-
-
+      let valid_clause (cl : clause) =
+        let overlapping = R.CompileTime.get_clauses ~check_mut_excl:true ~depth:0 p (hd_query p cl) index in
+        let rec has_bang (t : term list) : bool =
+          match t with
+          | [] -> false
+          | Builtin (Cut, []) :: _ -> true
+          | Builtin (Pi, [Lam b]) :: xs | Builtin (Sigma, [Lam b]) :: xs -> has_bang [b] || has_bang xs
+          | Builtin (Impl, [_; l]) :: xs -> has_bang [l] || has_bang xs
+          | Builtin (And, l) :: xs -> has_bang l || has_bang xs
+          | _ :: xs -> has_bang xs
+        in
+        let rec check_overlaps = function
+          | [] -> assert false
+          | x::xs when Option.equal Loc.equal x.Data.loc (Some loc) ->
+              if (xs = [] || has_bang x.hyps) then []
+              else xs
+          | x::xs -> 
+            if not (has_bang x.hyps) then (x::check_overlaps xs)
+            else check_overlaps xs
+        in
+      let overlaps = check_overlaps (Bl.to_list overlapping) in
+      if overlaps <> [] then
+        let to_str = List.map (fun e -> Format.asprintf "overlaps with %s --> %a" 
+          (Option.value ~default:"anonymous clause" (Option.map Loc.show e.loc)) (pplist pp_term ", ") e.hyps) overlaps  in
+        error ~loc (Format.asprintf "- %s@." (String.concat  "\n - " to_str))
+      in valid_clause cl
+    );
 
     (graft,id,p,cl) :: clauses, symbols, index
 
