@@ -85,5 +85,5 @@ module CompileTime : sig
     nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 
 
-  val get_clauses : depth:int -> constant -> term -> index -> clause Bl.scan
+  val get_clauses : ?check_mut_excl:bool -> depth:int -> constant -> term -> index -> clause Bl.scan
 end

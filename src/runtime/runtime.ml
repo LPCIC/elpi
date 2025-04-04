@@ -2599,7 +2599,7 @@ let max_lists_length = List.fold_left (fun acc e -> max (max_list_length 0 e) ac
   - mp is the max_path size of any path in the index used to truncate the goal
   - max_list_length is the length of the longest sublist in each term of args 
 *)
-let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode mp (max_list_length':int) : Discrimination_tree.Path.t =
+let arg_to_trie_path ?(check_mut_excl=false) ~safe ~depth ~is_goal args arg_depths args_depths_ar mode mp (max_list_length':int) : Discrimination_tree.Path.t =
   let open Discrimination_tree in
 
   let path_length = mp + Array.length args_depths_ar + 1 in
@@ -2648,7 +2648,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
     | Builtin _ | CData _ | Lam _ -> 
         type_error (Format.asprintf "[DT]: not a list: %a" (Pp.ppterm depth [] ~argsdepth:0 Data.empty_env) (deref_head ~depth t))
 
-  and emit_mode is_goal mode = if is_goal then Path.emit path mode
+  and emit_mode is_goal mode = if is_goal then if check_mut_excl then Path.emit path mkOutputMode else Path.emit path mode
   (** gives the path representation of a list of sub-terms *)
   and arg_to_trie_path_aux ~safe ~depth t_list path_depth : unit = 
     if path_depth = 0 then update_current_min_depth path_depth
@@ -2741,7 +2741,7 @@ let add_clause_to_snd_lvl_idx ~depth ~insert predicate clause = function
       (* uvar: matches only flexible terms (or itself at the meta level) *)
       let clauses =
         try Ptmap.find mustbevariablec arg_idx
-        with Not_found -> Bl.empty() in
+        with Not_found -> Bl.empty () in
       TwoLevelIndex {
           argno; mode;
         all_clauses = insert clause all_clauses;
@@ -2970,7 +2970,7 @@ let trie_goal_args goal : term list = match goal with
 
 let cmp_timestamp { timestamp = tx } { timestamp = ty } = lex_insertion tx ty
 
-let get_clauses ~depth predicate goal { idx = m } =
+let get_clauses ?(check_mut_excl = false) ~depth predicate goal { idx = m } =
  let rc =
    try
      match Ptmap.find predicate m with
@@ -2989,7 +2989,7 @@ let get_clauses ~depth predicate goal { idx = m } =
         let max_depths = Discrimination_tree.max_depths args_idx in
         let max_path = Discrimination_tree.max_path args_idx in
         let max_list_length = Discrimination_tree.max_list_length args_idx in
-        let path = arg_to_trie_path ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths max_depths mode max_path max_list_length in
+        let path = arg_to_trie_path ~check_mut_excl ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths max_depths mode max_path max_list_length in
         [%spy "dev:disc-tree:depth-path" ~rid pp_string "Goal: MaxDepths " (pplist pp_int ";") (Array.to_list max_depths)];
         [%spy "dev:disc-tree:list-size-path" ~rid pp_string "Goal: MaxListSize " pp_int max_list_length];
         (* Format.(printf "Goal: MaxDepth is %a\n" (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_int) (Discrimination_tree.max_depths args_idx |> Array.to_list)); *)
