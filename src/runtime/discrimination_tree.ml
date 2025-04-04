@@ -55,6 +55,7 @@ let mkListHead = encode ~k:kOther ~data:4 ~arity:0
 let mkListEnd = encode ~k:kOther ~data:5 ~arity:0 
 let mkPathEnd = encode ~k:kOther ~data:6 ~arity:0
 let mkListTailVariableUnif = encode ~k:kOther ~data:7 ~arity:0
+let mkUvarVariable = encode ~k:kVariable ~data:8 ~arity:0
 
 
 let isVariable x = x == mkVariable
@@ -66,6 +67,7 @@ let isListEnd x = x == mkListEnd
 let isListTailVariable x = x == mkListTailVariable
 let isListTailVariableUnif x = x == mkListTailVariableUnif
 let isPathEnd x = x == mkPathEnd
+let isUvarVariable x = x == mkUvarVariable
 
 type cell = int
 
@@ -86,6 +88,7 @@ let pp_cell fmt n =
        else if isPathEnd n then "PathEnd"
        else if isListTailVariableUnif n then "ListTailVariableUnif"
        else if isAny n then "Other"
+       else if isUvarVariable n then "uvar"
        else failwith "Invalid path construct...")
   else if k == kPrimitive then Format.fprintf fmt "Primitive"
   else Format.fprintf fmt "%o" k
@@ -348,7 +351,9 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
       if get_all_children hd mode then 
         (* we take all the children in the map *)
         on_all_children ~pos:(pos+1) ~add_result mode path map
-      else if isInput mode && isVariable hd then () (* no search has to be done in the map *)
+      else if isInput mode && isVariable hd then
+        try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find mkUvarVariable map)
+        with Not_found -> ()
       else
           (* we have a Constant, Primitive, ListHead or ListHead and look for the key in the map *)
           try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find hd map)
@@ -421,4 +426,5 @@ module Internal = struct
   let isListTailVariableUnif = isListTailVariableUnif
   let isPathEnd = isPathEnd
 
+  let isUvarVariable = isUvarVariable
 end
