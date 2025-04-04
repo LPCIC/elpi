@@ -206,7 +206,7 @@ and second_lvl_idx =
     mode : Mode.hos;
     argno : int;
     all_clauses : clause_list;        (* when the query is flexible *)
-    flex_arg_clauses : clause_list;   (* when the query is rigid but arg_id ha nothing *)
+    flex_arg_clauses : clause_list;   (* when the query is rigid but arg_id has nothing *)
     arg_idx : clause_list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
