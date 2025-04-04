@@ -142,6 +142,13 @@ let () = declare "dt_var2"
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 3"))
   ()
 
+let () = declare "dt_var3"
+  ~source_elpi:"dt_var3.elpi"
+  ~description:"discrimination_tree indexing flex"
+    ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
+  ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 2"))
+  ()
+
 let () = declare "dt_multiparam1"
   ~source_elpi:"dt_multiparam1.elpi"
   ~description:"discrimination_tree indexing multi argument"
