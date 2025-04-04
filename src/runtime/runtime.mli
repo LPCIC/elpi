@@ -57,7 +57,7 @@ val hmove :
 val subst: depth:int -> term list -> term -> term
 
 (* The projection from the internal notion of constraints in the API one *)
-val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option
+val get_suspended_goal : blockers -> 'a stuck_goal_kind -> suspended_goal option
 
 val full_deref : depth:int -> term -> term
 
@@ -68,7 +68,7 @@ val lex_insertion : int list -> int list -> int
 module CompileTime : sig
   (* updates how predicates are indexed *)
   val update_indexing :
-    (mode * indexing) Constants.Map.t ->
+    (Mode.hos * indexing) Constants.Map.t ->
       index -> index
 
   (* adds 1 clause to its index *)
@@ -81,7 +81,9 @@ module CompileTime : sig
   (* can raise CannotDeclareClauseForBuiltin *)
   val clausify1 :
     loc:Loc.t ->
-    modes:(constant -> mode) -> (* for caching it in the clause *)
+    modes:(constant -> Mode.hos) -> (* for caching it in the clause *)
     nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 
+
+  val get_clauses : ?check_mut_excl:bool -> depth:int -> constant -> term -> index -> clause Bl.scan
 end

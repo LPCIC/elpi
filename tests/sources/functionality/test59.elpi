@@ -1,0 +1,10 @@
+% YES
+
+func f.
+func f1 fprop.
+
+f :-
+  X = ((x\ f1 x :- x) : (func fprop)),
+  X f.
+
+main.

@@ -1,0 +1,60 @@
+% An assumption asserting that the constant rbtree is of kind (type -> type).
+kind rbtree type -> type.
+kind color type.
+
+% We assume (not necessarily exhaustive) constructors of this type, somewhat similar to polymorphic variants in OCaml.
+type empty rbtree A.
+type red rbtree A -> A -> rbtree A -> rbtree A.
+type black rbtree A -> A -> rbtree A -> rbtree A.
+
+
+func balance rbtree A, A, rbtree A -> rbtree A.
+balance (red (red T0 V0 T1) V1 T2) V2 T3 (red (black T0 V0 T1) V1 (black T2 V2 T3)) :- !.
+balance (red T0 V0 (red T1 V1 T2)) V2 T3 (red (black T0 V0 T1) V1 (black T2 V2 T3)) :- !.
+balance T0 V0 (red (red T1 V1 T2) V2 T3) (red (black T0 V0 T1) V1 (black T2 V2 T3)) :- !.
+balance T0 V0 (red T1 V1 (red T2 V2 T3)) (red (black T0 V0 T1) V1 (black T2 V2 T3)) :- !.
+balance L X R (black L X R).
+
+func ins (func A, A -> cmp), A, rbtree A -> rbtree A.
+ins _ X empty (red empty X empty).
+ins Cmp X (red L Val R) Y :- Cmp X Val CMP, red_cmp CMP Cmp X L Val R Y.
+ins Cmp X (black L Val R) Y :- Cmp X Val CMP, black_cmp CMP Cmp X L Val R Y.
+
+func red_cmp cmp, (func A, A -> cmp), A, rbtree A, A, rbtree A -> rbtree A.
+red_cmp eq _ _ L Val R (red L Val R).
+red_cmp lt Cmp X L Val R (red L1 Val R) :- ins Cmp X L L1.
+red_cmp gt Cmp X L Val R (red L Val R1) :- ins Cmp X R R1.
+
+func black_cmp cmp, (func A, A -> cmp), A, rbtree A, A, rbtree A -> rbtree A.
+black_cmp eq _ _ L Val R (black L Val R).
+black_cmp lt Cmp X L Val R Y :- balance {ins Cmp X L} Val R Y.
+black_cmp gt Cmp X L Val R Y :- balance L Val {ins Cmp X R} Y.
+
+func int_cmp int, int -> cmp.
+int_cmp X Y lt :- X < Y, !.
+int_cmp X Y gt :- X > Y, !.
+int_cmp X Y eq :- X = Y.
+
+func split rbtree A -> rbtree A, A, rbtree A.
+split (red A B C) A B C.
+split (black A B C) A B C.
+
+func insert (func A, A -> cmp), A, rbtree A -> rbtree A.
+insert Cmp X T (black L V R) :-
+    % std.findall (ins Cmp X T _) LL, print "Length is" {std.length LL},
+    ins Cmp X T S,  split S L V R.
+
+func of_list_acc list int, rbtree int -> rbtree int.
+of_list_acc [] T T.
+of_list_acc (Hd :: Tl) T S :- of_list_acc Tl {insert int_cmp Hd T} S.
+
+func of_list list int -> rbtree int.
+of_list L T :- of_list_acc L empty T.
+
+% pred main.
+% main :-
+%     std.list.init 800 (x\ y\ x = y) L,
+%     of_list L T_.
+main :-
+    std.list.init 8000 (x\ y\ x = y) L,
+    of_list L T_.

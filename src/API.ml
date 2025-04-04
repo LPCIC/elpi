@@ -109,7 +109,7 @@ module Ast = struct
   module Name = struct
     include Ast.Func
     type constant = int
-    let is_global f i = show f = Util.Constants.Map.find i Data.Global_symbols.table.c2s
+    let is_global f i = equal f (Util.Constants.Map.find i Data.Global_symbols.table.c2s |> Data.Symbol.get_func)
   end
   module Opaque = Util.CData
 end
@@ -339,8 +339,8 @@ module RawOpaqueData = struct
       Format.fprintf fmt "@\n";
     end;
     Format.fprintf fmt "@[<hov 2>kind %s type.@]@\n@\n" name;
-    List.iter (fun (c,_) ->
-      Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
+    List.iter (fun (variant,(c,_)) ->
+      Format.fprintf fmt "@[<hov 2>external symbol %s : %s = \"%d\".@]@\n" c name variant)
       constants
     in
   { cin; cino; cout; isc; name = c },
@@ -348,13 +348,13 @@ module RawOpaqueData = struct
 
   let conversion_of_cdata (type a) ~name ?doc ?(constants=[]) ~compare ~pp cd =
     let module VM = Map.Make(struct type t = a let compare = compare end) in
-    let constants_map, values_map =
-      List.fold_right (fun (n,v) (cm,vm) ->
-        let c = ED.Global_symbols.declare_global_symbol n in
-        Util.Constants.Map.add c v cm, VM.add v c vm)
-      constants (Util.Constants.Map.empty,VM.empty) in
+    let constants_map, values_map, constants =
+      List.fold_right (fun (n,v) (cm,vm,cl) ->
+        let c, variant = ED.Global_symbols.declare_overloaded_global_symbol n in
+        Util.Constants.Map.add c v cm, VM.add v c vm,(variant,(n,v)) :: cl)
+      constants (Util.Constants.Map.empty,VM.empty,[]) in
     let values_map x = VM.find x values_map in
-    conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants ~pp cd
+    conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants:(List.rev constants) ~pp cd
 
   let declare { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = Util.CData.declare {
@@ -610,7 +610,7 @@ module RawData = struct
   let mkCons = ED.Term.mkCons
   let mkNil = ED.Term.mkNil
   let mkDiscard = ED.Term.mkDiscard
-  let mkBuiltin = ED.Term.mkBuiltin
+  let mkBuiltin c l = ED.Term.mkBuiltin (ED.Host c) l
   let mkCData = ED.Term.mkCData
   let mkAppBoundL x l =
     if x < 0 then Util.anomaly "mkAppBoundL: got a global constant";
@@ -651,14 +651,7 @@ module RawData = struct
 
     let show c = Util.Constants.show c
 
-    let eqc    = ED.Global_symbols.eqc
     let orc    = ED.Global_symbols.orc
-    let andc   = ED.Global_symbols.andc
-    let rimplc = ED.Global_symbols.rimplc
-    let pic    = ED.Global_symbols.pic
-    let sigmac = ED.Global_symbols.sigmac
-    let implc  = ED.Global_symbols.implc
-    let cutc   = ED.Global_symbols.cutc
     let ctypec = ED.Global_symbols.ctypec
     let spillc = ED.Global_symbols.spillc
 
@@ -677,15 +670,16 @@ module RawData = struct
     hsrc : term
   }
   type hyps = hyp list
-
+  type blockers = Elpi.t list
   type suspended_goal = ED.suspended_goal = {
     context : hyps;
-    goal : int * term
+    goal : int * term;
+    blockers : blockers;
   }
 
   let constraints l =
     let module R = (val !r) in let open R in
-    Util.map_filter (fun x -> get_suspended_goal x.ED.kind) l
+    Util.map_filter (fun (x : ED.stuck_goal) -> get_suspended_goal x.ED.blockers x.ED.kind) l
   let no_constraints = []
 
   let mkUnifVar ub ~args state =
@@ -1087,17 +1081,19 @@ module Calc = struct
   }
 
   let compile_operation_declaration { symbol; infix; args; code } =
-    let c = ED.Global_symbols.declare_global_symbol symbol in
     let ty_decl args =
-     if infix then
-       Printf.sprintf "type (%s) %s." symbol (String.concat " -> " args)
-     else
-       Printf.sprintf "type %s %s." symbol (String.concat " -> " args) in
-     c, { ED.CalcHooks.ty_decl = List.map ty_decl args |> String.concat "\n"; code }
+      let c, variant = ED.Global_symbols.declare_overloaded_global_symbol symbol in
+      let ty_decl = if infix then
+        Printf.sprintf "external symbol (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
+      else
+        Printf.sprintf "external symbol %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
+      c, { ED.CalcHooks.ty_decl = ty_decl; code }
+    in
+    List.map ty_decl args
 
    let register ~descriptor d =
      let e = compile_operation_declaration d in
-     descriptor := e :: !descriptor
+     descriptor := e @ !descriptor
     
   let register_eval n (symbol,tys) code =
     let infix, n = n < 0, abs n in
@@ -1256,7 +1252,7 @@ module Calc = struct
     [
     LPDoc " -- Evaluation --";
 
-    LPCode "pred (is) o:A, i:A.";
+    LPCode ":functional pred (is) o:A, i:A.";
     LPCode "X is Y :- calc Y X.";
   
     MLCode(Pred("calc",
@@ -1325,7 +1321,7 @@ module Utils = struct
           Term.mkSeq [hd;tl]
       | Data.Nil -> Term.mkNil buggy_loc
       | Data.Builtin(c,xs) ->
-          let c = Term.mkCon buggy_loc (show c) in
+          let c = Term.mkCon buggy_loc (ED.show_builtin_predicate (fun ?table -> show) c) in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: xs)
       | Data.CData x -> Term.mkC buggy_loc x
@@ -1346,6 +1342,7 @@ module Utils = struct
       attributes;
       body = aux depth Util.IntMap.empty term;
       needs_spilling = ();
+      is_deterministic = ()
     }]
 
   let term_to_raw_term s p ?ctx ~depth t =
@@ -1355,6 +1352,7 @@ module Utils = struct
   let map_acc = BuiltInData.map_acc
 
   module type Show = Util.Show
+  module type ShowKey = Util.ShowKey
   module type Show1 = Util.Show1
   module Map = Util.Map
   module Set = Util.Set

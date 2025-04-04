@@ -1,0 +1,10 @@
+% YES
+% test for spilling
+
+func p -> prop, fprop.
+
+func q.
+
+q :- X = {p R}, X.
+
+main.

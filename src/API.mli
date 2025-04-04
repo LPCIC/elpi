@@ -862,7 +862,6 @@ module BuiltIn : sig
 
 end
 
-
 (* ************************************************************************* *)
 (* ********************* Advanced Extension API **************************** *)
 (* ************************************************************************* *)
@@ -1178,9 +1177,11 @@ module RawData : sig
   val of_hyp : Data.hyp -> hyp
   val of_hyps : Data.hyp list -> hyps
 
+  type blockers = FlexibleData.Elpi.t list
   type suspended_goal = {
     context : hyps;
-    goal : int * term
+    goal : int * term;
+    blockers : blockers;
   }
   val constraints : Data.constraints -> suspended_goal list
   val no_constraints : Data.constraints
@@ -1191,14 +1192,7 @@ module RawData : sig
 
     val show : constant -> string
 
-    val eqc    : builtin (* = *)
     val orc    : constant (* ; *)
-    val andc   : constant (* , *)
-    val rimplc : constant (* :- *)
-    val pic    : constant (* pi *)
-    val sigmac : constant (* sigma *)
-    val implc  : constant (* => *)
-    val cutc   : builtin (* ! *)
 
     (* LambdaProlog built-in data types are just instances of CData.
      * The typeabbrev machinery translates [int], [float] and [string]
@@ -1340,6 +1334,12 @@ module Utils : sig
     type t
     val pp : Format.formatter -> t -> unit
     val show : t -> string
+  end
+
+  module type ShowKey = sig
+    type key
+    val pp_key : Format.formatter -> key -> unit
+    val show_key : key -> string
   end
 
   module type Show1 = sig

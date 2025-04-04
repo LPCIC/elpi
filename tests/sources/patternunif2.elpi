@@ -1,5 +1,6 @@
 % r Y yields Y=\0
-:untyped q (a\ X a) X.
-:untyped r A :- pi c\ q (a\a) A.
+pred q o:(int -> int), o:(int -> int).
+q (a\ X a) X.
+r A :- pi c\ q (a\a) A.
 
-:untyped main :- r Y, Y = x\x.
+main :- r Y, Y = x\x.
