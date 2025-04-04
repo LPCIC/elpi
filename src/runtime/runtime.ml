@@ -2660,7 +2660,7 @@ let add_clause_to_snd_lvl_idx ~depth ~insert predicate clause = function
       (* uvar: matches only flexible terms (or itself at the meta level) *)
       let clauses =
         try Ptmap.find mustbevariablec arg_idx
-        with Not_found -> flex_arg_clauses in
+        with Not_found -> Bl.empty() in
       TwoLevelIndex {
           argno; mode;
         all_clauses = insert clause all_clauses;
