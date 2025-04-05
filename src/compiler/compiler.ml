@@ -2081,10 +2081,10 @@ let program_of_ast ~flags ~header:((st, base) as header : State.t * Assembled.pr
 
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x
 
-let pp fmt ub =
-  R.Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
+let pp_uvar_body fmt ub = R.Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
+let pp_uvar_body_raw fmt ub = R.Pp.ppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
   
-let uvk = D.State.declare ~descriptor:D.elpi_state_descriptor ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp)
+let uvk = D.State.declare ~descriptor:D.elpi_state_descriptor ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp_uvar_body)
     ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
     ~compilation_is_over:(fun x -> Some x)
     ~execution_is_over:(fun _ -> None)
