@@ -1,0 +1,2 @@
+main :- declare_constraint (U = 2) [U],
+        findall_solutions (U = 1) Solns.
