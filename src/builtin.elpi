@@ -437,9 +437,10 @@ rex_split Rx S L :- rex.split Rx S L.
 % arguments it relates an applied variable with its head and argument list.
 external type var any -> variadic any fprop.
 
+
 % [prune V L] V is pruned to L (V is unified with a variable that only sees
 % the list of names L)
-external func prune list any -> any.
+:functional :external pred prune o:any, i:list any.
 
 % [distinct_names L] checks if L is a list of distinct names. If L is the
 % scope of a unification variable (its arguments, as per var predicate) then
