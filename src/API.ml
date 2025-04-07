@@ -526,8 +526,10 @@ module Elpi = struct
 
   type t = ED.uvar_body
 
-  let pp = Compiler.pp
+  let pp = Compiler.pp_uvar_body
   let show m = Format.asprintf "%a" pp m
+  let pp_raw = Compiler.pp_uvar_body_raw
+  let show_raw m = Format.asprintf "%a" pp_raw m
 
   let equal h1 h2  = h1 == h2
   let hash = ED.uvar_id 
@@ -768,7 +770,7 @@ module FlexibleData = struct
       let pp k uv _ () =
            Format.fprintf fmt "@[<h>%a@ <-> %a@]@ " T.pp k Elpi.pp uv
         in
-      Format.fprintf fmt "@[<v>";
+      Format.fprintf fmt "@[<hov>";
       fold pp m ();
       Format.fprintf fmt "@]"
     ;;

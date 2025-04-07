@@ -25,6 +25,12 @@ let () = declare "findall"
   ~description:"stash across backtrack"
   ()
 
+
+let () = declare "findall_csts"
+  ~source_elpi:"findall_csts.elpi"
+  ~description:"stash across backtrack"
+  ()
+
 let () =
   let v = Sys.ocaml_version in
   if Str.string_match (Str.regexp "4\\.\\(08\\|09\\|10\\|11\\|12\\)") v 0 then
