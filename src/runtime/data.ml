@@ -1424,7 +1424,10 @@ let pp_tab_args fmt l =
     | x :: xs ->
         let (m_of_x,_,_) = x in
         let pre = if m_of_last <> m_of_x then "-> " else "" in
-        let sep = if xs = [] then "." else ", " in
+        let sep = if xs = [] then "." else
+          match xs with
+          | (b,_,_) :: _ when b = m_of_x -> ", "
+          | _ -> "" in
         pp_tab_arg i max pre sep fmt x;
         aux m_of_x (i+1) xs in
 
@@ -1442,19 +1445,58 @@ let pp_args fmt l =
   else if l1 = [] then Format.fprintf fmt " -> %a" pp_args l2
   else Format.fprintf fmt " -> %a" pp_args l2
 
+let rec is_std_moded = function
+  | [] -> true
+  | (true,_,_) :: rest -> is_std_moded rest
+  | (false,_,_) :: [] -> true
+  | (false,_,_) :: ((false,_,_) :: _ as rest) -> is_std_moded rest
+  | _ -> false
+
 (* External predicate are functional *)
 let pp_pred fmt docspec name doc_pred args =
   let args = List.rev args in
-  match docspec with
-  | DocNext ->
-     Fmt.fprintf fmt "@[<v 2>external func %s %% %s@;%a@]@."
-       name doc_pred pp_tab_args args
-  | DocAbove ->
-    let doc =
-       "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
-       "] " ^ doc_pred in
-     Fmt.fprintf fmt "@[<v>%% %a@.external func %s@[<hov>%a.@]@]@.@."
-       pp_comment doc name pp_args args
+  if is_std_moded args then
+    match docspec with
+    | DocNext ->
+      Fmt.fprintf fmt "@[<v 2>external func %s %% %s@;%a@]@."
+        name doc_pred pp_tab_args args
+    | DocAbove ->
+      let doc =
+        "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
+        "] " ^ doc_pred in
+      Fmt.fprintf fmt "@[<v>%% %a@.external func %s@[<hov>%a.@]@]@.@."
+        pp_comment doc name pp_args args
+    else
+      let pp_tab_arg i max sep fmt (dir,ty,doc) =
+        let dir = if dir then "i" else "o" in
+        if i = 0 then Fmt.pp_set_tab fmt () else ();
+        Fmt.fprintf fmt "%s:%s%s" dir ty sep;
+        if i = 0 then (ws_to_max fmt max (String.length ty); Fmt.pp_set_tab fmt ()) else Fmt.pp_print_tab fmt ();
+        if doc <> "" then begin Fmt.fprintf fmt " %% %s" doc end;
+        Fmt.pp_print_tab fmt () in
+      let pp_tab_args fmt l =
+        let n = List.length l - 1 in
+        let max = List.fold_left (fun m (_,s,_) -> max (String.length s) m) 0 l in
+        Fmt.pp_open_tbox fmt ();
+        if l = [] then Fmt.fprintf fmt ".";
+        List.iteri (fun i x ->
+          let sep = if i = n then "." else "," in
+          pp_tab_arg i max sep fmt x) l;
+        Fmt.pp_close_tbox fmt () in
+      let pp_arg sep fmt (dir,ty,doc) =
+        let dir = if dir then "i" else "o" in
+        Fmt.fprintf fmt "%s:%s%s" dir ty sep in
+      let pp_args = pplist (pp_arg "") ", " ~pplastelem:(pp_arg "") in
+      match docspec with
+      | DocNext ->
+         Fmt.fprintf fmt "@\n@[<v 2>:functional :external pred %s %% %s@;%a@]@."
+           name doc_pred pp_tab_args args
+      | DocAbove ->
+        let doc =
+           "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
+           "] " ^ doc_pred in
+         Fmt.fprintf fmt "@\n@[<v>%% %a@.:functional :external pred %s @[<hov>%a.@]@]@.@."
+           pp_comment doc name pp_args args   
 ;;
 
 let pp_variadictype fmt name doc_pred ty args =

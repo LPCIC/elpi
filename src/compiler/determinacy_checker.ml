@@ -196,8 +196,7 @@ let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
   in
   let get_var = function None -> Any | Some e -> e in
   let get_con x =
-    if F.equal name F.mainf then Rel (*TODO: what if the main has arguments?*)
-    else if x = None then Any
+    if x = None then Any
     else Compilation.type_ass_2func_mut ~loc env tya
   in
   let det_head =
