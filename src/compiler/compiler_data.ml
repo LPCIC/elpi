@@ -537,7 +537,7 @@ module TypeAssignment = struct
 
   let check_same_mode ~loc1 ~loc2 x y =
     if compare_skema ~cmp_mode:compare_tmode x y <> 0 then
-      error ~loc:loc2 ("Two types for the same symbol cannot only differ on modes. Previous declaration: " ^ Loc.show loc1)
+      error ~loc:loc1 ("Two types for the same symbol cannot only differ on modes. Previous declaration: " ^ Loc.show loc2)
 
   let undup_skemas sk_of_s os1 os2 =
     let l1 = o2l os1 in
