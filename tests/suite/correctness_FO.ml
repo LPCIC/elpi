@@ -228,7 +228,7 @@ let () =
       Success; Failure; Failure; Failure; (FailureOutput Str.(regexp "line 2, column 21")); (*70*)
       Success
     |] in
-  let ignore = [1;5;7;8;9;10;11;13;16;26;27] in
+  let ignore = [5;7;8;9;10;13;16;26;27] in
   for i = 0 to Array.length status - 1 do
     if not (List.mem (i+1) ignore) then (
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
