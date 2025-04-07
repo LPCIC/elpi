@@ -41,6 +41,9 @@ val mkOutputMode : cell
 *)
 val mkListTailVariable : cell
 
+(** unique identifier for uvar constructor *)
+val mkUvarVariable : cell
+
 (** This is used for capped lists.
 
   If the length of the maximal list in the rules of a predicate is N, then any
@@ -127,4 +130,5 @@ module Internal: sig
   val isListTailVariable : cell -> bool
   val isListTailVariableUnif : cell -> bool
   val isPathEnd : cell -> bool
+  val isUvarVariable : cell -> bool
 end
