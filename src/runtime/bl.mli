@@ -13,7 +13,6 @@ val cons : 'a -> 'a t -> 'a t
 val rcons : 'a -> 'a t -> 'a t
 
 val replace : ('a -> bool) -> 'a -> 'a t -> 'a t
-val remove : ('a -> bool) -> 'a t -> 'a t
 
 (* [insert f x l] inserts before y in l if f y > 0 *)
 val insert : ('a -> int) -> 'a -> 'a t -> 'a t

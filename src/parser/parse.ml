@@ -48,8 +48,6 @@ end
 module Grammar = Grammar.Make(ParseFile)
   
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
-let chunk s (p1,p2) =
-  String.sub s p1.Lexing.pos_cnum (p2.Lexing.pos_cnum - p1.Lexing.pos_cnum)
 
 let parse grammar lexbuf =
   let buffer, lexer = MenhirLib.ErrorReports.wrap Lexer.(token C.versions) in

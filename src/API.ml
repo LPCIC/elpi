@@ -544,7 +544,8 @@ end
 module RawData = struct
 
   type constant = Util.constant
-  type builtin = Util.constant
+  type builtin = ED.builtin_predicate = Cut | And | Impl | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant
+
   type term = ED.Term.term
   type view =
     (* Pure subterms *)
@@ -559,7 +560,7 @@ module RawData = struct
     | CData of RawOpaqueData.t                    (* external data *)
     (* Unassigned unification variables *)
     | UnifVar of Elpi.t * term list
-  [@@warning "-37"]
+  [@@warning "-37"]  
   
   let rec look ~depth t =
     let module R = (val !r) in let open R in
@@ -595,7 +596,7 @@ module RawData = struct
   let mkCons = ED.Term.mkCons
   let mkNil = ED.Term.mkNil
   let mkDiscard = ED.Term.mkDiscard
-  let mkBuiltin c l = ED.Term.mkBuiltin (ED.Host c) l
+  let mkBuiltin c l = ED.Term.mkBuiltin c l
   let mkCData = ED.Term.mkCData
   let mkAppBoundL x l =
     if x < 0 then Util.anomaly "mkAppBoundL: got a global constant";
@@ -611,7 +612,7 @@ module RawData = struct
     if i < 0 then Util.anomaly "mkBound: got a global constant";
     mkConst i
 
-  let cmp_builtin i j = i - j
+  let cmp_builtin = ED.compare_builtin_predicate
 
   let mkAppMoreArgs ~depth hd args =
     let module R = (val !r) in let open R in

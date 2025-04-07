@@ -731,7 +731,6 @@ let pp_const = mk_spaghetti_printer ()
 type constant = int (* De Bruijn levels *) [@@ deriving ord]
 let pp_constant = pp_spaghetti pp_const
 let show_constant = show_spaghetti pp_const
-let equal_constant x y = x == y
 
 module Constants : sig
   type t = constant

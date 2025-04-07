@@ -148,7 +148,6 @@ end = struct
       goal_attempts : goal_attempts GoalMap.t
     }
   
-let elaborated_steps : Elaborated_step.t StepMap.t ref = ref StepMap.empty
 
 (* elaboration *)
 let rec filter_map f = function
@@ -181,9 +180,6 @@ let decode_chr_store_entry = function
   | { payload = [ gid; gtext ]}, _ -> int_of_string gid, gtext
   | _ -> assert false
 
-let get s l =
-  try (fst @@ List.find (fun ({ name },_) -> name = s) l).payload
-  with Not_found -> assert false
 
 type decoded_step =
   [ `Focus of item * time

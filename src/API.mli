@@ -1124,7 +1124,7 @@ module RawData : sig
       starts at 0 and grows for bound variables;
       global constants have negative values. *)
 
-  type builtin
+  type builtin = Cut | And | Impl | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant
   type term = Data.term
   type view = private
     (* Pure subterms *)

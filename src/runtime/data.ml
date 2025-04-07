@@ -1407,27 +1407,28 @@ let ws_to_max fmt max n =
   if n < max then Format.fprintf fmt "%s" (String.make (max - n) ' ')
   else ()
 
-let pp_tab_arg i max sep fmt (_,ty,doc) =
+let pp_tab_arg i max pre sep fmt (_,ty,doc) =
   if i = 0 then Fmt.pp_set_tab fmt () else ();
-  Fmt.fprintf fmt "%s%s" (parens_arr ty) sep;
+  Fmt.fprintf fmt "%s%s%s" pre (parens_arr ty) sep;
   if i = 0 then (ws_to_max fmt max (String.length ty); Fmt.pp_set_tab fmt ()) else Fmt.pp_print_tab fmt ();
   if doc <> "" then begin Fmt.fprintf fmt " %% %s" doc end;
   Fmt.pp_print_tab fmt ()
 ;;
 
 let pp_tab_args fmt l =
-  let n = List.length l - 1 in
   let max = List.fold_left (fun m (_,s,_) -> max (String.length s) m) 0 l in
   Fmt.pp_open_tbox fmt ();
-  if l = [] then Fmt.fprintf fmt ".";
-  let in_input = ref true in
-  let update_in_input (b,_,_) = in_input := b in
-  let print_arr (b,_,_) = b <> !in_input in 
-  List.iteri (fun i x ->
-    if print_arr x then Format.fprintf fmt "-> ";
-    update_in_input x;
-    let sep = if i = n then "." else "," in
-    pp_tab_arg i max sep fmt x) l;
+
+  let rec aux m_of_last i = function
+    | [] -> ()
+    | x :: xs ->
+        let (m_of_x,_,_) = x in
+        let pre = if m_of_last <> m_of_x then "-> " else "" in
+        let sep = if xs = [] then "." else ", " in
+        pp_tab_arg i max pre sep fmt x;
+        aux m_of_x (i+1) xs in
+
+  if l = [] then Format.fprintf fmt "." else aux true 0 l;
   Fmt.pp_close_tbox fmt ()
 ;;
 
@@ -1435,9 +1436,10 @@ let pp_args fmt l =
   let l1, l2 = List.partition (fun (x,_,_) -> x) l in
   let pp_arg fmt (_,ty,_) = Format.fprintf fmt "%s" (parens_arr ty) in
   let pp_args = pplist pp_arg ", " ~pplastelem:pp_arg in
+  if l1 <> [] then  Format.fprintf fmt " ";
   Format.fprintf fmt "%a" pp_args l1;
   if l2 = [] then ()
-  else if l1 = [] then Format.fprintf fmt "-> %a" pp_args l2
+  else if l1 = [] then Format.fprintf fmt " -> %a" pp_args l2
   else Format.fprintf fmt " -> %a" pp_args l2
 
 (* External predicate are functional *)
@@ -1451,7 +1453,7 @@ let pp_pred fmt docspec name doc_pred args =
     let doc =
        "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
        "] " ^ doc_pred in
-     Fmt.fprintf fmt "@[<v>%% %a@.external func %s @[<hov>%a.@]@]@.@."
+     Fmt.fprintf fmt "@[<v>%% %a@.external func %s@[<hov>%a.@]@]@.@."
        pp_comment doc name pp_args args
 ;;
 
