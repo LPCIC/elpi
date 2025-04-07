@@ -1347,7 +1347,7 @@ let ocaml_runtime = let open BuiltIn in let open BuiltInData in [
   (fun _ _ _ _ _ _ _ _ ~depth:_ ->
     let { Gc.minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; _ } = Gc.get () in
     !: minor_heap_size +! major_heap_increment +! space_overhead +! verbose +! max_overhead +! stack_limit +! allocation_policy +! window_size)),
-   DocAbove);
+   DocNext);
 
   MLCode(Pred("gc.set",
     In(unspec int,"MinorHeapSize",

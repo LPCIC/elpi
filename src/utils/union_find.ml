@@ -55,7 +55,6 @@ module Make (O : Util.Map.OrderedType) : S with type key = O.t = struct
   let mapi f t =
     M.fold (fun k (v,s) acc -> M.add (f k) (f v,KeySet.map f s) acc) M.empty t
 
-  let is_root acc k = O.compare (find acc k) k = 0
 
   let roots d =
     let roots = ref KeySet.empty in

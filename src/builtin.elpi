@@ -70,7 +70,7 @@ not _.
 external type declare_constraint any -> any -> variadic any fprop.
 
 % [print_constraints] prints all constraints
-external func print_constraints .
+external func print_constraints.
 
 % [halt ...] halts the program and print the terms
 external type halt variadic any fprop.
@@ -361,7 +361,7 @@ external symbol unix.process : out_stream -> in_stream -> in_stream ->
 % environment.
 % This API only works reliably since OCaml 4.12.
 external func unix.process.open string, list string, 
-                                list string -> unix.process, diagnostic.
+                               list string -> unix.process, diagnostic.
 
 % [unix.process.close P Diagnostic] OCaml's Unix.close_process_full
 external func unix.process.close unix.process -> diagnostic.
@@ -475,10 +475,10 @@ external type constant any -> variadic any fprop.
 
 external func names % generates the list of eigenvariable
   -> list any. % list of eigenvariables in order of age (young first)
-     
+  
 external func occurs % checks if the atom occurs in the term
-  any, % an atom, that is a global constant or a bound name (aka eigenvariable)
-  any. % a term
+  any,  % an atom, that is a global constant or a bound name (aka eigenvariable)
+  any.  % a term
   
 % [closed_term T] unify T with a variable that has no eigenvariables in
 % scope
@@ -535,7 +535,7 @@ if2 _  _  _  _  E :- !, E.
 external func random.init int.
 
 % [random.self_init] Initialize OCaml's PRNG with some seed
-external func random.self_init .
+external func random.self_init.
 
 % [random.int Bound N] unifies N with a random int between 0 and Bound
 % (excluded)
@@ -867,11 +867,11 @@ external func std.string.map.mem string, std.string.map A.
 
 % [std.string.map.add S V M M1] M1 is M where V is bound to S
 external func std.string.map.add string, A, 
-                                 std.string.map A -> std.string.map A.
+                                std.string.map A -> std.string.map A.
 
 % [std.string.map.remove S M M1] M1 is M where S is unbound
 external func std.string.map.remove string, 
-                                    std.string.map A -> std.string.map A.
+                                   std.string.map A -> std.string.map A.
 
 % [std.string.map.find S M V] V is the binding of S in M
 external func std.string.map.find string, std.string.map A -> A.
@@ -881,15 +881,15 @@ external func std.string.map.bindings std.string.map A -> list (pair string A).
 
 % [std.string.map.filter M F M1] Filter M w.r.t. the predicate F
 external func std.string.map.filter std.string.map A, 
-                                    (string -> A -> prop) -> std.string.map A.
+                                   (string -> A -> prop) -> std.string.map A.
 
 % [std.string.map.map M F M1] Map M w.r.t. the predicate F
 external func std.string.map.map std.string.map A, 
-                                 (string -> A -> B -> prop) -> std.string.map B.
+                                (string -> A -> B -> prop) -> std.string.map B.
 
 % [std.string.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external func std.string.map.fold std.string.map A, C, 
-                                  (string -> A -> C -> C -> prop) -> C.
+                                 (string -> A -> C -> C -> prop) -> C.
 
 % CAVEAT: the type parameter of std.int.map must be a closed term
 
@@ -915,15 +915,15 @@ external func std.int.map.bindings std.int.map A -> list (pair int A).
 
 % [std.int.map.filter M F M1] Filter M w.r.t. the predicate F
 external func std.int.map.filter std.int.map A, 
-                                 (int -> A -> prop) -> std.int.map A.
+                                (int -> A -> prop) -> std.int.map A.
 
 % [std.int.map.map M F M1] Map M w.r.t. the predicate F
 external func std.int.map.map std.int.map A, 
-                              (int -> A -> B -> prop) -> std.int.map B.
+                             (int -> A -> B -> prop) -> std.int.map B.
 
 % [std.int.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external func std.int.map.fold std.int.map A, C, 
-                               (int -> A -> C -> C -> prop) -> C.
+                              (int -> A -> C -> C -> prop) -> C.
 
 % CAVEAT: the type parameter of std.loc.map must be a closed term
 
@@ -949,15 +949,15 @@ external func std.loc.map.bindings std.loc.map A -> list (pair loc A).
 
 % [std.loc.map.filter M F M1] Filter M w.r.t. the predicate F
 external func std.loc.map.filter std.loc.map A, 
-                                 (loc -> A -> prop) -> std.loc.map A.
+                                (loc -> A -> prop) -> std.loc.map A.
 
 % [std.loc.map.map M F M1] Map M w.r.t. the predicate F
 external func std.loc.map.map std.loc.map A, 
-                              (loc -> A -> B -> prop) -> std.loc.map B.
+                             (loc -> A -> B -> prop) -> std.loc.map B.
 
 % [std.loc.map.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external func std.loc.map.fold std.loc.map A, C, 
-                               (loc -> A -> C -> C -> prop) -> C.
+                              (loc -> A -> C -> C -> prop) -> C.
 
 kind std.string.set type.
 
@@ -972,19 +972,19 @@ external func std.string.set.add string, std.string.set -> std.string.set.
 
 % [std.string.set.remove Elem A B] B is A \ {Elem}
 external func std.string.set.remove string, 
-                                    std.string.set -> std.string.set.
+                                   std.string.set -> std.string.set.
 
 % [std.string.set.union A B X] X is A union B
 external func std.string.set.union std.string.set, 
-                                   std.string.set -> std.string.set.
+                                  std.string.set -> std.string.set.
 
 % [std.string.set.inter A B X] X is A intersection B
 external func std.string.set.inter std.string.set, 
-                                   std.string.set -> std.string.set.
+                                  std.string.set -> std.string.set.
 
 % [std.string.set.diff A B X] X is A \ B
 external func std.string.set.diff std.string.set, 
-                                  std.string.set -> std.string.set.
+                                 std.string.set -> std.string.set.
 
 % [std.string.set.equal A B] tests A and B for equality
 external func std.string.set.equal std.string.set, std.string.set.
@@ -1009,21 +1009,21 @@ external func std.string.set.cardinal std.string.set -> int.
 
 % [std.string.set.filter M F M1] Filter M w.r.t. the predicate F
 external func std.string.set.filter std.string.set, 
-                                    (string -> prop) -> std.string.set.
+                                   (string -> prop) -> std.string.set.
 
 % [std.string.set.map M F M1] Map M w.r.t. the predicate F
 external func std.string.set.map std.string.set, 
-                                 (string -> string -> prop) -> std.string.set.
+                                (string -> string -> prop) -> std.string.set.
 
 % [std.string.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external func std.string.set.fold std.string.set, A, 
-                                  (string -> A -> A -> prop) -> A.
+                                 (string -> A -> A -> prop) -> A.
 
 % [std.string.set.partition M F M1 M2] Partitions M w.r.t. the predicate F,
 % M1 is where F holds
 external func std.string.set.partition std.string.set, 
-                                       (string -> prop) -> std.string.set, 
-                                       std.string.set.
+                                      (string -> prop) -> std.string.set, 
+                                      std.string.set.
 
 kind std.int.set type.
 
@@ -1071,21 +1071,21 @@ external func std.int.set.cardinal std.int.set -> int.
 
 % [std.int.set.filter M F M1] Filter M w.r.t. the predicate F
 external func std.int.set.filter std.int.set, 
-                                 (int -> prop) -> std.int.set.
+                                (int -> prop) -> std.int.set.
 
 % [std.int.set.map M F M1] Map M w.r.t. the predicate F
 external func std.int.set.map std.int.set, 
-                              (int -> int -> prop) -> std.int.set.
+                             (int -> int -> prop) -> std.int.set.
 
 % [std.int.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external func std.int.set.fold std.int.set, A, 
-                               (int -> A -> A -> prop) -> A.
+                              (int -> A -> A -> prop) -> A.
 
 % [std.int.set.partition M F M1 M2] Partitions M w.r.t. the predicate F, M1
 % is where F holds
 external func std.int.set.partition std.int.set, 
-                                    (int -> prop) -> std.int.set, 
-                                    std.int.set.
+                                   (int -> prop) -> std.int.set, 
+                                   std.int.set.
 
 kind std.loc.set type.
 
@@ -1133,21 +1133,21 @@ external func std.loc.set.cardinal std.loc.set -> int.
 
 % [std.loc.set.filter M F M1] Filter M w.r.t. the predicate F
 external func std.loc.set.filter std.loc.set, 
-                                 (loc -> prop) -> std.loc.set.
+                                (loc -> prop) -> std.loc.set.
 
 % [std.loc.set.map M F M1] Map M w.r.t. the predicate F
 external func std.loc.set.map std.loc.set, 
-                              (loc -> loc -> prop) -> std.loc.set.
+                             (loc -> loc -> prop) -> std.loc.set.
 
 % [std.loc.set.fold M Acc F Acc1] fold M w.r.t. the predicate F
 external func std.loc.set.fold std.loc.set, A, 
-                               (loc -> A -> A -> prop) -> A.
+                              (loc -> A -> A -> prop) -> A.
 
 % [std.loc.set.partition M F M1 M2] Partitions M w.r.t. the predicate F, M1
 % is where F holds
 external func std.loc.set.partition std.loc.set, 
-                                    (loc -> prop) -> std.loc.set, 
-                                    std.loc.set.
+                                   (loc -> prop) -> std.loc.set, 
+                                   std.loc.set.
 
 #line 1 "builtin_map.elpi"
 kind std.map type -> type -> type.
@@ -1388,11 +1388,16 @@ elements (node L E R _) Acc X :-
 % [trace.counter Name Value] reads the Value of a trace point Name
 external func trace.counter string -> int.
 
-% [gc.get MinorHeapSize MajorHeapIncrement SpaceOverhead Verbose MaxOverhead
-% StackLimit AllocationPolicy WindowSize] Reads the current settings of the
-% garbage collector. See also OCaml's Gc.control type documentation.
-external func gc.get -> int, int, int, int, int, int, int, int.
-
+external func gc.get % Reads the current settings of the garbage collector. See also OCaml's Gc.control type documentation.
+  -> int,  % MinorHeapSize
+  int,     % MajorHeapIncrement
+  int,     % SpaceOverhead
+  int,     % Verbose
+  int,     % MaxOverhead
+  int,     % StackLimit
+  int,     % AllocationPolicy
+  int.     % WindowSize
+  
 % [gc.set MinorHeapSize MajorHeapIncrement SpaceOverhead Verbose MaxOverhead
 % StackLimit AllocationPolicy WindowSize] Writes the current settings of the
 % garbage collector. Any parameter left unspecificed (eg _) is not changed.
@@ -1400,29 +1405,29 @@ external func gc.get -> int, int, int, int, int, int, int, int.
 external func gc.set int, int, int, int, int, int, int, int.
 
 % [gc.minor] See OCaml's Gc.minor documentation.
-external func gc.minor .
+external func gc.minor.
 
 % [gc.major] See OCaml's Gc.major documentation.
-external func gc.major .
+external func gc.major.
 
 % [gc.full] See OCaml's Gc.full_major documentation.
-external func gc.full .
+external func gc.full.
 
 % [gc.compact] See OCaml's Gc.compact documentation.
-external func gc.compact .
+external func gc.compact.
 
 % [gc.stat MinorWords PromotedWords MajorWords MinorCollections
 % MajorCollections HeapWords HeapChunks LiveWords LiveBlocks FreeWords
 % FreeBlocks LargestFree Fragments Compactions TopHeapWords StackSize] See
 % OCaml's Gc.stat documentation.
 external func gc.stat -> float, float, float, int, int, int, int, int, 
-                      int, int, int, int, int, int, int, int.
+                     int, int, int, int, int, int, int, int.
 
 % [gc.quick-stat MinorWords PromotedWords MajorWords MinorCollections
 % MajorCollections HeapWords HeapChunks Compactions TopHeapWords StackSize]
 % See OCaml's Gc.quick_stat documentation.
 external func gc.quick-stat -> float, float, float, int, int, int, int, 
-                            int, int, int.
+                           int, int, int.
 
 
 
