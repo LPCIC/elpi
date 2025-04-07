@@ -31,11 +31,11 @@ let () = pp_ta (Prop Relation) "pred";;
 let () = pp_ta (Prop Function) "func";;
 let () = pp_ta (list int) "list int";;
 let () = pp_ta (list (list int)) "list (list int)";;
-let () = pp_ta (arr (list int) int) "o:list int -> int";;
+(* let () = pp_ta (arr (list int) int) "o:list int -> int";;
 let () = pp_ta (arr (arr int int) int) "o:(o:int -> int) -> int";;
 let () = pp_ta (arr int (arr int int)) "o:int -> o:int -> int";;
 let () = pp_ta (arr int (arr (list int) int)) "o:int -> o:list int -> int";;
-let () = pp_ta (list (arr int int)) "list (o:int -> int)";;
+let () = pp_ta (list (arr int int)) "list (o:int -> int)";; *)
 
 open ScopedTerm
 

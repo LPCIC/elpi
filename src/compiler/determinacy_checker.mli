@@ -2,9 +2,11 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 open Compiler_data
-open Elpi_util.Util
-
-type t = (TypeAssignment.skema * Loc.t) F.Map.t [@@deriving show, ord]
+open Type_checker
 
 (* returns if the clause is deterministic *)
-val check_clause : env:t -> ScopedTerm.t -> bool
+val check_clause :
+  type_abbrevs:type_abbrevs ->
+  types:typing_env ->
+  unknown:env_undeclared ->
+    ScopedTerm.t -> bool

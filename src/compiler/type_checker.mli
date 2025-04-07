@@ -41,7 +41,7 @@ type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 [@@deriving show]
 
 val check :
-type_abbrevs:type_abbrevs ->
+  type_abbrevs:type_abbrevs ->
   kinds:arities ->
   types:typing_env ->
   unknown:env_undeclared ->

@@ -529,7 +529,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
             else bidirectional srcs tgt
 
   (* REDO PROCESSING ONE SRC at a time *)
-  and check_app_overloaded ~positive ctx ~loc (c, cid, tya as c_w_id) ety args targs alltys l =
+  and check_app_overloaded ~positive ctx ~loc (c, cid, tya) ety args targs alltys l =
     let rec filter = function
     | [] -> []
     | (id,t)::ts ->

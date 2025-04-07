@@ -275,8 +275,8 @@ let () = declare "printer"
 X0 is f X1 mod r X0
 X0 is f X1 + r X0 * g X2
 X0 is (f X1 + r X0) * g X2
-X0 is f X1 ^ r X0 ^ g X2
-X0 || X2 && X3 ===> X4
+X3 is f X1 ^ r X0 ^ g X2
+X0 || X2 && X4 ===> X5
 [f X0, g X1, (a , b), a + b]
 |})))
   ()

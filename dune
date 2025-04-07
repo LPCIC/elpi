@@ -6,7 +6,6 @@
   (modules elpi_REPL)
   (package elpi)
 )
-
 (env
   (dev
-    (flags (:standard -w -9 -w -32 -w -27 -warn-error -A))))
+    (flags (:standard -w -9 -w -27 -warn-error -A))))

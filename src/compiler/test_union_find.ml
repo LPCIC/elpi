@@ -8,7 +8,7 @@ let _ =
   (* From https://fr.wikipedia.org/wiki/Union-find#/media/Fichier:Dsu_disjoint_sets_final.svg *)
   let uf = ref empty in
   let update uf (_,act) = uf := act in
-  let union uf a b = update uf (union !uf a b) in
+  let union uf a b = update uf (union !uf a ~canon:b) in
 
   (* Partition avec 4 classes disjointes obtenue après
      Union(1, 2), Union(3, 4), Union(2, 5), Union(1, 6) et Union(2, 8). *)

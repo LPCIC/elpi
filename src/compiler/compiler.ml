@@ -12,7 +12,6 @@ module R = Runtime_trace_off
 module D = Data
 
 let elpi_language = Compiler_data.elpi_language
-let error = Compiler_data.error
 
 type flags = {
   defined_variables : StrSet.t;
@@ -42,10 +41,6 @@ let filter1_if { defined_variables } proj c =
   | None -> true
   | Some e when StrSet.mem e defined_variables -> true
   | Some _ -> false
-
-let filter_if flags proj l =
-  List.filter (filter1_if flags proj) l
-
 
 (* Symbol table of a compilation unit (part of the compiler state).
 
@@ -84,7 +79,7 @@ end = struct
     c2s : Symbol.t Constants.Map.t;
     last_global : int;
   }
-  [@@deriving show, ord]
+  [@@deriving show]
 
   let equal_globals m1 m2 = m1.last_global = m2.last_global
 
@@ -93,8 +88,6 @@ end = struct
     Util.Constants.Map.fold (fun c s m ->
       { m with c2s = Util.Constants.Map.remove c m.c2s; c2t = Util.Constants.Map.remove c m.c2t; ast2ct = .Map.remove (F.from_string s) m.ast2ct}
       ) small.c2s big *)
-
-  let equal x y = compare x y == 0
 
   let compile { last_global; c2t; c2s; ast2ct } =
     let t = { D.c2s; c2t = Hashtbl.create (Util.Constants.Map.cardinal c2t); frozen_constants = last_global; } in
@@ -779,7 +772,6 @@ let get_mtm, set_mtm, _drop_mtm, update_mtm =
 module Scope_Quotation_Macro : sig
 
   val run : State.t -> toplevel_macros:macro_declaration -> Ast.Structured.program -> Scoped.program
-  val check_duplicate_mode : F.t -> (Mode.hos * Loc.t) -> (Mode.hos * Loc.t) F.Map.t -> unit
   val scope_loc_term : state:State.t -> Ast.Term.t -> ScopedTerm.t
 
 end = struct
@@ -968,13 +960,6 @@ end = struct
     let ab = scope_type_abbrev ab in
     name, ab
 
-  let check_duplicate_mode name (mode, loc) map =
-    match F.Map.find_opt name map with
-    | Some (mode2,loc2) when mode2 <> mode ->
-      error ~loc
-        (Format.asprintf "Duplicate mode declaration for %a (also at %a)\n Mode1 = %a\n Mode2 = %a" F.pp name Loc.pp loc2 Mode.pp_hos mode Mode.pp_hos mode2)
-    | _ -> ()
-
   let defs_of_map m = F.Map.bindings m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
   let defs_of_assoclist m = m |> List.fold_left (fun x (a,_) -> F.Set.add a x) F.Set.empty
 
@@ -1111,10 +1096,6 @@ module Flatten : sig
   (* Eliminating the structure (name spaces) *)
 
   val run : State.t -> Scoped.program -> Flat.program
-  val merge_modes :
-    (Mode.hos * Loc.t) F.Map.t ->
-    (Mode.hos * Loc.t) F.Map.t ->
-    (Mode.hos * Loc.t) F.Map.t
   val merge_kinds :
     Arity.t F.Map.t ->
     Arity.t F.Map.t ->
@@ -1123,10 +1104,6 @@ module Flatten : sig
     Type_checker.typing_env ->
     Type_checker.typing_env ->
       Type_checker.typing_env
-  val merge_type_abbrevs :
-    (F.t * ScopedTypeExpression.t) list ->
-    (F.t * ScopedTypeExpression.t) list ->
-    (F.t * ScopedTypeExpression.t) list
   val merge_checked_type_abbrevs :
     Type_checker.type_abbrevs ->
     Type_checker.type_abbrevs ->
@@ -1236,9 +1213,6 @@ module Flatten : sig
   let apply_subst_types s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) (apply_subst_types s v) m) l F.Map.empty
 
-  let apply_subst_modes s l =
-    F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
-
   let apply_subst_kinds s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
   
@@ -1251,7 +1225,7 @@ module Flatten : sig
     idx1
 
   let merge_symbol_metadata s { Type_checker.ty = ty1; indexing = idx1 } { Type_checker.ty = ty2; indexing = idx2 } =
-    { Type_checker.ty = TypeAssignment.merge_skema s ty1 ty2;
+    { Type_checker.ty = TypeAssignment.merge_skema ty1 ty2;
       indexing = merge_indexing s idx1 idx2;
     }
 
@@ -1281,13 +1255,6 @@ module Flatten : sig
 
   let merge_types t1 t2 =
     F.Map.union (fun _ l1 l2 -> Some (ScopeTypeExpressionUniqueList.merge l1 l2)) t1 t2
-
-  let merge_modes m1 m2 =
-    if F.Map.is_empty m1 then m2 else
-    F.Map.fold (fun k v m ->
-      Scope_Quotation_Macro.check_duplicate_mode k v m;
-      F.Map.add k v m)
-    m2 m1
 
   let merge_kinds t1 t2 =
       F.Map.union (fun f (k,loc1 as kdecl) (k',loc2) ->
@@ -1447,7 +1414,7 @@ end = struct
       let spilled = {clause with body; needs_spilling = false} in
       (* if typecheck then Mode_checker.check ~is_rule:true ~type_abbrevs ~kinds ~types spilled.body; *)
 
-      let is_deterministic = typecheck && Determinacy_checker.check_clause ~env:type_abbrevs spilled.body in
+      let is_deterministic = typecheck && Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body in
 
       unknown, {spilled with is_deterministic } :: clauses) (F.Map.empty,[]) clauses in
     let clauses = List.rev clauses in
@@ -1506,7 +1473,7 @@ end
 
 let todopp name _fmt _ = error ("pp not implemented for field: "^name)
 
-let get_argmap, set_argmap, _update_argmap, drop_argmap =
+let get_argmap, set_argmap, _update_argmap =
   let argmap =
     State.declare
       ~name:"elpi:argmap" ~pp:(todopp "elpi:argmap")
@@ -1516,43 +1483,8 @@ let get_argmap, set_argmap, _update_argmap, drop_argmap =
       ~execution_is_over:(fun _ -> None)
      ~init:(fun () -> F.Map.empty)
     () in
-  State.(get argmap, set argmap, update_return argmap, drop argmap)
-
-  let is_Arg state x = 
-    match x with
-    | Arg _ | AppArg _ -> true
-    | _ -> false
+  State.(get argmap, set argmap, update_return argmap)
   
-  let mk_Arg state ~name ~args =
-    let name = F.from_string name in
-    let state, i =
-      let amap = get_argmap state in
-      try state, F.Map.find name amap
-      with Not_found ->
-        let i = F.Map.cardinal amap in
-        let amap = F.Map.add name i amap in
-        set_argmap state amap, i in
-    match args with
-    | [] -> state, mkArg i 0
-    | xs -> state, mkAppArg i xs
-  
-  let get_Arg state ~name ~args =
-    let name = F.from_string name in
-    let amap = get_argmap state in
-    let i =
-      try F.Map.find name amap
-      with Not_found -> error "get_Arg" in
-    match args with
-    | [] -> mkArg i 0
-    | xs -> mkAppArg i xs
-  
-  let fresh_Arg =
-    let qargno = ref 0 in
-    fun state ~name_hint:name ~args ->
-      incr qargno;
-      let name = Printf.sprintf "%s_%d_" name !qargno in
-      mk_Arg state ~name ~args
-
 module Assemble : sig
 
   val extend : flags -> State.t -> Assembled.program -> checked_compilation_unit -> State.t * Assembled.program
@@ -1567,23 +1499,6 @@ module Assemble : sig
     depth:int -> ScopedTerm.t -> constant F.Map.t * D.term
 
 end = struct
-
-  let chose_indexing state predicate l k =
-    let all_zero = List.for_all ((=) 0) in
-    let rec check_map default argno = function
-      | [] -> error ("Wrong indexing for " ^ F.show predicate ^ ": no argument selected.")
-      | 0 :: l -> check_map default (argno+1) l
-      | 1 :: l when all_zero l -> MapOn argno
-      | _ -> default ()
-    in
-    match k with
-    | Some Ast.Structured.DiscriminationTree -> DiscriminationTree l
-    | Some HashMap -> Hash l
-    | None -> check_map (fun () -> DiscriminationTree l) 0 l
-    | Some Map -> check_map (fun () ->
-        error ("Wrong indexing for " ^ F.show predicate ^
-                ": Map indexes exactly one argument at depth 1")) 0 l
-
 
   let update_indexing state symbols ({ idx } as index) (preds : (Symbol.t * _) list) old_idx =
     (* let check_if_some_clauses_already_in ~loc predicate c oldi newi =

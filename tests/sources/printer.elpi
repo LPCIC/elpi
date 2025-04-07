@@ -6,8 +6,11 @@ symbol f : int -> string.
 symbol g : int -> int.
 symbol g : int -> string.
 symbol (,) : variadic int int.
+symbol (&&) : int -> int -> int.
+symbol (||) : int -> int -> int.
+symbol (===>) : int -> int -> int.
 main :-
-  print (p X :- (q X : prop), r x), % BUG
+  print (p X :- (q X : prop), (r x:prop)), % BUG
   print (X is f Y mod r X),
   print (X is f Y + r X * g A),
   print (X is (f Y + r X) * g A),

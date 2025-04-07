@@ -485,23 +485,6 @@ module BuiltInData = struct
         aux (x :: acc) (gls :: extra) s xs
     in
       aux [] [] s l
-
-  let listC d =
-    let embed ~depth h c s l =
-      let module R = (val !r) in let open R in
-      let s, l, eg = map_acc (d.ContextualConversion.embed ~depth h c) s l in
-      s, list_to_lp_list l, eg in
-    let readback ~depth h c s t =
-      let module R = (val !r) in let open R in
-      map_acc (d.ContextualConversion.readback ~depth h c) s
-        (lp_list_to_list ~depth t)
-    in
-    let pp fmt l =
-      Format.fprintf fmt "[%a]" (Util.pplist d.pp ~boxed:true "; ") l in
-    { ContextualConversion.embed; readback;
-      ty = TyApp ("list",d.ty,[]);
-      pp;
-      pp_doc = (fun fmt () -> ()) }
   
   let list d =
     let embed ~depth s l =
@@ -654,15 +637,11 @@ module RawData = struct
     let show c = Util.Constants.show c
 
     let orc    = ED.Global_symbols.orc
-    let ctypec = ED.Global_symbols.ctypec
-    let spillc = ED.Global_symbols.spillc
 
     module Map = Util.Constants.Map
     module Set = Util.Constants.Set
 
   end
-
-  let of_term x = x
 
   let of_hyp x = x
   let of_hyps x = x

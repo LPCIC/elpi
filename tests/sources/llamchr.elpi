@@ -15,7 +15,7 @@ constraint term {
   rule (GX ?- term (uvar K LX) TX)
      \ (GY ?- term (uvar K LY) TY)
      | (compatible GX LX GY LY CTXCONSTR)
-   <=> ( TX = TY , CTXCONSTR ).
+   <=> ( TX = TY , std.do! CTXCONSTR ).
 }
 
 % resilient to dummy ctx variables
@@ -30,6 +30,7 @@ compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
  compatible GX XS GY YS K.
 compatible _ _ _ _ [false].
 
+func spy (func).
 spy P :- print "[" P, P, print "]ok", !.
 spy P :- print "]fail", fail.
 

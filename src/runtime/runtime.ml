@@ -393,7 +393,7 @@ module ConstraintStoreAndTrail : sig
 
   val contents :
     ?overlapping:uvar_body list -> unit -> (constraint_def * blockers) list
-  val print : ?pp_ctx:pp_ctx -> Fmt.formatter -> (constraint_def * blockers) list -> unit
+  (* val print : ?pp_ctx:pp_ctx -> Fmt.formatter -> (constraint_def * blockers) list -> unit *)
   val print1 : ?pp_ctx:pp_ctx -> Fmt.formatter -> constraint_def * blockers -> unit
   val print_gid: Fmt.formatter -> constraint_def * blockers -> unit
   val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
@@ -417,8 +417,6 @@ module ConstraintStoreAndTrail : sig
 
   (* add an item to the trail *)
   val trail_assignment : uvar_body -> unit           
-  val trail_stuck_goal_addition : stuck_goal -> unit 
-  val trail_stuck_goal_removal : stuck_goal -> unit  
 
   (* backtrack *)
   val undo :
@@ -443,12 +441,6 @@ end = struct (* {{{ *)
     Fork.new_local State.dummy
   let initial_state =
     Fork.new_local State.dummy
-
-  let read_custom_constraint ct =
-    State.get ct !state
-  let update_custom_constraint ct f =
-    state := State.update ct !state f
-
 
 type trail_item =
 | Assignement of uvar_body
@@ -688,8 +680,6 @@ module HO : sig
   val mkAppArg : int -> int -> term list -> term
   val is_flex : depth:int -> term -> uvar_body option
   val list_to_lp_list : term list -> term
-
-  val mknLam : int -> term -> term
 
   val full_deref : adepth:int -> env -> depth:int -> term -> term
 
@@ -2952,17 +2942,6 @@ let hash_goal_args ~depth mode args goal = match goal with
   | Const _ -> 0
   | App(k,x,xs) -> hash_goal_arg_list k ~depth (x::xs) mode args
   | _ -> assert false
-
-let rec nth_not_found l n = match l with 
-  | [] -> raise Not_found
-  | x :: _ when n = 0 -> x 
-  | _ :: l -> nth_not_found l (n-1)
-
-let rec nth_not_bool_default l n = match l with 
-  | [] -> Mode.Output
-  | x :: _ when n = 0 -> x 
-  | _ :: l -> nth_not_bool_default l (n - 1)
-
 let trie_goal_args goal : term list = match goal with
   | Const _ -> []
   | App(_, x, xs) -> x :: xs
@@ -3010,50 +2989,6 @@ let get_clauses ?(check_mut_excl = false) ~depth predicate goal { idx = m } =
  [%spy "dev:get_clauses" ~rid C.pp predicate pp_int (Bl.length rc)];
  rc
 
-(* flatten_snd = List.flatten o (List.map ~~snd~~) *)
-(* TODO: is this optimization necessary or useless? *)
-let rec flatten_snd =
- function
-    [] -> []
-  | (_,(hd,_,_))::tl -> hd @ flatten_snd tl 
-
-let close_with_pis depth vars t =
- if vars = 0 then t
- else
-  (* lifts the term by vars + replaces Arg(i,..) with x_{depth+i} *)
-  let fix_const c = if c < depth then c else c + vars in
-  (* TODO: the next function is identical to lift_pat, up to the
-     instantiation of Args. The two codes should be unified *)
-  let rec aux =
-   function
-    | Const c -> mkConst (fix_const c)
-    | Arg (i,argsno) ->
-       (match C.mkinterval (depth+vars) argsno 0 with
-        | [] -> Const(i+depth)
-        | [x] -> App(i+depth,x,[])
-        | x::xs -> App(i+depth,x,xs))
-    | AppArg (i,args) ->
-       (match List.map aux args with
-        | [] -> anomaly "AppArg to 0 args"
-        | [x] -> App(i+depth,x,[])
-        | x::xs -> App(i+depth,x,xs))
-    | App(c,x,xs) -> App(fix_const c,aux x,List.map aux xs)
-    | Builtin(c,xs) -> Builtin(c,List.map aux xs)
-    | UVar(_,_,_) as orig ->
-       (* TODO: quick hack here, but it does not work for AppUVar *)
-       hmove ~from:depth ~to_:(depth+vars) orig
-    | AppUVar(r,vardepth,args) ->
-       assert false (* TODO, essentially almost copy the code from move delta < 0 *)
-    | Cons(hd,tl) -> Cons(aux hd, aux tl)
-    | Nil as x -> x
-    | Discard as x -> x
-    | Lam t -> Lam (aux t)
-    | CData _ as x -> x
-  in
-  let rec add_pis n t =
-   if n = 0 then t else Builtin(Pi,[Lam (add_pis (n-1) t)]) in
-  add_pis vars (aux t)
-
 let local_prog { src } =  src
 
 end (* }}} *)
@@ -3079,23 +3014,6 @@ module Clausify : sig
   val split_conj      : depth:int -> term -> term list
 
 end = struct  (* {{{ *)
-
-let rec term_map m = function
-  | Const x when List.mem_assoc x m -> mkConst (List.assoc x m)
-  | Const _ as x -> x
-  | App(c,x,xs) when List.mem_assoc c m ->
-      App(List.assoc c m,term_map m x, smart_map2 term_map m xs)
-  | App(c,x,xs) -> App(c,term_map m x, smart_map2 term_map m xs)
-  | Lam x -> Lam (term_map m x)
-  | UVar _ as x -> x
-  | AppUVar(r,lvl,xs) -> AppUVar(r,lvl,smart_map2 term_map m xs)
-  | Arg _ as x -> x
-  | AppArg(i,xs) -> AppArg(i,smart_map2 term_map m xs)
-  | Builtin(c,xs) -> Builtin(c,smart_map2 term_map m xs)
-  | Cons(hd,tl) -> Cons(term_map m hd, term_map m tl)
-  | Nil as x -> x
-  | Discard as x -> x
-  | CData _ as x -> x
 
 let rec split_conj ~depth = function
   | Builtin(And, hd :: args) ->
@@ -3511,29 +3429,6 @@ end = struct (* {{{ *)
      daux to_ t
 
   let assignments { assignments } = assignments
-
-let replace_const m t =
-  let rec rcaux = function
-    | Const c as x -> (try mkConst (List.assoc c m) with Not_found -> x)
-    | Lam t -> Lam (rcaux t)
-    | App(c,x,xs) ->
-        App((try List.assoc c m with Not_found -> c),
-            rcaux x, smart_map rcaux xs)
-    | Builtin(c,xs) -> Builtin(c,smart_map rcaux xs)
-    | Cons(hd,tl) -> Cons(rcaux hd, rcaux tl)
-    | (CData _ | UVar _ | Nil | Discard) as x -> x
-    | Arg _ | AppArg _ -> assert false
-    | AppUVar(r,lvl,args) -> AppUVar(r,lvl,smart_map rcaux args) in
-  [%spy "dev:replace_const:in" ~rid (uppterm 0 [] ~argsdepth:0 empty_env) t];
-  let t = rcaux t in
-  [%spy "dev:replace_const:out" ~rid (uppterm 0 [] ~argsdepth:0 empty_env) t];
-  t
-;;
-let ppmap fmt (g,l) =
-  let aux fmt (c1,c2) = Fmt.fprintf fmt "%s -> %s" (C.show c1) (C.show c2) in
-  Fmt.fprintf fmt "%d = %a" g (pplist aux ",") l
-;;
-
 
 end (* }}} *)
 
@@ -4417,7 +4312,6 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  done
 ;;
 
-let print_constraints () = CS.print Fmt.std_formatter (CS.contents ())
 let pp_stuck_goal ?pp_ctx fmt s = CS.pp_stuck_goal ?pp_ctx fmt s
 let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
@@ -4425,7 +4319,6 @@ let deref_appuv = HO.deref_appuv
 let deref_head = HO.deref_head
 let full_deref = HO.full_deref ~adepth:0 empty_env
 let eta_contract_flex = HO.eta_contract_flex
-let make_runtime = Mainloop.make_runtime
 let lp_list_to_list = Clausify.lp_list_to_list
 let list_to_lp_list = HO.list_to_lp_list
 let split_conj = Clausify.split_conj
