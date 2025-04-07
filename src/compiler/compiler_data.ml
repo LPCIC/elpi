@@ -273,11 +273,16 @@ end
 
 module TypeAssignment = struct
   type tmode = MRef of tmode MutableOnce.t | MVal of Mode.t
-  [@@ deriving show, ord, fold]
+  [@@ deriving show]
 
+  
   let rec deref_tmode = function
-    | MRef r when MutableOnce.is_set r -> deref_tmode (MutableOnce.get r)
-    | a -> a
+  | MRef r when MutableOnce.is_set r -> deref_tmode (MutableOnce.get r)
+  | a -> a
+  let compare_tmode m1 m2 =
+    match deref_tmode m1, deref_tmode m2 with
+    | MVal m1, MVal m2 -> Mode.compare m1 m2
+    | _ -> assert false
 
   let is_tmode_set t =
     match deref_tmode t with
@@ -304,33 +309,32 @@ module TypeAssignment = struct
   [@@ deriving show, fold, ord]
 
   type 'a t_ = ('a,tmode) t__
-  [@@ deriving show, fold, ord]
+  [@@ deriving show, fold]
 
   exception InvalidMode
 
   let cmp_aux cmp1 k =
     if cmp1 = 0 then k () else cmp1
 
-  let rec compare_t_ c t1 t2 = match t1, t2 with
+
+  let (&&&) x y =
+    if x = 0 then y else x
+
+  let rec compare_t_ ~cmp_mode c t1 t2 = match t1, t2 with
     | Prop d1, Prop d2 -> Ast.Structured.compare_functionality d1 d2
     | Any, Any -> 0
     | Cons f1, Cons f2 -> F.compare f1 f2
     | App (f1,hd,tl), App (f2,hd1,tl1) -> 
       cmp_aux 
         (F.compare f1 f2)
-        (fun () -> List.compare (compare_t_ c) (hd::tl) (hd1::tl1))
-    | Arr (m1, v1, l1, r1), Arr (m2, v2, l2, r2) when m1 <> m2 ->
+        (fun () -> List.compare (compare_t_ ~cmp_mode c) (hd::tl) (hd1::tl1))
+
+    | Arr (m1, v1, l1, r1), Arr (m2, v2, l2, r2) ->
+      (cmp_mode m1 m2) &&&
       cmp_aux
         (Ast.Structured.compare_variadic v1 v2) (fun () -> 
-          cmp_aux (compare_t_ c l1 l2) (fun () -> 
-            let cmp2 = compare_t_ c r1 r2 in
-            if cmp2 = 0 then raise InvalidMode
-            else cmp2))
-    | Arr (_, v1, l1, r1), Arr (_, v2, l2, r2) ->
-      cmp_aux
-        (Ast.Structured.compare_variadic v1 v2) (fun () -> 
-          cmp_aux (compare_t_ c l1 l2) (fun () -> 
-            compare_t_ c r1 r2))
+          cmp_aux (compare_t_ ~cmp_mode c l1 l2) (fun () -> 
+            compare_t_ ~cmp_mode c r1 r2))
     | UVar v1, UVar v2 -> c v1 v2
     | Prop _, _ -> -1 | _, Prop _ -> 1
     | Any   , _ -> -1 | _, Any    -> 1
@@ -346,11 +350,11 @@ module TypeAssignment = struct
   | Any | Cons _ | App _ | UVar _ -> None
   | Arr(_,_,_,t) -> is_prop t
 
-  let compare_skema sk1 sk2 =
+  let compare_skema ~cmp_mode sk1 sk2 =
     let rec aux ctx sk1 sk2 =
       match sk1, sk2 with
       | Lam (f1,sk1), Lam(f2,sk2) -> aux (ScopeContext.push_ctx elpi_language f1 f2 ctx) sk1 sk2
-      | Ty t1, Ty t2 -> compare_t_ (ScopeContext.cmp_var ctx elpi_language) t1 t2
+      | Ty t1, Ty t2 -> compare_t_ ~cmp_mode (ScopeContext.cmp_var ctx elpi_language) t1 t2
       | Lam _, Ty _ -> -1
       | Ty _, Lam _ -> 1
     in
@@ -403,7 +407,7 @@ module TypeAssignment = struct
       | Arr(m,NotVariadic,s,t) when is_raw && skip_arrow_tail -> fprintf fmt "@[<hov 2>,@ %a:%a%a@]" show_mode m (pretty_parens ~lvl:arrs) s pretty t
       | Arr(m,NotVariadic,s,t) when is_raw -> 
           begin match arrow_tail t with
-            | None -> fprintf fmt "@[<hov 2>%a:%a ->@ %a@]" show_mode m (pretty_parens ~lvl:arrs) s pretty t
+            | None -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
             | Some Ast.Structured.Relation -> fprintf fmt "@[<hov 2>pred %a@]" (pretty_pred_mode m) (s, t) 
             | Some Ast.Structured.Function -> fprintf fmt "@[<hov 2>func %a@]" (pretty_pred_mode m) (s, t)
           end
@@ -418,7 +422,7 @@ module TypeAssignment = struct
     and pretty_pred_mode m fmt (s, t) =
       fprintf fmt "@[<hov 2>%a:%a@]" show_mode m pretty s;
       match t with
-      | Prop _ -> Format.fprintf fmt "."
+      | Prop _ -> ()
       | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic" else "") (pretty_pred_mode m) (s',r)
       | _ -> assert false
     in
@@ -431,7 +435,7 @@ module TypeAssignment = struct
 
 
   let pretty_mut_once = 
-    pretty (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
+    pretty_raw (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
 
   let pretty_mut_once_raw = 
     pretty_raw (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
@@ -492,7 +496,7 @@ module TypeAssignment = struct
   let apply (sk:skema) args = apply F.Map.empty sk args
 
   let eq_skema_w_id n (symb1,x) (symb2,y) = 
-    try compare_skema x y = 0
+    try compare_skema ~cmp_mode:compare_tmode x y = 0
     with InvalidMode -> 
       error ~loc:(Symbol.get_loc symb1) 
         (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n Symbol.pp symb1 pretty_skema_raw x Symbol.pp symb2 pretty_skema_raw y)
@@ -531,13 +535,18 @@ module TypeAssignment = struct
 
   let o2l = function Single x -> [x] | Overloaded l -> l
 
+  let check_same_mode ~loc1 ~loc2 x y =
+    if compare_skema ~cmp_mode:compare_tmode x y <> 0 then
+      error ~loc:loc2 ("Two types for the same symbol cannot only differ on modes. Previous declaration: " ^ Loc.show loc1)
+
   let undup_skemas sk_of_s os1 os2 =
     let l1 = o2l os1 in
     let l2 = o2l os2 in
     let l = l1 @ l2 |> List.map (fun x -> x, sk_of_s x) in
     let filtered = ref [] in
     let eq_skema (s1,x) (s2,y) = 
-      let b = compare_skema x y = 0 in
+      let b = compare_skema ~cmp_mode:(fun _ _ -> 0) x y = 0 in
+      if b then check_same_mode ~loc1:(Symbol.get_loc s1) ~loc2:(Symbol.get_loc s2) x y;
       if b then filtered := (s1,s2) :: !filtered;
       b in      
     let l =
@@ -551,9 +560,12 @@ module TypeAssignment = struct
     | [x] -> !filtered, Single x
     | l -> !filtered, Overloaded l
 
-  let merge_skema s sk1 sk2 =
-    if compare_skema sk1 sk2 <> 0 then anomaly "merging different skemas";
+  let merge_skema sk1 sk2 =
+    if compare_skema ~cmp_mode:compare_tmode sk1 sk2 <> 0 then anomaly "merging different skemas";
     sk1
+
+  let compare_t_ a b = compare_t_ ~cmp_mode:compare_tmode a b
+  let compare_skema a b = compare_skema ~cmp_mode:compare_tmode a b
 
   let set m v = MutableOnce.set m (Val v)
 

@@ -373,7 +373,6 @@ end = struct
 
   type t = { data : Obj.t StrMap.t; stage : stage; extensions : descriptor }
   let dummy : t = { data = StrMap.empty; stage = Dummy; extensions = ref StrMap.empty }
-  let descriptor { extensions = x } = x
  
   let new_descriptor () : descriptor = ref StrMap.empty
   let merge_descriptors m1 m2 =
@@ -469,14 +468,16 @@ end
 
 let elpi_state_descriptor = State.new_descriptor ()
 
-type core_symbol = As | Uv [@@deriving enum, ord, show]
+type core_symbol = As | Uv | ECons | ENil [@@deriving enum, ord, show]
 let func_of_core_symbol = function
   | As    -> F.asf
   | Uv    -> F.from_string "uvar"
+  | ECons  -> F.consf
+  | ENil   -> F.nilf
 
 (* Globally unique identifier for symbols with a quotient *)
 module Symbol : sig 
-  type symbol [@@deriving show, ord]
+  type symbol [@@deriving show]
   module UF : Union_find.S with type key = symbol
   type 'a merge = (symbol -> 'a -> 'a -> 'a)
   module RawMap : Map.S with type key = symbol
@@ -497,8 +498,10 @@ module Symbol : sig
     val get_uf : 'a t -> UF.t
   end 
 
-  type t = symbol [@@deriving show,ord]
+  type t = symbol [@@deriving show]
   type provenance = Elpi_parser.Ast.Structured.provenance [@@deriving show,ord]
+
+  val equal : uf:UF.t -> t -> t -> bool
 
   val make : provenance -> F.t -> t
   val make_builtin : ?variant:int -> F.t -> t
@@ -519,7 +522,7 @@ end = struct
   module O = struct type t = symbol [@@deriving show,ord] end
   module RawMap = Map.Make(O)
   module UF = Elpi_util.Union_find.Make(O)
-  type t = symbol [@@deriving show, ord]
+  type t = symbol [@@deriving show]
 
   open Elpi_parser.Ast.Structured
   module QMap = struct
@@ -596,7 +599,6 @@ end = struct
     | Builtin { variant } -> Loc.initial ("(ocaml:"^F.show f^":"^string_of_int variant^")")
   let get_str (_,f) = F.show f
   let get_func (_,f) = f
-  let map_func f (x,y) =  x, f y
   
   let make prov name = prov, name
   let make_builtin ?(variant=0) name = Builtin { variant }, name
@@ -641,30 +643,32 @@ module Global_symbols : sig
   val declare_overloaded_global_symbol : string -> constant * int
   val lock : unit -> unit
 
-  val orc      : constant
-  (* val cutc     : constant
-  val andc     : constant
-  val implc    : constant
-  val rimplc   : constant
-  val pic      : constant
-  val sigmac   : constant
-  val eqc      : constant
-  val pmc      : constant *)
-  val rulec    : constant
-  val consc    : constant
-  val nilc     : constant
-  val entailsc : constant
-  val nablac   : constant
-  val asc      : constant
-  val arrowc   : constant
-  val uvarc    : constant
-  val propc    : constant
+  open Symbol
 
-  val ctypec   : constant
-  val variadic : constant
+  (* builtin predicates *)
+  val cut : symbol
+  val and_ : symbol
+  val impl : symbol
+  val rImpl : symbol
+  val pi : symbol
+  val sigma : symbol
+  val eq : symbol
+  val match_ : symbol
+  val findall : symbol
+  val delay : symbol
 
-  val spillc   : constant
-  (* val truec    : constant *)
+  (* core symbols *)
+  val as_      : symbol
+  val uvar    : symbol
+  val nil    : symbol
+  val cons    : symbol
+
+  (* internal *)
+  val uvarc : constant (* needed by runtime/unif *)
+  val asc : constant (* needed by runtime/unif *)
+  val orc      : constant (* needed by coq-elpi *)
+  val nilc     : constant (* needed by indexing *)
+  val consc     : constant (* needed by indexing *)
 
 end = struct
 
@@ -706,9 +710,11 @@ let declare_global_symbol symb =
 
 let declare_core_symbol x =
   let symb = Symbol.(make Core (func_of_core_symbol x)) in
-  declare_global_symbol symb
-let uvarc = declare_core_symbol Uv
-let asc = declare_core_symbol As
+  declare_global_symbol symb, symb
+let uvarc, uvar = declare_core_symbol Uv
+let asc, as_ = declare_core_symbol As
+let nilc, nil = declare_core_symbol ENil
+let consc, cons = declare_core_symbol ECons
 
 let declare_overloaded_global_symbol str =
   let symb, variant = Symbol.make_variant_builtin (Ast.Func.from_string str) in
@@ -718,38 +724,24 @@ let declare_global_symbol str =
   let symb = Symbol.make_builtin (Ast.Func.from_string str) in
   declare_global_symbol symb
 
-
-let declare_global_symbol_for_builtin str =
-  let symb = Symbol.make_builtin (Ast.Func.from_string str) in
-  if table.locked then
-    Util.anomaly "declare_global_symbol_for_builtin called after initialization";
-  try fst @@ Symbol.RawMap.find symb table.s2ct
-  with Not_found ->
-    table.last_global <- table.last_global - 1;
-    let n = table.last_global in
-    let t = Builtin(Host n,[]) in
-    table.s2ct <- Symbol.RawMap.add symb (n,t) table.s2ct;
-    table.c2s <- Constants.Map.add n symb table.c2s;
-    n
-
 let lock () = table.locked <- true
 
-let arrowc              = declare_global_symbol F.(show arrowf)
-let consc               = declare_global_symbol F.(show consf)
-let entailsc            = declare_global_symbol "?-"
-let implc               = declare_global_symbol F.(show implf)
-let nablac              = declare_global_symbol "nabla"
-let nilc                = declare_global_symbol F.(show nilf)
 let orc                 = declare_global_symbol F.(show orf)
-let rulec               = declare_global_symbol "rule"
-let spillc              = declare_global_symbol F.(show spillf)
-(* let truec               = declare_global_symbol F.(show truef) *)
-let ctypec              = declare_global_symbol F.(show ctypef)
-let propc               = declare_global_symbol "prop"
-let fpropc               = declare_global_symbol "fprop"
-let variadic            = declare_global_symbol "variadic"
 
-let cutc                = declare_global_symbol_for_builtin F.(show cutf)
+let publish_builtin b = Constants.Map.find (const_of_builtin_predicate b) table.c2s 
+
+let cut = publish_builtin Cut
+let and_ = publish_builtin And
+let impl = publish_builtin Impl
+let rImpl = publish_builtin RImpl
+let pi = publish_builtin Pi
+let sigma = publish_builtin Sigma
+let eq = publish_builtin Eq
+let match_ = publish_builtin Match
+let findall = publish_builtin Findall
+let delay = publish_builtin Delay
+
+
 end
 
 (* This term is hashconsed here *)

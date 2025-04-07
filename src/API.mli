@@ -1198,14 +1198,6 @@ module RawData : sig
 
     val orc    : constant (* ; *)
 
-    (* LambdaProlog built-in data types are just instances of CData.
-     * The typeabbrev machinery translates [int], [float] and [string]
-     * to [ctype "int"], [ctype "float"] and [ctype "string"]. *)
-    val ctypec : constant (* ctype *)
-
-    (* Marker for spilling function calls, as in [{ rev L }] *)
-    val spillc : constant
-
     module Map : Map.S with type key = constant
     module Set : Set.S with type elt = constant
 

@@ -1,5 +1,8 @@
 % q X Y shoud yield X=ok Y=ok
 
+pred f o:diagnostic, o:diagnostic.
+symbol a : int.
+
 q X Y :- (r a => p X), f X Y.
 f ok ko :- r a.
 f ok ok.
