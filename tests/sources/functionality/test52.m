@@ -1,4 +1,4 @@
-:- module testTODO1.
+:- module test52.
 
 :- interface.
 :- import_module io.
@@ -21,21 +21,29 @@ divisor(N, M):- divisor_help(1,N,M).
 :- mode mmap(in(pred(in, out) is cc_multi), in, out) is cc_multi.
 :- mode mmap(in(pred(in, out) is semidet), in, out) is semidet.
 :- mode mmap(in(pred(in, out) is multi), in, out) is multi.
-:- mode mmap(in(pred(in, out) is nondet), in, out) is nondet.
 :- mode mmap(in(pred(in, in) is semidet), in, in) is semidet.
-:- mode mmap(in(pred((pred(out) is nondet),out) is nondet),in,out) is nondet.
+
+% One of the two following signatures should be used to accept
+% mmap((pred(F::(pred(out) is nondet),I::out) is nondet :- F(I)), ...).
+:- pred mmap1(pred((pred(Y)), Y), list(pred(Y)), list(Y)).
+% :- mode mmap1(in(pred(in, out) is nondet), in, out) is nondet.
+:- mode mmap1(in(pred((pred(out) is nondet),out) is nondet),in,out) is nondet.
 % :- mode mmap(in(pred((pred(out) is nondet),out) is nondet),in(pred((pred(out) is nondet),out) is nondet),out) is nondet.
 
 mmap(_, [],  []).
 mmap(P, [H0 | T0], [H | T]) :-
     P(H0, H),
     mmap(P, T0, T).
+mmap1(_, [],  []).
+mmap1(P, [H0 | T0], [H | T]) :-
+    P(H0, H),
+    mmap1(P, T0, T).
 
 
 :- pred give_fun(list(list(int))::out) is nondet.
 give_fun(L) :-
-  Pred = (pred(F::(pred(out) is nondet),I::out) is nondet :- F(I)),
+  Pred = (pred(F::in(pred(out) is nondet),I::out) is nondet :- F(I)),
   % Pred = (pred(F::in,I::out) is nondet :- F(I)),
-  mmap(Pred,[mmap(divisor,[2,9])],L).
+  mmap1(Pred,[mmap(divisor,[2,9])],L).
 
 main(!IO).
