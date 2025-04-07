@@ -82,6 +82,8 @@ module Aux = struct
       | Det, Det -> Det
       | Rel, Rel -> Rel
       | a, (Any | BVar _) | (Any | BVar _), a -> a
+      | Exp [(Det|Rel|Exp _ ) as x], (Det|Rel) -> min_max ~loc ~d1 ~d2 x f2
+      | (Det|Rel), Exp [(Det|Rel|Exp _ ) as x] -> min_max ~loc ~d1 ~d2 f1 x
       | Exp l1, Exp l2 -> (
           try Exp (List.map2 (min_max ~loc ~d1 ~d2) l1 l2)
           with Invalid_argument _ -> anomaly ~loc "detCheck: min_max invalid exp_length")
@@ -124,6 +126,8 @@ module Aux = struct
       | BVar v1, BVar v2 -> F.equal v1 v2 || wrong_bvars ~loc v1 v2
       | BVar _, _ | _, BVar _ -> wrong_type ~loc a b
       | Exp l1, Exp l2 -> ( try List.for_all2 (aux ~loc) l1 l2 with Invalid_argument _ -> wrong_type ~loc a b)
+      | Exp [(Det|Rel|Exp _ ) as x], (Det|Rel) -> aux ~loc x b
+      | (Det|Rel), Exp [(Det|Rel|Exp _ ) as x] -> aux ~loc a x
       | Arrow (_, NotVariadic, l1, r1), Arrow (_, NotVariadic, l2, r2) -> aux l2 l1 ~loc && aux r1 r2 ~loc
       | Arrow (_, NotVariadic, l1, r1), Arrow (_, Variadic, l2, r2) -> aux l2 l1 ~loc && aux r1 b ~loc
       | Arrow (_, Variadic, l1, r1), Arrow (_, NotVariadic, l2, r2) -> aux l2 a ~loc && aux r1 r2 ~loc
