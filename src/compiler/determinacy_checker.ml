@@ -119,7 +119,10 @@ module Aux = struct
     anomaly ~loc @@ Format.asprintf "DetCheck: <<=: TC did not unify two unif vars (%a and %a)" F.pp v1 F.pp v2
 
   let ( <<= ) ~loc a b =
-    let rec aux ~loc a b =
+    let rec choose_dir ~loc t1 t2 = function
+      | Mode.Input -> aux ~loc t2 t1
+      | Mode.Output -> aux ~loc t1 t2
+    and aux ~loc a b =
       match (a, b) with
       | _, Any -> true
       | Any, _ -> b = maximize ~loc b (* TC may accept A = any, so we do too *)
@@ -128,10 +131,10 @@ module Aux = struct
       | Exp l1, Exp l2 -> ( try List.for_all2 (aux ~loc) l1 l2 with Invalid_argument _ -> wrong_type ~loc a b)
       | Exp [(Det|Rel|Exp _ ) as x], (Det|Rel) -> aux ~loc x b
       | (Det|Rel), Exp [(Det|Rel|Exp _ ) as x] -> aux ~loc a x
-      | Arrow (_, NotVariadic, l1, r1), Arrow (_, NotVariadic, l2, r2) -> aux l2 l1 ~loc && aux r1 r2 ~loc
-      | Arrow (_, NotVariadic, l1, r1), Arrow (_, Variadic, l2, r2) -> aux l2 l1 ~loc && aux r1 b ~loc
-      | Arrow (_, Variadic, l1, r1), Arrow (_, NotVariadic, l2, r2) -> aux l2 a ~loc && aux r1 r2 ~loc
-      | Arrow (_, Variadic, l1, r1), Arrow (_, Variadic, l2, r2) -> aux l2 l1 ~loc && aux r1 r2 ~loc
+      | Arrow (m1, NotVariadic, l1, r1), Arrow (_, NotVariadic, l2, r2) -> choose_dir ~loc l1 l2 m1 && aux r1 r2 ~loc
+      | Arrow (m1, NotVariadic, l1, r1), Arrow (_, Variadic, l2, r2) -> choose_dir ~loc l1 l2 m1 && aux r1 b ~loc
+      | Arrow (m1, Variadic, l1, r1), Arrow (_, NotVariadic, l2, r2) -> choose_dir ~loc l1 l2 m1 && aux a r2 ~loc
+      | Arrow (m1, Variadic, l1, r1), Arrow (_, Variadic, l2, r2) -> choose_dir ~loc l1 l2 m1 && aux r1 r2 ~loc
       (* Left is variadic, Right is not an arrow -> we eat the arrow and continue *)
       | Arrow (_, Variadic, _, r), d -> aux r d ~loc
       (* Left is not an arrow, Right is variadic -> we eat the arrow and continue *)
@@ -203,8 +206,6 @@ let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
     if is_var then get_var @@ UVar.get var name
     else match t with Scope.Bound b -> get_ctx @@ BVar.get ctx (name, b) | Global g -> get_con g.decl_id
   in
-  Format.eprintf "The type of %a is %a@." F.pp name pp_dtype det_head;
-  Format.eprintf "The dtype of %a is %a@." F.pp name pp_dtype det_head;
   Format.eprintf "The functionality of %a is %a (its type is %a)@." F.pp name pp_dtype det_head
     TypeAssignment.pretty_mut_once_raw (TypeAssignment.deref tya);
   det_head
@@ -276,14 +277,18 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t:S
                  Format.eprintf "Invalid determinacy set b to wrong (%s)@." b#show));
             aux (choose_variadic v d r) tl (* The recursive call is correct *)
         | Arrow (Output, v, l, r), hd :: tl ->
-            (if was_input && was_data then
+            Format.eprintf "In was_input:%b and was_data:%b@." was_input was_data;
+            (if was_data then
                let dy, b' = infer ~was_input ctx hd in
+               Format.eprintf "In output of infer, with term %a and type %a with expectation %a -> %b@." ScopedTerm.pretty hd pp_dtype dy pp_dtype l ((dy <<= l) ~loc);
                if b'#is_wrong then (* If the recursive call is wrong, we stop and return bottom *)
-                 b#set_wrong b'#get_loc
+                 (Format.eprintf "Setting is wrong@.";
+                 b#set_wrong b'#get_loc)
                else if not ((dy <<= l) ~loc) then
                  (* If preconditions are not satisfied, we stop and return bottom *)
-                 b#set_wrong loc);
-            Format.eprintf "In output mode for term %a@." ScopedTerm.pretty hd;
+                 (Format.eprintf "Setting is wrong 2@.";
+                 b#set_wrong loc));
+            Format.eprintf "In output mode for term %a with bool %s@." ScopedTerm.pretty hd (b#show);
             aux (choose_variadic v d r) tl
         | (BVar _ | Any), _ -> (d, new good_call)
         | (Det | Rel | Exp _), _ :: _ ->
