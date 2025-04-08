@@ -15,4 +15,4 @@ type   (`and)     form -> form -> form.
 type   (`or)      form -> form -> form.
 type   (`imp)     form -> form -> form.
 type   all     (term -> form) -> form.
-type   some    (term -> form) -> form.
+type   ex    (term -> form) -> form.

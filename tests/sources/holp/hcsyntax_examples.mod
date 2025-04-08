@@ -8,9 +8,9 @@ module  hcsyntax_examples.
 
 accumulate  hc_syntax, refl_syntax.
 
-/* some sample formulas */
-formula  1  (some x \ ((path a x) `and (path x b))).
-formula  2  (some x \ ((path a x) `imp (path x b))).
+/* ex sample formulas */
+formula  1  (ex x \ ((path a x) `and (path x b))).
+formula  2  (ex x \ ((path a x) `imp (path x b))).
 formula  3  ((path a b) `and (path b a)).
 formula  4  ((path a b) `imp (path b a)).
 

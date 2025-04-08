@@ -605,7 +605,7 @@ end = struct
   let make_variant_builtin =
     let state = ref F.Map.empty in
     let incr name =
-      let n = try F.Map.find name !state with Not_found -> -1 in
+      let n = try F.Map.find name !state with Not_found -> 0 in
       let n = n + 1 in
       state := F.Map.add name n !state;
       n in
@@ -1339,13 +1339,21 @@ let compile_constructors ty self self_name l =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then
     anomaly ("Duplicate constructors name in ADT: " ^ Conversion.show_ty_ast ty);
-  List.fold_left (fun (vacc, acc,sacc) (K(name,_,a,b,m)) ->
-    let c, variant = Global_symbols.declare_overloaded_global_symbol name in
-    let args = compile_arguments a self in
-    StrMap.add  name variant vacc,
-    Constants.Map.add c (XK(args,compile_builder a b,compile_matcher a m)) acc,
-    StrMap.add name (tyargs_of_args self_name args) sacc)
-      (StrMap.empty, Constants.Map.empty,StrMap.empty) l
+  List.fold_left (fun (vacc, acc, sacc) (K(name,_,a,b,m)) ->
+    if name = "uvar" then
+      let args = compile_arguments a self in
+      let acc = Constants.Map.add Global_symbols.uvarc (XK(args,compile_builder a b,compile_matcher a m)) acc in
+      (vacc, acc, sacc)
+    else
+      let c, variant =
+        match ty with
+        | Conversion.TyApp _ -> Global_symbols.declare_global_symbol name, 0
+        | _ -> Global_symbols.declare_overloaded_global_symbol name in
+      let args = compile_arguments a self in
+      StrMap.add  name variant vacc,
+      Constants.Map.add c (XK(args,compile_builder a b,compile_matcher a m)) acc,
+      StrMap.add name (tyargs_of_args self_name args) sacc)
+        (StrMap.empty, Constants.Map.empty,StrMap.empty) l
 
 let document_constructor fmt name variant doc argsdoc =
   Fmt.fprintf fmt "@[<hov2>external symbol %s :@[<hov>%a@] = \"%d\". %s@]@\n"

@@ -51,9 +51,9 @@ prim_poly greater  (c (num --> num --> bool)).
 prim_poly (in N)   (c  num).
 
 
-% Representing typing judgements; these are essentially term, type pairs
-kind pair    type -> type -> type.     
-type pr      A -> B -> pair A B.
+% % Representing typing judgements; these are essentially term, type pairs
+% kind pair    type -> type -> type.     
+% type pr      A -> B -> pair A B.
 
 
 % Inferring a poly type for a term. The main work is done in typeof that

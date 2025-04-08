@@ -5,7 +5,6 @@ symbol f : int -> int.
 symbol f : int -> string.
 symbol g : int -> int.
 symbol g : int -> string.
-symbol (,) : variadic int int.
 symbol (&&) : int -> int -> int.
 symbol (||) : int -> int -> int.
 symbol (===>) : int -> int -> int.
@@ -16,4 +15,4 @@ main :-
   print (X is (f Y + r X) * g A),
   print (X1 is f Y ^ r X ^ g A),
   print (X || A && B ===> G),
-  print [(f X : int), g Y, (a , b), a + b].
+  print [(f X : int), g Y, (a + b), a + b].

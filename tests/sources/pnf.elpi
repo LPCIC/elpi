@@ -13,7 +13,7 @@ kind term, formula type.
 type perp, tru formula.
 type and, or, imp formula -> formula -> formula.
 type adj, path term -> term -> formula.
-type all, some (term -> formula) -> formula.
+type all, ex (term -> formula) -> formula.
 
 pred quant_free o:formula.
 quant_free perp.
@@ -42,7 +42,7 @@ pred prenex o:formula, o:formula.
 (prenex (or B C) D) :- (prenex B U), (prenex C V), (merge (or U V) D).
 (prenex (imp B C) D) :- (prenex B U), (prenex C V), (merge (imp U V) D).
 (prenex (all B) (all D)) :- (pi x\ ((termp x) => (prenex (B x) (D x)))).
-(prenex (some B) (some D)) :- (pi x\ ((termp x) => (prenex (B x) (D x)))).
+(prenex (ex B) (ex D)) :- (pi x\ ((termp x) => (prenex (B x) (D x)))).
 
 
 /* This predicate is for moving out quantifiers appearing at the head of the 
@@ -56,31 +56,31 @@ pred merge o:formula, o:formula.
 (merge (and B (all C)) (all D)) :- 
        (pi x\ ((termp x) => (merge (and B (C x)) (D x)))).
 
-(merge (and (some B) C) (some D)) :- 
+(merge (and (ex B) C) (ex D)) :- 
        (pi x\ ((termp x) => (merge (and (B x) C) (D x)))).
-(merge (and B (some C)) (some D)) :-
+(merge (and B (ex C)) (ex D)) :-
        (pi x\ ((termp x) => (merge (and B (C x)) (D x)))).
 
 (merge (or (all B) C) (all D)) :-
        (pi x\ ((termp x) => (merge (or (B x) C) (D x)))).
 (merge (or B (all C)) (all D)) :-
        (pi x\ ((termp x) => (merge (or B (C x)) (D x)))).
-(merge (or (some B) (some C)) (some D)) :-
+(merge (or (ex B) (ex C)) (ex D)) :-
        (pi x\ ((termp x) => (merge (or (B x) (C x)) (D x)))).
-(merge (or (some B) C) (some D)) :-
+(merge (or (ex B) C) (ex D)) :-
        (pi x\ ((termp x) => (merge (or (B x) C) (D x)))).
-(merge (or B (some C)) (some D)) :-
+(merge (or B (ex C)) (ex D)) :-
        (pi x\ ((termp x) => (merge (or B (C x)) (D x)))).
 
-(merge (imp (all B) (some C)) (some D)) :- 
+(merge (imp (all B) (ex C)) (ex D)) :- 
        (pi x\ ((termp x) => (merge (imp (B x) (C x)) (D x)))).
-(merge (imp (all B) C) (some D)) :- 
+(merge (imp (all B) C) (ex D)) :- 
        (pi x\ ((termp x) => (merge (imp (B x) C) (D x)))).
-(merge (imp (some B) C) (all D)) :-
+(merge (imp (ex B) C) (all D)) :-
        (pi x\ ((termp x) => (merge (imp (B x) C) (D x)))).
 (merge (imp B (all C)) (all D)) :-
        (pi x\ ((termp x) => (merge (imp B (C x)) (D x)))).
-(merge (imp B (some C)) (some D)) :-
+(merge (imp B (ex C)) (ex D)) :-
        (pi x\ ((termp x) => (merge (imp B (C x)) (D x)))).
 
 (merge B B) :- (quant_free B).
@@ -89,9 +89,9 @@ type one, two, three, four term.
 type formula term -> formula -> prop.
 
 formula one  (imp (all (x \ (path a x))) tru).
-formula two  (imp (some (x \ (path a x))) tru).
+formula two  (imp (ex (x \ (path a x))) tru).
 formula three  (and (all (x \ (path a x))) (all (y \ (path y a)))).
-formula four  (imp (some (x \ (path a x))) ((all (y \ (path a y))))).
+formula four  (imp (ex (x \ (path a x))) ((all (y \ (path a y))))).
 
 pred test o:term, o:formula.
 (test N F) :- (formula N OF), (prenex OF F).
