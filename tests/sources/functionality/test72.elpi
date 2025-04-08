@@ -1,0 +1,14 @@
+func succ int -> int.
+
+succ 3 4 :- true, !, false.
+
+succ X_ 5 :- pi x\ !.
+succ X_ 6 :- !.
+succ uvar _ :- !.
+succ _ _ :- pi x\ true => !.
+
+succ 1 _.
+succ 2 _.
+succ uvar _.
+
+main.
