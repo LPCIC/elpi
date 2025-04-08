@@ -375,7 +375,7 @@ let cloc =
 module Structured = struct
 type provenance =
   | Core (* baked into the elpi runtime *)
-  | Builtin of { variant : int } (* buitin or host declared *)
+  | Builtin of { variant : int } (* builtin or host declared *)
   | File of Loc.t
 [@@deriving show, ord]
   

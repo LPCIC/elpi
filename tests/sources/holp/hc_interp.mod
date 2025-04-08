@@ -11,7 +11,7 @@ accumulate lists.
 type   backchain   (list form) -> form -> o.
 type   try_clause  (list form) -> form -> form -> o.
 
-hc_interp Cs (some B)  :- !, hc_interp Cs (B T).
+hc_interp Cs (ex B)  :- !, hc_interp Cs (B T).
 hc_interp Cs (B `and C) :- !, hc_interp Cs B, hc_interp Cs C.
 hc_interp Cs (B `or C) :- !, (hc_interp Cs B ; hc_interp Cs C).
 hc_interp Cs A  :-  backchain Cs A.

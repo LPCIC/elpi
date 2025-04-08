@@ -189,6 +189,9 @@ let unspecC data = let open API.ContextualConversion in let open API.RawData in 
 }
 let unspec d = API.ContextualConversion.(!<(unspecC (!> d)))
 
+let pair_decl = (pair (BuiltInData.poly "A") (BuiltInData.poly "B"))
+let option_decl = option (BuiltInData.poly "A")
+
 (** Core built-in ********************************************************* *)
 
 let core_builtins = let open BuiltIn in let open ContextualConversion in [
@@ -216,7 +219,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   MLData BuiltInData.string;
   MLData BuiltInData.float;
 
-  LPCode "pred (;) i:prop, i:prop.";
+  LPCode "external symbol (;) prop -> prop -> prop.";
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
@@ -318,7 +321,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
 
   MLData bool;
 
-  MLData (pair (BuiltInData.poly "A") (BuiltInData.poly "B"));
+  MLData pair_decl;
 
   LPCode "func fst  pair A B -> A.";
   LPCode "fst (pr A _) A.";
@@ -340,8 +343,8 @@ triple_3 (triple _ _ C) C.
  
 |};
 
-  MLData (option (BuiltInData.poly "A"));
-
+  MLData option_decl;
+  
   MLData cmp;
 
   MLData diagnostic;

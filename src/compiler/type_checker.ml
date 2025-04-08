@@ -138,7 +138,10 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * 
     | External None when is_a_predicate -> Symbol.make_builtin name |> to_unify
     | External (Some (File _)) -> anomaly "provenance File cannot be provided by the user"
     | External (Some p) -> Symbol.make p name |> to_unify
-    | _ -> None in
+    | _ -> 
+      match Symbol.make_builtin name |> to_unify with
+      | Some s -> error ~loc ("non-external symbol " ^ F.show name ^ " conflicts with an existing, non-overloaded, external symbol. Rename it.")
+      | None -> None in
   symb, quotient, { ty; indexing }
 
 let arrow_of_args args ety =
