@@ -48,8 +48,8 @@ end
 exception DetError of (Scope.t ScopedTerm.ty_name option * Good_call.t)
 exception FatalDetError of (Scope.t ScopedTerm.ty_name option * Good_call.t)
 exception RelationalBody of (Scope.t ScopedTerm.ty_name option * Good_call.t)
+exception CastError of (Scope.t ScopedTerm.ty_name option * Good_call.t)
 exception LoadFlexClause of ScopedTerm.t
-exception CastError of Loc.t
 exception IGNORE
 
 let rec pp_dtype fmt = function
@@ -506,7 +506,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
           try
             let d, d_loc = check ~ctx d b in
             let d' = Compilation.type_ass_2func_mut ~loc env ty in
-            if not ((d <<= d') ~loc) then raise (CastError loc);
+            if not ((d <<= d') ~loc) then raise (CastError (None, Good_call.make ~exp:d' ~found:d b));
             (d, t)
           with DetError x -> raise (FatalDetError x))
       | Spill (b, _) -> spill_err ~loc
@@ -646,9 +646,14 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
         ("DetCheck: "
         ^ Format.asprintf "%sInvalid determinacy of output term %a.\n Expected: %a\n Found: %a"
             (undecl_disclaimer pred_name) ScopedTerm.pretty term pp_dtype exp pp_dtype found)
-  | CastError loc -> error ~loc "Cast error"
+  | CastError (_,gc) -> 
+    (let Good_call.{ exp; found; term } = Good_call.get gc in
+        error ~loc:term.loc
+          ("DetCheck: Cast error"
+          ^ Format.asprintf "for term %a.\n Expected: %a\n Found: %a"
+              ScopedTerm.pretty term pp_dtype exp pp_dtype found))
   | RelationalBody (pred_name, gc) -> 
       let Good_call.{ exp; found; term } = Good_call.get gc in
       error ~loc:term.loc 
-      @@ Format.asprintf "%sFound relational atom (%a) in the body of function %a" (undecl_disclaimer pred_name) ScopedTerm.pretty term F.pp (let (_,n,_) = Option.get pred_name in n);
+      @@ Format.asprintf "DetCheck: %sFound relational atom (%a) in the body of function %a" (undecl_disclaimer pred_name) ScopedTerm.pretty term F.pp (let (_,n,_) = Option.get pred_name in n);
 
