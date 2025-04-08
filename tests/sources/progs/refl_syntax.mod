@@ -16,7 +16,7 @@ term truth.
 term false.
 term (c X).
 term null.
-term (cons Hd Tl) :- term Hd, term Tl.
+term (lcons Hd Tl) :- term Hd, term Tl.
 
 term (M && N) :- term M, term N.
 term (plus M N) :- term M, term N.

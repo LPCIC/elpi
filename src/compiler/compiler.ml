@@ -1536,17 +1536,7 @@ end = struct
       C.Map.empty in
     R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
-  let to_dbl ?(ctx=Scope.Map.empty) ~types ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
-    (* Format.eprintf "todbl: term : %a" ScopedTerm.pretty t; *)
-    let symb = ref symb in
-    let amap = ref amap in
-    let allocate_arg c =
-      try F.Map.find c !amap
-      with Not_found ->
-        let n = F.Map.cardinal !amap in
-        amap := F.Map.add c n !amap;
-        n in
-    let lookup_global s =
+    let lookup_global types symb state s =
       let c = Symbol.UF.find (Symbol.QMap.get_uf types.Type_checker.symbols) s in
       (* Format.eprintf "LOOKUP %a\n" Symbol.pp c; *)
       match SymbolMap.get_global_symbol !symb c with
@@ -1557,9 +1547,10 @@ end = struct
       rc
      | Some c ->
       (* Format.eprintf "  FOUND %b\n" (is_builtin_predicate c); *)
-        c, SymbolMap.get_canonical state !symb c in
-    let allocate_global_symbol ~loc s c =
-      lookup_global @@
+        c, SymbolMap.get_canonical state !symb c
+
+    let allocate_global_symbol types symb state ~loc s c =
+      lookup_global types symb state @@
         match s with
         | Some s -> s
         | None -> 
@@ -1569,7 +1560,17 @@ end = struct
               error ~loc ("untyped and non allocated symbol " ^ F.show c)
           | exception Not_found ->
               error ~loc ("untyped and non allocated symbol " ^ F.show c)
-      in
+
+  let to_dbl ?(ctx=Scope.Map.empty) ~types ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
+    (* Format.eprintf "todbl: term : %a" ScopedTerm.pretty t; *)
+    let symb = ref symb in
+    let amap = ref amap in
+    let allocate_arg c =
+      try F.Map.find c !amap
+      with Not_found ->
+        let n = F.Map.cardinal !amap in
+        amap := F.Map.add c n !amap;
+        n in
     let lookup_bound loc (_,ctx) (c,l as x) =
       try Scope.Map.find x ctx
       with Not_found -> error ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "") in
@@ -1578,6 +1579,7 @@ end = struct
       let s, rc = SymbolMap.allocate_bound_symbol state !symb c in
       symb := s;
       rc in
+    let allocate_global_symbol = allocate_global_symbol types symb state in
     let push_bound (n,ctx) c = (n+1,Scope.Map.add c n ctx) in
     let push_unnamed_bound (n,ctx) = (n+1,ctx) in
     let push ctx : string ScopedTerm.ty_name option -> 'a = function
@@ -1733,10 +1735,11 @@ end = struct
     check_rule_pattern_in_clique state symbols clique rule;
     symbols, CHR.add_rule clique rule chr
 
-  let extend1_chr_block flags state ~builtins ~types (symbols,chr) { Ast.Structured.clique; ctx_filter; rules } =
+  let extend1_chr_block flags state ~builtins ~types (symbols,chr) { Ast.Structured.clique; ctx_filter; rules; loc } =
     let allocate_global_symbol state symbols f =
-      let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols f in
-      symbols, c in
+      let symbols = ref symbols in
+      let (c,_) = allocate_global_symbol types symbols state ~loc (Some f) (Symbol.get_func f) in
+      !symbols, c in
     let symbols, clique = map_acc (allocate_global_symbol state) symbols clique in
     let symbols, ctx_filter = map_acc (allocate_global_symbol state) symbols ctx_filter in
     let chr, clique = CHR.new_clique (SymbolMap.global_name state symbols) ctx_filter clique chr in

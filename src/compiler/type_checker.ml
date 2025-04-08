@@ -125,21 +125,21 @@ let check_indexing ~loc name value ty indexing =
 
 let check_type ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * Symbol.t option * symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
-  (* Format.eprintf " - %a\n%!" TypeAssignment.pretty_skema ty; *)
+  (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
   let indexing = check_indexing ~loc name value ty indexing in
   let symb = Symbol.make (File loc) name in
   let quotient =
-    let is_a_predicate = is_prop ty in
     let to_unify bsymb =
       match Symbol.RawMap.find bsymb Elpi_runtime.Data.Global_symbols.table.s2ct with
       | _ -> Some bsymb 
       | exception Not_found -> None in
     match indexing with
-    | External None when is_a_predicate -> Symbol.make_builtin name |> to_unify
     | External (Some (File _)) -> anomaly "provenance File cannot be provided by the user"
     | External (Some p) -> Symbol.make p name |> to_unify
-    | External None -> None
-    | (Index _ | DontIndex) -> 
+    | External None -> Symbol.make_builtin name |> to_unify
+    | (Index _ | DontIndex) ->
+      if Elpi_runtime.Data.is_core_symbol name then
+        error ~loc ("Symbol " ^ F.show name ^ " is reserved ");
       match Symbol.make_builtin name |> to_unify with
       | Some s -> error ~loc ("non-external symbol " ^ F.show name ^ " conflicts with an existing, non-overloaded, external symbol. Rename it.")
       | None -> None in

@@ -16,7 +16,7 @@ type cond  tm -> tm -> tm -> tm.    % conditional
 type in    int -> tm.               % constructor for embedding integers
 
 type and, or, false, truth,                      % boolean functions
-     car, cdr, cons, nullp, consp, empty,        % lists functions
+     car, cdr, lcons, nullp, consp, empty,        % lists functions
      equal, greater, zerop, minus, plus, times   % integer functions
      tm.
 

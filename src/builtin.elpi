@@ -239,9 +239,9 @@ X s>= Y :- ge_ X Y.
 
 kind list type -> type.
 
-type (::) X -> list X -> list X.
+external symbol (::) : X -> list X -> list X = "core".
 
-type ([]) list X.
+external symbol ([]) : list X = "core".
 
 % Boolean values: tt and ff since true and false are predicates
 kind bool type.

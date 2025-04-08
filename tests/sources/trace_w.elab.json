@@ -1988,7 +1988,7 @@
                   "step": [
                     "Init",
                     {
-                      "goal_text": "generalize [] [] (mono (uvar frozen--397 [] ===> uvar frozen--397 [])) X3",
+                      "goal_text": "generalize [] [] (mono (uvar frozen--395 [] ===> uvar frozen--395 [])) X3",
                       "goal_id": 26
                     }
                   ],
@@ -2001,7 +2001,7 @@
                     "Inference",
                     {
                       "current_goal_id": 26,
-                      "current_goal_text": "generalize [] [] (mono (uvar frozen--397 [] ===> uvar frozen--397 [])) X3",
+                      "current_goal_text": "generalize [] [] (mono (uvar frozen--395 [] ===> uvar frozen--395 [])) X3",
                       "current_goal_predicate": "generalize",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2027,14 +2027,14 @@
                               [ "Assign", "A2 := []" ],
                               [
                                 "Assign",
-                                "A0 := uvar frozen--397 [] ===> uvar frozen--397 []"
+                                "A0 := uvar frozen--395 [] ===> uvar frozen--395 []"
                               ],
                               [ "Assign", "A6 := X3" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "free-ty (mono (uvar frozen--397 [] ===> uvar frozen--397 [])) [] X4",
+                              "goal_text": "free-ty (mono (uvar frozen--395 [] ===> uvar frozen--395 [])) [] X4",
                               "goal_id": 27
                             },
                             {
@@ -2046,7 +2046,7 @@
                               "goal_id": 29
                             },
                             {
-                              "goal_text": "bind X6 [] (uvar frozen--397 [] ===> uvar frozen--397 []) X3",
+                              "goal_text": "bind X6 [] (uvar frozen--395 [] ===> uvar frozen--395 []) X3",
                               "goal_id": 30
                             }
                           ],
@@ -2086,7 +2086,7 @@
                     "Inference",
                     {
                       "current_goal_id": 27,
-                      "current_goal_text": "free-ty (mono (uvar frozen--397 [] ===> uvar frozen--397 [])) [] X4",
+                      "current_goal_text": "free-ty (mono (uvar frozen--395 [] ===> uvar frozen--395 [])) [] X4",
                       "current_goal_predicate": "free-ty",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2110,7 +2110,7 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := uvar frozen--397 [] ===> uvar frozen--397 []"
+                                "A0 := uvar frozen--395 [] ===> uvar frozen--395 []"
                               ],
                               [ "Assign", "A1 := []" ],
                               [ "Assign", "A2 := X4" ]
@@ -2118,7 +2118,7 @@
                           },
                           "siblings": [
                             {
-                              "goal_text": "free (uvar frozen--397 [] ===> uvar frozen--397 []) [] X4",
+                              "goal_text": "free (uvar frozen--395 [] ===> uvar frozen--395 []) [] X4",
                               "goal_id": 31
                             }
                           ],
@@ -2177,7 +2177,7 @@
                     "Inference",
                     {
                       "current_goal_id": 31,
-                      "current_goal_text": "free (uvar frozen--397 [] ===> uvar frozen--397 []) [] X4",
+                      "current_goal_text": "free (uvar frozen--395 [] ===> uvar frozen--395 []) [] X4",
                       "current_goal_predicate": "free",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2199,19 +2199,19 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := uvar frozen--397 []" ],
-                              [ "Assign", "A3 := uvar frozen--397 []" ],
+                              [ "Assign", "A0 := uvar frozen--395 []" ],
+                              [ "Assign", "A3 := uvar frozen--395 []" ],
                               [ "Assign", "A1 := []" ],
                               [ "Assign", "A4 := X4" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "free (uvar frozen--397 []) [] X7",
+                              "goal_text": "free (uvar frozen--395 []) [] X7",
                               "goal_id": 32
                             },
                             {
-                              "goal_text": "free (uvar frozen--397 []) X7 X4",
+                              "goal_text": "free (uvar frozen--395 []) X7 X4",
                               "goal_id": 33
                             }
                           ],
@@ -2289,7 +2289,7 @@
                     "Inference",
                     {
                       "current_goal_id": 32,
-                      "current_goal_text": "free (uvar frozen--397 []) [] X7",
+                      "current_goal_text": "free (uvar frozen--395 []) [] X7",
                       "current_goal_predicate": "free",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2311,14 +2311,14 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A1 := uvar frozen--397 []" ],
+                              [ "Assign", "A1 := uvar frozen--395 []" ],
                               [ "Assign", "A0 := []" ],
                               [ "Assign", "A2 := X7" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "if (mem [] (uvar frozen--397 [])) (X7 = []) (X7 = [uvar frozen--397 []])",
+                              "goal_text": "if (mem [] (uvar frozen--395 [])) (X7 = []) (X7 = [uvar frozen--395 []])",
                               "goal_id": 34
                             }
                           ],
@@ -2415,7 +2415,7 @@
                     "Inference",
                     {
                       "current_goal_id": 34,
-                      "current_goal_text": "if (mem [] (uvar frozen--397 [])) (X7 = []) (X7 = [uvar frozen--397 []])",
+                      "current_goal_text": "if (mem [] (uvar frozen--395 [])) (X7 = []) (X7 = [uvar frozen--395 []])",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2431,7 +2431,7 @@
                                     "filename": "builtin.elpi",
                                     "line": 526,
                                     "column": 0,
-                                    "character": 13671
+                                    "character": 13715
                                   }
                                 ]
                               }
@@ -2439,14 +2439,14 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := mem [] (uvar frozen--397 [])"
+                                "A0 := mem [] (uvar frozen--395 [])"
                               ],
                               [ "Assign", "A1 := X7 = []" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem [] (uvar frozen--397 [])",
+                              "goal_text": "mem [] (uvar frozen--395 [])",
                               "goal_id": 35
                             },
                             { "goal_text": "!", "goal_id": 36 },
@@ -2468,7 +2468,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -2564,7 +2564,7 @@
                     "Inference",
                     {
                       "current_goal_id": 35,
-                      "current_goal_text": "mem [] (uvar frozen--397 [])",
+                      "current_goal_text": "mem [] (uvar frozen--395 [])",
                       "current_goal_predicate": "mem",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2587,12 +2587,12 @@
                             ],
                             "events": [
                               [ "Assign", "A0 := []" ],
-                              [ "Assign", "A1 := frozen--397" ]
+                              [ "Assign", "A1 := frozen--395" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem! [] (uvar frozen--397 X8)",
+                              "goal_text": "mem! [] (uvar frozen--395 X8)",
                               "goal_id": 38
                             }
                           ],
@@ -2631,7 +2631,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -2727,7 +2727,7 @@
                     "Inference",
                     {
                       "current_goal_id": 38,
-                      "current_goal_text": "mem! [] (uvar frozen--397 X8)",
+                      "current_goal_text": "mem! [] (uvar frozen--395 X8)",
                       "current_goal_predicate": "mem!",
                       "failed_attempts": [],
                       "successful_attempts": [],
@@ -2763,7 +2763,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -2859,7 +2859,7 @@
                     "Inference",
                     {
                       "current_goal_id": 34,
-                      "current_goal_text": "if (mem [] (uvar frozen--397 [])) (X7 = []) (X7 = [uvar frozen--397 []])",
+                      "current_goal_text": "if (mem [] (uvar frozen--395 [])) (X7 = []) (X7 = [uvar frozen--395 []])",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2875,20 +2875,20 @@
                                     "filename": "builtin.elpi",
                                     "line": 527,
                                     "column": 0,
-                                    "character": 13692
+                                    "character": 13736
                                   }
                                 ]
                               }
                             ],
                             "events": [
                               [
-                                "Assign", "A0 := X7 = [uvar frozen--397 []]"
+                                "Assign", "A0 := X7 = [uvar frozen--395 []]"
                               ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "X7 = [uvar frozen--397 []]",
+                              "goal_text": "X7 = [uvar frozen--395 []]",
                               "goal_id": 39
                             }
                           ],
@@ -2908,7 +2908,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 527,
                                   "column": 0,
-                                  "character": 13692
+                                  "character": 13736
                                 }
                               ]
                             }
@@ -3004,7 +3004,7 @@
                     "Inference",
                     {
                       "current_goal_id": 39,
-                      "current_goal_text": "X7 = [uvar frozen--397 []]",
+                      "current_goal_text": "X7 = [uvar frozen--395 []]",
                       "current_goal_predicate": "=",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3012,7 +3012,7 @@
                           "attempt": {
                             "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
                             "events": [
-                              [ "Assign", "X7 := [uvar frozen--397 []]" ]
+                              [ "Assign", "X7 := [uvar frozen--395 []]" ]
                             ]
                           },
                           "siblings": [],
@@ -3037,7 +3037,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 527,
                                   "column": 0,
-                                  "character": 13692
+                                  "character": 13736
                                 }
                               ]
                             }
@@ -3133,7 +3133,7 @@
                     "Inference",
                     {
                       "current_goal_id": 33,
-                      "current_goal_text": "free (uvar frozen--397 []) [uvar frozen--397 []] X4",
+                      "current_goal_text": "free (uvar frozen--395 []) [uvar frozen--395 []] X4",
                       "current_goal_predicate": "free",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3155,14 +3155,14 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A1 := uvar frozen--397 []" ],
-                              [ "Assign", "A0 := [uvar frozen--397 []]" ],
+                              [ "Assign", "A1 := uvar frozen--395 []" ],
+                              [ "Assign", "A0 := [uvar frozen--395 []]" ],
                               [ "Assign", "A2 := X4" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "if (mem [uvar frozen--397 []] (uvar frozen--397 [])) \n (X4 = [uvar frozen--397 []]) \n (X4 = [uvar frozen--397 [], uvar frozen--397 []])",
+                              "goal_text": "if (mem [uvar frozen--395 []] (uvar frozen--395 [])) \n (X4 = [uvar frozen--395 []]) \n (X4 = [uvar frozen--395 [], uvar frozen--395 []])",
                               "goal_id": 40
                             }
                           ],
@@ -3259,7 +3259,7 @@
                     "Inference",
                     {
                       "current_goal_id": 40,
-                      "current_goal_text": "if (mem [uvar frozen--397 []] (uvar frozen--397 [])) \n (X4 = [uvar frozen--397 []]) \n (X4 = [uvar frozen--397 [], uvar frozen--397 []])",
+                      "current_goal_text": "if (mem [uvar frozen--395 []] (uvar frozen--395 [])) \n (X4 = [uvar frozen--395 []]) \n (X4 = [uvar frozen--395 [], uvar frozen--395 []])",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3275,7 +3275,7 @@
                                     "filename": "builtin.elpi",
                                     "line": 526,
                                     "column": 0,
-                                    "character": 13671
+                                    "character": 13715
                                   }
                                 ]
                               }
@@ -3283,21 +3283,21 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := mem [uvar frozen--397 []] (uvar frozen--397 [])"
+                                "A0 := mem [uvar frozen--395 []] (uvar frozen--395 [])"
                               ],
                               [
-                                "Assign", "A1 := X4 = [uvar frozen--397 []]"
+                                "Assign", "A1 := X4 = [uvar frozen--395 []]"
                               ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem [uvar frozen--397 []] (uvar frozen--397 [])",
+                              "goal_text": "mem [uvar frozen--395 []] (uvar frozen--395 [])",
                               "goal_id": 41
                             },
                             { "goal_text": "!", "goal_id": 42 },
                             {
-                              "goal_text": "X4 = [uvar frozen--397 []]",
+                              "goal_text": "X4 = [uvar frozen--395 []]",
                               "goal_id": 43
                             }
                           ],
@@ -3317,7 +3317,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -3413,7 +3413,7 @@
                     "Inference",
                     {
                       "current_goal_id": 41,
-                      "current_goal_text": "mem [uvar frozen--397 []] (uvar frozen--397 [])",
+                      "current_goal_text": "mem [uvar frozen--395 []] (uvar frozen--395 [])",
                       "current_goal_predicate": "mem",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3435,13 +3435,13 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := [uvar frozen--397 []]" ],
-                              [ "Assign", "A1 := frozen--397" ]
+                              [ "Assign", "A0 := [uvar frozen--395 []]" ],
+                              [ "Assign", "A1 := frozen--395" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem! [uvar frozen--397 []] (uvar frozen--397 X9)",
+                              "goal_text": "mem! [uvar frozen--395 []] (uvar frozen--395 X9)",
                               "goal_id": 44
                             }
                           ],
@@ -3480,7 +3480,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -3576,7 +3576,7 @@
                     "Inference",
                     {
                       "current_goal_id": 44,
-                      "current_goal_text": "mem! [uvar frozen--397 []] (uvar frozen--397 X9)",
+                      "current_goal_text": "mem! [uvar frozen--395 []] (uvar frozen--395 X9)",
                       "current_goal_predicate": "mem!",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3598,7 +3598,7 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := uvar frozen--397 []" ],
+                              [ "Assign", "A0 := uvar frozen--395 []" ],
                               [ "Assign", "X9 := []" ]
                             ]
                           },
@@ -3657,7 +3657,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -3756,7 +3756,7 @@
                       "cut_victims": [
                         {
                           "cut_branch_for_goal": {
-                            "goal_text": "mem! [uvar frozen--397 []] (uvar frozen--397 X9)",
+                            "goal_text": "mem! [uvar frozen--395 []] (uvar frozen--395 X9)",
                             "goal_id": 44
                           },
                           "cut_branch": {
@@ -3787,7 +3787,7 @@
                       "cut_victims": [
                         {
                           "cut_branch_for_goal": {
-                            "goal_text": "if (mem [uvar frozen--397 []] (uvar frozen--397 [])) \n (X4 = [uvar frozen--397 []]) \n (X4 = [uvar frozen--397 [], uvar frozen--397 []])",
+                            "goal_text": "if (mem [uvar frozen--395 []] (uvar frozen--395 [])) \n (X4 = [uvar frozen--395 []]) \n (X4 = [uvar frozen--395 [], uvar frozen--395 []])",
                             "goal_id": 40
                           },
                           "cut_branch": {
@@ -3798,7 +3798,7 @@
                                 "filename": "builtin.elpi",
                                 "line": 527,
                                 "column": 0,
-                                "character": 13692
+                                "character": 13736
                               }
                             ]
                           }
@@ -3815,7 +3815,7 @@
                     "Inference",
                     {
                       "current_goal_id": 43,
-                      "current_goal_text": "X4 = [uvar frozen--397 []]",
+                      "current_goal_text": "X4 = [uvar frozen--395 []]",
                       "current_goal_predicate": "=",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3823,7 +3823,7 @@
                           "attempt": {
                             "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
                             "events": [
-                              [ "Assign", "X4 := [uvar frozen--397 []]" ]
+                              [ "Assign", "X4 := [uvar frozen--395 []]" ]
                             ]
                           },
                           "siblings": [],
@@ -3848,7 +3848,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -4026,7 +4026,7 @@
                     "Inference",
                     {
                       "current_goal_id": 29,
-                      "current_goal_text": "filter [uvar frozen--397 []] (c0 \\ not (mem [] c0)) X6",
+                      "current_goal_text": "filter [uvar frozen--395 []] (c0 \\ not (mem [] c0)) X6",
                       "current_goal_predicate": "filter",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4048,17 +4048,17 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := uvar frozen--397 []" ],
+                              [ "Assign", "A0 := uvar frozen--395 []" ],
                               [ "Assign", "A2 := []" ],
                               [ "Assign", "A1 := c0 \\\nnot (mem [] c0)" ],
                               [
-                                "Assign", "X6 := [uvar frozen--397 [] | X10]"
+                                "Assign", "X6 := [uvar frozen--395 [] | X10]"
                               ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "not (mem [] (uvar frozen--397 []))",
+                              "goal_text": "not (mem [] (uvar frozen--395 []))",
                               "goal_id": 46
                             },
                             { "goal_text": "!", "goal_id": 47 },
@@ -4122,7 +4122,7 @@
                     "Inference",
                     {
                       "current_goal_id": 46,
-                      "current_goal_text": "not (mem [] (uvar frozen--397 []))",
+                      "current_goal_text": "not (mem [] (uvar frozen--395 []))",
                       "current_goal_predicate": "not",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4146,13 +4146,13 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := mem [] (uvar frozen--397 [])"
+                                "A0 := mem [] (uvar frozen--395 [])"
                               ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem [] (uvar frozen--397 [])",
+                              "goal_text": "mem [] (uvar frozen--395 [])",
                               "goal_id": 49
                             },
                             { "goal_text": "!", "goal_id": 50 },
@@ -4232,7 +4232,7 @@
                     "Inference",
                     {
                       "current_goal_id": 49,
-                      "current_goal_text": "mem [] (uvar frozen--397 [])",
+                      "current_goal_text": "mem [] (uvar frozen--395 [])",
                       "current_goal_predicate": "mem",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4255,12 +4255,12 @@
                             ],
                             "events": [
                               [ "Assign", "A0 := []" ],
-                              [ "Assign", "A1 := frozen--397" ]
+                              [ "Assign", "A1 := frozen--395" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem! [] (uvar frozen--397 X11)",
+                              "goal_text": "mem! [] (uvar frozen--395 X11)",
                               "goal_id": 52
                             }
                           ],
@@ -4357,7 +4357,7 @@
                     "Inference",
                     {
                       "current_goal_id": 52,
-                      "current_goal_text": "mem! [] (uvar frozen--397 X11)",
+                      "current_goal_text": "mem! [] (uvar frozen--395 X11)",
                       "current_goal_predicate": "mem!",
                       "failed_attempts": [],
                       "successful_attempts": [],
@@ -4451,7 +4451,7 @@
                     "Inference",
                     {
                       "current_goal_id": 46,
-                      "current_goal_text": "not (mem [] (uvar frozen--397 []))",
+                      "current_goal_text": "not (mem [] (uvar frozen--395 []))",
                       "current_goal_predicate": "not",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4678,7 +4678,7 @@
                     "Inference",
                     {
                       "current_goal_id": 30,
-                      "current_goal_text": "bind [uvar frozen--397 []] [] (uvar frozen--397 [] ===> uvar frozen--397 []) \n X3",
+                      "current_goal_text": "bind [uvar frozen--395 []] [] (uvar frozen--395 [] ===> uvar frozen--395 []) \n X3",
                       "current_goal_predicate": "bind",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4700,23 +4700,23 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A1 := uvar frozen--397 []" ],
+                              [ "Assign", "A1 := uvar frozen--395 []" ],
                               [ "Assign", "A3 := []" ],
                               [ "Assign", "A0 := []" ],
                               [
                                 "Assign",
-                                "A4 := uvar frozen--397 [] ===> uvar frozen--397 []"
+                                "A4 := uvar frozen--395 [] ===> uvar frozen--395 []"
                               ],
                               [ "Assign", "X3 := all X12 c0 \\ X13 c0" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "if (mem [] (uvar frozen--397 [])) (X12 = eqt) (X12 = any)",
+                              "goal_text": "if (mem [] (uvar frozen--395 [])) (X12 = eqt) (X12 = any)",
                               "goal_id": 53
                             },
                             {
-                              "goal_text": "pi c0 \\\n copy (uvar frozen--397 []) c0 =>\n  bind [] [] (uvar frozen--397 [] ===> uvar frozen--397 []) (X13 c0)",
+                              "goal_text": "pi c0 \\\n copy (uvar frozen--395 []) c0 =>\n  bind [] [] (uvar frozen--395 [] ===> uvar frozen--395 []) (X13 c0)",
                               "goal_id": 54
                             }
                           ],
@@ -4775,7 +4775,7 @@
                     "Inference",
                     {
                       "current_goal_id": 53,
-                      "current_goal_text": "if (mem [] (uvar frozen--397 [])) (X12 = eqt) (X12 = any)",
+                      "current_goal_text": "if (mem [] (uvar frozen--395 [])) (X12 = eqt) (X12 = any)",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4791,7 +4791,7 @@
                                     "filename": "builtin.elpi",
                                     "line": 526,
                                     "column": 0,
-                                    "character": 13671
+                                    "character": 13715
                                   }
                                 ]
                               }
@@ -4799,14 +4799,14 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := mem [] (uvar frozen--397 [])"
+                                "A0 := mem [] (uvar frozen--395 [])"
                               ],
                               [ "Assign", "A1 := X12 = eqt" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem [] (uvar frozen--397 [])",
+                              "goal_text": "mem [] (uvar frozen--395 [])",
                               "goal_id": 55
                             },
                             { "goal_text": "!", "goal_id": 56 },
@@ -4828,7 +4828,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -4886,7 +4886,7 @@
                     "Inference",
                     {
                       "current_goal_id": 55,
-                      "current_goal_text": "mem [] (uvar frozen--397 [])",
+                      "current_goal_text": "mem [] (uvar frozen--395 [])",
                       "current_goal_predicate": "mem",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4909,12 +4909,12 @@
                             ],
                             "events": [
                               [ "Assign", "A0 := []" ],
-                              [ "Assign", "A1 := frozen--397" ]
+                              [ "Assign", "A1 := frozen--395" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem! [] (uvar frozen--397 X14)",
+                              "goal_text": "mem! [] (uvar frozen--395 X14)",
                               "goal_id": 58
                             }
                           ],
@@ -4953,7 +4953,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -5011,7 +5011,7 @@
                     "Inference",
                     {
                       "current_goal_id": 58,
-                      "current_goal_text": "mem! [] (uvar frozen--397 X14)",
+                      "current_goal_text": "mem! [] (uvar frozen--395 X14)",
                       "current_goal_predicate": "mem!",
                       "failed_attempts": [],
                       "successful_attempts": [],
@@ -5047,7 +5047,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 526,
                                   "column": 0,
-                                  "character": 13671
+                                  "character": 13715
                                 }
                               ]
                             }
@@ -5105,7 +5105,7 @@
                     "Inference",
                     {
                       "current_goal_id": 53,
-                      "current_goal_text": "if (mem [] (uvar frozen--397 [])) (X12 = eqt) (X12 = any)",
+                      "current_goal_text": "if (mem [] (uvar frozen--395 [])) (X12 = eqt) (X12 = any)",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5121,7 +5121,7 @@
                                     "filename": "builtin.elpi",
                                     "line": 527,
                                     "column": 0,
-                                    "character": 13692
+                                    "character": 13736
                                   }
                                 ]
                               }
@@ -5147,7 +5147,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 527,
                                   "column": 0,
-                                  "character": 13692
+                                  "character": 13736
                                 }
                               ]
                             }
@@ -5236,7 +5236,7 @@
                                   "filename": "builtin.elpi",
                                   "line": 527,
                                   "column": 0,
-                                  "character": 13692
+                                  "character": 13736
                                 }
                               ]
                             }
@@ -5294,7 +5294,7 @@
                     "Inference",
                     {
                       "current_goal_id": 54,
-                      "current_goal_text": "pi c0 \\\n copy (uvar frozen--397 []) c0 =>\n  bind [] [] (uvar frozen--397 [] ===> uvar frozen--397 []) (X13 c0)",
+                      "current_goal_text": "pi c0 \\\n copy (uvar frozen--395 []) c0 =>\n  bind [] [] (uvar frozen--395 [] ===> uvar frozen--395 []) (X13 c0)",
                       "current_goal_predicate": "pi",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5305,7 +5305,7 @@
                           },
                           "siblings": [
                             {
-                              "goal_text": "copy (uvar frozen--397 []) c0 =>\n bind [] [] (uvar frozen--397 [] ===> uvar frozen--397 []) (X13 c0)",
+                              "goal_text": "copy (uvar frozen--395 []) c0 =>\n bind [] [] (uvar frozen--395 [] ===> uvar frozen--395 []) (X13 c0)",
                               "goal_id": 60
                             }
                           ],
@@ -5369,7 +5369,7 @@
                     "Inference",
                     {
                       "current_goal_id": 60,
-                      "current_goal_text": "copy (uvar frozen--397 []) c0 =>\n bind [] [] (uvar frozen--397 [] ===> uvar frozen--397 []) (X13 c0)",
+                      "current_goal_text": "copy (uvar frozen--395 []) c0 =>\n bind [] [] (uvar frozen--395 [] ===> uvar frozen--395 []) (X13 c0)",
                       "current_goal_predicate": "=>",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5382,7 +5382,7 @@
                           },
                           "siblings": [
                             {
-                              "goal_text": "bind [] [] (uvar frozen--397 [] ===> uvar frozen--397 []) (X13 c0)",
+                              "goal_text": "bind [] [] (uvar frozen--395 [] ===> uvar frozen--395 []) (X13 c0)",
                               "goal_id": 61
                             }
                           ],
@@ -5453,7 +5453,7 @@
                     "Inference",
                     {
                       "current_goal_id": 61,
-                      "current_goal_text": "bind [] [] (uvar frozen--397 [] ===> uvar frozen--397 []) (X13 c0)",
+                      "current_goal_text": "bind [] [] (uvar frozen--395 [] ===> uvar frozen--395 []) (X13 c0)",
                       "current_goal_predicate": "bind",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5477,7 +5477,7 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := uvar frozen--397 [] ===> uvar frozen--397 []"
+                                "A0 := uvar frozen--395 [] ===> uvar frozen--395 []"
                               ],
                               [ "Assign", "X13 := c0 \\\nX15 c0" ],
                               [ "Assign", "X15^1 := mono X16^1" ]
@@ -5485,7 +5485,7 @@
                           },
                           "siblings": [
                             {
-                              "goal_text": "copy (uvar frozen--397 [] ===> uvar frozen--397 []) X16^1",
+                              "goal_text": "copy (uvar frozen--395 [] ===> uvar frozen--395 []) X16^1",
                               "goal_id": 62
                             }
                           ],
@@ -5575,7 +5575,7 @@
                     "Inference",
                     {
                       "current_goal_id": 62,
-                      "current_goal_text": "copy (uvar frozen--397 [] ===> uvar frozen--397 []) X16^1",
+                      "current_goal_text": "copy (uvar frozen--395 [] ===> uvar frozen--395 []) X16^1",
                       "current_goal_predicate": "copy",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5597,18 +5597,18 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := uvar frozen--397 []" ],
-                              [ "Assign", "A2 := uvar frozen--397 []" ],
+                              [ "Assign", "A0 := uvar frozen--395 []" ],
+                              [ "Assign", "A2 := uvar frozen--395 []" ],
                               [ "Assign", "X16^1 := X17^1 ===> X18^1" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "copy (uvar frozen--397 []) X17^1",
+                              "goal_text": "copy (uvar frozen--395 []) X17^1",
                               "goal_id": 63
                             },
                             {
-                              "goal_text": "copy (uvar frozen--397 []) X18^1",
+                              "goal_text": "copy (uvar frozen--395 []) X18^1",
                               "goal_id": 64
                             }
                           ],
@@ -5717,7 +5717,7 @@
                     "Inference",
                     {
                       "current_goal_id": 63,
-                      "current_goal_text": "copy (uvar frozen--397 []) X17^1",
+                      "current_goal_text": "copy (uvar frozen--395 []) X17^1",
                       "current_goal_predicate": "copy",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5726,7 +5726,7 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(copy (uvar frozen--397 []) c0) :- .",
+                                "rule_text": "(copy (uvar frozen--395 []) c0) :- .",
                                 "rule_loc": [ "Context", 32 ]
                               }
                             ],
@@ -5742,7 +5742,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(copy (uvar frozen--397 []) c0) :- .",
+                              "rule_text": "(copy (uvar frozen--395 []) c0) :- .",
                               "rule_loc": [ "Context", 32 ]
                             }
                           ],
@@ -5849,7 +5849,7 @@
                     "Inference",
                     {
                       "current_goal_id": 64,
-                      "current_goal_text": "copy (uvar frozen--397 []) X18^1",
+                      "current_goal_text": "copy (uvar frozen--395 []) X18^1",
                       "current_goal_predicate": "copy",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5858,7 +5858,7 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(copy (uvar frozen--397 []) c0) :- .",
+                                "rule_text": "(copy (uvar frozen--395 []) c0) :- .",
                                 "rule_loc": [ "Context", 32 ]
                               }
                             ],
@@ -5874,7 +5874,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(copy (uvar frozen--397 []) c0) :- .",
+                              "rule_text": "(copy (uvar frozen--395 []) c0) :- .",
                               "rule_loc": [ "Context", 32 ]
                             }
                           ],

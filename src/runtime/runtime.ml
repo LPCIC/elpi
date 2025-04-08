@@ -3504,18 +3504,18 @@ let declare_constraint ~depth prog (gid[@trace]) args =
   let g, keys =
     match args with
     | t1 :: more ->
-      let err =
-        "the Key arguments of declare_constraint must be variables or list of variables"
+      let err t =
+        "The Key arguments of declare_constraint must be variables or list of variables. Got: " ^ show_term t
       in
       let rec collect_keys t = match deref_head ~depth t with
         | UVar (r, _, _) | AppUVar (r, _, _) -> [r]
         | Discard -> [dummy_uvar_body]
         | Lam _ ->
             begin match HO.eta_contract_flex ~depth t with
-            | None -> type_error err
+            | None -> type_error (err t)
             | Some t -> collect_keys t
             end
-        | _ -> type_error err
+        | _ -> type_error (err t)
       and collect_keys_list t = match deref_head ~depth t with
         | Nil -> []
         | Cons(hd,tl) -> collect_keys hd @ collect_keys_list tl

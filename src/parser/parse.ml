@@ -71,10 +71,11 @@ let parse grammar lexbuf =
 
 let already_parsed = Hashtbl.create 11
 
+let cleanup_fname filename = Re.Str.replace_first (Re.Str.regexp "/_build/[^/]+") "" filename
+
 let () =
   parse_ref := (fun ?cwd filename ->
   let filename = C.resolver ?cwd ~unit:filename () in
-  let dest = Re.Str.replace_first (Re.Str.regexp "/_build/[^/]+") "" filename in
   let digest = Digest.file filename in
   let to_parse =
     if Filename.extension filename = ".mod" then
@@ -88,6 +89,7 @@ let () =
     else
       let ic = open_in filename in
       let lexbuf = Lexing.from_channel ic in
+      let dest = cleanup_fname filename in
       lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = dest };
       Hashtbl.add already_parsed digest true;
       let ast = parse Grammar.program lexbuf in

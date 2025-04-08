@@ -474,6 +474,14 @@ let func_of_core_symbol = function
   | Uv    -> F.from_string "uvar"
   | ECons  -> F.consf
   | ENil   -> F.nilf
+let is_core_symbol f =
+  let rec aux i =
+    if i < max_core_symbol then
+      F.equal f (func_of_core_symbol (Option.get (core_symbol_of_enum i))) || aux (i+1)
+    else
+      false
+  in
+      aux 0
 
 (* Globally unique identifier for symbols with a quotient *)
 module Symbol : sig 
