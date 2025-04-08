@@ -28,7 +28,7 @@ eval empty     empty.
 eval and     (special and     2 nil).
 eval car     (special car     1 nil).
 eval cdr     (special cdr     1 nil).
-eval cons    (special cons    2 nil).
+eval lcons    (special lcons    2 nil).
 eval consp   (special consp   1 nil).
 eval equal   (special equal   2 nil).
 eval greater (special greater 2 nil).
@@ -50,9 +50,9 @@ apply (special Fun C Args) U (special Fun K (U::Args)) :- K is C - 1.
 
 %% List primitives
 
-eval_special car   ((cons # V # U)::nil) V.
-eval_special cdr   ((cons # V # U)::nil) U.
-eval_special cons  (U::V::nil) (cons # V # U).
+eval_special car   ((lcons # V # U)::nil) V.
+eval_special cdr   ((lcons # V # U)::nil) U.
+eval_special lcons  (U::V::nil) (lcons # V # U).
 eval_special nullp (U::nil) V :- if (U = empty) (V = truth) (V = false).
 eval_special consp (U::nil) V :- if (U = empty) (V = false) (V = truth).
 

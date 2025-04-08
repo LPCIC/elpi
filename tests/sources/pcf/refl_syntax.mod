@@ -22,7 +22,7 @@ term false.
 term truth.
 term car.
 term cdr.
-term cons.
+term lcons.
 term nullp.
 term consp.
 term empty.

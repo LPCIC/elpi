@@ -23,5 +23,5 @@ trm gcd2 (fix Gcd\ (abs X\ (abs Y\
 
 trm appnd (fix Appnd\ (abs L1\ (abs L2\
                       (cond (nullp L1) L2
-                           (cons (hd L1) (app (app Appnd (tl L1)) L2)))))). 
+                           (lcons (hd L1) (app (app Appnd (tl L1)) L2)))))). 
 

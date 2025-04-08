@@ -316,8 +316,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPDoc " -- Standard data types (supported in the FFI) --";
 
   LPCode "kind list type -> type.";
-  LPCode "type (::) X -> list X -> list X.";
-  LPCode "type ([]) list X.";
+  LPCode "external symbol (::) : X -> list X -> list X = \"core\".";
+  LPCode "external symbol ([]) : list X = \"core\".";
 
   MLData bool;
 
