@@ -502,10 +502,10 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       | Const b -> check_app ctx ~loc d ~is_var:false b [] t
       | Var (b, xs) -> check_app ctx ~loc d ~is_var:true b xs t
       | App (b, x, xs) -> check_app ctx ~loc d ~is_var:false b (x :: xs) t
-      | Cast (b, d') -> (
+      | Cast (b, _) -> (
           try
             let d, d_loc = check ~ctx d b in
-            let d' = Compilation.type_ass_2func_mut ~loc env ty in
+            let d' = Compilation.type_ass_2func_mut ~loc env b.ty in
             if not ((d <<= d') ~loc) then raise (CastError (None, Good_call.make ~exp:d' ~found:d b));
             (d, t)
           with DetError x -> raise (FatalDetError x))
@@ -649,8 +649,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
   | CastError (_,gc) -> 
     (let Good_call.{ exp; found; term } = Good_call.get gc in
         error ~loc:term.loc
-          ("DetCheck: Cast error"
-          ^ Format.asprintf "for term %a.\n Expected: %a\n Found: %a"
+          (Format.asprintf "DetCheck: Cast error on term %a.\n Expected: %a\n Found: %a"
               ScopedTerm.pretty term pp_dtype exp pp_dtype found))
   | RelationalBody (pred_name, gc) -> 
       let Good_call.{ exp; found; term } = Good_call.get gc in

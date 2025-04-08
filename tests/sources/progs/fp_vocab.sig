@@ -29,7 +29,7 @@ type   eq      tm -> tm -> tm.
 type   intp    tm -> tm.
 
 % encodings for pairs of the object language
-type   pr      tm -> tm -> tm.
+type   mkpr      tm -> tm -> tm.
 type   prp     tm -> tm.
 type   fst     tm -> tm.
 type   snd     tm -> tm.
