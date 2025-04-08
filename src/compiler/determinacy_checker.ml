@@ -344,7 +344,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
           try
             let _ = check_lam ~ctx ~var t in
             (Compilation.type_ass_2func_mut ~loc env ty, Good_call.init ())
-          with DetError (_, b1) -> (Compilation.type_ass_2func_mut ~loc env ty, b1))
+          with FatalDetError (_,b1) | DetError (_, b1) | RelationalBody (_, b1) -> (Compilation.type_ass_2func_mut ~loc env ty, b1))
       | Discard ->
           Format.eprintf "Calling type_ass_2func_mut in Discard@.";
           (Aux.maximize ~loc @@ Compilation.type_ass_2func_mut ~loc env ty, Good_call.init ())
