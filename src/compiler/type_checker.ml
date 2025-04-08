@@ -138,7 +138,8 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * 
     | External None when is_a_predicate -> Symbol.make_builtin name |> to_unify
     | External (Some (File _)) -> anomaly "provenance File cannot be provided by the user"
     | External (Some p) -> Symbol.make p name |> to_unify
-    | _ -> 
+    | External None -> None
+    | (Index _ | DontIndex) -> 
       match Symbol.make_builtin name |> to_unify with
       | Some s -> error ~loc ("non-external symbol " ^ F.show name ^ " conflicts with an existing, non-overloaded, external symbol. Rename it.")
       | None -> None in
@@ -851,7 +852,9 @@ let check_undeclared ~unknown =
 let check_pred_name ~types ~loc f =
   let undef = ref F.Map.empty in
   match global_type undef types ~loc f with
-  | Single s -> fst s
+  | Single s ->
+      if F.Map.is_empty !undef then fst s
+      else error ~loc ("Undeclared predicate " ^ F.show f)
   | Overloaded alltys -> error_ambiguous ~loc f alltys
 
 (* let check ~type_abbrevs a b c =
