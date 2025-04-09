@@ -448,6 +448,7 @@ module ContextualConversion : sig
 
   (* cast *)
   val (!<) : ('a,unit,unit) t -> 'a Conversion.t
+  val (!<<) : (('a,unit,unit) t -> ('b,unit,unit) t) -> ('a Conversion.t -> 'b Conversion.t)
 
   (* morphisms *)
   val (!>)   : 'a Conversion.t -> ('a,'hyps,'constraints) t
@@ -583,19 +584,23 @@ module AlgebraicData : sig
         ('match_stateful_t,'match_t,'t) match_t
       -> ('t,'h,'c) constructor
 
-  type cached_declaration
-  val declared : cached_declaration
-  val of_globals : (Ast.Term.constant * int) list -> cached_declaration
-
-  type ('t,'h,'c) declaration = {
+  type ('t,'h,'c) base_declaration = {
     ty : Conversion.ty_ast;
     doc : doc;
     pp : Format.formatter -> 't -> unit;
     constructors : ('t,'h,'c) constructor list;
-    mutable declared : cached_declaration;
   }
 
-  val declare : ('t,'h,'c) declaration -> ('t,'h,'c) ContextualConversion.t
+  type ('t,'h,'c) declaration =
+  | Decl : ('t,'h,'c) base_declaration -> ('t,'h,'c) declaration
+  | Param : ('t Conversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
+  | ParamC : (('t,'h,'c) ContextualConversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
+
+  type allocation
+
+  val allocate_constructors : ('t,'h,'c) declaration -> allocation
+  val declare_allocated : allocation -> ('t,'h,'c) declaration -> ('t,'h,'c) ContextualConversion.t
+  val declare : ('t,'h,'c) base_declaration -> ('t,'h,'c) ContextualConversion.t
 
 end
 

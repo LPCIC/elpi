@@ -779,25 +779,38 @@ module FlexibleData = struct
 end
 
 module AlgebraicData = struct
-  type cached_declaration = (int * int) Setup.StrMap.t
-  let of_globals l = l |> List.fold_left (fun m (c,v) ->
-      let open ED in
-      let k = Util.Constants.Map.find c Global_symbols.table.c2s |> Symbol.get_str in
-      Setup.StrMap.add k (c,v) m
-    ) Setup.StrMap.empty
-  let declared = Setup.StrMap.empty
   include ED.BuiltInPredicate.ADT
   type name = string
   type doc = string
 
-  let declare x =
+  let allocate_constructors x =
     let module R = (val !r) in
-    ED.BuiltInPredicate.ADT.adt
+    ED.BuiltInPredicate.ADT.allocate_constructors
       ~look:R.deref_head
       ~mkinterval:R.mkinterval
       ~mkConst:R.mkConst
       ~alloc:FlexibleData.Elpi.make
       ~mkUnifVar:RawData.mkUnifVar x
+
+  let declare_allocated alloc x =
+    let module R = (val !r) in
+    ED.BuiltInPredicate.ADT.declare_allocated
+      ~look:R.deref_head
+      ~mkinterval:R.mkinterval
+      ~mkConst:R.mkConst
+      ~alloc:FlexibleData.Elpi.make
+      ~mkUnifVar:RawData.mkUnifVar alloc x
+
+  let declare x =
+    begin match x.ED.BuiltInPredicate.ADT.ty with
+    | TyApp(s,_,_) -> Util.error ("Declaration of " ^ s ^ " requires allocate_constructors + declare_allocated")
+    | TyName _ -> ()
+    end;
+    let x = ED.BuiltInPredicate.ADT.Decl x in
+    let alloc = allocate_constructors x in
+    declare_allocated alloc x
+
+       
 end
 
 module BuiltInPredicate = struct
