@@ -616,6 +616,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       match it with
       | Impl (false, ({ it = Const b } as hd), bo) -> (b, assume_hd b false hd, hd, Some bo)
       | Impl (false, ({ it = App (b, _, _) } as hd), bo) -> (b, assume_hd b false hd, hd, Some bo)
+      | Impl (false, ({ it = Var (b, _) }), bo) -> raise(LoadFlexClause t) (*(b, assume_hd b true hd, hd, Some bo)*)
       | Const b -> (b, assume_hd b false t, t, None)
       (* For clauses with quantified unification variables *)
       | App (n, { it = Lam (oname, ty, body) }, []) when is_quantifier n ->
@@ -642,7 +643,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       infer_output ~pred_name ~ctx:!ctx ~var hd;
       det_pred
     with LoadFlexClause t ->
-      warn ~loc:t.loc (Format.asprintf "DetCheck: ignoring hypothetical clause with flex head: %a" ScopedTerm.pretty t);
+      warn ~loc:t.loc (Format.asprintf "DetCheck: ignoring clause with flex head: %a" ScopedTerm.pretty t);
       Det
   in
   try check_clause ~is_toplevel:true ~ctx:BVar.empty ~var:UVar.empty t = Det with
