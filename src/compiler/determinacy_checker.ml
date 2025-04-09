@@ -180,6 +180,12 @@ end
 
 let ( <<= ) = Aux.( <<= )
 
+(* 
+  Module for mapping variable names to their determinacy.
+  When a variable is added to the map and it already exists,
+  its dtype is updated to the minimum value between the
+  old and the new value.
+*)
 module EnvMaker (M : Map.S) : sig
   type t [@@deriving show]
 
