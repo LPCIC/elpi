@@ -577,7 +577,7 @@ function from `A` to `B`, then the interpretation of `map L F R` produces no
 choice points. For instance, consider the following code:
 
 ```prolog
-pred likes! A -> B.
+func likes! A -> B.
 likes! A B :- likes A B, !.
 
 func map list A, (func A -> B) -> list B.
