@@ -1,0 +1,9 @@
+% YES
+pred q o:int.
+
+func f -> int.
+
+func p.
+p :- std.map [f,f] (x\y\x y) _.
+
+main.
