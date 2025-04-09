@@ -226,7 +226,8 @@ let () =
       (*56*) Failure; Failure; Failure; Success; Success;                                          (*60*)
       (*61*) Failure; Success; Success; Success; Failure;                                          (*65*)
       (*66*) Success; Failure; Failure; Failure; (FailureOutput Str.(regexp "line 2, column 21")); (*70*)
-      (*71*) Success; Success; FailureOutput Str.(regexp "line 10, column 5"); Failure; FailureOutput Str.(regexp "line 17, column 5")
+      (*71*) Success; Success; FailureOutput Str.(regexp "line 10, column 5"); Failure; FailureOutput Str.(regexp "line 17, column 5");
+      (*76*) Success;
     |] in
   let ignore = [5;7;8;9;10;13;16;26;27] in
   for i = 0 to Array.length status - 1 do
