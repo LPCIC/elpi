@@ -53,8 +53,7 @@ let process = AlgebraicData.declare {
       B (fun stdin stdout stderr -> { stdin; stdout; stderr }),
       M (fun ~ok ~ko:_ { stdin; stdout; stderr } -> ok stdin stdout stderr ))
   ];
-  declared = AlgebraicData.declared;
-}|> ContextualConversion.(!<)
+  }|> ContextualConversion.(!<)
 
 let really_input ic s ofs len =
   let rec unsafe_really_input read ic s ofs len =
@@ -104,10 +103,9 @@ let bool = AlgebraicData.declare {
       B false,
       M (fun ~ok ~ko -> function false -> ok | _ -> ko ()));
   ];
-  declared = AlgebraicData.declared;
-}|> ContextualConversion.(!<)
+  }|> ContextualConversion.(!<)
 
-let pair a b = let open AlgebraicData in declare {
+let pair_decl a b = let open AlgebraicData in Decl {
   ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
   doc = "Pair: the constructor is pr, since ',' is for conjunction";
   pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.Conversion.pp b.Conversion.pp) o);
@@ -116,10 +114,15 @@ let pair a b = let open AlgebraicData in declare {
       B (fun a b -> (a,b)),
       M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
   ];
-  declared = AlgebraicData.declared;
-} |> ContextualConversion.(!<)
+  }
+let pair_alloc =
+  let open AlgebraicData in
+  allocate_constructors (Param (fun a -> Param (fun b-> pair_decl a b)))
+let pair a b =
+  let open AlgebraicData in
+  declare_allocated pair_alloc (pair_decl a b) |> ContextualConversion.(!<)
 
-let option a = let open AlgebraicData in declare {
+let option_decl a = let open AlgebraicData in Decl {
   ty = TyApp("option",a.Conversion.ty,[]);
   doc = "The option type (aka Maybe)";
   pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.Conversion.pp) o);
@@ -131,8 +134,13 @@ let option a = let open AlgebraicData in declare {
       B (fun x -> Some x),
       M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
   ];
-  declared = AlgebraicData.declared;
-} |> ContextualConversion.(!<)
+  }
+let option_alloc =
+  let open AlgebraicData in
+  allocate_constructors (Param option_decl)
+let option a = 
+  let open AlgebraicData in
+  declare_allocated option_alloc (option_decl a) |> ContextualConversion.(!<)
 
 type diagnostic = OK | ERROR of string ioarg
 let mkOK = OK
@@ -156,8 +164,7 @@ let diagnostic = let open API.AlgebraicData in declare {
       B (fun _ -> assert false),
       M (fun ~ok ~ko _ -> ko ()))
   ];
-  declared = AlgebraicData.declared;
-} |> ContextualConversion.(!<)
+  } |> ContextualConversion.(!<)
 
 let unix_error_to_diagnostic e f a =
   mkERROR (Printf.sprintf "%s: %s" (if a <> "" then f ^ " " ^ a else f) (Unix.error_message e))
@@ -171,8 +178,7 @@ let cmp = let open AlgebraicData in declare {
     K("lt", "", N, B ~-1, M(fun ~ok ~ko i -> if i < 0  then ok else ko ()));
     K("gt", "", N, B 1,   M(fun ~ok ~ko i -> if i > 0  then ok else ko ()))
   ];
-  declared = AlgebraicData.declared;
-} |> ContextualConversion.(!<)
+  } |> ContextualConversion.(!<)
 
 
 type 'a unspec = Given of 'a | Unspec

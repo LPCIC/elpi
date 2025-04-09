@@ -991,12 +991,13 @@ module ContextualConversion = struct
     embed = (fun ~depth s t -> embed ~depth () () s t);
     readback = (fun ~depth s t -> readback ~depth () () s t);
   }
-
   let (!>) { Conversion.ty; pp_doc; pp; embed; readback; } = {
     ty; pp; pp_doc;
     embed = (fun ~depth _ _ s t -> embed ~depth s t);
     readback = (fun ~depth _ _ s t -> readback ~depth s t);
   }
+
+  let (!<<) f x = (!<) (f ((!>) x))
 
   let (!>>) (f : 'a Conversion.t -> 'b Conversion.t) cc =
   let mk h c { ty; pp_doc; pp; embed; readback; } = {
@@ -1172,13 +1173,19 @@ type ('t,'h,'c) constructor =
       ('match_stateful_t,'match_t,'t) match_t
     -> ('t,'h,'c) constructor
 
-type ('t,'h,'c) declaration = {
+type ('t,'h,'c) base_declaration = {
   ty : Conversion.ty_ast;
   doc : doc;
   pp : Format.formatter -> 't -> unit;
   constructors : ('t,'h,'c) constructor list;
-  mutable declared : (constant * int) StrMap.t;
 }
+
+type ('t,'h,'c) declaration =
+| Decl : ('t,'h,'c) base_declaration -> ('t,'h,'c) declaration
+| Param : ('t Conversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
+| ParamC : (('t,'h,'c) ContextualConversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
+
+type allocation = (constant * int) StrMap.t
 
 type ('b,'m,'t,'h,'c) compiled_constructor_arguments =
   | XN : (State.t -> State.t * 't,State.t -> State.t * term * Conversion.extra_goals, 't,'h,'c) compiled_constructor_arguments
@@ -1343,28 +1350,33 @@ let rec tyargs_of_args : type a b c d e. string -> (a,b,c,d,e) compiled_construc
   | XN -> [false,self,""]
   | XA ({ ty },rest) -> (false,Conversion.show_ty_ast ty,"") :: tyargs_of_args self rest
 
-let compile_constructors declared ty self self_name l =
+let do_allocate_constructors ty l =
   let names =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then
     anomaly ("Duplicate constructors name in ADT: " ^ Conversion.show_ty_ast ty);
-  List.fold_left (fun (vacc, acc, sacc) (K(name,_,a,b,m)) ->
+  List.fold_left (fun vacc (K(name,_,a,b,m)) ->
+    if name = "uvar" then
+      vacc
+    else
+      let c_variant = Global_symbols.declare_overloaded_global_symbol name in
+      StrMap.add name c_variant vacc)
+    StrMap.empty l
+
+let compile_constructors allocated ty self self_name l =
+  List.fold_left (fun (acc, sacc) (K(name,_,a,b,m)) ->
     if name = "uvar" then
       let args = compile_arguments a self in
       let acc = Constants.Map.add Global_symbols.uvarc (XK(args,compile_builder a b,compile_matcher a m)) acc in
-      (vacc, acc, sacc)
+      (acc, sacc)
     else
-      let vacc, c =
-        try
-          vacc, StrMap.find name vacc |> fst (* already allocated *)
-        with Not_found ->
-          let c, variant = Global_symbols.declare_overloaded_global_symbol name in
-          StrMap.add name (c,variant) vacc, c in
+      let c =
+        try StrMap.find name allocated |> fst
+        with Not_found -> anomaly "constructor arguments should be preallocated" in
       let args = compile_arguments a self in
-       vacc,
-      Constants.Map.add c (XK(args,compile_builder a b,compile_matcher a m)) acc,
+             Constants.Map.add c (XK(args,compile_builder a b,compile_matcher a m)) acc,
       StrMap.add name (tyargs_of_args self_name args) sacc)
-        (declared, Constants.Map.empty,StrMap.empty) l
+        (Constants.Map.empty,StrMap.empty) l
 
 let document_constructor fmt name variant doc argsdoc =
   Fmt.fprintf fmt "@[<hov2>external symbol %s :@[<hov>%a@] = \"%d\". %s@]@\n"
@@ -1387,28 +1399,56 @@ let document_adt doc ty ks cks vks fmt () =
       let argsdoc = StrMap.find name cks in
       document_constructor fmt name (StrMap.find name vks |> snd) doc argsdoc) ks
 
-let adt ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ({ ty; constructors; doc; pp; declared } as decl) =
+let rec allocate_constructors: type t h c. mkinterval:(int -> int -> int -> term list) -> look:(depth:int -> term -> term) -> mkConst:(int -> term) -> alloc:(?name:doc -> State.t -> State.t * 'a) -> mkUnifVar:
+    ('a -> args:term list -> State.t -> term) ->
+      (t,h,c) declaration -> allocation =
+      fun ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ->
+function
+(Decl { ty; constructors; doc; pp }) -> do_allocate_constructors ty constructors
+| Param f ->
+  let a = {
+    ContextualConversion.ty = Conversion.TyName "A";
+    pp = (fun fmt _ -> ());
+    pp_doc = (fun fmt () -> ());
+    readback = (fun ~depth hyps constraints state term -> assert false);
+    embed = (fun ~depth hyps constraints state term -> assert false);
+  } |> ContextualConversion.(!<) in
+  allocate_constructors ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar (f a)
+| ParamC f ->
+  let a = {
+    ContextualConversion.ty = Conversion.TyName "A";
+    pp = (fun fmt _ -> ());
+    pp_doc = (fun fmt () -> ());
+    readback = (fun ~depth hyps constraints state term -> assert false);
+    embed = (fun ~depth hyps constraints state term -> assert false);
+  } in
+  allocate_constructors ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar (f a)
+
+
+  let declare_allocated: type t h c. mkinterval:(int -> int -> int -> term list) -> look:(depth:int -> term -> term) -> mkConst:(int -> term) -> alloc:(?name:doc -> State.t -> State.t * 'a) -> mkUnifVar:
+  ('a -> args:term list -> State.t -> term) ->
+    allocation -> (t,h,c) declaration -> (t,h,c) ContextualConversion.t =
+    fun ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar allocated ->
+function Decl { ty; constructors; doc; pp } ->
   let readback_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let embed_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let sconstructors_ref = ref StrMap.empty in
-  let vconstructors_ref = ref StrMap.empty in
   let self = {
     ContextualConversion.ty;
     pp;
     pp_doc = (fun fmt () ->
-      document_adt doc ty constructors !sconstructors_ref !vconstructors_ref fmt ());
+      document_adt doc ty constructors !sconstructors_ref allocated fmt ());
     readback = (fun ~depth hyps constraints state term ->
       !readback_ref ~depth hyps constraints state term);
     embed = (fun ~depth hyps constraints state term ->
       !embed_ref ~depth hyps constraints state term);
   } in
-  let vconstructors, cconstructors, sconstructors = compile_constructors declared ty self (Conversion.show_ty_ast ty) constructors in
-  decl.declared <- vconstructors;
+  let cconstructors, sconstructors = compile_constructors allocated ty self (Conversion.show_ty_ast ty) constructors in
   sconstructors_ref := sconstructors;
-  vconstructors_ref := vconstructors;
   readback_ref := readback ~mkinterval ~look ~alloc ~mkUnifVar ty cconstructors;
   embed_ref := embed ~mkConst ty pp cconstructors;
   self
+  | _ -> anomaly "declare_allocated can only be called on Decl"
 
 end
 

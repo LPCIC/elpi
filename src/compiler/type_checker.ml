@@ -792,7 +792,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k { nocc = n; binder } ->
-      if n = 1 && not @@ silence_linear_warn k then
+      if n = 1 && not @@ silence_linear_warn k && is_rule then
         warn ~loc:(Symbol.get_loc binder)
           (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k))
