@@ -1,0 +1,12 @@
+% NO
+
+kind t type.
+type k fprop -> t.
+
+pred q.
+
+func p -> t.
+% q is not fprop inside k
+p (k q).
+
+main.
