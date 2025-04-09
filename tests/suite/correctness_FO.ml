@@ -212,21 +212,21 @@ let () = declare "trie"
 
 let () =
   let status = Test.
-    [|Failure; Success; Failure; Success; Failure; (*05*)
-      Success; Failure; Failure; Failure; Failure; (*10*)
-      Failure; Success; Failure; Failure; Success; (*15*)
-      Success; Success; Failure; Failure; Success; (*20*)
-      Failure; Success; Failure; Success; Failure; (*25*)
-      Failure; Failure; Success; Success; Failure; (*30*)
-      Failure; Success; Failure; Failure; Failure; (*35*)
-      Success; Failure; Failure; Success; Success; (*40*)
-      Failure; Failure; Failure; Success; Failure; (*45*)
-      Success; Success; Success; Success; Failure; (*50*)
-      Success; Failure; Success; Failure; Success; (*55*)
-      Failure; Failure; Failure; Success; Success; (*60*)
-      Failure; Success; Success; Success; Failure; (*65*)
-      Success; Failure; Failure; Failure; (FailureOutput Str.(regexp "line 2, column 21")); (*70*)
-      Success; Success; FailureOutput Str.(regexp "line 10, column 5"); Failure; FailureOutput Str.(regexp "line 17, column 5")
+    [|(*01*) Failure; Success; Failure; Success; Failure;                                          (*05*)
+      (*06*) Success; Failure; Failure; Failure; Failure;                                          (*10*)
+      (*11*) Failure; Success; Failure; Failure; Success;                                          (*15*)
+      (*16*) Success; Success; Failure; Failure; Success;                                          (*20*)
+      (*21*) Failure; Success; Failure; Success; Failure;                                          (*25*)
+      (*26*) Failure; Failure; Success; Success; Failure;                                          (*30*)
+      (*31*) Failure; Success; Failure; Failure; Failure;                                          (*35*)
+      (*36*) Success; Failure; Failure; Success; Success;                                          (*40*)
+      (*41*) Failure; Failure; Failure; Success; Failure;                                          (*45*)
+      (*46*) Success; Success; Success; Success; Failure;                                          (*50*)
+      (*51*) Success; Failure; Success; Failure; Success;                                          (*55*)
+      (*56*) Failure; Failure; Failure; Success; Success;                                          (*60*)
+      (*61*) Failure; Success; Success; Success; Failure;                                          (*65*)
+      (*66*) Success; Failure; Failure; Failure; (FailureOutput Str.(regexp "line 2, column 21")); (*70*)
+      (*71*) Success; Success; FailureOutput Str.(regexp "line 10, column 5"); Failure; FailureOutput Str.(regexp "line 17, column 5")
     |] in
   let ignore = [5;7;8;9;10;13;16;26;27] in
   for i = 0 to Array.length status - 1 do
