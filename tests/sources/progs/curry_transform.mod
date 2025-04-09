@@ -10,7 +10,7 @@ module  curry_transform.
 type  curry  tm -> tm -> o.
 
 curry  (fix F \ (abs X \ (A (fst X) (snd X) (prp X)
-                             (R \ S \ (app F (mkpr R S))))))
+                             (R \ S \ (app F (pr R S))))))
        (fix F \ (abs Y \ (abs Z \ (A Y Z truth
                                    (R \ S \ (app (app F R) S)))))).
 

@@ -509,25 +509,24 @@ end = struct (* {{{ *)
     | x :: _ -> error ~loc ("illegal attribute " ^ show_raw_attribute x)
 
   let structure_external ~loc = function
-    | None -> None
-    | Some "core" -> Some Core
+    | None -> Builtin { variant = 0 }
+    | Some "core" -> Core
     | Some s ->
-        try Some (Builtin { variant = int_of_string s })
+        try (Builtin { variant = int_of_string s })
         with Invalid_argument _ -> error ~loc ("illegal external attribute")
 
 
-  let structure_type_attributes { Type.attributes; loc; name; ty } =
+  let structure_type_attributes { Type.attributes; loc; name; ty } : (symbol_attribute, functionality) Type.t=
     let duplicate_err s =
       error ~loc ("duplicate attribute " ^ s) in
     let illegal_err a =
       error ~loc ("illegal attribute " ^ show_raw_attribute a) in
-    let rec aux_tatt r f = function
+    let rec aux_tatt (r : symbol_attribute) f = function
       | [] -> r, f
       | External o :: rest ->
-         begin match r with
-           | None -> aux_tatt (Some (Structured.External (structure_external ~loc o))) f rest
-           | Some (Structured.External _) -> duplicate_err "external"
-           | Some _ -> error ~loc "external predicates cannot be indexed"
+         begin match r.availability with
+           | Structured.Elpi -> aux_tatt { r with availability = Structured.OCaml (structure_external ~loc o) } f rest
+           | Structured.OCaml _ -> duplicate_err "external"
          end
       | Index(i,index_type) :: rest ->
          let it =
@@ -537,25 +536,25 @@ end = struct (* {{{ *)
            | Some "Hash" -> Some HashMap
            | Some "DTree" -> Some DiscriminationTree
            | Some s -> error ~loc ("unknown indexing directive " ^ s ^ ". Valid ones are: Map, Hash, DTree.") in
-         begin match r with
-           | None -> aux_tatt (Some (Structured.Index(i,it))) f rest
-           | Some (Structured.Index _) -> duplicate_err "index"
-           | Some _ -> error ~loc "external predicates cannot be indexed"
+         begin match r.index with
+           | None -> aux_tatt { r with index = Some (Structured.Index(i,it)) } f rest
+           | Some _ -> duplicate_err "index"
          end
       | Functional :: rest -> aux_tatt r Structured.Function rest
       | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _ | Untyped) as a :: _ -> illegal_err a 
     in
-    let attributes, toplevel_func = aux_tatt None Structured.Relation attributes in
+    let attributes, toplevel_func = aux_tatt { availability = Elpi; index = None} Structured.Relation attributes in
     (* if F.equal name (F.from_string "std.map") then
     Format.eprintf "Type for %a is %a@." F.pp name (TypeExpression.pp (pplist pp_raw_attribute " ")) ty; *)
     let is_functional_from_ty () = match ty.tit with
       | TPred (l, _) -> List.mem Functional l | _ -> false in
     let attributes =
-      match attributes with
+      match attributes.index with
       | None -> 
-        if toplevel_func = Function || is_functional_from_ty () then Some MaximizeForFunctional
-        else None
-      | Some _ as x -> x in
+        { attributes with index =
+            if toplevel_func = Function || is_functional_from_ty () then Some MaximizeForFunctional
+            else None }
+      | Some _ -> attributes in
     let ty = structure_type_expression loc toplevel_func valid_functional ty in
     { Type.attributes; loc; name; ty }
 
@@ -825,7 +824,7 @@ end = struct
   let scope_loc_tye ctx (t: Ast.Structured.functionality Ast.TypeExpression.t) =
     scope_loc_tye ctx t
 
-  let compile_type { Ast.Type.name; loc; attributes; ty } =
+  let compile_type { Ast.Type.name; loc; attributes = { Ast.Structured.index; availability }; ty } =
     let open ScopedTypeExpression in
     let value = scope_loc_tye F.Set.empty ty in
     let vars =
@@ -849,7 +848,7 @@ end = struct
           let s = F.Set.remove c s in
           close s (Lam(c,t)) in
       close vars (Ty value) in
-    { ScopedTypeExpression.name; indexing = attributes; loc; nparams; value }
+    { ScopedTypeExpression.name; index; availability; loc; nparams; value }
 
   let scope_term_macro ~loc ~state c args =
     let { macros } = get_mtm state in
@@ -954,7 +953,7 @@ end = struct
       | Ast.TypeAbbreviation.Lam(c,loc,_) -> error ~loc "only variables can be abstracted in type schema"
       | Ast.TypeAbbreviation.Ty t -> ScopedTypeExpression.Ty (scope_loc_tye ctx t)
   in
-    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; indexing = None }
+    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; index = None; availability = Elpi }
 
   let compile_type_abbrev ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
     let ab = scope_type_abbrev ab in
@@ -1224,9 +1223,20 @@ module Flatten : sig
       error ~loc:(Symbol.get_loc s) ("Incompatible indexing options for symbol " ^ Symbol.get_str s);
     idx1
 
-  let merge_symbol_metadata s { Type_checker.ty = ty1; indexing = idx1 } { Type_checker.ty = ty2; indexing = idx2 } =
+  let merge_availability s a1 a2 =
+    let open Ast.Structured in
+    match a1, a2 with
+    | Elpi, Elpi -> Elpi
+    | OCaml (p1), OCaml (p2) when Symbol.compare_provenance p1 p2 = 0 -> a1
+    | OCaml ((Builtin _|Core)), OCaml ((File _)) -> a1
+    | OCaml ((File _)), OCaml ((Builtin _|Core)) -> a2
+    | _ ->
+       error ~loc:(Symbol.get_loc s) ("Incompatible provenance for symbol " ^ Symbol.get_str s ^ ": " ^  show_symbol_availability a1 ^ " != " ^ show_symbol_availability a2)
+
+  let merge_symbol_metadata s { Type_checker.ty = ty1; indexing = idx1; availability = a1; } { Type_checker.ty = ty2; indexing = idx2; availability = a2; } =
     { Type_checker.ty = TypeAssignment.merge_skema ty1 ty2;
       indexing = merge_indexing s idx1 idx2;
+      availability = merge_availability s a1 a2;
     }
 
   let merge_type_assignments { Type_checker.symbols = s1; overloading = o1 } { Type_checker.symbols = s2; overloading = o2 } =
@@ -1445,10 +1455,10 @@ end = struct
         | Overloaded _ -> assert false
         | exception Not_found ->
             error (Format.asprintf "No signature declared for builtin %s" name) in
-      let { Type_checker.indexing } = Symbol.QMap.find symb new_types.symbols in
-      begin match indexing with
-        | Type_checker.External None -> ()
-        | _ -> error ~loc:(Symbol.get_loc symb) (Format.asprintf "Non external type declaration for builtin %s" name)
+      let { Type_checker.indexing; availability } = Symbol.QMap.find symb new_types.symbols in
+      begin match availability with
+        | Ast.Structured.OCaml _ -> ()
+        | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "External predicate with no signature %s" name)
       end;
       symb, p
     ) builtins in

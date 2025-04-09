@@ -13,7 +13,6 @@ type arities = Arity.t F.Map.t
 type indexing =
   | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
   | DontIndex
-  | External of Elpi_parser.Ast.Structured.provenance option
 [@@deriving show]
 
 val compatible_indexing : indexing -> indexing -> bool
@@ -21,6 +20,7 @@ val compatible_indexing : indexing -> indexing -> bool
 type symbol_metadata = {
   ty : TypeAssignment.skema;
   indexing : indexing;
+  availability : Elpi_parser.Ast.Structured.symbol_availability;
 }
 [@@deriving show]
 

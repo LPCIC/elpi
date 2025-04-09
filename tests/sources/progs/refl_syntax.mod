@@ -25,7 +25,7 @@ term (times M N) :- term M, term N.
 term (lss M N) :- term M, term N.
 term (eq M N)  :- term M, term N.
 term (intp M) :- term M.
-term (mkpr M N) :- term M, term N.
+term (pr M N) :- term M, term N.
 term (prp M) :- term M.
 term (fst M) :- term M.
 term (snd M) :- term M.

@@ -250,7 +250,7 @@ external symbol ff : bool = "1".
 
 % Pair: the constructor is pr, since ',' is for conjunction
 kind pair type -> type -> type.
-external symbol pr : A -> B -> pair A B = "0". 
+external symbol pr : A -> B -> pair A B = "1". 
 
 func fst  pair A B -> A.
 
@@ -277,8 +277,8 @@ triple_3 (triple _ _ C) C.
 
 % The option type (aka Maybe)
 kind option type -> type.
-external symbol none : option A = "0". 
-external symbol some : A -> option A = "0". 
+external symbol none : option A = "1". 
+external symbol some : A -> option A = "1". 
 
 % Result of a comparison
 kind cmp type.

@@ -27,10 +27,10 @@ eval  (eq X Y) V  :-
                                                 V = false), !.
 eval (intp (c X)) truth :- !.
 eval (intp Y) false.
-eval (prp (mkpr X Y)) truth :- !.
+eval (prp (pr X Y)) truth :- !.
 eval (prp Y) false.
-eval (fst (mkpr X Y : tm)) V  :- eval X V.
-eval (snd (mkpr X Y : tm)) V  :- eval Y V.
+eval (fst (pr X Y : tm)) V  :- eval X V.
+eval (snd (pr X Y : tm)) V  :- eval Y V.
 
 eval (hd L) V :- eval L (lcons V Tl).
 eval (tl L) V :- eval L (lcons Hd V).
@@ -41,7 +41,7 @@ eval (nullp L) V :- eval L V1, (V1 = null, V = truth;
 eval truth truth.
 eval false false.
 eval (c Y) (c Y).
-eval (mkpr X Y) (mkpr X Y).
+eval (pr X Y) (pr X Y).
 eval (lcons Hd Tl) (lcons HdV TlV) :- eval Hd HdV, eval Tl TlV.
 eval null null.
 

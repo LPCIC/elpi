@@ -583,11 +583,16 @@ module AlgebraicData : sig
         ('match_stateful_t,'match_t,'t) match_t
       -> ('t,'h,'c) constructor
 
+  type cached_declaration
+  val declared : cached_declaration
+  val of_globals : (Ast.Term.constant * int) list -> cached_declaration
+
   type ('t,'h,'c) declaration = {
     ty : Conversion.ty_ast;
     doc : doc;
     pp : Format.formatter -> 't -> unit;
     constructors : ('t,'h,'c) constructor list;
+    mutable declared : cached_declaration;
   }
 
   val declare : ('t,'h,'c) declaration -> ('t,'h,'c) ContextualConversion.t
@@ -1192,7 +1197,7 @@ module RawData : sig
 
   module Constants : sig
 
-    val declare_global_symbol : string -> constant
+    val declare_global_symbol : ?variant:int -> string -> constant
 
     val show : constant -> string
 

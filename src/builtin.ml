@@ -52,7 +52,8 @@ let process = AlgebraicData.declare {
     K("unix.process","",A(out_stream,A(in_stream,A(in_stream,N))),
       B (fun stdin stdout stderr -> { stdin; stdout; stderr }),
       M (fun ~ok ~ko:_ { stdin; stdout; stderr } -> ok stdin stdout stderr ))
-  ]
+  ];
+  declared = AlgebraicData.declared;
 }|> ContextualConversion.(!<)
 
 let really_input ic s ofs len =
@@ -102,7 +103,8 @@ let bool = AlgebraicData.declare {
     K("ff","",N,
       B false,
       M (fun ~ok ~ko -> function false -> ok | _ -> ko ()));
-  ]
+  ];
+  declared = AlgebraicData.declared;
 }|> ContextualConversion.(!<)
 
 let pair a b = let open AlgebraicData in declare {
@@ -113,7 +115,8 @@ let pair a b = let open AlgebraicData in declare {
     K("pr","",A(a,A(b,N)),
       B (fun a b -> (a,b)),
       M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
-  ]
+  ];
+  declared = AlgebraicData.declared;
 } |> ContextualConversion.(!<)
 
 let option a = let open AlgebraicData in declare {
@@ -127,7 +130,8 @@ let option a = let open AlgebraicData in declare {
     K("some","",A(a,N),
       B (fun x -> Some x),
       M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
-  ]
+  ];
+  declared = AlgebraicData.declared;
 } |> ContextualConversion.(!<)
 
 type diagnostic = OK | ERROR of string ioarg
@@ -151,7 +155,8 @@ let diagnostic = let open API.AlgebraicData in declare {
     K("uvar","",A(FlexibleData.uvar,N),
       B (fun _ -> assert false),
       M (fun ~ok ~ko _ -> ko ()))
-  ]
+  ];
+  declared = AlgebraicData.declared;
 } |> ContextualConversion.(!<)
 
 let unix_error_to_diagnostic e f a =
@@ -165,7 +170,8 @@ let cmp = let open AlgebraicData in declare {
     K("eq", "", N, B 0,   M(fun ~ok ~ko i -> if i == 0 then ok else ko ()));
     K("lt", "", N, B ~-1, M(fun ~ok ~ko i -> if i < 0  then ok else ko ()));
     K("gt", "", N, B 1,   M(fun ~ok ~ko i -> if i > 0  then ok else ko ()))
-  ]
+  ];
+  declared = AlgebraicData.declared;
 } |> ContextualConversion.(!<)
 
 
