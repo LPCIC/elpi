@@ -382,7 +382,7 @@ type provenance =
 type program = {
   macros : (Func.t, Term.t) Macro.t list;
   kinds : (unit,unit) Type.t list;
-  types : (tattribute option,functionality) Type.t list;
+  types : (symbol_attribute,functionality) Type.t list;
   type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
   body : block list;
 }
@@ -410,10 +410,14 @@ and attribute = {
 }
 and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string
-and tattribute =
-  | External of provenance option
+and symbol_attribute = {
+  availability : symbol_availability;
+  index : predicate_indexing option;
+}
+and predicate_indexing =
   | Index of int list * tindex option
   | MaximizeForFunctional
+and symbol_availability = Elpi | OCaml of provenance
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;

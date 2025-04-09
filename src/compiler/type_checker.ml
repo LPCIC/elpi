@@ -68,7 +68,6 @@ let check_type ~type_abbrevs ~kinds ~loc ~name ctx x =
 type indexing =
   | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
   | DontIndex
-  | External of Elpi_parser.Ast.Structured.provenance option
 [@@deriving show]
 
 let compatible_indexing i1 i2 =
@@ -76,12 +75,11 @@ let compatible_indexing i1 i2 =
   | Index(mode1,idx1), Index(mode2,idx2) -> Elpi_util.Util.Mode.(compare_hos mode1 mode2 == 0) && Elpi_runtime.Data.(compare_indexing idx1 idx2 == 0)
   | DontIndex, _ -> true
   | _, DontIndex -> true
-  | External _, External _ -> true
-  | _ -> false
 
 type symbol_metadata = {
   ty : TypeAssignment.skema;
   indexing : indexing;
+  availability : Elpi_parser.Ast.Structured.symbol_availability;
 }
 [@@deriving show]
 
@@ -111,39 +109,36 @@ let rec is_prop = function
   | TypeAssignment.Lam (_,x) -> is_prop x
   | Ty t ->  TypeAssignment.is_prop t <> None
 
-let check_indexing ~loc name value ty indexing =
+let check_indexing ~loc availability name value ty indexing =
   let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
   let ensure_pred ty =
     if not (is_prop ty) then
       error ~loc "Indexing directive is for predicates only" in
   match indexing with
   | Some (Ast.Structured.Index(l,k)) -> ensure_pred ty; Index (mode,chose_indexing name l k)
-  | Some MaximizeForFunctional -> ensure_pred ty; Index (mode,maximize_indexing_input mode)
-  | Some Ast.Structured.External i -> External i 
+  | Some MaximizeForFunctional when availability = Ast.Structured.Elpi -> ensure_pred ty; Index (mode,maximize_indexing_input mode)
   | _ when is_prop ty -> Index (mode,chose_indexing name [1] None)
   | _ -> DontIndex
 
-let check_type ~type_abbrevs ~kinds { value; loc; name; indexing } : Symbol.t * Symbol.t option * symbol_metadata =
+let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
   (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
-  let indexing = check_indexing ~loc name value ty indexing in
+  let indexing = check_indexing ~loc availability name value ty index in
   let symb = Symbol.make (File loc) name in
   let quotient =
-    let to_unify bsymb =
+    let to_unify must bsymb =
       match Symbol.RawMap.find bsymb Elpi_runtime.Data.Global_symbols.table.s2ct with
       | _ -> Some bsymb 
+      | exception Not_found when must -> error ~loc ("Symbol " ^ F.show name ^ " marked as external is not declared in OCaml.\nCheck for calls to Constants.declare_global_symbol")
       | exception Not_found -> None in
-    match indexing with
-    | External (Some (File _)) -> anomaly "provenance File cannot be provided by the user"
-    | External (Some p) -> Symbol.make p name |> to_unify
-    | External None -> Symbol.make_builtin name |> to_unify
-    | (Index _ | DontIndex) ->
-      if Elpi_runtime.Data.is_core_symbol name then
-        error ~loc ("Symbol " ^ F.show name ^ " is reserved ");
-      match Symbol.make_builtin name |> to_unify with
-      | Some s -> error ~loc ("non-external symbol " ^ F.show name ^ " conflicts with an existing, non-overloaded, external symbol. Rename it.")
-      | None -> None in
-  symb, quotient, { ty; indexing }
+    match availability with
+    | Elpi -> None
+    | OCaml (File _) -> anomaly "provenance File cannot be provided by the user"
+    | OCaml Core -> Symbol.make Core name |> to_unify true
+    | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0)
+    (* | OCaml None -> Symbol.make_builtin name |> to_unify false  *)
+  in
+  symb, quotient, { ty; indexing; availability }
 
 let arrow_of_args args ety =
   let rec aux = function
@@ -835,7 +830,7 @@ let check1_undeclared w f (t, id) =
   | Some ty ->
       if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']*\\|main\\)$") (F.show f) 0) then
         w := Format.((f, Symbol.get_loc id), asprintf "type %a %a." F.pp f (pretty_ty true) (TypeAssignment.unval t)) :: !w;
-      id, { ty ; indexing = Index ([],chose_indexing (Symbol.get_func id) [1] None) }
+      id, { ty ; indexing = Index ([],chose_indexing (Symbol.get_func id) [1] None); availability = Elpi }
 
 let check_undeclared ~unknown =
   let w = ref [] in

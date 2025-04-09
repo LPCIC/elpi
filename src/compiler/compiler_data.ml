@@ -152,7 +152,14 @@ module ScopedTypeExpression = struct
     | Ty of e
   [@@ deriving show]
 
-  type t = { name : F.t; value : v_; nparams : int; loc : Loc.t; indexing : Ast.Structured.tattribute option }
+  type t = {
+    name : F.t;
+    value : v_;
+    nparams : int;
+    loc : Loc.t;
+    index : Ast.Structured.predicate_indexing option;
+    availability : Ast.Structured.symbol_availability;  
+  }
   [@@ deriving show]
 
   let pretty fmt { value } =
@@ -212,11 +219,11 @@ module ScopedTypeExpression = struct
       let t' = smart_map_scoped_loc_ty f t in
       if t == t' then orig else Ty t'
 
-  let smart_map f ({ name; value; nparams; loc; indexing } as orig) =
+  let smart_map f ({ name; value; nparams; loc; index; availability } as orig) =
     let name' = f name in
     let value' = smart_map_tye f value in
     if name == name' && value' == value then orig
-    else { name = name'; value = value'; nparams; loc; indexing }
+    else { name = name'; value = value'; nparams; loc; index; availability }
 
   let type2mode (value : v_) =
     let rec to_mode_ho (m, ty) = 

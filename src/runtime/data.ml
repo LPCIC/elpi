@@ -647,7 +647,7 @@ module Global_symbols : sig
   val table : t
 
   (* Static initialization, eg link time *)
-  val declare_global_symbol : string -> constant
+  val declare_global_symbol : ?variant:int -> string -> constant
   val declare_overloaded_global_symbol : string -> constant * int
   val lock : unit -> unit
 
@@ -728,8 +728,8 @@ let declare_overloaded_global_symbol str =
   let symb, variant = Symbol.make_variant_builtin (Ast.Func.from_string str) in
   declare_global_symbol symb, variant
 
-let declare_global_symbol str =
-  let symb = Symbol.make_builtin (Ast.Func.from_string str) in
+let declare_global_symbol ?variant str =
+  let symb = Symbol.make_builtin ?variant (Ast.Func.from_string str) in
   declare_global_symbol symb
 
 let lock () = table.locked <- true
@@ -1177,6 +1177,7 @@ type ('t,'h,'c) declaration = {
   doc : doc;
   pp : Format.formatter -> 't -> unit;
   constructors : ('t,'h,'c) constructor list;
+  mutable declared : (constant * int) StrMap.t;
 }
 
 type ('b,'m,'t,'h,'c) compiled_constructor_arguments =
@@ -1342,7 +1343,7 @@ let rec tyargs_of_args : type a b c d e. string -> (a,b,c,d,e) compiled_construc
   | XN -> [false,self,""]
   | XA ({ ty },rest) -> (false,Conversion.show_ty_ast ty,"") :: tyargs_of_args self rest
 
-let compile_constructors ty self self_name l =
+let compile_constructors declared ty self self_name l =
   let names =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then
@@ -1353,15 +1354,17 @@ let compile_constructors ty self self_name l =
       let acc = Constants.Map.add Global_symbols.uvarc (XK(args,compile_builder a b,compile_matcher a m)) acc in
       (vacc, acc, sacc)
     else
-      let c, variant =
-        match ty with
-        | Conversion.TyApp _ -> Global_symbols.declare_global_symbol name, 0
-        | _ -> Global_symbols.declare_overloaded_global_symbol name in
+      let vacc, c =
+        try
+          vacc, StrMap.find name vacc |> fst (* already allocated *)
+        with Not_found ->
+          let c, variant = Global_symbols.declare_overloaded_global_symbol name in
+          StrMap.add name (c,variant) vacc, c in
       let args = compile_arguments a self in
-      StrMap.add  name variant vacc,
+       vacc,
       Constants.Map.add c (XK(args,compile_builder a b,compile_matcher a m)) acc,
       StrMap.add name (tyargs_of_args self_name args) sacc)
-        (StrMap.empty, Constants.Map.empty,StrMap.empty) l
+        (declared, Constants.Map.empty,StrMap.empty) l
 
 let document_constructor fmt name variant doc argsdoc =
   Fmt.fprintf fmt "@[<hov2>external symbol %s :@[<hov>%a@] = \"%d\". %s@]@\n"
@@ -1382,9 +1385,9 @@ let document_adt doc ty ks cks vks fmt () =
   List.iter (fun (K(name,doc,_,_,_)) ->
     if name <> "uvar" then
       let argsdoc = StrMap.find name cks in
-      document_constructor fmt name (StrMap.find name vks) doc argsdoc) ks
+      document_constructor fmt name (StrMap.find name vks |> snd) doc argsdoc) ks
 
-let adt ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar { ty; constructors; doc; pp } =
+let adt ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ({ ty; constructors; doc; pp; declared } as decl) =
   let readback_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let embed_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let sconstructors_ref = ref StrMap.empty in
@@ -1399,7 +1402,8 @@ let adt ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar { ty; constructors; doc; pp
     embed = (fun ~depth hyps constraints state term ->
       !embed_ref ~depth hyps constraints state term);
   } in
-  let vconstructors, cconstructors, sconstructors = compile_constructors ty self (Conversion.show_ty_ast ty) constructors in
+  let vconstructors, cconstructors, sconstructors = compile_constructors declared ty self (Conversion.show_ty_ast ty) constructors in
+  decl.declared <- vconstructors;
   sconstructors_ref := sconstructors;
   vconstructors_ref := vconstructors;
   readback_ref := readback ~mkinterval ~look ~alloc ~mkUnifVar ty cconstructors;
