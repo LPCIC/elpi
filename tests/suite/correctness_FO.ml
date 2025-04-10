@@ -211,23 +211,27 @@ let () = declare "trie"
   ()
 
 let () =
+  let (!) x = Test.FailureOutput (Str.regexp x) in
+  let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*line %d" l1 l2) in
+  let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
+  let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
   let status = Test.
-    [|(*01*) Failure; Success; Failure; Success; Failure;                                          (*05*)
-      (*06*) Success; Failure; Failure; Failure; Failure;                                          (*10*)
-      (*11*) Failure; Success; Failure; Failure; Success;                                          (*15*)
-      (*16*) Success; Success; Failure; Failure; Success;                                          (*20*)
-      (*21*) Failure; Success; Failure; Success; Failure;                                          (*25*)
-      (*26*) Failure; Failure; Success; Success; Failure;                                          (*30*)
-      (*31*) Failure; Success; Failure; Failure; Failure;                                          (*35*)
-      (*36*) Success; Failure; Failure; Success; Success;                                          (*40*)
-      (*41*) Failure; Failure; Failure; Success; Failure;                                          (*45*)
-      (*46*) Success; Success; Success; Success; Failure;                                          (*50*)
-      (*51*) Success; Failure; Success; Failure; Success;                                          (*55*)
-      (*56*) Failure; Failure; Failure; Success; Success;                                          (*60*)
-      (*61*) Failure; Success; Success; Success; Failure;                                          (*65*)
-      (*66*) Success; Failure; Failure; Failure; (FailureOutput Str.(regexp "line 2, column 21")); (*70*)
-      (*71*) Success; Success; FailureOutput Str.(regexp "line 10, column 5"); Failure; FailureOutput Str.(regexp "line 17, column 5");
-      (*76*) Success; Success; Failure; Success
+    [|(*01*) mut_excl 9 6; Success; det_check 9 7; Success; Failure;            (*05*)
+      (*06*) Success; Failure; Failure; Failure; Failure;                       (*10*)
+      (*11*) mut_excl 9 8; Success; mut_excl 11 10; det_check 21 9; Success;    (*15*)
+      (*16*) Success; Success; det_check 14 7; det_check 13 7; Success;         (*20*)
+      (*21*) det_check 7 21; Success; det_check 16 9; Success; det_check 7 12;  (*25*)
+      (*26*) mut_excl 13 10; mut_excl 12 10; Success; Success; det_check 8 7;   (*30*)
+      (*31*) out_err 7 10; Success; out_err 10 14; out_err 9 21; out_err 9 13;  (*35*)
+      (*36*) Success; out_err 6 10; out_err 7 3; Success; Success;              (*40*)
+      (*41*) det_check 6 21; out_err 7 4; out_err 5 4; Success; det_check 11 34;(*45*)
+      (*46*) Success; Success; Success; Success; det_check 8 16;                (*50*)
+      (*51*) Success; det_check 19 2; Success; out_err 8 4; Success;            (*55*)
+      (*56*) det_check 10 2; out_err 12 19; out_err 13 8; Success; Success;     (*60*)
+      (*61*) det_check 13 2; Success; Success; Success; det_check 9 2;          (*65*)
+      (*66*) Success; det_check 9 31; det_check 11 5; det_check 7 39; det_check 2 21; (*70*)
+      (*71*) Success; Success; out_err 10 5; out_err 8 4; out_err 17 5;
+      (*76*) Success; Success; det_check 7 5; Success
     |] in
   let ignore = [5;7;8;9;10;13;16;26;27] in
   for i = 0 to Array.length status - 1 do
