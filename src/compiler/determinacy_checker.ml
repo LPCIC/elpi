@@ -403,25 +403,38 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
           Format.asprintf "assume: Type error, found dtype %a and arguments %a@." pp_dtype d
             (pplist ScopedTerm.pretty ",") tl
           |> anomaly ~loc
-    and assume_app ~was_input ctx ~loc ~is_var d ((t, name, _) as s) tl =
-      Format.eprintf "Calling assume_app on: %a with dtype %a with args [%a] and is var:%b@." F.pp name pp_dtype d
+    and assume_app ~was_input ctx ~loc d ((t, name, _) as s) tl =
+      Format.eprintf "Calling assume_app on: %a with dtype %a with args [%a] and@." F.pp name pp_dtype d
         (pplist ~boxed:true ScopedTerm.pretty " ; ")
-        tl is_var;
+        tl;
       (if tl = [] then
-         if is_var then add ~loc ~v:d name
-         else match t with Scope.Bound b -> BVar.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
+          match t with Scope.Bound b -> BVar.add ctx ~v:d ~loc (name, b) |> ignore | Global g -> ()
        else
-         let det_head = get_dtype ~env ~ctx ~var:!var ~loc ~is_var s in
+         let det_head = get_dtype ~env ~ctx ~var:!var ~loc ~is_var:false s in
          assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl);
       Format.eprintf "The map after call to assume_app is %a@." UVar.pp !var
+    and assume_var ~is_var ~ctx ~loc d ((_,name,_) as s) tl =
+      let rec eat_args d' = function 
+      | [] -> d
+      | x::xs -> match d' with
+        | Arrow (m, Variadic, l, r) -> eat_args d' xs
+        | Arrow (m, NotVariadic, l, r) ->  Arrow (m, NotVariadic, l, eat_args d' xs)
+        | _ -> error ~loc "Type error"  in
+      let dtype = get_dtype ~env ~ctx ~var:!var ~loc ~is_var:(is_var = None) s in
+      Format.eprintf "Dtype of %a is %a@." F.pp name pp_dtype dtype;
+      let d' = eat_args dtype tl in
+      Format.eprintf "d' is %a@." pp_dtype d';
+      match is_var with
+      | None -> add ~loc ~v:d' name
+      | Some b -> BVar.add ctx ~v:d' ~loc (name, b) |> ignore
     and assume ~was_input ctx d ScopedTerm.({ ty; loc; it } as t) : unit =
       Format.eprintf "Assume of %a with dtype %a (was_input:%b)@." ScopedTerm.pretty_ it pp_dtype d was_input;
       match it with
       | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
           assume ~was_input (BVar.add_oname ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc env x) ctx) d bo
-      | Const b -> assume_app ~was_input ctx ~loc ~is_var:false d b []
-      | Var (b, tl) -> assume_app ~was_input ctx ~loc ~is_var:true d b tl
-      | App (b, hd, tl) -> assume_app ~was_input ctx ~loc ~is_var:false d b (hd :: tl)
+      | Const b -> assume_app ~was_input ctx ~loc d b []
+      | Var (b, tl) -> assume_var ~loc ~ctx ~is_var:None d b tl
+      | App (b, hd, tl) -> assume_app ~was_input ctx ~loc d b (hd :: tl)
       | Discard -> ()
       | Impl (true, h, b) ->
           check_clause ~ctx ~var:!var h |> ignore;
