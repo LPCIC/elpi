@@ -1419,7 +1419,7 @@ let rec allocate_constructors: type t h c. mkinterval:(int -> int -> int -> term
       (t,h,c) declaration -> allocation =
       fun ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ->
 function
-(Decl { ty; constructors; doc; pp }) -> do_allocate_constructors ty constructors
+| Decl { ty; constructors; doc; pp } -> do_allocate_constructors ty constructors
 | Param f ->
   let a = {
     ContextualConversion.ty = Conversion.TyName "A";
@@ -1463,7 +1463,7 @@ function Decl { ty; constructors; doc; pp } ->
   readback_ref := readback ~mkinterval ~look ~alloc ~mkUnifVar ty cconstructors;
   embed_ref := embed ~mkConst ty pp cconstructors;
   self
-  | _ -> anomaly "declare_allocated can only be called on Decl"
+| _ -> anomaly "declare_allocated can only be called on Decl"
 
 end
 

@@ -364,6 +364,7 @@ type query = {
   prolog_program : index;
   chr : CHR.t;
   symbols : SymbolMap.table;
+  runtime_global_name_resolution : Symbol.t TypeAssignment.overloaded F.Map.t;
   initial_goal : term;
   assignments : term StrMap.t;
   compiler_state : State.t;
@@ -1995,6 +1996,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
     compiler_state = compiler_state |> state_update;
     total_type_checking_time;
     builtins;
+    runtime_global_name_resolution = types.overloading;
   }
 
 let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~depth t =
@@ -2042,6 +2044,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
     compiler_state;
     total_type_checking_time;
     builtins;
+    runtime_global_name_resolution = types.overloading;
   }
     
   let query_of_raw_term (compiler_state, assembled_program) f =
@@ -2070,22 +2073,25 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
       assignments;
       compiler_state;
       total_type_checking_time;
-      builtins
+      builtins;
+      runtime_global_name_resolution = types.overloading;
     }
   
-let symtab : (constant * D.term) Symbol.RawMap.t D.State.component = D.State.declare
+let symtab : ((constant * D.term) Symbol.RawMap.t * Symbol.t TypeAssignment.overloaded F.Map.t) D.State.component = D.State.declare
   ~descriptor:D.elpi_state_descriptor
   ~name:"elpi:symbol_table"
   ~pp:(fun fmt _ -> Format.fprintf fmt "<symbol_table>")
   ~clause_compilation_is_over:(fun x -> x)
   ~compilation_is_over:(fun x -> Some x)
   ~execution_is_over:(fun _ -> None)
-  ~init:(fun () -> Symbol.RawMap.empty)
+  ~init:(fun () -> Symbol.RawMap.empty, F.Map.empty)
   ()
   
 let global_name_to_constant state s =
-  let map = State.get symtab state in
-  fst @@  Symbol.RawMap.find (Symbol.make_builtin (F.from_string s)) map
+  let symbols2c,str2symbol = State.get symtab state in
+  match F.Map.find (F.from_string s) str2symbol with
+  | TypeAssignment.Overloaded l -> error "cannot resolve overloaded symbol at runtime"
+  | TypeAssignment.Single s -> fst @@  Symbol.RawMap.find s symbols2c
 
 module Compiler : sig
 
@@ -2102,11 +2108,12 @@ let run
     initial_goal;
     assignments;
     builtins;
+    runtime_global_name_resolution;
     compiler_state = state;
   }
 =
   let symbol_table = SymbolMap.compile symbols in
-  let state = State.set symtab state (SymbolMap.compile_s2c symbols) in
+  let state = State.set symtab state (SymbolMap.compile_s2c symbols,runtime_global_name_resolution) in
   {
     D.compiled_program = { index = close_index prolog_program; src = [] };
     chr;
