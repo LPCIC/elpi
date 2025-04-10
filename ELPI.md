@@ -465,10 +465,10 @@ mode (foo i o).
 
 ## Determinacy checking
 
-Determinacy is the property of predicate to produce at most one result. This
-means that the predicate is a single-valued relation or behaves as a function,
-more concretely, the call does not produce new choice points. The signature of
-predicates allows to define the behavior of the predicate wrt determinacy.
+Determinacy is the property of a predicate to produce at most one result. This
+means that the predicate behaves as a single-valued relation or a function. In
+practical terms, the call does not generate additional choice points. The
+signature of predicates defines their behavior with respect to determinacy.
 
 The syntax:
 
@@ -476,20 +476,20 @@ The syntax:
 func PRED_NAME? COMMA_SEPARATED(types*) -> COMMA_SEPARATED(types*).
 ```
 
-declares the signature of a new deterministic predicate called `PRED_NAME`. Its
-input (resp. output) arguments appear before (resp. after) the `->` symbol. Note
-that `PRED_NAME` is optional. If not specified, the signature stands for the
-type anonymous functions.
+uses the keyword `func` instead of `pred`. It introduces the signature of a new
+deterministic predicate called `PRED_NAME`. The types of its input (respectively
+output) arguments appear before (respectively after) the `->` symbol. Note that
+`PRED_NAME` is optional. If not specified, the signature represents the type of
+anonymous functions.
 
-For example in the following code
+For example, in the following code:
 
 ```prolog
 func id (func A -> B), A -> B.
 id P X Y :- P X Y.
 ```
 
-`id` is a function that takes in input a binary function from `A` to `B`,
-it takes an second input of type `A` and produces an output of type `B`.
+`id` is a function that takes as input an (anonymous) binary function from `A` to `B`, a second input of type `A`, and produces an output of type `B`.
 
 We also accepts the syntax
 
@@ -498,7 +498,7 @@ func PRED_NAME? COMMA_SEPARATED(types*).
 ```
 
 where the `->` is omitted. In this case we are declaring a predicate
-(or anonymous predicate) with no optputs — i.e., all arguments
+(or anonymous predicate) with no outputs — i.e., all arguments
 are in input mode.
 
 It is possible to declare functions with mixed input-output arguments, where
@@ -511,11 +511,11 @@ For example, the signature of the `is` predicate can be written as:
 :functional pred (is) o:A, i:A.
 ```
 
-We can note that a function is (mathematically) a relation, but the converse is
-not true. This means that we can define a function $\subseteq : D \to D \to
-bool$ where $D$ is the type of signatures, so that in a call like $d_1 \subseteq
-d_2$ you have true if $d_1$ is a signature stronger or equal then $d_2$ 
-(equivalently $d_2$ is weaker then $d_1$).
+We can observe that a function is (mathematically) a relation, but the converse
+is not true. This implies that we can define a function $\subseteq : D \to D \to
+bool$, where $D$ is the type of signatures. In a call like $d_1 \subseteq d_2$,
+the result is true if $d_1$ is a signature that is stronger than or equal to
+$d_2$ (equivalently, $d_2$ is weaker than or equal to $d_1$).
 
 The function $\subseteq$ is implemented as follows:
 
@@ -527,15 +527,12 @@ l_1 \to_o r_1 &\subseteq  l_2 \to_o r_2 \qquad\mathrm{ if\ } l_1 \subseteq l_2 \
 \end{align}
 $$
 
-This function mirrors the subtyping relation, since we use the contravariant
-relation for inputs. 
+This function mirrors the subtyping relation, as we use the contravariant
+relation for inputs.
 
-We say that a predicate $p$ a call is *wrongly* called if one of its input has
-an inferred determinacy which is weaker then the expected one. In this case,
-if $p$ is a function, then we have no guarantee that the call will behave
-deterministically.
-
-
+We say that a predicate $p$ is *wrongly* called if one of its inputs has an
+inferred determinacy weaker than the expected one. In this case, if $p$ is a
+function, we cannot guarantee that the call will behave deterministically.
 
 For example, consider the following program.
 
@@ -551,19 +548,22 @@ determinacy which is weaker then the expected by `id`. You can remark that the
 call assigs `A` to `pizza` but leave a choice point with `A` assigned to
 `pasta`.
 
-Our notion of determinacy gives not only guarantees on the behavior of a call,
-but also on the signature of outputs.
+Our notion of determinacy not only provides guarantees about the behavior of a
+call $c$, but also about the signature of the outputs of that call $c$.
 
 For example, one can define:
 ```prolog
 func make-deterministic (pred i:A, o:B) -> (func A -> B).
 make-deterministic P (x\y\ P x y, !).
 ```
-
-which transforms a binary predicate in a binary function (note the `!`). This
-means that the call `make-deterministic likes X, id X mario A` is deterministic:
-`X` is assumed to become a function from `guest` to `dishes`, this signature
-respects the expectations of `id` therefore `A` is deterministically assigned to
+which transforms a binary predicate into a binary function (note the `!`). This
+means that the call `make-deterministic likes X` is deterministic.
+The inferred determinacy of `likes` is `pred i:guest o:dishes`, which is 
+equivalent to `pred i:A, o:B`. This ensures that the call is deterministic.
+Moreover, we are guaranteed that `X` will be a binary function with the type
+`func guest -> dishes`. If we use the same `X` in the call `id X mario A`,
+we can observe that `id` is *correctly* called. Therefore, it
+behaves deterministically, and `A` is assigned the only value
 `pizza`.
 
 Let's consider an other example:
@@ -584,12 +584,11 @@ func map list A, (func A -> B) -> list B.
 map [] [].
 map [X|XS] F [Y|YS] :- F X Y, map XS F YS.
 ```
-
-The call `map [mario,anna] likes! L` is functional and produces exactly one
+The call `map [mario,anna] likes! L` is deterministic and produces exactly one
 result: `L = [pizza,gelato]`. However, the call `map [mario,anna] likes L` is
-not functional because it is "wrongly" called (`likes` is not a binary
-function). The call produces, in fact, a first result for `L = [pizza,gelato]`
-with three additional choice points where `L` is assigned to `[pasta,gelato]`.
+not deterministic because it is "wrongly" called (`likes` is not a binary
+function). This call produces an initial result `L = [pizza,gelato]` but
+leaves one additional choice point where `L` is assigned to `[pasta,gelato]`.
 
 
 
