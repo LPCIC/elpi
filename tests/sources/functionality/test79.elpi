@@ -1,0 +1,6 @@
+%YES
+
+func make-deterministic (pred i:A, o:B) -> (func A -> B).
+make-deterministic P (x\y\ P x y, !).
+
+main.
