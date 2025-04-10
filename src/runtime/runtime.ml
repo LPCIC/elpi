@@ -156,6 +156,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     Fmt.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
      (pplist pparg ?pplastelem:pplastarg " ") args in
   let ppconstant f c = Fmt.fprintf f "%s" (C.show ~table:pp_ctx.table c) in
+  (* let ppconstant f c = Fmt.fprintf f "%s/%d" (C.show ~table:pp_ctx.table c) c in *)
   let ppbuiltin f b = Fmt.fprintf f "%s" @@ show_builtin_predicate ~table:pp_ctx.table C.show b in
   let string_of_uvar_body r =
     try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
