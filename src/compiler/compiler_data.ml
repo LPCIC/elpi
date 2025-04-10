@@ -842,7 +842,7 @@ module ScopedTerm = struct
       | Discard | CData _ -> t
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
 
-    let rec clone_loc ~loc {it;loc:_} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
+    let rec clone_loc ~loc {it} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
     clone ~loc = function
       | Const g -> Const (clone_ty_name' g)
       | Impl (b, l, r) -> Impl(b, clone_loc ~loc l, clone_loc ~loc r)
