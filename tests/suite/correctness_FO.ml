@@ -125,6 +125,12 @@ let () = declare "macro_type"
   ~description:"polymorphic macro"
   ()
 
+let () = declare "macro_type_err_pos"
+  ~source_elpi:"macro_type_err_pos.elpi"
+  ~description:"polymorphic macro"
+  ~expectation:(FailureOutput (Str.regexp "line 5, column 8.*\nTypechecker"))
+  ()
+
 (* 
   Note in the following tests with DT, we disable typecheck not to print the
   number of candidates found in the search of clauses done by the elpi typechecker

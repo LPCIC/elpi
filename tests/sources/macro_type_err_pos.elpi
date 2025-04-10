@@ -1,0 +1,5 @@
+macro @m A :- f A.
+
+pred f i:int.
+
+main :- @m "4".
