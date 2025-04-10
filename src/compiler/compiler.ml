@@ -1696,8 +1696,8 @@ end = struct
         in
       let overlaps = check_overlaps (Bl.to_list overlapping) in
       if overlaps <> [] then
-        let to_str = List.map (fun e -> Format.asprintf "overlaps with %s --> %a" 
-          (Option.value ~default:"anonymous clause" (Option.map Loc.show e.loc)) (pplist pp_term ", ") e.hyps) overlaps  in
+        let to_str = List.map (fun e -> Format.asprintf "overlaps with %s" 
+          (Option.value ~default:"anonymous clause" (Option.map Loc.show e.loc))) overlaps  in
         error ~loc (Format.asprintf "- %s@." (String.concat  "\n - " to_str))
       in valid_clause cl
     );
