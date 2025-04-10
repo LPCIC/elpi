@@ -129,13 +129,13 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : 
     let to_unify must bsymb =
       match Symbol.RawMap.find bsymb Elpi_runtime.Data.Global_symbols.table.s2ct with
       | _ -> Some bsymb 
-      | exception Not_found when must -> error ~loc ("Symbol " ^ F.show name ^ " marked as external is not declared in OCaml.\nCheck for calls to Constants.declare_global_symbol")
+      | exception Not_found when must -> error ~loc ("Symbol " ^ Symbol.pretty bsymb ^ " marked as external is not declared in OCaml.\nCheck for calls to Constants.declare_global_symbol")
       | exception Not_found -> None in
     match availability with
     | Elpi -> None
     | OCaml (File _) -> anomaly "provenance File cannot be provided by the user"
-    | OCaml Core -> Symbol.make Core name |> to_unify true
-    | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0)
+    | OCaml Core -> Symbol.make Core name |> to_unify (not (is_prop ty))
+    | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0) (* TODO: this is hack for builtins, they could be overloaded as well *)
     (* | OCaml None -> Symbol.make_builtin name |> to_unify false  *)
   in
   symb, quotient, { ty; indexing; availability }

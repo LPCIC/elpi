@@ -1463,6 +1463,18 @@ end = struct
       symb, p
     ) builtins in
 
+    signature.types.overloading |> F.Map.iter (fun k -> function
+      | TypeAssignment.Single _ -> ()
+      | Overloaded l ->
+          let l = List.filter (fun x -> (Symbol.QMap.find x signature.types.symbols).availability <> Elpi) l in
+          let l = List.filter (fun x ->
+            match Symbol.UF.find (Symbol.QMap.get_uf signature.types.symbols) x |> Symbol.get_provenance with
+            | Core | File _ -> false
+            | Builtin _ -> true) l in
+          if Symbol.undup ~uf:(Symbol.QMap.get_uf signature.types.symbols) l |> List.length <> List.length l then
+          error ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?")
+    );
+
     let more_types = Type_checker.check_undeclared ~unknown in
     let u_types = Flatten.merge_type_assignments signature.types more_types in
     let types = Flatten.merge_type_assignments types more_types in
@@ -1779,7 +1791,7 @@ let extend1 flags (state, base) unit =
   
   let new_defined_symbols, new_indexable =
     let symbs = Symbol.QMap.bindings new_types.symbols in
-    symbs |> List.filter_map (fun (symb,_) -> if Symbol.QMap.mem symb bsig.types.symbols then None else Some symb),
+    symbs |> List.filter_map (fun (symb,m) -> if Symbol.QMap.mem symb bsig.types.symbols then None else Some symb),
     symbs |> List.filter_map (fun (symb, { Type_checker.indexing } ) -> match indexing with Index(m,i) -> Some (symb,(m,i)) | _ -> None) in
 
   let symbols =
@@ -1795,6 +1807,7 @@ let extend1 flags (state, base) unit =
         new_defined_symbols in
     List.fold_left (fun symbols s -> SymbolMap.allocate_global_symbol state symbols s |> fst)
       symbols new_defined_symbols in
+
 
   let prolog_program, indexing = update_indexing state symbols prolog_program new_indexable indexing in
   (* Format.eprintf "extended\n%!"; *)

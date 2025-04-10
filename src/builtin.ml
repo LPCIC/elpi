@@ -235,13 +235,13 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
-  LPCode "external symbol (:-)  : fprop -> fprop -> fprop.";
-  LPCode "external symbol (:-)  : fprop -> list prop -> fprop.";
+  LPCode "external symbol (:-)  : fprop -> fprop -> fprop = \"core\".";
+  LPCode "external symbol (:-)  : fprop -> list prop -> fprop = \"core\".";
   LPCode "external symbol (,)   : variadic fprop fprop.";
   LPCode "external symbol uvar  : A = \"core\".";
   LPCode "external symbol (as)  : A -> A -> A = \"core\".";
-  LPCode "external symbol (=>)  : prop -> fprop -> fprop.";
-  LPCode "external symbol (=>)  : list prop -> fprop -> fprop."; (* HACS in TC to handle this*)
+  LPCode "external symbol (=>)  : prop -> fprop -> fprop = \"core\".";
+  LPCode "external symbol (=>)  : list prop -> fprop -> fprop = \"core\"."; (* HACS in TC to handle this*)
   LPCode "external symbol (==>) : prop -> fprop -> fprop.";
   LPCode "external symbol (==>) : list prop -> fprop -> fprop.";
 

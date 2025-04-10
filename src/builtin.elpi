@@ -37,9 +37,9 @@ external symbol (;) prop -> prop -> prop.
 
 (_ ; B) :- B.
 
-external symbol (:-)  : fprop -> fprop -> fprop.
+external symbol (:-)  : fprop -> fprop -> fprop = "core".
 
-external symbol (:-)  : fprop -> list prop -> fprop.
+external symbol (:-)  : fprop -> list prop -> fprop = "core".
 
 external symbol (,)   : variadic fprop fprop.
 
@@ -47,9 +47,9 @@ external symbol uvar  : A = "core".
 
 external symbol (as)  : A -> A -> A = "core".
 
-external symbol (=>)  : prop -> fprop -> fprop.
+external symbol (=>)  : prop -> fprop -> fprop = "core".
 
-external symbol (=>)  : list prop -> fprop -> fprop.
+external symbol (=>)  : list prop -> fprop -> fprop = "core".
 
 external symbol (==>) : prop -> fprop -> fprop.
 
