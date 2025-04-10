@@ -12,12 +12,12 @@ p :-
     Y x = print,   % `Y x` is a function
     Y x = true,    % 
     Z x = print,
-    Z 3
+    % Z 3 4 5,
     % TODO: add also this Z 3 4 5 as premise, this should pass
-  % pi y\ pi x\
-  %   y x = q,
-  %   y x = print,
-  %   y 3
+  pi y\ pi x\
+    y x = q,
+    y x = print,
+    y 3
   .
 
 main.
