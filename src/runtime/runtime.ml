@@ -156,6 +156,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     Fmt.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
      (pplist pparg ?pplastelem:pplastarg " ") args in
   let ppconstant f c = Fmt.fprintf f "%s" (C.show ~table:pp_ctx.table c) in
+  (* let ppconstant f c = Fmt.fprintf f "%s/%d" (C.show ~table:pp_ctx.table c) c in *)
   let ppbuiltin f b = Fmt.fprintf f "%s" @@ show_builtin_predicate ~table:pp_ctx.table C.show b in
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == C.dummy then begin

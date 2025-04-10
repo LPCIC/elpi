@@ -2205,13 +2205,31 @@ let elpi ~language:_ state loc s =
 
 exception RelocationError of string
 
-let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols }) (t : term) : term =
+let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols; signature }) (t : term) : term =
   let relocate c =
     let s = Util.Constants.Map.find c symbol_table.c2s in
-    let c = SymbolMap.get_global_symbol symbols s in
+    let f = s |> Symbol.get_func in
+    let get_variant s =
+      match Symbol.get_provenance s with
+      | Builtin { variant } -> Some variant
+      | _ -> None in
+    let canon s = Symbol.UF.find (Symbol.QMap.get_uf signature.types.symbols) s in
+    let c =
+      match F.Map.find_opt f signature.types.overloading with
+      | Some (Single s) ->
+         let s = canon s in
+        SymbolMap.get_global_symbol symbols s
+      | Some (Overloaded l) ->
+        let l = List.map canon l in
+        begin match List.filter (fun x -> get_variant s = get_variant x) l with
+        | [] -> None
+        | [x] -> SymbolMap.get_global_symbol symbols x
+        | _ -> anomaly "cannot relocate overloaded symbol"
+        end
+      | None -> None in
     match c with
     | Some x -> x
-    | None -> raise (RelocationError (Format.asprintf "Relocation: unknown global %a" Symbol.pp s))
+    | None -> raise (RelocationError (Format.asprintf "Relocation: unknown global %a: %a" F.pp f SymbolMap.pp_table symbols))
     in
   let rec rel = function
     | Const c when c < 0 -> Const (relocate c)
