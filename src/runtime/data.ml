@@ -521,6 +521,10 @@ module Symbol : sig
   val get_func : t -> F.t
   val is_builtin : t -> F.t -> bool
 
+  val undup : uf:UF.t -> t list -> t list
+
+  val pretty : t -> string
+
   (* val map_func : (F.t -> F.t) -> t -> t *)
   
 end = struct
@@ -533,6 +537,12 @@ end = struct
   type t = symbol [@@deriving show]
 
   open Elpi_parser.Ast.Structured
+
+  let pretty (prov,f) = F.show f ^ match prov with
+    | Core -> " (core symbol)"
+    | File _ -> ""
+    | Builtin { variant } -> if variant <> 0 then " (variant "^string_of_int variant ^")" else ""
+
   module QMap = struct
     
     type 'a t = UF.t * 'a RawMap.t [@@deriving show]
@@ -596,6 +606,10 @@ end = struct
 
   let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
 
+  let rec undup ~uf = function
+  | [] -> []
+  | x :: xs -> let x = UF.find uf x in if List.exists (fun y -> compare x (UF.find uf y) = 0) xs then undup ~uf xs else x :: undup ~uf xs
+
   let is_builtin (p,f) s =
     F.equal f s && match p with Builtin { variant } -> variant = 0 | _ -> false
 
@@ -648,6 +662,7 @@ module Global_symbols : sig
 
   (* Static initialization, eg link time *)
   val declare_global_symbol : ?variant:int -> string -> constant
+  (* Used by auto-generated code, eg ADT *)
   val declare_overloaded_global_symbol : string -> constant * int
   val lock : unit -> unit
 

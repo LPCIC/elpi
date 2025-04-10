@@ -633,7 +633,11 @@ module RawData = struct
 
   module Constants = struct
 
-    let declare_global_symbol = ED.Global_symbols.declare_global_symbol
+    let declare_global_symbol ?variant x =
+      begin match variant with
+      | Some n -> if n < 1 then Util.error "declare_global_symbol: variants are >= 0"
+      | None -> () end;
+      ED.Global_symbols.declare_global_symbol ?variant x
 
     let show c = Util.Constants.show c
 
