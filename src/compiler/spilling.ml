@@ -13,7 +13,7 @@ let is_prop ~extra x =
   let ty = TypeAssignment.deref x in
   let rec aux extra = function
     | TypeAssignment.Prop _ -> true
-    | TypeAssignment.(App(f,Prop _,[])) when F.show f = "list" -> true (* hack since the type checker unifies prop with list prop *)
+    (* | TypeAssignment.(App(f,Prop _,[])) when F.show f = "list" -> true hack since the type checker unifies prop with list prop *)
     | TypeAssignment.Arr (_, _, _, t) when extra > 0 -> aux (extra - 1) t
     | TypeAssignment.UVar r when MutableOnce.is_set r -> aux extra (TypeAssignment.deref r)
     | _ -> false
