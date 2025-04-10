@@ -194,7 +194,7 @@ mem! [X|_] X :- !.
 mem! [_|L] X :- mem! L X.
 
 % [mem L X] succeeds every time if X occurs inside L 
-pred mem i:list A, i:A.
+pred mem i:list A, o:A.
 mem [X|_] X.
 mem [_|L] X :- mem L X.
 
