@@ -842,17 +842,17 @@ module ScopedTerm = struct
       | Discard | CData _ -> t
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
 
-    let rec clone_loc {it;loc} = {it=clone it;loc;ty=TypeAssignment.new_ty ()} and
-    clone = function
+    let rec clone_loc ~loc {it;loc:_} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
+    clone ~loc = function
       | Const g -> Const (clone_ty_name' g)
-      | Impl (b, l, r) -> Impl(b, clone_loc l, clone_loc r)
-      | Lam (n,ty,bo) -> Lam(Option.map clone_ty_name n, ty, clone_loc bo)
+      | Impl (b, l, r) -> Impl(b, clone_loc ~loc l, clone_loc ~loc r)
+      | Lam (n,ty,bo) -> Lam(Option.map clone_ty_name n, ty, clone_loc ~loc bo)
       | Discard -> Discard
-      | Var (v, xs) -> Var (clone_ty_name' v, List.map clone_loc xs)
-      | App (g, x, xs) -> App (clone_ty_name' g, clone_loc x, List.map clone_loc xs)
+      | Var (v, xs) -> Var (clone_ty_name' v, List.map (clone_loc ~loc) xs)
+      | App (g, x, xs) -> App (clone_ty_name' g, clone_loc ~loc x, List.map (clone_loc ~loc) xs)
       | CData _ as t -> t 
-      | Spill (t, _) -> Spill (clone_loc t, ref NoInfo)
-      | Cast (t, ty) -> Cast (clone_loc t, ty)
+      | Spill (t, _) -> Spill (clone_loc ~loc t, ref NoInfo)
+      | Cast (t, ty) -> Cast (clone_loc ~loc t, ty)
 
     let beta t args =
       let rec fv acc { it } =

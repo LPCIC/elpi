@@ -855,7 +855,7 @@ end = struct
     let { macros } = get_mtm state in
     match F.Map.find_opt c macros with
     | None -> error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
-    | Some (t, _) -> ScopedTerm.beta (ScopedTerm.clone_loc t) args
+    | Some (t, _) -> ScopedTerm.beta (ScopedTerm.clone_loc ~loc t) args
 
   let rec scope_term ~state ctx ~loc t =
     let open Ast.Term in
