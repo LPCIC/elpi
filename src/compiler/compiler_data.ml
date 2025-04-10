@@ -42,11 +42,6 @@ module Scope = struct
   let mkResolvedGlobal symb =
     Global { escape_ns = true ; decl_id = Some symb }
 
-  let is_builtin f = function
-    | Global { decl_id = Some s } -> Symbol.is_builtin s f
-    | _ -> false
-
-  
 end
 let elpi_language : Scope.language = "lp"
 let elpi_var : Scope.language = "lp_var"

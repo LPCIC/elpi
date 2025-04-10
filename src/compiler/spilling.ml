@@ -47,14 +47,22 @@ let add_spilled ~types (l : spill list) t =
 
 let mkApp n l = if l = [] then Const n else App (n, List.hd l, List.tl l)
 
-let app t args =
+let is_symbol ~types b = function
+| Scope.Global { decl_id = Some s } ->
+    let open Type_checker in
+    let uf = Symbol.QMap.get_uf types.symbols in
+    Symbol.equal ~uf s b
+| Global { decl_id = None } -> anomaly "unresolved global symbol"
+| _ -> false
+
+let app ~types t args =
   if args = [] then t
   else
     let rec aux { loc; it; ty } : t =
       mk_loc ~loc ~ty
       @@
       match it with
-      | App (((s, _, _) as n), x, xs) when Scope.is_builtin F.andf s -> mkApp n (aux_last (x :: xs))
+      | App (((s, _, _) as n), x, xs) when is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s -> mkApp n (aux_last (x :: xs))
       | Impl (b, s, t) -> Impl (b, s, aux t)
       | Const n -> mkApp n args
       | App (n, x, xs) -> mkApp n ((x :: xs) @ args)
@@ -124,20 +132,21 @@ let rec spill ~types ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; i
              args n
       in
       let spills, t = spill1 ~types ~extra:(List.length vars_names) ctx args t in
-      let expr = app t vars in
+      let expr = app ~types t vars in
+      (* Format.eprintf "Spilled %a@." ScopedTerm.pretty expr; *)
       (spills @ [ { vars; vars_names; expr } ], vars)
   (* globals and builtins *)
-  | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when Scope.is_builtin F.pif s ->
+  | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when is_symbol ~types Elpi_runtime.Data.Global_symbols.pi s ->
       let ctx = v :: ctx in
       let spilled, t = spill1 ~types ctx args t in
       ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
-  | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when Scope.is_builtin F.sigmaf s ->
+  | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when is_symbol ~types Elpi_runtime.Data.Global_symbols.sigma s ->
       let ctx = ctx in
       (* not to be put in scope of spills *)
       let spilled, t = spill1 ~types ctx args t in
       ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
-  | App (((s,xxxx,_) as hd), x, xs) ->
-      let last = if Scope.is_builtin F.andf s then List.length xs else -1 in
+  | App (((s,_,_) as hd), x, xs) ->
+      let last = if is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s then List.length xs else -1 in
       let spills, args =
         List.split @@ List.mapi (fun i -> spill ~types ~extra:(if i = last then extra else 0) ctx args) (x :: xs)
       in
