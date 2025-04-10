@@ -1308,7 +1308,7 @@ let copy_heap_drop_csts ~depth ?keep_if_outside x =
         r' in
   let alloc_copy r =
     let r' = alloc_copy r in
-    Format.eprintf "  copy uv %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r,0,0)) (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r',0,0));
+    (* Format.eprintf "  copy uv %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r,0,0)) (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r',0,0)); *)
     r' in
   let rec maux depth x =
   match x with
@@ -1346,7 +1346,7 @@ let copy_heap_drop_csts ~depth ?keep_if_outside x =
      AppUVar (r',vardepth,smart_map2 maux depth args)
     in
     let x' = maux depth x in
-    Format.eprintf "copy %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) x (uppterm depth [] ~argsdepth:0 empty_env) x';
+    (* Format.eprintf "copy %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) x (uppterm depth [] ~argsdepth:0 empty_env) x'; *)
     x', !m
 
 (* }}} *)
