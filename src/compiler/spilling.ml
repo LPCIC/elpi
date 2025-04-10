@@ -13,6 +13,7 @@ let is_prop ~extra x =
   let ty = TypeAssignment.deref x in
   let rec aux extra = function
     | TypeAssignment.Prop _ -> true
+    | TypeAssignment.(App(f,Prop _,[])) when F.show f = "list" -> true (* hack since the type checker unifies prop with list prop *)
     | TypeAssignment.Arr (_, _, _, t) when extra > 0 -> aux (extra - 1) t
     | TypeAssignment.UVar r when MutableOnce.is_set r -> aux extra (TypeAssignment.deref r)
     | _ -> false
@@ -64,9 +65,9 @@ let app t args =
 
 let mk_spilled ~loc ~ty ctx args n : (F.t * t) list =
   (* builds the type of the spilled variables, all variables has same type *)
-  let build_ty ty =
+  let builf_head_ty tgt_ty =
     let rec aux = function
-      | [] -> ty
+      | [] -> tgt_ty
       | ScopedTerm.{ ty } :: tl ->
           TypeAssignment.(Arr (MRef (MutableOnce.make F.dummyname), NotVariadic, deref ty, aux tl))
     in
@@ -78,12 +79,15 @@ let mk_spilled ~loc ~ty ctx args n : (F.t * t) list =
       F.from_string (Printf.sprintf "%%arg%d" !args)
     in
     let built_tm ty =
-      let ty = build_ty ty in
-      mk_loc ~loc ~ty @@ Var ((Bound elpi_var, f, ty), ctx)
+      let hd_ty = builf_head_ty ty in
+      mk_loc ~loc ~ty:(TypeAssignment.create ty) @@ Var ((Bound elpi_var, f, hd_ty), ctx)
     in
     if n = 0 then []
-    else match ty with TypeAssignment.Arr (_, _, l, r) -> (f, built_tm l) :: aux (n-1) r | ty -> 
-      (assert (n =1); [f, built_tm ty])
+    else
+      match ty with
+      | TypeAssignment.Arr (_, _, l, r) -> (f, built_tm l) :: aux (n-1) r
+      | UVar r when MutableOnce.is_set r -> aux n (TypeAssignment.deref r)
+      | _ -> anomaly "type abbreviations and spilling, not implemented"
   in
   aux n ty
 
@@ -112,7 +116,7 @@ let rec spill ~types ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; i
   | Spill (t, { contents = Phantom _ }) -> assert false (* escapes type checker *)
   | Spill (t, { contents = Main n }) ->
       let ty = t.ty in
-      (* Format.eprintf "Spilling of %a with ty %a@." ScopedTerm.pretty_ it TypeAssignment.pretty_mut_once (UVar ty); *)
+      (* Format.eprintf "Spilling of %a with ty %a requires %d slots@." ScopedTerm.pretty_ it TypeAssignment.pretty_mut_once (UVar ty) n; *)
       let vars_names, vars =
         List.split
         @@ mk_spilled ~loc ~ty:(TypeAssignment.deref ty)
@@ -132,7 +136,7 @@ let rec spill ~types ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; i
       (* not to be put in scope of spills *)
       let spilled, t = spill1 ~types ctx args t in
       ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
-  | App (((s,_,_) as hd), x, xs) ->
+  | App (((s,xxxx,_) as hd), x, xs) ->
       let last = if Scope.is_builtin F.andf s then List.length xs else -1 in
       let spills, args =
         List.split @@ List.mapi (fun i -> spill ~types ~extra:(if i = last then extra else 0) ctx args) (x :: xs)

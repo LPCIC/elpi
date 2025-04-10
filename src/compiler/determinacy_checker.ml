@@ -117,15 +117,15 @@ module Aux = struct
       | (Det | Rel), Exp [ ((Det | Rel | Exp _) as x) ] -> min_max ~loc ~d1 ~d2 f1 x
       | Exp l1, Exp l2 -> (
           try Exp (List.map2 (min_max ~loc ~d1 ~d2) l1 l2)
-          with Invalid_argument _ -> anomaly ~loc "detCheck: min_max invalid exp_length")
-      | Arrow (m1, _, _, r1), Arrow (m2, _, _, _) when m1 <> m2 -> anomaly ~loc "Mode mismatch"
+          with Invalid_argument _ -> error ~loc "detCheck: min_max invalid exp_length")
+      | Arrow (m1, _, _, r1), Arrow (m2, _, _, _) when m1 <> m2 -> error ~loc "Mode mismatch"
       | Arrow (Input, v1, l1, r1), Arrow (_, v2, l2, r2) ->
           check_variadic (min_max ~loc ~d1:d2 ~d2:d1) (min_max ~loc ~d1 ~d2) Input f1 v1 l1 r1 f2 v2 l2 r2
       | Arrow (Output, v1, l1, r1), Arrow (_, v2, l2, r2) ->
           check_variadic (min_max ~loc ~d1 ~d2) (min_max ~loc ~d1 ~d2) Output f1 v1 l1 r1 f2 v2 l2 r2
       | Arrow (_, Variadic, _, r), f2 -> min_max ~loc ~d1 ~d2 r f2
       | f2, Arrow (_, Variadic, _, r) -> min_max ~loc ~d1 ~d2 r f2
-      | _ -> Format.asprintf "DetCheck: min between %a and %a" pp_dtype f1 pp_dtype f2 |> anomaly ~loc
+      | _ -> Format.asprintf "DetCheck: min between %a and %a" pp_dtype f1 pp_dtype f2 |> error ~loc
 
   let min = min_max ~d1:Det ~d2:Rel
   let max = min_max ~d1:Rel ~d2:Det
@@ -144,10 +144,10 @@ module Aux = struct
   let maximize = minimize_maximize ~d1:Rel ~d2:Det
 
   let wrong_type ~loc a b =
-    anomaly ~loc @@ Format.asprintf "DetCheck: Typing invariant broken: %a <<= %a\n%!" pp_dtype a pp_dtype b
+    error ~loc @@ Format.asprintf "DetCheck: Typing invariant broken: %a <<= %a\n%!" pp_dtype a pp_dtype b
 
   let wrong_bvars ~loc v1 v2 =
-    anomaly ~loc @@ Format.asprintf "DetCheck: <<=: TC did not unify two unif vars (%a and %a)" F.pp v1 F.pp v2
+    error ~loc @@ Format.asprintf "DetCheck: <<=: TC did not unify two unif vars (%a and %a)" F.pp v1 F.pp v2
 
   let ( <<= ) ~loc a b =
     let rec choose_dir ~loc t1 t2 = function Mode.Input -> aux ~loc t2 t1 | Mode.Output -> aux ~loc t1 t2
@@ -414,15 +414,15 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
          assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl);
       Format.eprintf "The map after call to assume_app is %a@." UVar.pp !var
     and assume_var ~is_var ~ctx ~loc d ((_,name,_) as s) tl =
-      let rec eat_args d' = function 
-      | [] -> d
+      let rec replace_signature_tgt ~with_ d' = function 
+      | [] -> with_
       | x::xs -> match d' with
-        | Arrow (m, Variadic, l, r) -> eat_args d' xs
-        | Arrow (m, NotVariadic, l, r) ->  Arrow (m, NotVariadic, l, eat_args d' xs)
+        | Arrow (m, Variadic, l, r) -> replace_signature_tgt ~with_ d' xs
+        | Arrow (m, NotVariadic, l, r) ->  Arrow (m, NotVariadic, l, replace_signature_tgt ~with_ r xs)
         | _ -> error ~loc "Type error"  in
       let dtype = get_dtype ~env ~ctx ~var:!var ~loc ~is_var:(is_var = None) s in
       Format.eprintf "Dtype of %a is %a@." F.pp name pp_dtype dtype;
-      let d' = eat_args dtype tl in
+      let d' = replace_signature_tgt dtype tl  ~with_:d in
       Format.eprintf "d' is %a@." pp_dtype d';
       match is_var with
       | None -> add ~loc ~v:d' name

@@ -164,6 +164,12 @@ let () = declare "spill-var"
   ~description:"spilling a var"
   ()
 
+let () = declare "spill2"
+  ~source_elpi:"spill2.elpi"
+  ~description:"spilling 2 arguments"
+  ()
+
+
 let () = declare "block"
   ~source_elpi:"block.elpi"
   ~description:"blocks are closed"
