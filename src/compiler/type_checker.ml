@@ -432,13 +432,13 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     if unify ty ety then []
     else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
-  and check_lam ~positive ctx ~loc ~tyctx sc cty t ety =
-    let name_lang, c, tya = match sc with Some c -> c | None -> mk_ty_name elpi_language (fresh_name ()) in
-    let set_tya_ret f = MutableOnce.set ~loc tya (Val f); f in
-    let src = set_tya_ret @@ match cty with
+  and check_lam ~positive ctx ~loc ~tyctx sc c_type_cast t ety =
+    let name_lang, c, c_type = match sc with Some c -> c | None -> mk_ty_name elpi_language (fresh_name ()) in
+    let src = match c_type_cast with
       | None -> mk_uvar "Src"
       | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty x
-    in 
+    in
+    if not @@ MutableOnce.is_set c_type then MutableOnce.set ~loc c_type (Val src);
     (* Format.eprintf "Ty is setted to %a@." (MutableOnce.pp TypeAssignment.pp) (tya); *)
     let tgt = mk_uvar "Tgt" in
     (* let () = Format.eprintf "lam ety %a\n" TypeAssignment.pretty ety in *)
