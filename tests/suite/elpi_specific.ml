@@ -169,6 +169,10 @@ let () = declare "spill2"
   ~description:"spilling 2 arguments"
   ()
 
+let () = declare "spill_sigma"
+  ~source_elpi:"spill_sigma.elpi"
+  ~description:"spilling under sigma"
+  ()
 
 let () = declare "block"
   ~source_elpi:"block.elpi"
