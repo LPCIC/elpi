@@ -2224,7 +2224,7 @@ let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols; signatu
         begin match List.filter (fun x -> get_variant s = get_variant x) l with
         | [] -> None
         | [x] -> SymbolMap.get_global_symbol symbols x
-        | _ -> anomaly "cannot relocate overloaded symbol"
+        | x1::x2::_ -> anomaly ("Cannot relocate overloaded symbol " ^ F.show f ^"\nDeclarations:\n - " ^ Loc.show (Symbol.get_loc x1) ^ "\n - " ^ Loc.show (Symbol.get_loc x2))
         end
       | None -> None in
     match c with
