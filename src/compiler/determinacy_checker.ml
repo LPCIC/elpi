@@ -226,12 +226,12 @@ module Format = struct
   let eprintf = eprintf
 end
 
-let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya) =
+let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya)=
   let get_ctx = function
     | None -> anomaly ~loc (Format.asprintf "Bound var %a should be in the local map" F.pp name)
     | Some e -> e
   in
-  let get_var = function None -> Any | Some e -> e in
+  let get_var = function None -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc env tya) | Some e -> e in
   let get_con x = if x = None then Any else Compilation.type_ass_2func_mut ~loc env tya in
   let det_head =
     if is_var then get_var @@ UVar.get var name
@@ -383,7 +383,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
     | Var (b, xs) -> aux (get_dtype ~env ~ctx ~var ~loc ~is_var:true b) xs
     | _ -> anomaly ~loc @@ Format.asprintf "Invalid term in deduce output %a." ScopedTerm.pretty_ it
   and assume ~ctx ~var d t =
-    Format.eprintf "Calling assume on %a@." ScopedTerm.pretty t;
+    Format.eprintf "Calling assume on %a with det : %a@." ScopedTerm.pretty t pp_dtype d;
     let var = ref var in
     let add ~loc ~v vname =
       let m = UVar.add ~loc !var vname ~v in
@@ -591,8 +591,8 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
     let assume_hd b is_var (tm : ScopedTerm.t) =
       let _ =
         let do_filter = false in
-        let only_check = "f" in
-        let loc = "test" in
+        let only_check = "p" in
+        let loc = "a.elpi" in
         let _, name, _ = b in
         let bregexp s = Re.Str.regexp (".*" ^ s ^ ".*") in
         if
@@ -662,4 +662,5 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       let Good_call.{ exp; found; term } = Good_call.get gc in
       error ~loc:term.loc 
       @@ Format.asprintf "DetCheck: %sFound relational atom (%a) in the body of function %a" (undecl_disclaimer pred_name) ScopedTerm.pretty term F.pp (let (_,n,_) = Option.get pred_name in n);
+  | IGNORE -> false
 
