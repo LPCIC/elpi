@@ -195,6 +195,9 @@ let pretty_ty valid_mode =
   if valid_mode then TypeAssignment.pretty_mut_once
   else TypeAssignment.pretty_mut_once_raw
 
+
+let error ~loc msg = error ~loc ("Typechecker: " ^ msg)
+
 let error_not_a_function ~loc c tyc args x =
   let t =
     if args = [] then ScopedTerm.Const(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) c)
