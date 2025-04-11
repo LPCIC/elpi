@@ -235,7 +235,7 @@ let () =
       (*46*) Success; Success; Success; Success; det_check 8 16;                (*50*)
       (*51*) Success; det_check 19 2; Success; out_err 8 4; Success;            (*55*)
       (*56*) det_check 10 2; out_err 12 19; out_err 13 8; Success; Success;     (*60*)
-      (*61*) det_check 12 2; Success; Success; Success; det_check 9 2;          (*65*)
+      (*61*) det_check 12 2; Success; Success; Success; det_check 10 2;          (*65*)
       (*66*) Success; det_check 9 31; det_check 11 5; det_check 7 39; det_check 2 21; (*70*)
       (*71*) Success; Success; out_err 10 5; out_err 8 4; det_check 17 5;
       (*76*) Success; Success; det_check 7 5; Success; Success;                 (*80*)
