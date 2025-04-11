@@ -762,6 +762,7 @@ let version_parser ~what v =
     | [ma;mi;p] when List.for_all is_number l -> int_of_string ma, int_of_string mi, int_of_string p
     | [ma;mi] when List.for_all is_number l -> int_of_string ma, int_of_string mi, 0
     | [v] when Re.Str.(string_match (regexp "^%%.*%%$") v 0) -> 99, 99, 99
+    | [v] when Re.Str.(string_match (regexp "^[0-9a-f]+$") v 0) -> 99, 99, 99
     | _ -> raise (Failure "invalid format")
   with Failure msg ->
     warn ("elpi: version_parser: cannot parse version of "^what^" '" ^ v ^ "': " ^ msg);
