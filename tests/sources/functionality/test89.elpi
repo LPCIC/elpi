@@ -1,0 +1,5 @@
+% YES
+
+% Local variable hiding: in the term below, r is defined twice with different types
+main :-
+  std.map [] (m\r\sigma D\ D = [], std.map D (d\r\r = pr d m) r) ES2.

@@ -8,6 +8,12 @@ module C = Constants
 module UF = Symbol.UF
 module S = Elpi_runtime.Data.Global_symbols
 
+module Format = struct
+  include Format
+
+  let eprintf = fun e -> Format.ifprintf Format.err_formatter e
+end
+
 let error ~loc msg = error ~loc ("DetCheck: " ^  msg)
 
 type dtype =
@@ -200,18 +206,17 @@ let ( <<= ) = Aux.( <<= )
 module EnvMaker (M : Map.S) : sig
   type t [@@deriving show]
 
-  val add : loc:Loc.t -> v:dtype -> t -> M.key -> t
+  val add : new_:bool -> loc:Loc.t -> v:dtype -> t -> M.key -> t
   val get : t -> M.key -> dtype option
   val clone : t -> t
   val empty : t
 end = struct
   type t = dtype ref M.t [@@deriving show]
 
-  let add ~loc ~(v : dtype) (env : t) (n : M.key) : t =
-    match M.find_opt n env with
-    | None ->
-        let res = M.add n (ref v) env in
-        res
+  let add ~new_ ~loc ~(v : dtype) (env : t) (n : M.key) : t =
+    if new_ then M.add n (ref v) env 
+    else match M.find_opt n env with
+    | None -> M.add n (ref v) env
     | Some v' ->
         v' := Aux.min ~loc v !v';
         env
@@ -226,14 +231,13 @@ module UVar = EnvMaker (F.Map)
 module BVar = struct
   include EnvMaker (Scope.Map)
 
-  let add_oname ~loc oname f ctx =
-    match oname with None -> ctx | Some (scope, name, tya) -> add ~loc ctx (name, scope) ~v:(f tya)
-end
-
-module Format = struct
-  include Format
-
-  let eprintf = fun e -> Format.ifprintf Format.std_formatter e
+  let add_oname ~new_ ~loc oname f ctx =
+    Format.eprintf "add_oname: %a@." (Format.pp_print_option (fun fmt (s,n,tya) -> 
+      Format.fprintf fmt "@[<hov 2>%a@ with tya:@ %a@ and compiled@ %a@ -- [old: %a])]" F.pp n (TypeAssignment.pretty_mut_once) (TypeAssignment.deref tya)
+      pp_dtype (f tya)
+      (Format.pp_print_option pp_dtype) (get ctx (n,s))
+      )) oname;
+    match oname with None -> ctx | Some (scope, name, tya) -> add ~new_ ~loc ctx (name, scope) ~v:(f tya)
 end
 
 let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya)=
@@ -347,7 +351,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       | ScopedTerm.Const b -> infer_app ~was_input ~loc ctx false ty b []
       | Var (b, xs) -> infer_app ~was_input ~loc ctx true ty b xs
       | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
-          infer ~was_input (BVar.add_oname ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc env x) ctx) bo
+          infer ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc env x) ctx) bo
       (* | App ((Global _, name, _), x, xs) when name = F.andf ->
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
           infer_comma ctx ~loc (x :: xs) (Det, Good_call.init ()) *)
@@ -396,7 +400,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
     Format.eprintf "Calling assume on %a with det : %a@." ScopedTerm.pretty t pp_dtype d;
     let var = ref var in
     let add ~loc ~v vname =
-      let m = UVar.add ~loc !var vname ~v in
+      let m = UVar.add ~new_:false ~loc !var vname ~v in
       var := m
     in
     let rec assume_fold ~was_input ~was_data ~loc ctx d (tl : ScopedTerm.t list) =
@@ -417,13 +421,11 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       Format.eprintf "Calling assume_app on: %a with dtype %a with args [%a] and@." F.pp name pp_dtype d
         (pplist ~boxed:true ScopedTerm.pretty " ; ")
         tl;
-      match t with Scope.Bound b -> assume_var ~is_var:(Some b) ~ctx ~loc d s tl
-        | _ ->
-      (if tl = [] then
-          match t with Scope.Bound b -> BVar.add ctx ~v:d ~loc (name, b) |> ignore | Global _ -> ()
-       else
+      match t with 
+      | Scope.Bound b -> assume_var ~is_var:(Some b) ~ctx ~loc d s tl
+      | _ ->
          let det_head = get_dtype ~env ~ctx ~var:!var ~loc ~is_var:false s in
-         assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl);
+         assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl;
       Format.eprintf "The map after call to assume_app is %a@." UVar.pp !var
     and assume_var ~is_var ~ctx ~loc d ((_,name,_) as s) tl =
       let rec replace_signature_tgt ~with_ d' = function 
@@ -438,12 +440,12 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       Format.eprintf "d' is %a@." pp_dtype d';
       match is_var with
       | None -> add ~loc ~v:d' name
-      | Some b -> BVar.add ctx ~v:d' ~loc (name, b) |> ignore
+      | Some b -> BVar.add ~new_:false ctx ~v:d' ~loc (name, b) |> ignore
     and assume ~was_input ctx d ScopedTerm.({ loc; it } as t) : unit =
       Format.eprintf "Assume of %a with dtype %a (was_input:%b)@." ScopedTerm.pretty_ it pp_dtype d was_input;
       match it with
       | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
-          assume ~was_input (BVar.add_oname ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc env x) ctx) d bo
+          assume ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc env x) ctx) d bo
       | Const b -> assume_app ~was_input ctx ~loc d b []
       | Var (b, tl) -> assume_var ~loc ~ctx ~is_var:None d b tl
       | App (b, hd, tl) -> assume_app ~was_input ctx ~loc d b (hd :: tl)
@@ -455,10 +457,10 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       | Lam (oname, _, c) -> (
           match d with
           | Arrow (Input, NotVariadic, l, r) ->
-              let ctx = BVar.add_oname ~loc oname (fun _ -> l) ctx in
+              let ctx = BVar.add_oname ~new_:true ~loc oname (fun _ -> l) ctx in
               assume ~was_input ctx r c
           | Arrow (Output, NotVariadic, l, r) ->
-              let ctx = BVar.add_oname ~loc oname (fun _ -> l) ctx in
+              let ctx = BVar.add_oname ~new_:true ~loc oname (fun _ -> l) ctx in
               assume ~was_input ctx r c
           | Any -> ()
           | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype d))
@@ -520,7 +522,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
           check ~ctx d b
       | Const b when is_global b S.cut -> (Det, t)
       | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
-          check ~ctx:(BVar.add_oname ~loc b (Compilation.type_ass_2func_mut ~loc env) ctx) d bo
+          check ~ctx:(BVar.add_oname ~new_:true ~loc b (Compilation.type_ass_2func_mut ~loc env) ctx) d bo
       (* Cons and nil case may appear in prop position for example in : `f :- [print a, print b, a].` *)
       | App (b, x, [ xs ]) when is_global b S.cons -> check ~ctx (check ~ctx d x |> fst) xs
       | Const b when is_global b S.nil -> (d, t)
@@ -559,6 +561,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
     in
     (!var, check ~ctx d t, !has_top_level_cut)
   and check_lam ~ctx ~var t : dtype =
+    Format.eprintf "check_lam: t = %a@." ScopedTerm.pretty t;
     let get_ta n args =
       let ta_sk, _ = F.Map.find n env in
       let ty = TypeAssignment.apply ta_sk args in
@@ -574,7 +577,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       let args = List.rev args in
       let b = (Scope.Global {decl_id=None;escape_ns=false}, new_pred, t.ty) in
       let pred_hd = ScopedTerm.(App (b, List.hd args, List.tl args)) in
-      let ctx = BVar.add ~loc ctx (new_pred, elpi_language) ~v:(Compilation.type_ass_2func_mut ~loc env t.ty) in
+      (* let ctx = BVar.add ~loc ctx (new_pred, elpi_language) ~v:(Compilation.type_ass_2func_mut ~loc env t.ty) in *)
       let clause = ScopedTerm.{ ty; it = Impl (false, { it = pred_hd; ty; loc }, body); loc } in
       Format.eprintf "Clause is %a@." ScopedTerm.pretty clause;
       (clause, ctx)
@@ -599,6 +602,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       | Prop _, _ ->
           let t = add_partial_app t parial_app ty in
           let clause, ctx = build_clause args ~ctx ~loc ~ty t in
+          Format.eprintf "check_lam: built clause is = %a@." ScopedTerm.pretty clause;
           check_clause ~ctx ~var clause
       | Cons b, _ when F.Map.mem b env -> aux ~parial_app ~ctx ~args { t with ty = get_ta b [] }
       | App (b, x, xs), _ when F.Map.mem b env -> aux ~parial_app ~ctx ~args { t with ty = get_ta b (x :: xs) }
@@ -608,16 +612,16 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       (* If we reach a Uvar | Any case no check is needed, i.e. we don't know  *)
       | ((UVar _ | Any) as t), _ -> Compilation.type_ass_2func env ~loc t
       | Arr (_, _, l, _), Lam (b, _, bo) ->
-          aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc env t)) ctx) ~args:(otype2term ~loc l b :: args) bo
+          aux ~parial_app ~ctx:(BVar.add_oname ~new_:true ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc env t)) ctx) ~args:(otype2term ~loc l b :: args) bo
       | Arr (_, Structured.Variadic, _, r), _ ->
           let b = Some (elpi_language, emit (), TypeAssignment.create r) in
-          aux ~parial_app ~ctx:(BVar.add_oname ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc env t)) ctx) ~args { t with ty = TypeAssignment.create r }
+          aux ~parial_app ~ctx:(BVar.add_oname ~new_:true ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc env t)) ctx) ~args { t with ty = TypeAssignment.create r }
       | Arr (_, _, l, r), _ ->
           (* Partial app: type is Arr but body is not Lam *)
           let b = Some (elpi_language, emit (), TypeAssignment.create l) in
           let nt = otype2term ~loc l b in
           aux ~parial_app:(nt :: parial_app)
-            ~ctx:(BVar.add_oname ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc env t)) ctx)
+            ~ctx:(BVar.add_oname ~new_:true ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc env t)) ctx)
             ~args:(nt :: args)
             { t with ty = TypeAssignment.create r }
     in
@@ -647,7 +651,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       in
 
       let det_hd = get_dtype ~env ~ctx:!ctx ~var ~loc ~is_var b in
-      Format.eprintf "Assuming for term %a with det %a@." ScopedTerm.pretty tm pp_dtype det_hd;
+      Format.eprintf "assume_input for term %a with det %a@." ScopedTerm.pretty tm pp_dtype det_hd;
       
       (* Format.eprintf "Calling assume in hd for terms list [%a]@." (pplist ScopedTerm.pretty ", ") args; *)
       (* (det_hd, assume ~ctx:!ctx ~var det_hd tm) *)
@@ -661,7 +665,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       | Const b -> (b, assume_hd b false t [], t, None)
       (* For clauses with quantified unification variables *)
       | App (n, { it = Lam (oname, _, body) }, []) when is_quantifier n ->
-          ctx := BVar.add_oname ~loc oname (Compilation.type_ass_2func_mut ~loc env) !ctx;
+          ctx := BVar.add_oname ~new_:true ~loc oname (Compilation.type_ass_2func_mut ~loc env) !ctx;
           aux body
       | App (b, x, xs) -> (b, assume_hd b false t (x::xs), t, None)
       | Var _ -> raise (LoadFlexClause t)
