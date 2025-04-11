@@ -221,6 +221,7 @@ let () =
   let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*line %d" l1 l2) in
   let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
   let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
+  let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*[io]:.*" l c) in
   let status = Test.
     [|(*01*) mut_excl 9 6; Success; det_check 9 7; Success; Failure;            (*05*)
       (*06*) Success; Failure; Failure; Failure; Failure;                       (*10*)
@@ -237,7 +238,8 @@ let () =
       (*61*) det_check 12 2; Success; Success; Success; det_check 9 2;          (*65*)
       (*66*) Success; det_check 9 31; det_check 11 5; det_check 7 39; det_check 2 21; (*70*)
       (*71*) Success; Success; out_err 10 5; out_err 8 4; det_check 17 5;
-      (*76*) Success; Success; det_check 7 5; Success; Success                  (*80*)
+      (*76*) Success; Success; det_check 7 5; Success; Success;                 (*80*)
+      (*81*) mode_err 13 6; Success; mode_err 15 6; Success
     |] in
   let ignore = [5;7;8;9;10;13;16;26;27] in
   for i = 0 to Array.length status - 1 do

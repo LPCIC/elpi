@@ -1,0 +1,17 @@
+
+func map (func int -> (func)).
+map F :- F 3 G, G.
+
+func good -> int, (func).
+good 3 true.
+
+func bad int, (func) -> .
+bad _ _.
+
+main :-
+  std.filter [] (std.mem []) L1,
+  map good.
+
+
+
+

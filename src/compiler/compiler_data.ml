@@ -422,7 +422,7 @@ module TypeAssignment = struct
       | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
       | t -> pretty fmt t
     and pretty_pred_mode m fmt (s, t) =
-      fprintf fmt "@[<hov 2>%a:%a@]" show_mode m pretty s;
+      fprintf fmt "@[<hov 2>%a:%a@]" show_mode m (pretty_parens ~lvl:arrs) s;
       match t with
       | Prop _ -> ()
       | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic" else "") (pretty_pred_mode m) (s',r)
