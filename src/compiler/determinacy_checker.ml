@@ -127,7 +127,7 @@ module Aux = struct
       | (Det | Rel), Exp [ ((Det | Rel | Exp _) as x) ] -> min_max ~positive ~loc ~d1 ~d2 f1 x
       | Exp l1, Exp l2 -> (
           try Exp (List.map2 (min_max ~positive ~loc ~d1 ~d2) l1 l2)
-          with Invalid_argument _ -> error ~loc "min_max invalid exp_length")
+          with Invalid_argument _ -> error ~loc (Format.asprintf "min_max invalid exp_length: %a != %a" pp_dtype f1 pp_dtype f2))
       (* | Arrow (m1, _, _, _), Arrow (m2, _, _, _) when m1 <> m2 -> error ~loc "Mode mismatch" *)
       | Arrow (m1, v1, l1, r1), Arrow (m2, v2, l2, r2) ->
           let m, negative, (d1', d2') = (m1 <= m2) ~positive ~d1 ~d2 in
@@ -701,6 +701,6 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
   | RelationalBody (pred_name, gc) -> 
       let Good_call.{ term } = Good_call.get gc in
       error ~loc:term.loc 
-      @@ Format.asprintf "%sFound relational atom (%a) in the body of function %a" (undecl_disclaimer pred_name) ScopedTerm.pretty term F.pp (let (_,n,_) = Option.get pred_name in n);
+      @@ Format.asprintf "%s@[<hov>Found relational atom@ (%a)@ in the body of function@ %a@]" (undecl_disclaimer pred_name) ScopedTerm.pretty term F.pp (let (_,n,_) = Option.get pred_name in n);
   | IGNORE -> false
 
