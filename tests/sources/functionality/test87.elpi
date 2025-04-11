@@ -1,0 +1,8 @@
+
+pred p i:(func A, B, C -> D), i:C, o:D.
+p F X Y :- F _ _ X Y.
+
+main :-
+  p (x\y\triple_1) (triple 1 2 3) _.
+
+
