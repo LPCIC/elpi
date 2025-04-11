@@ -242,7 +242,7 @@ let error_bad_const_ety_l ~valid_mode ~loc ~tyctx ~ety c txl =
 
 let error_too_many_const_ety_l ~valid_mode ~loc ~tyctx ~ety c txl =
   let pretty_ty = pretty_ty !valid_mode in
-  let msg = Format.asprintf "@[<hv>%a is overloaded but too many of its types match the type expected by %a:@,  @[<hov>%a@]@,Matching types are:@,@[<v 2>  %a@]@]" F.pp c pp_tyctx tyctx pretty_ty ety (pplist ~boxed:true (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") txl in
+  let msg = Format.asprintf "@[<hv>%a is overloaded but too many of its types match the type expected by %a:@,  @[<hov>%a@]@,Matching types are:@,@[<v 2>  %a@]@]" F.pp c pp_tyctx tyctx pretty_ty ety (pplist ~boxed:true (fun fmt (s,x)-> Format.fprintf fmt "%a (defined at %a)" pretty_ty x Loc.pp (Symbol.get_loc s)) ", ") txl in
   error ~loc msg
 
 let error_overloaded_app ~valid_mode ~loc ~ety c args alltys =
@@ -254,7 +254,7 @@ let error_overloaded_app ~valid_mode ~loc ~ety c args alltys =
 let error_overloaded_app_ambiguous ~valid_mode ~loc ~ety c args alltys =
   let ty = arrow_of_args args ety in
   let pretty_ty = pretty_ty !valid_mode in
-  let msg = Format.asprintf "@[<v>%a is overloaded but too many of its types match:@,  @[<hov>%a@]@,Matching types are:@,@[<v 2>  %a@]@]" F.pp c pretty_ty ty (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
+  let msg = Format.asprintf "@[<v>%a is overloaded but too many of its types match:@,  @[<hov>%a@]@,Matching types are:@,@[<v 2>  %a@]@]" F.pp c pretty_ty ty (pplist ~boxed:true (fun fmt (s,x)-> Format.fprintf fmt "%a (defined at %a)" pretty_ty x Loc.pp (Symbol.get_loc s)) ", ") alltys in
   error ~loc msg
 
 let error_overloaded_app_tgt ~valid_mode ~loc ~ety c alltys =
