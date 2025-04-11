@@ -61,7 +61,7 @@ let rec pp_dtype fmt = function
   | Any -> Format.fprintf fmt "Any"
   | Arrow (m, Variadic, l, r) -> Format.fprintf fmt "(Variadic %a %a-> %a)" pp_dtype l Mode.pretty m pp_dtype r
   | Arrow (m, _, l, r) -> Format.fprintf fmt "(%a %a-> %a)" pp_dtype l Mode.pretty m pp_dtype r
-  | Exp l -> Format.fprintf fmt "Exp [%a]" (Format.pp_print_list pp_dtype) l
+  | Exp l -> Format.fprintf fmt "Exp [%a]" (pplist pp_dtype ", ") l
 
 type t = (TypeAssignment.skema * Loc.t) F.Map.t [@@deriving show, ord]
 
@@ -580,6 +580,7 @@ let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t :
       (clause, ctx)
     in
     let add_partial_app (ScopedTerm.{ it; loc } as t) args ty =
+      let args = List.rev args in
       match args with
       | [] -> t
       | hd :: tl -> (
