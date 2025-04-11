@@ -108,29 +108,38 @@ module Aux = struct
     | Variadic, NotVariadic -> Arrow (mode, v1, f1 l1 l2, f2 d1 r2)
     | NotVariadic, Variadic -> Arrow (mode, v1, f1 l1 l2, f2 r1 d2)
 
-  let rec min_max ~loc ~d1 ~d2 f1 f2 =
+  let (<=) m1 m2 ~positive ~d1 ~d2 =
+    let open Mode in
+    match m1, m2 with
+    | Input, Input -> Input, not positive, (d2, d1)
+    | Output, Input -> (if positive then Output else Input), not positive, (if positive then d2,d1 else d1,d2)
+    | Output, Output -> Output, positive, (d1, d2)
+    | Input, Output -> (if not positive then Output else Input), positive, (if positive then d1,d2 else d2,d1)
+  
+  let rec min_max ~positive ~loc ~d1 ~d2 f1 f2 =
     if f1 = d1 || f2 = d1 then d1
     else
       match (f1, f2) with
       | Det, Det -> Det
       | Rel, Rel -> Rel
       | a, (Any | BVar _) | (Any | BVar _), a -> a
-      | Exp [ ((Det | Rel | Exp _) as x) ], (Det | Rel) -> min_max ~loc ~d1 ~d2 x f2
-      | (Det | Rel), Exp [ ((Det | Rel | Exp _) as x) ] -> min_max ~loc ~d1 ~d2 f1 x
+      | Exp [ ((Det | Rel | Exp _) as x) ], (Det | Rel) -> min_max ~positive ~loc ~d1 ~d2 x f2
+      | (Det | Rel), Exp [ ((Det | Rel | Exp _) as x) ] -> min_max ~positive ~loc ~d1 ~d2 f1 x
       | Exp l1, Exp l2 -> (
-          try Exp (List.map2 (min_max ~loc ~d1 ~d2) l1 l2)
+          try Exp (List.map2 (min_max ~positive ~loc ~d1 ~d2) l1 l2)
           with Invalid_argument _ -> error ~loc "min_max invalid exp_length")
-      | Arrow (m1, _, _, _), Arrow (m2, _, _, _) when m1 <> m2 -> error ~loc "Mode mismatch"
-      | Arrow (Input, v1, l1, r1), Arrow (_, v2, l2, r2) ->
-          check_variadic (min_max ~loc ~d1:d2 ~d2:d1) (min_max ~loc ~d1 ~d2) Input f1 v1 l1 r1 f2 v2 l2 r2
-      | Arrow (Output, v1, l1, r1), Arrow (_, v2, l2, r2) ->
-          check_variadic (min_max ~loc ~d1 ~d2) (min_max ~loc ~d1 ~d2) Output f1 v1 l1 r1 f2 v2 l2 r2
-      | Arrow (_, Variadic, _, r), f2 -> min_max ~loc ~d1 ~d2 r f2
-      | f2, Arrow (_, Variadic, _, r) -> min_max ~loc ~d1 ~d2 r f2
+      (* | Arrow (m1, _, _, _), Arrow (m2, _, _, _) when m1 <> m2 -> error ~loc "Mode mismatch" *)
+      | Arrow (m1, v1, l1, r1), Arrow (m2, v2, l2, r2) ->
+          let m, negative, (d1', d2') = (m1 <= m2) ~positive ~d1 ~d2 in
+          check_variadic (min_max ~positive:negative ~loc ~d1:d1' ~d2:d2') (min_max ~positive ~loc ~d1 ~d2) m f1 v1 l1 r1 f2 v2 l2 r2
+      (* | Arrow (Output, v1, l1, r1), Arrow (_, v2, l2, r2) ->
+          check_variadic (min_max ~positive ~loc ~d1 ~d2) (min_max ~positive ~loc ~d1 ~d2) Output f1 v1 l1 r1 f2 v2 l2 r2 *)
+      | Arrow (_, Variadic, _, r), f2 -> min_max ~positive ~loc ~d1 ~d2 r f2
+      | f2, Arrow (_, Variadic, _, r) -> min_max ~positive ~loc ~d1 ~d2 r f2
       | _ -> Format.asprintf "min between %a and %a" pp_dtype f1 pp_dtype f2 |> error ~loc
 
-  let min = min_max ~d1:Det ~d2:Rel
-  let max = min_max ~d1:Rel ~d2:Det
+  let min = min_max ~positive:true ~d1:Det ~d2:Rel
+  let max = min_max ~positive:true ~d1:Rel ~d2:Det
 
   let rec minimize_maximize ~loc ~d1 ~d2 d =
     match d with
