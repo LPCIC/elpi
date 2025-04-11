@@ -217,17 +217,17 @@ let error_ambiguous ~loc c alltys =
 
 let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
   let pretty_ty = pretty_ty true in
-  let msg = Format.asprintf "@[<hov>literal \"%a\" has type %a@ but %a expects a term of type@ %a@]"  CData.pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety in
+  let msg = Format.asprintf "@[<hov>literal \"%a\" has type@ %a@ but %a expects a term of type@ %a@]"  CData.pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety in
   error ~loc msg
 
 let error_bad_ety ~valid_mode ~loc ~tyctx ~ety pp c tx =
   let pretty_ty = pretty_ty !valid_mode in
-  let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety in
+  let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects a term of type@ %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety in
   error ~loc msg
 
 let error_bad_ety2 ~valid_mode ~loc ~tyctx ~ety1 ~ety2 pp c tx =
   let pretty_ty = pretty_ty !valid_mode in
-  let msg = Format.asprintf "@[<hov>%a has type %a@ but %a expects a term of type@ %a@ or %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety1 pretty_ty ety2 in
+  let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects a term of type@ %a@ or %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety1 pretty_ty ety2 in
   error ~loc msg
 
 let error_bad_function_ety ~valid_mode ~loc ~tyctx ~ety c t =
