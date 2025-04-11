@@ -1,0 +1,6 @@
+
+
+main :-
+  std.map [] (m\r\sigma D\ D = [], std.map D (d\r\r = pr d m) r) _.
+
+
