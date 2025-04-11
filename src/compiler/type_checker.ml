@@ -563,7 +563,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
         begin match Scope.Map.find_opt (f,l) ctx with
         | None ->  anomaly "unbound"
         | Some info ->
-            if TypeAssignment.is_tmode_set info.mode || unif_mode false info.mode m then ()
+            if TypeAssignment.is_tmode_set info.mode || fst @@ unif_mode false ~positive:true info.mode m then ()
             else error ~loc ("mode mismatch on bound variable " ^ F.show f)
       end
     | _ -> ()
@@ -693,14 +693,21 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     List.iter MutableOnce.unset l_ty;
     List.iter MutableOnce.unset l_m
 
-  and unif_mode matching m1 m2 =
+  and unif_mode ~positive matching m1 m2 =
+    let (<=) (m1 : Mode.t) (m2 : Mode.t) =
+      match m1, m2 with
+      | Input, Input -> true, not positive
+      | Output, Input -> positive, not positive
+      | Output, Output -> true, positive
+      | Input, Output -> not positive, positive
+    in
     let m1, m2 = TypeAssignment.(deref_tmode m1, deref_tmode m2) in
     match m1, m2 with
-    | MVal m1, MVal m2 -> m1 = m2
-    | MRef _, MVal _ when matching -> false
-    | MRef m1, MRef m2 when m1 == m2 -> true
-    | MRef m1, _ -> MutableOnce.set m1 m2; true
-    | _, MRef m2 -> MutableOnce.set m2 m1; true
+    | MVal m1, MVal m2 -> m1 <= m2
+    | MRef _, MVal _ when matching -> false, not positive
+    | MRef m1, MRef m2 when m1 == m2 -> true, not positive
+    | MRef m1, _ -> MutableOnce.set m1 m2; true, not positive
+    | _, MRef m2 -> MutableOnce.set m2 m1; true, not positive
 
   and uvar_type ~loc c =
     try
@@ -713,48 +720,49 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       sigma := F.Map.add c { ty = TypeAssignment.Val ty; nocc = 1; binder } !sigma;
       Single (binder, ty)
   (* matching=true -> X = t fails (X = Y works)*)
-  and unif ~matching t1 t2 =
+  and unif ~matching ~positive t1 t2 =
     (* Format.eprintf "%a = %a\n" TypeAssignment.pretty_mut_once_raw t1 TypeAssignment.pretty_mut_once_raw t2; *)
     let open TypeAssignment in
     match t1, t2 with
     | Any, _ -> true
     | _, Any -> true
-    | UVar m, _ when MutableOnce.is_set m -> unif ~matching (TypeAssignment.deref m) t2
-    | _, UVar m when MutableOnce.is_set m -> unif ~matching t1 (TypeAssignment.deref m)
+    | UVar m, _ when MutableOnce.is_set m -> unif ~matching ~positive (TypeAssignment.deref m) t2
+    | _, UVar m when MutableOnce.is_set m -> unif ~matching ~positive t1 (TypeAssignment.deref m)
     | App(c1,x,xs), App(c2,y,ys) when F.equal c1 c2 ->
-        unif ~matching x y && Util.for_all2 (unif ~matching) xs ys
+        unif ~matching ~positive x y && Util.for_all2 (unif ~matching ~positive) xs ys
     | Cons c1, Cons c2 when F.equal c1 c2 -> true
     | Prop _, Prop _ -> true (* unification of prop is correct for tc indipendently of their functionality *)
     | App(c,Prop _,[]), Prop _ when F.equal c F.(from_string "list") -> true
     | Prop _, App(c,Prop _,[]) when F.equal c F.(from_string "list") -> true
     | Arr(m1,b1,s1,t1), Arr(m2,b2,s2,t2) -> 
-      valid_mode := unif_mode matching m1 m2;
-      !valid_mode && b1 == b2 && unif ~matching s1 s2 && unif ~matching t1 t2
-    | Arr(_,Variadic,_,t), _ -> unif ~matching t t2 (* TODO *)
-    | _, Arr(_,Variadic,_,t) -> unif ~matching t1 t (* TODO *)
+      let valid, negative = unif_mode ~positive matching m1 m2 in
+      valid_mode := valid;
+      !valid_mode && b1 == b2 && unif ~matching ~positive:negative s1 s2 && unif ~matching ~positive t1 t2
+    | Arr(_,Variadic,_,t), _ -> unif ~matching ~positive t t2 (* TODO *)
+    | _, Arr(_,Variadic,_,t) -> unif ~matching ~positive t1 t (* TODO *)
     | UVar m, UVar n when matching -> assign m t2 (* see disjoint *)
     | UVar m, _ when not matching -> assign m t2
     | _, UVar m -> assign m t1
     | Cons c, _ when F.Map.mem c type_abbrevs ->
         let t1 = apply (fst @@ F.Map.find c type_abbrevs) [] in
-        unif ~matching t1 t2
+        unif ~matching ~positive t1 t2
     | _, Cons c when F.Map.mem c type_abbrevs ->
         let t2 = apply (fst @@ F.Map.find c type_abbrevs) [] in
-        unif ~matching t1 t2
+        unif ~matching ~positive t1 t2
     | App(c,x,xs), _ when F.Map.mem c type_abbrevs ->
         let t1 = apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
-        unif ~matching t1 t2
+        unif ~matching ~positive t1 t2
     | _, App(c,x,xs) when F.Map.mem c type_abbrevs ->
         let t2 = apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
-        unif ~matching t1 t2
+        unif ~matching ~positive t1 t2
     | _,_ -> false
 
   and unify (x: TypeAssignment.t MutableOnce.t TypeAssignment.t_) (y: TypeAssignment.t MutableOnce.t TypeAssignment.t_) =
-    unif ~matching:false x y
+    unif ~matching:false ~positive:true x y
   and try_matching ~pat:(x,vars) y =
     let vars = F.Map.bindings vars |> List.map snd |> List.map cell_of, [] in
     let deref x = cell_of (TypeAssignment.deref x) in
-    if unif ~matching:true x y then
+    if unif ~matching:true ~positive:true x y then
       if disjoint (List.map deref (fst vars)) then true
       else (undo vars; false)
     else
