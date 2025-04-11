@@ -1,0 +1,9 @@
+% NO
+func succ int -> int.
+
+pred p o:(func).
+p X :-
+  % the output of the local rule is not guaranteed to be functional
+  p _ => X = true.
+
+main.

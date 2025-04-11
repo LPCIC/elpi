@@ -17,6 +17,6 @@ test 3 Gcd :- trm gcd2 F, eval (app (app F (c 5)) (c 35)) Gcd.
 
 test 4 Gcd :- trm gcd2 F, eval (app (app F (c 33)) (c 9)) Gcd.
 
-test 5 App :- trm appnd F, eval (app (app F (cons (c 1) (cons (c 2) null))) 
-                                            (cons (c 3) (cons (c 4) null)))
+test 5 App :- trm appnd F, eval (app (app F (lcons (c 1) (lcons (c 2) null))) 
+                                            (lcons (c 3) (lcons (c 4) null)))
                                 App.

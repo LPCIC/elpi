@@ -767,14 +767,14 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(not A0) :- A0, (!), fail.",
+                  "rule_text": "(not A0) :- A0, !, fail.",
                   "rule_loc": [
                     "File",
                     {
                       "filename": "builtin.elpi",
-                      "line": 62,
+                      "line": 64,
                       "column": 0,
-                      "character": 759
+                      "character": 1009
                     }
                   ]
                 }
@@ -795,14 +795,14 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(not A0) :- A0, (!), fail.",
+                "rule_text": "(not A0) :- A0, !, fail.",
                 "rule_loc": [
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 62,
+                    "line": 64,
                     "column": 0,
-                    "character": 759
+                    "character": 1009
                   }
                 ]
               }
@@ -898,14 +898,14 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(not A0) :- A0, (!), fail.",
+                "rule_text": "(not A0) :- A0, !, fail.",
                 "rule_loc": [
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 62,
+                    "line": 64,
                     "column": 0,
-                    "character": 759
+                    "character": 1009
                   }
                 ]
               }
@@ -975,14 +975,14 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(not A0) :- A0, (!), fail.",
+                "rule_text": "(not A0) :- A0, !, fail.",
                 "rule_loc": [
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 62,
+                    "line": 64,
                     "column": 0,
-                    "character": 759
+                    "character": 1009
                   }
                 ]
               }
@@ -1307,9 +1307,9 @@
                     "File",
                     {
                       "filename": "builtin.elpi",
-                      "line": 64,
+                      "line": 66,
                       "column": 0,
-                      "character": 781
+                      "character": 1031
                     }
                   ]
                 }
@@ -1331,9 +1331,9 @@
                   "File",
                   {
                     "filename": "builtin.elpi",
-                    "line": 64,
+                    "line": 66,
                     "column": 0,
-                    "character": 781
+                    "character": 1031
                   }
                 ]
               }

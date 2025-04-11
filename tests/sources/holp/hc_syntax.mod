@@ -9,7 +9,7 @@ module  hc_syntax.
 goal tru.
 goal (B `and C) :- goal B, goal C.
 goal (B `or C)  :- goal B, goal C.
-goal (some C) :- pi X \ ((termp X) => (goal (C X))).
+goal (ex C) :- pi X \ ((termp X) => (goal (C X))).
 goal A :- atom A.
 
 def_clause (all C)   :- pi X \ ((termp X) => (def_clause (C X))).

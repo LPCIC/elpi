@@ -13,13 +13,7 @@ module Array = struct
     [@@deriving show]
   
   let empty () = ref @@ Array [||]
-
-  let make n v =
-    ref (Array (Array.make n v))
-  
-  let init n f =
-    ref (Array (Array.init n f))
-  
+    
   (* `reroot t` ensures that `t` becomes an `Array` node.
       This is written in CPS to avoid any stack overflow. *)
   let rec rerootk t k = match !t with

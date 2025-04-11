@@ -1,0 +1,7 @@
+% YES
+func succ int -> int.
+
+pred p o:(func).
+p (pi x\ succ x Y).
+
+main.

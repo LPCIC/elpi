@@ -2,11 +2,11 @@ let us = [{|
 
 main :- p 1.
 
-pred p i:int.
+pred p o:int.
 
 |}; {|
 
-pred p o:int.
+pred p i:int.
 
 p X :- print X.
 

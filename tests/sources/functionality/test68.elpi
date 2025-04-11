@@ -1,0 +1,13 @@
+% NO
+
+% If we look for Warren's functionality, then the example above could
+% be accepted since there is no output, and more in general a 0-ary
+% predicate cannot unify anything. But not in our implementation.
+% A counter example, see test69.elpi
+pred p.
+p.
+p.
+func f.
+f :- p.
+
+main.

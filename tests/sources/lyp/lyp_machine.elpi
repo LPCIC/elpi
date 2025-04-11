@@ -235,7 +235,7 @@ conv_t T1 S1 S2 X2 :- def_l X2 T2, !, % print "d",
 
 % Implied conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv_i id -> term -> stack -> stack -> term -> id -> prop.
+pred conv_i i:id, o:term, o:stack, o:stack, o:term, i:id.
 
 conv_i X1 _ S1 S2 T2 X2 :- X1 < X2, !, conv_t X1 S1 S2 T2.
 

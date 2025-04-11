@@ -1,0 +1,20 @@
+
+func succ int -> int.
+succ X X.
+
+func map (func (func int -> int)).
+map F :- F succ.
+
+func good (func int, int ->).
+good F :- F 3 3.
+
+func bad (func -> int, int).
+bad G :- G A B.
+
+main :-
+  map bad. 
+  %map good.
+
+
+
+

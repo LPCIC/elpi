@@ -1,0 +1,14 @@
+% NO
+
+func f.
+pred rel.
+
+f :-
+  % Cast error: y is not rel in the output of y
+  ((y\ y = rel) : (func -> fprop)) = F,
+  F R,
+  R.
+
+func f -> fprop.
+
+main.

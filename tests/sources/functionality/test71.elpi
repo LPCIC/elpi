@@ -1,0 +1,12 @@
+% YES
+
+% From paper
+func id (func A -> B) -> (func A -> B).
+func map (func A -> B), list A -> list B.
+func compose (func A -> B), (func B -> C), A -> C.
+compose F G X Y :- F X R, G R Y.
+typeabbrev (flist A B) (func list A -> list B).
+func fuse (flist A B), (flist B C) -> (flist A C).
+fuse (map A) (map B) (map C) :- id (compose A B) C. 
+
+main.

@@ -33,7 +33,7 @@ type prim_poly    tm -> poly -> o.
 prim_poly car      (all A\ c ((lst A) --> A)).
 prim_poly cdr      (all A\ c ((lst A) --> (lst A))).
 prim_poly empty    (all A\ c (lst A)).
-prim_poly cons     (all A\ c (A --> (lst A) --> (lst A))).
+prim_poly lcons     (all A\ c (A --> (lst A) --> (lst A))).
 prim_poly nullp    (all A\ c ((lst A) --> bool)).
 prim_poly consp    (all A\ c ((lst A) --> bool)).
   
@@ -51,9 +51,9 @@ prim_poly greater  (c (num --> num --> bool)).
 prim_poly (in N)   (c  num).
 
 
-% Representing typing judgements; these are essentially term, type pairs
-kind pair    type -> type -> type.     
-type pr      A -> B -> pair A B.
+% % Representing typing judgements; these are essentially term, type pairs
+% kind pair    type -> type -> type.     
+% type pr      A -> B -> pair A B.
 
 
 % Inferring a poly type for a term. The main work is done in typeof that
