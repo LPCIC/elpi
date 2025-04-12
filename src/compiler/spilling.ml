@@ -23,7 +23,7 @@ let is_prop ~extra x =
 let mk_global ~types f l =
   (* TODO: check only builtins *)
   let s = Symbol.make_builtin f in
-  let f_ty = (Symbol.QMap.find s types.Type_checker.symbols).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
+  let f_ty = Type_checker.(resolve_symbol s types).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
   (Scope.mkResolvedGlobal s), f, f_ty
 
 let pif_ty_name ~types (_,_,ty) : 'a ty_name = mk_global ~types F.pif [TypeAssignment.deref ty]
@@ -49,9 +49,7 @@ let mkApp n l = if l = [] then Const n else App (n, List.hd l, List.tl l)
 
 let is_symbol ~types b = function
 | Scope.Global { decl_id = Some s } ->
-    let open Type_checker in
-    let uf = Symbol.QMap.get_uf types.symbols in
-    Symbol.equal ~uf s b
+    Type_checker.same_symbol types s b
 | Global { decl_id = None } -> anomaly "unresolved global symbol"
 | _ -> false
 

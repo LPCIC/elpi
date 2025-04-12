@@ -364,7 +364,7 @@ type query = {
   prolog_program : index;
   chr : CHR.t;
   symbols : SymbolMap.table;
-  runtime_global_name_resolution : Symbol.t TypeAssignment.overloaded F.Map.t;
+  runtime_types : Type_checker.runtime_types;
   initial_goal : term;
   assignments : term StrMap.t;
   compiler_state : State.t;
@@ -1219,41 +1219,8 @@ module Flatten : sig
   let apply_subst_type_abbrevs s l =
     List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
 
-  let merge_indexing s idx1 idx2 =
-    if not @@ Type_checker.compatible_indexing idx1 idx2 then
-      error ~loc:(Symbol.get_loc s) ("Incompatible indexing options for symbol " ^ Symbol.get_str s);
-    idx1
-
-  let merge_availability s a1 a2 =
-    let open Ast.Structured in
-    match a1, a2 with
-    | Elpi, Elpi -> Elpi
-    | OCaml (p1), OCaml (p2) when Symbol.compare_provenance p1 p2 = 0 -> a1
-    | OCaml ((Builtin _|Core)), OCaml ((File _)) -> a1
-    | OCaml ((File _)), OCaml ((Builtin _|Core)) -> a2
-    | _ ->
-       error ~loc:(Symbol.get_loc s) ("Incompatible provenance for symbol " ^ Symbol.get_str s ^ ": " ^  show_symbol_availability a1 ^ " != " ^ show_symbol_availability a2)
-
-  let merge_symbol_metadata s { Type_checker.ty = ty1; indexing = idx1; availability = a1; } { Type_checker.ty = ty2; indexing = idx2; availability = a2; } =
-    { Type_checker.ty = TypeAssignment.merge_skema ty1 ty2;
-      indexing = merge_indexing s idx1 idx2;
-      availability = merge_availability s a1 a2;
-    }
-
-  let merge_type_assignments { Type_checker.symbols = s1; overloading = o1 } { Type_checker.symbols = s2; overloading = o2 } =
-    let symbols = Symbol.QMap.union merge_symbol_metadata s1 s2 in
-    let to_unite = ref [] in
-    let overloading = F.Map.union (fun f l1 l2 ->
-      (* We give precedence to recent type declarations over old ones *)
-      let to_u, l = TypeAssignment.undup_skemas (fun x -> (Symbol.QMap.find x symbols).ty) l1 l2 in
-      to_unite := to_u :: !to_unite;
-      Some l
-      ) o1 o2 in
-    let to_unite = List.concat !to_unite in
-    let symbols =
-      List.fold_right (fun (x,y) -> Symbol.QMap.unify merge_symbol_metadata x y) to_unite symbols in
-    { Type_checker.overloading; symbols }
-
+  let merge_type_assignments = Type_checker.merge_envs
+  
   let merge_checked_type_abbrevs m1 m2 =
     let m = F.Map.union (fun k (sk,otherloc as x) (ty,loc) ->
       if TypeAssignment.compare_skema sk ty <> 0 then
@@ -1438,17 +1405,17 @@ end = struct
       ) (unknown, []) chr in
     let chr = List.rev chr in
 
-    Symbol.QMap.iter (fun k { Type_checker.indexing; ty } ->
+    Type_checker.iter_symbols (fun k { Type_checker.indexing; ty } ->
       match SymbolMap.get_global_symbol base.Assembled.symbols k with
       | Some c ->
           if Builtins.is_declared base.Assembled.builtins c then
             error ~loc:(Symbol.get_loc k)
               (Format.asprintf "Ascribing a type to an already registered builtin %s" (Symbol.get_str k))
-      | _ -> ()) new_types.symbols;
+      | _ -> ()) new_types;
 
     let builtins = List.map (fun (BuiltInPredicate.Pred(name,_,_) as p) ->
       let symb =
-        match F.Map.find (F.from_string name) new_types.overloading with
+        match Type_checker.resolve_name (F.from_string name) new_types with
         | Single s -> s
         | Overloaded (s1::s2::_) ->
             error ~loc:(Symbol.get_loc s2)
@@ -1456,7 +1423,7 @@ end = struct
         | Overloaded _ -> assert false
         | exception Not_found ->
             error (Format.asprintf "No signature declared for builtin %s" name) in
-      let { Type_checker.indexing; availability } = Symbol.QMap.find symb new_types.symbols in
+      let { Type_checker.indexing; availability } = Type_checker.resolve_symbol symb new_types in
       begin match availability with
         | Ast.Structured.OCaml _ -> ()
         | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "External predicate with no signature %s" name)
@@ -1464,17 +1431,17 @@ end = struct
       symb, p
     ) builtins in
 
-    signature.types.overloading |> F.Map.iter (fun k -> function
+    Type_checker.iter_names (fun k -> function
       | TypeAssignment.Single _ -> ()
       | Overloaded l ->
-          let l = List.filter (fun x -> (Symbol.QMap.find x signature.types.symbols).availability <> Elpi) l in
+          let l = List.filter (fun x -> Type_checker.(resolve_symbol x signature.types).availability <> Elpi) l in
           let l = List.filter (fun x ->
-            match Symbol.UF.find (Symbol.QMap.get_uf signature.types.symbols) x |> Symbol.get_provenance with
+            match Symbol.get_provenance x with
             | Core | File _ -> false
             | Builtin _ -> true) l in
-          if Symbol.undup ~uf:(Symbol.QMap.get_uf signature.types.symbols) l |> List.length <> List.length l then
+          if Type_checker.undup signature.types l |> List.length <> List.length l then
           error ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?")
-    );
+    ) signature.types;
 
     let more_types = Type_checker.check_undeclared ~unknown in
     let u_types = Flatten.merge_type_assignments signature.types more_types in
@@ -1560,11 +1527,10 @@ end = struct
     R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
     let lookup_global types symb state s =
-      let c = Symbol.UF.find (Symbol.QMap.get_uf types.Type_checker.symbols) s in
-      (* Format.eprintf "LOOKUP %a\n" Symbol.pp c; *)
-      match SymbolMap.get_global_symbol !symb c with
+      (* Format.eprintf "LOOKUP %a\n" Symbol.pp s; *)
+      match SymbolMap.get_global_symbol !symb s with
       | None ->
-      (* Format.eprintf " NEW\n"; *)
+      (* Format.eprintf " NEW \n"; *)
       let s, rc = SymbolMap.allocate_global_symbol state !symb s in
       symb := s;
       rc
@@ -1575,9 +1541,9 @@ end = struct
     let allocate_global_symbol types symb state ~loc s c =
       lookup_global types symb state @@
         match s with
-        | Some s -> s
+        | Some s -> Type_checker.canon types s
         | None -> 
-          match F.Map.find c types.Type_checker.overloading with
+          match Type_checker.resolve_name c types with
           | TypeAssignment.Single s -> s
           | TypeAssignment.Overloaded _ ->
               error ~loc ("untyped and non allocated symbol " ^ F.show c)
@@ -1709,9 +1675,10 @@ end = struct
         in
       let overlaps = check_overlaps (Bl.to_list overlapping) in
       if overlaps <> [] then
-        let to_str = List.map (fun e -> Format.asprintf "overlaps with %s" 
-          (Option.value ~default:"anonymous clause" (Option.map Loc.show e.loc))) overlaps  in
-        error ~loc (Format.asprintf "- %s@." (String.concat  "\n - " to_str))
+        let to_str fmt x = Format.fprintf fmt "- rule at %s" 
+          (Option.value ~default:"anonymous clause" (Option.map Loc.show x.loc))  in
+        error ~loc (Format.asprintf "@[<v 2>This rule overlaps with:@ %a@]"
+          (pplist to_str " ") overlaps)
       in valid_clause cl
     );
 
@@ -1791,8 +1758,8 @@ let extend1 flags (state, base) unit =
   (* Format.eprintf "extend %a\n%!" (F.Map.pp (fun _ _ -> ())) types_indexing; *)
   
   let new_defined_symbols, new_indexable =
-    let symbs = Symbol.QMap.bindings new_types.symbols in
-    symbs |> List.filter_map (fun (symb,m) -> if Symbol.QMap.mem symb bsig.types.symbols then None else Some symb),
+    let symbs = Type_checker.all_symbols new_types in
+    symbs |> List.filter_map (fun (symb,m) -> if Type_checker.mem_symbol bsig.types symb then None else Some symb),
     symbs |> List.filter_map (fun (symb, { Type_checker.indexing } ) -> match indexing with Index(m,i) -> Some (symb,(m,i)) | _ -> None) in
 
   let symbols =
@@ -1996,7 +1963,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
     compiler_state = compiler_state |> state_update;
     total_type_checking_time;
     builtins;
-    runtime_global_name_resolution = types.overloading;
+    runtime_types = Type_checker.compile_for_runtime types;
   }
 
 let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~depth t =
@@ -2044,7 +2011,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
     compiler_state;
     total_type_checking_time;
     builtins;
-    runtime_global_name_resolution = types.overloading;
+    runtime_types = Type_checker.compile_for_runtime types;
   }
     
   let query_of_raw_term (compiler_state, assembled_program) f =
@@ -2074,24 +2041,24 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
       compiler_state;
       total_type_checking_time;
       builtins;
-      runtime_global_name_resolution = types.overloading;
+      runtime_types = Type_checker.compile_for_runtime types;
     }
   
-let symtab : ((constant * D.term) Symbol.RawMap.t * Symbol.t TypeAssignment.overloaded F.Map.t) D.State.component = D.State.declare
+let symtab : ((constant * D.term) Symbol.RawMap.t * Type_checker.runtime_types) D.State.component = D.State.declare
   ~descriptor:D.elpi_state_descriptor
   ~name:"elpi:symbol_table"
   ~pp:(fun fmt _ -> Format.fprintf fmt "<symbol_table>")
   ~clause_compilation_is_over:(fun x -> x)
   ~compilation_is_over:(fun x -> Some x)
   ~execution_is_over:(fun _ -> None)
-  ~init:(fun () -> Symbol.RawMap.empty, F.Map.empty)
+  ~init:(fun () -> Symbol.RawMap.empty, Type_checker.empty_runtime_types)
   ()
   
 let global_name_to_constant state s =
   let symbols2c,str2symbol = State.get symtab state in
-  match F.Map.find (F.from_string s) str2symbol with
-  | TypeAssignment.Overloaded l -> error "cannot resolve overloaded symbol at runtime"
-  | TypeAssignment.Single s -> fst @@  Symbol.RawMap.find s symbols2c
+  match Type_checker.runtime_resolve str2symbol (F.from_string s) with
+  | s -> fst @@  Symbol.RawMap.find s symbols2c
+  | exception Not_found -> error "cannot resolve overloaded symbol at runtime"
 
 module Compiler : sig
 
@@ -2108,12 +2075,12 @@ let run
     initial_goal;
     assignments;
     builtins;
-    runtime_global_name_resolution;
+    runtime_types;
     compiler_state = state;
   }
 =
   let symbol_table = SymbolMap.compile symbols in
-  let state = State.set symtab state (SymbolMap.compile_s2c symbols,runtime_global_name_resolution) in
+  let state = State.set symtab state (SymbolMap.compile_s2c symbols,runtime_types) in
   {
     D.compiled_program = { index = close_index prolog_program; src = [] };
     chr;
@@ -2157,8 +2124,8 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
       | n -> "type -> " ^ a2k (n-1) in
     Format.fprintf fmt "@[<h>kind %s %s.@]@," (F.show name) (a2k ty))
     signature.kinds;
-  F.Map.iter (fun name sl ->
-    let f s = TypeAssignment.fresh (Symbol.QMap.find s signature.types.symbols).ty |> fst in
+  Type_checker.iter_names (fun name sl ->
+    let f s = TypeAssignment.fresh (Type_checker.resolve_symbol s signature.types).ty |> fst in
     let tys =
       match sl with
       | TypeAssignment.Single t -> [f t]
@@ -2170,7 +2137,7 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
     List.iter (fun ty ->
       Format.fprintf fmt "@[<h>type %s %a.@]@," name TypeAssignment.pretty_mut_once ty) tys;
     )
-    signature.types.overloading;
+    signature.types;
   F.Map.iter (fun name (ty,_) ->
     Format.fprintf fmt "@[<h>typeabbrv %a (%a).@]@," F.pp name TypeAssignment.pretty_mut_once (fst @@ TypeAssignment.fresh ty)
     )
@@ -2213,20 +2180,17 @@ let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols; signatu
       match Symbol.get_provenance s with
       | Builtin { variant } -> Some variant
       | _ -> None in
-    let canon s = Symbol.UF.find (Symbol.QMap.get_uf signature.types.symbols) s in
     let c =
-      match F.Map.find_opt f signature.types.overloading with
-      | Some (Single s) ->
-         let s = canon s in
+      match Type_checker.resolve_name f signature.types with
+      | (Single s) ->
         SymbolMap.get_global_symbol symbols s
-      | Some (Overloaded l) ->
-        let l = List.map canon l in
+      | (Overloaded l) ->
         begin match List.filter (fun x -> get_variant s = get_variant x) l with
         | [] -> None
         | [x] -> SymbolMap.get_global_symbol symbols x
         | x1::x2::_ -> anomaly ("Cannot relocate overloaded symbol " ^ F.show f ^"\nDeclarations:\n - " ^ Loc.show (Symbol.get_loc x1) ^ "\n - " ^ Loc.show (Symbol.get_loc x2))
         end
-      | None -> None in
+      | exception Not_found -> None in
     match c with
     | Some x -> x
     | None -> raise (RelocationError (Format.asprintf "Relocation: unknown global %a: %a" F.pp f SymbolMap.pp_table symbols))
