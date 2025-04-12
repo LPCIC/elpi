@@ -157,8 +157,80 @@ type typing_env = {
   overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
 }
 [@@deriving show]
-
+module Internal = struct
+  let cast (overloading,symbols) = { overloading; symbols }
+end
 let empty_typing_env = {symbols = Symbol.QMap.empty; overloading = F.Map.empty}
+
+let canon symbols s = Symbol.UF.find (Symbol.QMap.get_uf symbols) s
+
+let resolve_name f { overloading; symbols } : Symbol.t TypeAssignment.overloaded =
+  match F.Map.find f overloading with
+  | Single s -> Single (canon symbols s)
+  | Overloaded l -> Overloaded (List.map (canon symbols) l)
+
+let resolve_symbol s { symbols } = Symbol.QMap.find s symbols
+
+
+let merge_indexing s idx1 idx2 =
+  if not @@ compatible_indexing idx1 idx2 then
+    error ~loc:(Symbol.get_loc s) ("Incompatible indexing options for symbol " ^ Symbol.get_str s);
+  idx1
+
+let merge_availability s a1 a2 =
+  let open Ast.Structured in
+  match a1, a2 with
+  | Elpi, Elpi -> Elpi
+  | OCaml (p1), OCaml (p2) when Symbol.compare_provenance p1 p2 = 0 -> a1
+  | OCaml ((Builtin _|Core)), OCaml ((File _)) -> a1
+  | OCaml ((File _)), OCaml ((Builtin _|Core)) -> a2
+  | _ ->
+     error ~loc:(Symbol.get_loc s) ("Incompatible provenance for symbol " ^ Symbol.get_str s ^ ": " ^  show_symbol_availability a1 ^ " != " ^ show_symbol_availability a2)
+
+
+let merge_symbol_metadata s
+    { ty = ty1; indexing = idx1; availability = a1; }
+     { ty = ty2; indexing = idx2; availability = a2; } =
+  { ty = TypeAssignment.merge_skema ty1 ty2;
+    indexing = merge_indexing s idx1 idx2;
+    availability = merge_availability s a1 a2;
+  }
+
+let merge_envs   { symbols = s1; overloading = o1 } { symbols = s2; overloading = o2 } =
+  let symbols = Symbol.QMap.union merge_symbol_metadata s1 s2 in
+  let to_unite = ref [] in
+  let overloading = F.Map.union (fun f l1 l2 ->
+    (* We give precedence to recent type declarations over old ones *)
+    let to_u, l = TypeAssignment.undup_skemas (fun x -> (Symbol.QMap.find x symbols).ty) l1 l2 in
+    to_unite := to_u :: !to_unite;
+    Some l
+    ) o1 o2 in
+  let to_unite = List.concat !to_unite in
+  let symbols =
+    List.fold_right (fun (x,y) -> Symbol.QMap.unify merge_symbol_metadata x y) to_unite symbols in
+  { overloading; symbols }
+
+let iter_names f { overloading } = F.Map.iter f overloading
+let iter_symbols f { symbols } = Symbol.QMap.iter f symbols
+let same_symbol { symbols } x y =
+  let uf = Symbol.QMap.get_uf symbols in
+  Symbol.equal ~uf x y
+
+let undup { symbols } l =
+  let uf = Symbol.QMap.get_uf symbols in
+  Symbol.undup ~uf l
+
+let all_symbols { symbols } = Symbol.QMap.bindings symbols
+let mem_symbol  { symbols } x = Symbol.QMap.mem x symbols
+
+type runtime_types = Symbol.t F.Map.t
+[@@deriving show]
+
+let empty_runtime_types = F.Map.empty
+let compile_for_runtime { overloading; symbols } =
+  F.Map.filter_map (fun _ -> function TypeAssignment.Single s -> Some (canon symbols s) | _ -> None) overloading
+let runtime_resolve m f = F.Map.find f m
+let canon { symbols } x = canon symbols x
 
 let check_1types  ~type_abbrevs ~kinds lst : _ * Symbol.t TypeAssignment.overloaded =
   match List.map (check_type ~type_abbrevs ~kinds) lst with

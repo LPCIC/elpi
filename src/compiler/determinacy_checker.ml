@@ -257,10 +257,10 @@ let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya)=
 
 let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
 
-let check_clause ~type_abbrevs:env ~types:{ Type_checker.symbols } ~unknown (t : ScopedTerm.t) : bool =
+let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
   let same_symb symb symb' =
     match symb' with
-    | Scope.Global { decl_id = Some symb' } -> Symbol.equal ~uf:(Symbol.QMap.get_uf symbols) symb symb'
+    | Scope.Global { decl_id = Some symb' } -> Type_checker.same_symbol types symb symb'
     | _ -> false
   in
   let has_undeclared_signature (b, f, _) =

@@ -218,7 +218,7 @@ let () = declare "trie"
 
 let () =
   let (!) x = Test.FailureOutput (Str.regexp x) in
-  let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*line %d" l1 l2) in
+  let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n+.*line %d" l1 l2) in
   let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
   let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
   let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*[io]:.*" l c) in
