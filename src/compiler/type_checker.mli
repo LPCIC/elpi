@@ -16,6 +16,13 @@ val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpress
 
 val check_types : type_abbrevs:type_abbrevs -> kinds:arities -> ScopeTypeExpressionUniqueList.t F.Map.t -> TypingEnv.t
   
+val check_macro :
+  type_abbrevs:type_abbrevs ->
+  kinds:arities ->
+  types:TypingEnv.t ->
+    F.t ->
+    ScopedTerm.t * Ast.Loc.t -> unit
+
 type runtime_types
 [@@deriving show]
 val empty_runtime_types : runtime_types
