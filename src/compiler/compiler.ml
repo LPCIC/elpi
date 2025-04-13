@@ -775,11 +775,11 @@ module Scope_Quotation_Macro : sig
   val scope_loc_term : state:State.t -> Ast.Term.t -> ScopedTerm.t
 
 end = struct
-  let map_append Ast.Type.{name;loc} v m =
+  let map_append env Ast.Type.{name;loc} v m =
     let k = name in
     try
       let l = F.Map.find k m in
-      F.Map.add k (ScopeTypeExpressionUniqueList.merge v l) m
+      F.Map.add k (ScopeTypeExpressionUniqueList.merge env v l) m
     with Not_found ->
       F.Map.add k v m
 
@@ -1020,7 +1020,7 @@ end = struct
       let toplevel_macros, active_macros = List.fold_left (compile_macro state) (F.Map.empty,omacros) macros in
       let type_abbrevs = List.map compile_type_abbrev type_abbrevs in
       let kinds = List.fold_left compile_kind F.Map.empty kinds in
-      let types = List.fold_left (fun m t -> map_append t (ScopeTypeExpressionUniqueList.make @@ compile_type t) m) F.Map.empty (List.rev types) in
+      let types = List.fold_left (fun m t -> map_append TypingEnv.empty t (ScopeTypeExpressionUniqueList.make @@ compile_type t) m) F.Map.empty (List.rev types) in
       let defs_k = defs_of_map kinds in
       let defs_t = defs_of_map types in
       let defs_ta = defs_of_assoclist type_abbrevs in
@@ -1109,6 +1109,7 @@ module Flatten : sig
     Type_checker.type_abbrevs ->
     Type_checker.type_abbrevs
   val merge_toplevel_macros :
+    TypingEnv.t ->
     (ScopedTerm.t * Loc.t) F.Map.t ->
     (ScopedTerm.t * Loc.t) F.Map.t -> (ScopedTerm.t * Loc.t) F.Map.t
 
@@ -1231,8 +1232,8 @@ module Flatten : sig
         Some x) m1 m2 in
       m
 
-  let merge_types t1 t2 =
-    F.Map.union (fun _ l1 l2 -> Some (ScopeTypeExpressionUniqueList.merge l1 l2)) t1 t2
+  let merge_types env t1 t2 =
+    F.Map.union (fun _ l1 l2 -> Some (ScopeTypeExpressionUniqueList.merge env l1 l2)) t1 t2
 
   let merge_kinds t1 t2 =
       F.Map.union (fun f (k,loc1 as kdecl) (k',loc2) ->
@@ -1242,9 +1243,9 @@ module Flatten : sig
 
   let merge_type_abbrevs m1 m2 = m1 @ m2
 
-  let merge_toplevel_macros otlm toplevel_macros =
+  let merge_toplevel_macros env otlm toplevel_macros =
     F.Map.union (fun k (m1,l1) (m2,l2) ->
-      if ScopedTerm.equal ~types:false m1 m2 then Some (m1,l1) else
+      if ScopedTerm.equal env ~types:false m1 m2 then Some (m1,l1) else
         error ~loc:l2 (Format.asprintf "@[<v>Macro %a declared twice.@;@[<hov 2>%a @[%a@]@]@;@[<hov 2>%a @[%a@]@]@]" F.pp k Loc.pp l1 ScopedTerm.pretty m1 Loc.pp l2 ScopedTerm.pretty m2)
       ) otlm toplevel_macros
       
@@ -1255,7 +1256,7 @@ module Flatten : sig
       let inpsubst = push_subst_shorthands shorthands pred_subst in
       let intysubst = push_subst_shorthands shorthands ty_subst in
       let kinds = merge_kinds (apply_subst_kinds intysubst k) kinds in
-      let types = merge_types (apply_subst_types intysubst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types intysubst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs intysubst ta) in
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr inpsubst intysubst body in
@@ -1265,7 +1266,7 @@ module Flatten : sig
       let new_ty_subst = push_subst extra ts ty_subst in
       let kinds = merge_kinds (apply_subst_kinds new_ty_subst k) kinds in
       (* Format.eprintf "@[<v>Types before:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) t; *)
-      let types = merge_types (apply_subst_types new_ty_subst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types new_ty_subst t) types in
       (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) (apply_subst_types new_ty_subst t); *)
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs new_ty_subst ta) in
       let kinds, types, type_abbrevs, clauses, chr =
@@ -1277,7 +1278,7 @@ module Flatten : sig
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   | Scoped.Constraints (ch, { kinds = k; types = t; type_abbrevs = ta; body }) :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
-      let types = merge_types (apply_subst_types ty_subst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
       (* let modes = merge_modes (apply_subst_modes subst m) modes in *)
       let chr = apply_subst_chrs pred_subst  ty_subst ch :: chr in
@@ -1286,7 +1287,7 @@ module Flatten : sig
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   | Scoped.Accumulated { kinds=k; types = t; type_abbrevs = ta; body; ty_symbols = _ } :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
-      let types = merge_types (apply_subst_types ty_subst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr ty_subst pred_subst body in
@@ -1356,7 +1357,7 @@ end = struct
     let check_t_end = Unix.gettimeofday () in
 
     let all_types = Flatten.merge_type_assignments ot types in
-    let all_toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
+    let all_toplevel_macros = Flatten.merge_toplevel_macros all_types otlm toplevel_macros in
 
     { Assembled.kinds; types; type_abbrevs; toplevel_macros },
     { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros },
@@ -1745,7 +1746,7 @@ let extend1_signature base_signature (signature : checked_compilation_unit_signa
   let kinds = Flatten.merge_kinds ok kinds in
   let type_abbrevs = Flatten.merge_checked_type_abbrevs ota type_abbrevs in
   let types = Flatten.merge_type_assignments ot types in
-  let toplevel_macros = Flatten.merge_toplevel_macros otlm toplevel_macros in
+  let toplevel_macros = Flatten.merge_toplevel_macros types otlm toplevel_macros in
 
   { Assembled.kinds; types; type_abbrevs; toplevel_macros }
 
