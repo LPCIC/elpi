@@ -510,6 +510,7 @@ module Symbol : sig
   type provenance = Elpi_parser.Ast.Structured.provenance [@@deriving show,ord]
 
   val equal : uf:UF.t -> t -> t -> bool
+  val compare : uf:UF.t -> t -> t -> int
 
   val make : provenance -> F.t -> t
   val make_builtin : ?variant:int -> F.t -> t
@@ -605,10 +606,11 @@ end = struct
   end
 
   let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
+  let compare ~uf x y = compare (UF.find uf x) (UF.find uf y)
 
   let rec undup ~uf = function
   | [] -> []
-  | x :: xs -> let x = UF.find uf x in if List.exists (fun y -> compare x (UF.find uf y) = 0) xs then undup ~uf xs else x :: undup ~uf xs
+  | x :: xs -> let x = UF.find uf x in if List.exists (fun y -> compare ~uf x y = 0) xs then undup ~uf xs else x :: undup ~uf xs
 
   let is_builtin (p,f) s =
     F.equal f s && match p with Builtin { variant } -> variant = 0 | _ -> false

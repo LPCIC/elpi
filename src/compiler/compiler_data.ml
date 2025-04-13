@@ -442,6 +442,8 @@ module TypingEnv : sig
   val iter_symbols : (Symbol.t -> symbol_metadata -> unit) -> t -> unit
 
   val same_symbol : t -> Symbol.t -> Symbol.t -> bool
+  val compare_symbol : t -> Symbol.t -> Symbol.t -> int
+
   val undup : t -> Symbol.t list -> Symbol.t list
   val all_symbols : t -> (Symbol.t * symbol_metadata) list
   val mem_symbol : t -> Symbol.t -> bool
@@ -528,6 +530,10 @@ end = struct
   let same_symbol { symbols } x y =
     let uf = Symbol.QMap.get_uf symbols in
     Symbol.equal ~uf x y
+
+  let compare_symbol { symbols } x y =
+    let uf = Symbol.QMap.get_uf symbols in
+    Symbol.compare ~uf x y
   
   let undup { symbols } l =
     let uf = Symbol.QMap.get_uf symbols in
@@ -543,6 +549,8 @@ module SymbolResolver : sig
   type resolution
   [@@deriving show]
 
+  val compare : TypingEnv.t -> resolution -> resolution -> int
+
   val make : unit -> resolution
   val resolve : TypingEnv.t -> resolution -> Symbol.t -> unit
   val resolved_to : TypingEnv.t -> resolution -> Symbol.t option
@@ -551,6 +559,13 @@ end = struct
 
   type resolution = Symbol.t option ref
   [@@deriving show]
+
+  let compare env r1 r2 =
+    match !r1, !r2 with
+    | Some s1, Some s2 -> TypingEnv.compare_symbol env s1 s2
+    | Some _, None -> -1
+    | None, Some _ -> 1
+    | _ -> 0
 
   let make () = ref None
   let resolve env r s =
@@ -579,11 +594,16 @@ module Scope = struct
   [@@ deriving show]
 
   (* The compare function ignores the resolved_to field *)
-  let compare t1 t2 = match t1, t2 with
+  let compare env t1 t2 = match t1, t2 with
     | Bound b1, Bound b2 -> String.compare b1 b2
-    | Global g1, Global g2 -> Bool.compare g1.escape_ns g2.escape_ns
+    | Global g1, Global g2 -> 
+        let v = SymbolResolver.compare env g1.resolved_to g2.resolved_to in
+        if v = 0 then Bool.compare g1.escape_ns g2.escape_ns
+        else v
     | Bound _, Global _ -> 1
     | Global _, Bound _ -> -1
+
+  let equal env x y = compare env x y = 0
 
   let clone = function Bound _ as t -> t | Global {escape_ns; resolved_to} -> Global {escape_ns; resolved_to}
 
@@ -696,25 +716,25 @@ module ScopedTypeExpression = struct
       | Ty e -> pretty_e fmt e in
     Format.fprintf fmt "@[%a@]" pretty value
 
-  let rec eqt ctx t1 t2 =
+  let rec eqt env ctx t1 t2 =
     match t1.it, t2.it with
-    | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> Scope.compare b1 b2 == 0 && F.equal c1 c2
+    | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> Scope.compare env b1 b2 == 0 && F.equal c1 c2
     | Const(Bound l1,c1), Const(Bound l2,c2) -> Scope.compare_language l1 l2 == 0 && eq_var ctx l1 c1 c2
-    | App(Global _, c1,x,xs), App(Global _, c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
+    | App(Global _, c1,x,xs), App(Global _, c2,y,ys) -> F.equal c1 c2 && eqt env ctx x y && Util.for_all2 (eqt env ctx) xs ys
     | App(Bound _,_,_,_), _ -> assert false
     | _, App(Bound _,_,_,_) -> assert false
-    | Arrow(m1, b1,s1,t1), Arrow(m2, b2,s2,t2) -> Mode.compare m1 m2 == 0 && b1 = b2 && eqt ctx s1 s2 && eqt ctx t1 t2
+    | Arrow(m1, b1,s1,t1), Arrow(m2, b2,s2,t2) -> Mode.compare m1 m2 == 0 && b1 = b2 && eqt env ctx s1 s2 && eqt env ctx t1 t2
     | Any, Any -> true
     | Prop _, Prop _ -> true
     | _ -> false
 
-  let rec eq ctx t1 t2 =
+  let rec eq env ctx t1 t2 =
     match t1, t2 with
-    | Lam(c1,b1), Lam(c2,b2) -> eq (push_ctx "lp" c1 c2 ctx) b1 b2
-    | Ty t1, Ty t2 -> eqt ctx t1 t2
+    | Lam(c1,b1), Lam(c2,b2) -> eq env (push_ctx "lp" c1 c2 ctx) b1 b2
+    | Ty t1, Ty t2 -> eqt env ctx t1 t2
     | _ -> false
 
-  let equal { name = n1; value = x } { name = n2; value = y } = F.equal n1 n2 && eq (empty ()) x y
+  let equal env { name = n1; value = x } { name = n2; value = y } = F.equal n1 n2 && eq env (empty ()) x y
 
   let compare _ _ = assert false
 
@@ -929,20 +949,20 @@ module ScopedTerm = struct
   and pretty_parens_lam ~lvl fmt x =
     match x.it with Lam _ -> fprintf fmt "%a" pretty_ x.it | _ -> pretty_parens ~lvl fmt x
 
-  let equal ?(types=true) t1 t2 =
+  let equal env ?(types=true) t1 t2 =
     let rec eq ctx t1 t2 =
       match t1.it, t2.it with
-      | Const(Global _ as b1,c1, _), Const(Global _ as b2,c2,_) -> b1 = b2 && F.equal c1 c2
+      | Const(Global _ as b1,c1, _), Const(Global _ as b2,c2,_) -> Scope.equal env b1 b2 && F.equal c1 c2
       | Const(Bound l1, c1, _), Const(Bound l2, c2, _) -> l1 = l2 && eq_var ctx l1 c1 c2
       | Discard, Discard -> true
       | Var((_,n1,_),l1), Var((_,n2,_),l2) -> eq_uvar ctx n1 n2 && Util.for_all2 (eq ctx) l1 l2
-      | App((Global _ as b1,c1, _),x,xs), App((Global _ as b2, c2 ,_),y,ys) -> Scope.compare b1 b2 = 0 && F.equal c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
+      | App((Global _ as b1,c1, _),x,xs), App((Global _ as b2, c2 ,_),y,ys) -> Scope.equal env b1 b2 && F.equal c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
       | App((Bound l1, c1, _),x,xs), App((Bound l2, c2, _),y,ys) -> l1 = l2 && eq_var ctx l1 c1 c2 && eq ctx x y && Util.for_all2 (eq ctx) xs ys
-      | Lam(None, ty1,b1), Lam (None,ty2, b2) -> eq ctx b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2)
-      | Lam(Some (l1,c1,_),ty1,b1), Lam(Some (l2,c2,_),ty2, b2) -> l1 = l2 && eq (push_ctx l1 c1 c2 ctx) b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt (empty ())) ty1 ty2)
+      | Lam(None, ty1,b1), Lam (None,ty2, b2) -> eq ctx b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt env (empty ())) ty1 ty2)
+      | Lam(Some (l1,c1,_),ty1,b1), Lam(Some (l2,c2,_),ty2, b2) -> l1 = l2 && eq (push_ctx l1 c1 c2 ctx) b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt env (empty ())) ty1 ty2)
       | Spill(b1,n1), Spill (b2,n2) -> n1 == n2 && eq ctx b1 b2
       | CData c1, CData c2 -> CData.equal c1 c2
-      | Cast(t1,ty1), Cast(t2,ty2) -> eq ctx t1 t2 && (not types || ScopedTypeExpression.eqt (empty ()) ty1 ty2)
+      | Cast(t1,ty1), Cast(t2,ty2) -> eq ctx t1 t2 && (not types || ScopedTypeExpression.eqt env (empty ()) ty1 ty2)
       | Impl(b1,s1,t1), Impl(b2,s2,t2) -> b1 = b2 && eq ctx t1 t2 && eq ctx s1 s2
       | _ -> false
     in
@@ -1126,8 +1146,8 @@ module ScopeTypeExpressionUniqueList = struct
     
   let smart_map = smart_map
   
-  let append x t = x :: List.filter (fun y -> not @@ ScopedTypeExpression.equal x y) t
-  let merge t1 t2 = List.fold_left (fun acc x -> append x acc) (List.rev t1) t2
+  let append env x t = x :: List.filter (fun y -> not @@ ScopedTypeExpression.equal env x y) t
+  let merge env t1 t2 = List.fold_left (fun acc x -> append env x acc) (List.rev t1) t2
 
   let fold = List.fold_left
   
