@@ -270,7 +270,7 @@ let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya)=
   let get_con _x = Compilation.type_ass_2func_mut ~loc env tya in
   let det_head =
     if is_var then get_var @@ Uvar.get var name
-    else match t with Scope.Bound b -> get_ctx @@ BVar.get ctx (name, b) | Global g -> get_con g.decl_id
+    else match t with Scope.Bound b -> get_ctx @@ BVar.get ctx (name, b) | Global g -> get_con g.resolved_to
   in
   (* Format.eprintf "The functionality of %a is %a (its type is %a)@ Full type is %a@." F.pp name pp_dtype det_head
     TypeAssignment.pretty_mut_once_raw (TypeAssignment.deref tya) (MutableOnce.pp (TypeAssignment.pp) ) tya; *)
@@ -281,7 +281,11 @@ let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
 let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
   let same_symb symb symb' =
     match symb' with
-    | Scope.Global { decl_id = Some symb' } -> Type_checker.same_symbol types symb symb'
+    | Scope.Global { resolved_to = x } ->
+        begin match SymbolResolver.resolved_to types x with
+        | Some symb' -> TypingEnv.same_symbol types symb symb'
+        | _ -> false
+        end
     | _ -> false
   in
   let has_undeclared_signature (b, f, _) =
@@ -619,7 +623,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
     let build_clause args ~ctx ~loc ~ty body =
       let new_pred = emit () in
       let args = List.rev args in
-      let b = (Scope.Global {decl_id=None;escape_ns=false}, new_pred, t.ty) in
+      let b = (Scope.Global {resolved_to=SymbolResolver.make ();escape_ns=false}, new_pred, t.ty) in
       let pred_hd = ScopedTerm.(App (b, List.hd args, List.tl args)) in
       (* let ctx = BVar.add ~loc ctx (new_pred, elpi_language) ~v:(Compilation.type_ass_2func_mut ~loc env t.ty) in *)
       let clause = ScopedTerm.{ ty; it = Impl (false, { it = pred_hd; ty; loc }, body); loc } in

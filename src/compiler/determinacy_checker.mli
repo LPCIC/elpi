@@ -7,6 +7,6 @@ open Type_checker
 (* returns if the clause is deterministic *)
 val check_clause :
   type_abbrevs:type_abbrevs ->
-  types:typing_env ->
+  types:TypingEnv.t ->
   unknown:env_undeclared ->
     ScopedTerm.t -> bool

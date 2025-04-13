@@ -6,238 +6,37 @@ module F = Ast.Func
 
 module Symbol = Data.Symbol
 
-module Scope = struct
+module ScopeContext = struct
 
   type language = string
   [@@ deriving show, ord]
-
-  type t =
-    | Bound  of language (* bound by a lambda, stays bound *)
-    | Global of {
-        escape_ns : bool; (* when true name space elimination does not touch this constant *)
-        mutable decl_id : Symbol.t option;
-      }
-  [@@ deriving show]
-
-  (* The compare function ignores the decl_id field *)
-  let compare t1 t2 = match t1, t2 with
-    | Bound b1, Bound b2 -> String.compare b1 b2
-    | Global g1, Global g2 -> Bool.compare g1.escape_ns g2.escape_ns
-    | Bound _, Global _ -> 1
-    | Global _, Bound _ -> -1
-
-  let clone = function Bound _ as t -> t | Global {escape_ns; decl_id} -> Global {escape_ns; decl_id}
-
-  module Map = Map.Make(struct
-    type t = F.t * language
-    [@@ deriving show, ord]
-  end)
-  module Set = Set.Make(struct
-    type t = F.t * language
-    [@@ deriving show, ord]
-  end)
-
-  let mkGlobal ?(escape_ns=false) () =
-    Global { escape_ns ; decl_id = None }
-  let mkResolvedGlobal symb =
-    Global { escape_ns = true ; decl_id = Some symb }
-
-end
-let elpi_language : Scope.language = "lp"
-let elpi_var : Scope.language = "lp_var"
-
-module ScopeContext = struct
-
-
-type ctx = { vmap : (Scope.language * F.t * F.t) list; uvmap : (F.t * F.t) list ref }
-let empty () = { vmap = []; uvmap = ref [] }
-
-let eq_var { vmap } language c1 c2 = List.mem (language,c1,c2) vmap
-let cmp_var ctx language c1 c2 =
-  if eq_var ctx language c1 c2 then 0
-  else
-    let r = F.compare c1 c2 in
-    if r = 0 then -1 else r
-
-let purge language f c l = List.filter (fun (l,x,y) -> l = language && not @@ F.equal (f (x,y)) c) l
-let push_ctx language c1 c2 ctx = { ctx with vmap = (language,c1 , c2) :: (purge language fst c1 @@ purge language snd c2 ctx.vmap) }
-let eq_uvar ctx c1 c2 =
-  if List.exists (fun (x,_) -> F.equal x c1) !(ctx.uvmap) ||
-     List.exists (fun (_,y) -> F.equal y c2) !(ctx.uvmap) then
-    List.mem (c1,c2) !(ctx.uvmap)
-  else begin
-    ctx.uvmap := (c1,c2) :: !(ctx.uvmap);
-    true
+  
+  
+  type ctx = { vmap : (language * F.t * F.t) list; uvmap : (F.t * F.t) list ref }
+  let empty () = { vmap = []; uvmap = ref [] }
+  
+  let eq_var { vmap } language c1 c2 = List.mem (language,c1,c2) vmap
+  let cmp_var ctx language c1 c2 =
+    if eq_var ctx language c1 c2 then 0
+    else
+      let r = F.compare c1 c2 in
+      if r = 0 then -1 else r
+  
+  let purge language f c l = List.filter (fun (l,x,y) -> l = language && not @@ F.equal (f (x,y)) c) l
+  let push_ctx language c1 c2 ctx = { ctx with vmap = (language,c1 , c2) :: (purge language fst c1 @@ purge language snd c2 ctx.vmap) }
+  let eq_uvar ctx c1 c2 =
+    if List.exists (fun (x,_) -> F.equal x c1) !(ctx.uvmap) ||
+       List.exists (fun (_,y) -> F.equal y c2) !(ctx.uvmap) then
+      List.mem (c1,c2) !(ctx.uvmap)
+    else begin
+      ctx.uvmap := (c1,c2) :: !(ctx.uvmap);
+      true
+    end
   end
-end
-
-
-module ScopedTypeExpression = struct
-  open ScopeContext
-
-  module SimpleType = struct
-    type t_ =
-    | Any
-    | Con of F.t
-    | App of F.t * t * t list
-    | Arr of t * t
-    and t = { it : t_; loc : Loc.t }
-    [@@ deriving show]
-
-  end
-
-  type t_ =
-    | Any
-    | Prop of Ast.Structured.functionality
-    | Const of Scope.t * F.t
-    | App of Scope.t * F.t * e * e list
-    | Arrow of Mode.t * Ast.Structured.variadic * e * e
-  and e = { it : t_; loc : Loc.t }
-  [@@ deriving show]
-
-
-  open Format
-
-  let arrs = 0
-  let app = 1
-
-  let lvl_of = function
-    | Arrow _ -> arrs
-    | App _ -> app
-    | _ -> 2
-
-  let rec is_prop = function
-    | Prop f -> Some f
-    | Any | Const _ | App _ -> None
-    | Arrow(_,_,_,t) -> is_prop t.it
-
-  let rec pretty_e fmt = function
-    | Any -> fprintf fmt "any"
-    | Const(_,c) -> F.pp fmt c
-    | Prop _ -> fprintf fmt "prop"
-    | App(_, f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_e_parens ~lvl:app) " ") (x::xs)
-    | Arrow(m,v,s,t) as p -> 
-      (match is_prop p with
-      | None -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
-      | Some Function -> fprintf fmt "@[<hov 2>func%a@]" (pretty_prop m v s t) ()
-      | Some Relation -> fprintf fmt "@[<hov 2>pred%a@]" (pretty_prop m v s t) ()
-      )
-
-  and pretty_prop m v l r fmt () =
-    let show_var = function Ast.Structured.Variadic -> ".." | _ -> "" in
-    match r.it with
-    | Prop _ -> fprintf fmt "."
-    | _  -> fprintf fmt "%a %s->@ %a" (*Mode.pretty m*) pretty_e_loc l (show_var v) pretty_e_loc r
-  and pretty_e_parens ~lvl fmt = function
-    | t when lvl >= lvl_of t.it -> fprintf fmt "(%a)" pretty_e_loc t
-    | t -> pretty_e_loc fmt t
-  and pretty_e_loc fmt { it } = pretty_e fmt it
-  let pretty_e fmt (t : e) = Format.fprintf fmt "@[%a@]" pretty_e_loc t
-
-
-  let rec of_simple_type = function
-    | SimpleType.Any -> Any
-    | Con c -> Const(Scope.mkGlobal (),c)
-    | App(c,x,xs) -> App(Scope.mkGlobal (),c,of_simple_type_loc x,List.map of_simple_type_loc xs)
-    | Arr(s,t) -> Arrow(Output, NotVariadic,of_simple_type_loc s, of_simple_type_loc t)
-  and of_simple_type_loc { it; loc } = { it = of_simple_type it; loc }
-
-  type v_ =
-    | Lam of F.t * v_
-    | Ty of e
-  [@@ deriving show]
-
-  type t = {
-    name : F.t;
-    value : v_;
-    nparams : int;
-    loc : Loc.t;
-    index : Ast.Structured.predicate_indexing option;
-    availability : Ast.Structured.symbol_availability;  
-  }
-  [@@ deriving show]
-
-  let pretty fmt { value } =
-    let rec pretty fmt = function
-      | Lam(_,x) -> pretty fmt x
-      | Ty e -> pretty_e fmt e in
-    Format.fprintf fmt "@[%a@]" pretty value
-
-  let rec eqt ctx t1 t2 =
-    match t1.it, t2.it with
-    | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> Scope.compare b1 b2 == 0 && F.equal c1 c2
-    | Const(Bound l1,c1), Const(Bound l2,c2) -> Scope.compare_language l1 l2 == 0 && eq_var ctx l1 c1 c2
-    | App(Global _, c1,x,xs), App(Global _, c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
-    | App(Bound _,_,_,_), _ -> assert false
-    | _, App(Bound _,_,_,_) -> assert false
-    | Arrow(m1, b1,s1,t1), Arrow(m2, b2,s2,t2) -> Mode.compare m1 m2 == 0 && b1 = b2 && eqt ctx s1 s2 && eqt ctx t1 t2
-    | Any, Any -> true
-    | Prop _, Prop _ -> true
-    | _ -> false
-
-  let rec eq ctx t1 t2 =
-    match t1, t2 with
-    | Lam(c1,b1), Lam(c2,b2) -> eq (push_ctx "lp" c1 c2 ctx) b1 b2
-    | Ty t1, Ty t2 -> eqt ctx t1 t2
-    | _ -> false
-
-  let equal { name = n1; value = x } { name = n2; value = y } = F.equal n1 n2 && eq (empty ()) x y
-
-  let compare _ _ = assert false
-
-  let rec smart_map_scoped_loc_ty f ({ it; loc } as orig) =
-    let it' = smart_map_scoped_ty f it in
-    if it' == it then orig else { it = it'; loc }
-  and smart_map_scoped_ty f orig =
-    match orig with
-    | Any | Prop _ -> orig
-    | Const((Scope.Bound _| Scope.Global { escape_ns = true }),_) -> orig
-    | Const(Scope.Global _ as g,c) ->
-        let c' = f c in
-        if c == c' then orig else Const(g,c')
-    | App(Bound _,_,_,_) -> assert false
-    | App(Global g as s, c,x,xs) ->
-        let c' = if g.escape_ns then c else f c in
-        let x' = smart_map_scoped_loc_ty f x in
-        let xs' = smart_map (smart_map_scoped_loc_ty f) xs in
-        if c' == c && x' == x && xs' == xs then orig else App(s,c',x',xs')
-    | Arrow(m,v,x,y) ->
-        let x' = smart_map_scoped_loc_ty f x in
-        let y' = smart_map_scoped_loc_ty f y in
-        if x' == x && y' == y then orig else Arrow(m,v,x',y')
-
-  let rec smart_map_tye f = function
-    | Lam(c,t) as orig ->
-        let t' = smart_map_tye f t in
-        if t == t' then orig else Lam(c,t')
-    | Ty t as orig ->
-      let t' = smart_map_scoped_loc_ty f t in
-      if t == t' then orig else Ty t'
-
-  let smart_map f ({ name; value; nparams; loc; index; availability } as orig) =
-    let name' = f name in
-    let value' = smart_map_tye f value in
-    if name == name' && value' == value then orig
-    else { name = name'; value = value'; nparams; loc; index; availability }
-
-  let type2mode (value : v_) =
-    let rec to_mode_ho (m, ty) = 
-      match flatten_arrow [] ty with
-      | None -> Mode.Fo m
-      | Some l -> Mode.Ho (m, List.rev_map to_mode_ho l)
-    and flatten_arrow acc = function
-      | Prop _ -> Some acc
-      | Any | Const _ | App _ -> None
-      | Arrow (m,_,a,b) -> flatten_arrow ((m,a.it)::acc) b.it in
-    let rec type_to_mode_under_abs = function
-      | Lam (_,b) -> type_to_mode_under_abs b
-      | Ty {it;loc} -> Option.map (List.rev_map to_mode_ho) (flatten_arrow [] it)
-    in
-    type_to_mode_under_abs value
-
-
-end
-
+  
+let elpi_language : ScopeContext.language = "lp"
+let elpi_var : ScopeContext.language = "lp_var"
+  
 module MutableOnce : sig 
   type 'a t
   [@@ deriving show, ord]
@@ -610,6 +409,368 @@ module TypeAssignment = struct
       ([],[]) t
 
 end
+
+module TypingEnv : sig
+
+  type indexing =
+    | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
+    | DontIndex
+    [@@deriving show]
+
+  val compatible_indexing : indexing -> indexing -> bool
+
+  type symbol_metadata = {
+    ty : TypeAssignment.skema;
+    indexing : indexing;
+    availability : Elpi_parser.Ast.Structured.symbol_availability;
+    }
+    [@@deriving show]
+
+  type t = {
+    symbols : symbol_metadata Symbol.QMap.t;
+    overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
+  }
+  [@@deriving show]
+
+  val empty : t
+
+  val resolve_name : F.t -> t -> Symbol.t TypeAssignment.overloaded
+  val resolve_symbol : Symbol.t -> t -> symbol_metadata
+  val merge_envs : t -> t -> t
+
+  val iter_names : (F.t -> Symbol.t TypeAssignment.overloaded -> unit) -> t -> unit
+  val iter_symbols : (Symbol.t -> symbol_metadata -> unit) -> t -> unit
+
+  val same_symbol : t -> Symbol.t -> Symbol.t -> bool
+  val undup : t -> Symbol.t list -> Symbol.t list
+  val all_symbols : t -> (Symbol.t * symbol_metadata) list
+  val mem_symbol : t -> Symbol.t -> bool
+  val canon : t -> Symbol.t -> Symbol.t
+
+end = struct
+
+  type indexing =
+    | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
+    | DontIndex
+  [@@deriving show]
+
+  type symbol_metadata = {
+    ty : TypeAssignment.skema;
+    indexing : indexing;
+    availability : Elpi_parser.Ast.Structured.symbol_availability;
+  }
+  [@@deriving show]
+
+  type t = {
+    symbols : symbol_metadata Symbol.QMap.t;
+    overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
+  }
+  [@@deriving show]
+
+  let compatible_indexing i1 i2 =
+    match i1, i2 with
+    | Index(mode1,idx1), Index(mode2,idx2) -> Elpi_util.Util.Mode.(compare_hos mode1 mode2 == 0) && Elpi_runtime.Data.(compare_indexing idx1 idx2 == 0)
+    | DontIndex, _ -> true
+    | _, DontIndex -> true
+  
+  let empty = {symbols = Symbol.QMap.empty; overloading = F.Map.empty}
+  
+  let canon symbols s = Symbol.UF.find (Symbol.QMap.get_uf symbols) s
+  
+  let resolve_name f { overloading; symbols } : Symbol.t TypeAssignment.overloaded =
+    match F.Map.find f overloading with
+    | Single s -> Single (canon symbols s)
+    | Overloaded l -> Overloaded (List.map (canon symbols) l)
+  
+  let resolve_symbol s { symbols } = Symbol.QMap.find s symbols
+  
+  
+  let merge_indexing s idx1 idx2 =
+    if not @@ compatible_indexing idx1 idx2 then
+      error ~loc:(Symbol.get_loc s) ("Incompatible indexing options for symbol " ^ Symbol.get_str s);
+    idx1
+  
+  let merge_availability s a1 a2 =
+    let open Ast.Structured in
+    match a1, a2 with
+    | Elpi, Elpi -> Elpi
+    | OCaml (p1), OCaml (p2) when Symbol.compare_provenance p1 p2 = 0 -> a1
+    | OCaml ((Builtin _|Core)), OCaml ((File _)) -> a1
+    | OCaml ((File _)), OCaml ((Builtin _|Core)) -> a2
+    | _ ->
+       error ~loc:(Symbol.get_loc s) ("Incompatible provenance for symbol " ^ Symbol.get_str s ^ ": " ^  show_symbol_availability a1 ^ " != " ^ show_symbol_availability a2)
+  
+  
+  let merge_symbol_metadata s
+      { ty = ty1; indexing = idx1; availability = a1; }
+       { ty = ty2; indexing = idx2; availability = a2; } =
+    { ty = TypeAssignment.merge_skema ty1 ty2;
+      indexing = merge_indexing s idx1 idx2;
+      availability = merge_availability s a1 a2;
+    }
+  
+  let merge_envs   { symbols = s1; overloading = o1 } { symbols = s2; overloading = o2 } =
+    let symbols = Symbol.QMap.union merge_symbol_metadata s1 s2 in
+    let to_unite = ref [] in
+    let overloading = F.Map.union (fun f l1 l2 ->
+      (* We give precedence to recent type declarations over old ones *)
+      let to_u, l = TypeAssignment.undup_skemas (fun x -> (Symbol.QMap.find x symbols).ty) l1 l2 in
+      to_unite := to_u :: !to_unite;
+      Some l
+      ) o1 o2 in
+    let to_unite = List.concat !to_unite in
+    let symbols =
+      List.fold_right (fun (x,y) -> Symbol.QMap.unify merge_symbol_metadata x y) to_unite symbols in
+    { overloading; symbols }
+  
+  let iter_names f { overloading } = F.Map.iter f overloading
+  let iter_symbols f { symbols } = Symbol.QMap.iter f symbols
+  let same_symbol { symbols } x y =
+    let uf = Symbol.QMap.get_uf symbols in
+    Symbol.equal ~uf x y
+  
+  let undup { symbols } l =
+    let uf = Symbol.QMap.get_uf symbols in
+    Symbol.undup ~uf l
+  
+  let all_symbols { symbols } = Symbol.QMap.bindings symbols
+  let mem_symbol  { symbols } x = Symbol.QMap.mem x symbols
+  
+  let canon { symbols } x = canon symbols x
+
+end
+module SymbolResolver : sig
+  type resolution
+  [@@deriving show]
+
+  val make : unit -> resolution
+  val resolve : TypingEnv.t -> resolution -> Symbol.t -> unit
+  val resolved_to : TypingEnv.t -> resolution -> Symbol.t option
+
+end = struct
+
+  type resolution = Symbol.t option ref
+  [@@deriving show]
+
+  let make () = ref None
+  let resolve env r s =
+    match !r with
+    | None -> r := Some s
+    | Some s' -> assert(TypingEnv.same_symbol env s' s); r := Some s
+  let resolved_to env r =
+    match !r with
+    | None -> None
+    | Some x -> Some (TypingEnv.canon env x)
+
+end
+
+
+module Scope = struct
+
+  type language = ScopeContext.language
+  [@@ deriving show, ord]
+
+  type t =
+    | Bound  of language (* bound by a lambda, stays bound *)
+    | Global of {
+        escape_ns : bool; (* when true name space elimination does not touch this constant *)
+        mutable resolved_to : SymbolResolver.resolution;
+      }
+  [@@ deriving show]
+
+  (* The compare function ignores the resolved_to field *)
+  let compare t1 t2 = match t1, t2 with
+    | Bound b1, Bound b2 -> String.compare b1 b2
+    | Global g1, Global g2 -> Bool.compare g1.escape_ns g2.escape_ns
+    | Bound _, Global _ -> 1
+    | Global _, Bound _ -> -1
+
+  let clone = function Bound _ as t -> t | Global {escape_ns; resolved_to} -> Global {escape_ns; resolved_to}
+
+  module Map = Map.Make(struct
+    type t = F.t * language
+    [@@ deriving show, ord]
+  end)
+  module Set = Set.Make(struct
+    type t = F.t * language
+    [@@ deriving show, ord]
+  end)
+
+  let mkGlobal ?(escape_ns=false) () =
+    Global { escape_ns ; resolved_to = SymbolResolver.make () }
+    
+  let mkResolvedGlobal types symb =
+    let resolved_to = SymbolResolver.make () in
+    SymbolResolver.resolve types resolved_to symb;
+    Global { escape_ns = true ; resolved_to }
+
+end
+module ScopedTypeExpression = struct
+  open ScopeContext
+
+  module SimpleType = struct
+    type t_ =
+    | Any
+    | Con of F.t
+    | App of F.t * t * t list
+    | Arr of t * t
+    and t = { it : t_; loc : Loc.t }
+    [@@ deriving show]
+
+  end
+
+  type t_ =
+    | Any
+    | Prop of Ast.Structured.functionality
+    | Const of Scope.t * F.t
+    | App of Scope.t * F.t * e * e list
+    | Arrow of Mode.t * Ast.Structured.variadic * e * e
+  and e = { it : t_; loc : Loc.t }
+  [@@ deriving show]
+
+
+  open Format
+
+  let arrs = 0
+  let app = 1
+
+  let lvl_of = function
+    | Arrow _ -> arrs
+    | App _ -> app
+    | _ -> 2
+
+  let rec is_prop = function
+    | Prop f -> Some f
+    | Any | Const _ | App _ -> None
+    | Arrow(_,_,_,t) -> is_prop t.it
+
+  let rec pretty_e fmt = function
+    | Any -> fprintf fmt "any"
+    | Const(_,c) -> F.pp fmt c
+    | Prop _ -> fprintf fmt "prop"
+    | App(_, f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_e_parens ~lvl:app) " ") (x::xs)
+    | Arrow(m,v,s,t) as p -> 
+      (match is_prop p with
+      | None -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_e_parens ~lvl:arrs) s pretty_e_loc t
+      | Some Function -> fprintf fmt "@[<hov 2>func%a@]" (pretty_prop m v s t) ()
+      | Some Relation -> fprintf fmt "@[<hov 2>pred%a@]" (pretty_prop m v s t) ()
+      )
+
+  and pretty_prop m v l r fmt () =
+    let show_var = function Ast.Structured.Variadic -> ".." | _ -> "" in
+    match r.it with
+    | Prop _ -> fprintf fmt "."
+    | _  -> fprintf fmt "%a %s->@ %a" (*Mode.pretty m*) pretty_e_loc l (show_var v) pretty_e_loc r
+  and pretty_e_parens ~lvl fmt = function
+    | t when lvl >= lvl_of t.it -> fprintf fmt "(%a)" pretty_e_loc t
+    | t -> pretty_e_loc fmt t
+  and pretty_e_loc fmt { it } = pretty_e fmt it
+  let pretty_e fmt (t : e) = Format.fprintf fmt "@[%a@]" pretty_e_loc t
+
+
+  let rec of_simple_type = function
+    | SimpleType.Any -> Any
+    | Con c -> Const(Scope.mkGlobal (),c)
+    | App(c,x,xs) -> App(Scope.mkGlobal (),c,of_simple_type_loc x,List.map of_simple_type_loc xs)
+    | Arr(s,t) -> Arrow(Output, NotVariadic,of_simple_type_loc s, of_simple_type_loc t)
+  and of_simple_type_loc { it; loc } = { it = of_simple_type it; loc }
+
+  type v_ =
+    | Lam of F.t * v_
+    | Ty of e
+  [@@ deriving show]
+
+  type t = {
+    name : F.t;
+    value : v_;
+    nparams : int;
+    loc : Loc.t;
+    index : Ast.Structured.predicate_indexing option;
+    availability : Ast.Structured.symbol_availability;  
+  }
+  [@@ deriving show]
+
+  let pretty fmt { value } =
+    let rec pretty fmt = function
+      | Lam(_,x) -> pretty fmt x
+      | Ty e -> pretty_e fmt e in
+    Format.fprintf fmt "@[%a@]" pretty value
+
+  let rec eqt ctx t1 t2 =
+    match t1.it, t2.it with
+    | Const(Global _ as b1,c1), Const(Global _ as b2,c2) -> Scope.compare b1 b2 == 0 && F.equal c1 c2
+    | Const(Bound l1,c1), Const(Bound l2,c2) -> Scope.compare_language l1 l2 == 0 && eq_var ctx l1 c1 c2
+    | App(Global _, c1,x,xs), App(Global _, c2,y,ys) -> F.equal c1 c2 && eqt ctx x y && Util.for_all2 (eqt ctx) xs ys
+    | App(Bound _,_,_,_), _ -> assert false
+    | _, App(Bound _,_,_,_) -> assert false
+    | Arrow(m1, b1,s1,t1), Arrow(m2, b2,s2,t2) -> Mode.compare m1 m2 == 0 && b1 = b2 && eqt ctx s1 s2 && eqt ctx t1 t2
+    | Any, Any -> true
+    | Prop _, Prop _ -> true
+    | _ -> false
+
+  let rec eq ctx t1 t2 =
+    match t1, t2 with
+    | Lam(c1,b1), Lam(c2,b2) -> eq (push_ctx "lp" c1 c2 ctx) b1 b2
+    | Ty t1, Ty t2 -> eqt ctx t1 t2
+    | _ -> false
+
+  let equal { name = n1; value = x } { name = n2; value = y } = F.equal n1 n2 && eq (empty ()) x y
+
+  let compare _ _ = assert false
+
+  let rec smart_map_scoped_loc_ty f ({ it; loc } as orig) =
+    let it' = smart_map_scoped_ty f it in
+    if it' == it then orig else { it = it'; loc }
+  and smart_map_scoped_ty f orig =
+    match orig with
+    | Any | Prop _ -> orig
+    | Const((Scope.Bound _| Scope.Global { escape_ns = true }),_) -> orig
+    | Const(Scope.Global _ as g,c) ->
+        let c' = f c in
+        if c == c' then orig else Const(g,c')
+    | App(Bound _,_,_,_) -> assert false
+    | App(Global g as s, c,x,xs) ->
+        let c' = if g.escape_ns then c else f c in
+        let x' = smart_map_scoped_loc_ty f x in
+        let xs' = smart_map (smart_map_scoped_loc_ty f) xs in
+        if c' == c && x' == x && xs' == xs then orig else App(s,c',x',xs')
+    | Arrow(m,v,x,y) ->
+        let x' = smart_map_scoped_loc_ty f x in
+        let y' = smart_map_scoped_loc_ty f y in
+        if x' == x && y' == y then orig else Arrow(m,v,x',y')
+
+  let rec smart_map_tye f = function
+    | Lam(c,t) as orig ->
+        let t' = smart_map_tye f t in
+        if t == t' then orig else Lam(c,t')
+    | Ty t as orig ->
+      let t' = smart_map_scoped_loc_ty f t in
+      if t == t' then orig else Ty t'
+
+  let smart_map f ({ name; value; nparams; loc; index; availability } as orig) =
+    let name' = f name in
+    let value' = smart_map_tye f value in
+    if name == name' && value' == value then orig
+    else { name = name'; value = value'; nparams; loc; index; availability }
+
+  let type2mode (value : v_) =
+    let rec to_mode_ho (m, ty) = 
+      match flatten_arrow [] ty with
+      | None -> Mode.Fo m
+      | Some l -> Mode.Ho (m, List.rev_map to_mode_ho l)
+    and flatten_arrow acc = function
+      | Prop _ -> Some acc
+      | Any | Const _ | App _ -> None
+      | Arrow (m,_,a,b) -> flatten_arrow ((m,a.it)::acc) b.it in
+    let rec type_to_mode_under_abs = function
+      | Lam (_,b) -> type_to_mode_under_abs b
+      | Ty {it;loc} -> Option.map (List.rev_map to_mode_ho) (flatten_arrow [] it)
+    in
+    type_to_mode_under_abs value
+
+
+end
+
 
 module ScopedTerm = struct
   open ScopeContext

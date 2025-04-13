@@ -23,8 +23,8 @@ let is_prop ~extra x =
 let mk_global ~types f l =
   (* TODO: check only builtins *)
   let s = Symbol.make_builtin f in
-  let f_ty = Type_checker.(resolve_symbol s types).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
-  (Scope.mkResolvedGlobal s), f, f_ty
+  let f_ty = TypingEnv.(resolve_symbol s types).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
+  (Scope.mkResolvedGlobal types s), f, f_ty
 
 let pif_ty_name ~types (_,_,ty) : 'a ty_name = mk_global ~types F.pif [TypeAssignment.deref ty]
 let pif_ty ~types ty = let _,_,ty = pif_ty_name ~types ty in ty
@@ -48,9 +48,11 @@ let add_spilled ~types (l : spill list) t =
 let mkApp n l = if l = [] then Const n else App (n, List.hd l, List.tl l)
 
 let is_symbol ~types b = function
-| Scope.Global { decl_id = Some s } ->
-    Type_checker.same_symbol types s b
-| Global { decl_id = None } -> anomaly "unresolved global symbol"
+| Scope.Global { resolved_to = x } ->
+  begin match SymbolResolver.resolved_to types x with
+  | Some s  -> TypingEnv.same_symbol types s b
+  | _ -> anomaly "unresolved global symbol"
+  end
 | _ -> false
 
 let app ~types t args =
