@@ -251,6 +251,9 @@ type indexing =
   | DiscriminationTree of int list
 [@@deriving show, ord]
 
+type pred_info = {indexing:indexing; mode:Mode.hos; is_det:Ast.Structured.functionality}
+[@@deriving show, ord]
+
 let mkLam x = Lam x [@@inline]
 let mkApp c x xs = App(c,x,xs) [@@inline]
 let mkCons hd tl = Cons(hd,tl) [@@inline]

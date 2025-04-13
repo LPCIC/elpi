@@ -226,7 +226,7 @@ let () =
     [|(*01*) mut_excl 9 6; Success; det_check 9 7; Success; Failure;            (*05*)
       (*06*) Success; Failure; Failure; Failure; Failure;                       (*10*)
       (*11*) mut_excl 9 8; Success; mut_excl 11 10; det_check 21 9; Success;    (*15*)
-      (*16*) Success; Success; det_check 14 7; det_check 13 7; Success;         (*20*)
+      (*16*) det_check 8 9; Success; det_check 14 7; det_check 13 7; Success;         (*20*)
       (*21*) det_check 7 21; Success; det_check 16 9; Success; det_check 7 12;  (*25*)
       (*26*) mut_excl 13 10; mut_excl 12 10; Success; Success; det_check 8 7;   (*30*)
       (*31*) out_err 7 10; Success; out_err 10 14; out_err 9 21; out_err 9 13;  (*35*)
@@ -243,7 +243,7 @@ let () =
       (*86*) Success; Success; Success; Success; Success;                       (*90*)
       (*91*) det_check 14 5; Success; Success
     |] in
-  let ignore = [5;7;8;9;10;13;16;26;27] in
+  let ignore = [7;8;9;10;27] in
   for i = 0 to Array.length status - 1 do
     if not (List.mem (i+1) ignore) then (
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in

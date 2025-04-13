@@ -2877,9 +2877,9 @@ let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate cla
       let idx = Ptmap.add predicate (make_new_Map_snd_level_index 0 []) idx in
       add1clause_compile_time ~depth { idx; time; times } ~graft predicate clause name
 
-let update_indexing (indexing : (Mode.hos * indexing) Constants.Map.t) (index : index) : index =
+let update_indexing (indexing : pred_info Constants.Map.t) (index : index) : index =
   let idx =
-    C.Map.fold (fun predicate (mode, indexing) m ->
+    C.Map.fold (fun predicate ({mode; indexing}) m ->
       Ptmap.add predicate 
       begin
         match indexing with
