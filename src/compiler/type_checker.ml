@@ -338,7 +338,8 @@ let silence_linear_warn f =
 
 let checker ~type_abbrevs ~kinds ~types:env ~unknown :
   (is_rule:bool -> ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared) * 
-  ((_, ScopedTerm.t) Ast.Chr.t -> env_undeclared)
+  ((_, ScopedTerm.t) Ast.Chr.t -> env_undeclared) *
+  (ScopedTerm.t * Ast.Loc.t -> env_undeclared)
 =
   let valid_mode = ref true in
 
@@ -809,15 +810,29 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     Option.iter check_guard guard;
     Option.iter check_sequent new_goal;
     !unknown_global in
-  check, check_chr
+
+  let check_macro (t,loc) =
+    let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(mk_uvar "macro") in
+    if spills <> [] then error ~loc:t.loc "cannot spill in head";
+    !unknown_global in
+  check, check_chr, check_macro
 
 let check ~type_abbrevs ~kinds ~types:env ~unknown ~is_rule t ~exp =
-  let check, _ = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
+  let check, _, _ = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
   check ~is_rule t ~exp
 
 let check_chr_rule ~type_abbrevs ~kinds ~types:env ~unknown r =
-  let _, check_chr = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
+  let _, check_chr, _ = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
   check_chr r
+
+let check_macro ~type_abbrevs ~kinds ~types:env k m =
+  let unknown = F.Map.empty in
+  let _, _, check_macro = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
+  let unknown = check_macro m in
+  if F.Map.is_empty unknown then ()
+  else
+    F.Map.iter (fun _ (_,s) -> error ~loc:(Symbol.get_loc s) ("Undeclared symbol in macro " ^ F.show k ^": " ^ Symbol.get_str s)) unknown
+
 
 let check1_undeclared w f (t, id) =
   match TypeAssignment.is_monomorphic t with

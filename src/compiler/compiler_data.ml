@@ -550,6 +550,7 @@ module SymbolResolver : sig
   [@@deriving show]
 
   val compare : TypingEnv.t -> resolution -> resolution -> int
+  val clone : resolution -> resolution
 
   val make : unit -> resolution
   val resolve : TypingEnv.t -> resolution -> Symbol.t -> unit
@@ -559,6 +560,11 @@ end = struct
 
   type resolution = Symbol.t option ref
   [@@deriving show]
+
+  let clone r =
+    match !r with
+    | None -> ref None
+    | Some x -> ref (Some x)
 
   let compare env r1 r2 =
     match !r1, !r2 with
@@ -605,7 +611,7 @@ module Scope = struct
 
   let equal env x y = compare env x y = 0
 
-  let clone = function Bound _ as t -> t | Global {escape_ns; resolved_to} -> Global {escape_ns; resolved_to}
+  let clone = function Bound _ as t -> t | Global {escape_ns; resolved_to} -> Global {escape_ns; resolved_to = SymbolResolver.clone resolved_to}
 
   module Map = Map.Make(struct
     type t = F.t * language
@@ -966,7 +972,8 @@ module ScopedTerm = struct
       | Impl(b1,s1,t1), Impl(b2,s2,t2) -> b1 = b2 && eq ctx t1 t2 && eq ctx s1 s2
       | _ -> false
     in
-      eq (empty ()) t1 t2
+      let b = eq (empty ()) t1 t2 in
+      b
 
     let compare _ _ = assert false
 

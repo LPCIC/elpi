@@ -1353,10 +1353,11 @@ end = struct
       | _ :: xs -> type2type_idx xs
     in *)
 
-  
-    let check_t_end = Unix.gettimeofday () in
-
+    
+    
     let all_types = Flatten.merge_type_assignments ot types in
+    F.Map.iter (fun k m -> Type_checker.check_macro ~kinds:all_kinds ~type_abbrevs:all_type_abbrevs ~types:all_types k m) toplevel_macros;
+    let check_t_end = Unix.gettimeofday () in
     let all_toplevel_macros = Flatten.merge_toplevel_macros all_types otlm toplevel_macros in
 
     { Assembled.kinds; types; type_abbrevs; toplevel_macros },
