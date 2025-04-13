@@ -68,7 +68,7 @@ val lex_insertion : int list -> int list -> int
 module CompileTime : sig
   (* updates how predicates are indexed *)
   val update_indexing :
-    (Mode.hos * indexing) Constants.Map.t ->
+    pred_info Constants.Map.t ->
       index -> index
 
   (* adds 1 clause to its index *)

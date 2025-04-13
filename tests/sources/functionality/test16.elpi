@@ -1,4 +1,4 @@
-% YES
+% NO
 :functional 
 pred p i:int, o:int.
 

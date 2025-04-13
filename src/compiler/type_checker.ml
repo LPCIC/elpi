@@ -90,17 +90,18 @@ let maximize_indexing_input modes =
 
 let rec is_prop = function
   | TypeAssignment.Lam (_,x) -> is_prop x
-  | Ty t ->  TypeAssignment.is_prop t <> None
+  | Ty t ->  TypeAssignment.is_prop t
 
 let check_indexing ~loc availability name value ty indexing =
   let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
-  let ensure_pred ty =
-    if not (is_prop ty) then
+  let is_prop = is_prop ty in
+  let ensure_pred is_prop =
+    if Option.is_none is_prop then
       error ~loc "Indexing directive is for predicates only" in
   match indexing with
-  | Some (Ast.Structured.Index(l,k)) -> ensure_pred ty; TypingEnv.Index (mode,chose_indexing name l k)
-  | Some MaximizeForFunctional when availability = Ast.Structured.Elpi -> ensure_pred ty; Index (mode,maximize_indexing_input mode)
-  | _ when is_prop ty -> Index (mode,chose_indexing name [1] None)
+  | Some (Ast.Structured.Index(l,k)) -> ensure_pred is_prop; TypingEnv.Index {mode;indexing=chose_indexing name l k;is_det=Option.get is_prop}
+  | Some MaximizeForFunctional when availability = Ast.Structured.Elpi -> ensure_pred is_prop; Index {mode;indexing=maximize_indexing_input mode;is_det=Option.get is_prop}
+  | _ when Option.is_some is_prop -> Index {mode;indexing=chose_indexing name [1] None;is_det=Option.get is_prop}
   | _ -> DontIndex
 
 let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
@@ -117,7 +118,7 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : 
     match availability with
     | Elpi -> None
     | OCaml (File _) -> anomaly "provenance File cannot be provided by the user"
-    | OCaml Core -> Symbol.make Core name |> to_unify (not (is_prop ty))
+    | OCaml Core -> Symbol.make Core name |> to_unify (Option.is_none (is_prop ty))
     | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0) (* TODO: this is hack for builtins, they could be overloaded as well *)
     (* | OCaml None -> Symbol.make_builtin name |> to_unify false  *)
   in
@@ -840,7 +841,11 @@ let check1_undeclared w f (t, id) =
   | Some ty ->
       if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']*\\|main\\)$") (F.show f) 0) then
         w := Format.((f, Symbol.get_loc id), asprintf "type %a %a." F.pp f (pretty_ty true) (TypeAssignment.unval t)) :: !w;
-      id, { ty ; TypingEnv.indexing = Index ([],chose_indexing (Symbol.get_func id) [1] None); availability = Elpi }
+      let indexing = match is_prop ty with
+      | None -> TypingEnv.DontIndex
+      | Some is_det -> Index {mode=[]; indexing=chose_indexing (Symbol.get_func id) [1] None; is_det} 
+      in
+      id, TypingEnv.{ ty ; indexing; availability = Elpi }
 
 let check_undeclared ~unknown =
   let w = ref [] in

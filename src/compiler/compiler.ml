@@ -274,7 +274,7 @@ module Assembled = struct
   
     builtins : Builtins.t;
     prolog_program : index;
-    indexing : (Mode.hos * indexing) C.Map.t;
+    indexing : pred_info C.Map.t;
     chr : CHR.t;
   
     symbols : SymbolMap.table;
@@ -1492,7 +1492,7 @@ module Assemble : sig
 
 end = struct
 
-  let update_indexing state symbols ({ idx } as index) (preds : (Symbol.t * _) list) old_idx =
+  let update_indexing state symbols ({ idx } as index) (preds : (Symbol.t * pred_info) list) old_idx =
     (* let check_if_some_clauses_already_in ~loc predicate c oldi newi =
          if Ptmap.mem c idx then
            error ~loc @@ "Some clauses for " ^ predicate ^
@@ -1505,7 +1505,7 @@ end = struct
             " are already in the program, changing the indexing a posteriori is not allowed."
      in
 
-    let add_indexing_for name loc c index map =
+    let add_indexing_for name loc c (index:pred_info) map =
       (* Format.eprintf "indexing for %s with id %a at pos %a\n%!" name pp_int c Loc.pp loc; *)
       (* Format.eprintf "its indexing is %a@." pp_indexing index; *)
       try
@@ -1521,7 +1521,7 @@ end = struct
         in
 
     let map =
-      preds |> List.fold_left (fun acc (symb,indexing) ->
+      preds |> List.fold_left (fun acc (symb,(indexing:pred_info)) ->
         match SymbolMap.get_global_symbol symbols symb with
         | None -> assert false
         | Some c -> add_indexing_for (Symbol.get_str symb) (Symbol.get_loc symb) c indexing acc)
@@ -1626,7 +1626,7 @@ end = struct
     let t = if needs_spilling then Spilling.main ~types t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
-  let extend1_clause flags state indexing ~builtins ~types (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr }; is_deterministic } =
+  let extend1_clause flags state pred_info ~builtins ~types (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr }; is_deterministic } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index)
@@ -1634,7 +1634,7 @@ end = struct
     let (symbols, amap), body = to_dbl ~builtins ~types state symbols body in
     (* Format.eprintf "FINAL %a\n" (R.Pp.ppterm 0 [] ~argsdepth:0 empty_env) body;
     Format.eprintf "FINAL %a\n" (R.Pp.uppterm 0 [] ~argsdepth:0 empty_env) body; *)
-    let modes x = Constants.Map.find_opt x indexing |> Option.map fst |> Option.value ~default:[] in
+    let modes x = (Constants.Map.find_opt x pred_info) |> Option.fold ~some:(fun x -> x.mode) ~none:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
       with D.CannotDeclareClauseForBuiltin(loc,_c) ->
@@ -1645,7 +1645,7 @@ end = struct
     let index = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index in
 
     if is_deterministic then (
-      let hd_query p { args; mode } =
+      let hd_query (p, args, mode) =
         let rec mkpats args mode =
           match args, mode with
           | [], [] -> []
@@ -1655,33 +1655,75 @@ end = struct
           | _ -> assert false
         in
         R.mkAppL p @@ mkpats args mode in
-      let valid_clause (cl : clause) =
-        let overlapping = R.CompileTime.get_clauses ~check_mut_excl:true ~depth:0 p (hd_query p cl) index in
-        let rec has_bang (t : term list) : bool =
-          match t with
-          | [] -> false
-          | Builtin (Cut, []) :: _ -> true
-          | Builtin (Pi, [Lam b]) :: xs | Builtin (Sigma, [Lam b]) :: xs -> has_bang [b] || has_bang xs
-          | Builtin (Impl, [_; l]) :: xs -> has_bang [l] || has_bang xs
-          | Builtin (And, l) :: xs -> has_bang l || has_bang xs
-          | _ :: xs -> has_bang xs
-        in
-        let rec check_overlaps = function
-          | [] -> assert false
-          | x::xs when Option.equal Loc.equal x.Data.loc (Some loc) ->
-              if (xs = [] || has_bang x.hyps) then []
-              else xs
-          | x::xs -> 
-            if not (has_bang x.hyps) then (x::check_overlaps xs)
-            else check_overlaps xs
-        in
-      let overlaps = check_overlaps (Bl.to_list overlapping) in
-      if overlaps <> [] then
+      let rec has_bang ~loc (t : term list) : bool =
+        match t with
+        | [] -> false
+        | Builtin (Cut, []) :: _ -> true
+        | Builtin (Pi, [Lam b]) :: xs | Builtin (Sigma, [Lam b]) :: xs -> has_bang ~loc [b] || has_bang ~loc xs
+        | Builtin (Impl, [h; l]) :: xs -> has_bang ~loc [l] || has_bang ~loc xs
+        | Builtin (And, l) :: xs -> has_bang ~loc l || has_bang ~loc xs
+        | _ :: xs -> has_bang ~loc xs
+      in
+      let get_overlapping c query = 
+        R.CompileTime.get_clauses ~check_mut_excl:true ~depth:0 c query index |> Bl.to_list in
+      let overlapping_error ~loc overlaps = 
+        if overlaps <> [] then
         let to_str fmt x = Format.fprintf fmt "- rule at %s" 
           (Option.value ~default:"anonymous clause" (Option.map Loc.show x.loc))  in
         error ~loc (Format.asprintf "@[<v 2>This rule overlaps with:@ %a@]"
-          (pplist to_str " ") overlaps)
-      in valid_clause cl
+          (pplist to_str " ") overlaps) in
+      let valid_clause ~loc (p, args) =
+        let rec check_overlaps = function
+          | [] -> []
+          | x::xs when Option.equal Loc.equal x.Data.loc (Some loc) ->
+              if (xs = [] || has_bang ~loc:x.loc x.hyps) then []
+              else xs
+          | x::xs -> 
+            if not (has_bang ~loc:x.loc x.hyps) then (x::check_overlaps xs)
+            else check_overlaps xs
+        in
+      let overlapping = get_overlapping p (hd_query (p, args, modes p)) |> check_overlaps in
+      overlapping_error ~loc overlapping
+      in 
+      let split_local_clause (x:term) = 
+        let rec aux bo = function
+          | Builtin (RImpl, [hd; bo]) -> aux (Some bo) hd
+          | App (hd, x, xs) -> Some (hd, (x::xs), bo)
+          | Builtin (Pi, [Lam b]) -> aux bo b 
+          | Builtin (Sigma, [Lam b]) -> aux bo b 
+          | Const c -> Some (c, [], bo)
+          | UVar (_, _, _) | AppUVar (_, _, _) | Discard | Arg (_, _) | AppArg (_, _)-> None
+          | Builtin (RImpl, _) | Builtin (Pi, _) | Builtin (Sigma, _)
+          | Builtin ((Cut|And|Impl|Eq|Match|Findall|Delay|Host _), _)
+          | (Nil|Lam _|Cons (_, _)|CData _) -> assert false
+          in 
+          aux None x
+        in
+      let valid_local_clause ~loc = function
+        | None -> ()
+        | Some (hd, args, bo) ->
+          let query = hd_query (hd, args, modes hd) in
+          let overlapping = get_overlapping hd query in
+          match bo with
+          | None -> overlapping_error ~loc overlapping
+          | Some bo -> 
+            if not @@ has_bang ~loc [bo] then
+              overlapping_error ~loc overlapping
+        in
+      let rec check_local ~loc (t : term list) : unit =
+          match t with
+          | [] -> ()
+          | Builtin (Cut, []) :: tl -> check_local ~loc tl
+          | Builtin (Pi, [Lam b]) :: xs | Builtin (Sigma, [Lam b]) :: xs -> 
+            check_local ~loc [b]; check_local ~loc xs
+          | Builtin (Impl, [h; l]) :: xs ->
+              valid_local_clause ~loc (split_local_clause h); 
+              check_local ~loc [l]; check_local ~loc xs
+          | Builtin (And, l) :: xs -> check_local ~loc l; check_local ~loc xs
+          | _ :: xs -> check_local ~loc xs
+        in
+      valid_clause ~loc (p, cl.args);
+      check_local ~loc cl.hyps
     );
 
     (graft,id,p,cl) :: clauses, symbols, index
@@ -1766,7 +1808,7 @@ let extend1 flags (state, base) unit =
   let new_defined_symbols, new_indexable =
     let symbs = TypingEnv.all_symbols new_types in
     symbs |> List.filter_map (fun (symb,m) -> if TypingEnv.mem_symbol bsig.types symb then None else Some symb),
-    symbs |> List.filter_map (fun (symb, { TypingEnv.indexing } ) -> match indexing with Index(m,i) -> Some (symb,(m,i)) | _ -> None) in
+    symbs |> List.filter_map (fun (symb, { TypingEnv.indexing } ) -> match indexing with Index m -> Some (symb, m) | _ -> None) in
 
   let symbols =
     (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):

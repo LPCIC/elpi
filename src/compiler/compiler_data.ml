@@ -413,18 +413,18 @@ end
 module TypingEnv : sig
 
   type indexing =
-    | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
-    | DontIndex
-    [@@deriving show]
-
-  val compatible_indexing : indexing -> indexing -> bool
+  | Index of Elpi_runtime.Data.pred_info
+  | DontIndex
+  [@@deriving show]
 
   type symbol_metadata = {
     ty : TypeAssignment.skema;
     indexing : indexing;
     availability : Elpi_parser.Ast.Structured.symbol_availability;
-    }
-    [@@deriving show]
+  }
+  [@@deriving show]
+
+  val compatible_indexing : indexing -> indexing -> bool
 
   type t = {
     symbols : symbol_metadata Symbol.QMap.t;
@@ -452,7 +452,7 @@ module TypingEnv : sig
 end = struct
 
   type indexing =
-    | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
+    | Index of Elpi_runtime.Data.pred_info
     | DontIndex
   [@@deriving show]
 
@@ -471,7 +471,7 @@ end = struct
 
   let compatible_indexing i1 i2 =
     match i1, i2 with
-    | Index(mode1,idx1), Index(mode2,idx2) -> Elpi_util.Util.Mode.(compare_hos mode1 mode2 == 0) && Elpi_runtime.Data.(compare_indexing idx1 idx2 == 0)
+    | Index m1, Index m2 -> Elpi_runtime.Data.compare_pred_info m1 m2 == 0
     | DontIndex, _ -> true
     | _, DontIndex -> true
   
