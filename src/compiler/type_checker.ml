@@ -65,23 +65,6 @@ let check_type ~type_abbrevs ~kinds ~loc ~name ctx x =
   in
     aux_params ~loc ctx x
 
-type indexing =
-  | Index of Elpi_util.Util.Mode.hos * Elpi_runtime.Data.indexing
-  | DontIndex
-[@@deriving show]
-
-let compatible_indexing i1 i2 =
-  match i1, i2 with
-  | Index(mode1,idx1), Index(mode2,idx2) -> Elpi_util.Util.Mode.(compare_hos mode1 mode2 == 0) && Elpi_runtime.Data.(compare_indexing idx1 idx2 == 0)
-  | DontIndex, _ -> true
-  | _, DontIndex -> true
-
-type symbol_metadata = {
-  ty : TypeAssignment.skema;
-  indexing : indexing;
-  availability : Elpi_parser.Ast.Structured.symbol_availability;
-}
-[@@deriving show]
 
 let chose_indexing predicate l k =
   let open Elpi_runtime.Data in
@@ -115,12 +98,12 @@ let check_indexing ~loc availability name value ty indexing =
     if not (is_prop ty) then
       error ~loc "Indexing directive is for predicates only" in
   match indexing with
-  | Some (Ast.Structured.Index(l,k)) -> ensure_pred ty; Index (mode,chose_indexing name l k)
+  | Some (Ast.Structured.Index(l,k)) -> ensure_pred ty; TypingEnv.Index (mode,chose_indexing name l k)
   | Some MaximizeForFunctional when availability = Ast.Structured.Elpi -> ensure_pred ty; Index (mode,maximize_indexing_input mode)
   | _ when is_prop ty -> Index (mode,chose_indexing name [1] None)
   | _ -> DontIndex
 
-let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * symbol_metadata =
+let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
   (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
   let indexing = check_indexing ~loc availability name value ty index in
@@ -152,85 +135,14 @@ let arrow_of_tys tys ety =
     | (m,x) :: xs -> TypeAssignment.Arr(m,Ast.Structured.NotVariadic,x,aux xs) in
   aux tys
 
-type typing_env = {
-  symbols : symbol_metadata Symbol.QMap.t;
-  overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
-}
-[@@deriving show]
-module Internal = struct
-  let cast (overloading,symbols) = { overloading; symbols }
-end
-let empty_typing_env = {symbols = Symbol.QMap.empty; overloading = F.Map.empty}
-
-let canon symbols s = Symbol.UF.find (Symbol.QMap.get_uf symbols) s
-
-let resolve_name f { overloading; symbols } : Symbol.t TypeAssignment.overloaded =
-  match F.Map.find f overloading with
-  | Single s -> Single (canon symbols s)
-  | Overloaded l -> Overloaded (List.map (canon symbols) l)
-
-let resolve_symbol s { symbols } = Symbol.QMap.find s symbols
-
-
-let merge_indexing s idx1 idx2 =
-  if not @@ compatible_indexing idx1 idx2 then
-    error ~loc:(Symbol.get_loc s) ("Incompatible indexing options for symbol " ^ Symbol.get_str s);
-  idx1
-
-let merge_availability s a1 a2 =
-  let open Ast.Structured in
-  match a1, a2 with
-  | Elpi, Elpi -> Elpi
-  | OCaml (p1), OCaml (p2) when Symbol.compare_provenance p1 p2 = 0 -> a1
-  | OCaml ((Builtin _|Core)), OCaml ((File _)) -> a1
-  | OCaml ((File _)), OCaml ((Builtin _|Core)) -> a2
-  | _ ->
-     error ~loc:(Symbol.get_loc s) ("Incompatible provenance for symbol " ^ Symbol.get_str s ^ ": " ^  show_symbol_availability a1 ^ " != " ^ show_symbol_availability a2)
-
-
-let merge_symbol_metadata s
-    { ty = ty1; indexing = idx1; availability = a1; }
-     { ty = ty2; indexing = idx2; availability = a2; } =
-  { ty = TypeAssignment.merge_skema ty1 ty2;
-    indexing = merge_indexing s idx1 idx2;
-    availability = merge_availability s a1 a2;
-  }
-
-let merge_envs   { symbols = s1; overloading = o1 } { symbols = s2; overloading = o2 } =
-  let symbols = Symbol.QMap.union merge_symbol_metadata s1 s2 in
-  let to_unite = ref [] in
-  let overloading = F.Map.union (fun f l1 l2 ->
-    (* We give precedence to recent type declarations over old ones *)
-    let to_u, l = TypeAssignment.undup_skemas (fun x -> (Symbol.QMap.find x symbols).ty) l1 l2 in
-    to_unite := to_u :: !to_unite;
-    Some l
-    ) o1 o2 in
-  let to_unite = List.concat !to_unite in
-  let symbols =
-    List.fold_right (fun (x,y) -> Symbol.QMap.unify merge_symbol_metadata x y) to_unite symbols in
-  { overloading; symbols }
-
-let iter_names f { overloading } = F.Map.iter f overloading
-let iter_symbols f { symbols } = Symbol.QMap.iter f symbols
-let same_symbol { symbols } x y =
-  let uf = Symbol.QMap.get_uf symbols in
-  Symbol.equal ~uf x y
-
-let undup { symbols } l =
-  let uf = Symbol.QMap.get_uf symbols in
-  Symbol.undup ~uf l
-
-let all_symbols { symbols } = Symbol.QMap.bindings symbols
-let mem_symbol  { symbols } x = Symbol.QMap.mem x symbols
 
 type runtime_types = Symbol.t F.Map.t
 [@@deriving show]
 
 let empty_runtime_types = F.Map.empty
-let compile_for_runtime { overloading; symbols } =
-  F.Map.filter_map (fun _ -> function TypeAssignment.Single s -> Some (canon symbols s) | _ -> None) overloading
+let compile_for_runtime ({ TypingEnv.overloading } as e) =
+  F.Map.filter_map (fun _ -> function TypeAssignment.Single s -> Some (TypingEnv.canon e s) | _ -> None) overloading
 let runtime_resolve m f = F.Map.find f m
-let canon { symbols } x = canon symbols x
 
 let check_1types  ~type_abbrevs ~kinds lst : _ * Symbol.t TypeAssignment.overloaded =
   match List.map (check_type ~type_abbrevs ~kinds) lst with
@@ -254,7 +166,7 @@ let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
             Symbol.QMap.unify (fun _ _ _ -> anomaly "builtins predicates are unique") k q acc in
       Symbol.QMap.add k v acc) qm l) m Symbol.QMap.empty in
       
-  let rc = { overloading; symbols } in
+  let rc = { TypingEnv.overloading; symbols } in
   rc
 
 
@@ -365,7 +277,7 @@ let local_type ctx ~loc (lang,c,_) : ret_id TypeAssignment.overloaded =
   with Not_found -> anomaly ~loc "free variable"
 
 let fresh_skema_of_overloaded_symbol c env =
-  let overloaded = F.Map.find c env.overloading in
+  let overloaded = F.Map.find c env.TypingEnv.overloading in
   let get_fresh x = x, (Symbol.QMap.find x env.symbols).ty |> TypeAssignment.fresh |> fst in
   TypeAssignment.map_overloaded get_fresh overloaded
 
@@ -468,7 +380,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     match gid with
     | Scope.Global x -> 
       (* Format.eprintf "resolving %a\n" Symbol.pp id; *)
-      x.decl_id <- Some id
+      SymbolResolver.resolve env x.resolved_to id
     | _ -> ()
 
   and check_impl ~positive ctx ~loc ~tyctx b t1 t2 ety =
@@ -913,7 +825,7 @@ let check1_undeclared w f (t, id) =
   | Some ty ->
       if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']*\\|main\\)$") (F.show f) 0) then
         w := Format.((f, Symbol.get_loc id), asprintf "type %a %a." F.pp f (pretty_ty true) (TypeAssignment.unval t)) :: !w;
-      id, { ty ; indexing = Index ([],chose_indexing (Symbol.get_func id) [1] None); availability = Elpi }
+      id, { ty ; TypingEnv.indexing = Index ([],chose_indexing (Symbol.get_func id) [1] None); availability = Elpi }
 
 let check_undeclared ~unknown =
   let w = ref [] in
@@ -925,7 +837,7 @@ let check_undeclared ~unknown =
   end;
   let overloading = F.Map.map (fun (x,_) -> TypeAssignment.Single x) unknown in
   let symbols = F.Map.fold (fun _ (k,v) m -> Symbol.QMap.add k v m) unknown Symbol.QMap.empty in
-  { overloading; symbols }
+  { TypingEnv.overloading; symbols }
 
 let check_pred_name ~types ~loc f =
   let undef = ref F.Map.empty in

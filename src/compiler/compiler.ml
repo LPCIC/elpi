@@ -258,7 +258,7 @@ module Assembled = struct
   type signature = {
     toplevel_macros : macro_declaration;
     kinds : Arity.t F.Map.t;
-    types : Type_checker.typing_env;
+    types : TypingEnv.t;
     type_abbrevs : Type_checker.type_abbrevs;
   }
   [@@deriving show]
@@ -286,7 +286,7 @@ module Assembled = struct
   
   let empty_signature () = {
     kinds = F.Map.empty;
-    types = Type_checker.empty_typing_env;
+    types = TypingEnv.empty;
     type_abbrevs = F.Map.empty;
     toplevel_macros = F.Map.empty;
   }
@@ -1101,9 +1101,9 @@ module Flatten : sig
     Arity.t F.Map.t ->
     Arity.t F.Map.t
   val merge_type_assignments :
-    Type_checker.typing_env ->
-    Type_checker.typing_env ->
-      Type_checker.typing_env
+    TypingEnv.t ->
+    TypingEnv.t ->
+      TypingEnv.t
   val merge_checked_type_abbrevs :
     Type_checker.type_abbrevs ->
     Type_checker.type_abbrevs ->
@@ -1219,7 +1219,7 @@ module Flatten : sig
   let apply_subst_type_abbrevs s l =
     List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
 
-  let merge_type_assignments = Type_checker.merge_envs
+  let merge_type_assignments = TypingEnv.merge_envs
   
   let merge_checked_type_abbrevs m1 m2 =
     let m = F.Map.union (fun k (sk,otherloc as x) (ty,loc) ->
@@ -1311,7 +1311,7 @@ module Check : sig
 
 end = struct
 
-  let check_signature ~flags (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * Type_checker.typing_env =
+  let check_signature ~flags (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * TypingEnv.t =
     let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
     
     let { Flat.kinds; types; type_abbrevs; toplevel_macros } = signature in
@@ -1322,7 +1322,7 @@ end = struct
       List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, scoped_ty) ->
         (* TODO check disjoint from kinds *)
         let loc = scoped_ty.ScopedTypeExpression.loc in
-        let _, _, { Type_checker.ty } = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
+        let _, _, { TypingEnv.ty } = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
         if F.Map.mem name all_type_abbrevs then begin
           let sk, otherloc = F.Map.find name all_type_abbrevs in
           if TypeAssignment.compare_skema sk ty <> 0 then
@@ -1405,7 +1405,7 @@ end = struct
       ) (unknown, []) chr in
     let chr = List.rev chr in
 
-    Type_checker.iter_symbols (fun k { Type_checker.indexing; ty } ->
+    TypingEnv.iter_symbols (fun k { TypingEnv.indexing; ty } ->
       match SymbolMap.get_global_symbol base.Assembled.symbols k with
       | Some c ->
           if Builtins.is_declared base.Assembled.builtins c then
@@ -1415,7 +1415,7 @@ end = struct
 
     let builtins = List.map (fun (BuiltInPredicate.Pred(name,_,_) as p) ->
       let symb =
-        match Type_checker.resolve_name (F.from_string name) new_types with
+        match TypingEnv.resolve_name (F.from_string name) new_types with
         | Single s -> s
         | Overloaded (s1::s2::_) ->
             error ~loc:(Symbol.get_loc s2)
@@ -1423,7 +1423,7 @@ end = struct
         | Overloaded _ -> assert false
         | exception Not_found ->
             error (Format.asprintf "No signature declared for builtin %s" name) in
-      let { Type_checker.indexing; availability } = Type_checker.resolve_symbol symb new_types in
+      let { TypingEnv.indexing; availability } = TypingEnv.resolve_symbol symb new_types in
       begin match availability with
         | Ast.Structured.OCaml _ -> ()
         | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "External predicate with no signature %s" name)
@@ -1431,15 +1431,15 @@ end = struct
       symb, p
     ) builtins in
 
-    Type_checker.iter_names (fun k -> function
+    TypingEnv.iter_names (fun k -> function
       | TypeAssignment.Single _ -> ()
       | Overloaded l ->
-          let l = List.filter (fun x -> Type_checker.(resolve_symbol x signature.types).availability <> Elpi) l in
+          let l = List.filter (fun x -> TypingEnv.(resolve_symbol x signature.types).availability <> Elpi) l in
           let l = List.filter (fun x ->
             match Symbol.get_provenance x with
             | Core | File _ -> false
             | Builtin _ -> true) l in
-          if Type_checker.undup signature.types l |> List.length <> List.length l then
+          if TypingEnv.undup signature.types l |> List.length <> List.length l then
           error ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?")
     ) signature.types;
 
@@ -1540,10 +1540,10 @@ end = struct
 
     let allocate_global_symbol types symb state ~loc s c =
       lookup_global types symb state @@
-        match s with
-        | Some s -> Type_checker.canon types s
+        match SymbolResolver.resolved_to types s with
+        | Some s -> s
         | None -> 
-          match Type_checker.resolve_name c types with
+          match TypingEnv.resolve_name c types with
           | TypeAssignment.Single s -> s
           | TypeAssignment.Overloaded _ ->
               error ~loc ("untyped and non allocated symbol " ^ F.show c)
@@ -1590,13 +1590,13 @@ end = struct
           let y = todbl ctx y in
           D.mkCons x y
       (* globals and builtins *)
-      | Const((Global { decl_id },c,_)) ->
-          let c, t = allocate_global_symbol ~loc:t.loc decl_id c in
+      | Const((Global { resolved_to },c,_)) ->
+          let c, t = allocate_global_symbol ~loc:t.loc resolved_to c in
           if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) []
           else if Builtins.is_declared builtins c then D.mkBuiltin (Host c) []
           else t
-      | App((Global { decl_id },c,_),x,xs) ->
-          let c,_ = allocate_global_symbol ~loc:t.loc decl_id c in
+      | App((Global { resolved_to },c,_),x,xs) ->
+          let c,_ = allocate_global_symbol ~loc:t.loc resolved_to c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
           if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) (x::xs)
@@ -1728,7 +1728,11 @@ end = struct
   let extend1_chr_block flags state ~builtins ~types (symbols,chr) { Ast.Structured.clique; ctx_filter; rules; loc } =
     let allocate_global_symbol state symbols f =
       let symbols = ref symbols in
-      let (c,_) = allocate_global_symbol types symbols state ~loc (Some f) (Symbol.get_func f) in
+      let resolved_to =
+        let r = SymbolResolver.make () in
+        SymbolResolver.resolve types r f;
+        r in
+      let (c,_) = allocate_global_symbol types symbols state ~loc resolved_to (Symbol.get_func f) in
       !symbols, c in
     let symbols, clique = map_acc (allocate_global_symbol state) symbols clique in
     let symbols, ctx_filter = map_acc (allocate_global_symbol state) symbols ctx_filter in
@@ -1758,9 +1762,9 @@ let extend1 flags (state, base) unit =
   (* Format.eprintf "extend %a\n%!" (F.Map.pp (fun _ _ -> ())) types_indexing; *)
   
   let new_defined_symbols, new_indexable =
-    let symbs = Type_checker.all_symbols new_types in
-    symbs |> List.filter_map (fun (symb,m) -> if Type_checker.mem_symbol bsig.types symb then None else Some symb),
-    symbs |> List.filter_map (fun (symb, { Type_checker.indexing } ) -> match indexing with Index(m,i) -> Some (symb,(m,i)) | _ -> None) in
+    let symbs = TypingEnv.all_symbols new_types in
+    symbs |> List.filter_map (fun (symb,m) -> if TypingEnv.mem_symbol bsig.types symb then None else Some symb),
+    symbs |> List.filter_map (fun (symb, { TypingEnv.indexing } ) -> match indexing with Index(m,i) -> Some (symb,(m,i)) | _ -> None) in
 
   let symbols =
     (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
@@ -1972,7 +1976,7 @@ let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~de
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
     let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
-    let _ : Type_checker.typing_env = Type_checker.check_undeclared ~unknown in
+    let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown in
     ()
   end;
   let amap = get_argmap state in
@@ -2124,8 +2128,8 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
       | n -> "type -> " ^ a2k (n-1) in
     Format.fprintf fmt "@[<h>kind %s %s.@]@," (F.show name) (a2k ty))
     signature.kinds;
-  Type_checker.iter_names (fun name sl ->
-    let f s = TypeAssignment.fresh (Type_checker.resolve_symbol s signature.types).ty |> fst in
+    TypingEnv.iter_names (fun name sl ->
+    let f s = TypeAssignment.fresh (TypingEnv.resolve_symbol s signature.types).ty |> fst in
     let tys =
       match sl with
       | TypeAssignment.Single t -> [f t]
@@ -2181,7 +2185,7 @@ let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols; signatu
       | Builtin { variant } -> Some variant
       | _ -> None in
     let c =
-      match Type_checker.resolve_name f signature.types with
+      match TypingEnv.resolve_name f signature.types with
       | (Single s) ->
         SymbolMap.get_global_symbol symbols s
       | (Overloaded l) ->

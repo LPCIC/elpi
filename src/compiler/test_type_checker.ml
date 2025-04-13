@@ -63,8 +63,8 @@ let _ =
   let type_abbrevs = F.Map.empty in
   let kinds = F.Map.empty in
   let types = F.Map.empty, Symbol.QMap.empty in
-  let build_ty_metadata ty : Type_checker.symbol_metadata =
-    {indexing = Type_checker.DontIndex; availability = Elpi_parser.Ast.Structured.Elpi; ty} in
+  let build_ty_metadata ty : TypingEnv.symbol_metadata =
+    {indexing = TypingEnv.DontIndex; availability = Elpi_parser.Ast.Structured.Elpi; ty} in
   let add_ty k v (overloading, symbols) = 
     let k = fs k in
     let symb = Elpi_runtime.Data.Symbol.make_builtin k in
@@ -78,7 +78,7 @@ let _ =
     |> (* apply i:T i:P o:R :- if (P T) (R = tt) (R = ff) *)
     add_ty "apply" (Lam (fs "A", Ty (uv "A" @->> (uv "A" @->> rprop) @-> bool @-> rprop)))
   in
-  let types = Type_checker.Internal.cast types in
+  let types = { TypingEnv.overloading = fst types; symbols = snd types } in
 
   let unknown = F.Map.empty in
   let exp = build_ta rprop in
