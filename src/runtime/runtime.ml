@@ -3109,6 +3109,7 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
        | App(h,x,xs) -> h, x::xs
        | UVar _ | AppUVar _
        | Arg _ | AppArg _ | Discard ->
+          assert false |> ignore;
            error ?loc "The head of a clause cannot be flexible"
        | Lam _ ->
            type_error ?loc "The head of a clause cannot be a lambda abstraction"
@@ -3128,6 +3129,7 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
      claux1 loc get_mode vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ ->
+      assert false |> ignore;
       error ?loc "The head of a clause cannot be flexible"
   | Builtin (c,_) -> raise @@ CannotDeclareClauseForBuiltin(loc,c)
   | (Lam _ | CData _ ) as x ->

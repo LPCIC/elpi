@@ -87,3 +87,7 @@ module CompileTime : sig
 
   val get_clauses : ?check_mut_excl:bool -> depth:int -> constant -> term -> index -> clause Bl.scan
 end
+
+module Indexing : sig
+  val add1clause_runtime : depth:constant -> index -> constant -> clause -> index
+end
