@@ -1,0 +1,13 @@
+% NO
+
+func foo int, int.
+
+func g3.
+g3 :-
+  % Overlapping error
+  pi x\ (pi X\ foo x X :- print "AA") =>
+    pi y\ (pi X\ foo X y :- print "BB") =>
+      std.findall (foo x y) [_].
+
+
+main :- g3.

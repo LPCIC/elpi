@@ -1,3 +1,5 @@
+% OK
+
 func succ int -> int.
 
 succ 3 4 :- true, !, false.
