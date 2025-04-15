@@ -319,7 +319,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   let build_symb (spref, ty) = 
     let op_l = ["gt_";"lt_"; "le_"; "ge_"] in
     let sym_l = List.map (fun x -> spref ^ x) [">";"<"; "=<"; ">="] in
-    let buildLPCode s op = LPCode (Printf.sprintf "pred (%s) i:%s, i:%s.\nX %s Y :- %s X Y." s ty ty s op) in
+    let buildLPCode s op = LPCode (Printf.sprintf "func (%s) %s, %s.\nX %s Y :- %s X Y." s ty ty s op) in
     List.map2 buildLPCode sym_l op_l in
   let symbs = ["", "A"; "i", "int"; "r", "float"; "s", "string"] in
   List.flatten (List.map build_symb symbs) @
