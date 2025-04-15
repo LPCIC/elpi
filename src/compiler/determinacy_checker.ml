@@ -272,6 +272,7 @@ let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya)=
     if is_var then get_var @@ Uvar.get var name
     else match t with Scope.Bound b -> get_ctx @@ BVar.get ctx (name, b) | Global g -> get_con g.resolved_to
   in
+  Format.eprintf "Type of %a at %s is %a@." F.pp name (Scope.show t) pp_dtype det_head;
   (* Format.eprintf "The functionality of %a is %a (its type is %a)@ Full type is %a@." F.pp name pp_dtype det_head
     TypeAssignment.pretty_mut_once_raw (TypeAssignment.deref tya) (MutableOnce.pp (TypeAssignment.pp) ) tya; *)
   det_head
@@ -316,11 +317,11 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
 
   let rec infer ~ctx ~var t : dtype * Good_call.t =
     let rec infer_fold ~was_input ~was_data ~loc ctx d tl =
-      Format.eprintf "Starting infer fold at %a@." Loc.pp loc;
+      Format.eprintf "Starting infer fold at %a with dtype:@[%a@]@." Loc.pp loc pp_dtype d;
       let b = Good_call.init () in
       let rec aux d tl : (dtype * Good_call.t) =
-        Format.eprintf "In recursive call for infer.aux with list [  %a  ], good_call is %a@." (pplist ~boxed:true ScopedTerm.pretty ",  ") tl
-          Good_call.pp b;
+        Format.eprintf "@[<hov 2>In recursive call for infer.aux with head-term@ @[%a@], good_call is %a -- and dtype@ %a@]@." (Format.pp_print_option ScopedTerm.pretty) (List.nth_opt tl 1)
+          Good_call.pp b pp_dtype d;
         match (d, tl) with
         | UVar v, tl -> aux v tl
         | Arrow (_, Variadic, _, t), [] -> (t, b)
@@ -372,7 +373,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
            infer_comma ctx ~loc xs (Det, Good_call.init ())
        | x :: xs -> infer_comma ctx ~loc xs (infer ctx x) *)
     and infer ~was_input ctx ScopedTerm.({ it; ty; loc } as t) : dtype * Good_call.t =
-      Format.eprintf "--> Infer of %a@." ScopedTerm.pretty_ it;
+      Format.eprintf "--> Infer of @[%a@]@." ScopedTerm.pretty_ it;
       match it with
       | ScopedTerm.Const b -> infer_app ~was_input ~loc ctx false ty b []
       | Var (b, xs) -> infer_app ~was_input ~loc ctx true ty b xs
@@ -529,7 +530,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
     let has_top_level_cut = ref false in
     let var = ref var in
     let rec check_app ctx ~loc (d : dtype) ~is_var b tl tm =
-      Format.eprintf "-- Entering check_app with term %a@." ScopedTerm.pretty tm;
+      Format.eprintf "@[<hov 2>-- Entering check_app with term@ @[%a@]@]@." ScopedTerm.pretty tm;
       let d', gc = infer ~ctx ~var:!var tm in
       Format.eprintf "-- Checked term dtype is %a and gc is %a@." pp_dtype d' Good_call.pp gc;
       if Good_call.is_good gc then (
