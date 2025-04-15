@@ -198,6 +198,10 @@ pred mem i:list A, o:A.
 mem [X|_] X.
 mem [_|L] X :- mem L X.
 
+func exists! list A, (pred i:A) ->.
+exists! [X| _] P :- P X, !.
+exists! [_|XS] P :- exists! XS P. 
+
 pred exists i:list A, i:(pred i:A).
 exists [X|_] P :- P X.
 exists [_|L] P :- exists L P.
