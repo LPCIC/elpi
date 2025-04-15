@@ -8,6 +8,8 @@ Requires Menhir 20211230 and OCaml 4.13 or above.
     `map` is functional if the higher order argument also is. Functional
     predicates (with preconditions) can be miscalled, in that case they behave
     as relations.
+  - The matching operator used for input arguments is now also available as a
+    builtin predicate named `pattern_match`.
 
 - API:
   - New `Utils.ground_check` and `Utils.cmp_term` (already available as builtins)

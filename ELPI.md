@@ -34,7 +34,7 @@ is very welcome. Questions or feature requests are welcome as well.
   semantics of Prolog
 
 - [Determinacy checking](#determinacy-checking) ensures that predicates marked
-  as deterministic behave as single-valued relations and that their outputs
+  as functional behave as single-valued relations and that their outputs
   have the expected determinacy.
 
 - [Syntactic constraints](#syntactic-constraints) are goals suspended on
@@ -466,9 +466,11 @@ mode (foo i o).
 ## Determinacy checking
 
 Determinacy is the property of a predicate to produce at most one result. This
-means that the predicate behaves as a single-valued relation or a function. In
-practical terms, the call does not generate additional choice points. The
-signature of predicates defines their behavior with respect to determinacy.
+means that the predicate behaves as a single-valued relation or a function.
+Operationally, a the call to a functional predicate does not generate additional
+choice points.
+
+The signature of predicates defines their behavior with respect to determinacy.
 
 The syntax:
 
@@ -489,9 +491,10 @@ func id (func A -> B), A -> B.
 id P X Y :- P X Y.
 ```
 
-`id` is a function that takes as input an (anonymous) binary function from `A` to `B`, a second input of type `A`, and produces an output of type `B`.
+`id` is a function that takes as input an (anonymous) binary function from
+`A` to `B`, a second input of type `A`, and produces an output of type `B`.
 
-We also accepts the syntax
+We also accepts the syntax:
 
 ```prolog
 func PRED_NAME? COMMA_SEPARATED(types*).
@@ -511,8 +514,14 @@ For example, the signature of the `is` predicate can be written as:
 :functional pred (is) o:A, i:A.
 ```
 
-We can observe that a function is (mathematically) a relation, but the converse
-is not true. This implies that we can define a function $\subseteq : D \to D \to
+Internally the keyword `fprop`, akin to `prop`, is used in the type of symbols
+that are functional predicate (it may show up in error messages).
+
+The static checker is built around a notion of "subtyping" since a function is
+(mathematically) a relation, but the converse is not true. We say that a function
+is stronger than a relation.
+
+Signatures a compared using the function $\subseteq : D \to D \to
 bool$, where $D$ is the type of signatures. In a call like $d_1 \subseteq d_2$,
 the result is true if $d_1$ is a signature that is stronger than or equal to
 $d_2$ (equivalently, $d_2$ is weaker than or equal to $d_1$).
@@ -589,7 +598,6 @@ result: `L = [pizza,gelato]`. However, the call `map [mario,anna] likes L` is
 not deterministic because it is "wrongly" called (`likes` is not a binary
 function). This call produces an initial result `L = [pizza,gelato]` but
 leaves one additional choice point where `L` is assigned to `[pasta,gelato]`.
-
 
 
 ## Syntactic constraints
