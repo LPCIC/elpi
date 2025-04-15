@@ -929,7 +929,7 @@ let deoptimize_uv_w_args = function
    
 *)
 
-let rec move ~argsdepth e ?avoid ~from ~to_ t =
+let rec move ~argsdepth (e:env) ?avoid ~from ~to_ t =
 (* TODO: to disable occur_check add something like: let avoid = None in *)
  let delta = from - to_ in
  let rc =
@@ -3134,7 +3134,9 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   | Builtin (c,_) -> raise @@ CannotDeclareClauseForBuiltin(loc,c)
   | (Lam _ | CData _ ) as x ->
      type_error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
-  | UVar _ | AppUVar _ -> error ?loc "Flexible hypothetical clause"
+  | UVar _ | AppUVar _ -> 
+    assert false |> ignore;
+    error ?loc "Flexible hypothetical clause"
   | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause"
   end]
 
