@@ -33,7 +33,7 @@ jobs:
         - run: opam pin --ignore-constraints-on elpi add rocq-elpi https://github.com/LPCIC/coq-elpi.git#fix-elpi-3.0
         - run: opam pin --ignore-constraints-on elpi add coq-elpi https://github.com/LPCIC/coq-elpi.git#fix-elpi-3.0
         - run: opam pin --ignore-constraints-on elpi add rocq-stdlib https://github.com/rocq-prover/stdlib.git#master
-        - run: opam pin --ignore-constraints-on elpi add coq-hierarchy-builder https://github.com/math-comp/hierarchy-builder.git#elpi-3.0
+        - run: opam pin --ignore-constraints-on elpi add coq-hierarchy-builder https://github.com/gares/hierarchy-builder.git#elpi-3.0
         - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-ssreflect https://github.com/math-comp/math-comp.git#master
         - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-fingroup https://github.com/math-comp/math-comp.git#master
         - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-algebra https://github.com/math-comp/math-comp.git#master
