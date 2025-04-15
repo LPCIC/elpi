@@ -4349,4 +4349,5 @@ module CompileTime = struct
   let add_to_index = add_to_index
   let clausify1 = Clausify.clausify1  
   let get_clauses = get_clauses
+  let fresh_uvar () = oref C.dummy
 end

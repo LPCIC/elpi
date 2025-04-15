@@ -86,6 +86,8 @@ module CompileTime : sig
 
 
   val get_clauses : ?check_mut_excl:bool -> depth:int -> constant -> term -> index -> clause Bl.scan
+
+  val fresh_uvar : unit -> uvar_body
 end
 
 module Indexing : sig

@@ -775,6 +775,7 @@ end
 (* This term is hashconsed here *)
 let dummy = App (-1,Const (-1),[])
 
+(* This is the one uvar used for _ in CHR rules blockers *)
 let dummy_uvar_body = { contents = dummy; uid_private = 0 }
 
 module CHR : sig
