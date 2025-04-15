@@ -771,6 +771,13 @@ func filter list A, (func A) -> list A.
 filter []    _ [].
 filter [X|L] P R :- if (P X) (R = X :: L1) (R = L1), filter L P L1.
 
+:index (1)
+func partition list A, (pred i:A) -> list A, list A.
+partition [] _ [] [].
+partition [X|XS] P [X|R] L :- P X, !, partition XS P R L.
+partition [X|XS] P R [X|L] :- partition XS P R L.
+
+
 func zip list A, list B -> list (pair A B).
 zip [_|_] [] _ :- fatal-error "zip on lists of different length".
 zip [] [_|_] _ :- fatal-error "zip on lists of different length".
