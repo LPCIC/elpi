@@ -187,52 +187,52 @@ external func le_ A, A.
 % [ge_ X Y] checks if X >= Y. Works for string, int and float
 external func ge_ A, A.
 
-pred (>) i:A, i:A.
+func (>) A, A.
 X > Y :- gt_ X Y.
 
-pred (<) i:A, i:A.
+func (<) A, A.
 X < Y :- lt_ X Y.
 
-pred (=<) i:A, i:A.
+func (=<) A, A.
 X =< Y :- le_ X Y.
 
-pred (>=) i:A, i:A.
+func (>=) A, A.
 X >= Y :- ge_ X Y.
 
-pred (i>) i:int, i:int.
+func (i>) int, int.
 X i> Y :- gt_ X Y.
 
-pred (i<) i:int, i:int.
+func (i<) int, int.
 X i< Y :- lt_ X Y.
 
-pred (i=<) i:int, i:int.
+func (i=<) int, int.
 X i=< Y :- le_ X Y.
 
-pred (i>=) i:int, i:int.
+func (i>=) int, int.
 X i>= Y :- ge_ X Y.
 
-pred (r>) i:float, i:float.
+func (r>) float, float.
 X r> Y :- gt_ X Y.
 
-pred (r<) i:float, i:float.
+func (r<) float, float.
 X r< Y :- lt_ X Y.
 
-pred (r=<) i:float, i:float.
+func (r=<) float, float.
 X r=< Y :- le_ X Y.
 
-pred (r>=) i:float, i:float.
+func (r>=) float, float.
 X r>= Y :- ge_ X Y.
 
-pred (s>) i:string, i:string.
+func (s>) string, string.
 X s> Y :- gt_ X Y.
 
-pred (s<) i:string, i:string.
+func (s<) string, string.
 X s< Y :- lt_ X Y.
 
-pred (s=<) i:string, i:string.
+func (s=<) string, string.
 X s=< Y :- le_ X Y.
 
-pred (s>=) i:string, i:string.
+func (s>=) string, string.
 X s>= Y :- ge_ X Y.
 
 %  -- Standard data types (supported in the FFI) --
