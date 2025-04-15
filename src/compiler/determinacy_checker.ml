@@ -85,7 +85,7 @@ let rec pp_dtype fmt = function
 type t = (TypeAssignment.skema * Loc.t) F.Map.t [@@deriving show, ord]
 
 let arr m ~v a b = Arrow (m, v, a, b)
-let is_exp = function Exp _ -> true | _ -> false
+let rec is_exp = function Exp _ -> true | UVar e -> is_exp e | _ -> false
 let is_uvar = function UVar _ -> true | _ -> false
 let choose_variadic v full right = if v = Structured.Variadic then full else right
 
@@ -316,6 +316,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
 
   let rec infer ~ctx ~var t : dtype * Good_call.t =
     let rec infer_fold ~was_input ~was_data ~loc ctx d tl =
+      Format.eprintf "Starting infer fold at %a@." Loc.pp loc;
       let b = Good_call.init () in
       let rec aux d tl : (dtype * Good_call.t) =
         Format.eprintf "In recursive call for infer.aux with list [  %a  ], good_call is %a@." (pplist ~boxed:true ScopedTerm.pretty ",  ") tl
@@ -332,42 +333,25 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
                let dy, b' = infer ~was_input:true ctx h in
                (* Format.eprintf "@[<hov 2>After call to deduce in aux %a, its determinacy is %a and gc:%a; Expected is %a@ at %a.@]@."
                  ScopedTerm.pretty h pp_dtype dy Good_call.pp b' pp_dtype l Loc.pp h.loc; *)
-               if Good_call.is_wrong b' then
-                 (* If the recursive call is wrong, we stop and return bottom *)
-                 (
-                  Format.eprintf "@[<hov 2>Inference of %a gives a wrong result.@ (bool is %b) @]@." ScopedTerm.pretty h (Good_call.is_polymorphic b');
-                  (* TODO: se sono exp, allora i tipi fissati dal costruttore devono fare match perfetto sul
-                    tipo del termine che sto considerando, altrimenti basta un (<=)
-                  *)
-                  if (is_uvar l || (Good_call.is_polymorphic b')) && compare_dtype l (Aux.maximize l ~loc) == 0 then 
-                    Good_call.set_good b
-                  else 
-                    Good_call.set b b'
-                 )
+                 Format.eprintf "end infer.aux for term %a with b':%a and not ((dy <<= l) ~loc):%b and was_data:%b@." ScopedTerm.pretty h Good_call.pp b' (not ((dy <<= l) ~loc)) was_data;
+               if Good_call.is_wrong b' then(
+                (* If the recursive call is wrong, we stop and return bottom *)
+                if compare_dtype l (Aux.maximize l ~loc) == 0 then 
+                  if was_data || is_exp l then
+                    if (is_uvar l || (Good_call.is_polymorphic b')) then Good_call.set_good b 
+                    else Good_call.set b b'
+                  else Good_call.set_good b
+                else 
+                  Good_call.set b b')
                else if not ((dy <<= l) ~loc) then (
                  (* If preconditions are not satisfied, we stop and return bottom *)
                  Good_call.set_wrong ~p:(is_uvar l) b ~exp:l ~found:dy h;
                  Format.eprintf "Invalid determinacy set b to wrong (%a)@." Good_call.pp b));
             aux (choose_variadic v d r) tl (* The recursive call is correct *)
         | Arrow (Output, v, l, r), hd :: tl ->
-            Format.eprintf "In was_input:%b and was_data:%b@." was_input was_data;
-            if was_data then (
-                Format.eprintf "infer.aux in Input branch with dtype:%a and t:%a@." pp_dtype l ScopedTerm.pretty hd;
-              let dy, b' = infer ~was_input ctx hd in
-              (* Format.eprintf "In output of infer, with term %a and type %a with expectation %a -> %b@." *)
-                (* ScopedTerm.pretty hd pp_dtype dy pp_dtype l *)
-                (* ((dy <<= l) ~loc); *)
-              if Good_call.is_wrong b' then (
-                (* If the recursive call is wrong, we stop and return bottom *)
-                if (is_uvar l || (Good_call.is_polymorphic b')) && compare_dtype l (Aux.maximize l ~loc) == 0 then 
-                    Good_call.set_good b
-                  else 
-                    Good_call.set b b')
-              else if not ((dy <<= l) ~loc) then (
-                (* If preconditions are not satisfied, we stop and return bottom *)
-                Format.eprintf "Setting is wrong 2@.";
-                Good_call.set_wrong ~p:(is_uvar l) b ~exp:l ~found:dy hd));
-            Format.eprintf "In output mode for term %a with bool %a@." ScopedTerm.pretty hd Good_call.pp b;
+            if was_data then
+              aux (Arrow (Input, v, l, r)) (hd :: tl)
+            else
             aux (choose_variadic v d r) tl
         | (BVar _ | Any), _ -> (d, Good_call.init ())
         | (Det | Rel | Exp _), _ :: _ ->
@@ -378,7 +362,9 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
       aux d tl
     and infer_app ctx ~loc is_var ty s tl =
       let was_data = is_exp (Compilation.type_ass_2func_mut ~loc env ty) in
-      infer_fold ~was_data ~loc ctx (get_dtype ~env ~ctx ~var ~loc ~is_var s) tl
+      Format.eprintf "Is_exp: %b@." was_data;
+      let dtype = get_dtype ~env ~ctx ~var ~loc ~is_var s in
+      infer_fold ~was_data ~loc ctx dtype tl
     (* and infer_comma ctx ~loc args d =
        match args with
        | [] -> d

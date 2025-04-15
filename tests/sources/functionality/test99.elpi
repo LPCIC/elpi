@@ -1,0 +1,7 @@
+pred p.
+
+func f.
+
+f :- std.once (p, p).
+
+main.
