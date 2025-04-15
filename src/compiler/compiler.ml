@@ -1694,7 +1694,7 @@ end = struct
         | Builtin (Cut, []) -> ()
         | Builtin (Pi, [Lam b]) -> aux ~depth:(depth+1) index b
         | Builtin (Sigma, [Lam b]) ->
-          let uvar = UVar(D.dummy_uvar_body,depth,0) in 
+          let uvar = UVar(R.CompileTime.fresh_uvar (),depth,0) in 
           let b = Runtime.subst ~depth [uvar] b in
           aux ~depth:(depth+1) index b
         | Builtin (Impl, [h; l]) ->
@@ -1733,8 +1733,8 @@ end = struct
         | Const x -> t
         | Lam t -> Lam (move t)
         | (Nil | CData _ | Discard | AppUVar _ | UVar _) -> t
-        | Arg _ -> UVar (D.dummy_uvar_body,depth,0)
-        | AppArg (hd, args) -> AppUVar (D.dummy_uvar_body, hd, List.map move args)
+        | Arg _ -> UVar (R.CompileTime.fresh_uvar (),depth,0)
+        | AppArg (hd, args) -> AppUVar (R.CompileTime.fresh_uvar (), hd, List.map move args)
         | Cons (a, b) -> Cons (move a, move b)
       in
       check_overlaps ~loc cl p cl.args index amap;
