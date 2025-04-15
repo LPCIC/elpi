@@ -242,7 +242,7 @@ let () =
       (*81*) mode_err 13 6; Success; mode_err 15 6; Success; mode_err 14 26;    (*85*)
       (*86*) Success; Success; Success; Success; Success;                       (*90*)
       (*91*) det_check 14 5; Success; Success; det_check 14 5; Success;         (*95*)
-      (*96*) mut_excl 6 6
+      (*96*) mut_excl 6 6; mut_excl 6 6; Success
     |] in
   let ignore = [7;8;9;10;27] in
   for i = 0 to Array.length status - 1 do
