@@ -1,23 +1,49 @@
-# UNRELEASED
+# UNRELEASED v3.0
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Language:
+  - A **functional predicate** is a predicate that does not leave choice points
+    for any of its calls. A functional predicate can have preconditions, eg
+    `map` is functional if the higher order argument also is. Functional
+    predicates (with preconditions) can be miscalled, in that case they behave
+    as relations.
 
 - API:
   - New `Utils.ground_check` and `Utils.cmp_term` (already available as builtins)
+  - Change `Constants.declare_global_symbol` takes an optional `variant` argument.
 
 - Parser:
-  - A **functional predicate** is a predicate that does not create choice points for any of its calls.
-  - A functional predicate is declared with the signature:  
-    `func pred_name(comma_separated(types_of_inputs)*) -> (comma_separated(types_of_outputs*))`
-  - If the list of output types is empty, the `->` is optional.  
-  - Example: The type of `map` is  
-    `func map list A, (func A -> B) -> list B`   
-    This indicates that if the higher-order predicate passed to map is a function, then `map` is functional.
-  - `fprop` is a synonym for `prop` in type checking but is used to represent **functional predicates**, whereas `prop` captures **relational predicates**.
-  - The `:functional` keyword before `pred` is retained to flag the predicate as functional (equivalent to `func ...`).
+  - The `fprop` keyword is akin to `prop` but signals the predicate is functional
+  - The `:functional` attribute flags `pred`icates as functional (equivalent to `func ...`).
+  - Dedicated syntac for functional signatures:  
+    `func name(comma_sep(types_of_inputs)* [-> comma_sep(types_of_outputs*)]`.
+    Example: The signature of `map` is `func map list A, (func A -> B) -> list B`
+  - New `[external] symbol name : type [= "variant"]` is a synonim of `type` and can be
+    used to ascribe a type to a symbol. External symbols must be matched by
+    a declaration in OCaml, and when the symbol is overloaded the variant
+    label is used for the matching (additionally to the name).
 
 - Compiler:
-  - The `determinacy_checker` module is used to statically analyze whether a predicate labeled as functional adheres to its signature. If it does not, a **fatal error** is returned.
-  - The elaboration of **spilling** has been moved to a dedicated file.
+  - The type checker is in charge of resolving all symbols, overloaded or not,
+    to a `Symbol.t` datatype that gathers the `Loc.t` where it is defined
+    (and it can be defined at multiple places, e.g. OCaml + Elpi, or twice
+    in Elpi). This data can be used to implement jump-to-def and the like in
+    modern UIs.
+  - The `determinacy_checker` statically analyzes whether a predicate labeled
+    as functional adheres to its signature.
+  - The elaboration of `{spilling}` has been moved to a dedicated file.
+  - CHR rules are typechecked (finally)
+  - Macros are typechecked. This paves the way to make them live in name
+    spaces and possibly globally available, but it is not implemented yet.
 
+- Runtime:
+  - Builtin predicates now have a dedicated node when they are part of the
+    Elpi language, i.e. Cut, And, Impl, RImpl, Pi, Sigma, Eq, Match, Findall,
+    Delay.
+  - Symbols part of the Elpi language (other than the builtins) also have
+    a dedicated status, i.e. As, Uv, ECons, ENil although As and Uv do not a
+    dedicated node in the AST, while ENil and ECons do have.
 
 # v2.0.7 (January 2025)
 
