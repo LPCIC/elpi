@@ -1622,7 +1622,7 @@ end = struct
   let t  = todbl (depth,ctx) t in
   (!symb, !amap), t
 
-  let check_mut_excl pred_info index_original =
+  let check_mut_excl pred_info index_original cl p amap =
     let get_fresh_loc =
       let n = ref 0 in
       fun loc -> 
@@ -1643,7 +1643,7 @@ end = struct
           (pplist to_str " ") overlaps) in
 
     (* Builds a query for the predicate p with args args *)
-    let rec hd_query ~loc p args =
+    let hd_query ~loc p args =
       let mode = modes p in
       let rec mkpats args mode =
         match args, mode with
@@ -1686,13 +1686,15 @@ end = struct
     (* Inspect the a local premise. If a local clause is found
       it is added to the index and it check_clause is launched on it 
     *)
-    let rec check_local ~loc index amap (t : term) : unit =
+    let rec check_local mv ~depth ~loc ~lcs index amap (t : term) : unit =
+      let t = mv t in
+      (* let t = R.hmove ~from:depth ~to_:(depth+lcs) t in *)
       let rec aux ~depth index t =
         match t with
         | Builtin (Cut, []) -> ()
         | Builtin (Pi, [Lam b]) -> aux ~depth:(depth+1) index b
         | Builtin (Sigma, [Lam b]) ->
-          let uvar = Arg(depth,0) in 
+          let uvar = UVar(D.dummy_uvar_body,depth,0) in 
           let b = Runtime.subst ~depth [uvar] b in
           aux ~depth:(depth+1) index b
         | Builtin (Impl, [h; l]) ->
@@ -1704,14 +1706,14 @@ end = struct
                 with D.CannotDeclareClauseForBuiltin(loc,_c) ->
                   error ?loc ("Declaring a clause for built in predicate")
                 in
-              if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
+
               (* Format.eprintf "Adding in index with time is %d@." index.time; *)
               let index = R.Indexing.add1clause_runtime ~depth index p cl in
               (* Format.eprintf "Index is@ %a@." pp_index index;  *)
               begin
                 match get_opt p with
                 | Some {is_det = Ast.Structured.Function} -> 
-                  check_clause ~loc:fresh_loc index cl p amap
+                  check_clause ~depth ~loc:fresh_loc ~lcs:morelcs index cl p amap
                 | _ -> () 
               end;
               aux ~depth index l
@@ -1719,17 +1721,33 @@ end = struct
             | CompileError _ as e -> raise e
             (* TODO: this horrible catchall is for clause with flex head... *)
             | _ -> aux ~depth index l end
-        | Builtin (And, l) -> List.iter (aux ~depth index) l
+        | Builtin (And, l) -> 
+            List.iter (aux ~depth index) l
         | _ -> () (* TODO: missing cases *)
       in
-      aux ~depth:0 index t 
-    and check_clause ~loc index cl p amap =
+      aux ~depth index t 
+    and check_clause ~depth ~loc ~lcs index cl p amap =
+      let rec move t = match t with
+        | Builtin (x, xs) -> Builtin (x, List.map move xs) 
+        | App (h,x,xs) -> App (h, move x, List.map move xs)
+        | Const x -> t
+        | Lam t -> Lam (move t)
+        | (Nil | CData _ | Discard | AppUVar _ | UVar _) -> t
+        | Arg _ -> UVar (D.dummy_uvar_body,depth,0)
+        | AppArg (hd, args) -> AppUVar (D.dummy_uvar_body, hd, List.map move args)
+        | Cons (a, b) -> Cons (move a, move b)
+      in
       check_overlaps ~loc cl p cl.args index amap;
-      List.iter (check_local ~loc index amap) cl.hyps
+      let mv t = 
+        (* Format.eprintf "@[<hov 2>Moving term@ %a@ from %d to %d at@ %a@]@." pp_term t cl.depth depth Loc.pp loc; *)
+        (* let env () = Array.make cl.vars D.dummy in *)
+        (* R.move ~argsdepth:depth ~from:cl.depth ~to_:depth (env ()) t in *)
+        move t in
+      List.iter (check_local mv ~loc ~depth ~lcs index amap) cl.hyps
     in
 
     let index = {index_original with time = 0} in
-    check_clause index
+    check_clause ~lcs:0 ~depth:0 index cl p amap
 
   let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let t = if needs_spilling then Spilling.main ~types t else t in
