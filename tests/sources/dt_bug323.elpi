@@ -1,0 +1,11 @@
+kind term type.
+type prod string -> term -> term.
+
+:index (3)
+pred f o:term, o:int.
+f (prod _ _) 1 :- print "AA".
+f X 2 :- print "BB".
+
+main :-
+  std.findall (f _ _) L, 
+  std.assert! ({std.length L} = 2) "Mh".
