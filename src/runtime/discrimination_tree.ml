@@ -205,20 +205,21 @@ module Trie = struct
 
   let rec pp (ppelem : Format.formatter -> 'a -> unit) (fmt : Format.formatter)
       (Node { data; other; listTailVariable; map } : 'a t) : unit =
-    Format.fprintf fmt "@[<v>[values:{";
+    Format.fprintf fmt "@[<v>[@[<hov 2>values:{@ ";
     pplist ppelem "; " fmt data;
-    Format.fprintf fmt "}@ other:{";
+    Format.fprintf fmt "}@ @]@ @[<hov 2> other:{@ ";
     (match other with None -> () | Some m -> pp ppelem fmt m);
-    Format.fprintf fmt "}@ listTailVariable:{";
+    Format.fprintf fmt "}@ @]@ @[<hov 2> listTailVariable:{@ ";
     (match listTailVariable with None -> () | Some m -> pp ppelem fmt m);
-    Format.fprintf fmt "}@ key:{@[<hov 2>";
+    Format.fprintf fmt "}@ @]@ @[<hov 2> key:{@ @[<hov 2>";
     Ptmap.to_list map
     |> pplist
          (fun fmt (k, v) ->
-           pp_cell fmt k;
-           pp ppelem fmt v)
+          Format.fprintf fmt "@[<hov 2> %a@ %a@]"
+           pp_cell k
+           (pp ppelem) v)
          ";@ " fmt;
-    Format.fprintf fmt "@]}]@]"
+    Format.fprintf fmt "@]}@]]@]"
 
   let show (fmt : Format.formatter -> 'a -> unit) (n : 'a t) : string =
     let b = Buffer.create 22 in
