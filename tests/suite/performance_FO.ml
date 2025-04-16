@@ -99,11 +99,12 @@ let () = declare "dt_off"
   ~description:"(without) discrimination_tree indexing"
   ()
 
-  let () = declare "dt_bench"
+let () = declare "dt_bench"
   ~source_elpi:"dt_bench.elpi"
   ~description:"discrimination_tree on trees"
   ()
-  let () = declare "dt_order"
+
+let () = declare "dt_order"
   ~source_elpi:"dt_order.elpi"
   ~description:"discrimination_tree grafting"
   ()

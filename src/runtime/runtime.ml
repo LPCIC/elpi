@@ -2975,7 +2975,10 @@ let get_clauses ?(check_mut_excl = false) ~depth predicate goal { idx = m } =
           Discrimination_tree.Path.pp path
           (pplist pp_int ";") arg_depths
           (*Discrimination_tree.(pp (fun fmt x -> pp_string fmt "+")) args_idx*)];
+        (* Format.eprintf "@[<hov 2>Path is@ @[%a@]]@." Discrimination_tree.Path.pp path;
+        Format.eprintf "@[<hov 2>Discrimination tree is@ @[%a@]@." (Discrimination_tree.pp pp_clause) args_idx; *)
         let candidates = Discrimination_tree.retrieve cmp_timestamp path args_idx in 
+        (* Format.eprintf "Candidates len is %d -->@ @[[%a]@]@." (Bl.length candidates) (pplist pp_clause ",@.") (Bl.to_list candidates); *)
           [%spy "dev:disc-tree:candidates" ~rid 
             pp_int (Bl.length candidates)];
         candidates
