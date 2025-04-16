@@ -1302,7 +1302,7 @@ let copy_heap_drop_csts ~depth ?keep_if_outside x =
         r' in
   let alloc_copy r =
     let r' = alloc_copy r in
-    Format.eprintf "  copy uv %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r,0,0)) (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r',0,0));
+    (* Format.eprintf "  copy uv %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r,0,0)) (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r',0,0)); *)
     r' in
   let rec maux depth x =
   match x with
@@ -1340,7 +1340,7 @@ let copy_heap_drop_csts ~depth ?keep_if_outside x =
      AppUVar (r',vardepth,smart_map2 maux depth args)
     in
     let x' = maux depth x in
-    Format.eprintf "copy %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) x (uppterm depth [] ~argsdepth:0 empty_env) x';
+    (* Format.eprintf "copy %a -> %a\n%!" (uppterm depth [] ~argsdepth:0 empty_env) x (uppterm depth [] ~argsdepth:0 empty_env) x'; *)
     x', !m
 
 (* }}} *)
@@ -2975,7 +2975,10 @@ let get_clauses ~depth predicate goal { index = { idx = m } } =
           Discrimination_tree.Path.pp path
           (pplist pp_int ";") arg_depths
           (*Discrimination_tree.(pp (fun fmt x -> pp_string fmt "+")) args_idx*)];
+        (* Format.eprintf "@[<hov 2>Path is@ @[%a@]]@." Discrimination_tree.Path.pp path;
+        Format.eprintf "@[<hov 2>Discrimination tree is@ @[%a@]@." (Discrimination_tree.pp pp_clause) args_idx; *)
         let candidates = Discrimination_tree.retrieve cmp_timestamp path args_idx in 
+        (* Format.eprintf "Candidates len is %d -->@ @[[%a]@]@." (Bl.length candidates) (pplist pp_clause ",@.") (Bl.to_list candidates); *)
           [%spy "dev:disc-tree:candidates" ~rid 
             pp_int (Bl.length candidates)];
         candidates
