@@ -253,7 +253,7 @@
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type other.doomed int -&gt; prop.</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 </pre></div>
@@ -269,7 +269,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/ackermann.elpi
@@ -304,7 +304,7 @@
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi&quot;, line 24, column 38, characters 794-795:</span>
 <span class="go">V is linear: name it _V (discard) or V_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
@@ -476,7 +476,7 @@
 
 <span class="go">Constraints:</span>
 <span class="go"> {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */</span>
-<span class="go"> {c0 c1} : term c1 X13, term c0 X13 ?- term (X14 c1 c0) (arr X13 (arr X13 X6))  /* suspended on X14 */</span>
+<span class="go"> {c0 c1} : term c1 X13, term c0 X13 ?- term (X14 c1 c0) (arr X13 (arr X13 X7))  /* suspended on X14 */</span>
 
 <span class="go">State:</span>
 </pre></div>
@@ -510,7 +510,7 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
@@ -1299,7 +1299,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -1447,7 +1447,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -1468,7 +1468,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 <span class="go">Fatal error:</span>
 <span class="go">Unification problem outside the pattern fragment. ((Data.Term.App (f, (Data.Term.Const x), [])) == (Data.Term.AppUVar (</span>
 <span class="go">   { Data.Term.contents = please extend this printer; uid_private = 2 }, 0,</span>
@@ -1544,9 +1544,9 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -1783,7 +1783,7 @@
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/even-odd.elpi&quot;, line 19, column 41, characters 436-437:</span>
 <span class="go">Z is linear: name it _Z (discard) or Z_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
@@ -1807,7 +1807,7 @@
 <span class="linenos"> 6</span>
 <span class="linenos"> 7</span><span class="kd">type</span><span class="w"> </span><span class="nf">test1, test2, test3, test4, test5</span><span class="w"> </span><span class="kt">prop</span>.
 <span class="linenos"> 8</span>
-<span class="linenos"> 9</span>test1<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>std.findall<span class="w"> </span>(p<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span>p<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span>p<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>p<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">2</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos"> 9</span>test1<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>std.findall<span class="w"> </span>(p<span class="w"> </span><span class="nv">_A</span><span class="w"> </span><span class="nv">_B</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span>p<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span>p<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>p<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">2</span><span class="kd">]</span><span class="o">.</span>
 <span class="linenos">10</span>test2<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>std.findall<span class="w"> </span>(p<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span>p<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span>p<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>p<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">2</span><span class="kd">],</span><span class="w"> </span>not(var<span class="w"> </span><span class="nv">X</span><span class="o">).</span>
 <span class="linenos">11</span>test3<span class="w"> </span><span class="kd">:-</span>
 <span class="linenos">12</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">q</span>\
@@ -1821,7 +1821,7 @@
 <span class="linenos">20</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">q</span>\
 <span class="linenos">21</span><span class="w">    </span>q<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="kd">=&gt;</span>
 <span class="linenos">22</span><span class="w">    </span>q<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="kd">=&gt;</span>
-<span class="linenos">23</span><span class="w">      </span>(std.findall<span class="w"> </span><span class="o">(</span>q<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span>q<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>q<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nv">Y</span><span class="kd">],</span><span class="w"> </span>not<span class="o">(</span>same_var<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="o">)).</span>
+<span class="linenos">23</span><span class="w">      </span>(std.findall<span class="w"> </span><span class="o">(</span>q<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span>q<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>q<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nv">Y</span><span class="kd">],</span><span class="w"> </span><span class="o">(</span>same_var<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="o">)).</span>
 <span class="linenos">24</span><span class="c">% this is super tricky but hard to implement differently.</span>
 <span class="linenos">25</span><span class="c">% q _ _ -&gt; q A^1 B^1</span>
 <span class="linenos">26</span><span class="c">% q A^1 B^1 == q 1 X0 --restrict--&gt; X0 := X1,  A1 := _\X1</span>
@@ -1831,7 +1831,7 @@
 <span class="linenos">30</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">q</span>\
 <span class="linenos">31</span><span class="w">    </span>q<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="kd">=&gt;</span>
 <span class="linenos">32</span><span class="w">    </span>q<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="kd">=&gt;</span>
-<span class="linenos">33</span><span class="w">      </span>(std.findall<span class="w"> </span><span class="o">(</span>q<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">Z</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span>q<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>q<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nv">Y</span><span class="kd">],</span><span class="w"> </span>same_var<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="o">).</span>
+<span class="linenos">33</span><span class="w">      </span>(dprint<span class="w"> </span><span class="nv">A</span><span class="kd">,</span><span class="w"> </span>std.spy<span class="w"> </span><span class="o">(</span>std.findall<span class="w"> </span><span class="o">(</span>q<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">_Z</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span>q<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>q<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nv">Y</span><span class="kd">]</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>same_var<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="o">).</span>
 <span class="linenos">34</span><span class="c">% this works because there is no restriction</span>
 <span class="linenos">35</span>
 <span class="linenos">36</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>test1<span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="mi">1</span><span class="kd">,</span>
@@ -1845,18 +1845,15 @@
 <span class="go">2</span>
 <span class="go">3</span>
 <span class="go">4</span>
+<span class="go">.X0</span>
+<span class="go">----&lt;&lt;---- enter:  std.findall (c0 _ _) [c0 2 X1, c0 1 X2]</span>
+<span class="go">----&gt;&gt;---- exit:  std.findall (c0 _ _) [c0 2 X0, c0 1 X0]</span>
 <span class="go">5</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
-<span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi&quot;, line 9, column 24, characters 134-135:</span>
-<span class="go">A is linear: name it _A (discard) or A_ (fresh variable)</span>
-<span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi&quot;, line 9, column 26, characters 136-137:</span>
-<span class="go">B is linear: name it _B (discard) or B_ (fresh variable)</span>
-<span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi&quot;, line 33, column 24, characters 711-712:</span>
-<span class="go">Z is linear: name it _Z (discard) or Z_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
@@ -1881,7 +1878,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -1903,7 +1900,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -1925,7 +1922,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -1980,7 +1977,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -2003,7 +2000,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.001</span>
+<span class="go">Typechecking time: 0.002</span>
 
 <span class="go">Success:</span>
 
@@ -4450,7 +4447,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.819</span>
+<span class="go">Time: 1.818</span>
 
 <span class="go">Constraints:</span>
 
@@ -4526,7 +4523,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -4602,7 +4599,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.319</span>
+<span class="go">Time: 0.313</span>
 
 <span class="go">Constraints:</span>
 
@@ -5042,7 +5039,7 @@
 <span class="linenos">30</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.338270 + 0.059642 + 0.952688</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.352521 + 0.057215 + 0.963717</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -5053,7 +5050,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.577</span>
+<span class="go">Time: 2.599</span>
 
 <span class="go">Constraints:</span>
 
@@ -5116,10 +5113,10 @@
 <span class="linenos">51</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.859857 + 3.225199 + 0.388670</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.478120 + 3.027189 + 0.347900</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -5127,7 +5124,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 10.480</span>
+<span class="go">Time: 9.860</span>
 
 <span class="go">Constraints:</span>
 
@@ -5185,7 +5182,7 @@
 <span class="linenos">46</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.890797 + 2.904576 + 0.229280</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.811764 + 2.831437 + 0.233147</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
@@ -5196,7 +5193,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 9.031</span>
+<span class="go">Time: 8.882</span>
 
 <span class="go">Constraints:</span>
 
@@ -5289,7 +5286,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -5377,7 +5374,7 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
@@ -5507,7 +5504,7 @@
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi&quot;, line 9, column 0, characters 101-102:</span>
 <span class="go">X is linear: name it _X (discard) or X_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
@@ -5612,7 +5609,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -5663,7 +5660,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -5691,7 +5688,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -5727,7 +5724,7 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
@@ -6268,7 +6265,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.651</span>
+<span class="go">Time: 1.528</span>
 
 <span class="go">Constraints:</span>
 
@@ -6300,7 +6297,7 @@
 <span class="linenos">6</span><span class="w">  </span><span class="nv">R</span><span class="w"> </span><span class="kd">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">9</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">0</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -6388,7 +6385,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.256</span>
+<span class="go">Time: 0.243</span>
 
 <span class="go">Constraints:</span>
 
@@ -6464,7 +6461,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.714</span>
+<span class="go">Time: 1.509</span>
 
 <span class="go">Constraints:</span>
 
@@ -6530,7 +6527,7 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
@@ -6559,7 +6556,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -6613,7 +6610,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -6713,7 +6710,7 @@
 <span class="linenos">84</span><span class="w">   </span>rev<span class="w"> </span><span class="nv">X</span><span class="w">  </span><span class="nv">Y</span><span class="kd">,</span><span class="w">   </span>rev<span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="nv">Z</span><span class="kd">,</span><span class="w">  </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">Z</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -6721,7 +6718,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.146</span>
+<span class="go">Time: 0.136</span>
 
 <span class="go">Constraints:</span>
 
@@ -6779,13 +6776,13 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.145</span>
+<span class="go">Time: 0.134</span>
 
 <span class="go">Constraints:</span>
 
@@ -6883,7 +6880,7 @@
 <span class="linenos">31</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.158025 + 0.054499 + 0.794552</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.125624 + 0.053295 + 0.789743</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -6894,7 +6891,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.098</span>
+<span class="go">Time: 2.057</span>
 
 <span class="go">Constraints:</span>
 
@@ -7002,7 +6999,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/shorten_aux2.elpi
@@ -7038,7 +7035,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.002</span>
+<span class="go">Typechecking time: 0.001</span>
 
 <span class="go">Success:</span>
 
@@ -7265,7 +7262,7 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.002</span>
 
