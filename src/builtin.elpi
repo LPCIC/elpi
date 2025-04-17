@@ -668,6 +668,7 @@ func fold-right list B, A, (func B, A -> A) -> A.
 fold-right [] A _ A.
 fold-right [X|XS] A F R :- fold-right XS A F A', F X A' R.
 
+:index (1 1)
 func fold2 list C, list B, A, (func C, B, A -> A) -> A.
 fold2 [] [_|_] _ _ _ :- fatal-error "fold2 on lists of different length".
 fold2 [_|_] [] _ _ _ :- fatal-error "fold2 on lists of different length".
