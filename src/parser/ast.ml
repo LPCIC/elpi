@@ -199,7 +199,7 @@ let warn_impl { it; loc } =
   match it with
   | App({ it = Const "=>" }, _ ) ->
       if !last_warn_impl <> loc then
-        warn ~loc
+        warn ~loc ~id:ImplicationPrecedence
 {|The standard λProlog infix operator for implication => has higher precedence
 than conjunction. This means that 'A => B, C' reads '(A => B), C'.
 This is a common mistake since it makes A only available to B (and not to C

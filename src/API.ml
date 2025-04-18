@@ -85,6 +85,7 @@ let trace = set_trace
 
 let usage =
   Trace_ppx_runtime.Runtime.usage
+  type warning_id = Util.warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
 
 let set_warn = Util.set_warn
 let set_error = Util.set_error
@@ -1291,7 +1292,6 @@ module Utils = struct
     hmove ~from ~to_ ?avoid:None t
 
   let beta = BuiltInPredicate.beta
-
   let error = Util.error
   let type_error = Util.type_error
   let anomaly = Util.anomaly

@@ -723,7 +723,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
       infer_output ~pred_name ~ctx:!ctx ~var hd;
       det_pred
     with LoadFlexClause t ->
-      warn ~loc:t.loc (Format.asprintf "ignoring clause with flex head: %a" ScopedTerm.pretty t);
+      warn ~loc:t.loc ~id:FlexClause (Format.asprintf "ignoring flexible clause: %a" ScopedTerm.pretty t);
       Det
   in
   try check_clause ~_is_toplevel:true ~ctx:BVar.empty ~var:Uvar.empty t = Det with
