@@ -1,4 +1,4 @@
-% YES
+% NO
 :functional 
 pred p i:int, o:int.
 
@@ -6,7 +6,7 @@ pred p i:int, o:int.
 pred q i:int, o:int.
 
 q 1 1.
-% Nested local clauses keep q still functional !
-p 1 X :- (pi x\ q 2 x :- x = 4) => (q 1 Z, (q 3 4) => q Z X).
+        % Nested local clauses error...
+p 1 X :- pi z\ (pi x\ q z x :- x = 4) => (q 1 Z, (q 3 4) => q Z X).
 
 main.
