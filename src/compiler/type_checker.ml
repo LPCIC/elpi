@@ -790,7 +790,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k { nocc = n; binder } ->
       if n = 1 && not @@ silence_linear_warn k && is_rule then
-        warn ~loc:(Symbol.get_loc binder)
+        warn ~loc:(Symbol.get_loc binder) ~id:LinearVariable
           (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k))
       !sigma;
@@ -858,7 +858,7 @@ let check_undeclared ~unknown =
   let unknown = F.Map.mapi (check1_undeclared w) unknown in
   if !w <> [] then begin
     let undeclared, types = List.split !w in
-    warn Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared
+    warn ~id:UndeclaredGlobal Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared
      (pplist pp_print_string "") types);
   end;
   let overloading = F.Map.map (fun (x,_) -> TypeAssignment.Single x) unknown in

@@ -58,7 +58,7 @@ let get_hd_ty ST.{ it } =
   | _ -> assert false
 
 let _ =
-  Elpi_util.Util.set_warn (fun ?loc _ -> ());
+  Elpi_util.Util.set_warn (fun ?loc ~id _ -> ());
 
   let type_abbrevs = F.Map.empty in
   let kinds = F.Map.empty in

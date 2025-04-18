@@ -317,7 +317,8 @@ let rec for_all23 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3
 let pp_loc_opt = function
   | None -> ""
   | Some loc -> Loc.show loc
-let default_warn ?loc s =
+type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+let default_warn ?loc ~id:_ s =
   Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" (pp_loc_opt loc) s
 let default_error ?loc s =
   Format.eprintf "@[<hv>Fatal error: %s@,%s@]\n%!" (pp_loc_opt loc) s;
@@ -369,7 +370,7 @@ let set_type_error f = type_error_f := (Obj.repr f)
 let set_std_formatter f = std_fmt := f
 let set_err_formatter f = err_fmt := f
 
-let warn ?loc s : unit = Obj.obj !warn_f ?loc s
+let warn ?loc ~id s : unit = Obj.obj !warn_f ?loc ~id s
 let error ?loc s = Obj.obj !error_f ?loc s
 let anomaly ?loc s = Obj.obj !anomaly_f ?loc s
 let type_error ?loc s = Obj.obj !type_error_f ?loc s
@@ -765,5 +766,5 @@ let version_parser ~what v =
     | [v] when Re.Str.(string_match (regexp "^[0-9a-f]+$") v 0) -> 99, 99, 99
     | _ -> raise (Failure "invalid format")
   with Failure msg ->
-    warn ("elpi: version_parser: cannot parse version of "^what^" '" ^ v ^ "': " ^ msg);
+    warn ~id:"version-parser" ("cannot parse version of "^what^" '" ^ v ^ "': " ^ msg);
     0,0,0

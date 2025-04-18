@@ -197,7 +197,8 @@ module Setup : sig
   val trace : string list -> string list
 
   (** Override default runtime error functions (they call exit) *)
-  val set_warn : (?loc:Ast.Loc.t -> string -> unit) -> unit
+  type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+  val set_warn : (?loc:Ast.Loc.t -> id:warning_id -> string -> unit) -> unit
   val set_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_anomaly : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_type_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
@@ -1298,7 +1299,7 @@ module Utils : sig
   val type_error : ?loc:Ast.Loc.t ->string -> 'a
 
   (** A non fatal warning *)
-  val warn : ?loc:Ast.Loc.t ->string -> unit
+  val warn : ?loc:Ast.Loc.t -> id:Setup.warning_id -> string -> unit
 
   (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
    * OCaml list! *)
