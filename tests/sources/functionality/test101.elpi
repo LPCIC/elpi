@@ -1,0 +1,10 @@
+% YES
+
+func f int -> int.
+func chain1 -> int.
+chain1 X :-
+  pi x\ (f (A x) 3 :- !) => f _ X.	
+func chain2 -> int.
+chain2 X :-
+   pi x\ (f (Z x) 2 :- !) => chain1 X.
+main :- std.findall (chain2 X) L, print L.
