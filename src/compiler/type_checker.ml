@@ -838,14 +838,20 @@ let check_macro ~type_abbrevs ~kinds ~types:env k m =
 let check1_undeclared w f (t, id) =
   match TypeAssignment.is_monomorphic t with
   | None -> error ~loc:(Symbol.get_loc id) Format.(asprintf "@[Unable to infer a closed type for %a:@ %a@]" F.pp f (pretty_ty true) (TypeAssignment.unval t))
-  | Some ty ->
+  | Some (Ty tya as ty) ->
       if not @@ Re.Str.(string_match (regexp "^\\(.*aux[0-9']*\\|main\\)$") (F.show f) 0) then
         w := Format.((f, Symbol.get_loc id), asprintf "type %a %a." F.pp f (pretty_ty true) (TypeAssignment.unval t)) :: !w;
+      let rec ty2mode : _ -> Util.Mode.hos = function
+        | TypeAssignment.Arr (_,_,(Arr _ as l),r) -> Ast.Mode.(Ho (Output, ty2mode l)) :: ty2mode r
+        | TypeAssignment.Arr (_,_,_,r) -> Ast.Mode.(Fo Output) :: ty2mode r
+        | _ -> [] in
+      let mode = ty2mode tya in
       let indexing = match is_prop ty with
       | None -> TypingEnv.DontIndex
-      | Some is_det -> Index {mode=[]; indexing=chose_indexing (Symbol.get_func id) [1] None; is_det} 
+      | Some is_det -> Index {mode; indexing=chose_indexing (Symbol.get_func id) [1] None; is_det} 
       in
       id, TypingEnv.{ ty ; indexing; availability = Elpi }
+  | _ -> assert false
 
 let check_undeclared ~unknown =
   let w = ref [] in

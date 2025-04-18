@@ -1622,13 +1622,16 @@ end = struct
   let t  = todbl (depth,ctx) t in
   (!symb, !amap), t
 
-  let check_mut_excl pred_info index_original cl p amap =
+  let check_mut_excl state symbols pred_info index_original cl p amap =
     let get_fresh_loc =
       let n = ref 0 in
       fun loc -> 
         incr n;
         Loc.extend !n loc in
     let get_opt x = Constants.Map.find_opt x pred_info in
+    let is_det x = match get_opt x with
+      | Some {is_det = Function} -> true
+      | _ -> false in
     let modes x = match get_opt x with Some {mode} -> mode | None -> [] in
     let get_overlapping index c query = 
       R.CompileTime.get_clauses ~check_mut_excl:true ~depth:0 c query index |> Bl.to_list
@@ -1650,7 +1653,11 @@ end = struct
         | [], [] -> []
         | a::args, (Mode.Fo Input | Ho(Input,_)) :: mode -> a :: mkpats args mode
         | _::args, _ :: mode -> mkDiscard :: mkpats args mode
-        | _::args, [] -> warn ~loc ("args/mode mismatch: " ^ String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode); mkDiscard :: mkpats args mode
+        | _::args, [] -> error ~loc @@
+          let pname = SymbolMap.global_name state symbols p in
+          let xx = C.Map.find p ((SymbolMap.compile symbols : symbol_table).c2s) in
+          Format.asprintf "@[<hov 2>args/mode mismatch: Building query for predicate %a at@ %a: %s@]" F.pp pname Loc.pp (Symbol.get_loc xx) (String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode)
+          (* ; mkDiscard :: mkpats args mode *)
         | _ -> assert false
       in
       R.mkAppL p @@ mkpats args mode in
@@ -1711,10 +1718,10 @@ end = struct
               let index = R.Indexing.add1clause_runtime ~depth index p cl in
               (* Format.eprintf "Index is@ %a@." pp_index index;  *)
               begin
-                match get_opt p with
-                | Some {is_det = Ast.Structured.Function} -> 
+                (* match get_opt p with *)
+                (* | Some {is_det = Ast.Structured.Function} ->  *)
                   check_clause ~depth ~loc:fresh_loc ~lcs:morelcs index cl p amap
-                | _ -> () 
+                (* | _ -> ()  *)
               end;
               aux ~depth index l
             with 
@@ -1737,13 +1744,14 @@ end = struct
         | AppArg (hd, args) -> AppUVar (R.CompileTime.fresh_uvar (), hd, List.map move args)
         | Cons (a, b) -> Cons (move a, move b)
       in
-      check_overlaps ~loc cl p cl.args index amap;
-      let mv t = 
-        (* Format.eprintf "@[<hov 2>Moving term@ %a@ from %d to %d at@ %a@]@." pp_term t cl.depth depth Loc.pp loc; *)
-        (* let env () = Array.make cl.vars D.dummy in *)
-        (* R.move ~argsdepth:depth ~from:cl.depth ~to_:depth (env ()) t in *)
-        move t in
-      List.iter (check_local mv ~loc ~depth ~lcs index amap) cl.hyps
+      if is_det p then (
+        check_overlaps ~loc cl p cl.args index amap;
+        let mv t = 
+          (* Format.eprintf "@[<hov 2>Moving term@ %a@ from %d to %d at@ %a@]@." pp_term t cl.depth depth Loc.pp loc; *)
+          (* let env () = Array.make cl.vars D.dummy in *)
+          (* R.move ~argsdepth:depth ~from:cl.depth ~to_:depth (env ()) t in *)
+          move t in
+      List.iter (check_local mv ~loc ~depth ~lcs index amap) cl.hyps)
     in
 
     let index = {index_original with time = 0} in
@@ -1771,9 +1779,8 @@ end = struct
 
     let index = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index in
     (* Format.eprintf "Validating local clause for predicate %a at %a@." F.pp (SymbolMap.global_name state symbols p) Loc.pp loc; *)
-    if is_deterministic then (
-      check_mut_excl ~loc pred_info index cl p amap
-    );
+    
+    check_mut_excl state symbols ~loc pred_info index cl p amap;
 
     (graft,id,p,cl) :: clauses, symbols, index
 
