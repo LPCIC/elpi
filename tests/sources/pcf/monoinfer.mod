@@ -20,7 +20,7 @@ infer T A              :- prim T A.
 prim car    ((lst A) --> A).
 prim cdr    ((lst A) --> (lst A) ).
 prim empty  (lst A).
-prim cons   (A --> (lst A) --> (lst A) ).
+prim lcons   (A --> (lst A) --> (lst A) ).
 prim nullp  ((lst A) --> bool).
 prim consp  ((lst A) --> bool).
 

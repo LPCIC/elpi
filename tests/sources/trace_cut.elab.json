@@ -216,7 +216,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "p :- (!), fail.",
+                  "rule_text": "p :- !, fail.",
                   "rule_loc": [
                     "File",
                     {
@@ -243,7 +243,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "p :- (!), fail.",
+                "rule_text": "p :- !, fail.",
                 "rule_loc": [
                   "File",
                   {
@@ -342,7 +342,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "p :- (!), fail.",
+                "rule_text": "p :- !, fail.",
                 "rule_loc": [
                   "File",
                   {
@@ -397,7 +397,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                  "rule_text": "main :- q, !, (q => (q :- !) => q).",
                   "rule_loc": [
                     "File",
                     {
@@ -425,7 +425,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, (q => (q :- !) => q).",
                 "rule_loc": [
                   "File",
                   {
@@ -504,7 +504,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, (q => (q :- !) => q).",
                 "rule_loc": [
                   "File",
                   {
@@ -583,7 +583,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, (q => (q :- !) => q).",
                 "rule_loc": [
                   "File",
                   {
@@ -639,7 +639,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, (q => (q :- !) => q).",
                 "rule_loc": [
                   "File",
                   {
@@ -674,7 +674,7 @@
             "attempt": {
               "rule": [
                 "UserRule",
-                { "rule_text": "q :- (!).", "rule_loc": [ "Context", 11 ] }
+                { "rule_text": "q :- !.", "rule_loc": [ "Context", 11 ] }
               ],
               "events": []
             },
@@ -687,7 +687,7 @@
           {
             "rule": [
               "UserRule",
-              { "rule_text": "q :- (!).", "rule_loc": [ "Context", 11 ] }
+              { "rule_text": "q :- !.", "rule_loc": [ "Context", 11 ] }
             ],
             "step_id": 12,
             "runtime_id": 0
@@ -706,7 +706,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, (q => (q :- !) => q).",
                 "rule_loc": [
                   "File",
                   {

@@ -8,6 +8,7 @@ type t = Tokens.token =
   | UNTYPED
   | TYPEABBREV
   | TYPE
+  | SYMBOL
   | STRING of ( string )
   | SLASH
   | SIGMA

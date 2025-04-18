@@ -52,8 +52,8 @@ let process = AlgebraicData.declare {
     K("unix.process","",A(out_stream,A(in_stream,A(in_stream,N))),
       B (fun stdin stdout stderr -> { stdin; stdout; stderr }),
       M (fun ~ok ~ko:_ { stdin; stdout; stderr } -> ok stdin stdout stderr ))
-  ]
-}|> ContextualConversion.(!<)
+  ];
+  }|> ContextualConversion.(!<)
 
 let really_input ic s ofs len =
   let rec unsafe_really_input read ic s ofs len =
@@ -102,10 +102,10 @@ let bool = AlgebraicData.declare {
     K("ff","",N,
       B false,
       M (fun ~ok ~ko -> function false -> ok | _ -> ko ()));
-  ]
-}|> ContextualConversion.(!<)
+  ];
+  }|> ContextualConversion.(!<)
 
-let pair a b = let open AlgebraicData in declare {
+let pair_decl a b = let open AlgebraicData in Decl {
   ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
   doc = "Pair: the constructor is pr, since ',' is for conjunction";
   pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.Conversion.pp b.Conversion.pp) o);
@@ -113,10 +113,16 @@ let pair a b = let open AlgebraicData in declare {
     K("pr","",A(a,A(b,N)),
       B (fun a b -> (a,b)),
       M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
-  ]
-} |> ContextualConversion.(!<)
+  ];
+  }
+let pair_alloc =
+  let open AlgebraicData in
+  allocate_constructors (Param (fun a -> Param (fun b-> pair_decl a b)))
+let pair a b =
+  let open AlgebraicData in
+  declare_allocated pair_alloc (pair_decl a b) |> ContextualConversion.(!<)
 
-let option a = let open AlgebraicData in declare {
+let option_decl a = let open AlgebraicData in Decl {
   ty = TyApp("option",a.Conversion.ty,[]);
   doc = "The option type (aka Maybe)";
   pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.Conversion.pp) o);
@@ -127,8 +133,14 @@ let option a = let open AlgebraicData in declare {
     K("some","",A(a,N),
       B (fun x -> Some x),
       M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
-  ]
-} |> ContextualConversion.(!<)
+  ];
+  }
+let option_alloc =
+  let open AlgebraicData in
+  allocate_constructors (Param option_decl)
+let option a = 
+  let open AlgebraicData in
+  declare_allocated option_alloc (option_decl a) |> ContextualConversion.(!<)
 
 type diagnostic = OK | ERROR of string ioarg
 let mkOK = OK
@@ -151,8 +163,8 @@ let diagnostic = let open API.AlgebraicData in declare {
     K("uvar","",A(FlexibleData.uvar,N),
       B (fun _ -> assert false),
       M (fun ~ok ~ko _ -> ko ()))
-  ]
-} |> ContextualConversion.(!<)
+  ];
+  } |> ContextualConversion.(!<)
 
 let unix_error_to_diagnostic e f a =
   mkERROR (Printf.sprintf "%s: %s" (if a <> "" then f ^ " " ^ a else f) (Unix.error_message e))
@@ -165,8 +177,8 @@ let cmp = let open AlgebraicData in declare {
     K("eq", "", N, B 0,   M(fun ~ok ~ko i -> if i == 0 then ok else ko ()));
     K("lt", "", N, B ~-1, M(fun ~ok ~ko i -> if i < 0  then ok else ko ()));
     K("gt", "", N, B 1,   M(fun ~ok ~ko i -> if i > 0  then ok else ko ()))
-  ]
-} |> ContextualConversion.(!<)
+  ];
+  } |> ContextualConversion.(!<)
 
 
 type 'a unspec = Given of 'a | Unspec
@@ -189,6 +201,9 @@ let unspecC data = let open API.ContextualConversion in let open API.RawData in 
 }
 let unspec d = API.ContextualConversion.(!<(unspecC (!> d)))
 
+let pair_decl = (pair (BuiltInData.poly "A") (BuiltInData.poly "B"))
+let option_decl = option (BuiltInData.poly "A")
+
 (** Core built-in ********************************************************* *)
 
 let core_builtins = let open BuiltIn in let open ContextualConversion in [
@@ -199,42 +214,44 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
 
   LPDoc " -- Logic --";
 
-  LPCode "pred true.";
+  LPCode "func true.";
   LPCode "true.";
 
-  LPCode "pred fail.";
-  LPCode "pred false.";
+  LPCode "func fail.";
+  LPCode "func false.";
 
-  LPCode "external pred (=) o:A, o:A. % unification";
+  LPCode "external func (=) -> A, A. % unification";
+  LPCode "external func pattern_match A -> A. % matching";
 
-  LPCode "external pred (pi) i:A -> prop.";
-  LPCode "external pred (sigma) i:A -> prop.";
+  (* LPCode "external func (pi) i:(func i:A)."; *)
+  LPCode "external func (pi) (func A).";
+  LPCode "external func (sigma) (func A).";
   
   MLData BuiltInData.int;
   MLData BuiltInData.string;
   MLData BuiltInData.float;
 
-  LPCode "pred (;) i:prop, i:prop.";
+  LPCode "external symbol (;) prop -> prop -> prop.";
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
-  LPCode "type (:-) prop -> prop -> prop.";
-  LPCode "type (:-) prop -> list prop -> prop.";
-  LPCode "type (,) variadic prop prop.";
-  LPCode "type uvar A.";
-  LPCode "type (as) A -> A -> A.";
-  LPCode "type (=>) prop -> prop -> prop.";
-  LPCode "type (=>) list prop -> prop -> prop.";
-  LPCode "type (==>) prop -> prop -> prop."; (* not really needed since the parser emits a => *)
-  LPCode "type (==>) list prop -> prop -> prop.";
+  LPCode "external symbol (:-)  : fprop -> fprop -> fprop = \"core\".";
+  LPCode "external symbol (:-)  : fprop -> list prop -> fprop = \"core\".";
+  LPCode "external symbol (,)   : variadic fprop fprop.";
+  LPCode "external symbol uvar  : A = \"core\".";
+  LPCode "external symbol (as)  : A -> A -> A = \"core\".";
+  LPCode "external symbol (=>)  : prop -> fprop -> fprop = \"core\".";
+  LPCode "external symbol (=>)  : list prop -> fprop -> fprop = \"core\"."; (* HACS in TC to handle this*)
+  LPCode "external symbol (==>) : prop -> fprop -> fprop.";
+  LPCode "external symbol (==>) : list prop -> fprop -> fprop.";
 
   LPDoc " -- Control --";
 
   (* This is not implemented here, since the API had no access to the
    * choice points *)
-  LPCode "external pred !. % The cut operator";
+  LPCode "external func !. % The cut operator";
 
-  LPCode "pred not i:prop.";
+  LPCode "func not prop.";
   LPCode "not X :- X, !, fail.";
   LPCode "not _.";
 
@@ -242,9 +259,13 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
    * store of syntactic constraints *)
   LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
           "% on Key1 Key2 ... (variables, or lists thereof).\n"^
-          "external type declare_constraint any -> any -> variadic any prop.");
-  LPCode "external pred print_constraints. % prints all constraints";
-
+          "external type declare_constraint any -> any -> variadic any fprop.");
+  MLCode(Pred("print_constraints",
+    Full(raw_ctx,"prints all constraints"),
+    (fun ~depth _ constraints state ->
+      Util.printf "@[<hov 0>%a@]@\n%!" RawPp.constraints constraints;
+      state, (), []
+      )),DocAbove);
   MLCode(Pred("halt", VariadicIn(unit_ctx, !> BuiltInData.any, "halts the program and print the terms"),
   (fun args ~depth _ _ ->
      if args = [] then error "halt"
@@ -255,7 +276,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
        error (Buffer.contents b))),
   DocAbove);
 
-  LPCode "pred stop.";
+  LPCode "func stop.";
   LPCode "stop :- halt.";
 
   ] @ Calc.calc @ [
@@ -298,7 +319,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   let build_symb (spref, ty) = 
     let op_l = ["gt_";"lt_"; "le_"; "ge_"] in
     let sym_l = List.map (fun x -> spref ^ x) [">";"<"; "=<"; ">="] in
-    let buildLPCode s op = LPCode (Printf.sprintf "pred (%s) i:%s, i:%s.\nX %s Y :- %s X Y." s ty ty s op) in
+    let buildLPCode s op = LPCode (Printf.sprintf "func (%s) %s, %s.\nX %s Y :- %s X Y." s ty ty s op) in
     List.map2 buildLPCode sym_l op_l in
   let symbs = ["", "A"; "i", "int"; "r", "float"; "s", "string"] in
   List.flatten (List.map build_symb symbs) @
@@ -307,35 +328,35 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPDoc " -- Standard data types (supported in the FFI) --";
 
   LPCode "kind list type -> type.";
-  LPCode "type (::) X -> list X -> list X.";
-  LPCode "type ([]) list X.";
+  LPCode "external symbol (::) : X -> list X -> list X = \"core\".";
+  LPCode "external symbol ([]) : list X = \"core\".";
 
   MLData bool;
 
-  MLData (pair (BuiltInData.poly "A") (BuiltInData.poly "B"));
+  MLData pair_decl;
 
-  LPCode "pred fst  i:pair A B, o:A.";
+  LPCode "func fst  pair A B -> A.";
   LPCode "fst (pr A _) A.";
-  LPCode "pred snd  i:pair A B, o:B.";
+  LPCode "func snd  pair A B -> B.";
   LPCode "snd (pr _ B) B.";
 
   LPCode {|
 kind triple type -> type -> type -> type.
 type triple A -> B -> C -> triple A B C.
 
-pred triple_1 i:triple A B C, o:A.
+func triple_1 triple A B C -> A.
 triple_1 (triple A _ _) A.
 
-pred triple_2 i:triple A B C, o:B.
+func triple_2 triple A B C -> B.
 triple_2 (triple _ B _) B.
 
-pred triple_3 i:triple A B C, o:C.
+func triple_3 triple A B C -> C.
 triple_3 (triple _ _ C) C.
  
 |};
 
-  MLData (option (BuiltInData.poly "A"));
-
+  MLData option_decl;
+  
   MLData cmp;
 
   MLData diagnostic;
@@ -530,15 +551,18 @@ This API only works reliably since OCaml 4.12.|}))))),
   LPDoc " -- Debugging --";
 
   MLCode(Pred("term_to_string",
-    In(any,     "T",
+    InOut(ioarg_any,     "T",
     Out(string, "S",
     Easy        "prints T to S")),
   (fun t _ ~depth ->
+     match t with
+     | NoData -> ?: None +! "_"
+     | Data t ->
      let b = Buffer.create 1024 in
      let fmt = Format.formatter_of_buffer b in
      Format.fprintf fmt "%a" (RawPp.term depth) t ;
      Format.pp_print_flush fmt ();
-       !:(Buffer.contents b))),
+     ?: None +! (Buffer.contents b))),
   DocAbove);
 
   ]
@@ -611,7 +635,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   DocAbove);
 
   LPCode {|% Deprecated, use trace.counter
-pred counter i:string, o:int.
+func counter string -> int.
 counter C N :- trace.counter C N.|};
 
   MLData loc;
@@ -664,15 +688,15 @@ counter C N :- trace.counter C N.|};
   DocAbove);
 
     LPCode {|% Deprecated, use rex.match
-pred rex_match i:string, i:string.
+func rex_match string, string.
 rex_match Rx S :- rex.match Rx S.|};
 
   LPCode {|% Deprecated, use rex.replace
-pred rex_replace i:string, i:string, i:string, o:string.
+func rex_replace string, string, string -> string.
 rex_replace Rx R S O :- rex.replace Rx R S O.|};
 
   LPCode {|% Deprecated, use rex.split
-pred rex_split i:string, i:string, o:list string.
+func rex_split string, string -> list string.
 rex_split Rx S L :- rex.split Rx S L.|};
 
 
@@ -826,7 +850,7 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
 
   LPCode {|
 % Infix notation for same_term
-pred (==) i:A, i:A.
+func (==) A, A.
 X == Y :- same_term X Y.
 |};
 
@@ -897,7 +921,7 @@ X == Y :- same_term X Y.
      | _ -> raise No_clause)),
   DocAbove);
 
-  LPCode "pred primitive? i:A, i:string.";
+  LPCode "func primitive? any, string.";
   LPCode "primitive? X S :- is_cdata X S.";
 
   MLCode(Pred("new_int",
@@ -910,7 +934,7 @@ X == Y :- same_term X Y.
   DocAbove);
 
   LPDoc  {|[findall_solution P L] finds all the solved instances of P and puts them in L in the order in which they are found. Instances can contain eigenvariables and unification variables. P may or may not be instantiated. Instances should be found in L.|};
-  LPCode "external pred findall_solutions i:prop, o:list prop.";
+  LPCode "external func findall_solutions prop -> list prop.";
 
   MLData safe;
 
@@ -937,12 +961,12 @@ X == Y :- same_term X Y.
   LPCode {|
 % [if C T E] picks the first success of C then runs T (never E).
 % if C has no success it runs E.
-pred if i:prop, i:prop, i:prop.
+func if prop, fprop, fprop.
 if B T _ :- B, !, T.
 if _ _ E :- E.
 
 % [if2 C1 B1 C2 B2 E] like if but with 2 then branches (and one else branch).
-pred if2 i:prop, i:prop, i:prop, i:prop, i:prop.
+func if2 prop, fprop, prop, fprop, fprop.
 if2 G1 P1 _  _  _ :- G1, !, P1.
 if2 _  _  G2 P2 _ :- G2, !, P2.
 if2 _  _  _  _  E :- !, E. |};
@@ -1338,7 +1362,7 @@ let ocaml_runtime = let open BuiltIn in let open BuiltInData in [
   (fun _ _ _ _ _ _ _ _ ~depth:_ ->
     let { Gc.minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; _ } = Gc.get () in
     !: minor_heap_size +! major_heap_increment +! space_overhead +! verbose +! max_overhead +! stack_limit +! allocation_policy +! window_size)),
-   DocAbove);
+   DocNext);
 
   MLCode(Pred("gc.set",
     In(unspec int,"MinorHeapSize",

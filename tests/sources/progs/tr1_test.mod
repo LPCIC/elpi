@@ -8,11 +8,11 @@ module tr1_test.
 
 accumulate terms, tr_recognizer. 
 
-type test  int -> o.
+type test_nb  int -> o.
 
-test 1 :- trm trfact1 F, tl_rec F.
+test_nb 1 :- trm trfact1 F, tl_rec F.
 
-test 2 :- trm gcd2 F, tl_rec F.
+test_nb 2 :- trm gcd2 F, tl_rec F.
 
-test 3 :- trm appnd F, tl_rec F.
+test_nb 3 :- trm appnd F, tl_rec F.
 

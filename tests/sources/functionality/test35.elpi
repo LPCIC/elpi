@@ -1,0 +1,11 @@
+% NO
+% Test on func of outputs
+
+func do (func) ->.
+
+pred give-fun o:(func).
+% There is no way to ensure that X, which is an input of do is
+% really deterministic, i.e. -> error
+give-fun (do X).
+
+main.

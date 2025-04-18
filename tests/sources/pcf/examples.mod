@@ -25,7 +25,7 @@ prog "fib"
 prog "map" 
   (fixpt map\ fn f\ fn l\ 
      cond (nullp # l) empty 
-          (cons # (f # (car # l)) # (map # f # (cdr # l)))).
+          (lcons # (f # (car # l)) # (map # f # (cdr # l)))).
 
 prog "mem" 
   (fixpt mem\ fn x\ fn l\ 
@@ -40,7 +40,7 @@ prog "fact"
 
 prog "app"
   (fixpt app\ fn l\ fn k\
-    (cond (nullp # l) k (cons # (car # l) # (app # (cdr # l) # k)))).
+    (cond (nullp # l) k (lcons # (car # l) # (app # (cdr # l) # k)))).
 
 prog "gcd" 
   (fixpt f\ fn x\ fn y\ 
@@ -48,7 +48,7 @@ prog "gcd"
          (cond (greater # y # x) (f # y # x)
                (cond (equal # x # y) x (f # (minus # x # y) # y)))).
 
-prog "ex1"   (cons # (in 1) # (in 2)).
+prog "ex1"   (lcons # (in 1) # (in 2)).
 prog "ex2"   (plus # empty # (in 1)).
 prog "ex3"   (cond truth (in 3) empty).
 prog "ex4"   (fn x\ fn x\x).

@@ -1,3 +1,5 @@
-:untyped main :-
+type f int -> (int -> int) -> int.
+
+main :-
     pi x\ sigma Y Z\ pi y\
       std.spy(X x = f (Y y) e\ (Z y e)).

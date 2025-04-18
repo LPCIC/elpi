@@ -1,0 +1,16 @@
+% YES
+
+kind t type -> type.
+type k A -> fprop -> t A.
+
+func f1 fprop ->.
+
+func q (t prop).
+q (k F1 F2) :- F1, !, F2.
+
+func f.
+pred r.
+
+f :- q (k (f1 f) r).
+
+main.

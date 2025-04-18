@@ -150,7 +150,7 @@ no (more) solutions
 [eval_examples] ?- test 5 F.
 
 The answer substitution:
-F = cons (c 1) (cons (c 2) (cons (c 3) (cons (c 4) null)))
+F = lcons (c 1) (lcons (c 2) (lcons (c 3) (lcons (c 4) null)))
 
 More solutions (y/n)? y
 

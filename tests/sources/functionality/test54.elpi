@@ -1,0 +1,12 @@
+% NO
+
+func f.
+pred rel.
+
+f :-
+  % Fails since y is assigned to a rel, rel is not fprop
+  ((y\ y = rel) : (func -> fprop)) = F,
+  F R,
+  R.
+
+main.
