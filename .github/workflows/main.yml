@@ -88,8 +88,9 @@ jobs:
 
       - name: Build elpi with dune profile ${{ matrix.profile }}
         run: |
+          if [ "${{ matrix.profile }}" = "fatalwarnings" ]; then sed -ibak 's/-A/+A/' dune; fi
           opam exec -- dune subst
-          opam exec -- make build DUNE_OPTS='--profile ${{ matrix.profile }}'
+          opam exec -- make build
           opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
           opam exec -- cp _build/install/default/bin/elpi-trace-elaborator elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
 
