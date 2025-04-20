@@ -165,7 +165,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
 **../../tests/sources/ackermann.elpi
 :**
@@ -308,7 +308,7 @@ Test Bed
    
    Success:
    
-   Time: 0.001
+   Time: 0.000
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -1021,7 +1021,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1047,7 +1047,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 17, column 10, characters 254-255:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.002
    
@@ -1127,7 +1127,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1210,7 +1210,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1332,7 +1332,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/even-odd.elpi", line 19, column 41, characters 436-437:
    Z is linear: name it _Z (discard) or Z_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
@@ -1370,7 +1370,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
@@ -1424,7 +1424,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -1530,7 +1530,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1590,7 +1590,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1644,7 +1644,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1759,7 +1759,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1789,7 +1789,7 @@ Test Bed
    
    Success:
    
-   Time: 1.818
+   Time: 1.876
    
    Constraints:
    
@@ -1837,7 +1837,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -1889,11 +1889,11 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
-   Time: 0.313
+   Time: 0.314
    
    Constraints:
    
@@ -2164,7 +2164,7 @@ Test Bed
    
    Success:
    
-   Time: 0.002
+   Time: 0.003
    
    Constraints:
    
@@ -2199,7 +2199,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -2220,7 +2220,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.352521 + 0.057215 + 0.963717
+   1.373279 + 0.059976 + 0.989387
    
 
 .. code-block:: console
@@ -2234,7 +2234,7 @@ Test Bed
    
    Success:
    
-   Time: 2.599
+   Time: 2.650
    
    Constraints:
    
@@ -2251,7 +2251,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.478120 + 3.027189 + 0.347900
+   6.408930 + 2.970327 + 0.363547
    
 
 .. code-block:: console
@@ -2265,7 +2265,7 @@ Test Bed
    
    Success:
    
-   Time: 9.860
+   Time: 9.750
    
    Constraints:
    
@@ -2282,7 +2282,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.811764 + 2.831437 + 0.233147
+   5.898513 + 2.858099 + 0.222545
    
 
 .. code-block:: console
@@ -2296,7 +2296,7 @@ Test Bed
    
    Success:
    
-   Time: 8.882
+   Time: 8.985
    
    Constraints:
    
@@ -2455,7 +2455,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
@@ -2509,7 +2509,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -2542,7 +2542,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 0, characters 101-102:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
@@ -2684,7 +2684,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -2938,7 +2938,7 @@ Test Bed
    
    Success:
    
-   Time: 1.528
+   Time: 1.544
    
    Constraints:
    
@@ -2972,7 +2972,7 @@ Test Bed
 
 .. code-block:: console
 
-   0
+   6
    
 
 .. code-block:: console
@@ -3025,7 +3025,7 @@ Test Bed
    
    Success:
    
-   Time: 0.243
+   Time: 0.245
    
    Constraints:
    
@@ -3064,7 +3064,7 @@ Test Bed
    
    Success:
    
-   Time: 1.509
+   Time: 1.570
    
    Constraints:
    
@@ -3114,7 +3114,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.002
    
@@ -3148,7 +3148,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3212,7 +3212,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3238,11 +3238,11 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
-   Time: 0.136
+   Time: 0.138
    
    Constraints:
    
@@ -3268,7 +3268,7 @@ Test Bed
    
    Success:
    
-   Time: 0.134
+   Time: 0.141
    
    Constraints:
    
@@ -3316,7 +3316,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3337,7 +3337,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.125624 + 0.053295 + 0.789743
+   1.155659 + 0.054721 + 0.803877
    
 
 .. code-block:: console
@@ -3351,7 +3351,7 @@ Test Bed
    
    Success:
    
-   Time: 2.057
+   Time: 2.101
    
    Constraints:
    
@@ -3425,7 +3425,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
 **../../tests/sources/shorten_aux2.elpi
 :**
@@ -3467,7 +3467,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.001
+   Typechecking time: 0.002
    
    Success:
    
@@ -3696,7 +3696,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3805,7 +3805,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -3967,7 +3967,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
@@ -4045,7 +4045,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.002
+   Typechecking time: 0.001
    
    Success:
    
