@@ -22,7 +22,7 @@ jobs:
             ocaml-compiler: 4.14.x
             opam-local-packages:
 
-        - run: opam install ./elpi.opam
+        - run: opam pin add elpi .
           env:
             OPAMWITHTEST: false
             
