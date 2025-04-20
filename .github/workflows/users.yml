@@ -22,14 +22,20 @@ jobs:
             ocaml-compiler: 4.14.x
             opam-local-packages:
 
-        - run: opam install ./elpi.opam
+        - run: opam pin add sexplib0 v0.16.0
+          env:
+            OPAMWITHTEST: false
+
+        - run: opam pin add elpi .
           env:
             OPAMWITHTEST: false
             
+        - run: opam pin --ignore-constraints-on elpi add rocq-elpi https://github.com/LPCIC/coq-elpi.git#master
         - run: opam pin --ignore-constraints-on elpi add coq-elpi https://github.com/LPCIC/coq-elpi.git#master
-        - run: opam pin --ignore-constraints-on elpi add coq-hierarchy-builder https://github.com/math-comp/hierarchy-builder.git#master
-        - run: opam pin --ignore-constraints-on elpi add coq-mathcomp-ssreflect https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi add coq-mathcomp-fingroup https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi add coq-mathcomp-algebra https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi add coq-mathcomp-solvable https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi add coq-mathcomp-field https://github.com/math-comp/math-comp.git#master
+        - run: opam pin --ignore-constraints-on elpi add rocq-stdlib https://github.com/rocq-prover/stdlib.git#master
+        - run: opam pin --ignore-constraints-on elpi add rocq-hierarchy-builder https://github.com/math-comp/hierarchy-builder.git#master
+        - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-ssreflect https://github.com/math-comp/math-comp.git#master
+        - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-fingroup https://github.com/math-comp/math-comp.git#master
+        - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-algebra https://github.com/math-comp/math-comp.git#master
+        - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-solvable https://github.com/math-comp/math-comp.git#master
+        - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-field https://github.com/math-comp/math-comp.git#master

@@ -86,10 +86,14 @@ jobs:
         run: |
           opam install ./elpi.opam --deps-only --with-doc --with-test
 
-      - name: Build elpi with dune profile ${{ matrix.profile }}
+      - name: Enable warn as errors
+        if: runner.os == 'Linux' && matrix.profile == 'fatalwarnings'
+        run: sed -ibak 's/-A/+A/' dune
+
+      - name: Build elpi
         run: |
           opam exec -- dune subst
-          opam exec -- make build DUNE_OPTS='--profile ${{ matrix.profile }}'
+          opam exec -- make build
           opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
           opam exec -- cp _build/install/default/bin/elpi-trace-elaborator elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
 
