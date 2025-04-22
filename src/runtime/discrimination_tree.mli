@@ -55,6 +55,7 @@ val mkUvarVariable : cell
 *)
 val mkListTailVariableUnif : cell
 val mkListHead : cell
+val mkListNil : cell
 val mkListEnd : cell
 
 (** This is padding used to fill the array in paths and indicate the retrieve
@@ -126,6 +127,7 @@ module Internal: sig
   val isInput : cell -> bool
   val isOutput : cell -> bool
   val isListHead : cell -> bool
+  val isListNil : cell -> bool
   val isListEnd : cell -> bool
   val isListTailVariable : cell -> bool
   val isListTailVariableUnif : cell -> bool

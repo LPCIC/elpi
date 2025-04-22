@@ -53,9 +53,10 @@ let mkOutputMode = encode ~k:kOther ~data:2 ~arity:0
 let mkListTailVariable = encode ~k:kOther ~data:3 ~arity:0
 let mkListHead = encode ~k:kOther ~data:4 ~arity:0
 let mkListEnd = encode ~k:kOther ~data:5 ~arity:0 
-let mkPathEnd = encode ~k:kOther ~data:6 ~arity:0
-let mkListTailVariableUnif = encode ~k:kOther ~data:7 ~arity:0
-let mkUvarVariable = encode ~k:kVariable ~data:8 ~arity:0
+let mkListNil = encode ~k:kOther ~data:6 ~arity:0
+let mkPathEnd = encode ~k:kOther ~data:7 ~arity:0
+let mkListTailVariableUnif = encode ~k:kOther ~data:8 ~arity:0
+let mkUvarVariable = encode ~k:kVariable ~data:9 ~arity:0
 
 
 let isVariable x = x == mkVariable
@@ -63,6 +64,7 @@ let isAny x = x == mkAny
 let isInput x = x == mkInputMode
 let isOutput x = x == mkOutputMode
 let isListHead x = x == mkListHead
+let isListNil x = x == mkListNil
 let isListEnd x = x == mkListEnd
 let isListTailVariable x = x == mkListTailVariable
 let isListTailVariableUnif x = x == mkListTailVariableUnif
@@ -347,7 +349,7 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
     let sub_tries = skip_to_listEnd (if isListTailVariableUnif hd then mkOutputMode else mode) tree in
     List.iter (retrieve ~pos:(pos+1) ~add_result mode path) sub_tries
   else begin
-    (* Here the constructor can be Constant, Primitive, Variable, Other, ListHead, ListEnd *)
+    (* Here the constructor can be Constant, Primitive, Variable, Other, ListHead, ListNil, ListEnd *)
     begin
       if get_all_children hd mode then 
         (* we take all the children in the map *)
@@ -356,7 +358,7 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
         try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find mkUvarVariable map)
         with Not_found -> ()
       else
-          (* we have a Constant, Primitive, ListHead or ListHead and look for the key in the map *)
+          (* we have a Constant, Primitive, ListHead, ListNil or ListEnd and look for the key in the map *)
           try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find hd map)
           with Not_found -> ()
     end;
@@ -428,4 +430,5 @@ module Internal = struct
   let isPathEnd = isPathEnd
 
   let isUvarVariable = isUvarVariable
+  let isListNil = isListNil
 end
