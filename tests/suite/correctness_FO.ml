@@ -140,7 +140,7 @@ let () =
   declare "dt_empty_list"
   ~source_elpi:"dt_empty_list.elpi"
   ~description:"discrimination_tree empty_list"
-    ~trace:(On["tty";"file://"^sample;"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:depth-path"])
+    ~trace:(On["tty";"file://"^sample;"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:[^l]"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "dt_empty_list.log" })
   ()
 

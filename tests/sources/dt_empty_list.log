@@ -1,12 +1,27 @@
   rid:0 step:2 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths  
                                                 1 
                                                 
+  rid:0 step:2 gid:0 dev:disc-tree:path = [|Output; Variable; PathEnd; PathEnd;
+                                            PathEnd|] 
+                                          1 
+                                          
+  rid:0 step:2 gid:0 dev:disc-tree:candidates = 2 
+                                                
+  rid:0 step:3 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths  
+                                                1 
+                                                
+  rid:0 step:3 gid:0 dev:disc-tree:path = [|Output; ListNil; PathEnd; PathEnd;
+                                            PathEnd|] 
+                                          1 
+                                          
+  rid:0 step:3 gid:0 dev:disc-tree:candidates = 1 
+                                                
   rid:0 step:4 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths  
                                                 1 
                                                 
-  rid:0 step:5 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths  
-                                                1 
-                                                
-  rid:0 step:6 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths  
-                                                1 
+  rid:0 step:4 gid:0 dev:disc-tree:path = [|Output; ListHead; Variable;
+                                            ListTailVariable; PathEnd|] 
+                                          1 
+                                          
+  rid:0 step:4 gid:0 dev:disc-tree:candidates = 1 
                                                 
