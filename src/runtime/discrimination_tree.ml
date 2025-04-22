@@ -88,6 +88,7 @@ let pp_cell fmt n =
        else if isListHead n then "ListHead"
        else if isListEnd n then "ListEnd"
        else if isPathEnd n then "PathEnd"
+       else if isListNil n then "ListNil"
        else if isListTailVariableUnif n then "ListTailVariableUnif"
        else if isAny n then "Other"
        else if isUvarVariable n then "uvar"

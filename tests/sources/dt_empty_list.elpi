@@ -1,0 +1,8 @@
+:index (1) "DTree"
+pred p o:list int.
+p [].
+
+main :-
+  p X, X = [],
+  p [],
+  not (p [_|_]).
