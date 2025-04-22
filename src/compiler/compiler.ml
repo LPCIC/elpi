@@ -1622,20 +1622,34 @@ end = struct
   let t  = todbl (depth,ctx) t in
   (!symb, !amap), t
 
-  let check_mut_excl state symbols pred_info index_original cl p amap =
+  let check_mut_excl state symbols pred_info cl p amap =
     let get_fresh_loc =
       let n = ref 0 in
       fun loc -> 
         incr n;
         Loc.extend !n loc in
     let get_opt x = Constants.Map.find_opt x pred_info in
-    let is_det x = match get_opt x with
-      | Some {is_det = Function} -> true
-      | _ -> false in
+    let can_overlap x = match get_opt x with
+      | Some { overlap = Allowed } -> true
+      | Some { overlap = Forbidden _ } -> false
+      | _ -> true in
     let modes x = match get_opt x with Some {mode} -> mode | None -> [] in
-    let get_overlapping index c query = 
-      R.CompileTime.get_clauses ~check_mut_excl:true ~depth:0 c query index |> Bl.to_list
+    let get_overlapping (_, pred_info) c query = 
+      match C.Map.find c pred_info with
+      | { overlap = Allowed } -> []
+      | { overlap = Forbidden dt } ->
+          R.CompileTime.get_clauses ~depth:0 query dt |> Bl.to_list
     in
+    let rec to_heap ~depth t = match t with
+    | Builtin (x, xs) -> Builtin (x, List.map (to_heap ~depth) xs) 
+    | App (h,x,xs) -> App (h, (to_heap ~depth) x, List.map (to_heap ~depth) xs)
+    | Const x -> t
+    | Lam t -> Lam ((to_heap ~depth) t)
+    | (Nil | CData _ | Discard | AppUVar _ | UVar _) -> t
+    | Arg _ -> UVar (R.CompileTime.fresh_uvar (),depth,0)
+    | AppArg (hd, args) -> AppUVar (R.CompileTime.fresh_uvar (), hd, List.map (to_heap ~depth) args)
+    | Cons (a, b) -> Cons ((to_heap ~depth) a, (to_heap ~depth) b)
+  in
 
     let pp_const p =
       let symb = C.Map.find p ((SymbolMap.compile symbols : symbol_table).c2s) in
@@ -1700,18 +1714,8 @@ end = struct
       (not !has_input || !rig_occ), R.mkAppL p @@ mkpats args mode in
 
     (* Returns if the clause has a bang *)
-    let has_bang ~loc (t : term list) : bool =
-      let rec aux ~loc t =
-      match t with
-      | [] -> false
-      | Builtin (Cut, []) :: _ -> true
-      | Builtin (Pi, [Lam b]) :: xs | Builtin (Sigma, [Lam b]) :: xs -> aux ~loc [b] || aux ~loc xs
-      | Builtin (Impl, [h; l]) :: xs -> aux ~loc [l] || aux ~loc xs
-      | Builtin (And, l) :: xs -> aux ~loc l || aux ~loc xs
-      | _ :: xs -> aux ~loc xs in
-      aux ~loc t in
 
-    let check_overlaps ~is_local ~loc ~depth cl p args index amap =
+    let check_overlaps ~is_local ~loc ~depth cl p args (index : int * pred_info) amap =
       let rec filter_overlaps hb = function
         | [] -> []
         | x::xs when Option.equal Loc.equal x.Data.loc (Some loc) ->
@@ -1738,8 +1742,8 @@ end = struct
     (* Inspect the a local premise. If a local clause is found
       it is added to the index and it check_clause is launched on it 
     *)
-    let rec check_local mv ~depth ~loc ~lcs index amap (t : term) : unit =
-      let t = mv t in
+    let rec check_local ~depth ~loc ~lcs index amap (t : term) : unit =
+      let t = to_heap ~depth t in
       (* let t = R.hmove ~from:depth ~to_:(depth+lcs) t in *)
       let rec aux ~depth index t =
         match t with
@@ -1772,49 +1776,32 @@ end = struct
             with 
             | CompileError _ as e -> raise e
             (* TODO: this horrible catchall is for clause with flex head... *)
-            | _ -> aux ~depth index l end
+            | Assert_failure _ -> aux ~depth index l end
         | Builtin (And, l) -> 
             List.iter (aux ~depth index) l
         | _ -> () (* TODO: missing cases *)
       in
       aux ~depth index t 
     and check_clause ~is_local ~depth ~loc ~lcs index cl p amap =
-      let rec move t = match t with
-        | Builtin (x, xs) -> Builtin (x, List.map move xs) 
-        | App (h,x,xs) -> App (h, move x, List.map move xs)
-        | Const x -> t
-        | Lam t -> Lam (move t)
-        | (Nil | CData _ | Discard | AppUVar _ | UVar _) -> t
-        | Arg _ -> UVar (R.CompileTime.fresh_uvar (),depth,0)
-        | AppArg (hd, args) -> AppUVar (R.CompileTime.fresh_uvar (), hd, List.map move args)
-        | Cons (a, b) -> Cons (move a, move b)
-      in
-      if is_det p then (
-        check_overlaps ~is_local ~loc ~depth cl p cl.args index amap;
-        let mv t = 
-          (* Format.eprintf "@[<hov 2>Moving term@ %a@ from %d to %d at@ %a@]@." pp_term t cl.depth depth Loc.pp loc; *)
-          (* let env () = Array.make cl.vars D.dummy in *)
-          (* R.move ~argsdepth:depth ~from:cl.depth ~to_:depth (env ()) t in *)
-          move t in
-      List.iter (check_local mv ~loc ~depth ~lcs index amap) cl.hyps)
+      if not @@ can_overlap p then check_overlaps ~is_local ~loc ~depth cl p cl.args index amap;
+      List.iter (check_local ~loc ~depth ~lcs index amap) cl.hyps
     in
 
-    let index = {index_original with time = 0} in
-    check_clause ~is_local:false ~lcs:0 ~depth:0 index cl p amap
+    check_clause ~is_local:false ~lcs:0 ~depth:0 (0,pred_info) cl p amap
 
   let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let t = if needs_spilling then Spilling.main ~types t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
-  let extend1_clause flags state pred_info ~builtins ~types (clauses, symbols, index) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr }; is_deterministic } =
+  let extend1_clause flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr }; is_deterministic } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
-      (clauses,symbols, index)
+      (clauses,symbols, index, pred_info)
     else
     let (symbols, amap), body = to_dbl ~builtins ~types state symbols body in
     (* Format.eprintf "FINAL %a\n" (R.Pp.ppterm 0 [] ~argsdepth:0 empty_env) body;
     Format.eprintf "FINAL %a\n" (R.Pp.uppterm 0 [] ~argsdepth:0 empty_env) body; *)
-    let modes x = (Constants.Map.find_opt x pred_info) |> Option.fold ~some:(fun x -> x.mode) ~none:[] in
+    let modes x = (Constants.Map.find_opt x pred_info) |> Option.fold ~some:(fun (x : pred_info) -> x.mode) ~none:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
       with D.CannotDeclareClauseForBuiltin(loc,_c) ->
@@ -1822,12 +1809,14 @@ end = struct
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
 
-    let index = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index in
+    let p_info = C.Map.find p pred_info in
+    let index, p_info = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index p_info in
+    let pred_info = C.Map.add p p_info pred_info in
     (* Format.eprintf "Validating local clause for predicate %a at %a@." F.pp (SymbolMap.global_name state symbols p) Loc.pp loc; *)
     
-    check_mut_excl state symbols ~loc pred_info index cl p amap;
+    check_mut_excl state symbols ~loc pred_info cl p amap;
 
-    (graft,id,p,cl) :: clauses, symbols, index
+    (graft,id,p,cl) :: clauses, symbols, index, pred_info
 
 
   let check_rule_pattern_in_clique state symbols clique { D.CHR.pattern; rule_name; rule_loc } =
@@ -1938,9 +1927,9 @@ let extend1 flags (state, base) unit =
   let symbols, chr =
     List.fold_left (extend1_chr_block ~builtins ~types:signature.types flags state) (symbols,ochr) chr in
 
-  let clauses, symbols, prolog_program =
+  let clauses, symbols, prolog_program, indexing =
     (* TODO: pass also typeabbrevs *)
-    List.fold_left (extend1_clause ~builtins ~types:signature.types flags state indexing) (cl, symbols, prolog_program) clauses in
+    List.fold_left (extend1_clause ~builtins ~types:signature.types flags state) (cl, symbols, prolog_program, indexing) clauses in
 
   (* Printf.eprintf "kinds: %d\n%!" (F.Map.cardinal kinds); *)
 

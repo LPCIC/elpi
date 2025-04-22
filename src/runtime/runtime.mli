@@ -76,7 +76,7 @@ module CompileTime : sig
     depth:int ->
     predicate:constant ->
     graft:Elpi_parser.Ast.Structured.insertion option ->
-    clause -> string option -> index -> index
+    clause -> string option -> index -> pred_info -> index * pred_info
 
   (* can raise CannotDeclareClauseForBuiltin *)
   val clausify1 :
@@ -85,7 +85,7 @@ module CompileTime : sig
     nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 
 
-  val get_clauses : ?check_mut_excl:bool -> depth:int -> constant -> term -> index -> clause Bl.scan
+  val get_clauses : depth:int -> term -> overlap_clause Discrimination_tree.t -> overlap_clause Bl.scan
 
   val fresh_uvar : unit -> uvar_body
 end

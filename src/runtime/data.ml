@@ -11,6 +11,42 @@ module Fmt = Format
 module F = Ast.Func
 open Util
 
+(** 
+  Used to index the parameters of a predicate P
+  - [MapOn N] -> N-th argument at depth 1 (head symbol only)
+  - [Hash L]  -> L is the list of depths given by the urer for the parameters of
+                 P. Indexing is done by hashing all the parameters with a non
+                 zero depth and comparing it with the hashing of the parameters
+                 of the query
+  - [DiscriminationTree L] ->
+            we use the same logic of Hash, except we use DiscriminationTree to discriminate
+            clauses
+*)
+type indexing =
+  | MapOn of int
+  | Hash of int list
+  | DiscriminationTree of int list
+[@@deriving show, ord]
+
+type overlap_clause = { overlap_loc : Loc.t option; has_cut : bool }
+[@@deriving show]
+
+type overlap =
+  | Allowed
+  | Forbidden of overlap_clause Discrimination_tree.t
+[@@deriving show]
+
+let mk_Forbidden indexing =
+  Forbidden (
+    match indexing with
+    | MapOn i -> Discrimination_tree.empty_dt (List.init i (fun j -> if j = i-1 then 1 else 0))
+    | Hash l -> Discrimination_tree.empty_dt l
+    | DiscriminationTree l -> Discrimination_tree.empty_dt l
+  )
+
+type pred_info = { indexing:indexing; mode:Mode.hos; overlap: overlap }
+[@@deriving show]
+
 (******************************************************************************
   Terms: data type definition and printing
  ******************************************************************************)
@@ -233,26 +269,6 @@ type suspended_goal = {
   goal : int * term;
   blockers : blockers;
 }
-
-(** 
-  Used to index the parameters of a predicate P
-  - [MapOn N] -> N-th argument at depth 1 (head symbol only)
-  - [Hash L]  -> L is the list of depths given by the urer for the parameters of
-                 P. Indexing is done by hashing all the parameters with a non
-                 zero depth and comparing it with the hashing of the parameters
-                 of the query
-  - [DiscriminationTree L] ->
-            we use the same logic of Hash, except we use DiscriminationTree to discriminate
-            clauses
-*)
-type indexing =
-  | MapOn of int
-  | Hash of int list
-  | DiscriminationTree of int list
-[@@deriving show, ord]
-
-type pred_info = {indexing:indexing; mode:Mode.hos; is_det:Ast.Structured.functionality}
-[@@deriving show, ord]
 
 let mkLam x = Lam x [@@inline]
 let mkApp c x xs = App(c,x,xs) [@@inline]

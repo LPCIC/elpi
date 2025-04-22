@@ -2590,7 +2590,11 @@ let max_lists_length = List.fold_left (fun acc e -> max (max_list_length 0 e) ac
   - mp is the max_path size of any path in the index used to truncate the goal
   - max_list_length is the length of the longest sublist in each term of args 
 *)
-let arg_to_trie_path ?(check_mut_excl=false) ~safe ~depth ~is_goal args arg_depths args_depths_ar mode mp (max_list_length':int) : Discrimination_tree.Path.t =
+type check_mut_excl =
+ | Off of Mode.hos
+ | On
+
+let arg_to_trie_path ~check_mut_excl ~safe ~depth ~is_goal args arg_depths args_depths_ar mp (max_list_length':int) : Discrimination_tree.Path.t =
   let open Discrimination_tree in
 
   let path_length = mp + Array.length args_depths_ar + 1 in
@@ -2639,7 +2643,8 @@ let arg_to_trie_path ?(check_mut_excl=false) ~safe ~depth ~is_goal args arg_dept
     | Builtin _ | CData _ | Lam _ -> 
         type_error (Format.asprintf "[DT]: not a list: %a" (Pp.ppterm depth [] ~argsdepth:0 Data.empty_env) (deref_head ~depth t))
 
-  and emit_mode is_goal mode = if is_goal then if check_mut_excl then Path.emit path mkOutputMode else Path.emit path mode
+  and emit_mode is_goal mode = if is_goal then Path.emit path mode
+
   (** gives the path representation of a list of sub-terms *)
   and arg_to_trie_path_aux ~safe ~depth t_list path_depth : unit = 
     if path_depth = 0 then update_current_min_depth path_depth
@@ -2697,14 +2702,14 @@ let arg_to_trie_path ?(check_mut_excl=false) ~safe ~depth ~is_goal args arg_dept
   and aux ~safe ~depth is_goal args arg_depths mode =
     match args, arg_depths, mode with 
     | _, [], _ -> ()
-    | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, [] ->
-      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl Output []
-    | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, mode_hd :: mode_tl ->
-      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl (Mode.get_head mode_hd) mode_tl 
+    | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, (On | Off []) ->
+      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl Output On
+    | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, Off (mode_hd :: mode_tl) ->
+      make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl (Mode.get_head mode_hd) (Off mode_tl)
     | _, _ :: _,_ -> anomaly "Invalid Index length" in
   begin
     if args == [] then emit_mode is_goal mkOutputMode
-    else aux ~safe ~depth is_goal args (if is_goal then Array.to_list args_depths_ar else arg_depths) mode
+    else aux ~safe ~depth is_goal args (if is_goal then Array.to_list args_depths_ar else arg_depths) check_mut_excl
   end;
   Path.stop path  
 
@@ -2717,6 +2722,14 @@ let make_new_Map_snd_level_index argno mode =
     arg_idx = Ptmap.empty;
   }
         
+let path_for_dtree ~depth ~check_mut_excl arg_depths args_idx args =
+  let max_depths = Discrimination_tree.max_depths args_idx in
+  let max_path = Discrimination_tree.max_path args_idx in
+  let max_list_length = max_lists_length args in
+  (* Format.printf "[%d] Going to index [%a]\n%!" max_list_length (pplist pp_term ",") clause.args; *)
+  let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false args arg_depths max_depths ~check_mut_excl max_path max_list_length in
+  path, max_list_length, max_depths
+
 let add_clause_to_snd_lvl_idx ~depth ~insert predicate clause = function
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx; } ->
     begin match classify_clause_argno ~depth argno mode clause.args with
@@ -2763,16 +2776,10 @@ let add_clause_to_snd_lvl_idx ~depth ~insert predicate clause = function
        args_idx = Ptmap.add hash (insert clause clauses) args_idx
     }
 | IndexWithDiscriminationTree {mode; arg_depths; args_idx; } ->
-    let max_depths = Discrimination_tree.max_depths args_idx in
-    let max_path = Discrimination_tree.max_path args_idx in
-    let max_list_length = max_lists_length clause.args in
-    (* Format.printf "[%d] Going to index [%a]\n%!" max_list_length (pplist pp_term ",") clause.args; *)
-    let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false clause.args arg_depths max_depths mode max_path max_list_length in
+    let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) arg_depths args_idx clause.args in
     [%spy "dev:disc-tree:depth-path" ~rid pp_string "Inst: MaxDepths " (pplist pp_int "") (Array.to_list max_depths)];
-    let args_idx = Discrimination_tree.index args_idx path clause ~max_list_length in
     IndexWithDiscriminationTree {
-      mode; arg_depths;
-      args_idx = args_idx
+      mode; arg_depths; args_idx = Discrimination_tree.index args_idx path clause ~max_list_length
     }
 
 let compile_time_tick x = x + 1
@@ -2836,7 +2843,42 @@ let remove_clause_in_snd_lvl_idx p = function
     args_idx = Discrimination_tree.remove p args_idx;
   }
 
-let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate clause name =
+  let has_bang (t : term list) : bool =
+    let rec aux t =
+    match t with
+    | [] -> false
+    | Builtin (Cut, []) :: _ -> true
+    | Builtin (Pi, [Lam b]) :: xs | Builtin (Sigma, [Lam b]) :: xs -> aux [b] || aux xs
+    | Builtin (Impl, [h; l]) :: xs -> aux [l] || aux xs
+    | Builtin (And, l) :: xs -> aux l || aux xs
+    | _ :: xs -> aux xs in
+    aux t
+
+
+let update_overlap overlap ~depth index clause =
+  match overlap.overlap, index with
+  | Allowed,_ -> overlap
+  | Forbidden dt, TwoLevelIndex { mode; argno } ->
+    let arg_depths = List.init argno (fun j -> if j = argno-1 then 1 else 0) in
+    let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) arg_depths dt clause.args in
+    let has_cut = has_bang clause.hyps in
+    { overlap with overlap = Forbidden (
+        Discrimination_tree.index dt path { overlap_loc = clause.loc; has_cut } ~max_list_length
+      ) }
+  | Forbidden dt, BitHash { mode; args = arg_depths } ->
+    let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) arg_depths dt clause.args in
+    let has_cut = has_bang clause.hyps in
+    { overlap with overlap = Forbidden (
+        Discrimination_tree.index dt path { overlap_loc = clause.loc; has_cut } ~max_list_length
+      ) }
+  | Forbidden dt, IndexWithDiscriminationTree {mode; arg_depths; } ->
+    let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) arg_depths dt clause.args in
+    let has_cut = has_bang clause.hyps in
+    { overlap with overlap = Forbidden (
+        Discrimination_tree.index dt path { overlap_loc = clause.loc; has_cut } ~max_list_length
+      ) }
+
+let rec add1clause_compile_time ~depth { idx; time; times } overlap ~graft predicate clause name =
   try
     let snd_lvl_idx = Ptmap.find predicate idx in
     let time = compile_time_tick time in
@@ -2846,7 +2888,8 @@ let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate cla
         let times = add_to_times clause.loc name timestamp predicate times in
         clause.timestamp <- timestamp;
         let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.rcons predicate clause snd_lvl_idx in
-        { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
+        { times; time; idx = Ptmap.add predicate snd_lvl_idx idx },
+        update_overlap overlap ~depth snd_lvl_idx clause
     | Some (Ast.Structured.Remove x) ->
         let reference, predicate1 = time_of clause.loc x times in
         if predicate1 <> predicate then
@@ -2854,7 +2897,8 @@ let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate cla
         let times = remove_from_times x times in
         clause.timestamp <- reference;
         let snd_lvl_idx = remove_clause_in_snd_lvl_idx (fun x -> x.timestamp = reference) snd_lvl_idx in
-        { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
+        { times; time; idx = Ptmap.add predicate snd_lvl_idx idx },
+        update_overlap overlap ~depth snd_lvl_idx clause
     | Some (Ast.Structured.Replace x) ->
         let reference, predicate1 = time_of clause.loc x times in
         if predicate1 <> predicate then
@@ -2863,7 +2907,8 @@ let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate cla
         clause.timestamp <- reference;
         let snd_lvl_idx = remove_clause_in_snd_lvl_idx (fun x -> x.timestamp = reference) snd_lvl_idx in
         let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.(insert (fun x -> lex_insertion x.timestamp reference)) predicate clause snd_lvl_idx in
-        { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
+        { times; time; idx = Ptmap.add predicate snd_lvl_idx idx },
+        update_overlap overlap ~depth snd_lvl_idx clause
     | Some (Ast.Structured.Insert gr) ->
         let timestamp =
           match gr with
@@ -2872,10 +2917,11 @@ let rec add1clause_compile_time ~depth { idx; time; times } ~graft predicate cla
         let times = add_to_times clause.loc name timestamp predicate times in
         clause.timestamp <- timestamp;
         let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.(insert (fun x -> lex_insertion x.timestamp timestamp)) predicate clause snd_lvl_idx in
-        { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
+        { times; time; idx = Ptmap.add predicate snd_lvl_idx idx },
+        update_overlap overlap ~depth snd_lvl_idx clause
   with Not_found ->
       let idx = Ptmap.add predicate (make_new_Map_snd_level_index 0 []) idx in
-      add1clause_compile_time ~depth { idx; time; times } ~graft predicate clause name
+      add1clause_compile_time ~depth { idx; time; times } overlap ~graft predicate clause name
 
 let update_indexing (indexing : pred_info Constants.Map.t) (index : index) : index =
   let idx =
@@ -2897,8 +2943,8 @@ let update_indexing (indexing : pred_info Constants.Map.t) (index : index) : ind
     in
       { index with idx }
 
-let add_to_index ~depth ~predicate ~graft clause name index : index =
-  add1clause_compile_time ~depth ~graft index predicate clause name
+let add_to_index_compile_time ~depth ~predicate ~graft clause name index overlap_index : index * pred_info =
+  add1clause_compile_time ~depth ~graft index overlap_index predicate clause name
 
 let make_empty_index ~depth ~indexing =
   let index = update_indexing indexing { idx = Ptmap.empty; time = 0; times = StrMap.empty } in
@@ -2950,7 +2996,28 @@ let trie_goal_args goal : term list = match goal with
 
 let cmp_timestamp { timestamp = tx } { timestamp = ty } = lex_insertion tx ty
 
-let get_clauses ?(check_mut_excl = false) ~depth predicate goal { idx = m } =
+let get_clauses_dt ~check_mut_excl ~depth goal arg_depths args_idx =
+  let max_depths = Discrimination_tree.max_depths args_idx in
+  let max_path = Discrimination_tree.max_path args_idx in
+  let max_list_length = Discrimination_tree.max_list_length args_idx in
+  let path = arg_to_trie_path ~check_mut_excl:On ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths max_depths max_path max_list_length in
+  [%spy "dev:disc-tree:depth-path" ~rid pp_string "Goal: MaxDepths " (pplist pp_int ";") (Array.to_list max_depths)];
+  [%spy "dev:disc-tree:list-size-path" ~rid pp_string "Goal: MaxListSize " pp_int max_list_length];
+  (* Format.(printf "Goal: MaxDepth is %a\n" (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_int) (Discrimination_tree.max_depths args_idx |> Array.to_list)); *)
+  [%spy "dev:disc-tree:path" ~rid 
+    Discrimination_tree.Path.pp path
+    (pplist pp_int ";") arg_depths
+    (*Discrimination_tree.(pp (fun fmt x -> pp_string fmt "+")) args_idx*)];
+  (* Format.eprintf "@[<hov 2>Path is@ @[%a@]]@." Discrimination_tree.Path.pp path;
+  Format.eprintf "@[<hov 2>Discrimination tree is@ @[%a@]@." (Discrimination_tree.pp pp_clause) args_idx; *)
+  let candidates = Discrimination_tree.retrieve cmp_timestamp path args_idx in 
+  (* Format.eprintf "Candidates len is %d -->@ @[[%a]@]@." (Bl.length candidates) (pplist pp_clause ",@.") (Bl.to_list candidates); *)
+    [%spy "dev:disc-tree:candidates" ~rid 
+      pp_int (Bl.length candidates)];
+  candidates
+
+
+let get_clauses ~depth predicate goal { idx = m } =
  let rc =
    try
      match Ptmap.find predicate m with
@@ -2966,24 +3033,7 @@ let get_clauses ?(check_mut_excl = false) ~depth predicate goal { idx = m } =
        let cl = Ptmap.find_unifiables hash args_idx |> List.map Bl.to_scan |> List.map Bl.to_list |> List.flatten in
        Bl.of_list @@ List.sort cmp_timestamp cl
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
-        let max_depths = Discrimination_tree.max_depths args_idx in
-        let max_path = Discrimination_tree.max_path args_idx in
-        let max_list_length = Discrimination_tree.max_list_length args_idx in
-        let path = arg_to_trie_path ~check_mut_excl ~safe:false ~depth ~is_goal:true (trie_goal_args goal) arg_depths max_depths mode max_path max_list_length in
-        [%spy "dev:disc-tree:depth-path" ~rid pp_string "Goal: MaxDepths " (pplist pp_int ";") (Array.to_list max_depths)];
-        [%spy "dev:disc-tree:list-size-path" ~rid pp_string "Goal: MaxListSize " pp_int max_list_length];
-        (* Format.(printf "Goal: MaxDepth is %a\n" (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_int) (Discrimination_tree.max_depths args_idx |> Array.to_list)); *)
-        [%spy "dev:disc-tree:path" ~rid 
-          Discrimination_tree.Path.pp path
-          (pplist pp_int ";") arg_depths
-          (*Discrimination_tree.(pp (fun fmt x -> pp_string fmt "+")) args_idx*)];
-        (* Format.eprintf "@[<hov 2>Path is@ @[%a@]]@." Discrimination_tree.Path.pp path;
-        Format.eprintf "@[<hov 2>Discrimination tree is@ @[%a@]@." (Discrimination_tree.pp pp_clause) args_idx; *)
-        let candidates = Discrimination_tree.retrieve cmp_timestamp path args_idx in 
-        (* Format.eprintf "Candidates len is %d -->@ @[[%a]@]@." (Bl.length candidates) (pplist pp_clause ",@.") (Bl.to_list candidates); *)
-          [%spy "dev:disc-tree:candidates" ~rid 
-            pp_int (Bl.length candidates)];
-        candidates
+       get_clauses_dt ~check_mut_excl:false ~depth goal arg_depths mode args_idx
    with Not_found -> Bl.of_list []
  in
  [%log "get_clauses" ~rid (C.show predicate) (Bl.length rc)];
@@ -4346,8 +4396,10 @@ let expand_appuv ~depth r ~lvl ~args =
 
 module CompileTime = struct
   let update_indexing = update_indexing
-  let add_to_index = add_to_index
+  let add_to_index = add_to_index_compile_time
   let clausify1 = Clausify.clausify1  
-  let get_clauses = get_clauses
+  let get_clauses ~depth goal args_idx =
+    get_clauses_dt ~check_mut_excl:On ~depth goal arg_depths args_idx
+
   let fresh_uvar () = oref C.dummy
 end

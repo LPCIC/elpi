@@ -98,10 +98,23 @@ let check_indexing ~loc availability name value ty indexing =
   let ensure_pred is_prop =
     if Option.is_none is_prop then
       error ~loc "Indexing directive is for predicates only" in
+  let overlap indexing =
+    match is_prop with
+    | None | Some Relation -> Elpi_runtime.Data.Allowed
+    | Some Function -> Elpi_runtime.Data.mk_Forbidden indexing in
   match indexing with
-  | Some (Ast.Structured.Index(l,k)) -> ensure_pred is_prop; TypingEnv.Index {mode;indexing=chose_indexing name l k;is_det=Option.get is_prop}
-  | Some MaximizeForFunctional when availability = Ast.Structured.Elpi -> ensure_pred is_prop; Index {mode;indexing=maximize_indexing_input mode;is_det=Option.get is_prop}
-  | _ when Option.is_some is_prop -> Index {mode;indexing=chose_indexing name [1] None;is_det=Option.get is_prop}
+  | Some (Ast.Structured.Index(l,k)) -> ensure_pred is_prop;
+      let indexing = chose_indexing name l k in
+      let overlap = overlap indexing in
+      TypingEnv.Index {mode;indexing; overlap}
+  | Some MaximizeForFunctional when availability = Ast.Structured.Elpi -> ensure_pred is_prop;
+      let indexing = maximize_indexing_input mode in
+      let overlap = overlap indexing in
+      Index {mode;indexing; overlap }
+  | _ when Option.is_some is_prop ->
+      let indexing = chose_indexing name [1] None in
+      let overlap = overlap indexing in
+      Index {mode;indexing; overlap}
   | _ -> DontIndex
 
 let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
@@ -841,7 +854,11 @@ let check1_undeclared w f (t, id) =
       let mode = ty2mode tya in
       let indexing = match is_prop ty with
       | None -> TypingEnv.DontIndex
-      | Some is_det -> Index {mode; indexing=chose_indexing (Symbol.get_func id) [1] None; is_det} 
+      | Some Relation -> Index {mode; indexing=chose_indexing (Symbol.get_func id) [1] None; overlap = Allowed} 
+      | Some Function ->
+          let indexing = chose_indexing (Symbol.get_func id) [1] None in
+          let overlap = Elpi_runtime.Data.mk_Forbidden indexing in
+          Index {mode; indexing; overlap } 
       in
       id, TypingEnv.{ ty ; indexing; availability = Elpi }
   | _ -> assert false

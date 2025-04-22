@@ -468,7 +468,8 @@ end = struct
 
   let compatible_indexing i1 i2 =
     match i1, i2 with
-    | Index m1, Index m2 -> Elpi_runtime.Data.compare_pred_info m1 m2 == 0
+    | Index { indexing = i1; mode = m1 }, Index { indexing = i2; mode = m2 } ->
+        Elpi_runtime.Data.compare_indexing i1 i2 == 0 && Elpi_util.Util.Mode.compare_hos m1 m2 == 0
     | DontIndex, _ -> true
     | _, DontIndex -> true
   
