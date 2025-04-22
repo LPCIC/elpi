@@ -145,31 +145,24 @@ let compile_for_runtime ({ TypingEnv.overloading } as e) =
   F.Map.filter_map (fun _ -> function TypeAssignment.Single s -> Some (TypingEnv.canon e s) | _ -> None) overloading
 let runtime_resolve m f = F.Map.find f m
 
-let check_1types  ~type_abbrevs ~kinds lst : _ * Symbol.t TypeAssignment.overloaded =
-  match List.map (check_type ~type_abbrevs ~kinds) lst with
-  | [] -> assert false
-  | [x,_,_] as l -> l, TypeAssignment.Single x
-  | xs as l -> l, TypeAssignment.Overloaded (List.map (fun (x,_,_) -> x) xs)
+let check_1types k ~type_abbrevs ~kinds lst : TypingEnv.t list =
+  List.map (check_type ~type_abbrevs ~kinds) lst |>
+  List.map (function
+  | (x,None,metadata) ->
+      let overloading = F.Map.(add k (TypeAssignment.Single x) empty) in
+      let symbols = Symbol.QMap.(add x metadata empty) in
+      { TypingEnv.overloading; symbols }
+  | (x,Some q,metadata) ->
+    let overloading = F.Map.(add k (TypeAssignment.Single x) empty) in
+    let symbols = Symbol.QMap.(add x metadata empty) in
+    let symbols = Symbol.QMap.unify (fun _ _ _ -> anomaly "builtins predicates are unique") x q symbols in
+    { TypingEnv.overloading; symbols })
 
 let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
-  let m = F.Map.mapi (fun k tl ->
+  let tel = F.Map.mapi (fun k tl ->
     (* Format.eprintf "Types for %a\n%!" F.pp k; *)
-    check_1types ~type_abbrevs ~kinds tl) m in
-  let overloading = F.Map.map snd m in
-  let symbols = F.Map.fold (fun _ (l,_) qm ->
-    List.fold_left (fun acc (k, q, v) ->
-      let acc =
-        match q with
-        | None -> acc
-        | Some q ->
-            (* Format.eprintf "FOUND %a -> %a\n" Symbol.pp q Symbol.pp k; *)
-            (* CAVEAT: we keep as canonical the (ocaml) one allocated statically in Global_symbols *)
-            Symbol.QMap.unify (fun _ _ _ -> anomaly "builtins predicates are unique") k q acc in
-      Symbol.QMap.add k v acc) qm l) m Symbol.QMap.empty in
-      
-  let rc = { TypingEnv.overloading; symbols } in
-  rc
-
+    check_1types k ~type_abbrevs ~kinds tl) m in
+  F.Map.fold (fun _ l acc -> List.fold_left TypingEnv.merge_envs acc l) tel TypingEnv.empty
 
 type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 [@@deriving show]

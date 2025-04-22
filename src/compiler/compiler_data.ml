@@ -121,21 +121,21 @@ module TypeAssignment = struct
   let (&&&) x y =
     if x = 0 then y else x
 
-  let rec compare_t_ ~cmp_mode c t1 t2 = match t1, t2 with
-    | Prop d1, Prop d2 -> Ast.Structured.compare_functionality d1 d2
+  let rec compare_t_ ~cmp_mode ~cmp_func c t1 t2 = match t1, t2 with
+    | Prop d1, Prop d2 -> cmp_func d1 d2
     | Any, Any -> 0
     | Cons f1, Cons f2 -> F.compare f1 f2
     | App (f1,hd,tl), App (f2,hd1,tl1) -> 
       cmp_aux 
         (F.compare f1 f2)
-        (fun () -> List.compare (compare_t_ ~cmp_mode c) (hd::tl) (hd1::tl1))
+        (fun () -> List.compare (compare_t_ ~cmp_mode ~cmp_func c) (hd::tl) (hd1::tl1))
 
     | Arr (m1, v1, l1, r1), Arr (m2, v2, l2, r2) ->
       (cmp_mode m1 m2) &&&
       cmp_aux
         (Ast.Structured.compare_variadic v1 v2) (fun () -> 
-          cmp_aux (compare_t_ ~cmp_mode c l1 l2) (fun () -> 
-            compare_t_ ~cmp_mode c r1 r2))
+          cmp_aux (compare_t_ ~cmp_mode ~cmp_func c l1 l2) (fun () -> 
+            compare_t_ ~cmp_mode ~cmp_func c r1 r2))
     | UVar v1, UVar v2 -> c v1 v2
     | Prop _, _ -> -1 | _, Prop _ -> 1
     | Any   , _ -> -1 | _, Any    -> 1
@@ -151,11 +151,11 @@ module TypeAssignment = struct
   | Any | Cons _ | App _ | UVar _ -> None
   | Arr(_,_,_,t) -> is_prop t
 
-  let compare_skema ~cmp_mode sk1 sk2 =
+  let compare_skema ~cmp_mode ~cmp_func sk1 sk2 =
     let rec aux ctx sk1 sk2 =
       match sk1, sk2 with
       | Lam (f1,sk1), Lam(f2,sk2) -> aux (ScopeContext.push_ctx elpi_language f1 f2 ctx) sk1 sk2
-      | Ty t1, Ty t2 -> compare_t_ ~cmp_mode (ScopeContext.cmp_var ctx elpi_language) t1 t2
+      | Ty t1, Ty t2 -> compare_t_ ~cmp_mode ~cmp_func (ScopeContext.cmp_var ctx elpi_language) t1 t2
       | Lam _, Ty _ -> -1
       | Ty _, Lam _ -> 1
     in
@@ -297,7 +297,7 @@ module TypeAssignment = struct
   let apply (sk:skema) args = apply F.Map.empty sk args
 
   let eq_skema_w_id n (symb1,x) (symb2,y) = 
-    try compare_skema ~cmp_mode:compare_tmode x y = 0
+    try compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality x y = 0
     with InvalidMode -> 
       error ~loc:(Symbol.get_loc symb1) 
         (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n Symbol.pp symb1 pretty_skema_raw x Symbol.pp symb2 pretty_skema_raw y)
@@ -334,19 +334,16 @@ module TypeAssignment = struct
       let res = merge_aux t1 t2 in
       !removed, res *)
 
-  let o2l = function Single x -> [x] | Overloaded l -> l
 
   let check_same_mode ~loc1 ~loc2 x y =
-    if compare_skema ~cmp_mode:compare_tmode x y <> 0 then
-      error ~loc:loc1 ("Two types for the same symbol cannot only differ on modes. Previous declaration: " ^ Loc.show loc2)
+    if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality x y <> 0 then
+      error ~loc:loc1 ("Two types for the same symbol cannot only differ on modes or functionality.\nPrevious declaration: " ^ Loc.show loc2)
 
-  let undup_skemas sk_of_s os1 os2 =
-    let l1 = o2l os1 in
-    let l2 = o2l os2 in
-    let l = l1 @ l2 |> List.map (fun x -> x, sk_of_s x) in
+  let undup_skemas sk_of_s osl =
+    let l = osl |> List.map (fun x -> x, sk_of_s x) in
     let filtered = ref [] in
     let eq_skema (s1,x) (s2,y) = 
-      let b = compare_skema ~cmp_mode:(fun _ _ -> 0) x y = 0 in
+      let b = compare_skema ~cmp_mode:(fun _ _ -> 0) ~cmp_func:(fun _ _ -> 0) x y = 0 in
       if b then check_same_mode ~loc1:(Symbol.get_loc s1) ~loc2:(Symbol.get_loc s2) x y;
       if b then filtered := (s1,s2) :: !filtered;
       b in      
@@ -362,11 +359,11 @@ module TypeAssignment = struct
     | l -> !filtered, Overloaded l
 
   let merge_skema sk1 sk2 =
-    if compare_skema ~cmp_mode:compare_tmode sk1 sk2 <> 0 then anomaly "merging different skemas";
+    if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality sk1 sk2 <> 0 then anomaly "merging different skemas";
     sk1
 
-  let compare_t_ a b = compare_t_ ~cmp_mode:compare_tmode a b
-  let compare_skema a b = compare_skema ~cmp_mode:compare_tmode a b
+  let compare_t_ a b = compare_t_ ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality a b
+  let compare_skema a b = compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality a b
 
   let set m v = MutableOnce.set m (Val v)
 
@@ -511,12 +508,14 @@ end = struct
       availability = merge_availability s a1 a2;
     }
   
+  let o2l = function  TypeAssignment.Single x -> [x] | Overloaded l -> l
+
   let merge_envs   { symbols = s1; overloading = o1 } { symbols = s2; overloading = o2 } =
     let symbols = Symbol.QMap.union merge_symbol_metadata s1 s2 in
     let to_unite = ref [] in
     let overloading = F.Map.union (fun f l1 l2 ->
       (* We give precedence to recent type declarations over old ones *)
-      let to_u, l = TypeAssignment.undup_skemas (fun x -> (Symbol.QMap.find x symbols).ty) l1 l2 in
+      let to_u, l = TypeAssignment.undup_skemas (fun x -> (Symbol.QMap.find x symbols).ty) (o2l l1 @ o2l l2) in
       to_unite := to_u :: !to_unite;
       Some l
       ) o1 o2 in
@@ -731,7 +730,7 @@ module ScopedTypeExpression = struct
     | _, App(Bound _,_,_,_) -> assert false
     | Arrow(m1, b1,s1,t1), Arrow(m2, b2,s2,t2) -> Mode.compare m1 m2 == 0 && b1 = b2 && eqt env ctx s1 s2 && eqt env ctx t1 t2
     | Any, Any -> true
-    | Prop _, Prop _ -> true
+    | Prop f1, Prop f2 -> Ast.Structured.compare_functionality f1 f2 == 0
     | _ -> false
 
   let rec eq env ctx t1 t2 =

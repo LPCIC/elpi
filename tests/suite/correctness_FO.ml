@@ -223,6 +223,7 @@ let () =
   let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
   let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
   let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*[io]:.*" l c) in
+  let duplicate_err l1 l2 = !(Format.asprintf "line %d.*\n.*cannot only differ.*\n.*line %d" l1 l2) in
   let status = Test.
     [|(* 01*) mut_excl 9 6; Success; det_check 9 7; mut_excl_no_loc "q 2 _"; mut_excl_no_loc "q 1 _";            (*05*)
       (* 06*) mut_excl_no_loc "q 3 _"; mut_excl_no_loc "q 2 _"; mut_excl_no_loc "q X0 _"; mut_excl 10 10; mut_excl 10 10; (*10*)
@@ -244,7 +245,7 @@ let () =
       (* 86*) Success; Success; Success; Success; Success;                       (*90*)
       (* 91*) det_check 14 5; Success; Success; det_check 14 5; Success;         (*95*)
       (* 96*) mut_excl 6 6; mut_excl 6 6; Success; Success; Success;             (*100*)
-      (*100*) Success; mut_excl_no_loc "f X0 _"
+      (*101*) Success; mut_excl_no_loc "f X0 _";  duplicate_err 1 2
     |] in
   for i = 0 to Array.length status - 1 do
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
