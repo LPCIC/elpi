@@ -28,7 +28,7 @@ type indexing =
   | DiscriminationTree of int list
 [@@deriving show, ord]
 
-type overlap_clause = { overlap_loc : Loc.t option; has_cut : bool }
+type overlap_clause = { overlap_loc : Loc.t option; has_cut : bool; mutable timestamp : int list }
 [@@deriving show]
 
 type overlap =

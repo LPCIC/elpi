@@ -80,8 +80,9 @@ val index : 'a t -> max_list_length:int -> Path.t -> 'a -> 'a t
 val max_path : 'a t -> int
 val max_list_length : 'a t -> int
 val max_depths : 'a t -> int array
+val user_upper_bound_depth : 'a t -> int list
 
-val empty_dt : 'b list -> 'a t
+val empty_dt : int list -> 'a t
 
 (** [retrive cmp path dt] Retrives all values in a discrimination tree [dt] from
     a given path [p].

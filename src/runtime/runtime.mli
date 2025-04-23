@@ -76,7 +76,7 @@ module CompileTime : sig
     depth:int ->
     predicate:constant ->
     graft:Elpi_parser.Ast.Structured.insertion option ->
-    clause -> string option -> index -> pred_info -> index * pred_info
+    clause -> string option -> index -> pred_info -> index * (overlap_clause option * pred_info)
 
   (* can raise CannotDeclareClauseForBuiltin *)
   val clausify1 :
@@ -91,5 +91,5 @@ module CompileTime : sig
 end
 
 module Indexing : sig
-  val add1clause_runtime : depth:constant -> index -> constant -> clause -> index
+  val add1clause_overlap_runtime : depth:constant -> pred_info Constants.Map.t -> constant -> time:constant -> clause -> overlap_clause option * pred_info Constants.Map.t
 end
