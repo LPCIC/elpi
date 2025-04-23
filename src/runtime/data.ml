@@ -39,7 +39,7 @@ type overlap =
 let mk_Forbidden indexing =
   Forbidden (
     match indexing with
-    | MapOn i -> Discrimination_tree.empty_dt (List.init i (fun j -> if j = i-1 then 1 else 0))
+    | MapOn i -> Discrimination_tree.empty_dt (List.init (i+1) (fun j -> if j = i then 1 else 0))
     | Hash l -> Discrimination_tree.empty_dt l
     | DiscriminationTree l -> Discrimination_tree.empty_dt l
   )
