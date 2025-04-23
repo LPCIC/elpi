@@ -396,9 +396,9 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     | _ -> ()
 
   and check_impl ~positive ctx ~loc ~tyctx b t1 t2 ety =
-    if not @@ unify (ety) prop then error_bad_ety ~valid_mode ~loc ~tyctx ~ety:prop ScopedTerm.pretty_ (Impl(b,t1,t2)) (ety)
+    if not @@ unify ety prop then error_bad_ety ~valid_mode ~loc ~tyctx ~ety:prop ScopedTerm.pretty_ (Impl(b,t1,t2)) (ety)
     else
-      let lhs, rhs,c (* of => *) = if b then t1,t2,F.implf else t2,t1,F.rimplf in
+      let lhs, rhs,c,positive (* of => *) = if b then t1,t2,F.implf,positive else t2,t1,F.rimplf,not positive in
       let spills = check_loc ~positive ~tyctx:(Some c) ctx rhs ~ety:prop in
       let lhs_ty = mk_uvar "Src" in
       let more_spills = check_loc ~positive:(not positive) ~tyctx:None ctx ~ety:lhs_ty lhs in
