@@ -310,37 +310,6 @@ module TypeAssignment = struct
       error ~loc:(Symbol.get_loc symb1) 
         (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n Symbol.pp symb1 pretty_skema_raw x Symbol.pp symb2 pretty_skema_raw y)
 
-  (* returns a pair of ids representing the merged type_ass + the new merge type_ass
-  let merge_skema n t1 t2 =
-    let diff_id_check ((id1:Symbol.t),t1) (id2,t2) = 
-      if (id1 = id2) then error ~loc:(Symbol.get_loc id1) 
-        (Format.asprintf "Different constants with same ids (loc2 is:%a)\n%a\n<>\n%a" Symbol.pp id2 pp_skema t1 pp_skema t2) in
-    let diff_ids_check e = List.iter (diff_id_check e) in
-
-    let removed = ref [] in
-    let add x y = removed := (fst x,fst y) :: !removed in 
-    let rec remove_mem e acc = function
-      | [] -> List.rev acc
-      | x::xs when eq_skema_w_id n e x ->
-        diff_ids_check x xs;
-        add x e;
-        List.rev_append acc xs
-      | x::xs -> remove_mem e (x::acc) xs
-    in
-    let rec merge_aux t1 t2 =
-      match t1, t2 with
-      | Single x, Single y when eq_skema_w_id n x y -> 
-        add y x;
-        t1
-      | Single x, Single y -> diff_id_check x y; Overloaded [x;y]
-      | Single x, Overloaded ys  -> Overloaded (x :: remove_mem x [] ys)
-      | Overloaded xs, Single y when List.exists (eq_skema_w_id n y) xs -> t1
-      | Overloaded xs, Single y -> diff_ids_check y xs; Overloaded(xs@[y])
-      | Overloaded xs, Overloaded _ ->
-          List.fold_right (fun x -> merge_aux (Single x)) xs t2
-      in
-      let res = merge_aux t1 t2 in
-      !removed, res *)
 
 
   let check_same_mode ~loc1 ~loc2 x y =
