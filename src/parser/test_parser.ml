@@ -23,7 +23,7 @@ let error s a1 a2 =
 
 let mkClause loc attributes body =
   let open Clause in
-  Clause { loc; attributes; body; needs_spilling = (); is_deterministic = () }
+  Clause { loc; attributes; body; needs_spilling = () }
 
 let mkLoc x y w z =
   { Loc.client_payload = None; source_name = "(input)"; source_start = x; source_stop = y; line = w; line_starts_at = z}

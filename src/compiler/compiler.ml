@@ -983,7 +983,7 @@ end = struct
      let needs_spilling = ref false in
      let state = set_mtm state { empty_mtm with macros; needs_spilling } in
      let body = scope_loc_term ~state body in
-     { Ast.Clause.body; attributes; loc; needs_spilling = !needs_spilling; is_deterministic = false }
+     { Ast.Clause.body; attributes; loc; needs_spilling = !needs_spilling }
 
 
   let compile_sequent state macros { Ast.Chr.eigen; context; conclusion } =
@@ -1394,9 +1394,9 @@ end = struct
       let spilled = {clause with body; needs_spilling = false} in
       (* if typecheck then Mode_checker.check ~is_rule:true ~type_abbrevs ~kinds ~types spilled.body; *)
 
-      let is_deterministic = typecheck && Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body in
+      let _ = typecheck && Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body in
 
-      unknown, {spilled with is_deterministic } :: clauses) (F.Map.empty,[]) clauses in
+      unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
     let clauses = List.rev clauses in
 
     let unknown, chr = List.fold_left (fun (unknown,chr_blocks) { Ast.Structured.clique; ctx_filter; rules; loc } ->
@@ -1789,7 +1789,7 @@ end = struct
     let t = if needs_spilling then Spilling.main ~types t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
-  let extend1_clause flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr }; is_deterministic } =
+  let extend1_clause flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index, pred_info)

@@ -347,7 +347,6 @@ clause:
       attributes;
       body;
       needs_spilling = ();
-      is_deterministic = ()
     }
   }
 | attributes = attributes; l = clause_hd_term; v = VDASH; r = term { 
@@ -355,7 +354,6 @@ clause:
       attributes;
       body = mkApp (loc $sloc) [mkConst (loc $loc(v)) Func.rimplf;l;r];
       needs_spilling = ();
-      is_deterministic = ()
     }
 }
 

@@ -115,7 +115,6 @@ module Clause : sig
     attributes : 'attributes;
     body : 'term;
     needs_spilling : 'spill;
-    is_deterministic: 'deterministic
   }
   [@@ deriving show, ord]
 
