@@ -40,18 +40,22 @@ let check_global_exists ~loc c (type_abbrevs : type_abbrevs) arities nargs =
   end else
     error ~loc ("Unknown type " ^ F.show c)
 
+let error_unknown_target ~loc =
+  error ~loc (Format.asprintf "Unknown target type. It is a predicate or not?")
+
 (* Converts a ScopedTypeExpression into a TypeAssignment *)
-let rec check_loc_tye ~type_abbrevs ~kinds ctx { loc; it } =
-  check_tye ~loc ~type_abbrevs ~kinds ctx it
-and check_tye ~loc ~type_abbrevs ~kinds ctx = function
+let rec check_loc_tye ~positive ~type_abbrevs ~kinds ctx { loc; it } =
+  check_tye ~loc ~positive ~type_abbrevs ~kinds ctx it
+and check_tye ~loc ~positive ~type_abbrevs ~kinds ctx = function
+  | Any when positive -> error_unknown_target ~loc
   | Any -> TypeAssignment.Any
   | Prop p -> Prop p
   | Const(Bound _,c) -> check_param_exists ~loc c ctx; UVar c
   | Const(Global _,c) -> check_global_exists ~loc c type_abbrevs kinds 0; Cons c
   | App(_,c,x,xs) ->
       check_global_exists ~loc c type_abbrevs kinds (1 + List.length xs);
-      App(c,check_loc_tye ~type_abbrevs ~kinds ctx x, List.map (check_loc_tye ~type_abbrevs ~kinds ctx) xs)
-  | Arrow(m,v,s,t) -> Arr(TypeAssignment.MVal m,v,check_loc_tye ~type_abbrevs ~kinds ctx s,check_loc_tye ~type_abbrevs ~kinds ctx t)
+      App(c,check_loc_tye ~positive ~type_abbrevs ~kinds ctx x, List.map (check_loc_tye ~positive ~type_abbrevs ~kinds ctx) xs)
+  | Arrow(m,v,s,t) -> Arr(TypeAssignment.MVal m,v,check_loc_tye ~positive:false ~type_abbrevs ~kinds ctx s,check_loc_tye ~positive:true ~type_abbrevs ~kinds ctx t)
 
 
 let check_type ~type_abbrevs ~kinds ~loc ~name ctx x =
@@ -61,7 +65,7 @@ let check_type ~type_abbrevs ~kinds ~loc ~name ctx x =
     | Lam(c,t) ->
         check_param_unique ~loc c ctx;
         TypeAssignment.Lam(c,aux_params ~loc (F.Set.add c ctx) t)
-    | Ty t -> TypeAssignment.Ty(check_loc_tye ~type_abbrevs ~kinds ctx t)
+    | Ty t -> TypeAssignment.Ty(check_loc_tye ~positive:true ~type_abbrevs ~kinds ctx t)
   in
     aux_params ~loc ctx x
 
@@ -378,7 +382,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     | Discard -> []
     | Var((_,c,_ as hd),args) -> check_app ~positive ctx ~loc ~tyctx hd (uvar_type ~loc c) args ety
     | Cast(t,ty) ->
-        let ty = TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty ty in
+        let ty = TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty ty in
         let spills = check_loc ~positive ctx ~tyctx:None t ~ety:ty in
         if unify ty ety then spills
         else error_bad_ety ~valid_mode ~loc ~tyctx ScopedTerm.pretty_ x ty ~ety
@@ -431,7 +435,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     let name_lang, c, c_type = match sc with Some c -> c | None -> mk_ty_name elpi_language (fresh_name ()) in
     let src = match c_type_cast with
       | None -> mk_uvar "Src"
-      | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~type_abbrevs ~kinds F.Set.empty x
+      | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty x
     in
     if not @@ MutableOnce.is_set c_type then MutableOnce.set ~loc c_type (Val src);
     (* Format.eprintf "Ty is setted to %a@." (MutableOnce.pp TypeAssignment.pp) (tya); *)

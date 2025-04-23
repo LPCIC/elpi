@@ -1757,6 +1757,12 @@ end = struct
           let uvar = UVar(R.CompileTime.fresh_uvar (),depth,0) in 
           let b = Runtime.subst ~depth [uvar] b in
           aux ~depth:(depth+1) index b
+        | Builtin (Impl, [Nil; l])
+        | Builtin (Impl, [Builtin(And,[]); l]) -> aux ~depth index l
+        | Builtin (Impl, [Cons(h,hl); l]) ->
+            aux ~depth index (Builtin (Impl, [h; Builtin(Impl,[hl; l])]))
+        | Builtin (Impl, [Builtin(And,h::hl); l]) ->
+            aux ~depth index (Builtin (Impl, [h; Builtin(Impl,[Builtin(And,hl); l])]))
         | Builtin (Impl, [h; l]) ->
             (* Format.eprintf "Adding local clause %a@." pp_term h; *)
             begin try
@@ -1806,7 +1812,9 @@ end = struct
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
 
-    let p_info = C.Map.find p pred_info in
+    let p_info =
+      try C.Map.find p pred_info
+      with Not_found -> anomaly ("No pred_info for " ^ F.show @@ SymbolMap.global_name state symbols p) in
     let index, (overlap_clause, p_info) = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index p_info in
     let pred_info = C.Map.add p p_info pred_info in
     (* Format.eprintf "Validating local clause for predicate %a at %a@." F.pp (SymbolMap.global_name state symbols p) Loc.pp loc; *)

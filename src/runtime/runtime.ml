@@ -2858,15 +2858,15 @@ let remove_clause_in_snd_lvl_idx p = function
     aux t
 
 let add1clause_overlap_runtime ~depth (idx:pred_info C.Map.t) predicate ~time clause =
-  let pred_info = C.Map.find predicate idx in 
-  match pred_info.overlap with
-  | Allowed -> None, idx
-  | Forbidden dt ->
+  match C.Map.find predicate idx with
+  | { overlap = Allowed } -> None, idx
+  | { overlap = Forbidden dt } as pred_info ->
     clause.timestamp <- [time];
     let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off pred_info.mode) dt clause.args in
     let cl_overlap = { overlap_loc = clause.loc; has_cut=has_bang clause.hyps; timestamp=clause.timestamp } in
     let dt = Discrimination_tree.index dt ~max_list_length path cl_overlap in
     Some cl_overlap, C.Map.add predicate ({pred_info with overlap = Forbidden dt}) idx
+  | exception Not_found -> None, idx
 
 
 let update_overlap overlap ~depth index clause =
@@ -3131,10 +3131,10 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   | Discard -> error ?loc "ill-formed hypothetical clause: discard in head position"
   | Builtin(RImpl, [g2;g1]) ->
      claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | Builtin(RImpl,  _) -> error ?loc "ill-formed hypothetical clause"
+  | Builtin(RImpl, []) -> error ?loc "ill-formed hypothetical clause: :-"
   | Builtin(Impl, [g1;g2])->
      claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | Builtin(Impl, _) -> error ?loc "ill-formed hypothetical clause"
+  | Builtin(Impl, []) -> error ?loc "ill-formed hypothetical clause: =>"
   | Builtin(Sigma, [arg]) ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      let args =
@@ -3197,7 +3197,7 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   | UVar _ | AppUVar _ -> 
     assert false |> ignore;
     error ?loc "Flexible hypothetical clause"
-  | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause"
+  | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause: [] / ::"
   end]
 
 let clausify ~loc { index = { idx = index } } ~depth t =

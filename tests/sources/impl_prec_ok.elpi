@@ -1,5 +1,7 @@
-main :- true, (true => true), true, true.
-main :- true, (true => true), !.
-main :- true, (true => (true,true)), true, true.
-main :- std.do! [ true, true => true, true].
-main :- std.do! [ true, (pi x\ true => true), true].
+main :- xx, (xx => xx), xx, xx.
+main :- xx, (xx => xx), !.
+main :- xx, (xx => (xx,xx)), xx, xx.
+main :- std.do! [ xx, xx => xx, xx].
+main :- std.do! [ xx, (pi x\ xx => xx), xx].
+pred xx.
+xx.

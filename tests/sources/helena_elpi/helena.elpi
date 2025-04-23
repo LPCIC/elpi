@@ -56,11 +56,14 @@
 
 % AUXILIARY PREDICATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type k+0, l+0, m+0 any.
-type k+1, l+1, m+1 any.
-type k+2, l+2, m+2 any.
-type k+y, l+y, m+y any.
-pred m+pred o:any, o:any.
+kind term type.
+kind label type.
+
+type k+0, l+0, m+0 term.
+type k+1, l+1, m+1 term.
+type k+2, l+2, m+2 term.
+type k+y, l+y, m+y term.
+pred m+pred o:term, o:term.
 
 m+pred m+1 m+0.
 
@@ -68,42 +71,43 @@ m+pred m+y m+y.
 
 % EXTENDED REDUCTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-pred maybe+sn i:any,i:any,o:any,o:any,o:any,o:any,i:any,i:any.
-pred age+check i:any,i:any,o:any,o:any,o:any,o:any,i:any,o:any,i:any,i:any.
-pred conv+ o:any,i:any,o:any,o:any,i:any,i:any.
-pred conv+s i:any,i:any.
-pred conv+r i:any,i:any,o:any,o:any,i:any,o:any.
-pred conv+l o:any,i:any,o:any,o:any,i:any,i:any.
-pred conv+0 o:any,i:any,o:any,o:any,i:any,i:any.
-pred k+succ o:any,o:any.
-type k+prop any.
-type k+set any.
-pred l+pred o:any,o:any.
-pred l+zero o:any.
-pred r+exp o:any,o:any,o:any,o:any,o:any.
-type e+sn any.
-type e+dx any.
-pred rtm+0 o:any,o:any, o:any,o:any,o:any,o:any.
-type satom any.
-type appr any -> any -> any.
-type scons any -> any -> any.
-% type appr any -> any -> any -> any.
-type appx any -> any -> any -> any.
-type cast any -> any -> any.
-type sort any -> any.
-type abst any -> any -> (any -> any) -> any.
-type abbr any -> (any -> any) -> any.
-type prod any -> any -> (any -> any) -> any.
-pred appl+ i:any,o:any,o:any,o:any.
-pred gv+ o:any.
-pred tv+ o:any.
-type gtop any.
-type gdef+1 any -> any -> (any -> any) -> any.
-type gdef+2 any -> any -> any -> any.
 
-type gdec+1 any -> any -> (any -> any) -> any.
-type gdec+2 any -> any -> any -> any.
-type g+line any -> any -> any -> any.
+pred maybe+sn i:term,i:term,o:term,o:term,o:term,o:term,i:term,i:term.
+pred age+check i:term,i:term,o:term,o:term,o:term,o:term,i:term,o:term,i:term,i:term.
+pred conv+ o:term,i:term,o:term,o:term,i:term,i:term.
+pred conv+s i:term,i:term.
+pred conv+r i:term,i:term,o:term,o:term,i:term,o:term.
+pred conv+l o:term,i:term,o:term,o:term,i:term,i:term.
+pred conv+0 o:term,i:term,o:term,o:term,i:term,i:term.
+pred k+succ o:term,o:term.
+type k+prop term.
+type k+set term.
+pred l+pred o:term,o:term.
+pred l+zero o:term.
+pred r+exp o:term,o:term,o:term,o:term,o:term.
+type e+sn term.
+type e+dx term.
+pred rtm+0 o:term,o:term, o:term,o:term,o:term,o:term.
+type satom term.
+type appr term -> term -> term.
+type scons term -> term -> term.
+% type appr term -> term -> term -> term.
+type appx term -> term -> term.
+type cast term -> term -> term.
+type sort term -> term.
+type abst term -> term -> (term -> term) -> term.
+type abbr term -> (term -> term) -> term.
+type prod term -> term -> (term -> term) -> term.
+pred appl+ i:term,o:term,o:term,o:term.
+pred gv+ o:term.
+pred tv+ o:term.
+type gtop term.
+type gdef+1 label -> term -> (term -> term) -> term.
+type gdef+2 term -> term -> term.
+
+type gdec+1 label -> term -> (term -> term) -> term.
+type gdec+2 term -> term -> term.
+type g+line term -> label -> term -> prop.
 
 % rtm+0 T1 S1 M1 M2 S2 T2 :- before, print begin-rtm1 T1 S1 M1, fail.
 
@@ -294,21 +298,21 @@ tv+ (cast U T) :- tv+ U, tv+ T, conv+ T satom m+1 m+0 satom U.
 gv+ gtop.
 
 % global delta updated for version 2
-gv+ (gdef+1 C V G) :- % print constant C unknown,
+gv+ (gdef+1 _C V G) :- % print constant C unknown,
                       tv+ V,
                       pi x\ tv+ x =>
                             (pi m\ pi e\ r+exp x m e m V) =>
                             gv+ (G x).
 
 % global l updated for version 2
-gv+ (gdec+1 C W G) :- % print constant C unknown,
+gv+ (gdec+1 _C W G) :- % print constant C unknown,
                       tv+ W,
                       pi x\ tv+ x =>
                             (pi m1\ pi m2\ pi e\ r+exp x m1 e m2 W :- m+pred m1 m2) =>
                             gv+ (G x).
 
 % global delta updated for version 2
-gv+ (gdef+2 R G) :- g+line R C V,
+gv+ (gdef+2 R G) :- g+line R _C V,
 %                    print constant C R,
                     tv+ V,
 %                    tv+c C V,
@@ -317,7 +321,7 @@ gv+ (gdef+2 R G) :- g+line R C V,
 % (print aggiungo (pi m\ pi e\ r+exp R m e m V), gv+ G)).
 
 % global l updated for version 2
-gv+ (gdec+2 R G) :- g+line R C W,
+gv+ (gdec+2 R G) :- g+line R _C W,
 %                    print constant C R,
                     tv+ W,
 %                    tv+c C W,
