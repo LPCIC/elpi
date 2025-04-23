@@ -5,7 +5,7 @@
 open Elpi_parser
 open Compiler_data
 
-type type_abbrevs = (TypeAssignment.skema * Ast.Loc.t) F.Map.t
+type type_abbrevs = TypeAssignment.type_abbrevs
 [@@deriving show]
 
 type arities = Arity.t F.Map.t
@@ -50,7 +50,10 @@ val check_chr_rule :
   ('a,ScopedTerm.t) Ast.Chr.t ->
     env_undeclared
 
-val check_undeclared : unknown:env_undeclared -> TypingEnv.t
+val check_undeclared :
+  type_abbrevs:type_abbrevs ->
+  unknown:env_undeclared ->
+  TypingEnv.t
 
 val check_pred_name : types:TypingEnv.t -> loc:Elpi_util.Util.Loc.t -> F.t -> Symbol.t
 val unknown_type_assignment : string -> TypeAssignment.t

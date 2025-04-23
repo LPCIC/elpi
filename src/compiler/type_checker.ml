@@ -8,7 +8,7 @@ open Elpi_parser
 open Ast
 open Compiler_data
 
-type type_abbrevs = (TypeAssignment.skema * Loc.t) F.Map.t
+type type_abbrevs = TypeAssignment.type_abbrevs
 [@@deriving show]
 
 type arities = Arity.t F.Map.t
@@ -92,13 +92,13 @@ let maximize_indexing_input modes =
   let depths = List.map (function Util.Mode.Fo Input | Util.Mode.Ho (Input, _) -> max_int | _ -> 0) modes in
   DiscriminationTree depths
 
-let rec is_prop = function
-  | TypeAssignment.Lam (_,x) -> is_prop x
-  | Ty t ->  TypeAssignment.is_prop t
+let rec is_prop ~type_abbrevs = function
+  | TypeAssignment.Lam (_,x) -> is_prop ~type_abbrevs x
+  | Ty t ->  TypeAssignment.is_prop ~type_abbrevs t
 
-let check_indexing ~loc availability name value ty indexing =
+let check_indexing ~loc ~type_abbrevs availability name value ty indexing =
   let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
-  let is_prop = is_prop ty in
+  let is_prop = is_prop ~type_abbrevs ty in
   let ensure_pred is_prop =
     if Option.is_none is_prop then
       error ~loc "Indexing directive is for predicates only" in
@@ -124,7 +124,7 @@ let check_indexing ~loc availability name value ty indexing =
 let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
   (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
-  let indexing = check_indexing ~loc availability name value ty index in
+  let indexing = check_indexing ~loc ~type_abbrevs availability name value ty index in
   let symb = Symbol.make (File loc) name in
   let quotient =
     let to_unify must bsymb =
@@ -135,7 +135,7 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : 
     match availability with
     | Elpi -> None
     | OCaml (File _) -> anomaly "provenance File cannot be provided by the user"
-    | OCaml Core -> Symbol.make Core name |> to_unify (Option.is_none (is_prop ty))
+    | OCaml Core -> Symbol.make Core name |> to_unify (Option.is_none (is_prop ~type_abbrevs ty))
     | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0) (* TODO: this is hack for builtins, they could be overloaded as well *)
     (* | OCaml None -> Symbol.make_builtin name |> to_unify false  *)
   in
@@ -845,7 +845,7 @@ let check_macro ~type_abbrevs ~kinds ~types:env k m =
     F.Map.iter (fun _ (_,s) -> error ~loc:(Symbol.get_loc s) ("Undeclared symbol in macro " ^ F.show k ^": " ^ Symbol.get_str s)) unknown
 
 
-let check1_undeclared w f (t, id) =
+let check1_undeclared ~type_abbrevs w f (t, id) =
   match TypeAssignment.is_monomorphic t with
   | None -> error ~loc:(Symbol.get_loc id) Format.(asprintf "@[Unable to infer a closed type for %a:@ %a@]" F.pp f (pretty_ty true) (TypeAssignment.unval t))
   | Some (Ty tya as ty) ->
@@ -856,7 +856,7 @@ let check1_undeclared w f (t, id) =
         | TypeAssignment.Arr (_,_,_,r) -> Ast.Mode.(Fo Output) :: ty2mode r
         | _ -> [] in
       let mode = ty2mode tya in
-      let indexing = match is_prop ty with
+      let indexing = match is_prop ~type_abbrevs ty with
       | None -> TypingEnv.DontIndex
       | Some Relation -> Index {mode; indexing=chose_indexing (Symbol.get_func id) [1] None; overlap = Allowed} 
       | Some Function ->
@@ -867,9 +867,9 @@ let check1_undeclared w f (t, id) =
       id, TypingEnv.{ ty ; indexing; availability = Elpi }
   | _ -> assert false
 
-let check_undeclared ~unknown =
+let check_undeclared ~type_abbrevs ~unknown =
   let w = ref [] in
-  let unknown = F.Map.mapi (check1_undeclared w) unknown in
+  let unknown = F.Map.mapi (check1_undeclared ~type_abbrevs w) unknown in
   if !w <> [] then begin
     let undeclared, types = List.split !w in
     warn ~id:UndeclaredGlobal Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared

@@ -73,6 +73,7 @@ end = struct
 end
 
 module TypeAssignment = struct
+
   type tmode = MRef of tmode MutableOnce.t | MVal of Mode.t
   [@@ deriving show]
 
@@ -146,10 +147,8 @@ module TypeAssignment = struct
   type skema = Lam of F.t * skema | Ty of F.t t_
   [@@ deriving show]
 
-  let rec is_prop = function
-  | Prop f -> Some f
-  | Any | Cons _ | App _ | UVar _ -> None
-  | Arr(_,_,_,t) -> is_prop t
+  type type_abbrevs = (skema * Ast.Loc.t) F.Map.t
+  [@@deriving show]
 
   let compare_skema ~cmp_mode ~cmp_func sk1 sk2 =
     let rec aux ctx sk1 sk2 =
@@ -295,6 +294,15 @@ module TypeAssignment = struct
     | _ -> assert false (* kind checker *)
 
   let apply (sk:skema) args = apply F.Map.empty sk args
+
+
+  let rec is_prop ~type_abbrevs = function
+    | Prop f -> Some f
+    | Cons a when F.Map.mem a type_abbrevs -> let ty = apply (fst @@ F.Map.find a type_abbrevs) [] in is_prop ~type_abbrevs ty
+    | App (a,x,xs) when F.Map.mem a type_abbrevs -> let ty = apply (fst @@ F.Map.find a type_abbrevs) (x::xs) in is_prop ~type_abbrevs ty
+    | Any | Cons _ | App _ | UVar _ -> None
+    | Arr(_,_,_,t) -> is_prop ~type_abbrevs t
+
 
   let eq_skema_w_id n (symb1,x) (symb2,y) = 
     try compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality x y = 0

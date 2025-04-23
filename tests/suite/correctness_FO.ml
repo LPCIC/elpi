@@ -115,6 +115,12 @@ let () = declare "typeabbrv13"
   ~expectation:(FailureOutput (Str.regexp "SYMBOL.*uses the undefined dl constant"))
   () *)
 
+  let () = declare "typeabbrv15"
+  ~source_elpi:"typeabbrv15.elpi"
+  ~description:"type abbreviations"
+  ()
+
+
 let () = declare "conj2"
   ~source_elpi:"conj2.elpi"
   ~description:"parsing and evaluation of & (binary conj)"

@@ -1445,7 +1445,7 @@ end = struct
           error ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?")
     ) signature.types;
 
-    let more_types = Type_checker.check_undeclared ~unknown in
+    let more_types = Type_checker.check_undeclared ~unknown ~type_abbrevs in
     let u_types = Flatten.merge_type_assignments signature.types more_types in
     let types = Flatten.merge_type_assignments types more_types in
 
@@ -2090,7 +2090,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let needs_spilling = ref false in
   let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros; needs_spilling }) t in
   let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
-  let _ = Type_checker.check_undeclared ~unknown in
+  let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (!needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
@@ -2115,7 +2115,7 @@ let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~de
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
     let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
-    let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown in
+    let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
     ()
   end;
   let amap = get_argmap state in
@@ -2138,7 +2138,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let compiler_state,t = f compiler_state in
   let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
-  let _ = Type_checker.check_undeclared ~unknown in
+  let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (false,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
