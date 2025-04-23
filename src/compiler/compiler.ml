@@ -1342,16 +1342,6 @@ end = struct
     let types = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds types in
 
 
-    (* let rec is_arrow_to_prop = function
-      | ScopedTypeExpression.Lam (_,x) -> is_arrow_to_prop x
-      | Ty t -> ScopedTypeExpression.is_prop t.it <> None in 
-
-    let rec type2type_idx = function
-      | [] -> []
-      | x :: xs when is_arrow_to_prop x.ScopedTypeExpression.value ->
-        x :: type2type_idx xs
-      | _ :: xs -> type2type_idx xs
-    in *)
 
     
     
