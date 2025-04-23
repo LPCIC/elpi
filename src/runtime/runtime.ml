@@ -158,9 +158,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
   let ppconstant f c = Fmt.fprintf f "%s" (C.show ~table:pp_ctx.table c) in
   (* let ppconstant f c = Fmt.fprintf f "%s/%d" (C.show ~table:pp_ctx.table c) c in *)
   let ppbuiltin f b = Fmt.fprintf f "%s" @@ show_builtin_predicate ~table:pp_ctx.table C.show b in
-  let rec pp_uvar prec depth vardepth args f r =
-   if !!r == C.dummy then begin
-    let s =
+  let string_of_uvar_body r =
      try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
      with Not_found ->
       let m, n = !(pp_ctx.uv_names) in
@@ -395,8 +393,8 @@ module ConstraintStoreAndTrail : sig
   val contents :
     ?overlapping:uvar_body list -> unit -> (constraint_def * blockers) list
   (* val print : ?pp_ctx:pp_ctx -> Fmt.formatter -> (constraint_def * blockers) list -> unit *)
-  val print1 : ?pp_ctx:pp_ctx -> Fmt.formatter -> constraint_def * blockers -> unit
-  val print_gid: Fmt.formatter -> constraint_def * blockers -> unit
+  val print1 : ?pp_ctx:pp_ctx -> Fmt.formatter -> constraint_def * blockers -> unit [@@warning "-32"]
+  val print_gid: Fmt.formatter -> constraint_def * blockers -> unit  [@@warning "-32"]
   val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 
   val state : State.t Fork.local_ref
@@ -423,7 +421,7 @@ module ConstraintStoreAndTrail : sig
   val undo :
     old_trail:trail -> ?old_state:State.t -> unit -> unit
 
-  val print_trail : Fmt.formatter -> unit
+  val print_trail : Fmt.formatter -> unit  [@@warning "-32"]
 
   (* ---------------------------------------------------- *)
 
@@ -2469,7 +2467,7 @@ let dec_to_bin2 num =
     else "0" :: aux (x/2)
   in
     String.concat "" (List.rev (aux num))
-
+  [@@warning "-32"]
 let hash_bits = Sys.int_size - 1 (* the sign *)
 
 (**
@@ -2663,7 +2661,7 @@ let arg_to_trie_path ~check_mut_excl ~safe ~depth ~is_goal args arg_depths args_
     else
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
-      | Const k when k == Global_symbols.uvarc -> Path.emit path mkVariable; update_current_min_depth path_depth
+      | Const k when k == Global_symbols.uvarc -> Path.emit path mkUvarVariable; update_current_min_depth path_depth
       | Const k when safe -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
       | Const k -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
       | CData d -> Path.emit path @@ mkPrimitive d; update_current_min_depth path_depth
@@ -3237,6 +3235,7 @@ let make_subgoal_id ogid ((depth,goal)[@trace]) =
   [%spy "user:newgoal" ~rid ~gid (uppterm depth [] ~argsdepth:0 empty_env) goal];
   gid
   [@@inline]
+  [@@warning "-32"]
 
 let make_subgoal (gid[@trace]) ~depth program goal =
   let gid[@trace] = make_subgoal_id gid ((depth,goal)[@trace]) in
@@ -3642,7 +3641,7 @@ let pp_urule fmt { CHR. to_match; to_remove; new_goal; guard } =
     (pp_optl "\\ " pp_sequent) to_remove
     (pp_opt "| " (uppterm ~min_prec:Elpi_parser.Parser_config.inf_precedence 0 [] ~argsdepth:0 empty_env)) guard
     (pp_opt "<=> " pp_sequent) new_goal
-
+  [@@warning "-32"]
 
 let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
 
@@ -3900,24 +3899,28 @@ let pred_of g =
   | Const c -> Some(C.show c)
   | Builtin(c,_) -> Some(show_builtin_predicate C.show c)
   | _ -> None
+  [@@warning "-32"]
 
 let pp_candidate ~depth ~k fmt ({ loc } as cl) =
   match loc with
   | Some x -> Util.CData.pp fmt (Ast.cloc.Util.CData.cin x)
   | None -> Fmt.fprintf fmt "hypothetical clause: %a" (ppclause ~hd:k) cl
+  [@@warning "-32"]
 
 let hd_c_of = function
   | Const _ as x -> x
   | App(x,_,_) -> C.mkConst x
   | Builtin(x,_) -> C.mkConst (const_of_builtin_predicate x)
   | _ -> C.dummy
+  [@@warning "-32"]
 
 let pp_resumed_goal { depth; program; goal; gid = gid[@trace] } =
   [%spy "user:rule:resume:resumed" ~rid ~gid (uppterm depth [] ~argsdepth:0 empty_env) goal]
-;;
+  [@@warning "-32"]
+  
 let pp_CHR_resumed_goal { depth; program; goal; gid = gid[@trace] } =
   [%spy "user:CHR:resumed" ~rid ~gid (uppterm depth [] ~argsdepth:0 empty_env) goal]
-;;
+  [@@warning "-32"]
 
 
 (* The block of recursive functions spares the allocation of a Some/None
