@@ -9,4 +9,4 @@ val check_clause :
   type_abbrevs:type_abbrevs ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->
-    ScopedTerm.t -> bool
+    ScopedTerm.t -> unit

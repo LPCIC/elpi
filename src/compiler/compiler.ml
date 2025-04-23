@@ -1376,7 +1376,7 @@ end = struct
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body; needs_spilling = false} in
 
-      let _ = typecheck && Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body in
+      if typecheck then Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body;
 
       unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
     let clauses = List.rev clauses in

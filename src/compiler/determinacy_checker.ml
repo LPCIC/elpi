@@ -279,7 +279,7 @@ let get_dtype ~env ~ctx ~var ~loc ~is_var (t, name, tya)=
 
 let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
 
-let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
+let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
   let same_symb symb symb' =
     match symb' with
     | Scope.Global { resolved_to = x } ->
@@ -666,30 +666,8 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
     let ctx = ref (BVar.clone ctx) in
     let var = Uvar.clone var in
     let assume_hd b is_var (tm : ScopedTerm.t) tl =
-      let _ =
-        let do_filter = false in
-        let only_check = "p" in
-        let loc = "a.elpi" in
-        let _, name, _ = b in
-        let bregexp s = Re.Str.regexp (".*" ^ s ^ ".*") in
-        if
-          do_filter
-          && Re.Str.(
-               string_match (bregexp only_check) (F.show name) 0 && string_match (bregexp loc) (Loc.show tm.loc) 0)
-             |> not
-        then raise IGNORE;
-        Format.eprintf "=================================================@.";
-        Format.eprintf "Checking clause %a at (%a)@." ScopedTerm.pretty t Loc.pp t.loc;
-        Format.eprintf "The var map is %a@." Uvar.pp var;
-        Format.eprintf "** START CHECKING THE CLAUSE@."
-        (* else assert false *)
-      in
-
       let det_hd = get_dtype ~env ~ctx:!ctx ~var ~loc ~is_var b in
       Format.eprintf "assume_input for term %a with det %a@." ScopedTerm.pretty tm pp_dtype det_hd;
-      
-      (* Format.eprintf "Calling assume in hd for terms list [%a]@." (pplist ScopedTerm.pretty ", ") args; *)
-      (* (det_hd, assume ~ctx:!ctx ~var det_hd tm) *)
       (det_hd, assume_input ~ctx:!ctx ~var det_hd tl)
     in
     let rec aux ScopedTerm.{ it; loc } =
@@ -726,7 +704,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
       warn ~loc:t.loc ~id:FlexClause (Format.asprintf "ignoring flexible clause: %a" ScopedTerm.pretty t);
       Det
   in
-  try check_clause ~_is_toplevel:true ~ctx:BVar.empty ~var:Uvar.empty t = Det with
+  try check_clause ~_is_toplevel:true ~ctx:BVar.empty ~var:Uvar.empty t |> ignore with
   | FatalDetError (pred_name, gc) | DetError (pred_name, gc) ->
       let Good_call.{ exp; found; term } = Good_call.get gc in
       error ~loc:term.loc
@@ -741,5 +719,5 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : bool =
       let Good_call.{ term } = Good_call.get gc in
       error ~loc:term.loc 
       @@ Format.asprintf "%s@[<hov>Found relational atom@ (%a)@ in the body of function@ %a@]" (undecl_disclaimer pred_name) ScopedTerm.pretty term F.pp (let (_,n,_) = Option.get pred_name in n);
-  | IGNORE -> false
+  | IGNORE -> ()
 
