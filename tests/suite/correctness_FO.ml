@@ -225,14 +225,14 @@ let () = declare "trie"
 let () =
   let (!) x = Test.FailureOutput (Str.regexp x) in
   let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n+.*line %d" l1 l2) in
-  let mut_excl_no_loc t = !("Mutual excl: The local clause with head " ^ t) in
+  let mut_excl_no_loc t = !("Mutual exclusion: This.*rule for predicate " ^ t) in
   let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
   let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
   let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*[io]:.*" l c) in
   let duplicate_err l1 l2 = !(Format.asprintf "line %d.*\n.*cannot only differ.*\n.*line %d" l1 l2) in
   let status = Test.
-    [|(* 01*) mut_excl 9 6; Success; det_check 9 7; mut_excl_no_loc "q 2 _"; mut_excl_no_loc "q 1 _";            (*05*)
-      (* 06*) mut_excl_no_loc "q 3 _"; mut_excl_no_loc "q 2 _"; mut_excl_no_loc "q X0 _"; mut_excl 10 10; mut_excl 10 10; (*10*)
+    [|(* 01*) mut_excl 9 6; Success; det_check 9 7; mut_excl_no_loc "q"; mut_excl_no_loc "q";            (*05*)
+      (* 06*) mut_excl_no_loc "q"; mut_excl_no_loc "q"; mut_excl_no_loc "q"; mut_excl 10 10; mut_excl 10 10; (*10*)
       (* 11*) mut_excl 9 8; Success; mut_excl 11 10; det_check 21 9; Success;    (*15*)
       (* 16*) det_check 8 9; Success; det_check 14 7; det_check 13 7; Success;   (*20*)
       (* 21*) det_check 7 21; Success; det_check 16 9; Success; det_check 7 12;  (*25*)
@@ -251,7 +251,7 @@ let () =
       (* 86*) Success; Success; Success; Success; Success;                       (*90*)
       (* 91*) det_check 14 5; Success; Success; det_check 14 5; Success;         (*95*)
       (* 96*) mut_excl 6 6; mut_excl 6 6; Success; Success; Success;             (*100*)
-      (*101*) Success; mut_excl_no_loc "f X0 _";  duplicate_err 1 2
+      (*101*) Success; mut_excl_no_loc "f";  duplicate_err 1 2
     |] in
   for i = 0 to Array.length status - 1 do
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in

@@ -1623,9 +1623,9 @@ end = struct
   (!symb, !amap), t
 
   let check_mut_excl state symbols pred_info cl p amap =
-    let pp_const fmt p =
-      let symb = C.Map.find p ((SymbolMap.compile symbols : symbol_table).c2s) in
-      Format.fprintf fmt "predicate %a at@ %a" F.pp (Symbol.get_func symb) Loc.pp Symbol.(get_loc symb) in
+    let pp_global_predicate fmt p =
+      let f = SymbolMap.global_name state symbols p in
+      Format.fprintf fmt "predicate %a" F.pp f in
 
     let get_fresh_loc =
       let n = ref 0 in
@@ -1645,7 +1645,7 @@ end = struct
       match pred_info with
       | { overlap = Allowed } -> []
       | { overlap = Forbidden dt } ->
-          (* Format.eprintf "@[<hov 2>Getting clause for@ %a with query@ %a@]@." pp_const c pp_term query; *)
+          (* Format.eprintf "@[<hov 2>Getting clause for@ %a with query@ %a@]@." pp_global_predicate c pp_term query; *)
           R.CompileTime.get_clauses ~depth:0 query dt |> Bl.to_list
     in
     let rec to_heap ~depth t = match t with
@@ -1660,18 +1660,14 @@ end = struct
   in
 
     (* Takes the list of rules overlapping with the clause cl *)
-    let overlapping_error ~loc cl overlaps = 
-      if overlaps <> [] then
-        let to_str fmt x = Format.fprintf fmt "- rule at %s" 
-          (Option.value ~default:"anonymous clause" (Option.map Loc.show x.overlap_loc))  in
-        error ~loc (Format.asprintf "@[<v 2>This rule overlaps with:@ %a@]"
-          (pplist to_str " ") overlaps) in
-
-    let may_overlapp_error ~loc ~depth t cl =
-      error ~loc (Format.asprintf 
-        {|@[<hov 2>Mutual excl: The local clause with head@ @[%a@]@ @[has no cut in its body and it exists an input without a bound local variable.@] @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@]|}
-        (R.Pp.uppterm ~pp_ctx:({uv_names= ref (IntMap.empty,0); table=SymbolMap.compile symbols}) depth [] ~argsdepth:depth [||]) t) 
-    in
+    let overlapping_error ~loc ~is_local pred overlaps = 
+      let local = if is_local then "local " else "" in
+      let to_str fmt x =
+        match x.overlap_loc with
+        | None -> Format.fprintf fmt "- anonymous clause" 
+        | Some loc -> Format.fprintf fmt "- rule at %a" Loc.pp loc in
+      error ~loc (Format.asprintf "@[<v 0>@[<v 2>Mutual exclusion: This %srule for %a overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@]" local pp_global_predicate pred
+        (pplist to_str " ") overlaps) in
 
     (* check if the term has a rigid occurence of a bound variable *)
     let has_rigid_occurence ~depth (t:term) = 
@@ -1710,7 +1706,7 @@ end = struct
           a :: mkpats args mode
         | _::args, _ :: mode -> mkDiscard :: mkpats args mode
         | _::args, [] -> error ~loc @@
-          Format.asprintf "@[<hov 2>args/mode mismatch: Building query for %a: %s@]" pp_const p (String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode)
+          Format.asprintf "@[<hov 2>args/mode mismatch: Building query for %a: %s@]" pp_global_predicate p (String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode)
           (* ; mkDiscard :: mkpats args mode *)
         | _ -> assert false
       in
@@ -1732,16 +1728,13 @@ end = struct
               else filter_overlaps hb xs
           in
           let rig_occ, hd = hd_query ~loc ~depth p args in
-          let hb = cl_overlap.has_cut in
           (* Format.eprintf "Is_local:%b -- Has bang? %b -- rig_occ:%b@." is_local hb rig_occ; *)
-          let check_overlapping = ref true in
-          if is_local then
-            if hb then check_overlapping := false
-            else if not rig_occ then may_overlapp_error ~depth ~loc hd cl;
-          if !check_overlapping then
+          if is_local && not cl_overlap.has_cut &&  not rig_occ then
+            overlapping_error ~is_local ~loc p [{ overlap_loc = None; timestamp =[]; has_cut = false}];
+          if not is_local || (is_local && not cl_overlap.has_cut) then
             let all_overlapping = get_overlapping index p hd in
-            let overlapping =  filter_overlaps hb all_overlapping in
-            overlapping_error ~loc cl overlapping in
+            let overlapping =  filter_overlaps cl_overlap.has_cut all_overlapping in
+            if overlapping <> [] then overlapping_error ~loc ~is_local p overlapping in
 
     (* Inspect the a local premise. If a local clause is found
       it is added to the index and it check_clause is launched on it 
