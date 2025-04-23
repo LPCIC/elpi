@@ -357,20 +357,6 @@ module TypeAssignment = struct
       let t = map t in
       Some (Ty (Obj.magic t : F.t t_)) (* No UVar nodes *)
     with Not_monomorphic -> None
-  
-  let rec is_arrow_to_prop = function
-    | Prop _ -> true
-    | Any | Cons _ | App _ -> false
-    | Arr(_,_,_,t) -> is_arrow_to_prop t
-    | UVar _ -> false
-
-  let rec is_predicate = function
-    | Lam (_,t) -> is_predicate t
-    | Ty t -> is_arrow_to_prop t
-
-  let is_predicate = function
-    | Single (_,t) -> is_predicate t
-    | Overloaded l -> List.exists (fun (_,x) -> is_predicate x) l
 
   let vars_of (Val t)  =
     fold_t__

@@ -545,8 +545,6 @@ end = struct (* {{{ *)
       | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _ | Untyped) as a :: _ -> illegal_err a 
     in
     let attributes, toplevel_func = aux_tatt { availability = Elpi; index = None} Structured.Relation attributes in
-    (* if F.equal name (F.from_string "std.map") then
-    Format.eprintf "Type for %a is %a@." F.pp name (TypeExpression.pp (pplist pp_raw_attribute " ")) ty; *)
     let is_functional_from_ty () = match ty.tit with
       | TPred (l, _) -> List.mem Functional l | _ -> false in
     let attributes =
@@ -1103,7 +1101,7 @@ module Flatten : sig
   val merge_type_assignments :
     TypingEnv.t ->
     TypingEnv.t ->
-      TypingEnv.t
+    TypingEnv.t
   val merge_checked_type_abbrevs :
     Type_checker.type_abbrevs ->
     Type_checker.type_abbrevs ->
@@ -1341,10 +1339,6 @@ end = struct
 
     let types = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds types in
 
-
-
-    
-    
     let all_types = Flatten.merge_type_assignments ot types in
     F.Map.iter (fun k m -> Type_checker.check_macro ~kinds:all_kinds ~type_abbrevs:all_type_abbrevs ~types:all_types k m) toplevel_macros;
     let check_t_end = Unix.gettimeofday () in
@@ -1374,15 +1368,13 @@ end = struct
 
     let check_begin = Unix.gettimeofday () in
 
-    (* returns unkown types + clauses without spilling *)
+    (* returns unkown types + spilled clauses *)
     let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
       let unknown, body = 
         if typecheck then check_and_spill_pred ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types body
         else unknown, body in
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
-      (* if String.starts_with ~prefix:"File \"<" (Loc.show loc)  then Format.eprintf "The clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body; needs_spilling = false} in
-      (* if typecheck then Mode_checker.check ~is_rule:true ~type_abbrevs ~kinds ~types spilled.body; *)
 
       let _ = typecheck && Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body in
 
@@ -1483,17 +1475,11 @@ module Assemble : sig
 end = struct
 
   let update_indexing state symbols ({ idx } as index) (preds : (Symbol.t * pred_info) list) old_idx =
-    (* let check_if_some_clauses_already_in ~loc predicate c oldi newi =
-         if Ptmap.mem c idx then
-           error ~loc @@ "Some clauses for " ^ predicate ^
-             " are already in the program, changing the indexing a posteriori is not allowed. " ^
-             show_indexing oldi ^ " <> " ^ show_indexing newi
-      in *)
-      let check_if_some_clauses_already_in2 ~loc predicate c =
-        if Ptmap.mem c idx then
-          error ~loc @@ "2 Some clauses for " ^ predicate ^
-            " are already in the program, changing the indexing a posteriori is not allowed."
-     in
+    let check_if_some_clauses_already_in2 ~loc predicate c =
+      if Ptmap.mem c idx then
+        error ~loc @@ "Some clauses for " ^ predicate ^
+          " are already in the program, changing the indexing a posteriori is not allowed."
+    in
 
     let add_indexing_for name loc c (index:pred_info) map =
       (* Format.eprintf "indexing for %s with id %a at pos %a\n%!" name pp_int c Loc.pp loc; *)
@@ -1502,45 +1488,46 @@ end = struct
         let old_tindex =
           try C.Map.find c map
           with Not_found -> C.Map.find c old_idx in
-        if old_tindex <> index then
-            error ("multiple and inconsistent indexing attributes for " ^ name)
+        if old_tindex <> index then error ("multiple and inconsistent indexing attributes for " ^ name)
         else map
       with Not_found ->
-          check_if_some_clauses_already_in2 ~loc name c;
-          C.Map.add c index map
-        in
+        check_if_some_clauses_already_in2 ~loc name c;
+        C.Map.add c index map
+    in
 
     let map =
       preds |> List.fold_left (fun acc (symb,(indexing:pred_info)) ->
         match SymbolMap.get_global_symbol symbols symb with
         | None -> assert false
         | Some c -> add_indexing_for (Symbol.get_str symb) (Symbol.get_loc symb) c indexing acc)
-      C.Map.empty in
+      C.Map.empty 
+    in
+    
     R.CompileTime.update_indexing map index, C.Map.union (fun _ a b -> assert (a=b); Some a) map old_idx
 
-    let lookup_global types symb state s =
-      (* Format.eprintf "LOOKUP %a\n" Symbol.pp s; *)
-      match SymbolMap.get_global_symbol !symb s with
+  let lookup_global types symb state s =
+    (* Format.eprintf "LOOKUP %a\n" Symbol.pp s; *)
+    match SymbolMap.get_global_symbol !symb s with
       | None ->
-      (* Format.eprintf " NEW \n"; *)
-      let s, rc = SymbolMap.allocate_global_symbol state !symb s in
-      symb := s;
-      rc
-     | Some c ->
-      (* Format.eprintf "  FOUND %b\n" (is_builtin_predicate c); *)
-        c, SymbolMap.get_canonical state !symb c
+        (* Format.eprintf " NEW \n"; *)
+        let s, rc = SymbolMap.allocate_global_symbol state !symb s in
+        symb := s;
+        rc
+      | Some c ->
+        (* Format.eprintf "  FOUND %b\n" (is_builtin_predicate c); *)
+        c, SymbolMap.get_canonical state !symb c;;
 
-    let allocate_global_symbol types symb state ~loc s c =
-      lookup_global types symb state @@
-        match SymbolResolver.resolved_to types s with
-        | Some s -> s
-        | None -> 
-          match TypingEnv.resolve_name c types with
-          | TypeAssignment.Single s -> s
-          | TypeAssignment.Overloaded _ ->
-              error ~loc ("untyped and non allocated symbol " ^ F.show c)
-          | exception Not_found ->
-              error ~loc ("untyped and non allocated symbol " ^ F.show c)
+  let allocate_global_symbol types symb state ~loc s c =
+    lookup_global types symb state @@
+      match SymbolResolver.resolved_to types s with
+      | Some s -> s
+      | None -> 
+        match TypingEnv.resolve_name c types with
+        | TypeAssignment.Single s -> s
+        | TypeAssignment.Overloaded _ ->
+            error ~loc ("untyped and non allocated symbol " ^ F.show c)
+        | exception Not_found ->
+            error ~loc ("untyped and non allocated symbol " ^ F.show c)
 
   let to_dbl ?(ctx=Scope.Map.empty) ~types ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
     (* Format.eprintf "todbl: term : %a" ScopedTerm.pretty t; *)
@@ -1551,15 +1538,18 @@ end = struct
       with Not_found ->
         let n = F.Map.cardinal !amap in
         amap := F.Map.add c n !amap;
-        n in
+        n 
+    in
     let lookup_bound loc (_,ctx) (c,l as x) =
       try Scope.Map.find x ctx
-      with Not_found -> error ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "") in
+      with Not_found -> error ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "") 
+    in
     let allocate_bound_symbol loc ctx f =
       let c = lookup_bound loc ctx f in
       let s, rc = SymbolMap.allocate_bound_symbol state !symb c in
       symb := s;
-      rc in
+      rc 
+    in
     let allocate_global_symbol = allocate_global_symbol types symb state in
     let push_bound (n,ctx) c = (n+1,Scope.Map.add c n ctx) in
     let push_unnamed_bound (n,ctx) = (n+1,ctx) in
@@ -1608,9 +1598,8 @@ end = struct
           R.mkAppArg (allocate_arg c) 0 xs
       | Discard -> D.mkDiscard
     in
-
-  let t  = todbl (depth,ctx) t in
-  (!symb, !amap), t
+    let t  = todbl (depth,ctx) t in
+    (!symb, !amap), t
 
   let check_mut_excl state symbols pred_info cl p amap =
     let pp_global_predicate fmt p =
@@ -1624,12 +1613,14 @@ end = struct
         Loc.extend !n loc in
     let runtime_tick = 
       let tick = ref 0 in
-      fun () -> decr tick; !tick in
+      fun () -> decr tick; !tick 
+    in
     let get_opt x = Constants.Map.find_opt x pred_info in
     let can_overlap x = match get_opt x with
       | Some { overlap = Allowed } -> true
       | Some { overlap = Forbidden _ } -> false
-      | _ -> true in
+      | _ -> true 
+    in
     let modes x = match get_opt x with Some {mode} -> mode | None -> [] in
     let get_overlapping (_, pred_info) c query = 
       match pred_info with
@@ -1638,16 +1629,17 @@ end = struct
           (* Format.eprintf "@[<hov 2>Getting clause for@ %a with query@ %a@]@." pp_global_predicate c pp_term query; *)
           R.CompileTime.get_clauses ~depth:0 query dt |> Bl.to_list
     in
-    let rec to_heap ~depth t = match t with
-    | Builtin (x, xs) -> Builtin (x, List.map (to_heap ~depth) xs) 
-    | App (h,x,xs) -> App (h, (to_heap ~depth) x, List.map (to_heap ~depth) xs)
-    | Const x -> t
-    | Lam t -> Lam ((to_heap ~depth) t)
-    | (Nil | CData _ | Discard | AppUVar _ | UVar _) -> t
-    | Arg _ -> UVar (R.CompileTime.fresh_uvar (),depth,0)
-    | AppArg (hd, args) -> AppUVar (R.CompileTime.fresh_uvar (), hd, List.map (to_heap ~depth) args)
-    | Cons (a, b) -> Cons ((to_heap ~depth) a, (to_heap ~depth) b)
-  in
+    let rec to_heap ~depth t = 
+      match t with
+      | Builtin (x, xs) -> Builtin (x, List.map (to_heap ~depth) xs) 
+      | App (h,x,xs) -> App (h, (to_heap ~depth) x, List.map (to_heap ~depth) xs)
+      | Const x -> t
+      | Lam t -> Lam ((to_heap ~depth) t)
+      | (Nil | CData _ | Discard | AppUVar _ | UVar _) -> t
+      | Arg _ -> UVar (R.CompileTime.fresh_uvar (),depth,0)
+      | AppArg (hd, args) -> AppUVar (R.CompileTime.fresh_uvar (), hd, List.map (to_heap ~depth) args)
+      | Cons (a, b) -> Cons ((to_heap ~depth) a, (to_heap ~depth) b)
+    in
 
     (* Takes the list of rules overlapping with the clause cl *)
     let overlapping_error ~loc ~is_local pred overlaps = 
@@ -1657,7 +1649,8 @@ end = struct
         | None -> Format.fprintf fmt "- anonymous clause" 
         | Some loc -> Format.fprintf fmt "- rule at %a" Loc.pp loc in
       error ~loc (Format.asprintf "@[<v 0>@[<v 2>Mutual exclusion: This %srule for %a overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@]" local pp_global_predicate pred
-        (pplist to_str " ") overlaps) in
+        (pplist to_str " ") overlaps) 
+    in
 
     (* check if the term has a rigid occurence of a bound variable *)
     let has_rigid_occurence ~depth (t:term) = 
@@ -1697,13 +1690,12 @@ end = struct
         | _::args, _ :: mode -> mkDiscard :: mkpats args mode
         | _::args, [] -> error ~loc @@
           Format.asprintf "@[<hov 2>args/mode mismatch: Building query for %a: %s@]" pp_global_predicate p (String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode)
-          (* ; mkDiscard :: mkpats args mode *)
         | _ -> assert false
       in
-      (not !has_input || !rig_occ), R.mkAppL p @@ mkpats args mode in
+      (not !has_input || !rig_occ), R.mkAppL p @@ mkpats args mode 
+    in
 
     (* Returns if the clause has a bang *)
-
     let check_overlaps ~is_local ~loc ~depth cl (cl_overlap:overlap_clause option) p args (index : int * pred_info) amap =
       match cl_overlap with
         | None -> ()
@@ -1724,7 +1716,8 @@ end = struct
           if not is_local || (is_local && not cl_overlap.has_cut) then
             let all_overlapping = get_overlapping index p hd in
             let overlapping =  filter_overlaps cl_overlap.has_cut all_overlapping in
-            if overlapping <> [] then overlapping_error ~loc ~is_local p overlapping in
+            if overlapping <> [] then overlapping_error ~loc ~is_local p overlapping 
+    in
 
     (* Inspect the a local premise. If a local clause is found
       it is added to the index and it check_clause is launched on it 
@@ -1785,8 +1778,6 @@ end = struct
       (clauses,symbols, index, pred_info)
     else
     let (symbols, amap), body = to_dbl ~builtins ~types state symbols body in
-    (* Format.eprintf "FINAL %a\n" (R.Pp.ppterm 0 [] ~argsdepth:0 empty_env) body;
-    Format.eprintf "FINAL %a\n" (R.Pp.uppterm 0 [] ~argsdepth:0 empty_env) body; *)
     let modes x = (Constants.Map.find_opt x pred_info) |> Option.fold ~some:(fun (x : pred_info) -> x.mode) ~none:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
@@ -2248,9 +2239,8 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
     let rec a2k = function
       | 0 -> "type"
       | n -> "type -> " ^ a2k (n-1) in
-    Format.fprintf fmt "@[<h>kind %s %s.@]@," (F.show name) (a2k ty))
-    signature.kinds;
-    TypingEnv.iter_names (fun name sl ->
+    Format.fprintf fmt "@[<h>kind %s %s.@]@," (F.show name) (a2k ty)) signature.kinds;
+  TypingEnv.iter_names (fun name sl ->
     let f s = TypeAssignment.fresh (TypingEnv.resolve_symbol s signature.types).ty |> fst in
     let tys =
       match sl with
@@ -2262,12 +2252,10 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
       | _ -> F.show name in
     List.iter (fun ty ->
       Format.fprintf fmt "@[<h>type %s %a.@]@," name TypeAssignment.pretty_mut_once ty) tys;
-    )
-    signature.types;
+  ) signature.types;
   F.Map.iter (fun name (ty,_) ->
     Format.fprintf fmt "@[<h>typeabbrv %a (%a).@]@," F.pp name TypeAssignment.pretty_mut_once (fst @@ TypeAssignment.fresh ty)
-    )
-    signature.type_abbrevs;
+  ) signature.type_abbrevs;
   List.iter (fun (name,predicate,{ depth; args; hyps; loc; timestamp }) ->
     Format.fprintf fmt "@[<h>%% %a [%a] %a@]@;"
       Format.(pp_print_option Loc.pp) loc
