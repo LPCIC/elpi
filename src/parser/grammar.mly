@@ -246,13 +246,15 @@ type_:
      { Type.loc=loc $sloc; attributes; name = n; ty = t })
   }
 | attributes = attributes;
-  SYMBOL; names = separated_nonempty_list(CONJ,constant); COLON; t = type_term {
-    names |> List.map (fun n ->
-      { Type.loc=loc $sloc; attributes; name = n; ty = t })
+  SYMBOL; names = separated_nonempty_list(CONJ,constant); option(COLON); ty = type_term; o=option(external_ref) {
+    match attributes, o, names with
+    | [External None], Some _, [name] -> [{ Type.loc=loc $sloc; attributes = [External o]; name ; ty }]
+    | _, Some _, _ -> raise (ParseError (loc $loc, "Only one symbol with a named external reference can be marked with the external attribute at a time."))
+    | _, None, _ -> List.map (fun n -> { Type.loc=loc $sloc; attributes; name = n; ty }) names
 }
-| EXTERNAL; SYMBOL; name = constant; option(COLON); t = type_term; o=option(external_ref) {
-    [{ Type.loc=loc $sloc; attributes = [External o]; name ; ty = t }]
-}
+// | EXTERNAL; SYMBOL; name = constant; option(COLON); t = type_term; o=option(external_ref) {
+//     [{ Type.loc=loc $sloc; attributes = [External o]; name ; ty = t }]
+// }
 
 external_ref:
 | EQ; i=STRING { i }
