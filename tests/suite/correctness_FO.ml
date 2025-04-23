@@ -135,6 +135,15 @@ let () =
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "dt_max_depths.log" })
   ()
 
+let () = 
+  let sample = Filename.get_temp_dir_name () ^ Filename.dir_sep ^ "dt_empty_list.log" in
+  declare "dt_empty_list"
+  ~source_elpi:"dt_empty_list.elpi"
+  ~description:"discrimination_tree empty_list"
+    ~trace:(On["tty";"file://"^sample;"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:[^l]"])
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "dt_empty_list.log" })
+  ()
+
 let () = declare "dt_var2"
   ~source_elpi:"dt_var2.elpi"
   ~description:"discrimination_tree indexing flex"

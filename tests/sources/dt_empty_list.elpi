@@ -1,0 +1,9 @@
+:index (1) "DTree"
+pred p o:list int.
+p [].
+p [_|_].
+
+main :-
+  p _,
+  p [],
+  p [_|_].

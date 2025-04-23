@@ -2662,7 +2662,7 @@ let arg_to_trie_path ~safe ~depth ~is_goal args arg_depths args_depths_ar mode m
         Path.emit path @@ mkConstant ~safe ~data:k ~arity:arg_length;
         main ~safe ~depth x path_depth;
         arg_to_trie_path_aux ~safe ~depth xs path_depth
-      | Nil -> Path.emit path mkListHead; Path.emit path mkListEnd; update_current_min_depth path_depth
+      | Nil -> Path.emit path mkListNil; update_current_min_depth path_depth
       | Cons (x,xs) ->
           Path.emit path mkListHead;
           main ~safe ~depth x (path_depth + 1);
