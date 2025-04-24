@@ -896,17 +896,17 @@ module ScopedTerm = struct
 
   and pretty fmt { it } = pretty_ fmt it
   and pretty_ fmt = function
-    | Impl(true,t1,t2) -> fprintf fmt "(%a => (%a))" pretty t1 pretty t2
-    | Impl(_,t1,t2) -> fprintf fmt "(%a :- %a)" pretty t1 pretty t2
+    | Impl(true,t1,t2) -> fprintf fmt "@[<hov 2>(%a =>@ (%a))@]" pretty t1 pretty t2
+    | Impl(_,t1,t2) -> fprintf fmt "@[<hov 2>(%a :-@ %a)@]" pretty t1 pretty t2
     | Const (_,f,_) -> fprintf fmt "%a" F.pp f
     | Discard -> fprintf fmt "_"
     | Lam(n, ste, it) -> pretty_lam fmt n ste it
     | App((_,f,_),x,[]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
-    | App((_,f,_),x,xs) when F.equal F.pif f || F.equal F.sigmaf f -> fprintf fmt "%a %a" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
-    | App((Global _, f, _ as n),x,xs) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant n) (x::xs))
-    | App((_,f,_),x,xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-    | Var((_,f,_),[]) -> fprintf fmt "%a" F.pp f
-    | Var((_,f,_),xs) -> fprintf fmt "%a %a" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") xs
+    | App((_,f,_),x,xs) when F.equal F.pif f || F.equal F.sigmaf f -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
+    | App((Global _, f, _ as n),x,xs) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist ~boxed:true (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant n) (x::xs))
+    | App((_,f,_),x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist ~boxed:true (pretty_parens ~lvl:app) " ") (x::xs)
+    | Var((_,f,_),[]) -> fprintf fmt "@[%a@]" F.pp f
+    | Var((_,f,_),xs) -> fprintf fmt "@[%a@ %a@]" F.pp f (Util.pplist ~boxed:true (pretty_parens ~lvl:app) " ") xs
     | CData c -> fprintf fmt "%a" CData.pp c
     | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t

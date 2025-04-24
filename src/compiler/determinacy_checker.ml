@@ -718,6 +718,6 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
   | RelationalBody (pred_name, gc) -> 
       let Good_call.{ term } = Good_call.get gc in
       error ~loc:term.loc 
-      @@ Format.asprintf "%s@[<hov>Found relational atom@ (%a)@ in the body of function@ %a@]" (undecl_disclaimer pred_name) ScopedTerm.pretty term F.pp (let (_,n,_) = Option.get pred_name in n);
+      @@ Format.asprintf "%s@[<hov 2>Found relational atom@ @[<hov 2>(%a)@]@ in the body of function@ %a@]" (undecl_disclaimer pred_name) ScopedTerm.pretty term F.pp (let (_,n,_) = Option.get pred_name in n);
   | IGNORE -> ()
 
