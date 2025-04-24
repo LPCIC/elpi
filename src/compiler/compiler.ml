@@ -1601,7 +1601,7 @@ end = struct
     let t  = todbl (depth,ctx) t in
     (!symb, !amap), t
 
-  let check_mut_excl state symbols pred_info cl p amap =
+  let check_mut_excl state symbols pred_info cl cl_st p amap =
     let pp_global_predicate fmt p =
       let f = SymbolMap.global_name state symbols p in
       Format.fprintf fmt "predicate %a" F.pp f in
@@ -1648,8 +1648,8 @@ end = struct
         match x.overlap_loc with
         | None -> Format.fprintf fmt "- anonymous clause" 
         | Some loc -> Format.fprintf fmt "- rule at %a" Loc.pp loc in
-      error ~loc (Format.asprintf "@[<v 0>@[<v 2>Mutual exclusion: This %srule for %a overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@]" local pp_global_predicate pred
-        (pplist to_str " ") overlaps) 
+      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion: This %srule for %a overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@ @[Original loaded clause is @[<hov 2>%a@]@] @]" local pp_global_predicate pred
+        (pplist to_str " ") overlaps ScopedTerm.pretty cl_st) 
     in
 
     (* check if the term has a rigid occurence of a bound variable *)
@@ -1696,7 +1696,7 @@ end = struct
     in
 
     (* Returns if the clause has a bang *)
-    let check_overlaps ~is_local ~loc ~depth cl (cl_overlap:overlap_clause option) p args (index : int * pred_info) amap =
+    let check_overlaps ~is_local ~loc ~depth (cl:clause) (cl_overlap:overlap_clause option) p args (index : int * pred_info) amap =
       match cl_overlap with
         | None -> ()
         | Some cl_overlap ->
@@ -1772,12 +1772,12 @@ end = struct
     let t = if needs_spilling then Spilling.main ~types t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
-  let extend1_clause flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
+  let extend1_clause flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body = body_st; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index, pred_info)
     else
-    let (symbols, amap), body = to_dbl ~builtins ~types state symbols body in
+    let (symbols, amap), body = to_dbl ~builtins ~types state symbols body_st in
     let modes x = (Constants.Map.find_opt x pred_info) |> Option.fold ~some:(fun (x : pred_info) -> x.mode) ~none:[] in
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
@@ -1793,7 +1793,7 @@ end = struct
     let pred_info = C.Map.add p p_info pred_info in
     (* Format.eprintf "Validating local clause for predicate %a at %a@." F.pp (SymbolMap.global_name state symbols p) Loc.pp loc; *)
     
-    check_mut_excl state symbols ~loc pred_info cl overlap_clause p amap;
+    check_mut_excl state symbols ~loc pred_info cl body_st overlap_clause p amap;
 
     (graft,id,p,cl) :: clauses, symbols, index, pred_info
 
