@@ -376,7 +376,9 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     | Const(Bound _,_,_ as c) -> check_local ctx ~loc ~tyctx c ety
     | CData c -> check_cdata ~loc ~tyctx kinds c ety
     | Spill(_,{contents = Phantom _}) -> assert false
-    | Spill(sp,info) -> check_spill ~positive ctx ~loc ~tyctx sp info ety
+    | Spill(sp,info) -> 
+      if not positive then error ~loc "Spilling in negative position is forbidden";
+      check_spill ~positive ctx ~loc ~tyctx sp info ety
     | App((gid,_,_ as hd),x,xs) -> check_app ~positive ctx ~loc ~tyctx hd (get_type ~loc ctx env hd) (x::xs) ety 
     | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx c cty t ety
     | Discard -> []
