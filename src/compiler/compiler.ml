@@ -1648,7 +1648,7 @@ end = struct
         match x.overlap_loc with
         | None -> Format.fprintf fmt "- anonymous clause" 
         | Some loc -> Format.fprintf fmt "- rule at %a" Loc.pp loc in
-      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion: This %srule for %a overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@ @[Original loaded clause is @[<hov 2>%a@]@] @]" local pp_global_predicate pred
+      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion: This %srule for %a overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@ @[Original loaded clause is@ @[<hov 2>%a@]@] @]" local pp_global_predicate pred
         (pplist to_str " ") overlaps ScopedTerm.pretty cl_st) 
     in
 

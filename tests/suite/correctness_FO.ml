@@ -251,7 +251,7 @@ let () =
       (* 86*) Success; Success; Success; Success; Success;                       (*90*)
       (* 91*) det_check 14 5; Success; Success; det_check 14 5; Success;         (*95*)
       (* 96*) mut_excl 6 6; mut_excl 6 6; Success; Success; Success;             (*100*)
-      (*101*) Success; mut_excl_no_loc "f";  duplicate_err 1 2
+      (*101*) Success; mut_excl_no_loc "f";  duplicate_err 1 2; Success; Success;(*105*)
     |] in
   for i = 0 to Array.length status - 1 do
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
