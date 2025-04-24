@@ -96,9 +96,8 @@ let rec is_prop ~type_abbrevs = function
   | TypeAssignment.Lam (_,x) -> is_prop ~type_abbrevs x
   | Ty t ->  TypeAssignment.is_prop ~type_abbrevs t
 
-let check_indexing ~loc ~type_abbrevs availability name value ty indexing =
-  let mode = ScopedTypeExpression.type2mode value |> Option.value ~default:[] in
-  let is_prop = is_prop ~type_abbrevs ty in
+let check_indexing ~loc ~type_abbrevs availability name ty indexing =
+  let is_prop, mode = TypeAssignment.skema_to_func_mode ~type_abbrevs ty in
   let ensure_pred is_prop =
     if Option.is_none is_prop then
       error ~loc "Indexing directive is for predicates only" in
@@ -124,7 +123,7 @@ let check_indexing ~loc ~type_abbrevs availability name value ty indexing =
 let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
   (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
-  let indexing = check_indexing ~loc ~type_abbrevs availability name value ty index in
+  let indexing = check_indexing ~loc ~type_abbrevs availability name ty index in
   let symb = Symbol.make (File loc) name in
   let quotient =
     let to_unify must bsymb =

@@ -368,6 +368,32 @@ module TypeAssignment = struct
          | MVal _ -> acc,xs)
       ([],[]) t
 
+  let to_func_mode ~(type_abbrevs:type_abbrevs) f = 
+    let apply_ta f c acc l =
+      match F.Map.find_opt c type_abbrevs with
+      | None -> None
+      | Some (e,_) -> f acc (apply e l)
+    in
+    let rec aux acc = function
+    | Prop f -> Some (Some f, List.rev acc)
+    | Any | UVar _ -> None
+    | Cons c -> apply_ta aux c acc []
+    | App (c, x, xs) -> apply_ta aux c acc (x::xs)
+    | Arr (mode, _, l, r) ->
+        let m = match deref_tmode mode with
+          | MVal v -> v
+          | MRef _ -> Output 
+        in
+        match aux [] l with
+        | None -> aux (Mode.Fo m :: acc) r
+        | Some (_,e) -> aux (Mode.Ho (m, e) :: acc) r
+    in
+    match aux [] f with None -> (None, []) | Some e -> e
+
+  let rec skema_to_func_mode ~(type_abbrevs:type_abbrevs) = function
+    | Lam (_,x) -> skema_to_func_mode ~type_abbrevs x
+    | Ty t ->  to_func_mode ~type_abbrevs t
+
 end
 
 module TypingEnv : sig
@@ -741,22 +767,6 @@ module ScopedTypeExpression = struct
     let value' = smart_map_tye f value in
     if name == name' && value' == value then orig
     else { name = name'; value = value'; nparams; loc; index; availability }
-
-  let type2mode (value : v_) =
-    let rec to_mode_ho (m, ty) = 
-      match flatten_arrow [] ty with
-      | None -> Mode.Fo m
-      | Some l -> Mode.Ho (m, List.rev_map to_mode_ho l)
-    and flatten_arrow acc = function
-      | Prop _ -> Some acc
-      | Any | Const _ | App _ -> None
-      | Arrow (m,_,a,b) -> flatten_arrow ((m,a.it)::acc) b.it in
-    let rec type_to_mode_under_abs = function
-      | Lam (_,b) -> type_to_mode_under_abs b
-      | Ty {it;loc} -> Option.map (List.rev_map to_mode_ho) (flatten_arrow [] it)
-    in
-    type_to_mode_under_abs value
-
 
 end
 
