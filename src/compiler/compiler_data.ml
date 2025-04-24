@@ -888,11 +888,11 @@ module ScopedTerm = struct
     (match n with
     | None -> Format.fprintf fmt "_"
     | Some (scope,name,ty) -> 
-      fprintf fmt "%a" F.pp name;
+      fprintf fmt "@[<hov 2>%a" F.pp name;
       if MutableOnce.is_set ty then
-        fprintf fmt ": %a " TypeAssignment.pretty_mut_once (TypeAssignment.deref ty)
+        fprintf fmt ": @[%a@] " TypeAssignment.pretty_mut_once (TypeAssignment.deref ty)
       else Option.iter (fprintf fmt ": %a " ScopedTypeExpression.pretty_e) ste);
-      fprintf fmt "\\ %a" pretty it;
+      fprintf fmt "\\@]@ %a" pretty it;
 
   and pretty fmt { it } = pretty_ fmt it
   and pretty_ fmt = function
