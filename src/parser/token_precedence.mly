@@ -2,6 +2,7 @@
 %nonassoc VDASH QDASH 
 %right OR 
 %right DDARROW 
+%right DDARROWBANG 
 %right CONJ CONJ2 
 %right ARROW 
 %right DARROW 

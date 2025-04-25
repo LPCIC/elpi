@@ -82,8 +82,9 @@ module Ast : sig
   end
 
   module Term : sig
+    type impl_kind = L2R | L2RBang | R2L
     type t_ =
-      | Impl of bool * t * t
+      | Impl of impl_kind * t * t
       | Const of Scope.t * Name.t
       | Discard
       | Var of Name.t * t list (** unification variable *)
@@ -1135,7 +1136,7 @@ module RawData : sig
       starts at 0 and grows for bound variables;
       global constants have negative values. *)
 
-  type builtin = Cut | And | Impl | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant
+  type builtin = Cut | And | Impl | ImplBang | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant
   type term = Data.term
   type view = private
     (* Pure subterms *)

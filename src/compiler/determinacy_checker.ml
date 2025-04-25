@@ -386,10 +386,13 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
           infer_comma ctx ~loc (x :: xs) (Det, Good_call.init ()) *)
       | App (b, x, xs) -> infer_app ~was_input ~loc ctx false ty b (x :: xs)
-      | Impl (true, c, b) ->
+      | Impl (L2R, c, b) ->
           check_clause ~ctx ~var c |> ignore;
           infer ~was_input ctx b
-      | Impl (false, _, _) -> 
+      | Impl (L2RBang, c, b) ->
+          check_clause ~ctx ~var ~has_tail_cut:true c |> ignore; (* TODO silence warning *)
+          infer ~was_input ctx b
+      | Impl (R2L, _, _) -> 
         Format.eprintf "Recursive call to check clause@.";
         (check_clause ~ctx ~var t, Good_call.init ())
       | Lam _ -> (
@@ -486,17 +489,20 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
       | Var (b, tl) -> assume_var ~loc ~ctx ~is_var:None d b tl
       | App (b, hd, tl) -> assume_app ~was_input ctx ~loc d b (hd :: tl)
       | Discard -> ()
-      | Impl (true, h, b) ->
+      | Impl (L2R, h, b) ->
           check_clause ~ctx ~var:!var h |> ignore;
           assume ~was_input ctx d b
-      | Impl (false, ({it = Const b} as t), bo) -> 
+      | Impl (L2RBang, h, b) ->
+        check_clause ~ctx ~var:!var ~has_tail_cut:true h |> ignore;
+        assume ~was_input ctx d b
+      | Impl (R2L, ({it = Const b} as t), bo) -> 
         let dtype, var' = assume_hd ~is_var:false ~loc ~ctx ~var:!var b t [] in
         assume ~was_input:false ctx (get_tl dtype) bo
-      | Impl (false, {it = App (b, x, xs)}, bo) -> 
+      | Impl (R2L, {it = App (b, x, xs)}, bo) -> 
         let dtype, var' = assume_hd ~is_var:false ~loc ~ctx ~var:!var b t (x::xs) in
         Uvar.iter (fun k v -> add ~loc ~v k) var';
         assume ~was_input:false ctx (get_tl dtype) bo
-      | Impl (false, _, _B) -> ()
+      | Impl (R2L, _, _B) -> ()
       | Lam (oname, _, c) -> (
           match d with
           | UVar b -> assume ~was_input ctx b c
@@ -565,9 +571,12 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
           check_comma ctx ~loc (d1, bad_atom) xs
     and check ~ctx (d : dtype) ScopedTerm.({ it; loc } as t) : dtype * ScopedTerm.t =
       match it with
-      | Impl (true, h, b) ->
+      | Impl (L2R, h, b) ->
           check_clause ~ctx ~var:!var h |> ignore;
           check ~ctx d b
+      | Impl (L2RBang, h, b) ->
+        check_clause ~ctx ~var:!var ~has_tail_cut:true h |> ignore;
+        check ~ctx d b
       | Const b when is_global b S.cut -> (Det, t)
       | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
           check ~ctx:(BVar.add_oname ~new_:true ~loc b (Compilation.type_ass_2func_mut ~loc env) ctx) d bo
@@ -605,7 +614,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
       | CData _ -> anomaly ~loc "Found CData in prop position"
       | Lam _ -> anomaly ~loc "Lambda-abstractions are not props"
       | Discard -> anomaly ~loc "Discard found in prop position"
-      | Impl (false, _, _) -> anomaly ~loc "Found clause in prop position"
+      | Impl (R2L, _, _) -> anomaly ~loc "Found clause in prop position"
     in
     (!var, check ~ctx d t, !has_top_level_cut)
   and check_lam ~ctx ~var t : dtype =
@@ -626,7 +635,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
       let b = (Scope.Global {resolved_to=SymbolResolver.make ();escape_ns=false}, new_pred, t.ty) in
       let pred_hd = ScopedTerm.(App (b, List.hd args, List.tl args)) in
       (* let ctx = BVar.add ~loc ctx (new_pred, elpi_language) ~v:(Compilation.type_ass_2func_mut ~loc env t.ty) in *)
-      let clause = ScopedTerm.{ ty; it = Impl (false, { it = pred_hd; ty; loc }, body); loc } in
+      let clause = ScopedTerm.{ ty; it = Impl (R2L, { it = pred_hd; ty; loc }, body); loc } in
       Format.eprintf "Clause is %a@." ScopedTerm.pretty clause;
       (clause, ctx)
     in
@@ -643,7 +652,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
     in
     let rec aux ~ctx ~args ~parial_app (ScopedTerm.{ it; loc; ty } as t) : dtype =
       match (TypeAssignment.deref ty, it) with
-      | Prop _, Impl (false, _, bo) ->
+      | Prop _, Impl (R2L, _, bo) ->
           assert (parial_app = []);
           let clause, ctx = build_clause args ~ctx ~loc ~ty bo in
           check_clause ~ctx ~var clause
@@ -679,14 +688,14 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
     let det_hd = get_dtype ~env ~ctx ~var ~loc ~is_var b in
     Format.eprintf "assume_input for term %a with det %a@." ScopedTerm.pretty tm pp_dtype det_hd;
     (det_hd, assume_input ~ctx ~var det_hd tl)
-  and check_clause ?(_is_toplevel = false) ~ctx ~var ScopedTerm.({ loc } as t) : dtype =
+  and check_clause ?(_is_toplevel = false) ~ctx ~var ?(has_tail_cut=false) ScopedTerm.({ loc } as t) : dtype =
     let ctx = ref (BVar.clone ctx) in
     let var = Uvar.clone var in
     let rec aux ScopedTerm.{ it; loc } =
       match it with
-      | Impl (false, ({ it = Const b } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd [], hd, Some bo)
-      | Impl (false, ({ it = App (b, x, xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd (x::xs), hd, Some bo)
-      | Impl (false, ({ it = Var _ }), _) -> raise(LoadFlexClause t) (*(b, assume_hd ~loc ~loc b true hd, hd, Some bo)*)
+      | Impl (R2L, ({ it = Const b } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd [], hd, Some bo)
+      | Impl (R2L, ({ it = App (b, x, xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd (x::xs), hd, Some bo)
+      | Impl (R2L, ({ it = Var(b,xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd xs, hd, Some bo)
       | Const b -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false t [], t, None)
       (* For clauses with quantified unification variables *)
       | App (n, { it = Lam (oname, _, body) }, []) when is_quantifier n ->
@@ -704,6 +713,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
           map (check ~ctx:!ctx ~var Det) body
           |> value ~default:(var, (Det, ScopedTerm.{ it = Discard; loc; ty = MutableOnce.make F.dummyname }), false))
       in
+      let det_body = if has_tail_cut then Det else det_body in
       Format.eprintf "** END CHECKING THE CLAUSE @.";
       Format.eprintf "The var map is %a and det_body is %a@." Uvar.pp var pp_dtype det_body;
 
@@ -714,7 +724,8 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
       infer_output ~pred_name ~ctx:!ctx ~var hd;
       det_pred
     with LoadFlexClause t ->
-      warn ~loc:t.loc ~id:FlexClause (Format.asprintf "ignoring flexible clause: %a" ScopedTerm.pretty t);
+      if not has_tail_cut then
+        warn ~loc:t.loc ~id:FlexClause (Format.asprintf "ignoring flexible clause: %a" ScopedTerm.pretty t);
       Det
   in
   try check_clause ~_is_toplevel:true ~ctx:BVar.empty ~var:Uvar.empty t |> ignore with

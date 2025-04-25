@@ -157,19 +157,19 @@ let rec spill ~types ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; i
       (* Format.eprintf "%a\nspill %b %d %a : %a\n" Loc.pp loc (is_prop ~extra ty) extra F.pp c TypeAssignment.pretty (TypeAssignment.UVar ty); *)
       if is_prop ~extra ty then ([], [ add_spilled ~types spilled { it; loc; ty } ]) else (spilled, [ { it; loc; ty } ])
   (* TODO: positive/negative postion, for now we assume :- and => are used in the obvious way *)
-  | Impl (false, head, premise) ->
+  | Impl (R2L, head, premise) ->
       (* head :- premise *)
       let spills_head, head = spill1 ~types ctx args head in
       if spills_head <> [] then error ~loc "Spilling in the head of a clause is not supported";
       let spilled, premise = spill1 ~types ctx args premise in
-      let it = Impl (false, head, premise) in
+      let it = Impl (R2L, head, premise) in
       ([], [ add_spilled ~types spilled { it; loc; ty } ])
-  | Impl (true, premise, conclusion) ->
+  | Impl ((L2R|L2RBang) as kind, premise, conclusion) ->
       (* premise => conclusion *)
       let spills_premise, premise = spill1 ~types ctx args premise in
       if spills_premise <> [] then error ~loc "Spilling in the premise of an implication is not supported";
       let spilled, conclusion = spill1 ~types ~extra ctx args conclusion in
-      let it = Impl (true, premise, conclusion) in
+      let it = Impl (kind, premise, conclusion) in
       ([], [ add_spilled ~types spilled { it; loc; ty } ])
   (* lambda terms *)
   | Lam (None, o, t) ->

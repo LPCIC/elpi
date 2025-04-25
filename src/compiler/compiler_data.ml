@@ -770,14 +770,26 @@ module ScopedTypeExpression = struct
 
 end
 
-
 module ScopedTerm = struct
   open ScopeContext
 
-  (* User Visible *)
   module SimpleTerm = struct
+
+  type impl_kind = L2R | L2RBang | R2L
+  [@@ deriving show]
+  
+  let is_implf f = let open Ast in Func.equal f Func.implf || Func.equal f Func.implbangf || Func.equal f Func.rimplf
+  
+  let func_to_impl_kind f =
+    let open Ast in
+    if Func.equal f Func.implf then L2R
+    else if Func.equal f Func.implbangf then L2RBang
+    else if Func.equal f Func.rimplf then R2L
+    else anomaly ("not an implication " ^ F.show f)
+    
+  (* User Visible *)
     type t_ =
-      | Impl of bool * t * t (* `Impl(true,t1,t2)` ≡ `t1 => t2` and `Impl(false,t1,t2)` ≡ `t1 :- t2` *)
+      | Impl of impl_kind * t * t (* `Impl(true,t1,t2)` ≡ `t1 => t2` and `Impl(false,t1,t2)` ≡ `t1 :- t2` *)
       | Const of Scope.t * F.t
       | Discard
       | Var of F.t * t list
@@ -798,7 +810,7 @@ module ScopedTerm = struct
    let mkCast ~loc t ty = { loc; it = Cast(t,ty) }
    let mkDiscard ~loc = { loc; it = Discard }
    let mkLam ~loc n ?ty t =  { loc; it = Lam(n,ty,t)  }
-   let mkImplication ~loc s t = { loc; it = Impl(true,s,t) }
+   let mkImplication ~loc s t = { loc; it = Impl(L2R,s,t) }
    let mkPi ~loc n ?ty t = { loc; it = App(Scope.mkGlobal ~escape_ns:true (),F.pif,{ loc; it = Lam (Some (n,elpi_language),ty,t) },[]) }
    let mkConj ~loc = function
      | [] -> { loc; it = Const(Scope.mkGlobal ~escape_ns:true (), F.truef) }
@@ -847,8 +859,10 @@ module ScopedTerm = struct
     | Main of int (* how many arguments it stands for *)
     | Phantom of int (* phantom term used during type checking *)
   [@@ deriving show]
+
+
   type t_ =
-   | Impl of bool * t * t (* `Impl(true,t1,t2)` ≡ `t1 => t2` and `Impl(false,t1,t2)` ≡ `t1 :- t2` *)
+   | Impl of SimpleTerm.impl_kind * t * t (* `Impl(true,t1,t2)` ≡ `t1 => t2` and `Impl(false,t1,t2)` ≡ `t1 :- t2` *)
    | Const of Scope.t ty_name
    | Discard
    | Var of Scope.t ty_name * t list
@@ -906,8 +920,9 @@ module ScopedTerm = struct
 
   and pretty fmt { it } = pretty_ fmt it
   and pretty_ fmt = function
-    | Impl(true,t1,t2) -> fprintf fmt "@[<hov 2>(%a =>@ (%a))@]" pretty t1 pretty t2
-    | Impl(_,t1,t2) -> fprintf fmt "@[<hov 2>(%a :-@ %a)@]" pretty t1 pretty t2
+    | Impl(L2R,t1,t2) -> fprintf fmt "@[<hov 2>(%a =>@ (%a))@]" pretty t1 pretty t2
+    | Impl(L2RBang,t1,t2) -> fprintf fmt "@[<hov 2>(%a =!=>@ (%a))@]" pretty t1 pretty t2
+    | Impl(R2L,t1,t2) -> fprintf fmt "@[<hov 2>(%a :-@ %a)@]" pretty t1 pretty t2
     | Const (_,f,_) -> fprintf fmt "%a" F.pp f
     | Discard -> fprintf fmt "_"
     | Lam(n, ste, it) -> pretty_lam fmt n ste it
@@ -968,9 +983,9 @@ module ScopedTerm = struct
     | Opaque c -> CData c
     | Cast(t,ty) -> Cast(of_simple_term_loc t, ScopedTypeExpression.of_simple_type_loc ty)
     | Lam(c,ty,t) -> Lam(mk_empty_lam_type c,Option.map ScopedTypeExpression.of_simple_type_loc ty, of_simple_term_loc t)
-    | App(s,c,x,xs) when F.equal c F.implf || F.equal c F.implf -> 
+    | App(s,c,x,xs) when SimpleTerm.is_implf c ->
       begin match xs with
-        | [y] -> Impl(F.equal c F.implf,of_simple_term_loc x, of_simple_term_loc y)
+        | [y] -> Impl(SimpleTerm.func_to_impl_kind c,of_simple_term_loc x, of_simple_term_loc y)
         | _ -> error ~loc "Use of App for Impl is allowed, but the length of the list in 3rd position must be 1"
       end
     | App(s,c,x,xs) -> App(mk_ty_name s c, of_simple_term_loc x, List.map of_simple_term_loc xs)
@@ -1094,7 +1109,7 @@ module ScopedTerm = struct
       | SimpleTerm.Opaque o when is_scoped_term o ->
           begin match out_scoped_term o with
           | { it = Spill(t,i); loc } ->
-            let impl = { loc; it = Impl(true, list_to_lp_list ~loc hyps, { loc; it = Opaque (in_scoped_term t) }) } in
+            let impl = { loc; it = Impl(L2R, list_to_lp_list ~loc hyps, { loc; it = Opaque (in_scoped_term t) }) } in
             { loc; it = Opaque(in_scoped_term @@ { it = Spill(of_simple_term_loc impl,i); loc; ty = MutableOnce.make (F.from_string "Ty") })}
           | _ ->
             anomaly ~loc (Format.asprintf "The term is not a spill coming from a quotation: @[%a@]" pp_t_ it)

@@ -399,7 +399,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
   and check_impl ~positive ctx ~loc ~tyctx b t1 t2 ety =
     if not @@ unify ety prop then error_bad_ety ~valid_mode ~loc ~tyctx ~ety:prop ScopedTerm.pretty_ (Impl(b,t1,t2)) (ety)
     else
-      let lhs, rhs,c,positive (* of => *) = if b then t1,t2,F.implf,positive else t2,t1,F.rimplf,not positive in
+      let lhs, rhs,c,positive (* of => *) = if b <> R2L then t1,t2,F.implf,positive else t2,t1,F.rimplf,not positive in
       let spills = check_loc ~positive ~tyctx:(Some c) ctx rhs ~ety:prop in
       let lhs_ty = mk_uvar "Src" in
       let more_spills = check_loc ~positive:(not positive) ~tyctx:None ctx ~ety:lhs_ty lhs in
@@ -619,7 +619,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
   inlines => and , typing... but leaves the rest of the code clean *)
   and check_spill_conclusion ~positive ~tyctx ctx ~loc it ety =
     match it with
-    | Impl(true,x,y) ->
+    | Impl((L2R|L2RBang),x,y) ->
         let lhs = mk_uvar "LHS" in
         let spills = check_loc ~positive ~tyctx ctx x ~ety:lhs in
         if spills <> [] then error ~loc "Hard spill";
@@ -642,8 +642,8 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       let rec head it =
         match it with
         | App((Global _,f,_),{ it = Lam(_,_,x) },[]) when F.equal F.pif f -> head x.it
-        | Impl(false,{ it = App((Global _,c',_),x,xs) },_) -> c', x :: xs
-        | Impl(false,{ it = Const((Global _,c',_)) },_) -> c', []
+        | Impl(R2L,{ it = App((Global _,c',_),x,xs) },_) -> c', x :: xs
+        | Impl(R2L,{ it = Const((Global _,c',_)) },_) -> c', []
         | App((Global _,c,_),x,xs) -> c, x :: xs
         | Const((Global _,c,_)) -> c, []
         | _ -> anomaly ~loc ("not a rule: " ^ ScopedTerm.show_t_ it) in

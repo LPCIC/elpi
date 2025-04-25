@@ -568,6 +568,7 @@ postfix_SYMB:
 | ARROW  { Func.arrowf }
 | DARROW { Func.implf }
 | DDARROW { Func.implf }
+| DDARROWBANG { Func.implbangf }
 | QDASH  { Func.sequentf }
 | SLASH  { Func.from_string "/" }
 | CONJ2  { Func.andf }

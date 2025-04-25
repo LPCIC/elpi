@@ -3063,9 +3063,9 @@ let orig_prolog_program = Fork.new_local (make_empty_index ~depth:0 ~indexing:C.
 
 module Clausify : sig
 
-  val clausify : loc:Loc.t option -> prolog_prog -> depth:int -> term -> (constant*clause) list * clause_src list * int
+  val clausify : tail_cut:bool -> loc:Loc.t option -> prolog_prog -> depth:int -> term -> (constant*clause) list * clause_src list * int
 
-  val clausify1 : loc:Loc.t -> modes:(constant -> Mode.hos) -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
+  val clausify1 : tail_cut:bool -> loc:Loc.t -> modes:(constant -> Mode.hos) -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
   
   (* Utilities that deref on the fly *)
   val lp_list_to_list : depth:int -> term -> term list
@@ -3198,7 +3198,11 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause: [] / ::"
   end]
 
-let clausify ~loc { index = { idx = index } } ~depth t =
+let add_tail_cut ~tail_cut l =
+  if not tail_cut then l
+  else (fun (d,c) -> d,{ c with hyps = c.hyps @ [mkBuiltin Cut []]}) l
+
+let clausify ~tail_cut ~loc { index = { idx = index } } ~depth t =
   let get_mode x =
     match Ptmap.find x index with
     | TwoLevelIndex { mode } -> mode
@@ -3214,11 +3218,11 @@ let clausify ~loc { index = { idx = index } } ~depth t =
           error ?loc ("Declaring a clause for built in predicate " ^ show_builtin_predicate C.show c)
       in
       clause :: clauses, program :: programs, lcs) ([],[],0) l in
-  clauses, program, lcs
+  clauses |> List.map (add_tail_cut ~tail_cut), program, lcs
 ;;
 
-let clausify1 ~loc ~modes ~nargs ~depth t =
-  claux1 (Some loc) modes nargs depth [] [] 0 0 t
+let clausify1 ~tail_cut ~loc ~modes ~nargs ~depth t =
+  claux1 (Some loc) modes nargs depth [] [] 0 0 t |> (fun (c,x,y) -> add_tail_cut ~tail_cut c,x,y)
 
 end (* }}} *)
 open Clausify
@@ -3980,15 +3984,15 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     | Builtin(RImpl, [g2;g1]) -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let [@warning "-26"]loc = None in
        let loc[@trace] = Some (Loc.initial ("(context step_id:" ^ string_of_int (Trace_ppx_runtime.Runtime.get_cur_step ~runtime_id:!rid "run") ^")")) in
-       let clauses, pdiff, lcs = clausify ~loc p ~depth g1 in
+       let clauses, pdiff, lcs = clausify ~tail_cut:false ~loc p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
        [%spy "user:rule:implication" ~rid ~gid pp_string "success"];
        [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts cutto_alts]
-    | Builtin(Impl, [g1; g2]) -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
+    | Builtin((Impl|ImplBang) as ik, [g1; g2]) -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let [@warning "-26"]loc = None in
        let loc[@trace] = Some (Loc.initial ("(context step_id:" ^ string_of_int (Trace_ppx_runtime.Runtime.get_cur_step ~runtime_id:!rid "run") ^")")) in
-       let clauses, pdiff, lcs = clausify ~loc p ~depth g1 in
+       let clauses, pdiff, lcs = clausify ~tail_cut:(ik = ImplBang) ~loc p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
        [%spy "user:rule:implication" ~rid ~gid pp_string "success"];
@@ -4061,6 +4065,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     | Builtin(Match,_) -> anomaly "match without 2 arguments"
     | Builtin(Impl,_) -> anomaly "impl without 2 arguments"
     | Builtin(RImpl,_) -> anomaly "rimpl without 2 arguments"
+    | Builtin(ImplBang,_) -> anomaly "implbang without 2 arguments"
     | Builtin(Pi,_) -> anomaly "pi without 1 argument"
     | Builtin(Sigma,_) -> anomaly "sigma without 1 argument"
     | Builtin(Findall,_) -> anomaly "findall without 2 arguments"

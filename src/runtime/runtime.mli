@@ -80,6 +80,7 @@ module CompileTime : sig
 
   (* can raise CannotDeclareClauseForBuiltin *)
   val clausify1 :
+    tail_cut:bool ->
     loc:Loc.t ->
     modes:(constant -> Mode.hos) -> (* for caching it in the clause *)
     nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int

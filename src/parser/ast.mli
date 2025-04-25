@@ -17,6 +17,7 @@ module Func : sig
   val andf : t
   val orf : t
   val implf : t
+  val implbangf : t
   val rimplf : t
   val cutf : t
   val pif : t

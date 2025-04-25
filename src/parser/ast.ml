@@ -33,6 +33,7 @@ module Func = struct
   let andf = from_string ","
   let orf = from_string ";"
   let implf = from_string "=>"
+  let implbangf = from_string "=!=>"
   let rimplf = from_string ":-"
   let cutf = from_string "!"
   let pif = from_string "pi"

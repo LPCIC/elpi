@@ -545,7 +545,7 @@ end
 module RawData = struct
 
   type constant = Util.constant
-  type builtin = ED.builtin_predicate = Cut | And | Impl | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant
+  type builtin = ED.builtin_predicate = Cut | And | Impl | ImplBang | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant
 
   type term = ED.Term.term
   type view =

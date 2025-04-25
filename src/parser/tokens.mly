@@ -24,6 +24,7 @@
 %token ARROW
 %token DARROW
 %token DDARROW
+%token DDARROWBANG
 %token DIV
 %token MOD
 %token < int * string > QUOTED

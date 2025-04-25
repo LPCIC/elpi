@@ -103,14 +103,15 @@ type ttype =
   [@@ deriving show, ord]
 
 type builtin_predicate =
-  | Cut | And | Impl | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant [@@deriving ord, show]
-let builtin_predicates = [Cut;And;Impl;RImpl;Pi;Sigma;Eq;Match;Findall;Delay]
+  | Cut | And | Impl | ImplBang | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant [@@deriving ord, show]
+let builtin_predicates = [Cut;And;Impl;ImplBang;RImpl;Pi;Sigma;Eq;Match;Findall;Delay]
 
 let builtin_predicate_max = List.length builtin_predicates
 let func_of_builtin_predicate f = function
   | Cut     -> F.cutf
   | And     -> F.andf
   | Impl    -> F.implf
+  | ImplBang -> F.implbangf
   | RImpl   -> F.rimplf
   | Pi      -> F.pif
   | Sigma   -> F.sigmaf
@@ -135,6 +136,7 @@ let const_of_builtin_predicate = function
   | Match   -> -8
   | Findall -> -9
   | Delay   -> -10
+  | ImplBang -> -11
   | Host c -> c
   
 let is_builtin_predicate c = - builtin_predicate_max <= c && c <= -1
@@ -150,6 +152,7 @@ let builtin_predicate_of_const = function
   | -8 -> Match
   | -9 -> Findall
   | -10 -> Delay
+  | -11 -> ImplBang
   | _ -> assert false
   
 let () = assert(List.for_all (fun p -> is_builtin_predicate @@ const_of_builtin_predicate p) builtin_predicates)

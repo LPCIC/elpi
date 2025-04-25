@@ -875,11 +875,15 @@ end = struct
         let { needs_spilling } = get_mtm state in
         needs_spilling := true;
         ScopedTerm.Spill (scope_loc_term ~state ctx x,ref ScopedTerm.NoInfo)
-    | App({ it = Const c }, l) when F.equal c F.implf || F.equal c F.rimplf ->
+    | App({ it = Const c }, l) when ScopedTerm.SimpleTerm.is_implf c ->
         begin match l with 
         | [t1;t2] ->           
           (* Printf.eprintf "LHS= %s\n" (Ast.Term.show t1); *)
-          Impl (F.equal c F.implf, scope_loc_term ~state ctx t1, scope_loc_term ~state ctx t2)
+          let t1, impl_kind = 
+           (* TODO: if t1 concrete and kind is =!=> then add tail cut in the syntax *)
+           t1, ScopedTerm.SimpleTerm.func_to_impl_kind c
+          in
+          Impl (impl_kind, scope_loc_term ~state ctx t1, scope_loc_term ~state ctx t2)
         | _ -> error ~loc "implication is a binary operator"
         end
     | App({ it = Const c }, x :: xs) ->
@@ -966,7 +970,7 @@ end = struct
     let add1 s t =
       match t.it with
       | Const(Global _,c,_) | App((Global _,c,_),_,_) -> F.Set.add c s
-      | Impl(false,{ it = (Const(Global _,c,_) | App((Global _,c,_),_,_)) }, _) -> F.Set.add c s
+      | Impl(R2L,{ it = (Const(Global _,c,_) | App((Global _,c,_),_,_)) }, _) -> F.Set.add c s
       | _ -> assert false in
     List.fold_left (fun s { Ast.Clause.body } ->
       match body.it with
@@ -1561,7 +1565,8 @@ end = struct
     let rec todbl (ctx : int * _ Scope.Map.t) t =
       match t.it with
       | Impl(b,t1,t2) ->
-          D.mkBuiltin (if b then Impl else RImpl) [todbl ctx t1;todbl ctx t2]
+          let b : builtin_predicate = match b with L2R -> Impl | R2L -> RImpl | L2RBang -> ImplBang in
+          D.mkBuiltin b [todbl ctx t1;todbl ctx t2]
       | CData c -> D.mkCData (CData.hcons c)
       | Spill(t,_) ->
           error ~loc:t.loc (Format.asprintf "todbl: term contains spill: %a" ScopedTerm.pretty t)
@@ -1660,6 +1665,7 @@ end = struct
       let rec aux = function
         | Const b -> 0 <= b && b < depth
         | Builtin (Impl, [l; r]) -> aux l || aux r
+        | Builtin (ImplBang, [l; r]) -> aux l || aux r
         | Builtin (Cut, _) -> false
         | Builtin ((Pi|Sigma), l)
         | Builtin ((And|RImpl|Eq|Match|Findall), l)
@@ -1667,6 +1673,7 @@ end = struct
         | Cons (l, r) -> aux l || aux r
         | Nil | UVar (_, _, _) | AppUVar (_, _, _) | Arg (_, _) | AppArg (_, _) -> false
         | Builtin (Impl, _) -> assert false
+        | Builtin (ImplBang, _) -> assert false
         | App (b, hd, tl) -> b < 0 || aux hd || List.exists aux tl
         | Lam b -> aux b
         | Discard | CData _ -> false in
@@ -1735,18 +1742,18 @@ end = struct
           let uvar = UVar(R.CompileTime.fresh_uvar (),depth,0) in 
           let b = Runtime.subst ~depth [uvar] b in
           aux ~depth:(depth+1) index b
-        | Builtin (Impl, [Nil; l])
-        | Builtin (Impl, [Builtin(And,[]); l]) -> aux ~depth index l
-        | Builtin (Impl, [Cons(h,hl); l]) ->
-            aux ~depth index (Builtin (Impl, [h; Builtin(Impl,[hl; l])]))
-        | Builtin (Impl, [Builtin(And,h::hl); l]) ->
-            aux ~depth index (Builtin (Impl, [h; Builtin(Impl,[Builtin(And,hl); l])]))
-        | Builtin (Impl, [h; l]) ->
+        | Builtin ((Impl| ImplBang), [Nil; l])
+        | Builtin ((Impl| ImplBang), [Builtin(And,[]); l]) -> aux ~depth index l
+        | Builtin ((Impl| ImplBang as ik), [Cons(h,hl); l]) ->
+            aux ~depth index (Builtin (ik, [h; Builtin(ik,[hl; l])]))
+        | Builtin ((Impl| ImplBang as ik), [Builtin(And,h::hl); l]) ->
+            aux ~depth index (Builtin (ik, [h; Builtin(ik,[Builtin(And,hl); l])]))
+        | Builtin ((Impl | ImplBang as ik), [h; l]) ->
             (* Format.eprintf "Adding local clause %a@." pp_term h; *)
             begin try
               let fresh_loc = get_fresh_loc loc in
               let (p,cl), _, morelcs =
-                try R.CompileTime.clausify1 ~loc:fresh_loc ~modes ~nargs:(F.Map.cardinal amap) ~depth h
+                try R.CompileTime.clausify1 ~tail_cut:(ik = ImplBang) ~loc:fresh_loc ~modes ~nargs:(F.Map.cardinal amap) ~depth h
                 with D.CannotDeclareClauseForBuiltin(loc,_c) ->
                   error ?loc ("Declaring a clause for built in predicate")
                 in
@@ -1782,7 +1789,7 @@ end = struct
     let (symbols, amap), body = to_dbl ~builtins ~types state symbols body_st in
     let modes x = (Constants.Map.find_opt x pred_info) |> Option.fold ~some:(fun (x : pred_info) -> x.mode) ~none:[] in
     let (p,cl), _, morelcs =
-      try R.CompileTime.clausify1 ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
+      try R.CompileTime.clausify1 ~tail_cut:false ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
       with D.CannotDeclareClauseForBuiltin(loc,_c) ->
         error ?loc ("Declaring a clause for built in predicate")
       in
