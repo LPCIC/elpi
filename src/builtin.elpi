@@ -807,7 +807,7 @@ list.make N E [E|L] :- N' is N - 1, list.make N' E L.
 
 % [init N F L] L is [F 0, ..., F (N-1)]
 func list.init int, (func int -> A) -> list A.
-list.init N F L :- list.init.aux 0 N F L.
+list.init N F L :- assert! (N >= 0) ("list.init: negative length"), list.init.aux 0 N F L.
 
 func list.init.aux int, int, (func int -> A) -> list A.
 list.init.aux N N _ [] :- !.
