@@ -389,13 +389,14 @@ and on_all_children ~pos ~add_result mode path map =
         end
   and skip_functor arity = function
     | Trie.Node { other; map } as tree ->
+      if arity = 0 then retrieve ~pos ~add_result mode path tree
+      else begin
         Option.iter (skip_functor (arity-1)) other;
-        if arity = 0 then retrieve ~pos ~add_result mode path tree
-        else
-          Ptmap.iter (fun k v ->
-              if isListHead k then skip_list 1 (arity - 1) v
-              else skip_functor (arity - 1 + arity_of k) v)
-            map
+        Ptmap.iter (fun k v ->
+            if isListHead k then skip_list 1 (arity - 1) v
+            else skip_functor (arity - 1 + arity_of k) v)
+          map
+      end
   in
   Ptmap.iter (fun k v ->
     if isListHead k then skip_list 1 0 v
