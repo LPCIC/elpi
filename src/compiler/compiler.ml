@@ -855,6 +855,39 @@ end = struct
     | None -> error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
     | Some (t, _) -> ScopedTerm.beta (ScopedTerm.clone_loc ~loc t) args
 
+  (* would be better when symbols are resolved, in particular andf, nil and cons *)
+  let rec try_add_tail_cut ({ ScopedTerm.it; loc } as orig) =
+    let open ScopedTerm in
+    let mk it = { it; loc; ty = TypeAssignment.new_ty () } in
+    let conj ({ ScopedTerm.it; loc } as orig) =
+      let mk it = { it; loc; ty = TypeAssignment.new_ty () } in
+       App(mk_global F.andf,orig,[mk @@ Const(mk_global F.cutf)]) in
+    let rec append_list { ScopedTerm.it; loc } =
+      let mk it = { it; loc; ty = TypeAssignment.new_ty () } in
+      match it with
+      | Const(Scope.Global _,c,_) when F.equal c F.nilf -> App(mk_global F.consf,mk @@ Const(mk_global F.cutf),[mk @@ Const(mk_global F.nilf)])
+      | App((Scope.Global g,c,t),x,[xs]) when F.equal c F.consf -> App((Scope.Global g,c,t),x,[mk @@ append_list xs]) 
+      | _ -> raise (Failure "not a list") in
+    let append_list_or_conj h =
+      try append_list h
+      with Failure _ -> conj h in
+    match it with
+    | Impl(R2L,hd,hyp) -> Some (mk @@ Impl(R2L,hd,mk @@ append_list_or_conj hyp))
+    | Const(Scope.Global _,c,_) when F.equal c F.nilf -> Some orig
+    | App((Scope.Global g,c,t),x,[xs]) when F.equal c F.consf ->
+        begin match try_add_tail_cut x, try_add_tail_cut xs with
+        | Some x, Some xs -> Some (mk @@ App((Scope.Global g,c,t),x,[xs]))
+        | _ -> None
+        end
+    | App((Scope.Global g,c,t),x,xs) when F.equal c F.andf ->
+        let x = try_add_tail_cut x in
+        let xs = List.map try_add_tail_cut xs in
+        if Option.is_some x && List.for_all Option.is_some xs then
+          Some (mk @@ App((Scope.Global g,c,t),Option.get x,List.map Option.get xs))
+        else None
+    | (App _ | Const _)-> Some (mk @@ Impl(R2L,orig,mk @@ Const(mk_global F.cutf)))
+    | _ -> None
+
   let rec scope_term ~state ctx ~loc t =
     let open Ast.Term in
     match t with
@@ -879,11 +912,16 @@ end = struct
         begin match l with 
         | [t1;t2] ->           
           (* Printf.eprintf "LHS= %s\n" (Ast.Term.show t1); *)
-          let t1, impl_kind = 
-           (* TODO: if t1 concrete and kind is =!=> then add tail cut in the syntax *)
-           t1, ScopedTerm.SimpleTerm.func_to_impl_kind c
-          in
-          Impl (impl_kind, scope_loc_term ~state ctx t1, scope_loc_term ~state ctx t2)
+          let t1 = scope_loc_term ~state ctx  t1 in
+          let ik = ScopedTerm.SimpleTerm.func_to_impl_kind c in
+          let t1, ik =
+            match ik with
+            | L2R | R2L -> t1, ik
+            | L2RBang ->
+                match try_add_tail_cut t1 with
+                | None -> t1, ik
+                | Some t1 -> Printf.eprintf "%s\n" (ScopedTerm.show t1); t1, L2R in
+          Impl (ik, t1, scope_loc_term ~state ctx t2)
         | _ -> error ~loc "implication is a binary operator"
         end
     | App({ it = Const c }, x :: xs) ->
