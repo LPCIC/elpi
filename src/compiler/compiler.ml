@@ -920,7 +920,7 @@ end = struct
             | L2RBang ->
                 match try_add_tail_cut t1 with
                 | None -> t1, ik
-                | Some t1 -> Printf.eprintf "%s\n" (ScopedTerm.show t1); t1, L2R in
+                | Some t1 -> t1, L2R in
           Impl (ik, t1, scope_loc_term ~state ctx t2)
         | _ -> error ~loc "implication is a binary operator"
         end
