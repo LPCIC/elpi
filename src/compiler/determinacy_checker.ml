@@ -390,7 +390,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
           check_clause ~ctx ~var c |> ignore;
           infer ~was_input ctx b
       | Impl (L2RBang, c, b) ->
-          check_clause ~ctx ~var ~has_tail_cut:true c |> ignore; (* TODO silence warning *)
+          check_clause ~ctx ~var ~has_tail_cut:true c |> ignore;
           infer ~was_input ctx b
       | Impl (R2L, _, _) -> 
         Format.eprintf "Recursive call to check clause@.";
@@ -695,7 +695,7 @@ let check_clause ~type_abbrevs:env ~types ~unknown (t : ScopedTerm.t) : unit =
       match it with
       | Impl (R2L, ({ it = Const b } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd [], hd, Some bo)
       | Impl (R2L, ({ it = App (b, x, xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd (x::xs), hd, Some bo)
-      | Impl (R2L, ({ it = Var(b,xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd xs, hd, Some bo)
+      | Impl (R2L, ({ it = Var(b,xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:true hd xs, hd, Some bo)
       | Const b -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false t [], t, None)
       (* For clauses with quantified unification variables *)
       | App (n, { it = Lam (oname, _, body) }, []) when is_quantifier n ->
