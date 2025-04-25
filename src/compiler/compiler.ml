@@ -1488,7 +1488,8 @@ end = struct
         let old_tindex =
           try C.Map.find c map
           with Not_found -> C.Map.find c old_idx in
-        if old_tindex <> index then error ("multiple and inconsistent indexing attributes for " ^ name)
+        if not @@ same_indexing old_tindex index then
+          error ("multiple and inconsistent indexing attributes for " ^ name) (* ". " ^ show_pred_info old_tindex ^ "<> " ^ show_pred_info index)*)
         else map
       with Not_found ->
         check_if_some_clauses_already_in2 ~loc name c;
@@ -1642,14 +1643,15 @@ end = struct
     in
 
     (* Takes the list of rules overlapping with the clause cl *)
-    let overlapping_error ~loc ~is_local pred overlaps = 
+    let overlapping_error ~loc ~is_local pred overlaps (cl_st,depth : term * int) = 
       let local = if is_local then "local " else "" in
       let to_str fmt x =
         match x.overlap_loc with
         | None -> Format.fprintf fmt "- anonymous clause" 
         | Some loc -> Format.fprintf fmt "- rule at %a" Loc.pp loc in
-      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion: This %srule for %a overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@ @[Original loaded clause is@ @[<hov 2>%a@]@] @]" local pp_global_predicate pred
-        (pplist to_str " ") overlaps ScopedTerm.pretty cl_st) 
+      let pretty = R.Pp.uppterm ~pp_ctx:({ uv_names = ref (IntMap.empty,0); table = SymbolMap.compile symbols }) depth [] ~argsdepth:0 [||] in
+      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,This %srule overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@ @[Offending clause is@ @[<hov 2>%a@]@] @]" pp_global_predicate pred local
+        (pplist to_str " ") overlaps pretty cl_st) 
     in
 
     (* check if the term has a rigid occurence of a bound variable *)
@@ -1696,7 +1698,7 @@ end = struct
     in
 
     (* Returns if the clause has a bang *)
-    let check_overlaps ~is_local ~loc ~depth (cl:clause) (cl_overlap:overlap_clause option) p args (index : int * pred_info) amap =
+    let check_overlaps ~is_local ~loc ~depth (cl:clause) h (cl_overlap:overlap_clause option) p args (index : int * pred_info) amap =
       match cl_overlap with
         | None -> ()
         | Some cl_overlap ->
@@ -1712,11 +1714,11 @@ end = struct
           let rig_occ, hd = hd_query ~loc ~depth p args in
           (* Format.eprintf "Is_local:%b -- Has bang? %b -- rig_occ:%b@." is_local hb rig_occ; *)
           if is_local && not cl_overlap.has_cut &&  not rig_occ then
-            overlapping_error ~is_local ~loc p [{ overlap_loc = None; timestamp =[]; has_cut = false}];
+            overlapping_error ~is_local ~loc p [{ overlap_loc = None; timestamp =[]; has_cut = false}] h;
           if not is_local || (is_local && not cl_overlap.has_cut) then
             let all_overlapping = get_overlapping index p hd in
             let overlapping =  filter_overlaps cl_overlap.has_cut all_overlapping in
-            if overlapping <> [] then overlapping_error ~loc ~is_local p overlapping 
+            if overlapping <> [] then overlapping_error ~loc ~is_local p overlapping h
     in
 
     (* Inspect the a local premise. If a local clause is found
@@ -1750,7 +1752,7 @@ end = struct
                 in
 
               let cl_overlap, index = R.Indexing.add1clause_overlap_runtime ~depth ~time:(runtime_tick ()) index p cl in
-              check_clause ~is_local:true ~depth ~loc:fresh_loc ~lcs:morelcs index cl cl_overlap p amap;
+              check_clause ~is_local:true ~depth ~loc:fresh_loc ~lcs:morelcs index cl h cl_overlap p amap;
               aux ~depth index l
             with 
             | CompileError _ as e -> raise e
@@ -1761,12 +1763,12 @@ end = struct
         | _ -> () (* TODO: missing cases *)
       in
       aux ~depth index t 
-    and check_clause ~is_local ~depth ~loc ~lcs index cl cl_overlap p amap =
-      if not @@ can_overlap p then check_overlaps ~is_local ~loc ~depth cl cl_overlap p cl.args (0, C.Map.find p index) amap;
+    and check_clause ~is_local ~depth ~loc ~lcs index cl h cl_overlap p amap =
+      if not @@ can_overlap p then check_overlaps ~is_local ~loc ~depth cl (h,depth) cl_overlap p cl.args (0, C.Map.find p index) amap;
       List.iter (check_local ~loc ~depth ~lcs index amap) cl.hyps
     in
 
-    check_clause ~is_local:false ~lcs:0 ~depth:0 pred_info cl p amap
+    check_clause ~is_local:false ~lcs:0 ~depth:0 pred_info cl cl_st p amap
 
   let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let t = if needs_spilling then Spilling.main ~types t else t in
@@ -1788,12 +1790,12 @@ end = struct
 
     let p_info =
       try C.Map.find p pred_info
-      with Not_found -> anomaly ("No pred_info for " ^ F.show @@ SymbolMap.global_name state symbols p) in
+      with Not_found -> anomaly ("No signature declaration for " ^ F.show (SymbolMap.global_name state symbols p) ^ ". Did you forget to accumulate a file?") in
     let index, (overlap_clause, p_info) = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index p_info in
     let pred_info = C.Map.add p p_info pred_info in
     (* Format.eprintf "Validating local clause for predicate %a at %a@." F.pp (SymbolMap.global_name state symbols p) Loc.pp loc; *)
     
-    check_mut_excl state symbols ~loc pred_info cl body_st overlap_clause p amap;
+    check_mut_excl state symbols ~loc pred_info cl body overlap_clause p amap;
 
     (graft,id,p,cl) :: clauses, symbols, index, pred_info
 

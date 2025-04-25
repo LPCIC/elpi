@@ -47,6 +47,8 @@ let mk_Forbidden indexing =
 type pred_info = { indexing:indexing; mode:Mode.hos; overlap: overlap }
 [@@deriving show]
 
+let same_indexing { indexing = i1 } { indexing = i2 } = compare_indexing i1 i2 == 0
+
 (******************************************************************************
   Terms: data type definition and printing
  ******************************************************************************)
