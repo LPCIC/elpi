@@ -3185,9 +3185,7 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   | AppUVar ({contents=g},from,args) when g != C.dummy ->
      claux1 loc get_mode vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
-  | Arg _ | AppArg _ ->
-      assert false |> ignore;
-      error ?loc "The head of a clause cannot be flexible"
+  | Arg _ | AppArg _ -> raise Flex_head
   | Builtin (c,_) -> raise @@ CannotDeclareClauseForBuiltin(loc,c)
   | (Lam _ | CData _ ) as x ->
      type_error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
