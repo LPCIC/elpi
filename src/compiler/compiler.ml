@@ -1801,8 +1801,7 @@ end = struct
               aux ~depth index l
             with 
             | CompileError _ as e -> raise e
-            (* TODO: this horrible catchall is for clause with flex head... *)
-            | Assert_failure _ -> aux ~depth index l end
+            | Flex_head -> aux ~depth index l end
         | Builtin (And, l) -> 
             List.iter (aux ~depth index) l
         | _ -> () (* TODO: missing cases *)

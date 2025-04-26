@@ -920,6 +920,7 @@ type clause_w_info = {
 
 exception No_clause
 exception No_more_steps
+exception Flex_head
 
 
 module Conversion = struct

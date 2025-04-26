@@ -3122,6 +3122,7 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the argument lives in (depth+lts)
  *  - the clause will live in (depth+lcs)
  *)
+
 let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   [%trace "clausify" ~rid ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] ~argsdepth:0 empty_env) t depth lts lcs (List.length ts)) begin
@@ -3166,9 +3167,7 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
          Const h -> h, []
        | App(h,x,xs) -> h, x::xs
        | UVar _ | AppUVar _
-       | Arg _ | AppArg _ | Discard ->
-          assert false |> ignore;
-           error ?loc "The head of a clause cannot be flexible"
+       | Arg _ | AppArg _ | Discard -> raise Flex_head
        | Lam _ ->
            type_error ?loc "The head of a clause cannot be a lambda abstraction"
        | Builtin(c,_) ->
@@ -3192,15 +3191,12 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   | Builtin (c,_) -> raise @@ CannotDeclareClauseForBuiltin(loc,c)
   | (Lam _ | CData _ ) as x ->
      type_error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
-  | UVar _ | AppUVar _ -> 
-    assert false |> ignore;
-    error ?loc "Flexible hypothetical clause"
+  | UVar _ | AppUVar _ -> raise Flex_head
   | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause: [] / ::"
   end]
 
-let add_tail_cut ~tail_cut l =
-  if not tail_cut then l
-  else (fun (d,c) -> d,{ c with hyps = c.hyps @ [mkBuiltin Cut []]}) l
+let add_tail_cut ~tail_cut =
+  if tail_cut then [[],Builtin(Cut,[])] else []
 
 let clausify ~tail_cut ~loc { index = { idx = index } } ~depth t =
   let get_mode x =
@@ -3213,16 +3209,18 @@ let clausify ~tail_cut ~loc { index = { idx = index } } ~depth t =
   let clauses, program, lcs =
     List.fold_left (fun (clauses, programs, lcs) t ->
       let clause, program, lcs =
-        try claux1 loc get_mode 0 depth [] [] 0 lcs t
-        with CannotDeclareClauseForBuiltin(loc,c) ->
+        try claux1 loc get_mode 0 depth (add_tail_cut ~tail_cut) [] 0 lcs t
+        with
+        | Flex_head -> error ?loc "The head of a clause cannot be flexible"
+        | CannotDeclareClauseForBuiltin(loc,c) ->
           error ?loc ("Declaring a clause for built in predicate " ^ show_builtin_predicate C.show c)
       in
       clause :: clauses, program :: programs, lcs) ([],[],0) l in
-  clauses |> List.map (add_tail_cut ~tail_cut), program, lcs
+  clauses, program, lcs
 ;;
 
 let clausify1 ~tail_cut ~loc ~modes ~nargs ~depth t =
-  claux1 (Some loc) modes nargs depth [] [] 0 0 t |> (fun (c,x,y) -> add_tail_cut ~tail_cut c,x,y)
+  claux1 (Some loc) modes nargs depth (add_tail_cut ~tail_cut) [] 0 0 t
 
 end (* }}} *)
 open Clausify
