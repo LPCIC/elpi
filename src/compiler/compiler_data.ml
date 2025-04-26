@@ -259,7 +259,19 @@ module TypeAssignment = struct
     | Single t -> pretty_skema_w_id fmt t
     | Overloaded l -> pplist pretty_skema_w_id "," fmt l
 
+  let set m v = MutableOnce.set m (Val v)
+
   let new_ty () : t MutableOnce.t = MutableOnce.make (F.from_string "Ty")
+  let mkProp f : t MutableOnce.t =
+    let r = MutableOnce.make (F.from_string "Ty") in
+    set r (Prop f);
+    r
+
+  let mkList x : t MutableOnce.t =
+    let r = MutableOnce.make (F.from_string "Ty") in
+    set r (App(F.from_string "list",x,[]));
+    r
+
 
   let nparams (t : skema) =
       let rec aux = function Ty _ -> 0 | Lam(_,t) -> 1 + aux t in
@@ -341,8 +353,6 @@ module TypeAssignment = struct
 
   let compare_t_ a b = compare_t_ ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality a b
   let compare_skema a b = compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality a b
-
-  let set m v = MutableOnce.set m (Val v)
 
   exception Not_monomorphic
   let is_monomorphic (Val t) =
@@ -544,6 +554,7 @@ module SymbolResolver : sig
   val make : unit -> resolution
   val resolve : TypingEnv.t -> resolution -> Symbol.t -> unit
   val resolved_to : TypingEnv.t -> resolution -> Symbol.t option
+  val is_resolved_to : TypingEnv.t -> resolution -> Symbol.t -> bool
 
 end = struct
 
@@ -572,6 +583,11 @@ end = struct
     | None -> None
     | Some x -> Some (TypingEnv.canon env x)
 
+  let is_resolved_to env r s =
+    match resolved_to env r with
+    | None -> false
+    | Some s1 -> TypingEnv.same_symbol env s s1
+
 end
 
 
@@ -584,7 +600,7 @@ module Scope = struct
     | Bound  of language (* bound by a lambda, stays bound *)
     | Global of {
         escape_ns : bool; (* when true name space elimination does not touch this constant *)
-        mutable resolved_to : SymbolResolver.resolution;
+        resolved_to : SymbolResolver.resolution;
       }
   [@@ deriving show]
 
@@ -851,6 +867,7 @@ module ScopedTerm = struct
   let mk_ty_name' a b : Scope.t ty_name = mk_ty_name a b
   let mk_ty_bound_elpi l n = mk_ty_name' (Bound l) n
   let mk_global name : 'a ty_name = mk_ty_name (Scope.mkGlobal ()) name
+  let mk_global_sym types symb : 'a ty_name = mk_ty_name (Scope.mkResolvedGlobal types symb) (Symbol.get_func symb)
   let clone_ty_name ?(clone_scope = Fun.id) (scope,name,_) = mk_ty_name (clone_scope scope) name
   let clone_ty_name' a = clone_ty_name ~clone_scope:Scope.clone a
 
