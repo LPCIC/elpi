@@ -314,7 +314,7 @@ module TypeAssignment = struct
 
   let check_same_mode ~loc1 ~loc2 x y =
     if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality x y <> 0 then
-      error ~loc:loc1 ("Two types for the same symbol cannot only differ on modes or functionality.\nPrevious declaration: " ^ Loc.show loc2)
+      error ~loc:loc2 ("Two types for the same symbol cannot only differ on modes or functionality.\nPrevious declaration: " ^ Loc.show loc1)
 
   let undup_skemas sk_of_s osl =
     let l = osl |> List.map (fun x -> x, sk_of_s x) in
