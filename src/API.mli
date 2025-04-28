@@ -307,6 +307,7 @@ module Compile : sig
   val optimize : query -> executable
   
   val total_type_checking_time : query -> float
+  val total_det_checking_time : query -> float
 end
 
 module Data : sig

@@ -182,6 +182,7 @@ module Compile = struct
     Compiler.query_of_ast s_p t (fun st -> st)
 
   let total_type_checking_time q = Compiler.total_type_checking_time q
+  let total_det_checking_time q = Compiler.total_det_checking_time q
 
   module StrSet = Util.StrSet
 

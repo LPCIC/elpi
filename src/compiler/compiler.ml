@@ -26,6 +26,19 @@ let default_flags = {
   time_typechecking = false;
 }
 
+let time_this r f =
+  let t0 = Unix.gettimeofday () in
+  try
+    let rc = f () in
+    let t1 = Unix.gettimeofday () in
+    r := !r +. (t1 -. t0);
+    rc
+  with e ->
+    let t1 = Unix.gettimeofday () in
+    r := !r +. (t1 -. t0);
+    raise e
+
+
 let parser : (module Parse.Parser) option D.State.component = D.State.declare
   ~descriptor:D.elpi_state_descriptor
   ~name:"elpi:parser"
@@ -271,6 +284,7 @@ module Assembled = struct
     signature : signature;
 
     total_type_checking_time : float;
+    total_det_checking_time : float;
   
     builtins : Builtins.t;
     prolog_program : index;
@@ -297,6 +311,7 @@ module Assembled = struct
     chr = CHR.empty;
     symbols = SymbolMap.empty ();
     total_type_checking_time = 0.0;
+    total_det_checking_time = 0.0;
     hash = "";
     builtins = Builtins.empty;
     signature = empty_signature ()
@@ -339,6 +354,7 @@ type checked_compilation_unit = {
   base_hash : string;
   precomputed_signature : Assembled.signature;
   type_checking_time : float;
+  det_checking_time : float;
 }
 [@@deriving show]
 
@@ -369,6 +385,7 @@ type query = {
   assignments : term StrMap.t;
   compiler_state : State.t;
   total_type_checking_time : float;
+  total_det_checking_time : float;
   builtins : Builtins.t;
 
 }
@@ -1351,16 +1368,16 @@ end = struct
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types
 
-  let check_and_spill_pred ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types t =
-    let unknown = Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation)) in
+  let check_and_spill_pred ~time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types t =
+    let unknown = time_this time (fun () -> Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
     unknown, if needs_spilling then Spilling.main ~types t else t
 
-  let check_and_spill_chr ~unknown ~type_abbrevs ~kinds ~types r =
-    let unknown = Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r in
+  let check_and_spill_chr ~time ~unknown ~type_abbrevs ~kinds ~types r =
+    let unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
     let guard = Option.map (Spilling.main ~types) r.guard in
     let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types conclusion }) r.new_goal in
     unknown, { r with guard; new_goal }
-
+    
   let check ~flags st ~base u : checked_compilation_unit =
 
     let signature, precomputed_signature, check_sig, new_types = check_signature ~flags base.Assembled.signature u.code.Flat.signature in
@@ -1368,17 +1385,19 @@ end = struct
     let { version; code = { Flat.clauses; chr; builtins } } = u in
     let { Assembled.kinds; types; type_abbrevs; toplevel_macros } = precomputed_signature in
 
-    let check_begin = Unix.gettimeofday () in
+    let type_check_time = ref 0.0 in
+    let det_check_time = ref 0.0 in
 
     (* returns unkown types + spilled clauses *)
     let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
       let unknown, body = 
-        if typecheck then check_and_spill_pred ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types body
+        if typecheck then check_and_spill_pred ~time:type_check_time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types body
         else unknown, body in
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body; needs_spilling = false} in
 
-      if typecheck then Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body;
+      if typecheck then
+        time_this det_check_time (fun () -> Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body);
 
       unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
     let clauses = List.rev clauses in
@@ -1386,7 +1405,7 @@ end = struct
     let unknown, chr = List.fold_left (fun (unknown,chr_blocks) { Ast.Structured.clique; ctx_filter; rules; loc } ->
         let clique = List.map (Type_checker.check_pred_name ~types ~loc) clique in
         let ctx_filter = List.map (Type_checker.check_pred_name ~types ~loc) ctx_filter in
-        let unknown, rules = map_acc (fun unknown -> check_and_spill_chr ~unknown ~type_abbrevs ~kinds ~types) unknown rules in
+        let unknown, rules = map_acc (fun unknown -> check_and_spill_chr ~time:type_check_time ~unknown ~type_abbrevs ~kinds ~types) unknown rules in
         (unknown, { Ast.Structured.clique; ctx_filter; rules; loc } :: chr_blocks)
       ) (unknown, []) chr in
     let chr = List.rev chr in
@@ -1429,11 +1448,9 @@ end = struct
           error ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?")
     ) signature.types;
 
-    let more_types = Type_checker.check_undeclared ~unknown ~type_abbrevs in
+    let more_types = time_this type_check_time (fun () -> Type_checker.check_undeclared ~unknown ~type_abbrevs) in
     let u_types = Flatten.merge_type_assignments signature.types more_types in
     let types = Flatten.merge_type_assignments types more_types in
-
-    let check_end = Unix.gettimeofday () in
 
     let signature = { signature with types = u_types } in
     let precomputed_signature = { precomputed_signature with types } in
@@ -1442,7 +1459,9 @@ end = struct
 
   { version; checked_code; base_hash = hash_base base;
     precomputed_signature;
-    type_checking_time = if flags.time_typechecking then check_end -. check_begin +. check_sig else 0.0 }
+    type_checking_time = if flags.time_typechecking then !type_check_time +. check_sig else 0.0;
+    det_checking_time = if flags.time_typechecking then !det_check_time else 0.0;
+}
 
 end
 
@@ -1822,7 +1841,7 @@ end = struct
     let t = if needs_spilling then Spilling.main ~types t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
-  let extend1_clause flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body = body_st; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
+  let extend1_clause ~time flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body = body_st; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index, pred_info)
@@ -1843,7 +1862,7 @@ end = struct
     let pred_info = C.Map.add p p_info pred_info in
     (* Format.eprintf "Validating local clause for predicate %a at %a@." F.pp (SymbolMap.global_name state symbols p) Loc.pp loc; *)
     
-    check_mut_excl state symbols ~loc pred_info cl body overlap_clause p amap;
+    time_this time (fun () -> check_mut_excl state symbols ~loc pred_info cl body overlap_clause p amap);
 
     (graft,id,p,cl) :: clauses, symbols, index, pred_info
 
@@ -1919,8 +1938,8 @@ let extend1 flags (state, base) unit =
     then unit.precomputed_signature
     else extend1_signature base.Assembled.signature unit.checked_code.CheckedFlat.signature in
 
-  let { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; signature = bsig; chr = ochr; builtins = ob; total_type_checking_time } = base in
-  let { version; base_hash; checked_code = { CheckedFlat.clauses; chr; builtins; signature = { types = new_types } }; type_checking_time; } = unit in
+  let { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; signature = bsig; chr = ochr; builtins = ob; total_type_checking_time; total_det_checking_time } = base in
+  let { version; base_hash; checked_code = { CheckedFlat.clauses; chr; builtins; signature = { types = new_types } }; type_checking_time; det_checking_time } = unit in
 
   (* Format.eprintf "extend %a\n%!" (F.Map.pp (fun _ _ -> ())) types_indexing; *)
   
@@ -1956,15 +1975,18 @@ let extend1 flags (state, base) unit =
   let symbols, chr =
     List.fold_left (extend1_chr_block ~builtins ~types:signature.types flags state) (symbols,ochr) chr in
 
+  let mutexcl_time = ref 0.0 in
+
   let clauses, symbols, prolog_program, indexing =
     (* TODO: pass also typeabbrevs *)
-    List.fold_left (extend1_clause ~builtins ~types:signature.types flags state) (cl, symbols, prolog_program, indexing) clauses in
+    List.fold_left (extend1_clause ~time:mutexcl_time ~builtins ~types:signature.types flags state) (cl, symbols, prolog_program, indexing) clauses in
 
   (* Printf.eprintf "kinds: %d\n%!" (F.Map.cardinal kinds); *)
 
   let total_type_checking_time = total_type_checking_time +. type_checking_time in
+  let total_det_checking_time = total_det_checking_time +. det_checking_time +. !mutexcl_time in
 
-  let base = { Assembled.builtins; hash; symbols; chr; clauses; prolog_program; signature; indexing; total_type_checking_time } in
+  let base = { Assembled.builtins; hash; symbols; chr; clauses; prolog_program; signature; indexing; total_type_checking_time; total_det_checking_time } in
   let hash = hash_base base in
   state, { base with hash }
 
@@ -2091,6 +2113,7 @@ let program_of_ast ~flags ~header:((st, base) as header : State.t * Assembled.pr
   assemble_unit ~flags ~header u
 
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x
+let total_det_checking_time { WithMain.total_det_checking_time = x } = x
 
 let pp_uvar_body fmt ub = R.Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
 let pp_uvar_body_raw fmt ub = R.Pp.ppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
@@ -2111,6 +2134,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let compiler_state = State.begin_goal_compilation compiler_state in
   let { Assembled.signature = { kinds; types; type_abbrevs; toplevel_macros; }; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
+  let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let needs_spilling = ref false in
   let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros; needs_spilling }) t in
   let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
@@ -2129,6 +2153,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
     assignments;
     compiler_state = compiler_state |> state_update;
     total_type_checking_time;
+    total_det_checking_time;
     builtins;
     runtime_types = Type_checker.compile_for_runtime types;
   }
@@ -2160,6 +2185,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let compiler_state = State.begin_goal_compilation compiler_state in
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
+  let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let compiler_state,t = f compiler_state in
   let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
@@ -2177,6 +2203,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
     assignments;
     compiler_state;
     total_type_checking_time;
+    total_det_checking_time;
     builtins;
     runtime_types = Type_checker.compile_for_runtime types;
   }
@@ -2185,6 +2212,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
     let compiler_state = State.begin_goal_compilation compiler_state in
     let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
     let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
+    let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
     let compiler_state, query, gls = f compiler_state in
     let compiler_state, gls = Data.State.get Data.Conversion.extra_goals_postprocessing compiler_state gls compiler_state in
     let gls = List.map Data.Conversion.term_of_extra_goal gls in
@@ -2207,6 +2235,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
       assignments;
       compiler_state;
       total_type_checking_time;
+      total_det_checking_time;
       builtins;
       runtime_types = Type_checker.compile_for_runtime types;
     }
