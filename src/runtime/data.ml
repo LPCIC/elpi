@@ -556,6 +556,7 @@ module Symbol : sig
 end = struct
   type provenance = Elpi_parser.Ast.Structured.provenance [@@deriving show,ord]
   type symbol = provenance * F.t [@@deriving show, ord]
+  let compare_symbol (p1,f1) (p2,f2) = let x = F.compare f1 f2 in if x = 0 then compare_provenance p1 p2 else x
   type 'a merge = (symbol -> 'a -> 'a -> 'a)
   module O = struct type t = symbol [@@deriving show,ord] end
   module RawMap = Map.Make(O)

@@ -161,7 +161,9 @@ module Loc = struct
 
   let pp fmt l =Fmt.fprintf fmt "%s" (to_string l)
   let show l = to_string l
-  let compare = Stdlib.compare
+  let compare l1 l2 =
+    let x =  Stdlib.compare l1.source_start l2.source_start in
+    if x = 0 then Stdlib.compare l1 l2 else x
   let equal = (=)
 
   let initial ?client_payload source_name = {
