@@ -7,6 +7,8 @@ is very welcome. Questions or feature requests are welcome as well.
 
 - [Underscore](#underscore) is a real wildcard
 
+- [Implication](#implication) has the *right precedence*™
+
 - [Spilling](#spilling) turns `..{foo X}..` into `foo X Y,..Y..`
 
 - [N-ary binders](#n-ary-binders) let one write `pi x y z\ ...`
@@ -76,6 +78,37 @@ some variable occurring in something is out of scope for `DummyNameUsedOnlyOnce`
 
 Side note: `elpi-checker.elpi` (see below) reports warnings about linearly used
 variables, suggesting to start their name with `_` (`_Name` is just sugar for `_`).
+
+## Implication
+
+In standard λProlog the infix `=>` binds stronger than `,` and as a consequence
+`a, b => c, d` reads `a, (b => c), d`. According to our experience this tricks
+beginners, for example the following attempt to add a debugging print has a
+catastrophic effect.
+```prolog
+buggy :- p => q.
+buggy :- p => print "debug print", q.
+```
+
+Elpi warn if `=>` is used without parentheses, and provides the infix `==>`
+that binds stronger than `,` only in the left, i.e. `a, b ==> c, d` reads
+`a, (b ==> (c, d))`.
+
+### Automatic tail Cut
+
+The [determinacy checking](#determinacy-checking) is not complete and sometimes
+it emits a warning about hypothetical clauses overlapping with other clauses.
+One way to silence the warning without exlicitly writing a tail cut is to use
+the `=!=>` operator, that automatically adds a tail cut.
+```prolog
+main :- copy a b =!=> copy T U.
+main :- (copy a b :- !) ==> copy T U. % equivalent
+```
+Note that `=!=>` may need to add the cut at runtime, eg when the hypothetical
+clause is not known statically
+```prolog
+main :- X = copy a b, X =!=> copy T U. % still cuts at run time
+```
 
 ## Spilling
 The following boring code
