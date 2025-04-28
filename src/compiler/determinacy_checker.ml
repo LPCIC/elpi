@@ -440,7 +440,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
           with FatalDetError (_,b1) | DetError (_, b1) | RelationalBody (_, b1) -> (Compilation.type_ass_2func_mut ~loc ta ty, b1))
       | Discard ->
           Format.eprintf "Calling type_ass_2func_mut in Discard@.";
-          (Aux.maximize ~loc @@ Compilation.type_ass_2func_mut ~loc ta ty, Good_call.init ())
+          (Compilation.type_ass_2func_mut ~loc ta ty, Good_call.init ())
       | CData _ -> (Exp [], Good_call.init ())
       | Cast (t, _) ->
           let d, good = infer ~was_input ctx t in
