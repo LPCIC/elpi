@@ -1,0 +1,10 @@
+func do (list (func)) ->.
+do [].
+do [P|PS] :- P, do PS.
+
+pred rel.
+
+func f -> (pred).
+f (do L) :- L = [rel].
+
+main.

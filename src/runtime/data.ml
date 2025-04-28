@@ -518,6 +518,7 @@ module Symbol : sig
     val empty : 'a t
     val add : symbol -> 'a -> 'a t -> 'a t
     val find : symbol -> 'a t -> 'a
+    val find_opt : symbol -> 'a t -> 'a option
     val union : 'a merge -> 'a t -> 'a t -> 'a t
     val give_uf : 'a t -> UF.t
     val unify : 'a merge -> symbol -> symbol -> 'a t -> 'a t
@@ -603,6 +604,8 @@ end = struct
       let s' = UF.find uf s in
       try RawMap.find s' m
       with Not_found -> anomaly ("Missing entry from QMap: " ^ show_symbol s)
+
+    let find_opt s (uf,m) = RawMap.find_opt (UF.find uf s) m
 
     let union f (uf1,m1) (uf2,m2) =
       let uf = UF.merge uf1 uf2 in

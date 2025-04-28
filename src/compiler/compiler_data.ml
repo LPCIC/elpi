@@ -432,6 +432,7 @@ module TypingEnv : sig
 
   val resolve_name : F.t -> t -> Symbol.t TypeAssignment.overloaded
   val resolve_symbol : Symbol.t -> t -> symbol_metadata
+  val resolve_symbol_opt : Symbol.t -> t -> symbol_metadata option
   val merge_envs : t -> t -> t
 
   val iter_names : (F.t -> Symbol.t TypeAssignment.overloaded -> unit) -> t -> unit
@@ -482,6 +483,7 @@ end = struct
     | Overloaded l -> Overloaded (List.map (canon symbols) l)
   
   let resolve_symbol s { symbols } = Symbol.QMap.find s symbols
+  let resolve_symbol_opt s { symbols } = Symbol.QMap.find_opt s symbols
   
   
   let merge_indexing s idx1 idx2 =
