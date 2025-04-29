@@ -2254,7 +2254,7 @@ let global_name_to_constant state s =
   let symbols2c,str2symbol = State.get symtab state in
   match Type_checker.runtime_resolve str2symbol (F.from_string s) with
   | s -> fst @@  Symbol.RawMap.find s symbols2c
-  | exception Not_found -> error "cannot resolve overloaded symbol at runtime"
+  | exception Not_found -> error (Format.asprintf "cannot resolve overloaded symbol (%s) at runtime" s)
 
 module Compiler : sig
 
