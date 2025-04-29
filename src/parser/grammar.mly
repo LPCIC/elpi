@@ -361,7 +361,7 @@ clause:
 
 attributes:
 | { [] }
-| EXTERNAL; o = option(STRING) { [ External o ] }
+| EXTERNAL { [ External None ] }
 | COLON; l = separated_nonempty_list(COLON, attribute) { l }
 
 attribute:
@@ -371,7 +371,7 @@ attribute:
 | BEFORE; s = STRING { Before s }
 | REPLACE; s = STRING { Replace s }
 | REMOVE; s = STRING { Remove s }
-| EXTERNAL; o = option(STRING) { External o }
+| EXTERNAL { External None }
 | FUNCTIONAL { Functional }
 | UNTYPED { Untyped }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
