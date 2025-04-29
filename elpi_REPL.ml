@@ -208,7 +208,8 @@ let _ =
     with API.Compile.CompileError(loc,msg) ->
       API.Utils.error ?loc msg
   in
-  Format.eprintf "@\nTypechecking time: %5.3f + %5.3f@\n%!" type_checking_time det_checking_time;
+  Format.eprintf "@\nTypechecking time: %5.3f@\n%!" type_checking_time;
+  Format.eprintf "Determinacy checking time: %5.3f@\n%!" det_checking_time;
   if !print_lprolog then begin
     API.Pp.program Format.std_formatter prog;
     Format.printf "\n\n%% query\n?- ";

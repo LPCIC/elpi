@@ -367,10 +367,18 @@ let read_tctime input_line =
   let time = ref 0.0 in
   try while true do
     let l = input_line () in
-    if Str.(string_match (regexp "^Typechecking time:") l 0) then
-      try time := float_of_string (String.sub l 18 (String.length l - 18))
+    begin
+      if Str.(string_match (regexp "^Typechecking time:") l 0) then
+      try time := !time +. float_of_string (String.sub l 18 (String.length l - 18))
       with _ -> ()
-  done; !time
+    end;
+    begin
+      if Str.(string_match (regexp "^Determinacy checking time:") l 0) then
+        try time := !time +. float_of_string (String.sub l 26 (String.length l - 26))
+      with _ -> ()
+    end;
+    done;
+    !time
   with End_of_file -> !time
 
 let () = Runner.declare
