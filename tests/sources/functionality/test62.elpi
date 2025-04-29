@@ -1,0 +1,11 @@
+% YES
+
+func f.
+pred rel.
+
+f :-
+  X = (x\ 3),
+  % Good lambda in X, but wrongly called below
+  Z = X _.
+
+main.

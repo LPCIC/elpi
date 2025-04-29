@@ -6,14 +6,14 @@ build N M X X1 :-
   std.set.add N X XR,
   build N1 M XR X1.
 
-pred test i:int, i:int, i:(int -> A -> prop), i:A.
+pred test i:int, i:int, i:(pred i:int, i:A), i:A.
 test N N _ _ :- !.
 test N M F X :-
   N1 is N + 1,
   std.assert! (F N X) "not found",
   test N1 M F X.
 
-pred test2 i:int, i:int, i:(int -> A -> A -> prop), i:A, o:A.
+pred test2 i:int, i:int, i:(pred i:int, i:A, o:A), i:A, o:A.
 test2 N N _ R R :- !.
 test2 N M F X R :-
   N1 is N + 1,

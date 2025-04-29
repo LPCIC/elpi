@@ -266,7 +266,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                  "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                   "rule_loc": [
                     "File",
                     {
@@ -311,7 +311,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -400,7 +400,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -519,7 +519,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -662,7 +662,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -777,7 +777,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -906,7 +906,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -1050,7 +1050,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -1182,7 +1182,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -1314,7 +1314,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -1463,7 +1463,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -1606,7 +1606,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -1769,7 +1769,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -1906,7 +1906,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -1988,7 +1988,7 @@
                   "step": [
                     "Init",
                     {
-                      "goal_text": "generalize [] [] (mono (uvar frozen--394 [] ===> uvar frozen--394 [])) X3",
+                      "goal_text": "generalize [] [] (mono (uvar frozen--402 [] ===> uvar frozen--402 [])) X3",
                       "goal_id": 26
                     }
                   ],
@@ -2001,7 +2001,7 @@
                     "Inference",
                     {
                       "current_goal_id": 26,
-                      "current_goal_text": "generalize [] [] (mono (uvar frozen--394 [] ===> uvar frozen--394 [])) X3",
+                      "current_goal_text": "generalize [] [] (mono (uvar frozen--402 [] ===> uvar frozen--402 [])) X3",
                       "current_goal_predicate": "generalize",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2027,14 +2027,14 @@
                               [ "Assign", "A2 := []" ],
                               [
                                 "Assign",
-                                "A0 := uvar frozen--394 [] ===> uvar frozen--394 []"
+                                "A0 := uvar frozen--402 [] ===> uvar frozen--402 []"
                               ],
                               [ "Assign", "A6 := X3" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "free-ty (mono (uvar frozen--394 [] ===> uvar frozen--394 [])) [] X4",
+                              "goal_text": "free-ty (mono (uvar frozen--402 [] ===> uvar frozen--402 [])) [] X4",
                               "goal_id": 27
                             },
                             {
@@ -2046,7 +2046,7 @@
                               "goal_id": 29
                             },
                             {
-                              "goal_text": "bind X6 [] (uvar frozen--394 [] ===> uvar frozen--394 []) X3",
+                              "goal_text": "bind X6 [] (uvar frozen--402 [] ===> uvar frozen--402 []) X3",
                               "goal_id": 30
                             }
                           ],
@@ -2086,7 +2086,7 @@
                     "Inference",
                     {
                       "current_goal_id": 27,
-                      "current_goal_text": "free-ty (mono (uvar frozen--394 [] ===> uvar frozen--394 [])) [] X4",
+                      "current_goal_text": "free-ty (mono (uvar frozen--402 [] ===> uvar frozen--402 [])) [] X4",
                       "current_goal_predicate": "free-ty",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2110,7 +2110,7 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := uvar frozen--394 [] ===> uvar frozen--394 []"
+                                "A0 := uvar frozen--402 [] ===> uvar frozen--402 []"
                               ],
                               [ "Assign", "A1 := []" ],
                               [ "Assign", "A2 := X4" ]
@@ -2118,7 +2118,7 @@
                           },
                           "siblings": [
                             {
-                              "goal_text": "free (uvar frozen--394 [] ===> uvar frozen--394 []) [] X4",
+                              "goal_text": "free (uvar frozen--402 [] ===> uvar frozen--402 []) [] X4",
                               "goal_id": 31
                             }
                           ],
@@ -2177,7 +2177,7 @@
                     "Inference",
                     {
                       "current_goal_id": 31,
-                      "current_goal_text": "free (uvar frozen--394 [] ===> uvar frozen--394 []) [] X4",
+                      "current_goal_text": "free (uvar frozen--402 [] ===> uvar frozen--402 []) [] X4",
                       "current_goal_predicate": "free",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2199,19 +2199,19 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := uvar frozen--394 []" ],
-                              [ "Assign", "A3 := uvar frozen--394 []" ],
+                              [ "Assign", "A0 := uvar frozen--402 []" ],
+                              [ "Assign", "A3 := uvar frozen--402 []" ],
                               [ "Assign", "A1 := []" ],
                               [ "Assign", "A4 := X4" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "free (uvar frozen--394 []) [] X7",
+                              "goal_text": "free (uvar frozen--402 []) [] X7",
                               "goal_id": 32
                             },
                             {
-                              "goal_text": "free (uvar frozen--394 []) X7 X4",
+                              "goal_text": "free (uvar frozen--402 []) X7 X4",
                               "goal_id": 33
                             }
                           ],
@@ -2289,7 +2289,7 @@
                     "Inference",
                     {
                       "current_goal_id": 32,
-                      "current_goal_text": "free (uvar frozen--394 []) [] X7",
+                      "current_goal_text": "free (uvar frozen--402 []) [] X7",
                       "current_goal_predicate": "free",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2311,14 +2311,14 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A1 := uvar frozen--394 []" ],
+                              [ "Assign", "A1 := uvar frozen--402 []" ],
                               [ "Assign", "A0 := []" ],
                               [ "Assign", "A2 := X7" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "if (mem [] (uvar frozen--394 [])) (X7 = []) (X7 = [uvar frozen--394 []])",
+                              "goal_text": "if (mem [] (uvar frozen--402 [])) (X7 = []) (X7 = [uvar frozen--402 []])",
                               "goal_id": 34
                             }
                           ],
@@ -2415,7 +2415,7 @@
                     "Inference",
                     {
                       "current_goal_id": 34,
-                      "current_goal_text": "if (mem [] (uvar frozen--394 [])) (X7 = []) (X7 = [uvar frozen--394 []])",
+                      "current_goal_text": "if (mem [] (uvar frozen--402 [])) (X7 = []) (X7 = [uvar frozen--402 []])",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2424,14 +2424,14 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                                "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                                 "rule_loc": [
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 515,
+                                    "line": 526,
                                     "column": 0,
-                                    "character": 12439
+                                    "character": 13687
                                   }
                                 ]
                               }
@@ -2439,14 +2439,14 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := mem [] (uvar frozen--394 [])"
+                                "A0 := mem [] (uvar frozen--402 [])"
                               ],
                               [ "Assign", "A1 := X7 = []" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem [] (uvar frozen--394 [])",
+                              "goal_text": "mem [] (uvar frozen--402 [])",
                               "goal_id": 35
                             },
                             { "goal_text": "!", "goal_id": 36 },
@@ -2461,14 +2461,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -2564,7 +2564,7 @@
                     "Inference",
                     {
                       "current_goal_id": 35,
-                      "current_goal_text": "mem [] (uvar frozen--394 [])",
+                      "current_goal_text": "mem [] (uvar frozen--402 [])",
                       "current_goal_predicate": "mem",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2587,12 +2587,12 @@
                             ],
                             "events": [
                               [ "Assign", "A0 := []" ],
-                              [ "Assign", "A1 := frozen--394" ]
+                              [ "Assign", "A1 := frozen--402" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem! [] (uvar frozen--394 X8)",
+                              "goal_text": "mem! [] (uvar frozen--402 X8)",
                               "goal_id": 38
                             }
                           ],
@@ -2624,14 +2624,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -2727,7 +2727,7 @@
                     "Inference",
                     {
                       "current_goal_id": 38,
-                      "current_goal_text": "mem! [] (uvar frozen--394 X8)",
+                      "current_goal_text": "mem! [] (uvar frozen--402 X8)",
                       "current_goal_predicate": "mem!",
                       "failed_attempts": [],
                       "successful_attempts": [],
@@ -2756,14 +2756,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -2859,7 +2859,7 @@
                     "Inference",
                     {
                       "current_goal_id": 34,
-                      "current_goal_text": "if (mem [] (uvar frozen--394 [])) (X7 = []) (X7 = [uvar frozen--394 []])",
+                      "current_goal_text": "if (mem [] (uvar frozen--402 [])) (X7 = []) (X7 = [uvar frozen--402 []])",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -2873,22 +2873,22 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 516,
+                                    "line": 527,
                                     "column": 0,
-                                    "character": 12460
+                                    "character": 13708
                                   }
                                 ]
                               }
                             ],
                             "events": [
                               [
-                                "Assign", "A0 := X7 = [uvar frozen--394 []]"
+                                "Assign", "A0 := X7 = [uvar frozen--402 []]"
                               ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "X7 = [uvar frozen--394 []]",
+                              "goal_text": "X7 = [uvar frozen--402 []]",
                               "goal_id": 39
                             }
                           ],
@@ -2906,9 +2906,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 516,
+                                  "line": 527,
                                   "column": 0,
-                                  "character": 12460
+                                  "character": 13708
                                 }
                               ]
                             }
@@ -3004,7 +3004,7 @@
                     "Inference",
                     {
                       "current_goal_id": 39,
-                      "current_goal_text": "X7 = [uvar frozen--394 []]",
+                      "current_goal_text": "X7 = [uvar frozen--402 []]",
                       "current_goal_predicate": "=",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3012,7 +3012,7 @@
                           "attempt": {
                             "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
                             "events": [
-                              [ "Assign", "X7 := [uvar frozen--394 []]" ]
+                              [ "Assign", "X7 := [uvar frozen--402 []]" ]
                             ]
                           },
                           "siblings": [],
@@ -3035,9 +3035,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 516,
+                                  "line": 527,
                                   "column": 0,
-                                  "character": 12460
+                                  "character": 13708
                                 }
                               ]
                             }
@@ -3133,7 +3133,7 @@
                     "Inference",
                     {
                       "current_goal_id": 33,
-                      "current_goal_text": "free (uvar frozen--394 []) [uvar frozen--394 []] X4",
+                      "current_goal_text": "free (uvar frozen--402 []) [uvar frozen--402 []] X4",
                       "current_goal_predicate": "free",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3155,14 +3155,14 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A1 := uvar frozen--394 []" ],
-                              [ "Assign", "A0 := [uvar frozen--394 []]" ],
+                              [ "Assign", "A1 := uvar frozen--402 []" ],
+                              [ "Assign", "A0 := [uvar frozen--402 []]" ],
                               [ "Assign", "A2 := X4" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "if (mem [uvar frozen--394 []] (uvar frozen--394 [])) \n (X4 = [uvar frozen--394 []]) \n (X4 = [uvar frozen--394 [], uvar frozen--394 []])",
+                              "goal_text": "if (mem [uvar frozen--402 []] (uvar frozen--402 [])) \n (X4 = [uvar frozen--402 []]) \n (X4 = [uvar frozen--402 [], uvar frozen--402 []])",
                               "goal_id": 40
                             }
                           ],
@@ -3259,7 +3259,7 @@
                     "Inference",
                     {
                       "current_goal_id": 40,
-                      "current_goal_text": "if (mem [uvar frozen--394 []] (uvar frozen--394 [])) \n (X4 = [uvar frozen--394 []]) \n (X4 = [uvar frozen--394 [], uvar frozen--394 []])",
+                      "current_goal_text": "if (mem [uvar frozen--402 []] (uvar frozen--402 [])) \n (X4 = [uvar frozen--402 []]) \n (X4 = [uvar frozen--402 [], uvar frozen--402 []])",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3268,14 +3268,14 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                                "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                                 "rule_loc": [
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 515,
+                                    "line": 526,
                                     "column": 0,
-                                    "character": 12439
+                                    "character": 13687
                                   }
                                 ]
                               }
@@ -3283,21 +3283,21 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := mem [uvar frozen--394 []] (uvar frozen--394 [])"
+                                "A0 := mem [uvar frozen--402 []] (uvar frozen--402 [])"
                               ],
                               [
-                                "Assign", "A1 := X4 = [uvar frozen--394 []]"
+                                "Assign", "A1 := X4 = [uvar frozen--402 []]"
                               ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem [uvar frozen--394 []] (uvar frozen--394 [])",
+                              "goal_text": "mem [uvar frozen--402 []] (uvar frozen--402 [])",
                               "goal_id": 41
                             },
                             { "goal_text": "!", "goal_id": 42 },
                             {
-                              "goal_text": "X4 = [uvar frozen--394 []]",
+                              "goal_text": "X4 = [uvar frozen--402 []]",
                               "goal_id": 43
                             }
                           ],
@@ -3310,14 +3310,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -3413,7 +3413,7 @@
                     "Inference",
                     {
                       "current_goal_id": 41,
-                      "current_goal_text": "mem [uvar frozen--394 []] (uvar frozen--394 [])",
+                      "current_goal_text": "mem [uvar frozen--402 []] (uvar frozen--402 [])",
                       "current_goal_predicate": "mem",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3435,13 +3435,13 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := [uvar frozen--394 []]" ],
-                              [ "Assign", "A1 := frozen--394" ]
+                              [ "Assign", "A0 := [uvar frozen--402 []]" ],
+                              [ "Assign", "A1 := frozen--402" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem! [uvar frozen--394 []] (uvar frozen--394 X9)",
+                              "goal_text": "mem! [uvar frozen--402 []] (uvar frozen--402 X9)",
                               "goal_id": 44
                             }
                           ],
@@ -3473,14 +3473,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -3576,7 +3576,7 @@
                     "Inference",
                     {
                       "current_goal_id": 44,
-                      "current_goal_text": "mem! [uvar frozen--394 []] (uvar frozen--394 X9)",
+                      "current_goal_text": "mem! [uvar frozen--402 []] (uvar frozen--402 X9)",
                       "current_goal_predicate": "mem!",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3585,7 +3585,7 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(mem! [A0 | _] A0) :- (!).",
+                                "rule_text": "(mem! [A0 | _] A0) :- !.",
                                 "rule_loc": [
                                   "File",
                                   {
@@ -3598,7 +3598,7 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := uvar frozen--394 []" ],
+                              [ "Assign", "A0 := uvar frozen--402 []" ],
                               [ "Assign", "X9 := []" ]
                             ]
                           },
@@ -3612,7 +3612,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(mem! [A0 | _] A0) :- (!).",
+                              "rule_text": "(mem! [A0 | _] A0) :- !.",
                               "rule_loc": [
                                 "File",
                                 {
@@ -3650,14 +3650,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -3756,7 +3756,7 @@
                       "cut_victims": [
                         {
                           "cut_branch_for_goal": {
-                            "goal_text": "mem! [uvar frozen--394 []] (uvar frozen--394 X9)",
+                            "goal_text": "mem! [uvar frozen--402 []] (uvar frozen--402 X9)",
                             "goal_id": 44
                           },
                           "cut_branch": {
@@ -3787,7 +3787,7 @@
                       "cut_victims": [
                         {
                           "cut_branch_for_goal": {
-                            "goal_text": "if (mem [uvar frozen--394 []] (uvar frozen--394 [])) \n (X4 = [uvar frozen--394 []]) \n (X4 = [uvar frozen--394 [], uvar frozen--394 []])",
+                            "goal_text": "if (mem [uvar frozen--402 []] (uvar frozen--402 [])) \n (X4 = [uvar frozen--402 []]) \n (X4 = [uvar frozen--402 [], uvar frozen--402 []])",
                             "goal_id": 40
                           },
                           "cut_branch": {
@@ -3796,9 +3796,9 @@
                               "File",
                               {
                                 "filename": "builtin.elpi",
-                                "line": 516,
+                                "line": 527,
                                 "column": 0,
-                                "character": 12460
+                                "character": 13708
                               }
                             ]
                           }
@@ -3815,7 +3815,7 @@
                     "Inference",
                     {
                       "current_goal_id": 43,
-                      "current_goal_text": "X4 = [uvar frozen--394 []]",
+                      "current_goal_text": "X4 = [uvar frozen--402 []]",
                       "current_goal_predicate": "=",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -3823,7 +3823,7 @@
                           "attempt": {
                             "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
                             "events": [
-                              [ "Assign", "X4 := [uvar frozen--394 []]" ]
+                              [ "Assign", "X4 := [uvar frozen--402 []]" ]
                             ]
                           },
                           "siblings": [],
@@ -3841,14 +3841,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -4026,7 +4026,7 @@
                     "Inference",
                     {
                       "current_goal_id": 29,
-                      "current_goal_text": "filter [uvar frozen--394 []] (c0 \\ not (mem [] c0)) X6",
+                      "current_goal_text": "filter [uvar frozen--402 []] (c0 \\ not (mem [] c0)) X6",
                       "current_goal_predicate": "filter",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4035,7 +4035,7 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), (!), (filter A2 A1 A3).",
+                                "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), !, (filter A2 A1 A3).",
                                 "rule_loc": [
                                   "File",
                                   {
@@ -4048,17 +4048,17 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := uvar frozen--394 []" ],
+                              [ "Assign", "A0 := uvar frozen--402 []" ],
                               [ "Assign", "A2 := []" ],
                               [ "Assign", "A1 := c0 \\\nnot (mem [] c0)" ],
                               [
-                                "Assign", "X6 := [uvar frozen--394 [] | X10]"
+                                "Assign", "X6 := [uvar frozen--402 [] | X10]"
                               ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "not (mem [] (uvar frozen--394 []))",
+                              "goal_text": "not (mem [] (uvar frozen--402 []))",
                               "goal_id": 46
                             },
                             { "goal_text": "!", "goal_id": 47 },
@@ -4076,7 +4076,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), (!), (filter A2 A1 A3).",
+                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), !, (filter A2 A1 A3).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -4122,7 +4122,7 @@
                     "Inference",
                     {
                       "current_goal_id": 46,
-                      "current_goal_text": "not (mem [] (uvar frozen--394 []))",
+                      "current_goal_text": "not (mem [] (uvar frozen--402 []))",
                       "current_goal_predicate": "not",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4131,14 +4131,14 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(not A0) :- A0, (!), fail.",
+                                "rule_text": "(not A0) :- A0, !, fail.",
                                 "rule_loc": [
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 62,
+                                    "line": 64,
                                     "column": 0,
-                                    "character": 759
+                                    "character": 1009
                                   }
                                 ]
                               }
@@ -4146,13 +4146,13 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := mem [] (uvar frozen--394 [])"
+                                "A0 := mem [] (uvar frozen--402 [])"
                               ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem [] (uvar frozen--394 [])",
+                              "goal_text": "mem [] (uvar frozen--402 [])",
                               "goal_id": 49
                             },
                             { "goal_text": "!", "goal_id": 50 },
@@ -4167,14 +4167,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(not A0) :- A0, (!), fail.",
+                              "rule_text": "(not A0) :- A0, !, fail.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 62,
+                                  "line": 64,
                                   "column": 0,
-                                  "character": 759
+                                  "character": 1009
                                 }
                               ]
                             }
@@ -4186,7 +4186,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), (!), (filter A2 A1 A3).",
+                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), !, (filter A2 A1 A3).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -4232,7 +4232,7 @@
                     "Inference",
                     {
                       "current_goal_id": 49,
-                      "current_goal_text": "mem [] (uvar frozen--394 [])",
+                      "current_goal_text": "mem [] (uvar frozen--402 [])",
                       "current_goal_predicate": "mem",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4255,12 +4255,12 @@
                             ],
                             "events": [
                               [ "Assign", "A0 := []" ],
-                              [ "Assign", "A1 := frozen--394" ]
+                              [ "Assign", "A1 := frozen--402" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem! [] (uvar frozen--394 X11)",
+                              "goal_text": "mem! [] (uvar frozen--402 X11)",
                               "goal_id": 52
                             }
                           ],
@@ -4292,14 +4292,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(not A0) :- A0, (!), fail.",
+                              "rule_text": "(not A0) :- A0, !, fail.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 62,
+                                  "line": 64,
                                   "column": 0,
-                                  "character": 759
+                                  "character": 1009
                                 }
                               ]
                             }
@@ -4311,7 +4311,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), (!), (filter A2 A1 A3).",
+                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), !, (filter A2 A1 A3).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -4357,7 +4357,7 @@
                     "Inference",
                     {
                       "current_goal_id": 52,
-                      "current_goal_text": "mem! [] (uvar frozen--394 X11)",
+                      "current_goal_text": "mem! [] (uvar frozen--402 X11)",
                       "current_goal_predicate": "mem!",
                       "failed_attempts": [],
                       "successful_attempts": [],
@@ -4386,14 +4386,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(not A0) :- A0, (!), fail.",
+                              "rule_text": "(not A0) :- A0, !, fail.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 62,
+                                  "line": 64,
                                   "column": 0,
-                                  "character": 759
+                                  "character": 1009
                                 }
                               ]
                             }
@@ -4405,7 +4405,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), (!), (filter A2 A1 A3).",
+                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), !, (filter A2 A1 A3).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -4451,7 +4451,7 @@
                     "Inference",
                     {
                       "current_goal_id": 46,
-                      "current_goal_text": "not (mem [] (uvar frozen--394 []))",
+                      "current_goal_text": "not (mem [] (uvar frozen--402 []))",
                       "current_goal_predicate": "not",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4465,9 +4465,9 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 64,
+                                    "line": 66,
                                     "column": 0,
-                                    "character": 781
+                                    "character": 1031
                                   }
                                 ]
                               }
@@ -4489,9 +4489,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 64,
+                                  "line": 66,
                                   "column": 0,
-                                  "character": 781
+                                  "character": 1031
                                 }
                               ]
                             }
@@ -4503,7 +4503,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), (!), (filter A2 A1 A3).",
+                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), !, (filter A2 A1 A3).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -4632,7 +4632,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), (!), (filter A2 A1 A3).",
+                              "rule_text": "(filter [A0 | A2] A1 [A0 | A3]) :- (A1 A0), !, (filter A2 A1 A3).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -4678,7 +4678,7 @@
                     "Inference",
                     {
                       "current_goal_id": 30,
-                      "current_goal_text": "bind [uvar frozen--394 []] [] (uvar frozen--394 [] ===> uvar frozen--394 []) \n X3",
+                      "current_goal_text": "bind [uvar frozen--402 []] [] (uvar frozen--402 [] ===> uvar frozen--402 []) \n X3",
                       "current_goal_predicate": "bind",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4700,23 +4700,23 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A1 := uvar frozen--394 []" ],
+                              [ "Assign", "A1 := uvar frozen--402 []" ],
                               [ "Assign", "A3 := []" ],
                               [ "Assign", "A0 := []" ],
                               [
                                 "Assign",
-                                "A4 := uvar frozen--394 [] ===> uvar frozen--394 []"
+                                "A4 := uvar frozen--402 [] ===> uvar frozen--402 []"
                               ],
                               [ "Assign", "X3 := all X12 c0 \\ X13 c0" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "if (mem [] (uvar frozen--394 [])) (X12 = eqt) (X12 = any)",
+                              "goal_text": "if (mem [] (uvar frozen--402 [])) (X12 = eqt) (X12 = any)",
                               "goal_id": 53
                             },
                             {
-                              "goal_text": "pi c0 \\\n copy (uvar frozen--394 []) c0 =>\n  bind [] [] (uvar frozen--394 [] ===> uvar frozen--394 []) (X13 c0)",
+                              "goal_text": "pi c0 \\\n copy (uvar frozen--402 []) c0 =>\n  bind [] [] (uvar frozen--402 [] ===> uvar frozen--402 []) (X13 c0)",
                               "goal_id": 54
                             }
                           ],
@@ -4775,7 +4775,7 @@
                     "Inference",
                     {
                       "current_goal_id": 53,
-                      "current_goal_text": "if (mem [] (uvar frozen--394 [])) (X12 = eqt) (X12 = any)",
+                      "current_goal_text": "if (mem [] (uvar frozen--402 [])) (X12 = eqt) (X12 = any)",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4784,14 +4784,14 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                                "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                                 "rule_loc": [
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 515,
+                                    "line": 526,
                                     "column": 0,
-                                    "character": 12439
+                                    "character": 13687
                                   }
                                 ]
                               }
@@ -4799,14 +4799,14 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := mem [] (uvar frozen--394 [])"
+                                "A0 := mem [] (uvar frozen--402 [])"
                               ],
                               [ "Assign", "A1 := X12 = eqt" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem [] (uvar frozen--394 [])",
+                              "goal_text": "mem [] (uvar frozen--402 [])",
                               "goal_id": 55
                             },
                             { "goal_text": "!", "goal_id": 56 },
@@ -4821,14 +4821,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -4886,7 +4886,7 @@
                     "Inference",
                     {
                       "current_goal_id": 55,
-                      "current_goal_text": "mem [] (uvar frozen--394 [])",
+                      "current_goal_text": "mem [] (uvar frozen--402 [])",
                       "current_goal_predicate": "mem",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -4909,12 +4909,12 @@
                             ],
                             "events": [
                               [ "Assign", "A0 := []" ],
-                              [ "Assign", "A1 := frozen--394" ]
+                              [ "Assign", "A1 := frozen--402" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "mem! [] (uvar frozen--394 X14)",
+                              "goal_text": "mem! [] (uvar frozen--402 X14)",
                               "goal_id": 58
                             }
                           ],
@@ -4946,14 +4946,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -5011,7 +5011,7 @@
                     "Inference",
                     {
                       "current_goal_id": 58,
-                      "current_goal_text": "mem! [] (uvar frozen--394 X14)",
+                      "current_goal_text": "mem! [] (uvar frozen--402 X14)",
                       "current_goal_predicate": "mem!",
                       "failed_attempts": [],
                       "successful_attempts": [],
@@ -5040,14 +5040,14 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(if A0 A1 _) :- A0, (!), A1.",
+                              "rule_text": "(if A0 A1 _) :- A0, !, A1.",
                               "rule_loc": [
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 515,
+                                  "line": 526,
                                   "column": 0,
-                                  "character": 12439
+                                  "character": 13687
                                 }
                               ]
                             }
@@ -5105,7 +5105,7 @@
                     "Inference",
                     {
                       "current_goal_id": 53,
-                      "current_goal_text": "if (mem [] (uvar frozen--394 [])) (X12 = eqt) (X12 = any)",
+                      "current_goal_text": "if (mem [] (uvar frozen--402 [])) (X12 = eqt) (X12 = any)",
                       "current_goal_predicate": "if",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5119,9 +5119,9 @@
                                   "File",
                                   {
                                     "filename": "builtin.elpi",
-                                    "line": 516,
+                                    "line": 527,
                                     "column": 0,
-                                    "character": 12460
+                                    "character": 13708
                                   }
                                 ]
                               }
@@ -5145,9 +5145,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 516,
+                                  "line": 527,
                                   "column": 0,
-                                  "character": 12460
+                                  "character": 13708
                                 }
                               ]
                             }
@@ -5234,9 +5234,9 @@
                                 "File",
                                 {
                                   "filename": "builtin.elpi",
-                                  "line": 516,
+                                  "line": 527,
                                   "column": 0,
-                                  "character": 12460
+                                  "character": 13708
                                 }
                               ]
                             }
@@ -5294,7 +5294,7 @@
                     "Inference",
                     {
                       "current_goal_id": 54,
-                      "current_goal_text": "pi c0 \\\n copy (uvar frozen--394 []) c0 =>\n  bind [] [] (uvar frozen--394 [] ===> uvar frozen--394 []) (X13 c0)",
+                      "current_goal_text": "pi c0 \\\n copy (uvar frozen--402 []) c0 =>\n  bind [] [] (uvar frozen--402 [] ===> uvar frozen--402 []) (X13 c0)",
                       "current_goal_predicate": "pi",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5305,7 +5305,7 @@
                           },
                           "siblings": [
                             {
-                              "goal_text": "copy (uvar frozen--394 []) c0 =>\n bind [] [] (uvar frozen--394 [] ===> uvar frozen--394 []) (X13 c0)",
+                              "goal_text": "copy (uvar frozen--402 []) c0 =>\n bind [] [] (uvar frozen--402 [] ===> uvar frozen--402 []) (X13 c0)",
                               "goal_id": 60
                             }
                           ],
@@ -5369,7 +5369,7 @@
                     "Inference",
                     {
                       "current_goal_id": 60,
-                      "current_goal_text": "copy (uvar frozen--394 []) c0 =>\n bind [] [] (uvar frozen--394 [] ===> uvar frozen--394 []) (X13 c0)",
+                      "current_goal_text": "copy (uvar frozen--402 []) c0 =>\n bind [] [] (uvar frozen--402 [] ===> uvar frozen--402 []) (X13 c0)",
                       "current_goal_predicate": "=>",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5382,7 +5382,7 @@
                           },
                           "siblings": [
                             {
-                              "goal_text": "bind [] [] (uvar frozen--394 [] ===> uvar frozen--394 []) (X13 c0)",
+                              "goal_text": "bind [] [] (uvar frozen--402 [] ===> uvar frozen--402 []) (X13 c0)",
                               "goal_id": 61
                             }
                           ],
@@ -5453,7 +5453,7 @@
                     "Inference",
                     {
                       "current_goal_id": 61,
-                      "current_goal_text": "bind [] [] (uvar frozen--394 [] ===> uvar frozen--394 []) (X13 c0)",
+                      "current_goal_text": "bind [] [] (uvar frozen--402 [] ===> uvar frozen--402 []) (X13 c0)",
                       "current_goal_predicate": "bind",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5477,7 +5477,7 @@
                             "events": [
                               [
                                 "Assign",
-                                "A0 := uvar frozen--394 [] ===> uvar frozen--394 []"
+                                "A0 := uvar frozen--402 [] ===> uvar frozen--402 []"
                               ],
                               [ "Assign", "X13 := c0 \\\nX15 c0" ],
                               [ "Assign", "X15^1 := mono X16^1" ]
@@ -5485,7 +5485,7 @@
                           },
                           "siblings": [
                             {
-                              "goal_text": "copy (uvar frozen--394 [] ===> uvar frozen--394 []) X16^1",
+                              "goal_text": "copy (uvar frozen--402 [] ===> uvar frozen--402 []) X16^1",
                               "goal_id": 62
                             }
                           ],
@@ -5575,7 +5575,7 @@
                     "Inference",
                     {
                       "current_goal_id": 62,
-                      "current_goal_text": "copy (uvar frozen--394 [] ===> uvar frozen--394 []) X16^1",
+                      "current_goal_text": "copy (uvar frozen--402 [] ===> uvar frozen--402 []) X16^1",
                       "current_goal_predicate": "copy",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5597,18 +5597,18 @@
                               }
                             ],
                             "events": [
-                              [ "Assign", "A0 := uvar frozen--394 []" ],
-                              [ "Assign", "A2 := uvar frozen--394 []" ],
+                              [ "Assign", "A0 := uvar frozen--402 []" ],
+                              [ "Assign", "A2 := uvar frozen--402 []" ],
                               [ "Assign", "X16^1 := X17^1 ===> X18^1" ]
                             ]
                           },
                           "siblings": [
                             {
-                              "goal_text": "copy (uvar frozen--394 []) X17^1",
+                              "goal_text": "copy (uvar frozen--402 []) X17^1",
                               "goal_id": 63
                             },
                             {
-                              "goal_text": "copy (uvar frozen--394 []) X18^1",
+                              "goal_text": "copy (uvar frozen--402 []) X18^1",
                               "goal_id": 64
                             }
                           ],
@@ -5717,7 +5717,7 @@
                     "Inference",
                     {
                       "current_goal_id": 63,
-                      "current_goal_text": "copy (uvar frozen--394 []) X17^1",
+                      "current_goal_text": "copy (uvar frozen--402 []) X17^1",
                       "current_goal_predicate": "copy",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5726,7 +5726,7 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(copy (uvar frozen--394 []) c0) :- .",
+                                "rule_text": "(copy (uvar frozen--402 []) c0) :- .",
                                 "rule_loc": [ "Context", 32 ]
                               }
                             ],
@@ -5742,7 +5742,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(copy (uvar frozen--394 []) c0) :- .",
+                              "rule_text": "(copy (uvar frozen--402 []) c0) :- .",
                               "rule_loc": [ "Context", 32 ]
                             }
                           ],
@@ -5849,7 +5849,7 @@
                     "Inference",
                     {
                       "current_goal_id": 64,
-                      "current_goal_text": "copy (uvar frozen--394 []) X18^1",
+                      "current_goal_text": "copy (uvar frozen--402 []) X18^1",
                       "current_goal_predicate": "copy",
                       "failed_attempts": [],
                       "successful_attempts": [
@@ -5858,7 +5858,7 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(copy (uvar frozen--394 []) c0) :- .",
+                                "rule_text": "(copy (uvar frozen--402 []) c0) :- .",
                                 "rule_loc": [ "Context", 32 ]
                               }
                             ],
@@ -5874,7 +5874,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(copy (uvar frozen--394 []) c0) :- .",
+                              "rule_text": "(copy (uvar frozen--402 []) c0) :- .",
                               "rule_loc": [ "Context", 32 ]
                             }
                           ],
@@ -6130,7 +6130,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -6248,7 +6248,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -6401,7 +6401,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -6582,7 +6582,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -6745,7 +6745,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -6929,7 +6929,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -7128,7 +7128,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -7469,7 +7469,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -7729,7 +7729,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -7921,7 +7921,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -8129,7 +8129,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -8309,7 +8309,7 @@
               "goal_id": 74
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
+              "rule_text": "(of A0 (mono A2)) :- (not err), !, (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
               "rule_loc": [
                 "File",
                 {
@@ -8327,7 +8327,7 @@
               "goal_id": 74
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt).",
+              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), halt.",
               "rule_loc": [
                 "File",
                 {
@@ -8345,7 +8345,7 @@
               "goal_id": 70
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
+              "rule_text": "(of A0 (mono A2)) :- (not err), !, (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
               "rule_loc": [
                 "File",
                 {
@@ -8363,7 +8363,7 @@
               "goal_id": 70
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt).",
+              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), halt.",
               "rule_loc": [
                 "File",
                 {
@@ -8417,7 +8417,7 @@
               "goal_id": 71
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
+              "rule_text": "(of A0 (mono A2)) :- (not err), !, (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
               "rule_loc": [
                 "File",
                 {
@@ -8435,7 +8435,7 @@
               "goal_id": 71
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt).",
+              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), halt.",
               "rule_loc": [
                 "File",
                 {
@@ -8453,7 +8453,7 @@
               "goal_id": 69
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
+              "rule_text": "(of A0 (mono A2)) :- (not err), !, (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
               "rule_loc": [
                 "File",
                 {
@@ -8471,7 +8471,7 @@
               "goal_id": 69
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt).",
+              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), halt.",
               "rule_loc": [
                 "File",
                 {
@@ -8507,7 +8507,7 @@
               "goal_id": 68
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
+              "rule_text": "(of A0 (mono A2)) :- (not err), !, (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
               "rule_loc": [
                 "File",
                 {
@@ -8525,7 +8525,7 @@
               "goal_id": 68
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt).",
+              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), halt.",
               "rule_loc": [
                 "File",
                 {
@@ -8561,7 +8561,7 @@
               "goal_id": 22
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
+              "rule_text": "(of A0 (mono A2)) :- (not err), !, (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
               "rule_loc": [
                 "File",
                 {
@@ -8579,7 +8579,7 @@
               "goal_id": 22
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt).",
+              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), halt.",
               "rule_loc": [
                 "File",
                 {
@@ -8615,7 +8615,7 @@
               "goal_id": 17
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
+              "rule_text": "(of A0 (mono A2)) :- (not err), !, (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
               "rule_loc": [
                 "File",
                 {
@@ -8633,7 +8633,7 @@
               "goal_id": 17
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt).",
+              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), halt.",
               "rule_loc": [
                 "File",
                 {
@@ -8669,7 +8669,7 @@
               "goal_id": 10
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono A2)) :- (not err), (!), (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
+              "rule_text": "(of A0 (mono A2)) :- (not err), !, (err => of A0 (mono A1)), \n (assert A0 A1 A2).",
               "rule_loc": [
                 "File",
                 {
@@ -8687,7 +8687,7 @@
               "goal_id": 10
             },
             "cut_branch": {
-              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), (halt).",
+              "rule_text": "(of A0 (mono _)) :- (print KO: term ( A0 ) has no type\n), halt.",
               "rule_loc": [
                 "File",
                 {
@@ -8735,7 +8735,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {
@@ -8824,7 +8824,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), (!), \n (print A0  :  A1), (print).",
+                "rule_text": "(typecheck A0) :- (print Checking: A0), (theta []), (of A0 A1), !, \n (print A0  :  A1), print.",
                 "rule_loc": [
                   "File",
                   {

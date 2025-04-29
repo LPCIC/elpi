@@ -367,10 +367,18 @@ let read_tctime input_line =
   let time = ref 0.0 in
   try while true do
     let l = input_line () in
-    if Str.(string_match (regexp "^Typechecking time:") l 0) then
-      try time := float_of_string (String.sub l 18 (String.length l - 18))
+    begin
+      if Str.(string_match (regexp "^Typechecking time:") l 0) then
+      try time := !time +. float_of_string (String.sub l 18 (String.length l - 18))
       with _ -> ()
-  done; !time
+    end;
+    begin
+      if Str.(string_match (regexp "^Determinacy checking time:") l 0) then
+        try time := !time +. float_of_string (String.sub l 26 (String.length l - 26))
+      with _ -> ()
+    end;
+    done;
+    !time
   with End_of_file -> !time
 
 let () = Runner.declare
@@ -395,6 +403,7 @@ let () = Runner.declare
       if outside_llam then "-delay-problems-outside-pattern-fragment"::args
       else args in
     Util.write log (Printf.sprintf "args: %s\n" (String.concat " " args));
+    Util.write log (Printf.sprintf "\ndebug with: dune exec elpi -- %s -trace-on -trace-at run 1 99999 -trace-only user\n\n" (String.concat " " args));
 
     let rc =
       let outcome = Util.exec ~timeout ~timetool ~close_output:false ?input ~executable ~env ~log ~args () in

@@ -31,7 +31,7 @@ main1 :-
 
         test 4 F4, F4 = c 3,
 
-        test 5 F5, F5 = cons (c 1) (cons (c 2) (cons (c 3) (cons (c 4) null))).
+        test 5 F5, F5 = lcons (c 1) (lcons (c 2) (lcons (c 3) (lcons (c 4) null))).
 
 %    test 1 F6, F6 = fix (x1\ abs (x2\ abs (x3\ _ x2 x3 truth (x4\ x5\ app (app x1 x4) x5)))).
  

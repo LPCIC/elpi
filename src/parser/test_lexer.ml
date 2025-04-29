@@ -8,6 +8,7 @@ type t = Tokens.token =
   | UNTYPED
   | TYPEABBREV
   | TYPE
+  | SYMBOL
   | STRING of ( string )
   | SLASH
   | SIGMA
@@ -76,6 +77,7 @@ type t = Tokens.token =
   | EQ
   | EOF
   | DIV
+  | DDARROWBANG
   | DDARROW
   | DARROW
   | CUT

@@ -1,0 +1,15 @@
+% YES
+
+func f.
+
+func std.do (list (func)).
+
+% the input of g is pattern-matched.
+% we assume (g (f :- L)) is det. Then,
+% we assume (f :- L) is func. Then
+% we assume L is func
+func g (func) -> (func).
+g (g (f :- L) _) (f :- L) :- std.do L.
+
+
+main.

@@ -1,0 +1,13 @@
+% YES
+
+func f.
+func f1 -> fprop.
+
+f :-
+  % PARTIAL APP
+  F1 = f1,
+  X = (x\ F1),
+  X R F,
+  F.
+
+main.

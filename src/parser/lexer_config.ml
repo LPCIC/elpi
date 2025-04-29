@@ -61,6 +61,8 @@ let mixfix_symbols : mixfix list = [
     fixity = Infixr };
   { tokens = [ mkFix ~comment "DDARROW" "==>" DDARROW];
     fixity = Infixr };
+  { tokens = [ mkFix ~comment "DDARROWBANG" "=!=>" DDARROWBANG];
+    fixity = Infixr };
   { tokens = [ mkFix "CONJ" "," CONJ;
                mkFix "CONJ2" "&" CONJ2];
     fixity = Infixr };

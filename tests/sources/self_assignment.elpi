@@ -1,7 +1,8 @@
 % main should succeed
 
-:untyped
+kind tm type.
+symbol d : tm.
+
 q X X A.
 
-:untyped
 main :- (pi c\ q X A Y, q Y A X, q X Y A), X = d.

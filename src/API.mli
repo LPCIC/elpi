@@ -82,8 +82,9 @@ module Ast : sig
   end
 
   module Term : sig
+    type impl_kind = L2R | L2RBang | R2L
     type t_ =
-      | Impl of bool * t * t
+      | Impl of impl_kind * t * t
       | Const of Scope.t * Name.t
       | Discard
       | Var of Name.t * t list (** unification variable *)
@@ -197,7 +198,8 @@ module Setup : sig
   val trace : string list -> string list
 
   (** Override default runtime error functions (they call exit) *)
-  val set_warn : (?loc:Ast.Loc.t -> string -> unit) -> unit
+  type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+  val set_warn : (?loc:Ast.Loc.t -> id:warning_id -> string -> unit) -> unit
   val set_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_anomaly : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_type_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
@@ -252,6 +254,8 @@ module Compile : sig
     print_units : bool;
     (* keep track of the amount of time spent type checking, default false *)
     time_typechecking : bool;
+    (* skip determinacy analysis *)
+    skip_det_checking: bool;
   }
   val default_flags : flags
   val to_setup_flags : flags -> Setup.flags
@@ -305,6 +309,7 @@ module Compile : sig
   val optimize : query -> executable
   
   val total_type_checking_time : query -> float
+  val total_det_checking_time : query -> float
 end
 
 module Data : sig
@@ -448,6 +453,7 @@ module ContextualConversion : sig
 
   (* cast *)
   val (!<) : ('a,unit,unit) t -> 'a Conversion.t
+  val (!<<) : (('a,unit,unit) t -> ('b,unit,unit) t) -> ('a Conversion.t -> 'b Conversion.t)
 
   (* morphisms *)
   val (!>)   : 'a Conversion.t -> ('a,'hyps,'constraints) t
@@ -583,14 +589,23 @@ module AlgebraicData : sig
         ('match_stateful_t,'match_t,'t) match_t
       -> ('t,'h,'c) constructor
 
-  type ('t,'h,'c) declaration = {
+  type ('t,'h,'c) base_declaration = {
     ty : Conversion.ty_ast;
     doc : doc;
     pp : Format.formatter -> 't -> unit;
     constructors : ('t,'h,'c) constructor list;
   }
 
-  val declare : ('t,'h,'c) declaration -> ('t,'h,'c) ContextualConversion.t
+  type ('t,'h,'c) declaration =
+  | Decl : ('t,'h,'c) base_declaration -> ('t,'h,'c) declaration
+  | Param : ('t Conversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
+  | ParamC : (('t,'h,'c) ContextualConversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
+
+  type allocation
+
+  val allocate_constructors : ('t,'h,'c) declaration -> allocation
+  val declare_allocated : allocation -> ('t,'h,'c) declaration -> ('t,'h,'c) ContextualConversion.t
+  val declare : ('t,'h,'c) base_declaration -> ('t,'h,'c) ContextualConversion.t
 
 end
 
@@ -862,7 +877,6 @@ module BuiltIn : sig
 
 end
 
-
 (* ************************************************************************* *)
 (* ********************* Advanced Extension API **************************** *)
 (* ************************************************************************* *)
@@ -1125,7 +1139,7 @@ module RawData : sig
       starts at 0 and grows for bound variables;
       global constants have negative values. *)
 
-  type builtin
+  type builtin = Cut | And | Impl | ImplBang | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant
   type term = Data.term
   type view = private
     (* Pure subterms *)
@@ -1182,35 +1196,22 @@ module RawData : sig
   val of_hyp : Data.hyp -> hyp
   val of_hyps : Data.hyp list -> hyps
 
+  type blockers = FlexibleData.Elpi.t list
   type suspended_goal = {
     context : hyps;
-    goal : int * term
+    goal : int * term;
+    blockers : blockers;
   }
   val constraints : Data.constraints -> suspended_goal list
   val no_constraints : Data.constraints
 
   module Constants : sig
 
-    val declare_global_symbol : string -> constant
+    val declare_global_symbol : ?variant:int -> string -> constant
 
     val show : constant -> string
 
-    val eqc    : builtin (* = *)
     val orc    : constant (* ; *)
-    val andc   : constant (* , *)
-    val rimplc : constant (* :- *)
-    val pic    : constant (* pi *)
-    val sigmac : constant (* sigma *)
-    val implc  : constant (* => *)
-    val cutc   : builtin (* ! *)
-
-    (* LambdaProlog built-in data types are just instances of CData.
-     * The typeabbrev machinery translates [int], [float] and [string]
-     * to [ctype "int"], [ctype "float"] and [ctype "string"]. *)
-    val ctypec : constant (* ctype *)
-
-    (* Marker for spilling function calls, as in [{ rev L }] *)
-    val spillc : constant
 
     module Map : Map.S with type key = constant
     module Set : Set.S with type elt = constant
@@ -1302,7 +1303,7 @@ module Utils : sig
   val type_error : ?loc:Ast.Loc.t ->string -> 'a
 
   (** A non fatal warning *)
-  val warn : ?loc:Ast.Loc.t ->string -> unit
+  val warn : ?loc:Ast.Loc.t -> id:Setup.warning_id -> string -> unit
 
   (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
    * OCaml list! *)
@@ -1344,6 +1345,12 @@ module Utils : sig
     type t
     val pp : Format.formatter -> t -> unit
     val show : t -> string
+  end
+
+  module type ShowKey = sig
+    type key
+    val pp_key : Format.formatter -> key -> unit
+    val show_key : key -> string
   end
 
   module type Show1 = sig

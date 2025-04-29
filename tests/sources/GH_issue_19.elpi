@@ -1,6 +1,6 @@
 type transl any -> prop.
-type p any -> any.
-type pp any -> any.
+type p any -> int.
+type pp any -> prop.
 transl (y \ _\ M y) :- % strip the hole
  P = (w \ p w),
  transl (z \ M (P z)).

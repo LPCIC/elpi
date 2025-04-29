@@ -36,7 +36,7 @@ type   snd     tm -> tm.
 
 % encodings for lists in the object language
 type  null  tm.
-type  cons  tm -> tm -> tm.
+type  lcons  tm -> tm -> tm.
 type  hd    tm -> tm.
 type  tl    tm -> tm.
 type  nullp  tm -> tm.

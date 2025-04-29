@@ -48,8 +48,6 @@ end
 module Grammar = Grammar.Make(ParseFile)
   
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
-let chunk s (p1,p2) =
-  String.sub s p1.Lexing.pos_cnum (p2.Lexing.pos_cnum - p1.Lexing.pos_cnum)
 
 let parse grammar lexbuf =
   let buffer, lexer = MenhirLib.ErrorReports.wrap Lexer.(token C.versions) in
@@ -73,10 +71,11 @@ let parse grammar lexbuf =
 
 let already_parsed = Hashtbl.create 11
 
+let cleanup_fname filename = Re.Str.replace_first (Re.Str.regexp "/_build/[^/]+") "" filename
+
 let () =
   parse_ref := (fun ?cwd filename ->
   let filename = C.resolver ?cwd ~unit:filename () in
-  let dest = Re.Str.replace_first (Re.Str.regexp "/_build/[^/]+") "" filename in
   let digest = Digest.file filename in
   let to_parse =
     if Filename.extension filename = ".mod" then
@@ -90,6 +89,7 @@ let () =
     else
       let ic = open_in filename in
       let lexbuf = Lexing.from_channel ic in
+      let dest = cleanup_fname filename in
       lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = dest };
       Hashtbl.add already_parsed digest true;
       let ast = parse Grammar.program lexbuf in

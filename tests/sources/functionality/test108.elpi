@@ -1,0 +1,16 @@
+kind k1 type.
+kind k2 type -> type.
+
+type t11 list (func) -> k1.
+type t21 list A -> k2 A.
+
+kind k3 type.
+type t31 k2 (func) -> k3.
+type t32 k1 -> k3.
+
+pred rel.
+
+func g -> k3.
+g (t32 (t11 [rel])). % NO: passo a t11 una rel invece di un func
+
+main.

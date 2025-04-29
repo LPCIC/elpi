@@ -8,6 +8,12 @@ module type Show = sig
   val show : t -> string
 end
 
+module type ShowKey = sig
+  type key
+  val pp_key : Format.formatter -> key -> unit
+  val show_key : key -> string
+end
+
 module type Show1 = sig
   type 'a t
   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
@@ -25,8 +31,7 @@ module Map = struct
   module type S = sig
     include Map.S
     include Show1 with type 'a t := 'a t
-    val pp_key : Format.formatter -> key -> unit
-    val show_key : key -> string
+    include ShowKey with type key := key
   end
 
   module type OrderedType = sig
@@ -156,7 +161,9 @@ module Loc = struct
 
   let pp fmt l =Fmt.fprintf fmt "%s" (to_string l)
   let show l = to_string l
-  let compare = Stdlib.compare
+  let compare l1 l2 =
+    let x =  Stdlib.compare l1.source_start l2.source_start in
+    if x = 0 then Stdlib.compare l1 l2 else x
   let equal = (=)
 
   let initial ?client_payload source_name = {
@@ -252,23 +259,45 @@ let rec for_all3b p l1 l2 bl b =
   | (_, _, _) -> false
 ;;
 
-type arg_mode = Input | Output
-[@@deriving show, ord]
+module type Mode = sig
+  type t = Input | Output [@@deriving show, ord]
 
-type mode_aux =
-  | Fo of arg_mode
-  | Ho of arg_mode * mode
-and mode = mode_aux list
+  type ho = Fo of t | Ho of t * ho list
+  and hos = ho list [@@deriving show, ord]
 
-let get_arg_mode = function Fo a -> a | Ho (a,_) -> a 
+  val get_head : ho -> t
+  val to_ho : t -> ho
+  val show_pretty : t -> string
+  val pretty : Fmt.formatter -> t -> unit
+end
+ 
+
+module Mode : Mode = struct
+
+  type t = Input | Output
+  [@@deriving show, ord]
+
+  type ho =
+    | Fo of t
+    | Ho of t * hos
+  and hos = ho list
+  [@@deriving show, ord]
+
+  let get_head = function Fo a -> a | Ho (a,_) -> a
+  let to_ho x = Fo x
+
+  let show_pretty = function Input -> "i" | Output -> "o"
+  let pretty fmt m = Format.fprintf fmt "%s" (show_pretty m)
+
+end
 
 let rec for_all3b3 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3 l1 l2 bl b =
   match (l1, l2, bl) with
   | ([], [], _) -> true
   | ([a1], [a2], []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b
-  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(get_arg_mode b3 == Input)
+  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(Mode.get_head b3 == Input)
   | (a1::l1, a2::l2, []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
-  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(get_arg_mode b3 == Input) && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
+  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(Mode.get_head b3 == Input) && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
   | (_, _, _) -> false
 ;;
 
@@ -290,7 +319,8 @@ let rec for_all23 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3
 let pp_loc_opt = function
   | None -> ""
   | Some loc -> Loc.show loc
-let default_warn ?loc s =
+type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+let default_warn ?loc ~id:_ s =
   Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" (pp_loc_opt loc) s
 let default_error ?loc s =
   Format.eprintf "@[<hv>Fatal error: %s@,%s@]\n%!" (pp_loc_opt loc) s;
@@ -342,7 +372,7 @@ let set_type_error f = type_error_f := (Obj.repr f)
 let set_std_formatter f = std_fmt := f
 let set_err_formatter f = err_fmt := f
 
-let warn ?loc s : unit = Obj.obj !warn_f ?loc s
+let warn ?loc ~id s : unit = Obj.obj !warn_f ?loc ~id s
 let error ?loc s = Obj.obj !error_f ?loc s
 let anomaly ?loc s = Obj.obj !anomaly_f ?loc s
 let type_error ?loc s = Obj.obj !type_error_f ?loc s
@@ -704,7 +734,6 @@ let pp_const = mk_spaghetti_printer ()
 type constant = int (* De Bruijn levels *) [@@ deriving ord]
 let pp_constant = pp_spaghetti pp_const
 let show_constant = show_spaghetti pp_const
-let equal_constant x y = x == y
 
 module Constants : sig
   type t = constant
@@ -736,7 +765,8 @@ let version_parser ~what v =
     | [ma;mi;p] when List.for_all is_number l -> int_of_string ma, int_of_string mi, int_of_string p
     | [ma;mi] when List.for_all is_number l -> int_of_string ma, int_of_string mi, 0
     | [v] when Re.Str.(string_match (regexp "^%%.*%%$") v 0) -> 99, 99, 99
+    | [v] when Re.Str.(string_match (regexp "^[0-9a-f]+$") v 0) -> 99, 99, 99
     | _ -> raise (Failure "invalid format")
   with Failure msg ->
-    warn ("elpi: version_parser: cannot parse version of "^what^" '" ^ v ^ "': " ^ msg);
+    warn ~id:"version-parser" ("cannot parse version of "^what^" '" ^ v ^ "': " ^ msg);
     0,0,0

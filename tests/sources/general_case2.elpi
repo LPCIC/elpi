@@ -1,3 +1,5 @@
-:untyped p F :- F (x\ c x).
-:untyped q (x\ c x).
-:untyped main :- p (y\ pi z\ q y).
+pred c o:int.
+pred q o:int -> prop.
+p F :- F (x\ c x).
+q (x\ c x).
+main :- p (y\ pi z\ q y).

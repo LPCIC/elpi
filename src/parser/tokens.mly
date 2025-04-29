@@ -24,6 +24,7 @@
 %token ARROW
 %token DARROW
 %token DDARROW
+%token DDARROWBANG
 %token DIV
 %token MOD
 %token < int * string > QUOTED
@@ -46,6 +47,7 @@
 %token EXTERNAL
 %token MODULE
 %token SIG
+%token SYMBOL
 %token IMPORT
 %token ACCUM_SIG
 %token USE_SIG

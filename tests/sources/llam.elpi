@@ -16,7 +16,7 @@ clause (x\y\F y x) :- F = a\b\b.
 pred clause1 o:any.
 clause1 (x\y\x).
 pred clause2 o:any.
-clause2 (x\y\X x, F y (X x)) :- F = a\b\b.
+clause2 (x\y\(X x : prop), (F y (X x) : prop)) :- F = a\b\b.
 pred clause3 o:any.
 
 type r A -> B.

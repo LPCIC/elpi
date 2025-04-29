@@ -13,6 +13,7 @@ type flags = {
   defined_variables : StrSet.t;
   print_units : bool; (* debug *)
   time_typechecking : bool; (* bench type checker *)
+  skip_det_checking: bool;
 }
 val default_flags : flags
 
@@ -45,6 +46,7 @@ val query_of_scoped_term : program -> (State.t -> State.t * Compiler_data.Scoped
 val query_of_raw_term : program -> (State.t -> State.t * term * Conversion.extra_goals) -> query
 
 val total_type_checking_time : query -> float
+val total_det_checking_time : query -> float
 
 val optimize_query : query -> executable
 

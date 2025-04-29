@@ -1,7 +1,8 @@
 accumulate helena.
 
 % TESTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-type l_imp, l_mp, l_refimp, l_trimp, l_con, l_not, l_wel, l_weli, l_et, w, w1, w2, k+3, c+1, c+2, c+3, c+4, c+5, c+6, c+7, c+8, c+9, k+prop any.
+type l_imp, l_mp, l_refimp, l_trimp, l_con, l_not, l_wel, l_weli, l_et, w, w1, w2, k+3, k+prop term.
+type c+1, c+2, c+3, c+4, c+5, c+6, c+7, c+8, c+9 label.
 
 pred test_sta.
 test_sta :- k+succ k+1 k+2 => conv+ (sort k+1) satom m+1 m+0 satom (sort k+2).

@@ -205,6 +205,7 @@ and token v = parse
 | "external" { EXTERNAL }
 | "module" { MODULE }
 | "sig" { SIG }
+| "symbol" { SYMBOL }
 | "import" { IMPORT }
 | "accum_sig" { ACCUM_SIG }
 | "use_sig" { USE_SIG }

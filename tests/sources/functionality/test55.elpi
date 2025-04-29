@@ -1,0 +1,10 @@
+% YES
+
+func f.
+pred rel.
+
+f :-
+  % Fails since we cannot load flex rules
+  X = rel, X => true.
+
+main.

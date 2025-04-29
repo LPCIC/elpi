@@ -1,0 +1,9 @@
+% YES
+% test for variadic predicates
+
+pred r.
+
+func p.
+p :- X = halt r, X.
+
+main.

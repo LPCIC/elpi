@@ -1,0 +1,10 @@
+func do (list (func)) ->.
+do [].
+do [X|Xs] :- X, do Xs.
+
+% Following clauses fails determinacy due to the absence of 
+% input mode tracking
+% do X :- X = [A|As], A, do As.
+% do X :- Y = X, Y = [A|As], A, do As.
+
+main.

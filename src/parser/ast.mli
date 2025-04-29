@@ -17,18 +17,22 @@ module Func : sig
   val andf : t
   val orf : t
   val implf : t
+  val implbangf : t
   val rimplf : t
   val cutf : t
   val pif : t
   val sigmaf : t
   val eqf : t
+  val pmf : t
   val isf : t
+  val asf : t
   val nilf : t
   val consf : t
   val arrowf : t
   val sequentf : t
   val ctypef : t
   val propf : t
+  val fpropf : t
   val typef : t
   val mainf : t
 
@@ -43,12 +47,7 @@ module Func : sig
   module Set : Set.S with type elt = t
 end
 
-module Mode : sig
-
-  type t = Input | Output
-  [@@deriving show, ord]
-
-end
+module Mode : Mode with type t = Mode.t
 
 type raw_attribute =
   | If of string
@@ -57,7 +56,7 @@ type raw_attribute =
   | Before of string
   | Replace of string
   | Remove of string
-  | External
+  | External of string option
   | Index of int list * string option
   | Functional
   | Untyped
@@ -112,7 +111,7 @@ end
 
 module Clause : sig
 
-  type ('term,'attributes,'spill) t = {
+  type ('term,'attributes,'spill,'deterministic) t = {
     loc : Loc.t;
     attributes : 'attributes;
     body : 'term;
@@ -185,7 +184,7 @@ module Program : sig
     | Accumulated of Loc.t * parser_output list
 
     (* data *)
-    | Clause of (Term.t, raw_attribute list, unit) Clause.t
+    | Clause of (Term.t, raw_attribute list, unit,unit) Clause.t
     | Chr of (raw_attribute list,Term.t) Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Kind of (raw_attribute list,raw_attribute list) Type.t list
@@ -222,18 +221,18 @@ module Structured : sig
 type program = {
   macros : (Func.t, Term.t) Macro.t list;
   kinds : (unit,unit) Type.t list;
-  types : (tattribute,functionality) Type.t list;
+  types : (symbol_attribute,functionality) Type.t list;
   type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
-  modes : (tattribute,functionality) Type.t list;
   body : block list;
 }
 and ('func,'term) block_constraint = {
+   loc: Loc.t;
    clique : 'func list;
    ctx_filter : 'func list;
    rules : (cattribute,'term) Chr.t list
 }
 and block =
-  | Clauses of (Term.t,attribute,unit) Clause.t list
+  | Clauses of (Term.t,attribute,unit,unit) Clause.t list
   | Namespace of Func.t * program
   | Shorten of Func.t shorthand list * program
   | Constraints of (Func.t,Term.t) block_constraint * program
@@ -250,9 +249,14 @@ and cattribute = {
   cid : string;
   cifexpr : string option
 }
-and tattribute =
-  | External
+and symbol_attribute = {
+  availability : symbol_availability;
+  index : predicate_indexing option;
+}
+and predicate_indexing =
   | Index of int list * tindex option
+  | MaximizeForFunctional
+and symbol_availability = Elpi | OCaml of provenance
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;
@@ -261,6 +265,10 @@ and 'a shorthand = {
 }
 and functionality = Function | Relation
 and variadic = Variadic | NotVariadic
+and provenance =
+  | Core (* baked into the elpi runtime *)
+  | Builtin of { variant : int } (* buitin or host declared *)
+  | File of Loc.t
 [@@deriving show, ord]
 
 end

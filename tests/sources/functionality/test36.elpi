@@ -1,0 +1,12 @@
+% YES
+% Test on func of outputs
+func do (func) ->.
+
+pred give-fun o:(func).
+give-fun (do true).
+
+func f.
+f :- give-fun (do X), !, X. % Note that X is an input of do, therefore, assumed
+                            % to have the determinacy in the signature of do
+
+main.

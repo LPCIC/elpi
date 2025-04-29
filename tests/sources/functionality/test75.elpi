@@ -1,0 +1,19 @@
+% NO
+
+kind k type.
+type k0 (func -> fprop) -> k.
+
+func fst-proj k -> (func -> fprop).
+fst-proj (k0 F) F.
+
+pred g.
+
+func give-rel -> prop.
+give-rel g.
+
+func f.
+% Since k0 is constructed with a wrong argument (give-rel returns a prop and not a fprop)
+% the call to `fst-proj` is wrong
+f :- fst-proj (k0 give-rel) X, X Y, Y.
+
+main.

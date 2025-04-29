@@ -6,6 +6,11 @@ open Suite
 let declare = Test.declare
     ~category:(Filename.(chop_extension (basename __FILE__)))
 
+let () = declare "pm"
+  ~source_elpi:"pm.elpi"
+  ~description:"pattern matching builtin"
+  ()
+
 let () = declare "cut1"
   ~source_elpi:"cut.elpi"
   ~description:"what else"
@@ -110,9 +115,26 @@ let () = declare "typeabbrv13"
   ~expectation:(FailureOutput (Str.regexp "SYMBOL.*uses the undefined dl constant"))
   () *)
 
+  let () = declare "typeabbrv15"
+  ~source_elpi:"typeabbrv15.elpi"
+  ~description:"type abbreviations"
+  ()
+
+
 let () = declare "conj2"
   ~source_elpi:"conj2.elpi"
   ~description:"parsing and evaluation of & (binary conj)"
+  ()
+
+let () = declare "macro_type"
+  ~source_elpi:"macro_type.elpi"
+  ~description:"polymorphic macro"
+  ()
+
+let () = declare "macro_type_err_pos"
+  ~source_elpi:"macro_type_err_pos.elpi"
+  ~description:"polymorphic macro"
+  ~expectation:(FailureOutput (Str.regexp "line 5, column 8.*\nTypechecker"))
   ()
 
 (* 
@@ -200,50 +222,53 @@ let () = declare "trie"
   ~description:"discrimination_tree on trees"
   ()
 
-let mode_check expected fname =
-  let is_in_file = Util.has_substring ~sub:fname in
-  let start_warning = String.starts_with ~prefix:"WARNING" in
-  let pos = ref 0 in
-  let check_same x =
-    let res = try Str.(search_forward (regexp expected.(!pos))) x 0 |> ignore; true
-              with Not_found -> false in
-    if not res then Printf.eprintf "Expected [[%s]]; \nFound    [[%s]]\n" expected.(!pos) x;
-    incr pos; 
-    res in
-  let rec f = function
-    | [] | [_] -> true
-    | x :: x' :: xs when start_warning x && is_in_file x' ->
-      check_same x && f xs
-    | x :: x' :: x'' :: xs when start_warning x && is_in_file x'' ->
-      check_same x && check_same x' && f xs
-    | _ :: xs -> f xs in
-    f
+let () =
+  let (!) x = Test.FailureOutput (Str.regexp x) in
+  let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n.*\n+.*line %d" l1 l2) in
+  let mut_excl_no_loc t = !("Mutual exclusion violated for rules of predicate " ^ t) in
+  let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
+  let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
+  let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*[io]:.*" l c) in
+  let duplicate_err l1 l2 = !(Format.asprintf "line %d.*\n.*cannot only differ.*\n.*line %d" l1 l2) in
+  let constr_error l1 l2 = !(Format.asprintf "line %d, column %d.*\n.*Invalid determinacy of constructor" l1 l2) in
+  let status = Test.
+    [|(* 01*) mut_excl 9 6; Success; det_check 9 7; mut_excl_no_loc "q"; mut_excl_no_loc "q";            (*05*)
+      (* 06*) mut_excl_no_loc "q"; mut_excl_no_loc "q"; mut_excl_no_loc "q"; mut_excl 10 10; mut_excl 10 10; (*10*)
+      (* 11*) mut_excl 9 8; Success; mut_excl 11 10; det_check 21 9; Success;    (*15*)
+      (* 16*) det_check 8 9; Success; det_check 14 7; det_check 13 7; Success;   (*20*)
+      (* 21*) det_check 7 21; Success; det_check 16 9; Success; det_check 7 12;  (*25*)
+      (* 26*) mut_excl 13 10; mut_excl 12 10; Success; Success; det_check 8 7;   (*30*)
+      (* 31*) out_err 7 10; Success; out_err 10 14; out_err 9 21; out_err 9 13;  (*35*)
+      (* 36*) Success; out_err 6 10; out_err 7 3; Success; Success;              (*40*)
+      (* 41*) det_check 6 21; Success; out_err 5 4; Success; det_check 11 34;(*45*)
+      (* 46*) Success; Success; Success; Success; det_check 8 16;                (*50*)
+      (* 51*) Success; det_check 19 2; Success; out_err 8 4; Success;            (*55*)
+      (* 56*) det_check 10 2; out_err 12 19; out_err 13 8; Success; Success;     (*60*)
+      (* 61*) det_check 12 2; Success; Success; Success; det_check 10 2;          (*65*)
+      (* 66*) Success; det_check 9 31; det_check 11 5; det_check 7 39; det_check 2 21; (*70*)
+      (* 71*) Success; Success; constr_error 10 5; out_err 8 4; constr_error 17 18; (*75*)
+      (* 76*) Success; Success; det_check 7 5; Success; Success;                 (*80*)
+      (* 81*) mode_err 13 6; Success; mode_err 15 6; Success; mode_err 14 26;    (*85*)
+      (* 86*) Success; Success; Success; Success; Success;                       (*90*)
+      (* 91*) det_check 14 5; Success; Success; constr_error 14 17; Success;         (*95*)
+      (* 96*) mut_excl 6 6; mut_excl 6 6; Success; Success; Success;             (*100*)
+      (*101*) Success; mut_excl_no_loc "f";  duplicate_err 2 1; Success; Success;(*105*)
+      (*106*) Success; constr_error 14 13; constr_error 14 13;
+    |] in
+  for i = 0 to Array.length status - 1 do
+    let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
+    let descr = Printf.sprintf "functionality%d" (i+1) in
+    declare descr
+    ~source_elpi:name
+    ~description:descr
+    ~expectation:status.(i)
+    ()
+  done
 
-let () = declare "mode_checking_fo"
-  ~source_elpi:"mode_checking_fo.elpi"
-  ~description:"mode_checking_fo"
-  ~expectation:(SuccessOutputTxt (
-    let expected = [|
-      "WARNING: Not ground Y passed to p "; 
-      "WARNING: The variables \\[Y\\] are in output position of the predicate\" "; 
-      "\"and cannot be ensured to be ground "|] in
-    mode_check expected "mode_checking_fo"
-    ))
-  ()
 
-let () = declare "mode_checking_ho"
-  ~source_elpi:"mode_checking_ho.elpi"
-  ~description:"mode_checking_ho"
-  ~expectation:(SuccessOutputTxt (
-    let expected = [|
-      "WARNING: Not ground Z passed to p "; 
-      "WARNING: Not ground (con Z) passed to p ";
-      "WARNING: Not ground X[0-9]+ c[0-9]+ passed to p ";
-      "WARNING: Passed flexible to , ";
-      "WARNING: Not ground C passed to c0 ";
-      "WARNING: The variables \\[C\\] are in output position of the predicate\" ";
-      "\"and cannot be ensured to be ground "
-      |] in
-    mode_check expected "mode_checking_ho"
-    ))
+let () = declare "sepcomp_tyid"
+  ~source_dune:"sepcomp_tyid.exe"
+  ~after:"sepcomp_tyid"
+  ~description:"separate compilation union find on type_id"
+  ~expectation:Test.Success
   ()

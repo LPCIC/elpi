@@ -1,0 +1,16 @@
+% NO
+
+func f.
+func f1 fprop.
+
+typeabbrev tt fprop -> fprop.
+
+pred rel.
+
+f :-
+  % in lambda x is in output position. It cannot be assumed functional
+  % in the clause `f1 x :- x`.
+  X = ((x\ f1 x :- x) : tt),
+  X rel.
+
+main.

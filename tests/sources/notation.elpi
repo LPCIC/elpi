@@ -17,14 +17,16 @@ x *x y +x z *x w.
 a +x b +x c +x d +x e.
 a ++x b ++x c ++x d ++x e.
 
-type a, b, d, x, xx, w, y, z, c, cd, e, uu any.
-type foo any -> any -> prop.
-type (~z) any -> prop.
-type (?w) any -> any.
-type (+x) any -> any -> any.
-type (++x) any -> any -> any.
+type a, b, d, x, xx, w, y, z, c, cd, e, uu prop.
+type f prop -> prop.
+type g list prop -> prop.
+type foo prop -> prop -> prop.
+type (~z) prop -> prop.
+type (?w) prop -> prop.
+type (+x) prop -> prop -> prop.
+type (++x) prop -> prop -> prop.
 type (+y) A -> B -> C.
 type (*x) A -> B -> C.
 
-main :- print (a a +x [b] +y d), cd +x d.
+main :- print (f a +x g [b] +y d), cd +x d.
 

@@ -164,6 +164,16 @@ let () = declare "spill-var"
   ~description:"spilling a var"
   ()
 
+let () = declare "spill2"
+  ~source_elpi:"spill2.elpi"
+  ~description:"spilling 2 arguments"
+  ()
+
+let () = declare "spill_sigma"
+  ~source_elpi:"spill_sigma.elpi"
+  ~description:"spilling under sigma"
+  ()
+
 let () = declare "block"
   ~source_elpi:"block.elpi"
   ~description:"blocks are closed"
@@ -275,9 +285,9 @@ let () = declare "printer"
 X0 is f X1 mod r X0
 X0 is f X1 + r X0 * g X2
 X0 is (f X1 + r X0) * g X2
-X0 is f X1 ^ r X0 ^ g X2
-X0 || X2 && X3 ===> X4
-[f X0, g X1, (a , b), a + b]
+X3 is f X1 ^ r X0 ^ g X2
+X0 || X2 && X4 ===> X5
+[f X0, g X1, a + b, a + b]
 |})))
   ()
 
@@ -494,3 +504,9 @@ let () = declare "ifdef"
 ~source_elpi:"ifdef.elpi"
 ~description:"lexer ifdef"
 ()
+
+let () = declare "tc_ambiguous"
+  ~source_elpi:"tc_ambiguous.elpi"
+  ~description:"tc_ambiguous"
+  ~expectation:(FailureOutput Str.(regexp "too many"))
+  ()

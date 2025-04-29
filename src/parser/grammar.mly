@@ -132,7 +132,7 @@ let mode_of_IO io =
 (* non terminals *)
 %type < Program.t > program
 %type < Goal.t > goal
-%type < (Term.t, raw_attribute list, unit) Clause.t > clause
+%type < (Term.t, raw_attribute list, unit,unit) Clause.t > clause
 %type < Term.t > term
 %type < Program.decl > decl
 %type < Func.t > infix_SYMB
@@ -236,15 +236,28 @@ anonymous_pred:
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
-    names |> List.map (fun n->
+    names |> List.map (fun n ->
      { Type.loc=loc $sloc; attributes=[]; name =  n; ty = k })
   }
 type_:
 | attributes = attributes;
   TYPE; names = separated_nonempty_list(CONJ,constant); t = type_term {
-    names |> List.map (fun n->
+    names |> List.map (fun n ->
      { Type.loc=loc $sloc; attributes; name = n; ty = t })
   }
+| attributes = attributes;
+  SYMBOL; names = separated_nonempty_list(CONJ,constant); option(COLON); ty = type_term; o=option(external_ref) {
+    match attributes, o, names with
+    | [External None], Some _, [name] -> [{ Type.loc=loc $sloc; attributes = [External o]; name ; ty }]
+    | _, Some _, _ -> raise (ParseError (loc $loc, "Only one symbol with a named external reference can be marked with the external attribute at a time."))
+    | _, None, _ -> List.map (fun n -> { Type.loc=loc $sloc; attributes; name = n; ty }) names
+}
+// | EXTERNAL; SYMBOL; name = constant; option(COLON); t = type_term; o=option(external_ref) {
+//     [{ Type.loc=loc $sloc; attributes = [External o]; name ; ty = t }]
+// }
+
+external_ref:
+| EQ; i=STRING { i }
 
 atype_term:
 | c = constant { { tloc = loc $loc; tit = TConst (fix_church c) } }
@@ -348,7 +361,7 @@ clause:
 
 attributes:
 | { [] }
-| EXTERNAL { [ External ] }
+| EXTERNAL; o = option(STRING) { [ External o ] }
 | COLON; l = separated_nonempty_list(COLON, attribute) { l }
 
 attribute:
@@ -358,7 +371,7 @@ attribute:
 | BEFORE; s = STRING { Before s }
 | REPLACE; s = STRING { Replace s }
 | REMOVE; s = STRING { Remove s }
-| EXTERNAL { External }
+| EXTERNAL; o = option(STRING) { External o }
 | FUNCTIONAL { Functional }
 | UNTYPED { Untyped }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
@@ -555,6 +568,7 @@ postfix_SYMB:
 | ARROW  { Func.arrowf }
 | DARROW { Func.implf }
 | DDARROW { Func.implf }
+| DDARROWBANG { Func.implbangf }
 | QDASH  { Func.sequentf }
 | SLASH  { Func.from_string "/" }
 | CONJ2  { Func.andf }

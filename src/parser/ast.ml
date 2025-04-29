@@ -33,12 +33,15 @@ module Func = struct
   let andf = from_string ","
   let orf = from_string ";"
   let implf = from_string "=>"
+  let implbangf = from_string "=!=>"
   let rimplf = from_string ":-"
   let cutf = from_string "!"
   let pif = from_string "pi"
   let sigmaf = from_string "sigma"
   let eqf = from_string "="
+  let pmf = from_string "pattern_match"
   let isf = from_string "is"
+  let asf = from_string "as"
   let consf = from_string "::"
   let nilf = from_string "[]"
   let arrowf = from_string "->"
@@ -46,6 +49,7 @@ module Func = struct
   let ctypef = from_string "ctype"
 
   let propf = from_string "prop"
+  let fpropf = from_string "fprop"
 
   let typef = from_string "type"
   let mainf = from_string "main"
@@ -66,12 +70,7 @@ module Func = struct
 
 end
 
-module Mode = struct
-
-  type t = Util.arg_mode = Input | Output
-  [@@deriving show, ord]
-
-end
+module Mode : Mode with type t = Mode.t = Mode
 
 type raw_attribute =
   | If of string
@@ -80,7 +79,7 @@ type raw_attribute =
   | Before of string
   | Replace of string
   | Remove of string
-  | External
+  | External of string option
   | Index of int list * string option
   | Functional
   | Untyped
@@ -166,7 +165,6 @@ let mkSeq ?loc (l : t list) =
    match loc with None -> l | Some loc -> { l with loc }
 let mkCast loc t ty = { loc; it = Cast(t,ty) }
 
-
 let rec best_effort_pp = function
  | Lam (x,_,t) -> "x\\" ^ best_effort_pp t.it
  | CData c -> CData.show c
@@ -202,7 +200,7 @@ let warn_impl { it; loc } =
   match it with
   | App({ it = Const "=>" }, _ ) ->
       if !last_warn_impl <> loc then
-        warn ~loc
+        warn ~loc ~id:ImplicationPrecedence
 {|The standard λProlog infix operator for implication => has higher precedence
 than conjunction. This means that 'A => B, C' reads '(A => B), C'.
 This is a common mistake since it makes A only available to B (and not to C
@@ -240,7 +238,7 @@ end
 
 module Clause = struct
   
-  type ('term,'attributes,'spill) t = {
+  type ('term,'attributes,'spill,'deterministic) t = {
     loc : Loc.t;
     attributes : 'attributes;
     body : 'term;
@@ -315,7 +313,7 @@ module Program = struct
     | Accumulated of Loc.t * parser_output list
 
     (* data *)
-    | Clause of (Term.t, raw_attribute list,unit) Clause.t
+    | Clause of (Term.t, raw_attribute list,unit, unit) Clause.t
     | Chr of (raw_attribute list,Term.t) Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Kind of (raw_attribute list,raw_attribute list) Type.t list
@@ -375,13 +373,17 @@ let cloc =
   })
 
 module Structured = struct
-
+type provenance =
+  | Core (* baked into the elpi runtime *)
+  | Builtin of { variant : int } (* builtin or host declared *)
+  | File of Loc.t
+[@@deriving show, ord]
+  
 type program = {
   macros : (Func.t, Term.t) Macro.t list;
   kinds : (unit,unit) Type.t list;
-  types : (tattribute,functionality) Type.t list;
+  types : (symbol_attribute,functionality) Type.t list;
   type_abbrevs : (Func.t,functionality TypeExpression.t) TypeAbbreviation.t list;
-  modes : (tattribute,functionality) Type.t list;
   body : block list;
 }
 and cattribute = {
@@ -389,12 +391,13 @@ and cattribute = {
   cifexpr : string option
 }
 and ('func,'term) block_constraint = {
+   loc: Loc.t;
    clique : 'func list;
    ctx_filter : 'func list;
    rules : (cattribute,'term) Chr.t list
 }
 and block =
-  | Clauses of (Term.t,attribute,unit) Clause.t list
+  | Clauses of (Term.t,attribute,unit,unit) Clause.t list
   | Namespace of Func.t * program
   | Shorten of Func.t shorthand list * program
   | Constraints of (Func.t,Term.t) block_constraint * program
@@ -407,9 +410,14 @@ and attribute = {
 }
 and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string
-and tattribute =
-  | External
+and symbol_attribute = {
+  availability : symbol_availability;
+  index : predicate_indexing option;
+}
+and predicate_indexing =
   | Index of int list * tindex option
+  | MaximizeForFunctional
+and symbol_availability = Elpi | OCaml of provenance
 and tindex = Map | HashMap | DiscriminationTree
 and 'a shorthand = {
   iloc : Loc.t;

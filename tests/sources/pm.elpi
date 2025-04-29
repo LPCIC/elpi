@@ -1,0 +1,8 @@
+type f int -> prop.
+type a int.
+
+main :- 
+  pattern_match (f X) (f 1),
+  print X,
+  not(pattern_match (f a) (f Y)),
+  print Y.

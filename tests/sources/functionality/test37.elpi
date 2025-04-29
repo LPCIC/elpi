@@ -1,0 +1,12 @@
+% NO
+% Test on func of outputs
+func do (func) ->.
+
+pred give-fun o:(func).
+give-fun (give-fun X).
+
+func f.
+f :- give-fun (give-fun X), !, X. % Note that X is an output of the second give-fun call.
+                                  % This means that X is considered relational
+
+main.

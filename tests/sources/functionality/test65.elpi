@@ -1,0 +1,13 @@
+% NO
+
+func f.
+func f1 -> fprop.
+
+f :-
+  % F = f1,
+  % PARTIAL APP
+  X = (x\ F), % No guarantee F is functional...
+  X 3,
+  F.
+
+main.

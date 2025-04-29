@@ -261,10 +261,17 @@ let skip_listTailVariable ~pos path : int =
     else aux (i+1) (update_par_count pc (Path.get path i)) in
   aux (pos + 1) (update_par_count 1 (Path.get path pos))
 
-(* A discrimination tree is a record {t; max_size; max_depths } where
+(* A discrimination tree is a record {t; max_size; max_depths; max_list_length; user_upper_bound_depth } where
    - t is a Trie for instance retrival 
    - max_size is a int representing the max size of a path in the Trie
    - max_depths is a int list representing the max depth of the each indexed arguments
+   - max_list_length is the length of the maximum indexed list
+   - user_upper_bound_depth is the index defined by the user
+  
+  Invariants:
+    - length(max_depths) = length(user_upper_bound_depth)
+    - forall i in range (length max_depths):
+        assert (max_depths[i] <= user_upper_bound_depth[i])
 
   Note : 
   - max_size is used as an heuristic for the size of path when a new one is created
@@ -289,18 +296,19 @@ let skip_listTailVariable ~pos path : int =
     In the example it is no needed to index the goal path to depth 100, but rather considering
     the maximal depth of the first argument, which 4 << 100
   *)
-type 'a t = {t: 'a Trie.t; max_size : int;  max_depths : int array; max_list_length: int } 
+type 'a t = {t: 'a Trie.t; max_size : int;  max_depths : int array; max_list_length: int; user_upper_bound_depth:int list } 
 
 let pp pp_a fmt { t } : unit = Trie.pp (fun fmt data -> pp_a fmt data) fmt t
 let show pp_a { t } : string = Trie.show (fun fmt data -> pp_a fmt data) t
 
-let index { t; max_size; max_depths; max_list_length = mll } ~max_list_length path data =
-  let t, m = Trie.add path data t in
-  { t; max_size = max max_size m; max_depths; max_list_length = max max_list_length mll }
+let index { t; max_size; max_depths; max_list_length = mll; user_upper_bound_depth } ~max_list_length path data =
+  let t, (m : int) = Trie.add path data t in
+  { t; max_size = max max_size m; max_depths; max_list_length = max max_list_length mll; user_upper_bound_depth }
 
 let max_path { max_size } = max_size
 let max_depths { max_depths } = max_depths 
 let max_list_length { max_list_length } = max_list_length
+let user_upper_bound_depth t = t.user_upper_bound_depth
 
 (* the equivalent of skip, but on the index, thus the list of trees
     that are rooted just after the term represented by the tree root
@@ -381,13 +389,14 @@ and on_all_children ~pos ~add_result mode path map =
         end
   and skip_functor arity = function
     | Trie.Node { other; map } as tree ->
+      if arity = 0 then retrieve ~pos ~add_result mode path tree
+      else begin
         Option.iter (skip_functor (arity-1)) other;
-        if arity = 0 then retrieve ~pos ~add_result mode path tree
-        else
-          Ptmap.iter (fun k v ->
-              if isListHead k then skip_list 1 (arity - 1) v
-              else skip_functor (arity - 1 + arity_of k) v)
-            map
+        Ptmap.iter (fun k v ->
+            if isListHead k then skip_list 1 (arity - 1) v
+            else skip_functor (arity - 1 + arity_of k) v)
+          map
+      end
   in
   Ptmap.iter (fun k v ->
     if isListHead k then skip_list 1 0 v
@@ -396,7 +405,7 @@ and on_all_children ~pos ~add_result mode path map =
 
 let empty_dt args_depth : 'a t =
   let max_depths = Array.make (List.length args_depth) 0 in
-  {t = Trie.empty; max_depths; max_size = 0; max_list_length=0}
+  {t = Trie.empty; max_depths; max_size = 0; max_list_length=0; user_upper_bound_depth = args_depth}
 
 let retrieve ~pos ~add_result path index =
   let mode = Path.get path pos in

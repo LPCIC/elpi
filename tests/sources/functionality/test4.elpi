@@ -1,3 +1,4 @@
+% NO
 :functional 
 pred p i:int, o:int.
 
@@ -5,12 +6,7 @@ pred p i:int, o:int.
 pred q i:int, o:int.
 
 q 1 1.
-      /* the local premise keeps q functional! */
+      /* the local premise may break functionality */
 p 1 X :- (pi x\ q 2 x :- x = 4) => q 1 X.
-
-p 2 X :- pi x\ q x 2 => q 1 X.
-
-         /* two new local clauses q x 2 and q y 3 are not overlapping, p is functional! */
-p 3 X :- pi x\ q x 2 => pi y\ q y 3 => q 1 X.
 
 main.

@@ -1,0 +1,4 @@
+pred p.
+func p.
+func g.
+g :- p.

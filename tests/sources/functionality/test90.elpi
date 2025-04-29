@@ -1,0 +1,9 @@
+% YES
+
+func q (func).
+pred r.
+func f.
+
+f :- std.do! [q r].
+
+main.

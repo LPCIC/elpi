@@ -85,6 +85,7 @@ let trace = set_trace
 
 let usage =
   Trace_ppx_runtime.Runtime.usage
+  type warning_id = Util.warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
 
 let set_warn = Util.set_warn
 let set_error = Util.set_error
@@ -109,7 +110,7 @@ module Ast = struct
   module Name = struct
     include Ast.Func
     type constant = int
-    let is_global f i = show f = Util.Constants.Map.find i Data.Global_symbols.table.c2s
+    let is_global f i = equal f (Util.Constants.Map.find i Data.Global_symbols.table.c2s |> Data.Symbol.get_func)
   end
   module Opaque = Util.CData
 end
@@ -181,6 +182,7 @@ module Compile = struct
     Compiler.query_of_ast s_p t (fun st -> st)
 
   let total_type_checking_time q = Compiler.total_type_checking_time q
+  let total_det_checking_time q = Compiler.total_det_checking_time q
 
   module StrSet = Util.StrSet
 
@@ -188,6 +190,7 @@ module Compile = struct
     defined_variables : StrSet.t;
     print_units : bool;
     time_typechecking : bool;
+    skip_det_checking: bool;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
@@ -339,8 +342,8 @@ module RawOpaqueData = struct
       Format.fprintf fmt "@\n";
     end;
     Format.fprintf fmt "@[<hov 2>kind %s type.@]@\n@\n" name;
-    List.iter (fun (c,_) ->
-      Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
+    List.iter (fun (variant,(c,_)) ->
+      Format.fprintf fmt "@[<hov 2>external symbol %s : %s = \"%d\".@]@\n" c name variant)
       constants
     in
   { cin; cino; cout; isc; name = c },
@@ -348,13 +351,13 @@ module RawOpaqueData = struct
 
   let conversion_of_cdata (type a) ~name ?doc ?(constants=[]) ~compare ~pp cd =
     let module VM = Map.Make(struct type t = a let compare = compare end) in
-    let constants_map, values_map =
-      List.fold_right (fun (n,v) (cm,vm) ->
-        let c = ED.Global_symbols.declare_global_symbol n in
-        Util.Constants.Map.add c v cm, VM.add v c vm)
-      constants (Util.Constants.Map.empty,VM.empty) in
+    let constants_map, values_map, constants =
+      List.fold_right (fun (n,v) (cm,vm,cl) ->
+        let c, variant = ED.Global_symbols.declare_overloaded_global_symbol n in
+        Util.Constants.Map.add c v cm, VM.add v c vm,(variant,(n,v)) :: cl)
+      constants (Util.Constants.Map.empty,VM.empty,[]) in
     let values_map x = VM.find x values_map in
-    conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants ~pp cd
+    conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants:(List.rev constants) ~pp cd
 
   let declare { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = Util.CData.declare {
@@ -485,23 +488,6 @@ module BuiltInData = struct
         aux (x :: acc) (gls :: extra) s xs
     in
       aux [] [] s l
-
-  let listC d =
-    let embed ~depth h c s l =
-      let module R = (val !r) in let open R in
-      let s, l, eg = map_acc (d.ContextualConversion.embed ~depth h c) s l in
-      s, list_to_lp_list l, eg in
-    let readback ~depth h c s t =
-      let module R = (val !r) in let open R in
-      map_acc (d.ContextualConversion.readback ~depth h c) s
-        (lp_list_to_list ~depth t)
-    in
-    let pp fmt l =
-      Format.fprintf fmt "[%a]" (Util.pplist d.pp ~boxed:true "; ") l in
-    { ContextualConversion.embed; readback;
-      ty = TyApp ("list",d.ty,[]);
-      pp;
-      pp_doc = (fun fmt () -> ()) }
   
   let list d =
     let embed ~depth s l =
@@ -561,7 +547,8 @@ end
 module RawData = struct
 
   type constant = Util.constant
-  type builtin = Util.constant
+  type builtin = ED.builtin_predicate = Cut | And | Impl | ImplBang | RImpl | Pi | Sigma | Eq | Match | Findall | Delay | Host of constant
+
   type term = ED.Term.term
   type view =
     (* Pure subterms *)
@@ -576,7 +563,7 @@ module RawData = struct
     | CData of RawOpaqueData.t                    (* external data *)
     (* Unassigned unification variables *)
     | UnifVar of Elpi.t * term list
-  [@@warning "-37"]
+  [@@warning "-37"]  
   
   let rec look ~depth t =
     let module R = (val !r) in let open R in
@@ -612,7 +599,7 @@ module RawData = struct
   let mkCons = ED.Term.mkCons
   let mkNil = ED.Term.mkNil
   let mkDiscard = ED.Term.mkDiscard
-  let mkBuiltin = ED.Term.mkBuiltin
+  let mkBuiltin c l = ED.Term.mkBuiltin c l
   let mkCData = ED.Term.mkCData
   let mkAppBoundL x l =
     if x < 0 then Util.anomaly "mkAppBoundL: got a global constant";
@@ -628,7 +615,7 @@ module RawData = struct
     if i < 0 then Util.anomaly "mkBound: got a global constant";
     mkConst i
 
-  let cmp_builtin i j = i - j
+  let cmp_builtin = ED.compare_builtin_predicate
 
   let mkAppMoreArgs ~depth hd args =
     let module R = (val !r) in let open R in
@@ -649,27 +636,20 @@ module RawData = struct
 
   module Constants = struct
 
-    let declare_global_symbol = ED.Global_symbols.declare_global_symbol
+    let declare_global_symbol ?variant x =
+      begin match variant with
+      | Some n -> if n < 1 then Util.error "declare_global_symbol: variants are >= 0"
+      | None -> () end;
+      ED.Global_symbols.declare_global_symbol ?variant x
 
     let show c = Util.Constants.show c
 
-    let eqc    = ED.Global_symbols.eqc
     let orc    = ED.Global_symbols.orc
-    let andc   = ED.Global_symbols.andc
-    let rimplc = ED.Global_symbols.rimplc
-    let pic    = ED.Global_symbols.pic
-    let sigmac = ED.Global_symbols.sigmac
-    let implc  = ED.Global_symbols.implc
-    let cutc   = ED.Global_symbols.cutc
-    let ctypec = ED.Global_symbols.ctypec
-    let spillc = ED.Global_symbols.spillc
 
     module Map = Util.Constants.Map
     module Set = Util.Constants.Set
 
   end
-
-  let of_term x = x
 
   let of_hyp x = x
   let of_hyps x = x
@@ -679,15 +659,16 @@ module RawData = struct
     hsrc : term
   }
   type hyps = hyp list
-
+  type blockers = Elpi.t list
   type suspended_goal = ED.suspended_goal = {
     context : hyps;
-    goal : int * term
+    goal : int * term;
+    blockers : blockers;
   }
 
   let constraints l =
     let module R = (val !r) in let open R in
-    Util.map_filter (fun x -> get_suspended_goal x.ED.kind) l
+    Util.map_filter (fun (x : ED.stuck_goal) -> get_suspended_goal x.ED.blockers x.ED.kind) l
   let no_constraints = []
 
   let mkUnifVar ub ~args state =
@@ -809,14 +790,34 @@ module AlgebraicData = struct
   type name = string
   type doc = string
 
-  let declare x =
+  let allocate_constructors x =
     let module R = (val !r) in
-    ED.BuiltInPredicate.ADT.adt
+    ED.BuiltInPredicate.ADT.allocate_constructors
       ~look:R.deref_head
       ~mkinterval:R.mkinterval
       ~mkConst:R.mkConst
       ~alloc:FlexibleData.Elpi.make
       ~mkUnifVar:RawData.mkUnifVar x
+
+  let declare_allocated alloc x =
+    let module R = (val !r) in
+    ED.BuiltInPredicate.ADT.declare_allocated
+      ~look:R.deref_head
+      ~mkinterval:R.mkinterval
+      ~mkConst:R.mkConst
+      ~alloc:FlexibleData.Elpi.make
+      ~mkUnifVar:RawData.mkUnifVar alloc x
+
+  let declare x =
+    begin match x.ED.BuiltInPredicate.ADT.ty with
+    | TyApp(s,_,_) -> Util.error ("Declaration of " ^ s ^ " requires allocate_constructors + declare_allocated")
+    | TyName _ -> ()
+    end;
+    let x = ED.BuiltInPredicate.ADT.Decl x in
+    let alloc = allocate_constructors x in
+    declare_allocated alloc x
+
+       
 end
 
 module BuiltInPredicate = struct
@@ -1089,17 +1090,19 @@ module Calc = struct
   }
 
   let compile_operation_declaration { symbol; infix; args; code } =
-    let c = ED.Global_symbols.declare_global_symbol symbol in
     let ty_decl args =
-     if infix then
-       Printf.sprintf "type (%s) %s." symbol (String.concat " -> " args)
-     else
-       Printf.sprintf "type %s %s." symbol (String.concat " -> " args) in
-     c, { ED.CalcHooks.ty_decl = List.map ty_decl args |> String.concat "\n"; code }
+      let c, variant = ED.Global_symbols.declare_overloaded_global_symbol symbol in
+      let ty_decl = if infix then
+        Printf.sprintf "external symbol (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
+      else
+        Printf.sprintf "external symbol %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
+      c, { ED.CalcHooks.ty_decl = ty_decl; code }
+    in
+    List.map ty_decl args
 
    let register ~descriptor d =
      let e = compile_operation_declaration d in
-     descriptor := e :: !descriptor
+     descriptor := e @ !descriptor
     
   let register_eval n (symbol,tys) code =
     let infix, n = n < 0, abs n in
@@ -1258,7 +1261,7 @@ module Calc = struct
     [
     LPDoc " -- Evaluation --";
 
-    LPCode "pred (is) o:A, i:A.";
+    LPCode ":functional pred (is) o:A, i:A.";
     LPCode "X is Y :- calc Y X.";
   
     MLCode(Pred("calc",
@@ -1291,7 +1294,6 @@ module Utils = struct
     hmove ~from ~to_ ?avoid:None t
 
   let beta = BuiltInPredicate.beta
-
   let error = Util.error
   let type_error = Util.type_error
   let anomaly = Util.anomaly
@@ -1327,7 +1329,7 @@ module Utils = struct
           Term.mkSeq [hd;tl]
       | Data.Nil -> Term.mkNil buggy_loc
       | Data.Builtin(c,xs) ->
-          let c = Term.mkCon buggy_loc (show c) in
+          let c = Term.mkCon buggy_loc (ED.show_builtin_predicate (fun ?table -> show) c) in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: xs)
       | Data.CData x -> Term.mkC buggy_loc x
@@ -1347,7 +1349,7 @@ module Utils = struct
       Clause.loc = loc;
       attributes;
       body = aux depth Util.IntMap.empty term;
-      needs_spilling = ();
+      needs_spilling = ()
     }]
 
   let term_to_raw_term s p ?ctx ~depth t =
@@ -1357,6 +1359,7 @@ module Utils = struct
   let map_acc = BuiltInData.map_acc
 
   module type Show = Util.Show
+  module type ShowKey = Util.ShowKey
   module type Show1 = Util.Show1
   module Map = Util.Map
   module Set = Util.Set

@@ -37,7 +37,7 @@ let message_of_state s = try Error_messages.message s with Not_found -> "syntax 
 module Parser = Parse.Make(struct let versions = Elpi_util.Util.StrMap.empty let resolver = Elpi_util.Util.std_resolver ~paths:[] () end)
 
 let warn = ref None
-let () = Elpi_util.Util.set_warn (fun ?loc str -> warn := Some str)
+let () = Elpi_util.Util.set_warn (fun ?loc ~id str -> warn := Some str)
 let test s x y w z att ?warns b =
   let loc = Loc.initial "(input)" in
   let exp = [mkClause (mkLoc (x-1) y w z) att b] in

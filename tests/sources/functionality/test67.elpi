@@ -1,0 +1,11 @@
+% NO
+
+func f -> fprop.
+func g -> fprop.
+pred rel.
+func f1.
+
+f1 :-
+  (f (g rel) => f X), X = g Y, Y.
+
+main.

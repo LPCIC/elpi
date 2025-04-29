@@ -57,7 +57,7 @@ val hmove :
 val subst: depth:int -> term list -> term -> term
 
 (* The projection from the internal notion of constraints in the API one *)
-val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option
+val get_suspended_goal : blockers -> 'a stuck_goal_kind -> suspended_goal option
 
 val full_deref : depth:int -> term -> term
 
@@ -68,20 +68,30 @@ val lex_insertion : int list -> int list -> int
 module CompileTime : sig
   (* updates how predicates are indexed *)
   val update_indexing :
-    (mode * indexing) Constants.Map.t ->
+    pred_info Constants.Map.t ->
       index -> index
 
   (* adds 1 clause to its index *)
   val add_to_index :
+    det_check: float ref option -> (* update det checking info *)
     depth:int ->
     predicate:constant ->
     graft:Elpi_parser.Ast.Structured.insertion option ->
-    clause -> string option -> index -> index
+    clause -> string option -> index -> pred_info -> index * (overlap_clause option * pred_info)
 
   (* can raise CannotDeclareClauseForBuiltin *)
   val clausify1 :
+    tail_cut:bool ->
     loc:Loc.t ->
-    modes:(constant -> mode) -> (* for caching it in the clause *)
+    modes:(constant -> Mode.hos) -> (* for caching it in the clause *)
     nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 
+
+  val get_clauses : depth:int -> term -> overlap_clause Discrimination_tree.t -> overlap_clause Bl.scan
+
+  val fresh_uvar : unit -> uvar_body
+end
+
+module Indexing : sig
+  val add1clause_overlap_runtime : depth:constant -> pred_info Constants.Map.t -> constant -> time:constant -> clause -> overlap_clause option * pred_info Constants.Map.t
 end

@@ -1,5 +1,5 @@
 :index(1 1)
-pred map2 i:list A, i:list B, i:(A -> B -> C -> o), o:list C.
+pred map2 i:list A, i:list B, i:(pred i:A, i:B, o:C), o:list C.
 map2 [] [] _ [].
 map2 [A|As] [B|Bs] F [C|Cs] :- F A B C, map2 As Bs F Cs.
 

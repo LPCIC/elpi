@@ -1,0 +1,6 @@
+typeabbrev x prop.
+
+type f x.
+f.
+
+main :- f.

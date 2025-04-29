@@ -15,8 +15,8 @@ pred tests-var.
 pred tests-unif.
 pred tests-declare-constraint.
 
-type bar variadic any any.
-type c variadic any any.
+type bar variadic any int.
+type c variadic any int.
 uvar_1 (bar (uvar K Args)) :- std.assert! (var K) "uvar_1 bar X, not a var", print K Args.
 uvar_2 (bar X) :- std.assert! (var X K Args) "uvar_2 bar X, not a var", print K Args.
 uvar_3 (uvar K) :- std.assert! (var K) "uvar_3 X, not a var", print K.
@@ -36,8 +36,9 @@ pred unif_2 o:any.
 unif_1 (x\ X x).
 unif_2 (x\ y\ X x y).
 
-type u any.
+type u int.
 
+:untyped
 tests-uvar :-
   print "--------- uvar_1",
   not(uvar_1 (bar (x \ u))),

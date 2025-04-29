@@ -7,6 +7,8 @@ is very welcome. Questions or feature requests are welcome as well.
 
 - [Underscore](#underscore) is a real wildcard
 
+- [Implication](#implication) has the *right precedence*™
+
 - [Spilling](#spilling) turns `..{foo X}..` into `foo X Y,..Y..`
 
 - [N-ary binders](#n-ary-binders) let one write `pi x y z\ ...`
@@ -32,6 +34,10 @@ is very welcome. Questions or feature requests are welcome as well.
 
 - [Modes](#modes) can be declared in order to control the generative
   semantics of Prolog
+
+- [Determinacy checking](#determinacy-checking) ensures that predicates marked
+  as functional behave as single-valued relations and that their outputs
+  have the expected determinacy.
 
 - [Syntactic constraints](#syntactic-constraints) are goals suspended on
   a set of variables that are resumed when any of them gets assigned and
@@ -72,6 +78,37 @@ some variable occurring in something is out of scope for `DummyNameUsedOnlyOnce`
 
 Side note: `elpi-checker.elpi` (see below) reports warnings about linearly used
 variables, suggesting to start their name with `_` (`_Name` is just sugar for `_`).
+
+## Implication
+
+In standard λProlog the infix `=>` binds stronger than `,` and as a consequence
+`a, b => c, d` reads `a, (b => c), d`. According to our experience this tricks
+beginners, for example the following attempt to add a debugging print has a
+catastrophic effect.
+```prolog
+buggy :- p => q.
+buggy :- p => print "debug print", q.
+```
+
+Elpi warn if `=>` is used without parentheses, and provides the infix `==>`
+that binds stronger than `,` only in the left, i.e. `a, b ==> c, d` reads
+`a, (b ==> (c, d))`.
+
+### Automatic tail Cut
+
+The [determinacy checking](#determinacy-checking) is not complete and sometimes
+it emits a warning about hypothetical clauses overlapping with other clauses.
+One way to silence the warning without exlicitly writing a tail cut is to use
+the `=!=>` operator, that automatically adds a tail cut.
+```prolog
+main :- copy a b =!=> copy T U.
+main :- (copy a b :- !) ==> copy T U. % equivalent
+```
+Note that `=!=>` may need to add the cut at runtime, eg when the hypothetical
+clause is not known statically
+```prolog
+main :- X = copy a b, X =!=> copy T U. % still cuts at run time
+```
 
 ## Spilling
 The following boring code
@@ -458,6 +495,143 @@ is expanded to the following declarations
 type  foo int -> string -> prop.
 mode (foo i o).
 ```
+
+## Determinacy checking
+
+Determinacy is the property of a predicate to produce at most one result. This
+means that the predicate behaves as a single-valued relation or a function.
+Operationally, a the call to a functional predicate does not generate additional
+choice points.
+
+The signature of predicates defines their behavior with respect to determinacy.
+
+The syntax:
+
+```prolog
+func PRED_NAME? COMMA_SEPARATED(types*) -> COMMA_SEPARATED(types*).
+```
+
+uses the keyword `func` instead of `pred`. It introduces the signature of a new
+deterministic predicate called `PRED_NAME`. The types of its input (respectively
+output) arguments appear before (respectively after) the `->` symbol. Note that
+`PRED_NAME` is optional. If not specified, the signature represents the type of
+anonymous functions.
+
+For example, in the following code:
+
+```prolog
+func id (func A -> B), A -> B.
+id P X Y :- P X Y.
+```
+
+`id` is a function that takes as input an (anonymous) binary function from
+`A` to `B`, a second input of type `A`, and produces an output of type `B`.
+
+We also accepts the syntax:
+
+```prolog
+func PRED_NAME? COMMA_SEPARATED(types*).
+```
+
+where the `->` is omitted. In this case we are declaring a predicate
+(or anonymous predicate) with no outputs — i.e., all arguments
+are in input mode.
+
+It is possible to declare functions with mixed input-output arguments, where
+output arguments may appear between input arguments. In such cases, the user
+should use the standard `pred` syntax along with the `:functional` attribute.
+
+For example, the signature of the `is` predicate can be written as:
+
+```prolog
+:functional pred (is) o:A, i:A.
+```
+
+Internally the keyword `fprop`, akin to `prop`, is used in the type of symbols
+that are functional predicate (it may show up in error messages).
+
+The static checker is built around a notion of "subtyping" since a function is
+(mathematically) a relation, but the converse is not true. We say that a function
+is stronger than a relation.
+
+Signatures a compared using the function $\subseteq : D \to D \to
+bool$, where $D$ is the type of signatures. In a call like $d_1 \subseteq d_2$,
+the result is true if $d_1$ is a signature that is stronger than or equal to
+$d_2$ (equivalently, $d_2$ is weaker than or equal to $d_1$).
+
+The function $\subseteq$ is implemented as follows:
+
+$$
+\begin{align}
+func &\subseteq pred\\
+l_1 \to_i r_1 &\subseteq  l_2 \to_i r_2 \qquad\mathrm{ if\ } l_2 \subseteq l_1 \land r_1 \subseteq r_2\\
+l_1 \to_o r_1 &\subseteq  l_2 \to_o r_2 \qquad\mathrm{ if\ } l_1 \subseteq l_2 \land r_1 \subseteq r_2\\
+\end{align}
+$$
+
+This function mirrors the subtyping relation, as we use the contravariant
+relation for inputs.
+
+We say that a predicate $p$ is *wrongly* called if one of its inputs has an
+inferred determinacy weaker than the expected one. In this case, if $p$ is a
+function, we cannot guarantee that the call will behave deterministically.
+
+For example, consider the following program.
+
+```prolog
+pred likes i:guest, o:dishes.
+likes mario pizza.
+likes mario pasta.
+likes anna gelato.
+```
+
+The call `id likes mario A` is *wrongly* called since the input `likes` has a
+determinacy which is weaker then the expected by `id`. You can remark that the
+call assigs `A` to `pizza` but leave a choice point with `A` assigned to
+`pasta`.
+
+Our notion of determinacy not only provides guarantees about the behavior of a
+call $c$, but also about the signature of the outputs of that call $c$.
+
+For example, one can define:
+```prolog
+func make-deterministic (pred i:A, o:B) -> (func A -> B).
+make-deterministic P (x\y\ P x y, !).
+```
+which transforms a binary predicate into a binary function (note the `!`). This
+means that the call `make-deterministic likes X` is deterministic.
+The inferred determinacy of `likes` is `pred i:guest o:dishes`, which is 
+equivalent to `pred i:A, o:B`. This ensures that the call is deterministic.
+Moreover, we are guaranteed that `X` will be a binary function with the type
+`func guest -> dishes`. If we use the same `X` in the call `id X mario A`,
+we can observe that `id` is *correctly* called. Therefore, it
+behaves deterministically, and `A` is assigned the only value
+`pizza`.
+
+Let's consider an other example:
+
+```elpi
+func map list A, (func A -> B) -> list B.
+```
+
+This signature tells that in a call like `map L F R`, if `F` is a binary
+function from `A` to `B`, then the interpretation of `map L F R` produces no
+choice points. For instance, consider the following code:
+
+```prolog
+func likes! A -> B.
+likes! A B :- likes A B, !.
+
+func map list A, (func A -> B) -> list B.
+map [] [].
+map [X|XS] F [Y|YS] :- F X Y, map XS F YS.
+```
+The call `map [mario,anna] likes! L` is deterministic and produces exactly one
+result: `L = [pizza,gelato]`. However, the call `map [mario,anna] likes L` is
+not deterministic because it is "wrongly" called (`likes` is not a binary
+function). This call produces an initial result `L = [pizza,gelato]` but
+leaves one additional choice point where `L` is assigned to `[pasta,gelato]`.
+
 
 ## Syntactic constraints
 
