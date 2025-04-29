@@ -18,7 +18,7 @@ Requires Menhir 20211230 and OCaml 4.13 or above.
 - Parser:
   - The `fprop` keyword is akin to `prop` but signals the predicate is functional
   - The `:functional` attribute flags `pred`icates as functional (equivalent to `func ...`).
-  - Dedicated syntac for functional signatures:  
+  - Dedicated syntax for functional signatures:  
     `func name(comma_sep(types_of_inputs)* [-> comma_sep(types_of_outputs*)]`.
     Example: The signature of `map` is `func map list A, (func A -> B) -> list B`
   - New `[external] symbol name : type [= "variant"]` is a synonim of `type` and can be
