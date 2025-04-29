@@ -17,6 +17,7 @@ type flags = {
   defined_variables : StrSet.t;
   print_units : bool;
   time_typechecking : bool;
+  skip_det_checking: bool;
 }
 [@@deriving show]
 
@@ -24,6 +25,7 @@ let default_flags = {
   defined_variables = StrSet.empty;
   print_units = false;
   time_typechecking = false;
+  skip_det_checking = false;
 }
 
 let time_this r f =
@@ -1396,7 +1398,7 @@ end = struct
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body; needs_spilling = false} in
 
-      if typecheck then
+      if typecheck && not flags.skip_det_checking then
         time_this det_check_time (fun () -> Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body);
 
       unknown, spilled :: clauses) (F.Map.empty,[]) clauses in
@@ -1858,11 +1860,12 @@ end = struct
     let p_info =
       try C.Map.find p pred_info
       with Not_found -> anomaly ("No signature declaration for " ^ F.show (SymbolMap.global_name state symbols p) ^ ". Did you forget to accumulate a file?") in
-    let index, (overlap_clause, p_info) = R.CompileTime.add_to_index ~depth:0 ~predicate:p ~graft cl id index p_info in
+    let index, (overlap_clause, p_info) = R.CompileTime.add_to_index ~det_check:(if flags.skip_det_checking then None else Some time) ~depth:0 ~predicate:p ~graft cl id index p_info in
     let pred_info = C.Map.add p p_info pred_info in
     (* Format.eprintf "Validating local clause for predicate %a at %a@." F.pp (SymbolMap.global_name state symbols p) Loc.pp loc; *)
     
-    time_this time (fun () -> check_mut_excl state symbols ~loc pred_info cl body overlap_clause p amap);
+    if not flags.skip_det_checking then
+      time_this time (fun () -> check_mut_excl state symbols ~loc pred_info cl body overlap_clause p amap);
 
     (graft,id,p,cl) :: clauses, symbols, index, pred_info
 

@@ -13,6 +13,7 @@ type flags = {
   defined_variables : StrSet.t;
   print_units : bool; (* debug *)
   time_typechecking : bool; (* bench type checker *)
+  skip_det_checking: bool;
 }
 val default_flags : flags
 

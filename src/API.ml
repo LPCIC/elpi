@@ -190,6 +190,7 @@ module Compile = struct
     defined_variables : StrSet.t;
     print_units : bool;
     time_typechecking : bool;
+    skip_det_checking: bool;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query

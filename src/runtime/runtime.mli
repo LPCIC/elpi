@@ -73,6 +73,7 @@ module CompileTime : sig
 
   (* adds 1 clause to its index *)
   val add_to_index :
+    det_check: float ref option -> (* update det checking info *)
     depth:int ->
     predicate:constant ->
     graft:Elpi_parser.Ast.Structured.insertion option ->

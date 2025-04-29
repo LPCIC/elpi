@@ -2867,23 +2867,32 @@ let add1clause_overlap_runtime ~depth (idx:pred_info C.Map.t) predicate ~time cl
   | exception Not_found -> None, idx
 
 
-let update_overlap overlap ~depth index clause =
-  match overlap.overlap with
-  | Allowed -> None, overlap
-  | Forbidden dt ->
-    let arg_depths, mode = match index with
-      | TwoLevelIndex { mode; argno } ->
-        List.init (argno+1) (fun j -> if j = argno-1 then 1 else 0), mode
-      | BitHash { mode; args = arg_depths } -> arg_depths, mode
-      | IndexWithDiscriminationTree {mode; arg_depths} -> arg_depths, mode
-    in
-    let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) dt clause.args in
-    let has_cut = has_bang clause.hyps in
-    let overlap_clause = { overlap_loc = clause.loc; has_cut; timestamp=clause.timestamp } in
-    let dt = Discrimination_tree.index dt path overlap_clause ~max_list_length in
-    Some overlap_clause, { overlap with overlap = Forbidden dt }
+let update_overlap ~det_check overlap ~depth index clause =
+  match det_check with
+  | None -> None, overlap
+  | Some time ->
+    let t0 = Unix.gettimeofday () in
+    let rc =
+      match overlap.overlap with
+      | Allowed -> None, overlap
+      | Forbidden dt ->
+        let arg_depths, mode = match index with
+          | TwoLevelIndex { mode; argno } ->
+            List.init (argno+1) (fun j -> if j = argno-1 then 1 else 0), mode
+          | BitHash { mode; args = arg_depths } -> arg_depths, mode
+          | IndexWithDiscriminationTree {mode; arg_depths} -> arg_depths, mode
+        in
+        let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) dt clause.args in
+        let has_cut = has_bang clause.hyps in
+        let overlap_clause = { overlap_loc = clause.loc; has_cut; timestamp=clause.timestamp } in
+        let dt = Discrimination_tree.index dt path overlap_clause ~max_list_length in
+        Some overlap_clause, { overlap with overlap = Forbidden dt }
+      in
+      let t1 = Unix.gettimeofday () in
+      time := !time +. (t1 -. t0);
+      rc
 
-let rec add1clause_compile_time ~depth { idx; time; times } overlap ~graft predicate clause name =
+let rec add1clause_compile_time ~det_check ~depth { idx; time; times } overlap ~graft predicate clause name =
   try
     let snd_lvl_idx = Ptmap.find predicate idx in
     let time = compile_time_tick time in
@@ -2894,7 +2903,7 @@ let rec add1clause_compile_time ~depth { idx; time; times } overlap ~graft predi
         clause.timestamp <- timestamp;
         let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.rcons predicate clause snd_lvl_idx in
         { times; time; idx = Ptmap.add predicate snd_lvl_idx idx },
-        update_overlap overlap ~depth snd_lvl_idx clause
+        update_overlap ~det_check overlap ~depth snd_lvl_idx clause
     | Some (Ast.Structured.Remove x) ->
         let reference, predicate1 = time_of clause.loc x times in
         if predicate1 <> predicate then
@@ -2913,7 +2922,7 @@ let rec add1clause_compile_time ~depth { idx; time; times } overlap ~graft predi
         let snd_lvl_idx = remove_clause_in_snd_lvl_idx (fun x -> x.timestamp = reference) snd_lvl_idx in
         let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.(insert (fun x -> lex_insertion x.timestamp reference)) predicate clause snd_lvl_idx in
         { times; time; idx = Ptmap.add predicate snd_lvl_idx idx },
-        update_overlap overlap ~depth snd_lvl_idx clause
+        update_overlap ~det_check overlap ~depth snd_lvl_idx clause
     | Some (Ast.Structured.Insert gr) ->
         let timestamp =
           match gr with
@@ -2923,10 +2932,10 @@ let rec add1clause_compile_time ~depth { idx; time; times } overlap ~graft predi
         clause.timestamp <- timestamp;
         let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.(insert (fun x -> lex_insertion x.timestamp timestamp)) predicate clause snd_lvl_idx in
         { times; time; idx = Ptmap.add predicate snd_lvl_idx idx },
-        update_overlap overlap ~depth snd_lvl_idx clause
+        update_overlap ~det_check overlap ~depth snd_lvl_idx clause
   with Not_found ->
       let idx = Ptmap.add predicate (make_new_Map_snd_level_index 0 []) idx in
-      add1clause_compile_time ~depth { idx; time; times } overlap ~graft predicate clause name
+      add1clause_compile_time ~det_check ~depth { idx; time; times } overlap ~graft predicate clause name
 
 let update_indexing (indexing : pred_info Constants.Map.t) (index : index) : index =
   let idx =
@@ -2948,8 +2957,8 @@ let update_indexing (indexing : pred_info Constants.Map.t) (index : index) : ind
     in
       { index with idx }
 
-let add_to_index_compile_time ~depth ~predicate ~graft clause name index overlap_index =
-  add1clause_compile_time ~depth ~graft index overlap_index predicate clause name
+let add_to_index_compile_time ~det_check ~depth ~predicate ~graft clause name index overlap_index =
+  add1clause_compile_time ~det_check ~depth ~graft index overlap_index predicate clause name
 
 let make_empty_index ~depth ~indexing =
   let index = update_indexing indexing { idx = Ptmap.empty; time = 0; times = StrMap.empty } in

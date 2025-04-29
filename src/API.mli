@@ -254,6 +254,8 @@ module Compile : sig
     print_units : bool;
     (* keep track of the amount of time spent type checking, default false *)
     time_typechecking : bool;
+    (* skip determinacy analysis *)
+    skip_det_checking: bool;
   }
   val default_flags : flags
   val to_setup_flags : flags -> Setup.flags

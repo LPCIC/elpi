@@ -56,6 +56,7 @@ let usage =
   "\nMain options:\n" ^ 
   "\t-test runs the query \"main\"\n" ^ 
   "\t-exec pred  runs the query \"pred ARGS\"\n" ^ 
+  "\t-no-det  disable determinacy analysis\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
   "\t-document-infix-syntax Print the documentation for infix operators\n" ^
@@ -93,6 +94,7 @@ let _ =
   let print_units = ref false in
   let extra_paths = ref [] in
   let parse_term = ref false in
+  let skip_det_check = ref false in
   let vars =
     ref API.Compile.(default_flags.defined_variables) in
   let rec eat_options = function
@@ -100,6 +102,7 @@ let _ =
     | "-delay-problems-outside-pattern-fragment" :: rest -> delay_outside_fragment := true; eat_options rest
     | "-test" :: rest -> batch := true; test := true; eat_options rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; eat_options rest
+    | "-no-det" :: rest -> skip_det_check := true; eat_options rest
     | "-print" :: rest -> print_lprolog := true; eat_options rest
     | "-print-ast" :: rest -> print_ast := true; eat_options rest
     | "-print-units" :: rest -> print_units := true; eat_options rest
@@ -129,6 +132,7 @@ let _ =
       API.Compile.defined_variables = !vars;
       API.Compile.print_units = !print_units;
       API.Compile.time_typechecking = true;
+      API.Compile.skip_det_checking = !skip_det_check;
   } in
   if !doc_infix then begin
     Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;
