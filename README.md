@@ -1,4 +1,5 @@
 [![Main workflow](https://github.com/LPCIC/elpi/actions/workflows/main.yml/badge.svg)](https://github.com/LPCIC/elpi/actions/workflows/main.yml)
+[![Users workflow](https://github.com/LPCIC/elpi/actions/workflows/users.yml/badge.svg)](https://github.com/LPCIC/elpi/actions/workflows/users.yml)
 # ELPI - Embeddable λProlog Interpreter
 
 ELPI implements a variant of λProlog enriched with Constraint Handling Rules,
