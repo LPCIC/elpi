@@ -240,7 +240,7 @@ let () =
       (* 26*) mut_excl 13 10; mut_excl 12 10; Success; Success; det_check 8 7;   (*30*)
       (* 31*) out_err 7 10; Success; out_err 10 14; out_err 9 21; out_err 9 13;  (*35*)
       (* 36*) Success; out_err 6 10; out_err 7 3; Success; Success;              (*40*)
-      (* 41*) det_check 6 21; out_err 7 4; out_err 5 4; Success; det_check 11 34;(*45*)
+      (* 41*) det_check 6 21; Success; out_err 5 4; Success; det_check 11 34;(*45*)
       (* 46*) Success; Success; Success; Success; det_check 8 16;                (*50*)
       (* 51*) Success; det_check 19 2; Success; out_err 8 4; Success;            (*55*)
       (* 56*) det_check 10 2; out_err 12 19; out_err 13 8; Success; Success;     (*60*)
@@ -252,7 +252,7 @@ let () =
       (* 86*) Success; Success; Success; Success; Success;                       (*90*)
       (* 91*) det_check 14 5; Success; Success; constr_error 14 17; Success;         (*95*)
       (* 96*) mut_excl 6 6; mut_excl 6 6; Success; Success; Success;             (*100*)
-      (*101*) Success; mut_excl_no_loc "f";  duplicate_err 1 2; Success; Success;(*105*)
+      (*101*) Success; mut_excl_no_loc "f";  duplicate_err 2 1; Success; Success;(*105*)
       (*106*) Success; constr_error 14 13; constr_error 14 13;
     |] in
   for i = 0 to Array.length status - 1 do

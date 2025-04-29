@@ -69,6 +69,8 @@ let check_type ~type_abbrevs ~kinds ~loc ~name ctx x =
   in
     aux_params ~loc ctx x
 
+type indexing_pair = {static:Elpi_runtime.Data.indexing;runtime:Elpi_runtime.Data.indexing}
+[@@deriving show]
 
 let chose_indexing predicate l k =
   let open Elpi_runtime.Data in
@@ -79,11 +81,13 @@ let chose_indexing predicate l k =
     | 1 :: l when all_zero l -> MapOn argno
     | _ -> default ()
   in
+  (* Format.eprintf "Index for %a is %a@." F.pp predicate (pplist pp_int ",  ") l; *)
+  let pairify t = {static=DiscriminationTree l; runtime=t} in
   match k with
-  | Some Ast.Structured.DiscriminationTree -> DiscriminationTree l
-  | Some HashMap -> Hash l
-  | None -> check_map (fun () -> DiscriminationTree l) 0 l
-  | Some Map -> check_map (fun () ->
+  | Some Ast.Structured.DiscriminationTree -> pairify @@ DiscriminationTree l
+  | Some HashMap -> pairify @@ Hash l
+  | None -> pairify @@ check_map (fun () -> DiscriminationTree l) 0 l
+  | Some Map -> pairify @@ check_map (fun () ->
       error ("Wrong indexing for " ^ F.show predicate ^
               ": Map indexes exactly one argument at depth 1")) 0 l
 
@@ -107,17 +111,17 @@ let check_indexing ~loc ~type_abbrevs availability name ty indexing =
     | Some Function -> Elpi_runtime.Data.mk_Forbidden indexing in
   match indexing with
   | Some (Ast.Structured.Index(l,k)) -> ensure_pred is_prop;
-      let indexing = chose_indexing name l k in
-      let overlap = overlap indexing in
-      TypingEnv.Index {mode;indexing; overlap}
+      let {static;runtime} = chose_indexing name l k in
+      let overlap = overlap static in
+      TypingEnv.Index {mode;indexing=runtime; overlap}
   | Some MaximizeForFunctional when availability = Ast.Structured.Elpi -> ensure_pred is_prop;
       let indexing = maximize_indexing_input mode in
       let overlap = overlap indexing in
-      Index {mode;indexing; overlap }
+      Index {mode;indexing=MapOn 0; overlap }
   | _ when Option.is_some is_prop ->
-      let indexing = chose_indexing name [1] None in
-      let overlap = overlap indexing in
-      Index {mode;indexing; overlap}
+      let {static;runtime} = chose_indexing name [1] None in
+      let overlap = overlap static in
+      TypingEnv.Index {mode;indexing=runtime; overlap}
   | _ -> DontIndex
 
 let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
@@ -863,11 +867,10 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
       let mode = ty2mode tya in
       let indexing = match is_prop ~type_abbrevs ty with
       | None -> TypingEnv.DontIndex
-      | Some Relation -> Index {mode; indexing=chose_indexing (Symbol.get_func id) [1] None; overlap = Allowed} 
+      | Some Relation -> Index {mode; indexing=MapOn 0; overlap = Allowed} 
       | Some Function ->
-          let indexing = chose_indexing (Symbol.get_func id) [1] None in
-          let overlap = Elpi_runtime.Data.mk_Forbidden indexing in
-          Index {mode; indexing; overlap } 
+        let {static;runtime} = chose_indexing (Symbol.get_func id) [1] None in
+        TypingEnv.Index {mode;indexing=runtime; overlap=Elpi_runtime.Data.mk_Forbidden static}
       in
       id, TypingEnv.{ ty ; indexing; availability = Elpi }
   | _ -> assert false

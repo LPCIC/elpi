@@ -1,9 +1,9 @@
-% NO
+% YES
 func succ int -> int.
 
 pred p o:(func).
 p X :-
-  % the output of the local rule is not guaranteed to be functional
+  % OK, we can return a discard as output of a clause
   p _ => X = true.
 
 main.
