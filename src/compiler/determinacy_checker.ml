@@ -26,7 +26,6 @@ type dtype =
 [@@deriving show, ord]
 
 module Good_call : sig
-  (* p: tells if the offending term corresponds to a polymorphics type variable *)
   (* NOTE:
       For a constructor with a non-polymorphic type, the inferred determinacy of the term
       must match the expected one exactly.

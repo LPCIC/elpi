@@ -7,8 +7,6 @@
 kind derive type.
 type derive string -> (func -> list (pred)) -> prop -> derive. 
 
-kind gref type.
-
 pred derivation o:derive.
 
 func unfold-constants.
