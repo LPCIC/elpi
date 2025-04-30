@@ -1,0 +1,19 @@
+% YES
+
+% A simplified version from XXX, where the output of a predicate is a data.
+% This data should assume its arguments to have the determinacy declared in
+% the signature of the constructor being taken into account
+
+kind derive type.
+type derive string -> (func -> list (pred)) -> prop -> derive. 
+
+kind gref type.
+
+pred derivation o:derive.
+
+func unfold-constants.
+unfold-constants :-
+  derivation (derive _ Do _), !,
+  Do [true].
+
+main.
