@@ -113,15 +113,15 @@ let check_indexing ~loc ~type_abbrevs availability name ty indexing =
   | Some (Ast.Structured.Index(l,k)) -> ensure_pred is_prop;
       let {static;runtime} = chose_indexing name l k in
       let overlap = overlap static in
-      TypingEnv.Index {mode;indexing=runtime; overlap}
+      TypingEnv.Index {mode;indexing=runtime; overlap; has_local_without_cut=None}
   | Some MaximizeForFunctional when availability = Ast.Structured.Elpi -> ensure_pred is_prop;
       let indexing = maximize_indexing_input mode in
       let overlap = overlap indexing in
-      Index {mode;indexing=MapOn 0; overlap }
+      Index {mode;indexing=MapOn 0; overlap; has_local_without_cut=None}
   | _ when Option.is_some is_prop ->
       let {static;runtime} = chose_indexing name [1] None in
       let overlap = overlap static in
-      TypingEnv.Index {mode;indexing=runtime; overlap}
+      TypingEnv.Index {mode;indexing=runtime; overlap; has_local_without_cut=None}
   | _ -> DontIndex
 
 let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
@@ -867,10 +867,10 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
       let mode = ty2mode tya in
       let indexing = match is_prop ~type_abbrevs ty with
       | None -> TypingEnv.DontIndex
-      | Some Relation -> Index {mode; indexing=MapOn 0; overlap = Allowed} 
+      | Some Relation -> Index {mode; indexing=MapOn 0; overlap = Allowed; has_local_without_cut=None} 
       | Some Function ->
         let {static;runtime} = chose_indexing (Symbol.get_func id) [1] None in
-        TypingEnv.Index {mode;indexing=runtime; overlap=Elpi_runtime.Data.mk_Forbidden static}
+        TypingEnv.Index {mode;indexing=runtime; overlap=Elpi_runtime.Data.mk_Forbidden static; has_local_without_cut=None}
       in
       id, TypingEnv.{ ty ; indexing; availability = Elpi }
   | _ -> assert false

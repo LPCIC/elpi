@@ -44,7 +44,7 @@ let mk_Forbidden indexing =
     | DiscriminationTree l -> Discrimination_tree.empty_dt l
   )
 
-type pred_info = { indexing:indexing; mode:Mode.hos; overlap: overlap }
+type pred_info = { indexing:indexing; mode:Mode.hos; overlap: overlap; has_local_without_cut: Loc.t option }
 [@@deriving show]
 
 let same_indexing { indexing = i1 } { indexing = i2 } = compare_indexing i1 i2 == 0
