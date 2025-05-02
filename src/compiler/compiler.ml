@@ -1772,8 +1772,9 @@ end = struct
       | Const b -> min_depth <= b && b < depth
       | _ -> false
     in
-    let is_unif_var = function
+    let rec is_unif_var = function
       | AppUVar _ | UVar (_, _, _) | Discard | Arg (_, _)|AppArg (_, _) -> true
+      | App (h,x,xs) when h == Global_symbols.asc -> is_unif_var x && List.for_all is_unif_var xs
       | Nil|Const _|Lam _|App (_, _, _)|Cons (_, _)|Builtin (_, _)|CData _ -> false
     in
     (* Builds a query for the predicate p with args args *)

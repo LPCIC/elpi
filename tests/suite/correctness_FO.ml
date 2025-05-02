@@ -225,7 +225,7 @@ let () = declare "trie"
 let () =
   let (!) x = Test.FailureOutput (Str.regexp x) in
   let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n.*\n+.*line %d" l1 l2) in
-  let mut_excl_no_loc t = !("Mutual exclusion violated for rules of predicate " ^ t) in
+  let mut_excl_no_loc t = !("Mutual exclusion violated for rules of predicate " ^ t ^ ".\nThis rule overlaps with") in
   let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
   let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
   let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*[io]:.*" l c) in
@@ -233,8 +233,8 @@ let () =
   let constr_error l1 l2 = !(Format.asprintf "line %d, column %d.*\n.*Invalid determinacy of constructor" l1 l2) in
   let mut_excl_eigen l p = !(Format.asprintf "line %d.*\nMutual exclusion violated for rules of predicate %s" l p) in
   let status = Test.
-    [|(* 01*) mut_excl 9 6; Success; det_check 9 7; mut_excl_no_loc "q"; mut_excl_no_loc "q";            (*05*)
-      (* 06*) mut_excl_no_loc "q"; mut_excl_no_loc "q"; mut_excl_no_loc "q"; mut_excl 10 10; mut_excl 10 10; (*10*)
+    [|(* 01*) mut_excl 9 6; Success; det_check 9 7; mut_excl_eigen 10 "q"; mut_excl_eigen 10 "q";            (*05*)
+      (* 06*) mut_excl_eigen 10 "q"; mut_excl_eigen 10 "q"; mut_excl_eigen 11 "q"; mut_excl 10 10; mut_excl 10 10; (*10*)
       (* 11*) mut_excl 9 8; Success; mut_excl 11 10; det_check 21 9; Success;    (*15*)
       (* 16*) det_check 8 9; Success; det_check 14 7; det_check 13 7; Success;   (*20*)
       (* 21*) det_check 7 21; Success; det_check 16 9; Success; det_check 7 12;  (*25*)
@@ -253,9 +253,9 @@ let () =
       (* 86*) Success; Success; Success; Success; Success;                       (*90*)
       (* 91*) det_check 14 5; Success; Success; constr_error 14 17; mut_excl_eigen 6 "foo";         (*95*)
       (* 96*) mut_excl_eigen 6 "foo"; mut_excl_eigen 6 "foo"; mut_excl_eigen 6 "foo"; Success; Success;             (*100*)
-      (*101*) Success; mut_excl_no_loc "f";  duplicate_err 2 1; Success; Success;(*105*)
+      (*101*) Success; mut_excl_eigen 5 "f";  duplicate_err 2 1; Success; Success;(*105*)
       (*106*) Success; constr_error 14 13; constr_error 14 13; mut_excl_eigen 9 "f"; Success; (*110*)
-      (*111*) mut_excl_eigen 5 "foo"; Success 
+      (*111*) mut_excl_eigen 5 "foo"; Success; mut_excl_no_loc "f"; Success
     |] in
   for i = 0 to Array.length status - 1 do
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in

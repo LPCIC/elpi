@@ -1,0 +1,7 @@
+func f int ->.
+
+
+main :-
+  pi x\ f x => true.
+
+f (X as (Y as 3)).
