@@ -1167,7 +1167,7 @@ module Flatten : sig
       | Const(Global { escape_ns = false },c,ty) -> let c' = f c in if c == c' then it else Const(Scope.mkGlobal (),c',ty)
       | Spill(t,n) -> let t' = aux_loc t in if t' == t then it else Spill(t',n)
       | App((scope,c,ty),x,xs) ->
-          let c' = if scope = Scope.mkGlobal () then f c else c in
+          let c' = match scope with Global { escape_ns = false } -> f c | _ -> c in
           let x' = aux_loc x in
           let xs' = smart_map aux_loc xs in
           if c == c' && x == x' && xs == xs' then it

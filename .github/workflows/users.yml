@@ -8,8 +8,8 @@ on:
     branches: [ master ]
 
 jobs:
-    test-users:
-        name: "test users"
+    test-users-mc:
+        name: "test users: math-comp"
         runs-on: ubuntu-latest
         env:
           OPAMWITHTEST: true
@@ -39,3 +39,75 @@ jobs:
         - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-algebra https://github.com/math-comp/math-comp.git#master
         - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-solvable https://github.com/math-comp/math-comp.git#master
         - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-field https://github.com/math-comp/math-comp.git#master
+
+    test-users-br:
+      name: "test users: bluerock.io"
+      runs-on: ubuntu-latest
+      env:
+        OPAMWITHTEST: true
+        OPAMVERBOSE: true
+      steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: git setup
+        run: |
+          git config --global user.email "you@example.com"
+          git config --global user.name "Your Name"
+          git switch -c branch
+
+      - name: opam setup
+        run: |
+          sudo apt-get install swi-prolog libclang-dev
+          curl -fsSL https://opam.ocaml.org/install.sh > install-opam.sh
+          chmod a+x install-opam.sh
+          yes '' | ./install-opam.sh 
+          opam init --bare --disable-sandboxing
+
+      - name: fm workspace setup
+        run: |
+          git clone https://github.com/bluerock-io/fm-workspace.git
+          cd fm-workspace
+          export OPAMYES=true
+          ./setup-fmdeps.sh -p
+          opam switch set `opam switch list 2>&1| grep br|sed 's/  */ /g'| cut -d ' ' -f 2`
+          opam switch
+
+      - name: merge elpi
+        run: |
+          E="$PWD"
+          cd fm-workspace/fmdeps/elpi
+          git remote add this file://$E/
+          git remote update this
+          git merge this/branch -Xtheirs -m ci
+          git show HEAD
+          
+      - name: overlay coq-elpi
+        run: |
+          cd fm-workspace/fmdeps/coq-elpi
+          git remote add this https://github.com/LPCIC/coq-elpi.git
+          git remote update this
+          git merge this/fix-elpi-3.0 -Xtheirs -m ci
+          git show HEAD
+
+      - name: overlay brick
+        run: |
+          cd fm-workspace/fmdeps/cpp2v-core
+          git remote add this https://github.com/gares/brick.git
+          git remote update this
+          git merge this/elpi-3.0 -Xtheirs -m ci
+          git show HEAD
+
+      - name: build bluerock-prelude/theories/elpi
+        run: |
+          cd fm-workspace
+          eval $(opam env)
+          opam switch
+          which ocamlc
+          dune build fmdeps/cpp2v-core/rocq-bluerock-prelude/theories/elpi/ --stop-on-first-error
+
+
+
+                  
+
