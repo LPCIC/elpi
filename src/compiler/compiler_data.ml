@@ -579,7 +579,11 @@ end = struct
   let resolve env r s =
     match !r with
     | None -> r := Some s
-    | Some s' -> assert(TypingEnv.same_symbol env s' s); r := Some s
+    | Some s' ->
+        if not @@ TypingEnv.same_symbol env s' s then
+          anomaly ("SymbolResolver: new " ^ Symbol.show s ^ " != old " ^ Symbol.show s');
+        r := Some s
+
   let resolved_to env r =
     match !r with
     | None -> None
