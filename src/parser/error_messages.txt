@@ -99,6 +99,12 @@ goal: AFTER DDARROW VDASH
 goal: LBRACKET AFTER DDARROW VDASH
 program: AFTER DDARROW VDASH
 program: EXPORTDEF AFTER AFTER ARROW VDASH
+program: AFTER DDARROWBANG FLOAT USE_SIG
+program: AFTER DDARROWBANG VDASH
+goal: LBRACKET AFTER DDARROWBANG FLOAT USE_SIG
+goal: LBRACKET AFTER DDARROWBANG VDASH
+goal: AFTER DDARROWBANG FLOAT USE_SIG
+goal: AFTER DDARROWBANG VDASH
 
 This infix operator expects a right hand side.
 
@@ -242,6 +248,7 @@ program: EXPORTDEF AFTER AFTER VDASH
 program: EXPORTDEF AFTER AFTER LPAREN USE_SIG
 program: EXPORTDEF AFTER AFTER LPAREN AFTER FULLSTOP
 program: EXPORTDEF AFTER AFTER AFTER VDASH
+program: SYMBOL AFTER AFTER EQ VDASH
 
 Term expected, got keyword.
 
@@ -329,11 +336,16 @@ Malformed 'external' attribute. Example:
 program: TYPE VDASH
 program: TYPE AFTER TYPE
 program: TYPE AFTER AFTER RPAREN
+program: SYMBOL AFTER AFTER RPAREN
+program: SYMBOL AFTER COLON VDASH
+program: SYMBOL AFTER TYPE
+program: SYMBOL VDASH
 
 Malformed type declaration. Examples:
 type app tm -> tm -> tm.
 type lam (tm -> tm) -> tm.
 type (++) list A -> list A -> list A.
+symbol app : tm -> tm -> tm.
 
 program: RULE LPAREN USE_SIG
 program: RULE VDASH
@@ -569,3 +581,4 @@ Anonymous predicate declaration expected.
 Examples:
 (pred i:ty, o:ty)
 (pred)
+
