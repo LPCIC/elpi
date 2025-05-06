@@ -1,0 +1,11 @@
+func f int ->.
+
+func f1.
+
+f1 :-
+  pi x\ (f x :- print "CIAO") =>
+    (f x, fail).
+
+f X :- halt "Mh".
+
+main :- f1.

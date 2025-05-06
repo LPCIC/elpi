@@ -26,7 +26,6 @@ type dtype =
 [@@deriving show, ord]
 
 module Good_call : sig
-  (* p: tells if the offending term corresponds to a polymorphics type variable *)
   (* NOTE:
       For a constructor with a non-polymorphic type, the inferred determinacy of the term
       must match the expected one exactly.
@@ -550,7 +549,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       | Arrow (Input, v, _, r), _ :: tl -> assume_output (choose_variadic v d r) tl var
       | Arrow (Output, v, l, r), hd :: tl ->
           Format.eprintf "Call assume of %a with dtype:%a@." ScopedTerm.pretty hd pp_dtype l;
-          let var = assume ~ctx ~var l hd in
+          let var = assume ~was_input:true ~ctx ~var l hd in
           assume_output (choose_variadic v d r) tl var
       | _ -> var
     in

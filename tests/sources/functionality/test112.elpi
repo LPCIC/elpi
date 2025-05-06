@@ -1,0 +1,5 @@
+func foo int ->.
+pred bad.
+
+
+main :- pi x\ (bad :- pi x\ (foo x) => foo x, bad) => true.
