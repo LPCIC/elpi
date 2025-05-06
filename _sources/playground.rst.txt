@@ -148,7 +148,7 @@ Test Bed
    Please add the following text to your program:
    type other.doomed int -> func.
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.003
    Determinacy checking time: 0.004
@@ -315,11 +315,11 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
-   Time: 0.001
+   Time: 0.000
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -375,7 +375,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.004
    
    Success:
@@ -539,7 +539,7 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -700,7 +700,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.004
@@ -729,7 +729,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.004
    
    Success:
@@ -946,7 +946,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -1078,7 +1078,7 @@ Test Bed
    Please add the following text to your program:
    type d pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.004
@@ -1107,7 +1107,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case.elpi", line 10, column 13, characters 215-218:
    G is linear: name it _G (discard) or G_ (fresh variable)
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.003
    Determinacy checking time: 0.004
@@ -1139,7 +1139,7 @@ Test Bed
    Please add the following text to your program:
    type p ((int -> pred) -> pred) -> pred.
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.003
    Determinacy checking time: 0.004
@@ -1201,7 +1201,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 73, column 11, characters 1913-1915:
    Cs is linear: name it _Cs (discard) or Cs_ (fresh variable)
    
-   Compilation time: 0.003
+   Compilation time: 0.002
    
    Typechecking time: 0.004
    Determinacy checking time: 0.006
@@ -1413,7 +1413,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.004
    
    Success:
@@ -1445,7 +1445,7 @@ Test Bed
    
    Success:
    
-   Time: 1.919
+   Time: 1.849
    
    Constraints:
    
@@ -1610,7 +1610,7 @@ Test Bed
    
    Success:
    
-   Time: 0.339
+   Time: 0.353
    
    Constraints:
    
@@ -1970,7 +1970,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.324202 + 0.059578 + 0.941145
+   1.291246 + 0.059349 + 0.915729
    
 
 .. code-block:: console
@@ -1981,11 +1981,11 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 2.559
+   Time: 2.477
    
    Constraints:
    
@@ -2002,7 +2002,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.650409 + 3.109681 + 0.366618
+   6.850342 + 3.163474 + 0.381351
    
 
 .. code-block:: console
@@ -2013,11 +2013,11 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
-   Time: 10.133
+   Time: 10.402
    
    Constraints:
    
@@ -2034,7 +2034,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.975637 + 2.929741 + 0.222532
+   5.966358 + 2.952270 + 0.223232
    
 
 .. code-block:: console
@@ -2045,11 +2045,11 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 9.133
+   Time: 9.147
    
    Constraints:
    
@@ -2075,7 +2075,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.004
@@ -2158,7 +2158,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.004
@@ -2219,7 +2219,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -2247,7 +2247,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -2309,7 +2309,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2465,7 +2465,7 @@ Test Bed
    Please add the following text to your program:
    type r (int -> int) -> pred.
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.003
    Determinacy checking time: 0.004
@@ -2532,7 +2532,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.004
    
    Success:
@@ -2759,7 +2759,7 @@ Test Bed
    
    Success:
    
-   Time: 1.720
+   Time: 1.727
    
    Constraints:
    
@@ -2793,7 +2793,7 @@ Test Bed
 
 .. code-block:: console
 
-   3
+   9
    
 
 .. code-block:: console
@@ -2844,7 +2844,7 @@ Test Bed
    
    Success:
    
-   Time: 0.257
+   Time: 0.260
    
    Constraints:
    
@@ -2880,11 +2880,11 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 1.427
+   Time: 1.467
    
    Constraints:
    
@@ -3005,7 +3005,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.004
    
    Success:
@@ -3072,7 +3072,7 @@ Test Bed
    
    Success:
    
-   Time: 0.138
+   Time: 0.137
    
    Constraints:
    
@@ -3094,12 +3094,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 0.137
+   Time: 0.135
    
    Constraints:
    
@@ -3121,7 +3121,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.004
    
    Success:
@@ -3153,7 +3153,7 @@ Test Bed
    Please add the following text to your program:
    type q tm -> tm -> tm -> pred.
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.003
    Determinacy checking time: 0.004
@@ -3177,7 +3177,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.160137 + 0.056518 + 0.792860
+   1.146138 + 0.054892 + 0.801907
    
 
 .. code-block:: console
@@ -3192,7 +3192,7 @@ Test Bed
    
    Success:
    
-   Time: 2.104
+   Time: 2.098
    
    Constraints:
    
@@ -3214,7 +3214,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.004
    
    Success:
@@ -3827,7 +3827,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.004
    
    Success:
@@ -3944,7 +3944,7 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
