@@ -60,3 +60,9 @@ let () = declare "sepcomp6"
   ~expectation:Test.Success
   ()
 
+let () = declare "sepcomp_hover"
+  ~source_dune:"sepcomp_hover.exe"
+  ~description:"hover info"
+  ~expectation:Test.Success
+  ()
+

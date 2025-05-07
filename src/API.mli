@@ -310,6 +310,20 @@ module Compile : sig
   
   val total_type_checking_time : query -> float
   val total_det_checking_time : query -> float
+
+  module IntervalTree : sig
+    type 'a t
+    val find : Ast.Loc.t -> 'a t -> (Ast.Loc.t * 'a) list
+    val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  end
+
+  type type_
+  val pp_type_ : Format.formatter -> type_ -> unit
+
+  type info = { defined : Ast.Loc.t option; type_ : type_ option }
+  val pp_info : Format.formatter -> info -> unit
+
+  val hover : compilation_unit -> info IntervalTree.t
 end
 
 module Data : sig
