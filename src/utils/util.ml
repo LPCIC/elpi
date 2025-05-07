@@ -159,7 +159,7 @@ module Loc = struct
              line (source_start - line_starts_at) chars in
     Re.(Str.global_replace (Str.regexp_string "\\") "/" source) ^ pos ^ ":"
 
-  let pp fmt l =Fmt.fprintf fmt "%s" (to_string l)
+  let pp fmt l =Fmt.fprintf fmt "@[%s@]" (to_string l)
   let show l = to_string l
   let compare l1 l2 =
     let x =  Stdlib.compare l1.source_start l2.source_start in
