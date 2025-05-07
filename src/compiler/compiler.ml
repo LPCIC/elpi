@@ -745,11 +745,11 @@ module CustomFunctorCompilation = struct
 
   let scope_singlequote ~loc state x = 
     match State.get singlequote state with
-    | None -> ScopedTerm.(Const(ScopedTerm.mk_global x))
+    | None -> ScopedTerm.(App(ScopedTerm.mk_global x,[]))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
   let scope_backtick ~loc state x =
     match State.get backtick state with
-    | None -> ScopedTerm.(Const(ScopedTerm.mk_global x))
+    | None -> ScopedTerm.(App(ScopedTerm.mk_global x,[]))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
 end
 
@@ -883,13 +883,13 @@ end = struct
     | Const c when is_discard c -> ScopedTerm.Discard
     | Const c when is_macro_name c ->
         scope_term_macro ~loc ~state c []
-    | Const c when F.Set.mem c ctx -> ScopedTerm.(Const(ScopedTerm.mk_ty_bound_elpi elpi_language c))
+    | Const c when F.Set.mem c ctx -> ScopedTerm.(App(ScopedTerm.mk_ty_bound_elpi elpi_language c,[]))
     | Const c ->
         if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_ty_bound_elpi elpi_var c,[])
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
-        else if is_global c then ScopedTerm.(Const(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) (of_global c)))
-        else ScopedTerm.(Const(mk_ty_name (Scope.mkGlobal ()) c))
+        else if is_global c then ScopedTerm.(App(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) (of_global c),[]))
+        else ScopedTerm.(App(mk_ty_name (Scope.mkGlobal ()) c,[]))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App ({ it = Parens f },l) -> scope_term ~state ctx ~loc (App(f, l))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
@@ -984,8 +984,8 @@ end = struct
     let open ScopedTerm in
     let add1 s t =
       match t.it with
-      | Const(Global _,c,_) | App((Global _,c,_),_) -> F.Set.add c s
-      | Impl(R2L,{ it = (Const(Global _,c,_) | App((Global _,c,_),_)) }, _) -> F.Set.add c s
+      | App((Global _,c,_),_) -> F.Set.add c s
+      | Impl(R2L,{ it = (App((Global _,c,_),_)) }, _) -> F.Set.add c s
       | _ -> assert false in
     List.fold_left (fun s { Ast.Clause.body } ->
       match body.it with
@@ -1161,14 +1161,12 @@ module Flatten : sig
           let t2' = aux_loc t2 in
           if t1 == t1' && t2 == t2' then it
           else Impl(b,t1',t2')
-      | Const((Bound _|Global { escape_ns = true }),_,_) -> it
-      | Const(Global { escape_ns = false },c,ty) -> let c' = f c in if c == c' then it else Const(Scope.mkGlobal (),c',ty)
       | Spill(t,n) -> let t' = aux_loc t in if t' == t then it else Spill(t',n)
       | App((scope,c,ty),xs) ->
           let c' = match scope with Global { escape_ns = false } -> f c | _ -> c in
           let xs' = smart_map aux_loc xs in
           if c == c' && xs == xs' then it
-          else App((scope,c',ty),xs')
+          else App((Scope.mkGlobal (),c',ty),xs')
       | Lam(n,ty,b) ->
           let b' = aux_loc b in
           let ty' = option_smart_map (ScopedTypeExpression.smart_map_scoped_loc_ty tyf) ty in
@@ -1557,13 +1555,13 @@ end = struct
     let isG s1 = function Scope.Global { resolved_to = s } -> SymbolResolver.is_resolved_to types s s1 | _ -> false in
     let conj ({ ScopedTerm.it; loc } as orig) =
       let mk it = { it; loc; ty = TypeAssignment.(mkProp Function) } in
-        App(mkG and_,[orig; mk @@ Const(mkG cut)]) in
+        App(mkG and_,[orig; mk @@ App(mkG cut,[])]) in
     let rec append_list { ScopedTerm.it; loc } =
       let mk it = { it; loc; ty = TypeAssignment.(mkProp Function) } in
       let mkl it = { it; loc; ty = TypeAssignment.(mkList @@ Prop Function) } in
       match it with
-      | Const(s,_,_) when isG nil s ->
-          App(mkG cons,[mk @@ Const(mkG cut);mkl @@ Const(mkG nil)])
+      | App((s,_,_),[]) when isG nil s ->
+          App(mkG cons,[mk @@ App(mkG cut,[]);mkl @@ App(mkG nil,[])])
       | App((s,_,_ as hd),[x;xs]) when isG cons s -> App(hd,[x;mk @@ append_list xs]) 
       | _ -> raise (Failure "not a list") in
     let append_list_or_conj h =
@@ -1572,7 +1570,7 @@ end = struct
     let mk it = { it; loc; ty = TypeAssignment.(mkProp Function) } in
     match it with
     | Impl(R2L,hd,hyp) -> Some (mk @@ Impl(R2L,hd,mk @@ append_list_or_conj hyp))
-    | Const(Scope.Global { resolved_to = s },_,_) when SymbolResolver.is_resolved_to types s nil -> Some orig
+    | App((Scope.Global { resolved_to = s },_,_),[]) when SymbolResolver.is_resolved_to types s nil -> Some orig
     | App((Scope.Global { resolved_to = s },_,_ as hd),[x;xs]) when SymbolResolver.is_resolved_to types s cons ->
         begin match try_add_tail_cut ~types x, try_add_tail_cut ~types xs with
         | Some x, Some xs -> Some (mk @@ App(hd,[x;xs]))
@@ -1583,7 +1581,7 @@ end = struct
         if List.for_all Option.is_some xs then
           Some (mk @@ App(hd,List.map Option.get xs))
         else None
-    | (App _ | Const _)-> Some (mk @@ Impl(R2L,orig,mk @@ Const(mk_global_sym types cut)))
+    | App _-> Some (mk @@ Impl(R2L,orig,mk @@ App(mk_global_sym types cut,[])))
     | _ -> None
         
   let to_dbl ?(ctx=Scope.Map.empty) ~types ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
@@ -1631,14 +1629,13 @@ end = struct
           error ~loc:t.loc (Format.asprintf "todbl: term contains spill: %a" ScopedTerm.pretty t)
       | Cast(t,_) -> todbl ctx t
       (* lists *)
-      | Const(Global _,c,_) when F.(equal c nilf) -> D.mkNil
+      | App((Global _,c,_),[]) when F.(equal c nilf) -> D.mkNil
       | App((Global _,c,_),[x;y]) when F.(equal c consf) ->
           let x = todbl ctx x in
           let y = todbl ctx y in
           D.mkCons x y
       (* globals and builtins *)
-      | App((Global { resolved_to },c,_),[])
-      | Const((Global { resolved_to },c,_)) ->
+      | App((Global { resolved_to },c,_),[]) ->
           let c, t = allocate_global_symbol ~loc:t.loc resolved_to c in
           if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) []
           else if Builtins.is_declared builtins c then D.mkBuiltin (Host c) []
@@ -1652,7 +1649,6 @@ end = struct
           else D.mkApp c x xs
       (* lambda terms *)
       | App((Bound l,c,_),[]) -> allocate_bound_symbol t.loc ctx (c,l)
-      | Const(Bound l,c,_) -> allocate_bound_symbol t.loc ctx (c,l)
       | Lam(c,_,t) -> D.mkLam @@ todbl (push ctx c) t
       | App((Bound l,c,_),x::xs) ->
           let c = lookup_bound t.loc ctx (c,l) in
@@ -2507,7 +2503,6 @@ let info_of_scoped_term ~types t =
 
   let rec aux loc ty = function
     | Impl(_,l,r) -> log_ty loc ty; aux_loc l; aux_loc r
-    | Const (s,_,tys) -> log_symb loc s (TypeAssignment.deref_opt tys)
     | Discard -> log_ty loc ty
     | Var((s,_,tys),args) -> log_symb loc s (TypeAssignment.deref_opt tys); List.iter aux_loc args
     | App((s,_,tys),args) -> log_symb loc s (TypeAssignment.deref_opt tys); List.iter aux_loc args

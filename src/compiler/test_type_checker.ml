@@ -15,8 +15,8 @@ let mk_local name = ScopedTerm.mk_ty_name elpi_language (fs name)
 let build_loc it = ST.{ loc = dummy_loc; ty = MutableOnce.make dummy_str; it }
 let app n ag ags = build_loc @@ ST.App (mk_global n, ag :: ags)
 let lam n bo = build_loc @@ ST.Lam (Some (mk_local n), None, bo)
-let const n = build_loc @@ ST.Const (mk_global n)
-let local_const n = build_loc @@ ST.Const (mk_bound n)
+let const n = build_loc @@ ST.App (mk_global n,[])
+let local_const n = build_loc @@ ST.App (mk_bound n,[])
 let var n = build_loc @@ ST.Var (ST.mk_ty_bound_elpi elpi_var @@ fs n, [])
 let build_ta a = TA.Val a
 let rprop = TA.Prop Relation
@@ -52,7 +52,7 @@ let unifyable_ground_ty (t1 : TA.t MutableOnce.t TA.t_) (t2 : TA.t MutableOnce.t
 
 let get_hd_ty ST.{ it } =
   match it with
-  | ST.Var (s, _) | App (s, _) | Const s ->
+  | ST.Var (s, _) | App (s, _) ->
       let _, _, s = s in
       s
   | _ -> assert false
