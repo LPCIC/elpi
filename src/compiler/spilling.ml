@@ -45,7 +45,7 @@ let add_spilled ~types (l : spill list) t =
         @@ App (mk_global ~types F.andf [], [expr; t ]))
       l t
 
-let mkApp n l = if l = [] then Const n else App (n, l)
+let mkApp n l = App (n, l)
 
 let is_symbol ~types b = function
 | Scope.Global { resolved_to = x } ->
@@ -64,7 +64,6 @@ let app ~types t args =
       match it with
       | App (((s, _, _) as n), xs) when is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s -> mkApp n (aux_last xs)
       | Impl (b, s, t) -> Impl (b, s, aux t)
-      | Const n -> mkApp n args
       | App (n, xs) -> mkApp n (xs @ args)
       | Var (c,l) -> Var (c,l @ args)
       | Discard | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) -> assert false
@@ -111,14 +110,14 @@ let rec bc ctx t =
   | Cast (t, ty) -> Cast (bc_loc ctx t, ty)
   | Spill (t, i) -> Spill (bc_loc ctx t, i)
   | App (hd, xs) -> App (hd, List.map (bc_loc ctx) xs)
-  | Const _ | Discard | Var _ | CData _ -> t
+  | Discard | Var _ | CData _ -> t
 
 and bc_loc ctx { loc; ty; it } = { loc; ty; it = bc ctx it }
 
 let rec spill ~types ?(extra = 0) (ctx : string w_name_ty list) args ({ loc; ty; it } as t) : spills * t list =
   (* Format.eprintf "@[<hov 2>spill %a :@ %a@]\n" pretty t TypeAssignment.pretty (TypeAssignment.deref ty); *)
   match it with
-  | CData _ | Discard | Const _ -> ([], [ t ])
+  | CData _ | Discard -> ([], [ t ])
   | Cast (t, _) -> spill ~types ctx args t
   | Spill (t, { contents = NoInfo }) -> assert false (* no type checking *)
   | Spill (t, { contents = Phantom _ }) -> assert false (* escapes type checker *)
@@ -128,7 +127,7 @@ let rec spill ~types ?(extra = 0) (ctx : string w_name_ty list) args ({ loc; ty;
       let vars_names, vars =
         List.split
         @@ mk_spilled ~loc ~ty:(TypeAssignment.deref ty)
-             (List.rev_map (fun (l, c, ty) -> mk_loc ~loc ~ty @@ Const (Bound l, c, ty)) ctx)
+             (List.rev_map (fun (l, c, ty) -> mk_loc ~loc ~ty @@ App((Bound l, c, ty),[])) ctx)
              args n
       in
       let spills, t = spill1 ~types ~extra:(List.length vars_names) ctx args t in

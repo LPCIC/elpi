@@ -198,7 +198,7 @@ let error ~loc msg = error ~loc ("Typechecker: " ^ msg)
 
 let error_not_a_function ~loc c tyc args x =
   let t =
-    if args = [] then ScopedTerm.Const(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) c)
+    if args = [] then ScopedTerm.App(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) c,[])
     else ScopedTerm.(App(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) c,args)) in
   let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@].@ The type of %a is %a@]"
     ScopedTerm.pretty_ t ScopedTerm.pretty x F.pp c TypeAssignment.pretty_mut_once tyc in
@@ -375,8 +375,8 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty_mut_once ety; *)
     match x with
     | Impl(b,t1,t2) -> check_impl ~positive ctx ~loc ~tyctx b t1 t2 ety
-    | Const(Global _,_,_ as c) -> check_global ctx ~loc ~tyctx c ety
-    | Const(Bound _,_,_ as c) -> check_local ctx ~loc ~tyctx c ety
+    | App(Global _,_,_ as c,[]) -> check_global ctx ~loc ~tyctx c ety
+    | App(Bound _,_,_ as c,[]) -> check_local ctx ~loc ~tyctx c ety
     | CData c -> check_cdata ~loc ~tyctx kinds c ety
     | Spill(_,{contents = Phantom _}) -> assert false
     | Spill(sp,info) -> 
@@ -564,7 +564,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
 
   and infer_mode ctx m { loc; it } =
     match it with
-    | Const(Scope.Bound l,f,ty) ->
+    | App((Scope.Bound l,f,ty),[]) ->
         begin match Scope.Map.find_opt (f,l) ctx with
         | None ->  anomaly "unbound"
         | Some info ->
@@ -650,10 +650,8 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       let rec head it =
         match it with
         | App((Global _,f,_),[{ it = Lam(_,_,x) }]) when F.equal F.pif f -> head x.it
-        | Impl(R2L,{ it = App((Global _,c',_),x::xs) },_) -> c', x :: xs
-        | Impl(R2L,{ it = Const((Global _,c',_)) },_) -> c', []
+        | Impl(R2L,{ it = App((Global _,c',_),xs) },_) -> c', xs
         | App((Global _,c,_),xs) -> c, xs
-        | Const((Global _,c,_)) -> c, []
         | _ -> anomaly ~loc ("not a rule: " ^ ScopedTerm.show_t_ it) in
       head it in
     (* Format.eprintf "Checking %a\n" F.pp c; *)

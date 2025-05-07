@@ -15,10 +15,10 @@ let () =
   let elpi = init () in
   let flags = Compile.default_flags in
   let pmain,unit0 = cc ~elpi ~flags ~base:(Compile.empty_base ~elpi) 1 maine in
-  let _,unit1 = cc ~elpi ~flags ~base:pmain 2 p1 in
+  let _,_unit1 = cc ~elpi ~flags ~base:pmain 2 p1 in
 
   let h0 = Compile.hover unit0 in
-  let h1 = Compile.hover unit1 in
+  (* let h1 = Compile.hover unit1 in *)
 
   let mkloc u n m =
     let l = Ast.Loc.initial (Printf.sprintf "<u%d>" u) in
