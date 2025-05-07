@@ -2462,3 +2462,69 @@ let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols; signatu
 let relocate_closed_term ~from ~to_ t =
   try Result.Ok(relocate_closed_term ~from ~to_ t)
   with RelocationError s -> Result.Error s
+
+
+module IntervalTree = struct
+  type 'a t = (Ast.Loc.t * 'a) list
+  [@@deriving show]
+
+  let overlap { Ast.Loc.source_name; source_start; source_stop } (l,_) =
+    l.Ast.Loc.source_name = source_name &&
+    not (l.Ast.Loc.source_start > source_stop || l.Ast.Loc.source_stop < source_start)
+
+  let smaller ({ Ast.Loc.source_start = b1; source_stop = e1 },_) ({ Ast.Loc.source_start = b2; source_stop = e2 },_) =
+    let d1 = e1 - b1 in
+    let d2 = e2 - b2 in
+    d1 - d2
+
+  let find loc l = List.filter (overlap loc) l |> List.sort smaller
+end
+
+type type_ = Compiler_data.TypeAssignment.ty
+let pp_type_ = Compiler_data.TypeAssignment.pretty_mut_once
+
+type info = { defined : Ast.Loc.t option; type_ : type_ option }
+let pp_info fmt { defined; type_ } =
+  Format.fprintf fmt "@[<hov 2>{ defined = %a,@ ty = %a }@]"
+    (pp_option Ast.Loc.pp) defined (pp_option pp_type_) type_
+
+let info_of_scoped_term ~types t =
+  let i = ref [] in
+  let log_ty loc type_ =
+    match type_ with
+    | None -> ()
+    | Some _ -> i := (loc,{ defined = None; type_ }) :: !i in
+  let log_symb loc s type_ =
+    match s with
+    | Scope.Global { resolved_to } ->
+      let origin = SymbolResolver.resolved_to types resolved_to in
+      let defined = Option.map Symbol.get_loc origin in
+      i := (loc,{ defined; type_ }) :: !i
+    | Scope.Bound _ ->
+      i := (loc,{ defined = None; type_ }) :: !i
+      in
+  let open ScopedTerm in
+
+  let rec aux loc ty = function
+    | Impl(_,l,r) -> log_ty loc ty; aux_loc l; aux_loc r
+    | Const (s,_,tys) -> log_symb loc s (TypeAssignment.deref_opt tys)
+    | Discard -> log_ty loc ty
+    | Var((s,_,tys),args) -> log_symb loc s (TypeAssignment.deref_opt tys); List.iter aux_loc args
+    | App((s,_,tys),args) -> log_symb loc s (TypeAssignment.deref_opt tys); List.iter aux_loc args
+    | CData _ -> log_ty loc ty
+    | Spill(t,_) -> log_ty loc ty; aux_loc t
+    | Cast(t,_) -> log_ty loc ty; aux_loc t
+    | Lam(_,_,_t) -> log_ty loc ty; aux_loc t
+  and aux_loc x = aux x.loc (TypeAssignment.deref_opt x.ty) x.it
+  in
+  aux_loc t;
+  ! i
+
+
+let info_of_clause ~types { Ast.Clause.body } =
+  info_of_scoped_term ~types body
+
+let hover (u : checked_compilation_unit) =
+  let { CheckedFlat.clauses } = u.checked_code in
+  List.map (info_of_clause ~types:u.precomputed_signature.Assembled.types) clauses |> List.flatten
+

@@ -203,6 +203,14 @@ module Compile = struct
   let signature u = Compiler.signature_of_checked_compilation_unit u
   let extend_signature ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit_signature ~flags ~base u
 
+
+  module IntervalTree = Compiler.IntervalTree
+
+  type type_ = Compiler.type_
+  let pp_type_ = Compiler.pp_type_
+  type info = Compiler.info = { defined : Ast.Loc.t option; type_ : type_ option }
+  let pp_info = Compiler.pp_info
+  let hover = Compiler.hover
 end
 
 module Execute = struct
