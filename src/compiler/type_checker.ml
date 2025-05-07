@@ -199,7 +199,7 @@ let error ~loc msg = error ~loc ("Typechecker: " ^ msg)
 let error_not_a_function ~loc c tyc args x =
   let t =
     if args = [] then ScopedTerm.Const(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) c)
-    else ScopedTerm.(App(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) c,List.hd args, List.tl args)) in
+    else ScopedTerm.(App(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) c,args)) in
   let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@].@ The type of %a is %a@]"
     ScopedTerm.pretty_ t ScopedTerm.pretty x F.pp c TypeAssignment.pretty_mut_once tyc in
   error ~loc msg
@@ -382,7 +382,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     | Spill(sp,info) -> 
       if not positive then error ~loc "Spilling in negative position is forbidden";
       check_spill ~positive ctx ~loc ~tyctx sp info ety
-    | App((gid,_,_ as hd),x,xs) -> check_app ~positive ctx ~loc ~tyctx hd (get_type ~loc ctx env hd) (x::xs) ety 
+    | App((gid,_,_ as hd),xs) -> check_app ~positive ctx ~loc ~tyctx hd (get_type ~loc ctx env hd) xs ety 
     | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx c cty t ety
     | Discard -> []
     | Var((_,c,_ as hd),args) -> check_app ~positive ctx ~loc ~tyctx hd (uvar_type ~loc c) args ety
@@ -508,7 +508,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       (* Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty; *)
         let err ty =
           if args = [] then error_bad_ety ~valid_mode ~loc ~tyctx ~ety F.pp c ty (* uvar *)
-          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c,List.hd args,List.tl args)) ty in
+          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_ty_name (Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c,args)) ty in
         let monodirectional () =
           (* Format.eprintf "checking app mono %a\n" F.pp c; *)
           let tgt = check_app_single ~positive ctx ~loc (cid,c,tya) ty [] args in
@@ -634,14 +634,14 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
         if try_unify lhs prop || try_unify lhs (App(F.from_string "list",prop,[]))
         then check_spill_conclusion_loc ~positive ~tyctx ctx y ~ety
         else error ~loc "Bad impl in spill"
-    | App((Global _,c,tya as sc),x,xs) when F.equal c F.andf ->
+    | App((Global _,c,tya as sc),x::xs) when F.equal c F.andf ->
         let _ = check_global ctx ~loc ~tyctx sc (mk_uvar "spill_and") in
         let spills = check_loc ~positive ~tyctx ctx x ~ety:fprop in
         if spills <> [] then error ~loc "Hard spill";
         begin match xs with
         | [] -> assert false
         | [x] -> check_loc ~positive ~tyctx ctx x ~ety
-        | x::xs -> check_spill_conclusion ~positive ~tyctx ctx ~loc (App(sc,x,xs)) ety
+        | x::xs -> check_spill_conclusion ~positive ~tyctx ctx ~loc (App(sc,x::xs)) ety
         end
     | _ -> check ~positive ~tyctx ctx ~loc it ety
 
@@ -649,10 +649,10 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     let c, args =
       let rec head it =
         match it with
-        | App((Global _,f,_),{ it = Lam(_,_,x) },[]) when F.equal F.pif f -> head x.it
-        | Impl(R2L,{ it = App((Global _,c',_),x,xs) },_) -> c', x :: xs
+        | App((Global _,f,_),[{ it = Lam(_,_,x) }]) when F.equal F.pif f -> head x.it
+        | Impl(R2L,{ it = App((Global _,c',_),x::xs) },_) -> c', x :: xs
         | Impl(R2L,{ it = Const((Global _,c',_)) },_) -> c', []
-        | App((Global _,c,_),x,xs) -> c, x :: xs
+        | App((Global _,c,_),xs) -> c, xs
         | Const((Global _,c,_)) -> c, []
         | _ -> anomaly ~loc ("not a rule: " ^ ScopedTerm.show_t_ it) in
       head it in
