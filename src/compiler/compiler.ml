@@ -903,18 +903,17 @@ end = struct
           Impl (ScopedTerm.SimpleTerm.func_to_impl_kind c, scope_loc_term ~state ctx  t1, scope_loc_term ~state ctx t2)
         | _ -> error ~loc "implication is a binary operator"
         end
-    | App({ it = Const c }, x :: xs) ->
+    | App({ it = Const c }, xs) ->
          if is_discard c then error ~loc "Applied discard";
-         let x = scope_loc_term ~state ctx x in
          let xs = List.map (scope_loc_term ~state ctx) xs in
          if is_macro_name c then
-           scope_term_macro ~loc ~state c (x::xs)
+           scope_term_macro ~loc ~state c xs
          else
           let bound = F.Set.mem c ctx in
-          if bound then ScopedTerm.App(ScopedTerm.mk_ty_bound_elpi elpi_language c, x, xs)
-          else if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_ty_bound_elpi elpi_var c,x :: xs)
-          else if is_global c then ScopedTerm.App(ScopedTerm.mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) (of_global c),x,xs)
-          else ScopedTerm.App(ScopedTerm.mk_ty_name (Scope.mkGlobal ()) c, x, xs)
+          if bound then ScopedTerm.App(ScopedTerm.mk_ty_bound_elpi elpi_language c, xs)
+          else if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_ty_bound_elpi elpi_var c,xs)
+          else if is_global c then ScopedTerm.App(ScopedTerm.mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) (of_global c),xs)
+          else ScopedTerm.App(ScopedTerm.mk_ty_name (Scope.mkGlobal ()) c, xs)
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
         let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty) in
@@ -928,7 +927,6 @@ end = struct
         let name = Some (ScopedTerm.mk_ty_name elpi_language c) in
         ScopedTerm.Lam (name,ty,scope_loc_term ~state (F.Set.add c ctx) b)
     | CData c -> ScopedTerm.CData c (* CData.hcons *)
-    | App ({ it = Const _},[]) -> anomaly "Application node with no arguments"
     | App ({ it = Lam _},_) ->
       error ~loc "Beta-redexes not allowed, use something like (F = x\\x, F a)"
     | App ({ it = CData _},_) ->
@@ -986,15 +984,15 @@ end = struct
     let open ScopedTerm in
     let add1 s t =
       match t.it with
-      | Const(Global _,c,_) | App((Global _,c,_),_,_) -> F.Set.add c s
-      | Impl(R2L,{ it = (Const(Global _,c,_) | App((Global _,c,_),_,_)) }, _) -> F.Set.add c s
+      | Const(Global _,c,_) | App((Global _,c,_),_) -> F.Set.add c s
+      | Impl(R2L,{ it = (Const(Global _,c,_) | App((Global _,c,_),_)) }, _) -> F.Set.add c s
       | _ -> assert false in
     List.fold_left (fun s { Ast.Clause.body } ->
       match body.it with
-      | App((Global _,c,_),x,xs) when F.equal F.andf c ->
+      | App((Global _,c,_),xs) when F.equal F.andf c ->
         (* since we allow a rule to be of the form (p :- ..., q :- ...) eg
            via macro expansion, we could have , in head position  *)
-          List.fold_left add1 s (x::xs)
+          List.fold_left add1 s xs
       | _ -> add1 s body)
       F.Set.empty cl
 
@@ -1166,12 +1164,11 @@ module Flatten : sig
       | Const((Bound _|Global { escape_ns = true }),_,_) -> it
       | Const(Global { escape_ns = false },c,ty) -> let c' = f c in if c == c' then it else Const(Scope.mkGlobal (),c',ty)
       | Spill(t,n) -> let t' = aux_loc t in if t' == t then it else Spill(t',n)
-      | App((scope,c,ty),x,xs) ->
+      | App((scope,c,ty),xs) ->
           let c' = match scope with Global { escape_ns = false } -> f c | _ -> c in
-          let x' = aux_loc x in
           let xs' = smart_map aux_loc xs in
-          if c == c' && x == x' && xs == xs' then it
-          else App((scope,c',ty),x',xs')
+          if c == c' && xs == xs' then it
+          else App((scope,c',ty),xs')
       | Lam(n,ty,b) ->
           let b' = aux_loc b in
           let ty' = option_smart_map (ScopedTypeExpression.smart_map_scoped_loc_ty tyf) ty in
@@ -1560,14 +1557,14 @@ end = struct
     let isG s1 = function Scope.Global { resolved_to = s } -> SymbolResolver.is_resolved_to types s s1 | _ -> false in
     let conj ({ ScopedTerm.it; loc } as orig) =
       let mk it = { it; loc; ty = TypeAssignment.(mkProp Function) } in
-        App(mkG and_,orig,[mk @@ Const(mkG cut)]) in
+        App(mkG and_,[orig; mk @@ Const(mkG cut)]) in
     let rec append_list { ScopedTerm.it; loc } =
       let mk it = { it; loc; ty = TypeAssignment.(mkProp Function) } in
       let mkl it = { it; loc; ty = TypeAssignment.(mkList @@ Prop Function) } in
       match it with
       | Const(s,_,_) when isG nil s ->
-          App(mkG cons,mk @@ Const(mkG cut),[mkl @@ Const(mkG nil)])
-      | App((s,_,_ as hd),x,[xs]) when isG cons s -> App(hd,x,[mk @@ append_list xs]) 
+          App(mkG cons,[mk @@ Const(mkG cut);mkl @@ Const(mkG nil)])
+      | App((s,_,_ as hd),[x;xs]) when isG cons s -> App(hd,[x;mk @@ append_list xs]) 
       | _ -> raise (Failure "not a list") in
     let append_list_or_conj h =
       try append_list h
@@ -1576,16 +1573,15 @@ end = struct
     match it with
     | Impl(R2L,hd,hyp) -> Some (mk @@ Impl(R2L,hd,mk @@ append_list_or_conj hyp))
     | Const(Scope.Global { resolved_to = s },_,_) when SymbolResolver.is_resolved_to types s nil -> Some orig
-    | App((Scope.Global { resolved_to = s },_,_ as hd),x,[xs]) when SymbolResolver.is_resolved_to types s cons ->
+    | App((Scope.Global { resolved_to = s },_,_ as hd),[x;xs]) when SymbolResolver.is_resolved_to types s cons ->
         begin match try_add_tail_cut ~types x, try_add_tail_cut ~types xs with
-        | Some x, Some xs -> Some (mk @@ App(hd,x,[xs]))
+        | Some x, Some xs -> Some (mk @@ App(hd,[x;xs]))
         | _ -> None
         end
-    | App((Scope.Global { resolved_to = s },_,_ as hd),x,xs) when SymbolResolver.is_resolved_to types s and_ ->
-        let x = try_add_tail_cut ~types x in
+    | App((Scope.Global { resolved_to = s },_,_ as hd),xs) when SymbolResolver.is_resolved_to types s and_ ->
         let xs = List.map (try_add_tail_cut ~types) xs in
-        if Option.is_some x && List.for_all Option.is_some xs then
-          Some (mk @@ App(hd,Option.get x,List.map Option.get xs))
+        if List.for_all Option.is_some xs then
+          Some (mk @@ App(hd,List.map Option.get xs))
         else None
     | (App _ | Const _)-> Some (mk @@ Impl(R2L,orig,mk @@ Const(mk_global_sym types cut)))
     | _ -> None
@@ -1614,7 +1610,7 @@ end = struct
     let allocate_global_symbol = allocate_global_symbol types symb state in
     let push_bound (n,ctx) c = (n+1,Scope.Map.add c n ctx) in
     let push_unnamed_bound (n,ctx) = (n+1,ctx) in
-    let push ctx : string ScopedTerm.ty_name option -> 'a = function
+    let push ctx : string ScopedTerm.w_name_ty option -> 'a = function
       | None -> push_unnamed_bound ctx
       | Some (l,x,_) -> push_bound ctx (x,l) in
     let open ScopedTerm in
@@ -1636,17 +1632,18 @@ end = struct
       | Cast(t,_) -> todbl ctx t
       (* lists *)
       | Const(Global _,c,_) when F.(equal c nilf) -> D.mkNil
-      | App((Global _,c,_),x,[y]) when F.(equal c consf) ->
+      | App((Global _,c,_),[x;y]) when F.(equal c consf) ->
           let x = todbl ctx x in
           let y = todbl ctx y in
           D.mkCons x y
       (* globals and builtins *)
+      | App((Global { resolved_to },c,_),[])
       | Const((Global { resolved_to },c,_)) ->
           let c, t = allocate_global_symbol ~loc:t.loc resolved_to c in
           if is_builtin_predicate c then D.mkBuiltin (builtin_predicate_of_const c) []
           else if Builtins.is_declared builtins c then D.mkBuiltin (Host c) []
           else t
-      | App((Global { resolved_to },c,_),x,xs) ->
+      | App((Global { resolved_to },c,_),x::xs) ->
           let c,_ = allocate_global_symbol ~loc:t.loc resolved_to c in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in
@@ -1654,9 +1651,10 @@ end = struct
           else if Builtins.is_declared builtins c then D.mkBuiltin (Host c) (x::xs)
           else D.mkApp c x xs
       (* lambda terms *)
+      | App((Bound l,c,_),[]) -> allocate_bound_symbol t.loc ctx (c,l)
       | Const(Bound l,c,_) -> allocate_bound_symbol t.loc ctx (c,l)
       | Lam(c,_,t) -> D.mkLam @@ todbl (push ctx c) t
-      | App((Bound l,c,_),x,xs) ->
+      | App((Bound l,c,_),x::xs) ->
           let c = lookup_bound t.loc ctx (c,l) in
           let x = todbl ctx x in
           let xs = List.map (todbl ctx) xs in

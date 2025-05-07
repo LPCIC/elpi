@@ -66,11 +66,11 @@ end = struct
   let pp fmt x = Format.fprintf fmt "%s" (show x)
 end
 
-exception DetError of (Scope.t ScopedTerm.ty_name option * Good_call.t)
-exception FatalDetError of (Scope.t ScopedTerm.ty_name option * Good_call.t)
-exception RelationalBody of (Scope.t ScopedTerm.ty_name option * Good_call.t)
-exception CastError of (Scope.t ScopedTerm.ty_name option * Good_call.t)
-exception KError of (Scope.t ScopedTerm.ty_name option * Good_call.t)
+exception DetError of (Scope.t ScopedTerm.w_name_ty option * Good_call.t)
+exception FatalDetError of (Scope.t ScopedTerm.w_name_ty option * Good_call.t)
+exception RelationalBody of (Scope.t ScopedTerm.w_name_ty option * Good_call.t)
+exception CastError of (Scope.t ScopedTerm.w_name_ty option * Good_call.t)
+exception KError of (Scope.t ScopedTerm.w_name_ty option * Good_call.t)
 exception LoadFlexClause of ScopedTerm.t
 
 let rec pp_dtype fmt = function
@@ -396,12 +396,12 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       match it with
       | ScopedTerm.Const b -> infer_app ~exp ~was_input ~loc ctx false t ty b []
       | Var (b, xs) -> infer_app ~exp ~was_input ~loc ctx true t ty b xs
-      | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
+      | App (q, [{ it = Lam (b, _, bo) }]) when is_quantifier q ->
           infer ~exp ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ta x) ctx) bo
-      | App (g, x, xs) when is_global g S.and_ ->
+      | App (g, x :: xs) when is_global g S.and_ ->
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
           infer_and ~was_input ctx ~loc (x :: xs) (Det, Good_call.init ())
-      | App (b, x, xs) -> infer_app ~exp ~was_input ~loc ctx false t ty b (x :: xs)
+      | App (b, x :: xs) -> infer_app ~exp ~was_input ~loc ctx false t ty b (x :: xs)
       | Impl (L2R, c, b) ->
           check_clause ~ctx ~var c |> ignore;
           infer ~exp ~was_input ctx b
@@ -448,7 +448,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
     match it with
     | Const _ -> ()
     (* TODO: add case for pi, comma and = *)
-    | App (b, x, xs) -> aux (get_dtype ~env:ta ~ctx ~var ~loc ~is_var:false b) (x :: xs)
+    | App (b, xs) -> aux (get_dtype ~env:ta ~ctx ~var ~loc ~is_var:false b) xs
     | Var (b, xs) -> aux (get_dtype ~env:ta ~ctx ~var ~loc ~is_var:true b) xs
     | _ -> anomaly ~loc @@ Format.asprintf "Invalid term in deduce output %a." ScopedTerm.pretty_ it
   and assume ?(was_input=false) ~ctx ~var d t =
@@ -500,11 +500,11 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
     and assume ~was_input ctx d ScopedTerm.({ loc; it }) : unit =
       Format.eprintf "Assume of %a with dtype %a (was_input:%b)@." ScopedTerm.pretty_ it pp_dtype d was_input;
       match it with
-      | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
+      | App (q, [{ it = Lam (b, _, bo) }]) when is_quantifier q ->
           assume ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ta x) ctx) d bo
       | Const b -> assume_app ~was_input ctx ~loc d b []
       | Var (b, tl) -> assume_var ~loc ~ctx ~is_var:None d b tl
-      | App (b, hd, tl) -> assume_app ~was_input ctx ~loc d b (hd :: tl)
+      | App (b, xs) -> assume_app ~was_input ctx ~loc d b xs
       | Discard -> ()
       | Impl (L2R, h, b) ->
           check_clause ~ctx ~var:!var h |> ignore;
@@ -515,8 +515,8 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       | Impl (R2L, ({it = Const b} as t), bo) -> 
         let dtype, var' = assume_hd ~is_var:false ~loc ~ctx ~var:!var b t [] in
         assume ~was_input:false ctx (get_tl dtype) bo
-      | Impl (R2L, {it = App (b, x, xs)}, bo) -> 
-        let dtype, var' = assume_hd ~is_var:false ~loc ~ctx ~var:!var b t (x::xs) in
+      | Impl (R2L, {it = App (b, xs)}, bo) -> 
+        let dtype, var' = assume_hd ~is_var:false ~loc ~ctx ~var:!var b t xs in
         Uvar.iter (fun k v -> add ~loc ~v k) var';
         assume ~was_input:false ctx (get_tl dtype) bo
       | Impl (R2L, _, _B) -> ()
@@ -602,16 +602,16 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
         check_clause ~ctx ~var:!var ~has_tail_cut:true h |> ignore;
         check ~ctx d b
       | Const b when is_global b S.cut -> (Det, Good_call.init ())
-      | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
+      | App (q, [{ it = Lam (b, _, bo) }]) when is_quantifier q ->
           check ~ctx:(BVar.add_oname ~new_:true ~loc b (Compilation.type_ass_2func_mut ~loc ta) ctx) d bo
       (* Cons and nil case may appear in prop position for example in : `f :- [print a, print b, a].` *)
-      | App (b, x, [ xs ]) when is_global b S.cons -> check ~ctx (check ~ctx d x |> fst) xs
+      | App (b, [x; xs ]) when is_global b S.cons -> check ~ctx (check ~ctx d x |> fst) xs
       | Const b when is_global b S.nil -> (d, Good_call.init ())
-      | App (b, x, xs) when is_global b S.and_ -> check_comma ctx ~loc (d, Good_call.init ()) (x :: xs)
+      | App (b, x :: xs) when is_global b S.and_ -> check_comma ctx ~loc (d, Good_call.init ()) (x :: xs)
       (* smarter than paper, we assume the min of the inference of both. Equivalent
          to elaboration t = s ---> eq1 t s, eq1 s t
          with func eq1 A -> A. *)
-      | App (b, l, [ r ]) when is_global b S.eq ->
+      | App (b, [l; r ]) when is_global b S.eq ->
           let d1, gc = infer ~exp:Any ~ctx ~var:!var l in
           (if Good_call.is_good gc then
              let d2, gc = infer ~exp:Any ~ctx ~var:!var r in
@@ -626,7 +626,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       (* Const are checked due to test68.elpi and test69.elpi *)
       | Const b -> check_app ctx ~loc d ~is_var:false b [] t
       | Var (b, xs) -> check_app ctx ~loc d ~is_var:true b xs t
-      | App (b, x, xs) -> check_app ctx ~loc d ~is_var:false b (x :: xs) t
+      | App (b, xs) -> check_app ctx ~loc d ~is_var:false b xs t
       | Cast (b, _) -> (
           try
             let d, _ = check ~ctx d b in
@@ -657,7 +657,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       let new_pred = emit () in
       let args = List.rev args in
       let b = (Scope.Global {resolved_to=SymbolResolver.make ();escape_ns=false}, new_pred, t.ty) in
-      let pred_hd = ScopedTerm.(App (b, List.hd args, List.tl args)) in
+      let pred_hd = ScopedTerm.(App (b, args)) in
       (* let ctx = BVar.add ~loc ctx (new_pred, elpi_language) ~v:(Compilation.type_ass_2func_mut ~loc env t.ty) in *)
       let clause = ScopedTerm.{ ty; it = Impl (R2L, { it = pred_hd; ty; loc }, body); loc } in
       Format.eprintf "Clause is %a@." ScopedTerm.pretty clause;
@@ -669,8 +669,8 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       | [] -> t
       | hd :: tl -> (
           match it with
-          | Const b -> { it = App (b, hd, tl); ty; loc }
-          | App (b, x, xs) -> { it = App (b, x, xs @ args); ty; loc }
+          | Const b -> { it = App (b, args); ty; loc }
+          | App (b, xs) -> { it = App (b, xs @ args); ty; loc }
           | Var (b, xs) -> { it = Var (b, xs @ args); ty; loc }
           | _ -> assert false)
     in
@@ -718,14 +718,14 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
     let rec aux ScopedTerm.{ it; loc } =
       match it with
       | Impl (R2L, ({ it = Const b } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd [], hd, Some bo)
-      | Impl (R2L, ({ it = App (b, x, xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd (x::xs), hd, Some bo)
+      | Impl (R2L, ({ it = App (b, xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false hd xs, hd, Some bo)
       | Impl (R2L, ({ it = Var(b,xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:true hd xs, hd, Some bo)
       | Const b -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false t [], t, None)
       (* For clauses with quantified unification variables *)
-      | App (n, { it = Lam (oname, _, body) }, []) when is_quantifier n ->
+      | App (n, [{ it = Lam (oname, _, body) }]) when is_quantifier n ->
           ctx := BVar.add_oname ~new_:true ~loc oname (Compilation.type_ass_2func_mut ~loc ta) !ctx;
           aux body
-      | App (b, x, xs) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false t (x::xs), t, None)
+      | App (b, xs) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false t xs, t, None)
       | Var _ -> raise (LoadFlexClause t)
       | _ -> anomaly ~loc @@ Format.asprintf "Found term %a in prop position" ScopedTerm.pretty_ it
     in

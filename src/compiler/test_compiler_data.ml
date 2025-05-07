@@ -44,7 +44,7 @@ let ty  = TypeAssignment.create (Prop Relation)
 let c3 = { loc; it = CData (Ast.cint.cin 3); ty };;
 let lam v t = { loc; ty; it = Lam(Some(ScopedTerm.mk_ty_name "" (F.from_string v)),None,t)}
 let var v = { loc; ty; it = Const(ScopedTerm.mk_ty_name' (Bound "") (F.from_string v))}
-let app c l = { loc; ty; it = App(ScopedTerm.mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) (F.from_string c),List.hd l,List.tl l)}
+let app c l = { loc; ty; it = App(ScopedTerm.mk_ty_name (Scope.mkGlobal ~escape_ns:true ()) (F.from_string c),l)}
 
 let () = pp_t c3 "3";;
 let () = pp_t (app "f" [app "g" [var "x"]]) "f (g x)";;

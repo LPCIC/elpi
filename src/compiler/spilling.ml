@@ -26,8 +26,8 @@ let mk_global ~types f l =
   let f_ty = TypingEnv.(resolve_symbol s types).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
   (Scope.mkResolvedGlobal types s), f, f_ty
 
-let pif_ty_name ~types (_,_,ty) : 'a ty_name = mk_global ~types F.pif [TypeAssignment.deref ty]
-let pif_ty ~types ty = let _,_,ty = pif_ty_name ~types ty in ty
+let pif_w_name_ty ~types (_,_,ty) : 'a w_name_ty = mk_global ~types F.pif [TypeAssignment.deref ty]
+let pif_ty ~types ty = let _,_,ty = pif_w_name_ty ~types ty in ty
 let pif_arg_ty ~types ty =
   match TypeAssignment.deref @@ pif_ty ~types ty with
   | TypeAssignment.Arr(_,_,x,_) -> TypeAssignment.create x
@@ -42,10 +42,10 @@ let add_spilled ~types (l : spill list) t =
     List.fold_right
       (fun { expr; vars_names } t ->
         mk_loc ~loc:t.loc ~ty:TypeAssignment.(create (Prop Elpi_parser.Ast.Structured.Function))
-        @@ App (mk_global ~types F.andf [], expr, [ t ]))
+        @@ App (mk_global ~types F.andf [], [expr; t ]))
       l t
 
-let mkApp n l = if l = [] then Const n else App (n, List.hd l, List.tl l)
+let mkApp n l = if l = [] then Const n else App (n, l)
 
 let is_symbol ~types b = function
 | Scope.Global { resolved_to = x } ->
@@ -62,10 +62,10 @@ let app ~types t args =
       mk_loc ~loc ~ty
       @@
       match it with
-      | App (((s, _, _) as n), x, xs) when is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s -> mkApp n (aux_last (x :: xs))
+      | App (((s, _, _) as n), xs) when is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s -> mkApp n (aux_last xs)
       | Impl (b, s, t) -> Impl (b, s, aux t)
       | Const n -> mkApp n args
-      | App (n, x, xs) -> mkApp n ((x :: xs) @ args)
+      | App (n, xs) -> mkApp n (xs @ args)
       | Var (c,l) -> Var (c,l @ args)
       | Discard | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) -> assert false
     and aux_last = function [] -> assert false | [ x ] -> [ aux x ] | x :: xs -> x :: aux_last xs in
@@ -110,12 +110,12 @@ let rec bc ctx t =
   | Impl (b, t1, t2) -> Impl (b, bc_loc ctx t1, bc_loc ctx t2)
   | Cast (t, ty) -> Cast (bc_loc ctx t, ty)
   | Spill (t, i) -> Spill (bc_loc ctx t, i)
-  | App (hd, x, xs) -> App (hd, bc_loc ctx x, List.map (bc_loc ctx) xs)
+  | App (hd, xs) -> App (hd, List.map (bc_loc ctx) xs)
   | Const _ | Discard | Var _ | CData _ -> t
 
 and bc_loc ctx { loc; ty; it } = { loc; ty; it = bc ctx it }
 
-let rec spill ~types ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; it } as t) : spills * t list =
+let rec spill ~types ?(extra = 0) (ctx : string w_name_ty list) args ({ loc; ty; it } as t) : spills * t list =
   (* Format.eprintf "@[<hov 2>spill %a :@ %a@]\n" pretty t TypeAssignment.pretty (TypeAssignment.deref ty); *)
   match it with
   | CData _ | Discard | Const _ -> ([], [ t ])
@@ -136,23 +136,23 @@ let rec spill ~types ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; i
       (* Format.eprintf "Spilled %a@." ScopedTerm.pretty expr; *)
       (spills @ [ { vars; vars_names; expr } ], vars)
   (* globals and builtins *)
-  | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when is_symbol ~types Elpi_runtime.Data.Global_symbols.pi s ->
+  | App (((s, _, _) as hd), [{ it = Lam (Some v, o, t); loc = tloc; ty = tty }]) when is_symbol ~types Elpi_runtime.Data.Global_symbols.pi s ->
       let ctx = v :: ctx in
       let spilled, t = spill1 ~types ctx args t in
-      ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
-  | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when is_symbol ~types Elpi_runtime.Data.Global_symbols.sigma s ->
+      ([], [ { loc; ty; it = App (hd, [{ it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }]) } ])
+  | App (((s, _, _) as hd), [{ it = Lam (Some v, o, t); loc = tloc; ty = tty }]) when is_symbol ~types Elpi_runtime.Data.Global_symbols.sigma s ->
       let ctx = ctx in
       (* not to be put in scope of spills *)
       let spilled, t = spill1 ~types ctx args t in
-      ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
-  | App (((s,_,_) as hd), x, xs) ->
+      ([], [ { loc; ty; it = App (hd, [{ it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }]) } ])
+  | App (((s,_,_) as hd), xs) ->
       let last = if is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s then List.length xs else -1 in
       let spills, args =
-        List.split @@ List.mapi (fun i -> spill ~types ~extra:(if i = last then extra else 0) ctx args) (x :: xs)
+        List.split @@ List.mapi (fun i -> spill ~types ~extra:(if i = last then extra else 0) ctx args) xs
       in
       let args = List.flatten args in
       let spilled = List.flatten spills in
-      let it = App (hd, List.hd args, List.tl args) in
+      let it = App (hd, args) in
       let extra = extra + List.length args - List.length xs - 1 in
       (* Format.eprintf "%a\nspill %b %d %a : %a\n" Loc.pp loc (is_prop ~extra ty) extra F.pp c TypeAssignment.pretty (TypeAssignment.UVar ty); *)
       if is_prop ~extra ty then ([], [ add_spilled ~types spilled { it; loc; ty } ]) else (spilled, [ { it; loc; ty } ])
@@ -186,7 +186,7 @@ let rec spill ~types ?(extra = 0) (ctx : string ty_name list) args ({ loc; ty; i
                 vars;
                 vars_names;
                 expr =
-                  mk_loc ~loc ~ty:(pif_ty ~types  c) @@ App (pif_ty_name ~types c, mk_loc ~loc ~ty:(pif_arg_ty ~types c) @@ Lam (abs, o, expr), []);
+                  mk_loc ~loc ~ty:(pif_ty ~types  c) @@ App (pif_w_name_ty ~types c, [mk_loc ~loc ~ty:(pif_arg_ty ~types c) @@ Lam (abs, o, expr)]);
               } ))
           (t, []) spills
       in
