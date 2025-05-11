@@ -1324,7 +1324,7 @@ module Utils = struct
       | Data.Lam t ->
           let s = "x" ^ string_of_int d in
           let ctx = Util.IntMap.add d (Term.mkCon buggy_loc s) ctx in
-          Term.mkLam buggy_loc s None (aux (d+1) ctx t)
+          Term.mkLam buggy_loc s buggy_loc None (aux (d+1) ctx t)
       | Data.App(c,x,xs) ->
           let c = aux d ctx (R.mkConst c) in
           let x = aux d ctx x in

@@ -105,7 +105,7 @@ module Term = struct
   type t_ =
    | Const of Func.t
    | App of t * t list
-   | Lam of Func.t * typ option * t
+   | Lam of Func.t * Loc.t * typ option * t
    | CData of CData.t
    | Quoted of quote
    | Cast of t * typ
@@ -117,7 +117,7 @@ module Term = struct
 exception NotInProlog of Loc.t * string
 
 let mkC loc x = { loc; it = CData x }
-let mkLam loc x ty t = { loc; it = Lam (Func.from_string x,ty,t) }
+let mkLam loc x xloc ty t = { loc; it = Lam (Func.from_string x,xloc,ty,t) }
 let mkNil loc = {loc; it = Const Func.nilf }
 let mkParens loc t = { loc; it = Parens t }
 let mkQuoted loc pad s =
@@ -166,7 +166,7 @@ let mkSeq ?loc (l : t list) =
 let mkCast loc t ty = { loc; it = Cast(t,ty) }
 
 let rec best_effort_pp = function
- | Lam (x,_,t) -> "x\\" ^ best_effort_pp t.it
+ | Lam (x,_,_,t) -> "x\\" ^ best_effort_pp t.it
  | CData c -> CData.show c
  | Quoted _ -> "{{ .. }}"
  | Cast _ -> "(.. : ..)"
