@@ -109,7 +109,9 @@ let (|-) a n ?(parenl=false) b =
 
 let lam x n ?ty ?(parensl=false) ?(parensr=false) b =
   let stop = b.loc.source_stop + (if parensr then 1 else 0) in
-  mkLam (mkLoc (n - 1 + (if parensl then -1 else 0)) stop 1 0) x ty b
+  let start = (n - 1 + (if parensl then -1 else 0)) in
+  let xloc = mkLoc start (start + if x = "%dummy" then 1 else String.length x) 1 0 in
+  mkLam (mkLoc (n - 1 + (if parensl then -1 else 0)) stop 1 0) x xloc ty b
 let mkNil ?(len=2) n = mkNil (mkLoc (n) (n + len) 1 0)
 let mkSeq n m = mkSeq ~loc:(mkLoc n m 1 0)
 let c ?(bug=false) n ?len s =

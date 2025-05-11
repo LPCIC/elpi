@@ -30,7 +30,7 @@ let desugar_multi_binder loc (t : Ast.Term.t) =
     when Func.equal hd Func.pif || Func.equal hd Func.sigmaf && List.length args > 1 ->
       let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
       let ty = match last.it with
-        | Lam (_,ty,_) -> ty
+        | Lam (_,_,ty,_) -> ty
         | Const x when Func.is_uvar_name x -> None
         | _ -> raise (ParseError(loc,"The last argument of 'pi' or 'sigma' must be a function or a unification variable, while it is: " ^ Ast.Term.show last)) in
       let names = List.map (function
@@ -40,7 +40,7 @@ let desugar_multi_binder loc (t : Ast.Term.t) =
       let body = mkApp (Loc.merge binder.loc last.loc) [binder;last] in
       List.fold_left (fun bo (name,nloc) ->
         let loc = Loc.merge nloc bo.loc in
-        mkApp loc [binder;mkLam loc name ty bo]) body names
+        mkApp loc [binder;mkLam loc name nloc ty bo]) body names
   | (App _ | Const _ | Lam _ | CData _ | Quoted _ | Cast _ | Parens _) -> t
 ;;
 
@@ -57,7 +57,7 @@ let desugar_macro loc lhs rhs =
         | { it = Const x; loc } -> Func.show x, loc
         | { it = (App _ | Lam _ | CData _ | Quoted _ | Cast _ | Parens _) } ->
               raise (ParseError(loc,"Macro parameters must be names"))) args in
-      name, List.fold_right (fun (name,nloc) b -> mkLam (Loc.merge nloc b.loc) name None b) names body
+      name, List.fold_right (fun (name,nloc) b -> mkLam (Loc.merge nloc b.loc) name nloc None b) names body
   | _ ->
         raise (ParseError(loc,"Illformed macro left hand side"))
 ;;
@@ -97,7 +97,7 @@ let binder l (loc,ty,b) =
   match List.rev l with
   | (name, bloc) :: rest ->
       let lloc = Loc.merge bloc b.loc in
-      List.rev_map (fun (n,l) -> mkConst l n) rest @ [mkLam lloc (Func.show name) ty b]
+      List.rev_map (fun (n,l) -> mkConst l n) rest @ [mkLam lloc (Func.show name) bloc ty b]
   | _ -> raise (ParseError(loc,"bind '\\' operator must follow a name"))
 
 let binder1 l = function
@@ -106,7 +106,7 @@ let binder1 l = function
       match List.rev l with
       | { it = Const name; loc = bloc } :: rest ->
         let lloc = Loc.merge bloc b.loc in
-        List.rev rest @ [mkLam lloc (Func.show name) ty b]
+        List.rev rest @ [mkLam lloc (Func.show name) bloc ty b]
       | _ -> raise (ParseError(loc,"bind '\\' operator must follow a name"))
 
 ;;
@@ -422,8 +422,8 @@ list_items_tail:
 | x = term_noconj; CONJ; xs = list_items_tail { x :: xs }
 
 binder_term:
-| t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) None b }
-| t = constant; COLON; ty = type_term; BIND; b = term { mkLam (loc $loc) (Func.show t) (Some ty) b }
+| t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) (loc $loc(t)) None b }
+| t = constant; COLON; ty = type_term; BIND; b = term { mkLam (loc $loc) (Func.show t) (loc $loc(t)) (Some ty) b }
 
 binder_body_no_ty:
 | bind = BIND; b = term { (loc $loc(bind), None, b) }
@@ -433,8 +433,8 @@ binder_body:
 | COLON; ty = type_term; bind = BIND; b = term { (loc $loc(bind), Some ty, b) }
 
 binder_term_noconj:
-| t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) None b }
-| t = constant; COLON; ty = type_term; BIND; b = term { mkLam (loc $loc) (Func.show t) (Some ty) b }
+| t = constant; BIND; b = term { mkLam (loc $loc) (Func.show t) (loc $loc(t)) None b }
+| t = constant; COLON; ty = type_term; BIND; b = term { mkLam (loc $loc) (Func.show t) (loc $loc(t)) (Some ty) b }
 
 open_term:
 | hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
