@@ -182,16 +182,7 @@ let mkApp loc = function
 
 let mkAppF loc (cloc, c) l =
   if l = [] then anomaly ~loc "empty application";
-  if c = "," then
-      { loc; it =
-        App({ it = Const c; loc = cloc },
-          List.concat_map (function 
-            | { loc; it = Parens { it = App({it=Const ","}, l)}} -> l
-            | { loc; it = App({it=Const ","}, l)} -> l
-            | x -> [x]
-        ) l) }
-  else
-    { loc; it = App({ it = Const c; loc = cloc },l) }
+ { loc; it = App({ it = Const c; loc = cloc },l) }
 
 
 

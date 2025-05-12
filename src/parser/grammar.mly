@@ -68,11 +68,6 @@ let mkParens_if_impl_or_conj loc t =
   | App({ it = Const c},_) when Func.(equal c andf) -> mkParens loc t
   | _ -> t
 
-let mkApp loc = function
-  | { it = Const c; loc = cloc } :: a :: { it = App ({ it = Const c1 }, args) } :: [] when Func.(equal c andf && equal c1 andf) ->
-      mkAppF loc (cloc,c) (a :: args)
-  | l -> mkApp loc l
-
 let rec unparen = function
   | [] -> []
   | { it = Parens { it = App ({ it = Const c1 }, args) } } as x :: xs when Func.(equal c1 implf) -> x :: unparen xs

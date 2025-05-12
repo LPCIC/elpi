@@ -180,7 +180,7 @@ let _ =
   test  "p :- pi x \\ q."   1 13 1 0 [] ((c 0 "p" |- 3) @@ app "pi" 5 [lam "x" 9 (c 12 "q")]);
   test  "p :- q, r."        1 9  1 0 [] ((c 0 "p" |- 3) @@ app "," 6 [c 5 "q";c 8 "r"]);
   test  "p :- f q, r."      1 11 1 0 [] ((c 0 "p" |- 3) @@ app "," 8 [app "f" 5 [c 7 "q"];c 10 "r"]);
-  test  "p :- q, r, s."     1 12 1 0 [] ((c 0 "p" |- 3) @@ app "," 6 [c 5 "q"; c 8 "r"; c 11 "s"]);
+  test  "p :- q, r, s."     1 12 1 0 [] ((c 0 "p" |- 3) @@ app "," 6 [c 5 "q"; app "," 9 [c 8 "r"; c 11 "s"]]);
   (*    01234567890123456789012345 *)
   test  "p :- q + r * s."   1 14 1 0 [] ((c 0 "p" |- 3) @@ app "+" 7 [c 5 "q"; app "*" 11 [c 9 "r";c 13 "s"]]);
   test  "p :- q + r , s."   1 14 1 0 [] ((c 0 "p" |- 3) @@ app "," 11 [app "+" 7 [c 5 "q";c 9 "r"]; c 13 "s"]);
@@ -196,7 +196,7 @@ let _ =
   test  "(x => y), z."      1 11 1 0 [] (app "," 8 [parens @@ app "=>" 3 [c 1 "x";c 6 "y"];c 10 "z"]);
   test  "x => (y, z)."      1 11 1 0 [] (app "=>" 2 ~parenr:1 [c 0 "x"; app "," 7 [c 6 "y"; c 9 "z"]]);
   (*    01234567890123456789012345 *)
-  test  "p :- !, (s X) = X, q." 1 20 1 0 [] ((c 0 "p" |- 3) @@ app "," 6 [c 5 "!";app "="  ~parenl:true  14 [app "s" 9 [c 11 "X"]; c 16  "X"]; c 19 "q"]);
+  test  "p :- !, (s X) = X, q." 1 20 1 0 [] ((c 0 "p" |- 3) @@ app "," 6 [c 5 "!";app "," 17 [app "="  ~parenl:true  14 [app "s" 9 [c 11 "X"]; c 16  "X"]; c 19 "q"]]);
   test  "p :- [ ]."         1 8  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 8 [mkNil 5 ~len:3]);
   test  "p :- []."          1 7  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 7 [mkNil 5]);
   test  "name."             1 4  1 0 [] (c 0 "name");
