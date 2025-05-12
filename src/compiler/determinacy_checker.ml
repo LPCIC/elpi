@@ -44,7 +44,6 @@ module Good_call : sig
   val get : t -> offending_term
   val set : t -> t -> unit
   val set_wrong : t -> exp:dtype -> found:dtype -> ScopedTerm.t -> unit
-  val set_good : t -> unit
 end = struct
   type offending_term = { exp : dtype; found : dtype; term : ScopedTerm.t }
   type t = offending_term option ref
@@ -56,7 +55,6 @@ end = struct
   let get (x : t) = Option.get !x
   let set (t1 : t) (t2 : t) = t1 := !t2
   let set_wrong (t1 : t) ~exp ~found term = t1 := Some { exp; found; term }
-  let set_good (t : t) = t := None
   let show (x : t) = match !x with None -> "true" | Some e -> Format.asprintf "false (%a)" Loc.pp e.term.loc
   let pp fmt x = Format.fprintf fmt "%s" (show x)
 end
@@ -335,9 +333,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
         | Arrow (Input, v, l, r), h :: tl ->
             let l_user, r_user = split_user_dtype user_dtype in
             let loc = h.loc in
-            (if is_cut h then Good_call.set_good b
-             else
-                Format.eprintf "infer.aux in Input branch with dtype:%a and t:%a@." pp_dtype l ScopedTerm.pretty h;
+            (Format.eprintf "infer.aux in Input branch with dtype:%a and t:%a@." pp_dtype l ScopedTerm.pretty h;
                let dy, b' = infer ~was_input:true ctx h in
                (* dy = Exp [Rel] b' = Good *)
                (* Format.eprintf "@[<hov 2>After call to deduce in aux %a, its determinacy is %a and gc:%a; Expected is %a@ at %a.@]@."
@@ -391,12 +387,11 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       Format.eprintf "Is_exp: %b@." was_data;
       let dtype = get_dtype ~env:ta ~ctx ~var ~loc ~is_var s in
       infer_fold ~was_data ~user_dtype ~loc ctx dtype s tl
-    (* and infer_comma ctx ~loc args d =
+    and infer_and ~was_input ctx ~loc args d =
        match args with
        | [] -> d
-       | ScopedTerm.{ it = Const (_, cut, _); _ } :: xs when F.equal F.cutf cut ->
-           infer_comma ctx ~loc xs (Det, Good_call.init ())
-       | x :: xs -> infer_comma ctx ~loc xs (infer ctx x) *)
+       | x :: xs when is_cut x -> infer_and ~was_input ctx ~loc xs (Det, Good_call.init ())
+       | x :: xs -> infer_and ~was_input ctx ~loc xs (infer ~was_input ctx x)
     and infer ~was_input ctx ScopedTerm.({ it; ty; loc } as t) : dtype * Good_call.t =
       Format.eprintf "--> Infer of @[%a@]@." ScopedTerm.pretty_ it;
       match it with
@@ -405,9 +400,9 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
         (* Format.eprintf "%a@." ScopedTerm.pp bo; *)
           infer ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ta x) ctx) bo
-      (* | App ((Global _, name, _), x, xs) when name = F.andf ->
+      | App (g, x, xs) when is_global g S.and_ ->
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
-          infer_comma ctx ~loc (x :: xs) (Det, Good_call.init ()) *)
+          infer_and ~was_input ctx ~loc (x :: xs) (Det, Good_call.init ())
       | App (b, x, xs) -> infer_app ~was_input ~loc ctx false ty b (x :: xs)
       | Impl (L2R, c, b) ->
           check_clause ~ctx ~var c |> ignore;

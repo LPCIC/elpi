@@ -1,0 +1,7 @@
+func f.
+pred r.
+
+f :-
+  if true (if true r !) f.
+
+main. 
