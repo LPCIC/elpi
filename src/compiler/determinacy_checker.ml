@@ -347,7 +347,8 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
               (* If preconditions are not satisfied, we stop and return bottom *)
               Good_call.set_wrong b ~exp:l ~found:dy h;
               Format.eprintf "Invalid determinacy set b to wrong (%a)@." Good_call.pp b);
-            aux ~user_dtype:(choose_variadic v user_dtype r_user) (choose_variadic v d r) tl (* The recursive call is correct *)
+            if Good_call.is_wrong b then Any, b 
+            else aux ~user_dtype:(choose_variadic v user_dtype r_user) (choose_variadic v d r) tl
         | Arrow (Output, v, l, r), hd :: tl ->
             if was_data then
               aux ~user_dtype (Arrow (Input, v, l, r)) (hd :: tl)
