@@ -321,7 +321,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
 
   let is_cut ScopedTerm.{ it } = match it with Const b -> is_global b S.cut | _ -> false in
 
-  let rec infer ~ctx ~var t : dtype * Good_call.t =
+  let rec infer ~ctx ~var ~exp t : dtype * Good_call.t =
     let rec infer_fold ~was_input ~was_data ~loc ~user_dtype ctx d hd tl =
       Format.eprintf "Starting infer fold at %a with dtype:@[%a@] and user_dtype:@[%a@]@." Loc.pp loc pp_dtype d (Format.pp_print_option pp_dtype) user_dtype;
       let b = Good_call.init () in
@@ -336,11 +336,13 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
           Good_call.pp b pp_dtype d (Format.pp_print_option pp_dtype) user_dtype;
         match (d, tl) with
         | Arrow (_, Variadic, _, t), [] -> (t, b)
-        | t, [] -> (t, b)
+        | t, [] -> ((if Good_call.is_wrong b then Aux.maximize ~loc t else t), b)
+        | Arrow (_,v,_,r), _ :: tl when Good_call.is_wrong b ->
+          aux ~user_dtype:(choose_variadic v user_dtype None) (choose_variadic v d r) tl
         | Arrow (Input, v, l, r), h :: tl ->
             let l_user, r_user = split_user_dtype user_dtype in
             let loc = h.loc in
-            let dy, b' = infer ~was_input:true ctx h in
+            let dy, b' = infer ~was_input:true ~exp:l ctx h in
             Format.eprintf "infer.aux in Input branch with dtype:%a and t:%a@." pp_dtype l ScopedTerm.pretty h;
             Format.eprintf "end infer.aux for term %a with b':%a and not ((dy <<= l) ~loc):%b and was_data:%b@." ScopedTerm.pretty h Good_call.pp b' (not ((dy <<= l) ~loc)) was_data;          
             if Good_call.is_wrong b' then begin
@@ -354,8 +356,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
               (* If preconditions are not satisfied, we stop and return bottom *)
               Good_call.set_wrong b ~exp:l ~found:dy h;
               Format.eprintf "Invalid determinacy set b to wrong (%a)@." Good_call.pp b);
-            if Good_call.is_wrong b then Any, b 
-            else aux ~user_dtype:(choose_variadic v user_dtype r_user) (choose_variadic v d r) tl
+            aux ~user_dtype:(choose_variadic v user_dtype r_user) (choose_variadic v d r) tl
         | Arrow (Output, v, l, r), hd :: tl ->
             if was_data then
               aux ~user_dtype (Arrow (Input, v, l, r)) (hd :: tl)
@@ -369,14 +370,14 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
             |> anomaly ~loc
       in
       aux ~user_dtype d tl
-    and infer_app ~was_input ctx ~loc is_var t ty s tl =
+    and infer_app ~exp ~was_input ctx ~loc is_var t ty s tl =
       let was_data = is_exp (Compilation.type_ass_2func_mut ~loc ta ty) in
       let user_dtype = if was_data then get_user_type ~loc s else None in
       Format.eprintf "Is_exp: %b@." was_data;
       let dtype = get_dtype ~env:ta ~ctx ~var ~loc ~is_var s in
       (* TODO: here: if is wrong then also the app is wrong... *)
       let (dt, gc as r) = infer_fold ~was_input ~was_data ~user_dtype ~loc ctx dtype s tl in
-      if Good_call.is_wrong gc then Good_call.prepend gc ~exp:Any ~found:dt t |> ignore;
+      if Good_call.is_wrong gc then Good_call.prepend gc ~exp ~found:dt t |> ignore;
       r
     and infer_and ~was_input ctx ~loc args (_, r as dr) =
        match args with
@@ -385,29 +386,28 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
         Good_call.set_good r;
         infer_and ~was_input ctx ~loc xs (Det, r)
        | x :: xs ->
-        let (d,gc) = infer ~was_input ctx x in
+        let (d,gc) = infer ~exp:Det ~was_input ctx x in
         if d = Rel then (
           Good_call.set_wrong gc ~exp:Det ~found:Rel x;
           infer_and ~was_input ctx ~loc xs (d,gc))
         else if Good_call.is_wrong gc then infer_and ~was_input ctx ~loc xs (d,gc)
         else infer_and ~was_input ctx ~loc xs dr
-    and infer ~was_input ctx ScopedTerm.({ it; ty; loc } as t) : dtype * Good_call.t =
+    and infer ~was_input ~exp ctx ScopedTerm.({ it; ty; loc } as t) : dtype * Good_call.t =
       match it with
-      | ScopedTerm.Const b -> infer_app ~was_input ~loc ctx false t ty b []
-      | Var (b, xs) -> infer_app ~was_input ~loc ctx true t ty b xs
+      | ScopedTerm.Const b -> infer_app ~exp ~was_input ~loc ctx false t ty b []
+      | Var (b, xs) -> infer_app ~exp ~was_input ~loc ctx true t ty b xs
       | App (q, { it = Lam (b, _, bo) }, []) when is_quantifier q ->
-        (* Format.eprintf "%a@." ScopedTerm.pp bo; *)
-          infer ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ta x) ctx) bo
+          infer ~exp ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ta x) ctx) bo
       | App (g, x, xs) when is_global g S.and_ ->
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
           infer_and ~was_input ctx ~loc (x :: xs) (Det, Good_call.init ())
-      | App (b, x, xs) -> infer_app ~was_input ~loc ctx false t ty b (x :: xs)
+      | App (b, x, xs) -> infer_app ~exp ~was_input ~loc ctx false t ty b (x :: xs)
       | Impl (L2R, c, b) ->
           check_clause ~ctx ~var c |> ignore;
-          infer ~was_input ctx b
+          infer ~exp ~was_input ctx b
       | Impl (L2RBang, c, b) ->
           check_clause ~ctx ~var ~has_tail_cut:true c |> ignore;
-          infer ~was_input ctx b
+          infer ~exp ~was_input ctx b
       | Impl (R2L, _, _) -> 
         Format.eprintf "Recursive call to check clause@.";
         (check_clause ~ctx ~var t, Good_call.init ())
@@ -421,12 +421,12 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
           (Compilation.type_ass_2func_mut ~loc ta ty, Good_call.init ())
       | CData _ -> (Exp [], Good_call.init ())
       | Cast (t, _) ->
-          let d, good = infer ~was_input ctx t in
+          let d, good = infer ~exp ~was_input ctx t in
           if Good_call.is_wrong good then raise (FatalDetError (None, good));
           (d, good)
       | Spill (_, _) -> spill_err ~loc
     in
-    let ((det, gc) as r) = infer ~was_input:false ctx t in
+    let ((det, gc) as r) = infer ~exp ~was_input:false ctx t in
     Format.eprintf "Result of infer for %a is (%a,%a)@." ScopedTerm.pretty t pp_dtype det Good_call.pp gc;
     r
   and infer_output ~pred_name ~ctx ~var ScopedTerm.{ it; loc } =
@@ -436,7 +436,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       | Arrow (Input, v, _, r), _ :: tl -> aux (choose_variadic v d r) tl
       | Arrow (Output, v, l, r), hd :: tl ->
 
-          let det, gc = infer ~ctx ~var hd in
+          let det, gc = infer ~exp:l ~ctx ~var hd in
           Format.eprintf "Inference of %a gives (%a,%a)@." ScopedTerm.pretty hd pp_dtype det Good_call.pp gc;
 
           if Good_call.is_wrong gc && Aux.is_maximized ~loc l then aux (choose_variadic v d r) tl
@@ -564,7 +564,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
     let var = ref var in
     let rec check_app ctx ~loc (d : dtype) ~is_var b tl tm =
       Format.eprintf "@[<hov 2>-- Entering check_app with term@ @[%a@]@]@." ScopedTerm.pretty tm;
-      let d', gc = infer ~ctx ~var:!var tm in
+      let d', gc = infer ~exp:d ~ctx ~var:!var tm in
       Format.eprintf "-- Checked term dtype is %a and gc is %a@." pp_dtype d' Good_call.pp gc;
       if Good_call.is_good gc then (
         let det = get_dtype ~env:ta ~ctx ~var:!var ~is_var b ~loc in
@@ -612,9 +612,9 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
          to elaboration t = s ---> eq1 t s, eq1 s t
          with func eq1 A -> A. *)
       | App (b, l, [ r ]) when is_global b S.eq ->
-          let d1, gc = infer ~ctx ~var:!var l in
+          let d1, gc = infer ~exp:Any ~ctx ~var:!var l in
           (if Good_call.is_good gc then
-             let d2, gc = infer ~ctx ~var:!var r in
+             let d2, gc = infer ~exp:Any ~ctx ~var:!var r in
              if Good_call.is_good gc then (
                Format.eprintf "In equality calling min between the two terms %a and %a@." ScopedTerm.pretty l
                  ScopedTerm.pretty r;
@@ -755,7 +755,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
   let err gc f =
     let last l = List.hd (List.rev l) in
     let pp_bt Good_call.{ exp; found; term } =
-      Format.asprintf "From (@[%a@])" ScopedTerm.pretty term  
+      Format.asprintf "From (@[%a@]) \n - Inferred: %a \n - Expected: %a" ScopedTerm.pretty term pp_dtype found pp_dtype exp
     in
     let l = Good_call.get gc in
     assert (l <> []);
