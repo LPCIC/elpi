@@ -333,40 +333,20 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
         | Arrow (Input, v, l, r), h :: tl ->
             let l_user, r_user = split_user_dtype user_dtype in
             let loc = h.loc in
-            (Format.eprintf "infer.aux in Input branch with dtype:%a and t:%a@." pp_dtype l ScopedTerm.pretty h;
-               let dy, b' = infer ~was_input:true ctx h in
-               (* dy = Exp [Rel] b' = Good *)
-               (* Format.eprintf "@[<hov 2>After call to deduce in aux %a, its determinacy is %a and gc:%a; Expected is %a@ at %a.@]@."
-                 ScopedTerm.pretty h pp_dtype dy Good_call.pp b' pp_dtype l Loc.pp h.loc; *)
-                 Format.eprintf "end infer.aux for term %a with b':%a and not ((dy <<= l) ~loc):%b and was_data:%b@." ScopedTerm.pretty h Good_call.pp b' (not ((dy <<= l) ~loc)) was_data;
-              
-                if Good_call.is_wrong b' then begin
-                  let max_exp = Aux.maximize ~loc dy in
-                  if not ((max_exp <<= l_user) ~loc) then
-                    raise (KError (Some hd, b'))
-                  else if not ((max_exp <<= l) ~loc) then Good_call.set b b'
-                end 
-                else if not ((dy <<= l_user) ~loc) then
-                  raise (KError (Some hd, (Good_call.set_wrong b ~exp:l_user ~found:dy h; b)))
-                else if not ((dy <<= l) ~loc) then (
-                  (* If preconditions are not satisfied, we stop and return bottom *)
-                  Good_call.set_wrong b ~exp:l ~found:dy h;
-                  Format.eprintf "Invalid determinacy set b to wrong (%a)@." Good_call.pp b)) 
-
-               (* if Good_call.is_wrong b' then(
-                (* If the recursive call is wrong, we stop and return bottom *)
-                if Aux.is_maximized ~loc l then 
-                  if was_data || is_exp l then
-                    if (is_uvar l || (Good_call.is_polymorphic b')) then Good_call.set_good b 
-                    else   Good_call.set b b'
-                  else Good_call.set_good b
-                else 
-                  Good_call.set b b')
-               else if not ((dy <<= l) ~loc) then (
-                 (* If preconditions are not satisfied, we stop and return bottom *)
-                 Good_call.set_wrong ~p:(is_uvar l) b ~exp:l ~found:dy h;
-                 Format.eprintf "Invalid determinacy set b to wrong (%a)@." Good_call.pp b)) *)
-                 ;
+            let dy, b' = infer ~was_input:true ctx h in
+            Format.eprintf "infer.aux in Input branch with dtype:%a and t:%a@." pp_dtype l ScopedTerm.pretty h;
+            Format.eprintf "end infer.aux for term %a with b':%a and not ((dy <<= l) ~loc):%b and was_data:%b@." ScopedTerm.pretty h Good_call.pp b' (not ((dy <<= l) ~loc)) was_data;          
+            if Good_call.is_wrong b' then begin
+              let max_exp = Aux.maximize ~loc dy in
+              if not ((max_exp <<= l_user) ~loc) then raise (KError (Some hd, b'))
+              else if not ((max_exp <<= l) ~loc) then Good_call.set b b'
+            end 
+            else if not ((dy <<= l_user) ~loc) then
+              raise (KError (Some hd, (Good_call.set_wrong b ~exp:l_user ~found:dy h; b)))
+            else if not ((dy <<= l) ~loc) then (
+              (* If preconditions are not satisfied, we stop and return bottom *)
+              Good_call.set_wrong b ~exp:l ~found:dy h;
+              Format.eprintf "Invalid determinacy set b to wrong (%a)@." Good_call.pp b);
             aux ~user_dtype:(choose_variadic v user_dtype r_user) (choose_variadic v d r) tl (* The recursive call is correct *)
         | Arrow (Output, v, l, r), hd :: tl ->
             if was_data then
