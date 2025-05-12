@@ -44,6 +44,7 @@ module Good_call : sig
   val get : t -> offending_term
   val set : t -> t -> unit
   val set_wrong : t -> exp:dtype -> found:dtype -> ScopedTerm.t -> unit
+  val set_good : t -> unit
 end = struct
   type offending_term = { exp : dtype; found : dtype; term : ScopedTerm.t }
   type t = offending_term option ref
@@ -55,6 +56,7 @@ end = struct
   let get (x : t) = Option.get !x
   let set (t1 : t) (t2 : t) = t1 := !t2
   let set_wrong (t1 : t) ~exp ~found term = t1 := Some { exp; found; term }
+  let set_good t = t := None
   let show (x : t) = match !x with None -> "true" | Some e -> Format.asprintf "false (%a)" Loc.pp e.term.loc
   let pp fmt x = Format.fprintf fmt "%s" (show x)
 end
@@ -368,11 +370,16 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       Format.eprintf "Is_exp: %b@." was_data;
       let dtype = get_dtype ~env:ta ~ctx ~var ~loc ~is_var s in
       infer_fold ~was_data ~user_dtype ~loc ctx dtype s tl
-    and infer_and ~was_input ctx ~loc args d =
+    and infer_and ~was_input ctx ~loc args (_, r as dr) =
        match args with
-       | [] -> d
-       | x :: xs when is_cut x -> infer_and ~was_input ctx ~loc xs (Det, Good_call.init ())
-       | x :: xs -> infer_and ~was_input ctx ~loc xs (infer ~was_input ctx x)
+       | [] -> dr
+       | x :: xs when is_cut x -> 
+        Good_call.set_good r;
+        infer_and ~was_input ctx ~loc xs (Det, r)
+       | x :: xs ->
+        let dr' = infer ~was_input ctx x in
+        if fst dr' = Rel then infer_and ~was_input ctx ~loc xs dr'
+        else infer_and ~was_input ctx ~loc xs dr
     and infer ~was_input ctx ScopedTerm.({ it; ty; loc } as t) : dtype * Good_call.t =
       Format.eprintf "--> Infer of @[%a@]@." ScopedTerm.pretty_ it;
       match it with
