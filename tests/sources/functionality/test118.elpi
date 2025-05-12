@@ -1,0 +1,9 @@
+func f.
+pred r.
+
+func f1 (func).
+
+f :-
+  if true (if true (f1 r, f) f) f.
+
+main. 

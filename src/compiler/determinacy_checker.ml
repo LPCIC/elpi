@@ -42,6 +42,7 @@ module Good_call : sig
   val is_good : t -> bool
   val is_wrong : t -> bool
   val get : t -> offending_term
+  val get_opt : t -> offending_term option
   val set : t -> t -> unit
   val set_wrong : t -> exp:dtype -> found:dtype -> ScopedTerm.t -> unit
   val set_good : t -> unit
@@ -54,6 +55,7 @@ end = struct
   let is_good (x : t) = Option.is_none !x
   let is_wrong (x : t) = Option.is_some !x
   let get (x : t) = Option.get !x
+  let get_opt (x : t) = !x
   let set (t1 : t) (t2 : t) = t1 := !t2
   let set_wrong (t1 : t) ~exp ~found term = t1 := Some { exp; found; term }
   let set_good t = t := None
@@ -364,12 +366,12 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
             |> anomaly ~loc
       in
       aux ~user_dtype d tl
-    and infer_app ctx ~loc is_var ty s tl =
+    and infer_app ~was_input ctx ~loc is_var ty s tl =
       let was_data = is_exp (Compilation.type_ass_2func_mut ~loc ta ty) in
       let user_dtype = if was_data then get_user_type ~loc s else None in
       Format.eprintf "Is_exp: %b@." was_data;
       let dtype = get_dtype ~env:ta ~ctx ~var ~loc ~is_var s in
-      infer_fold ~was_data ~user_dtype ~loc ctx dtype s tl
+      infer_fold ~was_input ~was_data ~user_dtype ~loc ctx dtype s tl
     and infer_and ~was_input ctx ~loc args (_, r as dr) =
        match args with
        | [] -> dr
@@ -377,8 +379,11 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
         Good_call.set_good r;
         infer_and ~was_input ctx ~loc xs (Det, r)
        | x :: xs ->
-        let dr' = infer ~was_input ctx x in
-        if fst dr' = Rel then infer_and ~was_input ctx ~loc xs dr'
+        let (d,gc) = infer ~was_input ctx x in
+        if d = Rel then (
+          Good_call.set_wrong gc ~exp:Det ~found:Rel x;
+          infer_and ~was_input ctx ~loc xs (d,gc))
+        else if Good_call.is_wrong gc then infer_and ~was_input ctx ~loc xs (d,gc)
         else infer_and ~was_input ctx ~loc xs dr
     and infer ~was_input ctx ScopedTerm.({ it; ty; loc } as t) : dtype * Good_call.t =
       Format.eprintf "--> Infer of @[%a@]@." ScopedTerm.pretty_ it;
