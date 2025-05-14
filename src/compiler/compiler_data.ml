@@ -926,10 +926,9 @@ module ScopedTerm = struct
     let infix = [F.andf; F.orf; F.eqf; F.isf; F.asf; F.consf] @ List.map F.from_string ["^";"+";"-";"*";"/"] in
     List.mem f infix
 
-  let intersperse e : 'a -> t list = function
-    | [] -> []
-    | [x] as a -> e x.loc :: a
-    | x::xs -> x :: e x.loc :: xs
+  let rec intersperse e : 'a -> t list = function
+    | [] | [_] as a -> a
+    | x::xs -> x :: e x.loc :: intersperse e xs
 
   let rec pretty_lam fmt n ste it =
     (match n with
