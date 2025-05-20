@@ -1,4 +1,4 @@
 pred pp i:int, o:string.
 pp X "name" :- name X.
 
-main :- (X = x\ print {pp x}), (X = x\ pp x (W x), print (W x)).
+main :- (X = x\ print {pp x}), (X = x\ sigma W\ pp x W, print W).
