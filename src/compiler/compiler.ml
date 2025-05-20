@@ -1367,12 +1367,12 @@ end = struct
 
   let check_and_spill_pred ~time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types t =
     let unknown = time_this time (fun () -> Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
-    unknown, if needs_spilling then Spilling.main ~types t else t
+    unknown, if needs_spilling then Spilling.main ~types ~type_abbrevs t else t
 
   let check_and_spill_chr ~time ~unknown ~type_abbrevs ~kinds ~types r =
     let unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
-    let guard = Option.map (Spilling.main ~types) r.guard in
-    let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types conclusion }) r.new_goal in
+    let guard = Option.map (Spilling.main ~type_abbrevs ~types) r.guard in
+    let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types ~type_abbrevs conclusion }) r.new_goal in
     unknown, { r with guard; new_goal }
     
   let check ~flags st ~base u : checked_compilation_unit =
@@ -1598,7 +1598,7 @@ end = struct
     in
     let lookup_bound loc (_,ctx) (c,l as x) =
       try Scope.Map.find x ctx
-      with Not_found -> error ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "") 
+      with Not_found -> anomaly ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "" ^ " in context " ^ Scope.Map.(show Format.pp_print_int) ctx) 
     in
     let allocate_bound_symbol loc ctx f =
       let c = lookup_bound loc ctx f in
@@ -1888,8 +1888,8 @@ end = struct
     pred_info 
     (* Format.eprintf "The predicates with local clauses bla is :@ @[%a@]@." (C.Map.pp (Loc.pp)) !preds_w_eigen_var_no_cut *)
 
-  let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
-    let t = if needs_spilling then Spilling.main ~types t else t in
+  let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~type_abbrevs ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
+    let t = if needs_spilling then Spilling.main ~types ~type_abbrevs t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
   let extend1_clause ~time flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body = body_st; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
@@ -2050,12 +2050,12 @@ let extend1 flags (state, base) unit =
     let base = { assembled with signature } in
     state, { base with hash = hash_base base }
 
-  let compile_query state { Assembled.symbols; builtins; signature = { types } } (needs_spilling,t) =
-    let (symbols, amap), t = spill_todbl ~builtins ~needs_spilling ~types state symbols t in
+  let compile_query state { Assembled.symbols; builtins; signature = { types; type_abbrevs } } (needs_spilling,t) =
+    let (symbols, amap), t = spill_todbl ~builtins ~needs_spilling ~types ~type_abbrevs state symbols t in
     symbols, amap, t 
 
-  let compile_query_term state { Assembled.symbols; builtins; signature = { types } } ?ctx ?(amap = F.Map.empty) ~depth t =
-    let (symbols', amap), rt = spill_todbl ~builtins ?ctx ~needs_spilling:false state symbols ~types ~depth ~amap t in
+  let compile_query_term state { Assembled.symbols; builtins; signature = { types; type_abbrevs } } ?ctx ?(amap = F.Map.empty) ~depth t =
+    let (symbols', amap), rt = spill_todbl ~builtins ?ctx ~needs_spilling:false state symbols ~types ~type_abbrevs ~depth ~amap t in
     if SymbolMap.equal_globals symbols' symbols then amap, rt
     else error ~loc:t.ScopedTerm.loc "cannot allocate new symbols in the query"
 

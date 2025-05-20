@@ -876,8 +876,8 @@ module ScopedTerm = struct
   type 'scope const = { scope: 'scope; name: F.t; ty: TypeAssignment.t MutableOnce.t; loc : Loc.t }
   [@@ deriving show]
 
-  let mk_const scope name loc : 'a const = { scope; name; ty = MutableOnce.make F.dummyname; loc } 
-  let mk_bound_const l n loc = mk_const (Scope.Bound l) n loc
+  let mk_const ?(ty = MutableOnce.make F.dummyname) scope name loc : 'a const = { scope; name; ty; loc } 
+  let mk_bound_const ?ty l n loc = mk_const ?ty (Scope.Bound l) n loc
   let mk_global_const name loc : 'a const = mk_const (Scope.mkGlobal ()) name loc
   let const_of_symb types symb loc : 'a const = mk_const (Scope.mkResolvedGlobal types symb) (Symbol.get_func symb) loc
   let clone_const ?(clone_scope = Fun.id) {scope;name; loc } = mk_const (clone_scope scope) name loc
@@ -1102,6 +1102,13 @@ module ScopedTerm = struct
       in
         if args = [] then unlock t else
         load_subst_loc t args Scope.Map.empty Scope.Set.empty
+
+  let beta t args =
+    (* Format.eprintf "beta %a\n" pretty t; *)
+    let t = beta t args in
+    (* Format.eprintf "beta result %a\n" pretty_ t; *)
+    t
+
 
   module QTerm = struct
     include SimpleTerm
