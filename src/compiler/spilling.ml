@@ -21,6 +21,19 @@ let args_missing_to_prop x =
   in
   aux [] ty
 
+let eat args ty = 
+  let ty = TypeAssignment.deref ty in
+  let rec aux args ty =
+    match args with
+    | [] -> ty
+    | _ :: args ->
+        match ty with
+        | TypeAssignment.Arr (_,Elpi_parser.Ast.Structured.NotVariadic, _, t) -> aux args t
+        | TypeAssignment.UVar r when MutableOnce.is_set r -> aux args (TypeAssignment.deref r)
+        | _ -> anomaly "eat args"
+  in
+  TypeAssignment.create @@ aux args ty
+
 let is_prop ~extra x =
   match args_missing_to_prop x with
   | Some n -> List.length n = extra
@@ -70,20 +83,22 @@ let is_symbol ~types b = function
   end
 | _ -> false
 
+
+
 let app ~types t args =
   if args = [] then t
   else
     let rec aux { loc; it; ty } : t =
-      mk_loc ~loc ~ty
-      @@
-      match it with
-      | App (((s, _, _) as n), x, xs) when is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s -> mkApp n (aux_last (x :: xs))
-      (* | App (((s, _, _) as n), { it = Lam(m,o,t); loc; ty } , []) when is_symbol ~types Elpi_runtime.Data.Global_symbols.sigma s -> mkApp n [{ it = Lam(m,o,aux t); loc; ty }] *)
-      | Impl (b, s, t) -> Impl (b, s, aux t)
-      | Const n -> mkApp n args
-      | App (n, x, xs) -> mkApp n ((x :: xs) @ args)
-      | Var (c,l) -> Var (c,l @ args)
-      | Discard | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) -> assert false
+      let it, ty =
+        match it with
+        | App (((s, _, _) as n), x, xs) when is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s -> mkApp n (aux_last (x :: xs)), eat args ty
+        | Impl (b, s, t) -> Impl (b, s, aux t), ty
+        | Const n -> mkApp n args, eat args ty
+        | App (n, x, xs) -> mkApp n ((x :: xs) @ args), eat args ty
+        | Var(c,l) -> Var (c,l @ args), eat args ty
+        | Discard | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) -> assert false
+      in  
+        mk_loc ~loc ~ty it
     and aux_last = function [] -> assert false | [ x ] -> [ aux x ] | x :: xs -> x :: aux_last xs in
     aux t
 
