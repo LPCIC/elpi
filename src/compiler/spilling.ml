@@ -9,7 +9,7 @@ open ScopedTerm
 type spill = { vars_names : string ty_name list; expr : t }
 type spills = spill list
 
-let args_missing_to_prop x =
+let args_missing_to_prop ~type_abbrevs x =
   let ty = TypeAssignment.deref x in
   let rec aux extra = function
     | TypeAssignment.Prop _ -> Some (List.rev extra)
@@ -17,26 +17,40 @@ let args_missing_to_prop x =
     | TypeAssignment.Arr (_,Elpi_parser.Ast.Structured.NotVariadic, ty, t) as arrow -> aux ((TypeAssignment.create ty,TypeAssignment.create arrow) :: extra) t
     | TypeAssignment.Arr (_,Elpi_parser.Ast.Structured.Variadic, _, t) -> aux extra t
     | TypeAssignment.UVar r when MutableOnce.is_set r -> aux extra (TypeAssignment.deref r)
+    | TypeAssignment.App(c,x,xs) when F.Map.mem c type_abbrevs ->
+      let t = TypeAssignment.apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
+      aux extra t
+    | TypeAssignment.Cons c when F.Map.mem c type_abbrevs ->
+      let t = TypeAssignment.apply (fst @@ F.Map.find c type_abbrevs) [] in
+      aux extra t
+
     | _ -> None
   in
   aux [] ty
 
-let eat args ty = 
+let eat ~type_abbrevs args ty = 
   let ty = TypeAssignment.deref ty in
   let rec aux args ty =
     match args with
     | [] -> ty
-    | _ :: args ->
+    | _ :: args as orig_args ->
         match ty with
+        | TypeAssignment.Arr (_,Elpi_parser.Ast.Structured.Variadic, _, t) -> if args = [] then aux args t else ty
         | TypeAssignment.Arr (_,Elpi_parser.Ast.Structured.NotVariadic, _, t) -> aux args t
-        | TypeAssignment.UVar r when MutableOnce.is_set r -> aux args (TypeAssignment.deref r)
-        | _ -> anomaly "eat args"
+        | TypeAssignment.UVar r when MutableOnce.is_set r -> aux orig_args (TypeAssignment.deref r)
+        | TypeAssignment.App(c,x,xs) when F.Map.mem c type_abbrevs ->
+          let t = TypeAssignment.apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
+          aux orig_args t
+        | TypeAssignment.Cons c when F.Map.mem c type_abbrevs ->
+          let t = TypeAssignment.apply (fst @@ F.Map.find c type_abbrevs) [] in
+          aux orig_args t
+        | _ -> anomaly ("eat args: " ^ TypeAssignment.(show @@ Val ty))
   in
   TypeAssignment.create @@ aux args ty
 
-let is_prop ~extra x =
-  match args_missing_to_prop x with
-  | Some n -> List.length n = extra
+let is_prop ~type_abbrevs x =
+  match args_missing_to_prop ~type_abbrevs x with
+  | Some n -> List.length n = 0
   | None -> false
 
 let mk_global ~types f l =
@@ -85,17 +99,17 @@ let is_symbol ~types b = function
 
 
 
-let app ~types t args =
+let app ~type_abbrevs ~types t args =
   if args = [] then t
   else
     let rec aux { loc; it; ty } : t =
       let it, ty =
         match it with
-        | App (((s, _, _) as n), x, xs) when is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s -> mkApp n (aux_last (x :: xs)), eat args ty
+        | App (((s, _, _) as n), x, xs) when is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s -> mkApp n (aux_last (x :: xs)), eat ~type_abbrevs args ty
         | Impl (b, s, t) -> Impl (b, s, aux t), ty
-        | Const n -> mkApp n args, eat args ty
-        | App (n, x, xs) -> mkApp n ((x :: xs) @ args), eat args ty
-        | Var(c,l) -> Var (c,l @ args), eat args ty
+        | Const n -> mkApp n args, eat ~type_abbrevs args ty
+        | App (n, x, xs) -> mkApp n ((x :: xs) @ args), eat ~type_abbrevs args ty
+        | Var(c,l) -> Var (c,l @ args), eat ~type_abbrevs args ty
         | Discard | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) -> assert false
       in  
         mk_loc ~loc ~ty it
@@ -168,11 +182,11 @@ let apply_loc what v t =
   (* Format.eprintf "apply=%a\n" ScopedTerm.pretty t; *)
   t
 
-let rec spill ~types ?(extra = 0) args ({ loc; ty; it } as t) : spills * t list =
+let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : spills * t list =
   (* Format.eprintf "@[<hov 2>spill %a :@ %a@]\n" pretty t TypeAssignment.pretty (TypeAssignment.deref ty); *)
   match it with
   | CData _ | Discard | Const _ -> ([], [ t ])
-  | Cast (t, _) -> spill ~types args t
+  | Cast (t, _) -> spill ~types ~type_abbrevs args t
   | Spill (t, { contents = NoInfo }) -> assert false (* no type checking *)
   | Spill (t, { contents = Phantom _ }) -> assert false (* escapes type checker *)
   | Spill (t, { contents = Main n }) ->
@@ -183,32 +197,34 @@ let rec spill ~types ?(extra = 0) args ({ loc; ty; it } as t) : spills * t list 
         @@ mk_spilled ~loc ~ty:(TypeAssignment.deref ty)
              args n
       in
-      let t = app ~types t vars in
-      let spills, t = spill1 ~types ~extra:(List.length vars_names) args t in
+      let t = app ~type_abbrevs ~types t vars in
+      let spills, t = spill1 ~types ~type_abbrevs ~extra:(List.length vars_names) args t in
       (* Format.eprintf "Spilled %a@." ScopedTerm.pretty t; *)
       (spills @ [ { vars_names; expr = t } ], vars)
   (* globals and builtins *)
   | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when is_symbol ~types Elpi_runtime.Data.Global_symbols.pi s ->
-      let spilled, t = spill1 ~types args t in
+      let spilled, t = spill1 ~types ~type_abbrevs args t in
       ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
   | App (((s, _, _) as hd), { it = Lam (Some v, o, t); loc = tloc; ty = tty }, []) when is_symbol ~types Elpi_runtime.Data.Global_symbols.sigma s ->
       (* not to be put in scope of spills *)
-      let spilled, t = spill1 ~types args t in
+      let spilled, t = spill1 ~types ~type_abbrevs args t in
       ([], [ { loc; ty; it = App (hd, { it = Lam (Some v, o, add_spilled ~types spilled t); loc = tloc; ty = tty }, []) } ])
-  | App (((s,_,_) as hd), x, xs) ->
+  | App (((s,_,hty) as hd), x, xs) ->
+
       let mk_eta_var () = incr args; F.from_string @@ Format.asprintf "%%eta%d" !args in
       let last = if is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s then List.length xs else -1 in
       let spills, args =
-        List.split @@ List.mapi (fun i -> spill ~types ~extra:(if i = last then extra else 0) args) (x :: xs)
+        List.split @@ List.mapi (fun i -> spill ~types ~type_abbrevs ~extra:(if i = last then extra else 0) args) (x :: xs)
       in
       let args = List.flatten args in
       let spilled = List.flatten spills in
       let it = App (hd, List.hd args, List.tl args) in
-      let extra = extra + List.length args - List.length xs - 1 in
-      (* Format.eprintf "%a\nspill %b %d %a : %a\n" Loc.pp loc (is_prop ~extra ty) extra F.pp c TypeAssignment.pretty (TypeAssignment.UVar ty); *)
-      if is_prop ~extra ty then ([], [ add_spilled ~types spilled { it; loc; ty } ])
+
+      let ty = eat ~type_abbrevs args hty in 
+      if spilled = [] then
+        (spilled, [ { it; loc; ty } ])
       else
-        begin match args_missing_to_prop ty with
+        begin match args_missing_to_prop ~type_abbrevs ty with
         | None -> (spilled, [ { it; loc; ty } ])
         | Some missing ->
             let rec mk_lam l t =
@@ -219,29 +235,31 @@ let rec spill ~types ?(extra = 0) args ({ loc; ty; it } as t) : spills * t list 
                 let v = mk_eta_var () in
                 ((elpi_language, v, ty), arrow)) missing in
             let missing_args = List.map (fun ((l,v,t),_) -> { ty; loc; it = Const(Bound l,v,t) }) missing_vars in
-            ([], [ mk_lam missing_vars @@ add_spilled ~types spilled (app ~types { it; loc; ty } missing_args) ])
+            let t = { it; loc; ty } in
+            let t = mk_lam missing_vars @@ add_spilled ~types spilled (app ~type_abbrevs ~types t missing_args) in
+            ([], [ t ])
         end
   (* TODO: positive/negative postion, for now we assume :- and => are used in the obvious way *)
   | Impl (R2L, head, premise) ->
       (* head :- premise *)
-      let spills_head, head = spill1 ~types args head in
+      let spills_head, head = spill1 ~types ~type_abbrevs args head in
       if spills_head <> [] then error ~loc "Spilling in the head of a clause is not supported";
-      let spilled, premise = spill1 ~types args premise in
+      let spilled, premise = spill1 ~types ~type_abbrevs args premise in
       let it = Impl (R2L, head, premise) in
       ([], [ add_spilled ~types spilled { it; loc; ty } ])
   | Impl ((L2R|L2RBang) as kind, premise, conclusion) ->
       (* premise => conclusion *)
-      let spills_premise, premise = spill1 ~types args premise in
+      let spills_premise, premise = spill1 ~types ~type_abbrevs args premise in
       if spills_premise <> [] then error ~loc "Spilling in the premise of an implication is not supported";
-      let spilled, conclusion = spill1 ~types ~extra args conclusion in
+      let spilled, conclusion = spill1 ~types ~type_abbrevs ~extra args conclusion in
       let it = Impl (kind, premise, conclusion) in
       ([], [ add_spilled ~types spilled { it; loc; ty } ])
   (* lambda terms *)
   | Lam (None, o, t) ->
-      let spills, t = spill1 ~types args t in
+      let spills, t = spill1 ~types ~type_abbrevs args t in
       (spills, [ { it = Lam (None, o, t); loc; ty } ])
   | Lam ((Some c as abs), o, t) ->
-      let spills, t = spill1 ~types args t in
+      let spills, t = spill1 ~types ~type_abbrevs args t in
       let t, spills =
         let s,f,ty = c in
         map_acc
@@ -258,16 +276,16 @@ let rec spill ~types ?(extra = 0) args ({ loc; ty; it } as t) : spills * t list 
       in
       (spills, [ { it = Lam (abs, o, t); loc; ty } ])
   (* holes *)
-  | Var (c, xs) ->
-      let spills, args = List.split @@ List.map (spill ~types args) xs in
+  | Var (_,_,cty  as c, xs) ->
+      let spills, args = List.split @@ List.map (spill ~types ~type_abbrevs args) xs in
       let args = List.flatten args in
       let spilled = List.flatten spills in
       let it = Var (c, args) in
-      let extra = extra + List.length args - List.length xs in
-      if is_prop ~extra ty then ([], [ add_spilled ~types spilled { it; loc; ty } ]) else (spilled, [ { it; loc; ty } ])
+      let ty = eat ~type_abbrevs args cty in
+      if is_prop ~type_abbrevs ty then ([], [ add_spilled ~types spilled { it; loc; ty } ]) else (spilled, [ { it; loc; ty } ])
 
-and spill1 ~types ?extra args ({ loc } as t) =
-  let spills, t = spill ~types ?extra args t in
+and spill1 ~type_abbrevs ~types ?extra args ({ loc } as t) =
+  let spills, t = spill ~types ~type_abbrevs ?extra args t in
   let t = if List.length t <> 1 then error ~loc "bad pilling" else List.hd t in
   (spills, t)
 
@@ -281,18 +299,18 @@ let rec remove_top_sigmas ~types t =
       remove_top_sigmas ~types { loc; ty; it = ScopedTerm.beta b [{ ty = vty; loc; it = Var((Bound elpi_var,vn,vty),[]) }] }
   | _ -> t
 
-let spill ~types t =
+let spill ~type_abbrevs ~types t =
   let args = ref 0 in
   (* Format.eprintf "before spill: %a\n" pretty t; *)
-  let s, t = spill ~types args t in
+  let s, t = spill ~type_abbrevs ~types args t in
   (* Format.eprintf "after spill: %a\n" pp (List.hd t); *)
   let t = List.map (remove_top_sigmas ~types) t in
   (* Format.eprintf "after sigma removal: %a\n" pretty (List.hd t); *)
   (s, t)
 
-let main ~types t =
+let main ~type_abbrevs ~types t =
   (* if needs_spilling then Format.eprintf "before %a\n" pretty t; *)
-  let spills, ts = spill ~types (bc_loc [] t) in
+  let spills, ts = spill ~type_abbrevs ~types (bc_loc [] t) in
   let t =
     match (spills, ts) with
     | [], [ t ] -> t
