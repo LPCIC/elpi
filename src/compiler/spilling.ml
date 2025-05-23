@@ -264,7 +264,7 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
         let s,f,ty = c in
         map_acc
           (fun t { vars_names; expr } ->
-            let bc = mk_loc ~loc ~ty (Const(Bound elpi_language,f,ty)) in
+            let bc = mk_loc ~loc ~ty (Const(Bound s,f,ty)) in
             ( apply_loc vars_names bc t,
               {
                 vars_names = List.map (fun (x,y,vty) ->

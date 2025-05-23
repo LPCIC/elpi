@@ -1603,7 +1603,7 @@ end = struct
     in
     let lookup_bound loc (_,ctx) (c,l as x) =
       try Scope.Map.find x ctx
-      with Not_found -> error ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "") 
+      with Not_found -> anomaly ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "" ^ " in context " ^ Scope.Map.(show Format.pp_print_int) ctx) 
     in
     let allocate_bound_symbol loc ctx f =
       let c = lookup_bound loc ctx f in
