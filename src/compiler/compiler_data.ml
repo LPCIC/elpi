@@ -1109,6 +1109,13 @@ module ScopedTerm = struct
         if args = [] then unlock t else
         load_subst_loc t args Scope.Map.empty Scope.Set.empty
 
+  let beta t args =
+    (* Format.eprintf "beta %a\n" pretty t; *)
+    let t = beta t args in
+    (* Format.eprintf "beta result %a\n" pretty_ t; *)
+    t
+
+
   module QTerm = struct
     include SimpleTerm
     let apply_elpi_var_from_quotation ({ SimpleTerm.it; loc } as o) l =
