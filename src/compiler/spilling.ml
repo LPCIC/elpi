@@ -135,10 +135,10 @@ let mk_spilled ~loc ~ty args n : (string const * t) list =
     in
     let built_tm ty =
       let hd_ty = TypeAssignment.create ty in
-      mk_loc ~loc ~ty:hd_ty @@ App (mk_bound_const elpi_language f loc ~ty:hd_ty,[])
+      mk_loc ~loc ~ty:hd_ty @@ App (mk_bound_const ~lang:elpi_language f ~loc ~ty:hd_ty,[])
     in
       match ty with
-      | TypeAssignment.Arr (_, _, l, r) -> (mk_const elpi_language f loc ~ty:(TypeAssignment.create l), built_tm l) :: aux (n-1) r
+      | TypeAssignment.Arr (_, _, l, r) -> (mk_const ~scope:elpi_language f ~loc ~ty:(TypeAssignment.create l), built_tm l) :: aux (n-1) r
       | UVar r when MutableOnce.is_set r -> aux n (TypeAssignment.deref r)
       | _ -> anomaly "type abbreviations and spilling, not implemented"
   in
@@ -231,8 +231,8 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
               | (v,ty) :: vs -> {loc;ty;it = Lam(Some v,None,mk_lam vs t)} in
             let missing_vars = List.map (fun (ty,arrow) -> 
                 let v = mk_eta_var () in
-                (mk_const elpi_language v loc ~ty, arrow)) missing in
-            let missing_args = List.map (fun (v,_) -> { ty; loc; it = App({ v with scope = Scope.Bound v.scope }, []) }) missing_vars in
+                (mk_const ~scope:elpi_language v ~loc ~ty, arrow)) missing in
+            let missing_args = List.map (fun (v,_) -> { ty; loc; it = App(bind_const v, []) }) missing_vars in
             let t = { it; loc; ty } in
             let t = mk_lam missing_vars @@ add_spilled ~types spilled (app ~type_abbrevs ~types t missing_args) in
             ([], [ t ])
@@ -262,7 +262,7 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
         let { scope = s; name = f; ty } = c in
         map_acc
           (fun t { vars_names; expr } ->
-            let bc = mk_loc ~loc ~ty (App({ c with scope = Scope.Bound c.scope},[])) in
+            let bc = mk_loc ~loc ~ty (App(bind_const c,[])) in
             ( apply_loc vars_names bc t,
               {
                 vars_names = List.map (fun (v : _ const) ->
@@ -285,7 +285,7 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
 
 and spill1 ~type_abbrevs ~types ?extra args ({ loc } as t) =
   let spills, t = spill ~types ~type_abbrevs ?extra args t in
-  let t = if List.length t <> 1 then error ~loc "bad pilling" else List.hd t in
+  let t = if List.length t <> 1 then error ~loc "bad spilling" else List.hd t in
   (spills, t)
 
 let rec remove_top_sigmas ~types t =
@@ -295,7 +295,7 @@ let rec remove_top_sigmas ~types t =
       { t with it = App(n, smart_map (remove_top_sigmas ~types) xs) }
   | Impl(x,l,t1,t2) -> { t with it = Impl(x,l,t1,remove_top_sigmas ~types t2) }
   | App ({ scope = s }, [{ it = Lam(Some { name = vn; ty = vty; loc=vloc },_,{ loc;ty }); } as b]) when is_symbol ~types Elpi_runtime.Data.Global_symbols.sigma s ->
-      remove_top_sigmas ~types { loc; ty; it = ScopedTerm.beta b [{ ty = vty; loc; it = Var(mk_bound_const elpi_var vn vloc ~ty:vty,[]) }] }
+      remove_top_sigmas ~types { loc; ty; it = ScopedTerm.beta b [{ ty = vty; loc; it = Var(mk_bound_const ~lang:elpi_var vn ~loc:vloc ~ty:vty,[]) }] }
   | _ -> t
 
 let spill ~type_abbrevs ~types t =

@@ -872,15 +872,17 @@ module ScopedTerm = struct
     
   end
 
-  (* type 'scope name = {name:F.t; scope:'scope; ty: TypeAssignment.t MutableOnce.t} *)
   type 'scope const = { scope: 'scope; name: F.t; ty: TypeAssignment.t MutableOnce.t; loc : Loc.t }
   [@@ deriving show]
 
-  let mk_const ?(ty = MutableOnce.make F.dummyname) scope name loc : 'a const = { scope; name; ty; loc } 
-  let mk_bound_const ?ty l n loc = mk_const ?ty (Scope.Bound l) n loc
-  let mk_global_const name loc : 'a const = mk_const (Scope.mkGlobal ()) name loc
-  let const_of_symb types symb loc : 'a const = mk_const (Scope.mkResolvedGlobal types symb) (Symbol.get_func symb) loc
-  let clone_const ?(clone_scope = Fun.id) {scope;name; loc } = mk_const (clone_scope scope) name loc
+  let mk_const ?(ty = MutableOnce.make F.dummyname) ~scope name ~loc : 'a const = { scope; name; ty; loc } 
+  let mk_bound_const ?ty ~lang name ~loc = mk_const ?ty ~scope:(Scope.Bound lang) name ~loc
+
+  let bind_const (n : string const) : Scope.t const = { n with scope = Scope.Bound n.scope }
+
+  let mk_global_const ~name ~loc : 'a const = mk_const ~scope:(Scope.mkGlobal ()) name ~loc
+  let const_of_symb ~types symb ~loc : 'a const = mk_const ~scope:(Scope.mkResolvedGlobal types symb) (Symbol.get_func symb) ~loc
+  let clone_const ?(clone_scope = Fun.id) {scope;name; loc } = mk_const ~scope:(clone_scope scope) name ~loc
 
   type spill_info =
     | NoInfo (* before typing *)
@@ -917,7 +919,7 @@ module ScopedTerm = struct
   let get_lam_name = function None -> F.from_string "_" | Some (n,_) -> n
   let mk_empty_lam_type = function
     | None -> None
-    | Some (sc, loc, n) -> Some (mk_const n sc loc)
+    | Some (name, loc, scope) -> Some (mk_const name ~scope ~loc)
 
   (* The type of the object being constructed is irrelevant since 
     build_infix_constant is used in the pretty printer of term and the type
@@ -1002,7 +1004,7 @@ module ScopedTerm = struct
   let rec of_simple_term ~loc = function
     | SimpleTerm.Discard -> Discard
     | Impl(b,loc,t1,t2) -> Impl(b,loc,of_simple_term_loc t1, of_simple_term_loc t2)
-    | Const(s,c) -> App (mk_const s c loc,[])
+    | Const(scope,c) -> App (mk_const ~scope c ~loc,[])
     | Opaque c -> CData c
     | Cast(t,ty) -> Cast(of_simple_term_loc t, ScopedTypeExpression.of_simple_type_loc ty)
     | Lam(c,ty,t) -> Lam(mk_empty_lam_type c,Option.map ScopedTypeExpression.of_simple_type_loc ty, of_simple_term_loc t)
@@ -1011,8 +1013,8 @@ module ScopedTerm = struct
         | [y] -> Impl(SimpleTerm.func_to_impl_kind c,cloc,of_simple_term_loc x, of_simple_term_loc y)
         | _ -> error ~loc "Use of App for Impl is allowed, but the length of the list in 3rd position must be 1"
       end
-    | App(s,c,cloc,x,xs) -> App(mk_const s c loc, of_simple_term_loc x :: List.map of_simple_term_loc xs)
-    | Var(c,cloc,xs) -> Var(mk_bound_const elpi_var c cloc,List.map of_simple_term_loc xs)
+    | App(s,c,cloc,x,xs) -> App(mk_const ~scope:s c ~loc, of_simple_term_loc x :: List.map of_simple_term_loc xs)
+    | Var(c,cloc,xs) -> Var(mk_bound_const ~lang:elpi_var c ~loc:cloc,List.map of_simple_term_loc xs)
   and of_simple_term_loc { SimpleTerm.it; loc } =
     match it with
     | Opaque c when is_scoped_term c -> out_scoped_term c
