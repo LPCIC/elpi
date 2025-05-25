@@ -399,13 +399,13 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
           infer_and ~was_input ctx ~loc (x :: xs) (Det, Good_call.init ())
       | App (b, xs) -> infer_app ~exp ~was_input ~loc ctx false t ty b xs
-      | Impl (L2R, c, b) ->
+      | Impl (L2R,_, c, b) ->
           check_clause ~ctx ~var c |> ignore;
           infer ~exp ~was_input ctx b
-      | Impl (L2RBang, c, b) ->
+      | Impl (L2RBang,_, c, b) ->
           check_clause ~ctx ~var ~has_tail_cut:true c |> ignore;
           infer ~exp ~was_input ctx b
-      | Impl (R2L, _, _) -> 
+      | Impl (R2L,_, _, _) -> 
         Format.eprintf "Recursive call to check clause@.";
         (check_clause ~ctx ~var t, Good_call.init ())
       | Lam _ -> (
