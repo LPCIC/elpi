@@ -84,12 +84,12 @@ module Ast : sig
   module Term : sig
     type impl_kind = L2R | L2RBang | R2L
     type t_ =
-      | Impl of impl_kind * t * t
+      | Impl of impl_kind * Loc.t * t * t
       | Const of Scope.t * Name.t
       | Discard
-      | Var of Name.t * t list (** unification variable *)
-      | App of Scope.t * Name.t * t * t list
-      | Lam of (Name.t * Scope.language) option * Type.t option * t
+      | Var of Name.t * Loc.t * t list (** unification variable *)
+      | App of Scope.t * Name.t * Loc.t * t * t list
+      | Lam of (Name.t * Loc.t * Scope.language) option * Type.t option * t
       | Opaque of Opaque.t
       | Cast of t * Type.t
     and t = { it : t_; loc : Loc.t; }
@@ -100,23 +100,23 @@ module Ast : sig
     type constant = Name.constant
     val mkGlobal : loc:Loc.t -> constant -> t
     val mkBound : loc:Loc.t -> language:Scope.language -> Name.t -> t
-    val mkAppGlobal : loc:Loc.t -> constant -> t -> t list -> t
-    val mkAppBound : loc:Loc.t ->  language:Scope.language -> Name.t -> t -> t list -> t
-    val mkVar : loc:Loc.t -> Name.t -> t list -> t
+    val mkAppGlobal : loc:Loc.t -> hdloc:Loc.t -> constant -> t -> t list -> t
+    val mkAppBound : loc:Loc.t -> hdloc:Loc.t -> language:Scope.language -> Name.t -> t -> t list -> t
+    val mkVar : loc:Loc.t -> hdloc:Loc.t -> Name.t -> t list -> t
     val mkOpaque : loc:Loc.t -> Opaque.t -> t
     val mkCast : loc:Loc.t -> t -> Type.t -> t
-    val mkLam : loc:Loc.t -> (Name.t *  Scope.language) option -> ?ty:Type.t -> t -> t
+    val mkLam : loc:Loc.t -> (Name.t * Loc.t * Scope.language) option -> ?ty:Type.t -> t -> t
     val mkDiscard : loc:Loc.t -> t
 
     (** Handy constructors to build goals *)
-    val mkImplication : loc:Loc.t -> t -> t -> t
-    val mkPi : loc:Loc.t -> Name.t -> ?ty:Type.t -> t -> t
-    val mkConj : loc:Loc.t -> t list -> t
-    val mkEq : loc:Loc.t -> t -> t -> t
+    val mkImplication : loc:Loc.t -> hdloc:Loc.t -> t -> t -> t
+    val mkPi : loc:Loc.t -> hdloc:Loc.t -> Name.t -> nloc:Loc.t -> ?ty:Type.t -> t -> t
+    val mkConj : loc:Loc.t -> hdloc:Loc.t -> t list -> t
+    val mkEq : loc:Loc.t -> hdloc:Loc.t -> t -> t -> t
     val mkNil : loc:Loc.t -> t
     (** if omitted, the loc is the merge of the hd and tl locs, as if
         one wrote (hd :: tl), but not as if one wrote [hd|tl] *)
-    val mkCons : ?loc:Loc.t -> t -> t -> t
+    val mkCons : ?loc:Loc.t -> hdloc:Loc.t -> t -> t -> t
 
     val list_to_lp_list : loc:Loc.t -> t list -> t
     val ne_list_to_lp_list : t list -> t
@@ -310,6 +310,20 @@ module Compile : sig
   
   val total_type_checking_time : query -> float
   val total_det_checking_time : query -> float
+
+  module IntervalTree : sig
+    type 'a t
+    val find : Ast.Loc.t -> 'a t -> (Ast.Loc.t * 'a) list
+    val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  end
+
+  type type_
+  val pp_type_ : Format.formatter -> type_ -> unit
+
+  type info = { defined : Ast.Loc.t option; type_ : type_ option }
+  val pp_info : Format.formatter -> info -> unit
+
+  val hover : compilation_unit -> info IntervalTree.t
 end
 
 module Data : sig

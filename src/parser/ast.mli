@@ -80,7 +80,7 @@ module Term : sig
   type t_ =
    | Const of Func.t
    | App of t * t list
-   | Lam of Func.t * typ option * t
+   | Lam of Func.t * Loc.t * typ option * t
    | CData of CData.t
    | Quoted of quote
    | Cast of t * typ
@@ -103,7 +103,7 @@ module Term : sig
   val mkQuoted : Loc.t -> int -> string -> t
   val mkFreshUVar : Loc.t -> t
   val mkFreshName : Loc.t -> t
-  val mkLam : Loc.t -> string -> typ option -> t -> t
+  val mkLam : Loc.t -> string -> Loc.t -> typ option -> t -> t
   val mkC : Loc.t -> CData.t -> t
   val mkCast : Loc.t -> t -> typ -> t
 

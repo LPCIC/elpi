@@ -71,3 +71,17 @@ val runtime_hack_term_to_raw_term :
   ?ctx:constant Compiler_data.Scope.Map.t ->
   depth:int -> Compiler_data.ScopedTerm.t -> term
 val global_name_to_constant : State.t -> string -> constant
+
+module IntervalTree : sig
+  type 'a t
+  val find : Ast.Loc.t -> 'a t -> (Ast.Loc.t * 'a) list
+  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+end
+
+type type_
+val pp_type_ : Format.formatter -> type_ -> unit
+
+type info = { defined : Ast.Loc.t option; type_ : type_ option }
+val pp_info : Format.formatter -> info -> unit
+
+val hover : checked_compilation_unit -> info IntervalTree.t
