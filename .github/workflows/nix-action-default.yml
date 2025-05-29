@@ -1,5 +1,5 @@
 jobs:
-  elpi:
+  ocamlPackages.elpi:
     needs: []
     runs-on: ubuntu-latest
     steps:
@@ -36,11 +36,11 @@ jobs:
         extraPullNames: coq-community, math-comp
         name: coq
     - id: stepGetDerivation
-      name: Getting derivation for current job (elpi)
+      name: Getting derivation for current job (ocamlPackages.elpi)
       run: "NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr bundle
-        \"default\" --argstr job \"elpi\" \\\n   --dry-run 2> err > out || (touch
-        fail; true)\ncat out err\nif [ -e fail ]; then echo \"Error: getting derivation
-        failed\"; exit 1; fi\n"
+        \"default\" --argstr job \"ocamlPackages.elpi\" \\\n   --dry-run 2> err >
+        out || (touch fail; true)\ncat out err\nif [ -e fail ]; then echo \"Error:
+        getting derivation failed\"; exit 1; fi\n"
     - id: stepCheck
       name: Checking presence of CI target for current job
       run: "if $(cat out err | grep -q \"built:\") ; then\n  echo \"CI target needs
@@ -55,7 +55,7 @@ jobs:
     - if: steps.stepCheck.outputs.status != 'fetched'
       name: Building/fetching current CI target
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "default"
-        --argstr job "elpi"
+        --argstr job "ocamlPackages.elpi"
 name: Nix CI for bundle default
 on:
   pull_request:

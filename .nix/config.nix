@@ -8,7 +8,7 @@
   ## either using nixpkgs data or the overlays located in `.nix/rocq-overlays`
   ## and `.nix/coq-overlays`
   ## Will determine the default main-job of the bundles defined below
-  attribute = "elpi";
+  attribute = "ocamlPackages.elpi";
 
   ## The attribute for coq compat shim, default to attribute
   ## set this when you need both to differ
