@@ -56,6 +56,16 @@ let parse grammar lexbuf =
   with
   | Ast.Term.NotInProlog(loc,message) ->
       raise (Parser_config.ParseError(loc,message^"\n"))
+  | Lexer.Error(loc,message) ->
+    let loc = {
+      Util.Loc.client_payload = None;
+      source_name = loc.Lexing.pos_fname;
+      line = loc.Lexing.pos_lnum;
+      line_starts_at = loc.Lexing.pos_bol;
+      source_start = loc.Lexing.pos_cnum;
+      source_stop = loc.Lexing.pos_cnum;
+    } in
+    raise (Parser_config.ParseError(loc,message))
   | Grammar.Error stateid ->
     let message = message_of_state stateid in
     let loc = lexbuf.Lexing.lex_curr_p in
