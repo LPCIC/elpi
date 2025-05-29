@@ -5,10 +5,10 @@
   ## to another supported format.
 
   ## The attribute to build from the local sources,
-  ## either using nixpkgs data or the overlays located in `.nix/rocq-overlays`
+  ## either using nixpkgs data or the overlays located in `.nix/rocq-overlaygis`
   ## and `.nix/coq-overlays`
   ## Will determine the default main-job of the bundles defined below
-  attribute = "ocamlPackages.elpi";
+  attribute = "coq-elpi";
 
   ## The attribute for coq compat shim, default to attribute
   ## set this when you need both to differ
@@ -68,7 +68,7 @@
     ## you may use `overrideAttrs` or long overlays
     ## located in `.nix/ocaml-overlays`
     ## (there is no automation for this one)
-    #  ocamlPackages.<ocaml-pkg>.override.version = "x.xx";
+    ocamlPackages.elpi.override.version = "#mcat-ci";
 
     ## You can also override packages from the nixpkgs toplevel
     # <nix-pkg>.override.overrideAttrs = o: <overrides>;
