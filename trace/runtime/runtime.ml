@@ -190,6 +190,7 @@ let exit ~runtime_id k tailcall e time =
   end
 
 (* Json *)
+module JSON = struct
 let pp_s fmt s =
   Format.fprintf fmt "%S" s
 
@@ -198,6 +199,9 @@ let pp_i fmt i =
 
 let pp_f fmt f =
   Format.fprintf fmt "%f" f
+
+let pp_b fmt f = 
+  Format.fprintf fmt "%b" f
 
 let pp_kv fmt = function
   | k, J(pp_v, v) -> F.fprintf fmt "%a : %a" pp_s k pp_v v
@@ -306,6 +310,7 @@ let print_json fmt  = (); fun { runtime_id; goal_id; kind; name; step; payload }
   ];
   F.pp_print_newline fmt ();
   F.pp_print_flush fmt ()
+end
 
 (* TTY *)
 let tty_formatter_maxcols = ref 80
@@ -322,17 +327,11 @@ let pplist ppelem f l =
 let print_tty fmt = (); fun { runtime_id; goal_id; kind; name; step; payload } ->
   match kind with
   | Start ->
-    F.fprintf fmt "%s %d {{{@[<hov1> %a@]\n%!" name step (pplist pp_j) payload
+    F.fprintf fmt "%s %d {{{@[<hov1> %a@]\n%!" name step (pplist JSON.pp_j) payload
   | Stop { cause; time } ->
     F.fprintf fmt "}}} %s  (%.3fs)\n%!" cause time
   | Info ->
-    let () = F.fprintf fmt "  @[<hov 2>rid:%d step:%d gid:%d %s =@ " runtime_id step goal_id name in
-    let () = match payload with
-      | [] -> ()
-      | j :: payload ->
-        let () = F.fprintf fmt "%a@," pp_j j in
-        F.fprintf fmt "@[<hov 0>%a@]" (pplist pp_j) payload in
-    F.fprintf fmt "@]\n%!"
+    F.fprintf fmt "  rid:%d step:%d gid:%d %s =@[<hov1> %a@]\n%!" runtime_id step goal_id name (pplist JSON.pp_j) payload
 
 let () = printer := print_tty F.err_formatter
 
@@ -344,7 +343,7 @@ let set_trace_output format formatter =
       F.pp_set_margin formatter !tty_formatter_maxcols;
       printer := print_tty formatter
   | JSON ->
-      printer := print_json formatter
+      printer := JSON.print_json formatter
 
 let output_file = ref None
 

@@ -264,6 +264,9 @@ module Pp = struct
   let program f c =
     let module R = (val !r) in let open R in
     Compiler.pp_program (fun ~pp_ctx ~depth -> Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c
+  let program1 f c =
+    let module R = (val !r) in let open R in
+    Compiler.pp_program1 (fun ~pp_ctx ~depth -> Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c
   let goal f c =
     let module R = (val !r) in let open R in
     Compiler.pp_goal (fun ~pp_ctx ~depth -> Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c

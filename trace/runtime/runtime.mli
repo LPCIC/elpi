@@ -27,3 +27,22 @@ val usage: string
 (* prints here *)
 type trace_format = TTY | JSON
 val set_trace_output : trace_format -> Format.formatter -> unit
+
+module JSON : sig
+  val pp_s : Format.formatter -> string -> unit
+  val pp_b : Format.formatter -> bool -> unit
+  val pp_i : Format.formatter -> int -> unit
+  val pp_f : Format.formatter -> float -> unit
+  val pp_kv : Format.formatter -> string * j -> unit
+  val pp_j : Format.formatter -> j -> unit
+
+  val pp_comma_l :
+    Format.formatter ->
+    (Format.formatter -> 'a -> unit) ->
+    'a list ->
+    unit
+
+  val pp_a : Format.formatter -> j list -> unit
+  val pp_d : Format.formatter -> (string * j) list -> unit
+
+end
