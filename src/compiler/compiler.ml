@@ -2401,6 +2401,110 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
   Format.fprintf fmt "@]"
 ;;
 
+let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> unit) (compiler_state, { Assembled.clauses=cl; signature; symbols }) =
+  let pp_ctx = {
+    uv_names = ref (IntMap.empty, 0);
+    table = SymbolMap.compile symbols;
+  } in
+
+  let pp_const ~depth x = 
+    let buf = Buffer.create 100 in
+    let fmt = Format.formatter_of_buffer buf in
+    pp ~depth ~pp_ctx fmt (D.Const x);
+    Buffer.contents buf in
+  
+  let pp_clause_loc (cl:clause) = Format.(asprintf "%a" (pp_print_option Loc.pp) cl.loc) in
+
+  let module JSON = struct 
+    type j = Trace_ppx_runtime.Runtime.j (*= J : (F.formatter -> 'a -> unit) * 'a -> j*)
+    module JSON = Trace_ppx_runtime.Runtime.JSON
+    open JSON
+
+    let pp_id_cnt id cnt : j =
+      JSON.( J(pp_d, ["id", (J(pp_s, id):j); "cnt", J(pp_d, cnt)]))
+
+    let rec pp_main (l: (string option * constant * clause) list) : j =
+      JSON.(J (pp_d, ["clauses", J(pp_a, List.map (pp_card ~depth:0) l)]))
+
+    and pp_card ~depth (graft,pname,cl:string option * constant * clause) : j =
+      J(pp_d, [
+        ("id", J (pp_s, "card"));
+        ("predicate", J (pp_s, pp_const ~depth pname));
+        ("title", J (pp_s, pp_clause_loc cl));
+        ("cnt", J (pp_clause ~depth, (pname,cl)));
+      ])
+
+    and pp_atom ~depth (tm:term) :j =
+      let pp_id x y = (x,(J(pp_s, y):j)) in
+      (* TODO: chain pis *)
+      let pp_quantifier ~depth s names bo =
+        pp_id_cnt "quantification" ["type", J(pp_s, s); "names", J(pp_a, List.map(fun x : j -> J(pp_s, pp_const ~depth x)) names); "body", pp_atom ~depth bo]
+      in
+      let rec grab_list = function
+        | Cons (x,xs) -> let xs, b = grab_list xs in (x::xs), b
+        | Nil -> [], None
+        | x -> [], Some x
+      in
+      JSON.(
+        match tm with
+        | Discard -> J(pp_kv, pp_id "id" "discard")
+        | Builtin (Cut, _) -> J(pp_kv, pp_id "id" "cut")
+        | Builtin (Impl, hd :: bo) -> 
+            let neckcut, bo = match bo with Builtin (Cut, []) :: ls -> true, ls | _ -> false, bo in
+            pp_id_cnt "clause"
+              ["args", pp_atom ~depth hd; "isNeckcut", J(pp_b, neckcut); "hyp", pp_atoms ~depth bo]
+        | Builtin (Pi, [arg]) -> pp_quantifier ~depth:(depth+1) "pi" [depth] arg
+        | Builtin (Sigma, [arg]) -> pp_quantifier ~depth:(depth+1) "sigma" [depth] arg
+        | Builtin (And, args) -> J(pp_d, [pp_id "id" "comma"; ("cnt", pp_atoms ~depth args)])
+        | Cons _ -> 
+            let l, b = grab_list tm in
+            pp_id_cnt "list" (("l",pp_atoms ~depth l) :: match b with None -> [] | Some e -> ["tl", pp_atom ~depth e])
+        | Nil -> assert false
+        | Const x -> J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, pp_const ~depth x)])
+        | App (x, hd, tl) -> pp_atoms ~depth (Const x :: hd ::tl)
+        | Lam _
+        | CData _
+        | Builtin ((Impl|ImplBang|RImpl|Pi|Sigma|Eq|Match|Findall|Delay|Host _), _)
+          -> assert false
+        | UVar (_, _, _)
+        | AppUVar (_, _, _)
+        | Arg (_, _)
+        | AppArg (_, _) -> assert false
+        )
+    
+    and pp_atoms ~depth l : j = 
+      JSON.(J (pp_d, [
+        ("id", J(pp_s, "prop"));
+        ("cnt",J (pp_a, List.map (fun x : j -> pp_atom ~depth x) l))
+      ]))
+
+    and pp_clause ~depth fmt (pname, cl) : unit =
+      JSON.((pp_d fmt [
+        ("id", J (pp_s, "clause"));
+        ("cnt", J (pp_d, 
+          [ "hyp", pp_atoms ~depth cl.hyps; 
+            "isNeckcut", J(pp_s, "false");
+            "args", pp_atom ~depth (match cl.args with [] -> Const pname | x::xs -> mkApp pname x xs) (**)
+          ]));
+      ]));;
+
+  end in
+  fun  fmt  ->
+
+  let clauses = handle_clause_graftin cl in
+
+  List.iter (fun (name,predicate,{ depth; args; hyps; loc; timestamp }) ->
+    Format.fprintf fmt "@[<h>%% %a [%a] %a@]@;"
+      Format.(pp_print_option Loc.pp) loc
+      Format.(pp_print_list ~pp_sep:(fun fmt () -> pp_print_string fmt "; ") pp_print_int) timestamp
+      Format.(pp_print_option pp_print_string) name;
+    Fmt.fprintf fmt "@[<hov 1>%a :- %a.@]@;"
+      (pp ~depth ~pp_ctx) (if args = [] then D.Const predicate else D.mkApp predicate (List.hd args) (List.tl args))
+      (pplist (pp ~depth ~pp_ctx) ", ") hyps)
+    clauses;
+  Format.fprintf fmt "@]"
+;;
+
 let pp_goal pp fmt {  WithMain.compiler_state; initial_goal; symbols } =
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
