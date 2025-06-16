@@ -45,4 +45,7 @@ module JSON : sig
   val pp_a : Format.formatter -> j list -> unit
   val pp_d : Format.formatter -> (string * j) list -> unit
 
+  module JSON_STRING_ENCODING : sig
+    val write_string_body : Buffer.t -> string -> unit
+  end
 end
