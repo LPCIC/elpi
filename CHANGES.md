@@ -44,8 +44,8 @@ Requires Menhir 20211230 and OCaml 4.13 or above.
     Elpi language, i.e. Cut, And, Impl, RImpl, Pi, Sigma, Eq, Match, Findall,
     Delay.
   - Symbols part of the Elpi language (other than the builtins) also have
-    a dedicated status, i.e. As, Uv, ECons, ENil although As and Uv do not a
-    dedicated node in the AST, while ENil and ECons do have.
+    a dedicated status, i.e. As, Uv, ECons, ENil although As and Uv do not
+    have a dedicated node in the AST, while ENil and ECons do have it.
 
 # v2.0.7 (January 2025)
 
