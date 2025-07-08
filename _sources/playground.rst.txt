@@ -757,7 +757,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -1169,7 +1169,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -1380,7 +1380,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -1438,14 +1438,14 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.005
+   Compilation time: 0.003
    
    Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 1.771
+   Time: 1.796
    
    Constraints:
    
@@ -1546,7 +1546,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -1610,7 +1610,7 @@ Test Bed
    
    Success:
    
-   Time: 0.319
+   Time: 0.317
    
    Constraints:
    
@@ -1970,7 +1970,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.281280 + 0.056332 + 0.907702
+   1.334839 + 0.056263 + 0.919055
    
 
 .. code-block:: console
@@ -1985,7 +1985,7 @@ Test Bed
    
    Success:
    
-   Time: 2.472
+   Time: 2.536
    
    Constraints:
    
@@ -2002,7 +2002,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.217865 + 2.918794 + 0.346199
+   6.221415 + 2.840479 + 0.362948
    
 
 .. code-block:: console
@@ -2017,7 +2017,7 @@ Test Bed
    
    Success:
    
-   Time: 9.490
+   Time: 9.432
    
    Constraints:
    
@@ -2034,7 +2034,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.575831 + 2.648842 + 0.213129
+   5.528605 + 2.684732 + 0.218494
    
 
 .. code-block:: console
@@ -2049,7 +2049,7 @@ Test Bed
    
    Success:
    
-   Time: 8.443
+   Time: 8.437
    
    Constraints:
    
@@ -2560,7 +2560,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -2718,7 +2718,7 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -2759,7 +2759,7 @@ Test Bed
    
    Success:
    
-   Time: 1.624
+   Time: 1.626
    
    Constraints:
    
@@ -2793,7 +2793,7 @@ Test Bed
 
 .. code-block:: console
 
-   7
+   6
    
 
 .. code-block:: console
@@ -2844,7 +2844,7 @@ Test Bed
    
    Success:
    
-   Time: 0.253
+   Time: 0.246
    
    Constraints:
    
@@ -2884,7 +2884,7 @@ Test Bed
    
    Success:
    
-   Time: 1.429
+   Time: 1.502
    
    Constraints:
    
@@ -3041,7 +3041,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -3072,7 +3072,7 @@ Test Bed
    
    Success:
    
-   Time: 0.125
+   Time: 0.126
    
    Constraints:
    
@@ -3095,11 +3095,11 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 0.128
+   Time: 0.127
    
    Constraints:
    
@@ -3177,7 +3177,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.126253 + 0.051417 + 0.788525
+   1.123782 + 0.051338 + 0.779793
    
 
 .. code-block:: console
@@ -3192,7 +3192,7 @@ Test Bed
    
    Success:
    
-   Time: 2.059
+   Time: 2.050
    
    Constraints:
    
@@ -3378,7 +3378,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -3944,7 +3944,7 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
