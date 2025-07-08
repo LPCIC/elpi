@@ -1,4 +1,4 @@
-# UNRELEASED v3.0
+# v3.0.0 (July 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
 
