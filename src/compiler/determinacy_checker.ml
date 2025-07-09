@@ -741,13 +741,14 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       Det
   in
   let err gc f =
-    let last l = List.hd (List.rev l) in
-    let pp_bt Good_call.{ exp; found; term } =
-      Format.asprintf "From (@[%a@]) \n - Inferred: %a \n - Expected: %a" ScopedTerm.pretty term pp_dtype found pp_dtype exp
+    let pp_bt i Good_call.{ exp; found; term } =
+      let start =
+        if i = 0 then "Offending term" else "Contained in" in
+      Format.asprintf "%s: (@[%a@]) \n - Inferred: %a \n - Expected: %a" start ScopedTerm.pretty term pp_dtype found pp_dtype exp
     in
-    let l = Good_call.get gc in
+    let l = Good_call.get gc |> List.rev in
     assert (l <> []);
-    error ~loc:(last l).term.loc @@ String.concat "\n" (f (List.hd l) :: List.map pp_bt l) in
+    error ~loc:(List.hd l).term.loc @@ String.concat "\n" (f (List.hd l) :: List.mapi pp_bt l) in
   try check_clause ~_is_toplevel:true ~ctx:BVar.empty ~var:Uvar.empty t |> ignore with
   | FatalDetError (pred_name, gc) | DetError (pred_name, gc) ->
       let f Good_call.{ exp; found; term } =
@@ -769,7 +770,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       err gc f
   | RelationalBody (pred_name, gc) -> 
       let f Good_call.{ term } = 
-        Format.asprintf "%s@[<hov  2>Found relational atom@ @[<hov 2>(%a)@]@ in the body of function@ %a@]" 
+        Format.asprintf "%s@[<hov  2>Found relational atom@ @[<hov 2>(%a)@]@ in the body of function@ %a.@]" 
           (undecl_disclaimer pred_name) ScopedTerm.pretty term F.pp (let { ScopedTerm.name = n } = Option.get pred_name in n)
       in
       err gc f
