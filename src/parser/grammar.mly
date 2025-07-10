@@ -495,6 +495,7 @@ constant:
 | INDEX { Func.from_string "index" }
 | FUNCTIONAL { Func.from_string "functional" }
 | UNTYPED { Func.from_string "untyped" }
+| SYMBOL { Func.from_string "symbol" }
 | c = IO { Func.from_string @@ String.make 1 c }
 | CUT { Func.cutf }
 | FRESHUV { Func.dummyname }
