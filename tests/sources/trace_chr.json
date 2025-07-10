@@ -71,8 +71,8 @@
 {"step" : 10,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:rule:builtin","payload" : ["success"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["not","not (even X1)"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 64, column 0, characters 1009-1028:","File \"builtin.elpi\", line 66, column 0, characters 1031-1036:"]}
-{"step" : 11,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 64, column 0, characters 1009-1028:","(not A0) :- A0, !, fail."]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 64, column 0, characters 1032-1051:","File \"builtin.elpi\", line 66, column 0, characters 1054-1059:"]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 64, column 0, characters 1032-1051:","(not A0) :- A0, !, fail."]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := even X1"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["15"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 15,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["even X1"]}
@@ -137,6 +137,6 @@
 {"step" : 16,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["fail"]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["not","not (even X1)"]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 66, column 0, characters 1031-1036:"]}
-{"step" : 17,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 66, column 0, characters 1031-1036:","(not _) :- ."]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"builtin.elpi\", line 66, column 0, characters 1054-1059:"]}
+{"step" : 17,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"builtin.elpi\", line 66, column 0, characters 1054-1059:","(not _) :- ."]}
 {"step" : 17,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:backchain","payload" : ["success"]}
