@@ -220,8 +220,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "func fail.";
   LPCode "func false.";
 
-  LPCode "external func (=) -> A, A. % unification";
-  LPCode "external func pattern_match A -> A. % matching";
+  LPCode "external func (=) -> A, A. % unification term term";
+  LPCode "external func pattern_match A -> A. % matching pattern term";
 
   (* LPCode "external func (pi) i:(func i:A)."; *)
   LPCode "external func (pi) (func A).";

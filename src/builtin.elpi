@@ -14,9 +14,9 @@ func fail.
 
 func false.
 
-external func (=) -> A, A. % unification
+external func (=) -> A, A. % unification term term
 
-external func pattern_match A -> A. % matching
+external func pattern_match A -> A. % matching pattern term
 
 external func (pi) (func A).
 
