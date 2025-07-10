@@ -339,7 +339,7 @@ program: TYPE AFTER AFTER RPAREN
 program: SYMBOL AFTER AFTER RPAREN
 program: SYMBOL AFTER COLON VDASH
 program: SYMBOL AFTER TYPE
-program: SYMBOL VDASH
+program: SYMBOL USE_SIG
 
 Malformed type declaration. Examples:
 type app tm -> tm -> tm.
