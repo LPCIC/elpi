@@ -25,6 +25,10 @@ help:
 	@echo '  menhir-complete-errormsgs run when updating the grammar'
 	@echo '  menhir-strip-errormsgs remove comments from error message file'
 	@echo
+	@echo 'CI maintenance targets:'
+	@echo
+	@echo '  nix'
+	@echo
 
 INSTALL=_build/install/default
 BUILD=_build/default
@@ -141,3 +145,7 @@ menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
 .PHONY: tests help install build clean gh-pages
+
+nix:
+	nix-shell --arg do-nothing true --run "updateNixToolBox && genNixActions"
+.PHONY: nix
