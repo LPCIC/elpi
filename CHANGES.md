@@ -1,3 +1,10 @@
+# UNRELEASED
+
+- Language:
+  - Improve error message for non deterministic atom
+  - Fix overlap check for `uvar F L as X`
+  - Fix allow `symbol` as an identifier
+
 # v3.0.0 (July 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
