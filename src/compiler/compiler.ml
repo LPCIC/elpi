@@ -1789,12 +1789,15 @@ end = struct
         rig_occ := !rig_occ && (is_eigen_variable ~min_depth ~depth t);
         is_catchall := !is_catchall && is_unif_var t
       in
+      let remove_as = function
+        | App(c,a,_) when c == Global_symbols.asc -> a
+        | x -> x in
       let rec mkpats indexed_args args mode =
         match indexed_args, args, mode with
         | _, [], [] -> []
         | i::is, a::args, (Mode.Fo Input | Ho(Input,_)) :: mode when i > 0 -> 
           update_bools true a;
-          a :: mkpats is args mode
+          remove_as a :: mkpats is args mode
         | (([] as is) | (_::is)), _::args, _ :: mode -> mkDiscard :: mkpats is args mode
         | _, _::args, [] -> error ~loc @@
           Format.asprintf "@[<hov 2>args/mode mismatch: Building query for %a: %s@]" pp_global_predicate p (String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode)
@@ -1808,14 +1811,13 @@ end = struct
       match cl_overlap with
         | None -> ()
         | Some cl_overlap ->
-          let rec filter_overlaps hb :overlap_clause list -> 'a list = function
+          let rec filter_overlaps has_cut :overlap_clause list -> 'a list = function
             | [] -> []
             | x::xs when Option.equal Loc.equal x.Data.overlap_loc (Some loc) ->
-                if (xs = [] || hb) then []
-                else xs
+                if has_cut then [] else xs
             | x::xs -> 
-              if not x.has_cut then (x::filter_overlaps hb xs)
-              else filter_overlaps hb xs
+              if not x.has_cut then (x::filter_overlaps has_cut xs)
+              else filter_overlaps has_cut xs
           in
           let all_input_eigen_vars, all_input_catchall, hd = hd_query ~loc ~min_depth ~depth p args in
           (* Format.eprintf "Is_local:%b -- Has bang? %b -- rig_occ:%b -- is_chatchall:%b@." is_local cl_overlap.has_cut has_input_w_eigen_var is_catchall; *)

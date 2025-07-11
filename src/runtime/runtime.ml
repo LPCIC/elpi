@@ -2661,12 +2661,11 @@ let arg_to_trie_path ~check_mut_excl ~safe ~depth ~is_goal args arg_depths args_
     else
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
-      | Const k when k == Global_symbols.uvarc -> Path.emit path mkUvarVariable; update_current_min_depth path_depth
+      | (Const k | App (k,_,_)) when k == Global_symbols.uvarc -> Path.emit path mkUvarConstant; update_current_min_depth path_depth
       | Const k when safe -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
       | Const k -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
       | CData d -> Path.emit path @@ mkPrimitive d; update_current_min_depth path_depth
-      | App (k,_,_) when k == Global_symbols.uvarc -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
-      | App (k,a,_) when k == Global_symbols.asc -> main ~safe ~depth a (path_depth+1)
+      | App (k,a,_) when k == Global_symbols.asc -> main ~safe ~depth a path_depth
       | Lam _ -> Path.emit path mkAny; update_current_min_depth path_depth (* loose indexing to enable eta *)
       | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
       | Builtin (k,tl) ->
@@ -2702,6 +2701,11 @@ let arg_to_trie_path ~check_mut_excl ~safe ~depth ~is_goal args arg_depths args_
     match args, arg_depths, mode with 
     | _, [], _ -> ()
     | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, (On | Off []) ->
+      (* overlap check:
+           func p int -> .
+           p 1.
+           p X.
+         we query the DT in output mode so that query p X finds p 1 *)
       make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl Output On
     | arg_hd :: arg_tl, arg_depth_hd :: arg_depth_tl, Off (mode_hd :: mode_tl) ->
       make_sub_path arg_hd arg_tl arg_depth_hd arg_depth_tl (Mode.get_head mode_hd) (Off mode_tl)
@@ -3010,7 +3014,7 @@ let trie_goal_args goal : term list = match goal with
 
 let cmp_timestamp { timestamp = tx } { timestamp = ty } = lex_insertion tx ty
 
-let get_clauses_dt ~(check_mut_excl:check_mut_excl) ~depth goal ~cmp_clause args_idx =
+let get_clauses_dt ~(check_mut_excl:check_mut_excl) ~depth goal ~cmp_clause ~pp_clause args_idx =
   let max_depths = Discrimination_tree.max_depths args_idx in
   let max_path = Discrimination_tree.max_path args_idx in
   let max_list_length = Discrimination_tree.max_list_length args_idx in
@@ -3050,7 +3054,7 @@ let get_clauses ~depth predicate goal { idx = m } =
        let cl = Ptmap.find_unifiables hash args_idx |> List.map Bl.to_scan |> List.map Bl.to_list |> List.flatten in
        Bl.of_list @@ List.sort cmp_timestamp cl
      | IndexWithDiscriminationTree {arg_depths; mode; args_idx} ->
-       get_clauses_dt ~check_mut_excl:(Off mode) ~cmp_clause:cmp_timestamp ~depth goal args_idx
+       get_clauses_dt ~check_mut_excl:(Off mode) ~cmp_clause:cmp_timestamp ~pp_clause:pp_clause ~depth goal args_idx
    with Not_found -> Bl.of_list []
  in
  [%log "get_clauses" ~rid (C.show predicate) (Bl.length rc)];
@@ -4422,7 +4426,7 @@ module CompileTime = struct
   let add_to_index = add_to_index_compile_time
   let clausify1 = Clausify.clausify1  
   let get_clauses ~depth goal args_idx : overlap_clause Bl.scan =
-    get_clauses_dt ~check_mut_excl:On ~cmp_clause:(fun (c1:overlap_clause) c2 -> lex_insertion c1.timestamp c2.timestamp) ~depth goal args_idx
+    get_clauses_dt ~check_mut_excl:On ~pp_clause:pp_overlap_clause ~cmp_clause:(fun (c1:overlap_clause) c2 -> lex_insertion c1.timestamp c2.timestamp) ~depth goal args_idx
 
   let fresh_uvar () = oref C.dummy
 end

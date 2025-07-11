@@ -1,0 +1,48 @@
+% :index(1) "DTree" 
+% pred copy i:int, o:int.
+func copy int -> int.
+copy 1 1 :- !.
+% copy (uvar as X) X. % works
+copy (uvar F L as X) X. % breaks
+copy 2 2.
+
+main.
+
+% check overlapping for File "/home/tassi/LPCIC/elpi/tests/sources/functionality/test119.elpi", line 7, column 0, characters 147-155:
+
+% Path is [|Output; Primitive; Output; PathEnd|]]
+% Discrimination tree is
+%   [values:{ } 
+%    other:{ } 
+%    listTailVariable:{ } 
+%    key:{
+%      Variable
+%       [values:{
+%          { Data.overlap_loc =
+%            (Some File "/home/tassi/LPCIC/elpi/tests/sources/functionality/test119.elpi", line 5, column 0, characters 84-102:);
+%            has_cut = false; timestamp = [253] }} 
+%        other:{ } 
+%        listTailVariable:{ } 
+%        key:{ }];@ 
+%        Primitive
+%         [values:{
+%            { Data.overlap_loc =
+%              (Some File "/home/tassi/LPCIC/elpi/tests/sources/functionality/test119.elpi", line 7, column 0, characters 147-155:);
+%              has_cut = false; timestamp = [254] }} 
+%          other:{ } 
+%          listTailVariable:{ } 
+%          key:{ }];@ 
+%        Primitive
+%         [values:{
+%            { Data.overlap_loc =
+%              (Some File "/home/tassi/LPCIC/elpi/tests/sources/functionality/test119.elpi", line 4, column 0, characters 69-82:);
+%              has_cut = true; timestamp = [252] }} 
+%          other:{ } 
+%          listTailVariable:{ } 
+%          key:{ }]}]
+% Going to retrieve with Runtime_trace_off.Indexing.On, path is
+%     [|Output; Primitive; Output; PathEnd|] -- goal is SYMBOL-366 2 _
+% Candidates len is 1 -->
+% [{ Data.overlap_loc =
+%    (Some File "/home/tassi/LPCIC/elpi/tests/sources/functionality/test119.elpi", line 7, column 0, characters 147-155:);
+%    has_cut = false; timestamp = [254] }]

@@ -42,7 +42,7 @@ val mkOutputMode : cell
 val mkListTailVariable : cell
 
 (** unique identifier for uvar constructor *)
-val mkUvarVariable : cell
+val mkUvarConstant : cell
 
 (** This is used for capped lists.
 
@@ -133,5 +133,5 @@ module Internal: sig
   val isListTailVariable : cell -> bool
   val isListTailVariableUnif : cell -> bool
   val isPathEnd : cell -> bool
-  val isUvarVariable : cell -> bool
+  val isUvarConstant : cell -> bool
 end
