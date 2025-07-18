@@ -2039,8 +2039,9 @@ let extend1 flags (state, base) unit =
 
   (* Printf.eprintf "kinds: %d\n%!" (F.Map.cardinal kinds); *)
 
+  let mutexcl_time = if flags.time_typechecking then !mutexcl_time else 0.0 in
   let total_type_checking_time = total_type_checking_time +. type_checking_time in
-  let total_det_checking_time = total_det_checking_time +. det_checking_time +. !mutexcl_time in
+  let total_det_checking_time = total_det_checking_time +. det_checking_time +. mutexcl_time in
 
   let base = { Assembled.builtins; hash; symbols; chr; clauses; prolog_program; signature; indexing; total_type_checking_time; total_det_checking_time } in
   let hash = hash_base base in
