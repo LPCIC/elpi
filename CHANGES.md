@@ -1,9 +1,12 @@
-# UNRELEASED
+# v3.0.1 (July 2025)
 
 - Language:
   - Improve error message for non deterministic atom
   - Fix overlap check for `uvar F L as X`
   - Fix allow `symbol` as an identifier
+
+- Compiler:
+  - Fix build reproducibility
 
 # v3.0.0 (July 2025)
 
