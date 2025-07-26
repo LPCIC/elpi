@@ -4,8 +4,15 @@
 open Compiler_data
 open Type_checker
 
-(* returns if the clause is deterministic *)
+(* checks if the clause adheres to the prescribed determinacy *)
 val check_clause :
+  type_abbrevs:type_abbrevs ->
+  types:TypingEnv.t ->
+  unknown:env_undeclared ->
+    ScopedTerm.t -> unit
+
+(* checks the atom is det *)
+val check_atom :
   type_abbrevs:type_abbrevs ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->
