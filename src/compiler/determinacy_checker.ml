@@ -90,7 +90,7 @@ let choose_variadic v full right = if v = Structured.Variadic then full else rig
 
 module Compilation = struct
 
-  let type_ass_2func ~loc (env : t) t : dtype =
+  let type_ass_2func ~loc ~type_abbrevs:env t : dtype =
     let rec type2func_app ~loc c args =
       match F.Map.find_opt c env with
       | None -> Exp (List.map (type_ass_2func ~loc) args)
@@ -115,7 +115,7 @@ module Compilation = struct
     in
     type_ass_2func ~loc t
 
-  let type_ass_2func_mut ~loc (env : t) t = type_ass_2func ~loc env (TypeAssignment.deref t)
+  let type_ass_2func_mut ~loc ~(type_abbrevs : t) t = type_ass_2func ~loc ~type_abbrevs (TypeAssignment.deref t)
 end
 
 module Aux = struct
@@ -257,13 +257,13 @@ module BVar = struct
     match oname with None -> ctx | Some { ScopedTerm.scope; name; ty = tya } -> add ~new_ ~loc ctx (name, scope) ~v:(f tya)
 end
 
-let get_dtype ~env ~ctx ~var ~loc ~is_var { ScopedTerm.scope = t; name; ty = tya } =
+let get_dtype ~type_abbrevs ~ctx ~var ~loc ~is_var { ScopedTerm.scope = t; name; ty = tya } =
   let get_ctx = function
     | None -> error ~loc (Format.asprintf "DetCheck: Bound var %a should be in the local map" F.pp name)
     | Some e -> e
   in
-  let get_var = function None -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc env tya) | Some e -> e in
-  let get_con _x = Compilation.type_ass_2func_mut ~loc env tya in
+  let get_var = function None -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc ~type_abbrevs tya) | Some e -> e in
+  let get_con _x = Compilation.type_ass_2func_mut ~loc ~type_abbrevs tya in
   let det_head =
     if is_var then get_var @@ Uvar.get var name
     else match t with Scope.Bound b -> get_ctx @@ BVar.get ctx (name, b) | Global g -> get_con g.resolved_to
@@ -275,8 +275,7 @@ let get_dtype ~env ~ctx ~var ~loc ~is_var { ScopedTerm.scope = t; name; ty = tya
 
 let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
 
-let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
-  let same_symb symb symb' =
+  let same_symb ~types symb symb' =
     match symb' with
     | Scope.Global { resolved_to = x } ->
         begin match SymbolResolver.resolved_to types x with
@@ -284,21 +283,24 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
         | _ -> false
         end
     | _ -> false
-  in
-  let get_user_type ~loc s = match s.ScopedTerm.scope with
+
+
+  let get_user_type ~type_abbrevs ~types ~loc s = match s.ScopedTerm.scope with
     | Scope.Global {resolved_to = x } ->
       let open TypeAssignment in
       let rec mk_args = function Ty t -> [] | Lam (_, b) -> Any :: mk_args b in
       let apply ty = TypeAssignment.apply ty (mk_args ty) in
-      let compile TypingEnv.{ty} = Compilation.type_ass_2func ~loc ta (apply ty) in
+      let compile TypingEnv.{ty} = Compilation.type_ass_2func ~loc ~type_abbrevs (apply ty) in
       let to_dtype x = Option.map compile @@ TypingEnv.resolve_symbol_opt x types in
       Option.bind (SymbolResolver.resolved_to types x) to_dtype
     | Bound _ -> None
-  in
+  
+let check_clause ~type_abbrevs ~types ~unknown (t : ScopedTerm.t) : unit =
+
   let has_undeclared_signature { ScopedTerm.scope = b; name = f } =
-    match F.Map.find_opt f unknown with Some (_, symb) -> same_symb symb b | _ -> false
+    match F.Map.find_opt f unknown with Some (_, symb) -> same_symb ~types symb b | _ -> false
   in
-  let is_global { ScopedTerm.scope = b } name = same_symb name b in
+  let is_global { ScopedTerm.scope = b } name = same_symb ~types name b in
   let is_quantifier x = is_global x S.pi || is_global x S.sigma in
   let undecl_disclaimer = function
     | Some ({ ScopedTerm.name; ty } as pred_name) when has_undeclared_signature pred_name ->
@@ -369,10 +371,10 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       in
       aux ~user_dtype d tl
     and infer_app ~exp ~was_input ctx ~loc is_var t ty s tl =
-      let was_data = is_exp (Compilation.type_ass_2func_mut ~loc ta ty) in
-      let user_dtype = if was_data then get_user_type ~loc s else None in
+      let was_data = is_exp (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty) in
+      let user_dtype = if was_data then get_user_type ~type_abbrevs ~types ~loc s else None in
       Format.eprintf "Is_exp: %b@." was_data;
-      let dtype = get_dtype ~env:ta ~ctx ~var ~loc ~is_var s in
+      let dtype = get_dtype ~type_abbrevs ~ctx ~var ~loc ~is_var s in
       (* TODO: here: if is wrong then also the app is wrong... *)
       let (dt, gc as r) = infer_fold ~was_input ~was_data ~user_dtype ~loc ctx dtype s tl in
       if Good_call.is_wrong gc then Good_call.prepend gc ~exp ~found:dt t |> ignore;
@@ -394,7 +396,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       match it with
       | Var (b, xs) -> infer_app ~exp ~was_input ~loc ctx true t ty b xs
       | App (q, [{ it = Lam (b, _, bo) }]) when is_quantifier q ->
-          infer ~exp ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ta x) ctx) bo
+          infer ~exp ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ~type_abbrevs x) ctx) bo
       | App (g, x :: xs) when is_global g S.and_ ->
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
           infer_and ~was_input ctx ~loc (x :: xs) (Det, Good_call.init ())
@@ -411,11 +413,11 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       | Lam _ -> (
           try
             let _ = check_lam ~ctx ~var t in
-            (Compilation.type_ass_2func_mut ~loc ta ty, Good_call.init ())
-          with FatalDetError (_,b1) | DetError (_, b1) | RelationalBody (_, b1) -> (Compilation.type_ass_2func_mut ~loc ta ty, b1))
+            (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty, Good_call.init ())
+          with FatalDetError (_,b1) | DetError (_, b1) | RelationalBody (_, b1) -> (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty, b1))
       | Discard ->
           Format.eprintf "Calling type_ass_2func_mut in Discard@.";
-          (Compilation.type_ass_2func_mut ~loc ta ty, Good_call.init ())
+          (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty, Good_call.init ())
       | CData _ -> (Exp [], Good_call.init ())
       | Cast (t, _) ->
           let d, good = infer ~exp ~was_input ctx t in
@@ -444,8 +446,8 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
     in
     match it with
     (* TODO: add case for pi, comma and = *)
-    | App (b, xs) -> aux (get_dtype ~env:ta ~ctx ~var ~loc ~is_var:false b) xs
-    | Var (b, xs) -> aux (get_dtype ~env:ta ~ctx ~var ~loc ~is_var:true b) xs
+    | App (b, xs) -> aux (get_dtype ~type_abbrevs ~ctx ~var ~loc ~is_var:false b) xs
+    | Var (b, xs) -> aux (get_dtype ~type_abbrevs ~ctx ~var ~loc ~is_var:true b) xs
     | _ -> anomaly ~loc @@ Format.asprintf "Invalid term in deduce output %a." ScopedTerm.pretty_ it
   and assume ?(was_input=false) ~ctx ~var d t =
     Format.eprintf "Calling assume on %a with det : %a@." ScopedTerm.pretty t pp_dtype d;
@@ -476,7 +478,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       match t with 
       | Scope.Bound b -> assume_var ~is_var:(Some b) ~ctx ~loc d s tl
       | _ ->
-         let det_head = get_dtype ~env:ta ~ctx ~var:!var ~loc ~is_var:false s in
+         let det_head = get_dtype ~type_abbrevs ~ctx ~var:!var ~loc ~is_var:false s in
          assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl;
       Format.eprintf "The map after call to assume_app is %a@." Uvar.pp !var
     and assume_var ~is_var ~ctx ~loc d ({ ScopedTerm.name } as s) tl =
@@ -486,7 +488,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
         | Arrow (_, Variadic, _, _) -> replace_signature_tgt ~with_ d' xs
         | Arrow (m, NotVariadic, l, r) ->  Arrow (m, NotVariadic, l, replace_signature_tgt ~with_ r xs)
         | _ -> error ~loc @@ Format.asprintf "replace_signature_tgt: Type error: found %a " pp_dtype d'  in
-      let dtype = get_dtype ~env:ta ~ctx ~var:!var ~loc ~is_var:(is_var = None) s in
+      let dtype = get_dtype ~type_abbrevs ~ctx ~var:!var ~loc ~is_var:(is_var = None) s in
       Format.eprintf "Dtype of %a is %a@." F.pp name pp_dtype dtype;
       let d' = replace_signature_tgt dtype tl  ~with_:d in
       Format.eprintf "d' is %a@." pp_dtype d';
@@ -497,7 +499,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       Format.eprintf "Assume of %a with dtype %a (was_input:%b)@." ScopedTerm.pretty_ it pp_dtype d was_input;
       match it with
       | App (q, [{ it = Lam (b, _, bo) }]) when is_quantifier q ->
-          assume ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ta x) ctx) d bo
+          assume ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ~type_abbrevs x) ctx) d bo
       | Var (b, tl) -> assume_var ~loc ~ctx ~is_var:None d b tl
       | App (b, xs) -> assume_app ~was_input ctx ~loc d b xs
       | Discard -> ()
@@ -559,7 +561,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       let d', gc = infer ~exp:d ~ctx ~var:!var tm in
       Format.eprintf "-- Checked term dtype is %a and gc is %a@." pp_dtype d' Good_call.pp gc;
       if Good_call.is_good gc then (
-        let det = get_dtype ~env:ta ~ctx ~var:!var ~is_var b ~loc in
+        let det = get_dtype ~type_abbrevs ~ctx ~var:!var ~is_var b ~loc in
         Format.eprintf "Assuming output of %a with dtype : %a@." ScopedTerm.pretty tm pp_dtype det;
         var := assume_output ~ctx ~var:!var det tl);
       Format.eprintf "In check_app before result, comparing %a with %a (expected %a)@."
@@ -595,7 +597,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
         check ~ctx d b
       | App(b,[]) when is_global b S.cut -> (Det, Good_call.init ())
       | App (q, [{ it = Lam (b, _, bo) }]) when is_quantifier q ->
-          check ~ctx:(BVar.add_oname ~new_:true ~loc b (Compilation.type_ass_2func_mut ~loc ta) ctx) d bo
+          check ~ctx:(BVar.add_oname ~new_:true ~loc b (Compilation.type_ass_2func_mut ~loc ~type_abbrevs) ctx) d bo
       (* Cons and nil case may appear in prop position for example in : `f :- [print a, print b, a].` *)
       | App (b, [x; xs ]) when is_global b S.cons -> check ~ctx (check ~ctx d x |> fst) xs
       | App(b,[]) when is_global b S.nil -> (d, Good_call.init ())
@@ -621,7 +623,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       | Cast (b, _) -> (
           try
             let d, _ = check ~ctx d b in
-            let d' = Compilation.type_ass_2func_mut ~loc ta b.ty in
+            let d' = Compilation.type_ass_2func_mut ~loc ~type_abbrevs b.ty in
             if not ((d <<= d') ~loc) then raise (CastError (None, Good_call.make ~exp:d' ~found:d b));
             (d, Good_call.init ())
           with DetError x -> raise (FatalDetError x))
@@ -635,7 +637,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
   and check_lam ~ctx ~var t : dtype =
     Format.eprintf "check_lam: t = %a@." ScopedTerm.pretty t;
     let get_ta n args =
-      let ta_sk, _ = F.Map.find n ta in
+      let ta_sk, _ = F.Map.find n type_abbrevs in
       let ty = TypeAssignment.apply ta_sk args in
       TypeAssignment.create ty
     in
@@ -675,31 +677,31 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
           let clause, ctx = build_clause args ~ctx ~loc ~ty t in
           Format.eprintf "check_lam: built clause is = %a@." ScopedTerm.pretty clause;
           check_clause ~ctx ~var clause
-      | Cons b, _ when F.Map.mem b ta -> aux ~parial_app ~ctx ~args { t with ty = get_ta b [] }
-      | App (b, x, xs), _ when F.Map.mem b ta -> aux ~parial_app ~ctx ~args { t with ty = get_ta b (x :: xs) }
+      | Cons b, _ when F.Map.mem b type_abbrevs -> aux ~parial_app ~ctx ~args { t with ty = get_ta b [] }
+      | App (b, x, xs), _ when F.Map.mem b type_abbrevs -> aux ~parial_app ~ctx ~args { t with ty = get_ta b (x :: xs) }
       | Cons _, _ -> Exp []
       (* Below: TODO: check that args have the type expected, for example list prop vs list func *)
-      | App (_, x, xs), _ -> Exp (List.map (Compilation.type_ass_2func ta ~loc) (x :: xs))
+      | App (_, x, xs), _ -> Exp (List.map (Compilation.type_ass_2func ~type_abbrevs ~loc) (x :: xs))
       (* If we reach a Uvar | Any case no check is needed, i.e. we don't know  *)
-      | ((UVar _ | Any) as t), _ -> Compilation.type_ass_2func ta ~loc t
+      | ((UVar _ | Any) as t), _ -> Compilation.type_ass_2func ~type_abbrevs ~loc t
       | Arr (_, _, l, _), Lam (b, _, bo) ->
-          aux ~parial_app ~ctx:(BVar.add_oname ~new_:true ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc ta t)) ctx) ~args:(otype2term ~loc l b :: args) bo
+          aux ~parial_app ~ctx:(BVar.add_oname ~new_:true ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc ~type_abbrevs t)) ctx) ~args:(otype2term ~loc l b :: args) bo
       | Arr (_, Structured.Variadic, _, r), _ ->
           let b = Some { ScopedTerm.scope = elpi_language; name = emit (); ty = TypeAssignment.create r; loc } in
-          aux ~parial_app ~ctx:(BVar.add_oname ~new_:true ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc ta t)) ctx) ~args { t with ty = TypeAssignment.create r }
+          aux ~parial_app ~ctx:(BVar.add_oname ~new_:true ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc ~type_abbrevs t)) ctx) ~args { t with ty = TypeAssignment.create r }
       | Arr (_, _, l, r), _ ->
           (* Partial app: type is Arr but body is not Lam *)
           let b = Some { ScopedTerm.scope = elpi_language; name = emit (); ty = TypeAssignment.create l; loc } in
           let nt = otype2term ~loc l b in
           aux ~parial_app:(nt :: parial_app)
-            ~ctx:(BVar.add_oname ~new_:true ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc ta t)) ctx)
+            ~ctx:(BVar.add_oname ~new_:true ~loc b (fun t -> Aux.maximize ~loc (Compilation.type_ass_2func_mut ~loc ~type_abbrevs t)) ctx)
             ~args:(nt :: args)
             { t with ty = TypeAssignment.create r }
     in
     aux ~ctx ~args:[] ~parial_app:[] t
   (* returns the determinacy of the clause and if the clause has a cut in it *)
   and assume_hd b ~is_var ~ctx ~var ~loc (tm : ScopedTerm.t) tl =
-    let det_hd = get_dtype ~env:ta ~ctx ~var ~loc ~is_var b in
+    let det_hd = get_dtype ~type_abbrevs ~ctx ~var ~loc ~is_var b in
     Format.eprintf "assume_input for term %a with det %a@." ScopedTerm.pretty tm pp_dtype det_hd;
     (det_hd, assume_input ~ctx ~var det_hd tl)
   and check_clause ?(_is_toplevel = false) ~ctx ~var ?(has_tail_cut=false) ScopedTerm.({ loc } as t) : dtype =
@@ -711,7 +713,7 @@ let check_clause ~type_abbrevs:ta ~types ~unknown (t : ScopedTerm.t) : unit =
       | Impl (R2L, _, ({ it = Var(b,xs) } as hd), bo) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:true hd xs, hd, Some bo)
       (* For clauses with quantified unification variables *)
       | App (n, [{ it = Lam (oname, _, body) }]) when is_quantifier n ->
-          ctx := BVar.add_oname ~new_:true ~loc oname (Compilation.type_ass_2func_mut ~loc ta) !ctx;
+          ctx := BVar.add_oname ~new_:true ~loc oname (Compilation.type_ass_2func_mut ~loc ~type_abbrevs) !ctx;
           aux body
       | App (b, xs) -> (b, assume_hd ~loc ~ctx:!ctx ~var:var b ~is_var:false t xs, t, None)
       | Var _ -> raise (LoadFlexClause t)
