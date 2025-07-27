@@ -1736,7 +1736,7 @@ end = struct
     in
 
     let error_overlapping_eigen_variables ~loc pred (cl_st,depth : term * int) = 
-      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,This rule (displayed below) does not respects the principles of mutual exclution@]@ @[Principles: there is a cut in the body of the local clause and/or all indexed input arguments are eigenvariables@] @[To solve the problem, add a cut in its body.@]@ @[Offending clause is@ @[<hov 2>%a@]@] @]" pp_global_predicate pred
+      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,This rule (displayed below) does not respects the principles of mutual exclution@]@ @[Principles: there is a cut in the body of the local clause and/or all indexed input arguments are eigenvariables@] @[To solve the problem, add a cut in its body.@]@ @[Offending rule:@ @[<hov 2>%a@]@] @]" pp_global_predicate pred
         (pretty_term ~depth) cl_st) 
     in
 
@@ -1868,8 +1868,8 @@ end = struct
               let fresh_loc = get_fresh_loc loc in
               let (p,cl), _, morelcs =
                 try R.CompileTime.clausify1 ~tail_cut:(ik = ImplBang) ~loc:fresh_loc ~modes:(fun x -> fst (get_info x)) ~nargs:(F.Map.cardinal amap) ~depth h
-                with D.CannotDeclareClauseForBuiltin(loc,_c) ->
-                  error ?loc ("Declaring a clause for built in predicate")
+                with D.CannotDeclareClauseForBuiltin(loc,c) ->
+                  error ?loc ("Declaring a clause for built predicate:" ^ show_builtin_predicate (fun ?table x -> F.show @@ SymbolMap.global_name state symbols x) c)
                 in
 
               let cl_overlap, index = R.Indexing.add1clause_overlap_runtime ~depth ~time:(runtime_tick ()) index p cl in
