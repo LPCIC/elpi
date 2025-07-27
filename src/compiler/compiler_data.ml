@@ -564,6 +564,7 @@ module SymbolResolver : sig
   val resolve : TypingEnv.t -> resolution -> Symbol.t -> unit
   val resolved_to : TypingEnv.t -> resolution -> Symbol.t option
   val is_resolved_to : TypingEnv.t -> resolution -> Symbol.t -> bool
+  val is_resolved_to_builtin : TypingEnv.t -> resolution -> bool
 
 end = struct
 
@@ -600,6 +601,15 @@ end = struct
     match resolved_to env r with
     | None -> false
     | Some s1 -> TypingEnv.same_symbol env s s1
+
+  let is_resolved_to_builtin env r =
+    match resolved_to env r with
+    | None -> false
+    | Some s ->
+        match Symbol.get_provenance s with
+        | Core -> true
+        | Builtin _ -> true
+        | _ -> false
 
 end
 

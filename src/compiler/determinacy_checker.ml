@@ -311,6 +311,10 @@ let check_clause, check_atom =
           (TypeAssignment.deref @@ ty)
     | _ -> ""
   in
+  let is_builtin ~types s =
+    match s.ScopedTerm.scope with
+    | Scope.Global { resolved_to } -> SymbolResolver.is_resolved_to_builtin types resolved_to
+    | _ -> false in
 
   let cnt = ref 0 in
   let emit () =
@@ -371,7 +375,11 @@ let check_clause, check_atom =
       in
       aux ~user_dtype d tl
     and infer_app ~exp ~was_input ctx ~loc is_var t ty s tl =
-      let was_data = is_exp (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty) in
+      let was_data =
+        is_exp (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty) 
+        ||
+        is_builtin ~types s
+      in
       let user_dtype = if was_data then get_user_type ~type_abbrevs ~types ~loc s else None in
       Format.eprintf "Is_exp: %b@." was_data;
       let dtype = get_dtype ~type_abbrevs ~ctx ~var ~loc ~is_var s in
@@ -769,7 +777,7 @@ let check_clause, check_atom =
         err gc f
     | KError (pred_name, gc) ->
         let f Good_call.{ exp; found; term } =
-          Format.asprintf "%sInvalid determinacy of constructor argument %a.\n Expected: %a\n Found: %a"
+          Format.asprintf "%sInvalid determinacy of constructor/builtin argument %a.\n Expected: %a\n Found: %a"
             (undecl_disclaimer ~types ~unknown pred_name) ScopedTerm.pretty term pp_dtype exp pp_dtype found 
         in
         err gc f
