@@ -57,26 +57,26 @@ specialize (mono T) T.
 specialize (all any F) T :- specialize (F Fresh_) T.
 specialize (all eqt F) T :- specialize (F Fresh) T, eqbar Fresh.
 
-pred eqbar i:tye.
+func eqbar tye.
 
-eqbar bool.
-eqbar int.
-eqbar (list A) :- eqbar A.
-eqbar (pair A B) :- eqbar A, eqbar B.
+eqbar bool :- !.
+eqbar int :- !.
+eqbar (list A) :- !, eqbar A.
+eqbar (pair A B) :- !, eqbar A, eqbar B.
 
-eqbar T :- var T, new_constraint (eqbar T) [T,_].
+eqbar (uvar as T) :- !, new_constraint (eqbar T) [T,_].
 
-eqbar T :- eqtype-error T.
+eqbar T :- eqtype-error T, !.
 
 %%%%%%%%%%%%% type schema introduction %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % theta carries the list of type variables for which eqbar has to hold
-pred theta i:list tye.
+func theta list tye.
 
 theta L :- new_constraint (theta L) [_].
 
 % gammabar is not a real constraint, but rather a 
-pred gammabar i:ty, o:ty.
+func gammabar ty -> ty.
 
 gammabar (mono T) TS :-
   new_constraint (gammabar (mono T) TS) [_].
@@ -154,7 +154,7 @@ assert T TY ETY :- print "KO: term (" T ") has type (" TY ") but its context exp
 pred eqtype-error i:tye.
 eqtype-error T :- print "KO: type (" T ") has no equality\n", halt.
 
-pred new_constraint i:prop, i:A.
+func new_constraint (func), A.
 new_constraint P X :- declare_constraint P X.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

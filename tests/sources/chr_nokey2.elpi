@@ -1,5 +1,5 @@
-type foo prop.
-type bar any -> prop.
+func foo.
+func bar any.
 
 main :- declare_constraint foo [], declare_constraint (bar X) [], X.
 
