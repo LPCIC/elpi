@@ -230,7 +230,7 @@ module TypeAssignment = struct
       fprintf fmt "@[<hov 2>%a:%a@]" show_mode m (pretty_parens ~lvl:arrs) s;
       match t with
       | Prop _ -> ()
-      | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic" else "") (pretty_pred_mode m) (s',r)
+      | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic " else "") (pretty_pred_mode m) (s',r)
       | _ -> assert false
     in
     let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t

@@ -575,7 +575,6 @@ You cannot ascribe a type on the head predicate.
 goal: AFTER COLON LPAREN PRED VDASH
 goal: AFTER COLON AFTER LPAREN FUNC ARROW AFTER ARROW
 goal: AFTER COLON LPAREN AFTER IO_COLON
-goal: AFTER COLON LPAREN FUNC ARROW AFTER ARROW
 
 Anonymous predicate declaration expected.
 Examples:

@@ -241,7 +241,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "external symbol uvar  : A = \"core\".";
   LPCode "external symbol (as)  : A -> A -> A = \"core\".";
   LPCode "external symbol (=>)  : prop -> fprop -> fprop = \"core\".";
-  LPCode "external symbol (=>)  : list prop -> fprop -> fprop = \"core\"."; (* HACS in TC to handle this*)
+  LPCode "external symbol (=>)  : list prop -> fprop -> fprop = \"core\"."; (* HACK in TC to handle this*)
   LPCode "external symbol (==>) : prop -> fprop -> fprop.";
   LPCode "external symbol (==>) : list prop -> fprop -> fprop.";
 
@@ -259,7 +259,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
    * store of syntactic constraints *)
   LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
           "% on Key1 Key2 ... (variables, or lists thereof).\n"^
-          "external type declare_constraint any -> any -> variadic any fprop.");
+          "external func declare_constraint (func) -> any .. .");
   MLCode(Pred("print_constraints",
     Full(raw_ctx,"prints all constraints"),
     (fun ~depth _ constraints state ->

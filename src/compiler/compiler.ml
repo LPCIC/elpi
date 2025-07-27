@@ -479,9 +479,9 @@ end = struct (* {{{ *)
 
   let rec structure_type_expression_aux ~loc valid t = { t with TypeExpression.tit =
     match t.TypeExpression.tit with
-    | TPred(att,p) when valid att <> None -> TPred(Option.get (valid att),List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p)
-    | TPred([], _) -> assert false
-    | TPred(a :: _, _) -> error ~loc ("illegal attribute " ^ show_raw_attribute a)
+    | TPred(att,p,v) when valid att <> None -> TPred(Option.get (valid att),List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p,v)
+    | TPred([], _,_) -> assert false
+    | TPred(a :: _, _, _) -> error ~loc ("illegal attribute " ^ show_raw_attribute a)
     | TArr(s,t) -> TArr(structure_type_expression_aux ~loc valid s,structure_type_expression_aux ~loc valid t) 
     | TApp(c,x,xs) -> TApp(c,structure_type_expression_aux ~loc valid x,List.map (structure_type_expression_aux ~loc valid) xs)
     | TConst c -> TConst c
@@ -498,7 +498,7 @@ end = struct (* {{{ *)
     let rec is_pred = function 
       | Ast.TypeExpression.TConst a -> is_propf a
       | TArr(_,r) -> is_pred r.tit
-      | TApp (_, _, _) | TPred (_, _) -> false
+      | TApp (_, _, _) | TPred (_, _, _) -> false
     in
     let rec flatten tloc = function
       | Ast.TypeExpression.TArr (l,r) -> (Ast.Mode.Output, l) :: flatten_loc r 
@@ -506,19 +506,19 @@ end = struct (* {{{ *)
       | tit -> [Output,{tit;tloc}]
     and flatten_loc {tit;tloc} = flatten tloc tit
     and main = function
-      | Ast.TypeExpression.TPred (b, l) -> 
-          Ast.TypeExpression.TPred (b, List.map (fun (a, b) -> a, main_loc b) l)
+      | Ast.TypeExpression.TPred (b, l,v) -> 
+          Ast.TypeExpression.TPred (b, List.map (fun (a, b) -> a, main_loc b) l,v)
       | TConst _ as t -> t
       | TApp (n, x, xs) -> TApp (n, main_loc x, List.map main_loc xs)
-      | TArr (l, r) when is_pred r.tit -> TPred (toplevel_func, (Output, main_loc l) :: flatten_loc r)
+      | TArr (l, r) when is_pred r.tit -> TPred (toplevel_func, (Output, main_loc l) :: flatten_loc r,false)
       | TArr (l, r) -> TArr(main_loc l, main_loc r)
     and main_loc {tit;tloc} = {tit=main tit;tloc}
     in main_loc
 
   let structure_type_expression loc toplevel_func valid t = 
     let res = match t.TypeExpression.tit with
-      | TPred([],p) ->
-        { t with tit = TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p) }
+      | TPred([],p,v) ->
+        { t with tit = TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p,v) }
       | x -> structure_type_expression_aux ~loc valid t
       in flatten_arrows toplevel_func res
 
@@ -565,7 +565,7 @@ end = struct (* {{{ *)
     in
     let attributes, toplevel_func = aux_tatt { availability = Elpi; index = None} Structured.Relation attributes in
     let is_functional_from_ty () = match ty.tit with
-      | TPred (l, _) -> List.mem Functional l | _ -> false in
+      | TPred (l, _,_) -> List.mem Functional l | _ -> false in
     let attributes =
       match attributes.index with
       | None -> 
@@ -816,9 +816,10 @@ end = struct
       let c = (F.show f).[0] in
       c = '@'
 
-  let rec pred2arr ctx ~loc func = function
+  let rec pred2arr ctx ~loc func variadic = function
     | [] -> ScopedTypeExpression.Prop func
-    | (m,x)::xs -> Arrow (m,NotVariadic,scope_loc_tye ctx x, {loc; it=pred2arr ctx ~loc func xs})
+    | [m,x] when variadic -> Arrow (m,Variadic,scope_loc_tye ctx x, {loc; it=ScopedTypeExpression.Prop func})
+    | (m,x)::xs -> Arrow (m,NotVariadic,scope_loc_tye ctx x, {loc; it=pred2arr ctx ~loc func variadic xs})
 
   and scope_tye ctx ~loc t : ScopedTypeExpression.t_ =
     match t with
@@ -836,7 +837,7 @@ end = struct
     | TApp(c,x,xs) ->
         if F.Set.mem c ctx || is_uvar_name c then error ~loc "type schema parameters cannot be type formers";
         App(Scope.mkGlobal (),c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
-    | TPred(m,xs) -> pred2arr ctx ~loc m xs
+    | TPred(m,xs,v) -> pred2arr ctx ~loc m v xs
     | TArr(s,t) -> Arrow(Output, NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
   and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
   let scope_loc_tye ctx (t: Ast.Structured.functionality Ast.TypeExpression.t) =

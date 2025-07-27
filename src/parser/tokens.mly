@@ -76,6 +76,7 @@
 %token IFF
 %token NIL
 %token EOF
+%token DOTS
 
 %token <string> FAMILY_PLUS
 %token <string> FAMILY_TIMES
