@@ -1520,7 +1520,7 @@ end = struct
     let map =
       preds |> List.fold_left (fun acc (symb,(indexing:pred_info)) ->
         match SymbolMap.get_global_symbol symbols symb with
-        | None -> assert false
+        | None -> acc
         | Some c -> add_indexing_for (Symbol.get_str symb) (Symbol.get_loc symb) c indexing acc)
       C.Map.empty 
     in
@@ -1802,6 +1802,7 @@ end = struct
           update_bools true a;
           remove_as a :: mkpats is args mode
         | (([] as is) | (_::is)), _::args, _ :: mode -> mkDiscard :: mkpats is args mode
+        | (([] as is) | (_::is)), _::args, [] -> mkDiscard :: mkpats is args mode
         | _, _::args, [] -> error ~loc @@
           Format.asprintf "@[<hov 2>args/mode mismatch: Building query for %a: %s@]" pp_global_predicate p (String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode)
         | _ -> assert false

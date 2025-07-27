@@ -1,5 +1,5 @@
 func f int, int -> int.. .
-f N D R :- R is N div D.
+f N D R :- !, R is N div D.
 f N D R M :- f N D R, M is N mod D.
 
 main :- f 3 2 R, f 3 2 _ Q, R = 1, Q = 1.
