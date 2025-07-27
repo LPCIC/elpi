@@ -510,3 +510,8 @@ let () = declare "tc_ambiguous"
   ~description:"tc_ambiguous"
   ~expectation:(FailureOutput Str.(regexp "too many"))
   ()
+
+let () = declare "variadic"
+  ~source_elpi:"variadic.elpi"
+  ~description:"variadic"
+  ()
