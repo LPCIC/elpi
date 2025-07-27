@@ -2,9 +2,9 @@ constraint foo good bad {
     rule \ (L :> D ?- foo G B) | (std.rev L L1) <=> (L1 :> D ?- foo G B).
 }
 
-pred good i:int.
-pred bad i:int.
-pred foo i:int, i:int.
+func good int.
+func bad int.
+func foo int, int.
 foo A B :- print A B, good A, bad B.
 
 main :-

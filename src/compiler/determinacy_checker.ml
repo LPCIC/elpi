@@ -802,9 +802,14 @@ let check_clause, check_atom =
   in
 
   let check_atom ~type_abbrevs ~types ~unknown (t : ScopedTerm.t) : unit =
-    let _var, (_dtype, _gc), _tl_cut = with_error_handling ~types ~unknown
+    let _var, (_dtype, gc), _tl_cut = with_error_handling ~types ~unknown
       (check ~type_abbrevs ~types ~ctx:BVar.empty ~var:Uvar.empty Det) t in
-    ()
+    if Good_call.is_wrong gc then
+      let f Good_call.{ term } = 
+          Format.asprintf "@[<hov  2>Found relational atom@ @[<hov 2>(%a)@]@]" 
+            ScopedTerm.pretty term 
+      in
+        err gc f
   in
 
     check_clause, check_atom

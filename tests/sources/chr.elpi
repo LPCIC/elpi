@@ -26,11 +26,11 @@ constraint term {
      \ (GY ?- term (uvar K LY) TY)
      | (print "compat" GX "|-" K LX TX "," GY "|-" K LY TY, 
         compatible GX LX GY LY CTXCONSTR)
-   <=> (print "NEW" CTXCONSTR TX "=" TY, CTXCONSTR, TX = TY).
+   <=> (print "NEW" CTXCONSTR TX "=" TY, std.do! CTXCONSTR, TX = TY).
 
 }
 
-pred compatible i:list prop, i:list term,i:list prop,i:list term,o:list prop.
+pred compatible i:list prop, i:list term,i:list prop,i:list term,o:list (func).
 compatible _ [] _ [] [] :- !.
 compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
  (GX => term X TX),

@@ -1372,6 +1372,8 @@ end = struct
 
   let check_and_spill_chr ~time ~unknown ~type_abbrevs ~kinds ~types r =
     let unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
+    Option.iter (fun x -> Determinacy_checker.check_atom ~type_abbrevs ~types ~unknown x.Ast.Chr.conclusion) r.new_goal;
+    (* TODO: check no cut *)
     let guard = Option.map (Spilling.main ~type_abbrevs ~types) r.guard in
     let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types ~type_abbrevs conclusion }) r.new_goal in
     unknown, { r with guard; new_goal }
