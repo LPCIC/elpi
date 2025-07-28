@@ -2859,13 +2859,16 @@ let remove_clause_in_snd_lvl_idx p = function
     | _ :: xs -> aux xs in
     aux t
 
-let add1clause_overlap_runtime ~depth (idx:pred_info C.Map.t) predicate ~time clause =
+let add1clause_overlap_runtime ~depth (idx:pred_info C.Map.t) predicate ~time (clause:clause) =
   match C.Map.find predicate idx with
   | { overlap = Allowed } -> None, idx
   | { overlap = Forbidden dt } as pred_info ->
     clause.timestamp <- [time];
     let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off pred_info.mode) dt clause.args in
-    let cl_overlap = { overlap_loc = clause.loc; has_cut=has_bang clause.hyps; timestamp=clause.timestamp } in
+    let cl_overlap = { 
+      overlap_loc = clause.loc; has_cut=has_bang clause.hyps; timestamp=clause.timestamp;
+      arg_nb = List.length clause.args
+    } in
     let dt = Discrimination_tree.index dt ~max_list_length path cl_overlap in
     Some cl_overlap, C.Map.add predicate ({pred_info with overlap = Forbidden dt}) idx
   | exception Not_found -> None, idx
@@ -2888,7 +2891,8 @@ let update_overlap ~det_check overlap ~depth index clause =
         in
         let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) dt clause.args in
         let has_cut = has_bang clause.hyps in
-        let overlap_clause = { overlap_loc = clause.loc; has_cut; timestamp=clause.timestamp } in
+        let arg_nb = List.length clause.args in
+        let overlap_clause = { overlap_loc = clause.loc; has_cut; timestamp=clause.timestamp; arg_nb } in
         let dt = Discrimination_tree.index dt path overlap_clause ~max_list_length in
         Some overlap_clause, { overlap with overlap = Forbidden dt }
       in

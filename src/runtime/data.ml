@@ -28,7 +28,24 @@ type indexing =
   | DiscriminationTree of int list
 [@@deriving show, ord]
 
-type overlap_clause = { overlap_loc : Loc.t option; has_cut : bool; mutable timestamp : int list }
+(* 
+Used in the lightweight discrimination tree to
+statically verify whether two rules overlap.
+
+- has_cut: 
+    Instead of storing the full body of the clause in the 
+    lightweight discrimination tree, we simply record 
+    whether the rule contains a cut.
+
+- arg_nb: 
+    In the discrimination tree, variadic arguments are not included in the path.
+    However, the number of arguments is used as a discriminator between two rules.
+    arg_nb tells the number of arguments in the clause when it was added to the trie.
+*)
+type overlap_clause = { 
+  overlap_loc : Loc.t option; has_cut : bool; mutable timestamp : int list;
+  arg_nb : int
+}
 [@@deriving show]
 
 type overlap =
