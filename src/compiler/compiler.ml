@@ -1370,10 +1370,25 @@ end = struct
     let unknown = time_this time (fun () -> Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
     unknown, if needs_spilling then Spilling.main ~types ~type_abbrevs t else t
 
+  let is_global ~types { ScopedTerm.scope = symb' } symb =
+    match symb' with
+    | Scope.Global { resolved_to = x } ->
+        begin match SymbolResolver.resolved_to types x with
+        | Some symb' -> TypingEnv.same_symbol types symb symb'
+        | _ -> false
+        end
+    | _ -> false
+  let rec has_cut ~types = function
+    | { ScopedTerm.it = App(b,[]) } -> is_global ~types b Global_symbols.cut
+    | { ScopedTerm.it = App(_,args) } -> List.exists (has_cut ~types) args
+    | { ScopedTerm.it = Cast(x,_) } -> has_cut ~types x
+    | _ -> false
+
   let check_and_spill_chr ~time ~unknown ~type_abbrevs ~kinds ~types r =
     let unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
     Option.iter (fun x -> Determinacy_checker.check_atom ~type_abbrevs ~types ~unknown x.Ast.Chr.conclusion) r.new_goal;
-    (* TODO: check no cut *)
+    if Option.fold ~none:false ~some:(fun x -> has_cut ~types x.Ast.Chr.conclusion) r.new_goal then
+      error ~loc:r.loc "CHR new goals cannot contain cut";
     let guard = Option.map (Spilling.main ~type_abbrevs ~types) r.guard in
     let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types ~type_abbrevs conclusion }) r.new_goal in
     unknown, { r with guard; new_goal }
@@ -1803,8 +1818,6 @@ end = struct
           remove_as a :: mkpats is args mode
         | (([] as is) | (_::is)), _::args, _ :: mode -> mkDiscard :: mkpats is args mode
         | (([] as is) | (_::is)), _::args, [] -> mkDiscard :: mkpats is args mode
-        | _, _::args, [] -> error ~loc @@
-          Format.asprintf "@[<hov 2>args/mode mismatch: Building query for %a: %s@]" pp_global_predicate p (String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode)
         | _ -> assert false
       in
       (not !has_input || !rig_occ), (not !has_input || !is_catchall), R.mkAppL p @@ mkpats indexed_args args mode 

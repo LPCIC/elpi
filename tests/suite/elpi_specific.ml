@@ -95,6 +95,12 @@ let () = declare "chr_ut"
   ~description:"type checker with UT via CHR"
   ()
 
+let () = declare "chr_cut"
+  ~source_elpi:"chr_cut.elpi"
+  ~description:"cut not allowed"
+  ~expectation:(FailureOutput (Str.regexp "cannot contain cut"))
+  ()
+
 let () = declare "chr_even_odd"
   ~source_elpi:"even-odd.elpi"
   ~description:"CHR example at MLWS"
