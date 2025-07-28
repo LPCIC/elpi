@@ -471,12 +471,15 @@ program: FUNC AFTER ARROW VDASH
 program: FUNC AFTER LPAREN FUNC AFTER FULLSTOP
 program: FUNC AFTER LPAREN FUNC VDASH
 program: FUNC AFTER LPAREN FUNC ARROW VDASH
+program: FUNC AFTER DOTS VDASH
+program: FUNC AFTER ARROW AFTER RPAREN
 
 Predicate declaration expected. Examples:
 pred append i:list A, i:list A, o:list A.
 pred append i:list A i:list A o:list A.
 pred mapR i:list A, i:(pred i:A, o:B), o:list B.
 func map list A, (func A -> B) -> list B.
+func intdiv int, int -> int.. .
 
 program: EXPORTDEF AFTER TYPE
 program: EXPORTDEF VDASH
@@ -575,9 +578,12 @@ You cannot ascribe a type on the head predicate.
 goal: AFTER COLON LPAREN PRED VDASH
 goal: AFTER COLON AFTER LPAREN FUNC ARROW AFTER ARROW
 goal: AFTER COLON LPAREN AFTER IO_COLON
+goal: AFTER COLON AFTER LPAREN FUNC ARROW DOTS VDASH
+goal: AFTER COLON LPAREN FUNC ARROW DOTS VDASH
 
 Anonymous predicate declaration expected.
 Examples:
 (pred i:ty, o:ty)
 (pred)
-
+(func tm -> ty)
+(func)
