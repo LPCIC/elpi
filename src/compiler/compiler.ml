@@ -1668,7 +1668,7 @@ end = struct
     let t  = todbl (depth,ctx) t in
     (!symb, !amap), t
 
-  let check_mut_excl state symbols ~loc pred_info cl cl_st oc p amap : pred_info C.Map.t =
+  let check_mut_excl state symbols ~loc pred_info cl cl_st (oc: overlap_clause option) p amap : pred_info C.Map.t =
     let pp_global_predicate fmt p =
       let f = SymbolMap.global_name state symbols p in
       Format.fprintf fmt "predicate %a" F.pp f in
@@ -1815,13 +1815,19 @@ end = struct
       match cl_overlap with
         | None -> ()
         | Some cl_overlap ->
-          let rec filter_overlaps has_cut :overlap_clause list -> 'a list = function
+          let rec filter_overlaps (arg_nb:int) has_cut : overlap_clause list -> 'a list = function
             | [] -> []
             | x::xs when Option.equal Loc.equal x.Data.overlap_loc (Some loc) ->
-                if has_cut then [] else xs
-            | x::xs -> 
-              if not x.has_cut then (x::filter_overlaps has_cut xs)
-              else filter_overlaps has_cut xs
+                if has_cut then [] 
+                else 
+                  (* only keeps the list of clauses with the same nb of arguments.
+                     this is for clauses with variadic number of argmnets:
+                     if 2 clauses have different arities, they cannot overlap
+                  *)
+                  List.filter (fun x -> x.arg_nb = arg_nb) xs
+            | x::xs ->
+              if not x.has_cut && arg_nb = x.arg_nb then (x::filter_overlaps arg_nb has_cut xs)
+              else filter_overlaps arg_nb has_cut xs
           in
           let all_input_eigen_vars, all_input_catchall, hd = hd_query ~loc ~min_depth ~depth p args in
           (* Format.eprintf "Is_local:%b -- Has bang? %b -- rig_occ:%b -- is_chatchall:%b@." is_local cl_overlap.has_cut has_input_w_eigen_var is_catchall; *)
@@ -1833,13 +1839,13 @@ end = struct
             (match get_opt p with
             | None | Some {has_local_without_cut = None} -> ()
             | Some {has_local_without_cut = (Some _) as loc1} ->
-              error_overlapping ~is_local ~loc p [{ overlap_loc = loc1; timestamp =[]; has_cut = false }] h);
+              error_overlapping ~is_local ~loc p [{ overlap_loc = loc1; timestamp =[]; has_cut = false; arg_nb = 0 }] h);
           if is_local && not cl_overlap.has_cut && all_input_eigen_vars then
             (* Here we have a local clause with all input vars being eigenvars + the has no cut in the body, we add the info to the pred *)
             add_pred_w_eigen_var_no_cut p loc;
           if not is_local || (is_local && not cl_overlap.has_cut) then
             let all_overlapping = get_overlapping index p hd in
-            let overlapping =  filter_overlaps cl_overlap.has_cut all_overlapping in
+            let overlapping =  filter_overlaps cl_overlap.arg_nb cl_overlap.has_cut all_overlapping in
             if overlapping <> [] then error_overlapping ~loc ~is_local p overlapping h
     in
 
