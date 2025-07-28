@@ -565,9 +565,8 @@ let check_clause, check_atom =
     in
     assume_input d tl var
 
-  (* returns the updated environment, the dtype of the term and if it has a top level cut *)
-  and check ~type_abbrevs ~types ~ctx ~var (d : dtype) t : Uvar.t * (dtype * _) * bool =
-    let has_top_level_cut = ref false in
+  (* returns the updated environment, the dtype of the term *)
+  and check ~type_abbrevs ~types ~ctx ~var (d : dtype) t : Uvar.t * (dtype * _) =
     let var = ref var in
     let rec check_app ctx ~loc (d : dtype) ~is_var b tl tm =
       Format.eprintf "@[<hov 2>-- Entering check_app with term@ @[%a@]@]@." ScopedTerm.pretty tm;
@@ -646,7 +645,7 @@ let check_clause, check_atom =
       | Discard -> anomaly ~loc "Discard found in prop position"
       | Impl (R2L, _,_, _) -> anomaly ~loc "Found clause in prop position"
     in
-    (!var, check ~ctx d t, !has_top_level_cut)
+    (!var, check ~ctx d t)
 
   and check_lam ~type_abbrevs ~types ~ctx ~var t : dtype =
     Format.eprintf "check_lam: t = %a@." ScopedTerm.pretty t;
@@ -736,10 +735,10 @@ let check_clause, check_atom =
     try
       let pred_name, (det_hd, var), hd, body = aux t in
       Format.eprintf "Var is %a@." Uvar.pp var;
-      let var, (det_body, err_atom), _has_top_level_cut =
+      let var, (det_body, err_atom) =
         Option.(
           map (check ~type_abbrevs ~types ~ctx:!ctx ~var Det) body
-          |> value ~default:(var, (Det, Good_call.init ()), false))
+          |> value ~default:(var, (Det, Good_call.init ())))
       in
       let det_body = if has_tail_cut then Det else det_body in
       Format.eprintf "** END CHECKING THE CLAUSE @.";
@@ -802,7 +801,7 @@ let check_clause, check_atom =
   in
 
   let check_atom ~type_abbrevs ~types ~unknown (t : ScopedTerm.t) : unit =
-    let _var, (_dtype, gc), _tl_cut = with_error_handling ~types ~unknown
+    let _var, (_dtype, gc) = with_error_handling ~types ~unknown
       (check ~type_abbrevs ~types ~ctx:BVar.empty ~var:Uvar.empty Det) t in
     if Good_call.is_wrong gc then
       let f Good_call.{ term } = 
