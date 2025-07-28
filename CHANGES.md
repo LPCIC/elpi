@@ -1,4 +1,22 @@
+# v3.1.0 UNRELEASED
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Language:
+  - Change: constraints must be functions. Hence `declare_constraint` only
+    suspends functional predicated and CHR rules can only generate
+    determinitic goals.
+  - New: the `func` syntax now supports variadic functions as in
+    ```prolog
+    func f int, int -> int.. .
+    f N D Q   :- Q is N div D.
+    f N D Q R :- f N D Q, R is N mod D.
+    ```
+
+
 # v3.0.1 (July 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
 
 - Language:
   - Improve error message for non deterministic atom
