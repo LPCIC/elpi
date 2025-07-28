@@ -2473,8 +2473,6 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
           let map, hyps = pp_atoms ~map ~depth bo in
           map, pp_id_cnt "clause"
             ["args", args; "isNeckcut", J(pp_b, neckcut); "hyp", hyps]
-      | Builtin (Pi, [arg]) -> pp_quantifier ~map ~depth "pi" [depth] arg
-      | Builtin (Sigma, [arg]) -> pp_quantifier ~map ~depth "sigma" [depth] arg
       | Builtin (And, args) -> 
           let map, args = pp_atoms ~map ~depth args in
           map, J(pp_d, [pp_id "id" "comma"; ("cnt", args)])
@@ -2489,13 +2487,12 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
       | App (x, l, r :: []) when is_infix ~depth x ->
           let map, l = pp_atom ~map ~depth l in
           let map, r = pp_atom ~map ~depth r in
-          map, pp_id_cnt "propInfix" ["args", J(pp_a, [
+          map, pp_id_cnt "appInfix" ["args", J(pp_a, [
             J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (pp ~depth ~pp_ctx) (Const x))]);
             l;r])] 
       | App (x, hd, tl) -> 
-          Format.eprintf "Printing app for %a@." (pp ~depth ~pp_ctx) (Const x);
           let map, cnt = pp_atoms ~map ~depth (Const x :: hd ::tl) in
-          map, J(pp_d, [pp_id "id" "prop"; "cnt", cnt])
+          map, J(pp_d, [pp_id "id" "app"; "cnt", cnt])
       | Lam t ->
           let clean, (map, names) = pp_names ~map ~depth [depth] in
           let map, body = pp_atom ~map ~depth:(depth+1) t in
@@ -2505,18 +2502,21 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
             "names", J(pp_a, names);
             "body", J(pp_a, [body])
           ]
-      | CData c -> map, J(pp_d, ["id", J(pp_s, "string"); "cnt", J(pp_s, Format.asprintf "%a" (pp ~pp_ctx ~depth) tm)])
+      | CData c -> 
+        let s = Format.asprintf "%a" (pp ~pp_ctx ~depth) tm in
+        let s = Re.Str.(global_replace (regexp "\(\194\|\171\|\187\)") "") s in
+        map, J(pp_d, ["id", J(pp_s, "string"); "cnt", J(pp_s, s)])
       | Builtin (ImplBang, hd::bo) -> 
         pp_atom ~depth ~map (Builtin(Impl, hd::bo @ [Builtin (Cut,[])]))
       | Builtin (RImpl, hd::bo) -> pp_atom ~map ~depth (Builtin(Impl, bo @ [hd] ))
-      (* | Builtin (Eq, [l;r]) ->
+      | Builtin (Eq, [l;r]) ->
           let map, l = pp_atom ~map ~depth l in
           let map, r = pp_atom ~map ~depth r in
-          map, J(pp_a, (J(pp_d, ["id", J(pp_s,"propInfix"); "cnt", J(pp_s, "=")]) :: l :: r :: [])) *)
+          map, pp_id_cnt "appInfix" ["args", J(pp_a, [J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, "=")]); l;r])] 
       | Builtin (b, []) ->  map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)])
       | Builtin (b, l) ->
           let map, args = List.fold_left_map (fun map x -> pp_atom ~map ~depth x) map l in
-          map, J(pp_d, [pp_id "id" "prop"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)]) :: args))])
+          map, J(pp_d, [pp_id "id" "app"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)]) :: args))])
 
       | AppArg (hd, laaa) ->
           let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
