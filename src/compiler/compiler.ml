@@ -1399,9 +1399,43 @@ end = struct
 
     let { version; code = { Flat.clauses; chr; builtins } } = u in
     let { Assembled.kinds; types; type_abbrevs; toplevel_macros } = precomputed_signature in
+    let u_types = signature.types in
 
     let type_check_time = ref 0.0 in
     let det_check_time = ref 0.0 in
+
+    let builtins = List.map (fun (BuiltInPredicate.Pred(name,_,_) as p) ->
+      let symb =
+        match TypingEnv.resolve_name (F.from_string name) new_types with
+        | Single s -> s
+        | Overloaded (s1::s2::_) ->
+            error ~loc:(Symbol.get_loc s2)
+              (Format.asprintf "Multiple signatures for builtin %s\nOther signature: %a" name Symbol.pp s1);
+        | Overloaded _ -> assert false
+        | exception Not_found ->
+            error (Format.asprintf "No signature declared for builtin %s" name) in
+      let { TypingEnv.indexing; availability } = TypingEnv.resolve_symbol symb new_types in
+      begin match availability with
+        | Ast.Structured.OCaml _ -> ()
+        | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "External predicate with no signature %s" name)
+      end;
+      symb, p
+    ) builtins in
+
+    let types, u_types =
+      List.fold_left (fun (t,ut) (s,_) -> TypingEnv.set_as_implemented_in_ocaml t s, TypingEnv.set_as_implemented_in_ocaml ut s) (types, u_types) builtins in
+
+    TypingEnv.iter_names (fun k -> function
+      | TypeAssignment.Single _ -> ()
+      | Overloaded l ->
+          let l = List.filter (fun x -> TypingEnv.(resolve_symbol x u_types).availability <> Elpi) l in
+          let l = List.filter (fun x ->
+            match Symbol.get_provenance x with
+            | Core | File _ -> false
+            | Builtin _ -> true) l in
+          if TypingEnv.undup u_types l |> List.length <> List.length l then
+          error ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?")
+    ) u_types;
 
     (* returns unkown types + spilled clauses *)
     let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
@@ -1433,38 +1467,8 @@ end = struct
               (Format.asprintf "Ascribing a type to an already registered builtin %s" (Symbol.get_str k))
       | _ -> ()) new_types;
 
-    let builtins = List.map (fun (BuiltInPredicate.Pred(name,_,_) as p) ->
-      let symb =
-        match TypingEnv.resolve_name (F.from_string name) new_types with
-        | Single s -> s
-        | Overloaded (s1::s2::_) ->
-            error ~loc:(Symbol.get_loc s2)
-              (Format.asprintf "Multiple signatures for builtin %s\nOther signature: %a" name Symbol.pp s1);
-        | Overloaded _ -> assert false
-        | exception Not_found ->
-            error (Format.asprintf "No signature declared for builtin %s" name) in
-      let { TypingEnv.indexing; availability } = TypingEnv.resolve_symbol symb new_types in
-      begin match availability with
-        | Ast.Structured.OCaml _ -> ()
-        | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "External predicate with no signature %s" name)
-      end;
-      symb, p
-    ) builtins in
-
-    TypingEnv.iter_names (fun k -> function
-      | TypeAssignment.Single _ -> ()
-      | Overloaded l ->
-          let l = List.filter (fun x -> TypingEnv.(resolve_symbol x signature.types).availability <> Elpi) l in
-          let l = List.filter (fun x ->
-            match Symbol.get_provenance x with
-            | Core | File _ -> false
-            | Builtin _ -> true) l in
-          if TypingEnv.undup signature.types l |> List.length <> List.length l then
-          error ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?")
-    ) signature.types;
-
     let more_types = time_this type_check_time (fun () -> Type_checker.check_undeclared ~unknown ~type_abbrevs) in
-    let u_types = Flatten.merge_type_assignments signature.types more_types in
+    let u_types = Flatten.merge_type_assignments u_types more_types in
     let types = Flatten.merge_type_assignments types more_types in
 
     let signature = { signature with types = u_types } in
