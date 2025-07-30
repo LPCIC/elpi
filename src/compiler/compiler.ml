@@ -1387,12 +1387,7 @@ end = struct
   let check_and_spill_chr ~time ~unknown ~type_abbrevs ~kinds ~types r =
     let unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
     Option.iter (fun { Ast.Chr.conclusion } ->
-      let guard_and_newg =
-        match r.guard with
-        | None -> [conclusion]
-        | Some guard -> [guard;conclusion]
-      in
-      Determinacy_checker.check_atoms ~type_abbrevs ~types ~unknown guard_and_newg)
+      Determinacy_checker.check_chr_guard_and_newgoal ~type_abbrevs ~types ~unknown ~guard:r.guard ~newgoal:conclusion)
       r.new_goal;
     if Option.fold ~none:false ~some:(fun x -> has_cut ~types x.Ast.Chr.conclusion) r.new_goal then
       error ~loc:r.loc "CHR new goals cannot contain cut";

@@ -11,9 +11,9 @@ val check_clause :
   unknown:env_undeclared ->
     ScopedTerm.t -> unit
 
-(* checks the atoms are det *)
-val check_atoms :
+(* checks [guard, !, newgoal] is det *)
+val check_chr_guard_and_newgoal :
   type_abbrevs:type_abbrevs ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->
-    ScopedTerm.t list -> unit
+    guard:ScopedTerm.t option -> newgoal:ScopedTerm.t -> unit
