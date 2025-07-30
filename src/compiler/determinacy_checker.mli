@@ -11,9 +11,9 @@ val check_clause :
   unknown:env_undeclared ->
     ScopedTerm.t -> unit
 
-(* checks the atom is det *)
-val check_atom :
+(* checks the atoms are det *)
+val check_atoms :
   type_abbrevs:type_abbrevs ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->
-    ScopedTerm.t -> unit
+    ScopedTerm.t list -> unit

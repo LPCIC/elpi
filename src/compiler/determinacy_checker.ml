@@ -295,7 +295,7 @@ let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
       Option.bind (SymbolResolver.resolved_to types x) to_dtype
     | Bound _ -> None
   
-let check_clause, check_atom =
+let check_clause, check_atoms =
 
   let has_undeclared_signature ~types ~unknown { ScopedTerm.scope = b; name = f } =
     match F.Map.find_opt f unknown with Some (_, symb) -> same_symb ~types symb b | _ -> false
@@ -800,16 +800,22 @@ let check_clause, check_atom =
     ()
   in
 
-  let check_atom ~type_abbrevs ~types ~unknown (t : ScopedTerm.t) : unit =
-    let _var, (_dtype, gc) = with_error_handling ~types ~unknown
-      (check ~type_abbrevs ~types ~ctx:BVar.empty ~var:Uvar.empty Det) t in
-    if Good_call.is_wrong gc then
-      let f Good_call.{ term } = 
-          Format.asprintf "@[<hov  2>Found relational atom@ @[<hov 2>(%a)@]@]" 
-            ScopedTerm.pretty term 
-      in
-        err gc f
+  let check_atoms ~type_abbrevs ~types ~unknown (tl : ScopedTerm.t list) : unit =
+    let _ : Uvar.t =
+      List.fold_left (fun var t ->
+        let var, (_dtype, gc) = with_error_handling ~types ~unknown
+          (check ~type_abbrevs ~types ~ctx:BVar.empty ~var Det) t in
+        begin if Good_call.is_wrong gc then
+          let f Good_call.{ term } = 
+              Format.asprintf "@[<hov  2>Found relational atom@ @[<hov 2>(%a)@]@]" 
+                ScopedTerm.pretty term 
+          in
+            err gc f
+        end;
+        var) Uvar.empty tl
+    in
+      ()
   in
 
-    check_clause, check_atom
+    check_clause, check_atoms
 
