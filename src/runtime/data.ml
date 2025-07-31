@@ -193,12 +193,13 @@ type term =
   | Builtin of builtin_predicate * term list
   | CData of CData.t
   (* Heap terms: unif variables in the query *)
-  | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
-  | AppUVar of uvar_body * (*depth:*)int * term list
+  | UVar of uvar_body * (*argsno:*)int
+  | AppUVar of uvar_body * term list
   (* Clause terms: unif variables used in clauses *)
   | Arg of (*id:*)int * (*argsno:*)int
   | AppArg of (*id*)int * term list
 and uvar_body = {
+  vardepth : int; (* the depth at which the uvar borns *)
   mutable contents : term [@printer (pp_spaghetti_any ~id:id_term pp_oref)];
   mutable uid_private : int; (* unique name, the sign is flipped when blocks a constraint *)
 }
@@ -299,8 +300,8 @@ let mkNil = Nil
 let mkDiscard = Discard
 let mkBuiltin c args = Builtin(c,args) [@@inline]
 let mkCData c = CData c [@@inline]
-let mkUVar r d ano = UVar(r,d,ano) [@@inline]
-let mkAppUVar r d args = AppUVar(r,d,args) [@@inline]
+let mkUVar r ano = UVar(r,ano) [@@inline]
+let mkAppUVar r args = AppUVar(r,args) [@@inline]
 let mkArg i ano = Arg(i,ano) [@@inline]
 let mkAppArg i args = AppArg(i,args) [@@inline]
 
@@ -337,7 +338,7 @@ let destConst = function Const x -> x | _ -> assert false
    After the constraint store, since assigning may wake up some constraints *)
 let oref =
   let uid = ref 0 in
-  fun x -> incr uid; assert(!uid > 0); { contents = x; uid_private = !uid }
+  fun ~depth:vardepth x -> incr uid; assert(!uid > 0); { vardepth; contents = x; uid_private = !uid }
 let (!!) { contents = x } = x
 
 (* Arg/AppArg point to environments, here the empty one *)
@@ -818,7 +819,7 @@ end
 let dummy = App (-1,Const (-1),[])
 
 (* This is the one uvar used for _ in CHR rules blockers *)
-let dummy_uvar_body = { contents = dummy; uid_private = 0 }
+let dummy_uvar_body = { vardepth = 0; contents = dummy; uid_private = 0 }
 
 module CHR : sig
 

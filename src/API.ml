@@ -535,7 +535,7 @@ module Elpi = struct
 
   let alloc_Elpi name state =
     let module R = (val !r) in
-    state, (ED.oref ED.dummy)
+    state, (ED.oref ~depth:0 ED.dummy)
 
   let make ?name state =
     match name with
@@ -577,11 +577,11 @@ module RawData = struct
     let module R = (val !r) in let open R in
     match deref_head ~depth t with
     | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
-    | ED.Term.AppUVar(ub,0,args) -> UnifVar (ub,args)
-    | ED.Term.AppUVar(ub,lvl,args) -> look ~depth (R.expand_appuv ub ~depth ~lvl ~args)
-    | ED.Term.UVar(ub,lvl,ano) -> look ~depth (R.expand_uv ub ~depth ~lvl ~ano)
+    | ED.Term.AppUVar(ub,args) when ub.vardepth == 0 -> UnifVar (ub,args)
+    | ED.Term.AppUVar(ub,args) -> look ~depth (R.expand_appuv ub ~depth ~args)
+    | ED.Term.UVar(ub,ano) -> look ~depth (R.expand_uv ub ~depth ~ano)
     | ED.Term.Discard ->
-        let ub = ED.oref ED.dummy in
+        let ub = ED.oref ~depth:0 ED.dummy in
         UnifVar (ub,R.mkinterval 0 depth 0)
     | ED.Term.Lam _ as t ->
         begin match R.eta_contract_flex ~depth t with
@@ -591,7 +591,7 @@ module RawData = struct
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
-    | UnifVar(ub,args) -> ED.Term.AppUVar(ub,0,args)
+    | UnifVar(ub,args) -> ED.Term.AppUVar(ub,args)
     | x -> Obj.magic x
   [@@ inline]
 
@@ -680,7 +680,7 @@ module RawData = struct
   let no_constraints = []
 
   let mkUnifVar ub ~args state =
-    ED.Term.mkAppUVar ub 0 args
+    ED.Term.mkAppUVar ub args
 
   type Conversion.extra_goal +=
   | RawGoal = ED.Conversion.RawGoal
@@ -905,7 +905,7 @@ module BuiltInPredicate = struct
 
   let beta ~depth t args =
     let module R = (val !r) in let open R in
-    deref_appuv ~from:depth ~to_:depth ?avoid:None args t
+    deref_apparg ~from:depth ~to_:depth ?avoid:None t args
 
   module HOAdaptors = struct
 

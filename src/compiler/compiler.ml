@@ -1737,8 +1737,8 @@ end = struct
       | Const x -> t
       | Lam t -> Lam ((to_heap ~depth) t)
       | (Nil | CData _ | Discard | AppUVar _ | UVar _) -> t
-      | Arg _ -> UVar (R.CompileTime.fresh_uvar (),depth,0)
-      | AppArg (hd, args) -> AppUVar (R.CompileTime.fresh_uvar (), hd, List.map (to_heap ~depth) args)
+      | Arg _ -> UVar (R.CompileTime.fresh_uvar ~depth,0)
+      | AppArg (_, args) -> AppUVar (R.CompileTime.fresh_uvar ~depth, List.map (to_heap ~depth) args)
       | Cons (a, b) -> Cons ((to_heap ~depth) a, (to_heap ~depth) b)
     in
 
@@ -1792,7 +1792,7 @@ end = struct
       | _ -> false
     in
     let rec is_unif_var = function
-      | AppUVar _ | UVar (_, _, _) | Discard | Arg (_, _)|AppArg (_, _) -> true
+      | AppUVar _ | UVar (_, _) | Discard | Arg (_, _)|AppArg (_, _) -> true
       | App (h,x,xs) when h == Global_symbols.asc -> is_unif_var x && List.for_all is_unif_var xs
       | Nil|Const _|Lam _|App (_, _, _)|Cons (_, _)|Builtin (_, _)|CData _ -> false
     in
@@ -1879,7 +1879,7 @@ end = struct
         | Builtin (Cut, []) -> ()
         | Builtin (Pi, [Lam b]) -> aux ~min_depth ~depth:(depth+1) index b
         | Builtin (Sigma, [Lam b]) ->
-          let uvar = UVar(R.CompileTime.fresh_uvar (),depth,0) in 
+          let uvar = UVar(R.CompileTime.fresh_uvar ~depth,0) in 
           let b = Runtime.subst ~depth [uvar] b in
           aux ~min_depth ~depth:(depth+1) index b
         | Builtin ((Impl| ImplBang), [Nil; l])
@@ -2201,8 +2201,8 @@ let program_of_ast ~flags ~header:((st, base) as header : State.t * Assembled.pr
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x
 let total_det_checking_time { WithMain.total_det_checking_time = x } = x
 
-let pp_uvar_body fmt ub = R.Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
-let pp_uvar_body_raw fmt ub = R.Pp.ppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
+let pp_uvar_body fmt ub = R.Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0)
+let pp_uvar_body_raw fmt ub = R.Pp.ppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0)
   
 let uvk = D.State.declare ~descriptor:D.elpi_state_descriptor ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp_uvar_body)
     ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
@@ -2229,7 +2229,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
-  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0,0)) m) (State.get uvk compiler_state) assignments in
+  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0)) m) (State.get uvk compiler_state) assignments in
   let builtins = assembled_program.Assembled.builtins in
   {
     WithMain.prolog_program;
@@ -2279,7 +2279,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
-  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0,0)) m) (State.get uvk compiler_state) assignments in
+  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0)) m) (State.get uvk compiler_state) assignments in
   let builtins = assembled_program.Assembled.builtins in
   {
     WithMain.prolog_program;
@@ -2311,7 +2311,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
     let query_env = Array.make (F.Map.cardinal amap) D.dummy in
     let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
     let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
-    let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0,0)) m) (State.get uvk compiler_state) assignments in
+    let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0)) m) (State.get uvk compiler_state) assignments in
     let builtins = assembled_program.Assembled.builtins in
     {
       WithMain.prolog_program;
