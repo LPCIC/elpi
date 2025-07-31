@@ -193,12 +193,12 @@ type term =
   | Builtin of builtin_predicate * term list
   | CData of CData.t
   (* Heap terms: unif variables in the query *)
-  | UVar of uvar_body * (*argsno:*)int
-  | AppUVar of uvar_body * term list
+  | UVar of uvar * (*argsno:*)int
+  | AppUVar of uvar * term list
   (* Clause terms: unif variables used in clauses *)
   | Arg of (*id:*)int * (*argsno:*)int
   | AppArg of (*id*)int * term list
-and uvar_body = {
+and uvar = {
   vardepth : int; (* the depth at which the uvar borns *)
   mutable contents : term [@printer (pp_spaghetti_any ~id:id_term pp_oref)];
   mutable uid_private : int; (* unique name, the sign is flipped when blocks a constraint *)
@@ -236,7 +236,7 @@ type stuck_goal = {
   mutable blockers : blockers;
   kind : unification_def stuck_goal_kind;
 }
-and blockers = uvar_body list
+and blockers = uvar list
 and unification_def = {
   adepth : int;
   env : term array;

@@ -518,7 +518,7 @@ end
 
 module Elpi = struct
 
-  type t = ED.uvar_body
+  type t = ED.uvar
 
   let pp = Compiler.pp_uvar_body
   let show m = Format.asprintf "%a" pp m

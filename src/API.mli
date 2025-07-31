@@ -1170,8 +1170,8 @@ module RawData : sig
     | UnifVar of FlexibleData.Elpi.t * term list
 
   (** Terms must be inspected after dereferencing their head.
-      If the resulting term is UVar then its uvar_body is such that
-      get_assignment uvar_body = None *)
+      If the resulting term is UVar then its uvar is such that
+      get_assignment uvar = None *)
   val look : depth:int -> term -> view
 
   (* to reuse a term that was looked at *)

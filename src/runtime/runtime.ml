@@ -112,9 +112,9 @@ let mkConst = C.mkConst
    of this kind.  The pretty printer needs one but will only be defined
    later, since we need, for example, beta reduction to implement it *)
 type 'args deref_uv_fun =
-  ?avoid:uvar_body -> to_:int -> uvar_body -> 'args -> term
+  ?avoid:uvar -> to_:int -> uvar -> 'args -> term
 type 'args deref_arg_fun =
-  ?avoid:uvar_body -> from:int -> to_:int -> term -> 'args -> term
+  ?avoid:uvar -> from:int -> to_:int -> term -> 'args -> term
 
 module Pp : sig
 
@@ -384,21 +384,21 @@ module ConstraintStoreAndTrail : sig
 
   type propagation_item = {
      cstr : constraint_def;
-     cstr_blockers : uvar_body list;
+     cstr_blockers : uvar list;
   }
 
   val new_delayed      : propagation_item list Fork.local_ref
   val to_resume        : stuck_goal list Fork.local_ref
 
   val blockers_map     : stuck_goal list IntMap.t Fork.local_ref
-  val blocked_by       : uvar_body -> stuck_goal list
+  val blocked_by       : uvar -> stuck_goal list
 
   val declare_new : stuck_goal -> unit
   val remove_old : stuck_goal -> unit
   val remove_old_constraint : constraint_def -> unit
 
   val contents :
-    ?overlapping:uvar_body list -> unit -> (constraint_def * blockers) list
+    ?overlapping:uvar list -> unit -> (constraint_def * blockers) list
   (* val print : ?pp_ctx:pp_ctx -> Fmt.formatter -> (constraint_def * blockers) list -> unit *)
   val print1 : ?pp_ctx:pp_ctx -> Fmt.formatter -> constraint_def * blockers -> unit [@@warning "-32"]
   val print_gid: Fmt.formatter -> constraint_def * blockers -> unit  [@@warning "-32"]
@@ -422,7 +422,7 @@ module ConstraintStoreAndTrail : sig
   val last_call : bool ref
 
   (* add an item to the trail *)
-  val trail_assignment : uvar_body -> unit           
+  val trail_assignment : uvar -> unit           
 
   (* backtrack *)
   val undo :
@@ -440,7 +440,7 @@ end = struct (* {{{ *)
 
  type propagation_item = {
     cstr : constraint_def;
-    cstr_blockers : uvar_body list;
+    cstr_blockers : uvar list;
  }
 
   let state =
@@ -449,7 +449,7 @@ end = struct (* {{{ *)
     Fork.new_local State.dummy
 
 type trail_item =
-| Assignement of uvar_body
+| Assignement of uvar
 | StuckGoalAddition of stuck_goal
 | StuckGoalRemoval of stuck_goal
 [@@deriving show]
@@ -469,7 +469,7 @@ let blocked_by r = IntMap.find (uvar_id r) !blockers_map
 module Ugly = struct let delayed : stuck_goal list ref = Fork.new_local [] end
 open Ugly
 let contents ?overlapping () =
-  let overlap : uvar_body list -> bool =
+  let overlap : uvar list -> bool =
     match overlapping with
     | None -> fun _ -> true
     | Some l -> fun b -> List.exists (fun x -> List.memq x l) b in
@@ -668,12 +668,12 @@ module HO : sig
 
   (* lift/restriction/heapification with occur_check *)
   val move : 
-    argsdepth:int -> env -> ?avoid:uvar_body ->
+    argsdepth:int -> env -> ?avoid:uvar ->
     from:int -> to_:int -> term -> term
   
   (* like move but for heap terms (no heapification) *)
   val hmove :
-    ?avoid:uvar_body ->
+    ?avoid:uvar ->
     from:int -> to_:int -> term -> term
 
   (* simultaneous substitution *)
@@ -684,15 +684,15 @@ module HO : sig
   val deref_arg : int deref_arg_fun
   val deref_apparg : term list deref_arg_fun
 
-  val mkAppUVar : uvar_body -> term list -> term
+  val mkAppUVar : uvar -> term list -> term
   val mkAppArg : int -> int -> term list -> term
-  val is_flex : depth:int -> term -> uvar_body option
+  val is_flex : depth:int -> term -> uvar option
   val list_to_lp_list : term list -> term
 
   val full_deref : adepth:int -> env -> depth:int -> term -> term
 
   (* freshens all uvars (unless keep_if_outside), discards blocker status *)
-  val copy_heap_drop_csts : depth:int -> ?keep_if_outside:uvar_body IntMap.t -> term -> term * uvar_body IntMap.t
+  val copy_heap_drop_csts : depth:int -> ?keep_if_outside:uvar IntMap.t -> term -> term * uvar IntMap.t
 
   (* Head of an heap term *)
   val deref_head : depth:int -> term -> term
@@ -702,11 +702,11 @@ module HO : sig
   (* Put a flexible term in canonical expanded form: X^0 args.
    * It returns the canonical term and an assignment if needed.
    * (The first term is the result of dereferencing after the assignment) *)
-  type assignment = uvar_body * term
+  type assignment = uvar * term
   val expand_uv :
-    depth:int -> uvar_body -> ano:int -> term * assignment option
+    depth:int -> uvar -> ano:int -> term * assignment option
   val expand_appuv :
-    depth:int -> uvar_body -> args:term list -> term * assignment option
+    depth:int -> uvar -> args:term list -> term * assignment option
 
   val shift_bound_vars : depth:int -> to_:int -> term -> term
 
@@ -795,7 +795,7 @@ let mkAppArg i fromdepth xxs' =
   try Arg(i,in_fragment fromdepth xxs')
   with NotInTheFragment -> AppArg (i,xxs')
 
-let expand_uv (r : uvar_body) ~ano =
+let expand_uv (r : uvar) ~ano =
   let lvl = r.vardepth in
   let args = C.mkinterval 0 (lvl+ano) 0 in
   if lvl = 0 then AppUVar(r,args), None else
@@ -803,7 +803,7 @@ let expand_uv (r : uvar_body) ~ano =
   let t = AppUVar(r1,args) in
   let assignment = mknLam ano t in
   t, Some (r,assignment)
-let expand_uv ~depth (r : uvar_body) ~ano =
+let expand_uv ~depth (r : uvar) ~ano =
   [%spy "dev:expand_uv:in" ~rid (uppterm depth [] ~argsdepth:0 empty_env) (UVar(r,ano))];
   let t, ass as rc = expand_uv r ~ano in
   [%spy "dev:expand_uv:out" ~rid (uppterm depth [] ~argsdepth:0 empty_env) t (fun fmt -> function
@@ -814,7 +814,7 @@ let expand_uv ~depth (r : uvar_body) ~ano =
           (uppterm r.vardepth [] ~argsdepth:0 empty_env) t) ass];
   rc
 
-let expand_appuv (r : uvar_body) ~args =
+let expand_appuv (r : uvar) ~args =
   let lvl = r.vardepth in
   if lvl = 0 then AppUVar(r,args), None else
   let args_lvl = C.mkinterval 0 lvl 0 in
@@ -824,7 +824,7 @@ let expand_appuv (r : uvar_body) ~args =
   let assignment =
     mknLam nargs (AppUVar(r1,args_lvl @ C.mkinterval lvl nargs 0)) in
   t, Some (r,assignment)
-let expand_appuv ~depth (r : uvar_body) ~args =
+let expand_appuv ~depth (r : uvar) ~args =
   [%spy "dev:expand_appuv:in" ~rid (uppterm depth [] ~argsdepth:0 empty_env) (AppUVar(r,args))];
   let t, ass as rc = expand_appuv r ~args in
   [%spy "dev:expand_appuv:out" ~rid (uppterm depth [] ~argsdepth:0 empty_env) t (fun fmt -> function
@@ -1266,7 +1266,7 @@ and eat_args depth l t =
      t lives in from; args already live in to_
 *)
 
-and deref_uv ?avoid ~to_ (r : uvar_body) (args : int) : term =
+and deref_uv ?avoid ~to_ (r : uvar) (args : int) : term =
   let from = r.vardepth in
   let t = !! r in
   deref_arg ?avoid ~from ~to_ t args
@@ -1325,7 +1325,7 @@ and deref_arg ?avoid ~from ~to_ t args =
 ;;
 
 let copy_heap_drop_csts ~depth ?keep_if_outside x =
-  let m : uvar_body IntMap.t ref =
+  let m : uvar IntMap.t ref =
     match keep_if_outside with
     | None -> ref IntMap.empty
     | Some m -> ref m in
@@ -2107,7 +2107,7 @@ let full_deref ~adepth env ~depth t =
   in
     deref depth t
 
-type assignment = uvar_body * term
+type assignment = uvar * term
 
 let shift_bound_vars ~depth ~to_ t =
   let shift_db d n =
@@ -3412,8 +3412,8 @@ module Ice : sig
 end = struct (* {{{ *)
 
   type freezer = {
-    c2uv : uvar_body C.Map.t;
-    uv2c : (uvar_body * term) list;
+    c2uv : uvar C.Map.t;
+    uv2c : (uvar * term) list;
     assignments : assignment list; (* assignment to lower the level to 0 *)
   }
 
