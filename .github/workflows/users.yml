@@ -30,8 +30,8 @@ jobs:
           env:
             OPAMWITHTEST: false
             
-        - run: opam pin --ignore-constraints-on elpi add rocq-elpi https://github.com/LPCIC/coq-elpi.git#fix-elpi-3.1
-        - run: opam pin --ignore-constraints-on elpi add coq-elpi https://github.com/LPCIC/coq-elpi.git#fix-elpi-3.1
+        - run: opam pin --ignore-constraints-on elpi add rocq-elpi https://github.com/LPCIC/coq-elpi.git#master
+        - run: opam pin --ignore-constraints-on elpi add coq-elpi https://github.com/LPCIC/coq-elpi.git#master
         - run: opam pin --ignore-constraints-on elpi add rocq-stdlib https://github.com/rocq-prover/stdlib.git#master
         - run: opam pin --ignore-constraints-on elpi add rocq-hierarchy-builder https://github.com/math-comp/hierarchy-builder.git#master
         - run: opam pin --ignore-constraints-on elpi add rocq-mathcomp-boot https://github.com/math-comp/math-comp.git#master
