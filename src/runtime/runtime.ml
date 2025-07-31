@@ -183,6 +183,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
    end else if nice then begin
     aux prec depth f (!do_uv_deref ~to_:depth r args)
    end else Fmt.fprintf f "<%s|%a>_%d" (string_of_uvar_body r) (aux min_prec vardepth) !!r vardepth
+
   and pp_arg prec depth f n =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
    if try env.(n) == C.dummy with Invalid_argument _ -> true then
@@ -2203,6 +2204,11 @@ let eta_contract_flex ~depth t =
 end
 (* }}} *)
 open HO
+
+let () = do_uv_deref := deref_uv
+let () = do_appuv_deref := deref_appuv
+let () = do_arg_deref := deref_arg
+let () = do_apparg_deref := deref_apparg
 
 
 (* Built-in predicates and their FFI *************************************** *)
