@@ -185,23 +185,28 @@ type term =
   | Const of constant
   | Lam of term
   | App of constant * term * term list
+
   (* Optimizations *)
   | Cons of term * term
   | Nil
   | Discard
+
   (* FFI *)
   | Builtin of builtin_predicate * term list
   | CData of CData.t
+
   (* Heap terms: unif variables in the query *)
-  | UVar of uvar * (*argsno:*)int
-  | AppUVar of uvar * term list
-  (* Clause terms: unif variables used in clauses *)
-  | Arg of (*id:*)int * (*argsno:*)int
-  | AppArg of (*id*)int * term list
+  | UVar    of uvar * int (* number of arguments *)
+  | AppUVar of uvar * term list (* arguments *)
+
+  (* Stack terms: unif variables in the rules *)
+  | Arg    of int * int (* number of arguments *)
+  | AppArg of int * term list (* arguments *)
+
 and uvar = {
-  vardepth : int; (* the depth at which the uvar borns *)
+  vardepth : int; (* depth at creation time *)
   mutable contents : term [@printer (pp_spaghetti_any ~id:id_term pp_oref)];
-  mutable uid_private : int; (* unique name, the sign is flipped when blocks a constraint *)
+  mutable uid_private : int; (* negative if it blocks a constraint *)
 }
 [@@deriving show, ord]
 
