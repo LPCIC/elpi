@@ -2,7 +2,7 @@ main :-
   (pi x y z\ sigma X XL\ mk-uvar [y] X XL, print "1)" X "/" XL, var XL X [y]).
 
   
-type mk-uvar list A -> B -> C -> o.
+func mk-uvar list A, B, C.
 mk-uvar L U UL :- declare_constraint (mk-uvar L U UL) [_].
 
 constraint mk-uvar {

@@ -1,4 +1,7 @@
-type a, b, c, d prop.
+func a.
+func b.
+func c.
+func d.
 main :- declare_constraint a [_],
         declare_constraint b [_],
         declare_constraint b [_],

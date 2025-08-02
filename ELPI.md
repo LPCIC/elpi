@@ -55,6 +55,8 @@ is very welcome. Questions or feature requests are welcome as well.
 - [Accumulate with paths](#accumulate-with-paths) accepts `accumulate "path".`
   so that one can use `.` in a file/path name.
 
+- [Variadic functions](#variadic-functions)
+
 - [Tracing facility](#tracing-facility) to debug your programs.
  
 - [Macros](#macros) are expanded at compilation time
@@ -1032,6 +1034,21 @@ Here `main` calls `std.list.map`, `std.string.concat` and finally
 
 Elpi accepts `accumulate "path".` (i.e. a string rather than an indent)
 so that one can use `.` in a file or path name.
+
+## Variadic functions
+
+Functions, both external and written in Elpi, can be variadic.
+
+```prolog
+func f int, int -> int.. .
+f N D Q   :- Q is N div D.
+f N D Q R :- f N D Q, R is N mod D.
+```
+
+Here `f` takes 3 or 4 argument: when 4 are passed it also returns the
+reminder of the division. Only the last output can be variadic.
+
+This feature is mainly used for external functions.
 
 ## Tracing facility
 

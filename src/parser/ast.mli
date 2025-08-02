@@ -67,7 +67,7 @@ module TypeExpression : sig
   type 'attribute t_ =
    | TConst of Func.t
    | TApp of Func.t * 'attribute t * 'attribute t list
-   | TPred of 'attribute * (Mode.t * 'attribute t) list
+   | TPred of 'attribute * (Mode.t * 'attribute t) list * bool (* true = variadic *)
    | TArr of 'attribute t * 'attribute t
    and 'a t = { tit : 'a t_; tloc : Loc.t }
    [@@ deriving show, ord]

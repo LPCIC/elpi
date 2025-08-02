@@ -1,7 +1,7 @@
 kind tm type.
 symbol true : tm.
 symbol false : tm.
-pred term i:tm, o:tm.
+func term tm -> tm.
 
 term (app X Y) B :- term X (arr A B), term Y A.
 term (lam A F) (arr A B) :- pi x\ term x A => term (F x) B.
@@ -41,7 +41,7 @@ watch X :- print "watch" X.
 main :- 
   % this is tricky becasuse X sees w, so CHR has to deal with a dirty context
   pi w\ (sigma X A B C A' B' T1 T2 \ pi v\
-    term b2n (arr bool nat) =>
+    term b2n (arr bool nat) =!=>
       (T1 = (lam _ x \ lam _ y\ X x y),
        T2 = (lam _ x \ lam _ y\ X y x),
        term T1 (arr A (arr B nat)),

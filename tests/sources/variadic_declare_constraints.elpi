@@ -1,5 +1,5 @@
 kind tm type.
-type foo tm -> (tm -> tm) -> prop.
+func foo tm, (tm -> tm).
 
 main :-
   declare_constraint (foo X Y) X [Y, Z].

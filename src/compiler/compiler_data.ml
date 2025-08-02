@@ -230,7 +230,7 @@ module TypeAssignment = struct
       fprintf fmt "@[<hov 2>%a:%a@]" show_mode m (pretty_parens ~lvl:arrs) s;
       match t with
       | Prop _ -> ()
-      | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic" else "") (pretty_pred_mode m) (s',r)
+      | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic " else "") (pretty_pred_mode m) (s',r)
       | _ -> assert false
     in
     let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
@@ -424,6 +424,7 @@ module TypingEnv : sig
     ty : TypeAssignment.skema;
     indexing : indexing;
     availability : Elpi_parser.Ast.Structured.symbol_availability;
+    implemented_in_ocaml : bool;
   }
   [@@deriving show]
 
@@ -453,6 +454,8 @@ module TypingEnv : sig
   val mem_symbol : t -> Symbol.t -> bool
   val canon : t -> Symbol.t -> Symbol.t
 
+  val set_as_implemented_in_ocaml : t -> Symbol.t -> t
+
 end = struct
 
   type indexing =
@@ -464,6 +467,7 @@ end = struct
     ty : TypeAssignment.skema;
     indexing : indexing;
     availability : Elpi_parser.Ast.Structured.symbol_availability;
+    implemented_in_ocaml : bool;
   }
   [@@deriving show]
 
@@ -472,6 +476,11 @@ end = struct
     overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
   }
   [@@deriving show]
+
+  let set_as_implemented_in_ocaml e s =
+    match Symbol.QMap.find_opt s e.symbols with
+    | None -> assert false
+    | Some m -> { e with symbols = Symbol.QMap.add s { m with implemented_in_ocaml = true } e.symbols }
 
   let compatible_indexing i1 i2 =
     match i1, i2 with
@@ -510,11 +519,12 @@ end = struct
   
   
   let merge_symbol_metadata s
-      { ty = ty1; indexing = idx1; availability = a1; }
-       { ty = ty2; indexing = idx2; availability = a2; } =
+      { ty = ty1; indexing = idx1; availability = a1; implemented_in_ocaml = o1; }
+       { ty = ty2; indexing = idx2; availability = a2; implemented_in_ocaml = o2; } =
     { ty = TypeAssignment.merge_skema ty1 ty2;
       indexing = merge_indexing s idx1 idx2;
       availability = merge_availability s a1 a2;
+      implemented_in_ocaml = o1 || o2;
     }
   
   let o2l = function  TypeAssignment.Single x -> [x] | Overloaded l -> l
@@ -564,6 +574,7 @@ module SymbolResolver : sig
   val resolve : TypingEnv.t -> resolution -> Symbol.t -> unit
   val resolved_to : TypingEnv.t -> resolution -> Symbol.t option
   val is_resolved_to : TypingEnv.t -> resolution -> Symbol.t -> bool
+  val is_resolved_to_builtin : TypingEnv.t -> resolution -> bool
 
 end = struct
 
@@ -600,6 +611,14 @@ end = struct
     match resolved_to env r with
     | None -> false
     | Some s1 -> TypingEnv.same_symbol env s s1
+
+  let is_resolved_to_builtin env r =
+    match resolved_to env r with
+    | None -> false
+    | Some r ->
+        match TypingEnv.resolve_symbol_opt r env with
+        | None -> false
+        | Some s -> s.implemented_in_ocaml
 
 end
 

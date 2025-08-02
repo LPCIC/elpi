@@ -28,14 +28,15 @@ val execute_loop :
   ?delay_outside_fragment:bool -> executable -> more:(unit -> bool) -> pp:(float -> 'a outcome -> unit) -> unit
 
 (* Functions useful to implement built-in predicates and evaluable functions *)
-val deref_uv : ?avoid:uvar_body -> from:constant -> to_:constant -> int -> term -> term
-val deref_appuv : ?avoid:uvar_body -> from:constant -> to_:constant -> term list -> term -> term
+val deref_uv : ?avoid:uvar -> to_:int -> uvar -> int -> term
+val deref_appuv : ?avoid:uvar -> to_:int -> uvar -> term list -> term
+val deref_apparg : ?avoid:uvar -> from:int -> to_:int -> term -> term list -> term
 val deref_head : depth:int -> term -> term
 val eta_contract_flex : depth:int -> term -> term option
-val is_flex : depth:int -> term -> uvar_body option
+val is_flex : depth:int -> term -> uvar option
 
-val expand_uv : depth:int -> uvar_body -> lvl:int -> ano:int -> term
-val expand_appuv : depth:int -> uvar_body -> lvl:int -> args:term list -> term
+val expand_uv : depth:int -> uvar -> ano:int -> term
+val expand_appuv : depth:int -> uvar -> args:term list -> term
 
 val lp_list_to_list : depth:int -> term -> term list
 val list_to_lp_list : term list -> term
@@ -49,10 +50,10 @@ val mkAppL : constant -> term list -> term
 val mkAppArg : int -> int -> term list -> term
 val move : 
   argsdepth:int -> env ->
-  ?avoid:uvar_body ->
+  ?avoid:uvar ->
   from:int -> to_:int -> term -> term
 val hmove : 
-  ?avoid:uvar_body ->
+  ?avoid:uvar ->
   from:int -> to_:int -> term -> term
 val subst: depth:int -> term list -> term -> term
 
@@ -89,7 +90,7 @@ module CompileTime : sig
 
   val get_clauses : depth:int -> term -> overlap_clause Discrimination_tree.t -> overlap_clause Bl.scan
 
-  val fresh_uvar : unit -> uvar_body
+  val fresh_uvar : depth:int -> uvar
 end
 
 module Indexing : sig

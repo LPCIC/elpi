@@ -76,6 +76,7 @@ type t = Tokens.token =
   | EQ2
   | EQ
   | EOF
+  | DOTS
   | DIV
   | DDARROWBANG
   | DDARROW
@@ -144,7 +145,9 @@ let () =
   test  "3.4\n .5"                   [T(FLOAT 3.4, 1, 0, 0, 3); T(FLOAT 0.5, 2, 4, 5, 7)];
   (*    01234567890123456789012345 *)
   test  "3 .4"                       [T(INTEGER 3, 1, 0, 0, 1); T(FLOAT 0.4, 1, 0, 2, 4)];
-  test  "3..4"                       [T(INTEGER 3, 1, 0, 0, 1); T(FULLSTOP, 1, 0, 1, 2); T(FLOAT 0.4, 1, 0, 2, 4)];
+  test  "3..4"                       [T(INTEGER 3, 1, 0, 0, 1); T(DOTS, 1, 0, 1, 3); T(INTEGER 4, 1, 0, 3, 4)];
+  test  "3..."                       [T(INTEGER 3, 1, 0, 0, 1); T(DOTS, 1, 0, 1, 3); T(FULLSTOP, 1, 0, 3, 4)];
+  test  "3. .4"                      [T(INTEGER 3, 1, 0, 0, 1); T(FULLSTOP, 1, 0, 1, 2); T(FLOAT 0.4, 1, 0, 3, 5)];
   test  "3."                         [T(INTEGER 3, 1, 0, 0, 1); T(FULLSTOP, 1, 0, 1, 2)];
   test  "-3."                        [T(INTEGER (-3), 1, 0, 0, 2); T(FULLSTOP, 1, 0, 2, 3)];
   (*    01234567890123456789012345 *)

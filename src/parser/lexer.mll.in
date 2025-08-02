@@ -237,5 +237,6 @@ and token v = parse
 | ucase idcharstar as c { CONSTANT c }
 | lcase idcharstarns as c { CONSTANT c }
 | "." idcharstarns as c { CONSTANT c }
+| ".." { DOTS }
 | '@' idcharstar as c { CONSTANT c }
 | eof { EOF }

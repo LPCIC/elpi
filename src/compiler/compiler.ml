@@ -479,9 +479,9 @@ end = struct (* {{{ *)
 
   let rec structure_type_expression_aux ~loc valid t = { t with TypeExpression.tit =
     match t.TypeExpression.tit with
-    | TPred(att,p) when valid att <> None -> TPred(Option.get (valid att),List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p)
-    | TPred([], _) -> assert false
-    | TPred(a :: _, _) -> error ~loc ("illegal attribute " ^ show_raw_attribute a)
+    | TPred(att,p,v) when valid att <> None -> TPred(Option.get (valid att),List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p,v)
+    | TPred([], _,_) -> assert false
+    | TPred(a :: _, _, _) -> error ~loc ("illegal attribute " ^ show_raw_attribute a)
     | TArr(s,t) -> TArr(structure_type_expression_aux ~loc valid s,structure_type_expression_aux ~loc valid t) 
     | TApp(c,x,xs) -> TApp(c,structure_type_expression_aux ~loc valid x,List.map (structure_type_expression_aux ~loc valid) xs)
     | TConst c -> TConst c
@@ -498,7 +498,7 @@ end = struct (* {{{ *)
     let rec is_pred = function 
       | Ast.TypeExpression.TConst a -> is_propf a
       | TArr(_,r) -> is_pred r.tit
-      | TApp (_, _, _) | TPred (_, _) -> false
+      | TApp (_, _, _) | TPred (_, _, _) -> false
     in
     let rec flatten tloc = function
       | Ast.TypeExpression.TArr (l,r) -> (Ast.Mode.Output, l) :: flatten_loc r 
@@ -506,19 +506,19 @@ end = struct (* {{{ *)
       | tit -> [Output,{tit;tloc}]
     and flatten_loc {tit;tloc} = flatten tloc tit
     and main = function
-      | Ast.TypeExpression.TPred (b, l) -> 
-          Ast.TypeExpression.TPred (b, List.map (fun (a, b) -> a, main_loc b) l)
+      | Ast.TypeExpression.TPred (b, l,v) -> 
+          Ast.TypeExpression.TPred (b, List.map (fun (a, b) -> a, main_loc b) l,v)
       | TConst _ as t -> t
       | TApp (n, x, xs) -> TApp (n, main_loc x, List.map main_loc xs)
-      | TArr (l, r) when is_pred r.tit -> TPred (toplevel_func, (Output, main_loc l) :: flatten_loc r)
+      | TArr (l, r) when is_pred r.tit -> TPred (toplevel_func, (Output, main_loc l) :: flatten_loc r,false)
       | TArr (l, r) -> TArr(main_loc l, main_loc r)
     and main_loc {tit;tloc} = {tit=main tit;tloc}
     in main_loc
 
   let structure_type_expression loc toplevel_func valid t = 
     let res = match t.TypeExpression.tit with
-      | TPred([],p) ->
-        { t with tit = TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p) }
+      | TPred([],p,v) ->
+        { t with tit = TPred(toplevel_func,List.map (fun (m,p) -> m, structure_type_expression_aux ~loc valid p) p,v) }
       | x -> structure_type_expression_aux ~loc valid t
       in flatten_arrows toplevel_func res
 
@@ -565,7 +565,7 @@ end = struct (* {{{ *)
     in
     let attributes, toplevel_func = aux_tatt { availability = Elpi; index = None} Structured.Relation attributes in
     let is_functional_from_ty () = match ty.tit with
-      | TPred (l, _) -> List.mem Functional l | _ -> false in
+      | TPred (l, _,_) -> List.mem Functional l | _ -> false in
     let attributes =
       match attributes.index with
       | None -> 
@@ -745,11 +745,11 @@ module CustomFunctorCompilation = struct
 
   let scope_singlequote ~loc state x = 
     match State.get singlequote state with
-    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const x loc,[]))
+    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const ~name:x ~loc,[]))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
   let scope_backtick ~loc state x =
     match State.get backtick state with
-    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const x loc,[]))
+    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const ~name:x ~loc,[]))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
 end
 
@@ -816,9 +816,10 @@ end = struct
       let c = (F.show f).[0] in
       c = '@'
 
-  let rec pred2arr ctx ~loc func = function
+  let rec pred2arr ctx ~loc func variadic = function
     | [] -> ScopedTypeExpression.Prop func
-    | (m,x)::xs -> Arrow (m,NotVariadic,scope_loc_tye ctx x, {loc; it=pred2arr ctx ~loc func xs})
+    | [m,x] when variadic -> Arrow (m,Variadic,scope_loc_tye ctx x, {loc; it=ScopedTypeExpression.Prop func})
+    | (m,x)::xs -> Arrow (m,NotVariadic,scope_loc_tye ctx x, {loc; it=pred2arr ctx ~loc func variadic xs})
 
   and scope_tye ctx ~loc t : ScopedTypeExpression.t_ =
     match t with
@@ -836,7 +837,7 @@ end = struct
     | TApp(c,x,xs) ->
         if F.Set.mem c ctx || is_uvar_name c then error ~loc "type schema parameters cannot be type formers";
         App(Scope.mkGlobal (),c,scope_loc_tye ctx x, List.map (scope_loc_tye ctx) xs)
-    | TPred(m,xs) -> pred2arr ctx ~loc m xs
+    | TPred(m,xs,v) -> pred2arr ctx ~loc m v xs
     | TArr(s,t) -> Arrow(Output, NotVariadic, scope_loc_tye ctx s, scope_loc_tye ctx t)
   and scope_loc_tye ctx { tloc; tit } = { loc = tloc; it = scope_tye ctx ~loc:tloc tit }
   let scope_loc_tye ctx (t: Ast.Structured.functionality Ast.TypeExpression.t) =
@@ -883,13 +884,13 @@ end = struct
     | Const c when is_discard c -> ScopedTerm.Discard
     | Const c when is_macro_name c ->
         scope_term_macro ~loc ~state c []
-    | Const c when F.Set.mem c ctx -> ScopedTerm.(App(ScopedTerm.mk_bound_const elpi_language c loc,[]))
+    | Const c when F.Set.mem c ctx -> ScopedTerm.(App(ScopedTerm.mk_bound_const ~lang:elpi_language c ~loc,[]))
     | Const c ->
-        if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_bound_const elpi_var c loc,[])
+        if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_bound_const ~lang:elpi_var c ~loc,[])
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
-        else if is_global c then ScopedTerm.(App(mk_const (Scope.mkGlobal ~escape_ns:true ()) (of_global c) loc,[]))
-        else ScopedTerm.(App(mk_const (Scope.mkGlobal ()) c loc,[]))
+        else if is_global c then ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) (of_global c) ~loc,[]))
+        else ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ()) c ~loc,[]))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App ({ it = Parens f },l) -> scope_term ~state ctx ~loc (App(f, l))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
@@ -910,10 +911,10 @@ end = struct
            scope_term_macro ~loc ~state c xs
          else
           let bound = F.Set.mem c ctx in
-          if bound then ScopedTerm.App(ScopedTerm.mk_bound_const elpi_language c cloc, xs)
-          else if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_bound_const elpi_var c cloc,xs)
-          else if is_global c then ScopedTerm.App(ScopedTerm.mk_const (Scope.mkGlobal ~escape_ns:true ()) (of_global c) cloc,xs)
-          else ScopedTerm.App(ScopedTerm.mk_const (Scope.mkGlobal ()) c cloc, xs)
+          if bound then ScopedTerm.App(ScopedTerm.mk_bound_const ~lang:elpi_language c ~loc:cloc, xs)
+          else if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_bound_const ~lang:elpi_var c ~loc:cloc,xs)
+          else if is_global c then ScopedTerm.App(ScopedTerm.mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) (of_global c) ~loc:cloc,xs)
+          else ScopedTerm.App(ScopedTerm.mk_const ~scope:(Scope.mkGlobal ()) c ~loc:cloc, xs)
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
         let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty) in
@@ -924,7 +925,7 @@ end = struct
     | Lam (c,cloc,ty,b) ->
         if has_dot c then error ~loc "Bound variables cannot contain the namespaec separator '.'";
         let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty)) in
-        let name = Some (ScopedTerm.mk_const elpi_language c cloc) in
+        let name = Some (ScopedTerm.mk_const ~scope:elpi_language c ~loc:cloc) in
         ScopedTerm.Lam (name,ty,scope_loc_term ~state (F.Set.add c ctx) b)
     | CData c -> ScopedTerm.CData c (* CData.hcons *)
     | App ({ it = Lam _},_) ->
@@ -1369,8 +1370,27 @@ end = struct
     let unknown = time_this time (fun () -> Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
     unknown, if needs_spilling then Spilling.main ~types ~type_abbrevs t else t
 
+  let is_global ~types { ScopedTerm.scope = symb' } symb =
+    match symb' with
+    | Scope.Global { resolved_to = x } ->
+        begin match SymbolResolver.resolved_to types x with
+        | Some symb' -> TypingEnv.same_symbol types symb symb'
+        | _ -> false
+        end
+    | _ -> false
+  let rec has_cut ~types = function
+    | { ScopedTerm.it = App(b,[]) } -> is_global ~types b Global_symbols.cut
+    | { ScopedTerm.it = App(_,args) } -> List.exists (has_cut ~types) args
+    | { ScopedTerm.it = Cast(x,_) } -> has_cut ~types x
+    | _ -> false
+
   let check_and_spill_chr ~time ~unknown ~type_abbrevs ~kinds ~types r =
     let unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
+    Option.iter (fun { Ast.Chr.conclusion } ->
+      Determinacy_checker.check_chr_guard_and_newgoal ~type_abbrevs ~types ~unknown ~guard:r.guard ~newgoal:conclusion)
+      r.new_goal;
+    if Option.fold ~none:false ~some:(fun x -> has_cut ~types x.Ast.Chr.conclusion) r.new_goal then
+      error ~loc:r.loc "CHR new goals cannot contain cut";
     let guard = Option.map (Spilling.main ~type_abbrevs ~types) r.guard in
     let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types ~type_abbrevs conclusion }) r.new_goal in
     unknown, { r with guard; new_goal }
@@ -1381,9 +1401,43 @@ end = struct
 
     let { version; code = { Flat.clauses; chr; builtins } } = u in
     let { Assembled.kinds; types; type_abbrevs; toplevel_macros } = precomputed_signature in
+    let u_types = signature.types in
 
     let type_check_time = ref 0.0 in
     let det_check_time = ref 0.0 in
+
+    let builtins = List.map (fun (BuiltInPredicate.Pred(name,_,_) as p) ->
+      let symb =
+        match TypingEnv.resolve_name (F.from_string name) new_types with
+        | Single s -> s
+        | Overloaded (s1::s2::_) ->
+            error ~loc:(Symbol.get_loc s2)
+              (Format.asprintf "Multiple signatures for builtin %s\nOther signature: %a" name Symbol.pp s1);
+        | Overloaded _ -> assert false
+        | exception Not_found ->
+            error (Format.asprintf "No signature declared for builtin %s" name) in
+      let { TypingEnv.indexing; availability } = TypingEnv.resolve_symbol symb new_types in
+      begin match availability with
+        | Ast.Structured.OCaml _ -> ()
+        | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "External predicate with no signature %s" name)
+      end;
+      symb, p
+    ) builtins in
+
+    let types, u_types =
+      List.fold_left (fun (t,ut) (s,_) -> TypingEnv.set_as_implemented_in_ocaml t s, TypingEnv.set_as_implemented_in_ocaml ut s) (types, u_types) builtins in
+
+    TypingEnv.iter_names (fun k -> function
+      | TypeAssignment.Single _ -> ()
+      | Overloaded l ->
+          let l = List.filter (fun x -> TypingEnv.(resolve_symbol x u_types).availability <> Elpi) l in
+          let l = List.filter (fun x ->
+            match Symbol.get_provenance x with
+            | Core | File _ -> false
+            | Builtin _ -> true) l in
+          if TypingEnv.undup u_types l |> List.length <> List.length l then
+          error ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?")
+    ) u_types;
 
     (* returns unkown types + spilled clauses *)
     let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
@@ -1415,38 +1469,8 @@ end = struct
               (Format.asprintf "Ascribing a type to an already registered builtin %s" (Symbol.get_str k))
       | _ -> ()) new_types;
 
-    let builtins = List.map (fun (BuiltInPredicate.Pred(name,_,_) as p) ->
-      let symb =
-        match TypingEnv.resolve_name (F.from_string name) new_types with
-        | Single s -> s
-        | Overloaded (s1::s2::_) ->
-            error ~loc:(Symbol.get_loc s2)
-              (Format.asprintf "Multiple signatures for builtin %s\nOther signature: %a" name Symbol.pp s1);
-        | Overloaded _ -> assert false
-        | exception Not_found ->
-            error (Format.asprintf "No signature declared for builtin %s" name) in
-      let { TypingEnv.indexing; availability } = TypingEnv.resolve_symbol symb new_types in
-      begin match availability with
-        | Ast.Structured.OCaml _ -> ()
-        | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "External predicate with no signature %s" name)
-      end;
-      symb, p
-    ) builtins in
-
-    TypingEnv.iter_names (fun k -> function
-      | TypeAssignment.Single _ -> ()
-      | Overloaded l ->
-          let l = List.filter (fun x -> TypingEnv.(resolve_symbol x signature.types).availability <> Elpi) l in
-          let l = List.filter (fun x ->
-            match Symbol.get_provenance x with
-            | Core | File _ -> false
-            | Builtin _ -> true) l in
-          if TypingEnv.undup signature.types l |> List.length <> List.length l then
-          error ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?")
-    ) signature.types;
-
     let more_types = time_this type_check_time (fun () -> Type_checker.check_undeclared ~unknown ~type_abbrevs) in
-    let u_types = Flatten.merge_type_assignments signature.types more_types in
+    let u_types = Flatten.merge_type_assignments u_types more_types in
     let types = Flatten.merge_type_assignments types more_types in
 
     let signature = { signature with types = u_types } in
@@ -1517,7 +1541,7 @@ end = struct
     let map =
       preds |> List.fold_left (fun acc (symb,(indexing:pred_info)) ->
         match SymbolMap.get_global_symbol symbols symb with
-        | None -> assert false
+        | None -> acc
         | Some c -> add_indexing_for (Symbol.get_str symb) (Symbol.get_loc symb) c indexing acc)
       C.Map.empty 
     in
@@ -1551,7 +1575,7 @@ end = struct
   let rec try_add_tail_cut ~types ({ ScopedTerm.it; loc } as orig) =
     let open ScopedTerm in
     let open Global_symbols in
-    let mkG x l = const_of_symb types x l in
+    let mkG x loc = const_of_symb ~types x ~loc in
     let isG s1 = function Scope.Global { resolved_to = s } -> SymbolResolver.is_resolved_to types s s1 | _ -> false in
     let conj ({ ScopedTerm.it; loc } as orig) =
       let mk it = { it; loc; ty = TypeAssignment.(mkProp Function) } in
@@ -1582,7 +1606,7 @@ end = struct
         if List.for_all Option.is_some xs then
           Some (mk @@ App(hd,List.map Option.get xs))
         else None
-    | App _-> Some (mk @@ Impl(R2L,loc,orig,mk @@ App(const_of_symb types cut loc,[])))
+    | App _-> Some (mk @@ Impl(R2L,loc,orig,mk @@ App(const_of_symb ~types cut ~loc,[])))
     | _ -> None
         
   let to_dbl ?(ctx=Scope.Map.empty) ~types ~builtins state symb ?(depth=0) ?(amap = F.Map.empty) t =
@@ -1665,7 +1689,7 @@ end = struct
     let t  = todbl (depth,ctx) t in
     (!symb, !amap), t
 
-  let check_mut_excl state symbols ~loc pred_info cl cl_st oc p amap : pred_info C.Map.t =
+  let check_mut_excl state symbols ~loc pred_info cl cl_st (oc: overlap_clause option) p amap : pred_info C.Map.t =
     let pp_global_predicate fmt p =
       let f = SymbolMap.global_name state symbols p in
       Format.fprintf fmt "predicate %a" F.pp f in
@@ -1713,8 +1737,8 @@ end = struct
       | Const x -> t
       | Lam t -> Lam ((to_heap ~depth) t)
       | (Nil | CData _ | Discard | AppUVar _ | UVar _) -> t
-      | Arg _ -> UVar (R.CompileTime.fresh_uvar (),depth,0)
-      | AppArg (hd, args) -> AppUVar (R.CompileTime.fresh_uvar (), hd, List.map (to_heap ~depth) args)
+      | Arg _ -> UVar (R.CompileTime.fresh_uvar ~depth,0)
+      | AppArg (_, args) -> AppUVar (R.CompileTime.fresh_uvar ~depth, List.map (to_heap ~depth) args)
       | Cons (a, b) -> Cons ((to_heap ~depth) a, (to_heap ~depth) b)
     in
 
@@ -1733,7 +1757,7 @@ end = struct
     in
 
     let error_overlapping_eigen_variables ~loc pred (cl_st,depth : term * int) = 
-      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,This rule (displayed below) does not respects the principles of mutual exclution@]@ @[Principles: there is a cut in the body of the local clause and/or all indexed input arguments are eigenvariables@] @[To solve the problem, add a cut in its body.@]@ @[Offending clause is@ @[<hov 2>%a@]@] @]" pp_global_predicate pred
+      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,This rule (displayed below) does not respects the principles of mutual exclution@]@ @[Principles: there is a cut in the body of the local clause and/or all indexed input arguments are eigenvariables@] @[To solve the problem, add a cut in its body.@]@ @[Offending rule:@ @[<hov 2>%a@]@] @]" pp_global_predicate pred
         (pretty_term ~depth) cl_st) 
     in
 
@@ -1768,7 +1792,7 @@ end = struct
       | _ -> false
     in
     let rec is_unif_var = function
-      | AppUVar _ | UVar (_, _, _) | Discard | Arg (_, _)|AppArg (_, _) -> true
+      | AppUVar _ | UVar (_, _) | Discard | Arg (_, _)|AppArg (_, _) -> true
       | App (h,x,xs) when h == Global_symbols.asc -> is_unif_var x && List.for_all is_unif_var xs
       | Nil|Const _|Lam _|App (_, _, _)|Cons (_, _)|Builtin (_, _)|CData _ -> false
     in
@@ -1799,8 +1823,7 @@ end = struct
           update_bools true a;
           remove_as a :: mkpats is args mode
         | (([] as is) | (_::is)), _::args, _ :: mode -> mkDiscard :: mkpats is args mode
-        | _, _::args, [] -> error ~loc @@
-          Format.asprintf "@[<hov 2>args/mode mismatch: Building query for %a: %s@]" pp_global_predicate p (String.concat " " (List.map  show_term args) ^ " != " ^ Mode.show_hos mode)
+        | (([] as is) | (_::is)), _::args, [] -> mkDiscard :: mkpats is args mode
         | _ -> assert false
       in
       (not !has_input || !rig_occ), (not !has_input || !is_catchall), R.mkAppL p @@ mkpats indexed_args args mode 
@@ -1811,13 +1834,19 @@ end = struct
       match cl_overlap with
         | None -> ()
         | Some cl_overlap ->
-          let rec filter_overlaps has_cut :overlap_clause list -> 'a list = function
+          let rec filter_overlaps (arg_nb:int) has_cut : overlap_clause list -> 'a list = function
             | [] -> []
             | x::xs when Option.equal Loc.equal x.Data.overlap_loc (Some loc) ->
-                if has_cut then [] else xs
-            | x::xs -> 
-              if not x.has_cut then (x::filter_overlaps has_cut xs)
-              else filter_overlaps has_cut xs
+                if has_cut then [] 
+                else 
+                  (* only keeps the list of clauses with the same nb of arguments.
+                     this is for clauses with variadic number of argmnets:
+                     if 2 clauses have different arities, they cannot overlap
+                  *)
+                  List.filter (fun x -> x.arg_nb = arg_nb) xs
+            | x::xs ->
+              if not x.has_cut && arg_nb = x.arg_nb then (x::filter_overlaps arg_nb has_cut xs)
+              else filter_overlaps arg_nb has_cut xs
           in
           let all_input_eigen_vars, all_input_catchall, hd = hd_query ~loc ~min_depth ~depth p args in
           (* Format.eprintf "Is_local:%b -- Has bang? %b -- rig_occ:%b -- is_chatchall:%b@." is_local cl_overlap.has_cut has_input_w_eigen_var is_catchall; *)
@@ -1829,13 +1858,13 @@ end = struct
             (match get_opt p with
             | None | Some {has_local_without_cut = None} -> ()
             | Some {has_local_without_cut = (Some _) as loc1} ->
-              error_overlapping ~is_local ~loc p [{ overlap_loc = loc1; timestamp =[]; has_cut = false }] h);
+              error_overlapping ~is_local ~loc p [{ overlap_loc = loc1; timestamp =[]; has_cut = false; arg_nb = 0 }] h);
           if is_local && not cl_overlap.has_cut && all_input_eigen_vars then
             (* Here we have a local clause with all input vars being eigenvars + the has no cut in the body, we add the info to the pred *)
             add_pred_w_eigen_var_no_cut p loc;
           if not is_local || (is_local && not cl_overlap.has_cut) then
             let all_overlapping = get_overlapping index p hd in
-            let overlapping =  filter_overlaps cl_overlap.has_cut all_overlapping in
+            let overlapping =  filter_overlaps cl_overlap.arg_nb cl_overlap.has_cut all_overlapping in
             if overlapping <> [] then error_overlapping ~loc ~is_local p overlapping h
     in
 
@@ -1850,7 +1879,7 @@ end = struct
         | Builtin (Cut, []) -> ()
         | Builtin (Pi, [Lam b]) -> aux ~min_depth ~depth:(depth+1) index b
         | Builtin (Sigma, [Lam b]) ->
-          let uvar = UVar(R.CompileTime.fresh_uvar (),depth,0) in 
+          let uvar = UVar(R.CompileTime.fresh_uvar ~depth,0) in 
           let b = Runtime.subst ~depth [uvar] b in
           aux ~min_depth ~depth:(depth+1) index b
         | Builtin ((Impl| ImplBang), [Nil; l])
@@ -1865,8 +1894,8 @@ end = struct
               let fresh_loc = get_fresh_loc loc in
               let (p,cl), _, morelcs =
                 try R.CompileTime.clausify1 ~tail_cut:(ik = ImplBang) ~loc:fresh_loc ~modes:(fun x -> fst (get_info x)) ~nargs:(F.Map.cardinal amap) ~depth h
-                with D.CannotDeclareClauseForBuiltin(loc,_c) ->
-                  error ?loc ("Declaring a clause for built in predicate")
+                with D.CannotDeclareClauseForBuiltin(loc,c) ->
+                  error ?loc ("Declaring a clause for built predicate:" ^ show_builtin_predicate (fun ?table x -> F.show @@ SymbolMap.global_name state symbols x) c)
                 in
 
               let cl_overlap, index = R.Indexing.add1clause_overlap_runtime ~depth ~time:(runtime_tick ()) index p cl in
@@ -2172,8 +2201,8 @@ let program_of_ast ~flags ~header:((st, base) as header : State.t * Assembled.pr
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x
 let total_det_checking_time { WithMain.total_det_checking_time = x } = x
 
-let pp_uvar_body fmt ub = R.Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
-let pp_uvar_body_raw fmt ub = R.Pp.ppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0 0)
+let pp_uvar_body fmt ub = R.Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0)
+let pp_uvar_body_raw fmt ub = R.Pp.ppterm 0 [] ~argsdepth:0 [||] fmt (D.mkUVar ub 0)
   
 let uvk = D.State.declare ~descriptor:D.elpi_state_descriptor ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp_uvar_body)
     ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
@@ -2200,7 +2229,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
-  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0,0)) m) (State.get uvk compiler_state) assignments in
+  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0)) m) (State.get uvk compiler_state) assignments in
   let builtins = assembled_program.Assembled.builtins in
   {
     WithMain.prolog_program;
@@ -2250,7 +2279,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
   let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
   let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
-  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0,0)) m) (State.get uvk compiler_state) assignments in
+  let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0)) m) (State.get uvk compiler_state) assignments in
   let builtins = assembled_program.Assembled.builtins in
   {
     WithMain.prolog_program;
@@ -2282,7 +2311,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
     let query_env = Array.make (F.Map.cardinal amap) D.dummy in
     let initial_goal = R.move ~argsdepth:0 ~from:0 ~to_:0 query_env query in
     let assignments = F.Map.fold (fun k i m -> StrMap.add (F.show k) query_env.(i) m) amap StrMap.empty in
-    let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0,0)) m) (State.get uvk compiler_state) assignments in
+    let assignments = StrMap.fold (fun k i m -> StrMap.add k (UVar(i,0)) m) (State.get uvk compiler_state) assignments in
     let builtins = assembled_program.Assembled.builtins in
     {
       WithMain.prolog_program;

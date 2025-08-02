@@ -142,7 +142,7 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : 
     | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0) (* TODO: this is hack for builtins, they could be overloaded as well *)
     (* | OCaml None -> Symbol.make_builtin name |> to_unify false  *)
   in
-  symb, quotient, { ty; indexing; availability }
+  symb, quotient, { ty; indexing; availability; implemented_in_ocaml = false }
 
 let arrow_of_args args ety =
   let rec aux = function
@@ -871,7 +871,7 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
         let {static;runtime} = chose_indexing (Symbol.get_func id) [1] None in
         TypingEnv.Index {mode;indexing=runtime; overlap=Elpi_runtime.Data.mk_Forbidden static; has_local_without_cut=None}
       in
-      id, TypingEnv.{ ty ; indexing; availability = Elpi }
+      id, TypingEnv.{ ty ; indexing; availability = Elpi; implemented_in_ocaml = false }
   | _ -> assert false
 
 let check_undeclared ~type_abbrevs ~unknown =

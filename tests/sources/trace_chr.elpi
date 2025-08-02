@@ -6,8 +6,8 @@ kind nat type.
 type s nat -> nat.
 type z nat.
 
-pred even i:nat.
-pred odd i:nat.
+func even nat.
+func odd nat.
 even z.
 
 odd (s X) :- even X.

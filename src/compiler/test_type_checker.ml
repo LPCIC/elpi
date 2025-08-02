@@ -62,7 +62,7 @@ let _ =
   let kinds = F.Map.empty in
   let types = F.Map.empty, Symbol.QMap.empty in
   let build_ty_metadata ty : TypingEnv.symbol_metadata =
-    {indexing = TypingEnv.DontIndex; availability = Elpi_parser.Ast.Structured.Elpi; ty} in
+    {indexing = TypingEnv.DontIndex; availability = Elpi_parser.Ast.Structured.Elpi; ty; implemented_in_ocaml = false } in
   let add_ty k v (overloading, symbols) = 
     let k = fs k in
     let symb = Elpi_runtime.Data.Symbol.make_builtin k in

@@ -28,7 +28,24 @@ type indexing =
   | DiscriminationTree of int list
 [@@deriving show, ord]
 
-type overlap_clause = { overlap_loc : Loc.t option; has_cut : bool; mutable timestamp : int list }
+(* 
+Used in the lightweight discrimination tree to
+statically verify whether two rules overlap.
+
+- has_cut: 
+    Instead of storing the full body of the clause in the 
+    lightweight discrimination tree, we simply record 
+    whether the rule contains a cut.
+
+- arg_nb: 
+    In the discrimination tree, variadic arguments are not included in the path.
+    However, the number of arguments is used as a discriminator between two rules.
+    arg_nb tells the number of arguments in the clause when it was added to the trie.
+*)
+type overlap_clause = { 
+  overlap_loc : Loc.t option; has_cut : bool; mutable timestamp : int list;
+  arg_nb : int
+}
 [@@deriving show]
 
 type overlap =
@@ -168,22 +185,28 @@ type term =
   | Const of constant
   | Lam of term
   | App of constant * term * term list
+
   (* Optimizations *)
   | Cons of term * term
   | Nil
   | Discard
+
   (* FFI *)
   | Builtin of builtin_predicate * term list
   | CData of CData.t
+
   (* Heap terms: unif variables in the query *)
-  | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
-  | AppUVar of uvar_body * (*depth:*)int * term list
-  (* Clause terms: unif variables used in clauses *)
-  | Arg of (*id:*)int * (*argsno:*)int
-  | AppArg of (*id*)int * term list
-and uvar_body = {
+  | UVar    of uvar * int (* number of arguments *)
+  | AppUVar of uvar * term list (* arguments *)
+
+  (* Stack terms: unif variables in the rules *)
+  | Arg    of int * int (* number of arguments *)
+  | AppArg of int * term list (* arguments *)
+
+and uvar = {
+  vardepth : int; (* depth at creation time *)
   mutable contents : term [@printer (pp_spaghetti_any ~id:id_term pp_oref)];
-  mutable uid_private : int; (* unique name, the sign is flipped when blocks a constraint *)
+  mutable uid_private : int; (* negative if it blocks a constraint *)
 }
 [@@deriving show, ord]
 
@@ -218,7 +241,7 @@ type stuck_goal = {
   mutable blockers : blockers;
   kind : unification_def stuck_goal_kind;
 }
-and blockers = uvar_body list
+and blockers = uvar list
 and unification_def = {
   adepth : int;
   env : term array;
@@ -282,8 +305,8 @@ let mkNil = Nil
 let mkDiscard = Discard
 let mkBuiltin c args = Builtin(c,args) [@@inline]
 let mkCData c = CData c [@@inline]
-let mkUVar r d ano = UVar(r,d,ano) [@@inline]
-let mkAppUVar r d args = AppUVar(r,d,args) [@@inline]
+let mkUVar r ano = UVar(r,ano) [@@inline]
+let mkAppUVar r args = AppUVar(r,args) [@@inline]
 let mkArg i ano = Arg(i,ano) [@@inline]
 let mkAppArg i args = AppArg(i,args) [@@inline]
 
@@ -320,7 +343,7 @@ let destConst = function Const x -> x | _ -> assert false
    After the constraint store, since assigning may wake up some constraints *)
 let oref =
   let uid = ref 0 in
-  fun x -> incr uid; assert(!uid > 0); { contents = x; uid_private = !uid }
+  fun ~depth:vardepth x -> incr uid; assert(!uid > 0); { vardepth; contents = x; uid_private = !uid }
 let (!!) { contents = x } = x
 
 (* Arg/AppArg point to environments, here the empty one *)
@@ -801,7 +824,7 @@ end
 let dummy = App (-1,Const (-1),[])
 
 (* This is the one uvar used for _ in CHR rules blockers *)
-let dummy_uvar_body = { contents = dummy; uid_private = 0 }
+let dummy_uvar_body = { vardepth = 0; contents = dummy; uid_private = 0 }
 
 module CHR : sig
 

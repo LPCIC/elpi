@@ -7,7 +7,7 @@ type arr ty -> ty -> ty.
 type nat ty.
 type bool ty.
 
-pred term i:term, o:ty.
+func term term -> ty.
 term (app HD ARG) TGT :- term HD (arr SRC TGT), term ARG SRC.
 term (lam F) (arr SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
 term (uvar as X) T :- declare_constraint (term X T) [X].
@@ -26,11 +26,11 @@ constraint term {
      \ (GY ?- term (uvar K LY) TY)
      | (print "compat" GX "|-" K LX TX "," GY "|-" K LY TY, 
         compatible GX LX GY LY CTXCONSTR)
-   <=> (print "NEW" CTXCONSTR TX "=" TY, CTXCONSTR, TX = TY).
+   <=> (print "NEW" CTXCONSTR TX "=" TY, std.do! CTXCONSTR, TX = TY).
 
 }
 
-pred compatible i:list prop, i:list term,i:list prop,i:list term,o:list prop.
+pred compatible i:list prop, i:list term,i:list prop,i:list term,o:list (func).
 compatible _ [] _ [] [] :- !.
 compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
  (GX => term X TX),

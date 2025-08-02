@@ -206,32 +206,36 @@ chr_rule:
 
 pred:
 | attributes = attributes; PRED;
-  name = constant; args = separated_list(option(CONJ),pred_item) {
-   { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([], args) } }
+  name = constant; args = separated_list(option(CONJ),pred_item); o=option(DOTS) {
+    let variadic = o <> None in
+   { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([], args, variadic) } }
  }
 | attributes = attributes; FUNC;
-  name = constant; in_args = separated_list(CONJ,fotype_term); ARROW; out_args = separated_list(CONJ,fotype_term) {
+  name = constant; in_args = separated_list(CONJ,fotype_term); ARROW; out_args = separated_list(CONJ,fotype_term); o=option(DOTS) {
     let args = List.map (fun x -> Mode.Input,x) in_args @ List.map (fun x -> Mode.Output,x) out_args in
-    { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([Functional], args) } }
+    let variadic = o <> None in
+    { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([Functional], args, variadic) } }
   }
 | attributes = attributes; FUNC;
-  name = constant; in_args = separated_list(CONJ,fotype_term) {
+  name = constant; in_args = separated_list(CONJ,fotype_term); o=option(DOTS) {
   let args = List.map (fun x -> Mode.Input,x) in_args in
-  { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([Functional], args) } }
+    let variadic = o <> None in
+  { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred ([Functional], args, variadic) } }
 }
 
 pred_item:
 | io = IO_COLON; ty = type_term { (mode_of_IO io,ty) }
 
 anonymous_pred:
-| PRED; args = separated_list(option(CONJ),pred_item) { { tloc = loc $loc; tit = TPred ([], args) } }
-| FUNC; in_args = separated_list(CONJ,fotype_term); ARROW; out_args = separated_list(CONJ,fotype_term) {
+| PRED; args = separated_list(option(CONJ),pred_item) { { tloc = loc $loc; tit = TPred ([], args, false) } }
+| FUNC; in_args = separated_list(CONJ,fotype_term); ARROW; out_args = separated_list(CONJ,fotype_term); o=option(DOTS) {
     let args = List.map (fun x -> Mode.Input,x) in_args @ List.map (fun x -> Mode.Output,x) out_args in
-    { tloc = loc $loc; tit = TPred ([Functional], args) }
+    let variadic = o <> None in
+    { tloc = loc $loc; tit = TPred ([Functional], args, variadic) }
   }
 | FUNC; in_args = separated_list(CONJ,fotype_term) {
     let args = List.map (fun x -> Mode.Input,x) in_args in
-    { tloc = loc $loc; tit = TPred ([Functional], args) }
+    { tloc = loc $loc; tit = TPred ([Functional], args, false) }
   }
 
 kind:

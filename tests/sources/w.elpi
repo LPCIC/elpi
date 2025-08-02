@@ -63,7 +63,7 @@ pred specialize i:ty, o:tye.
 specialize (all F) T :- specialize (F FRESH_) T.
 specialize (mono X) X.
 
-pred overbar i:ty, o:ty.
+func overbar ty -> ty.
 
 constraint w overbar {
 

@@ -1,13 +1,12 @@
-pred p i:int.
-pred trig.
+func p int.
+func trig.
+func q int.
+func trig1.
 
-pred q i:int.
-pred trig1.
+func acc int.
+func acc1 int.
 
-pred acc i:int.
-pred acc1 i:int.
-
-pred tester i:string, i:list prop, i:int.
+func tester string, list prop, int.
 tester Str Ctx Var :-
   print "In" Str "ctx is" Ctx,
   print "Doing acc with" Var,
@@ -33,14 +32,14 @@ constraint acc ?- q trig1 {
 
 pred q&trig1.
 q&trig1 :-
-  acc 4 => declare_constraint (q 4) [_], declare_constraint trig1 [_],
-  acc 4 => declare_constraint (q 5) [_], not (declare_constraint trig1 [_]).
+  (acc 4 =!=> declare_constraint (q 4) [_]), declare_constraint trig1 [_],
+  (acc 4 =!=> declare_constraint (q 5) [_]), not (declare_constraint trig1 [_]).
 
 pred p&trig.
 p&trig :-
-  acc 3 => acc1 3 => declare_constraint (p 3) [_], declare_constraint trig [_],
-  acc 4 => acc1 5 => declare_constraint (p 4) [_], not (declare_constraint trig [_]), 
-  acc 2 => acc1 4 => declare_constraint (p 4) [_], declare_constraint trig [_].
+  (acc 3 =!=> acc1 3 =!=> declare_constraint (p 3) [_]), declare_constraint trig [_],
+  (acc 4 =!=> acc1 5 =!=> declare_constraint (p 4) [_]), not (declare_constraint trig [_]), 
+  (acc 2 =!=> acc1 4 =!=> declare_constraint (p 4) [_]), declare_constraint trig [_].
 
 main :-
   p&trig, q&trig1.
