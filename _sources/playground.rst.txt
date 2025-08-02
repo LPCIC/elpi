@@ -127,9 +127,9 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/accumulated.elpi", line 1, column 0, characters 0-17:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulated.elpi", line 1, column 0, characters 0-17:
    Two types for the same symbol cannot only differ on modes or functionality.
-   Previous declaration: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi", line 1, column 0, characters 0-17:
+   Previous declaration: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi", line 1, column 0, characters 0-17:
    
 **../../tests/sources/accumulate_twice2.elpi
 :**
@@ -144,13 +144,13 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi", line 5, column 2, characters 92-108: other.doomed.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi", line 5, column 2, characters 92-108: other.doomed.
    Please add the following text to your program:
    type other.doomed int -> func.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
 **../../tests/sources/accumulated.elpi
@@ -165,7 +165,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -181,13 +181,13 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ackermann.elpi", line 24, column 38, characters 794-795:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 24, column 38, characters 794-795:
    V is linear: name it _V (discard) or V_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -217,7 +217,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -244,7 +244,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -270,7 +270,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/block.elpi", line 1, column 0, characters 0-15:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/block.elpi", line 1, column 0, characters 0-15:
    matching } is missing
    
 **../../tests/sources/chr.elpi
@@ -306,16 +306,16 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr.elpi", line 36, column 2, characters 984-986:
+   Parsing time: 0.002
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 36, column 2, characters 992-994:
    ignoring flexible clause: GX
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr.elpi", line 37, column 2, characters 1004-1006:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 37, column 2, characters 1012-1014:
    ignoring flexible clause: GY
    
-   Compilation time: 0.003
+   Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.007
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -346,14 +346,14 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
-   Time: 0.001
+   Time: 0.000
    
    Constraints:
    
@@ -373,9 +373,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.003
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -402,9 +402,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -429,9 +429,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -455,7 +455,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr_not_clique.elpi", line 1, column 0, characters 0-14:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_not_clique.elpi", line 1, column 0, characters 0-14:
    Typechecker: Undeclared predicate a
    
 **../../tests/sources/chr_sem.elpi
@@ -475,10 +475,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -502,9 +502,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -538,8 +538,8 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Typechecking time: 0.003
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -563,9 +563,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -590,10 +590,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -617,10 +617,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -644,7 +644,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -670,13 +670,13 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 17, column 10, characters 254-255:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 17, column 10, characters 254-255:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Typechecking time: 0.003
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -700,9 +700,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -727,9 +727,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -754,9 +754,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -780,7 +780,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 32, characters 32-43:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 32, characters 32-43:
    untyped and non allocated symbol p
    
 **../../tests/sources/end_comment.elpi
@@ -830,13 +830,13 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta.elpi", line 7, column 7, characters 143-146: g.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta.elpi", line 7, column 7, characters 143-146: g.
    Please add the following text to your program:
    type g tm -> tm.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -893,32 +893,32 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 26, column 7, characters 780-781:
+   Parsing time: 0.002
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 26, column 7, characters 780-781:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 36, column 11, characters 1111-1114:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 36, column 11, characters 1111-1114:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 14, characters 1131-1136:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 14, characters 1131-1136:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 76, column 17, characters 2261-2263:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 76, column 17, characters 2261-2263:
    X0 is linear: name it _X0 (discard) or X0_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 80, column 11, characters 2324-2325:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 80, column 11, characters 2324-2325:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 82, column 15, characters 2377-2381:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 82, column 15, characters 2377-2381:
    X1 is linear: name it _X1 (discard) or X1_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 84, column 18, characters 2437-2443:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 84, column 18, characters 2437-2443:
    X2 is linear: name it _X2 (discard) or X2_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 86, column 11, characters 2488-2490:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 86, column 11, characters 2488-2490:
    X3 is linear: name it _X3 (discard) or X3_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 88, column 15, characters 2542-2546:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 88, column 15, characters 2542-2546:
    X4 is linear: name it _X4 (discard) or X4_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 90, column 18, characters 2602-2608:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 90, column 18, characters 2602-2608:
    X5 is linear: name it _X5 (discard) or X5_ (fresh variable)
    
-   Compilation time: 0.003
+   Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.007
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -941,13 +941,13 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/even-odd.elpi", line 19, column 41, characters 436-437:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/even-odd.elpi", line 19, column 41, characters 439-440:
    Z is linear: name it _Z (discard) or Z_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -983,7 +983,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.004
    Determinacy checking time: 0.005
@@ -1009,17 +1009,17 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 4, column 20, characters 64-69:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 4, column 20, characters 64-69:
    X is linear: name it _X (discard) or X_ (fresh variable)
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 2, column 0, characters 21-24: q.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 2, column 0, characters 21-24: q.
    Please add the following text to your program:
    type q (int -> int) -> pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -1043,10 +1043,10 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit2.elpi", line 5, column 24, characters 70-75:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit2.elpi", line 5, column 24, characters 70-75:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -1074,13 +1074,13 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 4, column 47, characters 92-93: d.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 4, column 47, characters 92-93: d.
    Please add the following text to your program:
    type d pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -1104,13 +1104,13 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case.elpi", line 10, column 13, characters 215-218:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case.elpi", line 10, column 13, characters 215-218:
    G is linear: name it _G (discard) or G_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -1135,11 +1135,11 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case2.elpi", line 3, column 0, characters 36-39: p.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case2.elpi", line 3, column 0, characters 36-39: p.
    Please add the following text to your program:
    type p ((int -> pred) -> pred) -> pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -1166,7 +1166,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -1191,20 +1191,20 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 56, column 36, characters 1310-1311:
+   Parsing time: 0.001
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 56, column 36, characters 1310-1311:
    T is linear: name it _T (discard) or T_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 65, column 14, characters 1643-1644:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 65, column 14, characters 1643-1644:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 72, column 38, characters 1876-1877:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 72, column 38, characters 1876-1877:
    T is linear: name it _T (discard) or T_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 73, column 11, characters 1913-1915:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 73, column 11, characters 1913-1915:
    Cs is linear: name it _Cs (discard) or Cs_ (fresh variable)
    
-   Compilation time: 0.003
+   Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.007
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -1228,9 +1228,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -1254,13 +1254,13 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/heap_discard.elpi", line 5, column 10, characters 62-65:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/heap_discard.elpi", line 5, column 10, characters 62-65:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -1284,7 +1284,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -1308,7 +1308,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hollight.elpi", line 28, column 0, characters 756-797:
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hollight.elpi", line 28, column 0, characters 756-797:
    local keyword is no longer supported
    
 **../../tests/sources/hollight_legacy.elpi
@@ -1320,7 +1320,7 @@ Test Bed
 
 .. code-block:: console
 
-   Fatal error: exception Failure("File /home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hollight_legacy.elpi not found in: /home/tassi/LPCIC/elpi/_build/default/../lib/, /home/tassi/LPCIC/elpi/_build/default/../lib/ocaml, /home/tassi/LPCIC/elpi/_build/install/default/lib, /home/tassi/LPCIC/elpi/_build/default")
+   Fatal error: exception Failure("File /home/runner/work/elpi/elpi/docs/source/../../tests/sources/hollight_legacy.elpi not found in: /home/runner/work/elpi/elpi/_build/default/../lib/, /home/runner/work/elpi/elpi/_build/default/../lib/ocaml, /home/runner/work/elpi/elpi/_build/install/default/lib, /home/runner/work/elpi/elpi/_build/default")
    
 **../../tests/sources/hyp_uvar.elpi
 :**
@@ -1339,7 +1339,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -1367,19 +1367,19 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 6, column 10, characters 93-96: r, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 6, column 0, characters 83-88: q, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 6, column 17, characters 100-103: p, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 7, column 5, characters 118-120: ko.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 6, column 10, characters 93-96: r, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 6, column 0, characters 83-88: q, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 6, column 17, characters 100-103: p, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 7, column 5, characters 118-120: ko.
    Please add the following text to your program:
    type r int -> pred.
    type q diagnostic -> diagnostic -> pred.
    type p diagnostic -> pred.
    type ko diagnostic.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -1405,15 +1405,15 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl2.elpi", line 7, column 52, characters 96-99: r, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl2.elpi", line 7, column 1, characters 45-48: q.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 7, column 52, characters 96-99: r, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 7, column 1, characters 45-48: q.
    Please add the following text to your program:
    type r diagnostic -> pred.
    type q diagnostic -> pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -1436,16 +1436,16 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.002
    
-   Compilation time: 0.003
+   Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.007
+   Determinacy checking time: 0.006
    
    Success:
    
-   Time: 1.710
+   Time: 1.867
    
    Constraints:
    
@@ -1465,7 +1465,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -1493,11 +1493,11 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 10, column 0, characters 288-294: test, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 0, characters 186-203: of, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 19, column 33, characters 483-484: b, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 4, characters 190-200: appl, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 19, column 31, characters 481-482: a.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 10, column 0, characters 288-294: test, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 0, characters 186-203: of, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 19, column 33, characters 483-484: b, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 4, characters 190-200: appl, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 19, column 31, characters 481-482: a.
    Please add the following text to your program:
    type test ty -> pred.
    type of tm -> ty -> pred.
@@ -1505,10 +1505,10 @@ Test Bed
    type appl tm -> tm -> tm.
    type a ty.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Typechecking time: 0.004
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -1533,19 +1533,19 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 7, characters 41-53: r, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 0, characters 34-37: q, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda2.elpi", line 6, column 2, characters 57-59: ko, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda2.elpi", line 6, column 9, characters 64-67: g.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 7, characters 41-53: r, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 0, characters 34-37: q, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 6, column 2, characters 57-59: ko, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 6, column 9, characters 64-67: g.
    Please add the following text to your program:
    type r diagnostic -> (int -> pred) -> pred.
    type q diagnostic -> pred.
    type ko diagnostic.
    type g int -> pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -1568,29 +1568,29 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 24, column 15, characters 544-545:
+   Parsing time: 0.002
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 24, column 15, characters 544-545:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 48, column 15, characters 1170-1171:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 48, column 15, characters 1170-1171:
    Z is linear: name it _Z (discard) or Z_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 54, column 10, characters 1242-1243:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 54, column 10, characters 1242-1243:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 60, column 10, characters 1335-1336:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 60, column 10, characters 1335-1336:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 63, column 9, characters 1395-1396:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 63, column 9, characters 1395-1396:
    X is linear: name it _X (discard) or X_ (fresh variable)
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 27, column 14, characters 611-613: x0, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 26, column 0, characters 586-592: test, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 23, column 0, characters 505-527: termify, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 57, column 0, characters 1275-1288: plus, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 48, column 0, characters 1155-1161: once, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 16, column 0, characters 289-306: of, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 60, column 0, characters 1325-1341: mult, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 54, column 0, characters 1232-1243: iter, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 63, column 0, characters 1386-1405: exp, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 16, column 4, characters 293-303: appl.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 27, column 14, characters 611-613: x0, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 26, column 0, characters 586-592: test, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 23, column 0, characters 505-527: termify, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 57, column 0, characters 1275-1288: plus, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 48, column 0, characters 1155-1161: once, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 16, column 0, characters 289-306: of, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 60, column 0, characters 1325-1341: mult, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 54, column 0, characters 1232-1243: iter, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 63, column 0, characters 1386-1405: exp, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 16, column 4, characters 293-303: appl.
    Please add the following text to your program:
    type x0 xint.
    type test tm -> pred.
@@ -1603,14 +1603,14 @@ Test Bed
    type exp nat -> nat -> nat -> pred.
    type appl tm -> tm -> tm.
    
-   Compilation time: 0.003
+   Compilation time: 0.001
    
-   Typechecking time: 0.005
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 0.374
+   Time: 0.344
    
    Constraints:
    
@@ -1636,10 +1636,10 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/list_as_conj.elpi", line 4, column 6, characters 86-87:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/list_as_conj.elpi", line 4, column 6, characters 86-87:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -1666,7 +1666,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -1871,22 +1871,22 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 26, column 13, characters 654-655:
+   Parsing time: 0.002
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 26, column 13, characters 654-655:
    F is linear: name it _F (discard) or F_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 27, column 17, characters 675-678:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 27, column 17, characters 675-678:
    F is linear: name it _F (discard) or F_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 28, column 19, characters 701-706:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 28, column 19, characters 701-706:
    F is linear: name it _F (discard) or F_ (fresh variable)
    
-   Compilation time: 0.003
+   Compilation time: 0.001
    
-   Typechecking time: 0.005
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 0.002
+   Time: 0.003
    
    Constraints:
    
@@ -1917,24 +1917,24 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 28, column 15, characters 712-714:
+   Parsing time: 0.001
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 28, column 15, characters 710-712:
    ignoring flexible clause: GX
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 28, column 33, characters 730-732:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 28, column 33, characters 728-730:
    ignoring flexible clause: GY
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 35, column 4, characters 870-871:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 35, column 4, characters 868-869:
    P is linear: name it _P (discard) or P_ (fresh variable)
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 11, column 5, characters 277-281: zero, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 12, column 5, characters 292-296: succ, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 11, column 10, characters 282-285: nat, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 7, column 6, characters 128-135: lam, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 26, column 0, characters 619-642: compatible, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 9, column 10, characters 249-253: bool, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 44, column 9, characters 1147-1150: b2n, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 6, column 28, characters 102-109: arr, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 6, column 6, characters 80-87: app.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 11, column 5, characters 275-279: zero, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 12, column 5, characters 290-294: succ, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 11, column 10, characters 280-283: nat, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 7, column 6, characters 126-133: lam, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 26, column 0, characters 617-640: compatible, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 9, column 10, characters 247-251: bool, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 44, column 9, characters 1145-1148: b2n, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 6, column 28, characters 100-107: arr, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 6, column 6, characters 78-85: app.
    Please add the following text to your program:
    type zero tm.
    type succ tm.
@@ -1946,10 +1946,10 @@ Test Bed
    type arr tm -> tm -> tm.
    type app tm -> tm -> tm.
    
-   Compilation time: 0.003
+   Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.007
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -1970,7 +1970,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.156667 + 0.052707 + 0.827314
+   1.328904 + 0.057458 + 0.942824
    
 
 .. code-block:: console
@@ -1980,12 +1980,12 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 2.255
+   Time: 2.560
    
    Constraints:
    
@@ -2002,22 +2002,22 @@ Test Bed
 
 .. code-block:: console
 
-   6.617179 + 2.807421 + 0.355939
+   6.481646 + 3.058610 + 0.362915
    
 
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.002
    
-   Compilation time: 0.002
+   Compilation time: 0.001
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.007
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 9.788
+   Time: 9.910
    
    Constraints:
    
@@ -2034,22 +2034,22 @@ Test Bed
 
 .. code-block:: console
 
-   5.833983 + 2.615022 + 0.232899
+   5.736340 + 2.839343 + 0.229952
    
 
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.002
    
-   Compilation time: 0.002
+   Compilation time: 0.001
    
-   Typechecking time: 0.003
-   Determinacy checking time: 0.007
+   Typechecking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 8.688
+   Time: 8.812
    
    Constraints:
    
@@ -2075,10 +2075,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -2101,7 +2101,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/named_clauses00.elpi", line 6, column 0, characters 29-45:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses00.elpi", line 6, column 0, characters 29-45:
    duplicate clause name name1
    
 **../../tests/sources/named_clauses01.elpi
@@ -2115,7 +2115,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/named_clauses01.elpi", line 6, column 0, characters 27-31:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses01.elpi", line 6, column 0, characters 27-31:
    Typechecker: c1 is not a function but it is passed the argument main.
    The type of c1 is pred
    
@@ -2131,9 +2131,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2158,7 +2158,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.004
    Determinacy checking time: 0.006
@@ -2185,9 +2185,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2213,14 +2213,14 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces02.elpi", line 4, column 2, characters 112-115: x.foo.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces02.elpi", line 4, column 2, characters 112-115: x.foo.
    Please add the following text to your program:
    type x.foo pred.
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
    Typechecking time: 0.005
-   Determinacy checking time: 0.008
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -2244,10 +2244,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Typechecking time: 0.003
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -2271,7 +2271,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -2302,14 +2302,14 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 5, characters 106-107:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 5, characters 106-107:
    D is linear: name it _D (discard) or D_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 0, characters 101-102:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 0, characters 101-102:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -2331,7 +2331,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation_error.elpi", line 1, column 0, characters 0-12:
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation_error.elpi", line 1, column 0, characters 0-12:
    Mixfix directives are not supported by this parser.
    
    The parser is based on token families.
@@ -2401,7 +2401,7 @@ Test Bed
 
 .. code-block:: console
 
-   Fatal error: exception Failure("File /home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation_legacy.elpi not found in: /home/tassi/LPCIC/elpi/_build/default/../lib/, /home/tassi/LPCIC/elpi/_build/default/../lib/ocaml, /home/tassi/LPCIC/elpi/_build/install/default/lib, /home/tassi/LPCIC/elpi/_build/default")
+   Fatal error: exception Failure("File /home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation_legacy.elpi not found in: /home/runner/work/elpi/elpi/_build/default/../lib/, /home/runner/work/elpi/elpi/_build/default/../lib/ocaml, /home/runner/work/elpi/elpi/_build/install/default/lib, /home/runner/work/elpi/elpi/_build/default")
    
 **../../tests/sources/patternunif.elpi
 :**
@@ -2412,7 +2412,7 @@ Test Bed
 
 .. code-block:: console
 
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 19, characters 100-140:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 19, characters 100-140:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -2425,18 +2425,18 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 42, characters 123-134: s, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 58, characters 139-140: r, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 34, characters 115-118: f.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 42, characters 123-134: s, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 58, characters 139-140: r, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 34, characters 115-118: f.
    Please add the following text to your program:
    type s pred -> pred.
    type r pred.
    type f tm -> pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -2461,13 +2461,13 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif2.elpi", line 4, column 0, characters 71-74: r.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif2.elpi", line 4, column 0, characters 71-74: r.
    Please add the following text to your program:
    type r (int -> int) -> pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -2493,20 +2493,20 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 26, characters 85-88: r, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, characters 59-62: q, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 13, characters 72-75: p, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi.elpi", line 4, column 6, characters 107-109: ko.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 26, characters 85-88: r, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, characters 59-62: q, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 13, characters 72-75: p, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 4, column 6, characters 107-109: ko.
    Please add the following text to your program:
    type r int -> pred.
    type q diagnostic -> pred.
    type p int -> pred.
    type ko diagnostic.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Typechecking time: 0.005
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -2530,9 +2530,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2557,10 +2557,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Typechecking time: 0.003
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -2582,20 +2582,20 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 18, characters 3432-3434:
+   Parsing time: 0.002
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 18, characters 3432-3434:
    F1 is linear: name it _F1 (discard) or F1_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 33, characters 3447-3449:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 33, characters 3447-3449:
    F2 is linear: name it _F2 (discard) or F2_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 50, characters 3464-3466:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 50, characters 3464-3466:
    F3 is linear: name it _F3 (discard) or F3_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 66, characters 3480-3482:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 99, column 66, characters 3480-3482:
    F4 is linear: name it _F4 (discard) or F4_ (fresh variable)
    
-   Compilation time: 0.003
+   Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.007
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -2642,16 +2642,16 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 65, column 6, characters 2005-2006:
+   Parsing time: 0.002
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 65, column 6, characters 1968-1969:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 111, column 7, characters 3545-3546:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 111, column 7, characters 3508-3509:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.004
+   Compilation time: 0.002
    
-   Typechecking time: 0.006
-   Determinacy checking time: 0.005
+   Typechecking time: 0.004
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -2695,19 +2695,19 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 17, column 19, characters 475-476:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 17, column 19, characters 475-476:
    B is linear: name it _B (discard) or B_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 17, column 26, characters 482-483:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 17, column 26, characters 482-483:
    G is linear: name it _G (discard) or G_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 16, column 9, characters 432-434:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 16, column 9, characters 432-434:
    X1 is linear: name it _X1 (discard) or X1_ (fresh variable)
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 12, column 33, characters 313-314: x, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 12, column 17, characters 297-300: q, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 12, column 9, characters 289-292: p, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 18, column 32, characters 518-519: b, 
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 18, column 28, characters 514-515: a.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 12, column 33, characters 313-314: x, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 12, column 17, characters 297-300: q, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 12, column 9, characters 289-292: p, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 18, column 32, characters 518-519: b, 
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 18, column 28, characters 514-515: a.
    Please add the following text to your program:
    type x int.
    type q int -> pred.
@@ -2717,7 +2717,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -2740,26 +2740,26 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 16, characters 1168-1174:
+   Parsing time: 0.002
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 16, characters 1168-1174:
    DUMMY1 is linear: name it _DUMMY1 (discard) or DUMMY1_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 23, characters 1175-1181:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 23, characters 1175-1181:
    DUMMY2 is linear: name it _DUMMY2 (discard) or DUMMY2_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 70, column 10, characters 1941-1942:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 70, column 10, characters 1941-1942:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 73, column 10, characters 1984-1985:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 73, column 10, characters 1984-1985:
    X is linear: name it _X (discard) or X_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 76, column 9, characters 2044-2045:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 76, column 9, characters 2044-2045:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.004
+   Compilation time: 0.001
    
-   Typechecking time: 0.006
-   Determinacy checking time: 0.006
+   Typechecking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 1.401
+   Time: 1.709
    
    Constraints:
    
@@ -2778,9 +2778,9 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 2, column 41, characters 49-50:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 2, column 41, characters 49-50:
    A is linear: name it _A (discard) or A_ (fresh variable)
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 2, column 2, characters 10-52:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 2, column 2, characters 10-52:
    Typechecker: Unable to infer a closed type for quote_syntax:
    string -> string -> Src267 -> Src269 -> func
    
@@ -2793,7 +2793,7 @@ Test Bed
 
 .. code-block:: console
 
-   3
+   4
    
 
 .. code-block:: console
@@ -2801,9 +2801,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2825,7 +2825,7 @@ Test Bed
 
 .. code-block:: console
 
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 21, column 21, characters 727-756:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 21, column 21, characters 727-756:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -2835,16 +2835,16 @@ Test Bed
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
    
-   Parsing time: 0.000
+   Parsing time: 0.001
    
-   Compilation time: 0.002
+   Compilation time: 0.001
    
-   Typechecking time: 0.005
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 0.264
+   Time: 0.261
    
    Constraints:
    
@@ -2861,7 +2861,7 @@ Test Bed
 
 .. code-block:: console
 
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 18, column 8, characters 419-448:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 18, column 8, characters 419-448:
    The standard λProlog infix operator for implication => has higher precedence
    than conjunction. This means that 'A => B, C' reads '(A => B), C'.
    This is a common mistake since it makes A only available to B (and not to C
@@ -2871,20 +2871,20 @@ Test Bed
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
    
-   Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 33, column 31, characters 960-964:
+   Parsing time: 0.002
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 33, column 31, characters 960-964:
    NINE is linear: name it _NINE (discard) or NINE_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 30, column 30, characters 852-858:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 30, column 30, characters 852-858:
    TWELVE is linear: name it _TWELVE (discard) or TWELVE_ (fresh variable)
    
-   Compilation time: 0.003
+   Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.007
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 2.091
+   Time: 1.583
    
    Constraints:
    
@@ -2903,10 +2903,10 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction.elpi", line 3, column 21, characters 42-43:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction.elpi", line 3, column 21, characters 42-43:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -2935,10 +2935,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -2967,10 +2967,10 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction4.elpi", line 5, column 14, characters 85-88:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction4.elpi", line 5, column 14, characters 85-88:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3003,10 +3003,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.005
-   Determinacy checking time: 0.007
+   Typechecking time: 0.003
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -3035,12 +3035,12 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction6.elpi", line 4, column 14, characters 96-99:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction6.elpi", line 4, column 14, characters 96-99:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -3063,13 +3063,22 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.002
    
-   Compilation time: 0.002
+   Compilation time: 0.001
    
-   Typechecking time: 0.005
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
-   Fatal error: exception Stack overflow
+   
+   Success:
+   
+   Time: 0.130
+   
+   Constraints:
+   
+   
+   State:
+   
    
 **../../tests/sources/rev14.elpi
 :**
@@ -3085,9 +3094,18 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
-   Fatal error: exception Stack overflow
+   
+   Success:
+   
+   Time: 0.133
+   
+   Constraints:
+   
+   
+   State:
+   
    
 **../../tests/sources/same_term.elpi
 :**
@@ -3101,10 +3119,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
-   Determinacy checking time: 0.007
+   Typechecking time: 0.003
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -3127,17 +3145,17 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 6, column 6, characters 59-60:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 6, column 6, characters 59-60:
    A is linear: name it _A (discard) or A_ (fresh variable)
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 6, column 0, characters 53-60: q.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 6, column 0, characters 53-60: q.
    Please add the following text to your program:
    type q tm -> tm -> tm -> pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3159,7 +3177,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.012853 + 0.049792 + 0.657801
+   1.124301 + 0.052599 + 0.779793
    
 
 .. code-block:: console
@@ -3169,12 +3187,12 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 1.848
+   Time: 2.051
    
    Constraints:
    
@@ -3194,10 +3212,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -3221,10 +3239,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -3248,7 +3266,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3266,11 +3284,11 @@ Test Bed
    Parsing time: 0.000
    Warning: 
    Undeclared globals:
-   - File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 2, column 7, characters 17-20: foo.
+   - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 2, column 7, characters 17-20: foo.
    Please add the following text to your program:
    type foo pred.
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3292,7 +3310,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3318,17 +3336,17 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 39, characters 274-276:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 39, characters 274-276:
    AB is linear: name it _AB (discard) or AB_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 56, characters 291-292:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 56, characters 291-292:
    E is linear: name it _E (discard) or E_ (fresh variable)
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 17, characters 252-253:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 10, column 17, characters 252-253:
    F is linear: name it _F (discard) or F_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -3357,10 +3375,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -3389,10 +3407,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -3416,10 +3434,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -3443,9 +3461,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -3475,7 +3493,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3502,9 +3520,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.003
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3529,7 +3547,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3561,10 +3579,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
-   Typechecking time: 0.004
-   Determinacy checking time: 0.008
+   Typechecking time: 0.003
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -3588,10 +3606,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -3615,7 +3633,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3642,9 +3660,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -3668,7 +3686,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 16, characters 127-128:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 16, characters 127-128:
    Typechecker: literal "3" has type int but std.map expects a term of type list A
    
 **../../tests/sources/typeabbrv11.elpi
@@ -3682,7 +3700,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv11.elpi", line 4, column 2, characters 33-36:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv11.elpi", line 4, column 2, characters 33-36:
    Typechecker: literal "x" has type string but f expects a term of type x
    
 **../../tests/sources/typeabbrv12.elpi
@@ -3696,7 +3714,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv12.elpi", line 4, column 2, characters 40-43:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv12.elpi", line 4, column 2, characters 40-43:
    Typechecker: literal "x" has type string but f expects a term of type y
    
 **../../tests/sources/typeabbrv2.elpi
@@ -3710,8 +3728,8 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 6, column 0, characters 39-57:
-   Duplicate type abbreviation for t1. Previous declaration: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 1, column 0, characters 0-17:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 6, column 0, characters 39-57:
+   Duplicate type abbreviation for t1. Previous declaration: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 1, column 0, characters 0-17:
    
 **../../tests/sources/typeabbrv3.elpi
 :**
@@ -3725,7 +3743,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3752,9 +3770,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -3778,7 +3796,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv5.elpi", line 1, column 13, characters 13-14:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv5.elpi", line 1, column 13, characters 13-14:
    Unknown type y
    
 **../../tests/sources/typeabbrv6.elpi
@@ -3792,7 +3810,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv6.elpi", line 1, column 21, characters 21-22:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv6.elpi", line 1, column 21, characters 21-22:
    Unknown type A
    
 **../../tests/sources/typeabbrv7.elpi
@@ -3807,7 +3825,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3834,7 +3852,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3861,7 +3879,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3888,7 +3906,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -3920,7 +3938,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/uvar_chr.elpi", line 30, column 21, characters 818-821:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/uvar_chr.elpi", line 30, column 21, characters 816-819:
    F is linear: name it _F (discard) or F_ (fresh variable)
    
    Compilation time: 0.002
@@ -3954,13 +3972,13 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/var.elpi", line 6, column 29, characters 113-120:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/var.elpi", line 6, column 29, characters 113-120:
    X10 is linear: name it _X10 (discard) or X10_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -3983,10 +4001,10 @@ Test Bed
 
    
    Parsing time: 0.000
-   Warning: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/variadic_declare_constraints.elpi", line 5, column 37, characters 95-96:
+   Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/variadic_declare_constraints.elpi", line 5, column 37, characters 85-86:
    Z is linear: name it _Z (discard) or Z_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.002
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -4039,12 +4057,12 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.002
    
-   Compilation time: 0.003
+   Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.007
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -4065,7 +4083,7 @@ Test Bed
 
 .. code-block:: console
 
-   Fatal error: exception Failure("File /home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w_legacy.elpi not found in: /home/tassi/LPCIC/elpi/_build/default/../lib/, /home/tassi/LPCIC/elpi/_build/default/../lib/ocaml, /home/tassi/LPCIC/elpi/_build/install/default/lib, /home/tassi/LPCIC/elpi/_build/default")
+   Fatal error: exception Failure("File /home/runner/work/elpi/elpi/docs/source/../../tests/sources/w_legacy.elpi not found in: /home/runner/work/elpi/elpi/_build/default/../lib/, /home/runner/work/elpi/elpi/_build/default/../lib/ocaml, /home/runner/work/elpi/elpi/_build/install/default/lib, /home/runner/work/elpi/elpi/_build/default")
    
 **../../tests/sources/zebra.elpi:**
 
@@ -4074,5 +4092,5 @@ Test Bed
 
 .. code-block:: console
 
-   Fatal error: exception Failure("File /home/tassi/LPCIC/elpi/docs/source/../../tests/sources/zebra.elp not found in: /home/tassi/LPCIC/elpi/_build/default/../lib/, /home/tassi/LPCIC/elpi/_build/default/../lib/ocaml, /home/tassi/LPCIC/elpi/_build/install/default/lib, /home/tassi/LPCIC/elpi/_build/default")
+   Fatal error: exception Failure("File /home/runner/work/elpi/elpi/docs/source/../../tests/sources/zebra.elp not found in: /home/runner/work/elpi/elpi/_build/default/../lib/, /home/runner/work/elpi/elpi/_build/default/../lib/ocaml, /home/runner/work/elpi/elpi/_build/install/default/lib, /home/runner/work/elpi/elpi/_build/default")
    
