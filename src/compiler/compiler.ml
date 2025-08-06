@@ -1384,11 +1384,14 @@ end = struct
     | { ScopedTerm.it = Cast(x,_) } -> has_cut ~types x
     | _ -> false
 
-  let check_and_spill_chr ~time ~unknown ~type_abbrevs ~kinds ~types r =
+  let check_and_spill_chr ~flags ~det_check_time ~time ~unknown ~type_abbrevs ~kinds ~types r =
     let unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
-    Option.iter (fun { Ast.Chr.conclusion } ->
-      Determinacy_checker.check_chr_guard_and_newgoal ~type_abbrevs ~types ~unknown ~guard:r.guard ~newgoal:conclusion)
-      r.new_goal;
+
+    if not flags.skip_det_checking then
+        time_this det_check_time (fun () ->
+          Option.iter (fun { Ast.Chr.conclusion } ->
+            Determinacy_checker.check_chr_guard_and_newgoal ~type_abbrevs ~types ~unknown ~guard:r.guard ~newgoal:conclusion)
+            r.new_goal);
     if Option.fold ~none:false ~some:(fun x -> has_cut ~types x.Ast.Chr.conclusion) r.new_goal then
       error ~loc:r.loc "CHR new goals cannot contain cut";
     let guard = Option.map (Spilling.main ~type_abbrevs ~types) r.guard in
@@ -1456,7 +1459,7 @@ end = struct
     let unknown, chr = List.fold_left (fun (unknown,chr_blocks) { Ast.Structured.clique; ctx_filter; rules; loc } ->
         let clique = List.map (Type_checker.check_pred_name ~types ~loc) clique in
         let ctx_filter = List.map (Type_checker.check_pred_name ~types ~loc) ctx_filter in
-        let unknown, rules = map_acc (fun unknown -> check_and_spill_chr ~time:type_check_time ~unknown ~type_abbrevs ~kinds ~types) unknown rules in
+        let unknown, rules = map_acc (fun unknown -> check_and_spill_chr ~flags ~det_check_time ~time:type_check_time ~unknown ~type_abbrevs ~kinds ~types) unknown rules in
         (unknown, { Ast.Structured.clique; ctx_filter; rules; loc } :: chr_blocks)
       ) (unknown, []) chr in
     let chr = List.rev chr in
