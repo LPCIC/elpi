@@ -680,7 +680,8 @@ module RawData = struct
   let no_constraints = []
 
   let mkUnifVar ub ~args state =
-    ED.Term.mkAppUVar ub args
+    if args = [] then ED.Term.mkUVar ub 0
+    else ED.Term.mkAppUVar ub args
 
   type Conversion.extra_goal +=
   | RawGoal = ED.Conversion.RawGoal
