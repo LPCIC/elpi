@@ -1,4 +1,4 @@
-# v3.1.0 UNRELEASED
+# v3.1.0 (August 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
 
@@ -12,7 +12,6 @@ Requires Menhir 20211230 and OCaml 4.13 or above.
     f N D Q   :- Q is N div D.
     f N D Q R :- f N D Q, R is N mod D.
     ```
-
 
 # v3.0.1 (July 2025)
 
