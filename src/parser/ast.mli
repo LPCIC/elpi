@@ -32,7 +32,6 @@ module Func : sig
   val sequentf : t
   val ctypef : t
   val propf : t
-  val fpropf : t
   val typef : t
   val mainf : t
   val declare_constraintf : t

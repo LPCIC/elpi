@@ -283,7 +283,7 @@ intersperse Sep [X|XS] [X,Sep|YS] :- intersperse Sep XS YS.
 func flip (func A, B), B, A.
 flip P X Y :- P Y X.
 
-func time fprop -> float.
+func time (func) -> float.
 time P T :- gettimeofday Before, P, gettimeofday After, T is After - Before.
 
 func do! list prop.

@@ -235,15 +235,15 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
-  LPCode "external symbol (:-)  : fprop -> fprop -> fprop = \"core\".";
-  LPCode "external symbol (:-)  : fprop -> list prop -> fprop = \"core\".";
-  LPCode "external symbol (,)   : variadic fprop fprop.";
+  LPCode "external symbol (:-)  : (func) -> (func) -> (func) = \"core\".";
+  LPCode "external symbol (:-)  : (func) -> list prop -> (func) = \"core\".";
+  LPCode "external symbol (,)   : variadic (func) (func).";
   LPCode "external symbol uvar  : A = \"core\".";
   LPCode "external symbol (as)  : A -> A -> A = \"core\".";
-  LPCode "external symbol (=>)  : prop -> fprop -> fprop = \"core\".";
-  LPCode "external symbol (=>)  : list prop -> fprop -> fprop = \"core\"."; (* HACK in TC to handle this*)
-  LPCode "external symbol (==>) : prop -> fprop -> fprop.";
-  LPCode "external symbol (==>) : list prop -> fprop -> fprop.";
+  LPCode "external symbol (=>)  : prop -> (func) -> (func) = \"core\".";
+  LPCode "external symbol (=>)  : list prop -> (func) -> (func) = \"core\"."; (* HACK in TC to handle this*)
+  LPCode "external symbol (==>) : prop -> (func) -> (func).";
+  LPCode "external symbol (==>) : list prop -> (func) -> (func).";
 
   LPDoc " -- Control --";
 
@@ -961,12 +961,12 @@ X == Y :- same_term X Y.
   LPCode {|
 % [if C T E] picks the first success of C then runs T (never E).
 % if C has no success it runs E.
-func if prop, fprop, fprop.
+func if prop, (func), (func).
 if B T _ :- B, !, T.
 if _ _ E :- E.
 
 % [if2 C1 B1 C2 B2 E] like if but with 2 then branches (and one else branch).
-func if2 prop, fprop, prop, fprop, fprop.
+func if2 prop, (func), prop, (func), (func).
 if2 G1 P1 _  _  _ :- G1, !, P1.
 if2 _  _  G2 P2 _ :- G2, !, P2.
 if2 _  _  _  _  E :- !, E. |};
