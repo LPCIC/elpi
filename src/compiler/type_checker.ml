@@ -198,8 +198,8 @@ let error ~loc msg = error ~loc ("Typechecker: " ^ msg)
 
 let error_not_a_function ~loc c tyc args x =
   let t =
-    if args = [] then ScopedTerm.App(mk_const (Scope.mkGlobal ~escape_ns:true ()) c loc,[])
-    else ScopedTerm.(App(mk_const (Scope.mkGlobal ~escape_ns:true ()) c loc,args)) in
+    if args = [] then ScopedTerm.App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) c ~loc,[])
+    else ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) c ~loc,args)) in
   let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@].@ The type of %a is %a@]"
     ScopedTerm.pretty_ t ScopedTerm.pretty x F.pp c TypeAssignment.pretty_mut_once tyc in
   error ~loc msg
@@ -442,7 +442,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
   and check_lam ~positive ctx ~loc ~tyctx sc c_type_cast t ety =
-    let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_const elpi_language (fresh_name ()) loc in
+    let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_const ~scope:elpi_language (fresh_name ()) ~loc in
     let src = match c_type_cast with
       | None -> mk_uvar "Src"
       | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty x
@@ -509,7 +509,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       (* Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty; *)
         let err ty =
           if args = [] then error_bad_ety ~valid_mode ~loc ~tyctx ~ety F.pp c ty (* uvar *)
-          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_const (Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c loc,args)) ty in
+          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c ~loc,args)) ty in
         let monodirectional () =
           (* Format.eprintf "checking app mono %a\n" F.pp c; *)
           let tgt = check_app_single ~positive ctx ~loc (cid,c,tya) ty [] args in

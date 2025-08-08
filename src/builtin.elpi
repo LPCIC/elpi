@@ -435,7 +435,7 @@ rex_split Rx S L :- rex.split Rx S L.
 
 % [var V ...] checks if the term V is a variable. When used with tree
 % arguments it relates an applied variable with its head and argument list.
-external type var any -> variadic any fprop.
+external func var -> any, any.. .
 
 
 % [prune V L] V is pruned to L (V is unified with a variable that only sees
@@ -468,11 +468,11 @@ external func cmp_term any, any -> cmp.
 
 % [name T ...] checks if T is a eigenvariable. When used with tree arguments
 % it relates an applied name with its head and argument list.
-external type name any -> variadic any fprop.
+external func name -> any, any.. .
 
 % [constant T ...] checks if T is a (global) constant.  When used with tree
 % arguments it relates an applied constant with its head and argument list.
-external type constant any -> variadic any fprop.
+external func constant -> any, any.. .
 
 external func names % generates the list of eigenvariable
   -> list any. % list of eigenvariables in order of age (young first)
