@@ -1,9 +1,9 @@
 % NO
 
 kind k type.
-type k0 (func -> fprop) -> k.
+type k0 (func -> (func)) -> k.
 
-func fst-proj k -> (func -> fprop).
+func fst-proj k -> (func -> (func)).
 fst-proj (k0 F) F.
 
 pred g.
@@ -12,7 +12,7 @@ func give-rel -> prop.
 give-rel g.
 
 func f.
-% Since k0 is constructed with a wrong argument (give-rel returns a prop and not a fprop)
+% Since k0 is constructed with a wrong argument (give-rel returns a prop and not a (func))
 % the call to `fst-proj` is wrong
 f :- fst-proj (k0 give-rel) X, X Y, Y.
 

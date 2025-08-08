@@ -1,10 +1,10 @@
 % YES
 
 func f.
-func f1 fprop.
+func f1 (func).
 
 f :-
-  X = ((x\ f1 x :- x) : (func fprop)),
+  X = ((x\ f1 x :- x) : (func (func))),
   X f.
 
 main.

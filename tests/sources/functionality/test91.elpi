@@ -1,11 +1,11 @@
 % NO
 
 kind t type -> type.
-type k A -> fprop -> t A.
+type k A -> (func) -> t A.
 
-func f1 fprop ->.
+func f1 (func) ->.
 
-func q (t fprop).
+func q (t (func)).
 q (k F1 F2) :- F1, !, F2.
 
 func f.
