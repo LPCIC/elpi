@@ -35,6 +35,9 @@ module Func : sig
   val fpropf : t
   val typef : t
   val mainf : t
+  val declare_constraintf : t
+  val findall_solutionsf : t
+
 
   val dummyname : t
   val spillf : t
