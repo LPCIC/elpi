@@ -27,6 +27,7 @@ type t = Tokens.token =
   | PIPE
   | PI
   | OR
+  | NOOC
   | NIL
   | NAMESPACE
   | NAME

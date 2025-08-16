@@ -383,6 +383,7 @@ attribute:
 | FUNCTIONAL { Functional }
 | UNTYPED { Untyped }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
+| NOOC { NoOC }
 
 indexing:
 | FRESHUV { 0 }
@@ -501,6 +502,7 @@ constant:
 | REPLACE { Func.from_string "replace" }
 | REMOVE { Func.from_string "remove" }
 | INDEX { Func.from_string "index" }
+| NOOC { Func.from_string "nooc" }
 | FUNCTIONAL { Func.from_string "functional" }
 | UNTYPED { Func.from_string "untyped" }
 | SYMBOL { Func.from_string "symbol" }

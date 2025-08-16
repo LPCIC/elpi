@@ -62,6 +62,7 @@ type raw_attribute =
   | Index of int list * string option
   | Functional
   | Untyped
+  | NoOC
 [@@ deriving show]
 
 module TypeExpression : sig
@@ -244,6 +245,7 @@ and attribute = {
   id : string option;
   ifexpr : string option;
   typecheck : bool;
+  occur_check : bool;
 }
 and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string
@@ -254,6 +256,7 @@ and cattribute = {
 and symbol_attribute = {
   availability : symbol_availability;
   index : predicate_indexing option;
+  occur_check_pred : bool;
 }
 and predicate_indexing =
   | Index of int list * tindex option

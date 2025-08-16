@@ -28,9 +28,9 @@ val execute_loop :
   ?delay_outside_fragment:bool -> executable -> more:(unit -> bool) -> pp:(float -> 'a outcome -> unit) -> unit
 
 (* Functions useful to implement built-in predicates and evaluable functions *)
-val deref_uv : ?avoid:uvar -> to_:int -> uvar -> int -> term
-val deref_appuv : ?avoid:uvar -> to_:int -> uvar -> term list -> term
-val deref_apparg : ?avoid:uvar -> from:int -> to_:int -> term -> term list -> term
+val deref_uv : ?oc:occur_check -> to_:int -> uvar -> int -> term
+val deref_appuv : ?oc:occur_check -> to_:int -> uvar -> term list -> term
+val deref_apparg : ?oc:occur_check -> from:int -> to_:int -> term -> term list -> term
 val deref_head : depth:int -> term -> term
 val eta_contract_flex : depth:int -> term -> term option
 val is_flex : depth:int -> term -> uvar option
@@ -50,10 +50,10 @@ val mkAppL : constant -> term list -> term
 val mkAppArg : int -> int -> term list -> term
 val move : 
   argsdepth:int -> env ->
-  ?avoid:uvar ->
+  ?oc:occur_check ->
   from:int -> to_:int -> term -> term
 val hmove : 
-  ?avoid:uvar ->
+  ?oc:occur_check ->
   from:int -> to_:int -> term -> term
 val subst: depth:int -> term list -> term -> term
 
