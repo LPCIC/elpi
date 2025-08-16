@@ -61,7 +61,13 @@ let mk_Forbidden indexing =
     | DiscriminationTree l -> Discrimination_tree.empty_dt l
   )
 
-type pred_info = { indexing:indexing; mode:Mode.hos; overlap: overlap; has_local_without_cut: Loc.t option }
+type pred_info = {
+  indexing:indexing;
+  mode:Mode.hos;
+  overlap: overlap;
+  has_local_without_cut: Loc.t option; (* retroactive check: has a catch all and loads a rule without cut *)
+  occur_check:bool;
+}
 [@@deriving show]
 
 let same_indexing { indexing = i1 } { indexing = i2 } = compare_indexing i1 i2 == 0
@@ -225,6 +231,7 @@ type clause = {
     args : term list;
     hyps : term list;
     vars : int;
+    oc : bool; (* occur_check *)
     mode : Mode.hos;        (* CACHE to avoid allocation in get_clauses *)
     loc : Loc.t option; (* debug *)
     mutable timestamp : int list; (* for grafting *)
@@ -249,13 +256,13 @@ and unification_def = {
   a : term;
   b : term;
   matching: bool;
+  oc : bool;
 }
 and clause_src = { hdepth : int; hsrc : term }
 and prolog_prog = {
   src : clause_src list; (* hypothetical context in original form, for CHR *)
   index : index;
 }
-
 (* These two are the same, but the latter should not be mutated *)
 
 and clause_list = clause Bl.t
@@ -284,6 +291,11 @@ and second_lvl_idx =
     args_idx : clause Discrimination_tree.t; 
 }
 [@@deriving show]
+
+type occur_check =
+  | Skip
+  | No
+  | Check of uvar
 
 let stop = ref false
 let close_index ({idx; time; times} : index) : index =

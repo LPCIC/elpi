@@ -1,0 +1,95 @@
+% An assumption asserting that the constant rbtree is of kind (type -> type).
+kind rbtree type -> type.
+kind color type.
+
+% We assume (not necessarily exhaustive) constructors of this type, somewhat similar to polymorphic variants in OCaml.
+type empty rbtree A.
+type red rbtree A -> A -> rbtree A -> rbtree A.
+type black rbtree A -> A -> rbtree A -> rbtree A.
+
+:nooc
+pred (===) o:A, o:A.
+X === X.
+
+% Assumes both input trees have the same black-depth.
+% one tree is a red-black tree, the other may have both
+% the root and one of its children red.
+% Output is a red-black tree.
+:index(2 2)
+:nooc 
+pred balance i:rbtree A, i:A, i:rbtree A, o:rbtree A.
+balance (red (red T0 V0 T1) V1 T2) V2 T3 O :- !, O === (red (black T0 V0 T1) V1 (black T2 V2 T3)).
+balance (red T0 V0 (red T1 V1 T2)) V2 T3 O :- !, O === (red (black T0 V0 T1) V1 (black T2 V2 T3)).
+balance T0 V0 (red (red T1 V1 T2) V2 T3) O :- !, O === (red (black T0 V0 T1) V1 (black T2 V2 T3)).
+balance T0 V0 (red T1 V1 (red T2 V2 T3)) O :- !, O === (red (black T0 V0 T1) V1 (black T2 V2 T3)).
+balance L X R (black L X R).
+
+% ins is a functional relation on three arguments.
+% the inputs to the function are marked with an i,
+% the output with an o.
+% Unification variables are not instantiated
+% by a predicate in an argument marked with i.
+:index(0 0 1)
+:nooc 
+pred ins i:(pred i:A, i:A, o:cmp), i:A, i:rbtree A, o:rbtree A.
+ins _ X empty (red empty X empty).
+
+% For this example, we'll say that if the inserted value is in the tree,
+% return the tree without changes.
+ins Cmp X (red _L Val _R as G) Y :- Cmp X Val eq, G === Y, !.
+ins Cmp X (black _L Val _R as G) Y :- Cmp X Val eq, G === Y.
+
+% The basic inductive invariant of the ins function is:
+% - if the input tree is empty or has a black root, the output tree is a red-black tree.
+% - if the input tree has a red root, the output tree is almost a red-black tree, except that both the root and
+%   at most one of its children may be red.
+ins Cmp X (red L Val R) Y :-
+    Cmp X Val lt, !,
+    % by assumption that (red L Val R) is a red-black tree, L has a black root, so L' is a r.b. tree
+    Y === red {ins Cmp X L} Val R.
+
+ins Cmp X (red L Val R) Y :-
+    Cmp X Val gt, !,
+    Y === red L Val {ins Cmp X R}.
+
+ins Cmp X (black L Val R) Y :-
+    Cmp X Val lt, !,
+    balance {ins Cmp X L} Val R Y.
+
+ins Cmp X (black L Val R) Y :-
+    Cmp X Val gt, !,
+    balance L Val {ins Cmp X R} Y.
+
+pred int_cmp i:int, i:int, o:cmp.
+int_cmp X Y lt :- X < Y.
+int_cmp X Y gt :- X > Y.
+int_cmp X Y eq :- X = Y.
+
+:nooc 
+pred insert i:(pred i:A, i:A, o:cmp), i:A, i:rbtree A, o:rbtree A.
+insert Cmp X T (black L V R) :- ins Cmp X T S, !, (S === red L V R; S === black L V R), !.
+
+pred of_list_acc i:list int, i:rbtree int, o:rbtree int.
+of_list_acc [] T T.
+of_list_acc (Hd :: Tl) T S :- of_list_acc Tl {insert int_cmp Hd T} S.
+
+pred of_list i:list int, o:rbtree int.
+of_list L T :- of_list_acc L empty T.
+
+pred to_list_acc i:rbtree int, i:list int, o:list int.
+to_list_acc empty S S.
+to_list_acc (red L V R) T S :- to_list_acc R T T', to_list_acc L (V :: T') S.
+to_list_acc (black L V R) T S :- to_list_acc R T T', to_list_acc L (V :: T') S.
+
+pred to_list i:rbtree int, o:list int.
+to_list A B :- to_list_acc A [] B.
+
+pred check_sorted i:list int.
+check_sorted [].
+check_sorted [_].
+check_sorted (A :: B :: C) :- le_ A B, check_sorted (B :: C).
+
+pred main.
+main :-
+    std.list.init 15000 (x\ y\ x = y) L,
+    of_list L T.
