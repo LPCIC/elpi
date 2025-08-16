@@ -448,9 +448,10 @@ end = struct (* {{{ *)
          if r.ifexpr <> None then duplicate_err "if";
          aux_attrs { r with ifexpr = Some s } rest
       | Untyped :: rest -> aux_attrs { r with typecheck = false } rest
+      | NoOC :: rest -> aux_attrs { r with occur_check = false } rest
       | (External _ | Index _ | Functional) as a :: _-> illegal_err a
     in
-    let attributes = aux_attrs { insertion = None; id = None; ifexpr = None; typecheck = true } attributes in
+    let attributes = aux_attrs { insertion = None; id = None; ifexpr = None; typecheck = true; occur_check = true } attributes in
     begin
       match attributes.insertion, attributes.id with
       | Some (Replace x), Some _ -> illegal_replace x
@@ -471,7 +472,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux_chr { r with cifexpr = Some s } rest
-      | (Before _ | After _ | Replace _ | Remove _ | External _ | Index _ | Functional | Untyped) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | External _ | Index _ | Functional | Untyped | NoOC) as a :: _ -> illegal_err a 
     in
     let cid = Loc.show loc in
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
@@ -560,10 +561,11 @@ end = struct (* {{{ *)
            | None -> aux_tatt { r with index = Some (Structured.Index(i,it)) } f rest
            | Some _ -> duplicate_err "index"
          end
+      | NoOC :: rest -> aux_tatt { r with occur_check_pred = false } f rest
       | Functional :: rest -> aux_tatt r Structured.Function rest
       | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _ | Untyped) as a :: _ -> illegal_err a 
     in
-    let attributes, toplevel_func = aux_tatt { availability = Elpi; index = None} Structured.Relation attributes in
+    let attributes, toplevel_func = aux_tatt { availability = Elpi; index = None; occur_check_pred = true } Structured.Relation attributes in
     let is_functional_from_ty () = match ty.tit with
       | TPred (l, _,_) -> List.mem Functional l | _ -> false in
     let attributes =
@@ -1926,7 +1928,7 @@ end = struct
     let t = if needs_spilling then Spilling.main ~types ~type_abbrevs t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
-  let extend1_clause ~time flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body = body_st; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
+  let extend1_clause ~time flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body = body_st; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr; occur_check } } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index, pred_info)
@@ -1939,6 +1941,10 @@ end = struct
         error ?loc ("Declaring a clause for built in predicate")
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
+
+    let cl =
+      if occur_check then cl
+      else { cl with oc = false } in
 
     let p_info =
       try C.Map.find p pred_info
