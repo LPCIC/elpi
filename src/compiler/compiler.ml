@@ -2436,6 +2436,159 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
   Format.fprintf fmt "@]"
 ;;
 
+let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> unit) fmt (compiler_state, { Assembled.clauses=cl; signature; symbols }) =
+  let pp_ctx = {
+    uv_names = ref (IntMap.empty, 0);
+    table = SymbolMap.compile symbols;
+  } in
+
+  let cnt = ref 0 in
+  let get () = incr cnt; !cnt in
+
+  let pp_const ~depth t = Format.asprintf "%a" (pp ~depth ~pp_ctx) t in
+  
+  let pp_clause_loc (cl:clause) = Format.(asprintf "%a" (pp_print_option Loc.pp) cl.loc) in
+
+  let module JSON = struct 
+    type j = Trace_ppx_runtime.Runtime.j (*= J : (F.formatter -> 'a -> unit) * 'a -> j*)
+    module JSON = Trace_ppx_runtime.Runtime.JSON
+    open JSON 
+
+    let pp_id_cnt id cnt : j = JSON.( J(pp_d, ["id", (J(pp_s, id):j); "cnt", J(pp_d, cnt)]))
+
+    let rec pp_main fmt (l: (string option * constant * clause) list) : unit =
+      Format.fprintf fmt "@[<hov 2>%a@]" pp_d ["clauses", J(pp_a, List.map (pp_card ~depth:0) l)]
+
+    and pp_card ~depth (graft,pname,cl:string option * constant * clause) : j =
+      J(pp_d, [
+        ("id", J (pp_s, "card"));
+        ("predicate", J (pp_s, pp_const ~depth (Const pname)));
+        ("title", J (pp_s, pp_clause_loc cl));
+        ("cnt", J (pp_clause ~depth, (pname,cl)));
+      ])
+    
+    and pp_names ~map ~depth names =
+      let old = List.map (fun k -> k, C.Map.find_opt k map) names in
+      let clean map2 = List.fold_left (fun map (v,id) -> match id with None -> map | Some e -> C.Map.add v e map) map old in
+      clean, List.fold_left_map (fun (map:'a C.Map.t) (n:constant) -> 
+        let id = get () in
+        let m = C.Map.add n id map in
+        m, pp_id_cnt "var" ["name", J(pp_s, pp_const ~depth (Const n)); "varId", J(pp_i, id) ]) map names 
+
+    and pp_quantifier ~(map:'a C.Map.t) ~depth s names bo : 'a C.Map.t * j =
+        let clean, (map1, args) = pp_names ~map ~depth names in
+        let map2, bo = pp_atom ~map:map1 ~depth:(depth+(List.length names)) bo in
+        clean map2, pp_id_cnt "quantification" [
+          "type", J(pp_s, s); 
+          "names", J(pp_a, args);
+          "body", bo
+        ]
+
+    and is_infix ~depth c =
+      let s = (Format.asprintf "%a" (pp ~depth ~pp_ctx) (Const c)) in
+      let is_math c = List.mem c ['<';'>';'='] in
+      List.exists (fun prefix -> String.starts_with ~prefix s) [";";"=";"<";">";"&";"*";"/";"+";"-";"^"] || 
+        (String.length s > 2 && is_math s.[1] && is_math s.[2]) ||
+          (String.length s > 1 && is_math s.[1]) || s = "is"
+
+    and pp_atom ~map ~depth (tm:term) : 'a C.Map.t * j =
+      let pp_id x y = (x,(J(pp_s, y):j)) in
+      (* TODO: chain pis *)
+      let rec grab_list = function
+        | Cons (x,xs) -> let xs, b = grab_list xs in (x::xs), b
+        | Nil -> [], None
+        | x -> [], Some x
+      in
+      match tm with
+      | Discard -> map, J(pp_d, [pp_id "id" "discard"])
+      | Builtin (Cut, _) -> map, J(pp_d, [pp_id "id" "cut"])
+      | Builtin (Impl, hd :: bo) -> 
+          let neckcut, bo = match bo with Builtin (Cut, []) :: ls -> true, ls | _ -> false, bo in
+          let map, args = pp_atom ~map ~depth hd in
+          let map, hyps = pp_atoms ~map ~depth bo in
+          map, pp_id_cnt "clause"
+            ["args", args; "isNeckcut", J(pp_b, neckcut); "hyp", hyps]
+      | Builtin (And, args) -> 
+          let map, args = pp_atoms ~map ~depth args in
+          map, J(pp_d, [pp_id "id" "comma"; ("cnt", args)])
+      | Cons _ -> 
+          let l, b = grab_list tm in
+          let map, xxx = pp_atoms ~map ~depth l in
+          let map, tl = match b with None -> map, [] | Some e -> let map, l = pp_atom ~depth ~map e in map, ["tl", l] in
+          map, pp_id_cnt "list" (("l",xxx) :: tl)
+      | Nil -> map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, "[]")])
+      | Const x when x < 0 -> map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, pp_const ~depth tm)])
+      | Const x -> map, pp_id_cnt "var" ["name", J(pp_s, pp_const ~depth tm); "varId", J(pp_i, C.Map.find x map) ]
+      | App (x, l, r :: []) when is_infix ~depth x ->
+          let map, l = pp_atom ~map ~depth l in
+          let map, r = pp_atom ~map ~depth r in
+          map, pp_id_cnt "appInfix" ["args", J(pp_a, [
+            J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (pp ~depth ~pp_ctx) (Const x))]);
+            l;r])] 
+      | App (x, hd, tl) -> 
+          let map, cnt = pp_atoms ~map ~depth (Const x :: hd ::tl) in
+          map, J(pp_d, [pp_id "id" "app"; "cnt", cnt])
+      | Lam t ->
+          let clean, (map, names) = pp_names ~map ~depth [depth] in
+          let map, body = pp_atom ~map ~depth:(depth+1) t in
+          clean map, pp_id_cnt "quantification" 
+          [
+            "type", J (pp_s, "binder");
+            "names", J(pp_a, names);
+            "body", J(pp_a, [body])
+          ]
+      | CData c -> 
+        let s = Format.asprintf "%a" (pp ~pp_ctx ~depth) tm in
+        let s = Re.Str.(global_replace (regexp "\(\194\|\171\|\187\)") "") s in
+        map, J(pp_d, ["id", J(pp_s, "string"); "cnt", J(pp_s, s)])
+      | Builtin (ImplBang, hd::bo) -> 
+        pp_atom ~depth ~map (Builtin(Impl, hd::bo @ [Builtin (Cut,[])]))
+      | Builtin (RImpl, hd::bo) -> pp_atom ~map ~depth (Builtin(Impl, bo @ [hd] ))
+      | Builtin (Eq, [l;r]) ->
+          let map, l = pp_atom ~map ~depth l in
+          let map, r = pp_atom ~map ~depth r in
+          map, pp_id_cnt "appInfix" ["args", J(pp_a, [J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, "=")]); l;r])] 
+      | Builtin (b, []) ->  map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)])
+      | Builtin (b, l) ->
+          let map, args = List.fold_left_map (fun map x -> pp_atom ~map ~depth x) map l in
+          map, J(pp_d, [pp_id "id" "app"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)]) :: args))])
+
+      | AppArg (hd, laaa) ->
+          let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
+          map, J(pp_d, ["id", J(pp_s,"var"); "cnt", J(pp_d, ["name", J(pp_s, pp_const ~depth (AppArg (hd, []))); "varId", J(pp_i, C.Map.find hd map)])])
+      | Arg (hd, _) -> 
+          let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
+          map, J(pp_d, ["id", J(pp_s,"var"); "cnt", J(pp_d, ["name", J(pp_s, pp_const ~depth (AppArg (hd, []))); "varId", J(pp_i, C.Map.find hd map)])])
+
+      | UVar (_, _, _) ->  anomaly "pp_atom: UVar assert false"
+      | AppUVar (_, _, _) -> anomaly "pp_atom: AppUVar assert false"
+    
+    and pp_atoms ~map ~depth l : 'a C.Map.t * j = 
+      let map, args = List.fold_left_map (fun a e -> pp_atom ~depth ~map:a e) map l in 
+      map, J (pp_a, args)
+
+    and pp_clause ~depth fmt (pname, cl) : unit =
+      let pp_hyps ~map ~depth l : 'a C.Map.t * j = 
+        match l with
+        | [] -> map, J (pp_a, [])
+        | [x] -> pp_atom ~map ~depth x
+        | l -> pp_atom ~map ~depth (Builtin (And, l))
+      in
+      let map, args = pp_atom ~map:C.Map.empty ~depth (match cl.args with [] -> Const pname | x::xs -> mkApp pname x xs) in
+      let map, hyps = pp_hyps ~map ~depth cl.hyps in
+      (pp_d fmt [
+        ("id", J (pp_s, "clause"));
+        ("cnt", J (pp_d, 
+          [ "hyp", hyps; 
+            "isNeckcut", J(pp_s, "false" );
+            "args", J(pp_a, [args])
+          ]));
+      ]);;
+
+  end in
+  let clauses = handle_clause_graftin cl in
+  JSON.pp_main fmt clauses ;;
+
 let pp_goal pp fmt {  WithMain.compiler_state; initial_goal; symbols } =
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);

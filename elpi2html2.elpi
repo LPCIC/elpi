@@ -1,0 +1,267 @@
+/* elpi: embedded lambda prolog interpreter                                  */
+/* license: GNU Lesser General Public License Version 2.1 or later           */
+/* ------------------------------------------------------------------------- */
+
+accumulate elpi-quoted_syntax.
+
+shorten std.{spy, rev, exists}.
+
+pred escape-double-tick i:string, o:string.
+escape-double-tick A B :- 
+  rex.replace "\"" "\\\"" A B.
+
+pred iter i:(A -> prop), o:list A.
+iter _ [].
+iter P [X|XS] :- P X, iter P XS.
+
+pred iter-sep i:string, i:(A -> prop), i:list A.
+iter-sep _ _ []. 
+iter-sep _ P [X] :- !, P X.
+iter-sep S P [X|XS] :- P X, write S, iter-sep S P XS.
+
+pred iter-sep2 i:string, i:string, i:(A -> prop), i:list A.
+iter-sep2 _ _  _ [].
+iter-sep2 _ _  P [X] :- !, P X.
+iter-sep2 S S1 P [X|XS] :- P X, write S, iter-sep2 S S1 P XS.
+
+pred monad i:list (S -> S -> prop), i:S, o:S.
+monad [] X X.
+monad [P|PS] X R :- P X X1, monad PS X1 R. 
+
+pred len i:list A, o:int.
+len uvar 0.
+len [] 0.
+len [_|XS] N :- len XS M, N is M + 1.
+
+pred write-to o:ctype "out_stream".
+pred write i:string.
+write S :- write-to OC, output OC S.
+
+pred mk-name i:string, i:int, o:string.
+mk-name S1 I Y :-
+  Y is "{\"id\":\"var\", \"cnt\": {\"name\":\"" ^ S1 ^ "\", \"varId\":" ^ {term_to_string I} ^ "}}".
+
+pred cur-int o:int.
+pred incr-int i:prop.
+incr-int P :- cur-int J, I is J + 1, (cur-int I :- !) => P.
+
+pred var-to-string i:int, o:string.
+var-to-string I Y :-
+  cur-int J, S1 is "x " ^ {term_to_string J},
+  mk-name S1 I Y.
+pred uvar-to-string i:int, o:string.
+uvar-to-string I Y :-
+  cur-int J, S1 is "X " ^ {term_to_string J} ^ "",
+  mk-name S1 I Y.
+pred name-to-string i:string, i:int, o:string.
+name-to-string X0 I Y :-
+  if (rex_match "^_" X0) (X = "_") (X = X0),
+  rex_replace "^\\([A-Za-z]+\\)_?\\([0-9]+\\)_?$" "\\1 \\2" X S1,
+  mk-name S1 I Y.
+
+pred concat i:list string, o:string.
+concat [] "".
+concat [X|XS] S :- concat XS Res, S is X ^ Res.
+
+kind option type -> type.
+type some A -> option A.
+type none option A.
+
+pred grab-list i:term, o:list term, o:option term.
+grab-list (const "[]") [] none.
+grab-list (app [ const "::", X, XS]) [ X | R ] T :- grab-list XS R T.
+grab-list X [] (some X).
+
+pred infx i:string.
+infx "<".
+infx ">".
+infx ">=".
+infx "=<".
+infx "=>".
+infx "=".
+infx "^".
+infx "*".
+infx "/".
+infx "+".
+infx "-".
+infx ";".
+infx "is".
+infx "as".
+infx "i<".
+infx "i>".
+infx "i=<".
+infx "i>=".
+infx "r<".
+infx "r>".
+infx "r=<".
+infx "r>=".
+infx "s<".
+infx "s>".
+infx "s=<".
+infx "s>=".
+infx "==".
+
+pred pp i:term.
+pp (app [ const OP, Left, Right ]) :- infx OP, !,
+  write "{\"id\":\"propInfix\", \"cnt\": {\"args\":[\n{\"id\":\"const\", \"cnt\":\"",
+  write OP, write "\"}, ",
+  pp Left, write ",", pp Right,
+  write "]}}".
+
+pp (app [ const ":-" , Hd , Hyps ]) :-
+  if (Hyps = app [ const "," , const "!" | Rest])
+     (Hyps2 = app [ const "," | Rest], NeckCut = "true")
+     (Hyps2 = Hyps, NeckCut = "false"),
+  write "{\"id\":\"clause\", \"cnt\":{\"hyp\":\n",
+  pp Hyps2, write ",\n",
+  write "\"isNeckcut\":", write NeckCut, write ",\n",
+  Concl is "\"args\":",
+  write Concl, pp Hd,
+  write "}}".
+
+pp (app [ const C, lam _ ] as T) :- (C = "pi"; C = "sigma"), !,
+  pp-quantifier-block C T [].
+
+pred pp-quantifier-block  i:string, i:term, i:list string.
+pp-quantifier-block C (app [ const C, lam F ]) Args :- !, incr-int (
+  new_int I,
+  pi x\ if (C = "pi") (var-to-string I X) (uvar-to-string I X),
+        is-name x X => pp-quantifier-block C (F x) [X|Args]).
+pp-quantifier-block C T Args :-
+  write "{\"id\": \"quantification\",\n \"cnt\":{\n\"type\":\"",
+  write C,
+  write "\",\"names\":[",
+  iter-sep ", " write {rev Args},
+  write "],\n\"body\":[",
+  pp T,
+  write "]}}".
+
+pp (app [ const "," | Args ]) :-
+  write "[{\"id\":\"comma\", \"cnt\":[",
+  iter-sep2 "," "" pp Args, write "]}]".
+
+pp (app [ const "::", HD, TL ]) :-
+  grab-list TL Args Last,
+  write "{\"id\":\"list\", \"cnt\":",
+  write "{\"l\":[",
+  iter-sep2 "," "" pp [HD|Args],
+  write "]",
+  if (Last = some X) (write ",\"tl\":", pp X) (true),
+  write "}}".
+
+pp (app Args) :-
+  write "[{\"id\":\"prop\", \"cnt\":[",
+  iter-sep ", " pp Args,
+  write "]}]".
+
+pp (lam F) :- incr-int (
+  new_int I,
+  pi x\ 
+    write "{\"id\": \"quantification\",\n \"cnt\":{\n\"type\":\"binder\"",
+    write ",\"names\":[",
+    var-to-string I X, write X,
+    write "], \n\"body\":[",
+    is-name x X => pp (F x),
+    write "]}}\n").
+
+pp (const "!")  :- !,
+  write "{\"id\":\"cut\"}".
+
+pp (const "discard") :-
+  write "{\"id\":\"discard\"}".
+
+pp (const X) :-
+  write "{\"id\":\"const\", \"cnt\":\"",
+  write X,
+  write "\"}".
+
+pp X :- is-name X Y, !,
+  write Y.
+
+pp (cdata S) :- primitive? S "string", !,
+  term_to_string S Y,
+  write "{\"id\":\"string\", \"cnt\":\"\\\"", 
+  rex.replace "\\\." "\\\\\." Y Y',
+  write Y',
+  write "\\\"\"}".
+
+pp (cdata S) :- primitive? S _, !,
+  term_to_string S Y,
+  write "{\"id\":\"string\", \"cnt\":\"", 
+  rex.replace "\\\." "\\\\\." Y Y',
+  write Y',
+  write "\"}".
+
+pp _ :- write "ERROR".
+
+pred hd-symbol i:term.
+hd-symbol (app [ const ":-", H, _ ]) :- hd-symbol H.
+hd-symbol (app [ const S | _ ]) :- write S.
+hd-symbol (const S) :- write S.
+
+type is-name term -> string -> prop.
+pred write-clause i:clause.
+write-clause (clause Loc [] (arg Body)) :-
+  new_int I, 
+  (pi x\ X is "X" ^ {term_to_string I}),
+  name-to-string X I A1,
+  pi x\ is-name x A1 => write-clause (clause Loc [] (Body x)).
+write-clause (clause Loc [A|Args] (arg Body)) :-
+  new_int I, name-to-string A I A1,
+  pi x\ is-name x A1 => write-clause (clause Loc Args (Body x)).
+write-clause (clause Loc [] C) :- !,
+  write "{ \"id\":\"card\", \n\"predicate\":\"",
+  hd-symbol C,
+  write "\",\n\"title\":\"",
+    term_to_string Loc LocS, write {escape-double-tick LocS},
+    write "\", \n\"cnt\":",
+  cur-int 0 =>
+  if (C = app [const ":-"|_])
+     (pp C)
+     (write "{\"id\":\"clause\", \"cnt\":{\"hyp\":[],\n \"args\":",
+       pp C,
+      write "}}"),
+  write "}\n".
+
+pred filter-out i:list A, i:(A -> prop), o:list A.
+filter-out [] _ [].
+filter-out [X|XS] P R :-
+  if (P X) (R = [X | RS]) (R = RS),
+  filter-out XS P RS.
+
+pred write-html i:list clause, i:(string -> prop).
+write-html P R :-
+  filter-out P (c\
+    sigma Loc LocS \ c = (clause Loc _ _), 
+    term_to_string Loc LocS, not(R LocS)) [HD | TL],
+  write "{\n\"clauses\":[\n",
+  write-clause HD,
+  iter (x\ write ",\n", write-clause x) TL,
+  write "]}".
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+pred main-quoted i:list clause, i:string, i:list string.
+
+% entry point from a software having the program in compiled form
+main-quoted P OUT FILTERS :-
+  open_out OUT OC,
+  R = (x\exists FILTERS (y\ rex_match y x)),
+  write-to OC => write-html P R,
+  close_out OC.
+
+pred main i:list string.
+type main prop.
+
+% entry point from the command line
+main [IN,OUT|FILTERS] :- !,
+  quote_syntax IN "main" P _,
+  main-quoted P OUT FILTERS.
+
+main _ :- usage.
+main.
+
+usage :-
+  halt "usage: elpi elpi2html.elpi -exec main -- in out [filter]".
+
+% vim: set ft=lprolog:

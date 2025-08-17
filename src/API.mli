@@ -385,6 +385,7 @@ module Pp : sig
   val state : Format.formatter -> Data.state -> unit
 
   val program : Format.formatter -> Compile.program -> unit
+  val program1 : Format.formatter -> Compile.program -> unit
   val goal : Format.formatter -> Compile.query -> unit
 
   module Ast : sig
