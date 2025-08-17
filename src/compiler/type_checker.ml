@@ -657,10 +657,10 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
   and occur_check_pred { loc; it } =
     let s, _, _ = rule_head ~loc it in
     match s with
-    | None -> true
-    | Some id ->
+    | Some id when Symbol.QMap.mem id env.symbols ->
         let { occur_check } : TypingEnv.symbol_metadata = Symbol.QMap.find id env.symbols in
         occur_check
+    | _ -> true
 
   and check_matches_poly_skema_loc ~unknown { loc; it } =
     let _, c, args = rule_head ~loc it in
