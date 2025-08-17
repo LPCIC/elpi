@@ -62,7 +62,7 @@ let () = declare "deep_index"
   ~description:"indexing deeper rules out"
   ()
 
-let () = declare "map_rbtree"
+let () = declare "map"
   ~source_elpi:"map.elpi"
   ~description:"stdlib map"
   ()
@@ -107,4 +107,15 @@ let () = declare "dt_bench"
 let () = declare "dt_order"
   ~source_elpi:"dt_order.elpi"
   ~description:"discrimination_tree grafting"
+  ()
+
+
+let () = declare "rb"
+  ~source_elpi:"rb.elpi"
+  ~description:"red black trees"
+  ()
+
+let () = declare "rb_nooc"
+  ~source_elpi:"rb_nooc.elpi"
+  ~description:"red black trees no occur check"
   ()
