@@ -425,6 +425,7 @@ module TypingEnv : sig
     indexing : indexing;
     availability : Elpi_parser.Ast.Structured.symbol_availability;
     implemented_in_ocaml : bool;
+    occur_check : bool;
   }
   [@@deriving show]
 
@@ -468,6 +469,7 @@ end = struct
     indexing : indexing;
     availability : Elpi_parser.Ast.Structured.symbol_availability;
     implemented_in_ocaml : bool;
+    occur_check : bool;
   }
   [@@deriving show]
 
@@ -519,12 +521,13 @@ end = struct
   
   
   let merge_symbol_metadata s
-      { ty = ty1; indexing = idx1; availability = a1; implemented_in_ocaml = o1; }
-       { ty = ty2; indexing = idx2; availability = a2; implemented_in_ocaml = o2; } =
+      { ty = ty1; indexing = idx1; availability = a1; implemented_in_ocaml = o1; occur_check = oc1 }
+       { ty = ty2; indexing = idx2; availability = a2; implemented_in_ocaml = o2; occur_check = oc2 } =
     { ty = TypeAssignment.merge_skema ty1 ty2;
       indexing = merge_indexing s idx1 idx2;
       availability = merge_availability s a1 a2;
       implemented_in_ocaml = o1 || o2;
+      occur_check = oc1 && oc2;
     }
   
   let o2l = function  TypeAssignment.Single x -> [x] | Overloaded l -> l
@@ -749,7 +752,8 @@ module ScopedTypeExpression = struct
     nparams : int;
     loc : Loc.t;
     index : Ast.Structured.predicate_indexing option;
-    availability : Ast.Structured.symbol_availability;  
+    availability : Ast.Structured.symbol_availability;
+    occur_check : bool;
   }
   [@@ deriving show]
 
@@ -810,11 +814,11 @@ module ScopedTypeExpression = struct
       let t' = smart_map_scoped_loc_ty f t in
       if t == t' then orig else Ty t'
 
-  let smart_map f ({ name; value; nparams; loc; index; availability } as orig) =
+  let smart_map f ({ name; value; nparams; loc; index; availability; occur_check } as orig) =
     let name' = f name in
     let value' = smart_map_tye f value in
     if name == name' && value' == value then orig
-    else { name = name'; value = value'; nparams; loc; index; availability }
+    else { name = name'; value = value'; nparams; loc; index; availability; occur_check }
 
 end
 

@@ -845,7 +845,7 @@ end = struct
   let scope_loc_tye ctx (t: Ast.Structured.functionality Ast.TypeExpression.t) =
     scope_loc_tye ctx t
 
-  let compile_type { Ast.Type.name; loc; attributes = { Ast.Structured.index; availability }; ty } =
+  let compile_type { Ast.Type.name; loc; attributes = { Ast.Structured.index; availability; occur_check_pred }; ty } =
     let open ScopedTypeExpression in
     let value = scope_loc_tye F.Set.empty ty in
     let vars =
@@ -869,7 +869,7 @@ end = struct
           let s = F.Set.remove c s in
           close s (Lam(c,t)) in
       close vars (Ty value) in
-    { ScopedTypeExpression.name; index; availability; loc; nparams; value }
+    { ScopedTypeExpression.name; index; availability; occur_check = occur_check_pred; loc; nparams; value }
 
   let scope_term_macro ~loc ~state c args =
     let { macros } = get_mtm state in
@@ -974,7 +974,7 @@ end = struct
       | Ast.TypeAbbreviation.Lam(c,loc,_) -> error ~loc "only variables can be abstracted in type schema"
       | Ast.TypeAbbreviation.Ty t -> ScopedTypeExpression.Ty (scope_loc_tye ctx t)
   in
-    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; index = None; availability = Elpi }
+    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; index = None; occur_check = true; availability = Elpi }
 
   let compile_type_abbrev ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
     let ab = scope_type_abbrev ab in
@@ -1369,8 +1369,9 @@ end = struct
     types
 
   let check_and_spill_pred ~time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types t =
-    let unknown = time_this time (fun () -> Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
-    unknown, if needs_spilling then Spilling.main ~types ~type_abbrevs t else t
+    let unknown, occur_check = time_this time (fun () -> Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
+    let t = if needs_spilling then Spilling.main ~types ~type_abbrevs t else t in
+    unknown, t, occur_check
 
   let is_global ~types { ScopedTerm.scope = symb' } symb =
     match symb' with
@@ -1445,12 +1446,12 @@ end = struct
     ) u_types;
 
     (* returns unkown types + spilled clauses *)
-    let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
-      let unknown, body = 
+    let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = ({ Ast.Structured.typecheck; occur_check } as atts) } as clause) ->
+      let unknown, body, occur_check_pred = 
         if typecheck then check_and_spill_pred ~time:type_check_time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types body
-        else unknown, body in
+        else unknown, body, true in
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
-      let spilled = {clause with body; needs_spilling = false} in
+      let spilled = {clause with body; needs_spilling = false; attributes = { atts with occur_check = occur_check && occur_check_pred }} in
 
       if typecheck && not flags.skip_det_checking then
         time_this det_check_time (fun () -> Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body);
@@ -2232,7 +2233,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let needs_spilling = ref false in
   let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros; needs_spilling }) t in
-  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
+  let unknown, _ = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (!needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
@@ -2258,8 +2259,8 @@ let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~de
     anomaly "compile_term_to_raw_term called at run time";
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
-    let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
-    let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
+    let unknown, _ = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
+    let _ : TypingEnv.t= Type_checker.check_undeclared ~unknown ~type_abbrevs in
     ()
   end;
   let amap = get_argmap state in
@@ -2282,7 +2283,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let compiler_state,t = f compiler_state in
-  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
+  let unknown, _ = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (false,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in

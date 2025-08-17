@@ -124,7 +124,7 @@ let check_indexing ~loc ~type_abbrevs availability name ty indexing =
       TypingEnv.Index {mode;indexing=runtime; overlap; has_local_without_cut=None}
   | _ -> DontIndex
 
-let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
+let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability; occur_check } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
   (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
   let indexing = check_indexing ~loc ~type_abbrevs availability name ty index in
@@ -142,7 +142,7 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : 
     | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0) (* TODO: this is hack for builtins, they could be overloaded as well *)
     (* | OCaml None -> Symbol.make_builtin name |> to_unify false  *)
   in
-  symb, quotient, { ty; indexing; availability; implemented_in_ocaml = false }
+  symb, quotient, { ty; indexing; availability; implemented_in_ocaml = false; occur_check }
 
 let arrow_of_args args ety =
   let rec aux = function
@@ -351,7 +351,7 @@ let silence_linear_warn f =
   len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
 let checker ~type_abbrevs ~kinds ~types:env ~unknown :
-  (is_rule:bool -> ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared) * 
+  (is_rule:bool -> ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared * bool) * 
   ((_, ScopedTerm.t) Ast.Chr.t -> env_undeclared) *
   (ScopedTerm.t * Ast.Loc.t -> env_undeclared)
 =
@@ -646,15 +646,24 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
         end
     | _ -> check ~positive ~tyctx ctx ~loc it ety
 
+  and rule_head ~loc it =
+    match it with
+    | App({ scope = Global _; name = f },[{ it = Lam(_,_,x) }]) when F.equal F.pif f ->
+         rule_head ~loc x.it
+    | Impl(R2L,_,{ it = App({ scope = Global { resolved_to }; name = c' },xs) },_) -> SymbolResolver.resolved_to env resolved_to, c', xs
+    | App({ scope = Global { resolved_to }; name = c },xs) -> SymbolResolver.resolved_to env resolved_to, c, xs
+    | _ -> anomaly ~loc ("not a rule: " ^ ScopedTerm.show_t_ it)
+
+  and occur_check_pred { loc; it } =
+    let s, _, _ = rule_head ~loc it in
+    match s with
+    | None -> true
+    | Some id ->
+        let { occur_check } : TypingEnv.symbol_metadata = Symbol.QMap.find id env.symbols in
+        occur_check
+
   and check_matches_poly_skema_loc ~unknown { loc; it } =
-    let c, args =
-      let rec head it =
-        match it with
-        | App({ scope = Global _; name = f },[{ it = Lam(_,_,x) }]) when F.equal F.pif f -> head x.it
-        | Impl(R2L,_,{ it = App({ scope = Global _; name = c' },xs) },_) -> c', xs
-        | App({ scope = Global _; name = c },xs) -> c, xs
-        | _ -> anomaly ~loc ("not a rule: " ^ ScopedTerm.show_t_ it) in
-      head it in
+    let _, c, args = rule_head ~loc it in
     (* Format.eprintf "Checking %a\n" F.pp c; *)
     match F.Map.find c env.overloading with
     | Single id ->
@@ -805,6 +814,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
   let check ~is_rule t ~exp =
     let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
     if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
+    let oc = if is_rule then occur_check_pred t else true in
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k { nocc = n; binder } ->
       if n = 1 && not @@ silence_linear_warn k && is_rule then
@@ -812,7 +822,8 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
           (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k))
       !sigma;
-    !unknown_global in
+    !unknown_global, oc in
+
   let check_chr { Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes } =
     let check_sequent { Ast.Chr.context; conclusion; eigen } =
       let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(mk_uvar "eigen") eigen in
@@ -871,7 +882,7 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
         let {static;runtime} = chose_indexing (Symbol.get_func id) [1] None in
         TypingEnv.Index {mode;indexing=runtime; overlap=Elpi_runtime.Data.mk_Forbidden static; has_local_without_cut=None}
       in
-      id, TypingEnv.{ ty ; indexing; availability = Elpi; implemented_in_ocaml = false }
+      id, TypingEnv.{ ty ; indexing; availability = Elpi; implemented_in_ocaml = false; occur_check = true }
   | _ -> assert false
 
 let check_undeclared ~type_abbrevs ~unknown =

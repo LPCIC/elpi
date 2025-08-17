@@ -40,7 +40,7 @@ val check :
   is_rule:bool -> (* a rule or a term (eg query) *)
   ScopedTerm.t ->
   exp:TypeAssignment.t ->
-  env_undeclared
+  env_undeclared * bool (* occur_check *)
 
 val check_chr_rule :
   type_abbrevs:type_abbrevs ->
