@@ -232,7 +232,7 @@
 <span class="linenos">5</span><span class="w">  </span>doomed<span class="w"> </span><span class="mi">100</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Fatal error: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulated.elpi&quot;, line 1, column 0, characters 0-17:</span>
 <span class="go">Two types for the same symbol cannot only differ on modes or functionality.</span>
 <span class="go">Previous declaration: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi&quot;, line 1, column 0, characters 0-17:</span>
@@ -247,17 +247,17 @@
 <span class="linenos">5</span><span class="w">  </span>other.doomed<span class="w"> </span><span class="mi">100</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi&quot;, line 5, column 2, characters 92-108: other.doomed.</span>
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type other.doomed int -&gt; func.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/accumulated.elpi
@@ -267,11 +267,11 @@
 <span class="linenos">3</span>doomed<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">:-</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="kd">,</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">-</span><span class="w"> </span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span>doomed<span class="w"> </span><span class="nv">M</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 </pre></div>
 </div>
@@ -303,14 +303,14 @@
 <span class="linenos">24</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>ack<span class="w"> </span>(s<span class="w"> </span><span class="o">(</span>s<span class="w"> </span><span class="o">(</span>s<span class="w"> </span>zero<span class="o">)))</span><span class="w"> </span>(s<span class="w"> </span>zero<span class="o">)</span><span class="w"> </span><span class="nv">V</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi&quot;, line 24, column 38, characters 794-795:</span>
 <span class="go">V is linear: name it _V (discard) or V_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -341,11 +341,11 @@
 <span class="go">lam c0 \ c0</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -367,11 +367,11 @@
 <span class="linenos">5</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>(<span class="nv">x\</span><span class="w"> </span><span class="nv">y\</span><span class="w"> </span>f<span class="w"> </span>x<span class="w"> </span>y<span class="o">)</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span>a<span class="w"> </span>b<span class="w"> </span><span class="kd">=</span><span class="w"> </span>f<span class="w"> </span>a<span class="w"> </span>b<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -470,7 +470,7 @@
 <span class="go">NEW [bool = nat] X11 = nat</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.002</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi&quot;, line 36, column 2, characters 992-994:</span>
 <span class="go">ignoring flexible clause: GX</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi&quot;, line 37, column 2, characters 1012-1014:</span>
@@ -483,7 +483,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.000</span>
+<span class="go">Time: 0.001</span>
 
 <span class="go">Constraints:</span>
 <span class="go"> {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */</span>
@@ -519,11 +519,11 @@
 <span class="go">group 2 solved</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -578,11 +578,11 @@
 <span class="linenos">38</span><span class="c">% vim:set ft=lprolog:</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.002</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -613,11 +613,11 @@
 <span class="linenos">12</span>}
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -640,11 +640,11 @@
 <span class="linenos">6</span><span class="kd">constraint</span><span class="w"> </span><span class="nf">foo bar </span>{<span class="w"> </span><span class="kd">rule</span><span class="w"> </span>foo<span class="w"> </span>(bar<span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>false<span class="o">.</span><span class="w"> </span><span class="kd">rule</span><span class="w"> </span>(bar<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(<span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>true<span class="o">).</span><span class="w"> </span>}
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -692,12 +692,12 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">c</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -719,12 +719,12 @@
 <span class="linenos">6</span>test2<span class="w"> </span><span class="kd">:-</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="kd">[</span>true<span class="w"> </span><span class="kd">&amp;</span><span class="w"> </span>true<span class="kd">,</span><span class="w"> </span>false<span class="kd">],</span><span class="w"> </span>std.length<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="mi">2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -777,7 +777,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -813,12 +813,12 @@
 <span class="linenos">19</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -861,11 +861,11 @@
 <span class="linenos">27</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -903,12 +903,12 @@
 <span class="linenos">21</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -931,8 +931,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -972,14 +972,14 @@
 <span class="linenos">24</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi&quot;, line 17, column 10, characters 254-255:</span>
 <span class="go">Y is linear: name it _Y (discard) or Y_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -1011,12 +1011,12 @@
 <span class="linenos">16</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -1049,12 +1049,12 @@
 <span class="linenos">17</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>find<span class="w"> </span>(f<span class="w"> </span><span class="o">(</span>f<span class="w"> </span><span class="o">(</span>f<span class="w"> </span>g<span class="o">))).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -1079,11 +1079,11 @@
 <span class="linenos">9</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x </span>\<span class="w"> </span><span class="nv">_Foo</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>x<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -1116,8 +1116,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Typechecking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -1172,16 +1172,16 @@
 <span class="go">c1</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta.elpi&quot;, line 7, column 7, characters 143-146: g.</span>
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type g tm -&gt; tm.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -1401,13 +1401,13 @@
 <span class="linenos">24</span>}
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/even-odd.elpi&quot;, line 19, column 41, characters 439-440:</span>
 <span class="go">Z is linear: name it _Z (discard) or Z_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -1478,7 +1478,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -1499,7 +1499,7 @@
 <span class="linenos">4</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">c</span>\<span class="w"> </span>q<span class="w"> </span>(<span class="nv">x\</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span>c<span class="w"> </span>x<span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi&quot;, line 4, column 20, characters 64-69:</span>
 <span class="go">X is linear: name it _X (discard) or X_ (fresh variable)</span>
 <span class="go">Warning:</span>
@@ -1508,7 +1508,7 @@
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type q (int -&gt; int) -&gt; pred.</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
@@ -1532,13 +1532,13 @@
 <span class="linenos">5</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">c</span>\<span class="w"> </span><span class="nv">Y</span><span class="w"> </span>c<span class="w"> </span><span class="kd">=</span><span class="w"> </span>(<span class="nv">x\</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span>c<span class="w"> </span>x<span class="o">)</span><span class="kd">,</span><span class="w"> </span>ignore<span class="w"> </span>(<span class="nv">Y</span><span class="w"> </span>c<span class="w"> </span>d<span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit2.elpi&quot;, line 5, column 24, characters 70-75:</span>
 <span class="go">X is linear: name it _X (discard) or X_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -1559,16 +1559,16 @@
 <span class="linenos">4</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>(<span class="kd">pi</span><span class="w"> </span><span class="nv">c</span>\<span class="w"> </span><span class="kd">sigma</span><span class="w"> </span><span class="nv">Y</span>\<span class="w"> </span><span class="nv">X</span><span class="w"> </span>c<span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">Y</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>ignore<span class="w"> </span>(<span class="nv">X</span><span class="w"> </span><span class="o">(</span>f<span class="w"> </span>d<span class="o">)).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit3.elpi&quot;, line 4, column 47, characters 92-93: d.</span>
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type d pred.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -1595,13 +1595,13 @@
 <span class="linenos">10</span><span class="w">        </span>foo<span class="w"> </span>(<span class="nv">G</span><span class="w"> </span>c<span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case.elpi&quot;, line 10, column 13, characters 215-218:</span>
 <span class="go">G is linear: name it _G (discard) or G_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -1623,16 +1623,16 @@
 <span class="linenos">5</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>p<span class="w"> </span>(<span class="nv">y\</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">z</span>\<span class="w"> </span>q<span class="w"> </span>y<span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case2.elpi&quot;, line 3, column 0, characters 36-39: p.</span>
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type p ((int -&gt; pred) -&gt; pred) -&gt; pred.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -1653,11 +1653,11 @@
 <span class="linenos">4</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">c\</span><span class="w"> </span><span class="nv">d\</span><span class="w"> </span>f<span class="w"> </span>c<span class="w"> </span>d<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -1809,12 +1809,12 @@
 <span class="linenos">16</span><span class="w">  </span>(<span class="kd">pi</span><span class="w"> </span><span class="nv">x y</span>\<span class="w"> </span>p<span class="w"> </span>b<span class="w"> </span><span class="o">(</span><span class="nv">F</span><span class="w"> </span>y<span class="o">)).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -1835,14 +1835,14 @@
 <span class="linenos">5</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">a b</span>\<span class="w"> </span><span class="nv">Y</span><span class="w"> </span>b<span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">],</span><span class="w"> </span>b<span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">_</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/heap_discard.elpi&quot;, line 5, column 10, characters 62-65:</span>
 <span class="go">Y is linear: name it _Y (discard) or Y_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -1867,11 +1867,11 @@
 <span class="linenos">9</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span>a<span class="kd">,</span><span class="w"> </span>q<span class="w"> </span>(a<span class="kd">,</span>a<span class="o">)</span><span class="kd">,</span><span class="w"> </span>q<span class="w"> </span>true<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -3903,11 +3903,11 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">ok</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -3935,7 +3935,7 @@
 <span class="linenos">11</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="kd">,</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi&quot;, line 6, column 10, characters 93-96: r,</span>
@@ -3948,9 +3948,9 @@
 <span class="go">type p diagnostic -&gt; pred.</span>
 <span class="go">type ko diagnostic.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -3975,7 +3975,7 @@
 <span class="linenos">8</span><span class="w"> </span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi&quot;, line 7, column 52, characters 96-99: r,</span>
@@ -3984,9 +3984,9 @@
 <span class="go">type r diagnostic -&gt; pred.</span>
 <span class="go">type q diagnostic -&gt; pred.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -4124,11 +4124,11 @@
 <span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.858</span>
+<span class="go">Time: 1.883</span>
 
 <span class="go">Constraints:</span>
 
@@ -4147,7 +4147,7 @@
 <span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -4182,7 +4182,7 @@
 <span class="linenos">19</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>test<span class="w"> </span><span class="nv">Z</span><span class="kd">,</span><span class="w"> </span><span class="nv">Z</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>impl<span class="w"> </span>(impl<span class="w"> </span>a<span class="w"> </span>b<span class="o">)</span><span class="w"> </span>(impl<span class="w"> </span>a<span class="w"> </span>b<span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi&quot;, line 10, column 0, characters 288-294: test,</span>
@@ -4197,10 +4197,10 @@
 <span class="go">type appl tm -&gt; tm -&gt; tm.</span>
 <span class="go">type a ty.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -4224,7 +4224,7 @@
 <span class="linenos">8</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi&quot;, line 5, column 7, characters 41-53: r,</span>
@@ -4237,10 +4237,10 @@
 <span class="go">type ko diagnostic.</span>
 <span class="go">type g int -&gt; pred.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -4363,12 +4363,12 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.005</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.341</span>
+<span class="go">Time: 0.338</span>
 
 <span class="go">Constraints:</span>
 
@@ -4391,13 +4391,13 @@
 <span class="go">done</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/list_as_conj.elpi&quot;, line 4, column 6, characters 86-87:</span>
 <span class="go">X is linear: name it _X (discard) or X_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -4418,12 +4418,12 @@
 <span class="linenos">4</span><span class="w">  </span>std.length<span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>std.length<span class="w"> </span><span class="nv">L2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -4675,7 +4675,7 @@
 <span class="go">----------------------------------------</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.002</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi&quot;, line 26, column 13, characters 654-655:</span>
 <span class="go">F is linear: name it _F (discard) or F_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi&quot;, line 27, column 17, characters 675-678:</span>
@@ -4685,7 +4685,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.005</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -4801,7 +4801,7 @@
 <span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -4847,19 +4847,19 @@
 <span class="linenos">30</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.320315 + 0.058057 + 0.933178</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.353001 + 0.056505 + 0.931734</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.002</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.536</span>
+<span class="go">Time: 2.567</span>
 
 <span class="go">Constraints:</span>
 
@@ -4922,19 +4922,19 @@
 <span class="linenos">51</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.542025 + 3.163028 + 0.368144</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.655573 + 3.167057 + 0.343342</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 10.081</span>
+<span class="go">Time: 10.173</span>
 
 <span class="go">Constraints:</span>
 
@@ -4992,19 +4992,19 @@
 <span class="linenos">46</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.858628 + 2.898598 + 0.226183</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.887392 + 2.953498 + 0.223045</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 8.990</span>
+<span class="go">Time: 9.071</span>
 
 <span class="go">Constraints:</span>
 
@@ -5027,12 +5027,12 @@
 <span class="go">B= c1 \ c1</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -5094,11 +5094,11 @@
 <span class="linenos">12</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>c<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5127,12 +5127,12 @@
 <span class="linenos">12</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>rev<span class="w"> </span><span class="kd">[</span><span class="mi">1</span><span class="kd">,</span><span class="mi">2</span><span class="kd">,</span><span class="mi">3</span><span class="kd">]</span><span class="w"> </span><span class="kd">[</span><span class="mi">3</span><span class="kd">,</span><span class="mi">2</span><span class="kd">,</span><span class="mi">1</span><span class="kd">],</span><span class="w"> </span>not(aux<span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="kd">[]</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>rev.aux<span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="kd">[]</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -5159,11 +5159,11 @@
 <span class="linenos">11</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>foo.bar<span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>foo.baz<span class="w"> </span><span class="mi">1</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5187,16 +5187,16 @@
 <span class="linenos">7</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>x.acc.rev<span class="w"> </span><span class="kd">[</span><span class="mi">1</span><span class="kd">,</span><span class="mi">2</span><span class="kd">,</span><span class="mi">3</span><span class="kd">]</span><span class="w"> </span><span class="kd">[</span><span class="mi">3</span><span class="kd">,</span><span class="mi">2</span><span class="kd">,</span><span class="mi">1</span><span class="kd">],</span><span class="w"> </span>x.acc.rev.aux<span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="kd">[],</span><span class="w"> </span>not(x.foo<span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces02.elpi&quot;, line 4, column 2, characters 112-115: x.foo.</span>
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type x.foo pred.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5246,12 +5246,12 @@
 <span class="linenos">33</span><span class="w"> </span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>a.foo1<span class="kd">,</span><span class="w"> </span>a.foo2<span class="kd">,</span><span class="w"> </span>a.foo3<span class="kd">,</span><span class="w"> </span>a.foo4<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -5270,9 +5270,9 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5323,15 +5323,15 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">f a +x g [b] +y d</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi&quot;, line 9, column 5, characters 106-107:</span>
 <span class="go">D is linear: name it _D (discard) or D_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi&quot;, line 9, column 0, characters 101-102:</span>
 <span class="go">X is linear: name it _X (discard) or X_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5437,7 +5437,7 @@
 <span class="go">Infix ==&gt;  has lower precedence than conjunction, hence</span>
 <span class="go">&#39;A ==&gt; B, C&#39; reads &#39;A ==&gt; (B, C)&#39; and means the same as &#39;A =&gt; (B, C)&#39;.</span>
 
-<span class="go">Parsing time: 0.000</span>
+<span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi&quot;, line 6, column 42, characters 123-134: s,</span>
@@ -5448,10 +5448,10 @@
 <span class="go">type r pred.</span>
 <span class="go">type f tm -&gt; pred.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -5473,16 +5473,16 @@
 <span class="linenos">6</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>r<span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">x\</span>x<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif2.elpi&quot;, line 4, column 0, characters 71-74: r.</span>
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type r (int -&gt; int) -&gt; pred.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5505,7 +5505,7 @@
 <span class="linenos">6</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi&quot;, line 3, column 26, characters 85-88: r,</span>
@@ -5518,9 +5518,9 @@
 <span class="go">type p int -&gt; pred.</span>
 <span class="go">type ko diagnostic.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5546,11 +5546,11 @@
 <span class="linenos">9</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">b\</span>b<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5585,12 +5585,12 @@
 <span class="linenos">18</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>r<span class="w"> </span><span class="nv">S</span><span class="kd">,</span><span class="w"> </span>s<span class="w"> </span><span class="nv">T</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="kd">,</span><span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="kd">,</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -5716,8 +5716,8 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -5949,8 +5949,8 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -6003,7 +6003,7 @@
 <span class="go">[f X0, g X1, a + b, a + b]</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi&quot;, line 17, column 19, characters 475-476:</span>
 <span class="go">B is linear: name it _B (discard) or B_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi&quot;, line 17, column 26, characters 482-483:</span>
@@ -6024,9 +6024,9 @@
 <span class="go">type b int.</span>
 <span class="go">type a int.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6142,7 +6142,7 @@
 <span class="linenos">99</span><span class="c">%range(M,N,[M|Ns]) :- M &lt; N, M1 is M+1, range(M1,N,Ns).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.002</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi&quot;, line 50, column 16, characters 1168-1174:</span>
 <span class="go">DUMMY1 is linear: name it _DUMMY1 (discard) or DUMMY1_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi&quot;, line 50, column 23, characters 1175-1181:</span>
@@ -6161,7 +6161,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.702</span>
+<span class="go">Time: 1.729</span>
 
 <span class="go">Constraints:</span>
 
@@ -6193,14 +6193,14 @@
 <span class="linenos">6</span><span class="w">  </span><span class="nv">R</span><span class="w"> </span><span class="kd">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6276,12 +6276,12 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.257</span>
+<span class="go">Time: 0.263</span>
 
 <span class="go">Constraints:</span>
 
@@ -6345,7 +6345,7 @@
 <span class="go">Infix ==&gt;  has lower precedence than conjunction, hence</span>
 <span class="go">&#39;A ==&gt; B, C&#39; reads &#39;A ==&gt; (B, C)&#39; and means the same as &#39;A =&gt; (B, C)&#39;.</span>
 
-<span class="go">Parsing time: 0.002</span>
+<span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi&quot;, line 33, column 31, characters 960-964:</span>
 <span class="go">NINE is linear: name it _NINE (discard) or NINE_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi&quot;, line 30, column 30, characters 852-858:</span>
@@ -6353,12 +6353,12 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.635</span>
+<span class="go">Time: 1.541</span>
 
 <span class="go">Constraints:</span>
 
@@ -6379,7 +6379,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.005</span>
 <span class="go">Determinacy checking time: 0.005</span>
 </pre></div>
 </div>
@@ -6419,12 +6419,12 @@
 <span class="go">----&gt;&gt;---- exit:  lam c1 \ lam c2 \ c1 = lam c1 \ lam c2 \ c1</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -6449,13 +6449,13 @@
 <span class="go">----&gt;&gt;---- exit:  f (X3 c0) c2 \ X4 c0 c2 = f (X3 c0) c2 \ X4 c0 c2</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction4.elpi&quot;, line 5, column 14, characters 85-88:</span>
 <span class="go">X is linear: name it _X (discard) or X_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6483,7 +6483,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6508,13 +6508,13 @@
 <span class="go">----&gt;&gt;---- exit:  f (X3 c0) c2 \ c3 \ X4^1 c3 = f (X3 c0) c2 \ c3 \ X4^1 c3</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction6.elpi&quot;, line 4, column 14, characters 96-99:</span>
 <span class="go">X is linear: name it _X (discard) or X_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6618,12 +6618,12 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.133</span>
+<span class="go">Time: 0.129</span>
 
 <span class="go">Constraints:</span>
 
@@ -6681,14 +6681,14 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.000</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.133</span>
+<span class="go">Time: 0.130</span>
 
 <span class="go">Constraints:</span>
 
@@ -6708,12 +6708,12 @@
 <span class="linenos">8</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x y</span>\<span class="w"> </span>same_var<span class="w"> </span>(<span class="nv">X</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span>(<span class="nv">X</span><span class="w"> </span>y<span class="o">)</span><span class="kd">,</span><span class="w"> </span>not(same_term<span class="w"> </span><span class="o">(</span><span class="nv">X</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="nv">X</span><span class="w"> </span>y<span class="o">)).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -6737,7 +6737,7 @@
 <span class="linenos">8</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>(<span class="kd">pi</span><span class="w"> </span><span class="nv">c</span>\<span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span>q<span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>q<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="nv">A</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>d<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/self_assignment.elpi&quot;, line 6, column 6, characters 59-60:</span>
 <span class="go">A is linear: name it _A (discard) or A_ (fresh variable)</span>
 <span class="go">Warning:</span>
@@ -6746,10 +6746,10 @@
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type q tm -&gt; tm -&gt; tm -&gt; pred.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -6796,19 +6796,19 @@
 <span class="linenos">31</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.114433 + 0.054263 + 0.781278</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.141719 + 0.054691 + 0.788674</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.045</span>
+<span class="go">Time: 2.079</span>
 
 <span class="go">Constraints:</span>
 
@@ -6859,12 +6859,12 @@
 <span class="linenos">39</span><span class="w">       </span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -6887,11 +6887,11 @@
 <span class="linenos">7</span><span class="w">  </span>foo<span class="kd">,</span><span class="w"> </span>bar<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6918,7 +6918,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 </pre></div>
 </div>
@@ -6937,7 +6937,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 </pre></div>
 </div>
@@ -6956,7 +6956,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.006</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6983,7 +6983,7 @@
 <span class="linenos">10</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>list.map<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="kd">[],</span><span class="w"> </span>concat1<span class="w"> </span><span class="s2">&quot;a&quot;</span><span class="w"> </span><span class="s2">&quot;b&quot;</span><span class="w"> </span><span class="nv">AB</span><span class="kd">,</span><span class="w"> </span>escape<span class="w"> </span><span class="s2">&quot;x y&quot;</span><span class="w"> </span><span class="nv">E</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi&quot;, line 10, column 39, characters 274-276:</span>
 <span class="go">AB is linear: name it _AB (discard) or AB_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi&quot;, line 10, column 56, characters 291-292:</span>
@@ -6991,9 +6991,9 @@
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi&quot;, line 10, column 17, characters 252-253:</span>
 <span class="go">F is linear: name it _F (discard) or F_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7027,12 +7027,12 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">X0</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -7065,12 +7065,12 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">lam c0 \ app t t</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -7090,12 +7090,12 @@
 <span class="linenos">4</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>(<span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">x\</span><span class="w"> </span>print<span class="w"> </span>{pp<span class="w"> </span>x})<span class="kd">,</span><span class="w"> </span><span class="o">(</span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">x\</span><span class="w"> </span><span class="kd">sigma</span><span class="w"> </span><span class="nv">W</span>\<span class="w"> </span>pp<span class="w"> </span>x<span class="w"> </span><span class="nv">W</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">W</span><span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -7118,12 +7118,12 @@
 <span class="linenos">7</span><span class="w">  </span>p<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nv">X_</span><span class="w"> </span><span class="kd">;</span><span class="w"> </span>p<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">Y_</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -7148,7 +7148,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7188,11 +7188,11 @@
 <span class="linenos">23</span><span class="w">  </span>not(even<span class="w"> </span><span class="nv">W</span><span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7221,12 +7221,12 @@
 <span class="linenos">12</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>q<span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>q<span class="w"> </span><span class="kd">=&gt;</span><span class="w"> </span>(q<span class="w"> </span><span class="kd">:-</span><span class="w"> </span><span class="kd">!</span><span class="o">)</span><span class="w"> </span><span class="kd">=&gt;</span><span class="w"> </span>q<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -7252,11 +7252,11 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">[p 1, p 2, p 3]</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7293,11 +7293,11 @@
 <span class="linenos">20</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>p<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Z</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="kd">,</span><span class="w"> </span><span class="nv">Z</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>ok<span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7329,7 +7329,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7354,9 +7354,9 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7380,7 +7380,7 @@
 <span class="linenos">7</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>std.map<span class="w"> </span><span class="mi">3</span><span class="w"> </span>foo<span class="w"> </span><span class="nv">_</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Fatal error: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv10.elpi&quot;, line 7, column 16, characters 127-128:</span>
 <span class="go">Typechecker: literal &quot;3&quot; has type int but std.map expects a term of type list A</span>
 </pre></div>
@@ -7442,11 +7442,11 @@
 <span class="linenos">6</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>f<span class="w"> </span>(pr<span class="w"> </span><span class="mi">2</span><span class="w"> </span>tt<span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7475,7 +7475,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7536,7 +7536,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7564,11 +7564,11 @@
 <span class="linenos">11</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>f<span class="w"> </span>(g<span class="w"> </span>tt<span class="o">).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7595,11 +7595,11 @@
 <span class="linenos">10</span>main<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>f<span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="mi">0</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7621,9 +7621,9 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7675,13 +7675,13 @@
 <span class="go">lam c0 \ X0 c0</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/uvar_chr.elpi&quot;, line 30, column 21, characters 816-819:</span>
 <span class="go">F is linear: name it _F (discard) or F_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -7709,14 +7709,14 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">X0 , X1 , X2 , X3 , X4 , X4 c0 c1</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.002</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/var.elpi&quot;, line 6, column 29, characters 113-120:</span>
 <span class="go">X10 is linear: name it _X10 (discard) or X10_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -7737,13 +7737,13 @@
 <span class="linenos">5</span><span class="w">  </span>declare_constraint<span class="w"> </span>(foo<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="o">)</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">[</span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span><span class="nv">Z</span><span class="kd">]</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/variadic_declare_constraints.elpi&quot;, line 5, column 37, characters 85-86:</span>
 <span class="go">Z is linear: name it _Z (discard) or Z_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
