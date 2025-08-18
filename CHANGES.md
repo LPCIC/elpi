@@ -1,3 +1,8 @@
+# UNRELEASED
+
+- Language:
+  - Remove: the `fprop` sort, use `(func)` instead
+
 # v3.1.0 (August 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
