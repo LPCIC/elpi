@@ -142,7 +142,14 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : 
     | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0) (* TODO: this is hack for builtins, they could be overloaded as well *)
     (* | OCaml None -> Symbol.make_builtin name |> to_unify false  *)
   in
-  symb, quotient, { ty; indexing; availability; implemented_in_ocaml = false }
+  let implemented_in_ocaml = 
+    (* hack: these builtins are baked into the runtime *)
+    F.equal name F.declare_constraintf || 
+    F.equal name F.findall_solutionsf || 
+    F.equal name F.pmf ||
+    F.equal name F.eqf
+  in
+  symb, quotient, { ty; indexing; availability; implemented_in_ocaml }
 
 let arrow_of_args args ety =
   let rec aux = function

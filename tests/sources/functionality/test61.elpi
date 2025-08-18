@@ -1,10 +1,10 @@
 % NO
 
 func f.
-func f1 fprop.
+func f1 (func).
 pred rel.
 
-typeabbrev t (func fprop).
+typeabbrev t (func (func)).
 
 f :-
   X = ((x\ f1 x :- x) : t),

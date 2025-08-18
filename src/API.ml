@@ -916,7 +916,7 @@ module BuiltInPredicate = struct
     type ('a,'b,'c) pred3 = Data.term * 'a Conversion.t * 'b Conversion.t * 'c Conversion.t
     type ('a,'b) pred3a = Data.term * 'a Conversion.t * 'b Conversion.t
 
-    let pred1_ty x = Conversion.TyApp("->",x.Conversion.ty,[Conversion.TyName"prop"])
+    let pred1_ty x = Conversion.TyApp("->",x.Conversion.ty,[Conversion.TyName"(func)"])
     let pred1 x = { Conversion.ty = pred1_ty x; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<pred1>"); pp_doc = (fun fmt () -> ()) }
     let pred2_ty x y = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[Conversion.TyName"prop"])]))
     let pred2 x y = { Conversion.ty = pred2_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<pred2>"); pp_doc = (fun fmt () -> ()) }

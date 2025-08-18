@@ -5,10 +5,10 @@ pred rel.
 
 f :-
   % Cast error: y is not rel in the output of y
-  ((y\ y = rel) : (func -> fprop)) = F,
+  ((y\ y = rel) : (func -> (func))) = F,
   F R,
   R.
 
-func f -> fprop.
+func f -> (func).
 
 main.

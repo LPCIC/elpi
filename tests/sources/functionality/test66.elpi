@@ -1,7 +1,7 @@
 % YES
 
-func f -> fprop.
-func g -> fprop.
+func f -> (func).
+func g -> (func).
 pred rel.
 func f1.
 

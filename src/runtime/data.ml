@@ -1630,7 +1630,7 @@ let pp_pred fmt docspec name doc_pred args =
 ;;
 
 let pp_variadictype fmt name doc_pred ty args =
-  let args = List.rev ((false,"variadic " ^ parens ty ^ " fprop","") :: args) in
+  let args = List.rev ((false,"variadic " ^ parens ty ^ " (func)","") :: args) in
   let doc =
     "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
     "...] " ^ doc_pred in

@@ -39,7 +39,6 @@ module Func = struct
   let pif = from_string "pi"
   let sigmaf = from_string "sigma"
   let eqf = from_string "="
-  let pmf = from_string "pattern_match"
   let isf = from_string "is"
   let asf = from_string "as"
   let consf = from_string "::"
@@ -49,14 +48,15 @@ module Func = struct
   let ctypef = from_string "ctype"
 
   let propf = from_string "prop"
-  let fpropf = from_string "fprop"
-
   let typef = from_string "type"
   let mainf = from_string "main"
 
   
   let dummyname = from_string "%dummy"
   let spillf = from_string "%spill"
+  let declare_constraintf = from_string "declare_constraint"
+  let findall_solutionsf = from_string "findall_solutions"
+  let pmf = from_string "pattern_match"
 
   end
 

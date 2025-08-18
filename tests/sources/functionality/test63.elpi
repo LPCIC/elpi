@@ -1,7 +1,7 @@
 % YES
 
 func f.
-func f1 -> fprop.
+func f1 -> (func).
 
 f :-
   % PARTIAL APP

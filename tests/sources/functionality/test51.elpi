@@ -1,11 +1,11 @@
 % YES
 % test for spilling
 
-typeabbrev x (func -> prop, fprop).
+typeabbrev x (func -> prop, (func)).
 
 type p x.
 
-func r prop, fprop.
+func r prop, (func).
 
 func q.
 

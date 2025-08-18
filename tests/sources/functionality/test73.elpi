@@ -1,12 +1,12 @@
 % NO
 
 kind t type.
-type k fprop -> t.
+type k (func) -> t.
 
 pred q.
 
 func p -> t.
-% q is not fprop inside k
+% q is not (func) inside k
 p (k q).
 
 main.
