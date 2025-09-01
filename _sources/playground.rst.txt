@@ -146,7 +146,7 @@ Test Bed
    Undeclared globals:
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi", line 5, column 2, characters 92-108: other.doomed.
    Please add the following text to your program:
-   type other.doomed int -> func.
+   type other.doomed int -> (func).
    
    Compilation time: 0.000
    
@@ -593,7 +593,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -676,7 +676,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -1015,7 +1015,7 @@ Test Bed
    Undeclared globals:
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 2, column 0, characters 21-24: q.
    Please add the following text to your program:
-   type q (int -> int) -> pred.
+   type q (int -> int) -> (pred).
    
    Compilation time: 0.000
    
@@ -1049,7 +1049,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -1076,7 +1076,7 @@ Test Bed
    Undeclared globals:
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 4, column 47, characters 92-93: d.
    Please add the following text to your program:
-   type d pred.
+   type d (pred).
    
    Compilation time: 0.000
    
@@ -1137,7 +1137,7 @@ Test Bed
    Undeclared globals:
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case2.elpi", line 3, column 0, characters 36-39: p.
    Please add the following text to your program:
-   type p ((int -> pred) -> pred) -> pred.
+   type p ((int -> (pred)) -> (pred)) -> (pred).
    
    Compilation time: 0.000
    
@@ -1342,7 +1342,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -1372,15 +1372,15 @@ Test Bed
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 6, column 17, characters 100-103: p, 
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 7, column 5, characters 118-120: ko.
    Please add the following text to your program:
-   type r int -> pred.
-   type q diagnostic -> diagnostic -> pred.
-   type p diagnostic -> pred.
+   type r int -> (pred).
+   type q diagnostic -> diagnostic -> (pred).
+   type p diagnostic -> (pred).
    type ko diagnostic.
    
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -1408,8 +1408,8 @@ Test Bed
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 7, column 52, characters 96-99: r, 
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 7, column 1, characters 45-48: q.
    Please add the following text to your program:
-   type r diagnostic -> pred.
-   type q diagnostic -> pred.
+   type r diagnostic -> (pred).
+   type q diagnostic -> (pred).
    
    Compilation time: 0.000
    
@@ -1441,11 +1441,11 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.007
    
    Success:
    
-   Time: 1.883
+   Time: 1.851
    
    Constraints:
    
@@ -1499,8 +1499,8 @@ Test Bed
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 4, characters 190-200: appl, 
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 19, column 31, characters 481-482: a.
    Please add the following text to your program:
-   type test ty -> pred.
-   type of tm -> ty -> pred.
+   type test ty -> (pred).
+   type of tm -> ty -> (pred).
    type b ty.
    type appl tm -> tm -> tm.
    type a ty.
@@ -1538,10 +1538,10 @@ Test Bed
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 6, column 2, characters 57-59: ko, 
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 6, column 9, characters 64-67: g.
    Please add the following text to your program:
-   type r diagnostic -> (int -> pred) -> pred.
-   type q diagnostic -> pred.
+   type r diagnostic -> (int -> (pred)) -> (pred).
+   type q diagnostic -> (pred).
    type ko diagnostic.
-   type g int -> pred.
+   type g int -> (pred).
    
    Compilation time: 0.000
    
@@ -1593,14 +1593,14 @@ Test Bed
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 16, column 4, characters 293-303: appl.
    Please add the following text to your program:
    type x0 xint.
-   type test tm -> pred.
-   type termify xlist -> tm -> pred.
-   type plus nat -> nat -> nat -> pred.
-   type once tm -> pred.
-   type of tm -> ty -> pred.
-   type mult nat -> nat -> nat -> pred.
-   type iter nat -> func -> pred.
-   type exp nat -> nat -> nat -> pred.
+   type test tm -> (pred).
+   type termify xlist -> tm -> (pred).
+   type plus nat -> nat -> nat -> (pred).
+   type once tm -> (pred).
+   type of tm -> ty -> (pred).
+   type mult nat -> nat -> nat -> (pred).
+   type iter nat -> (func) -> (pred).
+   type exp nat -> nat -> nat -> (pred).
    type appl tm -> tm -> tm.
    
    Compilation time: 0.001
@@ -1610,7 +1610,7 @@ Test Bed
    
    Success:
    
-   Time: 0.338
+   Time: 0.339
    
    Constraints:
    
@@ -1886,7 +1886,7 @@ Test Bed
    
    Success:
    
-   Time: 0.002
+   Time: 0.003
    
    Constraints:
    
@@ -1940,7 +1940,8 @@ Test Bed
    type succ tm.
    type nat tm.
    type lam tm -> (tm -> tm) -> tm.
-   type compatible pred -> list tm -> pred -> list tm -> list func -> pred.
+   type compatible (pred) ->
+                     list tm -> (pred) -> list tm -> list (func) -> (pred).
    type bool tm.
    type b2n tm.
    type arr tm -> tm -> tm.
@@ -1970,13 +1971,13 @@ Test Bed
 
 .. code-block:: console
 
-   1.353001 + 0.056505 + 0.931734
+   1.333180 + 0.056920 + 0.946851
    
 
 .. code-block:: console
 
    
-   Parsing time: 0.002
+   Parsing time: 0.001
    
    Compilation time: 0.001
    
@@ -1985,7 +1986,7 @@ Test Bed
    
    Success:
    
-   Time: 2.567
+   Time: 2.564
    
    Constraints:
    
@@ -2002,7 +2003,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.655573 + 3.167057 + 0.343342
+   6.647023 + 3.155842 + 0.378114
    
 
 .. code-block:: console
@@ -2017,7 +2018,7 @@ Test Bed
    
    Success:
    
-   Time: 10.173
+   Time: 10.188
    
    Constraints:
    
@@ -2034,7 +2035,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.887392 + 2.953498 + 0.223045
+   5.919745 + 2.981625 + 0.218967
    
 
 .. code-block:: console
@@ -2049,7 +2050,7 @@ Test Bed
    
    Success:
    
-   Time: 9.071
+   Time: 9.127
    
    Constraints:
    
@@ -2117,7 +2118,7 @@ Test Bed
    Parsing time: 0.000
    Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses01.elpi", line 6, column 0, characters 27-31:
    Typechecker: c1 is not a function but it is passed the argument main.
-   The type of c1 is pred
+   The type of c1 is (pred)
    
 **../../tests/sources/named_clauses02.elpi
 :**
@@ -2134,7 +2135,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -2188,7 +2189,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -2215,7 +2216,7 @@ Test Bed
    Undeclared globals:
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces02.elpi", line 4, column 2, characters 112-115: x.foo.
    Please add the following text to your program:
-   type x.foo pred.
+   type x.foo (pred).
    
    Compilation time: 0.000
    
@@ -2273,7 +2274,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -2429,9 +2430,9 @@ Test Bed
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 58, characters 139-140: r, 
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 6, column 34, characters 115-118: f.
    Please add the following text to your program:
-   type s pred -> pred.
-   type r pred.
-   type f tm -> pred.
+   type s (pred) -> (pred).
+   type r (pred).
+   type f tm -> (pred).
    
    Compilation time: 0.000
    
@@ -2463,7 +2464,7 @@ Test Bed
    Undeclared globals:
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif2.elpi", line 4, column 0, characters 71-74: r.
    Please add the following text to your program:
-   type r (int -> int) -> pred.
+   type r (int -> int) -> (pred).
    
    Compilation time: 0.000
    
@@ -2498,9 +2499,9 @@ Test Bed
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 13, characters 72-75: p, 
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 4, column 6, characters 107-109: ko.
    Please add the following text to your program:
-   type r int -> pred.
-   type q diagnostic -> pred.
-   type p int -> pred.
+   type r int -> (pred).
+   type q diagnostic -> (pred).
+   type p int -> (pred).
    type ko diagnostic.
    
    Compilation time: 0.000
@@ -2710,8 +2711,8 @@ Test Bed
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 18, column 28, characters 514-515: a.
    Please add the following text to your program:
    type x int.
-   type q int -> pred.
-   type p int -> pred.
+   type q int -> (pred).
+   type p int -> (pred).
    type b int.
    type a int.
    
@@ -2740,7 +2741,7 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.001
+   Parsing time: 0.002
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 16, characters 1168-1174:
    DUMMY1 is linear: name it _DUMMY1 (discard) or DUMMY1_ (fresh variable)
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 50, column 23, characters 1175-1181:
@@ -2759,7 +2760,7 @@ Test Bed
    
    Success:
    
-   Time: 1.729
+   Time: 1.715
    
    Constraints:
    
@@ -2782,7 +2783,7 @@ Test Bed
    A is linear: name it _A (discard) or A_ (fresh variable)
    Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 2, column 2, characters 10-52:
    Typechecker: Unable to infer a closed type for quote_syntax:
-   string -> string -> Src267 -> Src269 -> func
+   string -> string -> Src267 -> Src269 -> (func)
    
 **../../tests/sources/random.elpi
 :**
@@ -2793,7 +2794,7 @@ Test Bed
 
 .. code-block:: console
 
-   1
+   8
    
 
 .. code-block:: console
@@ -2884,7 +2885,7 @@ Test Bed
    
    Success:
    
-   Time: 1.541
+   Time: 1.517
    
    Constraints:
    
@@ -3006,7 +3007,7 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -3041,7 +3042,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -3072,7 +3073,7 @@ Test Bed
    
    Success:
    
-   Time: 0.129
+   Time: 0.131
    
    Constraints:
    
@@ -3099,7 +3100,7 @@ Test Bed
    
    Success:
    
-   Time: 0.130
+   Time: 0.128
    
    Constraints:
    
@@ -3151,7 +3152,7 @@ Test Bed
    Undeclared globals:
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 6, column 0, characters 53-60: q.
    Please add the following text to your program:
-   type q tm -> tm -> tm -> pred.
+   type q tm -> tm -> tm -> (pred).
    
    Compilation time: 0.000
    
@@ -3177,7 +3178,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.141719 + 0.054691 + 0.788674
+   1.142936 + 0.054163 + 0.793657
    
 
 .. code-block:: console
@@ -3192,7 +3193,7 @@ Test Bed
    
    Success:
    
-   Time: 2.079
+   Time: 2.081
    
    Constraints:
    
@@ -3286,11 +3287,11 @@ Test Bed
    Undeclared globals:
    - File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 2, column 7, characters 17-20: foo.
    Please add the following text to your program:
-   type foo pred.
+   type foo (pred).
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
 **../../tests/sources/shorten_builtin.elpi
@@ -3312,8 +3313,8 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.006
-   Determinacy checking time: 0.005
+   Typechecking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -3346,7 +3347,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -3550,7 +3551,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -3855,7 +3856,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.004
    
    Success:
    
@@ -3906,7 +3907,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.004
    Determinacy checking time: 0.005
@@ -3971,7 +3972,7 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.002
+   Parsing time: 0.001
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/var.elpi", line 6, column 29, characters 113-120:
    X10 is linear: name it _X10 (discard) or X10_ (fresh variable)
    

@@ -252,7 +252,7 @@
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi&quot;, line 5, column 2, characters 92-108: other.doomed.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type other.doomed int -&gt; func.</span>
+<span class="go">type other.doomed int -&gt; (func).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -866,7 +866,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -979,7 +979,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -1506,7 +1506,7 @@
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi&quot;, line 2, column 0, characters 21-24: q.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type q (int -&gt; int) -&gt; pred.</span>
+<span class="go">type q (int -&gt; int) -&gt; (pred).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -1539,7 +1539,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -1564,7 +1564,7 @@
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit3.elpi&quot;, line 4, column 47, characters 92-93: d.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type d pred.</span>
+<span class="go">type d (pred).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -1628,7 +1628,7 @@
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case2.elpi&quot;, line 3, column 0, characters 36-39: p.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type p ((int -&gt; pred) -&gt; pred) -&gt; pred.</span>
+<span class="go">type p ((int -&gt; (pred)) -&gt; (pred)) -&gt; (pred).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -3908,7 +3908,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -3943,15 +3943,15 @@
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi&quot;, line 6, column 17, characters 100-103: p,</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi&quot;, line 7, column 5, characters 118-120: ko.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type r int -&gt; pred.</span>
-<span class="go">type q diagnostic -&gt; diagnostic -&gt; pred.</span>
-<span class="go">type p diagnostic -&gt; pred.</span>
+<span class="go">type r int -&gt; (pred).</span>
+<span class="go">type q diagnostic -&gt; diagnostic -&gt; (pred).</span>
+<span class="go">type p diagnostic -&gt; (pred).</span>
 <span class="go">type ko diagnostic.</span>
 
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -3981,8 +3981,8 @@
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi&quot;, line 7, column 52, characters 96-99: r,</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi&quot;, line 7, column 1, characters 45-48: q.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type r diagnostic -&gt; pred.</span>
-<span class="go">type q diagnostic -&gt; pred.</span>
+<span class="go">type r diagnostic -&gt; (pred).</span>
+<span class="go">type q diagnostic -&gt; (pred).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -4124,11 +4124,11 @@
 <span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.883</span>
+<span class="go">Time: 1.851</span>
 
 <span class="go">Constraints:</span>
 
@@ -4191,8 +4191,8 @@
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi&quot;, line 7, column 4, characters 190-200: appl,</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi&quot;, line 19, column 31, characters 481-482: a.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type test ty -&gt; pred.</span>
-<span class="go">type of tm -&gt; ty -&gt; pred.</span>
+<span class="go">type test ty -&gt; (pred).</span>
+<span class="go">type of tm -&gt; ty -&gt; (pred).</span>
 <span class="go">type b ty.</span>
 <span class="go">type appl tm -&gt; tm -&gt; tm.</span>
 <span class="go">type a ty.</span>
@@ -4232,10 +4232,10 @@
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi&quot;, line 6, column 2, characters 57-59: ko,</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi&quot;, line 6, column 9, characters 64-67: g.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type r diagnostic -&gt; (int -&gt; pred) -&gt; pred.</span>
-<span class="go">type q diagnostic -&gt; pred.</span>
+<span class="go">type r diagnostic -&gt; (int -&gt; (pred)) -&gt; (pred).</span>
+<span class="go">type q diagnostic -&gt; (pred).</span>
 <span class="go">type ko diagnostic.</span>
-<span class="go">type g int -&gt; pred.</span>
+<span class="go">type g int -&gt; (pred).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -4351,14 +4351,14 @@
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi&quot;, line 16, column 4, characters 293-303: appl.</span>
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type x0 xint.</span>
-<span class="go">type test tm -&gt; pred.</span>
-<span class="go">type termify xlist -&gt; tm -&gt; pred.</span>
-<span class="go">type plus nat -&gt; nat -&gt; nat -&gt; pred.</span>
-<span class="go">type once tm -&gt; pred.</span>
-<span class="go">type of tm -&gt; ty -&gt; pred.</span>
-<span class="go">type mult nat -&gt; nat -&gt; nat -&gt; pred.</span>
-<span class="go">type iter nat -&gt; func -&gt; pred.</span>
-<span class="go">type exp nat -&gt; nat -&gt; nat -&gt; pred.</span>
+<span class="go">type test tm -&gt; (pred).</span>
+<span class="go">type termify xlist -&gt; tm -&gt; (pred).</span>
+<span class="go">type plus nat -&gt; nat -&gt; nat -&gt; (pred).</span>
+<span class="go">type once tm -&gt; (pred).</span>
+<span class="go">type of tm -&gt; ty -&gt; (pred).</span>
+<span class="go">type mult nat -&gt; nat -&gt; nat -&gt; (pred).</span>
+<span class="go">type iter nat -&gt; (func) -&gt; (pred).</span>
+<span class="go">type exp nat -&gt; nat -&gt; nat -&gt; (pred).</span>
 <span class="go">type appl tm -&gt; tm -&gt; tm.</span>
 
 <span class="go">Compilation time: 0.001</span>
@@ -4368,7 +4368,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.338</span>
+<span class="go">Time: 0.339</span>
 
 <span class="go">Constraints:</span>
 
@@ -4690,7 +4690,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.002</span>
+<span class="go">Time: 0.003</span>
 
 <span class="go">Constraints:</span>
 
@@ -4792,7 +4792,8 @@
 <span class="go">type succ tm.</span>
 <span class="go">type nat tm.</span>
 <span class="go">type lam tm -&gt; (tm -&gt; tm) -&gt; tm.</span>
-<span class="go">type compatible pred -&gt; list tm -&gt; pred -&gt; list tm -&gt; list func -&gt; pred.</span>
+<span class="go">type compatible (pred) -&gt;</span>
+<span class="go">                  list tm -&gt; (pred) -&gt; list tm -&gt; list (func) -&gt; (pred).</span>
 <span class="go">type bool tm.</span>
 <span class="go">type b2n tm.</span>
 <span class="go">type arr tm -&gt; tm -&gt; tm.</span>
@@ -4847,10 +4848,10 @@
 <span class="linenos">30</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.353001 + 0.056505 + 0.931734</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.333180 + 0.056920 + 0.946851</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.002</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
 <span class="go">Compilation time: 0.001</span>
 
@@ -4859,7 +4860,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.567</span>
+<span class="go">Time: 2.564</span>
 
 <span class="go">Constraints:</span>
 
@@ -4922,7 +4923,7 @@
 <span class="linenos">51</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.655573 + 3.167057 + 0.343342</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.647023 + 3.155842 + 0.378114</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
@@ -4934,7 +4935,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 10.173</span>
+<span class="go">Time: 10.188</span>
 
 <span class="go">Constraints:</span>
 
@@ -4992,7 +4993,7 @@
 <span class="linenos">46</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.887392 + 2.953498 + 0.223045</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.919745 + 2.981625 + 0.218967</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
@@ -5004,7 +5005,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 9.071</span>
+<span class="go">Time: 9.127</span>
 
 <span class="go">Constraints:</span>
 
@@ -5075,7 +5076,7 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 <span class="go">Fatal error: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses01.elpi&quot;, line 6, column 0, characters 27-31:</span>
 <span class="go">Typechecker: c1 is not a function but it is passed the argument main.</span>
-<span class="go">The type of c1 is pred</span>
+<span class="go">The type of c1 is (pred)</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/named_clauses02.elpi
@@ -5099,7 +5100,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -5164,7 +5165,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -5192,7 +5193,7 @@
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces02.elpi&quot;, line 4, column 2, characters 112-115: x.foo.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type x.foo pred.</span>
+<span class="go">type x.foo (pred).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -5272,7 +5273,7 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.005</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5444,9 +5445,9 @@
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi&quot;, line 6, column 58, characters 139-140: r,</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi&quot;, line 6, column 34, characters 115-118: f.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type s pred -&gt; pred.</span>
-<span class="go">type r pred.</span>
-<span class="go">type f tm -&gt; pred.</span>
+<span class="go">type s (pred) -&gt; (pred).</span>
+<span class="go">type r (pred).</span>
+<span class="go">type f tm -&gt; (pred).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -5478,7 +5479,7 @@
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif2.elpi&quot;, line 4, column 0, characters 71-74: r.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type r (int -&gt; int) -&gt; pred.</span>
+<span class="go">type r (int -&gt; int) -&gt; (pred).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -5513,9 +5514,9 @@
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi&quot;, line 3, column 13, characters 72-75: p,</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi&quot;, line 4, column 6, characters 107-109: ko.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type r int -&gt; pred.</span>
-<span class="go">type q diagnostic -&gt; pred.</span>
-<span class="go">type p int -&gt; pred.</span>
+<span class="go">type r int -&gt; (pred).</span>
+<span class="go">type q diagnostic -&gt; (pred).</span>
+<span class="go">type p int -&gt; (pred).</span>
 <span class="go">type ko diagnostic.</span>
 
 <span class="go">Compilation time: 0.000</span>
@@ -6019,8 +6020,8 @@
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi&quot;, line 18, column 28, characters 514-515: a.</span>
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type x int.</span>
-<span class="go">type q int -&gt; pred.</span>
-<span class="go">type p int -&gt; pred.</span>
+<span class="go">type q int -&gt; (pred).</span>
+<span class="go">type p int -&gt; (pred).</span>
 <span class="go">type b int.</span>
 <span class="go">type a int.</span>
 
@@ -6142,7 +6143,7 @@
 <span class="linenos">99</span><span class="c">%range(M,N,[M|Ns]) :- M &lt; N, M1 is M+1, range(M1,N,Ns).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.002</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi&quot;, line 50, column 16, characters 1168-1174:</span>
 <span class="go">DUMMY1 is linear: name it _DUMMY1 (discard) or DUMMY1_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi&quot;, line 50, column 23, characters 1175-1181:</span>
@@ -6161,7 +6162,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.729</span>
+<span class="go">Time: 1.715</span>
 
 <span class="go">Constraints:</span>
 
@@ -6180,7 +6181,7 @@
 <span class="go">A is linear: name it _A (discard) or A_ (fresh variable)</span>
 <span class="go">Fatal error: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/quote_syntax.elpi&quot;, line 2, column 2, characters 10-52:</span>
 <span class="go">Typechecker: Unable to infer a closed type for quote_syntax:</span>
-<span class="go">string -&gt; string -&gt; Src267 -&gt; Src269 -&gt; func</span>
+<span class="go">string -&gt; string -&gt; Src267 -&gt; Src269 -&gt; (func)</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/random.elpi
@@ -6193,7 +6194,7 @@
 <span class="linenos">6</span><span class="w">  </span><span class="nv">R</span><span class="w"> </span><span class="kd">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">8</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -6358,7 +6359,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.541</span>
+<span class="go">Time: 1.517</span>
 
 <span class="go">Constraints:</span>
 
@@ -6484,7 +6485,7 @@
 <span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -6515,7 +6516,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -6623,7 +6624,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.129</span>
+<span class="go">Time: 0.131</span>
 
 <span class="go">Constraints:</span>
 
@@ -6688,7 +6689,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.130</span>
+<span class="go">Time: 0.128</span>
 
 <span class="go">Constraints:</span>
 
@@ -6744,7 +6745,7 @@
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/self_assignment.elpi&quot;, line 6, column 0, characters 53-60: q.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type q tm -&gt; tm -&gt; tm -&gt; pred.</span>
+<span class="go">type q tm -&gt; tm -&gt; tm -&gt; (pred).</span>
 
 <span class="go">Compilation time: 0.000</span>
 
@@ -6796,7 +6797,7 @@
 <span class="linenos">31</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.141719 + 0.054691 + 0.788674</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.142936 + 0.054163 + 0.793657</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
@@ -6808,7 +6809,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.079</span>
+<span class="go">Time: 2.081</span>
 
 <span class="go">Constraints:</span>
 
@@ -6933,11 +6934,11 @@
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux2.elpi&quot;, line 2, column 7, characters 17-20: foo.</span>
 <span class="go">Please add the following text to your program:</span>
-<span class="go">type foo pred.</span>
+<span class="go">type foo (pred).</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.005</span>
 <span class="go">Determinacy checking time: 0.005</span>
 </pre></div>
 </div>
@@ -6956,8 +6957,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.006</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Typechecking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -6994,7 +6995,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -7226,7 +7227,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -7569,7 +7570,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.004</span>
 
 <span class="go">Success:</span>
 
@@ -7621,7 +7622,7 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.000</span>
+<span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
@@ -7709,7 +7710,7 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">X0 , X1 , X2 , X3 , X4 , X4 c0 c1</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.002</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/var.elpi&quot;, line 6, column 29, characters 113-120:</span>
 <span class="go">X10 is linear: name it _X10 (discard) or X10_ (fresh variable)</span>
 
