@@ -1,10 +1,27 @@
 (library
-  (name trace_ppx)
-  (public_name elpi.trace.ppx)
-  (libraries ppxlib)
-  (preprocess (pps ppxlib.metaquot))
-  (kind ppx_rewriter)
-  (ppx_runtime_libraries elpi.trace.runtime)
-  (modules trace_ppx)
-  (optional)
-)
+ (name trace_ppx)
+ (public_name elpi.trace.ppx)
+ (libraries ppxlib)
+ (preprocessor_deps trace_ppx_config.mlh)
+ (preprocess
+  (pps ppxlib.metaquot ppx_optcomp))
+ (kind ppx_rewriter)
+ (ppx_runtime_libraries elpi.trace.runtime)
+ (modules trace_ppx)
+ (optional))
+
+(rule
+ (target trace_ppx_config.mlh)
+ (action
+  (with-stdout-to
+   %{target}
+   (progn
+    (echo "(* Automatically generated, don't edit *)\n")
+    (echo "[%%define ppxlib ")
+    (run ./version_parser.exe %{version:ppxlib})
+    (echo "]\n")))))
+
+(executable
+ (name version_parser)
+ (modules version_parser)
+ (libraries str))
