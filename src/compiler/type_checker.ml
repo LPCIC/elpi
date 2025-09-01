@@ -198,7 +198,7 @@ open ScopedTerm
 
 let pretty_ty valid_mode =
   if valid_mode then TypeAssignment.pretty_mut_once
-  else TypeAssignment.pretty_mut_once_raw
+  else TypeAssignment.pretty_mut_once
 
 
 let error ~loc msg = error ~loc ("Typechecker: " ^ msg)

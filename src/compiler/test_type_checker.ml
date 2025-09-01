@@ -86,8 +86,8 @@ let _ =
     let t = f t in
     let _pp = TA.pp_t_ (MutableOnce.pp TA.pp) in
     if unifyable_ground_ty t exp <> 0 then (
-      Format.eprintf "---\nUnexpected result %d: \nactual: @[%a@]\nreference: @[%a@]@." test_nb TA.pretty_mut_once_raw t
-        TA.pretty_mut_once_raw exp;
+      Format.eprintf "---\nUnexpected result %d: \nactual: @[%a@]\nreference: @[%a@]@." test_nb TA.pretty_mut_once t
+        TA.pretty_mut_once exp;
       exit 1)
   in
 
