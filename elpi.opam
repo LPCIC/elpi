@@ -10,7 +10,7 @@ bug-reports: "https://github.com/LPCIC/elpi/issues"
 build: [
   ["dune" "subst"] {dev}
   ["dune" "build" "-p" name "-j" jobs]
-  [make "tests" "DUNE_OPTS=-p %{name}%" "SKIP=performance_HO" "SKIP+=performance_FO" "SKIP+=elpi_api_performance"] {with-test & os != "macos" & os-distribution != "alpine" & os-distribution != "freebsd"}
+  [make "tests" "DUNE_OPTS=-p %{name}%" "SKIP=performance_HO" "SKIP+=performance_FO" "SKIP+=elpi_api_performance"] {with-test & os != "macos" & os-distribution != "alpine" & os-distribution != "freebsd"  & arch != "arm32" & arch != "x86_32"}
 ]
 x-maintenance-intent: ["(latest)"]
 depends: [
@@ -24,7 +24,7 @@ depends: [
   "ANSITerminal" {with-test}
   "cmdliner" {with-test}
   "fileutils" {with-test}
-  "dune" {>= "2.8.0"}
+  "dune" {>= "2.9.0"}
   "conf-time" {with-test}
   "atdgen" {>= "2.10.0"}
   "atdts" {>= "2.10.0"}
