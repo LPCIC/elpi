@@ -1,6 +1,6 @@
 (library
   (name test_suite)
-  (libraries str unix fileutils)
+  (libraries str unix fileutils yojson)
   (library_flags -linkall)
 )
 
