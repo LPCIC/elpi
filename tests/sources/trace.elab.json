@@ -9,8 +9,7 @@
     "step_id": 1,
     "runtime_id": 0,
     "step": [
-      "Inference",
-      {
+      "Inference",       {
         "current_goal_id": 4,
         "current_goal_text": "main",
         "current_goal_predicate": "main",
