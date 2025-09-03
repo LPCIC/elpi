@@ -1,3 +1,10 @@
+# v3.3.1 (September 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Tests:
+  - compare json files semantically
+
 # v3.3.0 (September 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
