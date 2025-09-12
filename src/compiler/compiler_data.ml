@@ -84,12 +84,17 @@ module TypeAssignment = struct
   let compare_tmode m1 m2 =
     match deref_tmode m1, deref_tmode m2 with
     | MVal m1, MVal m2 -> Mode.compare m1 m2
-    | _ -> assert false
+    | _ -> anomaly "comparing an inferred mode declaration. Maybe some pred/func declaration is missing"
 
   let is_tmode_set t =
     match deref_tmode t with
     | MVal _ -> true
     | _ -> false
+
+  let set_tmode m x =
+    match deref_tmode m with
+    | MVal _ -> assert false
+    | MRef m -> MutableOnce.set m (MVal x)
 
   let rec pretty_tmode fmt = function
     | MRef x when MutableOnce.is_set x -> pretty_tmode fmt (MutableOnce.get x)
