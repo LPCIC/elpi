@@ -894,7 +894,7 @@ let check_undeclared ~type_abbrevs ~unknown =
     let ty = match ty with
       | TypeAssignment.Lam _ -> assert false
       | TypeAssignment.Ty t -> t in
-    let rec pick_mode m =
+    let pick_mode m =
       if TypeAssignment.is_tmode_set m then ()
       else TypeAssignment.set_tmode m Mode.Output in
     let rec pick = function
