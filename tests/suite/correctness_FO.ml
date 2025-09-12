@@ -224,8 +224,8 @@ let () = declare "trie"
 
 let () =
   let (!) x = Test.FailureOutput (Str.regexp x) in
-  let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n.*\n+.*line %d" l1 l2) in
-  let mut_excl_no_loc t = !("Mutual exclusion violated for rules of predicate " ^ t ^ ".\nThis rule overlaps with") in
+  let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n.*\n.*\n+.*line %d" l1 l2) in
+  let mut_excl_no_loc t = !("Mutual exclusion violated for rules of predicate " ^ t ^ ".\n.*\nThis rule overlaps with") in
   let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
   let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
   let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*" l c) in
