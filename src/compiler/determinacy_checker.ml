@@ -752,7 +752,7 @@ let check_clause, check_chr_guard_and_newgoal =
       det_pred
     with LoadFlexClause t ->
       if not has_tail_cut then
-        warn ~loc:t.loc ~id:FlexClause (Format.asprintf "ignoring flexible clause: %a" ScopedTerm.pretty t);
+        warn ~loc:t.loc ~id:FlexClause (Format.asprintf "skipping static analysis of flexible rule: %a" ScopedTerm.pretty t);
       Det
   in
   let err gc f =
