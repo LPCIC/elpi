@@ -167,7 +167,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
 **../../tests/sources/ackermann.elpi
@@ -315,11 +315,11 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 0.001
+   Time: 0.000
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -646,7 +646,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -1445,7 +1445,7 @@ Test Bed
    
    Success:
    
-   Time: 1.873
+   Time: 1.894
    
    Constraints:
    
@@ -1610,7 +1610,7 @@ Test Bed
    
    Success:
    
-   Time: 0.340
+   Time: 0.347
    
    Constraints:
    
@@ -1886,7 +1886,7 @@ Test Bed
    
    Success:
    
-   Time: 0.002
+   Time: 0.003
    
    Constraints:
    
@@ -1971,7 +1971,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.342377 + 0.061161 + 0.938774
+   1.275306 + 0.058079 + 0.911427
    
 
 .. code-block:: console
@@ -1986,7 +1986,7 @@ Test Bed
    
    Success:
    
-   Time: 2.576
+   Time: 2.469
    
    Constraints:
    
@@ -2003,7 +2003,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.757908 + 3.184628 + 0.361745
+   6.631265 + 3.155827 + 0.370491
    
 
 .. code-block:: console
@@ -2018,7 +2018,7 @@ Test Bed
    
    Success:
    
-   Time: 10.312
+   Time: 10.165
    
    Constraints:
    
@@ -2035,7 +2035,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.036423 + 3.046367 + 0.222805
+   5.901941 + 2.944579 + 0.216670
    
 
 .. code-block:: console
@@ -2046,11 +2046,11 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 9.313
+   Time: 9.070
    
    Constraints:
    
@@ -2161,7 +2161,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2760,7 +2760,7 @@ Test Bed
    
    Success:
    
-   Time: 1.819
+   Time: 1.766
    
    Constraints:
    
@@ -2794,7 +2794,7 @@ Test Bed
 
 .. code-block:: console
 
-   3
+   6
    
 
 .. code-block:: console
@@ -2845,7 +2845,7 @@ Test Bed
    
    Success:
    
-   Time: 0.261
+   Time: 0.257
    
    Constraints:
    
@@ -2885,7 +2885,7 @@ Test Bed
    
    Success:
    
-   Time: 1.536
+   Time: 1.692
    
    Constraints:
    
@@ -3073,7 +3073,7 @@ Test Bed
    
    Success:
    
-   Time: 0.137
+   Time: 0.133
    
    Constraints:
    
@@ -3100,7 +3100,7 @@ Test Bed
    
    Success:
    
-   Time: 0.136
+   Time: 0.135
    
    Constraints:
    
@@ -3178,7 +3178,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.158176 + 0.055781 + 0.801245
+   1.121948 + 0.054789 + 0.778183
    
 
 .. code-block:: console
@@ -3193,7 +3193,7 @@ Test Bed
    
    Success:
    
-   Time: 2.109
+   Time: 2.047
    
    Constraints:
    
@@ -3269,7 +3269,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
 **../../tests/sources/shorten_aux2.elpi
@@ -3945,7 +3945,7 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Determinacy checking time: 0.005
    
    Success:
    
