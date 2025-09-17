@@ -10,6 +10,7 @@
 - Compiler:
   - Fix `=!=>` that was adding a head cut, rather than a tail cut, in some
     cases
+  - Fix compilation bug concerning `Loc.t` being erroneusly compared
 
 # v3.3.1 (September 2025)
 

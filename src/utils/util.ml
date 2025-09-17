@@ -161,6 +161,10 @@ module Loc = struct
 
   let pp fmt l =Fmt.fprintf fmt "@[%s@]" (to_string l)
   let show l = to_string l
+
+  (* WARNING: loc comparison must be correct, otherwise two occurrences of
+     the samy symbol may be compiled to different constants (e.g. if the payload
+     is different) *)
   let compare l1 l2 =
     let x =  Stdlib.compare l1.source_start l2.source_start in
     if x = 0 then Stdlib.compare { l1 with client_payload = None } { l2 with client_payload = None } else x
