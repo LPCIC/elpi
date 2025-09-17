@@ -1345,7 +1345,7 @@ let copy_heap_drop_csts ~depth ?keep_if_outside x =
   let rec maux depth x =
   match x with
   | Const _ -> x
-  | Lam f -> let f' = maux depth f in if f == f' then x else Lam f'
+  | Lam f -> let f' = maux (depth+1) f in if f == f' then x else Lam f'
   | App (c, t, l) ->
      let t' = maux depth t in 
      let l' = smart_map2 maux depth l in

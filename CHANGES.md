@@ -7,6 +7,9 @@
     pred appendR -> list A, list A, list A.
     ```
 
+- Compiler:
+  - Fix `=!=>` that was adding a head cut, rather than a tail cut, in some
+    cases
 
 # v3.3.1 (September 2025)
 

@@ -163,8 +163,8 @@ module Loc = struct
   let show l = to_string l
   let compare l1 l2 =
     let x =  Stdlib.compare l1.source_start l2.source_start in
-    if x = 0 then Stdlib.compare l1 l2 else x
-  let equal = (=)
+    if x = 0 then Stdlib.compare { l1 with client_payload = None } { l2 with client_payload = None } else x
+  let equal l1 l2 =  { l1 with client_payload = None } = { l2 with client_payload = None }
 
   let initial ?client_payload source_name = {
     client_payload;

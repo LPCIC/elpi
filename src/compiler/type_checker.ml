@@ -871,6 +871,7 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
         | TypeAssignment.Arr (_,_,_,r) -> Ast.Mode.(Fo Output) :: ty2mode r
         | _ -> [] in
       let mode = ty2mode tya in
+
       let indexing = match is_prop ~type_abbrevs ty with
       | None -> TypingEnv.DontIndex
       | Some Relation -> Index {mode; indexing=MapOn 0; overlap = Allowed; has_local_without_cut=None} 
@@ -889,8 +890,23 @@ let check_undeclared ~type_abbrevs ~unknown =
     warn ~id:UndeclaredGlobal Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared
      (pplist pp_print_string "") types);
   end;
+  let pick_a_mode { TypingEnv.ty } =
+    let ty = match ty with
+      | TypeAssignment.Lam _ -> assert false
+      | TypeAssignment.Ty t -> t in
+    let pick_mode m =
+      if TypeAssignment.is_tmode_set m then ()
+      else TypeAssignment.set_tmode m Mode.Output in
+    let rec pick = function
+      | TypeAssignment.Prop _ | Any | Cons _ -> ()
+      | App(_,x,xs) -> pick x; List.iter pick xs
+      | Arr(m,_,s,t) -> pick_mode m; pick s; pick t
+      | UVar _ -> ()
+    in
+      pick ty
+  in
   let overloading = F.Map.map (fun (x,_) -> TypeAssignment.Single x) unknown in
-  let symbols = F.Map.fold (fun _ (k,v) m -> Symbol.QMap.add k v m) unknown Symbol.QMap.empty in
+  let symbols = F.Map.fold (fun _ (k,v) m -> pick_a_mode v; Symbol.QMap.add k v m) unknown Symbol.QMap.empty in
   { TypingEnv.overloading; symbols }
 
 let check_pred_name ~types ~loc f =

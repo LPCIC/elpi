@@ -424,9 +424,9 @@ end = struct (* {{{ *)
     let illegal_err a =
       error ~loc ("illegal attribute " ^ show_raw_attribute a) in
     let illegal_replace s =
-      error ~loc ("replacing clause for "^ s ^" cannot have a name attribute") in
+      error ~loc ("replacing rule for "^ s ^" cannot have a name attribute") in
     let illegal_remove_id s =
-      error ~loc ("remove clause for "^ s ^" cannot have a name attribute") in
+      error ~loc ("remove rule for "^ s ^" cannot have a name attribute") in
     let rec aux_attrs r = function
       | [] -> r
       | Name s :: rest ->
@@ -1521,7 +1521,7 @@ end = struct
   let update_indexing state symbols ({ idx } as index) (preds : (Symbol.t * pred_info) list) old_idx =
     let check_if_some_clauses_already_in2 ~loc predicate c =
       if Ptmap.mem c idx then
-        error ~loc @@ "Some clauses for " ^ predicate ^
+        error ~loc @@ "Some rules for " ^ predicate ^
           " are already in the program, changing the indexing a posteriori is not allowed."
     in
 
@@ -1597,7 +1597,6 @@ end = struct
     match it with
     | Impl(R2L,lb,hd,hyp) -> Some (mk @@ Impl(R2L,lb,hd,mk @@ append_list_or_conj hyp))
     | App({ scope = Scope.Global { resolved_to = s } },[]) when SymbolResolver.is_resolved_to types s nil -> Some orig
-    | App({ scope = Scope.Global { resolved_to = s } },[]) when SymbolResolver.is_resolved_to types s nil -> Some orig
     | App({ scope = Scope.Global { resolved_to = s } } as hd,[x;xs]) when SymbolResolver.is_resolved_to types s cons ->
         begin match try_add_tail_cut ~types x, try_add_tail_cut ~types xs with
         | Some x, Some xs -> Some (mk @@ App(hd,[x;xs]))
@@ -1608,6 +1607,11 @@ end = struct
         if List.for_all Option.is_some xs then
           Some (mk @@ App(hd,List.map Option.get xs))
         else None
+    | App({ scope = Scope.Global { resolved_to = s } } as hd,[{ it = Lam(v,ty,t) } as lam]) when SymbolResolver.is_resolved_to types s pi ->
+        begin match try_add_tail_cut ~types t with
+        | Some x -> Some (mk @@ App(hd,[{lam with it = Lam(v,ty,x)}]))
+        | _ -> None
+        end
     | App _-> Some (mk @@ Impl(R2L,loc,orig,mk @@ App(const_of_symb ~types cut ~loc,[])))
     | _ -> None
         
@@ -1752,14 +1756,19 @@ end = struct
       let local = if is_local then "local " else "" in
       let to_str fmt x =
         match x.overlap_loc with
-        | None -> Format.fprintf fmt "- anonymous clause" 
-        | Some loc -> Format.fprintf fmt "- rule at %a" Loc.pp loc in
-      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,This %srule overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@ @[Offending clause is@ @[<hov 2>%a@]@] @]" pp_global_predicate pred local
-        (pplist to_str " ") overlaps (pretty_term ~depth) cl_st) 
+        | None -> Format.fprintf fmt "- anonymous rule" 
+        | Some loc2 when Loc.equal loc loc2 -> Format.fprintf fmt "- @[<v 0>itself at %a@,did you accumulate %s twice?@]" Loc.pp loc2 (Filename.basename loc2.Loc.source_name)
+        | Some loc2 -> Format.fprintf fmt "- rule at %a" Loc.pp loc2
+      in
+      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,@[Offending rule is:@ @[<hov 2>%a@]@]@,This %srule overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@ @]"
+        pp_global_predicate pred
+        (pretty_term ~depth) cl_st
+        local
+        (pplist to_str " ") overlaps)
     in
 
     let error_overlapping_eigen_variables ~loc pred (cl_st,depth : term * int) = 
-      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,This rule (displayed below) does not respects the principles of mutual exclution@]@ @[Principles: there is a cut in the body of the local clause and/or all indexed input arguments are eigenvariables@] @[To solve the problem, add a cut in its body.@]@ @[Offending rule:@ @[<hov 2>%a@]@] @]" pp_global_predicate pred
+      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,This rule (displayed below) does not respects the principles of mutual exclution@]@ @[Principles: there is a cut in the body of the local rule and/or all indexed input arguments are eigenvariables@] @[To solve the problem, add a cut in its body.@]@ @[Offending rule:@ @[<hov 2>%a@]@] @]" pp_global_predicate pred
         (pretty_term ~depth) cl_st) 
     in
 
@@ -1838,14 +1847,7 @@ end = struct
         | Some cl_overlap ->
           let rec filter_overlaps (arg_nb:int) has_cut : overlap_clause list -> 'a list = function
             | [] -> []
-            | x::xs when Option.equal Loc.equal x.Data.overlap_loc (Some loc) ->
-                if has_cut then [] 
-                else 
-                  (* only keeps the list of clauses with the same nb of arguments.
-                     this is for clauses with variadic number of argmnets:
-                     if 2 clauses have different arities, they cannot overlap
-                  *)
-                  List.filter (fun x -> x.arg_nb = arg_nb) xs
+            | x::xs when x.timestamp = cl.timestamp -> if x.has_cut then [] else filter_overlaps arg_nb has_cut xs
             | x::xs ->
               if not x.has_cut && arg_nb = x.arg_nb then (x::filter_overlaps arg_nb has_cut xs)
               else filter_overlaps arg_nb has_cut xs
@@ -1897,7 +1899,7 @@ end = struct
               let (p,cl), _, morelcs =
                 try R.CompileTime.clausify1 ~tail_cut:(ik = ImplBang) ~loc:fresh_loc ~modes:(fun x -> fst (get_info x)) ~nargs:(F.Map.cardinal amap) ~depth h
                 with D.CannotDeclareClauseForBuiltin(loc,c) ->
-                  error ?loc ("Declaring a clause for built predicate:" ^ show_builtin_predicate (fun ?table x -> F.show @@ SymbolMap.global_name state symbols x) c)
+                  error ?loc ("Declaring a rule for built predicate:" ^ show_builtin_predicate (fun ?table x -> F.show @@ SymbolMap.global_name state symbols x) c)
                 in
 
               let cl_overlap, index = R.Indexing.add1clause_overlap_runtime ~depth ~time:(runtime_tick ()) index p cl in
@@ -1935,16 +1937,17 @@ end = struct
     let (p,cl), _, morelcs =
       try R.CompileTime.clausify1 ~tail_cut:false ~loc ~modes ~nargs:(F.Map.cardinal amap) ~depth:0 body
       with D.CannotDeclareClauseForBuiltin(loc,_c) ->
-        error ?loc ("Declaring a clause for built in predicate")
+        error ?loc ("Declaring a rule for built in predicate")
       in
-    if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
+    if morelcs <> 0 then error ~loc "sigma in a toplevel rule is not supported";
 
     let p_info =
       try C.Map.find p pred_info
       with Not_found -> anomaly ("No signature declaration for " ^ F.show (SymbolMap.global_name state symbols p) ^ ". Did you forget to accumulate a file?") in
     let index, (overlap_clause, p_info) = R.CompileTime.add_to_index ~det_check:(if flags.skip_det_checking then None else Some time) ~depth:0 ~predicate:p ~graft cl id index p_info in
     let pred_info = C.Map.add p p_info pred_info in
-    (* Format.eprintf "Validating local clause for predicate %a at %a@." F.pp (SymbolMap.global_name state symbols p) Loc.pp loc; *)
+
+    (* Format.eprintf "Validating clause for predicate %a at %a@." F.pp (SymbolMap.global_name state symbols p) Loc.pp loc; *)
     
     let pred_info = ref pred_info in
 

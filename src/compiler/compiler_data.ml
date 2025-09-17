@@ -84,12 +84,17 @@ module TypeAssignment = struct
   let compare_tmode m1 m2 =
     match deref_tmode m1, deref_tmode m2 with
     | MVal m1, MVal m2 -> Mode.compare m1 m2
-    | _ -> assert false
+    | _ -> anomaly "comparing an inferred mode declaration. Maybe some pred/func declaration is missing"
 
   let is_tmode_set t =
     match deref_tmode t with
     | MVal _ -> true
     | _ -> false
+
+  let set_tmode m x =
+    match deref_tmode m with
+    | MVal _ -> assert false
+    | MRef m -> MutableOnce.set m (MVal x)
 
   let rec pretty_tmode fmt = function
     | MRef x when MutableOnce.is_set x -> pretty_tmode fmt (MutableOnce.get x)
@@ -340,16 +345,16 @@ module TypeAssignment = struct
 
 
 
-  let check_same_mode ~loc1 ~loc2 x y =
+  let check_same_mode ~loc1 ~loc2 (s1, x) (s2, y) =
     if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality x y <> 0 then
-      error ~loc:loc2 ("Two types for the same symbol cannot only differ on modes or functionality.\nPrevious declaration: " ^ Loc.show loc1)
+      error ~loc:loc2 (Format.asprintf "@[<v>Two types for the symbol %s cannot only differ on modes or functionality.@\n@[<hov 2>Current declaration:@;<2 0>%a@]@\n@[<v 2>Previous declaration: %a@ (%s)@]@]" (Symbol.pretty s1) pretty_skema x pretty_skema y (Loc.show loc1))
 
   let undup_skemas sk_of_s osl =
     let l = osl |> List.map (fun x -> x, sk_of_s x) in
     let filtered = ref [] in
-    let eq_skema (s1,x) (s2,y) = 
+    let eq_skema ((s1,x) as l) ((s2,y) as r) = 
       let b = compare_skema ~cmp_mode:(fun _ _ -> 0) ~cmp_func:(fun _ _ -> 0) x y = 0 in
-      if b then check_same_mode ~loc1:(Symbol.get_loc s1) ~loc2:(Symbol.get_loc s2) x y;
+      if b then check_same_mode ~loc1:(Symbol.get_loc s1) ~loc2:(Symbol.get_loc s2) l r;
       if b then filtered := (s1,s2) :: !filtered;
       b in      
     let l =
