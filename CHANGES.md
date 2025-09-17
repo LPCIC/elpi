@@ -1,3 +1,9 @@
+# Unreleased
+
+- Compiler:
+  - Fix `=!=>` that was adding a head cut, rather than a tail cut, in some
+    cases
+
 # v3.3.1 (September 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.

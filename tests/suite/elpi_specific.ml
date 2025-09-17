@@ -521,3 +521,9 @@ let () = declare "variadic"
   ~source_elpi:"variadic.elpi"
   ~description:"variadic"
   ()
+
+let () = declare "implbang"
+  ~source_elpi:"implbang.elpi"
+  ~description:"tail cut =!=>"
+  ~expectation:Success
+  ()
