@@ -1,7 +1,7 @@
 # Unreleased
 
 - Parser:
-  - New syntax for `pred`, identical to the new `func` one. Eg
+  - New `->`-based syntax for `pred`, analogous to the new `func` one. E.g.
     ```
     func append list A, list A -> list A.
     pred appendR list A, list A -> list A.
