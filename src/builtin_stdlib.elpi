@@ -45,7 +45,7 @@ assert-ok! Cond Msg :- Cond Diagnostic, !, (Diagnostic = ok ; Diagnostic = error
 assert-ok! _ Msg :- fatal-error-w-data Msg "no diagnostic returned".
 
 % [spy P] traces the call to P, printing all success and the final failure
-pred spy i:prop.
+pred spy (pred).
 spy P :- trace.counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
          debug-print "----<<---- enter: " P,
          P,
@@ -86,7 +86,7 @@ func append list A, list A -> list A.
 append [X|XS] L [X|L1] :- append XS L L1 .
 append [] L L .
 
-pred appendR o:list A, o:list A, o:list A.
+pred appendR -> list A, list A, list A.
 appendR [] L L.
 appendR [X|XS] L [X|L1] :- appendR XS L L1.
 
@@ -180,14 +180,14 @@ nth N _ _ :- N < 0, !, fatal-error "nth got a negative index".
 nth _ _ _ :- fatal-error "nth run out of list items".
 
 % [lookup L K V] sees L as a map from K to V
-pred lookup i:list (pair A B), i:A, o:B.
+pred lookup list (pair A B), A -> B.
 lookup [pr X Y|_] X Y.
-lookup [_|LS]       X Y :- lookup LS X Y.
+lookup [_|LS]     X Y :- lookup LS X Y.
 
 % [lookup! L K V] sees L as a map from K to V, stops at the first binding
 func lookup! list (pair A B), A -> B.
 lookup! [pr X Y|_] X Y :- !.
-lookup! [_|LS]       X Y :- lookup! LS X Y.
+lookup! [_|LS]     X Y :- lookup! LS X Y.
 
 % [mem! L X] succeeds once if X occurs inside L 
 func mem! list A, A ->.
@@ -195,19 +195,19 @@ mem! [X|_] X :- !.
 mem! [_|L] X :- mem! L X.
 
 % [mem L X] succeeds every time if X occurs inside L 
-pred mem i:list A, o:A.
+pred mem list A -> A.
 mem [X|_] X.
 mem [_|L] X :- mem L X.
 
-func exists! list A, (pred i:A) ->.
+func exists! list A, (pred A).
 exists! [X| _] P :- P X, !.
 exists! [_|XS] P :- exists! XS P. 
 
-pred exists i:list A, i:(pred i:A).
+pred exists list A, (pred A).
 exists [X|_] P :- P X.
 exists [_|L] P :- exists L P.
 
-pred exists2 i:list A, i:list B, i:(pred i:A, i:B).
+pred exists2 list A, list B, (pred A, B).
 exists2 [] [_|_] _ :- fatal-error "exists2 on lists of different length".
 exists2 [_|_] [] _ :- fatal-error "exists2 on lists of different length".
 exists2 [X|_] [Y|_] P :- P X Y.
@@ -232,7 +232,7 @@ filter []    _ [].
 filter [X|L] P R :- if (P X) (R = X :: L1) (R = L1), filter L P L1.
 
 :index (1)
-func partition list A, (pred i:A) -> list A, list A.
+func partition list A, (pred A) -> list A, list A.
 partition [] _ [] [].
 partition [X|XS] P [X|R] L :- P X, !, partition XS P R L.
 partition [X|XS] P R [X|L] :- partition XS P R L.
@@ -296,13 +296,13 @@ pred do-ok! o:diagnostic, i:list (pred o:diagnostic).
 do-ok! ok [].
 do-ok! S [P|PS] :- P S0, !, if (S0 = ok) (do-ok! S PS) (S = S0).
 
-pred lift-ok i:prop, i:string, o:diagnostic.
+pred lift-ok (pred), string -> diagnostic.
 lift-ok P Msg R :- (P, R = ok; R = error Msg).
 
 func spy-do! list prop.
 spy-do! L :- map L (x\y\y = spy x) L1, do! L1.
 
-func while-ok-do! diagnostic, list (pred o:diagnostic) -> diagnostic.
+func while-ok-do! diagnostic, list (pred -> diagnostic) -> diagnostic.
 while-ok-do! (error _ as E) _ E.
 while-ok-do! ok [] ok.
 while-ok-do! ok [P|PS] R :- P C, !, while-ok-do! C PS R.

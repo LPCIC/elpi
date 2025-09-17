@@ -223,7 +223,6 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "external func (=) -> A, A. % unification term term";
   LPCode "external func pattern_match A -> A. % matching pattern term";
 
-  (* LPCode "external func (pi) i:(func i:A)."; *)
   LPCode "external func (pi) (func A).";
   LPCode "external func (sigma) (func A).";
   
@@ -231,19 +230,19 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   MLData BuiltInData.string;
   MLData BuiltInData.float;
 
-  LPCode "external symbol (;) prop -> prop -> prop.";
+  LPCode "external symbol (;) (pred) -> (pred) -> (pred).";
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
   LPCode "external symbol (:-)  : (func) -> (func) -> (func) = \"core\".";
-  LPCode "external symbol (:-)  : (func) -> list prop -> (func) = \"core\".";
+  LPCode "external symbol (:-)  : (func) -> list (pred) -> (func) = \"core\".";
   LPCode "external symbol (,)   : variadic (func) (func).";
   LPCode "external symbol uvar  : A = \"core\".";
   LPCode "external symbol (as)  : A -> A -> A = \"core\".";
-  LPCode "external symbol (=>)  : prop -> (func) -> (func) = \"core\".";
-  LPCode "external symbol (=>)  : list prop -> (func) -> (func) = \"core\"."; (* HACK in TC to handle this*)
-  LPCode "external symbol (==>) : prop -> (func) -> (func).";
-  LPCode "external symbol (==>) : list prop -> (func) -> (func).";
+  LPCode "external symbol (=>)  : (pred) -> (func) -> (func) = \"core\".";
+  LPCode "external symbol (=>)  : list (pred) -> (func) -> (func) = \"core\"."; (* HACK in TC to handle this*)
+  LPCode "external symbol (==>) : (pred) -> (func) -> (func).";
+  LPCode "external symbol (==>) : list (pred) -> (func) -> (func).";
 
   LPDoc " -- Control --";
 
@@ -606,7 +605,7 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
      | Sys_error msg -> error msg)),
   DocAbove);
 
-  LPCode "pred printterm i:out_stream, i:A.";
+  LPCode "pred printterm out_stream, A.";
   LPCode "printterm S T :- term_to_string T T1, output S T1.";
 
   ]
