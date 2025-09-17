@@ -1,5 +1,12 @@
 # Unreleased
 
+- Parser:
+  - New `->`-based syntax for `pred`, analogous to the new `func` one. E.g.
+    ```
+    func append list A, list A -> list A.
+    pred appendR -> list A, list A, list A.
+    ```
+
 - Compiler:
   - Fix `=!=>` that was adding a head cut, rather than a tail cut, in some
     cases

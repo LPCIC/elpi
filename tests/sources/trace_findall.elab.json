@@ -91,7 +91,7 @@
                       "filename": "builtin_stdlib.elpi",
                       "line": 319,
                       "column": 0,
-                      "character": 10168
+                      "character": 10131
                     }
                   ]
                 }
@@ -119,7 +119,7 @@
                     "filename": "builtin_stdlib.elpi",
                     "line": 319,
                     "column": 0,
-                    "character": 10168
+                    "character": 10131
                   }
                 ]
               }
@@ -444,7 +444,7 @@
                     "filename": "builtin_stdlib.elpi",
                     "line": 319,
                     "column": 0,
-                    "character": 10168
+                    "character": 10131
                   }
                 ]
               }

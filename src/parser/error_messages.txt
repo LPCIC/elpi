@@ -464,22 +464,25 @@ program: PRED AFTER IO_COLON AFTER RPAREN
 program: PRED AFTER IO_COLON AFTER BIND
 program: FUNC AFTER AFTER IO_COLON
 program: FUNC AFTER AFTER CONJ VDASH
-program: FUNC VDASH
-program: FUNC AFTER VDASH
 program: FUNC AFTER AFTER RPAREN
 program: FUNC AFTER ARROW VDASH
 program: FUNC AFTER LPAREN FUNC AFTER FULLSTOP
-program: FUNC AFTER LPAREN FUNC VDASH
 program: FUNC AFTER LPAREN FUNC ARROW VDASH
 program: FUNC AFTER DOTS VDASH
 program: FUNC AFTER ARROW AFTER RPAREN
 
-Predicate declaration expected. Examples:
-pred append i:list A, i:list A, o:list A.
-pred append i:list A i:list A o:list A.
-pred mapR i:list A, i:(pred i:A, o:B), o:list B.
+Predicate declaration expected.
+Examples:
+func append list A, list A -> list A.
+pred appendR -> list A, list A, list A.
 func map list A, (func A -> B) -> list B.
+func if (pred), (func), (func).
 func intdiv int, int -> int.. .
+.
+Examples (legacy syntax):
+pred append i:list A, i:list A, o:list A.
+pred append i:list A  i:list A  o:list A.    % optional comma
+pred map i:list A, i:(pred i:A, o:B), o:list B.
 
 program: EXPORTDEF AFTER TYPE
 program: EXPORTDEF VDASH
@@ -583,7 +586,12 @@ goal: AFTER COLON LPAREN FUNC ARROW DOTS VDASH
 
 Anonymous predicate declaration expected.
 Examples:
-(pred i:ty, o:ty)
 (pred)
+(pred tm -> ty)
 (func tm -> ty)
 (func)
+.
+Examples (legacy syntax):
+(pred i:ty, o:ty)
+(func i:ty, o:ty)
+

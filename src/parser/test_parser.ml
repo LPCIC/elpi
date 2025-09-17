@@ -253,6 +253,13 @@ let _ =
   testT "func x int, list int -> bool."           ();
   testT "type x (func int, list int -> bool)."           ();
   testT "func x int, (func int -> int) -> bool."  ();
+  testT "pred x int, int -> bool, bool."          ();
+  testT "pred x int, list int -> bool."           ();
+  testT "type x (pred int, list int -> bool)."           ();
+  testT "pred x int, (pred int -> int) -> bool."  ();
+  testT "pred x."  ();
+  testT "pred x (pred)."  ();
+  testT "pred x (pred) -> ."  ();
   (*    01234567890123456789012345 *)
   test  "p :- f {{{ g }}}."    1 16 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [q 7 16 10 13 " g "]]);
   test  "p :- f {{ g }}."      1 14 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [q 7 14 9 12 " g "]]);
