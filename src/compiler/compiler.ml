@@ -1597,7 +1597,6 @@ end = struct
     match it with
     | Impl(R2L,lb,hd,hyp) -> Some (mk @@ Impl(R2L,lb,hd,mk @@ append_list_or_conj hyp))
     | App({ scope = Scope.Global { resolved_to = s } },[]) when SymbolResolver.is_resolved_to types s nil -> Some orig
-    | App({ scope = Scope.Global { resolved_to = s } },[]) when SymbolResolver.is_resolved_to types s nil -> Some orig
     | App({ scope = Scope.Global { resolved_to = s } } as hd,[x;xs]) when SymbolResolver.is_resolved_to types s cons ->
         begin match try_add_tail_cut ~types x, try_add_tail_cut ~types xs with
         | Some x, Some xs -> Some (mk @@ App(hd,[x;xs]))
@@ -1608,6 +1607,11 @@ end = struct
         if List.for_all Option.is_some xs then
           Some (mk @@ App(hd,List.map Option.get xs))
         else None
+    | App({ scope = Scope.Global { resolved_to = s } } as hd,[{ it = Lam(v,ty,t) } as lam]) when SymbolResolver.is_resolved_to types s pi ->
+        begin match try_add_tail_cut ~types t with
+        | Some x -> Some (mk @@ App(hd,[{lam with it = Lam(v,ty,x)}]))
+        | _ -> None
+        end
     | App _-> Some (mk @@ Impl(R2L,loc,orig,mk @@ App(const_of_symb ~types cut ~loc,[])))
     | _ -> None
         
