@@ -482,7 +482,7 @@ func intdiv int, int -> int.. .
 Examples (legacy syntax):
 pred append i:list A, i:list A, o:list A.
 pred append i:list A  i:list A  o:list A.    % optional comma
-pred mapR i:list A, i:(pred i:A, o:B), o:list B.
+pred map i:list A, i:(pred i:A, o:B), o:list B.
 
 program: EXPORTDEF AFTER TYPE
 program: EXPORTDEF VDASH
