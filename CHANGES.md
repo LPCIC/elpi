@@ -1,3 +1,13 @@
+# Unreleased
+
+- Parser:
+  - New syntax for `pred`, identical to the new `func` one. Eg
+    ```
+    func append list A, list A -> list A.
+    pred appendR list A, list A -> list A.
+    ```
+
+
 # v3.3.1 (September 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
