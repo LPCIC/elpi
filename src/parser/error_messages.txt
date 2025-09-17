@@ -474,7 +474,7 @@ program: FUNC AFTER ARROW AFTER RPAREN
 Predicate declaration expected.
 Examples:
 func append list A, list A -> list A.
-pred appendR list A, list A -> list A.
+pred appendR -> list A, list A, list A.
 func map list A, (func A -> B) -> list B.
 func if (pred), (func), (func).
 func intdiv int, int -> int.. .
