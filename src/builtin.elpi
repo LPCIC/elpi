@@ -1165,28 +1165,28 @@ external func std.loc.set.partition std.loc.set,
 
 #line 1 "builtin_map.elpi"
 kind std.map type -> type -> type.
-type std.map std.map.private.map K V -> (pred K, K -> cmp) -> std.map K V.
+type std.map std.map.private.map K V -> (func K, K -> cmp) -> std.map K V.
 
 namespace std.map {
 
 % [make Eq Ltn M] builds an empty map M where keys are compared using Eq and Ltn
-pred make (pred K, K -> cmp) -> std.map K V.
+func make (func K, K -> cmp) -> std.map K V.
 make Cmp (std.map private.empty Cmp).
 
 % [find K M V] looks in M for the value V associated to K
-pred find K, std.map K V -> V.
+func find K, std.map K V -> V.
 find K (std.map M Cmp) V :- private.find M Cmp K V.
 
 % [add K V M M1] M1 is M where K is bound to V
-pred add K, V, std.map K V -> std.map K V.
+func add K, V, std.map K V -> std.map K V.
 add K V (std.map M Cmp) (std.map M1 Cmp) :- private.add M Cmp K V M1.
 
 % [remove K M M1] M1 is M where K is unbound
-pred remove K, std.map K V -> std.map K V.
+func remove K, std.map K V -> std.map K V.
 remove K (std.map M Cmp) (std.map M1 Cmp) :- private.remove M Cmp K M1.
 
 % [bindings M L] L is the key-value pairs in increasing order
-pred bindings std.map K V -> list (pair K V).
+func bindings std.map K V -> list (pair K V).
 bindings (std.map M _) L :- private.bindings M [] L.
 
 namespace private {
@@ -1196,14 +1196,14 @@ kind map type -> type -> type.
 type empty map K V.
 type node map K V -> K -> V -> map K V -> int -> map K V.
 
-pred height map K V -> int.
+func height map K V -> int.
 height empty 0.
 height (node _ _ _ _ H) H.
 
-pred create map K V, K, V, map K V -> map K V.
+func create map K V, K, V, map K V -> map K V.
 create L K V R (node L K V R H) :- H is {std.max {height L} {height R}} + 1.
 
-pred bal map K V, K, V, map K V -> map K V.
+func bal map K V, K, V, map K V -> map K V.
 bal L K V R T :-
   height L HL,
   height R HR,
@@ -1211,7 +1211,7 @@ bal L K V R T :-
   HR2 is HR + 2,
   bal.aux HL HR HL2 HR2 L K V R T.
 
-pred bal.aux int, int, int, int, map K V, K, V, map K V -> map K V.
+func bal.aux int, int, int, int, map K V, K, V, map K V -> map K V.
 bal.aux HL _ _ HR2 (node LL LV LD LR _) X D R T :-
   HL > HR2, {height LL} >= {height LR}, !,
   create LL LV LD {create LR X D R} T.
@@ -1226,48 +1226,48 @@ bal.aux _ HR HL2 _ L X D (node (node RLL RLV RLD RLR _) RV RD RR _) T :-
   create {create L X D RLL} RLV RLD {create RLR RV RD RR} T.
 bal.aux _ _ _ _ L K V R T :- create L K V R T.
 
-pred add map K V, (pred K, K -> cmp), K, V -> map K V.
+func add map K V, (func K, K -> cmp), K, V -> map K V.
 add empty _ K V T :- create empty K V empty T.
 add (node _ X _ _ _ as M) Cmp X1 XD M1 :- Cmp X1 X E, add.aux E M Cmp X1 XD M1.
 
-pred add.aux cmp, map K V, (pred K, K -> cmp), K, V -> map K V.
+func add.aux cmp, map K V, (func K, K -> cmp), K, V -> map K V.
 add.aux eq (node L _ _ R H) _   X XD T :- T = node L X XD R H. 
 add.aux lt (node L V D R _) Cmp X XD T :- bal {add L Cmp X XD} V D R T.
 add.aux gt (node L V D R _) Cmp X XD T :- bal L V D {add R Cmp X XD} T.
 
-pred find map K V, (pred K, K -> cmp), K -> V.
+func find map K V, (func K, K -> cmp), K -> V.
 find (node L K1 V1 R _) Cmp K V :- Cmp K K1 E, find.aux E Cmp L R V1 K V.
 
-pred find.aux cmp, (pred K, K -> cmp), map K V, map K V, V, K -> V.
+func find.aux cmp, (func K, K -> cmp), map K V, map K V, V, K -> V.
 find.aux eq _   _ _ V _ V.
 find.aux lt Cmp L _ _ K V :- find L Cmp K V.
 find.aux gt Cmp _ R _ K V :- find R Cmp K V.
 
-pred remove-min-binding map K V -> map K V.
+func remove-min-binding map K V -> map K V.
 remove-min-binding (node empty _ _ R _) R :- !.
 remove-min-binding (node L V D R _) X :- bal {remove-min-binding L} V D R X.
 
-pred min-binding map K V -> K, V.
+func min-binding map K V -> K, V.
 min-binding (node empty V D _ _) V D :- !.
 min-binding (node L _ _ _ _) V D :- min-binding L V D.
 
-pred merge map K V, map K V -> map K V.
+func merge map K V, map K V -> map K V.
 merge empty X X :- !.
 merge X empty X :- !.
 merge M1 M2 R :-
   min-binding M2 X D,
   bal M1 X D {remove-min-binding M2} R.
 
-pred remove map K V, (pred K, K -> cmp), K -> map K V.
+func remove map K V, (func K, K -> cmp), K -> map K V.
 remove empty _ _ empty :- !.
 remove (node L V D R _) Cmp X M :- Cmp X V E, remove.aux E Cmp L R V D X M.
 
-pred remove.aux cmp, (pred K, K -> cmp), map K V, map K V, K, V, K -> map K V.
+func remove.aux cmp, (func K, K -> cmp), map K V, map K V, K, V, K -> map K V.
 remove.aux eq _   L R _ _ _ M :- merge L R M.
 remove.aux lt Cmp L R V D X M :- bal {remove L Cmp X} V D R M.
 remove.aux gt Cmp L R V D X M :- bal L V D {remove R Cmp X} M.
 
-pred bindings map K V, list (pair K V) -> list (pair K V).
+func bindings map K V, list (pair K V) -> list (pair K V).
 bindings empty X X.
 bindings (node L V D R _) X X1 :-
   bindings L [pr V D|{bindings R X}] X1.
@@ -1279,31 +1279,31 @@ bindings (node L V D R _) X X1 :-
 
 #line 1 "builtin_set.elpi"
 kind std.set type -> type.
-type std.set std.set.private.set E -> (pred E, E -> cmp) -> std.set E.
+type std.set std.set.private.set E -> (func E, E -> cmp) -> std.set E.
 
 namespace std.set {
 
 % [make Eq Ltn M] builds an empty set M where keys are compared using Eq and Ltn
-pred make (pred E, E -> cmp) -> std.set E.
+func make (func E, E -> cmp) -> std.set E.
 make Cmp (std.set private.empty Cmp).
 
 % [mem E M] looks if E is in M
-pred mem E, std.set E.
+func mem E, std.set E.
 mem E (std.set M Cmp):- private.mem M Cmp E.
 
 % [add E M M1] M1 is M + {E}
-pred add E, std.set E -> std.set E.
+func add E, std.set E -> std.set E.
 add E (std.set M Cmp) (std.set M1 Cmp) :- private.add M Cmp E M1.
 
 % [remove E M M1] M1 is M - {E}
-pred remove E, std.set E -> std.set E.
+func remove E, std.set E -> std.set E.
 remove E (std.set M Cmp) (std.set M1 Cmp) :- private.remove M Cmp E M1.
 
 % [cardinal S N] N is the number of elements of S
-pred cardinal std.set E -> int.
+func cardinal std.set E -> int.
 cardinal (std.set M _) N :- private.cardinal M N.
 
-pred elements std.set E -> list E.
+func elements std.set E -> list E.
 elements (std.set M _) L :- private.elements M [] L.
 
 namespace private {
@@ -1313,14 +1313,14 @@ kind set type -> type.
 type empty set E.
 type node set E -> E -> set E -> int -> set E.
 
-pred height set E -> int.
+func height set E -> int.
 height empty 0.
 height (node _ _ _ H) H.
 
-pred create set E, E, set E -> set E.
+func create set E, E, set E -> set E.
 create L E R (node L E R H) :- H is {std.max {height L} {height R}} + 1.
 
-pred bal set E, E, set E -> set E.
+func bal set E, E, set E -> set E.
 bal L E R T :-
   height L HL,
   height R HR,
@@ -1328,7 +1328,7 @@ bal L E R T :-
   HR2 is HR + 2,
   bal.aux HL HR HL2 HR2 L E R T.
 
-pred bal.aux int, int, int, int, set E, E, set E -> set E.
+func bal.aux int, int, int, int, set E, E, set E -> set E.
 bal.aux HL _ _ HR2 (node LL LV LR _) X R T :-
   HL > HR2, {height LL} >= {height LR}, !,
   create LL LV {create LR X R} T.
@@ -1343,52 +1343,52 @@ bal.aux _ HR HL2 _ L X (node (node RLL RLV RLR _) RV RR _) T :-
   create {create L X RLL} RLV {create RLR RV RR} T.
 bal.aux _ _ _ _ L E R T :- create L E R T.
 
-pred add set E, (pred E, E -> cmp), E -> set E.
+func add set E, (func E, E -> cmp), E -> set E.
 add empty _ E T :- create empty E empty T.
 add (node L X R H) Cmp X1 S :- Cmp X1 X E, add.aux E Cmp L R X X1 H S.
 
-pred add.aux cmp, (pred E, E -> cmp), set E, set E, E, E, int -> set E.
+func add.aux cmp, (func E, E -> cmp), set E, set E, E, E, int -> set E.
 add.aux eq _   L R X _ H (node L X R H).
 add.aux lt Cmp L R E X _ T :- bal {add L Cmp X} E R T.
 add.aux gt Cmp L R E X _ T :- bal L E {add R Cmp X} T.
 
-pred mem set E, (pred E, E -> cmp), E.
+func mem set E, (func E, E -> cmp), E.
 mem (node L K R _) Cmp E :- Cmp E K O, mem.aux O Cmp L R E.
 
-pred mem.aux cmp, (pred E, E -> cmp), set E, set E, E.
+func mem.aux cmp, (func E, E -> cmp), set E, set E, E.
 mem.aux eq _ _ _ _.
 mem.aux lt Cmp L _ E :- mem L Cmp E.
 mem.aux gt Cmp _ R E :- mem R Cmp E.
 
-pred remove-min-binding set E -> set E.
+func remove-min-binding set E -> set E.
 remove-min-binding (node empty _ R _) R :- !.
 remove-min-binding (node L E R _) X :- bal {remove-min-binding L} E R X.
 
-pred min-binding set E -> E.
+func min-binding set E -> E.
 min-binding (node empty E _ _) E :- !.
 min-binding (node L _ _ _) E :- min-binding L E.
 
-pred merge set E, set E -> set E.
+func merge set E, set E -> set E.
 merge empty X X :- !.
 merge X empty X :- !.
 merge M1 M2 R :-
   min-binding M2 X,
   bal M1 X {remove-min-binding M2} R.
 
-pred remove set E, (pred E, E -> cmp), E -> set E.
+func remove set E, (func E, E -> cmp), E -> set E.
 remove empty _ _ empty.
 remove (node L E R _) Cmp X M :- Cmp X E O, remove.aux O Cmp L R E X M.
 
-pred remove.aux cmp, (pred E, E -> cmp), set E, set E, E, E -> set E.
+func remove.aux cmp, (func E, E -> cmp), set E, set E, E, E -> set E.
 remove.aux eq _   L R _ _ M :- merge L R M.
 remove.aux lt Cmp L R E X M :- bal {remove L Cmp X} E R M.
 remove.aux gt Cmp L R E X M :- bal L E {remove R Cmp X} M.
 
-pred cardinal set E -> int.
+func cardinal set E -> int.
 cardinal empty 0.
 cardinal (node L _ R _) N :- N is {cardinal L} + 1 + {cardinal R}.
 
-pred elements set E, list E -> list E.
+func elements set E, list E -> list E.
 elements empty X X.
 elements (node L E R _) Acc X :-
   elements L [E|{elements R Acc}] X.
