@@ -1,4 +1,4 @@
-# Unreleased
+# v3.4.0 (September 2025)
 
 - Parser:
   - New `->`-based syntax for `pred`, analogous to the new `func` one. E.g.
@@ -10,7 +10,7 @@
 - Compiler:
   - Fix `=!=>` that was adding a head cut, rather than a tail cut, in some
     cases
-  - Fix compilation bug concerning `Loc.t` being erroneusly compared
+  - Fix compilation bug concerning `Loc.t` being erroneously compared
 
 # v3.3.1 (September 2025)
 
