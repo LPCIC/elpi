@@ -169,7 +169,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
 **../../tests/sources/ackermann.elpi
@@ -246,9 +246,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -431,7 +431,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -504,9 +504,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -565,9 +565,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -592,7 +592,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -619,7 +619,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -648,7 +648,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -675,7 +675,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 17, column 10, characters 254-255:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -702,9 +702,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -729,7 +729,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -799,7 +799,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -838,7 +838,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -895,7 +895,7 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.001
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 26, column 7, characters 780-781:
    X is linear: name it _X (discard) or X_ (fresh variable)
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 36, column 11, characters 1111-1114:
@@ -1019,7 +1019,7 @@ Test Bed
    Please add the following text to your program:
    type q (int -> int) -> (pred).
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -1048,7 +1048,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit2.elpi", line 5, column 24, characters 70-75:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -1080,7 +1080,7 @@ Test Bed
    Please add the following text to your program:
    type d (pred).
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -1259,9 +1259,9 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/heap_discard.elpi", line 5, column 10, characters 62-65:
    Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -1288,7 +1288,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -1343,7 +1343,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -1413,7 +1413,7 @@ Test Bed
    type r diagnostic -> (pred).
    type q diagnostic -> (pred).
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -1438,16 +1438,16 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.001
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
    Typechecking time: 0.005
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
-   Time: 1.853
+   Time: 1.849
    
    Constraints:
    
@@ -1612,7 +1612,7 @@ Test Bed
    
    Success:
    
-   Time: 0.330
+   Time: 0.340
    
    Constraints:
    
@@ -1641,7 +1641,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/list_as_conj.elpi", line 4, column 6, characters 86-87:
    X is linear: name it _X (discard) or X_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -1670,7 +1670,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -1888,7 +1888,7 @@ Test Bed
    
    Success:
    
-   Time: 0.002
+   Time: 0.003
    
    Constraints:
    
@@ -1973,7 +1973,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.296329 + 0.056702 + 0.934871
+   1.269046 + 0.056417 + 0.901282
    
 
 .. code-block:: console
@@ -1988,7 +1988,7 @@ Test Bed
    
    Success:
    
-   Time: 2.517
+   Time: 2.455
    
    Constraints:
    
@@ -2005,7 +2005,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.414155 + 2.994035 + 0.364420
+   6.483058 + 3.039114 + 0.357679
    
 
 .. code-block:: console
@@ -2020,7 +2020,7 @@ Test Bed
    
    Success:
    
-   Time: 9.780
+   Time: 9.887
    
    Constraints:
    
@@ -2037,7 +2037,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.698463 + 2.730501 + 0.218329
+   5.729663 + 2.761863 + 0.216521
    
 
 .. code-block:: console
@@ -2052,7 +2052,7 @@ Test Bed
    
    Success:
    
-   Time: 8.654
+   Time: 8.715
    
    Constraints:
    
@@ -2078,9 +2078,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -2468,7 +2468,7 @@ Test Bed
    Please add the following text to your program:
    type r (int -> int) -> (pred).
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -2562,7 +2562,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -2762,7 +2762,7 @@ Test Bed
    
    Success:
    
-   Time: 1.683
+   Time: 1.727
    
    Constraints:
    
@@ -2796,7 +2796,7 @@ Test Bed
 
 .. code-block:: console
 
-   5
+   2
    
 
 .. code-block:: console
@@ -2806,7 +2806,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -2847,7 +2847,7 @@ Test Bed
    
    Success:
    
-   Time: 0.261
+   Time: 0.257
    
    Constraints:
    
@@ -2874,7 +2874,7 @@ Test Bed
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
    
-   Parsing time: 0.000
+   Parsing time: 0.001
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 33, column 31, characters 960-964:
    NINE is linear: name it _NINE (discard) or NINE_ (fresh variable)
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 30, column 30, characters 852-858:
@@ -2887,7 +2887,7 @@ Test Bed
    
    Success:
    
-   Time: 1.607
+   Time: 1.640
    
    Constraints:
    
@@ -2911,7 +2911,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
 **../../tests/sources/restriction3.elpi
@@ -3006,10 +3006,10 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
-   Typechecking time: 0.005
-   Determinacy checking time: 0.007
+   Typechecking time: 0.004
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -3070,12 +3070,12 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.005
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 0.125
+   Time: 0.136
    
    Constraints:
    
@@ -3102,7 +3102,7 @@ Test Bed
    
    Success:
    
-   Time: 0.124
+   Time: 0.135
    
    Constraints:
    
@@ -3158,7 +3158,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3180,7 +3180,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.128298 + 0.052777 + 0.788546
+   1.140436 + 0.055978 + 0.794000
    
 
 .. code-block:: console
@@ -3195,7 +3195,7 @@ Test Bed
    
    Success:
    
-   Time: 2.064
+   Time: 2.086
    
    Constraints:
    
@@ -3215,7 +3215,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -3293,7 +3293,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
 **../../tests/sources/shorten_builtin.elpi
@@ -3378,7 +3378,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.005
    Determinacy checking time: 0.005
@@ -3437,9 +3437,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3466,7 +3466,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.005
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -3498,7 +3498,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3525,7 +3525,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3552,7 +3552,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3748,7 +3748,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3773,9 +3773,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3830,7 +3830,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3857,7 +3857,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3884,7 +3884,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
@@ -3909,9 +3909,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.005
    Determinacy checking time: 0.005
    
    Success:
