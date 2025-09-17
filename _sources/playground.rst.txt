@@ -128,8 +128,10 @@ Test Bed
    
    Parsing time: 0.000
    Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulated.elpi", line 1, column 0, characters 0-17:
-   Two types for the same symbol cannot only differ on modes or functionality.
-   Previous declaration: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi", line 1, column 0, characters 0-17:
+   Two types for the symbol doomed cannot only differ on modes or functionality.
+   Current declaration:  (pred o:int)
+   Previous declaration: (pred i:int)
+     (File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi", line 1, column 0, characters 0-17:)
    
 **../../tests/sources/accumulate_twice2.elpi
 :**
@@ -184,7 +186,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 24, column 38, characters 794-795:
    V is linear: name it _V (discard) or V_ (fresh variable)
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.004
    Determinacy checking time: 0.005
@@ -308,9 +310,9 @@ Test Bed
    
    Parsing time: 0.000
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 36, column 2, characters 992-994:
-   ignoring flexible clause: GX
+   skipping static analysis of flexible rule: GX
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 37, column 2, characters 1012-1014:
-   ignoring flexible clause: GY
+   skipping static analysis of flexible rule: GY
    
    Compilation time: 0.001
    
@@ -404,7 +406,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -646,7 +648,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -1445,7 +1447,7 @@ Test Bed
    
    Success:
    
-   Time: 1.894
+   Time: 1.822
    
    Constraints:
    
@@ -1610,7 +1612,7 @@ Test Bed
    
    Success:
    
-   Time: 0.347
+   Time: 0.346
    
    Constraints:
    
@@ -1886,7 +1888,7 @@ Test Bed
    
    Success:
    
-   Time: 0.003
+   Time: 0.002
    
    Constraints:
    
@@ -1919,9 +1921,9 @@ Test Bed
    
    Parsing time: 0.000
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 28, column 15, characters 710-712:
-   ignoring flexible clause: GX
+   skipping static analysis of flexible rule: GX
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 28, column 33, characters 728-730:
-   ignoring flexible clause: GY
+   skipping static analysis of flexible rule: GY
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 35, column 4, characters 868-869:
    P is linear: name it _P (discard) or P_ (fresh variable)
    Warning: 
@@ -1950,7 +1952,7 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -1971,7 +1973,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.275306 + 0.058079 + 0.911427
+   1.313002 + 0.057127 + 0.914695
    
 
 .. code-block:: console
@@ -1986,7 +1988,7 @@ Test Bed
    
    Success:
    
-   Time: 2.469
+   Time: 2.516
    
    Constraints:
    
@@ -2003,7 +2005,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.631265 + 3.155827 + 0.370491
+   6.440663 + 3.041939 + 0.343698
    
 
 .. code-block:: console
@@ -2018,7 +2020,7 @@ Test Bed
    
    Success:
    
-   Time: 10.165
+   Time: 9.834
    
    Constraints:
    
@@ -2035,7 +2037,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.901941 + 2.944579 + 0.216670
+   5.792993 + 2.871486 + 0.220871
    
 
 .. code-block:: console
@@ -2050,7 +2052,7 @@ Test Bed
    
    Success:
    
-   Time: 9.070
+   Time: 8.892
    
    Constraints:
    
@@ -2161,7 +2163,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -2596,7 +2598,7 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Determinacy checking time: 0.005
    
    Success:
    
@@ -2760,7 +2762,7 @@ Test Bed
    
    Success:
    
-   Time: 1.766
+   Time: 1.713
    
    Constraints:
    
@@ -2794,7 +2796,7 @@ Test Bed
 
 .. code-block:: console
 
-   6
+   2
    
 
 .. code-block:: console
@@ -2804,7 +2806,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2885,7 +2887,7 @@ Test Bed
    
    Success:
    
-   Time: 1.692
+   Time: 1.595
    
    Constraints:
    
@@ -3100,7 +3102,7 @@ Test Bed
    
    Success:
    
-   Time: 0.135
+   Time: 0.129
    
    Constraints:
    
@@ -3178,7 +3180,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.121948 + 0.054789 + 0.778183
+   1.144658 + 0.055658 + 0.794923
    
 
 .. code-block:: console
@@ -3193,7 +3195,7 @@ Test Bed
    
    Success:
    
-   Time: 2.047
+   Time: 2.089
    
    Constraints:
    
@@ -3269,7 +3271,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
 **../../tests/sources/shorten_aux2.elpi
@@ -4063,7 +4065,7 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Determinacy checking time: 0.005
    
    Success:
    

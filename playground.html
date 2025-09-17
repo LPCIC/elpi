@@ -234,8 +234,10 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 <span class="go">Fatal error: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulated.elpi&quot;, line 1, column 0, characters 0-17:</span>
-<span class="go">Two types for the same symbol cannot only differ on modes or functionality.</span>
-<span class="go">Previous declaration: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi&quot;, line 1, column 0, characters 0-17:</span>
+<span class="go">Two types for the symbol doomed cannot only differ on modes or functionality.</span>
+<span class="go">Current declaration:  (pred o:int)</span>
+<span class="go">Previous declaration: (pred i:int)</span>
+<span class="go">  (File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi&quot;, line 1, column 0, characters 0-17:)</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/accumulate_twice2.elpi
@@ -307,7 +309,7 @@
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi&quot;, line 24, column 38, characters 794-795:</span>
 <span class="go">V is linear: name it _V (discard) or V_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.000</span>
+<span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
@@ -472,9 +474,9 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi&quot;, line 36, column 2, characters 992-994:</span>
-<span class="go">ignoring flexible clause: GX</span>
+<span class="go">skipping static analysis of flexible rule: GX</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi&quot;, line 37, column 2, characters 1012-1014:</span>
-<span class="go">ignoring flexible clause: GY</span>
+<span class="go">skipping static analysis of flexible rule: GY</span>
 
 <span class="go">Compilation time: 0.001</span>
 
@@ -617,7 +619,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.003</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -931,7 +933,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -4128,7 +4130,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.894</span>
+<span class="go">Time: 1.822</span>
 
 <span class="go">Constraints:</span>
 
@@ -4368,7 +4370,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.347</span>
+<span class="go">Time: 0.346</span>
 
 <span class="go">Constraints:</span>
 
@@ -4690,7 +4692,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.003</span>
+<span class="go">Time: 0.002</span>
 
 <span class="go">Constraints:</span>
 
@@ -4771,9 +4773,9 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi&quot;, line 28, column 15, characters 710-712:</span>
-<span class="go">ignoring flexible clause: GX</span>
+<span class="go">skipping static analysis of flexible rule: GX</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi&quot;, line 28, column 33, characters 728-730:</span>
-<span class="go">ignoring flexible clause: GY</span>
+<span class="go">skipping static analysis of flexible rule: GY</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi&quot;, line 35, column 4, characters 868-869:</span>
 <span class="go">P is linear: name it _P (discard) or P_ (fresh variable)</span>
 <span class="go">Warning:</span>
@@ -4802,7 +4804,7 @@
 <span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -4848,7 +4850,7 @@
 <span class="linenos">30</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.275306 + 0.058079 + 0.911427</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.313002 + 0.057127 + 0.914695</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -4860,7 +4862,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.469</span>
+<span class="go">Time: 2.516</span>
 
 <span class="go">Constraints:</span>
 
@@ -4923,7 +4925,7 @@
 <span class="linenos">51</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.631265 + 3.155827 + 0.370491</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.440663 + 3.041939 + 0.343698</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -4935,7 +4937,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 10.165</span>
+<span class="go">Time: 9.834</span>
 
 <span class="go">Constraints:</span>
 
@@ -4993,7 +4995,7 @@
 <span class="linenos">46</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.901941 + 2.944579 + 0.216670</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.792993 + 2.871486 + 0.220871</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -5005,7 +5007,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 9.070</span>
+<span class="go">Time: 8.892</span>
 
 <span class="go">Constraints:</span>
 
@@ -5132,7 +5134,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -5718,7 +5720,7 @@
 <span class="go">Compilation time: 0.002</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -6162,7 +6164,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.766</span>
+<span class="go">Time: 1.713</span>
 
 <span class="go">Constraints:</span>
 
@@ -6194,14 +6196,14 @@
 <span class="linenos">6</span><span class="w">  </span><span class="nv">R</span><span class="w"> </span><span class="kd">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">2</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.003</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6359,7 +6361,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.692</span>
+<span class="go">Time: 1.595</span>
 
 <span class="go">Constraints:</span>
 
@@ -6689,7 +6691,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.135</span>
+<span class="go">Time: 0.129</span>
 
 <span class="go">Constraints:</span>
 
@@ -6797,7 +6799,7 @@
 <span class="linenos">31</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.121948 + 0.054789 + 0.778183</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.144658 + 0.055658 + 0.794923</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -6809,7 +6811,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.047</span>
+<span class="go">Time: 2.089</span>
 
 <span class="go">Constraints:</span>
 
@@ -6919,7 +6921,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
+<span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
 </pre></div>
 </div>
@@ -7925,7 +7927,7 @@
 <span class="go">Compilation time: 0.002</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
