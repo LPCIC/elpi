@@ -175,11 +175,11 @@ let map_trace = object(self)
         let args = List.map (fun (x,y) -> x, self#expression y) args in
         if args = [] then hd
         else { e with pexp_desc = Pexp_apply (hd,args)}
-    | Pexp_fun(_,_,pat,rest) [@if ppxlib < (0,36,0)] when not !enabled ->
+    | Pexp_fun(_,_,pat,rest) [@if ocaml_version < (5,2,0)] when not !enabled ->
         let has_iftrace { ppat_attributes = l; _ } = has_iftrace_attribute l in
         if has_iftrace pat then self#expression rest
         else e
-    | Pexp_function (params, constraint_, rest) [@if ppxlib >= (0,36,0)] when not !enabled ->
+    | Pexp_function (params, constraint_, rest) [@if ocaml_version >= (5,2,0)] when not !enabled ->
         let has_iftrace_pat { ppat_attributes = l; _ } = has_iftrace_attribute l in
         let does_not_have_iftrace_param = function
           | { pparam_desc = Pparam_val (_, _, pat); _ } -> not (has_iftrace_pat pat)
