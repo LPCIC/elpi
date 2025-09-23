@@ -2081,20 +2081,36 @@ let extend1 flags (state, base) unit =
   let hash = hash_base base in
   state, { base with hash }
 
-  let extend flags state assembled u = extend1 flags (state, assembled) u
-  let extend_signature state assembled u =
-    let signature = extend1_signature assembled.Assembled.signature u in
-    let base = { assembled with signature } in
-    state, { base with hash = hash_base base }
+let extend flags state assembled u = extend1 flags (state, assembled) u
+let extend_signature state assembled u =
+  let signature = extend1_signature assembled.Assembled.signature u in
 
-  let compile_query state { Assembled.symbols; builtins; signature = { types; type_abbrevs } } (needs_spilling,t) =
-    let (symbols, amap), t = spill_todbl ~builtins ~needs_spilling ~types ~type_abbrevs state symbols t in
-    symbols, amap, t 
+  let bsig = assembled.Assembled.signature in
+  let new_defined_symbols, new_indexable =
+    let symbs = TypingEnv.all_symbols signature.types in
+    symbs |> List.filter_map (fun (symb,m) -> if TypingEnv.mem_symbol bsig.types symb then None else Some symb),
+    symbs |> List.filter_map (fun (symb, { TypingEnv.indexing } ) -> match indexing with Index m -> Some (symb, m) | _ -> None) in
+  let symbols =
+    let new_defined_symbols =
+      if List.length new_defined_symbols > 2000 then
+        new_defined_symbols |> List.sort (fun s1 s2 -> compare (Symbol.get_loc s1).line (Symbol.get_loc s2).line)
+      else
+        new_defined_symbols in
+    List.fold_left (fun symbols s -> SymbolMap.allocate_global_symbol state symbols s |> fst)
+      assembled.symbols new_defined_symbols in
 
-  let compile_query_term state { Assembled.symbols; builtins; signature = { types; type_abbrevs } } ?ctx ?(amap = F.Map.empty) ~depth t =
-    let (symbols', amap), rt = spill_todbl ~builtins ?ctx ~needs_spilling:false state symbols ~types ~type_abbrevs ~depth ~amap t in
-    if SymbolMap.equal_globals symbols' symbols then amap, rt
-    else error ~loc:t.ScopedTerm.loc "cannot allocate new symbols in the query"
+  let prolog_program, indexing = update_indexing state symbols assembled.prolog_program new_indexable assembled.indexing in
+  let base = { assembled with symbols; prolog_program; indexing; signature } in
+  state, { base with hash = hash_base base }
+
+let compile_query state { Assembled.symbols; builtins; signature = { types; type_abbrevs } } (needs_spilling,t) =
+  let (symbols, amap), t = spill_todbl ~builtins ~needs_spilling ~types ~type_abbrevs state symbols t in
+  symbols, amap, t 
+
+let compile_query_term state { Assembled.symbols; builtins; signature = { types; type_abbrevs } } ?ctx ?(amap = F.Map.empty) ~depth t =
+  let (symbols', amap), rt = spill_todbl ~builtins ?ctx ~needs_spilling:false state symbols ~types ~type_abbrevs ~depth ~amap t in
+  if SymbolMap.equal_globals symbols' symbols then amap, rt
+  else error ~loc:t.ScopedTerm.loc "cannot allocate new symbols in the query"
 
 end
 
