@@ -11,6 +11,10 @@ let cc ~elpi ~flags ~base i u =
         (Lexing.from_string u))) in
   Compile.extend ~flags ~base u, u
 
+let signature_of u = Compile.signature u
+
+let extend ~flags ~base u = Compile.extend ~flags ~base u
+let extend_signature ~flags ~base u = Compile.extend_signature ~flags ~base u
 
 let check q =
   ()

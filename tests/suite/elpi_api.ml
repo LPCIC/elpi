@@ -66,3 +66,9 @@ let () = declare "sepcomp_hover"
   ~expectation:Test.Success
   ()
 
+let () = declare "sepcomp_extend_sig"
+  ~source_dune:"sepcomp_extend_sig.exe"
+  ~description:"extend unit with signature"
+  ~expectation:Test.Success
+  ()
+

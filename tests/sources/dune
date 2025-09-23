@@ -16,3 +16,4 @@
 (executable (name sepcomp_tyid)  (modules sepcomp_tyid)  (libraries sepcomp))
 (executable (name sepcomp_tyid2)  (modules sepcomp_tyid2)  (libraries sepcomp))
 (executable (name sepcomp_hover)  (modules sepcomp_hover)  (libraries sepcomp))
+(executable (name sepcomp_extend_sig)  (modules sepcomp_extend_sig)  (libraries sepcomp))
