@@ -72,3 +72,9 @@ let () = declare "sepcomp_extend_sig"
   ~expectation:Test.Success
   ()
 
+let () = declare "sepcomp_extend_sig2"
+  ~source_dune:"sepcomp_extend_sig2.exe"
+  ~description:"extend unit with signature then code"
+  ~expectation:Test.Success
+  ()
+

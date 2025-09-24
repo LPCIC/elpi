@@ -32,6 +32,13 @@ let exec q =
     | Execute.Success _ -> exit 0
     | Execute.NoMoreSteps -> assert false
 
+let try_exec q =
+    let exe = Compile.optimize q in
+    match Execute.once exe with
+    | Execute.Failure -> false
+    | Execute.Success _ -> true
+    | Execute.NoMoreSteps -> assert false
+    
 let main us =
   let elpi = init () in
   let flags = Compile.default_flags in
