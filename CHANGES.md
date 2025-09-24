@@ -1,3 +1,10 @@
+# v3.4.1 (September 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Compiler:
+  - Fix extend_signature, was not updating the symbol table
+
 # v3.4.0 (September 2025)
 
 - Parser:
