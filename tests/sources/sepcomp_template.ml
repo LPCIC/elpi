@@ -11,6 +11,10 @@ let cc ~elpi ~flags ~base i u =
         (Lexing.from_string u))) in
   Compile.extend ~flags ~base u, u
 
+let signature_of u = Compile.signature u
+
+let extend ~flags ~base u = Compile.extend ~flags ~base u
+let extend_signature ~flags ~base u = Compile.extend_signature ~flags ~base u
 
 let check q =
   ()
@@ -28,6 +32,13 @@ let exec q =
     | Execute.Success _ -> exit 0
     | Execute.NoMoreSteps -> assert false
 
+let try_exec q =
+    let exe = Compile.optimize q in
+    match Execute.once exe with
+    | Execute.Failure -> false
+    | Execute.Success _ -> true
+    | Execute.NoMoreSteps -> assert false
+    
 let main us =
   let elpi = init () in
   let flags = Compile.default_flags in

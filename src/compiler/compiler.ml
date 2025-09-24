@@ -2021,6 +2021,25 @@ let extend1_signature base_signature (signature : checked_compilation_unit_signa
 
   { Assembled.kinds; types; type_abbrevs; toplevel_macros }
 
+let new_symbols_of_types ~(base_sig:checked_compilation_unit_signature) new_types =
+  let symbs = TypingEnv.all_symbols new_types in
+  symbs |> List.filter_map (fun (symb,m) -> if TypingEnv.mem_symbol base_sig.types symb then None else Some symb),
+  symbs |> List.filter_map (fun (symb, { TypingEnv.indexing } ) -> match indexing with Index m -> Some (symb, m) | _ -> None)
+
+let allocate_new_symbols state ~symbols ~new_defined_symbols =
+  (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
+          time   typchk wall   mem
+    with: 14.75   0.53  16.69 2348.4M
+    wout: 19.61   0.56  21.72 2789.1M 
+  *)
+  let new_defined_symbols =
+    if List.length new_defined_symbols > 2000 then
+      new_defined_symbols |> List.sort (fun s1 s2 -> compare (Symbol.get_loc s1).line (Symbol.get_loc s2).line)
+    else
+      new_defined_symbols in
+  List.fold_left (fun symbols s -> SymbolMap.allocate_global_symbol state symbols s |> fst)
+    symbols new_defined_symbols
+
 let extend1 flags (state, base) unit =
 
   let signature =
@@ -2033,25 +2052,9 @@ let extend1 flags (state, base) unit =
 
   (* Format.eprintf "extend %a\n%!" (F.Map.pp (fun _ _ -> ())) types_indexing; *)
   
-  let new_defined_symbols, new_indexable =
-    let symbs = TypingEnv.all_symbols new_types in
-    symbs |> List.filter_map (fun (symb,m) -> if TypingEnv.mem_symbol bsig.types symb then None else Some symb),
-    symbs |> List.filter_map (fun (symb, { TypingEnv.indexing } ) -> match indexing with Index m -> Some (symb, m) | _ -> None) in
+  let new_defined_symbols, new_indexable = new_symbols_of_types ~base_sig:bsig new_types  in
 
-  let symbols =
-    (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
-            time   typchk wall   mem
-      with: 14.75   0.53  16.69 2348.4M
-      wout: 19.61   0.56  21.72 2789.1M 
-    *)
-    let new_defined_symbols =
-      if List.length new_defined_symbols > 2000 then
-        new_defined_symbols |> List.sort (fun s1 s2 -> compare (Symbol.get_loc s1).line (Symbol.get_loc s2).line)
-      else
-        new_defined_symbols in
-    List.fold_left (fun symbols s -> SymbolMap.allocate_global_symbol state symbols s |> fst)
-      symbols new_defined_symbols in
-
+  let symbols = allocate_new_symbols state ~symbols ~new_defined_symbols in
 
   let prolog_program, indexing = update_indexing state symbols prolog_program new_indexable indexing in
   (* Format.eprintf "extended\n%!"; *)
@@ -2081,11 +2084,15 @@ let extend1 flags (state, base) unit =
   let hash = hash_base base in
   state, { base with hash }
 
-  let extend flags state assembled u = extend1 flags (state, assembled) u
-  let extend_signature state assembled u =
-    let signature = extend1_signature assembled.Assembled.signature u in
-    let base = { assembled with signature } in
-    state, { base with hash = hash_base base }
+let extend flags state assembled u = extend1 flags (state, assembled) u
+let extend_signature state assembled u =
+  let signature = extend1_signature assembled.Assembled.signature u in
+  let base_sig = assembled.Assembled.signature in
+  let new_defined_symbols, new_indexable = new_symbols_of_types ~base_sig signature.types in
+  let symbols = allocate_new_symbols state ~symbols:assembled.symbols ~new_defined_symbols in
+  let prolog_program, indexing = update_indexing state symbols assembled.prolog_program new_indexable assembled.indexing in
+  let base = { assembled with symbols; prolog_program; indexing; signature } in
+  state, { base with hash = hash_base base }
 
   let compile_query state { Assembled.symbols; builtins; signature = { types; type_abbrevs } } (needs_spilling,t) =
     let (symbols, amap), t = spill_todbl ~builtins ~needs_spilling ~types ~type_abbrevs state symbols t in
