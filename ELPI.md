@@ -664,10 +664,10 @@ goal> pi x\ sigma Y\ even x => (declare_constraint (even Y) [Y], Y = x).
 Success:
 ```
 
-The `declare_constraint` built in is typically used in conjunction with `mode`
-as follows:
+The `declare_constraint` built requires functions, and is typically
+used as follows:
 ```prolog
-mode (even i).
+func even int -> .
 even (uvar as X) :- !, declare_constraint (even X) [X].
 even 0.
 even X :- X > 1, Y is X - 2, even Y.
@@ -753,8 +753,8 @@ It is used only in debug output.
 
 #### Example
 ```prolog
-mode (odd i).
-mode (even i).
+func odd int -> .
+func even int -> .
 
 even (uvar as X) :- !, declare_constraint (even X) [X].
 odd  (uvar as X) :- !, declare_constraint (odd X)  [X].
@@ -803,7 +803,7 @@ we can compute GCDs of 2 sets of numbers: 99, 66 and 22 named X;
 14 and 77 called Y.
 
 ```prolog
-mode (gcd i i).
+func gcd int ,int -> .
 
 gcd A (uvar as Group) :- declare_constraint (gcd A Group) Group.
 
@@ -827,7 +827,7 @@ Constraints are resumed as regular delayed goals are.
 #### Example of higher order rules
 
 ```prolog
-mode (term i o).
+func term tm -> ty.
 term (app HD ARG) TGT :- term HD (arrow SRC TGT), term ARG SRC.
 term (lam F) (arrow SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
 term (uvar as X) T :- declare_constraint (term X T) [X].
