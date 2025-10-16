@@ -1,3 +1,10 @@
+# v3.4.2 (October 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Runtime:
+  - Fix bug concerning CHR rules firing on non-fully-dereffed terms
+
 # v3.4.1 (September 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
