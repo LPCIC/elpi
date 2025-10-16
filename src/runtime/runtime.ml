@@ -165,6 +165,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
   (* let ppconstant f c = Fmt.fprintf f "%s/%d" (C.show ~table:pp_ctx.table c) c in *)
   let ppbuiltin f b = Fmt.fprintf f "%s" @@ show_builtin_predicate ~table:pp_ctx.table C.show b in
   let string_of_uvar_body r =
+     (* Use this to have stable names: "X" ^ string_of_int (uvar_id r) in *)
      try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
      with Not_found ->
       let m, n = !(pp_ctx.uv_names) in
@@ -3464,18 +3465,20 @@ end = struct (* {{{ *)
           let t' = faux (d+1) t in
           if t == t' then orig
           else Lam t'
+      (* deref *)
+      | UVar(r,ano) when !!r != C.dummy -> anomaly "faux: not fully derefd"
+        (* faux d (deref_uv ~to_:d r ano) *)
+      | AppUVar(r,args) when !!r != C.dummy -> anomaly "faux: not fully derefd"
+        (* faux d (deref_appuv ~to_:d r args) *)
       (* freeze *)
-      | AppUVar(r,args) when r.vardepth == 0 && !!r == C.dummy ->
+      | AppUVar(r,args) when r.vardepth == 0 ->
           let args = smart_map (faux d) args in
           App(Global_symbols.uvarc, freeze_uv r, [list_to_lp_list args])
       (* expansion *)
-      | UVar(r,ano) when !!r == C.dummy ->
+      | UVar(r,ano) ->
           faux d (log_assignment(expand_uv ~depth:d r ~ano))
-      | AppUVar(r,args) when !!r == C.dummy ->
+      | AppUVar(r,args) ->
           faux d (log_assignment(expand_appuv ~depth:d r ~args))
-      (* deref *)
-      | UVar(r,ano) -> faux d (deref_uv ~to_:d r ano)
-      | AppUVar(r,args) -> faux d (deref_appuv ~to_:d r args)
     in
     [%spy "dev:freeze:in" ~rid (fun fmt () ->
       Fmt.fprintf fmt "depth:%d ground:%d newground:%d maxground:%d %a"
@@ -3793,6 +3796,21 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
       if get CS.Ugly.delayed <> [] then
         error "propagation rules must not declare constraint(s)"
     with No_clause -> raise NoMatch in
+
+  (* Inefficient but sound:
+       deref_uv/appuv and freeze cannot be easily interleaved, since
+       deref>hmove>move may restrict and generate an assignment.
+       eg
+       1. X -> frozen-1  (freeze)
+       2. X c0 := Y      (deref a term containing X c0)
+       3. Y -> frozen-2  (freeze)
+       4. X derefs to Y -> frozen-2  (freeze)
+
+       It is unclear when deref restricts, but it happens. Looks like an optimization
+       no to restrict ahead-of-time, but I couldn't find where we do it.
+  *)
+  let constraints_goals = List.map (fun (n,d,t) -> n,d,full_deref ~adepth:0 empty_env ~depth:d t) constraints_goals in
+  let constraints_contexts = List.map (fun (n,m,l) -> n,m,l |> List.map (fun { hdepth = depth; hsrc = t } -> { hdepth = depth; hsrc = full_deref ~adepth:0 empty_env ~depth t})) constraints_contexts in
 
   let result = try
 
