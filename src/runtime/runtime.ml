@@ -3466,10 +3466,10 @@ end = struct (* {{{ *)
           if t == t' then orig
           else Lam t'
       (* deref *)
-      | UVar(r,ano) when !!r != C.dummy -> anomaly "faux: not fully derefd"
-        (* faux d (deref_uv ~to_:d r ano) *)
-      | AppUVar(r,args) when !!r != C.dummy -> anomaly "faux: not fully derefd"
-        (* faux d (deref_appuv ~to_:d r args) *)
+      | UVar(r,ano) when !!r != C.dummy ->
+        faux d (deref_uv ~to_:d r ano)
+      | AppUVar(r,args) when !!r != C.dummy ->
+        faux d (deref_appuv ~to_:d r args)
       (* freeze *)
       | AppUVar(r,args) when r.vardepth == 0 ->
           let args = smart_map (faux d) args in
