@@ -1,3 +1,8 @@
+# UNRELEASED
+
+- Compiler:
+  - Change raise an error in case of type/typeabbrev collision
+
 # v3.4.2 (October 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
