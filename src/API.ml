@@ -237,7 +237,7 @@ module Execute = struct
         relocate_assignment_to_runtime = (fun ~target ~depth s ->
           Compiler.relocate_closed_term ~from
             (Util.StrMap.find s assignments |> full_deref ~depth:idepth |> uvar2discard ~depth:idepth) ~to_:target
-          |> Stdlib.Result.map (hmove ?avoid:None ~from:depth ~to_:depth)
+          |> Stdlib.Result.map (hmove ?oc:None ~from:depth ~to_:depth)
         );
         }
 
@@ -479,7 +479,7 @@ module BuiltInData = struct
     let ty = Conversion.(TyName ty) in
     let embed ~depth state (x,from) =
       let module R = (val !r) in let open R in
-      state, hmove ~from ~to_:depth ?avoid:None x, [] in
+      state, hmove ~from ~to_:depth ?oc:None x, [] in
     let readback ~depth state t =
       state, fresh_copy t depth, [] in
     { Conversion.embed; readback; ty;
@@ -906,7 +906,7 @@ module BuiltInPredicate = struct
 
   let beta ~depth t args =
     let module R = (val !r) in let open R in
-    deref_apparg ~from:depth ~to_:depth ?avoid:None t args
+    deref_apparg ~from:depth ~to_:depth ?oc:None t args
 
   module HOAdaptors = struct
 
@@ -1300,7 +1300,7 @@ module Utils = struct
 
   let move ~from ~to_ t =
     let module R = (val !r) in let open R in
-    hmove ~from ~to_ ?avoid:None t
+    hmove ~from ~to_ ?oc:None t
 
   let beta = BuiltInPredicate.beta
   let error = Util.error

@@ -233,6 +233,7 @@ and token v = parse
 | "name" { NAME }
 | "if" { IF }
 | "index" { INDEX }
+| "nooc" { NOOC }
 @@MIXFIX@@
 | ucase idcharstar as c { CONSTANT c }
 | lcase idcharstarns as c { CONSTANT c }
