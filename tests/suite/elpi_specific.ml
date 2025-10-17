@@ -527,3 +527,16 @@ let () = declare "implbang"
   ~description:"tail cut =!=>"
   ~expectation:Success
   ()
+
+
+let () = declare "dupta"
+  ~source_elpi:"dupta.elpi"
+  ~description:"duplicate type abbreviation"
+  ~expectation:(FailureOutput (Str.regexp "Illegal type"))
+  ()
+
+let () = declare "dupta2"
+  ~source_elpi:"dupta2.elpi"
+  ~description:"duplicate type abbreviation namespace"
+  ~expectation:(FailureOutput (Str.regexp "Illegal type"))
+  ()

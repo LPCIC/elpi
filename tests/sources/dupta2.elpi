@@ -1,0 +1,5 @@
+namespace x { 
+    typeabbrev a (list int).
+}
+kind x.a type.
+main.

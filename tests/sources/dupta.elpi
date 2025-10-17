@@ -1,0 +1,3 @@
+typeabbrev a (list int).
+kind a type.
+main.
