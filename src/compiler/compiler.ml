@@ -275,6 +275,7 @@ module Assembled = struct
     kinds : Arity.t F.Map.t;
     types : TypingEnv.t;
     type_abbrevs : Type_checker.type_abbrevs;
+    ty_names : Loc.t F.Map.t;
   }
   [@@deriving show]
   
@@ -305,6 +306,7 @@ module Assembled = struct
     types = TypingEnv.empty;
     type_abbrevs = F.Map.empty;
     toplevel_macros = F.Map.empty;
+    ty_names = F.Map.empty;
   }
   let empty () = {
     clauses = [];
@@ -1038,6 +1040,12 @@ end = struct
       let type_abbrevs = List.map compile_type_abbrev type_abbrevs in
       let kinds = List.fold_left compile_kind F.Map.empty kinds in
       let types = List.fold_left (fun m t -> map_append TypingEnv.empty t (ScopeTypeExpressionUniqueList.make @@ compile_type t) m) F.Map.empty (List.rev types) in
+      let ta_t_captures = List.filter_map (fun (k,loc) -> if F.Map.mem k kinds then Some (k,loc,F.Map.find k kinds) else None) type_abbrevs in
+      if ta_t_captures <> [] then begin
+        let ta, tsd, (_, oloc) = List.hd ta_t_captures in
+        let tad = List.assoc ta type_abbrevs in
+        error ~loc:tad.ScopedTypeExpression.loc ("Illegal type abbreviation for " ^ F.show ta ^ ". A type with the same name already exists in " ^ Loc.show oloc)
+      end;
       let defs_k = defs_of_map kinds in
       let defs_t = defs_of_map types in
       let defs_ta = defs_of_assoclist type_abbrevs in
@@ -1283,6 +1291,11 @@ module Flatten : sig
       let types = merge_types TypingEnv.empty (apply_subst_types new_ty_subst t) types in
       (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) (apply_subst_types new_ty_subst t); *)
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs new_ty_subst ta) in
+      let ta_t_captures = List.filter_map (fun (k,loc) -> if F.Map.mem k kinds then Some (k,loc,F.Map.find k kinds) else None) type_abbrevs in
+      if ta_t_captures <> [] then begin
+        let ta, tad,(_,oloc) = List.hd ta_t_captures in
+        error ~loc:tad.ScopedTypeExpression.loc ("Illegal type abbreviation for " ^ F.show ta ^ ". A type with the same name already exists in " ^ Loc.show oloc)
+      end;
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr new_pred_subst new_ty_subst body in
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
@@ -1327,14 +1340,14 @@ module Check : sig
 end = struct
 
   let check_signature ~flags (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * TypingEnv.t =
-    let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
+    let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots } = base_signature in
     
     let { Flat.kinds; types; type_abbrevs; toplevel_macros } = signature in
 
     let all_kinds = Flatten.merge_kinds ok kinds in
     let check_k_begin = Unix.gettimeofday () in
-    let all_type_abbrevs, type_abbrevs =
-      List.fold_left (fun (all_type_abbrevs,type_abbrevs) (name, scoped_ty) ->
+    let all_type_abbrevs, type_abbrevs, all_ty_names, ty_names =
+      List.fold_left (fun (all_type_abbrevs,type_abbrevs, all_ty_names, ty_names) (name, scoped_ty) ->
         (* TODO check disjoint from kinds *)
         let loc = scoped_ty.ScopedTypeExpression.loc in
         let _, _, { TypingEnv.ty } = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
@@ -1345,23 +1358,38 @@ end = struct
             ("Duplicate type abbreviation for " ^ F.show name ^
               ". Previous declaration: " ^ Loc.show otherloc)
         end;
-        F.Map.add name (ty,loc) all_type_abbrevs, F.Map.add name (ty,loc) type_abbrevs)
-        (ota,F.Map.empty) type_abbrevs in
+        if F.Map.mem name ots && not (Loc.equal (F.Map.find name ots) loc) then begin
+          error ~loc ("Illegal type abbreviation for " ^ F.show name ^ ". A type with the same name already exists in " ^ Loc.show (F.Map.find name ots))
+        end;
+        F.Map.add name (ty,loc) all_type_abbrevs,
+        F.Map.add name (ty,loc) type_abbrevs,
+        F.Map.add name loc all_ty_names,
+        F.Map.add name loc ty_names
+        )
+        (ota,F.Map.empty,ots,F.Map.empty) type_abbrevs in
     let check_k_end = Unix.gettimeofday () in
 
     (* Type checking *)
     let check_t_begin = Unix.gettimeofday () in
     (* Type_checker.check_disjoint ~type_abbrevs ~kinds; *)
 
+    let merge k a b =
+      match a, b with
+      | _, Some (_,loc) -> Some loc
+      | Some _, b -> a
+      | _ -> anomaly ("ty_names collision: " ^ F.show k) in
+    let ty_names = F.Map.merge merge ty_names kinds in
+    let all_ty_names = F.Map.merge merge all_ty_names kinds in
     let types = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds types in
+
 
     let all_types = Flatten.merge_type_assignments ot types in
     F.Map.iter (fun k m -> Type_checker.check_macro ~kinds:all_kinds ~type_abbrevs:all_type_abbrevs ~types:all_types k m) toplevel_macros;
     let check_t_end = Unix.gettimeofday () in
     let all_toplevel_macros = Flatten.merge_toplevel_macros all_types otlm toplevel_macros in
 
-    { Assembled.kinds; types; type_abbrevs; toplevel_macros },
-    { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros },
+    { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names },
+    { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; ty_names = all_ty_names },
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types
 
@@ -2012,14 +2040,17 @@ end = struct
     List.fold_left (extend1_chr ~builtins ~types flags state clique) (symbols,chr) rules
 
 let extend1_signature base_signature (signature : checked_compilation_unit_signature) =
-  let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm } = base_signature in
-  let { Assembled.toplevel_macros; kinds; types; type_abbrevs } = signature in
+  let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots } = base_signature in
+  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; ty_names } = signature in
   let kinds = Flatten.merge_kinds ok kinds in
+  F.Map.iter (fun k (_,loc) -> if F.Map.mem k ots && not (Loc.equal loc (F.Map.find k ots)) then error ~loc ("Illegal type abbreviation for " ^ F.show k ^ ". A type with the same name already exists in " ^ Loc.show (F.Map.find k ots))) type_abbrevs;
   let type_abbrevs = Flatten.merge_checked_type_abbrevs ota type_abbrevs in
   let types = Flatten.merge_type_assignments ot types in
   let toplevel_macros = Flatten.merge_toplevel_macros types otlm toplevel_macros in
-
-  { Assembled.kinds; types; type_abbrevs; toplevel_macros }
+  let merge k a b =
+    if Loc.equal a b then Some a else anomaly ("ty_names collision: " ^ F.show k ^ "\n" ^ Loc.show a ^ "\n" ^ Loc.show b) in
+  let ty_names = F.Map.union merge ots ty_names in
+  { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names }
 
 let new_symbols_of_types ~(base_sig:checked_compilation_unit_signature) new_types =
   let symbs = TypingEnv.all_symbols new_types in
