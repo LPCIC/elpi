@@ -316,7 +316,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
@@ -836,7 +836,7 @@ Test Bed
    Please add the following text to your program:
    type g tm -> tm.
    
-   Compilation time: 0.000
+   Compilation time: 0.001
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
@@ -1447,7 +1447,7 @@ Test Bed
    
    Success:
    
-   Time: 1.864
+   Time: 1.821
    
    Constraints:
    
@@ -1670,7 +1670,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -1881,7 +1881,7 @@ Test Bed
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 28, column 19, characters 701-706:
    F is linear: name it _F (discard) or F_ (fresh variable)
    
-   Compilation time: 0.002
+   Compilation time: 0.001
    
    Typechecking time: 0.004
    Determinacy checking time: 0.005
@@ -1973,7 +1973,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.360983 + 0.055346 + 0.948722
+   1.329913 + 0.057860 + 0.962511
    
 
 .. code-block:: console
@@ -1988,7 +1988,7 @@ Test Bed
    
    Success:
    
-   Time: 2.599
+   Time: 2.589
    
    Constraints:
    
@@ -2005,7 +2005,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.583758 + 2.918006 + 0.354660
+   6.723086 + 3.091371 + 0.364169
    
 
 .. code-block:: console
@@ -2015,12 +2015,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 9.864
+   Time: 10.186
    
    Constraints:
    
@@ -2037,7 +2037,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.681553 + 2.691325 + 0.220998
+   5.916494 + 2.779243 + 0.218265
    
 
 .. code-block:: console
@@ -2047,12 +2047,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.003
+   Typechecking time: 0.004
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 8.600
+   Time: 8.921
    
    Constraints:
    
@@ -2222,7 +2222,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2563,7 +2563,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -2720,7 +2720,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2762,7 +2762,7 @@ Test Bed
    
    Success:
    
-   Time: 1.765
+   Time: 1.727
    
    Constraints:
    
@@ -2796,7 +2796,7 @@ Test Bed
 
 .. code-block:: console
 
-   3
+   6
    
 
 .. code-block:: console
@@ -2842,12 +2842,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Typechecking time: 0.004
+   Determinacy checking time: 0.006
    
    Success:
    
-   Time: 0.252
+   Time: 0.247
    
    Constraints:
    
@@ -2882,12 +2882,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Typechecking time: 0.003
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 1.590
+   Time: 1.705
    
    Constraints:
    
@@ -3068,14 +3068,14 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 0.133
+   Time: 0.134
    
    Constraints:
    
@@ -3102,7 +3102,7 @@ Test Bed
    
    Success:
    
-   Time: 0.133
+   Time: 0.135
    
    Constraints:
    
@@ -3180,7 +3180,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.151703 + 0.052957 + 0.800613
+   1.160058 + 0.053086 + 0.788454
    
 
 .. code-block:: console
@@ -3195,7 +3195,7 @@ Test Bed
    
    Success:
    
-   Time: 2.102
+   Time: 2.099
    
    Constraints:
    
