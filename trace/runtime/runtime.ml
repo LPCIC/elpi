@@ -326,7 +326,13 @@ let print_tty fmt = (); fun { runtime_id; goal_id; kind; name; step; payload } -
   | Stop { cause; time } ->
     F.fprintf fmt "}}} %s  (%.3fs)\n%!" cause time
   | Info ->
-    F.fprintf fmt "  rid:%d step:%d gid:%d %s =@[<hov1> %a@]\n%!" runtime_id step goal_id name (pplist pp_j) payload
+    let () = F.fprintf fmt "  @[<hov 2>rid:%d step:%d gid:%d %s =@ " runtime_id step goal_id name in
+    let () = match payload with
+      | [] -> ()
+      | j :: payload ->
+        let () = F.fprintf fmt "%a@," pp_j j in
+        F.fprintf fmt "@[<hov 0>%a@]" (pplist pp_j) payload in
+    F.fprintf fmt "@]\n%!"
 
 let () = printer := print_tty F.err_formatter
 
