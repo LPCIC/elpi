@@ -4,7 +4,7 @@ type f tm -> tm -> tm.
 pred move i:tm, i:tm, i:tm -> tm, o:tm -> tm.
 move A B (x\f B x) (x\f A x).
 
-pred c i:tm, i:tm -> tm.
+func c tm, (tm -> tm).
 
 constraint c {
     rule (E :> G ?- c (uvar X [A]) T1) \ (F :> _ ?- c (uvar X [B]) T2)

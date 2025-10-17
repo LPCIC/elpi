@@ -10,7 +10,12 @@ type p prop -> prop.
 type a prop.
 type b prop.
 type c prop.
-type d1, d2, d3, d11, d22, d33 prop -> prop.
+func d1 prop.
+func d2 prop.
+func d3 prop.
+func d11 prop.
+func d22 prop.
+func d33 prop.
 
 main :-
   (p b ==> p a ==> p W), !, W = a,

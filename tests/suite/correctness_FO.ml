@@ -224,12 +224,12 @@ let () = declare "trie"
 
 let () =
   let (!) x = Test.FailureOutput (Str.regexp x) in
-  let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n.*\n+.*line %d" l1 l2) in
-  let mut_excl_no_loc t = !("Mutual exclusion violated for rules of predicate " ^ t ^ ".\nThis rule overlaps with") in
+  let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n.*\n.*\n+.*line %d" l1 l2) in
+  let mut_excl_no_loc t = !("Mutual exclusion violated for rules of predicate " ^ t ^ ".\n.*\nThis rule overlaps with") in
   let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
   let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
-  let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*[io]:.*" l c) in
-  let duplicate_err l1 l2 = !(Format.asprintf "line %d.*\n.*cannot only differ.*\n.*line %d" l1 l2) in
+  let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*" l c) in
+  let duplicate_err l1 l2 = !(Format.asprintf "line %d.*\n.*cannot only differ.*\n.*\n.*\n.*line %d" l1 l2) in
   let constr_error l1 l2 = !(Format.asprintf "line %d, column %d.*\n.*Invalid determinacy of constructor" l1 l2) in
   let mut_excl_eigen l p = !(Format.asprintf "line %d.*\nMutual exclusion violated for rules of predicate %s" l p) in
   let status = Test.
@@ -244,7 +244,7 @@ let () =
       (* 41*) det_check 6 21; Success; out_err 5 4; Success; det_check 11 38;(*45*)
       (* 46*) Success; Success; Success; Success; det_check 8 16;                (*50*)
       (* 51*) Success; det_check 19 9; Success; out_err 8 4; Success;            (*55*)
-      (* 56*) det_check 10 4; out_err 12 19; out_err 13 8; Success; Success;     (*60*)
+      (* 56*) det_check 10 4; out_err 12 19; out_err 13 19; Success; Success;     (*60*)
       (* 61*) det_check 12 4; Success; Success; Success; det_check 10 2;          (*65*)
       (* 66*) Success; det_check 9 31; det_check 11 5; det_check 7 39; det_check 2 21; (*70*)
       (* 71*) Success; Success; constr_error 10 5; out_err 8 4; constr_error 17 18; (*75*)

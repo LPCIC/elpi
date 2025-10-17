@@ -1,4 +1,70 @@
+# v3.4.2 (October 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Runtime:
+  - Fix bug concerning CHR rules firing on non-fully-dereffed terms
+
+# v3.4.1 (September 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Compiler:
+  - Fix extend_signature, was not updating the symbol table
+
+# v3.4.0 (September 2025)
+
+- Parser:
+  - New `->`-based syntax for `pred`, analogous to the new `func` one. E.g.
+    ```
+    func append list A, list A -> list A.
+    pred appendR -> list A, list A, list A.
+    ```
+
+- Compiler:
+  - Fix `=!=>` that was adding a head cut, rather than a tail cut, in some
+    cases
+  - Fix compilation bug concerning `Loc.t` being erroneously compared
+
+# v3.3.1 (September 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Tests:
+  - compare json files semantically
+
+# v3.3.0 (September 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Tooling:
+  - port to ppxlib 0.36.0
+
+# v3.2.0 (September 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Language:
+  - Remove: the `fprop` sort, use `(func)` instead
+
+# v3.1.0 (August 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Language:
+  - Change: constraints must be functions. Hence `declare_constraint` only
+    suspends functional predicated and CHR rules can only generate
+    determinitic goals.
+  - New: the `func` syntax now supports variadic functions as in
+    ```prolog
+    func f int, int -> int.. .
+    f N D Q   :- Q is N div D.
+    f N D Q R :- f N D Q, R is N mod D.
+    ```
+
 # v3.0.1 (July 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
 
 - Language:
   - Improve error message for non deterministic atom

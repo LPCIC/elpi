@@ -160,8 +160,8 @@ let rec bc ctx t =
 
 and bc_loc ctx { loc; ty; it } = { loc; ty; it = bc ctx it }
 
-let not_from_pi (_,b) = b = false
-let from_pi (_,b) = b = true
+(* let not_from_pi (_,b) = b = false *)
+(* let from_pi (_,b) = b = true *)
 
 let rec apply what v = function
   | App ({ scope = Bound l; name = f; ty = hd_ty } as n, xs) when l = elpi_language && List.exists (fun f' -> F.equal f f'.name) what ->

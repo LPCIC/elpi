@@ -1,4 +1,4 @@
-pred gcd i:int, i:group.
+func gcd int, group.
 kind group type.
 type group-1 group.
 type group-2 group.

@@ -84,17 +84,29 @@ module TypeAssignment = struct
   let compare_tmode m1 m2 =
     match deref_tmode m1, deref_tmode m2 with
     | MVal m1, MVal m2 -> Mode.compare m1 m2
-    | _ -> assert false
+    | _ -> anomaly "comparing an inferred mode declaration. Maybe some pred/func declaration is missing"
 
   let is_tmode_set t =
     match deref_tmode t with
     | MVal _ -> true
     | _ -> false
 
+  let set_tmode m x =
+    match deref_tmode m with
+    | MVal _ -> assert false
+    | MRef m -> MutableOnce.set m (MVal x)
+
   let rec pretty_tmode fmt = function
     | MRef x when MutableOnce.is_set x -> pretty_tmode fmt (MutableOnce.get x)
     | MRef x -> Format.fprintf fmt "?"
     | MVal m -> Mode.pretty fmt m
+
+  let rec is_input = function
+    | MRef x when MutableOnce.is_set x -> is_input (MutableOnce.get x)
+    | MRef x -> false
+    | MVal Mode.Input -> true
+    | MVal Mode.Output -> false
+
 
   type 'a overloaded =
     | Single of 'a
@@ -183,43 +195,45 @@ module TypeAssignment = struct
     if MutableOnce.is_set m then Some (deref m) else None
 
   open Format
-  let pretty ?(is_raw=false) (f : formatter -> (formatter -> 'a t_ -> unit) -> 'a -> unit) fmt tm =
+  let pretty (f : formatter -> (formatter -> 'a t_ -> unit) -> 'a -> unit) fmt tm =
 
     let arrs = 0 in
     let app = 1 in
-
-    let lvl_of = function
-      | Arr _ -> arrs
-      | App _ -> app
-      | _ -> 2 in
-
-    let show_mode fmt m =
-      if is_raw then (Format.fprintf fmt "%a" pretty_tmode m) else Format.fprintf fmt ""
-    in
 
     let rec arrow_tail = function
       | Prop x -> Some x
       | Arr(_,_,_,x) -> arrow_tail x
       | _ -> None in
 
-    let skip_arrow_tail = false in
+    let lvl_of = function
+      | Arr _ -> arrs
+      | App _ -> app
+      | _ -> 2 in
+
+    let show_mode fmt m = Format.fprintf fmt "%a" pretty_tmode m
+    in
+
+    let rec is_func_modes input = function
+     | Arr(m,_,_,t) when is_input m && input -> is_func_modes input t
+     | Arr(m,_,_,t) when not (is_input m) && input -> is_func_modes false t
+     | Arr(m,_,_,t) when not (is_input m) && not input -> is_func_modes false t
+     | Prop _ -> true
+     | _ -> false
+    in
 
     let rec pretty fmt = function
-      | Prop _ when skip_arrow_tail -> ()
-      | Prop Relation -> fprintf fmt "%s" (if is_raw then "pred" else "prop")
-      | Prop Function -> fprintf fmt "%s" (if is_raw then "func" else "fprop")
+      | Prop Relation -> fprintf fmt "(pred)"
+      | Prop Function -> fprintf fmt "(func)"
       | Any -> fprintf fmt "any"
       | Cons c -> F.pp fmt c
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-      | Arr(m,NotVariadic,s,t) when is_raw && skip_arrow_tail -> fprintf fmt "@[<hov 2>,@ %a:%a%a@]" show_mode m (pretty_parens ~lvl:arrs) s pretty t
-      | Arr(m,NotVariadic,s,t) when is_raw -> 
+      | Arr(m,NotVariadic,s,t) as x -> 
           begin match arrow_tail t with
             | None -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
-            | Some Ast.Structured.Relation -> fprintf fmt "@[<hov 2>pred %a@]" (pretty_pred_mode m) (s, t) 
-            | Some Ast.Structured.Function -> fprintf fmt "@[<hov 2>func %a@]" (pretty_pred_mode m) (s, t)
+            | Some Ast.Structured.Function when is_func_modes true x -> fprintf fmt "@[<hov 2>(func%a)@]" (pretty_func ~fst:true true) x
+            | Some _ -> fprintf fmt "@[<hov 2>(pred %a)@]" (pretty_pred_mode m) (s, t) 
           end
-      | Arr(_,NotVariadic,s,t) -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
-      | Arr(m,Variadic,s,t) -> fprintf fmt "%a ..-> %a" (pretty_parens ~lvl:arrs) s pretty t
+      | Arr(m,Variadic,s,t) -> fprintf fmt "variadic %a %a" (pretty_parens ~lvl:arrs) s pretty t
       | UVar m -> f fmt pretty m
       (* | UVar m -> MutableOnce.pretty fmt m *)
     and pretty_parens ~lvl fmt = function
@@ -230,35 +244,35 @@ module TypeAssignment = struct
       fprintf fmt "@[<hov 2>%a:%a@]" show_mode m (pretty_parens ~lvl:arrs) s;
       match t with
       | Prop _ -> ()
-      | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic" else "") (pretty_pred_mode m) (s',r)
+      | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic " else "") (pretty_pred_mode m) (s',r)
+      | _ -> assert false
+    and pretty_func ?(fst=false) input fmt x =
+      match x with
+      | Prop _ -> ()
+      | Arr(m, v, s, r) ->
+        let input =
+          if not (is_input m) && input then begin fprintf fmt "@ ->"; false end
+          else (if not fst then fprintf fmt ","; input) in
+        fprintf fmt "@[<hov 2>@ %a%a@]" (pretty_parens ~lvl:arrs) s (pretty_func input) r
       | _ -> assert false
     in
     let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
   in 
   pretty fmt tm
 
-  let pretty_raw fmt = pretty ~is_raw:true fmt
-  let pretty fmt = pretty ~is_raw:false fmt
-
-
   let pretty_mut_once = 
-    pretty_raw (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
+    pretty (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
 
-  let pretty_mut_once_raw = 
-    pretty_raw (fun fmt f t -> if MutableOnce.is_set t then f fmt (deref t) else MutableOnce.pretty fmt t)
+  let pretty_ft fmt t =
+    pretty (fun fmt _ (t:F.t) -> F.pp fmt t) fmt t
 
-  let pretty_ft ?(raw=false) fmt t =
-    if raw then pretty_raw (fun fmt _ (t:F.t) -> F.pp fmt t) fmt t
-    else pretty (fun fmt _ (t:F.t) -> F.pp fmt t) fmt t
-
-  let pretty_skema ?raw fmt sk =
+  let pretty_skema fmt sk =
     let rec aux = function
       | Lam (_,t) -> aux t
-      | Ty t -> pretty_ft ?raw fmt t in
+      | Ty t -> pretty_ft fmt t in
     aux sk
 
-  let pretty_skema_raw = pretty_skema ~raw:true
-  let pretty_skema = pretty_skema ~raw:false
+  let pretty_skema = pretty_skema
 
   let pretty_skema_w_id fmt (_,sk) = pretty_skema fmt sk
 
@@ -327,20 +341,20 @@ module TypeAssignment = struct
     try compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality x y = 0
     with InvalidMode -> 
       error ~loc:(Symbol.get_loc symb1) 
-        (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n Symbol.pp symb1 pretty_skema_raw x Symbol.pp symb2 pretty_skema_raw y)
+        (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n Symbol.pp symb1 pretty_skema x Symbol.pp symb2 pretty_skema y)
 
 
 
-  let check_same_mode ~loc1 ~loc2 x y =
+  let check_same_mode ~loc1 ~loc2 (s1, x) (s2, y) =
     if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality x y <> 0 then
-      error ~loc:loc2 ("Two types for the same symbol cannot only differ on modes or functionality.\nPrevious declaration: " ^ Loc.show loc1)
+      error ~loc:loc2 (Format.asprintf "@[<v>Two types for the symbol %s cannot only differ on modes or functionality.@\n@[<hov 2>Current declaration:@;<2 0>%a@]@\n@[<v 2>Previous declaration: %a@ (%s)@]@]" (Symbol.pretty s1) pretty_skema x pretty_skema y (Loc.show loc1))
 
   let undup_skemas sk_of_s osl =
     let l = osl |> List.map (fun x -> x, sk_of_s x) in
     let filtered = ref [] in
-    let eq_skema (s1,x) (s2,y) = 
+    let eq_skema ((s1,x) as l) ((s2,y) as r) = 
       let b = compare_skema ~cmp_mode:(fun _ _ -> 0) ~cmp_func:(fun _ _ -> 0) x y = 0 in
-      if b then check_same_mode ~loc1:(Symbol.get_loc s1) ~loc2:(Symbol.get_loc s2) x y;
+      if b then check_same_mode ~loc1:(Symbol.get_loc s1) ~loc2:(Symbol.get_loc s2) l r;
       if b then filtered := (s1,s2) :: !filtered;
       b in      
     let l =
@@ -424,6 +438,7 @@ module TypingEnv : sig
     ty : TypeAssignment.skema;
     indexing : indexing;
     availability : Elpi_parser.Ast.Structured.symbol_availability;
+    implemented_in_ocaml : bool;
   }
   [@@deriving show]
 
@@ -453,6 +468,8 @@ module TypingEnv : sig
   val mem_symbol : t -> Symbol.t -> bool
   val canon : t -> Symbol.t -> Symbol.t
 
+  val set_as_implemented_in_ocaml : t -> Symbol.t -> t
+
 end = struct
 
   type indexing =
@@ -464,6 +481,7 @@ end = struct
     ty : TypeAssignment.skema;
     indexing : indexing;
     availability : Elpi_parser.Ast.Structured.symbol_availability;
+    implemented_in_ocaml : bool;
   }
   [@@deriving show]
 
@@ -472,6 +490,11 @@ end = struct
     overloading : Symbol.t TypeAssignment.overloaded F.Map.t;
   }
   [@@deriving show]
+
+  let set_as_implemented_in_ocaml e s =
+    match Symbol.QMap.find_opt s e.symbols with
+    | None -> assert false
+    | Some m -> { e with symbols = Symbol.QMap.add s { m with implemented_in_ocaml = true } e.symbols }
 
   let compatible_indexing i1 i2 =
     match i1, i2 with
@@ -510,11 +533,12 @@ end = struct
   
   
   let merge_symbol_metadata s
-      { ty = ty1; indexing = idx1; availability = a1; }
-       { ty = ty2; indexing = idx2; availability = a2; } =
+      { ty = ty1; indexing = idx1; availability = a1; implemented_in_ocaml = o1; }
+       { ty = ty2; indexing = idx2; availability = a2; implemented_in_ocaml = o2; } =
     { ty = TypeAssignment.merge_skema ty1 ty2;
       indexing = merge_indexing s idx1 idx2;
       availability = merge_availability s a1 a2;
+      implemented_in_ocaml = o1 || o2;
     }
   
   let o2l = function  TypeAssignment.Single x -> [x] | Overloaded l -> l
@@ -564,6 +588,7 @@ module SymbolResolver : sig
   val resolve : TypingEnv.t -> resolution -> Symbol.t -> unit
   val resolved_to : TypingEnv.t -> resolution -> Symbol.t option
   val is_resolved_to : TypingEnv.t -> resolution -> Symbol.t -> bool
+  val is_resolved_to_builtin : TypingEnv.t -> resolution -> bool
 
 end = struct
 
@@ -600,6 +625,14 @@ end = struct
     match resolved_to env r with
     | None -> false
     | Some s1 -> TypingEnv.same_symbol env s s1
+
+  let is_resolved_to_builtin env r =
+    match resolved_to env r with
+    | None -> false
+    | Some r ->
+        match TypingEnv.resolve_symbol_opt r env with
+        | None -> false
+        | Some s -> s.implemented_in_ocaml
 
 end
 

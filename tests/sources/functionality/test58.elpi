@@ -1,9 +1,9 @@
 % NO
 
 func f.
-func f1 fprop.
+func f1 (func).
 
-typeabbrev tt fprop -> fprop.
+typeabbrev tt (func) -> (func).
 
 pred rel.
 

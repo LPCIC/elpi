@@ -3,7 +3,7 @@
 (*  Copyright (C) Jean-Christophe Filliatre                               *)
 (*                                                                        *)
 (*  This software is free software; you can redistribute it and/or        *)
-(*  modify it under the terms of the GNU Library General Public           *)
+(*  modify it under the terms of the GNU Lesser General Public            *)
 (*  License version 2.1, with the special exception on linking            *)
 (*  described in file LICENSE.                                            *)
 (*                                                                        *)
@@ -13,43 +13,106 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(*i $Id$ i*)
+(** Maps over integers implemented as Patricia trees.
 
-(*s Maps over integers implemented as Patricia trees.
-    The following signature is exactly [Map.S with type key = int],
-    with the same specifications. *)
+   The following signature is a subset of [Map.S with type key = int],
+   with the same specifications (not repeated here) unless specified
+   otherwise.
 
-type (+'a) t
+   These are little-endian Patricia trees, so there is no efficient
+   ordering of keys within the structure. Consequently,
+   - [min/max_binding], [find_first/last] are rather inefficient (linear)
+   - [iter], [fold] *do not* iterate in the key order
+   - [bindings] is *not sorted* by keys
+*)
 
 type key = int
 
-val empty : 'a t
+type (+'a) t
 
-val is_empty : 'a t -> bool
+val empty: 'a t
 
-val add : int -> 'a -> 'a t -> 'a t
+val is_empty: 'a t -> bool
 
-val find : int -> 'a t -> 'a
+val mem: key -> 'a t -> bool
 
-val remove : int -> 'a t -> 'a t
+val add: key -> 'a -> 'a t -> 'a t
 
-val mem :  int -> 'a t -> bool
+val update: key -> ('a option -> 'a option) -> 'a t -> 'a t
 
-val iter : (int -> 'a -> unit) -> 'a t -> unit
+val singleton: key -> 'a -> 'a t
 
-val map : ('a -> 'b) -> 'a t -> 'b t
+val remove: key -> 'a t -> 'a t
 
-val mapi : (int -> 'a -> 'b) -> 'a t -> 'b t
+val merge:
+         (key -> 'a option -> 'b option -> 'c option) -> 'a t -> 'b t -> 'c t
 
-val fold : (int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+val union: (key -> 'a -> 'a -> 'a option) -> 'a t -> 'a t -> 'a t
 
-val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
+val compare: ('a -> 'a -> int) -> 'a t -> 'a t -> int
 
-val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+val equal: ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
+
+val iter: (key -> 'a -> unit) -> 'a t -> unit
+
+val fold: (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+
+val for_all: (key -> 'a -> bool) -> 'a t -> bool
+
+val exists: (key -> 'a -> bool) -> 'a t -> bool
+
+val filter: (key -> 'a -> bool) -> 'a t -> 'a t
+
+val filter_map: (key -> 'a -> 'b option) -> 'a t -> 'b t
+
+val partition: (key -> 'a -> bool) -> 'a t -> 'a t * 'a t
+
+val cardinal: 'a t -> int
+
+val bindings: 'a t -> (key * 'a) list
+
+val min_binding: 'a t -> (key * 'a)
+
+val min_binding_opt: 'a t -> (key * 'a) option
+
+val max_binding: 'a t -> (key * 'a)
+
+val max_binding_opt: 'a t -> (key * 'a) option
+
+val choose: 'a t -> (key * 'a)
+
+val choose_opt: 'a t -> (key * 'a) option
+
+val split: key -> 'a t -> 'a t * 'a option * 'a t
+
+val find: key -> 'a t -> 'a
+
+val find_opt: key -> 'a t -> 'a option
+
+val find_first: (key -> bool) -> 'a t -> key * 'a
+
+val find_first_opt: (key -> bool) -> 'a t -> (key * 'a) option
+
+val find_last: (key -> bool) -> 'a t -> key * 'a
+
+val find_last_opt: (key -> bool) -> 'a t -> (key * 'a) option
+
+val map: ('a -> 'b) -> 'a t -> 'b t
+
+val mapi: (key -> 'a -> 'b) -> 'a t -> 'b t
+
+val to_seq : 'a t -> (key * 'a) Seq.t
+
+val to_seq_from : key -> 'a t -> (key * 'a) Seq.t
+
+val add_seq : (key * 'a) Seq.t -> 'a t -> 'a t
+
+val of_seq : (key * 'a) Seq.t -> 'a t
+
+(********************************************************)
 
 (* Specific to a scenario where the key is computed starting from a term
      functor(args)
-
    If the key of items in the map was computed such that
    flexible args are made of 1 (read provides)
    and the query is computed such that
@@ -61,13 +124,6 @@ val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
    The result is in no precise order. *)
 val find_unifiables : int -> 'a t -> 'a list
 
-(* diff f m1 m2 is the map whose domain is (Dom(m1) \ Dom(m2)) \cup m3
-   where m3 = { x | x \in m1 \cap m2 && f (m1 x) (m2 x) != None } and
-   (diff f m1 m2)(x) = y when x \in m3 and f (m1 x) (m2 x) = Some y
-   (diff f m1 m2)(x) = m1(x) when x \in Dom(m1) \ Dom(m2) *)
-val diff : ('a -> 'b -> 'a option) -> 'a t -> 'b t -> 'a t
-
 val to_list : 'a t -> (int * 'a) list
-
 val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 val show : (Format.formatter -> 'a -> unit) -> 'a t -> string

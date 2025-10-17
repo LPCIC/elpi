@@ -4,8 +4,8 @@ func f.
 pred rel.
 
 f :-
-  % Fails since y is assigned to a rel, rel is not fprop
-  ((y\ y = rel) : (func -> fprop)) = F,
+  % Fails since y is assigned to a rel, rel is not (func)
+  ((y\ y = rel) : (func -> (func))) = F,
   F R,
   R.
 

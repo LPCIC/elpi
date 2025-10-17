@@ -1,9 +1,9 @@
 % YES
 
 func f.
-func f1 fprop.
+func f1 (func).
 
-typeabbrev t (func fprop).
+typeabbrev t (func (func)).
 
 f :-
   X = ((x\ f1 x :- x) : t),

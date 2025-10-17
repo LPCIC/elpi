@@ -142,7 +142,14 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : 
     | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0) (* TODO: this is hack for builtins, they could be overloaded as well *)
     (* | OCaml None -> Symbol.make_builtin name |> to_unify false  *)
   in
-  symb, quotient, { ty; indexing; availability }
+  let implemented_in_ocaml = 
+    (* hack: these builtins are baked into the runtime *)
+    F.equal name F.declare_constraintf || 
+    F.equal name F.findall_solutionsf || 
+    F.equal name F.pmf ||
+    F.equal name F.eqf
+  in
+  symb, quotient, { ty; indexing; availability; implemented_in_ocaml }
 
 let arrow_of_args args ety =
   let rec aux = function
@@ -191,15 +198,15 @@ open ScopedTerm
 
 let pretty_ty valid_mode =
   if valid_mode then TypeAssignment.pretty_mut_once
-  else TypeAssignment.pretty_mut_once_raw
+  else TypeAssignment.pretty_mut_once
 
 
 let error ~loc msg = error ~loc ("Typechecker: " ^ msg)
 
 let error_not_a_function ~loc c tyc args x =
   let t =
-    if args = [] then ScopedTerm.App(mk_const (Scope.mkGlobal ~escape_ns:true ()) c loc,[])
-    else ScopedTerm.(App(mk_const (Scope.mkGlobal ~escape_ns:true ()) c loc,args)) in
+    if args = [] then ScopedTerm.App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) c ~loc,[])
+    else ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) c ~loc,args)) in
   let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@].@ The type of %a is %a@]"
     ScopedTerm.pretty_ t ScopedTerm.pretty x F.pp c TypeAssignment.pretty_mut_once tyc in
   error ~loc msg
@@ -442,7 +449,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
   and check_lam ~positive ctx ~loc ~tyctx sc c_type_cast t ety =
-    let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_const elpi_language (fresh_name ()) loc in
+    let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_const ~scope:elpi_language (fresh_name ()) ~loc in
     let src = match c_type_cast with
       | None -> mk_uvar "Src"
       | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty x
@@ -509,7 +516,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       (* Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty; *)
         let err ty =
           if args = [] then error_bad_ety ~valid_mode ~loc ~tyctx ~ety F.pp c ty (* uvar *)
-          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_const (Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c loc,args)) ty in
+          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c ~loc,args)) ty in
         let monodirectional () =
           (* Format.eprintf "checking app mono %a\n" F.pp c; *)
           let tgt = check_app_single ~positive ctx ~loc (cid,c,tya) ty [] args in
@@ -864,6 +871,7 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
         | TypeAssignment.Arr (_,_,_,r) -> Ast.Mode.(Fo Output) :: ty2mode r
         | _ -> [] in
       let mode = ty2mode tya in
+
       let indexing = match is_prop ~type_abbrevs ty with
       | None -> TypingEnv.DontIndex
       | Some Relation -> Index {mode; indexing=MapOn 0; overlap = Allowed; has_local_without_cut=None} 
@@ -871,7 +879,7 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
         let {static;runtime} = chose_indexing (Symbol.get_func id) [1] None in
         TypingEnv.Index {mode;indexing=runtime; overlap=Elpi_runtime.Data.mk_Forbidden static; has_local_without_cut=None}
       in
-      id, TypingEnv.{ ty ; indexing; availability = Elpi }
+      id, TypingEnv.{ ty ; indexing; availability = Elpi; implemented_in_ocaml = false }
   | _ -> assert false
 
 let check_undeclared ~type_abbrevs ~unknown =
@@ -882,8 +890,23 @@ let check_undeclared ~type_abbrevs ~unknown =
     warn ~id:UndeclaredGlobal Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared
      (pplist pp_print_string "") types);
   end;
+  let pick_a_mode { TypingEnv.ty } =
+    let ty = match ty with
+      | TypeAssignment.Lam _ -> assert false
+      | TypeAssignment.Ty t -> t in
+    let pick_mode m =
+      if TypeAssignment.is_tmode_set m then ()
+      else TypeAssignment.set_tmode m Mode.Output in
+    let rec pick = function
+      | TypeAssignment.Prop _ | Any | Cons _ -> ()
+      | App(_,x,xs) -> pick x; List.iter pick xs
+      | Arr(m,_,s,t) -> pick_mode m; pick s; pick t
+      | UVar _ -> ()
+    in
+      pick ty
+  in
   let overloading = F.Map.map (fun (x,_) -> TypeAssignment.Single x) unknown in
-  let symbols = F.Map.fold (fun _ (k,v) m -> Symbol.QMap.add k v m) unknown Symbol.QMap.empty in
+  let symbols = F.Map.fold (fun _ (k,v) m -> pick_a_mode v; Symbol.QMap.add k v m) unknown Symbol.QMap.empty in
   { TypingEnv.overloading; symbols }
 
 let check_pred_name ~types ~loc f =

@@ -26,7 +26,7 @@ let () = declare "sepcomp3"
 let () = declare "sepcomp4"
   ~source_dune:"sepcomp4.exe"
   ~description:"separate compilation double naming"
-  ~expectation:Test.(FailureOutput (Str.regexp "Two types for the same symbol cannot only differ on modes"))
+  ~expectation:Test.(FailureOutput (Str.regexp "Two types for the symbol p cannot only differ on modes"))
   ()
 
 let () = declare "sepcomp5"
@@ -63,6 +63,18 @@ let () = declare "sepcomp6"
 let () = declare "sepcomp_hover"
   ~source_dune:"sepcomp_hover.exe"
   ~description:"hover info"
+  ~expectation:Test.Success
+  ()
+
+let () = declare "sepcomp_extend_sig"
+  ~source_dune:"sepcomp_extend_sig.exe"
+  ~description:"extend unit with signature"
+  ~expectation:Test.Success
+  ()
+
+let () = declare "sepcomp_extend_sig2"
+  ~source_dune:"sepcomp_extend_sig2.exe"
+  ~description:"extend unit with signature then code"
   ~expectation:Test.Success
   ()
 

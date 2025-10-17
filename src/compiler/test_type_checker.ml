@@ -9,15 +9,15 @@ module TA = TypeAssignment
 let fs = F.from_string
 let dummy_loc = Loc.initial ""
 let dummy_str = F.dummyname
-let mk_global name = ScopedTerm.mk_const (Scope.mkGlobal ()) (fs name) dummy_loc
-let mk_bound name = ScopedTerm.mk_const (Scope.Bound elpi_language) (fs name) dummy_loc
-let mk_local name = ScopedTerm.mk_const elpi_language (fs name) dummy_loc
+let mk_global name = ScopedTerm.mk_const ~scope:(Scope.mkGlobal ()) (fs name) ~loc:dummy_loc
+let mk_bound name = ScopedTerm.mk_const ~scope:(Scope.Bound elpi_language) (fs name) ~loc:dummy_loc
+let mk_local name = ScopedTerm.mk_const ~scope:elpi_language (fs name) ~loc:dummy_loc
 let build_loc it = ST.{ loc = dummy_loc; ty = MutableOnce.make dummy_str; it }
 let app n ag ags = build_loc @@ ST.App (mk_global n, ag :: ags)
 let lam n bo = build_loc @@ ST.Lam (Some (mk_local n), None, bo)
 let const n = build_loc @@ ST.App (mk_global n,[])
 let local_const n = build_loc @@ ST.App (mk_bound n,[])
-let var n = build_loc @@ ST.Var (ST.mk_bound_const elpi_var (fs n) dummy_loc, [])
+let var n = build_loc @@ ST.Var (ST.mk_bound_const ~lang:elpi_var (fs n) ~loc:dummy_loc, [])
 let build_ta a = TA.Val a
 let rprop = TA.Prop Relation
 let bool = TA.Cons (fs "bool")
@@ -62,7 +62,7 @@ let _ =
   let kinds = F.Map.empty in
   let types = F.Map.empty, Symbol.QMap.empty in
   let build_ty_metadata ty : TypingEnv.symbol_metadata =
-    {indexing = TypingEnv.DontIndex; availability = Elpi_parser.Ast.Structured.Elpi; ty} in
+    {indexing = TypingEnv.DontIndex; availability = Elpi_parser.Ast.Structured.Elpi; ty; implemented_in_ocaml = false } in
   let add_ty k v (overloading, symbols) = 
     let k = fs k in
     let symb = Elpi_runtime.Data.Symbol.make_builtin k in
@@ -86,8 +86,8 @@ let _ =
     let t = f t in
     let _pp = TA.pp_t_ (MutableOnce.pp TA.pp) in
     if unifyable_ground_ty t exp <> 0 then (
-      Format.eprintf "---\nUnexpected result %d: \nactual: @[%a@]\nreference: @[%a@]@." test_nb TA.pretty_mut_once_raw t
-        TA.pretty_mut_once_raw exp;
+      Format.eprintf "---\nUnexpected result %d: \nactual: @[%a@]\nreference: @[%a@]@." test_nb TA.pretty_mut_once t
+        TA.pretty_mut_once exp;
       exit 1)
   in
 

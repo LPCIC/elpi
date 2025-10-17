@@ -22,7 +22,7 @@ pred copy-list i:list term, o:list term.
 copy-list [] [].
 copy-list [X|XS] [Y|YS] :- copy X Y, copy-list XS YS.
 
-pred meta-copy i:term, o:term.
+func meta-copy term -> term.
 constraint meta-copy {
   rule (meta-copy I O) | (copy I X) <=> (O = X).
 }

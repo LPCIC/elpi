@@ -1,26 +1,26 @@
 kind std.map type -> type -> type.
-type std.map std.map.private.map K V -> (pred i:K, i:K, o:cmp) -> std.map K V.
+type std.map std.map.private.map K V -> (func K, K -> cmp) -> std.map K V.
 
 namespace std.map {
 
 % [make Eq Ltn M] builds an empty map M where keys are compared using Eq and Ltn
-pred make i:(pred i:K, i:K, o:cmp), o:std.map K V.
+func make (func K, K -> cmp) -> std.map K V.
 make Cmp (std.map private.empty Cmp).
 
 % [find K M V] looks in M for the value V associated to K
-pred find i:K, i:std.map K V, o:V.
+func find K, std.map K V -> V.
 find K (std.map M Cmp) V :- private.find M Cmp K V.
 
 % [add K V M M1] M1 is M where K is bound to V
-pred add i:K, i:V, i:std.map K V, o:std.map K V.
+func add K, V, std.map K V -> std.map K V.
 add K V (std.map M Cmp) (std.map M1 Cmp) :- private.add M Cmp K V M1.
 
 % [remove K M M1] M1 is M where K is unbound
-pred remove i:K, i:std.map K V, o:std.map K V.
+func remove K, std.map K V -> std.map K V.
 remove K (std.map M Cmp) (std.map M1 Cmp) :- private.remove M Cmp K M1.
 
 % [bindings M L] L is the key-value pairs in increasing order
-pred bindings i:std.map K V, o:list (pair K V).
+func bindings std.map K V -> list (pair K V).
 bindings (std.map M _) L :- private.bindings M [] L.
 
 namespace private {
@@ -30,14 +30,14 @@ kind map type -> type -> type.
 type empty map K V.
 type node map K V -> K -> V -> map K V -> int -> map K V.
 
-pred height i:map K V, o:int.
+func height map K V -> int.
 height empty 0.
 height (node _ _ _ _ H) H.
 
-pred create i:map K V, i:K, i:V, i:map K V, o:map K V.
+func create map K V, K, V, map K V -> map K V.
 create L K V R (node L K V R H) :- H is {std.max {height L} {height R}} + 1.
 
-pred bal i:map K V, i:K, i:V, i:map K V, o:map K V.
+func bal map K V, K, V, map K V -> map K V.
 bal L K V R T :-
   height L HL,
   height R HR,
@@ -45,7 +45,7 @@ bal L K V R T :-
   HR2 is HR + 2,
   bal.aux HL HR HL2 HR2 L K V R T.
 
-pred bal.aux i:int, i:int, i:int, i:int, i:map K V, i:K, i:V, i:map K V, o:map K V.
+func bal.aux int, int, int, int, map K V, K, V, map K V -> map K V.
 bal.aux HL _ _ HR2 (node LL LV LD LR _) X D R T :-
   HL > HR2, {height LL} >= {height LR}, !,
   create LL LV LD {create LR X D R} T.
@@ -60,48 +60,48 @@ bal.aux _ HR HL2 _ L X D (node (node RLL RLV RLD RLR _) RV RD RR _) T :-
   create {create L X D RLL} RLV RLD {create RLR RV RD RR} T.
 bal.aux _ _ _ _ L K V R T :- create L K V R T.
 
-pred add i:map K V, i:(pred i:K, i:K, o:cmp), i:K, i:V, o:map K V.
+func add map K V, (func K, K -> cmp), K, V -> map K V.
 add empty _ K V T :- create empty K V empty T.
 add (node _ X _ _ _ as M) Cmp X1 XD M1 :- Cmp X1 X E, add.aux E M Cmp X1 XD M1.
 
-pred add.aux i:cmp, i:map K V, i:(pred i:K, i:K, o:cmp), i:K, i:V, o:map K V.
+func add.aux cmp, map K V, (func K, K -> cmp), K, V -> map K V.
 add.aux eq (node L _ _ R H) _   X XD T :- T = node L X XD R H. 
 add.aux lt (node L V D R _) Cmp X XD T :- bal {add L Cmp X XD} V D R T.
 add.aux gt (node L V D R _) Cmp X XD T :- bal L V D {add R Cmp X XD} T.
 
-pred find i:map K V, i:(pred i:K, i:K, o:cmp), i:K, o:V.
+func find map K V, (func K, K -> cmp), K -> V.
 find (node L K1 V1 R _) Cmp K V :- Cmp K K1 E, find.aux E Cmp L R V1 K V.
 
-pred find.aux i:cmp, i:(pred i:K, i:K, o:cmp), i:map K V, i:map K V, i:V, i:K, o:V.
+func find.aux cmp, (func K, K -> cmp), map K V, map K V, V, K -> V.
 find.aux eq _   _ _ V _ V.
 find.aux lt Cmp L _ _ K V :- find L Cmp K V.
 find.aux gt Cmp _ R _ K V :- find R Cmp K V.
 
-pred remove-min-binding i:map K V, o:map K V.
+func remove-min-binding map K V -> map K V.
 remove-min-binding (node empty _ _ R _) R :- !.
 remove-min-binding (node L V D R _) X :- bal {remove-min-binding L} V D R X.
 
-pred min-binding i:map K V, o:K, o:V.
+func min-binding map K V -> K, V.
 min-binding (node empty V D _ _) V D :- !.
 min-binding (node L _ _ _ _) V D :- min-binding L V D.
 
-pred merge i:map K V, i:map K V, o:map K V.
+func merge map K V, map K V -> map K V.
 merge empty X X :- !.
 merge X empty X :- !.
 merge M1 M2 R :-
   min-binding M2 X D,
   bal M1 X D {remove-min-binding M2} R.
 
-pred remove i:map K V, i:(pred i:K, i:K, o:cmp), i:K, o:map K V.
+func remove map K V, (func K, K -> cmp), K -> map K V.
 remove empty _ _ empty :- !.
 remove (node L V D R _) Cmp X M :- Cmp X V E, remove.aux E Cmp L R V D X M.
 
-pred remove.aux i:cmp, i:(pred i:K, i:K, o:cmp), i:map K V, i:map K V, i:K, i:V, i:K, o:map K V.
+func remove.aux cmp, (func K, K -> cmp), map K V, map K V, K, V, K -> map K V.
 remove.aux eq _   L R _ _ _ M :- merge L R M.
 remove.aux lt Cmp L R V D X M :- bal {remove L Cmp X} V D R M.
 remove.aux gt Cmp L R V D X M :- bal L V D {remove R Cmp X} M.
 
-pred bindings i:map K V, i:list (pair K V), o:list (pair K V).
+func bindings map K V, list (pair K V) -> list (pair K V).
 bindings empty X X.
 bindings (node L V D R _) X X1 :-
   bindings L [pr V D|{bindings R X}] X1.

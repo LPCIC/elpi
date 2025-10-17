@@ -55,6 +55,8 @@ is very welcome. Questions or feature requests are welcome as well.
 - [Accumulate with paths](#accumulate-with-paths) accepts `accumulate "path".`
   so that one can use `.` in a file/path name.
 
+- [Variadic functions](#variadic-functions)
+
 - [Tracing facility](#tracing-facility) to debug your programs.
  
 - [Macros](#macros) are expanded at compilation time
@@ -662,10 +664,10 @@ goal> pi x\ sigma Y\ even x => (declare_constraint (even Y) [Y], Y = x).
 Success:
 ```
 
-The `declare_constraint` built in is typically used in conjunction with `mode`
-as follows:
+The `declare_constraint` built requires functions, and is typically
+used as follows:
 ```prolog
-mode (even i).
+func even int -> .
 even (uvar as X) :- !, declare_constraint (even X) [X].
 even 0.
 even X :- X > 1, Y is X - 2, even Y.
@@ -751,8 +753,8 @@ It is used only in debug output.
 
 #### Example
 ```prolog
-mode (odd i).
-mode (even i).
+func odd int -> .
+func even int -> .
 
 even (uvar as X) :- !, declare_constraint (even X) [X].
 odd  (uvar as X) :- !, declare_constraint (odd X)  [X].
@@ -801,7 +803,7 @@ we can compute GCDs of 2 sets of numbers: 99, 66 and 22 named X;
 14 and 77 called Y.
 
 ```prolog
-mode (gcd i i).
+func gcd int ,int -> .
 
 gcd A (uvar as Group) :- declare_constraint (gcd A Group) Group.
 
@@ -825,7 +827,7 @@ Constraints are resumed as regular delayed goals are.
 #### Example of higher order rules
 
 ```prolog
-mode (term i o).
+func term tm -> ty.
 term (app HD ARG) TGT :- term HD (arrow SRC TGT), term ARG SRC.
 term (lam F) (arrow SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
 term (uvar as X) T :- declare_constraint (term X T) [X].
@@ -1032,6 +1034,21 @@ Here `main` calls `std.list.map`, `std.string.concat` and finally
 
 Elpi accepts `accumulate "path".` (i.e. a string rather than an indent)
 so that one can use `.` in a file or path name.
+
+## Variadic functions
+
+Functions, both external and written in Elpi, can be variadic.
+
+```prolog
+func f int, int -> int.. .
+f N D Q   :- Q is N div D.
+f N D Q R :- f N D Q, R is N mod D.
+```
+
+Here `f` takes 3 or 4 argument: when 4 are passed it also returns the
+reminder of the division. Only the last output can be variadic.
+
+This feature is mainly used for external functions.
 
 ## Tracing facility
 

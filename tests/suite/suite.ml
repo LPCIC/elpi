@@ -329,6 +329,31 @@ let match_file ~log file adjust reference =
     | _ -> false
   end
 
+let match_json_file ~log file adjust reference =
+  let file = adjust file in
+  let dig1 = Digest.to_hex (Digest.file file) in
+  let dig2 = Digest.(to_hex (file reference)) in
+  if dig1 = dig2 then begin
+    Util.write log (Printf.sprintf "Digest of %s and %s is %s\n" file reference dig2);
+    true
+  end else
+    let yreference = Yojson.Safe.from_file reference in
+    let yfile = Yojson.Safe.from_file file in
+    Yojson.Safe.equal yreference yfile ||
+  begin
+    Util.write log (Printf.sprintf "Diffing %s against %s\n" file reference);
+      match
+      Util.exec ~timeout:5.0 ~env:(Unix.environment ())
+        ~log ~close_output:false
+        ~executable:"diff" ~args:["-u";"--strip-trailing-cr";reference;file] ()
+    with
+    | Util.Exit(0,_,_) -> true
+    | Util.Exit(n,_,_) ->
+      Util.write log (Printf.sprintf "Exit code: %d\n" n);
+      Util.write log (Printf.sprintf "Promotion: cp %s %s\n" file reference);
+      false
+    | _ -> false
+  end
 
 module Elpi = struct
 
@@ -486,7 +511,7 @@ module ElpiTraceElab = struct
         match outcome, outcomey, test.Test.expectation with
         | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputTxt f when f (Util.read_lines (snd log)) -> 
             Runner.Success { walltime; typechecking; execution; mem }
-        | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when match_file ~log sample adjust (sources^"/"^reference) ->
+        | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when match_json_file ~log sample adjust (sources^"/"^reference) ->
             Runner.Success { walltime; typechecking; execution; mem }
         | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when promote ->
             FileUtil.cp [adjust sample] (sources^"/"^reference);
