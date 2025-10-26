@@ -80,7 +80,6 @@ let _ =
 
   let unknown = F.Map.empty in
   let exp = build_ta rprop in
-  let is_rule = false in
 
   let check f test_nb t exp =
     let t = f t in
@@ -104,14 +103,14 @@ let _ =
     let varY = var "Y" in
     let term = app "=" (app "f" varY []) [ varX ] in
 
-    let _ = Type_checker.check ~is_rule ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query ~types ~unknown ~exp ~kinds ~type_abbrevs term in
     check_type 1 varX (rprop @-> rprop)
   in
 
   let _ =
     let varX = var "X" in
     let term = app "=" (const "f") [ varX ] in
-    let _ = Type_checker.check ~is_rule ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query ~types ~unknown ~exp ~kinds ~type_abbrevs term in
     check_type 2 varX (rprop @->> rprop @-> rprop)
   in
 
@@ -119,7 +118,7 @@ let _ =
     let varX = var "X" in
     let term = app "=" (lam "x" (app "f" (local_const "x") [])) [ varX ] in
 
-    let _ = Type_checker.check ~is_rule ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query ~types ~unknown ~exp ~kinds ~type_abbrevs term in
 
     Format.eprintf "The type of the variable X is %a@." TA.pretty_mut_once (TA.UVar (get_hd_ty varX));
     check_type 3 varX (rprop @->> rprop @-> rprop)
@@ -129,7 +128,7 @@ let _ =
     let varX = var "X" in
     let term = app "=" (lam "x" @@ lam "y" (app "f" (local_const "x") [ local_const "y" ])) [ varX ] in
 
-    let _ = Type_checker.check ~is_rule ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query ~types ~unknown ~exp ~kinds ~type_abbrevs term in
     (* Format.eprintf "The inferred type is %a@." TA.pretty_mut_once_raw (UVar varX.ty); *)
     check_type 4 varX (rprop @->> rprop @-> rprop)
   in
@@ -139,7 +138,7 @@ let _ =
 
     let term = app "apply" (const "false") [ ag; var "R" ] in
 
-    let _ = Type_checker.check ~is_rule:false ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query~types ~unknown ~exp ~kinds ~type_abbrevs term in
     check_type 5 ag (rprop @->> rprop);
     check_hd 6 term (rprop @->> (rprop @->> rprop) @-> bool @-> rprop)
   in
@@ -147,7 +146,7 @@ let _ =
   let _ =
     let term = app "apply" (const "tt") [ lam "x" (const "false"); var "R" ] in
 
-    let _ = Type_checker.check ~is_rule:false ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query~types ~unknown ~exp ~kinds ~type_abbrevs term in
     check_hd 7 term (bool @->> (bool @->> rprop) @-> bool @-> rprop)
   in
 

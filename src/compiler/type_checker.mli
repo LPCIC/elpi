@@ -32,15 +32,23 @@ val runtime_resolve : runtime_types -> F.t -> Symbol.t
 type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 [@@deriving show]
 
-val check :
+val check_rule :
   type_abbrevs:type_abbrevs ->
   kinds:arities ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->
-  is_rule:bool -> (* a rule or a term (eg query) *)
   ScopedTerm.t ->
   exp:TypeAssignment.t ->
   env_undeclared * bool (* occur_check *)
+
+val check_query :
+  type_abbrevs:type_abbrevs ->
+  kinds:arities ->
+  types:TypingEnv.t ->
+  unknown:env_undeclared ->
+  ScopedTerm.t ->
+  exp:TypeAssignment.t ->
+  env_undeclared
 
 val check_chr_rule :
   type_abbrevs:type_abbrevs ->

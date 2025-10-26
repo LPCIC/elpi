@@ -1396,7 +1396,7 @@ end = struct
     types
 
   let check_and_spill_pred ~time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types t =
-    let unknown, occur_check = time_this time (fun () -> Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
+    let unknown, occur_check = time_this time (fun () -> Type_checker.check_rule ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
     let t = if needs_spilling then Spilling.main ~types ~type_abbrevs t else t in
     unknown, t, occur_check
 
@@ -2273,7 +2273,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let needs_spilling = ref false in
   let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros; needs_spilling }) t in
-  let unknown, _ = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
+  let unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (!needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
@@ -2299,7 +2299,7 @@ let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~de
     anomaly "compile_term_to_raw_term called at run time";
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
-    let unknown, _ = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
+    let unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
     let _ : TypingEnv.t= Type_checker.check_undeclared ~unknown ~type_abbrevs in
     ()
   end;
@@ -2323,7 +2323,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let compiler_state,t = f compiler_state in
-  let unknown, _ = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
+  let unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (false,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in

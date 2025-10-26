@@ -358,7 +358,8 @@ let silence_linear_warn f =
   len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
 let checker ~type_abbrevs ~kinds ~types:env ~unknown :
-  (is_rule:bool -> ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared * bool) * 
+  (ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared) * 
+  (ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared * bool) * 
   ((_, ScopedTerm.t) Ast.Chr.t -> env_undeclared) *
   (ScopedTerm.t * Ast.Loc.t -> env_undeclared)
 =
@@ -612,7 +613,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
             check_app_single ~positive ctx ~loc fc ty consumed args
         | _ -> error_not_a_function ~loc:x.loc c ty (List.rev consumed) x (* TODO: trim loc up to x *)
 
-  and check_loc ~positive ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
+  and check_loc ~positive ~tyctx ctx ({ loc; it; ty } as t) ~ety : spilled_phantoms =
       begin
         let extra_spill = check ~positive ~tyctx ctx ~loc it ety in
         if not @@ MutableOnce.is_set ty then MutableOnce.set ty (Val ety);
@@ -818,13 +819,18 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     (* this is wrong, since the same unit may be checked against different contexts *)
     (* if MutableOnce.is_set t.ty then !unknown_global else *)
 
-  let check ~is_rule t ~exp =
+  let check_query t ~exp =
     let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
-    if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
-    let oc = if is_rule then occur_check_pred t else true in
+    if spills <> [] then error ~loc:t.loc "cannot spill in head";
+    !unknown_global in
+
+  let check_rule t ~exp =
+    let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
+    check_matches_poly_skema_loc ~unknown:!unknown_global t;
+    let oc = occur_check_pred t in
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k { nocc = n; binder } ->
-      if n = 1 && not @@ silence_linear_warn k && is_rule then
+      if n = 1 && not @@ silence_linear_warn k then
         warn ~loc:(Symbol.get_loc binder) ~id:LinearVariable
           (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k))
@@ -852,19 +858,23 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(mk_uvar "macro") in
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     !unknown_global in
-  check, check_chr, check_macro
+  check_query, check_rule, check_chr, check_macro
 
-let check ~type_abbrevs ~kinds ~types:env ~unknown ~is_rule t ~exp =
-  let check, _, _ = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
-  check ~is_rule t ~exp
+let check_query ~type_abbrevs ~kinds ~types ~unknown t ~exp =
+  let check_query, _, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown in
+  check_query t ~exp
 
-let check_chr_rule ~type_abbrevs ~kinds ~types:env ~unknown r =
-  let _, check_chr, _ = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
+let check_rule ~type_abbrevs ~kinds ~types ~unknown t ~exp =
+  let _, check_rule, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown in
+  check_rule t ~exp
+
+let check_chr_rule ~type_abbrevs ~kinds ~types ~unknown r =
+  let _, _, check_chr, _ = checker  ~type_abbrevs ~kinds ~types ~unknown in
   check_chr r
 
-let check_macro ~type_abbrevs ~kinds ~types:env k m =
+let check_macro ~type_abbrevs ~kinds ~types k m =
   let unknown = F.Map.empty in
-  let _, _, check_macro = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
+  let _, _, _, check_macro = checker  ~type_abbrevs ~kinds ~types ~unknown in
   let unknown = check_macro m in
   if F.Map.is_empty unknown then ()
   else
