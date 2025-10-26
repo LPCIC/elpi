@@ -851,6 +851,11 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
 % Infix notation for same_term
 func (==) A, A.
 X == Y :- same_term X Y.
+
+% Unification without occur check. It can create infinite terms.
+:nooc
+func unsound_unif -> A, A.
+unsound_unif X X.
 |};
 
   MLCode(Pred("cmp_term",

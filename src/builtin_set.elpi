@@ -115,3 +115,136 @@ elements (node L E R _) Acc X :-
 
 } % std.set.private
 } % std.set
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Fast sets only work ground terms but do not perform occur check
+
+kind std.fset type -> type.
+type std.fset std.fset.private.set E -> (func E, E -> cmp) -> std.fset E.
+
+namespace std.fset {
+
+% [make Eq Ltn M] builds an empty set M where keys are compared using Eq and Ltn
+func make (func E, E -> cmp) -> std.fset E.
+make Cmp (std.fset private.empty Cmp).
+
+% [mem E M] looks if E is in M
+func mem E, std.fset E.
+mem E (std.fset M Cmp):- private.mem M Cmp E.
+
+% [add E M M1] M1 is M + {E}
+func add E, std.fset E -> std.fset E.
+add E (std.fset M Cmp) R :-
+  private.assert-ground E,
+  private.add M Cmp E M1,
+  unsound_unif R (std.fset M1 Cmp).
+
+% [remove E M M1] M1 is M - {E}
+func remove E, std.fset E -> std.fset E.
+remove E (std.fset M Cmp) R :-
+  private.assert-ground E,
+  private.remove M Cmp E M1,
+  unsound_unif R (std.fset M1 Cmp).
+
+% [cardinal S N] N is the number of elements of S
+func cardinal std.fset E -> int.
+cardinal (std.fset M _) N :- private.cardinal M N.
+
+func elements std.fset E -> list E.
+elements (std.fset M _) L :- private.elements M [] L.
+
+namespace private {
+
+func assert-ground A.
+assert-ground A :- std.assert! (ground_term A) "std.fset: not ground".
+
+% Taken from OCaml's set.ml
+kind set type -> type.
+type empty set E.
+type node set E -> E -> set E -> int -> set E.
+
+func height set E -> int.
+height empty 0.
+height (node _ _ _ H) H.
+
+func create set E, E, set E -> set E.
+create L E R S :-
+  H is {std.max {height L} {height R}} + 1,
+  unsound_unif S (node L E R H).
+
+func bal set E, E, set E -> set E.
+bal L E R T :-
+  height L HL,
+  height R HR,
+  HL2 is HL + 2,
+  HR2 is HR + 2,
+  bal.aux HL HR HL2 HR2 L E R T.
+
+func bal.aux int, int, int, int, set E, E, set E -> set E.
+bal.aux HL _ _ HR2 (node LL LV LR _) X R T :-
+  HL > HR2, {height LL} >= {height LR}, !,
+  create LL LV {create LR X R} T.
+bal.aux HL _ _ HR2 (node LL LV (node LRL LRV LRR _) _) X R T :-
+  HL > HR2, !,
+  create {create LL LV LRL} LRV {create LRR X R} T.
+bal.aux _ HR HL2 _ L X (node RL RV RR _) T :-
+  HR > HL2, {height RR} >= {height RL}, !,
+  create {create L X RL} RV RR T.
+bal.aux _ HR HL2 _ L X (node (node RLL RLV RLR _) RV RR _) T :-
+  HR > HL2, !,
+  create {create L X RLL} RLV {create RLR RV RR} T.
+bal.aux _ _ _ _ L E R T :- create L E R T.
+
+func add set E, (func E, E -> cmp), E -> set E.
+add empty _ E T :- create empty E empty T.
+add (node L X R H) Cmp X1 S :- Cmp X1 X E, add.aux E Cmp L R X X1 H S.
+
+func add.aux cmp, (func E, E -> cmp), set E, set E, E, E, int -> set E.
+add.aux eq _   L R X _ H S :- unsound_unif S (node L X R H).
+add.aux lt Cmp L R E X _ T :- bal {add L Cmp X} E R T.
+add.aux gt Cmp L R E X _ T :- bal L E {add R Cmp X} T.
+
+func mem set E, (func E, E -> cmp), E.
+mem (node L K R _) Cmp E :- Cmp E K O, mem.aux O Cmp L R E.
+
+func mem.aux cmp, (func E, E -> cmp), set E, set E, E.
+mem.aux eq _ _ _ _.
+mem.aux lt Cmp L _ E :- mem L Cmp E.
+mem.aux gt Cmp _ R E :- mem R Cmp E.
+
+func remove-min-binding set E -> set E.
+remove-min-binding (node empty _ R _) R :- !.
+remove-min-binding (node L E R _) X :- bal {remove-min-binding L} E R X.
+
+func min-binding set E -> E.
+min-binding (node empty E _ _) E :- !.
+min-binding (node L _ _ _) E :- min-binding L E.
+
+func merge set E, set E -> set E.
+merge empty X X :- !.
+merge X empty X :- !.
+merge M1 M2 R :-
+  min-binding M2 X,
+  bal M1 X {remove-min-binding M2} R.
+
+func remove set E, (func E, E -> cmp), E -> set E.
+remove empty _ _ empty.
+remove (node L E R _) Cmp X M :- Cmp X E O, remove.aux O Cmp L R E X M.
+
+func remove.aux cmp, (func E, E -> cmp), set E, set E, E, E -> set E.
+remove.aux eq _   L R _ _ M :- merge L R M.
+remove.aux lt Cmp L R E X M :- bal {remove L Cmp X} E R M.
+remove.aux gt Cmp L R E X M :- bal L E {remove R Cmp X} M.
+
+func cardinal set E -> int.
+cardinal empty 0.
+cardinal (node L _ R _) N :- N is {cardinal L} + 1 + {cardinal R}.
+
+func elements set E, list E -> list E.
+elements empty X X.
+elements (node L E R _) Acc X :-
+  elements L [E|{elements R Acc}] X.
+
+} % std.fset.private
+} % std.fset
