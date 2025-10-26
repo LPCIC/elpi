@@ -1283,6 +1283,8 @@ bindings (node L V D R _) X X1 :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Fast maps only work ground terms but do not perform occur check
+
 kind std.fmap type -> type -> type.
 type std.fmap std.fmap.private.map K V -> (func K, K -> cmp) -> std.fmap K V.
 
@@ -1530,6 +1532,8 @@ elements (node L E R _) Acc X :-
 } % std.set
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Fast sets only work ground terms but do not perform occur check
 
 kind std.fset type -> type.
 type std.fset std.fset.private.set E -> (func E, E -> cmp) -> std.fset E.

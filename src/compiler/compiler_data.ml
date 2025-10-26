@@ -916,7 +916,7 @@ module ScopedTerm = struct
 
   let mk_w_ty_loc ?(ty = MutableOnce.make F.dummyname) ~scope name ~loc : 'a w_ty_loc =
     { scope; name; ty; loc } 
-  let mk_global_const ?escape_ns ~loc name : const = mk_w_ty_loc ~scope:(Scope.mkGlobal ?escape_ns ()) name ~loc
+  let mk_global_const ?ty ?escape_ns ~loc name : const = mk_w_ty_loc ?ty ~scope:(Scope.mkGlobal ?escape_ns ()) name ~loc
   let mk_bound_const ?ty ~lang name ~loc = mk_w_ty_loc ?ty ~scope:(Scope.Bound lang) name ~loc
   let mk_uvar ?ty name ~loc = mk_w_ty_loc ?ty ~scope:() name ~loc
   let mk_binder ?ty ~lang name ~loc = mk_w_ty_loc ?ty ~scope:lang ~loc name
@@ -943,6 +943,10 @@ module ScopedTerm = struct
    | Cast of t * ScopedTypeExpression.e
    and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
   [@@ deriving show]
+
+  let mkGlobalApp ?ty ?escape_ns ~loc f xs = App(mk_global_const ?ty ?escape_ns ~loc f,xs)
+  let mkBoundApp ?ty ~lang ~loc f xs = App(mk_bound_const ?ty ~lang ~loc f,xs)
+  let mkUVar ?ty ~loc f xs = UVar(mk_uvar ?ty ~loc f, xs) 
 
   let type_of { ty } : TypeAssignment.ty = assert(MutableOnce.is_set ty); TypeAssignment.deref ty
 

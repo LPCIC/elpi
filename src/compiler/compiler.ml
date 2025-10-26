@@ -749,12 +749,12 @@ module CustomFunctorCompilation = struct
 
   let scope_singlequote ~loc state x = 
     match State.get singlequote state with
-    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const x ~loc,[]))
-    | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
+    | None -> ScopedTerm.mkGlobalApp ~loc x []
+    | Some (language,f) -> ScopedTerm.(unlock @@ of_simple_term_loc @@ f ~language state loc (F.show x))
   let scope_backtick ~loc state x =
     match State.get backtick state with
-    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const x ~loc,[]))
-    | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
+    | None -> ScopedTerm.mkGlobalApp ~loc x []
+    | Some (language,f) -> ScopedTerm.(unlock @@ of_simple_term_loc @@ f ~language state loc (F.show x))
 end
 
 let namespace_separatorc = '.'
@@ -876,7 +876,7 @@ end = struct
     let { macros } = get_mtm state in
     match F.Map.find_opt c macros with
     | None -> error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
-    | Some (t, _) -> ScopedTerm.beta (ScopedTerm.clone_loc ~loc t) args
+    | Some (t, _) -> ScopedTerm.(beta (clone_loc ~loc t) args)
 
   (* would be better when symbols are resolved, in particular andf, nil and cons *)
 
@@ -887,13 +887,13 @@ end = struct
     | Const c when is_discard c -> ScopedTerm.Discard
     | Const c when is_macro_name c ->
         scope_term_macro ~loc ~state c []
-    | Const c when F.Set.mem c ctx -> ScopedTerm.(App(ScopedTerm.mk_bound_const ~lang:elpi_language c ~loc,[]))
+    | Const c when F.Set.mem c ctx -> ScopedTerm.mkBoundApp ~lang:elpi_language ~loc c []
     | Const c ->
-        if is_uvar_name c then ScopedTerm.UVar(ScopedTerm.mk_uvar c ~loc,[])
+        if is_uvar_name c then ScopedTerm.mkUVar ~loc c []
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
-        else if is_global c then ScopedTerm.(App(mk_global_const ~escape_ns:true (of_global c) ~loc,[]))
-        else ScopedTerm.(App(mk_global_const ~loc c,[]))
+        else if is_global c then ScopedTerm.mkGlobalApp ~escape_ns:true ~loc (of_global c) []
+        else ScopedTerm.mkGlobalApp ~loc c []
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App ({ it = Parens f },l) -> scope_term ~state ctx ~loc (App(f, l))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
@@ -914,10 +914,10 @@ end = struct
            scope_term_macro ~loc ~state c xs
          else
           let bound = F.Set.mem c ctx in
-          if bound then ScopedTerm.App(ScopedTerm.mk_bound_const ~lang:elpi_language c ~loc:cloc, xs)
-          else if is_uvar_name c then ScopedTerm.UVar(ScopedTerm.mk_uvar c ~loc:cloc,xs)
-          else if is_global c then ScopedTerm.App(ScopedTerm.mk_global_const ~escape_ns:true (of_global c) ~loc:cloc,xs)
-          else ScopedTerm.App(ScopedTerm.mk_global_const c ~loc:cloc, xs)
+          if bound then ScopedTerm.mkBoundApp ~lang:elpi_language ~loc:cloc c xs
+          else if is_uvar_name c then ScopedTerm.mkUVar ~loc:cloc c xs
+          else if is_global c then ScopedTerm.mkGlobalApp ~escape_ns:true ~loc:cloc (of_global c) xs
+          else ScopedTerm.mkGlobalApp ~loc:cloc c xs
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
         let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty) in
