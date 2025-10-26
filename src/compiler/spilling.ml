@@ -6,7 +6,7 @@ open Compiler_data
 module C = Constants
 open ScopedTerm
 
-type spill = { vars_names : string const list; expr : t }
+type spill = { vars_names : binder list; expr : t }
 type spills = spill list
 
 let args_missing_to_prop ~type_abbrevs x =
@@ -59,9 +59,9 @@ let mk_global ~types ~loc f l =
   let f_ty = TypingEnv.(resolve_symbol s types).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
   { scope = Scope.mkResolvedGlobal types s; name = f; ty = f_ty; loc }
 
-let pif_w_name_ty ~types ({ ty; loc } : 'a const) : Scope.t const =
+let pif_w_name_ty ~types ({ ty; loc } : 'a w_ty_loc) : const =
   mk_global ~types ~loc F.pif [TypeAssignment.deref ty]
-let pif_ty ~types (ty : string const) = (pif_w_name_ty ~types ty).ty
+let pif_ty ~types (ty : binder) = (pif_w_name_ty ~types ty).ty
 let pif_arg_ty ~types ty =
   match TypeAssignment.deref @@ pif_ty ~types ty with
   | TypeAssignment.Arr(_,_,x,_) -> TypeAssignment.create x
@@ -77,7 +77,7 @@ let add_spilled ~types (l : spill list) t =
       (fun { expr; vars_names } t ->
         vars_names
         (* Format.eprintf "fold %a\n" ScopedTerm.pretty t; *)
-         |> List.fold_left (fun t (v : _ const) ->
+         |> List.fold_left (fun t (v : binder) ->
             mk_loc ~loc:t.loc ~ty:t.ty
             @@ App (mk_global ~loc:v.loc ~types F.sigmaf [TypeAssignment.deref v.ty],
               [mk_loc ~loc:t.loc ~ty:TypeAssignment.(create (Arr (MRef (MutableOnce.make F.dummyname), NotVariadic,deref v.ty,deref t.ty)))
@@ -109,14 +109,14 @@ let app ~type_abbrevs ~types t args =
         | App (({ scope = s } as n), xs) when is_symbol ~types Elpi_runtime.Data.Global_symbols.and_ s -> mkApp n (aux_last xs), eat ~type_abbrevs args ty
         | Impl (b, l, s, t) -> Impl (b,l, s, aux t), ty
         | App (n, xs) -> mkApp n (xs @ args), eat ~type_abbrevs args ty
-        | Var(c,l) -> Var (c,l @ args), eat ~type_abbrevs args ty
+        | UVar(c,l) -> UVar (c,l @ args), eat ~type_abbrevs args ty
         | Discard | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) -> assert false
       in  
         mk_loc ~loc ~ty it
     and aux_last = function [] -> assert false | [ x ] -> [ aux x ] | x :: xs -> x :: aux_last xs in
     aux t
 
-let mk_spilled ~loc ~ty args n : (string const * t) list =
+let mk_spilled ~loc ~ty args n : (binder * t) list =
   (* builds the type of the spilled variables, all variables has same type *)
   (* let builf_head_ty tgt_ty =
     let rec aux = function
@@ -138,7 +138,7 @@ let mk_spilled ~loc ~ty args n : (string const * t) list =
       mk_loc ~loc ~ty:hd_ty @@ App (mk_bound_const ~lang:elpi_language f ~loc ~ty:hd_ty,[])
     in
       match ty with
-      | TypeAssignment.Arr (_, _, l, r) -> (mk_const ~scope:elpi_language f ~loc ~ty:(TypeAssignment.create l), built_tm l) :: aux (n-1) r
+      | TypeAssignment.Arr (_, _, l, r) -> (mk_binder ~lang:elpi_language f ~loc ~ty:(TypeAssignment.create l), built_tm l) :: aux (n-1) r
       | UVar r when MutableOnce.is_set r -> aux n (TypeAssignment.deref r)
       | _ -> anomaly "type abbreviations and spilling, not implemented"
   in
@@ -156,7 +156,7 @@ let rec bc ctx t =
   | Cast (t, ty) -> Cast (bc_loc ctx t, ty)
   | Spill (t, i) -> Spill (bc_loc ctx t, i)
   | App (hd, xs) -> App (hd, List.map (bc_loc ctx) xs)
-  | Discard | Var _ | CData _ -> t
+  | Discard | UVar _ | CData _ -> t
 
 and bc_loc ctx { loc; ty; it } = { loc; ty; it = bc ctx it }
 
@@ -171,7 +171,7 @@ let rec apply what v = function
   | Impl(d,l,t1,t2) -> Impl(d,l,apply_loc what v t1,apply_loc what v t2)
   | Cast(t,e) -> Cast(apply_loc what v t,e)
   | Spill _ -> assert false
-  | CData _ | Discard | Var _ as x -> x
+  | CData _ | Discard | UVar _ as x -> x
 and apply_loc what v { loc; ty; it } = { loc; ty; it = apply what v it }
 
 let apply_loc what v t =
@@ -231,7 +231,7 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
               | (v,ty) :: vs -> {loc;ty;it = Lam(Some v,None,mk_lam vs t)} in
             let missing_vars = List.map (fun (ty,arrow) -> 
                 let v = mk_eta_var () in
-                (mk_const ~scope:elpi_language v ~loc ~ty, arrow)) missing in
+                (mk_binder ~lang:elpi_language v ~loc ~ty, arrow)) missing in
             let missing_args = List.map (fun (v,_) -> { ty; loc; it = App(bind_const v, []) }) missing_vars in
             let t = { it; loc; ty } in
             let t = mk_lam missing_vars @@ add_spilled ~types spilled (app ~type_abbrevs ~types t missing_args) in
@@ -265,7 +265,7 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
             let bc = mk_loc ~loc ~ty (App(bind_const c,[])) in
             ( apply_loc vars_names bc t,
               {
-                vars_names = List.map (fun (v : _ const) ->
+                vars_names = List.map (fun (v : binder) ->
                    { v with ty = TypeAssignment.(create @@ Arr (MRef (MutableOnce.make F.dummyname), NotVariadic, deref ty,deref v.ty)) }) vars_names;
                 expr =
                   mk_loc ~loc ~ty:(pif_ty ~types  c) @@
@@ -275,11 +275,11 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
       in
       (spills, [ { it = Lam (abs, o, t); loc; ty } ])
   (* holes *)
-  | Var ({ ty = cty } as c, xs) ->
+  | UVar ({ ty = cty } as c, xs) ->
       let spills, args = List.split @@ List.map (spill ~types ~type_abbrevs args) xs in
       let args = List.flatten args in
       let spilled = List.flatten spills in
-      let it = Var (c, args) in
+      let it = UVar (c, args) in
       let ty = eat ~type_abbrevs args cty in
       if is_prop ~type_abbrevs ty then ([], [ add_spilled ~types spilled { it; loc; ty } ]) else (spilled, [ { it; loc; ty } ])
 
@@ -295,7 +295,7 @@ let rec remove_top_sigmas ~types t =
       { t with it = App(n, smart_map (remove_top_sigmas ~types) xs) }
   | Impl(x,l,t1,t2) -> { t with it = Impl(x,l,t1,remove_top_sigmas ~types t2) }
   | App ({ scope = s }, [{ it = Lam(Some { name = vn; ty = vty; loc=vloc },_,{ loc;ty }); } as b]) when is_symbol ~types Elpi_runtime.Data.Global_symbols.sigma s ->
-      remove_top_sigmas ~types { loc; ty; it = ScopedTerm.beta b [{ ty = vty; loc; it = Var(mk_bound_const ~lang:elpi_var vn ~loc:vloc ~ty:vty,[]) }] }
+      remove_top_sigmas ~types { loc; ty; it = ScopedTerm.beta b [{ ty = vty; loc; it = UVar(mk_uvar vn ~loc:vloc ~ty:vty,[]) }] }
   | _ -> t
 
 let spill ~type_abbrevs ~types t =

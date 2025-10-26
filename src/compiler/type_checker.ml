@@ -205,8 +205,8 @@ let error ~loc msg = error ~loc ("Typechecker: " ^ msg)
 
 let error_not_a_function ~loc c tyc args x =
   let t =
-    if args = [] then ScopedTerm.App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) c ~loc,[])
-    else ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) c ~loc,args)) in
+    if args = [] then ScopedTerm.App(mk_global_const ~escape_ns:true c ~loc,[])
+    else ScopedTerm.(App(mk_global_const ~escape_ns:true c ~loc,args)) in
   let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@].@ The type of %a is %a@]"
     ScopedTerm.pretty_ t ScopedTerm.pretty x F.pp c TypeAssignment.pretty_mut_once tyc in
   error ~loc msg
@@ -379,6 +379,10 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     | Bound lang -> local_type ctx ~loc t
   in
 
+  let drop_scope (x : const) : uvar =
+    { loc = x.loc; ty = x.ty; name = x.name; scope = () }
+  in
+
   let rec check ~positive (ctx : ctx Scope.Map.t) ~loc ~tyctx x ety : spilled_phantoms =
     (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty_mut_once ety; *)
     match x with
@@ -390,10 +394,10 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     | Spill(sp,info) -> 
       if not positive then error ~loc "Spilling in negative position is forbidden";
       check_spill ~positive ctx ~loc ~tyctx sp info ety
-    | App({ scope = gid } as hd,xs) -> check_app ~positive ctx ~loc ~tyctx hd (get_type ~loc ctx env hd) xs ety 
+    | App({ scope = gid } as hd,xs) -> check_app ~positive ctx ~loc ~tyctx gid (drop_scope hd) (get_type ~loc ctx env hd) xs ety 
     | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx c cty t ety
     | Discard -> []
-    | Var({ name = c } as hd,args) -> check_app ~positive ctx ~loc ~tyctx hd (uvar_type ~loc c) args ety
+    | UVar({ name = c } as hd,args) -> check_app ~positive ctx ~loc ~tyctx (Scope.Bound elpi_var) hd (uvar_type ~loc c) args ety
     | Cast(t,ty) ->
         let ty = TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty ty in
         let spills = check_loc ~positive ctx ~tyctx:None t ~ety:ty in
@@ -450,7 +454,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
   and check_lam ~positive ctx ~loc ~tyctx sc c_type_cast t ety =
-    let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_const ~scope:elpi_language (fresh_name ()) ~loc in
+    let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_binder ~lang:elpi_language (fresh_name ()) ~loc in
     let src = match c_type_cast with
       | None -> mk_uvar "Src"
       | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty x
@@ -497,7 +501,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
           let srcs = drop n srcs in unify_then_undo (arrow_of_tys srcs tgt) ety
     | Variadic _ -> true (* TODO *)
 
-  and check_app ~positive ctx ~loc ~tyctx { scope = cid; name = c; ty = tya; loc = cloc } cty args ety =
+  and check_app ~positive ctx ~loc ~tyctx cid ({ name = c; ty = tya; loc = cloc } as hd) cty args ety =
     match cty with
     | Overloaded all ->
       (* Format.eprintf "@[options %a %a %d:@ %a@]\n" F.pp c TypeAssignment.pretty_mut_once ety (List.length args) (pplist (fun fmt (_,x) -> TypeAssignment.pretty_mut_once fmt x) "; ") l; *)
@@ -506,7 +510,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       | [] -> error_overloaded_app_tgt ~valid_mode ~loc ~ety c all
       | [ty] -> 
       (* Format.eprintf "1option left: %a\n" TypeAssignment.pretty (snd ty); *)
-        check_app ~positive ctx ~loc ~tyctx { scope = cid; name = c; ty = tya; loc = cloc } (Single ty) args ety
+        check_app ~positive ctx ~loc ~tyctx cid hd (Single ty) args ety
       | l ->
       (* Format.eprintf "newoptions: %a\n" (pplist (fun fmt (_,x) -> TypeAssignment.pretty fmt x) "; ") l; *)
           let args = List.concat_map (fun x -> x :: check_loc ~positive ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
@@ -517,7 +521,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       (* Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty; *)
         let err ty =
           if args = [] then error_bad_ety ~valid_mode ~loc ~tyctx ~ety F.pp c ty (* uvar *)
-          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c ~loc,args)) ty in
+          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_global_const ~escape_ns:true c ~loc,args)) ty in
         let monodirectional () =
           (* Format.eprintf "checking app mono %a\n" F.pp c; *)
           let tgt = check_app_single ~positive ctx ~loc (cid,c,tya) ty [] args in
@@ -683,7 +687,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
             List.iter (check_no_discard (`Symb name)) args
         | _ -> ()
         end
-    | Var({ name; ty },args) ->
+    | UVar({ name; ty },args) ->
       let args = output_args (TypeAssignment.deref ty) args in
       List.iter (check_no_discard (`Uvar name)) args
     | _ -> ()

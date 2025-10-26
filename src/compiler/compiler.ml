@@ -749,11 +749,11 @@ module CustomFunctorCompilation = struct
 
   let scope_singlequote ~loc state x = 
     match State.get singlequote state with
-    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const ~name:x ~loc,[]))
+    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const x ~loc,[]))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
   let scope_backtick ~loc state x =
     match State.get backtick state with
-    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const ~name:x ~loc,[]))
+    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const x ~loc,[]))
     | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
 end
 
@@ -889,11 +889,11 @@ end = struct
         scope_term_macro ~loc ~state c []
     | Const c when F.Set.mem c ctx -> ScopedTerm.(App(ScopedTerm.mk_bound_const ~lang:elpi_language c ~loc,[]))
     | Const c ->
-        if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_bound_const ~lang:elpi_var c ~loc,[])
+        if is_uvar_name c then ScopedTerm.UVar(ScopedTerm.mk_uvar c ~loc,[])
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
-        else if is_global c then ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) (of_global c) ~loc,[]))
-        else ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ()) c ~loc,[]))
+        else if is_global c then ScopedTerm.(App(mk_global_const ~escape_ns:true (of_global c) ~loc,[]))
+        else ScopedTerm.(App(mk_global_const ~loc c,[]))
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App ({ it = Parens f },l) -> scope_term ~state ctx ~loc (App(f, l))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
@@ -915,9 +915,9 @@ end = struct
          else
           let bound = F.Set.mem c ctx in
           if bound then ScopedTerm.App(ScopedTerm.mk_bound_const ~lang:elpi_language c ~loc:cloc, xs)
-          else if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_bound_const ~lang:elpi_var c ~loc:cloc,xs)
-          else if is_global c then ScopedTerm.App(ScopedTerm.mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) (of_global c) ~loc:cloc,xs)
-          else ScopedTerm.App(ScopedTerm.mk_const ~scope:(Scope.mkGlobal ()) c ~loc:cloc, xs)
+          else if is_uvar_name c then ScopedTerm.UVar(ScopedTerm.mk_uvar c ~loc:cloc,xs)
+          else if is_global c then ScopedTerm.App(ScopedTerm.mk_global_const ~escape_ns:true (of_global c) ~loc:cloc,xs)
+          else ScopedTerm.App(ScopedTerm.mk_global_const c ~loc:cloc, xs)
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
         let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty) in
@@ -928,7 +928,7 @@ end = struct
     | Lam (c,cloc,ty,b) ->
         if has_dot c then error ~loc "Bound variables cannot contain the namespaec separator '.'";
         let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty)) in
-        let name = Some (ScopedTerm.mk_const ~scope:elpi_language c ~loc:cloc) in
+        let name = Some (ScopedTerm.mk_binder ~lang:elpi_language c ~loc:cloc) in
         ScopedTerm.Lam (name,ty,scope_loc_term ~state (F.Set.add c ctx) b)
     | CData c -> ScopedTerm.CData c (* CData.hcons *)
     | App ({ it = Lam _},_) ->
@@ -1181,9 +1181,9 @@ module Flatten : sig
           let b' = aux_loc b in
           let ty' = option_smart_map (ScopedTypeExpression.smart_map_scoped_loc_ty tyf) ty in
           if b == b' && ty' == ty then it else Lam(n,ty',b')
-      | Var(c,l) ->
+      | UVar(c,l) ->
           let l' = smart_map aux_loc l in
-          if l == l' then it else Var(c,l')
+          if l == l' then it else UVar(c,l')
       | Cast(t,ty) ->
           let t' = aux_loc t in
           let ty' = ScopedTypeExpression.smart_map_scoped_loc_ty tyf ty in
@@ -1670,7 +1670,7 @@ end = struct
     let allocate_global_symbol = allocate_global_symbol types symb state in
     let push_bound (n,ctx) c = (n+1,Scope.Map.add c n ctx) in
     let push_unnamed_bound (n,ctx) = (n+1,ctx) in
-    let push ctx : string ScopedTerm.const option -> 'a = function
+    let push ctx : ScopedTerm.binder option -> 'a = function
       | None -> push_unnamed_bound ctx
       | Some { scope = l; name = x } -> push_bound ctx (x,l) in
     let open ScopedTerm in
@@ -1718,7 +1718,7 @@ end = struct
           let xs = List.map (todbl ctx) xs in
           D.mkApp c x xs
       (* holes *)
-      | Var({ name = c },xs) ->
+      | UVar({ name = c },xs) ->
           let xs = List.map (todbl ctx) xs in
           R.mkAppArg (allocate_arg c) 0 xs
       | Discard -> D.mkDiscard
@@ -2591,7 +2591,7 @@ let info_of_scoped_term ~types t =
   let rec aux loc ty = function
     | Impl(_,locs,l,r) -> log_bsymb locs Global_symbols.impl; log_ty loc ty; aux_loc l; aux_loc r
     | Discard -> log_ty loc ty
-    | Var({ scope = s; ty = tys; loc = locs},args) -> if args <> [] then log_ty loc ty; log_symb locs s (TypeAssignment.deref_opt tys); List.iter aux_loc args
+    | UVar({ scope = s; ty = tys; loc = locs},args) -> if args <> [] then log_ty loc ty; log_symb locs (Scope.Bound elpi_var) (TypeAssignment.deref_opt tys); List.iter aux_loc args
     | App({ scope = s; ty = tys; loc = locs},args) -> if args <> [] then log_ty loc ty; log_symb locs s (TypeAssignment.deref_opt tys); List.iter aux_loc args
     | CData _ -> log_ty loc ty
     | Spill(t,_) -> log_ty loc ty; aux_loc t
