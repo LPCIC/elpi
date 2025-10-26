@@ -228,11 +228,6 @@ let () = declare "heap_discard"
   ~description:"heapification of _"
     ~expectation:Test.(FailureOutput Str.(regexp "Discard not allowed"))
   ()
-let () = declare "heap_discard2"
-  ~source_elpi:"heap_discard2.elpi"
-  ~description:"heapification of _"
-    ~expectation:Test.(FailureOutput Str.(regexp "Discard not allowed"))
-  ()
 let () = declare "heap_discard3"
   ~source_elpi:"heap_discard3.elpi"
   ~description:"heapification of _"

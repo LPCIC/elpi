@@ -335,6 +335,13 @@ let check_clause, check_chr_guard_and_newgoal =
 
   let is_cut ~types ScopedTerm.{ it } = match it with App(b,[]) -> is_global ~types b S.cut | _ -> false in
 
+  let rec replace_signature_tgt ~loc ~with_ d' = function 
+    | [] -> with_
+    | _::xs -> match d' with
+      | Arrow (_, Variadic, _, _) -> replace_signature_tgt ~loc ~with_ d' xs
+      | Arrow (m, NotVariadic, l, r) ->  Arrow (m, NotVariadic, l, replace_signature_tgt ~loc ~with_ r xs)
+      | _ -> error ~loc @@ Format.asprintf "replace_signature_tgt: Type error: found %a " pp_dtype d'  in
+
   let rec infer ~type_abbrevs ~types ~ctx ~var ~exp t : dtype * Good_call.t =
     let rec infer_fold ~was_input ~was_data ~loc ~user_dtype ctx d hd tl =
       Format.eprintf "Starting infer fold at %a with dtype:@[%a@] and user_dtype:@[%a@]@." Loc.pp loc pp_dtype d (Format.pp_print_option pp_dtype) user_dtype;
@@ -505,19 +512,22 @@ let check_clause, check_chr_guard_and_newgoal =
       Format.eprintf "Calling assume_app on: %a with dtype %a with args [%a] and@." F.pp name pp_dtype d
         (pplist ~boxed:true ScopedTerm.pretty " ; ")
         tl;
-      let det_head = get_const_dtype ~type_abbrevs ~ctx ~var:!var ~loc s in
-      assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl;
-      Format.eprintf "The map after call to assume_app is %a@." Uvar.pp !var
-    and assume_var ~ctx ~loc d ({ ScopedTerm.name } as s) tl =
-      let rec replace_signature_tgt ~with_ d' = function 
-      | [] -> with_
-      | _::xs -> match d' with
-        | Arrow (_, Variadic, _, _) -> replace_signature_tgt ~with_ d' xs
-        | Arrow (m, NotVariadic, l, r) ->  Arrow (m, NotVariadic, l, replace_signature_tgt ~with_ r xs)
-        | _ -> error ~loc @@ Format.asprintf "replace_signature_tgt: Type error: found %a " pp_dtype d'  in
+      match t with 
+      | Scope.Bound b -> assume_bound_var b ~ctx ~loc d s tl
+      | _ ->
+        let det_head = get_const_dtype ~type_abbrevs ~ctx ~var:!var ~loc s in
+        assume_fold ~was_input ~was_data:(is_exp d) ~loc ctx det_head tl;
+        Format.eprintf "The map after call to assume_app is %a@." Uvar.pp !var
+    and assume_bound_var ~ctx ~loc b d ({ ScopedTerm.name } as s) tl =
       let dtype = get_uvar_dtype ~type_abbrevs ~ctx ~var:!var ~loc s in
       Format.eprintf "Dtype of %a is %a@." F.pp name pp_dtype dtype;
-      let d' = replace_signature_tgt dtype tl  ~with_:d in
+      let d' = replace_signature_tgt dtype tl ~loc ~with_:d in
+      Format.eprintf "d' is %a@." pp_dtype d';
+      BVar.add ~new_:false ctx ~v:d' ~loc (name, b) |> ignore
+    and assume_var ~ctx ~loc d ({ ScopedTerm.name } as s) tl =
+      let dtype = get_uvar_dtype ~type_abbrevs ~ctx ~var:!var ~loc s in
+      Format.eprintf "Dtype of %a is %a@." F.pp name pp_dtype dtype;
+      let d' = replace_signature_tgt dtype tl ~loc ~with_:d in
       Format.eprintf "d' is %a@." pp_dtype d';
       add ~loc ~v:d' name
     and assume ~was_input ctx d ScopedTerm.({ loc; it }) : unit =
@@ -738,7 +748,7 @@ let check_clause, check_chr_guard_and_newgoal =
     let rec aux ScopedTerm.{ it; loc } =
       match it with
       | Impl (R2L, _, ({ it = App (b, xs) } as hd), bo) -> (b, assume_hd ~type_abbrevs ~types ~loc ~ctx:!ctx ~var:var b hd xs, hd, Some bo)
-      (* | Impl (R2L, _, ({ it = UVar(b,xs) } as hd), bo) -> (b, assume_hd ~type_abbrevs ~types ~loc ~ctx:!ctx ~var:var (`UVar b) hd xs, hd, Some bo) *)
+      | Impl (R2L, _, ({ it = UVar _ }), _) -> raise (LoadFlexClause t)
       (* For clauses with quantified unification variables *)
       | App (n, [{ it = Lam (oname, _, body) }]) when is_quantifier ~types n ->
           ctx := BVar.add_oname ~new_:true ~loc oname (Compilation.type_ass_2func_mut ~loc ~type_abbrevs) !ctx;
