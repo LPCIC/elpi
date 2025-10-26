@@ -617,6 +617,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       begin
         let extra_spill = check ~positive ~tyctx ctx ~loc it ety in
         if not @@ MutableOnce.is_set ty then MutableOnce.set ty (Val ety);
+        check_discard_allowed t;
         extra_spill
       end
 
@@ -656,19 +657,56 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
 
   and rule_head ~loc it =
     match it with
-    | App({ scope = Global _; name = f },[{ it = Lam(_,_,x) }]) when F.equal F.pif f ->
+    | App({ scope = Global { resolved_to }; name = f },[{ it = Lam(_,_,x) }]) when F.equal F.pif f ->
          rule_head ~loc x.it
-    | Impl(R2L,_,{ it = App({ scope = Global { resolved_to }; name = c' },xs) },_) -> SymbolResolver.resolved_to env resolved_to, c', xs
-    | App({ scope = Global { resolved_to }; name = c },xs) -> SymbolResolver.resolved_to env resolved_to, c, xs
+    | Impl(R2L,_,{ it = App({ scope = Global { resolved_to }; name = c' },xs) },_) -> resolved_to, c', xs
+    | App({ scope = Global { resolved_to }; name = c },xs) -> resolved_to, c, xs
     | _ -> anomaly ~loc ("not a rule: " ^ ScopedTerm.show_t_ it)
 
-  and occur_check_pred { loc; it } =
-    let s, _, _ = rule_head ~loc it in
+  and occur_check_symb s = 
     match s with
     | Some id when Symbol.QMap.mem id env.symbols ->
         let { occur_check } : TypingEnv.symbol_metadata = Symbol.QMap.find id env.symbols in
         occur_check
     | _ -> true
+
+  and occur_check_pred { loc; it } =
+    let s, _, _ = rule_head ~loc it in
+    occur_check_symb (SymbolResolver.resolved_to env s)
+
+  and check_discard_allowed { loc; it } =
+    match it with
+    | App({ scope = Global { resolved_to = s }; name; ty },args) ->
+        begin match SymbolResolver.resolved_to env s with
+        | Some s when not (occur_check_symb (Some s)) ->
+            let args = output_args (TypeAssignment.deref ty) args in
+            List.iter (check_no_discard (`Symb name)) args
+        | _ -> ()
+        end
+    | Var({ name; ty },args) ->
+      let args = output_args (TypeAssignment.deref ty) args in
+      List.iter (check_no_discard (`Uvar name)) args
+    | _ -> ()
+
+  and check_no_discard s { loc; it } =
+    match it with
+    | Discard ->
+        begin match s with
+        | `Symb s -> error ~loc (Format.asprintf "Discard not allowed in output arguments of %a since it does not perform occur check" F.pp s)
+        | `Uvar s -> error ~loc (Format.asprintf "Discard not allowed in output arguments of %a since it may not perform occur check" F.pp s)
+        end
+    | App(_,xs) -> List.iter (check_no_discard s) xs
+    | Impl(_,_,x,y) -> check_no_discard s x; check_no_discard s y
+    | Cast(x,_) -> check_no_discard s x
+    | Lam (_,_,x) -> check_no_discard s x
+    | _ -> ()
+
+  and output_args ty l =
+    match ty, l with
+    | TypeAssignment.Arr(m,NotVariadic,_,ty), x :: l when not (TypeAssignment.is_input m) -> x :: output_args ty l
+    | TypeAssignment.Arr(m,Variadic,_,ty), x :: l when not (TypeAssignment.is_input m) -> x :: l
+    | TypeAssignment.Arr(_,NotVariadic,_,ty), x :: l -> output_args ty l
+    | _ -> []
 
   and check_matches_poly_skema_loc ~unknown { loc; it } =
     let _, c, args = rule_head ~loc it in

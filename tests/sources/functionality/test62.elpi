@@ -6,6 +6,6 @@ pred rel.
 f :-
   X = (x\ 3),
   % Good lambda in X, but wrongly called below
-  Z = X _.
+  Z = X 1.
 
 main.
