@@ -952,7 +952,7 @@ let deoptimize_uv_w_args = function
         G |- 5\ f 1 5
    
 *)
-let rec no_discard = function
+(* let rec no_discard = function
   | Discard -> false
   | Const _ -> true
   | Nil -> true
@@ -962,13 +962,18 @@ let rec no_discard = function
   | Arg _ | AppArg _ -> false
   | UVar _ | AppUVar _ -> true
   | CData _ -> true
-  | Builtin(_,xs) -> List.for_all no_discard xs
+  | Builtin(_,xs) -> List.for_all no_discard xs *)
 
 let rec move ~argsdepth (e:env) ?(oc=No) ~from ~to_ t =
 (* TODO: to disable occur_check add something like: let avoid = None in *)
  let delta = from - to_ in
  let rc =
-         if delta = 0 && e == empty_env && (oc == No || (oc == Skip (*&& no_discard t*))) then t (* Nothing to do! *)
+  if delta = 0 && e == empty_env && (oc == No || (oc == Skip)) then
+   begin
+    (* statically checked: *)
+    (* assert(no_discard t); *)
+     t (* Nothing to do! *)
+   end
  else begin
   (*if delta = 0 && e == empty_env && avoid <> None then prerr_endline "# EXPENSIVE OCCUR CHECK";*)
   let rec maux e depth x =
