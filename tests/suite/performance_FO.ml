@@ -62,11 +62,15 @@ let () = declare "deep_index"
   ~description:"indexing deeper rules out"
   ()
 
+let () = declare "map_nooc"
+  ~source_elpi:"map_nooc.elpi"
+  ~description:"stdlib fast map"
+  ()
 let () = declare "map"
   ~source_elpi:"map.elpi"
   ~description:"stdlib map"
   ()
-  let () = declare "map_defined_list"
+let () = declare "map_defined_list"
   ~source_elpi:"map_list.elpi"
   ~description:"stdlib map reference"
   ()
@@ -82,6 +86,10 @@ let () = declare "map_ho"
 let () = declare "set"
   ~source_elpi:"set.elpi"
   ~description:"stdlib set"
+  ()
+let () = declare "set_nooc"
+  ~source_elpi:"set_nooc.elpi"
+  ~description:"stdlib fast set"
   ()
 let () = declare "set_ho"
   ~source_elpi:"set_ho.elpi"

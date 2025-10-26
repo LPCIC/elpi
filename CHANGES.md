@@ -1,5 +1,11 @@
 # UNRELEASED
 
+- Language:
+  - New attribute `:nooc` to disable occur check
+- Stdlib:
+  - New `unsound_unif` performing unification without occur check
+  - New `std.fset` and `std.fmap` that work on ground terms and
+    disable occur check
 - Compiler:
   - Change raise an error in case of type/typeabbrev collision
 

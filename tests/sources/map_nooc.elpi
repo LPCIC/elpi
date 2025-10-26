@@ -1,0 +1,31 @@
+
+pred build i:int, i:int, i:std.fmap int int, o:std.fmap int int.
+build N N X X :- !.
+build N M X X1 :-
+  N1 is N + 1,
+  std.fmap.add N N X XR,
+  build N1 M XR X1.
+
+pred test i:int, i:int, i:(pred i:int, i:A, o:int), i:A.
+test N N _ _ :- !.
+test N M F X :-
+  N1 is N + 1,
+  std.assert! (F N X N) "not found",
+  test N1 M F X.
+
+pred test2 i:int, i:int, i:(pred i:int, i:A, o:A), i:A.
+test2 N N _ _ :- !.
+test2 N M F X :-
+  N1 is N + 1,
+  std.assert! (F N X X1) "not found",
+  test2 N1 M F X1.
+
+macro @iters :- 4096.
+
+main :-
+  std.time (build 0 @iters {std.fmap.make cmp_term} T) Time0, !,
+  std.time (test 0 @iters std.fmap.find T) Time1, !,
+  std.fmap.bindings T B,
+  std.assert! ({std.length B} = @iters, B = [pr 0 0|_]) "bindings broken", !,
+  std.time (test2 0 @iters std.fmap.remove T) Time2, !,
+  print Time0 "+" Time1 "+" Time2.

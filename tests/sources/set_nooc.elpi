@@ -1,0 +1,32 @@
+
+pred build i:int, i:int, i:std.fset int, o:std.fset int.
+build N N X X :- !.
+build N M X X1 :-
+  N1 is N + 1,
+  std.fset.add N X XR,
+  build N1 M XR X1.
+
+pred test i:int, i:int, i:(pred i:int, i:A), i:A.
+test N N _ _ :- !.
+test N M F X :-
+  N1 is N + 1,
+  std.assert! (F N X) "not found",
+  test N1 M F X.
+
+pred test2 i:int, i:int, i:(pred i:int, i:A, o:A), i:A, o:A.
+test2 N N _ R R :- !.
+test2 N M F X R :-
+  N1 is N + 1,
+  F N X X1,
+  test2 N1 M F X1 R.
+
+macro @iters :- 4096.
+
+main :-
+  std.time (build 0 @iters {std.fset.make cmp_term} T) Time0, !,
+  std.time (test 0 @iters std.fset.mem T) Time1, !,
+  std.fset.elements T L,
+  std.assert! ({std.length L} = @iters, L = [0|_]) "elements broken", !,
+  std.time (test2 0 @iters std.fset.remove T E) Time2, !,
+  std.assert! (std.fset.cardinal E 0) "not empty",
+  print Time0 "+" Time1 "+" Time2.
