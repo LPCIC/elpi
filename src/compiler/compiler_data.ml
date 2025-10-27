@@ -439,6 +439,7 @@ module TypingEnv : sig
     indexing : indexing;
     availability : Elpi_parser.Ast.Structured.symbol_availability;
     implemented_in_ocaml : bool;
+    occur_check : bool;
   }
   [@@deriving show]
 
@@ -482,6 +483,7 @@ end = struct
     indexing : indexing;
     availability : Elpi_parser.Ast.Structured.symbol_availability;
     implemented_in_ocaml : bool;
+    occur_check : bool;
   }
   [@@deriving show]
 
@@ -533,12 +535,13 @@ end = struct
   
   
   let merge_symbol_metadata s
-      { ty = ty1; indexing = idx1; availability = a1; implemented_in_ocaml = o1; }
-       { ty = ty2; indexing = idx2; availability = a2; implemented_in_ocaml = o2; } =
+      { ty = ty1; indexing = idx1; availability = a1; implemented_in_ocaml = o1; occur_check = oc1 }
+       { ty = ty2; indexing = idx2; availability = a2; implemented_in_ocaml = o2; occur_check = oc2 } =
     { ty = TypeAssignment.merge_skema ty1 ty2;
       indexing = merge_indexing s idx1 idx2;
       availability = merge_availability s a1 a2;
       implemented_in_ocaml = o1 || o2;
+      occur_check = oc1 && oc2;
     }
   
   let o2l = function  TypeAssignment.Single x -> [x] | Overloaded l -> l
@@ -763,7 +766,8 @@ module ScopedTypeExpression = struct
     nparams : int;
     loc : Loc.t;
     index : Ast.Structured.predicate_indexing option;
-    availability : Ast.Structured.symbol_availability;  
+    availability : Ast.Structured.symbol_availability;
+    occur_check : bool;
   }
   [@@ deriving show]
 
@@ -824,11 +828,11 @@ module ScopedTypeExpression = struct
       let t' = smart_map_scoped_loc_ty f t in
       if t == t' then orig else Ty t'
 
-  let smart_map f ({ name; value; nparams; loc; index; availability } as orig) =
+  let smart_map f ({ name; value; nparams; loc; index; availability; occur_check } as orig) =
     let name' = f name in
     let value' = smart_map_tye f value in
     if name == name' && value' == value then orig
-    else { name = name'; value = value'; nparams; loc; index; availability }
+    else { name = name'; value = value'; nparams; loc; index; availability; occur_check }
 
 end
 
@@ -905,17 +909,21 @@ module ScopedTerm = struct
     
   end
 
-  type 'scope const = { scope: 'scope; name: F.t; ty: TypeAssignment.t MutableOnce.t; loc : Loc.t }
-  [@@ deriving show]
+  type 'scope w_ty_loc = { scope: 'scope; name: F.t; ty: TypeAssignment.t MutableOnce.t; loc : Loc.t } [@@ deriving show]
+  type const = Scope.t w_ty_loc [@@ deriving show]
+  type uvar = unit w_ty_loc [@@ deriving show]
+  type binder = string w_ty_loc [@@ deriving show]
 
-  let mk_const ?(ty = MutableOnce.make F.dummyname) ~scope name ~loc : 'a const = { scope; name; ty; loc } 
-  let mk_bound_const ?ty ~lang name ~loc = mk_const ?ty ~scope:(Scope.Bound lang) name ~loc
+  let mk_w_ty_loc ?(ty = MutableOnce.make F.dummyname) ~scope name ~loc : 'a w_ty_loc =
+    { scope; name; ty; loc } 
+  let mk_global_const ?ty ?escape_ns ~loc name : const = mk_w_ty_loc ?ty ~scope:(Scope.mkGlobal ?escape_ns ()) name ~loc
+  let mk_bound_const ?ty ~lang name ~loc = mk_w_ty_loc ?ty ~scope:(Scope.Bound lang) name ~loc
+  let mk_uvar ?ty name ~loc = mk_w_ty_loc ?ty ~scope:() name ~loc
+  let mk_binder ?ty ~lang name ~loc = mk_w_ty_loc ?ty ~scope:lang ~loc name
+  let bind_const (n : binder) : const = { n with scope = Scope.Bound n.scope }
 
-  let bind_const (n : string const) : Scope.t const = { n with scope = Scope.Bound n.scope }
-
-  let mk_global_const ~name ~loc : 'a const = mk_const ~scope:(Scope.mkGlobal ()) name ~loc
-  let const_of_symb ~types symb ~loc : 'a const = mk_const ~scope:(Scope.mkResolvedGlobal types symb) (Symbol.get_func symb) ~loc
-  let clone_const ?(clone_scope = Fun.id) {scope;name; loc } = mk_const ~scope:(clone_scope scope) name ~loc
+  let const_of_symb ~types symb ~loc : const = mk_w_ty_loc ~scope:(Scope.mkResolvedGlobal types symb) (Symbol.get_func symb) ~loc
+  let clone_const ?(clone_scope = Fun.id) {scope;name; loc } = mk_w_ty_loc ~scope:(clone_scope scope) name ~loc
 
   type spill_info =
     | NoInfo (* before typing *)
@@ -925,16 +933,20 @@ module ScopedTerm = struct
 
   type t_ =
    | Impl of SimpleTerm.impl_kind * Loc.t * t * t (* `Impl(true,t1,t2)` ≡ `t1 => t2` and `Impl(false,t1,t2)` ≡ `t1 :- t2` *)
-   | Discard
-   | Var of Scope.t const * t list
-   | App of Scope.t const * t list
-   | Lam of (Scope.language const) option * ScopedTypeExpression.e option * t
+   | Discard of { mutable heapify : bool } (* true if passed to code not doing OC *)
+   | UVar of uvar * t list
+   | App of const * t list
+   | Lam of binder option * ScopedTypeExpression.e option * t
 
    | CData of CData.t
    | Spill of t * spill_info ref
    | Cast of t * ScopedTypeExpression.e
    and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
   [@@ deriving show]
+
+  let mkGlobalApp ?ty ?escape_ns ~loc f xs = App(mk_global_const ?ty ?escape_ns ~loc f,xs)
+  let mkBoundApp ?ty ~lang ~loc f xs = App(mk_bound_const ?ty ~lang ~loc f,xs)
+  let mkUVar ?ty ~loc f xs = UVar(mk_uvar ?ty ~loc f, xs) 
 
   let type_of { ty } : TypeAssignment.ty = assert(MutableOnce.is_set ty); TypeAssignment.deref ty
 
@@ -945,14 +957,14 @@ module ScopedTerm = struct
 
   let lvl_of = function
     | App(_, (_::_)) -> app
-    | Var (_, (_::_)) -> app
+    | UVar (_, (_::_)) -> app
     | Lam _ -> lam
     | _ -> 2
 
   let get_lam_name = function None -> F.from_string "_" | Some (n,_) -> n
   let mk_empty_lam_type = function
     | None -> None
-    | Some (name, loc, scope) -> Some (mk_const name ~scope ~loc)
+    | Some (name, loc, scope) -> Some (mk_w_ty_loc name ~scope ~loc)
 
   (* The type of the object being constructed is irrelevant since 
     build_infix_constant is used in the pretty printer of term and the type
@@ -984,14 +996,14 @@ module ScopedTerm = struct
     | Impl(L2RBang,_,t1,t2) -> fprintf fmt "@[<hov 2>(%a =!=>@ (%a))@]" pretty t1 pretty t2
     | Impl(R2L,_,t1,t2) -> fprintf fmt "@[<hov 2>(%a :-@ %a)@]" pretty t1 pretty t2
     | App({ name = f },[]) -> fprintf fmt "%a" F.pp f
-    | Discard -> fprintf fmt "_"
+    | Discard _ -> fprintf fmt "_"
     | Lam(n, ste, it) -> pretty_lam fmt n ste it
     | App({ name = f },[x]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App({ name = f },x::xs) when F.equal F.pif f || F.equal F.sigmaf f -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
     | App({ scope = Global _; name = f } as n,x::xs) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist ~boxed:true (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant n) (x::xs))
     | App({ name = f },x::xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist ~boxed:true (pretty_parens ~lvl:app) " ") (x::xs)
-    | Var({ name = f },[]) -> fprintf fmt "@[%a@]" F.pp f
-    | Var({ name = f },xs) -> fprintf fmt "@[%a@ %a@]" F.pp f (Util.pplist ~boxed:true (pretty_parens ~lvl:app) " ") xs
+    | UVar({ name = f },[]) -> fprintf fmt "@[%a@]" F.pp f
+    | UVar({ name = f },xs) -> fprintf fmt "@[%a@ %a@]" F.pp f (Util.pplist ~boxed:true (pretty_parens ~lvl:app) " ") xs
     | CData c -> fprintf fmt "%a" CData.pp c
     | Spill (t,{ contents = NoInfo }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t
@@ -1006,8 +1018,8 @@ module ScopedTerm = struct
   let equal env ?(types=true) t1 t2 =
     let rec eq ctx t1 t2 =
       match t1.it, t2.it with
-      | Discard, Discard -> true
-      | Var(n1,l1), Var(n2,l2) -> eq_uvar ctx n1.name n2.name && Util.for_all2 (eq ctx) l1 l2
+      | Discard _, Discard _ -> true
+      | UVar(n1,l1), UVar(n2,l2) -> eq_uvar ctx n1.name n2.name && Util.for_all2 (eq ctx) l1 l2
       | App({ scope = Global _ as b1; name = c1},xs), App({ scope = Global _ as b2; name = c2 },ys) -> Scope.equal env b1 b2 && F.equal c1 c2 && Util.for_all2 (eq ctx) xs ys
       | App({ scope = Bound l1; name = c1 },xs), App({ scope = Bound l2; name = c2 },ys) -> l1 = l2 && eq_var ctx l1 c1 c2 && Util.for_all2 (eq ctx) xs ys
       | Lam(None, ty1,b1), Lam (None,ty2, b2) -> eq ctx b1 b2 && (not types || Option.equal (ScopedTypeExpression.eqt env (empty ())) ty1 ty2)
@@ -1035,9 +1047,9 @@ module ScopedTerm = struct
     cin, cout, isc
 
   let rec of_simple_term ~loc = function
-    | SimpleTerm.Discard -> Discard
+    | SimpleTerm.Discard -> Discard { heapify = false }
     | Impl(b,loc,t1,t2) -> Impl(b,loc,of_simple_term_loc t1, of_simple_term_loc t2)
-    | Const(scope,c) -> App (mk_const ~scope c ~loc,[])
+    | Const(scope,c) -> App (mk_w_ty_loc ~scope c ~loc,[])
     | Opaque c -> CData c
     | Cast(t,ty) -> Cast(of_simple_term_loc t, ScopedTypeExpression.of_simple_type_loc ty)
     | Lam(c,ty,t) -> Lam(mk_empty_lam_type c,Option.map ScopedTypeExpression.of_simple_type_loc ty, of_simple_term_loc t)
@@ -1046,8 +1058,8 @@ module ScopedTerm = struct
         | [y] -> Impl(SimpleTerm.func_to_impl_kind c,cloc,of_simple_term_loc x, of_simple_term_loc y)
         | _ -> error ~loc "Use of App for Impl is allowed, but the length of the list in 3rd position must be 1"
       end
-    | App(s,c,cloc,x,xs) -> App(mk_const ~scope:s c ~loc, of_simple_term_loc x :: List.map of_simple_term_loc xs)
-    | Var(c,cloc,xs) -> Var(mk_bound_const ~lang:elpi_var c ~loc:cloc,List.map of_simple_term_loc xs)
+    | App(s,c,cloc,x,xs) -> App(mk_w_ty_loc ~scope:s c ~loc, of_simple_term_loc x :: List.map of_simple_term_loc xs)
+    | Var(c,cloc,xs) -> UVar(mk_uvar c ~loc:cloc,List.map of_simple_term_loc xs)
   and of_simple_term_loc { SimpleTerm.it; loc } =
     match it with
     | Opaque c when is_scoped_term c -> out_scoped_term c
@@ -1070,16 +1082,16 @@ module ScopedTerm = struct
       | Lam(v,tya,t) -> Lam(v,tya,rename_loc l c d t)
       | Spill(t,i) -> Spill(rename_loc l c d t,i)
       | Cast(t,ty) -> Cast(rename_loc l c d t,ty)
-      | Var(v,xs) -> Var(v,List.map (rename_loc l c d) xs)
-      | Discard | CData _ -> t
+      | UVar(v,xs) -> UVar(v,List.map (rename_loc l c d) xs)
+      | Discard _ | CData _ -> t
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
 
     let rec clone_loc ~loc {it} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
     clone ~loc = function
       | Impl (b, loc, l, r) -> Impl(b, loc, clone_loc ~loc l, clone_loc ~loc r)
       | Lam (n,ty,bo) -> Lam(Option.map clone_const n, ty, clone_loc ~loc bo)
-      | Discard -> Discard
-      | Var (v, xs) -> Var (clone_const v, List.map (clone_loc ~loc) xs)
+      | Discard { heapify } -> Discard { heapify }
+      | UVar (v, xs) -> UVar (clone_const v, List.map (clone_loc ~loc) xs)
       | App (g, xs) -> App (clone_const g, List.map (clone_loc ~loc) xs)
       | CData _ as t -> t 
       | Spill (t, _) -> Spill (clone_loc ~loc t, ref NoInfo)
@@ -1089,14 +1101,14 @@ module ScopedTerm = struct
       let rec fv acc { it } =
         match it with
         | Impl(_,_,a,b) -> List.fold_left fv acc [a;b]
-        | Var (_,args) -> List.fold_left fv acc args
+        | UVar (_,args) -> List.fold_left fv acc args
         | App({ scope = Bound l; name = c },xs) -> List.fold_left fv (Scope.Set.add (c,l) acc) xs
         | App({ scope = Global _ },xs) -> List.fold_left fv acc xs
         | Lam(None,_,t) -> fv acc t
         | Lam(Some { scope = c; name = l },_,t) -> Scope.Set.union acc @@ Scope.Set.remove (l,c) (fv Scope.Set.empty t)
         | Spill(t,_) -> fv acc t
         | Cast(t,_) -> fv acc t
-        | Discard | CData _ -> acc in
+        | Discard _ | CData _ -> acc in
       let rec load_subst ~loc t (args : t list) map fvset =
         match t, args with
         | Lam(None,_,t), _ :: xs -> load_subst_loc t xs map fvset
@@ -1117,21 +1129,21 @@ module ScopedTerm = struct
             let hd = Scope.Map.find (c,l) map in
             unlock @@ app_loc hd (List.map (subst_loc map fv) xs)
         | App(n,xs) -> App(n,List.map (subst_loc map fv) xs)
-        | Var(c,xs) -> Var(c,List.map (subst_loc map fv) xs)
+        | UVar(c,xs) -> UVar(c,List.map (subst_loc map fv) xs)
         | Spill(t,i) -> Spill(subst_loc map fv t,i)
         | Cast(t,ty) -> Cast(subst_loc map fv t,ty)
-        | Discard | CData _ -> t
+        | Discard _ | CData _ -> t
       and subst_loc map fv { it; ty; loc } = {loc; it = (subst map fv it); ty}
       and app_loc { it; loc; ty } args : t = {loc; it = (app ~loc it args); ty}
       and app ~loc t (args : t list) =
         if args = [] then t else
         match t with
         | App(n,xs) -> App(n,xs @ args)
-        | Var(c,xs) -> Var(c,xs @ args)
+        | UVar(c,xs) -> UVar(c,xs @ args)
         | Impl(_,_,_,_) -> error ~loc "cannot apply impl"
         | CData _ -> error ~loc "cannot apply cdata"
         | Spill _ -> error ~loc "cannot apply spill"
-        | Discard -> error ~loc "cannot apply discard"
+        | Discard _ -> error ~loc "cannot apply discard"
         | Cast _ -> error ~loc "cannot apply cast"
         | Lam _ -> load_subst ~loc t args Scope.Map.empty Scope.Set.empty
       in
@@ -1154,7 +1166,7 @@ module ScopedTerm = struct
         match it with
         | SimpleTerm.Opaque o when is_scoped_term o ->
             begin match out_scoped_term o with
-            | { it = Var(f,xs); loc = loc'; ty } -> { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = Var(f,xs @ l); loc = loc'; ty }) }
+            | { it = UVar(f,xs); loc = loc'; ty } -> { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = UVar(f,xs @ l); loc = loc'; ty }) }
             | { it = App({ scope = Bound g } as n,[]); loc = loc'; ty } when g = elpi_language ->
                 { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = App(n, l); loc = loc'; ty }) }
             | x -> anomaly ~loc (Format.asprintf "The term is not an elpi varible coming from a quotation: @[%a@]" pretty x)
@@ -1185,7 +1197,7 @@ module ScopedTerm = struct
       | _ -> false
   end
 
-  let is_var = function Var _ -> true | _ -> false
+  let is_var = function UVar _ -> true | _ -> false
 end
 
 

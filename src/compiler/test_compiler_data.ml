@@ -50,9 +50,9 @@ open ScopedTerm
 let loc = Ast.Loc.initial "x"
 let ty  = TypeAssignment.create (Prop Relation)
 let c3 = { loc; it = CData (Ast.cint.cin 3); ty };;
-let lam v t = { loc; ty; it = Lam(Some(ScopedTerm.mk_const ~scope:"" (F.from_string v) ~loc),None,t)}
-let var v = { loc; ty; it = App(ScopedTerm.mk_const ~scope:(Scope.Bound "") (F.from_string v) ~loc,[])}
-let app c l = { loc; ty; it = App(ScopedTerm.mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) (F.from_string c) ~loc,l)}
+let lam v t = { loc; ty; it = Lam(Some(ScopedTerm.mk_binder ~lang:"" (F.from_string v) ~loc),None,t)}
+let var v = { loc; ty; it = App(ScopedTerm.mk_bound_const ~lang:"" (F.from_string v) ~loc,[])}
+let app c l = { loc; ty; it = App(ScopedTerm.mk_global_const ~escape_ns:true (F.from_string c) ~loc,l)}
 
 let () = pp_t c3 "3";;
 let () = pp_t (app "f" [app "g" [var "x"]]) "f (g x)";;

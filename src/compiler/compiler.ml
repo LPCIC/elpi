@@ -450,9 +450,10 @@ end = struct (* {{{ *)
          if r.ifexpr <> None then duplicate_err "if";
          aux_attrs { r with ifexpr = Some s } rest
       | Untyped :: rest -> aux_attrs { r with typecheck = false } rest
-      | (External _ | Index _ | Functional) as a :: _-> illegal_err a
+      | (NoOC (* is set by the predicate *)
+        | External _ | Index _ | Functional) as a :: _-> illegal_err a
     in
-    let attributes = aux_attrs { insertion = None; id = None; ifexpr = None; typecheck = true } attributes in
+    let attributes = aux_attrs { insertion = None; id = None; ifexpr = None; typecheck = true; occur_check = true } attributes in
     begin
       match attributes.insertion, attributes.id with
       | Some (Replace x), Some _ -> illegal_replace x
@@ -473,7 +474,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux_chr { r with cifexpr = Some s } rest
-      | (Before _ | After _ | Replace _ | Remove _ | External _ | Index _ | Functional | Untyped) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | External _ | Index _ | Functional | Untyped | NoOC) as a :: _ -> illegal_err a 
     in
     let cid = Loc.show loc in
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
@@ -562,10 +563,11 @@ end = struct (* {{{ *)
            | None -> aux_tatt { r with index = Some (Structured.Index(i,it)) } f rest
            | Some _ -> duplicate_err "index"
          end
+      | NoOC :: rest -> aux_tatt { r with occur_check_pred = false } f rest
       | Functional :: rest -> aux_tatt r Structured.Function rest
       | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _ | Untyped) as a :: _ -> illegal_err a 
     in
-    let attributes, toplevel_func = aux_tatt { availability = Elpi; index = None} Structured.Relation attributes in
+    let attributes, toplevel_func = aux_tatt { availability = Elpi; index = None; occur_check_pred = true } Structured.Relation attributes in
     let is_functional_from_ty () = match ty.tit with
       | TPred (l, _,_) -> List.mem Functional l | _ -> false in
     let attributes =
@@ -747,12 +749,12 @@ module CustomFunctorCompilation = struct
 
   let scope_singlequote ~loc state x = 
     match State.get singlequote state with
-    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const ~name:x ~loc,[]))
-    | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
+    | None -> ScopedTerm.mkGlobalApp ~loc x []
+    | Some (language,f) -> ScopedTerm.(unlock @@ of_simple_term_loc @@ f ~language state loc (F.show x))
   let scope_backtick ~loc state x =
     match State.get backtick state with
-    | None -> ScopedTerm.(App(ScopedTerm.mk_global_const ~name:x ~loc,[]))
-    | Some (language,f) -> ScopedTerm.unlock @@ ScopedTerm.of_simple_term_loc @@ f ~language state loc (F.show x)
+    | None -> ScopedTerm.mkGlobalApp ~loc x []
+    | Some (language,f) -> ScopedTerm.(unlock @@ of_simple_term_loc @@ f ~language state loc (F.show x))
 end
 
 let namespace_separatorc = '.'
@@ -844,7 +846,7 @@ end = struct
   let scope_loc_tye ctx (t: Ast.Structured.functionality Ast.TypeExpression.t) =
     scope_loc_tye ctx t
 
-  let compile_type { Ast.Type.name; loc; attributes = { Ast.Structured.index; availability }; ty } =
+  let compile_type { Ast.Type.name; loc; attributes = { Ast.Structured.index; availability; occur_check_pred }; ty } =
     let open ScopedTypeExpression in
     let value = scope_loc_tye F.Set.empty ty in
     let vars =
@@ -868,13 +870,13 @@ end = struct
           let s = F.Set.remove c s in
           close s (Lam(c,t)) in
       close vars (Ty value) in
-    { ScopedTypeExpression.name; index; availability; loc; nparams; value }
+    { ScopedTypeExpression.name; index; availability; occur_check = occur_check_pred; loc; nparams; value }
 
   let scope_term_macro ~loc ~state c args =
     let { macros } = get_mtm state in
     match F.Map.find_opt c macros with
     | None -> error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
-    | Some (t, _) -> ScopedTerm.beta (ScopedTerm.clone_loc ~loc t) args
+    | Some (t, _) -> ScopedTerm.(beta (clone_loc ~loc t) args)
 
   (* would be better when symbols are resolved, in particular andf, nil and cons *)
 
@@ -882,16 +884,16 @@ end = struct
     let open Ast.Term in
     match t with
     | Parens { loc; it } -> scope_term ~state ctx ~loc it
-    | Const c when is_discard c -> ScopedTerm.Discard
+    | Const c when is_discard c -> ScopedTerm.Discard { heapify = false }
     | Const c when is_macro_name c ->
         scope_term_macro ~loc ~state c []
-    | Const c when F.Set.mem c ctx -> ScopedTerm.(App(ScopedTerm.mk_bound_const ~lang:elpi_language c ~loc,[]))
+    | Const c when F.Set.mem c ctx -> ScopedTerm.mkBoundApp ~lang:elpi_language ~loc c []
     | Const c ->
-        if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_bound_const ~lang:elpi_var c ~loc,[])
+        if is_uvar_name c then ScopedTerm.mkUVar ~loc c []
         else if CustomFunctorCompilation.is_singlequote c then CustomFunctorCompilation.scope_singlequote ~loc state c
         else if CustomFunctorCompilation.is_backtick c then CustomFunctorCompilation.scope_backtick ~loc state c
-        else if is_global c then ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) (of_global c) ~loc,[]))
-        else ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ()) c ~loc,[]))
+        else if is_global c then ScopedTerm.mkGlobalApp ~escape_ns:true ~loc (of_global c) []
+        else ScopedTerm.mkGlobalApp ~loc c []
     | App ({ it = App (f,l1) },l2) -> scope_term ~state ctx ~loc (App(f, l1 @ l2))
     | App ({ it = Parens f },l) -> scope_term ~state ctx ~loc (App(f, l))
     | App({ it = Const c }, [x]) when F.equal c F.spillf ->
@@ -912,10 +914,10 @@ end = struct
            scope_term_macro ~loc ~state c xs
          else
           let bound = F.Set.mem c ctx in
-          if bound then ScopedTerm.App(ScopedTerm.mk_bound_const ~lang:elpi_language c ~loc:cloc, xs)
-          else if is_uvar_name c then ScopedTerm.Var(ScopedTerm.mk_bound_const ~lang:elpi_var c ~loc:cloc,xs)
-          else if is_global c then ScopedTerm.App(ScopedTerm.mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) (of_global c) ~loc:cloc,xs)
-          else ScopedTerm.App(ScopedTerm.mk_const ~scope:(Scope.mkGlobal ()) c ~loc:cloc, xs)
+          if bound then ScopedTerm.mkBoundApp ~lang:elpi_language ~loc:cloc c xs
+          else if is_uvar_name c then ScopedTerm.mkUVar ~loc:cloc c xs
+          else if is_global c then ScopedTerm.mkGlobalApp ~escape_ns:true ~loc:cloc (of_global c) xs
+          else ScopedTerm.mkGlobalApp ~loc:cloc c xs
     | Cast (t,ty) ->
         let t = scope_loc_term ~state ctx t in
         let ty = scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty) in
@@ -926,7 +928,7 @@ end = struct
     | Lam (c,cloc,ty,b) ->
         if has_dot c then error ~loc "Bound variables cannot contain the namespaec separator '.'";
         let ty = ty |> Option.map (fun ty -> scope_loc_tye F.Set.empty (RecoverStructure.structure_type_expression ty.Ast.TypeExpression.tloc Ast.Structured.Relation valid_functional ty)) in
-        let name = Some (ScopedTerm.mk_const ~scope:elpi_language c ~loc:cloc) in
+        let name = Some (ScopedTerm.mk_binder ~lang:elpi_language c ~loc:cloc) in
         ScopedTerm.Lam (name,ty,scope_loc_term ~state (F.Set.add c ctx) b)
     | CData c -> ScopedTerm.CData c (* CData.hcons *)
     | App ({ it = Lam _},_) ->
@@ -973,7 +975,7 @@ end = struct
       | Ast.TypeAbbreviation.Lam(c,loc,_) -> error ~loc "only variables can be abstracted in type schema"
       | Ast.TypeAbbreviation.Ty t -> ScopedTypeExpression.Ty (scope_loc_tye ctx t)
   in
-    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; index = None; availability = Elpi }
+    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; index = None; occur_check = true; availability = Elpi }
 
   let compile_type_abbrev ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
     let ab = scope_type_abbrev ab in
@@ -1179,14 +1181,14 @@ module Flatten : sig
           let b' = aux_loc b in
           let ty' = option_smart_map (ScopedTypeExpression.smart_map_scoped_loc_ty tyf) ty in
           if b == b' && ty' == ty then it else Lam(n,ty',b')
-      | Var(c,l) ->
+      | UVar(c,l) ->
           let l' = smart_map aux_loc l in
-          if l == l' then it else Var(c,l')
+          if l == l' then it else UVar(c,l')
       | Cast(t,ty) ->
           let t' = aux_loc t in
           let ty' = ScopedTypeExpression.smart_map_scoped_loc_ty tyf ty in
           if t' == t && ty' == ty then it else Cast(t',ty')
-      | Discard -> it
+      | Discard _ -> it
       | CData _ -> it
     and aux_loc ({ it; loc; ty } as orig) =
       let it' = aux it in
@@ -1394,8 +1396,9 @@ end = struct
     types
 
   let check_and_spill_pred ~time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types t =
-    let unknown = time_this time (fun () -> Type_checker.check ~is_rule:true ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
-    unknown, if needs_spilling then Spilling.main ~types ~type_abbrevs t else t
+    let unknown, occur_check = time_this time (fun () -> Type_checker.check_rule ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
+    let t = if needs_spilling then Spilling.main ~types ~type_abbrevs t else t in
+    unknown, t, occur_check
 
   let is_global ~types { ScopedTerm.scope = symb' } symb =
     match symb' with
@@ -1470,12 +1473,12 @@ end = struct
     ) u_types;
 
     (* returns unkown types + spilled clauses *)
-    let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = { Ast.Structured.typecheck } } as clause) ->
-      let unknown, body = 
+    let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = ({ Ast.Structured.typecheck; occur_check } as atts) } as clause) ->
+      let unknown, body, occur_check_pred = 
         if typecheck then check_and_spill_pred ~time:type_check_time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types body
-        else unknown, body in
+        else unknown, body, true in
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
-      let spilled = {clause with body; needs_spilling = false} in
+      let spilled = {clause with body; needs_spilling = false; attributes = { atts with occur_check = occur_check && occur_check_pred }} in
 
       if typecheck && not flags.skip_det_checking then
         time_this det_check_time (fun () -> Determinacy_checker.check_clause ~types ~unknown ~type_abbrevs spilled.body);
@@ -1654,6 +1657,11 @@ end = struct
         amap := F.Map.add c n !amap;
         n 
     in
+    let allocate_fresh_arg () =
+        let n = F.Map.cardinal !amap in
+        let c = F.from_string (Printf.sprintf "%%Underscore%d" n) in
+        allocate_arg c
+    in
     let lookup_bound loc (_,ctx) (c,l as x) =
       try Scope.Map.find x ctx
       with Not_found -> anomaly ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "" ^ " in context " ^ Scope.Map.(show Format.pp_print_int) ctx) 
@@ -1667,7 +1675,7 @@ end = struct
     let allocate_global_symbol = allocate_global_symbol types symb state in
     let push_bound (n,ctx) c = (n+1,Scope.Map.add c n ctx) in
     let push_unnamed_bound (n,ctx) = (n+1,ctx) in
-    let push ctx : string ScopedTerm.const option -> 'a = function
+    let push ctx : ScopedTerm.binder option -> 'a = function
       | None -> push_unnamed_bound ctx
       | Some { scope = l; name = x } -> push_bound ctx (x,l) in
     let open ScopedTerm in
@@ -1715,10 +1723,16 @@ end = struct
           let xs = List.map (todbl ctx) xs in
           D.mkApp c x xs
       (* holes *)
-      | Var({ name = c },xs) ->
+      | UVar({ name = c },xs) ->
           let xs = List.map (todbl ctx) xs in
           R.mkAppArg (allocate_arg c) 0 xs
-      | Discard -> D.mkDiscard
+      | Discard { heapify = false } -> D.mkDiscard
+      | Discard { heapify = true } ->
+          let xs =
+            Scope.Map.bindings (snd ctx) |>
+            List.map (fun (k,_) -> allocate_bound_symbol t.loc ctx k) in
+          R.mkAppArg (allocate_fresh_arg ()) 0 xs
+          
     in
     let t  = todbl (depth,ctx) t in
     (!symb, !amap), t
@@ -1955,7 +1969,7 @@ end = struct
     let t = if needs_spilling then Spilling.main ~types ~type_abbrevs t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
-  let extend1_clause ~time flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body = body_st; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr } } =
+  let extend1_clause ~time flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body = body_st; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr; occur_check } } =
     assert (not needs_spilling);
     if not @@ filter1_if flags (fun x -> x) ifexpr then
       (clauses,symbols, index, pred_info)
@@ -1968,6 +1982,10 @@ end = struct
         error ?loc ("Declaring a rule for built in predicate")
       in
     if morelcs <> 0 then error ~loc "sigma in a toplevel rule is not supported";
+
+    let cl =
+      if occur_check then cl
+      else { cl with oc = false } in
 
     let p_info =
       try C.Map.find p pred_info
@@ -2266,7 +2284,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let needs_spilling = ref false in
   let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros; needs_spilling }) t in
-  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
+  let unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (!needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
@@ -2292,8 +2310,8 @@ let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~de
     anomaly "compile_term_to_raw_term called at run time";
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
   if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
-    let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
-    let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
+    let unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
+    let _ : TypingEnv.t= Type_checker.check_undeclared ~unknown ~type_abbrevs in
     ()
   end;
   let amap = get_argmap state in
@@ -2316,7 +2334,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let compiler_state,t = f compiler_state in
-  let unknown = Type_checker.check ~is_rule:false ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
+  let unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (false,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
@@ -2583,8 +2601,8 @@ let info_of_scoped_term ~types t =
 
   let rec aux loc ty = function
     | Impl(_,locs,l,r) -> log_bsymb locs Global_symbols.impl; log_ty loc ty; aux_loc l; aux_loc r
-    | Discard -> log_ty loc ty
-    | Var({ scope = s; ty = tys; loc = locs},args) -> if args <> [] then log_ty loc ty; log_symb locs s (TypeAssignment.deref_opt tys); List.iter aux_loc args
+    | Discard _ -> log_ty loc ty
+    | UVar({ scope = s; ty = tys; loc = locs},args) -> if args <> [] then log_ty loc ty; log_symb locs (Scope.Bound elpi_var) (TypeAssignment.deref_opt tys); List.iter aux_loc args
     | App({ scope = s; ty = tys; loc = locs},args) -> if args <> [] then log_ty loc ty; log_symb locs s (TypeAssignment.deref_opt tys); List.iter aux_loc args
     | CData _ -> log_ty loc ty
     | Spill(t,_) -> log_ty loc ty; aux_loc t

@@ -113,18 +113,18 @@ let check_indexing ~loc ~type_abbrevs availability name ty indexing =
   | Some (Ast.Structured.Index(l,k)) -> ensure_pred is_prop;
       let {static;runtime} = chose_indexing name l k in
       let overlap = overlap static in
-      TypingEnv.Index {mode;indexing=runtime; overlap; has_local_without_cut=None}
+      TypingEnv.Index {mode;indexing=runtime; overlap; has_local_without_cut=None;occur_check=true}
   | Some MaximizeForFunctional when availability = Ast.Structured.Elpi -> ensure_pred is_prop;
       let indexing = maximize_indexing_input mode in
       let overlap = overlap indexing in
-      Index {mode;indexing=MapOn 0; overlap; has_local_without_cut=None}
+      Index {mode;indexing=MapOn 0; overlap; has_local_without_cut=None;occur_check=true}
   | _ when Option.is_some is_prop ->
       let {static;runtime} = chose_indexing name [1] None in
       let overlap = overlap static in
-      TypingEnv.Index {mode;indexing=runtime; overlap; has_local_without_cut=None}
+      TypingEnv.Index {mode;indexing=runtime; overlap; has_local_without_cut=None;occur_check=true}
   | _ -> DontIndex
 
-let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
+let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability; occur_check } : Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
   (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
   let indexing = check_indexing ~loc ~type_abbrevs availability name ty index in
@@ -149,7 +149,7 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability } : 
     F.equal name F.pmf ||
     F.equal name F.eqf
   in
-  symb, quotient, { ty; indexing; availability; implemented_in_ocaml }
+  symb, quotient, { ty; indexing; availability; implemented_in_ocaml; occur_check }
 
 let arrow_of_args args ety =
   let rec aux = function
@@ -205,8 +205,8 @@ let error ~loc msg = error ~loc ("Typechecker: " ^ msg)
 
 let error_not_a_function ~loc c tyc args x =
   let t =
-    if args = [] then ScopedTerm.App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) c ~loc,[])
-    else ScopedTerm.(App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()) c ~loc,args)) in
+    if args = [] then ScopedTerm.App(mk_global_const ~escape_ns:true c ~loc,[])
+    else ScopedTerm.(App(mk_global_const ~escape_ns:true c ~loc,args)) in
   let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@].@ The type of %a is %a@]"
     ScopedTerm.pretty_ t ScopedTerm.pretty x F.pp c TypeAssignment.pretty_mut_once tyc in
   error ~loc msg
@@ -358,7 +358,8 @@ let silence_linear_warn f =
   len > 0 && (s.[0] = '_' || s.[len-1] = '_')
 
 let checker ~type_abbrevs ~kinds ~types:env ~unknown :
-  (is_rule:bool -> ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared) * 
+  (ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared) * 
+  (ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared * bool) * 
   ((_, ScopedTerm.t) Ast.Chr.t -> env_undeclared) *
   (ScopedTerm.t * Ast.Loc.t -> env_undeclared)
 =
@@ -378,6 +379,10 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     | Bound lang -> local_type ctx ~loc t
   in
 
+  let drop_scope (x : const) : uvar =
+    { loc = x.loc; ty = x.ty; name = x.name; scope = () }
+  in
+
   let rec check ~positive (ctx : ctx Scope.Map.t) ~loc ~tyctx x ety : spilled_phantoms =
     (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty_mut_once ety; *)
     match x with
@@ -389,10 +394,10 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     | Spill(sp,info) -> 
       if not positive then error ~loc "Spilling in negative position is forbidden";
       check_spill ~positive ctx ~loc ~tyctx sp info ety
-    | App({ scope = gid } as hd,xs) -> check_app ~positive ctx ~loc ~tyctx hd (get_type ~loc ctx env hd) xs ety 
+    | App({ scope = gid } as hd,xs) -> check_app ~positive ctx ~loc ~tyctx gid (drop_scope hd) (get_type ~loc ctx env hd) xs ety 
     | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx c cty t ety
-    | Discard -> []
-    | Var({ name = c } as hd,args) -> check_app ~positive ctx ~loc ~tyctx hd (uvar_type ~loc c) args ety
+    | Discard _ -> []
+    | UVar({ name = c } as hd,args) -> check_app ~positive ctx ~loc ~tyctx (Scope.Bound elpi_var) hd (uvar_type ~loc c) args ety
     | Cast(t,ty) ->
         let ty = TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty ty in
         let spills = check_loc ~positive ctx ~tyctx:None t ~ety:ty in
@@ -449,7 +454,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
   and check_lam ~positive ctx ~loc ~tyctx sc c_type_cast t ety =
-    let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_const ~scope:elpi_language (fresh_name ()) ~loc in
+    let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_binder ~lang:elpi_language (fresh_name ()) ~loc in
     let src = match c_type_cast with
       | None -> mk_uvar "Src"
       | Some x -> TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty x
@@ -496,7 +501,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
           let srcs = drop n srcs in unify_then_undo (arrow_of_tys srcs tgt) ety
     | Variadic _ -> true (* TODO *)
 
-  and check_app ~positive ctx ~loc ~tyctx { scope = cid; name = c; ty = tya; loc = cloc } cty args ety =
+  and check_app ~positive ctx ~loc ~tyctx cid ({ name = c; ty = tya; loc = cloc } as hd) cty args ety =
     match cty with
     | Overloaded all ->
       (* Format.eprintf "@[options %a %a %d:@ %a@]\n" F.pp c TypeAssignment.pretty_mut_once ety (List.length args) (pplist (fun fmt (_,x) -> TypeAssignment.pretty_mut_once fmt x) "; ") l; *)
@@ -505,7 +510,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       | [] -> error_overloaded_app_tgt ~valid_mode ~loc ~ety c all
       | [ty] -> 
       (* Format.eprintf "1option left: %a\n" TypeAssignment.pretty (snd ty); *)
-        check_app ~positive ctx ~loc ~tyctx { scope = cid; name = c; ty = tya; loc = cloc } (Single ty) args ety
+        check_app ~positive ctx ~loc ~tyctx cid hd (Single ty) args ety
       | l ->
       (* Format.eprintf "newoptions: %a\n" (pplist (fun fmt (_,x) -> TypeAssignment.pretty fmt x) "; ") l; *)
           let args = List.concat_map (fun x -> x :: check_loc ~positive ~tyctx:None ctx ~ety:(mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
@@ -516,7 +521,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       (* Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty; *)
         let err ty =
           if args = [] then error_bad_ety ~valid_mode ~loc ~tyctx ~ety F.pp c ty (* uvar *)
-          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_const ~scope:(Scope.mkGlobal ~escape_ns:true ()(* sucks *)) c ~loc,args)) ty in
+          else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_global_const ~escape_ns:true c ~loc,args)) ty in
         let monodirectional () =
           (* Format.eprintf "checking app mono %a\n" F.pp c; *)
           let tgt = check_app_single ~positive ctx ~loc (cid,c,tya) ty [] args in
@@ -612,10 +617,11 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
             check_app_single ~positive ctx ~loc fc ty consumed args
         | _ -> error_not_a_function ~loc:x.loc c ty (List.rev consumed) x (* TODO: trim loc up to x *)
 
-  and check_loc ~positive ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
+  and check_loc ~positive ~tyctx ctx ({ loc; it; ty } as t) ~ety : spilled_phantoms =
       begin
         let extra_spill = check ~positive ~tyctx ctx ~loc it ety in
         if not @@ MutableOnce.is_set ty then MutableOnce.set ty (Val ety);
+        check_discard_allowed t;
         extra_spill
       end
 
@@ -653,15 +659,48 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
         end
     | _ -> check ~positive ~tyctx ctx ~loc it ety
 
+  and rule_head ~loc it =
+    match it with
+    | App({ scope = Global { resolved_to }; name = f },[{ it = Lam(_,_,x) }]) when F.equal F.pif f ->
+         rule_head ~loc x.it
+    | Impl(R2L,_,{ it = App({ scope = Global { resolved_to }; name = c' },xs) },_) -> resolved_to, c', xs
+    | App({ scope = Global { resolved_to }; name = c },xs) -> resolved_to, c, xs
+    | _ -> anomaly ~loc ("not a rule: " ^ ScopedTerm.show_t_ it)
+
+  and occur_check_symb s = 
+    match s with
+    | Some id when Symbol.QMap.mem id env.symbols ->
+        let { occur_check } : TypingEnv.symbol_metadata = Symbol.QMap.find id env.symbols in
+        occur_check
+    | _ -> true
+
+  and occur_check_pred { loc; it } =
+    let s, _, _ = rule_head ~loc it in
+    occur_check_symb (SymbolResolver.resolved_to env s)
+
+  and check_discard_allowed { loc; it } =
+    match it with
+    | App({ scope = Global { resolved_to = s }; name; ty },args) ->
+        begin match SymbolResolver.resolved_to env s with
+        | Some s when not (occur_check_symb (Some s)) -> List.iter ensure_no_discard args
+        | _ -> ()
+        end
+    | UVar({ name; ty },args) -> List.iter ensure_no_discard args
+    | _ -> ()
+
+  and ensure_no_discard { loc; it } =
+    match it with
+    | Discard x -> x.heapify <- true
+    | App(_,xs) -> List.iter ensure_no_discard xs
+    | Impl(_,_,x,y) -> ensure_no_discard x; ensure_no_discard y
+    | Cast(x,_) -> ensure_no_discard x
+    | Lam (_,_,x) -> ensure_no_discard x
+    | UVar(u,xs) -> List.iter ensure_no_discard xs
+    | Spill(t,_) -> ensure_no_discard t
+    | CData _ -> ()
+
   and check_matches_poly_skema_loc ~unknown { loc; it } =
-    let c, args =
-      let rec head it =
-        match it with
-        | App({ scope = Global _; name = f },[{ it = Lam(_,_,x) }]) when F.equal F.pif f -> head x.it
-        | Impl(R2L,_,{ it = App({ scope = Global _; name = c' },xs) },_) -> c', xs
-        | App({ scope = Global _; name = c },xs) -> c, xs
-        | _ -> anomaly ~loc ("not a rule: " ^ ScopedTerm.show_t_ it) in
-      head it in
+    let _, c, args = rule_head ~loc it in
     (* Format.eprintf "Checking %a\n" F.pp c; *)
     match F.Map.find c env.overloading with
     | Single id ->
@@ -809,17 +848,24 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     (* this is wrong, since the same unit may be checked against different contexts *)
     (* if MutableOnce.is_set t.ty then !unknown_global else *)
 
-  let check ~is_rule t ~exp =
+  let check_query t ~exp =
     let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
-    if is_rule then check_matches_poly_skema_loc ~unknown:!unknown_global t;
+    if spills <> [] then error ~loc:t.loc "cannot spill in head";
+    !unknown_global in
+
+  let check_rule t ~exp =
+    let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.unval exp) in
+    check_matches_poly_skema_loc ~unknown:!unknown_global t;
+    let oc = occur_check_pred t in
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k { nocc = n; binder } ->
-      if n = 1 && not @@ silence_linear_warn k && is_rule then
+      if n = 1 && not @@ silence_linear_warn k then
         warn ~loc:(Symbol.get_loc binder) ~id:LinearVariable
           (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k))
       !sigma;
-    !unknown_global in
+    !unknown_global, oc in
+
   let check_chr { Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes } =
     let check_sequent { Ast.Chr.context; conclusion; eigen } =
       let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(mk_uvar "eigen") eigen in
@@ -841,19 +887,23 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(mk_uvar "macro") in
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     !unknown_global in
-  check, check_chr, check_macro
+  check_query, check_rule, check_chr, check_macro
 
-let check ~type_abbrevs ~kinds ~types:env ~unknown ~is_rule t ~exp =
-  let check, _, _ = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
-  check ~is_rule t ~exp
+let check_query ~type_abbrevs ~kinds ~types ~unknown t ~exp =
+  let check_query, _, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown in
+  check_query t ~exp
 
-let check_chr_rule ~type_abbrevs ~kinds ~types:env ~unknown r =
-  let _, check_chr, _ = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
+let check_rule ~type_abbrevs ~kinds ~types ~unknown t ~exp =
+  let _, check_rule, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown in
+  check_rule t ~exp
+
+let check_chr_rule ~type_abbrevs ~kinds ~types ~unknown r =
+  let _, _, check_chr, _ = checker  ~type_abbrevs ~kinds ~types ~unknown in
   check_chr r
 
-let check_macro ~type_abbrevs ~kinds ~types:env k m =
+let check_macro ~type_abbrevs ~kinds ~types k m =
   let unknown = F.Map.empty in
-  let _, _, check_macro = checker  ~type_abbrevs ~kinds ~types:env ~unknown in
+  let _, _, _, check_macro = checker  ~type_abbrevs ~kinds ~types ~unknown in
   let unknown = check_macro m in
   if F.Map.is_empty unknown then ()
   else
@@ -874,12 +924,12 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
 
       let indexing = match is_prop ~type_abbrevs ty with
       | None -> TypingEnv.DontIndex
-      | Some Relation -> Index {mode; indexing=MapOn 0; overlap = Allowed; has_local_without_cut=None} 
+      | Some Relation -> Index {mode; indexing=MapOn 0; overlap = Allowed; has_local_without_cut=None;occur_check=true} 
       | Some Function ->
         let {static;runtime} = chose_indexing (Symbol.get_func id) [1] None in
-        TypingEnv.Index {mode;indexing=runtime; overlap=Elpi_runtime.Data.mk_Forbidden static; has_local_without_cut=None}
+        TypingEnv.Index {mode;indexing=runtime; overlap=Elpi_runtime.Data.mk_Forbidden static; has_local_without_cut=None;occur_check=true}
       in
-      id, TypingEnv.{ ty ; indexing; availability = Elpi; implemented_in_ocaml = false }
+      id, TypingEnv.{ ty ; indexing; availability = Elpi; implemented_in_ocaml = false; occur_check = true }
   | _ -> assert false
 
 let check_undeclared ~type_abbrevs ~unknown =

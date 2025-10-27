@@ -62,11 +62,15 @@ let () = declare "deep_index"
   ~description:"indexing deeper rules out"
   ()
 
-let () = declare "map_rbtree"
+let () = declare "map_nooc"
+  ~source_elpi:"map_nooc.elpi"
+  ~description:"stdlib fast map"
+  ()
+let () = declare "map"
   ~source_elpi:"map.elpi"
   ~description:"stdlib map"
   ()
-  let () = declare "map_defined_list"
+let () = declare "map_defined_list"
   ~source_elpi:"map_list.elpi"
   ~description:"stdlib map reference"
   ()
@@ -82,6 +86,10 @@ let () = declare "map_ho"
 let () = declare "set"
   ~source_elpi:"set.elpi"
   ~description:"stdlib set"
+  ()
+let () = declare "set_nooc"
+  ~source_elpi:"set_nooc.elpi"
+  ~description:"stdlib fast set"
   ()
 let () = declare "set_ho"
   ~source_elpi:"set_ho.elpi"
@@ -107,4 +115,20 @@ let () = declare "dt_bench"
 let () = declare "dt_order"
   ~source_elpi:"dt_order.elpi"
   ~description:"discrimination_tree grafting"
+  ()
+
+
+let () = declare "rb"
+  ~source_elpi:"rb.elpi"
+  ~description:"red black trees"
+  ()
+
+let () = declare "rb_nooc"
+  ~source_elpi:"rb_nooc.elpi"
+  ~description:"red black trees no occur check"
+  ()
+
+let () = declare "rb_nooc_safe"
+  ~source_elpi:"rb_nooc_safe.elpi"
+  ~description:"red black trees no occur check with ground check"
   ()

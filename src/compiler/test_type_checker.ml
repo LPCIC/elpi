@@ -9,15 +9,15 @@ module TA = TypeAssignment
 let fs = F.from_string
 let dummy_loc = Loc.initial ""
 let dummy_str = F.dummyname
-let mk_global name = ScopedTerm.mk_const ~scope:(Scope.mkGlobal ()) (fs name) ~loc:dummy_loc
-let mk_bound name = ScopedTerm.mk_const ~scope:(Scope.Bound elpi_language) (fs name) ~loc:dummy_loc
-let mk_local name = ScopedTerm.mk_const ~scope:elpi_language (fs name) ~loc:dummy_loc
+let mk_global name = ScopedTerm.mk_global_const (fs name) ~loc:dummy_loc
+let mk_bound name = ScopedTerm.mk_bound_const ~lang:elpi_language (fs name) ~loc:dummy_loc
+let mk_binder name = ScopedTerm.mk_binder ~lang:elpi_language (fs name) ~loc:dummy_loc
 let build_loc it = ST.{ loc = dummy_loc; ty = MutableOnce.make dummy_str; it }
 let app n ag ags = build_loc @@ ST.App (mk_global n, ag :: ags)
-let lam n bo = build_loc @@ ST.Lam (Some (mk_local n), None, bo)
+let lam n bo = build_loc @@ ST.Lam (Some (mk_binder n), None, bo)
 let const n = build_loc @@ ST.App (mk_global n,[])
 let local_const n = build_loc @@ ST.App (mk_bound n,[])
-let var n = build_loc @@ ST.Var (ST.mk_bound_const ~lang:elpi_var (fs n) ~loc:dummy_loc, [])
+let var n = build_loc @@ ST.UVar (ST.mk_uvar (fs n) ~loc:dummy_loc, [])
 let build_ta a = TA.Val a
 let rprop = TA.Prop Relation
 let bool = TA.Cons (fs "bool")
@@ -52,7 +52,8 @@ let unifyable_ground_ty (t1 : TA.t MutableOnce.t TA.t_) (t2 : TA.t MutableOnce.t
 
 let get_hd_ty ST.{ it } =
   match it with
-  | ST.Var (s, _) | App (s, _) -> s.ScopedTerm.ty
+  | ST.UVar (s, _) -> s.ScopedTerm.ty
+  | App (s, _) -> s.ScopedTerm.ty
   | _ -> assert false
 
 let _ =
@@ -62,7 +63,7 @@ let _ =
   let kinds = F.Map.empty in
   let types = F.Map.empty, Symbol.QMap.empty in
   let build_ty_metadata ty : TypingEnv.symbol_metadata =
-    {indexing = TypingEnv.DontIndex; availability = Elpi_parser.Ast.Structured.Elpi; ty; implemented_in_ocaml = false } in
+    {indexing = TypingEnv.DontIndex; availability = Elpi_parser.Ast.Structured.Elpi; ty; implemented_in_ocaml = false; occur_check = true } in
   let add_ty k v (overloading, symbols) = 
     let k = fs k in
     let symb = Elpi_runtime.Data.Symbol.make_builtin k in
@@ -80,7 +81,6 @@ let _ =
 
   let unknown = F.Map.empty in
   let exp = build_ta rprop in
-  let is_rule = false in
 
   let check f test_nb t exp =
     let t = f t in
@@ -104,14 +104,14 @@ let _ =
     let varY = var "Y" in
     let term = app "=" (app "f" varY []) [ varX ] in
 
-    let _ = Type_checker.check ~is_rule ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query ~types ~unknown ~exp ~kinds ~type_abbrevs term in
     check_type 1 varX (rprop @-> rprop)
   in
 
   let _ =
     let varX = var "X" in
     let term = app "=" (const "f") [ varX ] in
-    let _ = Type_checker.check ~is_rule ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query ~types ~unknown ~exp ~kinds ~type_abbrevs term in
     check_type 2 varX (rprop @->> rprop @-> rprop)
   in
 
@@ -119,7 +119,7 @@ let _ =
     let varX = var "X" in
     let term = app "=" (lam "x" (app "f" (local_const "x") [])) [ varX ] in
 
-    let _ = Type_checker.check ~is_rule ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query ~types ~unknown ~exp ~kinds ~type_abbrevs term in
 
     Format.eprintf "The type of the variable X is %a@." TA.pretty_mut_once (TA.UVar (get_hd_ty varX));
     check_type 3 varX (rprop @->> rprop @-> rprop)
@@ -129,7 +129,7 @@ let _ =
     let varX = var "X" in
     let term = app "=" (lam "x" @@ lam "y" (app "f" (local_const "x") [ local_const "y" ])) [ varX ] in
 
-    let _ = Type_checker.check ~is_rule ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query ~types ~unknown ~exp ~kinds ~type_abbrevs term in
     (* Format.eprintf "The inferred type is %a@." TA.pretty_mut_once_raw (UVar varX.ty); *)
     check_type 4 varX (rprop @->> rprop @-> rprop)
   in
@@ -139,7 +139,7 @@ let _ =
 
     let term = app "apply" (const "false") [ ag; var "R" ] in
 
-    let _ = Type_checker.check ~is_rule:false ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query~types ~unknown ~exp ~kinds ~type_abbrevs term in
     check_type 5 ag (rprop @->> rprop);
     check_hd 6 term (rprop @->> (rprop @->> rprop) @-> bool @-> rprop)
   in
@@ -147,7 +147,7 @@ let _ =
   let _ =
     let term = app "apply" (const "tt") [ lam "x" (const "false"); var "R" ] in
 
-    let _ = Type_checker.check ~is_rule:false ~types ~unknown ~exp ~kinds ~type_abbrevs term in
+    let _ = Type_checker.check_query~types ~unknown ~exp ~kinds ~type_abbrevs term in
     check_hd 7 term (bool @->> (bool @->> rprop) @-> bool @-> rprop)
   in
 
