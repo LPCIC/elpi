@@ -1,24 +1,17 @@
-  rid:0 step:2 gid:0 dev:disc-tree:depth-path = Inst: MaxDepths  
-                                                2
-                                                1 
-                                                
-  rid:0 step:3 gid:0 dev:disc-tree:depth-path = Inst: MaxDepths  
-                                                2
-                                                3 
-                                                
-  rid:0 step:4 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths  
-                                                2;
-                                                3 
-                                                
-  rid:0 step:5 gid:0 dev:disc-tree:depth-path = Inst: MaxDepths  
-                                                3 
-                                                
-  rid:0 step:6 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths  
-                                                3 
-                                                
-  rid:0 step:7 gid:0 dev:disc-tree:depth-path = Inst: MaxDepths  
-                                                2 
-                                                
-  rid:0 step:8 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths  
-                                                2 
-                                                
+  rid:0 step:2 gid:0 dev:disc-tree:depth-path = Inst: MaxDepths 2
+                                                                1 
+                                                                
+  rid:0 step:3 gid:0 dev:disc-tree:depth-path = Inst: MaxDepths 2
+                                                                3 
+                                                                
+  rid:0 step:4 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths 2;
+                                                                3 
+                                                                
+  rid:0 step:5 gid:0 dev:disc-tree:depth-path = Inst: MaxDepths 3 
+                                                                
+  rid:0 step:6 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths 3 
+                                                                
+  rid:0 step:7 gid:0 dev:disc-tree:depth-path = Inst: MaxDepths 2 
+                                                                
+  rid:0 step:8 gid:0 dev:disc-tree:depth-path = Goal: MaxDepths 2 
+                                                                
