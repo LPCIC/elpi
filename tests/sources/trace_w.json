@@ -346,7 +346,7 @@
 {"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 123, column 0, characters 3297-3418:"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 123, column 0, characters 3297-3418:","(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))."]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := uvar frozen--402 []"]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := uvar frozen--451 []"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A3 := []"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := []"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A4 := uvar frozen--451 [] ===> uvar frozen--451 []"]}
@@ -457,7 +457,7 @@
 {"step" : 19,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:rule:builtin:name","payload" : ["="]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X1 := all any c0 \\ mono (c0 ===> c0)"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:rule:eq","payload" : ["success"]}
-{"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["pi","pi c0 \\\n of c0 (all any c0 \\ mono (c0 ===> c0)) => of (app c0 (global [])) (mono X3)"]}
+{"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["pi","pi c0 \\\n of c0 (all any c1 \\ mono (c1 ===> c1)) => of (app c0 (global [])) (mono X3)"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:rule","payload" : ["pi"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["67"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of c0 (all any c1 \\ mono (c1 ===> c1)) => of (app c0 (global [])) (mono X3)"]}

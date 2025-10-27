@@ -38,7 +38,7 @@
             "siblings": [
               { "goal_text": "print 1", "goal_id": 5 },
               {
-                "goal_text": "pi c0 \\ sigma c0 \\ fail => (true , fail)",
+                "goal_text": "pi c0 \\ sigma c1 \\ fail => (true , fail)",
                 "goal_id": 6
               }
             ],
@@ -129,7 +129,7 @@
       "Inference",
       {
         "current_goal_id": 6,
-        "current_goal_text": "pi c0 \\ sigma c0 \\ fail => (true , fail)",
+        "current_goal_text": "pi c0 \\ sigma c1 \\ fail => (true , fail)",
         "current_goal_predicate": "pi",
         "failed_attempts": [],
         "successful_attempts": [
