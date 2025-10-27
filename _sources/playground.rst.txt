@@ -321,7 +321,7 @@ Test Bed
    
    Success:
    
-   Time: 0.001
+   Time: 0.000
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -378,7 +378,7 @@ Test Bed
    Compilation time: 0.001
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.005
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -406,8 +406,8 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.003
-   Determinacy checking time: 0.005
+   Typechecking time: 0.004
+   Determinacy checking time: 0.006
    
    Success:
    
@@ -838,7 +838,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -1443,11 +1443,11 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Determinacy checking time: 0.005
    
    Success:
    
-   Time: 1.850
+   Time: 1.863
    
    Constraints:
    
@@ -1612,7 +1612,7 @@ Test Bed
    
    Success:
    
-   Time: 0.348
+   Time: 0.350
    
    Constraints:
    
@@ -1694,66 +1694,66 @@ Test Bed
 
    0 test  pi c0 c1 \ X0 c1 c0 = c0 , X0 = (c0 \ c1 \ c1)
    0 test  pi c0 c1 \ c0 = X0 c1 c0 , X0 = (c0 \ c1 \ c1)
-   0 test  pi c0 \ sigma c0 \ pi c1 c2 \ c1 c3 c2 = c2 , c1 = (c1 \ c2 \ c3)
-   0 test  pi c0 \ sigma c0 \ pi c1 c2 \ c2 = c1 c3 c2 , c1 = (c1 \ c2 \ c3)
+   0 test  pi c0 \ sigma c1 \ pi c2 c3 \ c1 c3 c2 = c2 , c1 = (c2 \ c3 \ c3)
+   0 test  pi c0 \ sigma c1 \ pi c2 c3 \ c2 = c1 c3 c2 , c1 = (c2 \ c3 \ c3)
    ----------------------------------------
    0 test  not (pi c0 c1 \ X1 c0 = c1) , X1 = whatever
    0 test  not (pi c0 c1 \ c1 = X1 c0) , X1 = whatever
-   0 test  pi c0 \ sigma c0 \ not (pi c1 c2 \ c1 c2 = c3) , c1 = whatever
-   0 test  pi c0 \ sigma c0 \ not (pi c1 c2 \ c3 = c1 c2) , c1 = whatever
+   0 test  pi c0 \ sigma c1 \ not (pi c2 c3 \ c1 c2 = c3) , c1 = whatever
+   0 test  pi c0 \ sigma c1 \ not (pi c2 c3 \ c3 = c1 c2) , c1 = whatever
    ----------------------------------------
-   0 test  pi c0 c1 \ X2 c1 c0 = r c1 \ h c2 c0 , X2 = (c0 \ c1 \ r c2 \ h c2 c1)
-   0 test  pi c0 c1 \ r c1 \ h c2 c0 = X2 c1 c0 , X2 = (c0 \ c1 \ r c2 \ h c2 c1)
+   0 test  pi c0 c1 \ X2 c1 c0 = r c2 \ h c2 c0 , X2 = (c0 \ c1 \ r c2 \ h c2 c1)
+   0 test  pi c0 c1 \ r c2 \ h c2 c0 = X2 c1 c0 , X2 = (c0 \ c1 \ r c2 \ h c2 c1)
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ c1 c3 c2 = r c2 \ h c4 c2 , c1 = (c1 \ c2 \ r c3 \ h c4 c3)
+     sigma c1 \
+      pi c2 c3 \ c1 c3 c2 = r c4 \ h c4 c2 , c1 = (c2 \ c3 \ r c4 \ h c4 c3)
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ r c2 \ h c4 c2 = c1 c3 c2 , c1 = (c1 \ c2 \ r c3 \ h c4 c3)
+     sigma c1 \
+      pi c2 c3 \ r c4 \ h c4 c2 = c1 c3 c2 , c1 = (c2 \ c3 \ r c4 \ h c4 c3)
    ----------------------------------------
-   0 test  pi c0 c1 \ sigma c1 \ c2 = c0 , X3 c1 c0 = c2 , X3 = (c0 \ c1 \ c1)
-   0 test  pi c0 c1 \ sigma c1 \ c2 = c0 , c2 = X3 c1 c0 , X3 = (c0 \ c1 \ c1)
+   0 test  pi c0 c1 \ sigma c2 \ c2 = c0 , X3 c1 c0 = c2 , X3 = (c0 \ c1 \ c1)
+   0 test  pi c0 c1 \ sigma c2 \ c2 = c0 , c2 = X3 c1 c0 , X3 = (c0 \ c1 \ c1)
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ sigma c2 \ c4 = c2 , c1 c3 c2 = c4 , c1 = (c1 \ c2 \ c3)
+     sigma c1 \
+      pi c2 c3 \ sigma c4 \ c4 = c2 , c1 c3 c2 = c4 , c1 = (c2 \ c3 \ c3)
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ sigma c2 \ c4 = c2 , c4 = c1 c3 c2 , c1 = (c1 \ c2 \ c3)
+     sigma c1 \
+      pi c2 c3 \ sigma c4 \ c4 = c2 , c4 = c1 c3 c2 , c1 = (c2 \ c3 \ c3)
    ----------------------------------------
-   0 test  not (pi c0 c1 \ sigma c1 \ c2 = c0 , X4 c2 = c1) , X4 = whatever
-   0 test  not (pi c0 c1 \ sigma c1 \ c2 = c0 , c1 = X4 c2) , X4 = whatever
+   0 test  not (pi c0 c1 \ sigma c2 \ c2 = c0 , X4 c2 = c1) , X4 = whatever
+   0 test  not (pi c0 c1 \ sigma c2 \ c2 = c0 , c1 = X4 c2) , X4 = whatever
    0 test  
     pi c0 \
-     sigma c0 \ not (pi c1 c2 \ sigma c2 \ c4 = c2 , c1 c4 = c3) , c1 = whatever
+     sigma c1 \ not (pi c2 c3 \ sigma c4 \ c4 = c2 , c1 c4 = c3) , c1 = whatever
    0 test  
     pi c0 \
-     sigma c0 \ not (pi c1 c2 \ sigma c2 \ c4 = c2 , c3 = c1 c4) , c1 = whatever
+     sigma c1 \ not (pi c2 c3 \ sigma c4 \ c4 = c2 , c3 = c1 c4) , c1 = whatever
    ----------------------------------------
    0 test  
-    pi c0 c1 \ sigma c1 \ c2 = c0 , X5 c1 c0 = r c2 \ h c3 c2 , 
+    pi c0 c1 \ sigma c2 \ c2 = c0 , X5 c1 c0 = r c3 \ h c3 c2 , 
      X5 = (c0 \ c1 \ r c2 \ h c2 c1)
    0 test  
-    pi c0 c1 \ sigma c1 \ c2 = c0 , r c2 \ h c3 c2 = X5 c1 c0 , 
+    pi c0 c1 \ sigma c2 \ c2 = c0 , r c3 \ h c3 c2 = X5 c1 c0 , 
      X5 = (c0 \ c1 \ r c2 \ h c2 c1)
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ sigma c2 \ c4 = c2 , c1 c3 c2 = r c3 \ h c5 c4 , 
-       c1 = (c1 \ c2 \ r c3 \ h c4 c3)
+     sigma c1 \
+      pi c2 c3 \ sigma c4 \ c4 = c2 , c1 c3 c2 = r c5 \ h c5 c4 , 
+       c1 = (c2 \ c3 \ r c4 \ h c4 c3)
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ sigma c2 \ c4 = c2 , r c3 \ h c5 c4 = c1 c3 c2 , 
-       c1 = (c1 \ c2 \ r c3 \ h c4 c3)
+     sigma c1 \
+      pi c2 c3 \ sigma c4 \ c4 = c2 , r c5 \ h c5 c4 = c1 c3 c2 , 
+       c1 = (c2 \ c3 \ r c4 \ h c4 c3)
    ----------------------------------------
-   0 test  pi c0 \ clause c0 \ c1 \ c1
-   0 test  pi c0 \ clause1 c0 \ c1 \ X6 c2 c1 , X6 = (c0 \ c1 \ c2)
-   0 test  pi c0 \ clause2 c0 \ c1 \ c1 , c1
-   0 test  clause3 c0 \ c1 \ X7 c1 c0 => pi c0 \ clause3 c0 \ c1 \ c1
+   0 test  pi c0 \ clause c1 \ c2 \ c1
+   0 test  pi c0 \ clause1 c1 \ c2 \ X6 c2 c1 , X6 = (c1 \ c2 \ c2)
+   0 test  pi c0 \ clause2 c1 \ c2 \ c1 , c1
+   0 test  clause3 c0 \ c1 \ X7 c1 c0 => pi c0 \ clause3 c1 \ c2 \ c1
    0 test  
     sigma c0 \ pi c1 c2 \ X8 c2 = r (c0 c2 c1) , c0 c1 c1 = c1 , c0 c1 c2 = c1 , 
      X8 = (c0 \ r c0)
@@ -1762,74 +1762,74 @@ Test Bed
      X8 = (c0 \ r c0)
    0 test  
     pi c0 \
-     sigma c0 \
-      sigma c1 \ pi c2 c3 \ c1 c4 = r (c2 c4 c3) , c2 c3 c3 = c3 , c2 c3 c4 = c3 , 
-       c1 = (c1 \ r c2)
+     sigma c1 \
+      sigma c2 \ pi c3 c4 \ c1 c4 = r (c2 c4 c3) , c2 c3 c3 = c3 , c2 c3 c4 = c3 , 
+       c1 = (c2 \ r c2)
    0 test  
     pi c0 \
-     sigma c0 \
-      sigma c1 \ pi c2 c3 \ r (c2 c4 c3) = c1 c4 , c2 c3 c3 = c3 , c2 c3 c4 = c3 , 
-       c1 = (c1 \ r c2)
+     sigma c1 \
+      sigma c2 \ pi c3 c4 \ r (c2 c4 c3) = c1 c4 , c2 c3 c3 = c3 , c2 c3 c4 = c3 , 
+       c1 = (c2 \ r c2)
    ----------------------------------------
    0 test  
     pi c0 c1 \
-     sigma c1 \ pi c2 c3 \ X9 c1 = r (c2 c4) , spy (c2 1 = c1) , not (c2 2 = c0) , 
+     sigma c2 \ pi c3 c4 \ X9 c1 = r (c2 c4) , spy (c2 1 = c1) , not (c2 2 = c0) , 
      X9 = (c0 \ r whatever)
    0 test  X10 c1 = c1
    0 test  
     pi c0 c1 \
-     sigma c1 \ pi c2 c3 \ r (c2 c4) = X9 c1 , spy (c2 1 = c1) , not (c2 2 = c0) , 
+     sigma c2 \ pi c3 c4 \ r (c2 c4) = X9 c1 , spy (c2 1 = c1) , not (c2 2 = c0) , 
      X9 = (c0 \ r whatever)
    0 test  X11 c1 = c1
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \
-       sigma c2 \ pi c3 c4 \ c1 c3 = r (c4 c6) , spy (c4 1 = c3) , not (c4 2 = c2) , 
-       c1 = (c1 \ r whatever)
+     sigma c1 \
+      pi c2 c3 \
+       sigma c4 \ pi c5 c6 \ c1 c3 = r (c4 c6) , spy (c4 1 = c3) , not (c4 2 = c2) , 
+       c1 = (c2 \ r whatever)
    0 test  X12^1 c2 = c2
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \
-       sigma c2 \ pi c3 c4 \ r (c4 c6) = c1 c3 , spy (c4 1 = c3) , not (c4 2 = c2) , 
-       c1 = (c1 \ r whatever)
+     sigma c1 \
+      pi c2 c3 \
+       sigma c4 \ pi c5 c6 \ r (c4 c6) = c1 c3 , spy (c4 1 = c3) , not (c4 2 = c2) , 
+       c1 = (c2 \ r whatever)
    0 test  X13^1 c2 = c2
    ----------------------------------------
    0 test  
-    pi c0 c1 \ sigma c1 \ pi c2 \ X14 c1 c0 = r (c2 c3) , c2 1 = f c0 c1 , 
+    pi c0 c1 \ sigma c2 \ pi c3 \ X14 c1 c0 = r (c2 c3) , c2 1 = f c0 c1 , 
      X14 = (c0 \ c1 \ r (f c1 c0))
    0 test  
-    pi c0 c1 \ sigma c1 \ pi c2 \ r (c2 c3) = X14 c1 c0 , c2 1 = f c0 c1 , 
+    pi c0 c1 \ sigma c2 \ pi c3 \ r (c2 c3) = X14 c1 c0 , c2 1 = f c0 c1 , 
      X14 = (c0 \ c1 \ r (f c1 c0))
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ sigma c2 \ pi c3 \ c1 c3 c2 = r (c4 c5) , c4 1 = f c2 c3 , 
-       c1 = (c1 \ c2 \ r (f c3 c2))
+     sigma c1 \
+      pi c2 c3 \ sigma c4 \ pi c5 \ c1 c3 c2 = r (c4 c5) , c4 1 = f c2 c3 , 
+       c1 = (c2 \ c3 \ r (f c3 c2))
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ sigma c2 \ pi c3 \ r (c4 c5) = c1 c3 c2 , c4 1 = f c2 c3 , 
-       c1 = (c1 \ c2 \ r (f c3 c2))
+     sigma c1 \
+      pi c2 c3 \ sigma c4 \ pi c5 \ r (c4 c5) = c1 c3 c2 , c4 1 = f c2 c3 , 
+       c1 = (c2 \ c3 \ r (f c3 c2))
    ----------------------------------------
    0 test  pi c0 c1 \ prune_arg (X15 c1 c0) , X15 = (c0 \ c1 \ r (v c0 c1))
    0 test  pi c0 c1 \ prune_arg (X15 c1 c0) , X15 = (c0 \ c1 \ r (v c0 c1))
    0 test  
     pi c0 \
-     sigma c0 \ pi c1 c2 \ prune_arg (c1 c3 c2) , c1 = (c1 \ c2 \ r (v c2 c3))
+     sigma c1 \ pi c2 c3 \ prune_arg (c1 c3 c2) , c1 = (c2 \ c3 \ r (v c2 c3))
    0 test  
     pi c0 \
-     sigma c0 \ pi c1 c2 \ prune_arg (c1 c3 c2) , c1 = (c1 \ c2 \ r (v c2 c3))
+     sigma c1 \ pi c2 c3 \ prune_arg (c1 c3 c2) , c1 = (c2 \ c3 \ r (v c2 c3))
    ----------------------------------------
    0 test  pi c0 c1 \ prune_arg2 (X16 c1 c0) , X16 = (c0 \ c1 \ r c2 \ v c0 c1)
    0 test  pi c0 c1 \ prune_arg2 (X16 c1 c0) , X16 = (c0 \ c1 \ r c2 \ v c0 c1)
    0 test  
     pi c0 \
-     sigma c0 \ pi c1 c2 \ prune_arg2 (c1 c3 c2) , c1 = (c1 \ c2 \ r c3 \ v c2 c3)
+     sigma c1 \ pi c2 c3 \ prune_arg2 (c1 c3 c2) , c1 = (c2 \ c3 \ r c4 \ v c2 c3)
    0 test  
     pi c0 \
-     sigma c0 \ pi c1 c2 \ prune_arg2 (c1 c3 c2) , c1 = (c1 \ c2 \ r c3 \ v c2 c3)
+     sigma c1 \ pi c2 c3 \ prune_arg2 (c1 c3 c2) , c1 = (c2 \ c3 \ r c4 \ v c2 c3)
    ----------------------------------------
    0 test  
     pi c0 c1 \ prune_arg3 (X17 c1 c0) , X17 = (c0 \ c1 \ r c2 \ c3 \ v c0 c1)
@@ -1837,12 +1837,12 @@ Test Bed
     pi c0 c1 \ prune_arg3 (X17 c1 c0) , X17 = (c0 \ c1 \ r c2 \ c3 \ v c0 c1)
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ prune_arg3 (c1 c3 c2) , c1 = (c1 \ c2 \ r c3 \ c4 \ v c2 c3)
+     sigma c1 \
+      pi c2 c3 \ prune_arg3 (c1 c3 c2) , c1 = (c2 \ c3 \ r c4 \ c5 \ v c2 c3)
    0 test  
     pi c0 \
-     sigma c0 \
-      pi c1 c2 \ prune_arg3 (c1 c3 c2) , c1 = (c1 \ c2 \ r c3 \ c4 \ v c2 c3)
+     sigma c1 \
+      pi c2 c3 \ prune_arg3 (c1 c3 c2) , c1 = (c2 \ c3 \ r c4 \ c5 \ v c2 c3)
    ----------------------------------------
    
 
@@ -1864,7 +1864,7 @@ Test Bed
    
    Success:
    
-   Time: 0.003
+   Time: 0.002
    
    Constraints:
    
@@ -1925,7 +1925,7 @@ Test Bed
    type arr tm -> tm -> tm.
    type app tm -> tm -> tm.
    
-   Compilation time: 0.002
+   Compilation time: 0.001
    
    Typechecking time: 0.004
    Determinacy checking time: 0.005
@@ -1949,7 +1949,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.390660 + 0.058793 + 0.994270
+   1.357218 + 0.058659 + 0.972147
    
 
 .. code-block:: console
@@ -1964,7 +1964,7 @@ Test Bed
    
    Success:
    
-   Time: 2.678
+   Time: 2.623
    
    Constraints:
    
@@ -1981,7 +1981,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.636491 + 3.046339 + 0.352903
+   6.594125 + 3.017015 + 0.357921
    
 
 .. code-block:: console
@@ -1991,12 +1991,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 10.044
+   Time: 9.976
    
    Constraints:
    
@@ -2013,7 +2013,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.775602 + 2.784344 + 0.231817
+   5.811763 + 2.856206 + 0.230921
    
 
 .. code-block:: console
@@ -2023,12 +2023,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 8.798
+   Time: 8.905
    
    Constraints:
    
@@ -2694,9 +2694,9 @@ Test Bed
    type b int.
    type a int.
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -2738,7 +2738,7 @@ Test Bed
    
    Success:
    
-   Time: 1.755
+   Time: 1.747
    
    Constraints:
    
@@ -2772,7 +2772,7 @@ Test Bed
 
 .. code-block:: console
 
-   9
+   2
    
 
 .. code-block:: console
@@ -2823,7 +2823,7 @@ Test Bed
    
    Success:
    
-   Time: 0.257
+   Time: 0.261
    
    Constraints:
    
@@ -2863,7 +2863,7 @@ Test Bed
    
    Success:
    
-   Time: 1.692
+   Time: 1.634
    
    Constraints:
    
@@ -3051,7 +3051,7 @@ Test Bed
    
    Success:
    
-   Time: 0.132
+   Time: 0.136
    
    Constraints:
    
@@ -3078,7 +3078,7 @@ Test Bed
    
    Success:
    
-   Time: 0.133
+   Time: 0.132
    
    Constraints:
    
@@ -3134,7 +3134,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.004
+   Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
@@ -3156,7 +3156,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.203191 + 0.054790 + 0.841886
+   1.202317 + 0.055696 + 0.807016
    
 
 .. code-block:: console
@@ -3164,14 +3164,14 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.000
    
    Typechecking time: 0.003
    Determinacy checking time: 0.005
    
    Success:
    
-   Time: 2.195
+   Time: 2.165
    
    Constraints:
    
@@ -4041,7 +4041,7 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.004
-   Determinacy checking time: 0.006
+   Determinacy checking time: 0.005
    
    Success:
    

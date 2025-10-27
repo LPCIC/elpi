@@ -485,7 +485,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.001</span>
+<span class="go">Time: 0.000</span>
 
 <span class="go">Constraints:</span>
 <span class="go"> {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */</span>
@@ -585,7 +585,7 @@
 <span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -619,8 +619,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.003</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Typechecking time: 0.004</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1183,7 +1183,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.003</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -4126,11 +4126,11 @@
 <span class="go">Compilation time: 0.002</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.850</span>
+<span class="go">Time: 1.863</span>
 
 <span class="go">Constraints:</span>
 
@@ -4370,7 +4370,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.348</span>
+<span class="go">Time: 0.350</span>
 
 <span class="go">Constraints:</span>
 
@@ -4501,66 +4501,66 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">0 test  pi c0 c1 \ X0 c1 c0 = c0 , X0 = (c0 \ c1 \ c1)</span>
 <span class="go">0 test  pi c0 c1 \ c0 = X0 c1 c0 , X0 = (c0 \ c1 \ c1)</span>
-<span class="go">0 test  pi c0 \ sigma c0 \ pi c1 c2 \ c1 c3 c2 = c2 , c1 = (c1 \ c2 \ c3)</span>
-<span class="go">0 test  pi c0 \ sigma c0 \ pi c1 c2 \ c2 = c1 c3 c2 , c1 = (c1 \ c2 \ c3)</span>
+<span class="go">0 test  pi c0 \ sigma c1 \ pi c2 c3 \ c1 c3 c2 = c2 , c1 = (c2 \ c3 \ c3)</span>
+<span class="go">0 test  pi c0 \ sigma c1 \ pi c2 c3 \ c2 = c1 c3 c2 , c1 = (c2 \ c3 \ c3)</span>
 <span class="go">----------------------------------------</span>
 <span class="go">0 test  not (pi c0 c1 \ X1 c0 = c1) , X1 = whatever</span>
 <span class="go">0 test  not (pi c0 c1 \ c1 = X1 c0) , X1 = whatever</span>
-<span class="go">0 test  pi c0 \ sigma c0 \ not (pi c1 c2 \ c1 c2 = c3) , c1 = whatever</span>
-<span class="go">0 test  pi c0 \ sigma c0 \ not (pi c1 c2 \ c3 = c1 c2) , c1 = whatever</span>
+<span class="go">0 test  pi c0 \ sigma c1 \ not (pi c2 c3 \ c1 c2 = c3) , c1 = whatever</span>
+<span class="go">0 test  pi c0 \ sigma c1 \ not (pi c2 c3 \ c3 = c1 c2) , c1 = whatever</span>
 <span class="go">----------------------------------------</span>
-<span class="go">0 test  pi c0 c1 \ X2 c1 c0 = r c1 \ h c2 c0 , X2 = (c0 \ c1 \ r c2 \ h c2 c1)</span>
-<span class="go">0 test  pi c0 c1 \ r c1 \ h c2 c0 = X2 c1 c0 , X2 = (c0 \ c1 \ r c2 \ h c2 c1)</span>
+<span class="go">0 test  pi c0 c1 \ X2 c1 c0 = r c2 \ h c2 c0 , X2 = (c0 \ c1 \ r c2 \ h c2 c1)</span>
+<span class="go">0 test  pi c0 c1 \ r c2 \ h c2 c0 = X2 c1 c0 , X2 = (c0 \ c1 \ r c2 \ h c2 c1)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ c1 c3 c2 = r c2 \ h c4 c2 , c1 = (c1 \ c2 \ r c3 \ h c4 c3)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ c1 c3 c2 = r c4 \ h c4 c2 , c1 = (c2 \ c3 \ r c4 \ h c4 c3)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ r c2 \ h c4 c2 = c1 c3 c2 , c1 = (c1 \ c2 \ r c3 \ h c4 c3)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ r c4 \ h c4 c2 = c1 c3 c2 , c1 = (c2 \ c3 \ r c4 \ h c4 c3)</span>
 <span class="go">----------------------------------------</span>
-<span class="go">0 test  pi c0 c1 \ sigma c1 \ c2 = c0 , X3 c1 c0 = c2 , X3 = (c0 \ c1 \ c1)</span>
-<span class="go">0 test  pi c0 c1 \ sigma c1 \ c2 = c0 , c2 = X3 c1 c0 , X3 = (c0 \ c1 \ c1)</span>
+<span class="go">0 test  pi c0 c1 \ sigma c2 \ c2 = c0 , X3 c1 c0 = c2 , X3 = (c0 \ c1 \ c1)</span>
+<span class="go">0 test  pi c0 c1 \ sigma c2 \ c2 = c0 , c2 = X3 c1 c0 , X3 = (c0 \ c1 \ c1)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ sigma c2 \ c4 = c2 , c1 c3 c2 = c4 , c1 = (c1 \ c2 \ c3)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ sigma c4 \ c4 = c2 , c1 c3 c2 = c4 , c1 = (c2 \ c3 \ c3)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ sigma c2 \ c4 = c2 , c4 = c1 c3 c2 , c1 = (c1 \ c2 \ c3)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ sigma c4 \ c4 = c2 , c4 = c1 c3 c2 , c1 = (c2 \ c3 \ c3)</span>
 <span class="go">----------------------------------------</span>
-<span class="go">0 test  not (pi c0 c1 \ sigma c1 \ c2 = c0 , X4 c2 = c1) , X4 = whatever</span>
-<span class="go">0 test  not (pi c0 c1 \ sigma c1 \ c2 = c0 , c1 = X4 c2) , X4 = whatever</span>
+<span class="go">0 test  not (pi c0 c1 \ sigma c2 \ c2 = c0 , X4 c2 = c1) , X4 = whatever</span>
+<span class="go">0 test  not (pi c0 c1 \ sigma c2 \ c2 = c0 , c1 = X4 c2) , X4 = whatever</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \ not (pi c1 c2 \ sigma c2 \ c4 = c2 , c1 c4 = c3) , c1 = whatever</span>
+<span class="go">  sigma c1 \ not (pi c2 c3 \ sigma c4 \ c4 = c2 , c1 c4 = c3) , c1 = whatever</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \ not (pi c1 c2 \ sigma c2 \ c4 = c2 , c3 = c1 c4) , c1 = whatever</span>
+<span class="go">  sigma c1 \ not (pi c2 c3 \ sigma c4 \ c4 = c2 , c3 = c1 c4) , c1 = whatever</span>
 <span class="go">----------------------------------------</span>
 <span class="go">0 test</span>
-<span class="go"> pi c0 c1 \ sigma c1 \ c2 = c0 , X5 c1 c0 = r c2 \ h c3 c2 ,</span>
+<span class="go"> pi c0 c1 \ sigma c2 \ c2 = c0 , X5 c1 c0 = r c3 \ h c3 c2 ,</span>
 <span class="go">  X5 = (c0 \ c1 \ r c2 \ h c2 c1)</span>
 <span class="go">0 test</span>
-<span class="go"> pi c0 c1 \ sigma c1 \ c2 = c0 , r c2 \ h c3 c2 = X5 c1 c0 ,</span>
+<span class="go"> pi c0 c1 \ sigma c2 \ c2 = c0 , r c3 \ h c3 c2 = X5 c1 c0 ,</span>
 <span class="go">  X5 = (c0 \ c1 \ r c2 \ h c2 c1)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ sigma c2 \ c4 = c2 , c1 c3 c2 = r c3 \ h c5 c4 ,</span>
-<span class="go">    c1 = (c1 \ c2 \ r c3 \ h c4 c3)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ sigma c4 \ c4 = c2 , c1 c3 c2 = r c5 \ h c5 c4 ,</span>
+<span class="go">    c1 = (c2 \ c3 \ r c4 \ h c4 c3)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ sigma c2 \ c4 = c2 , r c3 \ h c5 c4 = c1 c3 c2 ,</span>
-<span class="go">    c1 = (c1 \ c2 \ r c3 \ h c4 c3)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ sigma c4 \ c4 = c2 , r c5 \ h c5 c4 = c1 c3 c2 ,</span>
+<span class="go">    c1 = (c2 \ c3 \ r c4 \ h c4 c3)</span>
 <span class="go">----------------------------------------</span>
-<span class="go">0 test  pi c0 \ clause c0 \ c1 \ c1</span>
-<span class="go">0 test  pi c0 \ clause1 c0 \ c1 \ X6 c2 c1 , X6 = (c0 \ c1 \ c2)</span>
-<span class="go">0 test  pi c0 \ clause2 c0 \ c1 \ c1 , c1</span>
-<span class="go">0 test  clause3 c0 \ c1 \ X7 c1 c0 =&gt; pi c0 \ clause3 c0 \ c1 \ c1</span>
+<span class="go">0 test  pi c0 \ clause c1 \ c2 \ c1</span>
+<span class="go">0 test  pi c0 \ clause1 c1 \ c2 \ X6 c2 c1 , X6 = (c1 \ c2 \ c2)</span>
+<span class="go">0 test  pi c0 \ clause2 c1 \ c2 \ c1 , c1</span>
+<span class="go">0 test  clause3 c0 \ c1 \ X7 c1 c0 =&gt; pi c0 \ clause3 c1 \ c2 \ c1</span>
 <span class="go">0 test</span>
 <span class="go"> sigma c0 \ pi c1 c2 \ X8 c2 = r (c0 c2 c1) , c0 c1 c1 = c1 , c0 c1 c2 = c1 ,</span>
 <span class="go">  X8 = (c0 \ r c0)</span>
@@ -4569,74 +4569,74 @@
 <span class="go">  X8 = (c0 \ r c0)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   sigma c1 \ pi c2 c3 \ c1 c4 = r (c2 c4 c3) , c2 c3 c3 = c3 , c2 c3 c4 = c3 ,</span>
-<span class="go">    c1 = (c1 \ r c2)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   sigma c2 \ pi c3 c4 \ c1 c4 = r (c2 c4 c3) , c2 c3 c3 = c3 , c2 c3 c4 = c3 ,</span>
+<span class="go">    c1 = (c2 \ r c2)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   sigma c1 \ pi c2 c3 \ r (c2 c4 c3) = c1 c4 , c2 c3 c3 = c3 , c2 c3 c4 = c3 ,</span>
-<span class="go">    c1 = (c1 \ r c2)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   sigma c2 \ pi c3 c4 \ r (c2 c4 c3) = c1 c4 , c2 c3 c3 = c3 , c2 c3 c4 = c3 ,</span>
+<span class="go">    c1 = (c2 \ r c2)</span>
 <span class="go">----------------------------------------</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 c1 \</span>
-<span class="go">  sigma c1 \ pi c2 c3 \ X9 c1 = r (c2 c4) , spy (c2 1 = c1) , not (c2 2 = c0) ,</span>
+<span class="go">  sigma c2 \ pi c3 c4 \ X9 c1 = r (c2 c4) , spy (c2 1 = c1) , not (c2 2 = c0) ,</span>
 <span class="go">  X9 = (c0 \ r whatever)</span>
 <span class="go">0 test  X10 c1 = c1</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 c1 \</span>
-<span class="go">  sigma c1 \ pi c2 c3 \ r (c2 c4) = X9 c1 , spy (c2 1 = c1) , not (c2 2 = c0) ,</span>
+<span class="go">  sigma c2 \ pi c3 c4 \ r (c2 c4) = X9 c1 , spy (c2 1 = c1) , not (c2 2 = c0) ,</span>
 <span class="go">  X9 = (c0 \ r whatever)</span>
 <span class="go">0 test  X11 c1 = c1</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \</span>
-<span class="go">    sigma c2 \ pi c3 c4 \ c1 c3 = r (c4 c6) , spy (c4 1 = c3) , not (c4 2 = c2) ,</span>
-<span class="go">    c1 = (c1 \ r whatever)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \</span>
+<span class="go">    sigma c4 \ pi c5 c6 \ c1 c3 = r (c4 c6) , spy (c4 1 = c3) , not (c4 2 = c2) ,</span>
+<span class="go">    c1 = (c2 \ r whatever)</span>
 <span class="go">0 test  X12^1 c2 = c2</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \</span>
-<span class="go">    sigma c2 \ pi c3 c4 \ r (c4 c6) = c1 c3 , spy (c4 1 = c3) , not (c4 2 = c2) ,</span>
-<span class="go">    c1 = (c1 \ r whatever)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \</span>
+<span class="go">    sigma c4 \ pi c5 c6 \ r (c4 c6) = c1 c3 , spy (c4 1 = c3) , not (c4 2 = c2) ,</span>
+<span class="go">    c1 = (c2 \ r whatever)</span>
 <span class="go">0 test  X13^1 c2 = c2</span>
 <span class="go">----------------------------------------</span>
 <span class="go">0 test</span>
-<span class="go"> pi c0 c1 \ sigma c1 \ pi c2 \ X14 c1 c0 = r (c2 c3) , c2 1 = f c0 c1 ,</span>
+<span class="go"> pi c0 c1 \ sigma c2 \ pi c3 \ X14 c1 c0 = r (c2 c3) , c2 1 = f c0 c1 ,</span>
 <span class="go">  X14 = (c0 \ c1 \ r (f c1 c0))</span>
 <span class="go">0 test</span>
-<span class="go"> pi c0 c1 \ sigma c1 \ pi c2 \ r (c2 c3) = X14 c1 c0 , c2 1 = f c0 c1 ,</span>
+<span class="go"> pi c0 c1 \ sigma c2 \ pi c3 \ r (c2 c3) = X14 c1 c0 , c2 1 = f c0 c1 ,</span>
 <span class="go">  X14 = (c0 \ c1 \ r (f c1 c0))</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ sigma c2 \ pi c3 \ c1 c3 c2 = r (c4 c5) , c4 1 = f c2 c3 ,</span>
-<span class="go">    c1 = (c1 \ c2 \ r (f c3 c2))</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ sigma c4 \ pi c5 \ c1 c3 c2 = r (c4 c5) , c4 1 = f c2 c3 ,</span>
+<span class="go">    c1 = (c2 \ c3 \ r (f c3 c2))</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ sigma c2 \ pi c3 \ r (c4 c5) = c1 c3 c2 , c4 1 = f c2 c3 ,</span>
-<span class="go">    c1 = (c1 \ c2 \ r (f c3 c2))</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ sigma c4 \ pi c5 \ r (c4 c5) = c1 c3 c2 , c4 1 = f c2 c3 ,</span>
+<span class="go">    c1 = (c2 \ c3 \ r (f c3 c2))</span>
 <span class="go">----------------------------------------</span>
 <span class="go">0 test  pi c0 c1 \ prune_arg (X15 c1 c0) , X15 = (c0 \ c1 \ r (v c0 c1))</span>
 <span class="go">0 test  pi c0 c1 \ prune_arg (X15 c1 c0) , X15 = (c0 \ c1 \ r (v c0 c1))</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \ pi c1 c2 \ prune_arg (c1 c3 c2) , c1 = (c1 \ c2 \ r (v c2 c3))</span>
+<span class="go">  sigma c1 \ pi c2 c3 \ prune_arg (c1 c3 c2) , c1 = (c2 \ c3 \ r (v c2 c3))</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \ pi c1 c2 \ prune_arg (c1 c3 c2) , c1 = (c1 \ c2 \ r (v c2 c3))</span>
+<span class="go">  sigma c1 \ pi c2 c3 \ prune_arg (c1 c3 c2) , c1 = (c2 \ c3 \ r (v c2 c3))</span>
 <span class="go">----------------------------------------</span>
 <span class="go">0 test  pi c0 c1 \ prune_arg2 (X16 c1 c0) , X16 = (c0 \ c1 \ r c2 \ v c0 c1)</span>
 <span class="go">0 test  pi c0 c1 \ prune_arg2 (X16 c1 c0) , X16 = (c0 \ c1 \ r c2 \ v c0 c1)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \ pi c1 c2 \ prune_arg2 (c1 c3 c2) , c1 = (c1 \ c2 \ r c3 \ v c2 c3)</span>
+<span class="go">  sigma c1 \ pi c2 c3 \ prune_arg2 (c1 c3 c2) , c1 = (c2 \ c3 \ r c4 \ v c2 c3)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \ pi c1 c2 \ prune_arg2 (c1 c3 c2) , c1 = (c1 \ c2 \ r c3 \ v c2 c3)</span>
+<span class="go">  sigma c1 \ pi c2 c3 \ prune_arg2 (c1 c3 c2) , c1 = (c2 \ c3 \ r c4 \ v c2 c3)</span>
 <span class="go">----------------------------------------</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 c1 \ prune_arg3 (X17 c1 c0) , X17 = (c0 \ c1 \ r c2 \ c3 \ v c0 c1)</span>
@@ -4644,12 +4644,12 @@
 <span class="go"> pi c0 c1 \ prune_arg3 (X17 c1 c0) , X17 = (c0 \ c1 \ r c2 \ c3 \ v c0 c1)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ prune_arg3 (c1 c3 c2) , c1 = (c1 \ c2 \ r c3 \ c4 \ v c2 c3)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ prune_arg3 (c1 c3 c2) , c1 = (c2 \ c3 \ r c4 \ c5 \ v c2 c3)</span>
 <span class="go">0 test</span>
 <span class="go"> pi c0 \</span>
-<span class="go">  sigma c0 \</span>
-<span class="go">   pi c1 c2 \ prune_arg3 (c1 c3 c2) , c1 = (c1 \ c2 \ r c3 \ c4 \ v c2 c3)</span>
+<span class="go">  sigma c1 \</span>
+<span class="go">   pi c2 c3 \ prune_arg3 (c1 c3 c2) , c1 = (c2 \ c3 \ r c4 \ c5 \ v c2 c3)</span>
 <span class="go">----------------------------------------</span>
 </pre></div>
 </div>
@@ -4668,7 +4668,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.003</span>
+<span class="go">Time: 0.002</span>
 
 <span class="go">Constraints:</span>
 
@@ -4777,7 +4777,7 @@
 <span class="go">type arr tm -&gt; tm -&gt; tm.</span>
 <span class="go">type app tm -&gt; tm -&gt; tm.</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.004</span>
 <span class="go">Determinacy checking time: 0.005</span>
@@ -4826,7 +4826,7 @@
 <span class="linenos">30</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.390660 + 0.058793 + 0.994270</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.357218 + 0.058659 + 0.972147</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -4838,7 +4838,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.678</span>
+<span class="go">Time: 2.623</span>
 
 <span class="go">Constraints:</span>
 
@@ -4901,19 +4901,19 @@
 <span class="linenos">51</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.636491 + 3.046339 + 0.352903</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.594125 + 3.017015 + 0.357921</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.003</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 10.044</span>
+<span class="go">Time: 9.976</span>
 
 <span class="go">Constraints:</span>
 
@@ -4971,19 +4971,19 @@
 <span class="linenos">46</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.775602 + 2.784344 + 0.231817</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.811763 + 2.856206 + 0.230921</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.003</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 8.798</span>
+<span class="go">Time: 8.905</span>
 
 <span class="go">Constraints:</span>
 
@@ -6003,9 +6003,9 @@
 <span class="go">type b int.</span>
 <span class="go">type a int.</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.003</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6140,7 +6140,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.755</span>
+<span class="go">Time: 1.747</span>
 
 <span class="go">Constraints:</span>
 
@@ -6172,7 +6172,7 @@
 <span class="linenos">6</span><span class="w">  </span><span class="nv">R</span><span class="w"> </span><span class="kd">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">9</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">2</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -6260,7 +6260,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.257</span>
+<span class="go">Time: 0.261</span>
 
 <span class="go">Constraints:</span>
 
@@ -6337,7 +6337,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.692</span>
+<span class="go">Time: 1.634</span>
 
 <span class="go">Constraints:</span>
 
@@ -6602,7 +6602,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.132</span>
+<span class="go">Time: 0.136</span>
 
 <span class="go">Constraints:</span>
 
@@ -6667,7 +6667,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.133</span>
+<span class="go">Time: 0.132</span>
 
 <span class="go">Constraints:</span>
 
@@ -6727,7 +6727,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.004</span>
+<span class="go">Typechecking time: 0.003</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
@@ -6775,19 +6775,19 @@
 <span class="linenos">31</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.203191 + 0.054790 + 0.841886</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.202317 + 0.055696 + 0.807016</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.001</span>
+<span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.003</span>
 <span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.195</span>
+<span class="go">Time: 2.165</span>
 
 <span class="go">Constraints:</span>
 
@@ -7903,7 +7903,7 @@
 <span class="go">Compilation time: 0.002</span>
 
 <span class="go">Typechecking time: 0.004</span>
-<span class="go">Determinacy checking time: 0.006</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
