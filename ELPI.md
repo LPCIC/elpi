@@ -56,6 +56,8 @@ is very welcome. Questions or feature requests are welcome as well.
   so that one can use `.` in a file/path name.
 
 - [Variadic functions](#variadic-functions)
+ 
+- [Occur check](#occur-check)
 
 - [Tracing facility](#tracing-facility) to debug your programs.
  
@@ -1049,6 +1051,15 @@ Here `f` takes 3 or 4 argument: when 4 are passed it also returns the
 reminder of the division. Only the last output can be variadic.
 
 This feature is mainly used for external functions.
+
+## Occur check
+
+Unification performs occur check by default. One can disable it
+on a predicate basis using the `:nooc` attribute.
+
+It is recommended that code that disables occur check guards against
+building cyclic terms using `ground_term`. No mode analysis is performed
+in order to make this dynamic check unnecessary.
 
 ## Tracing facility
 
