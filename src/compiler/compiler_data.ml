@@ -933,7 +933,7 @@ module ScopedTerm = struct
 
   type t_ =
    | Impl of SimpleTerm.impl_kind * Loc.t * t * t (* `Impl(true,t1,t2)` ≡ `t1 => t2` and `Impl(false,t1,t2)` ≡ `t1 :- t2` *)
-   | Discard
+   | Discard of { mutable heapify : bool } (* true if passed to code not doing OC *)
    | UVar of uvar * t list
    | App of const * t list
    | Lam of binder option * ScopedTypeExpression.e option * t
@@ -996,7 +996,7 @@ module ScopedTerm = struct
     | Impl(L2RBang,_,t1,t2) -> fprintf fmt "@[<hov 2>(%a =!=>@ (%a))@]" pretty t1 pretty t2
     | Impl(R2L,_,t1,t2) -> fprintf fmt "@[<hov 2>(%a :-@ %a)@]" pretty t1 pretty t2
     | App({ name = f },[]) -> fprintf fmt "%a" F.pp f
-    | Discard -> fprintf fmt "_"
+    | Discard _ -> fprintf fmt "_"
     | Lam(n, ste, it) -> pretty_lam fmt n ste it
     | App({ name = f },[x]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App({ name = f },x::xs) when F.equal F.pif f || F.equal F.sigmaf f -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
@@ -1018,7 +1018,7 @@ module ScopedTerm = struct
   let equal env ?(types=true) t1 t2 =
     let rec eq ctx t1 t2 =
       match t1.it, t2.it with
-      | Discard, Discard -> true
+      | Discard _, Discard _ -> true
       | UVar(n1,l1), UVar(n2,l2) -> eq_uvar ctx n1.name n2.name && Util.for_all2 (eq ctx) l1 l2
       | App({ scope = Global _ as b1; name = c1},xs), App({ scope = Global _ as b2; name = c2 },ys) -> Scope.equal env b1 b2 && F.equal c1 c2 && Util.for_all2 (eq ctx) xs ys
       | App({ scope = Bound l1; name = c1 },xs), App({ scope = Bound l2; name = c2 },ys) -> l1 = l2 && eq_var ctx l1 c1 c2 && Util.for_all2 (eq ctx) xs ys
@@ -1047,7 +1047,7 @@ module ScopedTerm = struct
     cin, cout, isc
 
   let rec of_simple_term ~loc = function
-    | SimpleTerm.Discard -> Discard
+    | SimpleTerm.Discard -> Discard { heapify = false }
     | Impl(b,loc,t1,t2) -> Impl(b,loc,of_simple_term_loc t1, of_simple_term_loc t2)
     | Const(scope,c) -> App (mk_w_ty_loc ~scope c ~loc,[])
     | Opaque c -> CData c
@@ -1083,14 +1083,14 @@ module ScopedTerm = struct
       | Spill(t,i) -> Spill(rename_loc l c d t,i)
       | Cast(t,ty) -> Cast(rename_loc l c d t,ty)
       | UVar(v,xs) -> UVar(v,List.map (rename_loc l c d) xs)
-      | Discard | CData _ -> t
+      | Discard _ | CData _ -> t
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
 
     let rec clone_loc ~loc {it} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
     clone ~loc = function
       | Impl (b, loc, l, r) -> Impl(b, loc, clone_loc ~loc l, clone_loc ~loc r)
       | Lam (n,ty,bo) -> Lam(Option.map clone_const n, ty, clone_loc ~loc bo)
-      | Discard -> Discard
+      | Discard { heapify } -> Discard { heapify }
       | UVar (v, xs) -> UVar (clone_const v, List.map (clone_loc ~loc) xs)
       | App (g, xs) -> App (clone_const g, List.map (clone_loc ~loc) xs)
       | CData _ as t -> t 
@@ -1108,7 +1108,7 @@ module ScopedTerm = struct
         | Lam(Some { scope = c; name = l },_,t) -> Scope.Set.union acc @@ Scope.Set.remove (l,c) (fv Scope.Set.empty t)
         | Spill(t,_) -> fv acc t
         | Cast(t,_) -> fv acc t
-        | Discard | CData _ -> acc in
+        | Discard _ | CData _ -> acc in
       let rec load_subst ~loc t (args : t list) map fvset =
         match t, args with
         | Lam(None,_,t), _ :: xs -> load_subst_loc t xs map fvset
@@ -1132,7 +1132,7 @@ module ScopedTerm = struct
         | UVar(c,xs) -> UVar(c,List.map (subst_loc map fv) xs)
         | Spill(t,i) -> Spill(subst_loc map fv t,i)
         | Cast(t,ty) -> Cast(subst_loc map fv t,ty)
-        | Discard | CData _ -> t
+        | Discard _ | CData _ -> t
       and subst_loc map fv { it; ty; loc } = {loc; it = (subst map fv it); ty}
       and app_loc { it; loc; ty } args : t = {loc; it = (app ~loc it args); ty}
       and app ~loc t (args : t list) =
@@ -1143,7 +1143,7 @@ module ScopedTerm = struct
         | Impl(_,_,_,_) -> error ~loc "cannot apply impl"
         | CData _ -> error ~loc "cannot apply cdata"
         | Spill _ -> error ~loc "cannot apply spill"
-        | Discard -> error ~loc "cannot apply discard"
+        | Discard _ -> error ~loc "cannot apply discard"
         | Cast _ -> error ~loc "cannot apply cast"
         | Lam _ -> load_subst ~loc t args Scope.Map.empty Scope.Set.empty
       in

@@ -396,7 +396,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       check_spill ~positive ctx ~loc ~tyctx sp info ety
     | App({ scope = gid } as hd,xs) -> check_app ~positive ctx ~loc ~tyctx gid (drop_scope hd) (get_type ~loc ctx env hd) xs ety 
     | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx c cty t ety
-    | Discard -> []
+    | Discard _ -> []
     | UVar({ name = c } as hd,args) -> check_app ~positive ctx ~loc ~tyctx (Scope.Bound elpi_var) hd (uvar_type ~loc c) args ety
     | Cast(t,ty) ->
         let ty = TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty ty in
@@ -682,35 +682,22 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     match it with
     | App({ scope = Global { resolved_to = s }; name; ty },args) ->
         begin match SymbolResolver.resolved_to env s with
-        | Some s when not (occur_check_symb (Some s)) ->
-            let args = output_args (TypeAssignment.deref ty) args in
-            List.iter (check_no_discard (`Symb name)) args
+        | Some s when not (occur_check_symb (Some s)) -> List.iter ensure_no_discard args
         | _ -> ()
         end
-    | UVar({ name; ty },args) ->
-      let args = output_args (TypeAssignment.deref ty) args in
-      List.iter (check_no_discard (`Uvar name)) args
+    | UVar({ name; ty },args) -> List.iter ensure_no_discard args
     | _ -> ()
 
-  and check_no_discard s { loc; it } =
+  and ensure_no_discard { loc; it } =
     match it with
-    | Discard ->
-        begin match s with
-        | `Symb s -> error ~loc (Format.asprintf "Discard not allowed in output arguments of %a since it does not perform occur check" F.pp s)
-        | `Uvar s -> error ~loc (Format.asprintf "Discard not allowed in output arguments of %a since it may not perform occur check" F.pp s)
-        end
-    | App(_,xs) -> List.iter (check_no_discard s) xs
-    | Impl(_,_,x,y) -> check_no_discard s x; check_no_discard s y
-    | Cast(x,_) -> check_no_discard s x
-    | Lam (_,_,x) -> check_no_discard s x
-    | _ -> ()
-
-  and output_args ty l =
-    match ty, l with
-    | TypeAssignment.Arr(m,NotVariadic,_,ty), x :: l when not (TypeAssignment.is_input m) -> x :: output_args ty l
-    | TypeAssignment.Arr(m,Variadic,_,ty), x :: l when not (TypeAssignment.is_input m) -> x :: l
-    | TypeAssignment.Arr(_,NotVariadic,_,ty), x :: l -> output_args ty l
-    | _ -> []
+    | Discard x -> x.heapify <- true
+    | App(_,xs) -> List.iter ensure_no_discard xs
+    | Impl(_,_,x,y) -> ensure_no_discard x; ensure_no_discard y
+    | Cast(x,_) -> ensure_no_discard x
+    | Lam (_,_,x) -> ensure_no_discard x
+    | UVar(u,xs) -> List.iter ensure_no_discard xs
+    | Spill(t,_) -> ensure_no_discard t
+    | CData _ -> ()
 
   and check_matches_poly_skema_loc ~unknown { loc; it } =
     let _, c, args = rule_head ~loc it in

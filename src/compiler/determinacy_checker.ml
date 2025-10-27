@@ -450,7 +450,7 @@ let check_clause, check_chr_guard_and_newgoal =
             let _ = check_lam ~type_abbrevs ~types ~ctx ~var t in
             (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty, Good_call.init ())
           with FatalDetError (_,b1) | DetError (_, b1) | RelationalBody (_, b1) -> (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty, b1))
-      | Discard ->
+      | Discard _ ->
           Format.eprintf "Calling type_ass_2func_mut in Discard@.";
           (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty, Good_call.init ())
       | CData _ -> (Exp [], Good_call.init ())
@@ -537,7 +537,7 @@ let check_clause, check_chr_guard_and_newgoal =
           assume ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ~type_abbrevs x) ctx) d bo
       | UVar (b, tl) -> assume_var ~loc ~ctx  d b tl
       | App (b, xs) -> assume_app ~was_input ctx ~loc d b xs
-      | Discard -> ()
+      | Discard _ -> ()
       | Impl (L2R,_, h, b) ->
           check_clause ~type_abbrevs ~types ~ctx ~var:!var h |> ignore;
           assume ~was_input ctx d b
@@ -667,7 +667,7 @@ let check_clause, check_chr_guard_and_newgoal =
       | Spill _ -> spill_err ~loc
       | CData _ -> anomaly ~loc "Found CData in prop position"
       | Lam _ -> anomaly ~loc "Lambda-abstractions are not props"
-      | Discard -> anomaly ~loc "Discard found in prop position"
+      | Discard _ -> anomaly ~loc "Discard found in prop position"
       | Impl (R2L, _,_, _) -> anomaly ~loc "Found clause in prop position"
     in
     (!var, check ~ctx d t)
@@ -681,7 +681,7 @@ let check_clause, check_chr_guard_and_newgoal =
     in
     let otype2term ~loc ty b =
       let ty = TypeAssignment.create ty in
-      let it = match b with None -> ScopedTerm.Discard | Some { ScopedTerm.scope = a; name = b; ty = c; loc } -> App({ ScopedTerm.scope = Bound a; name = b; ty = c; loc },[]) in
+      let it = match b with None -> ScopedTerm.Discard { heapify = false } | Some { ScopedTerm.scope = a; name = b; ty = c; loc } -> App({ ScopedTerm.scope = Bound a; name = b; ty = c; loc },[]) in
       ScopedTerm.{ it; ty; loc }
     in
     let build_clause args ~ctx ~loc ~ty body =

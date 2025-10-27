@@ -226,12 +226,10 @@ let () = declare "list_comma"
 let () = declare "heap_discard"
   ~source_elpi:"heap_discard.elpi"
   ~description:"heapification of _"
-    ~expectation:Test.(FailureOutput Str.(regexp "Discard not allowed"))
   ()
 let () = declare "heap_discard3"
   ~source_elpi:"heap_discard3.elpi"
   ~description:"heapification of _"
-    ~expectation:Test.(FailureOutput Str.(regexp "Discard not allowed"))
   ()
 
 let () = declare "accumulate_twice1"

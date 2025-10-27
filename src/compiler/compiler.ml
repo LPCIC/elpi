@@ -884,7 +884,7 @@ end = struct
     let open Ast.Term in
     match t with
     | Parens { loc; it } -> scope_term ~state ctx ~loc it
-    | Const c when is_discard c -> ScopedTerm.Discard
+    | Const c when is_discard c -> ScopedTerm.Discard { heapify = false }
     | Const c when is_macro_name c ->
         scope_term_macro ~loc ~state c []
     | Const c when F.Set.mem c ctx -> ScopedTerm.mkBoundApp ~lang:elpi_language ~loc c []
@@ -1188,7 +1188,7 @@ module Flatten : sig
           let t' = aux_loc t in
           let ty' = ScopedTypeExpression.smart_map_scoped_loc_ty tyf ty in
           if t' == t && ty' == ty then it else Cast(t',ty')
-      | Discard -> it
+      | Discard _ -> it
       | CData _ -> it
     and aux_loc ({ it; loc; ty } as orig) =
       let it' = aux it in
@@ -1657,6 +1657,11 @@ end = struct
         amap := F.Map.add c n !amap;
         n 
     in
+    let allocate_fresh_arg () =
+        let n = F.Map.cardinal !amap in
+        let c = F.from_string (Printf.sprintf "%%Underscore%d" n) in
+        allocate_arg c
+    in
     let lookup_bound loc (_,ctx) (c,l as x) =
       try Scope.Map.find x ctx
       with Not_found -> anomaly ~loc ("Unbound variable " ^ F.show c ^ if l <> elpi_language then " (language: "^l^")" else "" ^ " in context " ^ Scope.Map.(show Format.pp_print_int) ctx) 
@@ -1721,7 +1726,13 @@ end = struct
       | UVar({ name = c },xs) ->
           let xs = List.map (todbl ctx) xs in
           R.mkAppArg (allocate_arg c) 0 xs
-      | Discard -> D.mkDiscard
+      | Discard { heapify = false } -> D.mkDiscard
+      | Discard { heapify = true } ->
+          let xs =
+            Scope.Map.bindings (snd ctx) |>
+            List.map (fun (k,_) -> allocate_bound_symbol t.loc ctx k) in
+          R.mkAppArg (allocate_fresh_arg ()) 0 xs
+          
     in
     let t  = todbl (depth,ctx) t in
     (!symb, !amap), t
@@ -2590,7 +2601,7 @@ let info_of_scoped_term ~types t =
 
   let rec aux loc ty = function
     | Impl(_,locs,l,r) -> log_bsymb locs Global_symbols.impl; log_ty loc ty; aux_loc l; aux_loc r
-    | Discard -> log_ty loc ty
+    | Discard _ -> log_ty loc ty
     | UVar({ scope = s; ty = tys; loc = locs},args) -> if args <> [] then log_ty loc ty; log_symb locs (Scope.Bound elpi_var) (TypeAssignment.deref_opt tys); List.iter aux_loc args
     | App({ scope = s; ty = tys; loc = locs},args) -> if args <> [] then log_ty loc ty; log_symb locs s (TypeAssignment.deref_opt tys); List.iter aux_loc args
     | CData _ -> log_ty loc ty
