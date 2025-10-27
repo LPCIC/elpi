@@ -302,7 +302,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
           Fmt.fprintf f "@ %a" (aux inf_prec depth) (mkConst depth);
           match t with
           | Lam (Builtin (Pi, [body])) -> pp_pis (depth + 1) body
-          | Lam t -> Fmt.fprintf f "@ \\@ %a@]" (aux min_prec depth) t
+          | Lam t -> Fmt.fprintf f "@ \\@ %a@]" (aux min_prec (depth+1)) t
           | _ -> assert false in
         pp_pis depth body)
     | Builtin(b,[]) -> Fmt.fprintf f "%a" ppbuiltin b

@@ -21,7 +21,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                  "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
                   "rule_loc": [
                     "File",
                     {
@@ -51,7 +51,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -102,7 +102,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -158,7 +158,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -216,7 +216,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -277,7 +277,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -346,7 +346,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -445,7 +445,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -522,7 +522,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {

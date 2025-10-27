@@ -70,7 +70,7 @@
 {"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of (let (lam c0 \\ c0) X1 c0 \\ app c0 (global [])) X2"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 11, column 0, characters 177-284:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 368-429:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4507-4576:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4578-4639:"]}
-{"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 11, column 0, characters 177-284:","(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4))))."]}
+{"step" : 9,"kind" : ["Info"],"goal_id" : 10,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 11, column 0, characters 177-284:","(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))."]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := lam c0 \\ c0"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A2 := X1"]}
 {"step" : 9,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A3 := c0 \\\napp c0 (global [])"]}
@@ -85,7 +85,7 @@
 {"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of (lam c0 \\ c0) (mono X4)"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 8, column 0, characters 100-174:","File \"tests/sources/trace-w/hm.elpi\", line 21, column 0, characters 368-429:","File \"tests/sources/trace-w/main.elpi\", line 163, column 0, characters 4507-4576:","File \"tests/sources/trace-w/main.elpi\", line 164, column 0, characters 4578-4639:"]}
-{"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 8, column 0, characters 100-174:","(of (lam A0) (mono (A2 ===> A1))) :- (pi (c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1))))."]}
+{"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/hm.elpi\", line 8, column 0, characters 100-174:","(of (lam A0) (mono (A2 ===> A1))) :- (pi c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1)))."]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["A0 := c0 \\\nc0"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:assign","payload" : ["X4 := X5 ===> X6"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 17,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["20"]}
@@ -345,7 +345,7 @@
 {"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["bind","bind [uvar frozen--402 []] [] (uvar frozen--402 [] ===> uvar frozen--402 []) \n X3"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule:backchain:candidates","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 123, column 0, characters 3297-3418:"]}
-{"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 123, column 0, characters 3297-3418:","(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))))."]}
+{"step" : 25,"kind" : ["Info"],"goal_id" : 30,"runtime_id" : 1,"name" : "user:rule:backchain:try","payload" : ["File \"tests/sources/trace-w/main.elpi\", line 123, column 0, characters 3297-3418:","(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))."]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A1 := uvar frozen--402 []"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A3 := []"]}
 {"step" : 25,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 1,"name" : "user:assign","payload" : ["A0 := []"]}

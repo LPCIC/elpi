@@ -851,7 +851,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                  "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                   "rule_loc": [
                     "File",
                     {
@@ -887,7 +887,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -980,7 +980,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi (c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1)))).",
+                  "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1))).",
                   "rule_loc": [
                     "File",
                     {
@@ -1012,7 +1012,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi (c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1)))).",
+                "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1031,7 +1031,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1144,7 +1144,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi (c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1)))).",
+                "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1163,7 +1163,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1276,7 +1276,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi (c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1)))).",
+                "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1295,7 +1295,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1425,7 +1425,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi (c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1)))).",
+                "rule_text": "(of (lam A0) (mono (A2 ===> A1))) :- (pi c0 \\\n                                       (of c0 (mono A2) =>\n                                         of (A0 c0) (mono A1))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1444,7 +1444,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1587,7 +1587,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1750,7 +1750,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -1887,7 +1887,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -4687,7 +4687,7 @@
                             "rule": [
                               "UserRule",
                               {
-                                "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                                "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                                 "rule_loc": [
                                   "File",
                                   {
@@ -4729,7 +4729,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -4840,7 +4840,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -4965,7 +4965,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -5059,7 +5059,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -5159,7 +5159,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -5248,7 +5248,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -5323,7 +5323,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -5407,7 +5407,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -5529,7 +5529,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -5671,7 +5671,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -5803,7 +5803,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -5935,7 +5935,7 @@
                           "rule": [
                             "UserRule",
                             {
-                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi (c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0)))).",
+                              "rule_text": "(bind [A1 | A3] A0 A4 (all A2 (c0 \\ (A5 c0)))) :- (if (mem A0 A1) (A2 = eqt) \n                                                    (A2 = any)), \n (pi c0 \\ (copy A1 c0 => bind A3 A0 A4 (A5 c0))).",
                               "rule_loc": [
                                 "File",
                                 {
@@ -6111,7 +6111,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -6229,7 +6229,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -6382,7 +6382,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -6563,7 +6563,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -6726,7 +6726,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -6910,7 +6910,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -7109,7 +7109,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -7450,7 +7450,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -7710,7 +7710,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -7902,7 +7902,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
@@ -8110,7 +8110,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi (c0 \\ (of c0 A2 => of (A3 c0) (mono A4)))).",
+                "rule_text": "(of (let A0 A2 A3) (mono A4)) :- (of A0 (mono A1)), (gammabar (mono A1) A2), \n (pi c0 \\ (of c0 A2 => of (A3 c0) (mono A4))).",
                 "rule_loc": [
                   "File",
                   {
