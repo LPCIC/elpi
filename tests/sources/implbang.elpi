@@ -1,3 +1,6 @@
 pred p o:int.
 
 main :- (pi x\ p x :- x = 1) =!=> (pi x\ p x :- x = 2) =!=> std.findall (p 1) [ _ ].
+
+pred q.
+q :- print 1, true =!=> print 2.
