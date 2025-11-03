@@ -1,13 +1,18 @@
-# UNRELEASED
+# v3.4.3 (November 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
 
 - Language:
   - New attribute `:nooc` to disable occur check
+  
 - Stdlib:
   - New `unsound_unif` performing unification without occur check
   - New `std.fset` and `std.fmap` that work on ground terms and
     disable occur check
+    
 - Compiler:
   - Change raise an error in case of type/typeabbrev collision
+
 - Parser:
   - Fix associativity of `=!=>` (was not the same as `==>`)
 
