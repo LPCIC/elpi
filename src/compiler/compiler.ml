@@ -986,18 +986,19 @@ end = struct
 
   let global_hd_symbols_of_clauses cl =
     let open ScopedTerm in
-    let add1 s t =
+    let add1 ~loc s t =
       match t.it with
       | App({ scope = Global _; name = c },_) -> F.Set.add c s
       | Impl(R2L,_,{ it = (App({ scope = Global _; name = c },_)) }, _) -> F.Set.add c s
-      | _ -> assert false in
-    List.fold_left (fun s { Ast.Clause.body } ->
+      | Impl(R2L,_,{ it = (UVar _) }, _) | UVar _ -> error ~loc "Variables cannot be used as predicate names"
+      | _ -> error ~loc "Cannot determine the predicate for this rule" in
+    List.fold_left (fun s { Ast.Clause.body; loc } ->
       match body.it with
       | App({ scope = Global _; name = c },xs) when F.equal F.andf c ->
         (* since we allow a rule to be of the form (p :- ..., q :- ...) eg
            via macro expansion, we could have , in head position  *)
-          List.fold_left add1 s xs
-      | _ -> add1 s body)
+          List.fold_left (add1 ~loc) s xs
+      | _ -> add1 ~loc s body)
       F.Set.empty cl
 
   let compile_clause state macros { Ast.Clause.body; attributes; loc; needs_spilling = () } =
