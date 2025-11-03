@@ -65,6 +65,7 @@ let desugar_macro loc lhs rhs =
 let mkParens_if_impl_or_conj loc t =
   match t.it with
   | App({ it = Const c},_) when Func.(equal c implf) -> mkParens loc t
+  | App({ it = Const c},_) when Func.(equal c implbangf) -> mkParens loc t
   | App({ it = Const c},_) when Func.(equal c andf) -> mkParens loc t
   | _ -> t
 
@@ -76,11 +77,12 @@ let mkApp loc = function
 let rec unparen = function
   | [] -> []
   | { it = Parens { it = App ({ it = Const c1 }, args) } } as x :: xs when Func.(equal c1 implf) -> x :: unparen xs
+  | { it = Parens { it = App ({ it = Const c1 }, args) } } as x :: xs when Func.(equal c1 implbangf) -> x :: unparen xs
   | { it = Parens x} :: xs -> x :: unparen xs
   | x :: xs -> x :: unparen xs
 
 let mkAppF loc (cloc,c) l =
-  if Func.(equal c implf) then
+  if Func.(equal c implf || equal c implbangf) then
     match l with
     | { it = App ({ it = Const j; loc = jloc }, args) } :: rhs when Func.(equal j andf) ->
        begin match List.rev args with

@@ -8,6 +8,8 @@
     disable occur check
 - Compiler:
   - Change raise an error in case of type/typeabbrev collision
+- Parser:
+  - Fix associativity of `=!=>` (was not the same as `==>`)
 
 # v3.4.2 (October 2025)
 
