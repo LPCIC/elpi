@@ -6,9 +6,11 @@ let pp_mehir_fixity fmt = function
   | Infixr -> Format.fprintf fmt "right"
 
 let pp_token_names fmt l =
-  l |> List.iter (function
-    | Fixed { token; _ } -> Format.fprintf fmt "%s " token
-    | Extensible { token; _ } -> Format.fprintf fmt "%s " token)
+  let toks = l |> List.map (function
+    | Fixed { token; _ } -> Format.asprintf "%s" token
+    | Extensible { token; _ } -> Format.asprintf "%s" token) in
+  let toks = Elpi_util.Util.uniq @@ List.sort Stdlib.compare toks in
+  Format.fprintf fmt "%s" (String.concat " " toks)
 
 let () =
   Format.printf "%%right BIND\n";

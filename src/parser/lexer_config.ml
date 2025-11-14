@@ -66,7 +66,8 @@ let mixfix_symbols : mixfix list = [
   { tokens = [ mkFix "CONJ" "," CONJ;
                mkFix "CONJ2" "&" CONJ2];
     fixity = Infixr };
-  { tokens = [ mkFix "ARROW" "->" ARROW];
+  { tokens = [ mkFix "ARROW" "->" ARROW;
+               mkFix "ARROW" "→" ARROW];
     fixity = Infixr };
   { tokens = [ mkFix "DARROW" "=>" DARROW];
     fixity = Infixr };
