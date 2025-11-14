@@ -1,3 +1,9 @@
+# UNRELEASED
+
+- Parser:
+  - New accept `→` as `->` since it is found in Elpi tutorials rendered in
+    HTML
+
 # v3.4.3 (November 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
