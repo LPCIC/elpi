@@ -74,6 +74,7 @@ type t = Tokens.token =
   | FAMILY_AND of (string)
   | EXTERNAL
   | EXPORTDEF
+  | ERROR_TOKEN of Mastic.Error.t
   | EQ2
   | EQ
   | EOF
