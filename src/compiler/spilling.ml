@@ -288,6 +288,8 @@ and spill1 ~type_abbrevs ~types ?extra args ({ loc } as t) =
   let t = if List.length t <> 1 then error ~loc "bad spilling" else List.hd t in
   (spills, t)
 
+let fresh = ref 0
+
 let rec remove_top_sigmas ~types t =
   match t.it with
   | App ({ scope = s }, [_]) when is_symbol ~types Elpi_runtime.Data.Global_symbols.pi s -> t
@@ -295,7 +297,9 @@ let rec remove_top_sigmas ~types t =
       { t with it = App(n, smart_map (remove_top_sigmas ~types) xs) }
   | Impl(x,l,t1,t2) -> { t with it = Impl(x,l,t1,remove_top_sigmas ~types t2) }
   | App ({ scope = s }, [{ it = Lam(Some { name = vn; ty = vty; loc=vloc },_,{ loc;ty }); } as b]) when is_symbol ~types Elpi_runtime.Data.Global_symbols.sigma s ->
-      remove_top_sigmas ~types { loc; ty; it = ScopedTerm.beta b [{ ty = vty; loc; it = UVar(mk_uvar vn ~loc:vloc ~ty:vty,[]) }] }
+      let vn_fresh = F.from_string @@ Printf.sprintf "%s_%d" (F.show vn) !fresh in
+      incr fresh;
+      remove_top_sigmas ~types { loc; ty; it = ScopedTerm.beta b [{ ty = vty; loc; it = UVar(mk_uvar vn_fresh ~loc:vloc ~ty:vty,[]) }] }
   | _ -> t
 
 let spill ~type_abbrevs ~types t =

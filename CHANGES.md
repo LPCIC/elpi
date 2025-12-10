@@ -1,3 +1,10 @@
+# v3.4.4 (December 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Compiler:
+  - Fix bug involving spilling and sigma
+
 # v3.4.3 (November 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
