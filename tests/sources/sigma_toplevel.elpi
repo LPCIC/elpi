@@ -1,0 +1,3 @@
+macro @foo :- sigma N\ N = 3.
+
+main :- N = 4, @foo, A = {std.length []}.

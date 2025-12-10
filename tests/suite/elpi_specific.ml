@@ -543,3 +543,8 @@ let () = declare "dupta2"
   ~description:"duplicate type abbreviation namespace"
   ~expectation:(FailureOutput (Str.regexp "Illegal type"))
   ()
+
+let () = declare "sigma_toplevel"
+  ~source_elpi:"sigma_toplevel.elpi"
+  ~description:"sigma elimination"
+  ()
