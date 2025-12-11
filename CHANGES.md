@@ -1,3 +1,11 @@
+# v3.4.5 (December 2025)
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Builtin:
+  - Fix `pattern_match` builtin had the arguments in wrong order (w.r.t. the
+    documentation). The pattern is now the second argument.
+
 # v3.4.4 (December 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.

@@ -220,8 +220,14 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "func fail.";
   LPCode "func false.";
 
-  LPCode "external func (=) -> A, A. % unification term term";
-  LPCode "external func pattern_match A -> A. % matching pattern term";
+  LPCode {|
+% [X = T] unifies X with Y, possibly assigning unification
+% variables in X and Y.
+external func (=) -> A, A.
+
+% [pattern_matching T P] matches T against pattern P, only
+% variables in P are assigned.
+external func pattern_match A -> A.|};
 
   LPCode "external func (pi) (func A).";
   LPCode "external func (sigma) (func A).";

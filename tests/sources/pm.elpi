@@ -2,7 +2,7 @@ type f int -> prop.
 type a int.
 
 main :- 
-  pattern_match (f X) (f 1),
+  pattern_match (f 1) (f X),
   print X,
-  not(pattern_match (f a) (f Y)),
+  not(pattern_match (f Y) (f a)),
   print Y.
