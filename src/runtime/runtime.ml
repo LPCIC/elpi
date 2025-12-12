@@ -4084,7 +4084,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
          [%spy "user:rule:eq" ~rid ~gid pp_string "fail"];
          [%tcall next_alt alts]
        end
-    | Builtin(Match,[p;r]) -> [%spy "user:rule" ~rid ~gid pp_string "eq"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (show_builtin_predicate C.show Match)];
+    | Builtin(Match,[r;p]) -> [%spy "user:rule" ~rid ~gid pp_string "eq"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (show_builtin_predicate C.show Match)];
        if unif ~oc:true ~argsdepth:depth ~matching:true (gid[@trace]) depth empty_env depth r p then begin
          [%spy "user:rule:eq" ~rid ~gid pp_string "success"];
          match gs with

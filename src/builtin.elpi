@@ -14,9 +14,14 @@ func fail.
 
 func false.
 
-external func (=) -> A, A. % unification term term
 
-external func pattern_match A -> A. % matching pattern term
+% [X = T] unifies X with Y, possibly assigning unification
+% variables in X and Y.
+external func (=) -> A, A.
+
+% [pattern_matching T P] matches T against pattern P, only
+% variables in P are assigned.
+external func pattern_match A -> A.
 
 external func (pi) (func A).
 
