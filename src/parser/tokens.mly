@@ -78,6 +78,7 @@
 %token NIL
 %token EOF
 %token DOTS
+%token <Mastic.Error.t> ERROR_TOKEN
 
 %token <string> FAMILY_PLUS
 %token <string> FAMILY_TIMES

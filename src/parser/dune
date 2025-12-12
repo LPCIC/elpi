@@ -2,14 +2,14 @@
   (name elpi_parser)
   (public_name elpi.parser)
   (preprocess (per_module ((pps ppx_deriving.std) ast)))
-  (libraries unix menhirLib elpi_lexer_config elpi.util stdlib-shims)
+  (libraries unix menhirLib elpi_lexer_config elpi.util stdlib-shims mastic)
   (modules ast grammar lexer parser_config error_messages parse)
   )
 
 (library
   (name elpi_lexer_config)
   (public_name elpi.lexer_config)
-  (libraries elpi.util)
+  (libraries elpi.util mastic)
   (modules tokens lexer_config))
 
 (executable
@@ -22,8 +22,8 @@
   (modules gen_infix_lexer)
   (libraries elpi.lexer_config str))
 
-(menhir (modules tokens) (flags --only-tokens))
-(menhir (modules grammar tokens token_precedence) (flags --external-tokens Elpi_lexer_config.Tokens --exn-carries-state) (merge_into grammar))
+(menhir (modules tokens) (flags --table --inspection --only-tokens))
+(menhir (modules grammar tokens token_precedence) (flags --external-tokens Elpi_lexer_config.Tokens --table --inspection) (merge_into grammar))
 (ocamllex (modules lexer))
 
 (rule

@@ -1354,7 +1354,7 @@ module Utils = struct
         | Some (`Replace,x) -> [Replace x]
         | Some (`Remove,x) -> [Remove x]
         | None -> []) in
-    [Program.Clause {
+    [Decl.Clause {
       Clause.loc = loc;
       attributes;
       body = aux depth Util.IntMap.empty term;
