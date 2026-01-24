@@ -87,12 +87,13 @@ The extensions to λProlog implemented in ELPI are described in the
 [ELPI](ELPI.md) file, built-in predicates are documented in
 [builtin](src/builtin.elpi).
 
-There is a [short paper](https://hal.inria.fr/hal-01176856/) describing
-the implementation of the interpreter, in particular how it deals with
-binder mobility.
+This [thesis](https://inria.hal.science/hal-05294918) is the most comprehensive
+document about Elpi and its applications. This [paper](https://inria.hal.science/hal-05026472)
+describes the determinacy checker.
 
-A [longer paper](https://hal.inria.fr/hal-01410567v2) describes, among other
-things, the part of the language
+To cite Elpi use the [system description](https://hal.inria.fr/hal-01176856/)
+of the interpreter. A [longer paper](https://hal.inria.fr/hal-01410567v2) describes,
+among other things, the part of the language
 for declaring and manipulating constraints.
 
 For a lightweight introduction to Elpi one can look at the
