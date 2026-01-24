@@ -589,9 +589,9 @@ end = struct (* {{{ *)
 
   let run _ dl =
     let rec aux_run ns blocks clauses macros kinds types tabbrs chr accs = function
-      | Program.Ignored _ :: rest ->
+      | Decl.Ignored _ :: rest ->
           aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
-      | (Program.End _ :: _ | []) as rest ->
+      | (Decl.End _ :: _ | []) as rest ->
           { body = List.rev (cl2b clauses @ blocks);
             types = (*List.rev*) types; (* we prefer the last one *)
             kinds = List.rev kinds;
@@ -599,27 +599,27 @@ end = struct (* {{{ *)
             macros = List.rev macros },
           List.rev chr,
           rest
-      | Program.Begin loc :: rest ->
+      | Decl.Begin loc :: rest ->
           let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside an anonymous block";
           aux_end_block loc ns (Accumulated p :: cl2b clauses @ blocks)
             [] macros kinds types tabbrs chr accs rest
-      | Program.Constraint (loc, ctx_filter, clique) :: rest ->
+      | Decl.Constraint (loc, ctx_filter, clique) :: rest ->
           if chr <> [] then
             error "Constraint blocks cannot be nested";
           let p, chr, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
           aux_end_block loc ns (Constraints({loc;ctx_filter;clique;rules=chr},p) :: cl2b clauses @ blocks)
             [] macros kinds types tabbrs [] accs rest
-      | Program.Namespace (loc, n) :: rest ->
+      | Decl.Namespace (loc, n) :: rest ->
           let p, chr1, rest = aux_run (n::ns) [] [] [] [] [] [] [] StrSet.empty rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside a namespace block";
           aux_end_block loc ns (Namespace (n,p) :: cl2b clauses @ blocks)
             [] macros kinds types tabbrs chr accs rest
-      | Program.Shorten (loc,[]) :: _ ->
+      | Decl.Shorten (loc,[]) :: _ ->
           anomaly ~loc "parser returns empty list of shorten directives"
-      | Program.Shorten (loc,directives) :: rest ->
+      | Decl.Shorten (loc,directives) :: rest ->
           let shorthand (full_name,short_name) = { iloc = loc; full_name; short_name } in
           let shorthands = List.map shorthand directives in
           let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
@@ -628,11 +628,11 @@ end = struct (* {{{ *)
           aux_run ns ((Shorten(shorthands,p) :: cl2b clauses @ blocks))
             [] macros kinds types tabbrs chr accs rest
 
-      | Program.Accumulated (_,[]) :: rest ->
+      | Decl.Accumulated (_,[]) :: rest ->
           aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
 
-      | Program.Accumulated (loc,{ file_name; digest; ast = a } :: more) :: rest ->
-          let rest = Program.Accumulated (loc, more) :: rest in
+      | Decl.Accumulated (loc,{ file_name; digest; ast = a } :: more) :: rest ->
+          let rest = Decl.Accumulated (loc, more) :: rest in
           let digest = String.concat "." (digest :: List.map F.show ns) in
           if StrSet.mem digest accs then begin
             (* Printf.eprintf "skip: %s\n%!" filename; *)
@@ -641,38 +641,41 @@ end = struct (* {{{ *)
             (* Printf.eprintf "acc: %s -> %d\n%!" filename (List.length a); *)
             aux_run ns blocks clauses macros kinds types tabbrs chr
               (StrSet.add digest accs)
-              (Program.Begin loc :: a @ Program.End loc :: rest)
+              (Decl.Begin loc :: a @ Decl.End loc :: rest)
           end
 
-      | Program.Clause c :: rest ->
+      | Decl.Clause c :: rest ->
           let c = structure_clause_attributes c in
           aux_run ns blocks (c::clauses) macros kinds types tabbrs chr accs rest
-      | Program.Macro m :: rest ->
+      | Decl.Macro m :: rest ->
           aux_run ns blocks clauses (m::macros) kinds types tabbrs chr accs rest
-      | Program.Pred t :: rest ->
+      | Decl.Pred t :: rest ->
           let t = structure_type_attributes t in
           aux_run ns blocks clauses macros kinds (t :: types) tabbrs chr accs rest
-      | Program.Kind [] :: rest ->
+      | Decl.Kind [] :: rest ->
           aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
-      | Program.Kind (k::ks) :: rest ->          
+      | Decl.Kind (k::ks) :: rest ->          
           let k = structure_kind_attributes k in
-          aux_run ns blocks clauses macros (k :: kinds) types tabbrs chr accs (Program.Kind ks :: rest)
-      | Program.Type [] :: rest ->
+          aux_run ns blocks clauses macros (k :: kinds) types tabbrs chr accs (Decl.Kind ks :: rest)
+      | Decl.Type [] :: rest ->
           aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
-      | Program.Type (t::ts) :: rest ->          
+      | Decl.Type (t::ts) :: rest ->          
           if List.mem Functional t.attributes then error ~loc:t.loc "functional attribute only applies to pred";
           let t = structure_type_attributes t in
-          aux_run ns blocks clauses macros kinds (t :: types) tabbrs chr accs (Program.Type ts :: rest)
-      | Program.TypeAbbreviation abbr :: rest ->
+          aux_run ns blocks clauses macros kinds (t :: types) tabbrs chr accs (Decl.Type ts :: rest)
+      | Decl.TypeAbbreviation abbr :: rest ->
           let abbr = structure_type_abbreviation abbr in
           aux_run ns blocks clauses macros kinds types (abbr :: tabbrs) chr accs rest
-      | Program.Chr r :: rest ->
+      | Decl.Chr r :: rest ->
           let r = structure_chr_attributes r in
           aux_run ns blocks clauses macros kinds types tabbrs (r::chr) accs rest
+      | Decl.Error _ :: rest ->
+          error "TODO";
+          aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
 
     and aux_end_block loc ns blocks clauses macros kinds types tabbrs chr accs rest =
       match rest with
-      | Program.End _ :: rest ->
+      | Decl.End _ :: rest ->
           aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
       | _ -> error ~loc "matching } is missing"
 
@@ -680,7 +683,7 @@ end = struct (* {{{ *)
     let blocks, chr, rest = aux_run [] [] [] [] [] [] [] [] StrSet.empty dl in
     begin match rest with
     | [] -> ()
-    | Program.End loc :: _ -> error ~loc "extra }"
+    | Decl.End loc :: _ -> error ~loc "extra }"
     | _ -> assert false
     end;
     if chr <> [] then

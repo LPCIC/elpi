@@ -1,6 +1,6 @@
 open Elpi_parser
 open Ast
-open Ast.Program
+open Ast.Decl
 open Ast.Term
 
 let error s a1 a2 =
@@ -57,7 +57,7 @@ let test s x y w z att ?warns b =
     exit 1
 
 let testR s x y w z attributes to_match to_remove guard new_goal =
-  let exp = [Program.(Chr { Chr.to_match; to_remove; guard; new_goal; loc=(mkLoc (x-1) y w z); attributes })] in
+  let exp = [Decl.(Chr { Chr.to_match; to_remove; guard; new_goal; loc=(mkLoc (x-1) y w z); attributes })] in
   let lexbuf = Lexing.from_string s in
   let loc = Loc.initial "(input)" in
   try
@@ -74,8 +74,8 @@ let testT s () =
   try
     let p = Parser.program_from ~loc lexbuf in
     match p with
-    | [Program.Pred _] -> ()
-    | [Program.Type _] -> ()
+    | [Decl.Pred _] -> ()
+    | [Decl.Type _] -> ()
     | _ -> 
       Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) "not a type declaration";
       exit 1
@@ -217,28 +217,28 @@ let _ =
   test  "p :- [ a , b \\ @f , x \\ b ]." 1 27  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 27 [c 7 "a"; lam "b" 12 (app "," 18 [ c 15 "@f"; lam "x" 21  (c 24 "b")]);mkNil 26 ~len:1]);
   (*    0123456789012345678901234567890 *)
   test  "X is a."           1 6  1 0 [] (app "is" 2 [c 0 "X";c 5 "a"]);
-  testF "p :- f use_sig."   14 ".*term expected";
-  testF "X is ."            6 ".*expects a right hand side";
-  testF "X + ."             5 ".*expects a right hand side";
-  testF "X * ."             5 ".*expects a right hand side";
+  testF "p :- f use_sig."   7 ".*term expected";
+  testF "X is ."            5 ".*expects a right hand side";
+  testF "X + ."             4 ".*expects a right hand side";
+  testF "X * ."             4 ".*expects a right hand side";
   test  "p :- X is a, Y is b." 1 19 1 0 [] (app ":-" 2 [c 0 "p"; app "," 11 [app "is" 7 [c 5 "X";c 10 "a"];app "is" 15 [c 13 "Y";c 18 "b"]]]);
   (*    0123456789012345678901234567890 *)
   test  "p (f x\\ _ as y)." 1 15 1 0 [] (app "p" 0 [app"as" ~parenl:true ~parenr:1 10 [app "f" 3 [lam "x" 6  (underscore 8)]; c 13 "y"]]); (* parenl implied by bug *)
   (*    01234567890123456789012345 *)
-  testF ":-"                2 "unexpected start";
-  testF "type ( -> :-"      12 ".*parenthesis.*expected";
-  testF "+"                 1 "unexpected start";
-  testF "x. x)"             5 "unexpected keyword";
-  testF "x. x]"             5 "unexpected keyword";
-  testF "x. +"              4 "unexpected start";
+  testF ":-"                0 "unexpected start";
+  testF "type ( -> :-"      10 ".*parenthesis.*expected";
+  testF "+"                 0 "unexpected start";
+  testF "x. x)"             4 "unexpected keyword";
+  testF "x. x]"             4 "unexpected keyword";
+  testF "x. +"              3 "unexpected start";
   (*    01234567890123456789012345 *)
   test  ":name \"x\" x."    1 11 1 0 [Name "x"] (c 10 "x");
   testT ":index (1) \"foobar\" pred x." ();
   testT ":index (1) pred x."     ();
   testF "p :- g (f x) \\ y." 13 ".*bind.*must follow.*name.*";
-  testF "foo i:term, o:term. foo A B :- A = [B]." 6 "unexpected keyword";
+  testF "foo i:term, o:term. foo A B :- A = [B]." 4 "unexpected keyword";
   (*    01234567890123456789012345 *)
-  testF ":nam \"x\" x."     4 "attribute expected";
+  testF ":nam \"x\" x."     1 "attribute expected";
   testR "rule p (q r)."     1 12 1 0 [] [ss 5 1 (c 5 "p");ss 7 5 (app "q" 8 [c 10 "r"])] [] None None;
   testR "rule (E :> G ?- r)." 1 18 1 0 [] [s (c 6 "E") (c 11 "G") (c 16  "r")] [] None None;
   test  "p :- f \".*\\\\.aux\"." 1 17 1 0 [] (app ":-" 2 [c 0 "p";app "f" 5  [str 7 17 ".*\\.aux"]]);

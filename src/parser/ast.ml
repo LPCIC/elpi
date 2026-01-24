@@ -300,10 +300,9 @@ module TypeAbbreviation = struct
 
 end
 
+module Decl = struct
 
-module Program = struct
-
-  type decl =
+    type t =
     (* Blocks *)
     | Begin of Loc.t
     | Namespace of Loc.t * Func.t
@@ -314,7 +313,7 @@ module Program = struct
     | Accumulated of Loc.t * parser_output list
 
     (* data *)
-    | Clause of (Term.t, raw_attribute list,unit, unit) Clause.t
+    | Clause of (Term.t, raw_attribute list, unit,unit) Clause.t
     | Chr of (raw_attribute list,Term.t) Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Kind of (raw_attribute list,raw_attribute list) Type.t list
@@ -322,11 +321,26 @@ module Program = struct
     | Pred of (raw_attribute list,raw_attribute list) Type.t
     | TypeAbbreviation of (Func.t,raw_attribute list TypeExpression.t) TypeAbbreviation.t
     | Ignored of Loc.t
-  and parser_output = { file_name : string; digest : Digest.t; ast : decl list }
-  [@@deriving show]
+    | Error of Mastic.Error.t
+  and parser_output = { file_name : string; digest : Digest.t; ast : t list }
+  [@@ deriving show]
 
+  type Mastic.Error.t_ += Decl of t
 
-type t = decl list [@@deriving show]
+    let register = {
+    Mastic.Error.pp = pp;
+    match_ast = (function Error x -> Some x | _ -> None);
+    match_error = (function Decl x -> Some x | _ -> None);
+    build_ast = (fun x -> Error x);
+    build_error = (fun x -> Decl x) ;
+  }
+  let Mastic.Error.Registered { of_token; build_token; is_err } =
+    Mastic.Error.register "Decl.t" register
+
+end
+module Program = struct
+
+type t = Decl.t list [@@deriving show]
 
 end
 

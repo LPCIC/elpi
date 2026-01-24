@@ -136,7 +136,7 @@ let mode_of_IO io =
 %type < Goal.t > goal
 %type < (Term.t, raw_attribute list, unit,unit) Clause.t > clause
 %type < Term.t > term
-%type < Program.decl > decl
+%type < Decl.t > decl
 %type < Func.t > infix_SYMB
 %type < Func.t > prefix_SYMB
 %type < Func.t > postfix_SYMB
@@ -164,28 +164,29 @@ program:
 | d = decl; p = program { d :: p }
 
 decl:
-| c = clause; FULLSTOP { Program.Clause c }
-| r = chr_rule; FULLSTOP { Program.Chr r }
-| p = pred; FULLSTOP { Program.Pred p }
-| t = type_; FULLSTOP { Program.Type t }
-| t = kind; FULLSTOP { Program.Kind t }
-| m = macro; FULLSTOP { Program.Macro m }
-| CONSTRAINT; hyps = list(constant); QDASH; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, hyps, cl) }
-| CONSTRAINT; cl = list(constant); LCURLY { Program.Constraint(loc $sloc, [], cl) }
-| NAMESPACE; c = constant; LCURLY { Program.Namespace(loc $sloc, c )}
-| SHORTEN; s = shorten; FULLSTOP { Program.Shorten(loc $sloc, s) }
-| a = typeabbrev; FULLSTOP { Program.TypeAbbreviation a }
-| LCURLY { Program.Begin (loc $sloc) }
-| RCURLY { Program.End (loc $sloc) }
+| c = clause; FULLSTOP { Decl.Clause c }
+| r = chr_rule; FULLSTOP { Decl.Chr r }
+| p = pred; FULLSTOP { Decl.Pred p }
+| t = type_; FULLSTOP { Decl.Type t }
+| t = kind; FULLSTOP { Decl.Kind t }
+| m = macro; FULLSTOP { Decl.Macro m }
+| CONSTRAINT; hyps = list(constant); QDASH; cl = list(constant); LCURLY { Decl.Constraint(loc $sloc, hyps, cl) }
+| CONSTRAINT; cl = list(constant); LCURLY { Decl.Constraint(loc $sloc, [], cl) }
+| NAMESPACE; c = constant; LCURLY { Decl.Namespace(loc $sloc, c )}
+| SHORTEN; s = shorten; FULLSTOP { Decl.Shorten(loc $sloc, s) }
+| a = typeabbrev; FULLSTOP { Decl.TypeAbbreviation a }
+| LCURLY { Decl.Begin (loc $sloc) }
+| RCURLY { Decl.End (loc $sloc) }
 | ext = accumulate; l = separated_nonempty_list(CONJ,filename); FULLSTOP {
-    Program.Accumulated(loc $sloc,List.(concat (map (fun x ->
+    Decl.Accumulated(loc $sloc,List.(concat (map (fun x ->
       let cwd = Filename.dirname (loc $sloc).source_name in
       C.parse_file ~cwd (x ^ ext)) l)))
   }
 | LOCAL; l = separated_nonempty_list(CONJ,constant); option(type_term); FULLSTOP {
     raise (ParseError(loc $loc,"local keyword is no longer supported"))  }
-| ignored; FULLSTOP { Program.Ignored (loc $sloc) }
+| ignored; FULLSTOP { Decl.Ignored (loc $sloc) }
 | f = fixity; FULLSTOP { error_mixfix (loc $loc) }
+| e = ERROR_TOKEN { Decl.of_token e }
 
 accumulate:
 | ACCUMULATE { ".elpi" }
@@ -318,7 +319,7 @@ ignored:
 | USEONLY; separated_nonempty_list(CONJ,constant)
 | USEONLY; separated_nonempty_list(CONJ,constant); type_term
 | CLOSED; separated_nonempty_list(CONJ,constant)
-  { Program.Ignored (loc $sloc) }
+  { Decl.Ignored (loc $sloc) }
 
 fixity:
 | f = FIXITY; c = constant; i = INTEGER { (fixity_of_string f,c,i,loc $loc(c)) }
