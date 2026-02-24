@@ -1,6 +1,11 @@
 % q X yields X=ok
 
 pred p o:int.
+pred q o:int.
+pred r o:int, o:(int -> prop).
+symbol g : int -> prop.
+symbol ok, ko : int.
+
 
 q X :- r X (x\ p x).
 r ko (x\ g x).

@@ -2,12 +2,12 @@
 
 kind xlist type.
 kind xint type.
-symbol x1, x2, x3, x4 ,x5 ,x6, x7, x8, x9, x10 : xint.
+symbol x0, x1, x2, x3, x4 ,x5 ,x6, x7, x8, x9, x10 : xint.
 symbol xnil : xlist.
 symbol xcons : xint -> xlist -> xlist.
 
 kind tm type.
-symbol app : tm -> tm -> tm.
+symbol appl : tm -> tm -> tm.
 symbol lam : (tm -> tm) -> tm.
 
 kind ty type.

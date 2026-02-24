@@ -1,6 +1,14 @@
 kind tm type.
 symbol true : tm.
 symbol false : tm.
+symbol bool : tm.
+symbol nat : tm.
+symbol zero : tm.
+symbol succ : tm.
+symbol b2n : tm.
+symbol app : tm -> tm -> tm.
+symbol arr : tm -> tm -> tm.
+symbol lam : tm -> (tm -> tm) -> tm.
 func term tm -> tm.
 
 term (app X Y) B :- term X (arr A B), term Y A.
