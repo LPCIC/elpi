@@ -222,8 +222,8 @@ let error_ambiguous ~loc c alltys =
 
 let error_unknown_symbol ~loc c =
   let pretty_ty = pretty_ty true in
-  let msg = Format.asprintf "@[<v>%a is unknown." F.pp c in
-    (* (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in *)
+  let msg = Format.asprintf "%a is unknown." F.pp c in
+
   error ~loc msg
 
 
@@ -330,8 +330,6 @@ let rec classify_arrow = function
 let global_type (unknown_global : env_undeclared ref) (ety : TypeAssignment.t MutableOnce.t TypeAssignment.t_) env ~loc c : ret_id TypeAssignment.overloaded =
   try fresh_skema_of_overloaded_symbol c env
   with Not_found ->
-    (* Printf.eprintf "FOUND OMAP %s %s\n%!" (F.show c) ; *)
-
     try
       let ty,id = F.Map.find c !unknown_global in
       Single (id,TypeAssignment.unval ty)
@@ -344,8 +342,6 @@ let global_type (unknown_global : env_undeclared ref) (ety : TypeAssignment.t Mu
           Single (id,TypeAssignment.unval ty)
       | Simple { tgt = (App(f,_,_)) } -> error_unknown_symbol ~loc c (Some f)
       | _ -> error_unknown_symbol ~loc c None
-
-
 let unknown_type_assignment s = TypeAssignment.Val (mk_uvar s)
 
 let rec extend l1 l2 =
