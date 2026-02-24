@@ -1,3 +1,10 @@
+# UNRELEASED
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Typechecker:
+  - Change: disallow undeclared data constructors and predicates
+
 # v3.4.5 (December 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.
