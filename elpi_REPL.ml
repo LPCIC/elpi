@@ -215,7 +215,7 @@ let _ =
   Format.eprintf "@\nTypechecking time: %5.3f@\n%!" type_checking_time;
   Format.eprintf "Determinacy checking time: %5.3f@\n%!" det_checking_time;
   if !print_lprolog then begin
-    API.Pp.program Format.std_formatter prog;
+    API.Pp.program1 Format.std_formatter prog;
     Format.printf "\n\n%% query\n?- ";
     API.Pp.goal Format.std_formatter query;
     exit 0;

@@ -142,7 +142,7 @@ module Pp : sig
 
   val pp_constant : ?pp_ctx:pp_ctx -> Format.formatter -> constant -> unit
 
-  val ppbuiltin : ?pp_ctx:pp_ctx -> Format.formatter -> builtin_predicate -> unit
+  (* val ppbuiltin : ?pp_ctx:pp_ctx -> Format.formatter -> builtin_predicate -> unit *)
 
 end = struct (* {{{ *)
 
@@ -158,10 +158,10 @@ let appl_prec = Elpi_parser.Parser_config.appl_precedence
 let lam_prec = Elpi_parser.Parser_config.lam_precedence
 let inf_prec = Elpi_parser.Parser_config.inf_precedence
 
-let ppbuiltin ?(pp_ctx = { Data.uv_names; table = ! C.table }) f b = Fmt.fprintf f "%s" @@ show_builtin_predicate ~table:pp_ctx.table C.show b
 
 
 let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=min_prec) depth0 names ~argsdepth env f t =
+  let ppbuiltin f b = Fmt.fprintf f "%s" @@ show_builtin_predicate ~table:pp_ctx.table C.show b in
   let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
    else
@@ -310,7 +310,8 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
           | Lam t -> Fmt.fprintf f "@ \\@ %a@]" (aux min_prec (depth+1)) t
           | _ -> assert false in
         pp_pis depth body)
-    | Builtin(b,[]) -> Fmt.fprintf f "%a" (ppbuiltin ~pp_ctx) b
+    (* | Builtin(b,[]) -> Fmt.fprintf f "%a" (ppbuiltin ~pp_ctx) b *)
+    | Builtin(b,[]) -> Fmt.fprintf f "TODO"
     | Builtin(b,x::xs) ->
       (try
         let pprec, hdlvl =

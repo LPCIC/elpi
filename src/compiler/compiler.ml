@@ -2607,10 +2607,12 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
           let map, l = pp_atom ~map ~depth l in
           let map, r = pp_atom ~map ~depth r in
           map, J(pp_a, (J(pp_d, ["id", J(pp_s,"propInfix"); "cnt", J(pp_s, "=")]) :: l :: r :: [])) *)
-      | Builtin (b, []) ->  map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)])
+      (* | Builtin (b, []) ->  map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)]) *)
+      | Builtin (b, []) ->  map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "TODO")])
       | Builtin (b, l) ->
           let map, args = List.fold_left_map (fun map x -> pp_atom ~map ~depth x) map l in
-          map, J(pp_d, [pp_id "id" "prop"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)]) :: args))])
+          (* map, J(pp_d, [pp_id "id" "prop"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)]) :: args))]) *)
+          map, J(pp_d, [pp_id "id" "prop"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "TODO")]) :: args))])
 
       | AppArg (hd, laaa) ->
           let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
@@ -2619,8 +2621,8 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
           let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
           map, J(pp_d, ["id", J(pp_s,"var"); "cnt", J(pp_d, ["name", J(pp_s, pp_const ~depth (AppArg (hd, []))); "varId", J(pp_i, C.Map.find hd map)])])
 
-      | UVar (_, _, _) ->  anomaly "pp_atom: UVar assert false"
-      | AppUVar (_, _, _) -> anomaly "pp_atom: AppUVar assert false"
+      | UVar (_, _) ->  anomaly "pp_atom: UVar assert false"
+      | AppUVar (_, _) -> anomaly "pp_atom: AppUVar assert false"
     
     and pp_atoms ~map ~depth l : 'a C.Map.t * j = 
       let map, args = List.fold_left_map (fun a e -> pp_atom ~depth ~map:a e) map l in 
@@ -2760,10 +2762,14 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
           let map, l = pp_atom ~map ~depth l in
           let map, r = pp_atom ~map ~depth r in
           map, pp_id_cnt "appInfix" ["args", J(pp_a, [J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, "=")]); l;r])] 
-      | Builtin (b, []) ->  map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)])
+      | Builtin (b, []) ->  map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%s" (pp_const ~depth tm))])
+      | Builtin ((Pi|Sigma) as b, l) ->
+          let map, args = List.fold_left_map (fun map x -> pp_atom ~map ~depth x) map l in
+          map, J(pp_d, [pp_id "id" "app"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, if b == Pi then "pi" else "sigma")]) :: args))])
       | Builtin (b, l) ->
           let map, args = List.fold_left_map (fun map x -> pp_atom ~map ~depth x) map l in
-          map, J(pp_d, [pp_id "id" "app"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (Runtime.Pp.ppbuiltin ~pp_ctx) b)]) :: args))])
+          map, J(pp_d, [pp_id "id" "app"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "TODO" (*(pp_const  ~depth tm)*))]) :: args))])
+      (* | Builtin ((Match|Findall|Delay|Host _|Eq), _) -> anomaly ("pp_atom: ty_err -> " ^ (pp_const ~depth tm)) *)
 
       | AppArg (hd, laaa) ->
           let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
@@ -2772,8 +2778,8 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
           let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
           map, J(pp_d, ["id", J(pp_s,"var"); "cnt", J(pp_d, ["name", J(pp_s, pp_const ~depth (AppArg (hd, []))); "varId", J(pp_i, C.Map.find hd map)])])
 
-      | UVar (_, _, _) ->  anomaly "pp_atom: UVar assert false"
-      | AppUVar (_, _, _) -> anomaly "pp_atom: AppUVar assert false"
+      | UVar (_, _) ->  anomaly "pp_atom: UVar assert false"
+      | AppUVar (_, _) -> anomaly "pp_atom: AppUVar assert false"
     
     and pp_atoms ~map ~depth l : 'a C.Map.t * j = 
       let map, args = List.fold_left_map (fun a e -> pp_atom ~depth ~map:a e) map l in 
