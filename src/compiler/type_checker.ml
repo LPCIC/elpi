@@ -220,10 +220,8 @@ let error_ambiguous ~loc c alltys =
   let msg = Format.asprintf "@[<v>%a is overloaded. Its types are:@,@[<v 2>  %a@]@]" F.pp c (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
   error ~loc msg
 
-let error_unknown_symbol ~loc c =
-  let pretty_ty = pretty_ty true in
+let error_unknown_symbol ~loc c _exp =
   let msg = Format.asprintf "%a is unknown." F.pp c in
-
   error ~loc msg
 
 let hint_wrong_arity msg ty ~ety =
