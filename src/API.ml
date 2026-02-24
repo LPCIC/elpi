@@ -205,7 +205,7 @@ module Compile = struct
     Compiler.scoped_of_ast ~flags ~header ?builtins_src a, builtins_hash
   let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base ?builtins (x,builtins_hash) =
     if builtins_hash <> Hashtbl.hash builtins then
-      Util.error "API: Compiler.scope and Compile.unit must take the same ~builtins";
+      Util.error "API: Compile.scope and Compile.unit must take the same ~builtins";
     Compiler.unit_of_scoped ~flags ~header ?builtins x |> Compiler.check_unit ~flags ~base
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
