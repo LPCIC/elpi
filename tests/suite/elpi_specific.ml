@@ -554,3 +554,9 @@ let () = declare "errmsg_unknown"
   ~description:"unknown type constructor"
   ~expectation:(FailureOutput (Str.regexp "pair is unknown"))
   ()
+
+let () = declare "errmsg_arity"
+  ~source_elpi:"errmsg_arity.elpi"
+  ~description:"missing argument"
+  ~expectation:(FailureOutput (Str.regexp "is missing"))
+  ()

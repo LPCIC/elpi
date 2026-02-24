@@ -226,6 +226,11 @@ let error_unknown_symbol ~loc c =
 
   error ~loc msg
 
+let hint_wrong_arity msg ty ~ety =
+  let n = TypeAssignment.arity_mismatch ty ety in
+  if n = 0 then msg else
+  if n = 1 then Format.asprintf "@[<v>%s.@,Hint: maybe one argument is missing.@]" msg
+  else Format.asprintf "@[<v>%s.@,Hint: maybe %d arguments are missing.@]" msg n
 
 let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
   let pretty_ty = pretty_ty true in
@@ -235,11 +240,13 @@ let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
 let error_bad_ety ~valid_mode ~loc ~tyctx ~ety pp c tx =
   let pretty_ty = pretty_ty !valid_mode in
   let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects a term of type@ %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety in
+  let msg = hint_wrong_arity msg tx ~ety in
   error ~loc msg
 
 let error_bad_ety2 ~valid_mode ~loc ~tyctx ~ety1 ~ety2 pp c tx =
   let pretty_ty = pretty_ty !valid_mode in
   let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects a term of type@ %a@ or %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety1 pretty_ty ety2 in
+  let msg = hint_wrong_arity msg tx ~ety:ety1 in
   error ~loc msg
 
 let error_bad_function_ety ~valid_mode ~loc ~tyctx ~ety c t =
