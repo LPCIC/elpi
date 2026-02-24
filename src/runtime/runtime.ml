@@ -142,8 +142,6 @@ module Pp : sig
 
   val pp_constant : ?pp_ctx:pp_ctx -> Format.formatter -> constant -> unit
 
-  (* val ppbuiltin : ?pp_ctx:pp_ctx -> Format.formatter -> builtin_predicate -> unit *)
-
 end = struct (* {{{ *)
 
 let do_uv_deref = ref (fun ?oc ~to_ _ _ -> assert false);;
@@ -158,10 +156,7 @@ let appl_prec = Elpi_parser.Parser_config.appl_precedence
 let lam_prec = Elpi_parser.Parser_config.lam_precedence
 let inf_prec = Elpi_parser.Parser_config.inf_precedence
 
-
-
 let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=min_prec) depth0 names ~argsdepth env f t =
-  let ppbuiltin f b = Fmt.fprintf f "%s" @@ show_builtin_predicate ~table:pp_ctx.table C.show b in
   let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
    else
@@ -169,6 +164,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
      (pplist pparg ?pplastelem:pplastarg " ") args in
   let ppconstant f c = Fmt.fprintf f "%s" (C.show ~table:pp_ctx.table c) in
   (* let ppconstant f c = Fmt.fprintf f "%s/%d" (C.show ~table:pp_ctx.table c) c in *)
+  let ppbuiltin f b = Fmt.fprintf f "%s" @@ show_builtin_predicate ~table:pp_ctx.table C.show b in
   let string_of_uvar_body r =
      (* Use this to have stable names: "X" ^ string_of_int (uvar_id r) in *)
      try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
@@ -310,8 +306,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
           | Lam t -> Fmt.fprintf f "@ \\@ %a@]" (aux min_prec (depth+1)) t
           | _ -> assert false in
         pp_pis depth body)
-    (* | Builtin(b,[]) -> Fmt.fprintf f "%a" (ppbuiltin ~pp_ctx) b *)
-    | Builtin(b,[]) -> Fmt.fprintf f "TODO"
+    | Builtin(b,[]) -> Fmt.fprintf f "%a" ppbuiltin b
     | Builtin(b,x::xs) ->
       (try
         let pprec, hdlvl =
