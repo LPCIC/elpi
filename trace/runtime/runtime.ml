@@ -221,13 +221,6 @@ let pp_a fmt (l : j list) =
   end;
   F.fprintf fmt "]@]"
 
-let pp_d fmt (l : (string * j) list) =
-  F.fprintf fmt "@[<hov 2>{";
-  begin match l with
-  | [] -> ()
-  | x :: l -> pp_kv fmt x; pp_comma_l fmt pp_kv l
-  end;
-  F.fprintf fmt "}@]"
 
 module JSON_STRING_ENCODING = struct
   (* This code is from Yojson *)
@@ -292,6 +285,14 @@ let pp_as fmt (l : j list) =
   end;
   F.fprintf fmt "]"
 
+
+let pp_d fmt (l : (string * j) list) =
+  F.fprintf fmt "{";
+  begin match l with
+  | [] -> ()
+  | x :: l -> pp_kv fmt x; pp_comma_l fmt pp_kv l
+  end;
+  F.fprintf fmt "}"
 
 let pp_kind fmt = function
   | Start -> pp_a fmt [J(pp_s,"Start")]
