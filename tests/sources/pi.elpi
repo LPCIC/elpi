@@ -1,5 +1,8 @@
 % q X yields X=ok
-type z int -> int -> diagnostic -> prop.
+type z int -> int -> int -> prop.
+type r int -> prop.
+type p int -> prop.
+symbol ok, ko : int.
 q X :- pi x\ p x => pi y\ r y => z x y X.
 z A B ko :- r A, p B.
 z A B ok :- p A, r B.

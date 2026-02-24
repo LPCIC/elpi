@@ -191,6 +191,16 @@ module TypeAssignment = struct
     | UVar m when MutableOnce.is_set m -> deref m
     | x -> x
 
+  let rec arity_mismatch (t1 : ty) (t2 : ty) =
+  match t1, t2 with
+  | Arr(_,_,_,t1) , (Prop _|Any|Cons _|App _) -> 1 + arity_mismatch t1 t2
+  | Arr(_,_,_,t1), Arr(_,NotVariadic,_,t2) -> arity_mismatch t1 t2
+  | UVar m, _ when MutableOnce.is_set m -> arity_mismatch (deref m) t2
+  | _, UVar m when MutableOnce.is_set m -> arity_mismatch t1 (deref m)
+  | _ -> 0
+
+
+
   let deref_opt m =
     if MutableOnce.is_set m then Some (deref m) else None
 

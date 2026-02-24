@@ -13,7 +13,6 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macos-latest
           - ubuntu-latest
           - windows-latest
         ocaml-compiler:
@@ -22,13 +21,13 @@ jobs:
           - dev
         include:
           - os: ubuntu-latest
-            ocaml-compiler: 5.3.x
+            ocaml-compiler: 5.4.x
             profile: fatalwarnings
           - os: macos-latest
-            ocaml-compiler: 5.3.x
+            ocaml-compiler: 5.4.x
             profile: dev
           - os: windows-latest
-            ocaml-compiler: 5.3.x
+            ocaml-compiler: 5.4.x
             profile: dev
 
     runs-on: ${{ matrix.os }}
