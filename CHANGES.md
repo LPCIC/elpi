@@ -1,3 +1,11 @@
+# UNRELEASED
+
+Requires Menhir 20211230 and OCaml 4.13 or above.
+
+- Compiler:
+  - New allow builtins to be declared in extension units (not just in the
+    base)
+
 # v3.4.5 (December 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.

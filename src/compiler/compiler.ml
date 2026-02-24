@@ -2235,15 +2235,14 @@ let check_unit ~flags ~base:(st,base) u = Check.check ~flags st ~base u
 
 let empty_base ~header:b = b
 
-let scoped_of_ast ~flags:_ ~header:(s,u) p =
-  scope ~toplevel_macros:u.Assembled.signature.toplevel_macros s p
+let scoped_of_ast ~flags:_ ~header:(s,u) ?(builtins_src = []) p =
+  scope ~toplevel_macros:u.Assembled.signature.toplevel_macros s (builtins_src @ p)
 
-let unit_of_scoped ~flags ~header:(s, u) ?(builtins=[]) p : unchecked_compilation_unit =
+let unit_of_scoped ~flags ~header:(s, u) ?builtins p : unchecked_compilation_unit =
   let builtins =
-    List.flatten @@
-    List.map (fun (_,decl) -> decl |> List.filter_map (function
+    Option.fold ~none:[] ~some:(fun (_,decl) -> decl |> List.filter_map (function
       | Data.BuiltInPredicate.MLCode (p,_) -> Some p
-      | _ -> error "Only BuiltInPredicate.MLCode allowed in units")) builtins in
+      | _ -> None)) builtins in
   let u = unit_or_header_of_scoped s ~builtins p in
   print_unit flags u;
   u

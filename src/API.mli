@@ -290,12 +290,12 @@ module Compile : sig
        merged at assembly time
 *)
   type scoped_program
-  val scope : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> scoped_program
+  val scope : ?flags:flags -> elpi:Setup.elpi -> ?builtins:Setup.builtins -> Ast.program -> scoped_program
   
   type compilation_unit
   type compilation_unit_signature
   val empty_base : elpi:Setup.elpi -> program
-  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> ?builtins:Setup.builtins list -> scoped_program -> compilation_unit
+  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> ?builtins:Setup.builtins -> scoped_program -> compilation_unit
   val extend : ?flags:flags -> base:program -> compilation_unit -> program
 
   (* only adds the types/modes from the compilation unit, not its code *)

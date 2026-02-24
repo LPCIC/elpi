@@ -59,6 +59,11 @@ let () = declare "sepcomp6"
   ~description:"separate compilation different processes, with remove (step 3)"
   ~expectation:Test.Success
   ()
+  let () = declare "sepcomp10"
+  ~source_dune:"sepcomp10.exe"
+  ~description:"separate compilation extend builtins"
+  ~expectation:Test.Success
+  ()
 
 let () = declare "sepcomp_hover"
   ~source_dune:"sepcomp_hover.exe"
