@@ -548,3 +548,9 @@ let () = declare "sigma_toplevel"
   ~source_elpi:"sigma_toplevel.elpi"
   ~description:"sigma elimination"
   ()
+
+let () = declare "errmsg_unknown"
+  ~source_elpi:"errmsg_unknown.elpi"
+  ~description:"unknown type constructor"
+  ~expectation:(FailureOutput (Str.regexp "pair is unknown"))
+  ()
