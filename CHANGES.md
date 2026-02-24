@@ -1,3 +1,11 @@
+# UNRELEASED
+
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and MacOS 14 (Sonoma) .
+MacOS 15 (Sequoia) and later require OCaml 5.4.
+
+- Typechecker:
+  - Change: disallow undeclared data constructors and predicates
+
 # v3.4.5 (December 2025)
 
 Requires Menhir 20211230 and OCaml 4.13 or above.

@@ -220,6 +220,16 @@ let error_ambiguous ~loc c alltys =
   let msg = Format.asprintf "@[<v>%a is overloaded. Its types are:@,@[<v 2>  %a@]@]" F.pp c (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
   error ~loc msg
 
+let error_unknown_symbol ~loc c _exp =
+  let msg = Format.asprintf "%a is unknown." F.pp c in
+  error ~loc msg
+
+let hint_wrong_arity msg ty ~ety =
+  let n = TypeAssignment.arity_mismatch ty ety in
+  if n = 0 then msg else
+  if n = 1 then Format.asprintf "@[<v>%s.@,Hint: maybe one argument is missing.@]" msg
+  else Format.asprintf "@[<v>%s.@,Hint: maybe %d arguments are missing.@]" msg n
+
 let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
   let pretty_ty = pretty_ty true in
   let msg = Format.asprintf "@[<hov>literal \"%a\" has type@ %a@ but %a expects a term of type@ %a@]"  CData.pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety in
@@ -228,11 +238,13 @@ let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
 let error_bad_ety ~valid_mode ~loc ~tyctx ~ety pp c tx =
   let pretty_ty = pretty_ty !valid_mode in
   let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects a term of type@ %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety in
+  let msg = hint_wrong_arity msg tx ~ety in
   error ~loc msg
 
 let error_bad_ety2 ~valid_mode ~loc ~tyctx ~ety1 ~ety2 pp c tx =
   let pretty_ty = pretty_ty !valid_mode in
   let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects a term of type@ %a@ or %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety1 pretty_ty ety2 in
+  let msg = hint_wrong_arity msg tx ~ety:ety1 in
   error ~loc msg
 
 let error_bad_function_ety ~valid_mode ~loc ~tyctx ~ety c t =
@@ -302,20 +314,6 @@ let fresh_skema_of_overloaded_symbol c env =
   let get_fresh x = x, (Symbol.QMap.find x env.symbols).ty |> TypeAssignment.fresh |> fst in
   TypeAssignment.map_overloaded get_fresh overloaded
 
-let global_type (unknown_global : env_undeclared ref) env ~loc c : ret_id TypeAssignment.overloaded =
-  try fresh_skema_of_overloaded_symbol c env
-  with Not_found ->
-    (* Printf.eprintf "FOUND OMAP %s %s\n%!" (F.show c) ; *)
-
-    try
-      let ty,id = F.Map.find c !unknown_global in
-      Single (id,TypeAssignment.unval ty)
-    with Not_found ->
-      let ty = TypeAssignment.Val (mk_uvar (Format.asprintf "Unknown_type_of_%a_" F.pp c)) in
-      let id = Symbol.make (File loc) c in
-      unknown_global := F.Map.add c (ty,id) !unknown_global;
-      Single (id,TypeAssignment.unval ty)
-
 type classification =
   | Simple of { srcs : (TypeAssignment.tmode * ret) list; tgt : ret }
   | Variadic of { srcs : ret list; tgt : ret }
@@ -334,6 +332,21 @@ let rec classify_arrow = function
       | Unknown -> Unknown
       | Variadic { srcs; tgt } -> Variadic { srcs = x :: srcs; tgt }
 
+let global_type (unknown_global : env_undeclared ref) (ety : TypeAssignment.t MutableOnce.t TypeAssignment.t_) env ~loc c : ret_id TypeAssignment.overloaded =
+  try fresh_skema_of_overloaded_symbol c env
+  with Not_found ->
+    try
+      let ty,id = F.Map.find c !unknown_global in
+      Single (id,TypeAssignment.unval ty)
+    with Not_found ->
+      match classify_arrow ety with
+      | Simple { tgt = Prop _ } ->
+          let ty = TypeAssignment.Val (mk_uvar (Format.asprintf "Unknown_type_of_%a_" F.pp c)) in
+          let id = Symbol.make (File loc) c in
+          unknown_global := F.Map.add c (ty,id) !unknown_global;
+          Single (id,TypeAssignment.unval ty)
+      | Simple { tgt = (App(f,_,_)) } -> error_unknown_symbol ~loc c (Some f)
+      | _ -> error_unknown_symbol ~loc c None
 let unknown_type_assignment s = TypeAssignment.Val (mk_uvar s)
 
 let rec extend l1 l2 =
@@ -373,9 +386,9 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
 
   let global_type = global_type unknown_global in
 
-  let get_type ~loc ctx env ({ scope; name = c } as t) =
+  let get_hd_type ~loc ctx env ({ scope; name = c } as t) ety =
     match scope with
-    | Scope.Global _ -> global_type env ~loc c
+    | Scope.Global _ -> global_type ety env ~loc c
     | Bound lang -> local_type ctx ~loc t
   in
 
@@ -394,7 +407,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     | Spill(sp,info) -> 
       if not positive then error ~loc "Spilling in negative position is forbidden";
       check_spill ~positive ctx ~loc ~tyctx sp info ety
-    | App({ scope = gid } as hd,xs) -> check_app ~positive ctx ~loc ~tyctx gid (drop_scope hd) (get_type ~loc ctx env hd) xs ety 
+    | App({ scope = gid } as hd,xs) -> check_app ~positive ctx ~loc ~tyctx gid (drop_scope hd) (get_hd_type ~loc ctx env hd ety) xs ety 
     | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx c cty t ety
     | Discard _ -> []
     | UVar({ name = c } as hd,args) -> check_app ~positive ctx ~loc ~tyctx (Scope.Bound elpi_var) hd (uvar_type ~loc c) args ety
@@ -431,7 +444,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       else error_bad_ety2 ~valid_mode ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
 
   and check_global ctx ~loc ~tyctx { scope = gid; name = c; ty = tya } ety =
-    match global_type env ~loc c with
+    match global_type ety env ~loc c with
     | Single (id,ty) ->
         if unify ty ety then (resolve_gid ~loc id gid ty tya; [])
         else error_bad_ety ~valid_mode ~tyctx ~loc ~ety F.pp c ty
@@ -961,7 +974,8 @@ let check_undeclared ~type_abbrevs ~unknown =
 
 let check_pred_name ~types ~loc f =
   let undef = ref F.Map.empty in
-  match global_type undef types ~loc f with
+  let ety = mk_uvar (Format.asprintf "Unknown_type_of_%a_" F.pp f) in
+  match global_type undef ety types ~loc f with
   | Single s ->
       if F.Map.is_empty !undef then fst s
       else error ~loc ("Undeclared predicate " ^ F.show f)

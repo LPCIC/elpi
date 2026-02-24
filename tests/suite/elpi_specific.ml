@@ -548,3 +548,15 @@ let () = declare "sigma_toplevel"
   ~source_elpi:"sigma_toplevel.elpi"
   ~description:"sigma elimination"
   ()
+
+let () = declare "errmsg_unknown"
+  ~source_elpi:"errmsg_unknown.elpi"
+  ~description:"unknown type constructor"
+  ~expectation:(FailureOutput (Str.regexp "pair is unknown"))
+  ()
+
+let () = declare "errmsg_arity"
+  ~source_elpi:"errmsg_arity.elpi"
+  ~description:"missing argument"
+  ~expectation:(FailureOutput (Str.regexp "is missing"))
+  ()

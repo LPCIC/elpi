@@ -1,5 +1,6 @@
 kind tm type.
 type c (tm -> A) -> tm.
+type g tm -> tm.
 macro @ctx A :- c (_\ A). % to have depth > 0 in unif
 
 % to test the indexing

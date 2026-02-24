@@ -8,6 +8,7 @@ symbol g : int -> string.
 symbol (&&) : int -> int -> int.
 symbol (||) : int -> int -> int.
 symbol (===>) : int -> int -> int.
+symbol x, a, b : int.
 main :-
   print (p X :- (q X : prop), (r x:prop)), % BUG
   print (X is f Y mod r X),
