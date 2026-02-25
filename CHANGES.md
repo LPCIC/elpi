@@ -5,6 +5,10 @@ MacOS 15 (Sequoia) and later require OCaml 5.4.
 
 - Typechecker:
   - Change: disallow undeclared data constructors and predicates
+ 
+- Compiler:
+  - New allow builtins to be declared in extension units (not just in the
+    base)
 
 # v3.4.5 (December 2025)
 

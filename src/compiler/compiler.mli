@@ -26,12 +26,12 @@ type program
 val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program
 
 type scoped_program
-val scoped_of_ast : flags:flags -> header:header -> Ast.Program.t -> scoped_program
+val scoped_of_ast : flags:flags -> header:header -> ?builtins_src:Ast.Program.t -> Ast.Program.t -> scoped_program
 
 type checked_compilation_unit
 type unchecked_compilation_unit
 val empty_base : header:header -> program
-val unit_of_scoped : flags:flags -> header:header -> ?builtins:builtins list -> scoped_program -> unchecked_compilation_unit
+val unit_of_scoped : flags:flags -> header:header -> ?builtins:builtins -> scoped_program -> unchecked_compilation_unit
 val append_unit : flags:flags -> base:program -> checked_compilation_unit -> program
 val check_unit : flags:flags -> base:program -> unchecked_compilation_unit -> checked_compilation_unit
 

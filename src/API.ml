@@ -46,6 +46,28 @@ type elpi = {
 }
 type flags = Compiler.flags
 
+let ast_of_builtins calc ~(parser: (module Parse.Parser)) builtins =
+  builtins |> List.map (fun (fname,decls) ->
+    (* This is a bit ugly, since we print and then parse... *)
+    let b = Buffer.create 1024 in
+    let fmt = Format.formatter_of_buffer b in
+    Data.BuiltInPredicate.document fmt decls calc;
+    Format.pp_print_flush fmt ();
+    let text = Buffer.contents b in
+    let lexbuf = Lexing.from_string text in
+    let module P = (val parser) in
+    try
+      P.program_from ~loc:(Util.Loc.initial fname) lexbuf
+    with Parse.ParseError(loc,msg) ->
+      List.iteri (fun i s ->
+        Printf.eprintf "%4d: %s\n" (i+1) s)
+        (Re.Str.(split_delim (regexp_string "\n") text));
+      begin try Printf.eprintf "Excerpt of %s:\n%s\n" fname
+        (String.sub text loc.Util.Loc.line_starts_at
+          Util.Loc.(loc.source_stop - loc.line_starts_at))
+      with _ -> (* loc could be bogus *) (); end;
+      Util.anomaly ~loc msg)
+
 let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
@@ -55,31 +77,14 @@ let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags)
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
   let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver end) : Parse.Parser) in
   Data.Global_symbols.lock ();
-  let header_src =
-    builtins |> List.map (fun (fname,decls) ->
-      (* This is a bit ugly, since we print and then parse... *)
-      let b = Buffer.create 1024 in
-      let fmt = Format.formatter_of_buffer b in
-      Data.BuiltInPredicate.document fmt decls (List.rev !calc);
-      Format.pp_print_flush fmt ();
-      let text = Buffer.contents b in
-      let lexbuf = Lexing.from_string text in
-      let module P = (val parser) in
-      try
-        P.program_from ~loc:(Util.Loc.initial fname) lexbuf
-      with Parse.ParseError(loc,msg) ->
-        List.iteri (fun i s ->
-          Printf.eprintf "%4d: %s\n" (i+1) s)
-          (Re.Str.(split_delim (regexp_string "\n") text));
-        begin try Printf.eprintf "Excerpt of %s:\n%s\n" fname
-          (String.sub text loc.Util.Loc.line_starts_at
-            Util.Loc.(loc.source_stop - loc.line_starts_at))
-        with _ -> (* loc could be bogus *) (); end;
-        Util.anomaly ~loc msg) in
+  let header_src = ast_of_builtins (List.rev !calc) ~parser builtins in
   let header =
     try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins (List.concat header_src)
     with Compiler_data.CompileError(loc,msg) -> Util.anomaly ?loc msg in
   { parser; header; resolver = file_resolver }
+
+let ast_of_builtins ~(parser: (module Parse.Parser)) builtins =
+  List.flatten @@ ast_of_builtins [] ~parser builtins
 
 let trace = set_trace
 
@@ -166,7 +171,7 @@ module Compile = struct
   type program = Compiler.program
   type query = Compiler.query
   type executable = ED.executable
-  type scoped_program = Compiler.scoped_program
+  type scoped_program = Compiler.scoped_program * int
   type compilation_unit = Compiler.checked_compilation_unit
   type compilation_unit_signature = Compiler.checked_compilation_unit_signature
   exception CompileError = Compiler_data.CompileError
@@ -194,9 +199,13 @@ module Compile = struct
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
-  let scope ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } a =
-    Compiler.scoped_of_ast ~flags ~header a
-  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base ?builtins x =
+  let scope ?(flags=Compiler.default_flags) ~elpi:{ Setup.header; parser } ?builtins a =
+    let builtins_hash = Hashtbl.hash builtins in
+    let builtins_src = Option.map (fun x -> Setup.ast_of_builtins ~parser [x]) builtins in
+    Compiler.scoped_of_ast ~flags ~header ?builtins_src a, builtins_hash
+  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base ?builtins (x,builtins_hash) =
+    if builtins_hash <> Hashtbl.hash builtins then
+      Util.error "API: Compile.scope and Compile.unit must take the same ~builtins";
     Compiler.unit_of_scoped ~flags ~header ?builtins x |> Compiler.check_unit ~flags ~base
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
