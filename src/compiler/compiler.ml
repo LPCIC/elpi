@@ -2557,6 +2557,8 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
       in
       match tm with
       | Discard -> map, J(pp_d, [pp_id "id" "discard"])
+      | Builtin (b, []) ->
+          map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, builtin2str b)])
       | Builtin (b, bo) ->
           let map, cnt = pp_atoms ~map ~depth bo in
           let cnt : j = J(pp_a, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, builtin2str b)]) :: cnt) in
