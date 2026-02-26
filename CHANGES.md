@@ -1,7 +1,7 @@
-# UNRELEASED
+# v3.5.0 (Feb 2026)
 
-Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and MacOS 14 (Sonoma) .
-MacOS 15 (Sequoia) and later require OCaml 5.4.
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS 14 (Sonoma). MacOS 15 (Sequoia) and later require OCaml 5.4.
 
 - Typechecker:
   - Change: disallow undeclared data constructors and predicates
@@ -9,6 +9,13 @@ MacOS 15 (Sequoia) and later require OCaml 5.4.
 - Compiler:
   - New allow builtins to be declared in extension units (not just in the
     base)
+
+- Typechecker:
+  - Fix error messages when there is an arity mismatch, i.e. suggest some
+    arguments may be missing
+  - Change symbols without a declared signature raise a fatal error. Only
+    undeclared predicates are tolerated, and only when the inferred type is
+    unambiguously `prop`
 
 # v3.4.5 (December 2025)
 
