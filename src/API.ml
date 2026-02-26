@@ -38,7 +38,7 @@ let default_quotations_descriptor = Compiler_data.QuotationHooks.new_descriptor 
 let default_hoas_descriptor = Data.HoasHooks.new_descriptor ()
 let default_calc_descriptor = Data.CalcHooks.new_descriptor ()
 
-type builtins = Compiler.builtins
+type builtins = Compiler.declared_builtins
 type elpi = {
   parser : (module Parse.Parser);
   resolver : ?cwd:string -> unit:string -> unit -> string;
@@ -46,27 +46,6 @@ type elpi = {
 }
 type flags = Compiler.flags
 
-let ast_of_builtins calc ~(parser: (module Parse.Parser)) builtins =
-  builtins |> List.map (fun (fname,decls) ->
-    (* This is a bit ugly, since we print and then parse... *)
-    let b = Buffer.create 1024 in
-    let fmt = Format.formatter_of_buffer b in
-    Data.BuiltInPredicate.document fmt decls calc;
-    Format.pp_print_flush fmt ();
-    let text = Buffer.contents b in
-    let lexbuf = Lexing.from_string text in
-    let module P = (val parser) in
-    try
-      P.program_from ~loc:(Util.Loc.initial fname) lexbuf
-    with Parse.ParseError(loc,msg) ->
-      List.iteri (fun i s ->
-        Printf.eprintf "%4d: %s\n" (i+1) s)
-        (Re.Str.(split_delim (regexp_string "\n") text));
-      begin try Printf.eprintf "Excerpt of %s:\n%s\n" fname
-        (String.sub text loc.Util.Loc.line_starts_at
-          Util.Loc.(loc.source_stop - loc.line_starts_at))
-      with _ -> (* loc could be bogus *) (); end;
-      Util.anomaly ~loc msg)
 
 let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver () : elpi =
   (* At the moment we can only init the parser once *)
@@ -77,14 +56,10 @@ let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags)
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
   let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver end) : Parse.Parser) in
   Data.Global_symbols.lock ();
-  let header_src = ast_of_builtins (List.rev !calc) ~parser builtins in
   let header =
-    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins (List.concat header_src)
+    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins
     with Compiler_data.CompileError(loc,msg) -> Util.anomaly ?loc msg in
   { parser; header; resolver = file_resolver }
-
-let ast_of_builtins ~(parser: (module Parse.Parser)) builtins =
-  List.flatten @@ ast_of_builtins [] ~parser builtins
 
 let trace = set_trace
 
@@ -201,12 +176,13 @@ module Compile = struct
   let optimize = Compiler.optimize_query
   let scope ?(flags=Compiler.default_flags) ~elpi:{ Setup.header; parser } ?builtins a =
     let builtins_hash = Hashtbl.hash builtins in
-    let builtins_src = Option.map (fun x -> Setup.ast_of_builtins ~parser [x]) builtins in
-    Compiler.scoped_of_ast ~flags ~header ?builtins_src a, builtins_hash
+    let builtins = match builtins with None -> [] | Some x -> [x] in
+    Compiler.scoped_of_ast ~flags ~header ~builtins a, builtins_hash
   let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base ?builtins (x,builtins_hash) =
     if builtins_hash <> Hashtbl.hash builtins then
       Util.error "API: Compile.scope and Compile.unit must take the same ~builtins";
-    Compiler.unit_of_scoped ~flags ~header ?builtins x |> Compiler.check_unit ~flags ~base
+    let builtins = match builtins with None -> [] | Some x -> [x] in
+    Compiler.unit_of_scoped ~flags ~header ~builtins x |> Compiler.check_unit ~flags ~base
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
   let signature u = Compiler.signature_of_checked_compilation_unit u
@@ -1030,15 +1006,15 @@ end
 
 module BuiltIn = struct
   include ED.BuiltInPredicate
-  let declare ~file_name l = file_name, l
-  let document_fmt fmt ?(calc=Setup.default_calc_descriptor) (_,l) =
-    ED.BuiltInPredicate.document fmt l (List.rev !calc)
-  let document_file ?header:_ ?(calc=Setup.default_calc_descriptor) (name,l) =
-    let oc = open_out name in
-    let fmt = Format.formatter_of_out_channel oc in
-    ED.BuiltInPredicate.document fmt l (List.rev !calc);
-    Format.pp_print_flush fmt ();
-    close_out oc
+
+  let declare ~file_name l = Compiler.declare_builtins ~file_name l
+
+  let of_file ~file_name = Compiler.declared_builtins_of_file ~file_name
+
+  let document_fmt fmt ?(calc=Setup.default_calc_descriptor) file_name =
+    Compiler.document_fmt fmt ~calc:(List.rev !calc) file_name
+  let document_file ?header ?(calc=Setup.default_calc_descriptor) file_name =
+    Compiler.document_file ?header ~calc:(List.rev !calc) ~file:(Compiler.file_of_declared_builtins file_name) file_name
 end
 
 module State = struct

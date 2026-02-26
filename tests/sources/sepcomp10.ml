@@ -57,3 +57,7 @@ let main =
   | Execute.Success _ -> ()
   | _ -> exit 1
   end;
+
+  let _ : string = Marshal.to_string u1 [] in
+  let _ : string = Marshal.to_string u2 [] in
+  exit 0
