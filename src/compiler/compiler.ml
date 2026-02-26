@@ -247,6 +247,69 @@ end
 
 
 
+type declared_builtins = string
+[@@deriving show]
+
+let declared_builtins = ref StrMap.empty
+let build_predmap l =
+  let m = ref StrMap.empty in
+  l |> List.iter (function
+    | BuiltInPredicate.MLCode (Pred(name,_,_) as p, _) ->
+        if StrMap.mem name !m then
+          error ("Multiple declarations for builtin predicate " ^ name);
+        m := StrMap.add name p !m
+    | _ -> ()
+  );
+  !m
+
+let declare_builtins ~file_name l =
+  if Util.StrMap.mem file_name !declared_builtins then
+    Util.error ("Canno declare builtins " ^ file_name ^ " twice");
+  declared_builtins := Util.StrMap.add file_name (build_predmap l,l) !declared_builtins;
+  file_name
+
+let declared_builtins_of_file ~file_name =
+  if Util.StrMap.mem file_name !declared_builtins then file_name
+  else Util.error ("Builtins for file " ^ file_name ^ " were not declared")
+let declared_builtins ~file_name =
+  try Util.StrMap.find file_name !declared_builtins
+  with Not_found -> Util.error ("Builtins for file " ^ file_name ^ " were not declared")
+let file_of_declared_builtins x = x
+
+let document_fmt fmt ~calc file_name =
+  let _, l = declared_builtins ~file_name in
+  Data.BuiltInPredicate.document fmt l calc
+let document_file ?header:_ ~calc ~file:name file_name =
+  let _, l = declared_builtins ~file_name in
+  let oc = open_out name in
+  let fmt = Format.formatter_of_out_channel oc in
+  Data.BuiltInPredicate.document fmt l calc;
+  Format.pp_print_flush fmt ();
+  close_out oc
+
+
+let ast_of_builtins ~calc ~(parser: (module Parse.Parser)) ~file_name =
+  let _, decls = declared_builtins ~file_name in
+  (* This is a bit ugly, since we print and then parse... *)
+  let b = Buffer.create 1024 in
+  let fmt = Format.formatter_of_buffer b in
+  Data.BuiltInPredicate.document fmt decls calc;
+  Format.pp_print_flush fmt ();
+  let text = Buffer.contents b in
+  let lexbuf = Lexing.from_string text in
+  let module P = (val parser) in
+  try
+    P.program_from ~loc:(Util.Loc.initial file_name) lexbuf
+  with Parse.ParseError(loc,msg) ->
+    List.iteri (fun i s ->
+      Printf.eprintf "%4d: %s\n" (i+1) s)
+      (Re.Str.(split_delim (regexp_string "\n") text));
+    begin try Printf.eprintf "Excerpt of %s:\n%s\n" file_name
+      (String.sub text loc.Util.Loc.line_starts_at
+        Util.Loc.(loc.source_stop - loc.line_starts_at))
+    with _ -> (* loc could be bogus *) (); end;
+    Util.anomaly ~loc msg
+
 module Flat = struct
 
 type unchecked_signature = {
@@ -261,7 +324,7 @@ type program = {
   signature : unchecked_signature;
   clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
-  builtins : BuiltInPredicate.t list;
+  builtins : declared_builtins list;
 }
 [@@deriving show]
 
@@ -330,7 +393,7 @@ type program = {
   signature : Assembled.signature;
   clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
   chr : (Symbol.t,ScopedTerm.t) Ast.Structured.block_constraint list;
-  builtins : (Symbol.t * BuiltInPredicate.t) list;
+  builtins : ((Symbol.t * string) list * declared_builtins) list;
 }
 [@@deriving show]
 
@@ -367,11 +430,6 @@ type checked_compilation_unit_signature = Assembled.signature
 
 
 let signature_of_checked_compilation_unit { checked_code = { CheckedFlat.signature } } = signature
-
-
-
-
-type builtins = string * Data.BuiltInPredicate.declaration list
 
 type program = State.t * Assembled.program
 type header = program
@@ -1440,7 +1498,9 @@ end = struct
     let type_check_time = ref 0.0 in
     let det_check_time = ref 0.0 in
 
-    let builtins = List.map (fun (BuiltInPredicate.Pred(name,_,_) as p) ->
+    let builtins = builtins |> List.map (fun file_name -> 
+      let builtins, _ = declared_builtins ~file_name in
+      StrMap.fold (fun _ (BuiltInPredicate.Pred(name,_,_)) acc ->
       let symb =
         match TypingEnv.resolve_name (F.from_string name) new_types with
         | Single s -> s
@@ -1455,11 +1515,17 @@ end = struct
         | Ast.Structured.OCaml _ -> ()
         | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "External predicate with no signature %s" name)
       end;
-      symb, p
-    ) builtins in
+      (symb, name) :: acc
+    ) builtins [],
+    file_name) in
 
     let types, u_types =
-      List.fold_left (fun (t,ut) (s,_) -> TypingEnv.set_as_implemented_in_ocaml t s, TypingEnv.set_as_implemented_in_ocaml ut s) (types, u_types) builtins in
+      List.fold_left (fun (types, u_types) (bl,_) ->
+        List.fold_left (fun (t,ut) (s,_) ->
+          TypingEnv.set_as_implemented_in_ocaml t s, TypingEnv.set_as_implemented_in_ocaml ut s)
+          (types, u_types) bl)
+        (types, u_types)
+      builtins in
 
     TypingEnv.iter_names (fun k -> function
       | TypeAssignment.Single _ -> ()
@@ -2110,10 +2176,15 @@ let extend1 flags (state, base) unit =
   (* Format.eprintf "extended\n%!"; *)
 
   let symbols, builtins =
-    List.fold_left (fun (symbols,builtins) (symb, p) ->
-      let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols symb in
-      let builtins = Builtins.register builtins p c in
-      symbols, builtins) (symbols, ob) builtins in
+    List.fold_left (fun (symbols, ob) (builtins,file_name) ->
+      let bm, _ = declared_builtins ~file_name in
+      List.fold_left (fun (symbols,builtins) (symb, name) ->
+        let p = StrMap.find name bm in
+        let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols symb in
+        let builtins = Builtins.register builtins p c in
+        symbols, builtins) (symbols, ob) builtins)
+      (symbols, ob) builtins
+    in
 
   let symbols, chr =
     List.fold_left (extend1_chr_block ~builtins ~types:signature.types flags state) (symbols,ochr) chr in
@@ -2192,8 +2263,12 @@ let assemble_unit ~flags ~header:(s,base) units : program =
  s, p
 ;;
 
+let scoped_of_ast ~flags:_ ~header:(s,u) ?(calc=[]) ?(builtins = []) p =
+  let parser = Option.get @@ D.State.get parser s in
+  let builtins_src = List.concat @@ List.map (fun file_name -> ast_of_builtins ~calc ~parser ~file_name) builtins in
+  scope ~toplevel_macros:u.Assembled.signature.toplevel_macros s (builtins_src @ p)
 
-let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor calc_descriptor builtins ast : header =
+let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor calc_descriptor builtins : header =
   let state = D.State.(init (merge_descriptors D.elpi_state_descriptor state_descriptor)) in
   let state =
     match hoas_descriptor.D.HoasHooks.extra_goals_postprocessing with
@@ -2214,16 +2289,12 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
     D.State.set CalcHooks.eval state eval_map in
   let state = D.State.set parser state (Some p) in
   let state = D.State.set D.while_compiling state true in
-  (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
-  let builtins =
-    List.flatten @@
-    List.map (fun (_,decl) -> decl |> List.filter_map (function
-      | Data.BuiltInPredicate.MLCode (p,_) -> Some p
-      | _ -> None)) builtins in
-  let scoped_ast = scope ~toplevel_macros:F.Map.empty state ast in
-  let u = unit_or_header_of_scoped state ~builtins scoped_ast in
-  print_unit flags u;
   let base = Assembled.empty () in
+  let header = state, base in
+  (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
+  let builtins_src = scoped_of_ast ~flags ~calc:calc_descriptor ~header ~builtins [] in
+  let u = unit_or_header_of_scoped state ~builtins builtins_src in
+  print_unit flags u;
   let u = Check.check ~flags state ~base u in
  (* with toplevel_macros = u.checked_code.signature.toplevel_macros } in *)
   (* Printf.eprintf "header_of_ast: types u %d\n%!" (F.Map.cardinal u.checked_code.CheckedFlat.signature.types); *)
@@ -2235,14 +2306,7 @@ let check_unit ~flags ~base:(st,base) u = Check.check ~flags st ~base u
 
 let empty_base ~header:b = b
 
-let scoped_of_ast ~flags:_ ~header:(s,u) ?(builtins_src = []) p =
-  scope ~toplevel_macros:u.Assembled.signature.toplevel_macros s (builtins_src @ p)
-
-let unit_of_scoped ~flags ~header:(s, u) ?builtins p : unchecked_compilation_unit =
-  let builtins =
-    Option.fold ~none:[] ~some:(fun (_,decl) -> decl |> List.filter_map (function
-      | Data.BuiltInPredicate.MLCode (p,_) -> Some p
-      | _ -> None)) builtins in
+let unit_of_scoped ~flags ~header:(s, u) ?(builtins=[]) p : unchecked_compilation_unit =
   let u = unit_or_header_of_scoped s ~builtins p in
   print_unit flags u;
   u
@@ -2254,7 +2318,7 @@ let append_unit_signature ~flags ~base:(s,p) unit : program =
   Assemble.extend_signature s p unit
   
 let program_of_ast ~flags ~header:((st, base) as header : State.t * Assembled.program) p : program =
-  let p = scoped_of_ast ~flags ~header p in
+  let p = scoped_of_ast ~flags ~calc:[] ~header p in
   let u = unit_of_scoped ~flags ~header p in
   let u = Check.check ~flags st ~base u in
   assemble_unit ~flags ~header u

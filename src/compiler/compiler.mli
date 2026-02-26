@@ -17,21 +17,26 @@ type flags = {
 }
 val default_flags : flags
 
-type builtins = string * Data.BuiltInPredicate.declaration list
+type declared_builtins
+val declare_builtins : file_name:string -> Data.BuiltInPredicate.declaration list -> declared_builtins
+val declared_builtins_of_file : file_name:string -> declared_builtins
+val file_of_declared_builtins : declared_builtins -> string
+val document_fmt : Format.formatter -> calc:CalcHooks.descriptor -> declared_builtins -> unit
+val document_file : ?header:string  -> calc:CalcHooks.descriptor -> file:string -> declared_builtins -> unit
 
 type header
-val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descriptor -> Compiler_data.QuotationHooks.descriptor -> HoasHooks.descriptor -> CalcHooks.descriptor -> builtins list -> Ast.Program.t ->  header
+val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descriptor -> Compiler_data.QuotationHooks.descriptor -> HoasHooks.descriptor -> CalcHooks.descriptor -> declared_builtins list -> header
 
 type program
 val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program
 
 type scoped_program
-val scoped_of_ast : flags:flags -> header:header -> ?builtins_src:Ast.Program.t -> Ast.Program.t -> scoped_program
+val scoped_of_ast : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> ?builtins:declared_builtins list -> Ast.Program.t -> scoped_program
 
 type checked_compilation_unit
 type unchecked_compilation_unit
 val empty_base : header:header -> program
-val unit_of_scoped : flags:flags -> header:header -> ?builtins:builtins -> scoped_program -> unchecked_compilation_unit
+val unit_of_scoped : flags:flags -> header:header -> ?builtins:declared_builtins list -> scoped_program -> unchecked_compilation_unit
 val append_unit : flags:flags -> base:program -> checked_compilation_unit -> program
 val check_unit : flags:flags -> base:program -> unchecked_compilation_unit -> checked_compilation_unit
 
