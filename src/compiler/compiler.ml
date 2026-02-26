@@ -2541,9 +2541,15 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
         (String.length s > 2 && is_math s.[1] && is_math s.[2]) ||
           (String.length s > 1 && is_math s.[1]) || s = "is"
 
+    and is_infixb = function
+      | Eq | Impl | ImplBang | RImpl | And -> true
+      | Pi | Sigma | Cut | Match | Findall | Delay | Host _ -> false
+
+    and builtin2str = Data.Term.show_builtin_predicate (fun ?table x -> "TODO")
+
     and pp_atom ~map ~depth (tm:term) : 'a C.Map.t * j =
       let pp_id x y = (x,(J(pp_s, y):j)) in
-      (* TODO: chain pis *)
+      let pp_b x y = (x,(J(pp_b, y):j)) in
       let rec grab_list = function
         | Cons (x,xs) -> let xs, b = grab_list xs in (x::xs), b
         | Nil -> [], None
@@ -2551,33 +2557,22 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
       in
       match tm with
       | Discard -> map, J(pp_d, [pp_id "id" "discard"])
-      | Builtin (Cut, _) -> map, J(pp_d, [pp_id "id" "cut"])
-      | Builtin (Impl, hd :: bo) -> 
-          let neckcut, bo = match bo with Builtin (Cut, []) :: ls -> true, ls | _ -> false, bo in
-          let map, args = pp_atom ~map ~depth hd in
-          let map, hyps = pp_atoms ~map ~depth bo in
-          map, pp_id_cnt "clause"
-            ["args", args; "isNeckcut", J(pp_b, neckcut); "hyp", hyps]
-      | Builtin (And, args) -> 
-          let map, args = pp_atoms ~map ~depth args in
-          map, J(pp_d, [pp_id "id" "comma"; ("cnt", args)])
+      | Builtin (b, bo) ->
+          let map, cnt = pp_atoms ~map ~depth bo in
+          let cnt : j = J(pp_a, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, builtin2str b)]) :: cnt) in
+          map, J(pp_d, [pp_id "id" "app"; pp_b "is_infix" (is_infixb b); "cnt", cnt])
       | Cons _ -> 
           let l, b = grab_list tm in
-          let map, xxx = pp_atoms ~map ~depth l in
-          let map, tl = match b with None -> map, [] | Some e -> let map, l = pp_atom ~depth ~map e in map, ["tl", l] in
-          map, pp_id_cnt "list" (("l",xxx) :: tl)
+          let map, cnt = pp_atoms ~map ~depth l in
+          let cnt : j = J(pp_a, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, "::")]) :: cnt) in
+          map, J(pp_d, [pp_id "id" "app"; pp_b "is_infix" true; "cnt", cnt])
       | Nil -> map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, "[]")])
       | Const x when x < 0 -> map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, pp_const ~depth tm)])
       | Const x -> map, pp_id_cnt "var" ["name", J(pp_s, pp_const ~depth tm); "varId", J(pp_i, C.Map.find x map) ]
-      | App (x, l, r :: []) when is_infix ~depth x ->
-          let map, l = pp_atom ~map ~depth l in
-          let map, r = pp_atom ~map ~depth r in
-          map, pp_id_cnt "appInfix" ["args", J(pp_a, [
-            J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%a" (pp ~depth ~pp_ctx) (Const x))]);
-            l;r])] 
       | App (x, hd, tl) -> 
           let map, cnt = pp_atoms ~map ~depth (Const x :: hd ::tl) in
-          map, J(pp_d, [pp_id "id" "app"; "cnt", cnt])
+          let cnt : j = J(pp_a, cnt) in
+          map, J(pp_d, [pp_id "id" "app"; pp_b "is_infix" (is_infix ~depth x); "cnt", cnt])
       | Lam t ->
           let clean, (map, names) = pp_names ~map ~depth [depth] in
           let map, body = pp_atom ~map ~depth:(depth+1) t in
@@ -2589,24 +2584,8 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
           ]
       | CData c -> 
         let s = Format.asprintf "%a" (pp ~pp_ctx ~depth) tm in
-        let s = Re.Str.(global_replace (regexp "\(\194\|\171\|\187\)") "") s in
+        let s = Re.Str.(global_replace (regexp "\\(\194\\|\171\\|\187\\)") "") s in
         map, J(pp_d, ["id", J(pp_s, "string"); "cnt", J(pp_s, s)])
-      | Builtin (ImplBang, hd::bo) -> 
-        pp_atom ~depth ~map (Builtin(Impl, hd::bo @ [Builtin (Cut,[])]))
-      | Builtin (RImpl, hd::bo) -> pp_atom ~map ~depth (Builtin(Impl, bo @ [hd] ))
-      | Builtin (Eq, [l;r]) ->
-          let map, l = pp_atom ~map ~depth l in
-          let map, r = pp_atom ~map ~depth r in
-          map, pp_id_cnt "appInfix" ["args", J(pp_a, [J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, "=")]); l;r])] 
-      | Builtin (b, []) ->  map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "%s" (pp_const ~depth tm))])
-      | Builtin ((Pi|Sigma) as b, l) ->
-          let map, args = List.fold_left_map (fun map x -> pp_atom ~map ~depth x) map l in
-          map, J(pp_d, [pp_id "id" "app"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, if b == Pi then "pi" else "sigma")]) :: args))])
-      | Builtin (b, l) ->
-          let map, args = List.fold_left_map (fun map x -> pp_atom ~map ~depth x) map l in
-          map, J(pp_d, [pp_id "id" "app"; "cnt", J(pp_a, (J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, Format.asprintf "TODO" (*(pp_const  ~depth tm)*))]) :: args))])
-      (* | Builtin ((Match|Findall|Delay|Host _|Eq), _) -> anomaly ("pp_atom: ty_err -> " ^ (pp_const ~depth tm)) *)
-
       | AppArg (hd, laaa) ->
           let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
           map, J(pp_d, ["id", J(pp_s,"var"); "cnt", J(pp_d, ["name", J(pp_s, pp_const ~depth (AppArg (hd, []))); "varId", J(pp_i, C.Map.find hd map)])])
@@ -2617,9 +2596,9 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
       | UVar (_, _) ->  anomaly "pp_atom: UVar assert false"
       | AppUVar (_, _) -> anomaly "pp_atom: AppUVar assert false"
     
-    and pp_atoms ~map ~depth l : 'a C.Map.t * j = 
+    and pp_atoms ~map ~depth l : 'a C.Map.t * j list = 
       let map, args = List.fold_left_map (fun a e -> pp_atom ~depth ~map:a e) map l in 
-      map, J (pp_a, args)
+      map, args
 
     and pp_clause ~depth fmt (pname, cl) : unit =
       let pp_hyps ~map ~depth l : 'a C.Map.t * j = 
@@ -2632,11 +2611,7 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
       let map, hyps = pp_hyps ~map ~depth cl.hyps in
       (pp_d fmt [
         ("id", J (pp_s, "clause"));
-        ("cnt", J (pp_d, 
-          [ "hyp", hyps; 
-            "isNeckcut", J(pp_s, "false" );
-            "args", J(pp_a, [args])
-          ]));
+        ("cnt", J (pp_d, [ "hyp", hyps; "args", args ]));
       ]);;
 
   end in
