@@ -18,6 +18,7 @@ depends: [
   "stdlib-shims"
   "ppxlib" {>= "0.12.0"}
   "ppx_optcomp"
+  "mastic"
   "menhir" {>= "20211230" }
   "re" {>= "1.7.2"}
   "ppx_deriving" {>= "4.3"}

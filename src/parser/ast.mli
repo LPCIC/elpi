@@ -174,9 +174,9 @@ module TypeAbbreviation : sig
 
 end
 
-module Program : sig
+module Decl : sig
 
-  type decl =
+    type t =
     (* Blocks *)
     | Begin of Loc.t
     | Namespace of Loc.t * Func.t
@@ -195,10 +195,23 @@ module Program : sig
     | Pred of (raw_attribute list,raw_attribute list) Type.t
     | TypeAbbreviation of (Func.t,raw_attribute list TypeExpression.t) TypeAbbreviation.t
     | Ignored of Loc.t
-  and parser_output = { file_name : string; digest : Digest.t; ast : decl list }
+    | Error of Mastic.Error.t
+  and parser_output = { file_name : string; digest : Digest.t; ast : t list }
   [@@ deriving show]
 
-  type t = decl list
+    type Mastic.Error.t_ += Decl of t
+
+  val of_token : Mastic.Error.t -> t
+  val build_token : t Mastic.Error.located -> Mastic.Error.t
+  val is_err : t -> bool
+
+
+end
+
+module Program : sig
+
+
+  type t = Decl.t list
   [@@ deriving show]
 
 end
