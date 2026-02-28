@@ -714,9 +714,9 @@ module BuiltInPredicate : sig
     | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> 'o, 'o,'h,'c) ffi
     | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
     | FullHO : ('h,'c) ContextualConversion.ctx_readback * doc -> (once:once -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
-    | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o, 'o,'h,'c) ffi
-    | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
-    | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
+    | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
+    | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option) * Conversion.extra_goals, 'o,'h,'c) ffi
+    | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option) * Conversion.extra_goals, 'o,'h,'c) ffi
 
   type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
 

@@ -628,7 +628,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   (fun args ~depth _ _ state ->
     Util.printf "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.Debug.term depth) " ") args ;
-     state, ())),
+     state, (), [])),
   DocAbove);
 
   MLCode(Pred("print",
@@ -636,7 +636,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   (fun args ~depth _ _ state ->
      Util.printf "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.term depth) " ") args ;
-     state, ())),
+     state, (), [])),
   DocAbove);
 
   LPCode {|% Deprecated, use trace.counter
@@ -732,7 +732,7 @@ let name_or_constant name condition = (); fun x out ~depth _ _ state ->
   if len != 0 && len != 2 then
     type_error (name^" only supports 1 or 3 arguments");
   state,
-  match x with
+  (match x with
   | NoData -> raise No_clause
   | Data x ->
       match look ~depth x with
@@ -755,7 +755,8 @@ let name_or_constant name condition = (); fun x out ~depth _ _ state ->
               | _ -> raise No_clause end
           | _ -> raise No_clause
           end
-      | _ -> raise No_clause
+      | _ -> raise No_clause),
+  []
 ;;
 
 let rec same_term ~depth t1 t2 =
@@ -791,7 +792,7 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
       | UnifVar(v,a) -> v,a
       | _ -> raise No_clause in
     state,
-    match x, out with
+    (match x, out with
     | Data x, [] -> let _ = is_var x in ?: None +? None
     | Data x, [NoData; NoData] -> let _ = is_var x in ?: None +? None
     | Data x, [NoData; Data args] -> let _, a = is_var x in ?: None +! [None; Some (list_to_lp_list a)]
@@ -806,7 +807,8 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
           !: (mkUnifVar vy ~args:(ay @ lp_list_to_list ~depth args) state)
           +! [Some (mkUnifVar vx ~args:[] state); Some (list_to_lp_list ax)]
         end
-    | _ -> raise No_clause)),
+    | _ -> raise No_clause),
+    [])),
   DocAbove);
 
   MLCode(Pred("prune",
