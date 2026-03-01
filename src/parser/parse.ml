@@ -49,10 +49,28 @@ module Grammar = Grammar.Make(ParseFile)
   
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
 
+let raise_parse_error lexbuf stateid =
+  let message = message_of_state stateid in
+  let loc = lexbuf.Lexing.lex_curr_p in
+  let loc = {
+    Util.Loc.client_payload = None;
+    source_name = loc.Lexing.pos_fname;
+    line = loc.Lexing.pos_lnum;
+    line_starts_at = loc.Lexing.pos_bol;
+    source_start = loc.Lexing.pos_cnum;
+    source_stop = loc.Lexing.pos_cnum;
+  } in
+  raise (Parser_config.ParseError(loc,message))
+
 let parse grammar lexbuf =
   let buffer, lexer = MenhirLib.ErrorReports.wrap Lexer.(token C.versions) in
   try
-    grammar lexer lexbuf
+    Grammar.MenhirInterpreter.loop_handle
+     (fun x -> x)
+     (function (HandlingError e) -> raise_parse_error lexbuf Grammar.MenhirInterpreter.(current_state_number e) | _ -> assert false)
+     (Grammar.MenhirInterpreter.lexer_lexbuf_to_supplier lexer lexbuf)
+     (grammar lexbuf.lex_curr_p)
+    (* grammar lexer lexbuf *)
   with
   | Ast.Term.NotInProlog(loc,message) ->
       raise (Parser_config.ParseError(loc,message^"\n"))
@@ -66,18 +84,7 @@ let parse grammar lexbuf =
       source_stop = loc.Lexing.pos_cnum;
     } in
     raise (Parser_config.ParseError(loc,message))
-  | Grammar.Error stateid ->
-    let message = message_of_state stateid in
-    let loc = lexbuf.Lexing.lex_curr_p in
-    let loc = {
-      Util.Loc.client_payload = None;
-      source_name = loc.Lexing.pos_fname;
-      line = loc.Lexing.pos_lnum;
-      line_starts_at = loc.Lexing.pos_bol;
-      source_start = loc.Lexing.pos_cnum;
-      source_stop = loc.Lexing.pos_cnum;
-    } in
-    raise (Parser_config.ParseError(loc,message))
+  (* | Grammar.Error stateid -> raise_parse_error lexbuf stateid *)
 
 let already_parsed = Hashtbl.create 11
 
@@ -102,7 +109,7 @@ let () =
       let dest = cleanup_fname filename in
       lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = dest };
       Hashtbl.add already_parsed digest true;
-      let ast = parse Grammar.program lexbuf in
+      let ast = parse Grammar.Incremental.program lexbuf in
       close_in ic;
       { file_name = filename; digest; ast }))
 
@@ -122,7 +129,7 @@ let lexing_set_position lexbuf loc =
   
 let goal_from ~loc lexbuf =
   lexing_set_position lexbuf loc;
-  parse Grammar.goal lexbuf
+  parse Grammar.Incremental.goal lexbuf
       
 let goal ~loc ~text =
   let lexbuf = Lexing.from_string text in
@@ -131,7 +138,7 @@ let goal ~loc ~text =
 let program_from ~loc lexbuf =
   Hashtbl.clear already_parsed;
   lexing_set_position lexbuf loc;
-  parse Grammar.program lexbuf
+  parse Grammar.Incremental.program lexbuf
 
 let program ~file =
   Hashtbl.clear already_parsed;
