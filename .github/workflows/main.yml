@@ -15,20 +15,16 @@ jobs:
         os:
           - ubuntu-latest
           - windows-latest
+          - macos-latest
         ocaml-compiler:
           - 4.14.x
+          - 5.4.x
         profile:
           - dev
         include:
           - os: ubuntu-latest
             ocaml-compiler: 5.4.x
             profile: fatalwarnings
-          - os: macos-latest
-            ocaml-compiler: 5.4.x
-            profile: dev
-          - os: windows-latest
-            ocaml-compiler: 5.4.x
-            profile: dev
 
     runs-on: ${{ matrix.os }}
 
