@@ -1190,9 +1190,9 @@ type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints
   | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> State.t -> 'o, 'o,'h,'c) ffi
   | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
   | FullHO : ('h,'c) ContextualConversion.ctx_readback * doc -> (once:(depth:int -> term -> State.t -> State.t) -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
-  | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o, 'o,'h,'c) ffi
-  | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) ffi
-  | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) ffi
+  | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
+  | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option) * Conversion.extra_goals, 'o,'h,'c) ffi
+  | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option) * Conversion.extra_goals, 'o,'h,'c) ffi
 
 type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
 let pp fmt (Pred(name,_,_)) = Format.fprintf fmt "%s" name

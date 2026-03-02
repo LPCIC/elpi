@@ -2355,31 +2355,31 @@ let call (Data.BuiltInPredicate.Pred(bname,ffi,compute)) ~once ~depth hyps const
     | Data.BuiltInPredicate.VariadicIn(_,{ ContextualConversion.readback }, _), data ->
        let state, i, gls =
          map_acc (in_of_termC ~depth readback n bname ctx constraints) state data in
-       let state, rest = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
+       let state, rest, gls1 = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
        let state, l = reduce state rest in
-       state, List.(gls @ concat (rev extra) @ rev l)
+       state, List.(gls @ gls1 @ concat (rev extra) @ rev l)
     | Data.BuiltInPredicate.VariadicOut(_,{ ContextualConversion.embed; readback }, _), data ->
        let i = List.map (out_of_term ~depth readback n bname state) data in
-       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
+       let state, (rest, out), gls = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
        let state, l = reduce state rest in
        begin match out with
          | Some out ->
              let state, ass =
                map_acc3 (mk_out_assignC ~depth embed bname ctx constraints) state i data out in 
-             state, List.(concat (rev extra) @ rev (concat ass) @ l)
+             state, List.(gls @ concat (rev extra) @ rev (concat ass) @ l)
          | None -> state, List.(concat (rev extra) @ rev l)
        end
     | Data.BuiltInPredicate.VariadicInOut(_,{ ContextualConversion.embed; readback }, _), data ->
        let state, i, gls =
          map_acc (inout_of_termC ~depth readback n bname ctx constraints) state data in
-       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
+       let state, (rest, out), gls1 = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
        let state, l = reduce state rest in
        begin match out with
          | Some out ->
              let state, ass =
                map_acc3 (mk_inout_assignC ~depth embed bname ctx constraints) state i data out in 
-             state, List.(gls @ concat (rev extra) @ rev (concat ass) @ l)
-         | None -> state, List.(gls @ concat (rev extra) @ rev l)
+             state, List.(gls @ gls1 @ concat (rev extra) @ rev (concat ass) @ l)
+         | None -> state, List.(gls @ gls1 @ concat (rev extra) @ rev l)
        end
     | Data.BuiltInPredicate.CIn({ ContextualConversion.readback }, _, ffi), t :: rest ->
         let state, i, gls = in_of_termC ~depth readback n bname ctx constraints state t in

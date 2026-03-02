@@ -15,20 +15,16 @@ jobs:
         os:
           - ubuntu-latest
           - windows-latest
+          - macos-latest
         ocaml-compiler:
           - 4.14.x
+          - 5.4.x
         profile:
           - dev
         include:
           - os: ubuntu-latest
             ocaml-compiler: 5.4.x
             profile: fatalwarnings
-          - os: macos-latest
-            ocaml-compiler: 5.4.x
-            profile: dev
-          - os: windows-latest
-            ocaml-compiler: 5.4.x
-            profile: dev
 
     runs-on: ${{ matrix.os }}
 
@@ -107,6 +103,7 @@ jobs:
 
       - name: Save binary
         uses: actions/upload-artifact@v4
+        if: matrix.profile != 'fatalwarnings'
         with:
           name: elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}
           path: elpi*-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
@@ -116,11 +113,11 @@ jobs:
 # We run the test suite which also produces data.csf containing benchmarks
 
       - name: Test elpi on Unix
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.profile != 'fatalwarnings'
         run: opam exec -- make tests RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe'
 
       - name: Test elpi on Windows
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.profile != 'fatalwarnings'
         run: |
           opam exec -- ls -l tests/sources/*.elpi
           opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe' TIME=--time=C:/cygwin/bin/time.exe
@@ -129,7 +126,7 @@ jobs:
 
       - name: Save logs
         uses: actions/upload-artifact@v4
-        if: always()
+        if: matrix.profile != 'fatalwarnings'
         with:
           name: .logs-${{ matrix.ocaml-compiler }}-${{ runner.os }}
           path: _log
@@ -137,7 +134,7 @@ jobs:
 
       - name: Save benchmarking data
         uses: actions/upload-artifact@v4
-        if: always()
+        if: matrix.profile != 'fatalwarnings'
         with:
           name: .benchmark-${{ matrix.ocaml-compiler }}-${{ runner.os }}
           path: data.csv

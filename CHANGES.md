@@ -1,3 +1,11 @@
+# v3.6.0 (Feb 2026)
+
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
+
+- FFI:
+  - Change: Variadic predicates can generate extra goals
+
 # v3.5.0 (Feb 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
