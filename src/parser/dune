@@ -26,7 +26,10 @@
 (menhir (modules grammar tokens token_precedence) (flags --external-tokens Elpi_lexer_config.Tokens --table) (merge_into grammar))
 ;(menhir (modules grammar tokens token_precedence) (flags --external-tokens Elpi_lexer_config.Tokens --exn-carries-state) (merge_into grammar))
 (ocamllex (modules lexer))
-
+(env
+  (dev
+    (flags (:standard -w -9 -w -27 -warn-error -A))))
+    
 (rule
 ;  (mode promote)
   (action (with-stdout-to lexer.mll
