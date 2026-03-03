@@ -560,3 +560,9 @@ let () = declare "errmsg_arity"
   ~description:"missing argument"
   ~expectation:(FailureOutput (Str.regexp "is missing"))
   ()
+
+let () = declare "tc_overload"
+  ~source_elpi:"tc_overload.elpi"
+  ~description:"hard overloading resolution"
+  ~expectation:Success
+  ()

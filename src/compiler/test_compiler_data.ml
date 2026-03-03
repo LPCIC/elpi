@@ -37,7 +37,7 @@ let () = pp_ta (list (list int)) "list (list int)";;
 let () = pp_ta (arri int (arro (list (list int)) (Prop Function))) "(func int -> list (list int))";;
 let () = pp_ta (arro int (arro (list (list int)) (Prop Function))) "(func -> int, list (list int))";;
 let () = pp_ta (arro int (arri (list (list int)) (Prop Function))) "(pred o:int, i:list (list int))";;
-let () = pp_ta (arri int (arro (list (list int)) (Prop Relation))) "(pred i:int, o:list (list int))";;
+let () = pp_ta (arri int (arro (list (list int)) (Prop Relation))) "(pred int -> list (list int))";;
 
 (* let () = pp_ta (arr (list int) int) "o:list int -> int";;
 let () = pp_ta (arr (arr int int) int) "o:(o:int -> int) -> int";;

@@ -191,12 +191,20 @@ module TypeAssignment = struct
     | UVar m when MutableOnce.is_set m -> deref m
     | x -> x
 
-  let rec arity_mismatch (t1 : ty) (t2 : ty) =
-  match t1, t2 with
-  | Arr(_,_,_,t1) , (Prop _|Any|Cons _|App _) -> 1 + arity_mismatch t1 t2
-  | Arr(_,_,_,t1), Arr(_,NotVariadic,_,t2) -> arity_mismatch t1 t2
+(* arity = None means no constraint, arity = Some x means x is the desired arity *)
+type ety = { arity : int option; eit : ty }
+let mk_ety ?arity eit = assert(match arity with None -> true | Some x -> x >= 0);
+  { arity; eit }
+let update_ety ety eit = { ety with eit }
+
+  let rec arity_mismatch (t1 : ty) (t2 : ety) =
+  match t1, t2.eit with
   | UVar m, _ when MutableOnce.is_set m -> arity_mismatch (deref m) t2
-  | _, UVar m when MutableOnce.is_set m -> arity_mismatch t1 (deref m)
+  | _, UVar m when MutableOnce.is_set m -> arity_mismatch t1 (update_ety t2 (deref m))
+  | Arr(_,_,_,t1), (Prop _|Any|Cons _|App _) -> 1 + arity_mismatch t1 t2
+  | Arr(_,_,_,t1), UVar _ when t2.arity = Some 0 -> 1 + arity_mismatch t1 t2
+  | Arr(_,_,_,t1), UVar _ when t2.arity <> None -> 1 + arity_mismatch t1 (mk_ety ~arity:(Option.get t2.arity - 1) t2.eit)
+  | Arr(_,_,_,t1), Arr(_,NotVariadic,_,t2) -> arity_mismatch t1 (mk_ety t2)
   | _ -> 0
 
 
@@ -437,6 +445,8 @@ module TypeAssignment = struct
     | Ty t ->  to_func_mode ~type_abbrevs t
 
 end
+
+type ety = TypeAssignment.ety = { arity : int option; eit : TypeAssignment.ty }
 
 module TypingEnv : sig
 
