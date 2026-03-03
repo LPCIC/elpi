@@ -123,7 +123,7 @@ val smart_map2 : ('x -> 'a -> 'a) -> 'x -> 'a list -> 'a list
 val smart_map3 : ('x -> 'y -> 'a -> 'a) -> 'x -> 'y -> 'a list -> 'a list
 (* tail rec when the two lists have len 1; raises no exception. *)
 val uniqq: 'a list -> 'a list
-val for_all2 : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
+val for_all2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 val for_all23 :  argsdepth:int -> (argsdepth:int -> matching:bool -> 'x -> 'y -> 'z -> 'a -> 'a -> bool) -> 'x -> 'y -> 'z -> 'a list -> 'a list -> bool
 val for_all3b : ('a -> 'a -> bool -> bool) -> 'a list -> 'a list -> bool list -> bool -> bool
 

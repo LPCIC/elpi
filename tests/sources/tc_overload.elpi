@@ -1,0 +1,5 @@
+pred f int -> int.
+f _ _.
+pred f int -> int, diagnostic.
+
+main :- f 1 1 ok => f 2 2.
