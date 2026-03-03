@@ -1,3 +1,12 @@
+# v3.6.1 (Feb 2026)
+
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
+
+- Typechecker:
+  - Change: when expcting `prop` or `list prop` use an excted type of 0 arity
+  - Fix: improve error message in case of failed overloading resolution
+
 # v3.6.0 (Feb 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
