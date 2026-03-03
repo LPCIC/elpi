@@ -241,6 +241,7 @@ module TypeAssignment = struct
           begin match arrow_tail t with
             | None -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
             | Some Ast.Structured.Function when is_func_modes true x -> fprintf fmt "@[<hov 2>(func%a)@]" (pretty_func ~fst:true true) x
+            | Some Ast.Structured.Relation when is_func_modes true x -> fprintf fmt "@[<hov 2>(pred%a)@]" (pretty_func ~fst:true true) x
             | Some _ -> fprintf fmt "@[<hov 2>(pred %a)@]" (pretty_pred_mode m) (s, t) 
           end
       | Arr(m,Variadic,s,t) -> fprintf fmt "variadic %a %a" (pretty_parens ~lvl:arrs) s pretty t
