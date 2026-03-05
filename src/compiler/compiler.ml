@@ -2496,9 +2496,10 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
 ;;
 
 let pp_program_json (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> unit) fmt (compiler_state, { Assembled.clauses=cl; signature; symbols }) =
+  let table = SymbolMap.compile symbols in
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
-    table = SymbolMap.compile symbols;
+    table;
   } in
 
   let cnt = ref 0 in
@@ -2522,7 +2523,8 @@ let pp_program_json (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term ->
       else J(pp_d, [pp_id "id" "app"; pp_b "is_infix" is_infix; "cnt", J(pp_a, hd :: args)])
     let pp_const s : j = J(pp_d, [pp_id "id" "const"; "cnt", J(pp_s, s)])
 
-    let builtin2str = Data.Term.show_builtin_predicate (fun ?table x -> "TODO")
+    (* let builtin2str = Data.Term.show_builtin_predicate ~table (Constants.show) *)
+    let builtin2str b = const2str ~depth:0 (Builtin(b, []))
 
     let is_infixb = function
       | Eq | Impl | ImplBang | RImpl | And -> true
