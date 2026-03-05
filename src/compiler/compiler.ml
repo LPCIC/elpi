@@ -2495,7 +2495,7 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
   Format.fprintf fmt "@]"
 ;;
 
-let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> unit) fmt (compiler_state, { Assembled.clauses=cl; signature; symbols }) =
+let pp_program_json (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> unit) fmt (compiler_state, { Assembled.clauses=cl; signature; symbols }) =
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
     table = SymbolMap.compile symbols;
@@ -2504,7 +2504,7 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
   let cnt = ref 0 in
   let get () = incr cnt; !cnt in
 
-  let pp_const ~depth t = Format.asprintf "%a" (pp ~depth ~pp_ctx) t in
+  let const2str ~depth t = Format.asprintf "%a" (pp ~depth ~pp_ctx) t in
   
   let pp_clause_loc (cl:clause) = Format.(asprintf "%a" (pp_print_option Loc.pp) cl.loc) in
 
@@ -2513,96 +2513,83 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
     module JSON = Trace_ppx_runtime.Runtime.JSON
     open JSON 
 
+    let pp_id x y = (x,(J(pp_s, y):j))
+    let pp_b x y = (x,(J(pp_b, y):j))
     let pp_id_cnt id cnt : j = JSON.( J(pp_d, ["id", (J(pp_s, id):j); "cnt", J(pp_d, cnt)]))
+    let pp_var vname vid = pp_id_cnt "var" ["name", J(pp_s, vname); "varId", J(pp_i, vid)]
+    let pp_app is_infix hd args : j = 
+      if args = [] then hd
+      else J(pp_d, [pp_id "id" "app"; pp_b "is_infix" is_infix; "cnt", J(pp_a, hd :: args)])
+    let pp_const s : j = J(pp_d, [pp_id "id" "const"; "cnt", J(pp_s, s)])
 
-    let rec pp_main fmt (l: (string option * constant * clause) list) : unit =
-      Format.fprintf fmt "@[<hov 2>%a@]" pp_d ["clauses", J(pp_a, List.map (pp_card ~depth:0) l)]
+    let builtin2str = Data.Term.show_builtin_predicate (fun ?table x -> "TODO")
 
-    and pp_card ~depth (graft,pname,cl:string option * constant * clause) : j =
-      J(pp_d, [
-        ("id", J (pp_s, "card"));
-        ("predicate", J (pp_s, pp_const ~depth (Const pname)));
-        ("title", J (pp_s, pp_clause_loc cl));
-        ("cnt", J (pp_clause ~depth, (pname,cl)));
-      ])
-    
-    and pp_names ~map ~depth names =
-      let old = List.map (fun k -> k, C.Map.find_opt k map) names in
-      let clean map2 = List.fold_left (fun map (v,id) -> match id with None -> map | Some e -> C.Map.add v e map) map old in
-      clean, List.fold_left_map (fun (map:'a C.Map.t) (n:constant) -> 
-        let id = get () in
-        let m = C.Map.add n id map in
-        m, pp_id_cnt "var" ["name", J(pp_s, pp_const ~depth (Const n)); "varId", J(pp_i, id) ]) map names 
-
-    and is_infix ~depth c =
-      let s = (Format.asprintf "%a" (pp ~depth ~pp_ctx) (Const c)) in
-      let is_math c = List.mem c ['<';'>';'='] in
-      List.exists (fun prefix -> String.starts_with ~prefix s) [";";"=";"<";">";"&";"*";"/";"+";"-";"^"] || 
-        (String.length s > 2 && is_math s.[1] && is_math s.[2]) ||
-          (String.length s > 1 && is_math s.[1]) || s = "is"
-
-    and is_infixb = function
+    let is_infixb = function
       | Eq | Impl | ImplBang | RImpl | And -> true
       | Pi | Sigma | Cut | Match | Findall | Delay | Host _ -> false
 
-    and builtin2str = Data.Term.show_builtin_predicate (fun ?table x -> "TODO")
+    let pp_names ~map ~depth name =
+      let varid = C.Map.find_opt name map in
+      let clean map2 = match varid with None -> map | Some e -> C.Map.add name e map in
+      clean,
+        let id = get () in
+        let m = C.Map.add name id map in
+        m, pp_var (const2str ~depth (Const name)) id 
 
-    and pp_atom ~map ~depth (tm:term) : 'a C.Map.t * j =
-      let pp_id x y = (x,(J(pp_s, y):j)) in
-      let pp_b x y = (x,(J(pp_b, y):j)) in
-      let rec grab_list = function
-        | Cons (x,xs) -> let xs, b = grab_list xs in (x::xs), b
-        | Nil -> [], None
-        | x -> [], Some x
-      in
+    let is_infix ~depth c =
+      let s = (Format.asprintf "%a" (pp ~depth ~pp_ctx) (Const c)) in
+      let is_math c = List.mem c ['<';'>';'='] in
+      List.exists (fun prefix -> String.starts_with ~prefix s) [";";"=";"<";">";"&";"*";"/";"+";"-";"^";"as"] || 
+        (String.length s > 2 && is_math s.[1] && is_math s.[2]) ||
+          (String.length s > 1 && is_math s.[1]) || s = "is"
+
+    let rec pp_atom ~map ~depth (tm:term) : 'a C.Map.t * j =
       match tm with
       | Discard -> map, J(pp_d, [pp_id "id" "discard"])
-      | Builtin (b, []) ->
-          map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, builtin2str b)])
       | Builtin (b, bo) ->
-          let map, cnt = pp_atoms ~map ~depth bo in
-          let cnt : j = J(pp_a, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, builtin2str b)]) :: cnt) in
-          map, J(pp_d, [pp_id "id" "app"; pp_b "is_infix" (is_infixb b); "cnt", cnt])
-      | Cons _ -> 
-          let l, b = grab_list tm in
-          let map, cnt = pp_atoms ~map ~depth l in
-          let cnt : j = J(pp_a, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, "::")]) :: cnt) in
-          map, J(pp_d, [pp_id "id" "app"; pp_b "is_infix" true; "cnt", cnt])
-      | Nil -> map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, "[]")])
-      | Const x when x < 0 -> map, J(pp_d, ["id", J(pp_s,"const"); "cnt", J(pp_s, pp_const ~depth tm)])
-      | Const x -> map, pp_id_cnt "var" ["name", J(pp_s, pp_const ~depth tm); "varId", J(pp_i, C.Map.find x map) ]
+          let map, args = pp_atoms ~map ~depth bo in
+          let hd = pp_const (builtin2str b) in
+          map, pp_app (is_infixb b) hd args
+      | Cons (l,r) -> 
+          let hd = pp_const "::" in
+          let map, args = pp_atoms ~map ~depth [l;r] in
+          map, pp_app true hd args
+      | Nil -> map, pp_const "[]"
+      | Const x when x < 0 -> map, pp_const (const2str ~depth tm)
+      | Const x -> map, pp_var (const2str ~depth tm) (C.Map.find x map)
       | App (x, hd, tl) -> 
-          let map, cnt = pp_atoms ~map ~depth (Const x :: hd ::tl) in
-          let cnt : j = J(pp_a, cnt) in
-          map, J(pp_d, [pp_id "id" "app"; pp_b "is_infix" (is_infix ~depth x); "cnt", cnt])
+          let map, args = pp_atoms ~map ~depth (hd ::tl) in
+          let map, hd = pp_atom ~map ~depth (Const x) in
+          map, pp_app  (is_infix ~depth x) hd args
       | Lam t ->
-          let clean, (map, names) = pp_names ~map ~depth [depth] in
+          let clean, (map, names) = pp_names ~map ~depth depth in
           let map, body = pp_atom ~map ~depth:(depth+1) t in
           clean map, pp_id_cnt "quantification" 
           [
             "type", J (pp_s, "binder");
-            "names", J(pp_a, names);
+            "names", names;
             "body", J(pp_a, [body])
           ]
       | CData c -> 
         let s = Format.asprintf "%a" (pp ~pp_ctx ~depth) tm in
         let s = Re.Str.(global_replace (regexp "\\(\194\\|\171\\|\187\\)") "") s in
         map, J(pp_d, ["id", J(pp_s, "string"); "cnt", J(pp_s, s)])
-      | AppArg (hd, laaa) ->
+      | AppArg (hd, args) ->
           let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
-          map, J(pp_d, ["id", J(pp_s,"var"); "cnt", J(pp_d, ["name", J(pp_s, pp_const ~depth (AppArg (hd, []))); "varId", J(pp_i, C.Map.find hd map)])])
+          let map, cnt = pp_atoms ~map ~depth args in
+          let hd = pp_var (const2str ~depth (AppArg (hd, []))) (C.Map.find hd map) in
+          map, pp_app false hd cnt
       | Arg (hd, _) -> 
           let map = if C.Map.mem hd map then map else C.Map.add hd (get ()) map in
-          map, J(pp_d, ["id", J(pp_s,"var"); "cnt", J(pp_d, ["name", J(pp_s, pp_const ~depth (AppArg (hd, []))); "varId", J(pp_i, C.Map.find hd map)])])
+          map, pp_var (const2str ~depth (AppArg (hd, []))) (C.Map.find hd map)
 
       | UVar (_, _) ->  anomaly "pp_atom: UVar assert false"
       | AppUVar (_, _) -> anomaly "pp_atom: AppUVar assert false"
     
     and pp_atoms ~map ~depth l : 'a C.Map.t * j list = 
-      let map, args = List.fold_left_map (fun a e -> pp_atom ~depth ~map:a e) map l in 
-      map, args
+      List.fold_left_map (fun a e -> pp_atom ~depth ~map:a e) map l
 
-    and pp_clause ~depth fmt (pname, cl) : unit =
+    let pp_clause ~depth fmt (pname, cl) : unit =
       let pp_hyps ~map ~depth l : 'a C.Map.t * j = 
         match l with
         | [] -> map, J (pp_a, [])
@@ -2614,8 +2601,18 @@ let pp_program1 (pp : pp_ctx:pp_ctx -> depth:int -> Fmt.formatter -> term -> uni
       (pp_d fmt [
         ("id", J (pp_s, "clause"));
         ("cnt", J (pp_d, [ "hyp", hyps; "args", args ]));
-      ]);;
+      ])
 
+    let pp_card ~depth (graft,pname,cl:string option * constant * clause) : j =
+      J(pp_d, [
+        ("id", J (pp_s, "card"));
+        ("predicate", J (pp_s, const2str ~depth (Const pname)));
+        ("title", J (pp_s, pp_clause_loc cl));
+        ("cnt", J (pp_clause ~depth, (pname,cl)));
+      ])
+
+    let pp_main fmt (l: (string option * constant * clause) list) : unit =
+      Format.fprintf fmt "@[<hov 2>%a@]" pp_d ["clauses", J(pp_a, List.map (pp_card ~depth:0) l)]
   end in
   let clauses = handle_clause_graftin cl in
   JSON.pp_main fmt clauses ;;
