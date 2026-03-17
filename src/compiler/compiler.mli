@@ -34,6 +34,7 @@ type scoped_program
 val scoped_of_ast : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> ?builtins:declared_builtins list -> Ast.Program.t -> scoped_program
 
 type checked_compilation_unit
+val pp_checked_compilation_unit : Format.formatter -> checked_compilation_unit -> unit
 type unchecked_compilation_unit
 val empty_base : header:header -> program
 val unit_of_scoped : flags:flags -> header:header -> ?builtins:declared_builtins list -> scoped_program -> unchecked_compilation_unit

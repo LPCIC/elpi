@@ -6,6 +6,13 @@
   (modules elpi_REPL)
   (package elpi)
 )
+
+(executable
+  (name elpi_inspect_unit)
+  (libraries elpi
+  )
+  (modules elpi_inspect_unit)
+)
 (env
   (dev
     (flags (:standard -w -9 -w -27 -warn-error -A))))

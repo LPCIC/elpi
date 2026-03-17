@@ -419,7 +419,6 @@ type checked_compilation_unit = {
   version : string;
   checked_code : CheckedFlat.program;
   base_hash : string;
-  precomputed_signature : Assembled.signature;
   type_checking_time : float;
   det_checking_time : float;
 }
@@ -1318,7 +1317,7 @@ module Flatten : sig
   let merge_types env t1 t2 =
     F.Map.union (fun _ l1 l2 -> Some (ScopeTypeExpressionUniqueList.merge env l1 l2)) t1 t2
 
-  let merge_kinds t1 t2 =
+  let merge_kinds (t1 : Arity.t F.Map.t) t2 =
       F.Map.union (fun f (k,loc1 as kdecl) (k',loc2) ->
         if k == k' then Some kdecl
         else error ~loc:loc2 ("Duplicate kind declaration for " ^ F.show f ^ ". Previously declared in " ^ Loc.show loc1);
@@ -1437,8 +1436,8 @@ end = struct
     let merge k a b =
       match a, b with
       | _, Some (_,loc) -> Some loc
-      | Some _, b -> a
-      | _ -> anomaly ("ty_names collision: " ^ F.show k) in
+      | Some _, _ -> a
+      | _ -> assert false in
     let ty_names = F.Map.merge merge ty_names kinds in
     let all_ty_names = F.Map.merge merge all_ty_names kinds in
     let types = Type_checker.check_types ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds types in
@@ -1571,15 +1570,12 @@ end = struct
 
     let more_types = time_this type_check_time (fun () -> Type_checker.check_undeclared ~unknown ~type_abbrevs) in
     let u_types = Flatten.merge_type_assignments u_types more_types in
-    let types = Flatten.merge_type_assignments types more_types in
 
     let signature = { signature with types = u_types } in
-    let precomputed_signature = { precomputed_signature with types } in
 
     let checked_code = { CheckedFlat.signature; clauses; chr; builtins } in
 
   { version; checked_code; base_hash = hash_base base;
-    precomputed_signature;
     type_checking_time = if flags.time_typechecking then !type_check_time +. check_sig else 0.0;
     det_checking_time = if flags.time_typechecking then !det_check_time else 0.0;
 }
@@ -2132,8 +2128,7 @@ let extend1_signature base_signature (signature : checked_compilation_unit_signa
   let type_abbrevs = Flatten.merge_checked_type_abbrevs ota type_abbrevs in
   let types = Flatten.merge_type_assignments ot types in
   let toplevel_macros = Flatten.merge_toplevel_macros types otlm toplevel_macros in
-  let merge k a b =
-    if Loc.equal a b then Some a else anomaly ("ty_names collision: " ^ F.show k ^ "\n" ^ Loc.show a ^ "\n" ^ Loc.show b) in
+  let merge _ _ b = Some b in
   let ty_names = F.Map.union merge ots ty_names in
   { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names }
 
@@ -2158,10 +2153,7 @@ let allocate_new_symbols state ~symbols ~new_defined_symbols =
 
 let extend1 flags (state, base) unit =
 
-  let signature =
-    if hash_base base = unit.base_hash
-    then unit.precomputed_signature
-    else extend1_signature base.Assembled.signature unit.checked_code.CheckedFlat.signature in
+  let signature = extend1_signature base.Assembled.signature unit.checked_code.CheckedFlat.signature in
 
   let { Assembled.hash; clauses = cl; symbols; prolog_program; indexing; signature = bsig; chr = ochr; builtins = ob; total_type_checking_time; total_det_checking_time } = base in
   let { version; base_hash; checked_code = { CheckedFlat.clauses; chr; builtins; signature = { types = new_types } }; type_checking_time; det_checking_time } = unit in
@@ -2684,5 +2676,6 @@ let info_of_clause ~types { Ast.Clause.body } =
 
 let hover (u : checked_compilation_unit) =
   let { CheckedFlat.clauses } = u.checked_code in
-  List.map (info_of_clause ~types:u.precomputed_signature.Assembled.types) clauses |> List.flatten
+  (* This signature does not contain all types ... *)
+  List.map (info_of_clause ~types:u.checked_code.signature.Assembled.types) clauses |> List.flatten
 

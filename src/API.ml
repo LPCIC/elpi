@@ -148,6 +148,7 @@ module Compile = struct
   type executable = ED.executable
   type scoped_program = Compiler.scoped_program * int
   type compilation_unit = Compiler.checked_compilation_unit
+  let pp_compilation_unit = Compiler.pp_checked_compilation_unit
   type compilation_unit_signature = Compiler.checked_compilation_unit_signature
   exception CompileError = Compiler_data.CompileError
 

@@ -293,6 +293,8 @@ module Compile : sig
   val scope : ?flags:flags -> elpi:Setup.elpi -> ?builtins:Setup.builtins -> Ast.program -> scoped_program
   
   type compilation_unit
+  val pp_compilation_unit : Format.formatter -> compilation_unit -> unit
+  
   type compilation_unit_signature
   val empty_base : elpi:Setup.elpi -> program
   val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> ?builtins:Setup.builtins -> scoped_program -> compilation_unit

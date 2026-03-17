@@ -1,3 +1,13 @@
+# v3.6.2 (March 2026)
+
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
+
+- Compiler:
+  - Change: do not store in the unit the whole program signature (base + unit),
+    since this grows quadratically and is a problem in Rocq since some programs
+    are made of thausands of units.
+
 # v3.6.1 (Feb 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
