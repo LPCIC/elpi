@@ -2679,3 +2679,71 @@ let hover (u : checked_compilation_unit) =
   (* This signature does not contain all types ... *)
   List.map (info_of_clause ~types:u.checked_code.signature.Assembled.types) clauses |> List.flatten
 
+(* ---- map_compilation_unit: apply a CData.t -> CData.t mapping ---- *)
+
+let smart_map_cdata_in_scoped_term (f : CData.t -> CData.t) t =
+  let open ScopedTerm in
+  let rec aux it =
+    match it with
+    | CData c ->
+        let c' = f c in
+        if c == c' then it else CData c'
+    | Impl(b,lb,t1,t2) ->
+        let t1' = aux_loc t1 in
+        let t2' = aux_loc t2 in
+        if t1 == t1' && t2 == t2' then it
+        else Impl(b,lb,t1',t2')
+    | Spill(t,n) ->
+        let t' = aux_loc t in
+        if t' == t then it else Spill(t',n)
+    | App(c,xs) ->
+        let xs' = smart_map aux_loc xs in
+        if xs == xs' then it else App(c,xs')
+    | Lam(n,ty,b) ->
+        let b' = aux_loc b in
+        if b == b' then it else Lam(n,ty,b')
+    | UVar(c,l) ->
+        let l' = smart_map aux_loc l in
+        if l == l' then it else UVar(c,l')
+    | Cast(t,ty) ->
+        let t' = aux_loc t in
+        if t' == t then it else Cast(t',ty)
+    | Discard _ -> it
+  and aux_loc ({ it; loc; ty } as orig) =
+    let it' = aux it in
+    if it == it' then orig
+    else { it = it'; loc; ty }
+  in
+    aux_loc t
+
+let smart_map_cdata_in_clause f ({ Ast.Clause.body } as x) =
+  let body' = smart_map_cdata_in_scoped_term f body in
+  if body == body' then x else { x with body = body' }
+
+let smart_map_cdata_in_sequent f ({ Ast.Chr.eigen; context; conclusion } as orig) =
+  let eigen' = smart_map_cdata_in_scoped_term f eigen in
+  let context' = smart_map_cdata_in_scoped_term f context in
+  let conclusion' = smart_map_cdata_in_scoped_term f conclusion in
+  if eigen' == eigen && context' == context && conclusion' == conclusion then orig
+  else { Ast.Chr.eigen = eigen'; context = context'; conclusion = conclusion' }
+
+let smart_map_cdata_in_chr f ({ Ast.Chr.to_match; to_remove; guard; new_goal; attributes; loc } as orig) =
+  let to_match' = smart_map (smart_map_cdata_in_sequent f) to_match in
+  let to_remove' = smart_map (smart_map_cdata_in_sequent f) to_remove in
+  let guard' = option_smart_map (smart_map_cdata_in_scoped_term f) guard in
+  let new_goal' = option_smart_map (smart_map_cdata_in_sequent f) new_goal in
+  if to_match' == to_match && to_remove' == to_remove && guard' == guard && new_goal' == new_goal then orig
+  else { Ast.Chr.to_match = to_match'; to_remove = to_remove'; guard = guard'; new_goal = new_goal'; attributes; loc }
+
+let smart_map_cdata_in_block_constraint f ({ Ast.Structured.rules; _ } as orig) =
+  let rules' = smart_map (smart_map_cdata_in_chr f) rules in
+  if rules' == rules then orig
+  else { orig with Ast.Structured.rules = rules' }
+
+let map_compilation_unit (f : CData.t -> CData.t) (u : checked_compilation_unit) : checked_compilation_unit =
+  let { checked_code = { CheckedFlat.clauses; chr; builtins; signature }; _ } = u in
+  let clauses' = smart_map (smart_map_cdata_in_clause f) clauses in
+  let chr' = smart_map (smart_map_cdata_in_block_constraint f) chr in
+  if clauses == clauses' && chr == chr' then u
+  else { u with checked_code = { CheckedFlat.clauses = clauses'; chr = chr'; builtins; signature } }
+

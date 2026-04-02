@@ -189,6 +189,7 @@ module Compile = struct
   let signature u = Compiler.signature_of_checked_compilation_unit u
   let extend_signature ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit_signature ~flags ~base u
 
+  let map_compilation_unit = Compiler.map_compilation_unit
 
   module IntervalTree = Compiler.IntervalTree
 
