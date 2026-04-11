@@ -6,9 +6,11 @@ let init () =
 let cc ~elpi ~flags ~base i u =
   let u =
     Compile.unit ~elpi ~flags ~base
-     (Compile.scope ~elpi ~flags
-      (Parse.program_from ~elpi ~loc:(Ast.Loc.initial (Printf.sprintf "<u%d>" i))
-        (Lexing.from_string u))) in
+    (match
+     (Compile.scope_ast ~elpi ~flags
+      (Parse.program_from ~elpi ~digest:(Digest.string u) ~loc:(Ast.Loc.initial (Printf.sprintf "<u%d>" i))
+        (Lexing.from_string u)))
+    with [x] -> x | _ -> assert false) in
   Compile.extend ~flags ~base u, u
 
 let signature_of u = Compile.signature u

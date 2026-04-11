@@ -1,10 +1,16 @@
 open Elpi.API
 
-let cc ~elpi ~flags ~base ?builtins i u =
-    Compile.unit ~elpi ~flags ~base ?builtins
-     (Compile.scope ~elpi ~flags ?builtins
+let cc ~elpi ~flags ~base i u =
+    Compile.unit ~elpi ~flags ~base
+     (match
+     (Compile.scope_ast ~elpi ~flags
       (Parse.program_from ~elpi ~loc:(Ast.Loc.initial (Printf.sprintf "<u%d>" i))
-        (Lexing.from_string u)))
+        ~digest:(Digest.string u) (Lexing.from_string u)))
+      with [x] -> x | _ -> assert false)
+
+  let ccb ~elpi ~flags ~base builtins i  =
+    Compile.unit ~elpi ~flags ~base
+     (Compile.scope_builtins ~elpi ~flags builtins)
 
 let u1 = {| pred p. p. |}
 
@@ -33,7 +39,7 @@ let main =
 
   let u1 = cc ~elpi ~flags ~base 1 u1 in
 
-  let u2 = cc ~elpi ~flags ~base ~builtins:b2 2 "" in
+  let u2 = ccb ~elpi ~flags ~base b2 2 in
 
   let base = Compile.extend ~base u1 in
 

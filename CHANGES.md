@@ -1,3 +1,13 @@
+# UNRELEASED
+
+- REPL:
+  - elpi takes zero or one file (not more)
+
+- API:
+  - separate API for scoping AST or builtins. Scoping AST can return more
+    than one scoped program, in particular it returns all accumulated code
+    with file name and digest
+
 # v3.6.2 (March 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and

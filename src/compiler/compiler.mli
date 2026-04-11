@@ -31,18 +31,28 @@ type program
 val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program
 
 type scoped_program
-val scoped_of_ast : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> ?builtins:declared_builtins list -> Ast.Program.t -> scoped_program
+val scoped_program_name : scoped_program -> string
+val scoped_program_digest : scoped_program -> Digest.t
+val scoped_program_deps : scoped_program -> Ast.dependencies
+val scoped_of_builtins : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> declared_builtins -> scoped_program
+val scoped_of_ast : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> Ast.Program.t -> scoped_program list
 
 type checked_compilation_unit
 val pp_checked_compilation_unit : Format.formatter -> checked_compilation_unit -> unit
+val checked_compilation_unit_name : checked_compilation_unit -> string
+val checked_compilation_unit_digest : checked_compilation_unit -> Digest.t
+val checked_compilation_unit_deps : checked_compilation_unit -> Ast.dependencies
+
 type unchecked_compilation_unit
 val empty_base : header:header -> program
-val unit_of_scoped : flags:flags -> header:header -> ?builtins:declared_builtins list -> scoped_program -> unchecked_compilation_unit
+val unit_of_scoped : flags:flags -> header:header -> scoped_program -> unchecked_compilation_unit
 val append_unit : flags:flags -> base:program -> checked_compilation_unit -> program
 val check_unit : flags:flags -> base:program -> unchecked_compilation_unit -> checked_compilation_unit
 
 type checked_compilation_unit_signature
 val signature_of_checked_compilation_unit : checked_compilation_unit -> checked_compilation_unit_signature
+val checked_compilation_unit_signature_name : checked_compilation_unit_signature -> string
+val checked_compilation_unit_signature_digest : checked_compilation_unit_signature -> Digest.t
 
 val append_unit_signature : flags:flags -> base:program -> checked_compilation_unit_signature -> program
 

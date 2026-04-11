@@ -52,7 +52,7 @@ let set_terminal_width ?(max_w=
 ;;
 
 let usage =
-  "\nUsage: elpi [OPTION].. [FILE].. [-- ARGS..] \n" ^ 
+  "\nUsage: elpi [OPTION].. [FILE] [-- ARGS..] \n" ^ 
   "\nMain options:\n" ^ 
   "\t-test runs the query \"main\"\n" ^ 
   "\t-exec pred  runs the query \"pred ARGS\"\n" ^ 
@@ -150,8 +150,8 @@ let _ =
       try API.Parse.goal_from ~elpi ~loc:(API.Ast.Loc.initial "(-parse-term)") (Lexing.from_channel stdin)
       with API.Parse.ParseError(loc,msg) -> Format.eprintf "%a@;%s\n" API.Ast.Loc.pp loc msg; exit 1 in
     Format.printf "Raw term: %a\n" API.Pp.Ast.query g;
-    let p = API.Parse.program ~elpi ~files:[] in
-    let prog = API.Compile.program ~flags ~elpi [p] in
+    let p = API.Parse.program_from ~elpi ~loc:(API.Ast.Loc.initial "(parse_term)") ~digest:(Digest.string "")  (Lexing.from_string "") in
+    let prog = API.Compile.program ~flags ~elpi p in
     let query = API.Compile.query prog g in
     Format.printf "Compiled term: %a\n" API.Pp.goal query;
     exit 0;
@@ -169,12 +169,17 @@ let _ =
     API.BuiltIn.document_file Builtin.std_builtins;
     exit 0;
   end;
+  let file =
+    match files with
+    | [] -> "/dev/null"
+    | [x] -> x
+    | _ -> Printf.eprintf "Only one file can be specified"; exit 1 in
   let t0_parsing = Unix.gettimeofday () in
   let p =
-    try API.Parse.program ~elpi ~files
+    try API.Parse.program ~elpi ~file
     with API.Parse.ParseError(loc,err) ->
       Printf.eprintf "%s\n%s\n" (API.Ast.Loc.show loc) err;
-      exit 1;
+      exit 1
   in
   let g =
     if !test then
@@ -203,7 +208,7 @@ let _ =
   let query, prog, exec, (type_checking_time, det_checking_time) =
     let t0_compilation = Unix.gettimeofday () in
     try
-      let prog = API.Compile.program ~flags ~elpi [p] in
+      let prog = API.Compile.program ~flags ~elpi p in
       let query = API.Compile.query prog g in
       let type_checking_time = API.Compile.total_type_checking_time query, API.Compile.total_det_checking_time query in
       let exec = API.Compile.optimize query in

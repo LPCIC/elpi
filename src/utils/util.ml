@@ -323,7 +323,7 @@ let rec for_all23 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3
 let pp_loc_opt = function
   | None -> ""
   | Some loc -> Loc.show loc
-type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
 let default_warn ?loc ~id:_ s =
   Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" (pp_loc_opt loc) s
 let default_error ?loc s =
