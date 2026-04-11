@@ -132,7 +132,7 @@ let mode_of_IO io =
 %on_error_reduce term
 
 (* non terminals *)
-%type < Program.t > program
+%type < Program.decl list > program
 %type < Goal.t > goal
 %type < (Term.t, raw_attribute list, unit,unit) Clause.t > clause
 %type < Term.t > term
@@ -178,9 +178,9 @@ decl:
 | LCURLY { Program.Begin (loc $sloc) }
 | RCURLY { Program.End (loc $sloc) }
 | ext = accumulate; l = separated_nonempty_list(CONJ,filename); FULLSTOP {
-    Program.Accumulated(loc $sloc,List.(concat (map (fun x ->
+    Program.Accumulated(loc $sloc,List.(map (fun x ->
       let cwd = Filename.dirname (loc $sloc).source_name in
-      C.parse_file ~cwd (x ^ ext)) l)))
+      C.parse_file ~cwd (x ^ ext)) l))
   }
 | LOCAL; l = separated_nonempty_list(CONJ,constant); option(type_term); FULLSTOP {
     raise (ParseError(loc $loc,"local keyword is no longer supported"))  }

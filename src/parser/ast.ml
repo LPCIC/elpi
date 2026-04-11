@@ -301,6 +301,9 @@ module TypeAbbreviation = struct
 end
 
 
+type 'a parser_output = { file_name : string; digest : Digest.t; ast : 'a }
+[@@ deriving ord, show]
+
 module Program = struct
 
   type decl =
@@ -311,7 +314,7 @@ module Program = struct
     | Shorten of Loc.t * (Func.t * Func.t) list (* prefix suffix *)
     | End of Loc.t
 
-    | Accumulated of Loc.t * parser_output list
+    | Accumulated of Loc.t * decl_list parser_output list
 
     (* data *)
     | Clause of (Term.t, raw_attribute list,unit, unit) Clause.t
@@ -322,11 +325,11 @@ module Program = struct
     | Pred of (raw_attribute list,raw_attribute list) Type.t
     | TypeAbbreviation of (Func.t,raw_attribute list TypeExpression.t) TypeAbbreviation.t
     | Ignored of Loc.t
-  and parser_output = { file_name : string; digest : Digest.t; ast : decl list }
+  and decl_list = decl list
   [@@deriving show]
 
 
-type t = decl list [@@deriving show]
+type t = decl_list parser_output [@@deriving show]
 
 end
 
@@ -402,7 +405,7 @@ and block =
   | Namespace of Func.t * program
   | Shorten of Func.t shorthand list * program
   | Constraints of (Func.t,Term.t) block_constraint * program
-  | Accumulated of program
+  | Block of program
 and attribute = {
   insertion : insertion option;
   id : string option;
@@ -429,6 +432,9 @@ and 'a shorthand = {
 }
 and functionality = Function | Relation
 and variadic = Variadic | NotVariadic
+[@@deriving show, ord]
+
+type t = program parser_output
 [@@deriving show, ord]
 
 end

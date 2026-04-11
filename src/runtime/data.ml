@@ -668,8 +668,8 @@ end = struct
 
   end
 
-  let equal ~uf x y = compare (UF.find uf x) (UF.find uf y) = 0
-  let compare ~uf x y = compare (UF.find uf x) (UF.find uf y)
+  let equal ~uf x y = Stdlib.compare (UF.find uf x) (UF.find uf y) = 0
+  let compare ~uf x y = Stdlib.compare (UF.find uf x) (UF.find uf y)
 
   let rec undup ~uf = function
   | [] -> []

@@ -97,9 +97,9 @@ end
 
 module Parse = struct
 
-  let program ~elpi:{ Setup.parser } ~files =
+  let program ~elpi:{ Setup.parser } ~file =
     let module P = (val parser) in
-    List.(concat (map (fun file -> P.program ~file) files))
+    P.program ~file
 
   let program_from ~elpi:{ Setup.parser } ~loc buf =
     let module P = (val parser) in
@@ -146,16 +146,20 @@ module Compile = struct
   type program = Compiler.program
   type query = Compiler.query
   type executable = ED.executable
-  type scoped_program = Compiler.scoped_program * int
-  type compilation_unit = Compiler.checked_compilation_unit
-  let pp_compilation_unit = Compiler.pp_checked_compilation_unit
+  type scoped_program = string * Digest.t * Compiler.scoped_program
+  let scoped_program_name (n,_,_)= n
+  let scoped_program_digest (_,n,_)= n
+  type compilation_unit = string * Digest.t * Compiler.checked_compilation_unit
+  let compilation_unit_name (n,_,_) = n
+  let compilation_unit_digest (_,n,_) = n
+  let pp_compilation_unit fmt (_,_,u) = Compiler.pp_checked_compilation_unit fmt u
   type compilation_unit_signature = Compiler.checked_compilation_unit_signature
   exception CompileError = Compiler_data.CompileError
 
   let to_setup_flags x = x
 
-  let program ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } l =
-    Compiler.program_of_ast ~flags ~header (List.flatten l)
+  let program ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } p =
+    Compiler.program_of_ast ~flags ~header p
 
   let empty_base ~elpi:{ Setup.header } = Compiler.empty_base ~header
 
@@ -175,18 +179,15 @@ module Compile = struct
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
-  let scope ?(flags=Compiler.default_flags) ~elpi:{ Setup.header; parser } ?builtins a =
-    let builtins_hash = Hashtbl.hash builtins in
-    let builtins = match builtins with None -> [] | Some x -> [x] in
-    Compiler.scoped_of_ast ~flags ~header ~builtins a, builtins_hash
-  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base ?builtins (x,builtins_hash) =
-    if builtins_hash <> Hashtbl.hash builtins then
-      Util.error "API: Compile.scope and Compile.unit must take the same ~builtins";
-    let builtins = match builtins with None -> [] | Some x -> [x] in
-    Compiler.unit_of_scoped ~flags ~header ~builtins x |> Compiler.check_unit ~flags ~base
+  let scope_ast ?(flags=Compiler.default_flags) ~elpi:{ Setup.header; parser } a =
+    Compiler.scoped_of_ast ~flags ~header a
+  let scope_builtins ?(flags=Compiler.default_flags) ~elpi:{ Setup.header; parser } builtins =
+    Compiler.scoped_of_builtins ~flags ~header builtins
+  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base (n,d,x) =
+    n,d,Compiler.unit_of_scoped ~flags ~header x |> Compiler.check_unit ~flags ~base
 
-  let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
-  let signature u = Compiler.signature_of_checked_compilation_unit u
+  let extend ?(flags=Compiler.default_flags) ~base (_,_,u) = Compiler.append_unit ~flags ~base u
+  let signature (_,_,u) = Compiler.signature_of_checked_compilation_unit u
   let extend_signature ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit_signature ~flags ~base u
 
 
@@ -196,7 +197,7 @@ module Compile = struct
   let pp_type_ = Compiler.pp_type_
   type info = Compiler.info = { defined : Ast.Loc.t option; type_ : type_ option }
   let pp_info = Compiler.pp_info
-  let hover = Compiler.hover
+  let hover (_,_,u) = Compiler.hover u
 end
 
 module Execute = struct
@@ -1340,12 +1341,16 @@ module Utils = struct
         | Some (`Replace,x) -> [Replace x]
         | Some (`Remove,x) -> [Remove x]
         | None -> []) in
-    [Program.Clause {
-      Clause.loc = loc;
-      attributes;
-      body = aux depth Util.IntMap.empty term;
-      needs_spilling = ()
-    }]
+    { ast =
+        [Program.Clause {
+          Clause.loc = loc;
+          attributes;
+          body = aux depth Util.IntMap.empty term;
+          needs_spilling = ()
+        }];
+      file_name = loc.Util.Loc.source_name;
+      digest = "";
+    }
 
   let term_to_raw_term s p ?ctx ~depth t =
     Compiler.runtime_hack_term_to_raw_term s p ?ctx ~depth @@

@@ -8,7 +8,7 @@ open Elpi_lexer_config
 exception ParseError = Parser_config.ParseError
 
 module type Parser = sig
-  val program : file:string -> Ast.Program.decl list
+  val program : file:string -> Ast.Program.t
   val goal : loc:Util.Loc.t -> text:string -> Ast.Goal.t
   
   val goal_from : loc:Util.Loc.t -> Lexing.lexbuf -> Ast.Goal.t
@@ -33,7 +33,7 @@ end
 
 module Make(C : Config) = struct
   
-let parse_ref : (?cwd:string -> string -> Ast.Program.parser_output list) ref =
+let parse_ref : (?cwd:string -> string -> Ast.Program.t) ref =
   ref (fun ?cwd:_ _ -> assert false)
   
 
@@ -90,28 +90,34 @@ let already_parsed = Hashtbl.create 11
 
 let cleanup_fname filename = Re.Str.replace_first (Re.Str.regexp "/_build/[^/]+") "" filename
 
+let parse_one_file digest filename =
+  if Hashtbl.mem already_parsed digest then
+    Hashtbl.find already_parsed digest
+  else 
+    let ic = open_in filename in
+    let lexbuf = Lexing.from_channel ic in
+    let dest = cleanup_fname filename in
+    lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = dest };
+    let ast = parse Grammar.Incremental.program lexbuf in
+    let output = { Ast.file_name = filename; digest; ast } in
+    Hashtbl.add already_parsed digest output;
+    close_in ic;
+    output
+
 let () =
   parse_ref := (fun ?cwd filename ->
   let filename = C.resolver ?cwd ~unit:filename () in
   let digest = Digest.file filename in
-  let to_parse =
-    if Filename.extension filename = ".mod" then
-      let sigf = Filename.chop_extension filename ^ ".sig" in
-      if Sys.file_exists sigf then [sigf,Digest.file sigf;filename,digest]
-      else [filename,digest]
-    else [filename,digest] in
-  to_parse |> List.map (fun (filename,digest) ->
-    if Hashtbl.mem already_parsed digest then
-      { Ast.Program.file_name = filename; digest; ast = [] }
-    else
-      let ic = open_in filename in
-      let lexbuf = Lexing.from_channel ic in
-      let dest = cleanup_fname filename in
-      lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = dest };
-      Hashtbl.add already_parsed digest true;
-      let ast = parse Grammar.Incremental.program lexbuf in
-      close_in ic;
-      { file_name = filename; digest; ast }))
+  if Filename.extension filename = ".mod" then
+    (* Teyjus compatibility *)
+    let sig_filename = Filename.chop_extension filename ^ ".sig" in
+    if Sys.file_exists sig_filename then
+      let ds = Digest.file sig_filename in
+      let s = parse_one_file ds sig_filename in
+      let m = parse_one_file digest filename in
+      { Ast.file_name = filename; digest = ds^digest; ast = s.ast @ m.ast  }
+    else parse_one_file digest filename
+  else parse_one_file digest filename)
 
 let to_lexing_loc { Util.Loc.source_name; line; line_starts_at; source_start; _ } =
   { Lexing.pos_fname = source_name;
@@ -138,11 +144,15 @@ let goal ~loc ~text =
 let program_from ~loc lexbuf =
   Hashtbl.clear already_parsed;
   lexing_set_position lexbuf loc;
-  parse Grammar.Incremental.program lexbuf
+  let ast = parse Grammar.Incremental.program lexbuf in
+  let filename = loc.Util.Loc.source_name in
+  let digest = filename in
+  { Ast.file_name = filename; digest; ast }
+
 
 let program ~file =
   Hashtbl.clear already_parsed;
-  List.(concat (map (fun { Ast.Program.ast = x } -> x) @@ !parse_ref file))
+  !parse_ref file
 
 module Internal = struct
 let infix_SYMB = Grammar.infix_SYMB
