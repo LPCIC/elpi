@@ -198,7 +198,7 @@ module Setup : sig
   val trace : string list -> string list
 
   (** Override default runtime error functions (they call exit) *)
-  type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+  type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
   val set_warn : (?loc:Ast.Loc.t -> id:warning_id -> string -> unit) -> unit
   val set_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_anomaly : (?loc:Ast.Loc.t -> string -> 'a) -> unit

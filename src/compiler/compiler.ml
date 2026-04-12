@@ -686,8 +686,10 @@ end = struct (* {{{ *)
           aux_run ns ((Shorten(shorthands,p) :: cl2b clauses @ blocks))
             [] macros kinds types tabbrs chr rest
 
-      | Program.Accumulated (loc,_) :: _ ->
-          error ~loc "accumulate outside file header"
+      | Program.Accumulated (loc,l) :: rest ->
+          warn ~loc ~id:NestedAccumulate "accumulate outside file header";
+          aux_run ns blocks clauses macros kinds types tabbrs chr
+           (List.concat_map (fun x -> Program.Begin loc :: x.ast @ [Program.End loc]) l @ rest)
 
       | Program.Clause c :: rest ->
           let c = structure_clause_attributes c in
@@ -722,19 +724,20 @@ end = struct (* {{{ *)
       | _ -> error ~loc "matching } is missing"
 
     in
-    let rec aux_accumulate accs = function
-      | Program.Accumulated (_,[]) :: rest -> aux_accumulate accs rest
+    let rec aux_accumulate file_name digest accs = function
+      | Program.Accumulated (_,[]) :: rest -> aux_accumulate file_name digest accs rest
 
-      | Program.Accumulated (loc,{ file_name; digest; ast = a } :: more) :: rest ->
+      | Program.Accumulated (loc,x :: more) :: rest ->
           let rest = Program.Accumulated (loc, more) :: rest in
-          if StrSet.mem digest accs then
-            aux_accumulate accs rest
+          if StrSet.mem x.digest accs then
+            aux_accumulate file_name digest accs rest
           else
-            { Ast.file_name; digest; ast = a } :: aux_accumulate (StrSet.add digest accs) rest
+            aux_accumulate x.file_name x.digest accs x.ast @ aux_accumulate file_name digest (StrSet.add x.digest accs) rest
+
       | rest -> [{ file_name; digest; ast = rest }]
     in
 
-    let files = aux_accumulate StrSet.empty dl in
+    let files = aux_accumulate file_name digest StrSet.empty dl in
     files |> List.map (fun x ->
     let blocks, chr, rest = aux_run [] [] [] [] [] [] [] [] x.ast in
       begin match rest with

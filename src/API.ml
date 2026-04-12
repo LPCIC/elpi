@@ -65,7 +65,7 @@ let trace = set_trace
 
 let usage =
   Trace_ppx_runtime.Runtime.usage
-  type warning_id = Util.warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+  type warning_id = Util.warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
 
 let set_warn = Util.set_warn
 let set_error = Util.set_error
