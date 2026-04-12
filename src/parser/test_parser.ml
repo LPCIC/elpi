@@ -14,7 +14,7 @@ let error s a1 a2 =
   output_string oc1 "\nnew:\n";
   output_string oc1 (Program.show a1);
   output_string oc2 "\nreference:\n";
-  output_string oc2 (Program.show a2);
+  output_string oc2 (Program.show_decl_list a2);
   flush_all ();
   close_out oc1;
   close_out oc2;
@@ -44,8 +44,8 @@ let test s x y w z att ?warns b =
   let lexbuf = Lexing.from_string s in
   warn := None;
   try
-    let p = Parser.program_from ~loc lexbuf in
-    if p <> exp then error s p exp;
+    let { ast } as p = Parser.program_from ~loc lexbuf in
+    if ast <> exp then error s p exp;
     match !warn, warns with
     | None, None -> ()
     | Some w, None -> Printf.eprintf "parsing '%s': unexpected warning:\n%s\n" s w; exit 1
@@ -61,8 +61,8 @@ let testR s x y w z attributes to_match to_remove guard new_goal =
   let lexbuf = Lexing.from_string s in
   let loc = Loc.initial "(input)" in
   try
-    let p = Parser.program_from ~loc lexbuf in
-    if p <> exp then
+    let { ast } as p = Parser.program_from ~loc lexbuf in
+    if ast <> exp then
       error s p exp
   with Parse.ParseError(loc,message) ->
     Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
@@ -72,8 +72,8 @@ let testT s () =
   let lexbuf = Lexing.from_string s in
   let loc = Loc.initial "(input)" in
   try
-    let p = Parser.program_from ~loc lexbuf in
-    match p with
+    let { ast } as p = Parser.program_from ~loc lexbuf in
+    match ast with
     | [Program.Pred _] -> ()
     | [Program.Type _] -> ()
     | _ -> 

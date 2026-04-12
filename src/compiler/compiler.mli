@@ -31,13 +31,14 @@ type program
 val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program
 
 type scoped_program
-val scoped_of_ast : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> ?builtins:declared_builtins list -> Ast.Program.t -> scoped_program
+val scoped_of_builtins : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> declared_builtins -> string * Digest.t * scoped_program
+val scoped_of_ast : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> Ast.Program.t -> (string * Digest.t * scoped_program) list
 
 type checked_compilation_unit
 val pp_checked_compilation_unit : Format.formatter -> checked_compilation_unit -> unit
 type unchecked_compilation_unit
 val empty_base : header:header -> program
-val unit_of_scoped : flags:flags -> header:header -> ?builtins:declared_builtins list -> scoped_program -> unchecked_compilation_unit
+val unit_of_scoped : flags:flags -> header:header -> scoped_program -> unchecked_compilation_unit
 val append_unit : flags:flags -> base:program -> checked_compilation_unit -> program
 val check_unit : flags:flags -> base:program -> unchecked_compilation_unit -> checked_compilation_unit
 

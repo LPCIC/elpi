@@ -240,7 +240,7 @@ and block =
   | Namespace of string * pbody
   | Shorten of F.t Ast.Structured.shorthand list * pbody
   | Constraints of (F.t,ScopedTerm.t) Ast.Structured.block_constraint * pbody
-  | Accumulated of pbody
+  | Block of pbody
 [@@deriving show]
 
 end
@@ -324,7 +324,7 @@ type program = {
   signature : unchecked_signature;
   clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
   chr : (F.t,ScopedTerm.t) Ast.Structured.block_constraint list;
-  builtins : declared_builtins list;
+  builtins : declared_builtins option;
 }
 [@@deriving show]
 
@@ -393,7 +393,7 @@ type program = {
   signature : Assembled.signature;
   clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
   chr : (Symbol.t,ScopedTerm.t) Ast.Structured.block_constraint list;
-  builtins : ((Symbol.t * string) list * declared_builtins) list;
+  builtins : ((Symbol.t * string) list * declared_builtins) option;
 }
 [@@deriving show]
 
@@ -402,6 +402,7 @@ end
 type scoped_program = {
   version : string;
   code : Scoped.program;
+  builtins : declared_builtins option;
 }
 [@@deriving show]
 
@@ -465,7 +466,7 @@ module RecoverStructure : sig
 
   (* Reconstructs the structure of the AST (i.e. matches { with }) *)
 
-  val run : State.t -> Ast.Program.t -> Ast.Structured.program
+  val run : State.t -> Ast.Program.t -> Ast.Structured.t list
   val structure_type_expression : Loc.t -> 'a -> (Ast.raw_attribute list -> 'a option) -> Ast.raw_attribute list Ast.TypeExpression.t -> 'a Ast.TypeExpression.t
 
 end = struct (* {{{ *)
@@ -644,10 +645,10 @@ end = struct (* {{{ *)
   in
   { TypeAbbreviation.name; value = aux value; nparams; loc }
 
-  let run _ dl =
-    let rec aux_run ns blocks clauses macros kinds types tabbrs chr accs = function
+  let run _ { file_name; digest; ast = dl } =
+    let rec aux_run ns blocks clauses macros kinds types tabbrs chr = function
       | Program.Ignored _ :: rest ->
-          aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs chr rest
       | (Program.End _ :: _ | []) as rest ->
           { body = List.rev (cl2b clauses @ blocks);
             types = (*List.rev*) types; (* we prefer the last one *)
@@ -657,92 +658,96 @@ end = struct (* {{{ *)
           List.rev chr,
           rest
       | Program.Begin loc :: rest ->
-          let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
+          let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside an anonymous block";
-          aux_end_block loc ns (Accumulated p :: cl2b clauses @ blocks)
-            [] macros kinds types tabbrs chr accs rest
+          aux_end_block loc ns (Block p :: cl2b clauses @ blocks)
+            [] macros kinds types tabbrs chr rest
       | Program.Constraint (loc, ctx_filter, clique) :: rest ->
           if chr <> [] then
             error "Constraint blocks cannot be nested";
-          let p, chr, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
+          let p, chr, rest = aux_run ns [] [] [] [] [] [] [] rest in
           aux_end_block loc ns (Constraints({loc;ctx_filter;clique;rules=chr},p) :: cl2b clauses @ blocks)
-            [] macros kinds types tabbrs [] accs rest
+            [] macros kinds types tabbrs [] rest
       | Program.Namespace (loc, n) :: rest ->
-          let p, chr1, rest = aux_run (n::ns) [] [] [] [] [] [] [] StrSet.empty rest in
+          let p, chr1, rest = aux_run (n::ns) [] [] [] [] [] [] [] rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside a namespace block";
           aux_end_block loc ns (Namespace (n,p) :: cl2b clauses @ blocks)
-            [] macros kinds types tabbrs chr accs rest
+            [] macros kinds types tabbrs chr rest
       | Program.Shorten (loc,[]) :: _ ->
           anomaly ~loc "parser returns empty list of shorten directives"
       | Program.Shorten (loc,directives) :: rest ->
           let shorthand (full_name,short_name) = { iloc = loc; full_name; short_name } in
           let shorthands = List.map shorthand directives in
-          let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] accs rest in
+          let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] rest in
           if chr1 <> [] then
             error "CHR cannot be declared after a shorthand";
           aux_run ns ((Shorten(shorthands,p) :: cl2b clauses @ blocks))
-            [] macros kinds types tabbrs chr accs rest
+            [] macros kinds types tabbrs chr rest
 
-      | Program.Accumulated (_,[]) :: rest ->
-          aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
-
-      | Program.Accumulated (loc,{ file_name; digest; ast = a } :: more) :: rest ->
-          let rest = Program.Accumulated (loc, more) :: rest in
-          let digest = String.concat "." (digest :: List.map F.show ns) in
-          if StrSet.mem digest accs then begin
-            (* Printf.eprintf "skip: %s\n%!" filename; *)
-            aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
-          end else begin
-            (* Printf.eprintf "acc: %s -> %d\n%!" filename (List.length a); *)
-            aux_run ns blocks clauses macros kinds types tabbrs chr
-              (StrSet.add digest accs)
-              (Program.Begin loc :: a @ Program.End loc :: rest)
-          end
+      | Program.Accumulated (loc,l) :: rest ->
+          warn ~loc ~id:NestedAccumulate "accumulate outside file header";
+          aux_run ns blocks clauses macros kinds types tabbrs chr
+           (List.concat_map (fun x -> Program.Begin loc :: x.ast @ [Program.End loc]) l @ rest)
 
       | Program.Clause c :: rest ->
           let c = structure_clause_attributes c in
-          aux_run ns blocks (c::clauses) macros kinds types tabbrs chr accs rest
+          aux_run ns blocks (c::clauses) macros kinds types tabbrs chr rest
       | Program.Macro m :: rest ->
-          aux_run ns blocks clauses (m::macros) kinds types tabbrs chr accs rest
+          aux_run ns blocks clauses (m::macros) kinds types tabbrs chr rest
       | Program.Pred t :: rest ->
           let t = structure_type_attributes t in
-          aux_run ns blocks clauses macros kinds (t :: types) tabbrs chr accs rest
+          aux_run ns blocks clauses macros kinds (t :: types) tabbrs chr rest
       | Program.Kind [] :: rest ->
-          aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs chr rest
       | Program.Kind (k::ks) :: rest ->          
           let k = structure_kind_attributes k in
-          aux_run ns blocks clauses macros (k :: kinds) types tabbrs chr accs (Program.Kind ks :: rest)
+          aux_run ns blocks clauses macros (k :: kinds) types tabbrs chr (Program.Kind ks :: rest)
       | Program.Type [] :: rest ->
-          aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs chr rest
       | Program.Type (t::ts) :: rest ->          
           if List.mem Functional t.attributes then error ~loc:t.loc "functional attribute only applies to pred";
           let t = structure_type_attributes t in
-          aux_run ns blocks clauses macros kinds (t :: types) tabbrs chr accs (Program.Type ts :: rest)
+          aux_run ns blocks clauses macros kinds (t :: types) tabbrs chr (Program.Type ts :: rest)
       | Program.TypeAbbreviation abbr :: rest ->
           let abbr = structure_type_abbreviation abbr in
-          aux_run ns blocks clauses macros kinds types (abbr :: tabbrs) chr accs rest
+          aux_run ns blocks clauses macros kinds types (abbr :: tabbrs) chr rest
       | Program.Chr r :: rest ->
           let r = structure_chr_attributes r in
-          aux_run ns blocks clauses macros kinds types tabbrs (r::chr) accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs (r::chr) rest
 
-    and aux_end_block loc ns blocks clauses macros kinds types tabbrs chr accs rest =
+    and aux_end_block loc ns blocks clauses macros kinds types tabbrs chr rest =
       match rest with
       | Program.End _ :: rest ->
-          aux_run ns blocks clauses macros kinds types tabbrs chr accs rest
+          aux_run ns blocks clauses macros kinds types tabbrs chr rest
       | _ -> error ~loc "matching } is missing"
 
     in
-    let blocks, chr, rest = aux_run [] [] [] [] [] [] [] [] StrSet.empty dl in
-    begin match rest with
-    | [] -> ()
-    | Program.End loc :: _ -> error ~loc "extra }"
-    | _ -> assert false
-    end;
-    if chr <> [] then
-      error "CHR cannot be declared outside a Constraint block";
-    blocks
+    let rec aux_accumulate file_name digest accs = function
+      | Program.Accumulated (_,[]) :: rest -> aux_accumulate file_name digest accs rest
+
+      | Program.Accumulated (loc,x :: more) :: rest ->
+          let rest = Program.Accumulated (loc, more) :: rest in
+          if StrSet.mem x.digest accs then
+            aux_accumulate file_name digest accs rest
+          else
+            aux_accumulate x.file_name x.digest accs x.ast @ aux_accumulate file_name digest (StrSet.add x.digest accs) rest
+
+      | rest -> [{ file_name; digest; ast = rest }]
+    in
+
+    let files = aux_accumulate file_name digest StrSet.empty dl in
+    files |> List.map (fun x ->
+    let blocks, chr, rest = aux_run [] [] [] [] [] [] [] [] x.ast in
+      begin match rest with
+      | [] -> ()
+      | Program.End loc :: _ -> error ~loc "extra }"
+      | _ -> assert false
+      end;
+      if chr <> [] then
+        error "CHR cannot be declared outside a Constraint block";
+      { x with ast = blocks })
 
 end (* }}} *)
 
@@ -1160,14 +1165,14 @@ end = struct
           F.Set.union defs p.Scoped.pred_symbols,
           F.Set.union ty_defs p.Scoped.ty_symbols,
           Scoped.Constraints({loc;ctx_filter; clique; rules},p) :: compiled_rest
-      | Accumulated p :: rest ->
+      | Block p :: rest ->
           let _, p = compile_program macros state p in
           let kinds, types, type_abbrevs, defs, ty_defs, compiled_rest =
             compile_body macros kinds types type_abbrevs defs ty_defs state rest in
           kinds, types, type_abbrevs,
           F.Set.union defs p.Scoped.pred_symbols,
           F.Set.union ty_defs p.Scoped.ty_symbols,
-          Scoped.Accumulated p :: compiled_rest
+          Scoped.Block p :: compiled_rest
   
     in
     let toplevel_macros, pbody = compile_program toplevel_macros state p in
@@ -1372,7 +1377,7 @@ module Flatten : sig
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst body in
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
-  | Scoped.Accumulated { kinds=k; types = t; type_abbrevs = ta; body; ty_symbols = _ } :: rest ->
+  | Scoped.Block { kinds=k; types = t; type_abbrevs = ta; body; ty_symbols = _ } :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
       let types = merge_types TypingEnv.empty (apply_subst_types ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
@@ -1386,7 +1391,7 @@ module Flatten : sig
   let run state { Scoped.pbody; toplevel_macros } =
     let kinds, types, type_abbrevs, clauses_rev, chr_rev = compile_body pbody in
     let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros } in
-    { Flat.clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; builtins = []; signature } (* TODO builtins can be in a unit *)
+    { Flat.clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; builtins = None; signature } (* TODO builtins can be in a unit *)
 
 
 end
@@ -1497,7 +1502,7 @@ end = struct
     let type_check_time = ref 0.0 in
     let det_check_time = ref 0.0 in
 
-    let builtins = builtins |> List.map (fun file_name -> 
+    let builtins = builtins |> Option.map (fun file_name -> 
       let builtins, _ = declared_builtins ~file_name in
       StrMap.fold (fun _ (BuiltInPredicate.Pred(name,_,_)) acc ->
       let symb =
@@ -1519,11 +1524,11 @@ end = struct
     file_name) in
 
     let types, u_types =
-      List.fold_left (fun (types, u_types) (bl,_) ->
+      Option.fold ~some:(fun (bl,_) ->
         List.fold_left (fun (t,ut) (s,_) ->
           TypingEnv.set_as_implemented_in_ocaml t s, TypingEnv.set_as_implemented_in_ocaml ut s)
           (types, u_types) bl)
-        (types, u_types)
+        ~none:(types, u_types)
       builtins in
 
     TypingEnv.iter_names (fun k -> function
@@ -2168,14 +2173,14 @@ let extend1 flags (state, base) unit =
   (* Format.eprintf "extended\n%!"; *)
 
   let symbols, builtins =
-    List.fold_left (fun (symbols, ob) (builtins,file_name) ->
+    Option.fold ~some:(fun (builtins,file_name) ->
       let bm, _ = declared_builtins ~file_name in
       List.fold_left (fun (symbols,builtins) (symb, name) ->
         let p = StrMap.find name bm in
         let symbols, (c,_) = SymbolMap.allocate_global_symbol state symbols symb in
         let builtins = Builtins.register builtins p c in
         symbols, builtins) (symbols, ob) builtins)
-      (symbols, ob) builtins
+     ~none:(symbols, ob) builtins
     in
 
   let symbols, chr =
@@ -2223,29 +2228,32 @@ end
   API
  ****************************************************************************)
 
-let scope s ~toplevel_macros p : scoped_program =
-  let p = RecoverStructure.run s p in
-  let p = Scope_Quotation_Macro.run ~toplevel_macros s p in
-  {
-    version = "%%VERSION_NUM%%";
-    code = p;
-  }
+let scope s ~toplevel_macros ~builtins p : (string * Digest.t * scoped_program) list =
+  let pl = RecoverStructure.run s p in
+  pl |> List.map (fun { Ast.ast = p; digest; file_name} -> 
+    let p = Scope_Quotation_Macro.run ~toplevel_macros s p in
+    file_name, digest, ({
+      version = "%%VERSION_NUM%%";
+      code = p;
+      builtins;
+    } : scoped_program))
 
 (* Compiler passes *)
-let unit_or_header_of_scoped s ~builtins (p : scoped_program) : unchecked_compilation_unit =
+let unit_or_header_of_scoped s (p : scoped_program) : unchecked_compilation_unit =
   assert ("%%VERSION_NUM%%" = p.version);
-  let p = Flatten.run s p.code in
+  let f = Flatten.run s p.code in
   {
     version = "%%VERSION_NUM%%";
-    code = { p with builtins };
+    code = { f with builtins = p.builtins };
   }
 ;;
 
 let print_unit { print_units } x =
     if print_units then
       let b1 = Marshal.to_bytes x.code [] in
-      Printf.eprintf "== UNIT =================\ncode: %dk (%d clauses)\n\n%!"
+      Printf.eprintf "== UNIT =================\ncode: %dk (%d clauses) (%d builtins)\n\n%!"
         (Bytes.length b1 / 1024) (List.length x.code.Flat.clauses)
+        (Option.fold ~none:0 ~some:(fun file_name -> List.length (declared_builtins ~file_name |> snd)) x.code.Flat.builtins)
 ;;
 
 let assemble_unit ~flags ~header:(s,base) units : program =
@@ -2255,10 +2263,16 @@ let assemble_unit ~flags ~header:(s,base) units : program =
  s, p
 ;;
 
-let scoped_of_ast ~flags:_ ~header:(s,u) ?(calc=[]) ?(builtins = []) p =
+let scoped_of_builtins ~flags:_ ~header:(s,u) ?(calc=[]) builtins =
   let parser = Option.get @@ D.State.get parser s in
-  let builtins_src = List.concat @@ List.map (fun file_name -> ast_of_builtins ~calc ~parser ~file_name) builtins in
-  scope ~toplevel_macros:u.Assembled.signature.toplevel_macros s (builtins_src @ p)
+  let builtins_src = ast_of_builtins ~calc ~parser ~file_name:builtins in
+  match scope ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:(Some builtins) builtins_src with
+  | [x] -> x
+  | _ -> assert false
+
+let scoped_of_ast ~flags:_ ~header:(s,u) ?(calc=[]) p =
+  scope ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:None p
+
 
 let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor calc_descriptor builtins : header =
   let state = D.State.(init (merge_descriptors D.elpi_state_descriptor state_descriptor)) in
@@ -2282,24 +2296,25 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let state = D.State.set parser state (Some p) in
   let state = D.State.set D.while_compiling state true in
   let base = Assembled.empty () in
-  let header = state, base in
   (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
-  let builtins_src = scoped_of_ast ~flags ~calc:calc_descriptor ~header ~builtins [] in
-  let u = unit_or_header_of_scoped state ~builtins builtins_src in
-  print_unit flags u;
-  let u = Check.check ~flags state ~base u in
- (* with toplevel_macros = u.checked_code.signature.toplevel_macros } in *)
-  (* Printf.eprintf "header_of_ast: types u %d\n%!" (F.Map.cardinal u.checked_code.CheckedFlat.signature.types); *)
-  let h = assemble_unit ~flags ~header:(state,base) u in
-  (* Printf.eprintf "header_of_ast: types h %d\n%!" (F.Map.cardinal (snd h).Assembled.signature.types); *)
-  h
+  builtins |> List.fold_left (fun (state,base as header) builtins ->
+    let _, _, scoped = scoped_of_builtins ~flags ~calc:calc_descriptor ~header builtins in
+    let u = unit_or_header_of_scoped state scoped in
+    print_unit flags u;
+    let u = Check.check ~flags state ~base u in
+  (* with toplevel_macros = u.checked_code.signature.toplevel_macros } in *)
+    (* Printf.eprintf "header_of_ast: types u %d\n%!" (F.Map.cardinal u.checked_code.CheckedFlat.signature.types); *)
+    let h = assemble_unit ~flags ~header:(state,base) u in
+    (* Printf.eprintf "header_of_ast: types h %d\n%!" (F.Map.cardinal (snd h).Assembled.signature.types); *)
+    h)
+   (state,base)
 
 let check_unit ~flags ~base:(st,base) u = Check.check ~flags st ~base u
 
 let empty_base ~header:b = b
 
-let unit_of_scoped ~flags ~header:(s, u) ?(builtins=[]) p : unchecked_compilation_unit =
-  let u = unit_or_header_of_scoped s ~builtins p in
+let unit_of_scoped ~flags ~header:(s, u) p : unchecked_compilation_unit =
+  let u = unit_or_header_of_scoped s p in
   print_unit flags u;
   u
 
@@ -2309,11 +2324,13 @@ let append_unit ~flags ~base:(s,p) unit : program =
 let append_unit_signature ~flags ~base:(s,p) unit : program =
   Assemble.extend_signature s p unit
   
-let program_of_ast ~flags ~header:((st, base) as header : State.t * Assembled.program) p : program =
-  let p = scoped_of_ast ~flags ~calc:[] ~header p in
-  let u = unit_of_scoped ~flags ~header p in
-  let u = Check.check ~flags st ~base u in
-  assemble_unit ~flags ~header u
+let program_of_ast ~flags ~header:(header : State.t * Assembled.program) p : program =
+  let pl = scoped_of_ast ~flags ~calc:[] ~header p in
+  pl |> List.fold_left (fun ((st, base) as header) (_,_,p) ->
+    let u = unit_of_scoped ~flags ~header p in
+    let u = Check.check ~flags st ~base u in
+    assemble_unit ~flags ~header u)
+    header
 
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x
 let total_det_checking_time { WithMain.total_det_checking_time = x } = x
