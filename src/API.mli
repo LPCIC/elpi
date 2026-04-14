@@ -305,10 +305,7 @@ module Compile : sig
   val extend_signature : ?flags:flags -> base:program -> compilation_unit_signature -> program
 
   (** [map_compilation_unit f u] applies [f] to every opaque data (CData)
-      node in the compiled clauses and CHR rules of [u]. Useful for host
-      applications that need to rewrite embedded references (e.g., module
-      substitutions). Preserves physical equality when [f] returns
-      physically equal values for all CData nodes. *)
+      node in the unit *)
   val map_compilation_unit : (Ast.Opaque.t -> Ast.Opaque.t) -> compilation_unit -> compilation_unit
 
   (* then compile the query *)
