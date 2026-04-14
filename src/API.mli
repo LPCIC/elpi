@@ -304,6 +304,10 @@ module Compile : sig
   val signature : compilation_unit -> compilation_unit_signature
   val extend_signature : ?flags:flags -> base:program -> compilation_unit_signature -> program
 
+  (** [map_compilation_unit f u] applies [f] to every opaque data (CData)
+      node in the unit *)
+  val map_compilation_unit : (Ast.Opaque.t -> Ast.Opaque.t) -> compilation_unit -> compilation_unit
+
   (* then compile the query *)
   val query : program -> Ast.query -> query
   

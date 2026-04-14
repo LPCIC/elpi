@@ -46,6 +46,8 @@ val signature_of_checked_compilation_unit : checked_compilation_unit -> checked_
 
 val append_unit_signature : flags:flags -> base:program -> checked_compilation_unit_signature -> program
 
+val map_compilation_unit : (Util.CData.t -> Util.CData.t) -> checked_compilation_unit -> checked_compilation_unit
+
 type query
 val query_of_ast : program -> Ast.Goal.t -> (State.t -> State.t) -> query
 val query_of_scoped_term : program -> (State.t -> State.t * Compiler_data.ScopedTerm.t) -> query
