@@ -1,7 +1,9 @@
 # UNRELEASED
 
 - REPL:
-  - elpi takes zero or one file (not more)
+  - `elpi` takes zero or one file (not more) when executing
+  - `elpi -deps` prints a dot file with the direct dependencies of given files.
+    Example: `elpi -deps *.elpi | xdot -`
 
 - API:
   - separate API for scoping AST or builtins. Scoping AST can return more

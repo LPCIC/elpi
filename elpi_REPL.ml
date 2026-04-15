@@ -95,6 +95,7 @@ let _ =
   let extra_paths = ref [] in
   let parse_term = ref false in
   let skip_det_check = ref false in
+  let print_deps = ref false in
   let vars =
     ref API.Compile.(default_flags.defined_variables) in
   let rec eat_options = function
@@ -107,6 +108,7 @@ let _ =
     | "-print-ast" :: rest -> print_ast := true; eat_options rest
     | "-print-units" :: rest -> print_units := true; eat_options rest
     | "-parse-term" :: rest -> parse_term := true; eat_options rest
+    | "-deps" :: rest -> print_deps := true; eat_options rest
     | "-document-builtins" :: rest -> doc_builtins := true; eat_options rest
     | "-document-infix-syntax" :: rest -> doc_infix := true; eat_options rest
     | "-D" :: var :: rest -> vars := API.Compile.StrSet.add var !vars; eat_options rest
@@ -168,6 +170,28 @@ let _ =
   if !doc_builtins then begin
     API.BuiltIn.document_file Builtin.std_builtins;
     exit 0;
+  end;
+  if !print_deps then begin
+    let pl = files |> List.map (fun file ->
+      try API.Parse.program ~elpi ~file
+      with API.Parse.ParseError(loc,err) ->
+        Printf.eprintf "%s\n%s\n" (API.Ast.Loc.show loc) err;
+        exit 1) in
+    let all = List.map (API.Compile.scope_ast ~elpi) pl |> List.concat in
+    let name_of = API.Compile.scoped_program_name in
+    let all = List.sort (fun p1 p2 -> compare (name_of p1) (name_of p2)) all in
+    let all =
+      let rec undup = function
+        | [] -> []
+        | x :: y :: rest when name_of x = name_of y -> undup (y :: rest)
+        | x :: rest -> x :: undup rest in
+      undup all in
+    Printf.printf "digraph deps {\n";
+    all |> List.iter (fun x ->
+      let deps = API.Compile.scoped_program_deps x in
+      deps |> List.iter (fun d -> Printf.printf "%S -> %S;\n" (name_of x) (fst d)));
+    Printf.printf "}\n";
+    exit 0
   end;
   let file =
     match files with
