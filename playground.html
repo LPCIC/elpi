@@ -233,11 +233,15 @@
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
-<span class="go">Fatal error: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulated.elpi&quot;, line 1, column 0, characters 0-17:</span>
+<span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi&quot;, line 2, column 0, characters 19-42:</span>
+<span class="go">accumulate outside file header</span>
+<span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi&quot;, line 3, column 0, characters 43-66:</span>
+<span class="go">accumulate outside file header</span>
+<span class="go">Fatal error: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi&quot;, line 1, column 0, characters 0-17:</span>
 <span class="go">Two types for the symbol doomed cannot only differ on modes or functionality.</span>
-<span class="go">Current declaration:  (pred -&gt; int)</span>
-<span class="go">Previous declaration: (pred int)</span>
-<span class="go">  (File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice1.elpi&quot;, line 1, column 0, characters 0-17:)</span>
+<span class="go">Current declaration:  (pred int)</span>
+<span class="go">Previous declaration: (pred -&gt; int)</span>
+<span class="go">  (File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulated.elpi&quot;, line 1, column 0, characters 0-17:)</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/accumulate_twice2.elpi
@@ -250,16 +254,13 @@
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
-<span class="go">Warning:</span>
-<span class="go">Undeclared globals:</span>
-<span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi&quot;, line 5, column 2, characters 92-108: other.doomed.</span>
-<span class="go">Please add the following text to your program:</span>
-<span class="go">type other.doomed int -&gt; (func).</span>
+<span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi&quot;, line 2, column 18, characters 42-65:</span>
+<span class="go">accumulate outside file header</span>
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/accumulated.elpi
@@ -273,8 +274,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/ackermann.elpi
@@ -311,8 +312,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -347,8 +348,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -373,8 +374,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -480,7 +481,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
@@ -525,8 +526,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -584,8 +585,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -619,8 +620,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -646,8 +647,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -696,10 +697,10 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.000</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -725,8 +726,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -779,8 +780,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -819,8 +820,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -867,8 +868,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -909,8 +910,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -933,8 +934,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -981,7 +982,7 @@
 <span class="go">Compilation time: 0.000</span>
 
 <span class="go">Typechecking time: 0.008</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1017,8 +1018,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1055,8 +1056,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1085,8 +1086,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1118,8 +1119,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1179,8 +1180,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.010</span>
+<span class="go">Determinacy checking time: 0.008</span>
 
 <span class="go">Success:</span>
 
@@ -1334,7 +1335,7 @@
 <span class="go">---------- var 3</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi&quot;, line 26, column 7, characters 780-781:</span>
 <span class="go">X is linear: name it _X (discard) or X_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi&quot;, line 36, column 11, characters 1111-1114:</span>
@@ -1358,7 +1359,7 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.008</span>
+<span class="go">Typechecking time: 0.009</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
@@ -1405,8 +1406,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1476,8 +1477,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1508,8 +1509,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1536,8 +1537,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1566,8 +1567,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1599,8 +1600,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1630,7 +1631,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
@@ -1655,8 +1656,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1774,8 +1775,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.008</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1811,8 +1812,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1843,8 +1844,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -1873,8 +1874,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -3909,8 +3910,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -3949,10 +3950,10 @@
 <span class="go">type q int -&gt; int -&gt; (pred).</span>
 <span class="go">type p int -&gt; (pred).</span>
 
-<span class="go">Compilation time: 0.000</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -3987,8 +3988,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -4124,12 +4125,12 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.008</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.817</span>
+<span class="go">Time: 1.761</span>
 
 <span class="go">Constraints:</span>
 
@@ -4147,8 +4148,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -4195,8 +4196,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -4229,8 +4230,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -4349,12 +4350,12 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.008</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.348</span>
+<span class="go">Time: 0.316</span>
 
 <span class="go">Constraints:</span>
 
@@ -4383,8 +4384,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -4408,8 +4409,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -4637,7 +4638,7 @@
 <span class="go">----------------------------------------</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi&quot;, line 26, column 13, characters 654-655:</span>
 <span class="go">F is linear: name it _F (discard) or F_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi&quot;, line 27, column 17, characters 675-678:</span>
@@ -4647,12 +4648,12 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.008</span>
-<span class="go">Determinacy checking time: 0.008</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.003</span>
+<span class="go">Time: 0.002</span>
 
 <span class="go">Constraints:</span>
 
@@ -4755,7 +4756,7 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.007</span>
+<span class="go">Typechecking time: 0.009</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
@@ -4802,19 +4803,19 @@
 <span class="linenos">30</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.335310 + 0.058745 + 0.956914</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.286456 + 0.052585 + 0.887393</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.580</span>
+<span class="go">Time: 2.437</span>
 
 <span class="go">Constraints:</span>
 
@@ -4877,19 +4878,19 @@
 <span class="linenos">51</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.679430 + 3.068099 + 0.366995</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">6.438221 + 2.884130 + 0.345082</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 10.122</span>
+<span class="go">Time: 9.675</span>
 
 <span class="go">Constraints:</span>
 
@@ -4947,19 +4948,19 @@
 <span class="linenos">46</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.931012 + 2.926588 + 0.224842</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">5.710197 + 2.726383 + 0.213280</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 9.089</span>
+<span class="go">Time: 8.656</span>
 
 <span class="go">Constraints:</span>
 
@@ -4986,8 +4987,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5053,8 +5054,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5086,8 +5087,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5118,8 +5119,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5143,6 +5144,8 @@
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces02.elpi&quot;, line 2, column 18, characters 32-56:</span>
+<span class="go">accumulate outside file header</span>
 <span class="go">Warning:</span>
 <span class="go">Undeclared globals:</span>
 <span class="go">- File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces02.elpi&quot;, line 4, column 2, characters 112-115: x.foo.</span>
@@ -5151,8 +5154,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5205,8 +5208,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.009</span>
-<span class="go">Determinacy checking time: 0.005</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5227,8 +5230,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.005</span>
 
 <span class="go">Success:</span>
 
@@ -5286,8 +5289,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5405,8 +5408,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5437,8 +5440,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5470,10 +5473,10 @@
 <span class="go">Please add the following text to your program:</span>
 <span class="go">type q int -&gt; (pred).</span>
 
-<span class="go">Compilation time: 0.000</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5502,8 +5505,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5541,8 +5544,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -5668,7 +5671,7 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.008</span>
+<span class="go">Typechecking time: 0.009</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
@@ -5901,8 +5904,8 @@
 
 <span class="go">Compilation time: 0.003</span>
 
-<span class="go">Typechecking time: 0.008</span>
-<span class="go">Determinacy checking time: 0.008</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
 
@@ -5973,8 +5976,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6089,7 +6092,7 @@
 <span class="linenos">99</span><span class="c">%range(M,N,[M|Ns]) :- M &lt; N, M1 is M+1, range(M1,N,Ns).</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi&quot;, line 50, column 16, characters 1168-1174:</span>
 <span class="go">DUMMY1 is linear: name it _DUMMY1 (discard) or DUMMY1_ (fresh variable)</span>
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi&quot;, line 50, column 23, characters 1175-1181:</span>
@@ -6103,12 +6106,12 @@
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.008</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.643</span>
+<span class="go">Time: 1.586</span>
 
 <span class="go">Constraints:</span>
 
@@ -6140,15 +6143,15 @@
 <span class="linenos">6</span><span class="w">  </span><span class="nv">R</span><span class="w"> </span><span class="kd">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">9</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">2</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6223,12 +6226,12 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.265</span>
+<span class="go">Time: 0.248</span>
 
 <span class="go">Constraints:</span>
 
@@ -6300,12 +6303,12 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.648</span>
+<span class="go">Time: 1.589</span>
 
 <span class="go">Constraints:</span>
 
@@ -6326,8 +6329,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/restriction3.elpi
@@ -6370,8 +6373,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6402,8 +6405,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6430,8 +6433,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6461,8 +6464,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6565,12 +6568,12 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.135</span>
+<span class="go">Time: 0.130</span>
 
 <span class="go">Constraints:</span>
 
@@ -6630,12 +6633,12 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.008</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.134</span>
+<span class="go">Time: 0.132</span>
 
 <span class="go">Constraints:</span>
 
@@ -6659,8 +6662,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6695,8 +6698,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6743,19 +6746,19 @@
 <span class="linenos">31</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.172032 + 0.054957 + 0.815595</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1.100294 + 0.049602 + 0.719518</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 2.129</span>
+<span class="go">Time: 1.958</span>
 
 <span class="go">Constraints:</span>
 
@@ -6810,7 +6813,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
+<span class="go">Typechecking time: 0.009</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
@@ -6825,9 +6828,9 @@
 </div>
 <p><strong>../../tests/sources/shorten2.elpi
 :</strong></p>
-<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">accumulate</span><span class="w"> </span>shorten_aux<span class="kd">,</span><span class="w"> </span>shorten_aux2<span class="o">.</span>
-<span class="linenos">2</span>
-<span class="linenos">3</span><span class="kd">pred</span><span class="w"> </span><span class="nf">foo</span>.
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">pred</span><span class="w"> </span><span class="nf">foo</span>.
+<span class="linenos">2</span><span class="kd">accumulate</span><span class="w"> </span>shorten_aux<span class="kd">,</span><span class="w"> </span>shorten_aux2<span class="o">.</span>
+<span class="linenos">3</span>
 <span class="linenos">4</span>foo<span class="w"> </span><span class="kd">:-</span><span class="w"> </span>true<span class="o">.</span>
 <span class="linenos">5</span>
 <span class="linenos">6</span>main<span class="w"> </span><span class="kd">:-</span>
@@ -6835,11 +6838,13 @@
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten2.elpi&quot;, line 2, column 0, characters 10-47:</span>
+<span class="go">accumulate outside file header</span>
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6865,8 +6870,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/shorten_aux2.elpi
@@ -6895,8 +6900,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6932,8 +6937,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.009</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -6970,8 +6975,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7008,8 +7013,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7033,8 +7038,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7061,8 +7066,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7087,8 +7092,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7131,8 +7136,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7164,8 +7169,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7195,8 +7200,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7234,10 +7239,10 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.000</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.010</span>
+<span class="go">Determinacy checking time: 0.009</span>
 
 <span class="go">Success:</span>
 
@@ -7268,8 +7273,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7295,7 +7300,7 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
+<span class="go">Typechecking time: 0.009</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
@@ -7385,8 +7390,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7414,8 +7419,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7475,8 +7480,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7507,8 +7512,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7538,8 +7543,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7562,8 +7567,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7620,8 +7625,8 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7652,10 +7657,10 @@
 <span class="go">Warning: File &quot;/home/runner/work/elpi/elpi/docs/source/../../tests/sources/var.elpi&quot;, line 6, column 29, characters 113-120:</span>
 <span class="go">X10 is linear: name it _X10 (discard) or X10_ (fresh variable)</span>
 
-<span class="go">Compilation time: 0.000</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7682,8 +7687,8 @@
 
 <span class="go">Compilation time: 0.000</span>
 
-<span class="go">Typechecking time: 0.007</span>
-<span class="go">Determinacy checking time: 0.007</span>
+<span class="go">Typechecking time: 0.008</span>
+<span class="go">Determinacy checking time: 0.006</span>
 
 <span class="go">Success:</span>
 
@@ -7858,11 +7863,11 @@
 <span class="go">Error:  c0 cannot have type mono (X4^1 ===&gt; list # X5^1)</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.001</span>
 
 <span class="go">Compilation time: 0.002</span>
 
-<span class="go">Typechecking time: 0.008</span>
+<span class="go">Typechecking time: 0.009</span>
 <span class="go">Determinacy checking time: 0.007</span>
 
 <span class="go">Success:</span>
