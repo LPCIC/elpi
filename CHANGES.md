@@ -1,4 +1,7 @@
-# UNRELEASED
+# v3.7.0 (April 2026)
+
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
 
 - REPL:
   - `elpi` takes zero or one file (not more) when executing
@@ -6,9 +9,13 @@
     Example: `elpi -deps *.elpi | xdot -`
 
 - API:
-  - separate API for scoping AST or builtins. Scoping AST can return more
+  - Change: separate API for scoping AST or builtins. Scoping AST can return more
     than one scoped program, in particular it returns all accumulated code
-    with file name and digest
+    with file name and digest. Incidentally it also computes the dependencies
+    of each file.
+  - New: api to get the dependencies of a scoped program or compilation unit
+  - New: api to map compilation units and apply a substitution on the CData
+    they contain
 
 # v3.6.2 (March 2026)
 
