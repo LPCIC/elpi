@@ -250,7 +250,7 @@ val anomaly : ?loc:Loc.t -> string -> 'a
 (* If we type check the program, then these are anomalies *)
 val type_error : ?loc:Loc.t -> string -> 'a
 (* A non fatal warning *)
-type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
 val warn : ?loc:Loc.t -> id:warning_id -> string -> unit
 (* Indirection for standard print functions *)
 val printf : ('a, Format.formatter, unit) format -> 'a

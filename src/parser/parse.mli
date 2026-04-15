@@ -9,11 +9,11 @@ open Elpi_lexer_config
 exception ParseError of Util.Loc.t * string
 
 module type Parser = sig
-  val program : file:string -> Ast.Program.decl list
+  val program : file:string -> Ast.Program.t
   val goal : loc:Util.Loc.t -> text:string -> Ast.Goal.t
   
   val goal_from : loc:Util.Loc.t -> Lexing.lexbuf -> Ast.Goal.t
-  val program_from : loc:Util.Loc.t -> Lexing.lexbuf -> Ast.Program.t
+  val program_from : loc:Util.Loc.t -> digest:Digest.t -> Lexing.lexbuf -> Ast.Program.t
 end
 
 module type Parser_w_Internals = sig

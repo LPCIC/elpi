@@ -198,7 +198,7 @@ module Setup : sig
   val trace : string list -> string list
 
   (** Override default runtime error functions (they call exit) *)
-  type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+  type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
   val set_warn : (?loc:Ast.Loc.t -> id:warning_id -> string -> unit) -> unit
   val set_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_anomaly : (?loc:Ast.Loc.t -> string -> 'a) -> unit
@@ -213,9 +213,9 @@ module Parse : sig
   (** [program file_list] parses a list of files,
       Raises Failure if the file does not exist. *)
   val program : elpi:Setup.elpi ->
-    files:string list -> Ast.program
+    file:string -> Ast.program
   val program_from : elpi:Setup.elpi ->
-    loc:Ast.Loc.t -> Lexing.lexbuf -> Ast.program
+    loc:Ast.Loc.t -> digest:Digest.t -> Lexing.lexbuf -> Ast.program
 
   (** [goal file_list] parses the query,
       Raises Failure if the file does not exist.  *)
@@ -276,7 +276,7 @@ module Compile : sig
      - the `accumulate` directive inserts `{` and `}` around the accumulated
        code
    *)
-  val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program list -> program
+  val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> program
 
   (* separate compilation API: scoped_programs and units are marshalable and
      closed w.r.t. the host application (eg quotations are desugared).
@@ -290,14 +290,24 @@ module Compile : sig
        merged at assembly time
 *)
   type scoped_program
-  val scope : ?flags:flags -> elpi:Setup.elpi -> ?builtins:Setup.builtins -> Ast.program -> scoped_program
+  val scoped_program_name : scoped_program -> string
+  val scoped_program_digest : scoped_program -> Digest.t
+  val scoped_program_deps : scoped_program -> (string * Digest.t) list
+  val scope_ast : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> scoped_program list
+  val scope_builtins : ?flags:flags -> elpi:Setup.elpi -> Setup.builtins -> scoped_program
   
   type compilation_unit
+  val compilation_unit_name : compilation_unit -> string
+  val compilation_unit_digest : compilation_unit -> Digest.t
+  val compilation_unit_deps : compilation_unit -> (string * Digest.t) list
   val pp_compilation_unit : Format.formatter -> compilation_unit -> unit
   
   type compilation_unit_signature
+  val compilation_unit_signature_name : compilation_unit_signature -> string
+  val compilation_unit_signature_digest : compilation_unit_signature -> Digest.t
+
   val empty_base : elpi:Setup.elpi -> program
-  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> ?builtins:Setup.builtins -> scoped_program -> compilation_unit
+  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> scoped_program -> compilation_unit
   val extend : ?flags:flags -> base:program -> compilation_unit -> program
 
   (* only adds the types/modes from the compilation unit, not its code *)

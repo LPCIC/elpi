@@ -65,7 +65,7 @@ let trace = set_trace
 
 let usage =
   Trace_ppx_runtime.Runtime.usage
-  type warning_id = Util.warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence
+  type warning_id = Util.warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
 
 let set_warn = Util.set_warn
 let set_error = Util.set_error
@@ -97,13 +97,13 @@ end
 
 module Parse = struct
 
-  let program ~elpi:{ Setup.parser } ~files =
+  let program ~elpi:{ Setup.parser } ~file =
     let module P = (val parser) in
-    List.(concat (map (fun file -> P.program ~file) files))
+    P.program ~file
 
-  let program_from ~elpi:{ Setup.parser } ~loc buf =
+  let program_from ~elpi:{ Setup.parser } ~loc ~digest buf =
     let module P = (val parser) in
-    P.program_from ~loc buf
+    P.program_from ~loc ~digest buf
 
   let goal ~elpi:{ Setup.parser } ~loc ~text =
     let module P = (val parser) in
@@ -146,16 +146,28 @@ module Compile = struct
   type program = Compiler.program
   type query = Compiler.query
   type executable = ED.executable
-  type scoped_program = Compiler.scoped_program * int
+  type scoped_program = Compiler.scoped_program
+  let scoped_program_name = Compiler.scoped_program_name
+  let scoped_program_digest = Compiler.scoped_program_digest
+  let scoped_program_deps = Compiler.scoped_program_deps
+
   type compilation_unit = Compiler.checked_compilation_unit
+  let compilation_unit_name = Compiler.checked_compilation_unit_name
+  let compilation_unit_digest = Compiler.checked_compilation_unit_digest
+  let compilation_unit_deps = Compiler.checked_compilation_unit_deps
   let pp_compilation_unit = Compiler.pp_checked_compilation_unit
+
   type compilation_unit_signature = Compiler.checked_compilation_unit_signature
+
+  let compilation_unit_signature_name = Compiler.checked_compilation_unit_signature_name
+  let compilation_unit_signature_digest = Compiler.checked_compilation_unit_signature_digest
+
   exception CompileError = Compiler_data.CompileError
 
   let to_setup_flags x = x
 
-  let program ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } l =
-    Compiler.program_of_ast ~flags ~header (List.flatten l)
+  let program ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } p =
+    Compiler.program_of_ast ~flags ~header p
 
   let empty_base ~elpi:{ Setup.header } = Compiler.empty_base ~header
 
@@ -175,15 +187,12 @@ module Compile = struct
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
-  let scope ?(flags=Compiler.default_flags) ~elpi:{ Setup.header; parser } ?builtins a =
-    let builtins_hash = Hashtbl.hash builtins in
-    let builtins = match builtins with None -> [] | Some x -> [x] in
-    Compiler.scoped_of_ast ~flags ~header ~builtins a, builtins_hash
-  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base ?builtins (x,builtins_hash) =
-    if builtins_hash <> Hashtbl.hash builtins then
-      Util.error "API: Compile.scope and Compile.unit must take the same ~builtins";
-    let builtins = match builtins with None -> [] | Some x -> [x] in
-    Compiler.unit_of_scoped ~flags ~header ~builtins x |> Compiler.check_unit ~flags ~base
+  let scope_ast ?(flags=Compiler.default_flags) ~elpi:{ Setup.header; parser } a =
+    Compiler.scoped_of_ast ~flags ~header a
+  let scope_builtins ?(flags=Compiler.default_flags) ~elpi:{ Setup.header; parser } builtins =
+    Compiler.scoped_of_builtins ~flags ~header builtins
+  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base x =
+    Compiler.unit_of_scoped ~flags ~header x |> Compiler.check_unit ~flags ~base
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
   let signature u = Compiler.signature_of_checked_compilation_unit u
@@ -1341,12 +1350,19 @@ module Utils = struct
         | Some (`Replace,x) -> [Replace x]
         | Some (`Remove,x) -> [Remove x]
         | None -> []) in
-    [Program.Clause {
-      Clause.loc = loc;
-      attributes;
-      body = aux depth Util.IntMap.empty term;
-      needs_spilling = ()
-    }]
+    let body = aux depth Util.IntMap.empty term in
+    let digest = Digest.string (Marshal.to_string body []) in
+    { ast =
+        [Program.Clause {
+          Clause.loc = loc;
+          attributes;
+          body;
+          needs_spilling = ();
+        }];
+      file_name = loc.Util.Loc.source_name;
+      deps = [];
+      digest ;
+    }
 
   let term_to_raw_term s p ?ctx ~depth t =
     Compiler.runtime_hack_term_to_raw_term s p ?ctx ~depth @@
