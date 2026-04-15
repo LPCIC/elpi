@@ -71,7 +71,7 @@ jobs:
         run: |
           opam exec -- cygpath -m ${{ github.workspace }} | % {$_ -replace "^","workspace=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
           opam exec -- sed -i ' ' tests/sources/*.elpi
-          & "setup-x86_64.exe" -v -q -P time,which,wdiff
+          & "C:/.opam/.cygwin/setup-x86_64.exe" -s https://mirrors.kernel.org/sourceware/cygwin/ -v -q -P time,which,wdiff
 
 # Build ######################################################################
 #
@@ -120,7 +120,7 @@ jobs:
         if: runner.os == 'Windows' && matrix.profile != 'fatalwarnings'
         run: |
           opam exec -- ls -l tests/sources/*.elpi
-          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe' TIME=--time=C:/cygwin/bin/time.exe
+          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe' TIME=--time=C:/.opam/.cygwin/root/bin/time.exe
 
 # Artifacts 2 ################################################################
 
