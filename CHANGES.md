@@ -1,3 +1,12 @@
+# v3.7.1 (April 2026)
+
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
+
+- API:
+  - Fix: `clause_of_term` now correctly computes the digest of the whole
+    clause, including its attributes
+
 # v3.7.0 (April 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and

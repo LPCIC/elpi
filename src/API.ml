@@ -1351,14 +1351,14 @@ module Utils = struct
         | Some (`Remove,x) -> [Remove x]
         | None -> []) in
     let body = aux depth Util.IntMap.empty term in
-    let digest = Digest.string (Marshal.to_string body []) in
-    { ast =
-        [Program.Clause {
+    let ast = [Program.Clause {
           Clause.loc = loc;
           attributes;
           body;
           needs_spilling = ();
-        }];
+        }] in
+    let digest = Digest.string (Marshal.to_string ast []) in
+    { ast;
       file_name = loc.Util.Loc.source_name;
       deps = [];
       digest ;
