@@ -231,24 +231,24 @@ let hint_wrong_arity msg ty ~ety =
 
 let error_bad_cdata_ety ~loc ~tyctx ~ety c tx =
   let pretty_ty = pretty_ty true in
-  let msg = Format.asprintf "@[<hov>literal \"%a\" has type@ %a@ but %a expects a term of type@ %a@]"  CData.pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety.eit in
+  let msg = Format.asprintf "@[<hov>literal \"%a\" has type@ %a@ but %a expects an argument of type@ %a@]"  CData.pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety.eit in
   error ~loc msg
 
 let error_bad_ety ~valid_mode ~loc ~tyctx ~ety pp c tx =
   let pretty_ty = pretty_ty !valid_mode in
-  let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects a term of type@ %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety.eit in
+  let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects an argument of type@ %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety.eit in
   let msg = hint_wrong_arity msg tx ~ety in
   error ~loc msg
 
 let error_bad_ety2 ~valid_mode ~loc ~tyctx ~ety1 ~ety2 pp c tx =
   let pretty_ty = pretty_ty !valid_mode in
-  let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects a term of type@ %a@ or %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety1.eit pretty_ty ety2.eit in
+  let msg = Format.asprintf "@[<hov>%a has type@ %a@ but %a expects an argument of type@ %a@ or %a@]"  pp c pretty_ty tx pp_tyctx tyctx pretty_ty ety1.eit pretty_ty ety2.eit in
   let msg = hint_wrong_arity msg tx ~ety:ety1 in
   error ~loc msg
 
 let error_bad_function_ety ~valid_mode ~loc ~tyctx ~ety c t =
   let pretty_ty = pretty_ty !valid_mode in
-  let msg = Format.asprintf "@[<hov>%a is a function@ but %a expects a term of type@ %a@]"  ScopedTerm.pretty_ ScopedTerm.(Lam(c,None,t)) pp_tyctx tyctx pretty_ty ety.eit in
+  let msg = Format.asprintf "@[<hov>%a is a function@ but %a expects an argument of type@ %a@]"  ScopedTerm.pretty_ ScopedTerm.(Lam(c,None,t)) pp_tyctx tyctx pretty_ty ety.eit in
   error ~loc msg
 
 let error_bad_const_ety_l ~valid_mode ~loc ~tyctx ~ety c txl =
@@ -275,7 +275,7 @@ let error_overloaded_app_ambiguous ~valid_mode ~loc ~ety c args alltys =
 
 let error_overloaded_app_tgt ~valid_mode ~loc ~ety c alltys =
   let pretty_ty = pretty_ty !valid_mode in
-  let msg = Format.asprintf "@[<v>%a is overloaded but none of its types make it build a term of type @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pretty_ty ety.eit (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
+  let msg = Format.asprintf "@[<v>%a is overloaded but none of its types make it build an expression of type @[<hov>%a@]@,Its types are:@,@[<v 2>  %a@]@]" F.pp c pretty_ty ety.eit (pplist (fun fmt (_,x)-> Format.fprintf fmt "%a" pretty_ty x) ", ") alltys in
   error ~loc msg
 
 
