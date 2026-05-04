@@ -201,7 +201,10 @@ mem [_|L] X :- mem L X.
 
 func exists! list A, (pred A).
 exists! [X| _] P :- P X, !.
-exists! [_|XS] P :- exists! XS P. 
+exists! [_|XS] P :- exists! XS P.
+
+func mem-rel! A, (pred A B), list B.
+mem-rel! A R L :- exists! L (B\ R A B).
 
 pred exists list A, (pred A).
 exists [X|_] P :- P X.
