@@ -1304,11 +1304,11 @@ module Utils = struct
   let anomaly = Util.anomaly
   let warn = Util.warn
 
-  let clause_of_term ?name ?graft ~depth loc term =
+  let clause_of_term ?pp_ctx ?name ?graft ~depth loc term =
     let open EA in
     let module Data = ED.Term in
     let module R = (val !r) in let open R in
-    let show i = Format.asprintf "%a" (R.Pp.pp_constant ?pp_ctx:None) i in
+    let show i = Format.asprintf "%a" (R.Pp.pp_constant ?pp_ctx) i in
     let buggy_loc = loc in
     (* Format.eprintf "clause: %a\n" ( Pp.uppterm depth [] ~argsdepth:0 ED.empty_env ) term; *)
     let rec aux d ctx t =
@@ -1357,7 +1357,7 @@ module Utils = struct
           body;
           needs_spilling = ();
         }] in
-    let digest = Digest.string (Marshal.to_string ast []) in
+    let digest = Digest.string (Marshal.to_string ast [Marshal.Closures]) in
     { ast;
       file_name = loc.Util.Loc.source_name;
       deps = [];
