@@ -1357,7 +1357,7 @@ module Utils : sig
 
   (** Hackish, in particular the output should be a compiled program *)
   val clause_of_term :
-    ?name:string -> ?graft:([`After | `Before | `Replace | `Remove] * string) ->
+    ?pp_ctx:Data.pretty_printer_context -> ?name:string -> ?graft:([`After | `Before | `Replace | `Remove] * string) ->
     depth:int -> Ast.Loc.t -> Data.term -> Ast.program
 
   (** Hackish *)
