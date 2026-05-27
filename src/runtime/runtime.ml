@@ -2738,7 +2738,7 @@ let arg_to_trie_path ~check_mut_excl ~safe ~depth ~is_goal args arg_depths args_
       | Const k when safe -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
       | Const k -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
       | CData d -> Path.emit path @@ mkPrimitive d; update_current_min_depth path_depth
-      | App (k,a,_) when k == Global_symbols.asc -> main ~safe ~depth a path_depth
+      | App (k,a,_) when k == Global_symbols.asc -> main ~safe ~depth a (path_depth+1)
       | Lam _ -> Path.emit path mkAny; update_current_min_depth path_depth (* loose indexing to enable eta *)
       | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Path.emit path @@ mkVariable; update_current_min_depth path_depth
       | Builtin (k,tl) ->
