@@ -1090,7 +1090,8 @@ module ScopedTerm = struct
 
     (* naive, but only used by macros *)
     let fresh = ref 0
-    let fresh () = incr fresh; F.from_string (Format.asprintf "%%bound%d" !fresh)
+    let fresh_bound () = incr fresh; F.from_string (Format.asprintf "%%bound%d" !fresh)
+    let fresh_uv () = incr fresh; F.from_string (Format.asprintf "%%free%d" !fresh)
 
     let rec rename l c d t =
       match t with
@@ -1106,17 +1107,28 @@ module ScopedTerm = struct
       | UVar(v,xs) -> UVar(v,List.map (rename_loc l c d) xs)
       | Discard _ | CData _ -> t
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
-
-    let rec clone_loc ~loc {it} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
-    clone ~loc = function
-      | Impl (b, loc, l, r) -> Impl(b, loc, clone_loc ~loc l, clone_loc ~loc r)
-      | Lam (n,ty,bo) -> Lam(Option.map clone_const n, ty, clone_loc ~loc bo)
-      | Discard { heapify } -> Discard { heapify }
-      | UVar (v, xs) -> UVar (clone_const v, List.map (clone_loc ~loc) xs)
-      | App (g, xs) -> App (clone_const g, List.map (clone_loc ~loc) xs)
-      | CData _ as t -> t 
-      | Spill (t, _) -> Spill (clone_loc ~loc t, ref NoInfo)
-      | Cast (t, ty) -> Cast (clone_loc ~loc t, ty)
+    let clone_loc ~loc t =
+      let m = ref F.Map.empty in
+      let rec clone_loc ~loc {it} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
+      clone ~loc = function
+        | Impl (b, loc, l, r) -> Impl(b, loc, clone_loc ~loc l, clone_loc ~loc r)
+        | Lam (n,ty,bo) -> Lam(Option.map clone_const n, ty, clone_loc ~loc bo)
+        | Discard { heapify } -> Discard { heapify }
+        | UVar (v, xs) ->
+            let name =
+              try F.Map.find v.name !m
+              with
+                Not_found ->
+                  let name' = fresh_uv () in
+                  m := F.Map.add v.name name' !m;
+                  name' in
+            let v = { v with name } in
+            UVar (clone_const v, List.map (clone_loc ~loc) xs)
+        | App (g, xs) -> App (clone_const g, List.map (clone_loc ~loc) xs)
+        | CData _ as t -> t 
+        | Spill (t, _) -> Spill (clone_loc ~loc t, ref NoInfo)
+        | Cast (t, ty) -> Cast (clone_loc ~loc t, ty) in
+      clone_loc ~loc t
 
     let beta t args =
       let rec fv acc { it } =
@@ -1144,7 +1156,7 @@ module ScopedTerm = struct
         | Lam(Some { scope = c; name = l } as n,ty,t) when not @@ Scope.Map.mem (l,c) map && not @@ Scope.Set.mem (l,c) fv ->
             Lam(n,ty,subst_loc map fv @@ t)
         | Lam(Some { scope = l; name = c; ty = tya;loc },ty,t) ->
-            let d = fresh () in
+            let d = fresh_bound () in
             Lam(Some { scope = l; name = d; ty = tya; loc },ty,subst_loc map fv @@ rename_loc l c d t)
         | App({ scope = Bound l; name = c },xs) when Scope.Map.mem (c,l) map ->
             let hd = Scope.Map.find (c,l) map in

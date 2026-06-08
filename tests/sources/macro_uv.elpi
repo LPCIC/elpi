@@ -1,0 +1,3 @@
+macro @f :- X = "a".
+
+main :- X = 3, @f.

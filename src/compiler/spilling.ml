@@ -149,7 +149,7 @@ let rec bc ctx t =
   match t with
   | Lam (None, o, t) -> Lam (None, o, bc_loc ctx t)
   | Lam (Some { scope = l; name = c; loc; ty = tya }, o, t) when List.mem (c, l) ctx ->
-      let d = fresh () in
+      let d = fresh_bound () in
       bc ctx (Lam (Some { scope = l; name = d; loc; ty = tya }, o, rename_loc l c d t))
   | Lam ((Some { scope = l; name =  c } as abs), o, t) -> Lam (abs, o, bc_loc ((c, l) :: ctx) t)
   | Impl (b, bl, t1, t2) -> Impl (b, bl, bc_loc ctx t1, bc_loc ctx t2)
