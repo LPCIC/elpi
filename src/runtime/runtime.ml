@@ -1770,6 +1770,8 @@ let eta_contract_flex depth xdepth ~argsdepth e t =
 let uvar_uvar_assignment_order r1 r2 = uvar_id r1 > uvar_id r2
 
 let isLam = function Lam _ -> true | _ -> false
+
+let is_eigen_variable ~depth b = b <= depth
   
 let rec unif ~oc argsdepth matching depth adepth a bdepth b e =
    [%trace "unif" ~rid ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
@@ -1838,6 +1840,14 @@ let rec unif ~oc argsdepth matching depth adepth a bdepth b e =
       unif ~oc argsdepth matching depth adepth a adepth
         (deref_apparg ~from:argsdepth ~to_:(adepth+depth) e.(i) args) empty_env
 
+   (* matching names *)
+   | Const cx, Const c when c == Global_symbols.namec && matching ->
+      is_eigen_variable ~depth cx
+   | Const cx, App(c,hd,[]) when c == Global_symbols.namec && matching ->
+      is_eigen_variable ~depth cx && 
+      unif ~oc argsdepth matching depth adepth (Const cx) bdepth hd e
+   | (App _ | Const _ | Builtin _ | Nil | Cons _ | CData _), (Const c | App(c,_,[])) when c == Global_symbols.namec && matching -> false
+        
    (* UVar introspection (matching) *)
    | (UVar _ | AppUVar _), Const c when c == Global_symbols.uvarc && matching -> true
    | UVar(r,ano), App(c,hd,[]) when c == Global_symbols.uvarc && matching ->
@@ -2484,6 +2494,7 @@ let lex_insertion l1 l2 =
   in
   lex_insertion true l1 l2
 let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
+let mustbenamec = min_int+1 (* uvar or uvar t or uvar l t *)
 
 let ppclause f ~hd { depth; args = args; hyps = hyps } =
   Fmt.fprintf f "@[<hov 1>%a :- %a.@]"
@@ -2502,16 +2513,19 @@ let hd_opt = function
 type clause_arg_classification =
   | Variable
   | MustBeVariable
+  | MustBeName
   | Rigid of constant * Mode.t
 
 let rec classify_clause_arg ~depth matching t =
   (* Format.eprintf "index %a\n%!" (ppterm depth [] ~argsdepth:depth empty_env) t; *)
   match deref_head ~depth t with
   | Const k when k == Global_symbols.uvarc -> MustBeVariable
+  | Const k when k == Global_symbols.namec -> MustBeName
   | Const k -> Rigid(k,matching)
   | Nil -> Rigid (Global_symbols.nilc,matching)
   | Cons _ -> Rigid (Global_symbols.consc,matching)
   | App (k,_,_) when k == Global_symbols.uvarc -> MustBeVariable
+  | App (k,_,_) when k == Global_symbols.namec -> MustBeName
   | App (k,a,_) when k == Global_symbols.asc -> classify_clause_arg ~depth matching a
   | App (k,_,_) -> Rigid (k,matching)
   | Builtin (k,_) -> Rigid (const_of_builtin_predicate k,matching)
@@ -2575,6 +2589,10 @@ let hash_arg_list is_goal hd ~depth args mode spec =
           hash size mustbevariablec
       | App(k,_,_) when k == Global_symbols.uvarc && deep = 1 ->
           hash size mustbevariablec
+      | Const k when k == Global_symbols.namec ->
+          hash size mustbenamec
+      | App(k,_,_) when k == Global_symbols.namec && deep = 1 ->
+          hash size mustbenamec
       | Const k -> hash size k
       | App(k,_,_) when deep = 1 -> hash size k
       | App(k,x,xs) ->
@@ -2734,6 +2752,7 @@ let arg_to_trie_path ~check_mut_excl ~safe ~depth ~is_goal args arg_depths args_
     else
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
+      (* TODO: namec *)
       | (Const k | App (k,_,_)) when k == Global_symbols.uvarc -> Path.emit path mkUvarConstant; update_current_min_depth path_depth
       | Const k when safe -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
       | Const k -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
@@ -2829,6 +2848,18 @@ let add_clause_to_snd_lvl_idx ~depth ~insert predicate clause = function
         all_clauses = insert clause all_clauses;
         flex_arg_clauses;
         arg_idx = Ptmap.add mustbevariablec (insert clause clauses) arg_idx;
+      }
+    | MustBeName ->
+      (* TODO: this is wrong *)
+      (* qname: matches only eigenvariable (or itself at the meta level) *)
+      let clauses =
+        try Ptmap.find mustbenamec arg_idx
+        with Not_found -> Bl.empty () in
+      TwoLevelIndex {
+        argno; mode;
+        all_clauses = insert clause all_clauses;
+        flex_arg_clauses;
+        arg_idx = Ptmap.add mustbenamec (insert clause clauses) arg_idx;
       }
     | Rigid (arg_hd,arg_mode) ->
       (* t: a rigid term matches flexible terms only in unification mode *)
@@ -3054,10 +3085,12 @@ let rec classify_goal_arg ~depth t =
   (* Format.eprintf "goal %a\n%!" (ppterm depth [] ~argsdepth:depth empty_env) t; *)
   match deref_head ~depth t with
   | Const k when k == Global_symbols.uvarc -> Rigid mustbevariablec
+  | Const k when k == Global_symbols.namec -> Rigid mustbenamec
   | Const k -> Rigid(k)
   | Nil -> Rigid (Global_symbols.nilc)
   | Cons _ -> Rigid (Global_symbols.consc)
   | App (k,_,_) when k == Global_symbols.uvarc -> Rigid mustbevariablec
+  | App (k,_,_) when k == Global_symbols.uvarc -> Rigid mustbenamec
   | App (k,a,_) when k == Global_symbols.asc -> classify_goal_arg ~depth a
   | App (k,_,_) -> Rigid (k)
   | Builtin (k,_) -> Rigid (const_of_builtin_predicate k)
@@ -3065,7 +3098,7 @@ let rec classify_goal_arg ~depth t =
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
   | CData d -> 
      let hash = -(CData.hash d) in
-     if hash > mustbevariablec then Rigid (hash)
+     if hash > mustbenamec then Rigid (hash)
      else Rigid (hash+1)
 
 let classify_goal_argno ~depth argno = function

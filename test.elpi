@@ -1,0 +1,8 @@
+pred p int -> int.
+
+% p uvar.
+p (qname X) X.
+
+
+main :- 
+  (pi x\ p x (R x), std.assert!(R x = x) "Err").

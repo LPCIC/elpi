@@ -50,6 +50,8 @@ external symbol (,)   : variadic (func) (func).
 
 external symbol uvar  : A = "core".
 
+external symbol qname : A = "core".
+
 external symbol (as)  : A -> A -> A = "core".
 
 external symbol (=>)  : (pred) -> (func) -> (func) = "core".
