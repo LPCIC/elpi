@@ -1,8 +1,29 @@
-pred p int -> int.
+pred check0 int, int.
+check0 _ qname.
 
-% p uvar.
-p (qname X) X.
+pred check1 int, int -> int.
+check1 _ (qname X) X.
 
+pred check2 int, int -> any, list any.
+check2 _ (qname X L) X L.
+
+pred t0 int.
+t0 T1 :- check0 0 T1.
+
+pred t1 int.
+t1 T1 :- check1 0 T1 T2, T1 == T2.
+
+pred t2 int, any, list any.
+t2 T1 T2 T3 :- check2 0 T1 T2' T3', T2' == T2, T3' == T3.
 
 main :- 
-  (pi x\ p x (R x), std.assert!(R x = x) "Err").
+  % std.spy-do![
+    (pi x\ t0 x),
+    (pi x\ t1 x),
+    (pi x\ t2 x x []),
+    (pi x y\ t0 (x y)),
+    (pi x y\ t1 (x y)),
+    (pi x y\ t2 (x y) x [y])
+  % ]
+  .
+  

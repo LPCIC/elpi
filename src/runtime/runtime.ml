@@ -1771,7 +1771,9 @@ let uvar_uvar_assignment_order r1 r2 = uvar_id r1 > uvar_id r2
 
 let isLam = function Lam _ -> true | _ -> false
 
-let is_eigen_variable ~depth b = b <= depth
+let is_eigen_variable ~depth b =
+    (* Format.printf "b is %d - depth is %d \n@." b depth; *)
+    b >= 0
   
 let rec unif ~oc argsdepth matching depth adepth a bdepth b e =
    [%trace "unif" ~rid ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
@@ -1779,6 +1781,7 @@ let rec unif ~oc argsdepth matching depth adepth a bdepth b e =
        depth (if matching then "m" else "")
        bdepth (ppterm (bdepth+depth) [] ~argsdepth:bdepth e) b)
    begin
+  Format.printf "Tm A - %a -- B - %a\n@." pp_term a pp_term b;
    let delta = adepth - bdepth in
          
    (delta = 0 && a == b) || match a,b with
@@ -1841,11 +1844,20 @@ let rec unif ~oc argsdepth matching depth adepth a bdepth b e =
         (deref_apparg ~from:argsdepth ~to_:(adepth+depth) e.(i) args) empty_env
 
    (* matching names *)
-   | Const cx, Const c when c == Global_symbols.namec && matching ->
+   | (Const cx | App(cx, _, _)), Const nc when nc == Global_symbols.namec && matching ->
       is_eigen_variable ~depth cx
-   | Const cx, App(c,hd,[]) when c == Global_symbols.namec && matching ->
+   | (Const cx | App(cx, _, _)), App(c,hd,[]) when c == Global_symbols.namec && matching ->
       is_eigen_variable ~depth cx && 
-      unif ~oc argsdepth matching depth adepth (Const cx) bdepth hd e
+      unif ~oc argsdepth matching depth adepth a bdepth hd e
+   | Const cx, App(c,hd,[arg]) when c == Global_symbols.namec && matching ->
+      is_eigen_variable ~depth cx && 
+      unif ~oc argsdepth matching depth adepth (Const cx) bdepth hd e &&
+      unif ~oc argsdepth matching depth adepth Nil bdepth arg e
+   | App(cx,h,ag), App(c,hd,[arg]) when c == Global_symbols.namec && matching ->
+      is_eigen_variable ~depth cx && 
+      unif ~oc argsdepth matching depth adepth (Const cx) bdepth hd e &&
+      unif ~oc argsdepth matching depth adepth (list_to_lp_list (h::ag)) bdepth arg e
+
    | (App _ | Const _ | Builtin _ | Nil | Cons _ | CData _), (Const c | App(c,_,[])) when c == Global_symbols.namec && matching -> false
         
    (* UVar introspection (matching) *)
