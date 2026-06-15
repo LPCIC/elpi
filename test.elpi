@@ -1,20 +1,23 @@
-pred check0 int, int.
-check0 _ qname.
+:index (1) "Hash"
+pred check0 int.
+check0 qname.
 
-pred check1 int, int -> int.
-check1 _ (qname X) X.
 
-pred check2 int, int -> any, list any.
-check2 _ (qname X L) X L.
+:index (1) "DTree"
+pred check1 int -> int.
+check1 (qname X) X.
+
+pred check2 int -> any, list any.
+check2 (qname X L) X L.
 
 pred t0 int.
-t0 T1 :- check0 0 T1.
+t0 T1 :- check0 T1.
 
 pred t1 int.
-t1 T1 :- check1 0 T1 T2, T1 == T2.
+t1 T1 :- check1 T1 T2, T1 == T2.
 
 pred t2 int, any, list any.
-t2 T1 T2 T3 :- check2 0 T1 T2' T3', T2' == T2, T3' == T3.
+t2 T1 T2 T3 :- check2 T1 T2' T3', T2' == T2, T3' == T3.
 
 main :- 
   % std.spy-do![

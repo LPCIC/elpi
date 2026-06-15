@@ -12,6 +12,7 @@ module Path : sig
 end
 
 val mkConstant : safe:bool -> data:int -> arity:int -> cell
+val mkName : cell
 val mkPrimitive : Elpi_util.Util.CData.t -> cell
 
 (** This is for: unification variables, discard *)

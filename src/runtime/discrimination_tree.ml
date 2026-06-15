@@ -8,7 +8,7 @@ open Elpi_util.Util
 let kConstant = 0  (* p, q *)
 let kPrimitive = 1 (* 3, "foo" *)
 let kVariable = 2  (* X1, _ *)
-let kOther = 3     (* Lam + internal tags for list-begin/end, input, output, list-tail-variable *)
+let kOther = 3     (* names + Lam + internal tags for list-begin/end, input, output, list-tail-variable *)
 
 (* 4 constructors encoded as: kno, arity, arg_value *)
 let arity_bits = 4
@@ -36,10 +36,18 @@ let arity_of n =
 let data_of n =
   (n land data_mask)
 
+let check_arity ~arity =
+  if arity >= 1 lsl arity_bits then
+    anomaly (Printf.sprintf "Indexing at depth > 1 is unsupported since constant arity is too big (received %d; max := %d)" arity (1 lsl arity_bits))
+
+let check_data ~data =
+  if abs data > data_mask then
+    anomaly (Printf.sprintf "Indexing at depth > 1 is unsupported since constant %d/%d is too large or wide" data (data_mask))
+
+
 let mkConstant ~safe ~data ~arity =
   let rc = encode ~k:kConstant ~data ~arity in
-  if safe && (abs data > data_mask || arity >= 1 lsl arity_bits) then
-    anomaly (Printf.sprintf "Indexing at depth > 1 is unsupported since constant %d/%d is too large or wide" data arity);
+  if safe then (check_data ~data; check_arity ~arity);
   rc
 
 let mkPrimitive c = encode ~k:kPrimitive ~data:(CData.hash c lsl k_bits) ~arity:0
@@ -57,6 +65,7 @@ let mkListNil = encode ~k:kOther ~data:6 ~arity:0
 let mkPathEnd = encode ~k:kOther ~data:7 ~arity:0
 let mkListTailVariableUnif = encode ~k:kOther ~data:8 ~arity:0
 let mkUvarConstant = encode ~k:kVariable ~data:9 ~arity:0
+let mkName = encode ~k:kOther ~data:10 ~arity:0
 
 
 let isVariable x = x == mkVariable
