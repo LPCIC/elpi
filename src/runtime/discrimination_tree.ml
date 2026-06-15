@@ -367,6 +367,9 @@ let get_all_children v mode = isAny v || (isVariable v && isOutput mode)
 let rec retrieve ~pos ~add_result mode path tree : unit =
   let hd = Path.get path pos in
   let Trie.Node {data; map; other; listTailVariable; names} = tree in
+  let retrieveNF ~pos mode path v m=
+    try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find v m)
+    with Not_found -> () in
   (* Format.eprintf "%d %a\n%!" pos pp_cell hd; *)
   if Trie.is_empty tree then ()
   else if isPathEnd hd then List.iter add_result data
@@ -383,18 +386,15 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
         (* we take all the children in the map *)
         on_all_children ~pos:(pos+1) ~add_result mode path map
       else if isInput mode && isVariable hd then
-        try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find mkUvarConstant map)
-        with Not_found -> ()
+        retrieveNF ~pos mode path mkUvarConstant map
       else
           (* we have a Constant, Primitive, ListHead, ListNil or ListEnd and look for the key in the map *)
-          try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find hd map)
-          with Not_found -> ()
+          retrieveNF ~pos mode path hd map
     end;
-    (if isNameConst hd then
-      begin try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find mkName map)
-      with Not_found -> () end
+    (if isNameConst hd then (retrieveNF ~pos mode path mkName map; retrieveNF ~pos mode path hd map)
     else if hd == mkName then
-      Option.iter (fun a -> retrieve ~pos:(pos+1) ~add_result mode path a) names);
+      (retrieveNF ~pos mode path mkName map;
+       Option.iter (fun a -> retrieve ~pos:(pos+1) ~add_result mode path a) names));
 
     (* moreover, we have to take into account other and listTailVariable since they represent UVar in the tree,
        therefore they can be unified with the hd *)
