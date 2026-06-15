@@ -106,3 +106,7 @@ let () =
   Printf.printf "Test remove 4\n";
   remove dt 200;
   test ~expected:0 (get_length dt p1Retr)
+
+let () = 
+  let n : cell = mkConstant ~safe:true ~data:10 ~arity:0 in
+  assert (isNameConst n)

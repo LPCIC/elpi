@@ -8,7 +8,7 @@ open Elpi_util.Util
 let kConstant = 0  (* p, q *)
 let kPrimitive = 1 (* 3, "foo" *)
 let kVariable = 2  (* X1, _ *)
-let kOther = 3     (* names + Lam + internal tags for list-begin/end, input, output, list-tail-variable *)
+let kOther = 3     (* qname + Lam + internal tags for list-begin/end, input, output, list-tail-variable *)
 
 (* 4 constructors encoded as: kno, arity, arg_value *)
 let arity_bits = 4
@@ -46,9 +46,8 @@ let check_data ~data =
 
 
 let mkConstant ~safe ~data ~arity =
-  let rc = encode ~k:kConstant ~data ~arity in
   if safe then (check_data ~data; check_arity ~arity);
-  rc
+  encode ~k:kConstant ~data ~arity
 
 let mkPrimitive c = encode ~k:kPrimitive ~data:(CData.hash c lsl k_bits) ~arity:0
 
@@ -67,7 +66,6 @@ let mkListTailVariableUnif = encode ~k:kOther ~data:8 ~arity:0
 let mkUvarConstant = encode ~k:kVariable ~data:9 ~arity:0
 let mkName = encode ~k:kOther ~data:10 ~arity:0
 
-
 let isVariable x = x == mkVariable
 let isAny x = x == mkAny
 let isInput x = x == mkInputMode
@@ -79,6 +77,18 @@ let isListTailVariable x = x == mkListTailVariable
 let isListTailVariableUnif x = x == mkListTailVariableUnif
 let isPathEnd x = x == mkPathEnd
 let isUvarConstant x = x == mkUvarConstant
+let isName x = x == mkName
+let isNameConst = 
+  (* this keeps the constructor and the strongest bit of data *)
+  (* a name has the bit shapre "000...."
+     where the first two bits indicates that it is a constant
+     and the third that it is a name: 
+      names are positives, therefore, their bit encoding has a leading 0
+      global constant, instead, are negative, and therefore, have a leading 1
+  *)
+  let kn_lshift = k_lshift-1 in
+  fun x -> x lsr kn_lshift == 0
+  
 
 type cell = int
 
@@ -101,6 +111,7 @@ let pp_cell fmt n =
        else if isListTailVariableUnif n then "ListTailVariableUnif"
        else if isAny n then "Other"
        else if isUvarConstant n then "uvar"
+       else if isName n then "qname"
        else failwith "Invalid path construct...")
   else if k == kPrimitive then Format.fprintf fmt "Primitive"
   else Format.fprintf fmt "%o" k
@@ -170,47 +181,47 @@ module Trie = struct
     (* children *)
     other : 'a t option;             (* for Other, Variable *)
     listTailVariable : 'a t option;  (* for ListTailVariable *)
+    names : 'a t option;             (* for names *)
     map : 'a t Ptmap.t;              (* for Constant, Primitive, ListHead, ListEnd *)
   }
 
-  let empty = Node { data = []; other = None; listTailVariable = None; map = Ptmap.empty }
+  let empty = Node { data = []; other = None; names = None; listTailVariable = None; map = Ptmap.empty }
 
   let is_empty x = x == empty
 
   let rec replace p x = function
-    | Node { data; other; listTailVariable; map } ->
+    | Node { data; other; listTailVariable; map; names } ->
         Node {
           data = data |> List.map (fun y -> if p y then x else y);
           other = other |> Option.map (replace p x);
           listTailVariable = listTailVariable |> Option.map (replace p x);
           map = map |> Ptmap.map (replace p x);
+          names = names |> Option.map (replace p x);
         }
       
   let rec remove f = function
-    | Node { data; other; listTailVariable; map } ->
+    | Node { data; other; listTailVariable; map; names } ->
         Node {
           data = data |> List.filter (fun x -> not (f x));
           other = other |> Option.map (remove f);
+          names = names |> Option.map (remove f);
           listTailVariable = listTailVariable |> Option.map (remove f);
           map = map |> Ptmap.map (remove f);
         }
 
   let add (a : Path.t) v t =
+    let add_opt f n pos = Some (f ~pos (Option.value ~default:empty n)) in
+    let add_map f pos x map = Ptmap.add x (f ~pos (try Ptmap.find x map with Not_found -> empty)) map in
     let max = ref 0 in
     let rec ins ~pos = let x = Path.get a pos in function
       | Node ({ data } as t) when isPathEnd x -> max := pos; Node { t with data = v :: data }
       | Node ({ other } as t) when isVariable x || isAny x ->
-          let t' = match other with None -> empty | Some x -> x in
-          let t'' = ins ~pos:(pos+1) t' in
-          Node { t with other = Some t'' }
+          Node { t with other = add_opt ins other (pos + 1) }
       | Node ({ listTailVariable } as t) when isListTailVariable x || isListTailVariableUnif x ->
-          let t' = match listTailVariable with None -> empty | Some x -> x in
-          let t'' = ins ~pos:(pos+1) t' in
-          Node { t with listTailVariable = Some t'' }
-      | Node ({ map } as t) ->
-          let t' = try Ptmap.find x map with Not_found -> empty in
-          let t'' = ins ~pos:(pos+1) t' in
-          Node { t with map = Ptmap.add x t'' map }
+          Node { t with listTailVariable = add_opt ins listTailVariable (pos + 1) }
+      | Node ({ map; names } as t) ->
+          let names: 'a t option = if isNameConst x then add_opt ins names (pos+1) else names in
+          Node { t with map = add_map ins (pos+1) x map; names }
     in
     let t = ins ~pos:0 t in
     t, !max
@@ -356,7 +367,7 @@ let get_all_children v mode = isAny v || (isVariable v && isOutput mode)
 
 let rec retrieve ~pos ~add_result mode path tree : unit =
   let hd = Path.get path pos in
-  let Trie.Node {data; map; other; listTailVariable} = tree in
+  let Trie.Node {data; map; other; listTailVariable; names} = tree in
   (* Format.eprintf "%d %a\n%!" pos pp_cell hd; *)
   if Trie.is_empty tree then ()
   else if isPathEnd hd then List.iter add_result data
@@ -380,6 +391,12 @@ let rec retrieve ~pos ~add_result mode path tree : unit =
           try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find hd map)
           with Not_found -> ()
     end;
+    (if isNameConst hd then
+      begin try retrieve ~pos:(pos+1) ~add_result mode path (Ptmap.find mkName map)
+      with Not_found -> () end
+    else if hd == mkName then
+      Option.iter (fun a -> retrieve ~pos:(pos+1) ~add_result mode path a) names);
+
     (* moreover, we have to take into account other and listTailVariable since they represent UVar in the tree,
        therefore they can be unified with the hd *)
     if not(isListEnd hd) then Option.iter (fun a -> retrieve ~pos:(skip ~pos path) ~add_result mode path a) other;
@@ -450,4 +467,5 @@ module Internal = struct
 
   let isUvarConstant = isUvarConstant
   let isListNil = isListNil
+  let isNameConst = isNameConst
 end

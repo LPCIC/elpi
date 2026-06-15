@@ -135,4 +135,5 @@ module Internal: sig
   val isListTailVariableUnif : cell -> bool
   val isPathEnd : cell -> bool
   val isUvarConstant : cell -> bool
+  val isNameConst : cell -> bool
 end

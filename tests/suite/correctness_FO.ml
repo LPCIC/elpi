@@ -222,6 +222,11 @@ let () = declare "trie"
   ~description:"discrimination_tree on trees"
   ()
 
+let () = declare "qname"
+  ~source_elpi:"qname.elpi"
+  ~description:"discrimination_tree with qname"
+  ()
+
 let () =
   let (!) x = Test.FailureOutput (Str.regexp x) in
   let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n.*\n.*\n+.*line %d" l1 l2) in
@@ -256,7 +261,8 @@ let () =
       (*101*) Success; mut_excl_eigen 5 "f";  duplicate_err 2 1; Success; Success;(*105*)
       (*106*) Success; constr_error 14 13; constr_error 14 13; mut_excl_eigen 9 "f"; Success; (*110*)
       (*111*) mut_excl_eigen 5 "foo"; Success; mut_excl_no_loc "f"; Success; det_check 5 19;
-      (*116*) Success; det_check 5 2; det_check 7 2; Success
+      (*116*) Success; det_check 5 2; det_check 7 2; Success; Success; (*120*)
+      (*121*) mut_excl_eigen 9 "copy"; mut_excl 9 7; mut_excl_eigen 8 "copy"
     |] in
   for i = 0 to Array.length status - 1 do
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in

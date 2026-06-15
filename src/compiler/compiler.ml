@@ -1801,6 +1801,7 @@ end = struct
     (!symb, !amap), t
 
   let check_mut_excl state symbols ~loc pred_info cl cl_st (oc: overlap_clause option) p amap : pred_info C.Map.t =
+    (* Printf.printf "Checking %s\n ov_l %s\n" (Loc.show loc) (match oc with Some {overlap_loc} -> (match overlap_loc with | Some x -> Loc.show x | _ -> "Some") | _ -> "None"); *)
     let pp_global_predicate fmt p =
       let f = SymbolMap.global_name state symbols p in
       Format.fprintf fmt "predicate %a" F.pp f in
@@ -1904,8 +1905,12 @@ end = struct
       b
     in *)
     let is_eigen_variable ~min_depth ~depth = function
-      | Const b -> min_depth <= b && b < depth
+      | (Const k | App(k,_,_)) -> (min_depth <= k && k < depth)
       | _ -> false
+    in
+    let is_qname = function
+    | (Const k | App(k,_,_)) -> k == Global_symbols.namec
+    | _ -> false
     in
     let rec is_unif_var = function
       | AppUVar _ | UVar (_, _) | Discard | Arg (_, _)|AppArg (_, _) -> true
@@ -1924,8 +1929,10 @@ end = struct
       let rig_occ = ref true in
       let has_input = ref false in
       let is_catchall = ref true in
+      let has_qname = ref false in
       let update_bools m t =
         has_input := !has_input || m;
+        has_qname := !has_qname || is_qname t;
         rig_occ := !rig_occ && (is_eigen_variable ~min_depth ~depth t);
         is_catchall := !is_catchall && is_unif_var t
       in
@@ -1942,26 +1949,28 @@ end = struct
         | (([] as is) | (_::is)), _::args, [] -> mkDiscard :: mkpats is args mode
         | _ -> assert false
       in
-      (not !has_input || !rig_occ), (not !has_input || !is_catchall), R.mkAppL p @@ mkpats indexed_args args mode 
+      (not !has_input || !rig_occ), (not !has_input || !is_catchall), (!has_input && !has_qname), R.mkAppL p @@ mkpats indexed_args args mode 
     in
 
-    (* Returns if the clause has a bang *)
     let check_overlaps ~is_local ~loc ~min_depth ~depth (cl:clause) h (cl_overlap:overlap_clause option) p args (index : int * pred_info) =
       match cl_overlap with
         | None -> ()
         | Some cl_overlap ->
-          let rec filter_overlaps (arg_nb:int) has_cut : overlap_clause list -> 'a list = function
-            | [] -> []
-            | x::xs when x.timestamp = cl.timestamp -> if x.has_cut then [] else filter_overlaps arg_nb has_cut xs
+          let rec filter_overlaps : overlap_clause list -> 'a list = function
+            | [] -> anomaly ~loc "clause should be in the filtered list"
+            (* we find the current clause --> if it has a cut, then it discards xs else xs are kept as alternatives *)
+            | x::xs when x.timestamp = cl.timestamp ->
+              if x.has_cut then [] else xs
+            (* x has higher prio then cl, then if it has a cut, then does not overlap with cl, otherwise yes *)
             | x::xs ->
-              if not x.has_cut && arg_nb = x.arg_nb then (x::filter_overlaps arg_nb has_cut xs)
-              else filter_overlaps arg_nb has_cut xs
+              let tl = filter_overlaps xs in
+              if x.has_cut then tl else x :: tl
           in
-          let all_input_eigen_vars, all_input_catchall, hd = hd_query ~loc ~min_depth ~depth p args in
+          let all_input_eigen_vars, all_input_catchall, has_qname, hd = hd_query ~loc ~min_depth ~depth p args in
           (* Format.eprintf "Is_local:%b -- Has bang? %b -- rig_occ:%b -- is_chatchall:%b@." is_local cl_overlap.has_cut has_input_w_eigen_var is_catchall; *)
           if is_local && not cl_overlap.has_cut && not all_input_eigen_vars then (
             error_overlapping_eigen_variables ~loc p h);
-          if not is_local && all_input_catchall then
+          if (not is_local && all_input_catchall) || has_qname then
             (* We check if there is a local clause for p loading a local clause without cut, if this is the case,
                we throw an error, the catchall make $p$ non functional *)
             (match get_opt p with
@@ -1972,9 +1981,14 @@ end = struct
             (* Here we have a local clause with all input vars being eigenvars + the has no cut in the body, we add the info to the pred *)
             add_pred_w_eigen_var_no_cut p loc;
           if not is_local || (is_local && not cl_overlap.has_cut) then
+            (
+              (* Format.printf "==============================================================================================\n"; *)
+            (* Format.printf "Qui checking %a\n" pp_overlap_clause cl_overlap; *)
             let all_overlapping = get_overlapping index p hd in
-            let overlapping =  filter_overlaps cl_overlap.arg_nb cl_overlap.has_cut all_overlapping in
-            if overlapping <> [] then error_overlapping ~loc ~is_local p overlapping h
+            (* Format.printf "Overlapping list is %a\n" (pplist pp_overlap_clause "\n\t\t\t") all_overlapping; *)
+            let overlapping =  filter_overlaps all_overlapping in
+            (* Format.printf "Overlapping list is %a" (pplist pp_overlap_clause "\n\t\t\t") overlapping; *)
+            if overlapping <> [] then error_overlapping ~loc ~is_local p overlapping h)
     in
 
     (* Inspect the a local premise. If a local clause is found
@@ -2025,8 +2039,8 @@ end = struct
 (* state symbols ~loc pred_info cl body overlap_clause p amap *)
     check_clause ~min_depth:0 ~loc ~is_local:false ~lcs:0 ~depth:0 pred_info cl cl_st oc p amap;
     let pred_info = C.Map.fold (fun k v -> C.Map.add k {(C.Map.find k pred_info) with has_local_without_cut = Some v}) !preds_w_eigen_var_no_cut pred_info in
+    (* Format.eprintf "The predicates with local clauses are :@ @[%a@]@." (C.Map.pp (Loc.pp)) !preds_w_eigen_var_no_cut; *)
     pred_info 
-    (* Format.eprintf "The predicates with local clauses bla is :@ @[%a@]@." (C.Map.pp (Loc.pp)) !preds_w_eigen_var_no_cut *)
 
   let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~type_abbrevs ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let t = if needs_spilling then Spilling.main ~types ~type_abbrevs t else t in
