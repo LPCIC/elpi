@@ -1956,20 +1956,24 @@ end = struct
       match cl_overlap with
         | None -> ()
         | Some cl_overlap ->
-          let rec filter_overlaps : overlap_clause list -> 'a list = function
+          (* arg_nb is for variadic implementataions *)
+          let rec filter_overlaps arg_nb : overlap_clause list -> 'a list = function
             | [] -> anomaly ~loc "clause should be in the filtered list"
             (* we find the current clause --> if it has a cut, then it discards xs else xs are kept as alternatives *)
             | x::xs when x.timestamp = cl.timestamp ->
               if x.has_cut then [] else xs
             (* x has higher prio then cl, then if it has a cut, then does not overlap with cl, otherwise yes *)
             | x::xs ->
-              let tl = filter_overlaps xs in
-              if x.has_cut then tl else x :: tl
+              let tl = filter_overlaps arg_nb xs in
+              if x.has_cut || x.arg_nb <> arg_nb then tl else x :: tl
           in
           let all_input_eigen_vars, all_input_catchall, has_qname, hd = hd_query ~loc ~min_depth ~depth p args in
           (* Format.eprintf "Is_local:%b -- Has bang? %b -- rig_occ:%b -- is_chatchall:%b@." is_local cl_overlap.has_cut has_input_w_eigen_var is_catchall; *)
-          if is_local && not cl_overlap.has_cut && not all_input_eigen_vars then (
-            error_overlapping_eigen_variables ~loc p h);
+          if is_local && not cl_overlap.has_cut then (
+            if all_input_eigen_vars then 
+              (* Here we have a local clause with all input vars being eigenvars + the has no cut in the body, we add the info to the pred *)
+              add_pred_w_eigen_var_no_cut p loc
+            else error_overlapping_eigen_variables ~loc p h);
           if (not is_local && all_input_catchall) || has_qname then
             (* We check if there is a local clause for p loading a local clause without cut, if this is the case,
                we throw an error, the catchall make $p$ non functional *)
@@ -1977,16 +1981,13 @@ end = struct
             | None | Some {has_local_without_cut = None} -> ()
             | Some {has_local_without_cut = (Some _) as loc1} ->
               error_overlapping ~is_local ~loc p [{ overlap_loc = loc1; timestamp =[]; has_cut = false; arg_nb = 0 }] h);
-          if is_local && not cl_overlap.has_cut && all_input_eigen_vars then
-            (* Here we have a local clause with all input vars being eigenvars + the has no cut in the body, we add the info to the pred *)
-            add_pred_w_eigen_var_no_cut p loc;
           if not is_local || (is_local && not cl_overlap.has_cut) then
             (
               (* Format.printf "==============================================================================================\n"; *)
             (* Format.printf "Qui checking %a\n" pp_overlap_clause cl_overlap; *)
             let all_overlapping = get_overlapping index p hd in
             (* Format.printf "Overlapping list is %a\n" (pplist pp_overlap_clause "\n\t\t\t") all_overlapping; *)
-            let overlapping =  filter_overlaps all_overlapping in
+            let overlapping =  filter_overlaps cl_overlap.arg_nb all_overlapping in
             (* Format.printf "Overlapping list is %a" (pplist pp_overlap_clause "\n\t\t\t") overlapping; *)
             if overlapping <> [] then error_overlapping ~loc ~is_local p overlapping h)
     in
