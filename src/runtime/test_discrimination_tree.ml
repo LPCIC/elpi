@@ -110,3 +110,7 @@ let () =
 let () = 
   let n : cell = mkConstant ~safe:true ~data:10 ~arity:0 in
   assert (isNameConst n)
+
+let () = 
+  let n : cell = mkConstant ~safe:true ~data:~-10 ~arity:0 in
+  assert (not (isNameConst n))

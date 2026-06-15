@@ -86,8 +86,7 @@ let isNameConst =
       names are positives, therefore, their bit encoding has a leading 0
       global constant, instead, are negative, and therefore, have a leading 1
   *)
-  let kn_lshift = k_lshift-1 in
-  fun x -> x lsr kn_lshift == 0
+  fun x -> k_of x == kConstant && ((data_of x) lsr (ka_lshift - 1)) == 0
   
 
 type cell = int
