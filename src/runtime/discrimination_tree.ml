@@ -210,18 +210,18 @@ module Trie = struct
         }
 
   let add (a : Path.t) v t =
-    let add_opt f n pos = Some (f ~pos (Option.value ~default:empty n)) in
-    let add_map f pos x map = Ptmap.add x (f ~pos (try Ptmap.find x map with Not_found -> empty)) map in
+    let add_opt f n ~pos = Some (f ~pos:(pos+1) (Option.value ~default:empty n)) in
+    let add_map f ~pos x map = Ptmap.add x (f ~pos:(pos+1) (try Ptmap.find x map with Not_found -> empty)) map in
     let max = ref 0 in
     let rec ins ~pos = let x = Path.get a pos in function
       | Node ({ data } as t) when isPathEnd x -> max := pos; Node { t with data = v :: data }
       | Node ({ other } as t) when isVariable x || isAny x ->
-          Node { t with other = add_opt ins other (pos + 1) }
+          Node { t with other = add_opt ins other ~pos }
       | Node ({ listTailVariable } as t) when isListTailVariable x || isListTailVariableUnif x ->
-          Node { t with listTailVariable = add_opt ins listTailVariable (pos + 1) }
+          Node { t with listTailVariable = add_opt ins listTailVariable ~pos }
       | Node ({ map; names } as t) ->
-          let names: 'a t option = if isNameConst x then add_opt ins names (pos+1) else names in
-          Node { t with map = add_map ins (pos+1) x map; names }
+          let names: 'a t option = if isNameConst x then add_opt ins names ~pos else names in
+          Node { t with map = add_map ins ~pos x map; names }
     in
     let t = ins ~pos:0 t in
     t, !max
