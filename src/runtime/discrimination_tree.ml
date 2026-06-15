@@ -339,20 +339,11 @@ let call f =
   
 let skip_to_listEnd ~add_result mode (Trie.Node { other; map; listTailVariable }) =
   let rec get_from_list n = function
-    | Trie.Node { other = None; map; listTailVariable } as tree ->
-        if n = 0 then add_result tree
+    | Trie.Node { other; map; listTailVariable } as tree ->
+        if n = 0 then (add_result tree; Option.iter add_result other)
         else
-          (Ptmap.iter
-            (fun k v -> get_from_list (update_par_count n k) v)
-            map;
-            match listTailVariable with None -> () | Some a -> add_result a)
-    | Trie.Node { other = Some other; map; listTailVariable } as tree ->
-        if n = 0 then (add_result tree; add_result other)
-        else
-          (get_from_list n other;
-          Ptmap.iter
-              (fun k v -> get_from_list (update_par_count n k) v)
-              map;
+          (Option.iter (get_from_list n) other;
+          Ptmap.iter (fun k -> get_from_list (update_par_count n k)) map;
             match listTailVariable with None -> () | Some a -> add_result a)
   in
   let some_to_list = function Some x -> add_result x | None -> () in
