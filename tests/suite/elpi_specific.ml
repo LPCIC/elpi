@@ -566,3 +566,9 @@ let () = declare "tc_overload"
   ~description:"hard overloading resolution"
   ~expectation:Success
   ()
+
+let () = declare "macro_uv"
+  ~source_elpi:"macro_uv.elpi"
+  ~description:"refreshing of macro body"
+  ~expectation:Success
+  ()

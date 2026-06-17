@@ -1,3 +1,9 @@
+# UNRELEASED
+
+
+- Compiler:
+  - Fix bug about macro body refresh
+
 # v3.7.1 (April 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
