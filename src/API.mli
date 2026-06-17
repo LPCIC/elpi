@@ -501,6 +501,7 @@ module BuiltInData : sig
   val float  : float Conversion.t
   val string : string Conversion.t
   val list   : 'a Conversion.t -> 'a list Conversion.t
+  val listC  : ('a,'h,'cst) ContextualConversion.t -> ('a list,'h,'cst) ContextualConversion.t
   val loc    : Ast.Loc.t Conversion.t
 
   (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)

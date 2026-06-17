@@ -510,6 +510,23 @@ module BuiltInData = struct
       pp;
       pp_doc = (fun fmt () -> ()) }
 
+  let listC (d : ('a,'h,'cst) ContextualConversion.t) =
+  let embed ~depth h cst s l =
+    let module R = (val !r) in let open R in
+    let s, l, eg = map_acc (d.ContextualConversion.embed ~depth h cst ) s l in
+    s, list_to_lp_list l, eg in
+  let readback ~depth h cst s t =
+    let module R = (val !r) in let open R in
+    map_acc (d.ContextualConversion.readback ~depth h cst) s
+      (lp_list_to_list ~depth t)
+  in
+  let pp fmt l =
+    Format.fprintf fmt "[%a]" (Util.pplist d.ContextualConversion.pp ~boxed:true "; ") l in
+  { ContextualConversion.embed; readback;
+    ty = TyApp ("list",d.ContextualConversion.ty,[]);
+    pp;
+    pp_doc = (fun fmt () -> ()) }    
+
 end
 
 module Elpi = struct
