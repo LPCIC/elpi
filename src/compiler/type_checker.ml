@@ -367,7 +367,8 @@ let rec any_arg_is_spill = function
 let silence_linear_warn f =
   let s = F.show f in
   let len = String.length s in
-  len > 0 && (s.[0] = '_' || s.[len-1] = '_')
+  len > 0 && (s.[0] = '_' || s.[len-1] = '_'
+              || s.[0] = '%') (* generated name *)
 
 let checker ~type_abbrevs ~kinds ~types:env ~unknown :
   (ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared) * 

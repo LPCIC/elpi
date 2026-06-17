@@ -1091,7 +1091,7 @@ module ScopedTerm = struct
     (* naive, but only used by macros *)
     let fresh = ref 0
     let fresh_bound () = incr fresh; F.from_string (Format.asprintf "%%bound%d" !fresh)
-    let fresh_uv () = incr fresh; F.from_string (Format.asprintf "%%free%d" !fresh)
+    let fresh_uv name = incr fresh; F.from_string (Format.asprintf "%%fresh_%s_%d" (F.show name) !fresh)
 
     let rec rename l c d t =
       match t with
@@ -1119,7 +1119,7 @@ module ScopedTerm = struct
               try F.Map.find v.name !m
               with
                 Not_found ->
-                  let name' = fresh_uv () in
+                  let name' = fresh_uv v.name in
                   m := F.Map.add v.name name' !m;
                   name' in
             let v = { v with name } in
