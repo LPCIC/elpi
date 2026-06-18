@@ -244,6 +244,7 @@ external func pattern_match A -> A.|};
   LPCode "external symbol (:-)  : (func) -> list (pred) -> (func) = \"core\".";
   LPCode "external symbol (,)   : variadic (func) (func).";
   LPCode "external symbol uvar  : A = \"core\".";
+  LPCode "external symbol qname : A = \"core\".";
   LPCode "external symbol (as)  : A -> A -> A = \"core\".";
   LPCode "external symbol (=>)  : (pred) -> (func) -> (func) = \"core\".";
   LPCode "external symbol (=>)  : list (pred) -> (func) -> (func) = \"core\"."; (* HACK in TC to handle this*)

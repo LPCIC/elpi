@@ -1777,6 +1777,7 @@ let rec unif ~oc argsdepth matching depth adepth a bdepth b e =
        depth (if matching then "m" else "")
        bdepth (ppterm (bdepth+depth) [] ~argsdepth:bdepth e) b)
    begin
+    (* Format.printf "Tm A - %a -- B - %a\n@." pp_term a pp_term b; *)
    let delta = adepth - bdepth in
          
    (delta = 0 && a == b) || match a,b with
@@ -1838,6 +1839,23 @@ let rec unif ~oc argsdepth matching depth adepth a bdepth b e =
       unif ~oc argsdepth matching depth adepth a adepth
         (deref_apparg ~from:argsdepth ~to_:(adepth+depth) e.(i) args) empty_env
 
+   (* matching names *)
+   | (Const cx | App(cx, _, _)), Const nc when nc == Global_symbols.namec && matching ->
+      cx >= 0
+   | (Const cx | App(cx, _, _)), App(c,hd,[]) when c == Global_symbols.namec && matching ->
+      cx >= 0 && 
+      unif ~oc argsdepth matching depth adepth a bdepth hd e
+   | Const cx, App(c,hd,[arg]) when c == Global_symbols.namec && matching ->
+      cx >= 0 && 
+      unif ~oc argsdepth matching depth adepth (Const cx) bdepth hd e &&
+      unif ~oc argsdepth matching depth adepth Nil bdepth arg e
+   | App(cx,h,ag), App(c,hd,[arg]) when c == Global_symbols.namec && matching ->
+      cx >= 0 && 
+      unif ~oc argsdepth matching depth adepth (Const cx) bdepth hd e &&
+      unif ~oc argsdepth matching depth adepth (list_to_lp_list (h::ag)) bdepth arg e
+
+   | (App _ | Const _ | Builtin _ | Nil | Cons _ | CData _), (Const c | App(c,_,[])) when c == Global_symbols.namec && matching -> false
+        
    (* UVar introspection (matching) *)
    | (UVar _ | AppUVar _), Const c when c == Global_symbols.uvarc && matching -> true
    | UVar(r,ano), App(c,hd,[]) when c == Global_symbols.uvarc && matching ->
@@ -2484,6 +2502,7 @@ let lex_insertion l1 l2 =
   in
   lex_insertion true l1 l2
 let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
+let mustbenamec = min_int+1 (* uvar or uvar t or uvar l t *)
 
 let ppclause f ~hd { depth; args = args; hyps = hyps } =
   Fmt.fprintf f "@[<hov 1>%a :- %a.@]"
@@ -2507,11 +2526,11 @@ type clause_arg_classification =
 let rec classify_clause_arg ~depth matching t =
   (* Format.eprintf "index %a\n%!" (ppterm depth [] ~argsdepth:depth empty_env) t; *)
   match deref_head ~depth t with
-  | Const k when k == Global_symbols.uvarc -> MustBeVariable
+  | (Const k | App(k,_,_)) when k == Global_symbols.uvarc -> MustBeVariable
+  | (Const k | App(k,_,_)) when k == Global_symbols.namec -> Rigid(mustbenamec,matching)
   | Const k -> Rigid(k,matching)
   | Nil -> Rigid (Global_symbols.nilc,matching)
   | Cons _ -> Rigid (Global_symbols.consc,matching)
-  | App (k,_,_) when k == Global_symbols.uvarc -> MustBeVariable
   | App (k,a,_) when k == Global_symbols.asc -> classify_clause_arg ~depth matching a
   | App (k,_,_) -> Rigid (k,matching)
   | Builtin (k,_) -> Rigid (const_of_builtin_predicate k,matching)
@@ -2519,7 +2538,7 @@ let rec classify_clause_arg ~depth matching t =
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
   | CData d ->
      let hash = -(CData.hash d) in
-     if hash > mustbevariablec then Rigid (hash,matching)
+     if hash > mustbenamec then Rigid (hash,matching)
      else Rigid (hash+1,matching)
 
 (** 
@@ -2575,6 +2594,7 @@ let hash_arg_list is_goal hd ~depth args mode spec =
           hash size mustbevariablec
       | App(k,_,_) when k == Global_symbols.uvarc && deep = 1 ->
           hash size mustbevariablec
+      | (Const k | App (k,_,_)) when k == Global_symbols.namec || k >= 0 -> hash size mustbenamec
       | Const k -> hash size k
       | App(k,_,_) when deep = 1 -> hash size k
       | App(k,x,xs) ->
@@ -2735,6 +2755,7 @@ let arg_to_trie_path ~check_mut_excl ~safe ~depth ~is_goal args arg_depths args_
       let path_depth = path_depth - 1 in 
       match deref_head ~depth t with 
       | (Const k | App (k,_,_)) when k == Global_symbols.uvarc -> Path.emit path mkUvarConstant; update_current_min_depth path_depth
+      | (Const k | App (k,_,_)) when k == Global_symbols.namec -> Path.emit path mkName; update_current_min_depth path_depth
       | Const k when safe -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
       | Const k -> Path.emit path @@ mkConstant ~safe ~data:k ~arity:0; update_current_min_depth path_depth
       | CData d -> Path.emit path @@ mkPrimitive d; update_current_min_depth path_depth
@@ -3053,20 +3074,20 @@ type goal_arg_classification =
 let rec classify_goal_arg ~depth t =
   (* Format.eprintf "goal %a\n%!" (ppterm depth [] ~argsdepth:depth empty_env) t; *)
   match deref_head ~depth t with
-  | Const k when k == Global_symbols.uvarc -> Rigid mustbevariablec
-  | Const k -> Rigid(k)
+  | (Const k | App(k,_,_)) when k == Global_symbols.uvarc -> Rigid mustbevariablec
+  | (Const k | App(k,_,_)) when k == Global_symbols.namec -> Rigid mustbenamec
+  | Const k -> Rigid k
   | Nil -> Rigid (Global_symbols.nilc)
   | Cons _ -> Rigid (Global_symbols.consc)
-  | App (k,_,_) when k == Global_symbols.uvarc -> Rigid mustbevariablec
   | App (k,a,_) when k == Global_symbols.asc -> classify_goal_arg ~depth a
-  | App (k,_,_) -> Rigid (k)
+  | App (k,_,_) -> Rigid k
   | Builtin (k,_) -> Rigid (const_of_builtin_predicate k)
   | Lam t -> classify_goal_arg ~depth:(depth+1) t (* eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
   | CData d -> 
      let hash = -(CData.hash d) in
-     if hash > mustbevariablec then Rigid (hash)
-     else Rigid (hash+1)
+     if hash > mustbenamec then Rigid (hash)
+     else Rigid (hash+2)
 
 let classify_goal_argno ~depth argno = function
   | Const _ -> Variable

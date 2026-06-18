@@ -1,0 +1,10 @@
+% NO
+kind term type.
+type lam (term -> term) -> term.
+
+% ugly-copy: no load rules for name, but catchall for names using qname
+func copy term -> term.
+copy X X :- !.
+copy (lam B) (lam B') :- pi x\ (copy x x) => copy (B x) (B' x).
+
+main.

@@ -527,8 +527,9 @@ end
 
 let elpi_state_descriptor = State.new_descriptor ()
 
-type core_symbol = As | Uv | ECons | ENil [@@deriving enum, ord, show]
+type core_symbol = Name | As | Uv | ECons | ENil [@@deriving enum, ord, show]
 let func_of_core_symbol = function
+  | Name  -> F.from_string "qname"
   | As    -> F.asf
   | Uv    -> F.from_string "uvar"
   | ECons  -> F.consf
@@ -746,6 +747,7 @@ module Global_symbols : sig
   val delay : symbol
 
   (* core symbols *)
+  val name : symbol
   val as_      : symbol
   val uvar    : symbol
   val nil    : symbol
@@ -753,6 +755,7 @@ module Global_symbols : sig
 
   (* internal *)
   val uvarc : constant (* needed by runtime/unif *)
+  val namec : constant (* needed by runtime/unif *)
   val asc : constant (* needed by runtime/unif *)
   val orc      : constant (* needed by coq-elpi *)
   val nilc     : constant (* needed by indexing *)
@@ -803,6 +806,7 @@ let uvarc, uvar = declare_core_symbol Uv
 let asc, as_ = declare_core_symbol As
 let nilc, nil = declare_core_symbol ENil
 let consc, cons = declare_core_symbol ECons
+let namec, name = declare_core_symbol Name
 
 let declare_overloaded_global_symbol str =
   let symb, variant = Symbol.make_variant_builtin (Ast.Func.from_string str) in
@@ -1438,7 +1442,7 @@ let do_allocate_constructors ty l =
   if StrSet.cardinal names <> List.length l then
     anomaly ("Duplicate constructors name in ADT: " ^ Conversion.show_ty_ast ty);
   List.fold_left (fun vacc (K(name,_,a,b,m)) ->
-    if name = "uvar" then
+    if name = "uvar" || name = "qname" then
       vacc
     else
       let c_variant = Global_symbols.declare_overloaded_global_symbol name in
@@ -1450,6 +1454,10 @@ let compile_constructors allocated ty self self_name l =
     if name = "uvar" then
       let args = compile_arguments a self in
       let acc = Constants.Map.add Global_symbols.uvarc (XK(args,compile_builder a b,compile_matcher a m)) acc in
+      (acc, sacc)
+    else if name = "qname" then
+      let args = compile_arguments a self in
+      let acc = Constants.Map.add Global_symbols.namec (XK(args,compile_builder a b,compile_matcher a m)) acc in
       (acc, sacc)
     else
       let c =
@@ -1477,7 +1485,7 @@ let document_adt doc ty ks cks vks fmt () =
     begin pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n" end;
   document_kind fmt ty;
   List.iter (fun (K(name,doc,_,_,_)) ->
-    if name <> "uvar" then
+    if name <> "uvar" && name <> "qname" then
       let argsdoc = StrMap.find name cks in
       document_constructor fmt name (StrMap.find name vks |> snd) doc argsdoc) ks
 

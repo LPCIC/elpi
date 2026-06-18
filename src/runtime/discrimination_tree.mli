@@ -12,6 +12,7 @@ module Path : sig
 end
 
 val mkConstant : safe:bool -> data:int -> arity:int -> cell
+val mkName : cell
 val mkPrimitive : Elpi_util.Util.CData.t -> cell
 
 (** This is for: unification variables, discard *)
@@ -134,4 +135,5 @@ module Internal: sig
   val isListTailVariableUnif : cell -> bool
   val isPathEnd : cell -> bool
   val isUvarConstant : cell -> bool
+  val isNameConst : cell -> bool
 end
