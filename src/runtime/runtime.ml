@@ -2527,7 +2527,7 @@ let rec classify_clause_arg ~depth matching t =
   (* Format.eprintf "index %a\n%!" (ppterm depth [] ~argsdepth:depth empty_env) t; *)
   match deref_head ~depth t with
   | (Const k | App(k,_,_)) when k == Global_symbols.uvarc -> MustBeVariable
-  | (Const k | App(k,_,_)) when k == Global_symbols.namec || k >= 0 -> Rigid(mustbenamec,matching)
+  | (Const k | App(k,_,_)) when k == Global_symbols.namec -> Rigid(mustbenamec,matching)
   | Const k -> Rigid(k,matching)
   | Nil -> Rigid (Global_symbols.nilc,matching)
   | Cons _ -> Rigid (Global_symbols.consc,matching)
@@ -3075,7 +3075,7 @@ let rec classify_goal_arg ~depth t =
   (* Format.eprintf "goal %a\n%!" (ppterm depth [] ~argsdepth:depth empty_env) t; *)
   match deref_head ~depth t with
   | (Const k | App(k,_,_)) when k == Global_symbols.uvarc -> Rigid mustbevariablec
-  | (Const k | App(k,_,_)) when k == Global_symbols.namec || k >= 0 -> Rigid mustbenamec
+  | (Const k | App(k,_,_)) when k == Global_symbols.namec -> Rigid mustbenamec
   | Const k -> Rigid k
   | Nil -> Rigid (Global_symbols.nilc)
   | Cons _ -> Rigid (Global_symbols.consc)
@@ -3087,7 +3087,7 @@ let rec classify_goal_arg ~depth t =
   | CData d -> 
      let hash = -(CData.hash d) in
      if hash > mustbenamec then Rigid (hash)
-     else Rigid (hash+1)
+     else Rigid (hash+2)
 
 let classify_goal_argno ~depth argno = function
   | Const _ -> Variable
