@@ -626,11 +626,14 @@ length [_|L] N :- length L N1, N is N1 + 1.
 length []    0.
 
 func rev list A -> list A.
-rev L RL  :- rev.aux L []  RL.
+rev L RL  :- rev-append L []  RL.
+
+func rev-append list A, list A -> list A.
+rev-append [X|XS] ACC R :- rev-append XS [X|ACC] R.
+rev-append [] L L.
 
 func rev.aux list A, list A -> list A.
-rev.aux [X|XS] ACC R :- rev.aux XS [X|ACC] R.
-rev.aux [] L L.
+rev.aux L1 L2 L3 :- rev-append L1 L2 L3.
 
 func last list A -> A.
 last [] _ :- fatal-error "last on empty list".
