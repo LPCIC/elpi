@@ -19,3 +19,4 @@
 (executable (name sepcomp_hover)  (modules sepcomp_hover)  (libraries sepcomp))
 (executable (name sepcomp_extend_sig)  (modules sepcomp_extend_sig)  (libraries sepcomp))
 (executable (name sepcomp_extend_sig2)  (modules sepcomp_extend_sig2)  (libraries sepcomp))
+(executable (name bug_407)  (modules bug_407)  (libraries elpi))

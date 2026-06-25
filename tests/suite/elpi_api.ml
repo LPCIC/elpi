@@ -83,3 +83,8 @@ let () = declare "sepcomp_extend_sig2"
   ~expectation:Test.Success
   ()
 
+let () = declare "bug_407"
+  ~source_dune:"bug_407.exe"
+  ~description:"misleading API"
+  ~expectation:Test.Success
+  ()
