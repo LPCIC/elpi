@@ -1,8 +1,13 @@
-# UNRELEASED
+# v3.7.2 (July 2026)
 
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
 
 - Compiler:
   - Fix bug about macro body refresh
+
+- Runtime:
+  - Fix bug involving `as` and deep indexing
 
 # v3.7.1 (April 2026)
 
