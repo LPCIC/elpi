@@ -170,8 +170,8 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.008
-   Determinacy checking time: 0.009
+   Typechecking time: 0.007
+   Determinacy checking time: 0.008
    
 **../../tests/sources/ackermann.elpi
 :**
@@ -189,8 +189,8 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.008
-   Determinacy checking time: 0.009
+   Typechecking time: 0.007
+   Determinacy checking time: 0.008
    
    Success:
    
@@ -317,12 +317,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.008
-   Determinacy checking time: 0.010
+   Typechecking time: 0.007
+   Determinacy checking time: 0.008
    
    Success:
    
-   Time: 0.000
+   Time: 0.001
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -374,12 +374,12 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.026
    
    Compilation time: 0.001
    
    Typechecking time: 0.008
-   Determinacy checking time: 0.008
+   Determinacy checking time: 0.009
    
    Success:
    
@@ -407,8 +407,8 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.007
-   Determinacy checking time: 0.008
+   Typechecking time: 0.008
+   Determinacy checking time: 0.010
    
    Success:
    
@@ -891,7 +891,7 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.001
+   Parsing time: 0.000
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 26, column 7, characters 780-781:
    X is linear: name it _X (discard) or X_ (fresh variable)
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 36, column 11, characters 1111-1114:
@@ -915,8 +915,8 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.008
-   Determinacy checking time: 0.009
+   Typechecking time: 0.007
+   Determinacy checking time: 0.008
    
    Success:
    
@@ -1201,7 +1201,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.008
+   Typechecking time: 0.007
    Determinacy checking time: 0.008
    
    Success:
@@ -1439,7 +1439,7 @@ Test Bed
    
    Success:
    
-   Time: 1.758
+   Time: 1.850
    
    Constraints:
    
@@ -1576,14 +1576,14 @@ Test Bed
    type iter nat -> (func) -> (pred).
    type exp nat -> nat -> nat -> (pred).
    
-   Compilation time: 0.002
+   Compilation time: 0.001
    
    Typechecking time: 0.008
    Determinacy checking time: 0.008
    
    Success:
    
-   Time: 0.317
+   Time: 0.343
    
    Constraints:
    
@@ -1614,7 +1614,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.007
+   Typechecking time: 0.006
    Determinacy checking time: 0.008
    
    Success:
@@ -1820,7 +1820,7 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.001
+   Parsing time: 0.000
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 26, column 13, characters 654-655:
    F is linear: name it _F (discard) or F_ (fresh variable)
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 27, column 17, characters 675-678:
@@ -1866,7 +1866,7 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.001
+   Parsing time: 0.000
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 36, column 15, characters 893-895:
    skipping static analysis of flexible rule: GX
    Warning: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 36, column 33, characters 911-913:
@@ -1883,7 +1883,7 @@ Test Bed
    Compilation time: 0.002
    
    Typechecking time: 0.007
-   Determinacy checking time: 0.008
+   Determinacy checking time: 0.009
    
    Success:
    
@@ -1904,7 +1904,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.303100 + 0.053018 + 0.916172
+   1.322105 + 0.059174 + 0.951264
    
 
 .. code-block:: console
@@ -1919,7 +1919,7 @@ Test Bed
    
    Success:
    
-   Time: 2.515
+   Time: 2.564
    
    Constraints:
    
@@ -1936,7 +1936,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.268439 + 2.761298 + 0.327029
+   6.563204 + 3.045601 + 0.355925
    
 
 .. code-block:: console
@@ -1946,12 +1946,12 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.008
+   Typechecking time: 0.007
    Determinacy checking time: 0.008
    
    Success:
    
-   Time: 9.364
+   Time: 9.972
    
    Constraints:
    
@@ -1968,7 +1968,7 @@ Test Bed
 
 .. code-block:: console
 
-   5.750568 + 2.679474 + 0.208318
+   5.966063 + 2.936125 + 0.215471
    
 
 .. code-block:: console
@@ -1983,7 +1983,7 @@ Test Bed
    
    Success:
    
-   Time: 8.644
+   Time: 9.123
    
    Constraints:
    
@@ -2522,8 +2522,8 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.008
-   Determinacy checking time: 0.009
+   Typechecking time: 0.007
+   Determinacy checking time: 0.008
    
    Success:
    
@@ -2676,12 +2676,12 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.008
+   Typechecking time: 0.007
    Determinacy checking time: 0.008
    
    Success:
    
-   Time: 1.583
+   Time: 1.656
    
    Constraints:
    
@@ -2715,7 +2715,7 @@ Test Bed
 
 .. code-block:: console
 
-   3
+   4
    
 
 .. code-block:: console
@@ -2757,7 +2757,7 @@ Test Bed
    Infix ==>  has lower precedence than conjunction, hence
    'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.
    
-   Parsing time: 0.001
+   Parsing time: 0.000
    
    Compilation time: 0.001
    
@@ -2766,7 +2766,7 @@ Test Bed
    
    Success:
    
-   Time: 0.259
+   Time: 0.255
    
    Constraints:
    
@@ -2806,7 +2806,7 @@ Test Bed
    
    Success:
    
-   Time: 1.702
+   Time: 1.649
    
    Constraints:
    
@@ -2994,7 +2994,7 @@ Test Bed
    
    Success:
    
-   Time: 0.133
+   Time: 0.126
    
    Constraints:
    
@@ -3021,7 +3021,7 @@ Test Bed
    
    Success:
    
-   Time: 0.133
+   Time: 0.126
    
    Constraints:
    
@@ -3099,7 +3099,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.105782 + 0.050137 + 0.768792
+   1.172249 + 0.057446 + 0.805681
    
 
 .. code-block:: console
@@ -3114,7 +3114,7 @@ Test Bed
    
    Success:
    
-   Time: 2.030
+   Time: 2.125
    
    Constraints:
    
@@ -3165,7 +3165,7 @@ Test Bed
    
    Compilation time: 0.000
    
-   Typechecking time: 0.007
+   Typechecking time: 0.006
    Determinacy checking time: 0.008
    
    Success:
@@ -3353,7 +3353,7 @@ Test Bed
    Compilation time: 0.000
    
    Typechecking time: 0.007
-   Determinacy checking time: 0.009
+   Determinacy checking time: 0.008
    
    Success:
    
