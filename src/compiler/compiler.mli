@@ -71,6 +71,7 @@ val optimize_query : query -> executable
 val relocate_closed_term : from:symbol_table -> to_:program -> term -> (term, string) Stdlib.Result.t
 
 val pp_program : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> program -> unit
+val pp_program_json : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> program -> unit
 val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> query -> unit
 
 val elpi_language : Compiler_data.Scope.language
