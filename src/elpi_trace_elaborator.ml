@@ -297,9 +297,20 @@ let gstacks : frame list GoalMap.t ref = ref GoalMap.empty (* goal_id -> stack *
 let fstacks : frame list StepMap.t ref = ref StepMap.empty (* step_id -> stack *)
 
 let push_stack (step,rid) goal_id rule siblings =
-  let this_stack = try GoalMap.find goal_id !gstacks with Not_found -> [] in
+  (* If a step pushes multiple frames, such as an implication with
+     multiple clauses on the LHS, then a stack for this step already
+     exists; we need to make sure to properly push to it, instead of
+     overriding *)
+  let this_stack =
+    try StepMap.find (step,rid) !fstacks
+    with Not_found ->
+      try GoalMap.find goal_id !gstacks
+      with Not_found -> [] in
   let stack = { rule; step_id = step; runtime_id = rid } :: this_stack in
   fstacks := StepMap.add (step,rid) stack !fstacks;
+  (* We assume that a step pushes all its frames before we start
+     processing siblings, so we can safely override the siblings'
+     stacks *)
   List.iter (fun g -> gstacks := GoalMap.add g stack !gstacks) siblings
 
 let update_stack (step,rid) goal_id rule =
@@ -382,6 +393,20 @@ try
           assert(List.length events = 1);
           let _, events = List.hd events in
           Builtin { name; outcome; events = List.map decode_infer_event events  }
+        else if name = "implication" then
+          let new_hyps = match has "user:new-hyps" items with
+            | Some ({ payload = hyps },_) -> hyps
+            (* Backwards compatibility: treat a missing new-hyps item
+               as empty, which renders as before *)
+            | _ -> [] in
+          let () = new_hyps |> List.iter (fun hyp ->
+            push_stack (step,rid) goal_id (`BuiltinRule (`Logic (name ^ "\n" ^ hyp))) siblings
+          ) in
+          let name = `Logic name in
+          (* Every step needs to push a stack, even a degenerate ([] => P) *)
+          if new_hyps = [] then
+            push_stack (step,rid) goal_id (`BuiltinRule name) siblings;
+          Builtin { name; outcome; events = [] }
         else
           let name = `Logic name in
           let () = push_stack (step,rid) goal_id (`BuiltinRule name) siblings in
