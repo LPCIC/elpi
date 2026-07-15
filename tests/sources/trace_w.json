@@ -100,6 +100,7 @@
 {"step" : 12,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["22"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of c0 (mono X6)"]}
+{"step" : 12,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:new-hyps","payload" : ["(of c0 (mono X5)) :- ."]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of c0 (mono X6)"]}
 {"step" : 13,"kind" : ["Info"],"goal_id" : 22,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}
@@ -404,6 +405,7 @@
 {"step" : 32,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["61"]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["bind [] [] (uvar frozen--452 [] ===> uvar frozen--452 []) (X13 c0)"]}
+{"step" : 32,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:new-hyps","payload" : ["(copy (uvar frozen--452 []) c0) :- ."]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:rule:implication","payload" : ["success"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["bind","bind [] [] (uvar frozen--452 [] ===> uvar frozen--452 []) (X13 c0)"]}
 {"step" : 33,"kind" : ["Info"],"goal_id" : 61,"runtime_id" : 1,"name" : "user:rule","payload" : ["backchain"]}
@@ -451,6 +453,7 @@
 {"step" : 18,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 65,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["66"]}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["X1 = all any c0 \\ mono (c0 ===> c0)"]}
+{"step" : 18,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:new-hyps","payload" : []}
 {"step" : 18,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=","X1 = all any c0 \\ mono (c0 ===> c0)"]}
 {"step" : 19,"kind" : ["Info"],"goal_id" : 66,"runtime_id" : 0,"name" : "user:rule","payload" : ["eq"]}
@@ -466,6 +469,7 @@
 {"step" : 21,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["68"]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of (app c0 (global [])) (mono X3)"]}
+{"step" : 21,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:new-hyps","payload" : ["(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["of","of (app c0 (global [])) (mono X3)"]}
 {"step" : 22,"kind" : ["Info"],"goal_id" : 68,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}

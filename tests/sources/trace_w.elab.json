@@ -1263,7 +1263,10 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [ "Logic", "implication\n(of c0 (mono X5)) :- ." ]
+            ],
             "step_id": 12,
             "runtime_id": 0
           },
@@ -1412,7 +1415,10 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [ "Logic", "implication\n(of c0 (mono X5)) :- ." ]
+            ],
             "step_id": 12,
             "runtime_id": 0
           },
@@ -5393,7 +5399,11 @@
                       "stack": [
                         {
                           "rule": [
-                            "BuiltinRule", [ "Logic", "implication" ]
+                            "BuiltinRule",
+                            [
+                              "Logic",
+                              "implication\n(copy (uvar frozen--452 []) c0) :- ."
+                            ]
                           ],
                           "step_id": 32,
                           "runtime_id": 1
@@ -5515,7 +5525,11 @@
                         },
                         {
                           "rule": [
-                            "BuiltinRule", [ "Logic", "implication" ]
+                            "BuiltinRule",
+                            [
+                              "Logic",
+                              "implication\n(copy (uvar frozen--452 []) c0) :- ."
+                            ]
                           ],
                           "step_id": 32,
                           "runtime_id": 1
@@ -5657,7 +5671,11 @@
                         },
                         {
                           "rule": [
-                            "BuiltinRule", [ "Logic", "implication" ]
+                            "BuiltinRule",
+                            [
+                              "Logic",
+                              "implication\n(copy (uvar frozen--452 []) c0) :- ."
+                            ]
                           ],
                           "step_id": 32,
                           "runtime_id": 1
@@ -5789,7 +5807,11 @@
                         },
                         {
                           "rule": [
-                            "BuiltinRule", [ "Logic", "implication" ]
+                            "BuiltinRule",
+                            [
+                              "Logic",
+                              "implication\n(copy (uvar frozen--452 []) c0) :- ."
+                            ]
                           ],
                           "step_id": 32,
                           "runtime_id": 1
@@ -5921,7 +5943,11 @@
                         },
                         {
                           "rule": [
-                            "BuiltinRule", [ "Logic", "implication" ]
+                            "BuiltinRule",
+                            [
+                              "Logic",
+                              "implication\n(copy (uvar frozen--452 []) c0) :- ."
+                            ]
                           ],
                           "step_id": 32,
                           "runtime_id": 1
@@ -6216,7 +6242,13 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },
@@ -6369,7 +6401,13 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },
@@ -6550,7 +6588,13 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },
@@ -6713,7 +6757,13 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },
@@ -6897,7 +6947,13 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },
@@ -7096,7 +7152,13 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },
@@ -7437,7 +7499,13 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },
@@ -7697,7 +7765,13 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },
@@ -7889,7 +7963,13 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },
@@ -8097,7 +8177,13 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              [
+                "Logic",
+                "implication\n(of c0 (all any (c1 \\ (mono (c1 ===> c1))))) :- ."
+              ]
+            ],
             "step_id": 21,
             "runtime_id": 0
           },

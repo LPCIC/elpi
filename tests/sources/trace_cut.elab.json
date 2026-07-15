@@ -575,7 +575,7 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "implication\nq :- ." ] ],
             "step_id": 10,
             "runtime_id": 0
           },
@@ -626,12 +626,12 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "implication\nq :- !." ] ],
             "step_id": 11,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "implication\nq :- ." ] ],
             "step_id": 10,
             "runtime_id": 0
           },
@@ -693,12 +693,12 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "implication\nq :- !." ] ],
             "step_id": 11,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "implication\nq :- ." ] ],
             "step_id": 10,
             "runtime_id": 0
           },

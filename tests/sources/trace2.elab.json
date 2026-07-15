@@ -259,7 +259,7 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "implication\nfail :- ." ] ],
             "step_id": 5,
             "runtime_id": 0
           },
@@ -328,7 +328,7 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "implication\nfail :- ." ] ],
             "step_id": 5,
             "runtime_id": 0
           },
@@ -427,7 +427,7 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "implication\nfail :- ." ] ],
             "step_id": 5,
             "runtime_id": 0
           },
@@ -504,7 +504,7 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "implication\nfail :- ." ] ],
             "step_id": 5,
             "runtime_id": 0
           },

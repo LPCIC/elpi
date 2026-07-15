@@ -26,6 +26,7 @@
 {"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["9"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["true , fail"]}
+{"step" : 5,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:new-hyps","payload" : ["fail :- ."]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:curgoal","payload" : [",","true , fail"]}
 {"step" : 6,"kind" : ["Info"],"goal_id" : 9,"runtime_id" : 0,"name" : "user:rule","payload" : ["and"]}
