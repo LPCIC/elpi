@@ -64,9 +64,10 @@ type attempt = {
   rule : rule;
   events : event list;
 }
-type rule = [ BuiltinRule of builtin_name | UserRule of user_rule ]
+type rule = [ BuiltinRule of builtin_rule | UserRule of user_rule ]
 type user_rule = { rule_text : rule_text; rule_loc : location }
-type builtin_name = [ Logic of string | FFI of string ]
+type builtin_kind = [ Logic | FFI ]
+type builtin_rule = { name : string; kind : builtin_kind; payload : string list }
 type location = [ File of file_location | Context of step_id ]
 type file_location = { filename : string; line : int; column : int; character : int }
 type event = [ Assign of string | Fail of string | ResumeGoal of goal_id list]
