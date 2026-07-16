@@ -84,7 +84,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "print", "kind": "FFI", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [],
@@ -94,7 +97,10 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "print", "kind": "FFI", "payload": [] }
+            ],
             "step_id": 2,
             "runtime_id": 0
           },
@@ -135,7 +141,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "pi", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [
@@ -150,7 +159,9 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -191,7 +202,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "sigma", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [
@@ -203,12 +217,17 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "sigma", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -249,7 +268,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "true , fail", "goal_id": 9 } ],
@@ -259,17 +281,29 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nfail :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "fail :- ." ]
+              }
+            ],
             "step_id": 5,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "sigma", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -310,7 +344,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "and", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [
@@ -323,22 +360,37 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "and", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 6,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nfail :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "fail :- ." ]
+              }
+            ],
             "step_id": 5,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "sigma", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -422,22 +474,37 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "and", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 6,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nfail :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "fail :- ." ]
+              }
+            ],
             "step_id": 5,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "sigma", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -499,22 +566,37 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "and", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 6,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nfail :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "fail :- ." ]
+              }
+            ],
             "step_id": 5,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "sigma", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },

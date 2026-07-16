@@ -162,7 +162,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "z0", "goal_id": 7 } ],
@@ -172,7 +175,14 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nx0 :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x0 :- ." ]
+              }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -233,7 +243,14 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nx0 :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x0 :- ." ]
+              }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -480,7 +497,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "z1", "goal_id": 10 } ],
@@ -490,12 +510,14 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\ny1 :- ." ] ],
-            "step_id": 7,
-            "runtime_id": 0
-          },
-          {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nx1 :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x1 :- .", "y1 :- ." ]
+              }
+            ],
             "step_id": 7,
             "runtime_id": 0
           },
@@ -575,12 +597,14 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\ny1 :- ." ] ],
-            "step_id": 7,
-            "runtime_id": 0
-          },
-          {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nx1 :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x1 :- .", "y1 :- ." ]
+              }
+            ],
             "step_id": 7,
             "runtime_id": 0
           },
@@ -884,7 +908,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "z2", "goal_id": 13 } ],
@@ -894,12 +921,14 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\ny2 :- ." ] ],
-            "step_id": 11,
-            "runtime_id": 0
-          },
-          {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nx2 :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x2 :- .", "y2 :- ." ]
+              }
+            ],
             "step_id": 11,
             "runtime_id": 0
           },
@@ -998,12 +1027,14 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\ny2 :- ." ] ],
-            "step_id": 11,
-            "runtime_id": 0
-          },
-          {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nx2 :- ." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x2 :- .", "y2 :- ." ]
+              }
+            ],
             "step_id": 11,
             "runtime_id": 0
           },
@@ -1368,7 +1399,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "z3", "goal_id": 16 } ],
@@ -1378,12 +1412,14 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\ny3 :- !." ] ],
-            "step_id": 15,
-            "runtime_id": 0
-          },
-          {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nx3 :- !." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x3 :- !.", "y3 :- !." ]
+              }
+            ],
             "step_id": 15,
             "runtime_id": 0
           },
@@ -1501,12 +1537,14 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\ny3 :- !." ] ],
-            "step_id": 15,
-            "runtime_id": 0
-          },
-          {
-            "rule": [ "BuiltinRule", [ "Logic", "implication\nx3 :- !." ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x3 :- !.", "y3 :- !." ]
+              }
+            ],
             "step_id": 15,
             "runtime_id": 0
           },
@@ -1923,7 +1961,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "z4", "goal_id": 19 } ],
@@ -1934,7 +1975,12 @@
         "stack": [
           {
             "rule": [
-              "BuiltinRule", [ "Logic", "implication\nx4 :- y4, !." ]
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x4 :- y4, !." ]
+              }
             ],
             "step_id": 19,
             "runtime_id": 0
@@ -2073,7 +2119,12 @@
         "stack": [
           {
             "rule": [
-              "BuiltinRule", [ "Logic", "implication\nx4 :- y4, !." ]
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "x4 :- y4, !." ]
+              }
             ],
             "step_id": 19,
             "runtime_id": 0
@@ -2539,7 +2590,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "z5", "goal_id": 22 } ],
@@ -2549,7 +2603,18 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "implication", "kind": "Logic", "payload": [] }
+            ],
+            "step_id": 23,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "BuiltinRule",
+              { "name": "implication", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 23,
             "runtime_id": 0
           },
@@ -2705,7 +2770,18 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "implication", "kind": "Logic", "payload": [] }
+            ],
+            "step_id": 23,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "BuiltinRule",
+              { "name": "implication", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 23,
             "runtime_id": 0
           },

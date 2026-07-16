@@ -374,7 +374,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "FFI", "calc" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "calc", "kind": "FFI", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "1 = 5", "goal_id": 9 } ],
@@ -384,7 +387,9 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "FFI", "calc" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "calc", "kind": "FFI", "payload": [] }
+            ],
             "step_id": 5,
             "runtime_id": 0
           },
@@ -480,7 +485,9 @@
         "current_goal_predicate": "=",
         "failed_attempts": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "eq", "kind": "Logic", "payload": [] }
+            ],
             "events": [ [ "Fail", "unify 1 with 5" ] ]
           }
         ],
@@ -488,12 +495,16 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "eq", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 6,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "FFI", "calc" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "calc", "kind": "FFI", "payload": [] }
+            ],
             "step_id": 5,
             "runtime_id": 0
           },
@@ -693,7 +704,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "eq", "kind": "Logic", "payload": [] }
+              ],
               "events": [ [ "Assign", "X2 := 1" ] ]
             },
             "siblings": [],
@@ -703,7 +717,9 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "eq", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 8,
             "runtime_id": 0
           },
@@ -782,7 +798,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "eq", "kind": "Logic", "payload": [] }
+              ],
               "events": [ [ "Assign", "X3 := 2" ] ]
             },
             "siblings": [],
@@ -792,7 +811,9 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "eq", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 9,
             "runtime_id": 0
           },
@@ -869,7 +890,9 @@
         "current_goal_predicate": "=",
         "failed_attempts": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "eq", "kind": "Logic", "payload": [] }
+            ],
             "events": [ [ "Fail", "unify 1 with 2" ] ]
           }
         ],
@@ -877,7 +900,9 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "eq", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 10,
             "runtime_id": 0
           },
