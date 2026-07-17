@@ -130,6 +130,7 @@
 {"step" : 15,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 23,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["24"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["fail"]}
+{"step" : 15,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:new-hyps","payload" : []}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["fail","fail"]}
 {"step" : 16,"kind" : ["Info"],"goal_id" : 24,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}

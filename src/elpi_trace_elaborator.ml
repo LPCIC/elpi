@@ -71,7 +71,7 @@ module Elaborate : sig
     type chr_attempt = { loc : location; code: string; events : event list; timestamp : timestamp; removed : goal_id list; resumed : goal_id list;  }
     
     type action =
-      | Builtin of { name : builtin_name; outcome : step_outcode; events : event list }
+      | Builtin of { name : builtin_rule; outcome : step_outcode; events : event list }
       | Backchain of { trylist : attempt list; outcome : step_outcode }
     
     type step =
@@ -117,7 +117,7 @@ end = struct
     type chr_attempt = { loc : location; code: string; events : event list; timestamp : timestamp; removed : goal_id list; resumed : goal_id list;  }
     
     type action =
-      | Builtin of { name : builtin_name; outcome : step_outcode; events : event list }
+      | Builtin of { name : builtin_rule; outcome : step_outcode; events : event list }
       | Backchain of { trylist : attempt list; outcome : step_outcode }
     
     type step =
@@ -288,18 +288,29 @@ let decode_cut = function
   | { payload = [g;r;t] }, _ -> int_of_string g, decode_loc r, t
   | _ -> assert false
 
-let get_builtin_name l : builtin_name =
+let get_builtin_name l : builtin_rule =
   match has "user:rule:builtin:name" l with
   | None -> assert false
-  | Some x -> `FFI (decode_string x)
+  | Some x -> { kind = `FFI; name = decode_string x; payload = [] }
 
 let gstacks : frame list GoalMap.t ref = ref GoalMap.empty (* goal_id -> stack *)
 let fstacks : frame list StepMap.t ref = ref StepMap.empty (* step_id -> stack *)
 
 let push_stack (step,rid) goal_id rule siblings =
-  let this_stack = try GoalMap.find goal_id !gstacks with Not_found -> [] in
+  (* If a step pushes multiple frames, such as an implication with
+     multiple clauses on the LHS, then a stack for this step already
+     exists; we need to make sure to properly push to it, instead of
+     overriding *)
+  let this_stack =
+    try StepMap.find (step,rid) !fstacks
+    with Not_found ->
+      try GoalMap.find goal_id !gstacks
+      with Not_found -> [] in
   let stack = { rule; step_id = step; runtime_id = rid } :: this_stack in
   fstacks := StepMap.add (step,rid) stack !fstacks;
+  (* We assume that a step pushes all its frames before we start
+     processing siblings, so we can safely override the siblings'
+     stacks *)
   List.iter (fun g -> gstacks := GoalMap.add g stack !gstacks) siblings
 
 let update_stack (step,rid) goal_id rule =
@@ -325,7 +336,7 @@ try
   timestamp,match decode_step items with
   | `Findall (({ goal_id; payload = [pred;goal] },_),start) ->
       let result = all "user:assign" decode_string items in
-      let () = push_stack (step,rid) goal_id (`BuiltinRule (`FFI "findall")) [] in
+      let () = push_stack (step,rid) goal_id (`BuiltinRule ({ kind = `FFI; name = "findall"; payload = [] })) [] in
       let stop =
         match has "user:assign" items with
         | None -> assert false
@@ -334,15 +345,15 @@ try
   | `Suspend ({ goal_id; payload = [pred;goal] },_) ->
        let sibling = all "user:subgoal" decode_int items in
        assert(List.length sibling = 1);
-       let () = push_stack (step,rid) goal_id (`BuiltinRule (`Logic "suspend")) sibling in
+       let () = push_stack (step,rid) goal_id (`BuiltinRule ({ kind = `Logic; name = "suspend"; payload = [] })) sibling in
        Suspend {goal_id;goal;sibling = List.hd sibling} 
   | `Cut ({ goal_id; payload = [pred;goal] },_) ->
-      let () = push_stack (step,rid) goal_id (`BuiltinRule (`FFI "!")) [] in
+      let () = push_stack (step,rid) goal_id (`BuiltinRule ({ kind = `FFI; name = "!"; payload = []})) [] in
       let cutted = all "user:rule:cut:branch" decode_cut items in
       Cut (goal_id,cutted)
   | `Resumption l ->
       let resumed = List.map (fun ({ goal_id; payload },_ as x) ->
-        let () = update_stack (step,rid) goal_id (`BuiltinRule (`Logic "resume")) in
+        let () = update_stack (step,rid) goal_id (`BuiltinRule ({ kind = `Logic; name = "resume"; payload = [] })) in
         goal_id, decode_string x) l in
       Resume resumed
   | `CHR(chr_store_before,chr_store_after) ->
@@ -382,8 +393,22 @@ try
           assert(List.length events = 1);
           let _, events = List.hd events in
           Builtin { name; outcome; events = List.map decode_infer_event events  }
+        else if name = "implication" then
+          let new_hyps = match has "user:new-hyps" items with
+            | Some ({ payload = hyps },_) -> hyps
+            (* Backwards compatibility: treat a missing new-hyps item
+               as empty, which renders as before *)
+            | _ -> [] in
+          let () =
+            push_stack (step,rid) goal_id (`BuiltinRule ({ kind = `Logic; name = name; payload = new_hyps })) siblings
+          in
+          let name = { kind = `Logic; name = name; payload = [] } in
+          (* Every step needs to push a stack, even a degenerate ([] => P) *)
+          if new_hyps = [] then
+            push_stack (step,rid) goal_id (`BuiltinRule name) siblings;
+          Builtin { name; outcome; events = [] }
         else
-          let name = `Logic name in
+          let name = { kind = `Logic; name = name; payload = [] } in
           let () = push_stack (step,rid) goal_id (`BuiltinRule name) siblings in
           let events = all_infer_event_chains "user:rule:builtin:name" items in (* ??? *)
           let events =

@@ -4109,6 +4109,8 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        let clauses, pdiff, lcs = clausify ~tail_cut:(ik = ImplBang) ~loc p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
+       (* clausify returns the clauses right-to-left, but we want to report them left-to-right *)
+       [%spyl "user:new-hyps" ~rid ~gid (fun f (hd,c) -> ppclause f ~hd c) (List.rev clauses)];
        [%spy "user:rule:implication" ~rid ~gid pp_string "success"];
        [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts cutto_alts]
     | Builtin(Pi, [arg]) -> [%spy "user:rule" ~rid ~gid pp_string "pi"];

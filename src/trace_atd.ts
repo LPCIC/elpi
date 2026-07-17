@@ -77,7 +77,7 @@ export type Attempt = {
 }
 
 export type Rule =
-| { kind: 'BuiltinRule'; value: BuiltinName }
+| { kind: 'BuiltinRule'; value: BuiltinRule }
 | { kind: 'UserRule'; value: UserRule }
 
 export type UserRule = {
@@ -85,9 +85,15 @@ export type UserRule = {
   rule_loc: Location;
 }
 
-export type BuiltinName =
-| { kind: 'Logic'; value: string }
-| { kind: 'FFI'; value: string }
+export type BuiltinKind =
+| { kind: 'Logic' }
+| { kind: 'FFI' }
+
+export type BuiltinRule = {
+  name: string;
+  kind: BuiltinKind;
+  payload: string[];
+}
 
 export type Location =
 | { kind: 'File'; value: FileLocation }
@@ -411,7 +417,7 @@ export function readAttempt(x: any, context: any = x): Attempt {
 export function writeRule(x: Rule, context: any = x): any {
   switch (x.kind) {
     case 'BuiltinRule':
-      return ['BuiltinRule', writeBuiltinName(x.value, x)]
+      return ['BuiltinRule', writeBuiltinRule(x.value, x)]
     case 'UserRule':
       return ['UserRule', writeUserRule(x.value, x)]
   }
@@ -421,7 +427,7 @@ export function readRule(x: any, context: any = x): Rule {
   _atd_check_json_tuple(2, x, context)
   switch (x[0]) {
     case 'BuiltinRule':
-      return { kind: 'BuiltinRule', value: readBuiltinName(x[1], x) }
+      return { kind: 'BuiltinRule', value: readBuiltinRule(x[1], x) }
     case 'UserRule':
       return { kind: 'UserRule', value: readUserRule(x[1], x) }
     default:
@@ -444,26 +450,41 @@ export function readUserRule(x: any, context: any = x): UserRule {
   };
 }
 
-export function writeBuiltinName(x: BuiltinName, context: any = x): any {
+export function writeBuiltinKind(x: BuiltinKind, context: any = x): any {
   switch (x.kind) {
     case 'Logic':
-      return ['Logic', _atd_write_string(x.value, x)]
+      return 'Logic'
     case 'FFI':
-      return ['FFI', _atd_write_string(x.value, x)]
+      return 'FFI'
   }
 }
 
-export function readBuiltinName(x: any, context: any = x): BuiltinName {
-  _atd_check_json_tuple(2, x, context)
-  switch (x[0]) {
+export function readBuiltinKind(x: any, context: any = x): BuiltinKind {
+  switch (x) {
     case 'Logic':
-      return { kind: 'Logic', value: _atd_read_string(x[1], x) }
+      return { kind: 'Logic' }
     case 'FFI':
-      return { kind: 'FFI', value: _atd_read_string(x[1], x) }
+      return { kind: 'FFI' }
     default:
-      _atd_bad_json('BuiltinName', x, context)
+      _atd_bad_json('BuiltinKind', x, context)
       throw new Error('impossible')
   }
+}
+
+export function writeBuiltinRule(x: BuiltinRule, context: any = x): any {
+  return {
+    'name': _atd_write_required_field('BuiltinRule', 'name', _atd_write_string, x.name, x),
+    'kind': _atd_write_required_field('BuiltinRule', 'kind', writeBuiltinKind, x.kind, x),
+    'payload': _atd_write_required_field('BuiltinRule', 'payload', _atd_write_array(_atd_write_string), x.payload, x),
+  };
+}
+
+export function readBuiltinRule(x: any, context: any = x): BuiltinRule {
+  return {
+    name: _atd_read_required_field('BuiltinRule', 'name', _atd_read_string, x['name'], x),
+    kind: _atd_read_required_field('BuiltinRule', 'kind', readBuiltinKind, x['kind'], x),
+    payload: _atd_read_required_field('BuiltinRule', 'payload', _atd_read_array(_atd_read_string), x['payload'], x),
+  };
 }
 
 export function writeLocation(x: Location, context: any = x): any {

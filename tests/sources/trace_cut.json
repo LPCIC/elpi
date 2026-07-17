@@ -59,11 +59,13 @@
 {"step" : 10,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 11,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["12"]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["(q :- !) => q"]}
+{"step" : 10,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:new-hyps","payload" : ["q :- ."]}
 {"step" : 10,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","(q :- !) => q"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 12,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["13"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["q"]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:new-hyps","payload" : ["q :- !."]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:rule:implication","payload" : ["success"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["q","q"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 13,"runtime_id" : 0,"name" : "user:rule","payload" : ["backchain"]}

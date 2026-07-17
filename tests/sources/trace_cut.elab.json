@@ -565,7 +565,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "(q :- !) => q", "goal_id": 12 } ],
@@ -575,7 +578,14 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "q :- ." ]
+              }
+            ],
             "step_id": 10,
             "runtime_id": 0
           },
@@ -616,7 +626,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "q", "goal_id": 13 } ],
@@ -626,12 +639,26 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "q :- !." ]
+              }
+            ],
             "step_id": 11,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "q :- ." ]
+              }
+            ],
             "step_id": 10,
             "runtime_id": 0
           },
@@ -693,12 +720,26 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "q :- !." ]
+              }
+            ],
             "step_id": 11,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              {
+                "name": "implication",
+                "kind": "Logic",
+                "payload": [ "q :- ." ]
+              }
+            ],
             "step_id": 10,
             "runtime_id": 0
           },

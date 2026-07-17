@@ -1,0 +1,15 @@
+pred x0. pred z0.
+pred x1. pred y1. pred z1.
+pred x2. pred y2. pred z2.
+pred x3. pred y3. pred z3.
+pred x4. pred y4. pred z4.
+pred z5.
+
+main :-
+  (x0 => z0);
+  ((x1, y1) => z1);
+  ([x2, y2] ==> z2);
+  ([x3, y3] =!=> z3);
+  ((x4 :- y4) =!=> z4);
+  ([] => z5);
+  true.

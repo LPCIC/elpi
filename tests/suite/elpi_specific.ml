@@ -460,6 +460,21 @@ let () = declare "trace-browser-elab-cut"
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_cut.elab.json" })
   ()
 
+let sample = mk_tmp_file "trace_implication.json" ".new"
+let () = declare "trace-browser-implication"
+  ~source_elpi:"trace_implication.elpi"
+  ~description:"trace generation"
+    ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_implication.json" })
+  ()
+
+let sample = mk_tmp_file "trace_implication.elab.json" ".new"
+let () = declare "trace-browser-elab-implication"
+  ~source_json:"trace_implication.json"
+  ~description:"trace elaboration"
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_implication.elab.json" })
+  ()
+
 let sample = Filename.temp_file "broken_trace1.elab.json" ".new"
 let () = declare "trace-browser-elab-broken1"
   ~source_json:"broken_trace1.json"

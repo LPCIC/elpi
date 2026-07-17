@@ -429,7 +429,10 @@
         "findall_solution_text": [ "X0 := [p 1, p 2, p 3]" ],
         "findall_stack": [
           {
-            "rule": [ "BuiltinRule", [ "FFI", "findall" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "findall", "kind": "FFI", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -489,7 +492,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "print", "kind": "FFI", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [],
@@ -499,7 +505,10 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "print", "kind": "FFI", "payload": [] }
+            ],
             "step_id": 4,
             "runtime_id": 0
           },

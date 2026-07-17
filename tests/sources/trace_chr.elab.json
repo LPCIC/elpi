@@ -165,7 +165,10 @@
         "suspend_sibling": { "goal_text": "even X0", "goal_id": 10 },
         "suspend_stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "suspend", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -223,7 +226,10 @@
         "suspend_sibling": { "goal_text": "true", "goal_id": 11 },
         "suspend_stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "suspend", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 4,
             "runtime_id": 0
           },
@@ -264,7 +270,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "eq", "kind": "Logic", "payload": [] }
+              ],
               "events": [
                 [ "Assign", "X0 := s X1" ], [ "ResumeGoal", [ 11, 10 ] ]
               ]
@@ -276,7 +285,9 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "rule": [
+              "BuiltinRule", { "name": "eq", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 5,
             "runtime_id": 0
           },
@@ -372,12 +383,18 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "resume" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "resume", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 6,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "suspend", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 4,
             "runtime_id": 0
           },
@@ -461,12 +478,18 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "resume" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "resume", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 6,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "suspend", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -593,12 +616,18 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "resume" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "resume", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 6,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "suspend", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -656,7 +685,10 @@
         "suspend_sibling": { "goal_text": "odd X1", "goal_id": 14 },
         "suspend_stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "suspend", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 10,
             "runtime_id": 0
           },
@@ -699,12 +731,18 @@
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "resume" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "resume", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 6,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "suspend", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -948,7 +986,10 @@
         "suspend_sibling": { "goal_text": "even X1", "goal_id": 19 },
         "suspend_stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "suspend", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 13,
             "runtime_id": 0
           },
@@ -1244,7 +1285,10 @@
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [
+                "BuiltinRule",
+                { "name": "implication", "kind": "Logic", "payload": [] }
+              ],
               "events": []
             },
             "siblings": [ { "goal_text": "fail", "goal_id": 24 } ],
@@ -1254,7 +1298,18 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "implication", "kind": "Logic", "payload": [] }
+            ],
+            "step_id": 15,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "BuiltinRule",
+              { "name": "implication", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 15,
             "runtime_id": 0
           }
@@ -1277,7 +1332,18 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [
+              "BuiltinRule",
+              { "name": "implication", "kind": "Logic", "payload": [] }
+            ],
+            "step_id": 15,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "BuiltinRule",
+              { "name": "implication", "kind": "Logic", "payload": [] }
+            ],
             "step_id": 15,
             "runtime_id": 0
           }
