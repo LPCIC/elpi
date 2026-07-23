@@ -403,9 +403,6 @@ try
             push_stack (step,rid) goal_id (`BuiltinRule ({ kind = `Logic; name = name; payload = new_hyps })) siblings
           in
           let name = { kind = `Logic; name = name; payload = [] } in
-          (* Every step needs to push a stack, even a degenerate ([] => P) *)
-          if new_hyps = [] then
-            push_stack (step,rid) goal_id (`BuiltinRule name) siblings;
           Builtin { name; outcome; events = [] }
         else
           let name = { kind = `Logic; name = name; payload = [] } in

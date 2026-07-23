@@ -6169,14 +6169,6 @@
             ],
             "step_id": 18,
             "runtime_id": 0
-          },
-          {
-            "rule": [
-              "BuiltinRule",
-              { "name": "implication", "kind": "Logic", "payload": [] }
-            ],
-            "step_id": 18,
-            "runtime_id": 0
           }
         ]
       }
@@ -6215,14 +6207,6 @@
               "BuiltinRule", { "name": "eq", "kind": "Logic", "payload": [] }
             ],
             "step_id": 19,
-            "runtime_id": 0
-          },
-          {
-            "rule": [
-              "BuiltinRule",
-              { "name": "implication", "kind": "Logic", "payload": [] }
-            ],
-            "step_id": 18,
             "runtime_id": 0
           },
           {

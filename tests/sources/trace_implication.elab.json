@@ -2612,14 +2612,6 @@
           },
           {
             "rule": [
-              "BuiltinRule",
-              { "name": "implication", "kind": "Logic", "payload": [] }
-            ],
-            "step_id": 23,
-            "runtime_id": 0
-          },
-          {
-            "rule": [
               "UserRule",
               {
                 "rule_text": "(A0 ; _) :- A0.",
@@ -2769,14 +2761,6 @@
         "successful_attempts": [],
         "more_successful_attempts": [],
         "stack": [
-          {
-            "rule": [
-              "BuiltinRule",
-              { "name": "implication", "kind": "Logic", "payload": [] }
-            ],
-            "step_id": 23,
-            "runtime_id": 0
-          },
           {
             "rule": [
               "BuiltinRule",
