@@ -1149,7 +1149,8 @@
         "stack": [
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 11,
             "runtime_id": 0
@@ -1293,7 +1294,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 11,
             "runtime_id": 0
@@ -1451,7 +1453,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 11,
             "runtime_id": 0
@@ -5392,7 +5395,11 @@
                         {
                           "rule": [
                             "BuiltinRule",
-                            { "name": "pi", "kind": "Logic", "payload": [] }
+                            {
+                              "name": "pi",
+                              "kind": "Logic",
+                              "payload": [ "c0" ]
+                            }
                           ],
                           "step_id": 31,
                           "runtime_id": 1
@@ -5491,7 +5498,11 @@
                         {
                           "rule": [
                             "BuiltinRule",
-                            { "name": "pi", "kind": "Logic", "payload": [] }
+                            {
+                              "name": "pi",
+                              "kind": "Logic",
+                              "payload": [ "c0" ]
+                            }
                           ],
                           "step_id": 31,
                           "runtime_id": 1
@@ -5623,7 +5634,11 @@
                         {
                           "rule": [
                             "BuiltinRule",
-                            { "name": "pi", "kind": "Logic", "payload": [] }
+                            {
+                              "name": "pi",
+                              "kind": "Logic",
+                              "payload": [ "c0" ]
+                            }
                           ],
                           "step_id": 31,
                           "runtime_id": 1
@@ -5775,7 +5790,11 @@
                         {
                           "rule": [
                             "BuiltinRule",
-                            { "name": "pi", "kind": "Logic", "payload": [] }
+                            {
+                              "name": "pi",
+                              "kind": "Logic",
+                              "payload": [ "c0" ]
+                            }
                           ],
                           "step_id": 31,
                           "runtime_id": 1
@@ -5917,7 +5936,11 @@
                         {
                           "rule": [
                             "BuiltinRule",
-                            { "name": "pi", "kind": "Logic", "payload": [] }
+                            {
+                              "name": "pi",
+                              "kind": "Logic",
+                              "payload": [ "c0" ]
+                            }
                           ],
                           "step_id": 31,
                           "runtime_id": 1
@@ -6059,7 +6082,11 @@
                         {
                           "rule": [
                             "BuiltinRule",
-                            { "name": "pi", "kind": "Logic", "payload": [] }
+                            {
+                              "name": "pi",
+                              "kind": "Logic",
+                              "payload": [ "c0" ]
+                            }
                           ],
                           "step_id": 31,
                           "runtime_id": 1
@@ -6270,7 +6297,8 @@
         "stack": [
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -6402,7 +6430,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -6566,7 +6595,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -6758,7 +6788,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -6932,7 +6963,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -7127,7 +7159,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -7337,7 +7370,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -7689,7 +7723,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -7960,7 +7995,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -8163,7 +8199,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
@@ -8382,7 +8419,8 @@
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 20,
             "runtime_id": 0
