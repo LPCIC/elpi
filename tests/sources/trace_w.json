@@ -95,6 +95,7 @@
 {"step" : 11,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 0,"name" : "user:rule","payload" : ["pi"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 20,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["21"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of c0 (mono X5) => of c0 (mono X6)"]}
+{"step" : 11,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:new-quant","payload" : ["c0"]}
 {"step" : 11,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:rule:pi","payload" : ["success"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","of c0 (mono X5) => of c0 (mono X6)"]}
 {"step" : 12,"kind" : ["Info"],"goal_id" : 21,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
@@ -400,6 +401,7 @@
 {"step" : 31,"kind" : ["Info"],"goal_id" : 54,"runtime_id" : 1,"name" : "user:rule","payload" : ["pi"]}
 {"step" : 31,"kind" : ["Info"],"goal_id" : 54,"runtime_id" : 1,"name" : "user:subgoal","payload" : ["60"]}
 {"step" : 31,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:newgoal","payload" : ["copy (uvar frozen--452 []) c0 =>\n bind [] [] (uvar frozen--452 [] ===> uvar frozen--452 []) (X13 c0)"]}
+{"step" : 31,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:new-quant","payload" : ["c0"]}
 {"step" : 31,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:rule:pi","payload" : ["success"]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:curgoal","payload" : ["=>","copy (uvar frozen--452 []) c0 =>\n bind [] [] (uvar frozen--452 [] ===> uvar frozen--452 []) (X13 c0)"]}
 {"step" : 32,"kind" : ["Info"],"goal_id" : 60,"runtime_id" : 1,"name" : "user:rule","payload" : ["implication"]}
@@ -464,6 +466,7 @@
 {"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:rule","payload" : ["pi"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["67"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["of c0 (all any c1 \\ mono (c1 ===> c1)) => of (app c0 (global [])) (mono X3)"]}
+{"step" : 20,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:new-quant","payload" : ["c0"]}
 {"step" : 20,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:rule:pi","payload" : ["success"]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","of c0 (all any c1 \\ mono (c1 ===> c1)) => of (app c0 (global [])) (mono X3)"]}
 {"step" : 21,"kind" : ["Info"],"goal_id" : 67,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}

@@ -16,11 +16,13 @@
 {"step" : 3,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:rule","payload" : ["pi"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 6,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["7"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["sigma c1 \\ fail => (true , fail)"]}
+{"step" : 3,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:new-quant","payload" : ["c0"]}
 {"step" : 3,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule:pi","payload" : ["success"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["sigma","sigma c1 \\ fail => (true , fail)"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:rule","payload" : ["sigma"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 7,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["8"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:newgoal","payload" : ["fail => (true , fail)"]}
+{"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:new-quant","payload" : ["X0^1"]}
 {"step" : 4,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule:sigma","payload" : ["success"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","fail => (true , fail)"]}
 {"step" : 5,"kind" : ["Info"],"goal_id" : 8,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}

@@ -4116,6 +4116,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     | Builtin(Pi, [arg]) -> [%spy "user:rule" ~rid ~gid pp_string "pi"];
        let f = get_lambda_body ~depth arg in
        let gid[@trace] = make_subgoal_id gid ((depth+1,f)[@trace]) in
+       [%spy "user:new-quant" ~rid ~gid pp_constant depth];
        [%spy "user:rule:pi" ~rid ~gid pp_string "success"];
        [%tcall run (depth+1) p f (gid[@trace]) gs next alts cutto_alts]
     | Builtin(Sigma, [arg]) -> [%spy "user:rule" ~rid ~gid pp_string "sigma"];
@@ -4123,6 +4124,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
        let v = UVar(oref ~depth C.dummy, 0) in
        let fv = subst depth [v] f in
        let gid[@trace] = make_subgoal_id gid ((depth,fv)[@trace]) in
+       [%spy "user:new-quant" ~rid ~gid (uppterm depth [] ~argsdepth:0 empty_env) v];
        [%spy "user:rule:sigma" ~rid ~gid pp_string "success"];
        [%tcall run depth p fv (gid[@trace]) gs next alts cutto_alts]
     | Builtin(Delay,args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (show_builtin_predicate C.show Delay)];
