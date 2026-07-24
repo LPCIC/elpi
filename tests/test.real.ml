@@ -197,17 +197,19 @@ let main ln_nb sources plot timeout promote executables namef catskip timetool s
   if ko_list = [] then exit 0 else exit 1
 
 open Cmdliner
+open Cmdliner.Term.Syntax
 
 let runners =
   let doc = "Run tests against $(docv)." in
   Arg.(non_empty & opt_all non_dir_file [] & info ["runner"] ~docv:"RUNNER" ~doc)
 
-let valid_category_parser c =
+let valid_category =
+  let parser c =
   if List.exists (fun (c',_) -> c = c') (Test.names ())
-  then `Ok c
-  else `Error ("unknown category " ^ c)
-
-let valid_category = Arg.(valid_category_parser,conv_printer string)
+    then Ok c
+    else Error ("unknown category " ^ c)
+  and pp ppf p = Format.fprintf ppf "%s" p in
+  Arg.Conv.make ~docv:"category" ~parser ~pp ()
 
 let namef =
   let doc = "Run only tests with a name that matches $(docv)." in
@@ -254,10 +256,14 @@ let info =
     |> List.map (fun (cat,ts) -> [ `I(cat,String.concat ", " ts) ])
     |> List.concat in
   let man = [`Blocks [`S "KNOWN TESTS" ; `Blocks tests ] ] in
-  (Term.info ~doc ~exits:Term.default_exits ~man "test") [@ warning "-A"]
+  (Cmd.info ~doc ~exits:Cmd.Exit.defaults ~man "test") [@ warning "-A"]
   (* ocaml >= 4.08 | Cmd.info ~doc ~exits:Cmd.Exit.defaults ~man "test" *)
 ;;
 
 let () =
-  (Term.exit @@ Term.eval (Term.(const main $ ln_nb $ src $ plot $ timeout $ promote $ runners $ namef $ catskip $ mem $ seed $ stop_on_first_error),info)) [@ warning "-A"]
-  (* ocaml >= 4.08 | exit @@ Cmd.eval (Cmd.v info Term.(const main $ src $ plot $ timeout $ runners $ namef $ catskip $ mem $ seed)) *)
+  let cmd =
+    Cmd.make info @@
+     let+ ln_nb and+ src and+ plot and+ timeout and+ promote and+ runners and+ namef and+ catskip and+ mem and+ seed and+ stop_on_first_error in
+   main ln_nb src plot timeout promote runners namef catskip mem seed stop_on_first_error [@ warning "-A"]
+  in
+  exit (Cmd.eval cmd)

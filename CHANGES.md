@@ -3,6 +3,9 @@
 - Trace:
   - Add information about added clauses to Implication cards
 
+- Tests:
+  - Port to cmdliner v2
+
 # v3.7.2 (July 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
