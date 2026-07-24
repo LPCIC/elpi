@@ -160,7 +160,8 @@
         "stack": [
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 3,
             "runtime_id": 0
@@ -219,14 +220,15 @@
           {
             "rule": [
               "BuiltinRule",
-              { "name": "sigma", "kind": "Logic", "payload": [] }
+              { "name": "sigma", "kind": "Logic", "payload": [ "X0^1" ] }
             ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 3,
             "runtime_id": 0
@@ -295,14 +297,15 @@
           {
             "rule": [
               "BuiltinRule",
-              { "name": "sigma", "kind": "Logic", "payload": [] }
+              { "name": "sigma", "kind": "Logic", "payload": [ "X0^1" ] }
             ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 3,
             "runtime_id": 0
@@ -382,14 +385,15 @@
           {
             "rule": [
               "BuiltinRule",
-              { "name": "sigma", "kind": "Logic", "payload": [] }
+              { "name": "sigma", "kind": "Logic", "payload": [ "X0^1" ] }
             ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 3,
             "runtime_id": 0
@@ -496,14 +500,15 @@
           {
             "rule": [
               "BuiltinRule",
-              { "name": "sigma", "kind": "Logic", "payload": [] }
+              { "name": "sigma", "kind": "Logic", "payload": [ "X0^1" ] }
             ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 3,
             "runtime_id": 0
@@ -588,14 +593,15 @@
           {
             "rule": [
               "BuiltinRule",
-              { "name": "sigma", "kind": "Logic", "payload": [] }
+              { "name": "sigma", "kind": "Logic", "payload": [ "X0^1" ] }
             ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
             "rule": [
-              "BuiltinRule", { "name": "pi", "kind": "Logic", "payload": [] }
+              "BuiltinRule",
+              { "name": "pi", "kind": "Logic", "payload": [ "c0" ] }
             ],
             "step_id": 3,
             "runtime_id": 0

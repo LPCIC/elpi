@@ -393,6 +393,14 @@ try
           assert(List.length events = 1);
           let _, events = List.hd events in
           Builtin { name; outcome; events = List.map decode_infer_event events  }
+        else if name = "pi" || name = "sigma" then
+          let new_term = match has "user:new-quant" items with
+            | Some ({ payload = var }, _) -> var
+            | _ -> [] in
+          let name = { kind = `Logic; name; payload = [] } in
+          let () =
+            push_stack (step,rid) goal_id (`BuiltinRule ({ name with payload = new_term })) siblings in
+          Builtin { name; outcome; events = [] }
         else if name = "implication" then
           let new_hyps = match has "user:new-hyps" items with
             | Some ({ payload = hyps },_) -> hyps
