@@ -1304,14 +1304,6 @@
             ],
             "step_id": 15,
             "runtime_id": 0
-          },
-          {
-            "rule": [
-              "BuiltinRule",
-              { "name": "implication", "kind": "Logic", "payload": [] }
-            ],
-            "step_id": 15,
-            "runtime_id": 0
           }
         ]
       }
@@ -1331,14 +1323,6 @@
         "successful_attempts": [],
         "more_successful_attempts": [],
         "stack": [
-          {
-            "rule": [
-              "BuiltinRule",
-              { "name": "implication", "kind": "Logic", "payload": [] }
-            ],
-            "step_id": 15,
-            "runtime_id": 0
-          },
           {
             "rule": [
               "BuiltinRule",
