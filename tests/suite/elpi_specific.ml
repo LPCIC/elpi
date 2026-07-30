@@ -175,6 +175,11 @@ let () = declare "spill2"
   ~description:"spilling 2 arguments"
   ()
 
+let () = declare "spill-chr"
+  ~source_elpi:"bug_419.elpi"
+  ~description:"spilling in chr"
+  ()
+
 let () = declare "spill_sigma"
   ~source_elpi:"spill_sigma.elpi"
   ~description:"spilling under sigma"
@@ -587,3 +592,4 @@ let () = declare "macro_uv"
   ~description:"refreshing of macro body"
   ~expectation:Success
   ()
+
