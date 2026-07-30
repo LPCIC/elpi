@@ -1503,15 +1503,15 @@ end = struct
   let check_and_spill_chr ~flags ~det_check_time ~time ~unknown ~type_abbrevs ~kinds ~types r =
     let unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
 
+    let guard = Option.map (Spilling.main ~type_abbrevs ~types) r.guard in
+    let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types ~type_abbrevs conclusion }) r.new_goal in
     if not flags.skip_det_checking then
         time_this det_check_time (fun () ->
           Option.iter (fun { Ast.Chr.conclusion } ->
-            Determinacy_checker.check_chr_guard_and_newgoal ~type_abbrevs ~types ~unknown ~guard:r.guard ~newgoal:conclusion)
-            r.new_goal);
+            Determinacy_checker.check_chr_guard_and_newgoal ~type_abbrevs ~types ~unknown ~guard ~newgoal:conclusion)
+            new_goal);
     if Option.fold ~none:false ~some:(fun x -> has_cut ~types x.Ast.Chr.conclusion) r.new_goal then
       error ~loc:r.loc "CHR new goals cannot contain cut";
-    let guard = Option.map (Spilling.main ~type_abbrevs ~types) r.guard in
-    let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types ~type_abbrevs conclusion }) r.new_goal in
     unknown, { r with guard; new_goal }
     
   let check ~flags st ~base u : checked_compilation_unit =

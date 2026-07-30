@@ -1,0 +1,10 @@
+func f -> int.
+
+func zero -> int.
+zero 0.
+
+constraint f {
+  rule (f X) <=> ({zero} = X).
+}
+
+main.
