@@ -1,0 +1,9 @@
+func p int -> int.
+func q -> int.
+
+p X 3 :- !.
+
+q X :- !, pi x\ p x 5 => p x X.
+
+main :-
+  std.findall (q X) L, print L.

@@ -1981,12 +1981,16 @@ end = struct
       match cl_overlap with
         | None -> ()
         | Some cl_overlap ->
-          let rec filter_overlaps (arg_nb:int) has_cut : overlap_clause list -> 'a list = function
+          let rec filter_overlaps (arg_nb:int) : overlap_clause list -> 'a list = function
             | [] -> []
-            | x::xs when x.timestamp = cl.timestamp -> if x.has_cut then [] else filter_overlaps arg_nb has_cut xs
+            | x::xs when x.timestamp = cl.timestamp -> 
+              (* we have found the rule cl in the list, if it has no cut, all
+                 rules coming after are valid choice points *)
+              if x.has_cut then [] else xs
             | x::xs ->
-              if not x.has_cut && arg_nb = x.arg_nb then (x::filter_overlaps arg_nb has_cut xs)
-              else filter_overlaps arg_nb has_cut xs
+              (*the test arg_nb = x.arg_nb is to recognize variadic functions*)
+              if not x.has_cut && arg_nb = x.arg_nb then (x::filter_overlaps arg_nb xs)
+              else filter_overlaps arg_nb xs
           in
           let all_input_eigen_vars, all_input_catchall, hd = hd_query ~loc ~min_depth ~depth p args in
           (* Format.eprintf "Is_local:%b -- Has bang? %b -- rig_occ:%b -- is_chatchall:%b@." is_local cl_overlap.has_cut has_input_w_eigen_var is_catchall; *)
@@ -2004,13 +2008,11 @@ end = struct
             add_pred_w_eigen_var_no_cut p loc;
           if not is_local || (is_local && not cl_overlap.has_cut) then
             let all_overlapping = get_overlapping index p hd in
-            let overlapping =  filter_overlaps cl_overlap.arg_nb cl_overlap.has_cut all_overlapping in
+            let overlapping =  filter_overlaps cl_overlap.arg_nb all_overlapping in
             if overlapping <> [] then error_overlapping ~loc ~is_local p overlapping h
     in
 
-    (* Inspect the a local premise. If a local clause is found
-      it is added to the index and it check_clause is launched on it 
-    *)
+    (* If a local clause is found it is added to the index and check_clause is launched on it *)
     let rec check_local ~min_depth ~depth ~loc ~lcs index amap (t : term) : unit =
       let t = to_heap ~depth t in
       (* let t = R.hmove ~from:depth ~to_:(depth+lcs) t in *)
@@ -2053,7 +2055,6 @@ end = struct
       if not @@ can_overlap p then check_overlaps ~is_local ~loc ~min_depth ~depth cl (h,depth) cl_overlap p cl.args (0, C.Map.find p index);
       List.iter (check_local ~min_depth:depth ~loc ~depth ~lcs index amap) cl.hyps
     in
-(* state symbols ~loc pred_info cl body overlap_clause p amap *)
     check_clause ~min_depth:0 ~loc ~is_local:false ~lcs:0 ~depth:0 pred_info cl cl_st oc p amap;
     let pred_info = C.Map.fold (fun k v -> C.Map.add k {(C.Map.find k pred_info) with has_local_without_cut = Some v}) !preds_w_eigen_var_no_cut pred_info in
     pred_info 
