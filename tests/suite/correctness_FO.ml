@@ -225,7 +225,7 @@ let () = declare "trie"
 let () =
   let (!) x = Test.FailureOutput (Str.regexp x) in
   let mut_excl l1 l2 = !(Format.asprintf "line %d.*\n.*\n.*\n.*\n+.*line %d" l1 l2) in
-  let mut_excl_no_loc t = !("Mutual exclusion violated for rules of predicate " ^ t ^ ".\n.*\nThis rule overlaps with") in
+  let mut_excl_no_loc t b = !(Format.asprintf "Mutual exclusion violated for rules of predicate %s.\n.*\nThis %srule overlaps with"t (if b then "local " else "")) in
   let det_check l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*relational atom" l c) in
   let out_err l c = !(Format.asprintf "line %d, column %d.*\nDetCheck.*output" l c) in
   let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*" l c) in
@@ -255,8 +255,8 @@ let () =
       (* 96*) mut_excl_eigen 6 "foo"; mut_excl_eigen 6 "foo"; mut_excl_eigen 6 "foo"; Success; Success;             (*100*)
       (*101*) Success; mut_excl_eigen 5 "f";  duplicate_err 2 1; Success; Success;(*105*)
       (*106*) Success; constr_error 14 13; constr_error 14 13; mut_excl_eigen 9 "f"; Success; (*110*)
-      (*111*) mut_excl_eigen 5 "foo"; Success; mut_excl_no_loc "f"; Success; det_check 5 19;
-      (*116*) Success; det_check 5 2; det_check 7 2; Success
+      (*111*) mut_excl_eigen 5 "foo"; Success; mut_excl_no_loc "f" false; Success; det_check 5 19;
+      (*116*) Success; det_check 5 2; det_check 7 2; Success; mut_excl_no_loc "p" true
     |] in
   for i = 0 to Array.length status - 1 do
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
