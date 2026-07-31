@@ -129,16 +129,16 @@ let option_decl a = let open AlgebraicData in Decl {
   constructors = [
     K("none","",N,
       B None,
-      M (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
+      M (fun ~ok ~ko -> function None -> ok | _ -> ko ()));
     K("some","",A(a,N),
       B (fun x -> Some x),
-      M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
+      M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ()));
   ];
   }
 let option_alloc =
   let open AlgebraicData in
   allocate_constructors (Param option_decl)
-let option a = 
+let option a =
   let open AlgebraicData in
   declare_allocated option_alloc (option_decl a) |> ContextualConversion.(!<)
 
@@ -169,6 +169,12 @@ let diagnostic = let open API.AlgebraicData in declare {
 let unix_error_to_diagnostic e f a =
   mkERROR (Printf.sprintf "%s: %s" (if a <> "" then f ^ " " ^ a else f) (Unix.error_message e))
 
+let fail_or_mkERROR (d : diagnostic ioarg) msg =
+  match d with
+  | Data (OK)      -> raise No_clause    (* fail *)
+  | NoData         -> None               (* discard *)
+  | Data (ERROR _) -> Some (mkERROR msg) (* construct the needed error *)
+
 let cmp = let open AlgebraicData in declare {
   ty = TyName "cmp";
   doc = "Result of a comparison";
@@ -179,7 +185,6 @@ let cmp = let open AlgebraicData in declare {
     K("gt", "", N, B 1,   M(fun ~ok ~ko i -> if i > 0  then ok else ko ()))
   ];
   } |> ContextualConversion.(!<)
-
 
 type 'a unspec = Given of 'a | Unspec
 
@@ -231,7 +236,7 @@ external func pattern_match A -> A.|};
 
   LPCode "external func (pi) (func A).";
   LPCode "external func (sigma) (func A).";
-  
+
   MLData BuiltInData.int;
   MLData BuiltInData.string;
   MLData BuiltInData.float;
@@ -306,7 +311,7 @@ external func pattern_match A -> A.|};
             if p (out x) (out y) then () else raise No_clause
           else if ty2 string x y then let out = to_string in
             if p (out x) (out y) then () else raise No_clause
-          else 
+          else
         type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")")
      (* HACK: grundlagen.elpi uses the "age" of constants *)
      | Const t1, Const t2 ->
@@ -320,8 +325,8 @@ external func pattern_match A -> A.|};
       { p = (<=); psym = "=<"; pname = "le_" } ;
       { p = (>=); psym = ">="; pname = "ge_" } ]
 
-  @ 
-  let build_symb (spref, ty) = 
+  @
+  let build_symb (spref, ty) =
     let op_l = ["gt_";"lt_"; "le_"; "ge_"] in
     let sym_l = List.map (fun x -> spref ^ x) [">";"<"; "=<"; ">="] in
     let buildLPCode s op = LPCode (Printf.sprintf "func (%s) %s, %s.\nX %s Y :- %s X Y." s ty ty s op) in
@@ -357,11 +362,11 @@ triple_2 (triple _ B _) B.
 
 func triple_3 triple A B C -> C.
 triple_3 (triple _ _ C) C.
- 
+
 |};
 
   MLData option_decl;
-  
+
   MLData cmp;
 
   MLData diagnostic;
@@ -380,7 +385,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLData (in_stream);
 
   MLData (out_stream);
-     
+
   MLCode(Pred("open_in",
     In(string,     "FileName",
     Out(in_stream, "InStream",
@@ -489,6 +494,53 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   (fun _ ~depth -> !:(Unix.gettimeofday ()))),
   DocAbove);
 
+  MLCode (Pred ("sys.file_exists",
+    In  (string, "Path",
+    Easy "is like [Sys.file_exists]. It succeeds if the file at [Path] exists"),
+  (fun path ~depth:_ ->
+    match Sys.file_exists path with
+    | true -> ()
+    | false -> raise No_clause
+    | exception Sys_error e ->
+      (* No recoverable errors are produced by Sys.file_exists *)
+      Utils.error ("file_exists: " ^ e))),
+  DocAbove);
+
+  MLCode (Pred ("sys.is_directory",
+    In (string, "Path",
+    InOut ((ioarg diagnostic), "Diagnostic",
+    Easy "is like [Sys.is_directory]. It succeeds if [Diagnostic = ok] and [Path] is \
+a directory or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
+   (fun path d ~depth:_ ->
+     match Sys.is_directory path with
+     | false -> raise No_clause
+     | true -> !: mkOK
+     | exception Sys_error e -> ?: (fail_or_mkERROR d e))),
+  DocAbove);
+
+  MLCode (Pred ("sys.remove",
+    In (string, "Path",
+    InOut (ioarg diagnostic, "Diagnostic",
+    Easy "is like [Sys.remove]. It succeeds if [Diagnostic = ok] and the file at [Path] is \
+removed or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
+  (fun path d ~depth:_ ->
+    match Sys.remove path with
+    | () -> !: mkOK
+    | exception Sys_error e -> ?: (fail_or_mkERROR d e))),
+  DocAbove);
+
+  MLCode (Pred ("sys.rename",
+    In (string, "OldPath",
+    In (string, "NewPath",
+    InOut (ioarg diagnostic, "Diagnostic",
+    Easy "is like [Sys.rename]. It succeeds if [Diagnostic = ok] and the file at [OldPath] is \
+renamed to [NewPath] or [Diagnostic = error Msg] and [Msg] describes an encountered system error."))),
+  (fun old_path new_path d ~depth:_ ->
+    match Sys.rename old_path new_path with
+    | () -> !: mkOK
+    | exception Sys_error e -> ?: (fail_or_mkERROR d e))),
+  DocAbove);
+
   MLCode(Pred("getenv",
     In(string,  "VarName",
     Out(option string, "Value",
@@ -500,8 +552,66 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
     In(string, "Command",
     Out(int,   "RetVal",
     Easy       "executes Command and sets RetVal to the exit code")),
-  (fun s _ ~depth -> !:(Sys.command s))),
+   (fun s _ ~depth -> !:(Sys.command s))),
   DocAbove);
+
+  MLCode(Pred("sys.chdir",
+    In(string, "DirPath",
+    InOut(ioarg diagnostic, "Diagnostic",
+    Easy "is like [Sys.chdir]. It succeeds if [Diagnostic = ok] and the current working directory \
+is updated to [DirPath] or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
+  (fun path d ~depth:_ ->
+    match Sys.chdir path with
+    | () -> !: mkOK
+    | exception Sys_error e -> ?: (fail_or_mkERROR d e))),
+  DocAbove);
+
+  MLCode(Pred("sys.mkdir",
+    In(string, "DirPath",
+    In(int, "Permissions",
+    InOut(ioarg diagnostic, "Diagnostic",
+    Easy "is like [Sys.mkdir]. It succeeds if [Diagnostic = ok] and the directory [DirPath] is created \
+or [Diagnostic = error Msg] and [Msg] describes an encountered system error."))),
+  (fun path perms d ~depth:_ ->
+    match Sys.mkdir path perms with
+    | () -> !: mkOK
+    | exception Sys_error e -> ?: (fail_or_mkERROR d e))),
+  DocAbove);
+
+  MLCode(Pred("sys.rmdir",
+    In(string, "DirPath",
+    InOut(ioarg diagnostic, "Diagnostic",
+    Easy "is like [Sys.rmdir]. It succeeds if [Diagnostic = ok] and the directory [DirPath] is removed \
+or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
+  (fun path d ~depth:_ ->
+    match Sys.rmdir path with
+    | () -> !: mkOK
+    | exception Sys_error e -> ?: (fail_or_mkERROR d e))),
+  DocAbove);
+
+  MLCode(Pred("sys.getcwd",
+    Out(string, "DirPath",
+    InOut(ioarg diagnostic, "Diagnostic",
+    Easy "is like [Sys.getcwd]. It succeeds if [Diagnostic = ok] and [DirPath] is the current working \
+directory or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
+  (fun _ d ~depth:_ ->
+    match Sys.getcwd () with
+    | dir -> !: dir +! mkOK
+    | exception Sys_error e -> ?: None +? (fail_or_mkERROR d e))),
+  DocAbove);
+
+  MLCode (Pred ("sys.readdir",
+    In  (string, "DirPath",
+    Out (list string, "Contents",
+    InOut (ioarg diagnostic, "Diagnostic",
+    Easy "is like [Sys.readdir]. It succeeds if [Diagnostic = ok] and [Contents] is the list of files \
+in [DirPath] or [Diagnostic = error Msg] and [Msg] describes an encountered system error."))),
+  (fun path _ d ~depth:_ ->
+    match Sys.readdir path |> Array.to_list with
+    | contents -> !: contents +! mkOK
+    | exception Sys_error e -> ?: None +? (fail_or_mkERROR d e))),
+  DocAbove);
+
 
   LPDoc " -- Unix --";
 
@@ -707,7 +817,7 @@ rex_split Rx S L :- rex.split Rx S L.|};
 ;;
 
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
-   
+
 let safe = OpaqueData.declare {
   OpaqueData.name = "safe";
   pp = (fun fmt (id,l) ->
@@ -774,7 +884,7 @@ and same_term_list ~depth xs ys =
   | x::xs, y::ys -> same_term ~depth x y && same_term_list ~depth xs ys
   | _ -> false
 
-let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [ 
+let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [
 
   LPDoc "== Elpi nonlogical builtins =====================================";
 
@@ -1002,7 +1112,7 @@ if2 _  _  _  _  E :- !, E. |};
 ]
 ;;
 
-let elpi_stdlib_src = let open BuiltIn in [ 
+let elpi_stdlib_src = let open BuiltIn in [
 
   LPCode Builtin_stdlib.code
 
@@ -1010,7 +1120,7 @@ let elpi_stdlib_src = let open BuiltIn in [
 
 let ocaml_set_conv ~name (type a) (type b)
    (alpha : a Conversion.t) (module Set : Util.Set.S with type elt = a and type t = b) =
- 
+
 let set = OpaqueData.declare {
   OpaqueData.name;
   doc = "";
@@ -1023,7 +1133,7 @@ let set = OpaqueData.declare {
 
 let set = { set with Conversion.ty = Conversion.(TyName name) } in
 
-let open BuiltIn in let open BuiltInData in 
+let open BuiltIn in let open BuiltInData in
 
 set,
 [
@@ -1140,7 +1250,7 @@ set,
     (fun m f _ ~once ~depth _ _ state ->
 
       let state, m, gls = HOAdaptors.filter1 ~once ~depth ~filter:Set.filter f m state in
-      
+
       state, !: m, gls
     )),
   DocAbove);
@@ -1153,7 +1263,7 @@ set,
     (fun m f _ ~once ~depth _ _ state ->
 
       let state, m, gls = HOAdaptors.map1 ~once ~depth ~map:Set.map f m state in
-      
+
       state, !: m, gls
     )),
   DocAbove);
@@ -1167,7 +1277,7 @@ set,
     (fun m a f _ ~once ~depth _ _ state ->
 
       let state, a, gls = HOAdaptors.fold1 ~once ~depth ~fold:Set.fold f m a state in
-      
+
       state, !: a, gls
     )),
   DocAbove);
@@ -1182,19 +1292,19 @@ set,
   (fun m f _ _ ~once ~depth _ _ state ->
 
     let state, (m1, m2), gls = HOAdaptors.filter1 ~once ~depth ~filter:Set.partition f m state in
-    
+
     state, !: m1 +! m2, gls
   )),
   DocAbove);
 
 
-] 
+]
 ;;
 let ocaml_set ~name c m = snd (ocaml_set_conv ~name c m)
 
 let ocaml_map ~name (type a)
    (alpha : a Conversion.t) (module Map : Util.Map.S with type key = a) =
- 
+
 let closed_A = BuiltInData.closed "A" in
 let closed_B = BuiltInData.closed "B" in
 
@@ -1211,7 +1321,7 @@ let map = OpaqueData.declare {
 let map a = { map with
   Conversion.ty = Conversion.(TyApp(name,TyName a,[])) } in
 
-let open BuiltIn in let open BuiltInData in 
+let open BuiltIn in let open BuiltInData in
 
 [
   LPDoc ("CAVEAT: the type parameter of "^name^" must be a closed term");
@@ -1273,7 +1383,7 @@ let open BuiltIn in let open BuiltInData in
     (fun m f _ ~once ~depth _ _ state ->
 
       let state, m, gls = HOAdaptors.filter2 ~once ~depth ~filter:Map.filter f m state in
-      
+
       state, !: m, gls
     )),
   DocAbove);
@@ -1286,7 +1396,7 @@ let open BuiltIn in let open BuiltInData in
     (fun m f _ ~once ~depth _ _ state ->
 
       let state, m, gls = HOAdaptors.map2 ~once ~depth ~map:Map.mapi f m state in
-      
+
       state, !: m, gls
     )),
   DocAbove);
@@ -1301,31 +1411,31 @@ let open BuiltIn in let open BuiltInData in
     (fun m a f _ ~once ~depth _ _ state ->
 
       let state, a, gls = HOAdaptors.fold2 ~once ~depth ~fold:Map.fold f m a state in
-      
+
       state, !: a, gls
     )),
   DocAbove);
 
-] 
+]
 ;;
 
 module LocMap : Util.Map.S with type key = Ast.Loc.t = Util.Map.Make(Ast.Loc)
 
 let elpi_map =  let open BuiltIn in [
-  
+
     LPCode Builtin_map.code
-    
+
 ]
 
 let elpi_set =  let open BuiltIn in [
-  
+
     LPCode Builtin_set.code
-    
+
 ]
 
 let string_set, string_set_decl = ocaml_set_conv ~name:"std.string.set" BuiltInData.string (module API.Compile.StrSet)
 let int_set, int_set_decl = ocaml_set_conv ~name:"std.int.set"    BuiltInData.int    (module API.Utils.IntSet)
-let loc_set, loc_set_decl = ocaml_set_conv ~name:"std.loc.set"    BuiltInData.loc    (module API.Utils.LocSet) 
+let loc_set, loc_set_decl = ocaml_set_conv ~name:"std.loc.set"    BuiltInData.loc    (module API.Utils.LocSet)
 
 let elpi_stdlib =
   elpi_stdlib_src @
@@ -1339,11 +1449,11 @@ let elpi_stdlib =
    (fun sep l _ ~depth:_ -> !: (String.concat sep l))),
   DocAbove);
   ] @
-  ocaml_map ~name:"std.string.map" BuiltInData.string (module Util.StrMap) @ 
-  ocaml_map ~name:"std.int.map"    BuiltInData.int    (module Util.IntMap) @ 
-  ocaml_map ~name:"std.loc.map"    BuiltInData.loc    (module LocMap) @ 
-  string_set_decl @ 
-  int_set_decl @ 
+  ocaml_map ~name:"std.string.map" BuiltInData.string (module Util.StrMap) @
+  ocaml_map ~name:"std.int.map"    BuiltInData.int    (module Util.IntMap) @
+  ocaml_map ~name:"std.loc.map"    BuiltInData.loc    (module LocMap) @
+  string_set_decl @
+  int_set_decl @
   loc_set_decl @
   []
 ;;
