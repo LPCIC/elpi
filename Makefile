@@ -85,7 +85,7 @@ tests:
 	$(MAKE) build
 	dune runtest
 	ulimit -s $(STACK); OCAMLRUNPARAM=l=$(STACK) \
-		tests/test.exe \
+		dune exec tests/test.exe -- \
 		--seed $$RANDOM \
 		--promote $(PROMOTE) \
 		--ln_nb=$(LN_NB) \
