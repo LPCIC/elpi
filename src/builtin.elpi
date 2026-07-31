@@ -344,7 +344,7 @@ external func eof in_stream.
 % [gettimeofday T] sets T to the number of seconds elapsed since 1/1/1970
 external func gettimeofday -> float.
 
-% [getenv VarName Value] Like Sys.getenv
+% [getenv VarName Value] Like Sys.getenv_opt
 external func getenv string -> option string.
 
 % [system Command RetVal] executes Command and sets RetVal to the exit code
