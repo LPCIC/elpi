@@ -3213,16 +3213,19 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the clause will live in (depth+lcs)
  *)
 
-let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
+let add_tail_cut ~tail_cut hyps =
+  if tail_cut then (([],Builtin(Cut,[])) :: hyps) else hyps
+
+let rec claux1 loc get_mode vars depth tc hyps ts lts lcs t =
   [%trace "clausify" ~rid ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] ~argsdepth:0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
   | Discard -> error ?loc "ill-formed hypothetical clause: discard in head position"
   | Builtin(RImpl, [g2;g1]) ->
-     claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
+     claux1 loc get_mode vars depth tc ((ts,g1)::hyps) ts lts lcs g2
   | Builtin(RImpl, []) -> error ?loc "ill-formed hypothetical clause: :-"
   | Builtin(Impl, [g1;g2])->
-     claux1 loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
+     claux1 loc get_mode vars depth tc ((ts,g1)::hyps) ts lts lcs g2
   | Builtin(Impl, []) -> error ?loc "ill-formed hypothetical clause: =>"
   | Builtin(Sigma, [arg]) ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
@@ -3232,10 +3235,10 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
       match args with
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
-     claux1 loc get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
+     claux1 loc get_mode vars depth tc hyps (cst::ts) (lts+1) (lcs+1) b
   | Builtin(Pi, [arg]) ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
-     claux1 loc get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
+     claux1 loc get_mode (vars+1) depth tc hyps (Arg(vars,0)::ts) (lts+1) lcs b
   | Builtin(And, _) ->
      error ?loc "Conjunction in the head of a clause is not supported"
   | Const _
@@ -3245,7 +3248,7 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
          let g = hmove ~from:(depth+lts) ~to_:(depth+lts+lcs) g in
          let g = subst depth ts g in
           split_conj ~depth:(depth+lcs) g
-        ) hyps)) in
+        ) (add_tail_cut ~tail_cut:tc hyps))) in
      let g = hmove ~from:(depth+lts) ~to_:(depth+lts+lcs) g in
      let g = subst depth ts g in
 (*     Fmt.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
@@ -3270,10 +3273,10 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
      [%spy "dev:claudify:extra-clause" ~rid (ppclause ~hd) c];
      (hd,c), { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g } as r,args) when g != C.dummy ->
-     claux1 loc get_mode vars depth hyps ts lts lcs
+     claux1 loc get_mode vars depth tc hyps ts lts lcs
        (deref_uv ~to_:(depth+lts) r args)
   | AppUVar ({contents=g } as r,args) when g != C.dummy ->
-     claux1 loc get_mode vars depth hyps ts lts lcs
+     claux1 loc get_mode vars depth tc hyps ts lts lcs
        (deref_appuv ~to_:(depth+lts) r args)
   | Arg _ | AppArg _ -> raise Flex_head
   | Builtin (c,_) -> raise @@ CannotDeclareClauseForBuiltin(loc,c)
@@ -3282,9 +3285,6 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
   | UVar _ | AppUVar _ -> raise Flex_head
   | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause: [] / ::"
   end]
-
-let add_tail_cut ~tail_cut =
-  if tail_cut then [[],Builtin(Cut,[])] else []
 
 let clausify ~tail_cut ~loc { index = { idx = index } } ~depth t =
   let get_mode x =
@@ -3297,7 +3297,7 @@ let clausify ~tail_cut ~loc { index = { idx = index } } ~depth t =
   let clauses, program, lcs =
     List.fold_left (fun (clauses, programs, lcs) t ->
       let clause, program, lcs =
-        try claux1 loc get_mode 0 depth (add_tail_cut ~tail_cut) [] 0 lcs t
+        try claux1 loc get_mode 0 depth tail_cut [] [] 0 lcs t
         with
         | Flex_head -> error ?loc "The head of a clause cannot be flexible"
         | CannotDeclareClauseForBuiltin(loc,c) ->
@@ -3308,7 +3308,7 @@ let clausify ~tail_cut ~loc { index = { idx = index } } ~depth t =
 ;;
 
 let clausify1 ~tail_cut ~loc ~modes ~nargs ~depth t =
-  claux1 (Some loc) modes nargs depth (add_tail_cut ~tail_cut) [] 0 0 t
+  claux1 (Some loc) modes nargs depth tail_cut [] [] 0 0 t
 
 end (* }}} *)
 open Clausify
