@@ -3,6 +3,10 @@
 - Trace:
   - Add information about added clauses to Implication cards
 
+- Runtime:
+  - Fix `=!=>` adding a head cut instead of a tail cut when the LHS is
+    not known during compilation
+
 - Tests:
   - Port to cmdliner v2
 

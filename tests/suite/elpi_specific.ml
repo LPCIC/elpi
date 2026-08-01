@@ -551,6 +551,12 @@ let () = declare "implbang"
   ~expectation:Success
   ()
 
+let () = declare "implbang_runtime"
+  ~source_elpi:"implbang_runtime.elpi"
+  ~description:"runtime tail cut Hyps =!=>"
+  ~expectation:Success
+  ()
+
 
 let () = declare "dupta"
   ~source_elpi:"dupta.elpi"

@@ -1,0 +1,7 @@
+pred p o:int.
+p 1.
+
+func hyp -> list prop.
+hyp (pi x\ p x :- x = 2).
+
+main :- hyp H, H =!=> std.findall (p 1) [ _ ].
