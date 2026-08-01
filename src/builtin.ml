@@ -492,10 +492,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("getenv",
     In(string,  "VarName",
     Out(option string, "Value",
-    Easy      ("Like Sys.getenv"))),
-  (fun s _ ~depth ->
-     try !:(Some (Sys.getenv s))
-     with Not_found -> !: None)),
+    Easy       "Like Sys.getenv_opt")),
+  (fun s _ ~depth -> !:(Sys.getenv_opt s))),
   DocAbove);
 
   MLCode(Pred("system",
