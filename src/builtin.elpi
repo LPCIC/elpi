@@ -344,20 +344,23 @@ external func eof in_stream.
 % [gettimeofday T] sets T to the number of seconds elapsed since 1/1/1970
 external func gettimeofday -> float.
 
-% [file_exists Path] like [Sys.file_exists], is true if file at [Path]
-% exists
+% [file_exists Path] is like [Sys.file_exists]. It succeeds if the file at
+% [Path] exists
 external func file_exists string.
 
-% [is_directory Path Diagnostic] like [Sys.is_directory], is true if [Path]
-% is a directory
+% [is_directory Path Diagnostic] is like [Sys.is_directory]. It succeeds if
+% [Diagnostic = ok] and [Path] is a directory or [Diagnostic = error Msg]
+% and [Msg] describes an encountered system error.
 external func is_directory string -> diagnostic.
 
-% [remove Path Diagnostic] like [Sys.remove], is true unless [Diagnostic] is
-% [ok] and would otherwise assign to an [error Msg]
+% [remove Path Diagnostic] is like [Sys.remove]. It succeeds if [Diagnostic
+% = ok] and the file at [Path] is removed or [Diagnostic = error Msg] and
+% [Msg] describes an encountered system error.
 external func remove string -> diagnostic.
 
-% [rename OldPath NewPath Diagnostic] like [Sys.rename], is true unless
-% [Diagnostic] is [ok] and would otherwise assign to an [error Msg]
+% [rename OldPath NewPath Diagnostic] is like [Sys.rename]. It succeeds if
+% [Diagnostic = ok] and the file at [OldPath] is renamed to [NewPath] or
+% [Diagnostic = error Msg] and [Msg] describes an encountered system error.
 external func rename string, string -> diagnostic.
 
 % [getenv VarName Value] Like Sys.getenv_opt
@@ -366,24 +369,29 @@ external func getenv string -> option string.
 % [system Command RetVal] executes Command and sets RetVal to the exit code
 external func system string -> int.
 
-% [chdir DirPath Diagnostic] like [Sys.chdir], is true unless [Diagnostic]
-% is [ok] and would otherwise assign to an [error Msg]
+% [chdir DirPath Diagnostic] is like [Sys.chdir]. It succeeds if [Diagnostic
+% = ok] and the current working directory is updated to [DirPath] or
+% [Diagnostic = error Msg] and [Msg] describes an encountered system error.
 external func chdir string -> diagnostic.
 
-% [mkdir DirPath Permissions Diagnostic] like [Sys.mkdir], is true unless
-% [Diagnostic] is [ok] and would otherwise assign to an [error Msg]
+% [mkdir DirPath Permissions Diagnostic] is like [Sys.mkdir]. It succeeds if
+% [Diagnostic = ok] and the directory [DirPath] is created or [Diagnostic =
+% error Msg] and [Msg] describes an encountered system error.
 external func mkdir string, int -> diagnostic.
 
-% [rmdir DirPath Diagnostic] like [Sys.rmdir], is true unless [Diagnostic]
-% is [ok] and would otherwise assign to an [error Msg]
+% [rmdir DirPath Diagnostic] is like [Sys.rmdir]. It succeeds if [Diagnostic
+% = ok] and the directory [DirPath] is removed or [Diagnostic = error Msg]
+% and [Msg] describes an encountered system error.
 external func rmdir string -> diagnostic.
 
-% [getcwd DirPath Diagnostic] like [Sys.getcwd], is true unless [Diagnostic]
-% is [ok] and would otherwise assign to an [error Msg]
+% [getcwd DirPath Diagnostic] is like [Sys.getcwd]. It succeeds if
+% [Diagnostic = ok] and [DirPath] is the current working directory or
+% [Diagnostic = error Msg] and [Msg] describes an encountered system error.
 external func getcwd -> string, diagnostic.
 
-% [readdir DirPath Contents Diagnostic] like [Sys.readdir], is true unless
-% [Diagnostic] is [ok] and would otherwise assign to an [error Msg]
+% [readdir DirPath Contents Diagnostic] is like [Sys.readdir]. It succeeds
+% if [Diagnostic = ok] and [Contents] is the list of files in [DirPath] or
+% [Diagnostic = error Msg] and [Msg] describes an encountered system error.
 external func readdir string -> list string, diagnostic.
 
 %  -- Unix --

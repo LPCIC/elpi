@@ -496,7 +496,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
 
   MLCode (Pred ("file_exists",
     In  (string, "Path",
-    Easy "like [Sys.file_exists], is true if file at [Path] exists"),
+    Easy "is like [Sys.file_exists]. It succeeds if the file at [Path] exists"),
   (fun path ~depth:_ ->
     match Sys.file_exists path with
     | true -> ()
@@ -509,7 +509,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode (Pred ("is_directory",
     In (string, "Path",
     InOut ((ioarg diagnostic), "Diagnostic",
-    Easy "like [Sys.is_directory], is true if [Path] is a directory")),
+    Easy "is like [Sys.is_directory]. It succeeds if [Diagnostic = ok] and [Path] is \
+a directory or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
    (fun path d ~depth:_ ->
      match Sys.is_directory path with
      | false -> raise No_clause
@@ -520,7 +521,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode (Pred ("remove",
     In (string, "Path",
     InOut (ioarg diagnostic, "Diagnostic",
-    Easy "like [Sys.remove], is true unless [Diagnostic] is [ok] and would otherwise assign to an [error Msg]")),
+    Easy "is like [Sys.remove]. It succeeds if [Diagnostic = ok] and the file at [Path] is \
+removed or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
   (fun path d ~depth:_ ->
     match Sys.remove path with
     | () -> !: mkOK
@@ -531,7 +533,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
     In (string, "OldPath",
     In (string, "NewPath",
     InOut (ioarg diagnostic, "Diagnostic",
-    Easy "like [Sys.rename], is true unless [Diagnostic] is [ok] and would otherwise assign to an [error Msg]"))),
+    Easy "is like [Sys.rename]. It succeeds if [Diagnostic = ok] and the file at [OldPath] is \
+renamed to [NewPath] or [Diagnostic = error Msg] and [Msg] describes an encountered system error."))),
   (fun old_path new_path d ~depth:_ ->
     match Sys.rename old_path new_path with
     | () -> !: mkOK
@@ -555,7 +558,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("chdir",
     In(string, "DirPath",
     InOut(ioarg diagnostic, "Diagnostic",
-    Easy "like [Sys.chdir], is true unless [Diagnostic] is [ok] and would otherwise assign to an [error Msg]")),
+    Easy "is like [Sys.chdir]. It succeeds if [Diagnostic = ok] and the current working directory \
+is updated to [DirPath] or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
   (fun path d ~depth:_ ->
     match Sys.chdir path with
     | () -> !: mkOK
@@ -566,7 +570,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
     In(string, "DirPath",
     In(int, "Permissions",
     InOut(ioarg diagnostic, "Diagnostic",
-    Easy "like [Sys.mkdir], is true unless [Diagnostic] is [ok] and would otherwise assign to an [error Msg]"))),
+    Easy "is like [Sys.mkdir]. It succeeds if [Diagnostic = ok] and the directory [DirPath] is created \
+or [Diagnostic = error Msg] and [Msg] describes an encountered system error."))),
   (fun path perms d ~depth:_ ->
     match Sys.mkdir path perms with
     | () -> !: mkOK
@@ -576,7 +581,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("rmdir",
     In(string, "DirPath",
     InOut(ioarg diagnostic, "Diagnostic",
-    Easy "like [Sys.rmdir], is true unless [Diagnostic] is [ok] and would otherwise assign to an [error Msg]")),
+    Easy "is like [Sys.rmdir]. It succeeds if [Diagnostic = ok] and the directory [DirPath] is removed \
+or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
   (fun path d ~depth:_ ->
     match Sys.rmdir path with
     | () -> !: mkOK
@@ -586,7 +592,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("getcwd",
     Out(string, "DirPath",
     InOut(ioarg diagnostic, "Diagnostic",
-    Easy "like [Sys.getcwd], is true unless [Diagnostic] is [ok] and would otherwise assign to an [error Msg]")),
+    Easy "is like [Sys.getcwd]. It succeeds if [Diagnostic = ok] and [DirPath] is the current working \
+directory or [Diagnostic = error Msg] and [Msg] describes an encountered system error.")),
   (fun _ d ~depth:_ ->
     match Sys.getcwd () with
     | dir -> !: dir +! mkOK
@@ -597,7 +604,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
     In  (string, "DirPath",
     Out (list string, "Contents",
     InOut (ioarg diagnostic, "Diagnostic",
-    Easy "like [Sys.readdir], is true unless [Diagnostic] is [ok] and would otherwise assign to an [error Msg]"))),
+    Easy "is like [Sys.readdir]. It succeeds if [Diagnostic = ok] and [Contents] is the list of files \
+in [DirPath] or [Diagnostic = error Msg] and [Msg] describes an encountered system error."))),
   (fun path _ d ~depth:_ ->
     match Sys.readdir path |> Array.to_list with
     | contents -> !: contents +! mkOK
