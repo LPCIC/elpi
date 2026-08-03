@@ -10,10 +10,10 @@
 (* input: raw events  *)
 
 type item = {
+  step : int;
   kind : kind list;
   goal_id : int;
   runtime_id : int;
-  step : int;
   name : string;
   payload : string list;
 }

@@ -15,10 +15,10 @@
 /* eslint-disable */
 
 export type Item = {
+  step: number /*int*/;
   kind: Kind[];
   goal_id: number /*int*/;
   runtime_id: number /*int*/;
-  step: number /*int*/;
   name: string;
   payload: string[];
 }
@@ -196,10 +196,10 @@ export type ChrText = string
 
 export function writeItem(x: Item, context: any = x): any {
   return {
+    'step': _atd_write_required_field('Item', 'step', _atd_write_int, x.step, x),
     'kind': _atd_write_required_field('Item', 'kind', _atd_write_array(writeKind), x.kind, x),
     'goal_id': _atd_write_required_field('Item', 'goal_id', _atd_write_int, x.goal_id, x),
     'runtime_id': _atd_write_required_field('Item', 'runtime_id', _atd_write_int, x.runtime_id, x),
-    'step': _atd_write_required_field('Item', 'step', _atd_write_int, x.step, x),
     'name': _atd_write_required_field('Item', 'name', _atd_write_string, x.name, x),
     'payload': _atd_write_required_field('Item', 'payload', _atd_write_array(_atd_write_string), x.payload, x),
   };
@@ -207,10 +207,10 @@ export function writeItem(x: Item, context: any = x): any {
 
 export function readItem(x: any, context: any = x): Item {
   return {
+    step: _atd_read_required_field('Item', 'step', _atd_read_int, x['step'], x),
     kind: _atd_read_required_field('Item', 'kind', _atd_read_array(readKind), x['kind'], x),
     goal_id: _atd_read_required_field('Item', 'goal_id', _atd_read_int, x['goal_id'], x),
     runtime_id: _atd_read_required_field('Item', 'runtime_id', _atd_read_int, x['runtime_id'], x),
-    step: _atd_read_required_field('Item', 'step', _atd_read_int, x['step'], x),
     name: _atd_read_required_field('Item', 'name', _atd_read_string, x['name'], x),
     payload: _atd_read_required_field('Item', 'payload', _atd_read_array(_atd_read_string), x['payload'], x),
   };
