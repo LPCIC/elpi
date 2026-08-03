@@ -1,6 +1,6 @@
 (library
   (name trace_ppx_runtime)
   (public_name elpi.trace.runtime)
-  (libraries re)
+  (libraries re elpi.trace.atd)
   (modules runtime)
 )

@@ -17,6 +17,7 @@
   
 *)
 
+open Elpi_trace_atd
 open Trace_atd
 module Str = Re.Str
 
