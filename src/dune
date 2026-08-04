@@ -36,11 +36,17 @@
       (run elpi -document-builtins)))
 )
 
+(library
+  (name elpi_trace_atd)
+  (public_name elpi.trace.atd)
+  (libraries atdgen-runtime)
+  (modules trace_atd))
+
 (executable
   (name elpi_trace_elaborator)
   (public_name elpi-trace-elaborator)
-  (libraries yojson atdgen-runtime re)
-  (modules elpi_trace_elaborator trace_atd)
+  (libraries yojson re elpi.trace.atd)
+  (modules elpi_trace_elaborator)
   (package elpi)
 )
 
