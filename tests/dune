@@ -1,11 +1,14 @@
 (executable
   (name test)
-  (modules test)
+  (modules test ansi)
   (optional)
   (promote)
   (libraries
+     (select ansi.ml from
+       (ANSITerminal -> ansi.real.ml)
+       (-> ansi.dummy.ml))
      (select test.ml from
-       (test_suite ANSITerminal cmdliner str unix -> test.real.ml)
+       (test_suite cmdliner str unix -> test.real.ml)
        (-> test.dummy.ml)))
 )
 (env
@@ -13,3 +16,5 @@
     (flags (:standard -w -9 -w -32 -w -27 -w -6 -w -37 -warn-error -A)))
   (fatalwarnings
     (flags (:standard -w -9 -w -32 -w -27 -w -6 -w -37 -warn-error +A))))
+
+(rule (write-file ansi.real.ml "module ANSITerminal = ANSITerminal"))

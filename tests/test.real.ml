@@ -3,6 +3,7 @@
 (* ------------------------------------------------------------------------- *)
 open Test_suite
 open Suite
+open Ansi
     
 module Printer : sig
 
@@ -93,17 +94,13 @@ let print_log ~ln_nb ~fname =
 
 end
 
-let aNSITerminal_move_bol () =
-  if Sys.win32 then ANSITerminal.printf [] "\n%!"
-  else ANSITerminal.move_bol ()
-
 let run stop_on_first_error timeout _seed sources promote env { Runner.run; test; executable }  =
 
   let { Test.name; description; _ } = test in
   let print = Printer.print ~executable:(Filename.basename executable) ~name ~description ~promote in
 
   print 0.0 0.0 0.0 0 `RUNNING;
-  aNSITerminal_move_bol ();
+  ANSITerminal.move_bol ();
 
   let rc = match run ~timeout ~env ~sources with
     | Runner.Skipped -> print 0.0 0.0 0.0 0 `SKIPPED; None
