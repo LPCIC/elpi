@@ -42,7 +42,12 @@ def process(source, base_path):
             if line.startswith(stext):
                 path = line[10:]
 
-                output, errors = exec(path, base_path)
+                # Resolve the program path relative to the directory of the
+                # .rst file being processed, i.e. the same way Sphinx resolves
+                # the `.. literalinclude::` we emit just below. (base_path is
+                # the source root, which only coincides with the .rst dir for
+                # files sitting at the top of docs/source.)
+                output, errors = exec(path, pathlib.Path(source).parent)
                 
                 if index < len(lines)-1:
                     next = lines[index+1]
