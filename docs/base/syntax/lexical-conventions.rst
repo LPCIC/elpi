@@ -64,9 +64,10 @@ macros conventionally do.
 
 .. rubric:: Qualified names
 
-A ``.`` between two name segments is part of the name: ``std.list.map`` is a
-single constant, not ``std`` applied to ``list.map``. This is what
-:doc:`../features/program-organization` uses for namespaces.
+A ``.`` immediately followed by a letter is part of the name: ``std.list.map``
+is a single constant, not ``std`` applied to ``list.map``. This is what
+:doc:`../features/program-organization` uses for namespaces. A ``.`` *not*
+followed by a letter is the clause terminator.
 
 .. rubric:: The wildcard
 
@@ -137,6 +138,63 @@ introducers ``kind``, ``type``, ``typeabbrev``, ``pred``, ``func``,
 ``as``. Immediately after a ``:``, the words ``before``, ``after``,
 ``replace``, ``remove``, ``name``, ``if``, ``index``, ``functional``,
 ``untyped`` and ``nooc`` introduce clause and rule attributes.
+
+
+The token grammar
+=================
+
+The character classes named above are, verbatim, the ones the ``ocamllex``
+lexer uses:
+
+.. literalinclude:: ../../../src/parser/lexer.mll.in
+   :language: ocaml
+   :start-at: let digit =
+   :end-at: let symbcharplus
+
+``num`` is an integer; ``num "." pnum`` or ``"." pnum`` is a float. A name comes
+from exactly one of these productions (the keyword rules in between are elided):
+
+.. code-block:: ocaml
+
+   | "_" idchar+            { CONSTANT }   (* _foo, _Acc : a wildcard   *)
+   | "_"                    { FRESHUV  }   (* the anonymous variable    *)
+   | ucase idcharstar       { CONSTANT }   (* X, Foo1, X+Y : a variable *)
+   | lcase idcharstarns     { CONSTANT }   (* foo, std.rev, x+y         *)
+   | "." idcharstarns       { CONSTANT }   (* .aux : a qualified tail   *)
+   | '@' idcharstar         { CONSTANT }   (* @macro                    *)
+   | '\'' symbcharstar '\'' { CONSTANT }   (* 'eq'                      *)
+   | '`'  symbcharstar '`'  { CONSTANT }   (* `->`                      *)
+
+``idcharstarns`` is ``idcharstar`` extended with an embedded ``.`` before a
+letter — that is what makes ``std.rev`` a single token. All eight productions
+emit the same ``CONSTANT`` token; the compiler decides *variable vs constant*
+afterwards, from the first character.
+
+
+Relation to Teyjus
+==================
+
+Elpi's tokens are close to those of `Teyjus
+<https://github.com/teyjus/teyjus/wiki/TeyjusTokens>`_. Both share the same
+identifier character set (letters, digits and the sign characters ``+ - * / ^
+< > = ` ' ? @ # $ & ! _ ~``), the same rule for telling a variable from a
+constant (a leading ``_`` or upper-case letter marks a variable), the same
+integer and real shapes (``.5`` yes, ``3.`` no), and the same comments (``%``
+to end of line, nesting ``/* */``). They differ in:
+
+* **Name start.** A Teyjus name may start with a sign character (``=abc`` is one
+  name). An Elpi name must start with a letter, ``_``, ``@`` or ``.``; a leading
+  sign character begins an operator.
+* **Dot.** ``.`` is punctuation in Teyjus. In Elpi ``.`` before a letter
+  continues a qualified name.
+* **Negative numbers.** ``-2`` (no space) is an integer literal in Elpi; Teyjus
+  has no negative numeric literal.
+* **Strings.** An Elpi string may contain a literal newline; a Teyjus string may
+  not. Teyjus recognises many more escapes (``\a \v \f \e \d \^c \ddd \xhh`` …);
+  Elpi recognises ``\n \b \t \r \\ \"`` and the doubled ``""``.
+* **Empty list.** ``[]`` in Elpi, ``nil`` in Teyjus.
+* **Operators.** Teyjus programs declare operators with ``infix`` / ``prefix`` /
+  … ; Elpi's operator set is fixed (:doc:`../operators-and-grammar`).
 
 
 Example
