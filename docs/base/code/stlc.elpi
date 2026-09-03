@@ -1,0 +1,23 @@
+% Example used in the "Simply-typed lambda-calculus" chapter.
+
+kind term  type.
+type app   term -> term -> term.
+type fun   (term -> term) -> term.
+
+kind ty    type.
+type arr   ty -> ty -> ty.
+
+% weak-head reduction
+pred whd i:term, o:term.
+whd (app Hd Arg) Reduct :- whd Hd (fun F), !, whd (F Arg) Reduct.
+whd X X.
+
+% type checking
+pred of i:term, o:ty.
+of (app Hd Arg) B :- of Hd (arr A B), of Arg A.
+of (fun F) (arr A B) :- pi x\ of x A ==> of (F x) B.
+
+main :-
+  Fst = fun (x\ fun y\ x),
+  of Fst Ty,
+  print "type of Fst:" Ty.

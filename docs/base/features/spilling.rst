@@ -10,4 +10,13 @@ Spilling
 
    Source material: ELPI.md “Spilling”; HDR §2.6.2; coq-elpi tutorial “Spilling (relation composition)”.
 
-   Examples will live in external ``.elpi`` files under ``docs/base/code/`` and be injected with the ``.. elpi::`` directive plus an ``:assert:`` line pinning the printed output.
+Example
+=======
+
+Spilling lets a "function-like" predicate call appear where a term is expected:
+the expression between ``{`` and ``}`` is lifted out and run just before the
+enclosing call. Here ``{std.rev L}`` becomes a fresh variable produced by an
+``std.rev`` goal inserted right before ``std.append``:
+
+.. elpi:: ../code/palindrome.elpi
+   :assert: \[1, 2, 3, 3, 2, 1\]

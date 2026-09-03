@@ -10,4 +10,11 @@ The logic programming model
 
    Source material: HDR §2.1-2.2; coq-elpi tutorial (Logic programming … Logical foundations).
 
-   Examples will live in external ``.elpi`` files under ``docs/base/code/`` and be injected with the ``.. elpi::`` directive plus an ``:assert:`` line pinning the printed output.
+Example
+=======
+
+A program is a set of rules; a rule fires when its head unifies with the goal,
+producing the premises as new goals; the search backtracks over the rules.
+
+.. elpi:: ../code/family.elpi
+   :assert: bob is older than alice

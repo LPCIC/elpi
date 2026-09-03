@@ -1,6 +1,6 @@
-#######################
+#############################
 Simply-typed λ-calculus
-#######################
+#############################
 
 .. note::
 
@@ -10,4 +10,14 @@ Simply-typed λ-calculus
 
    Source material: coq-elpi tutorial “Terms with binders”; HDR §2.2.
 
-   Examples will live in external ``.elpi`` files under ``docs/base/code/`` and be injected with the ``.. elpi::`` directive plus an ``:assert:`` line pinning the printed output.
+The program
+===========
+
+``term`` is represented with higher-order abstract syntax: ``fun`` carries a
+λProlog function, so substitution is application. ``whd`` is weak-head
+reduction; ``of`` is the type checker, which goes under ``fun`` with ``pi`` and
+adds the hypothetical rule ``of x A`` with ``==>``. The query types
+``λx.λy.x``:
+
+.. elpi:: ../code/stlc.elpi
+   :assert: type of Fst: arr X0 \(arr X1 X0\)

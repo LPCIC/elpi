@@ -56,6 +56,7 @@ doc:
 	dune build $(DUNE_OPTS) @doc
 
 doc-build: doc
+	dune build $(DUNE_OPTS) elpi_REPL.exe
 	rm -rf docs/build
 	rm -rf docs/source
 	cp -r docs/base docs/source
