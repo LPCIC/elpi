@@ -3,12 +3,12 @@
 kind person  type.
 type mallory, bob, alice  person.
 
-pred age o:person, o:int.
+pred age -> person, int.
 age mallory 23.
 age bob 23.
 age alice 20.
 
-pred older o:person, o:person.
+pred older person -> person.
 older P Q :- age P N, age Q M, N > M.
 
 main :- older bob X, print "bob is older than" X.

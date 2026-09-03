@@ -31,3 +31,7 @@ docs/source
 /HDR/
 /paper-determinacy/
 /coq-elpi/
+
+# python bytecode cache (e.g. docs/base/_pygments_elpi.py)
+__pycache__/
+*.pyc

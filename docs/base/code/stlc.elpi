@@ -8,12 +8,12 @@ kind ty    type.
 type arr   ty -> ty -> ty.
 
 % weak-head reduction
-pred whd i:term, o:term.
+pred whd term -> term.
 whd (app Hd Arg) Reduct :- whd Hd (fun F), !, whd (F Arg) Reduct.
 whd X X.
 
 % type checking
-pred of i:term, o:ty.
+pred of term -> ty.
 of (app Hd Arg) B :- of Hd (arr A B), of Arg A.
 of (fun F) (arr A B) :- pi x\ of x A ==> of (F x) B.
 

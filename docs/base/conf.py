@@ -41,8 +41,16 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ['_pygments_elpi.py']
 master_doc = 'index'
+
+# Use the manual's Elpi lexer (adds the modern pred/func signature syntax and
+# attributes that Pygments' built-in ElpiLexer does not know about).
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _pygments_elpi import ElpiManualLexer
+from sphinx.highlighting import lexers
+lexers['elpi'] = ElpiManualLexer()
 
 # -- Options for HTML output -------------------------------------------------
 

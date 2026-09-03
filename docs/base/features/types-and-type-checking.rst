@@ -6,7 +6,7 @@ Types and type checking
 
    **Stub — part of the manual outline.**
 
-   Planned content: Types play no role at run time; ``prop`` / ``o``; ``any``; ``variadic``; polymorphic predicates; overloading by repeating a ``type`` declaration; ``typeabbrev``; the untyped-constant warning and the ``main`` / ``.aux`` exemptions; ``-no-tc``.
+   Planned content: Types play no role at run time; ``prop``; ``any``; ``variadic``; polymorphic predicates; overloading by repeating a ``pred`` / ``func`` signature; ``typeabbrev``; the untyped-constant warning and the ``main`` / ``.aux`` exemptions; ``-no-tc``.
 
    Source material: ELPI.md “Typechecking”.
 
