@@ -1,4 +1,7 @@
-# UNRELEASED
+# v3.7.3 (September 2026)
+
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
 
 - Trace:
   - Add information about added clauses to Implication cards
