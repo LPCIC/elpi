@@ -42,7 +42,12 @@ def process(source, base_path):
             if line.startswith(stext):
                 path = line[10:]
 
-                output, errors = exec(path, base_path)
+                # Resolve the program path relative to the directory of the
+                # .rst file being processed, i.e. the same way Sphinx resolves
+                # the `.. literalinclude::` we emit just below. (base_path is
+                # the source root, which only coincides with the .rst dir for
+                # files sitting at the top of docs/source.)
+                output, errors = exec(path, pathlib.Path(source).parent)
                 
                 if index < len(lines)-1:
                     next = lines[index+1]
@@ -57,7 +62,7 @@ def process(source, base_path):
                             matchr = 'Injection failure: result did not pass regexp check (' + expression + ')'
 
             if line.startswith(stext):
-                block = '**' + path + ':' + '**' + '\n' + '\n'
+                block = '**' + path.strip() + ':' + '**' + '\n' + '\n'
                 block += line.replace(stext, rtext)
                 block += '   :linenos:' + '\n'
                 block += '   :language: elpi' + '\n'
@@ -73,7 +78,9 @@ def process(source, base_path):
                 block += '\n'
                 file.write(block)
                 
-            if len(errors) > 0:
+            # `elpi -test` always prints timing/"Success" boilerplate on stderr;
+            # only surface it when it carries a real diagnostic.
+            if len(errors) > 0 and re.search(r'(?i)(error|warning|\bfailure\b)', errors):
                 block  = '\n'
                 block += '.. code-block:: console' + '\n'
                 block += '\n   '

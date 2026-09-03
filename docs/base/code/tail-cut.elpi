@@ -1,0 +1,19 @@
+% =!=> adds a hard cut to the tail of a hypothetical rule. Here `copy a b` is
+% added while the rest of main runs; the cut means a later `copy a Z` commits
+% to Z = b and does not also backtrack into the static rule `copy X X` (which
+% would give Z = a). std.findall collects every solution and finds just one.
+%
+% With plain ==> this program would not compile: `copy` is a func, and adding
+% `copy a b` next to the static rule is flagged as "mutual exclusion
+% violated" -- exactly the choice point =!=> removes.
+
+data tm.
+symb a tm.
+symb b tm.
+
+func copy tm -> tm.
+copy X X.
+
+main :-
+  copy a b =!=> std.findall (copy a Z_) Sols,
+  print "solutions of copy a:" Sols.

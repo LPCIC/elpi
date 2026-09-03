@@ -32,7 +32,9 @@ release = '@@VERSION@@'
 # ones.
 extensions = [
     'sphinx.ext.intersphinx',
-    'sphinx.ext.githubpages'
+    'sphinx.ext.githubpages',
+    'sphinx.ext.mathjax',
+    '_roles_elpi',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -41,8 +43,27 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ['_pygments_elpi.py', '_roles_elpi.py']
 master_doc = 'index'
+
+# Use the manual's Elpi lexer (adds the modern pred/func signature syntax and
+# attributes that Pygments' built-in ElpiLexer does not know about).
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _pygments_elpi import ElpiManualLexer
+from sphinx.highlighting import lexers
+lexers['elpi'] = ElpiManualLexer()
+
+# The commit :stdlib:`...` links are pinned to, a content fingerprint of
+# src/builtin.elpi as of that commit, and a link to the whole file (no line
+# anchor) at that same commit — substituted into rst_epilog so any page can
+# use them (see builtins.rst and standard-library.rst).
+from _roles_elpi import pinned_commit_short, pinned_content_hash, pinned_file_url
+rst_epilog = f"""
+.. |stdlib_pin| replace:: {pinned_commit_short()}
+.. |stdlib_hash| replace:: {pinned_content_hash()}
+.. |stdlib_file| replace:: `src/builtin.elpi <{pinned_file_url()}>`__
+"""
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -56,3 +77,4 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_css_files = ['custom.css']

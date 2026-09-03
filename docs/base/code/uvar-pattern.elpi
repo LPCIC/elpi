@@ -1,0 +1,17 @@
+% `uvar` as a head pattern fires a rule on an argument that is still an
+% unassigned unification variable:
+%   uvar              — any hole
+%   uvar as X         — ... and bind X to the whole term
+%   uvar Hd Args      — an *applied* hole: Hd is the bare variable,
+%                       Args the list of arguments it is applied to
+%   uvar Hd Args as X — ... and bind X to the whole applied term
+
+pred classify any.
+classify (uvar _ [] as X)    :- !, print "unapplied hole:" X.
+classify (uvar Hd Args as X) :- !, print "applied hole:" X "-- head" Hd "args" Args.
+classify T                   :- print "not a hole:" T.
+
+main :-
+  classify Hole_,
+  (pi a\ pi b\ classify (Applied_ a b)),
+  classify 42.

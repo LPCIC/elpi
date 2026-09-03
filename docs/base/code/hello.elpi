@@ -1,0 +1,9 @@
+% Example used in the "Getting started" chapter: a first Elpi program.
+%
+% Run the query main with:   elpi hello.elpi -test
+% Explore it interactively:  elpi hello.elpi   (then type a goal at goal>)
+
+pred greeting -> string.
+greeting "Hello, world!".
+
+main :- greeting S, print S.

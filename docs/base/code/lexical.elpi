@@ -1,0 +1,19 @@
+% Lexical conventions — a small sample.
+
+/* Block comments  /* nest */  like this. */
+
+data item.
+symb apple, pear item.
+
+pred price -> item, float.
+price apple 0.30.
+price pear  0.45.
+
+main :-
+  std.findall (price _ _) All,   % _ is the wildcard
+  std.length All N,              % std.length is one qualified name
+  Discount = -5,                 % a negative integer literal
+  Note = "prices in euro,
+VAT included",                    % a string spanning two lines
+  print "items:" N "discount:" Discount,
+  print Note.

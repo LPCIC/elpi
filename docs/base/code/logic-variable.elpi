@@ -1,0 +1,8 @@
+% A unification variable is not a mutable slot: once assigned, a second
+% "assignment" is a unification against the existing value, which fails
+% unless it happens to agree.
+
+main :-
+  X = 1, print "X is now" X,
+  (X = 2, print "reassigned to" X
+   ; print "cannot reassign: X is already 1, not 2").

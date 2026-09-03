@@ -1,0 +1,6 @@
+% An operator can be used as an ordinary constant by writing it (op).
+
+main :-
+  Apply = (f\ a\ b\ f a b),
+  S is Apply (+) 2 3,
+  print "the result is" S.

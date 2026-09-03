@@ -1,0 +1,13 @@
+% The constraint store honours backtracking: an assignment made and then
+% undone leaves a resumed-and-reverted constraint exactly as it was.
+
+func even int.
+even (uvar as X) :- !, declare_constraint (even X) [X].
+even 0 :- !.
+even N :- N > 0, M is N - 2, even M.
+
+main :-
+  even Y,
+  print "before:", print_constraints,
+  (Y = 3, fail ; true),        % assign, resume, fail (3 is not even), backtrack
+  print "after backtracking:", print_constraints.

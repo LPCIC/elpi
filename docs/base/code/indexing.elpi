@@ -1,0 +1,14 @@
+% :index changes how rules are pre-filtered before matching, never what a
+% program computes. Here the second argument (depth 1) is indexed instead
+% of the default first one.
+
+data color.
+symb red, green, blue color.
+
+:index (2) "Hash"
+pred name-of int, color -> string.
+name-of _ red "red".
+name-of _ green "green".
+name-of _ blue "blue".
+
+main :- name-of 1 green S, print S.

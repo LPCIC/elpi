@@ -1,0 +1,15 @@
+% A library hides its helpers in a nested namespace and exposes only the
+% public entry point through `shorten`.
+
+namespace mylib {
+  namespace internal {
+    func helper int -> int.
+    helper X Y :- Y is X * 2.
+  }
+  func public-api int -> int.
+  public-api X Y :- internal.helper X Y0, Y is Y0 + 1.
+}
+
+shorten mylib.{ public-api }.
+
+main :- public-api 10 R, print "result:" R.

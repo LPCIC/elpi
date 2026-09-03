@@ -1,0 +1,19 @@
+% The STLC type checker from "The logic programming model", now handling
+% incomplete terms: a hole in argument position suspends instead of looping.
+
+data tm.
+data ty.
+symb app tm -> tm -> tm.
+symb lam (tm -> tm) -> tm.
+symb arr ty -> ty -> ty.
+
+func of tm -> ty.
+of (app H A) T :- of H (arr S T), of A S.
+of (lam F) (arr S T) :- pi c\ of c S ==> of (F c) T.
+of (uvar as E) T :- declare_constraint (of E T) [E].
+
+main :-
+  of (app H _A) _T,      % H and A are holes: two constraints appear
+  print "before:", print_constraints,
+  H = (lam x\ x),        % filling one hole resumes its constraint
+  print "after:", print_constraints.

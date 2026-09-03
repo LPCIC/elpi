@@ -1,0 +1,27 @@
+% Euclid's GCD as constraint handling rules. Each `gcd N G` fact says "N is one
+% of the numbers of group G"; the rules keep reducing the store until a single
+% number per group is left — its GCD.
+
+data group.
+symb group-1, group-2 group.
+
+func gcd int, group.
+
+% suspend until the group is known
+gcd A (uvar as G) :- !, declare_constraint (gcd A G) [G].
+
+% once resumed on a concrete group, report the surviving number
+gcd X group-1 :- print "group 1 GCD is" X.
+gcd X group-2 :- print "group 2 GCD is" X.
+
+constraint gcd {
+  % drop a duplicate number
+  rule (gcd A _) \ (gcd B _) | (A = B).
+  % replace the larger number by the difference
+  rule (gcd A _) \ (gcd B G) | (A < B) <=> (C is B - A, gcd C G).
+}
+
+main :-
+  gcd 99 X, gcd 66 X, gcd 22 X,      % group X = { 99, 66, 22 }
+  gcd 14 Y, gcd 77 Y,                % group Y = { 14, 77 }
+  X = group-1, Y = group-2.          % force resumption

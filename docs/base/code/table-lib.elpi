@@ -1,0 +1,7 @@
+% A small library, accumulated by file-structure.elpi.
+
+namespace table {
+  func lookup string -> int.
+  lookup "one" 1.
+  lookup "two" 2.
+}

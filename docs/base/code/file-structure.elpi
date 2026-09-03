@@ -1,0 +1,20 @@
+% Pulls in table-lib.elpi, shortens a namespaced name, defines a macro, and
+% grafts a rule before a named fallback.
+
+accumulate table-lib.
+
+shorten table.{ lookup }.        % `lookup` now means `table.lookup`
+
+macro @missing :- 0.
+
+pred value string -> int.
+
+:name "default"
+value _ M :- M = @missing.
+
+:before "default"
+value K V :- lookup K V, !.
+
+main :-
+  value "two" A, value "nope" B,
+  print "two =" A "/ nope =" B.
