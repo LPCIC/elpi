@@ -132,12 +132,12 @@ Keywords
 ========
 
 The following words are reserved and cannot be used as names: the declaration
-introducers ``kind``, ``type``, ``typeabbrev``, ``pred``, ``func``,
+and signature keywords ``kind``, ``type``, ``typeabbrev``, ``pred``, ``func``,
 ``external``, ``symbol``, ``macro``, ``namespace``, ``shorten``,
 ``accumulate``, ``constraint``, ``rule``, and the binders ``pi``, ``sigma`` and
 ``as``. Immediately after a ``:``, the words ``before``, ``after``,
 ``replace``, ``remove``, ``name``, ``if``, ``index``, ``functional``,
-``untyped`` and ``nooc`` introduce clause and rule attributes.
+``untyped`` and ``nooc`` introduce signature and rule attributes.
 
 
 The token grammar
