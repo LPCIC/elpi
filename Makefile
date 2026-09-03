@@ -70,7 +70,9 @@ doc-build: doc
 	sed -i "s/@@VERSION@@/$(shell git describe)/" docs/source/conf.py
 	python3 docs/engine/engine.py
 	cd docs && make html
-	cp -r _build/default/_doc/_html/* docs/build/html/
+	# Graft the odoc API tree in, but keep Sphinx's index.html as the landing
+	# page (odoc's own index.html is just a one-link package list).
+	cp -r _build/default/_doc/_html/elpi _build/default/_doc/_html/odoc.support docs/build/html/
 	touch docs/build/html/.nojekyll
 
 DOC_PORT ?= 8000
