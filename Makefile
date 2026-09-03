@@ -18,6 +18,13 @@ help:
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
 	@echo
+	@echo 'Documentation targets:'
+	@echo
+	@echo '  doc-build              build the user manual + API docs into docs/build/html'
+	@echo '  doc-serve              build (if needed) and serve docs/build/html locally'
+	@echo '  doc-serve DOC_PORT=n   ... on port n (default 8000)'
+	@echo '  doc-publish            build and push the docs to the gh-pages branch'
+	@echo
 	@echo 'Parser maintenance targets:'
 	@echo
 	@echo '  menhir-repl            run menhir in interactive mode'
@@ -65,6 +72,12 @@ doc-build: doc
 	cd docs && make html
 	cp -r _build/default/_doc/_html/* docs/build/html/
 	touch docs/build/html/.nojekyll
+
+DOC_PORT ?= 8000
+doc-serve:
+	@test -f docs/build/html/index.html || $(MAKE) doc-build
+	@echo "Serving docs on http://localhost:$(DOC_PORT)/  (Ctrl-C to stop)"
+	python3 -m http.server $(DOC_PORT) --directory docs/build/html
 
 doc-publish: doc-build
 	rm -rf /tmp/gh-pages
@@ -141,4 +154,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: tests help install build clean gh-pages
+.PHONY: tests help install build clean gh-pages doc doc-build doc-serve doc-publish
