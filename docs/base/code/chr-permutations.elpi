@@ -1,0 +1,13 @@
+% Two constraints share a trigger, so a 2-pattern rule is tried on every
+% permutation of them: "rule 1" fires once per ordering of (c 1, c 2).
+
+func c int.
+
+constraint c {
+  rule (c N) (c M) <=> (print "rule 1 on" N M).
+  rule (c N) <=> (print "rule 2 on" N).
+}
+
+main :-
+  print "declare c 1", declare_constraint (c 1) [_],
+  print "declare c 2", declare_constraint (c 2) [_].

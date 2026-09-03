@@ -1,0 +1,40 @@
+% The "hello world" of lambda-tree syntax: simply-typed lambda calculus,
+% weak-head reduction, and a type checker -- one that also handles terms with
+% holes in them, by suspending on a hole instead of guessing its shape.
+
+data term.
+symb app term -> term -> term.
+symb fun (term -> term) -> term.
+
+data ty.
+symb arr ty -> ty -> ty.
+
+% weak-head reduction
+func whd term -> term.
+whd (app Hd Arg) Reduct :- whd Hd (fun F), !, whd (F Arg) Reduct.
+whd X X.
+
+% type checking
+func of term -> ty.
+of (app Hd Arg) B :- of Hd (arr A B), of Arg A.
+of (fun F) (arr A B) :- pi x\ of x A ==> of (F x) B.
+of (uvar as Hole) T :- declare_constraint (of Hole T) [Hole].
+
+main :-
+  Fst = fun (x\ fun y\ x),
+  of Fst FstTy,
+  print "type of Fst:" FstTy,
+
+  Id = fun (z\ z),
+  whd (app Fst Id) Reduct,
+  print "\nwhd of Fst applied to the identity:" Reduct,
+
+  ( of (fun (x\ app x x)) _
+  ; print "\nfun (x\\ app x x) has no type: occur-check failure" ),
+
+  of (app H _) AppTy,
+  print "\nof (app H _): H still unknown, type" AppTy "-- of has suspended:",
+  print_constraints,
+  H = Id,
+  print "\nafter H := the identity, one constraint resolved:",
+  print_constraints.

@@ -1,0 +1,119 @@
+% Algorithm W, with let-generalization deferred through a constraint: a type
+% scheme is only generalized once we know everything that was unified into
+% it, which happens after type-checking the let-bound expression, not before.
+% Adapted from tests/sources/w.elpi.
+
+% terms
+data term.
+symb app term -> term -> term.
+symb lam (term -> term) -> term.
+symb let term -> ty -> (term -> term) -> term.
+
+% monotypes: type constructors applied to arguments (#) and the arrow (===>)
+% (===> and # are recognised as infix automatically, by token family)
+data tye.
+symb (===>) tye -> tye -> tye.
+symb (#)    tye -> tye -> tye.
+
+% type schemes: mono wraps a monotype, all quantifies a type variable
+data ty.
+symb all  (tye -> ty) -> ty.
+symb mono tye -> ty.
+
+% a handful of constants and their (possibly polymorphic) schemes
+symb one, plus, size, empty, comma  term.
+symb integer, list, pair            tye.
+
+% `w` stays relational: its last rule turns a type *scheme* into an instance
+% by dispatching on whether the (output) type came back as `mono` or `all`,
+% which the determinacy checker cannot follow through an output argument.
+% In practice every top-level call has a single, principal type.
+pred w term -> ty.
+w one    (mono integer).
+w plus   (mono (integer ===> integer ===> integer)).
+w size   (all x\ mono (list # x ===> integer)).
+w empty  (all x\ mono (list # x)).
+w comma  (all x\ all y\ mono (x ===> y ===> (pair # x # y))).
+
+w (app F X) (mono R) :-
+  w F (mono (A ===> R)),
+  w X (mono A).
+
+w (lam F) (mono (A ===> R)) :-
+  pi x\ w x (mono A) ==> w (F x) (mono R).
+
+w (let F FP B) (mono TC) :-
+  w F (mono FT),
+  % FP is generalized only once, by the CHR rule below, after this branch
+  % of the search is done computing constraints on FT
+  declare_constraint (overbar (mono FT) FP) [],
+  pi x\ w x FP ==> w (B x) (mono TC).
+
+w X (mono T) :- w X (all Poly), specialize (all Poly) T.
+
+func specialize ty -> tye.
+specialize (all F) T :- specialize (F FRESH_) T.
+specialize (mono X) X.
+
+% overbar generalizes a monotype into a type scheme, once its context Gamma
+% (the hypothetical `w` rules in scope) is fully known. `w ?-` is the context
+% filter: it keeps those `w` rules in the context a suspended `overbar`
+% constraint carries, so the rule below can see Gamma as `G`.
+func overbar ty -> ty.
+constraint w ?- overbar {
+  rule \ (G ?- overbar T T1)
+       | (generalize G T POLYT) <=> (T1 = POLYT).
+}
+
+func generalize list (pred), ty -> ty.
+generalize G (mono T) ALL :-
+  free-ty (mono T) [] VT,
+  free-gamma G [] VG,
+  filter VT (x\ not (mem VG x)) Q,
+  quantify Q T ALL.
+
+func free-ty ty, list any -> list any.
+free-ty (mono X) L L1 :- free X L L1.
+free-ty (all F) L L1 :- pi x\ free-ty (F x) L L1.
+
+func free-gamma list (pred), list any -> list any.
+free-gamma [] L L.
+free-gamma [w _ T|X] L L2 :- free-ty T L L1, free-gamma X L1 L2.
+
+func free tye, list any -> list any.
+free (A # B) L L2 :- free A L L1, free B L1 L2.
+free (A ===> B) L L2 :- free A L L1, free B L1 L2.
+free (uvar X _) L L1 :- if (mem L X) (L1 = L) (L1 = [X|L]).
+
+func copy-ty ty -> ty.
+copy-ty (mono X1) (mono X2) :- copy X1 X2.
+copy-ty (all F1) (all F2) :- pi x\ copy x x =!=> copy-ty (F1 x) (F2 x).
+
+func copy tye -> tye.
+copy (A ===> B) (A1 ===> B1) :- copy A A1, copy B B1.
+copy (A # B) (A1 # B1) :- copy A A1, copy B B1.
+copy (uvar _ _ as X) X.
+
+func quantify list tye, tye -> ty.
+quantify [] X (mono X1) :- copy X X1.
+quantify [X|XS] T (all x\ T2 x) :-
+  quantify XS T T1,
+  pi x\ copy (uvar X _) x =!=> copy-ty T1 (T2 x).
+
+% generic list helpers
+func filter list A, (pred A) -> list A.
+filter [] _ [].
+filter [X|XS] P [X|YS] :- P X, !, filter XS P YS.
+filter [_|XS] P YS :- filter XS P YS.
+
+func mem list A, A.
+mem [X|_] X :- !.
+mem [_|XS] X :- mem XS X.
+
+main :-
+  % let id = \x.x in plus (id one) (size (id empty))
+  % `id` is generalized to a type scheme and used at two different types
+  P = let (lam x\ x) IdTy (id\ app (app plus (app id one))
+                                  (app size (app id empty))),
+  w P TP, print "well typed, of type" TP,
+  print "id generalized to" IdTy.

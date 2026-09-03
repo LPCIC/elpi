@@ -48,11 +48,8 @@
 }
 
 let digit = [ '0' - '9' ]
-
 let pnum = (digit +)
-
 let num = '-' ? pnum
-
 let ucase = [ 'A' - 'Z' ]
 let lcase = [ 'a' - 'z' ]
 let schar2 = '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#' | '~' | '=' | '&' | '!'

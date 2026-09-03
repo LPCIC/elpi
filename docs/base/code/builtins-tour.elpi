@@ -1,0 +1,10 @@
+% A cross-section of the builtin library: arithmetic, standard data types,
+% string/term conversion, regular expressions, seeded randomness.
+
+main :-
+  X is 2 + 3 * 4, print "calc:" X,
+  P = pr 1 "one", term_to_string P S, print "term_to_string:" S,
+  rex.split "," "a,b,c" Parts, print "rex.split:" Parts,
+  random.init 42, random.int 100 R1,
+  random.init 42, random.int 100 R2,      % same seed, same draw
+  print "seeded random repeats:" R1 R2.

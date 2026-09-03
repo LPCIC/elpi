@@ -1,0 +1,23 @@
+% `even N` and `odd N`, each asked about an unknown N, both suspend without
+% complaint -- but no number is both even and odd. Suspending and resuming
+% cannot notice that. The one CHR rule below runs `false` whenever the store
+% holds `even N` and `odd N` for the same N, so the goal fails as it should.
+
+func even int.
+even (uvar as X) :- !, declare_constraint (even X) [X].
+even 0 :- !.
+even N :- N > 0, !, M is N - 2, even M.
+
+func odd int.
+odd (uvar as X) :- !, declare_constraint (odd X) [X].
+odd 1 :- !.
+odd N :- N > 1, !, M is N - 2, odd M.
+
+constraint even odd {
+  rule (even X) (odd X) <=> false.
+}
+
+main :-
+  ( even N, odd N,
+    print "even N and odd N: accepted (wrong!)", print_constraints
+  ; print "even N and odd N: rejected, no number is both" ).

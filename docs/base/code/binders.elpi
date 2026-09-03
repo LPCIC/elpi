@@ -1,0 +1,24 @@
+% Recursing under a binder (depth), and introspecting the eigenvariables
+% currently in scope (names / occurs), then restricting a unification
+% variable's scope with prune / closed_term.
+
+data tm.
+symb app tm -> tm -> tm.
+symb lam (tm -> tm) -> tm.
+
+func depth tm -> int.
+depth (app H A) N :- !, depth H N1, depth A N2, N is {std.max N1 N2}.
+depth (lam F) N :- !, pi x\ depth (F x) N1, N is N1 + 1.
+depth X 0 :- name X.   % X is an eigenvariable, not an app or a lam
+
+main :-
+  depth (lam x\ lam y\ app x y) D, print "depth:" D,
+  pi x\ pi y\ sigma Ns\ sigma Len\ sigma T\ sigma P\
+    ( names Ns, std.length Ns Len,
+      print "eigenvariables in scope:" Len,
+      (occurs x (app x y), print "x occurs in (app x y): yes" ; print "no"),
+      print "T sees both eigenvariables:" T,
+      prune P [x], print "P pruned to just x:" P,
+      closed_term T, print "T after closed_term, sees none:" T,
+      ( closed_term (app x y), print "unreachable"
+      ; print "closed_term (app x y) fails: it already mentions x and y" ) ).

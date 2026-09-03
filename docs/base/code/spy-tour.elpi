@@ -1,0 +1,7 @@
+% std.spy prints a call's arguments on entry and on exit (or failure),
+% without needing any command-line flag.
+
+pred double int -> int.
+double X Y :- Y is X * 2.
+
+main :- std.spy (double 5 R), print "result:" R.

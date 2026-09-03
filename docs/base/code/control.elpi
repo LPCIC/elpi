@@ -1,0 +1,16 @@
+% Cut committing a disjunction (describe), not, if, std.once, std.do!.
+
+pred describe int -> string.
+describe N R :- 0 is N mod 2, !, R = "even".
+describe _ "odd".
+
+pred even int.
+even N :- 0 is N mod 2.
+
+main :-
+  describe 4 R1, print "4 is" R1,
+  describe 3 R2, print "3 is" R2,
+  not (even 3), print "not (even 3) succeeds",
+  if (even 4) (print "if: 4 is even") (print "if: 4 is odd"),
+  std.once (std.mem [3,4,5] X), print "once picked the first match:" X,
+  std.do! [ print "do!: step 1", print "do!: step 2" ].

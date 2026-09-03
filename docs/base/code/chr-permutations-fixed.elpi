@@ -1,0 +1,14 @@
+% Same store as chr-permutations.elpi, but the first rule now removes one of
+% the two constraints it matches (`\`), so the second permutation has nothing
+% left to fire on: "rule 1" fires only once.
+
+func c int.
+
+constraint c {
+  rule (c N) \ (c M) <=> (print "rule 1 on" N M).
+  rule (c N) <=> (print "rule 2 on" N).
+}
+
+main :-
+  print "declare c 1", declare_constraint (c 1) [_],
+  print "declare c 2", declare_constraint (c 2) [_].

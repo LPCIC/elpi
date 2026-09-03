@@ -1,0 +1,19 @@
+% A variable is a parameter of the whole rule, not of an anonymous predicate
+% nested inside it: A below is shared by every call std.map makes, unless a
+% sigma gives each call its own.
+
+pred p int -> int.
+p X Y :- Y is X + 1.
+
+pred q int -> int.
+q X Y :- Y is X * 10.
+
+pred wrong list int -> list int.
+wrong L L1 :- std.map L (x\ r\ p x A, q A r) L1.        % A is the same for every x
+
+pred right list int -> list int.
+right L L1 :- std.map L (x\ r\ sigma A\ p x A, q A r) L1. % a fresh A per call
+
+main :-
+  (wrong [1, 2, 3] _ ; print "wrong: fails (A can't be both 2 and 3)"),
+  right [1, 2, 3] R, print "right:" R.

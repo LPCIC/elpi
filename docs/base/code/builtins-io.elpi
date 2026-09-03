@@ -1,0 +1,14 @@
+% Stream input (without touching the file system) and a typed finite map.
+
+main :-
+  open_string "alpha\nbeta\ngamma\n" S,
+  input_line S L1,
+  input_line S L2,
+  close_in S,
+  print "first two lines:" L1 L2,
+
+  std.string.map.empty M0,
+  std.string.map.add "one" 1 M0 M1,
+  std.string.map.add "two" 2 M1 M2,
+  std.string.map.find "two" M2 V,
+  print "string map, two ->" V.

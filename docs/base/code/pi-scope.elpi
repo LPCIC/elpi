@@ -1,0 +1,10 @@
+% `pi x\ …` extends its body as far right as possible, so inside a conjunction
+% it swallows the goals that follow it. Parenthesise the binder to keep a later
+% goal out of the fresh constant's scope.
+
+pred count-names string.
+count-names Where :- names Ns, std.length Ns N, print Where "sees" N "name(s)".
+
+main :-
+  ( pi x\ count-names "inside" ) ,   % without the ( ) the next line is inside too
+  count-names "after".
