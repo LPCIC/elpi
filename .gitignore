@@ -25,3 +25,9 @@ _log
 
 docs/build
 docs/source
+
+# local checkouts of reference material used while writing the user manual
+# (each is its own git repo; never committed or published from here)
+/HDR/
+/paper-determinacy/
+/coq-elpi/
