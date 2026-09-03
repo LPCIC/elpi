@@ -1,3 +1,7 @@
+; Local checkouts of reference material (see .gitignore) are not part of this
+; build. Without this, `dune build @doc` / `@all` descends into e.g. coq-elpi.
+(dirs (:standard \ HDR paper-determinacy coq-elpi))
+
 (executable
   (name elpi_REPL)
   (public_name elpi)
