@@ -71,6 +71,13 @@ compiling — is a ``State.component``, declared with
 value every advanced FFI hook (``Full``, ``Read``, …) receives.
 
 The odoc **API reference** (linked from this manual's sidebar) is the
-complete signature of every module mentioned here; coq-elpi is the largest
-real-world embedding, using custom data types, quotations and extensible
-state alike to embed Rocq's own term syntax into Elpi.
+complete signature of every module mentioned here. Its landing page lists
+several libraries; only ``elpi`` (the ``Elpi.API`` module used throughout
+this chapter) is the public, supported one. The others —
+``elpi.compiler``, ``elpi.parser``, ``elpi.runtime``, ``elpi.util``,
+``elpi.lexer_config``, ``elpi.trace.*`` — are Elpi's own implementation,
+split into separate libraries for internal build reasons and documented
+there only incidentally; a host application should never depend on them
+directly. coq-elpi is the largest real-world embedding, using custom data
+types, quotations and extensible state alike to embed Rocq's own term
+syntax into Elpi.
