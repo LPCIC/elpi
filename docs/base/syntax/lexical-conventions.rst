@@ -144,11 +144,59 @@ name.
 Operators
 =========
 
-Elpi has a fixed set of built-in mixfix operators (``,``  ``;``  ``=>``  ``:-``
-``::``  ``+``  ``*``  ``is`` …). Each belongs to a *family* identified by its
-leading character(s), and the family fixes its precedence and associativity;
-there is no ``infix`` / ``prefix`` directive to declare new ones. The full table
-is in :doc:`../operators-and-grammar`.
+Operators are built in: there is no ``infix`` / ``prefix`` directive to declare
+your own (Teyjus has one). An operator token is a run of symbol characters
+(``,``, ``::``, ``=>``, ``+``, …); a few are ordinary words (``is``, ``div``,
+``mod``).
+
+.. rubric:: Token families
+
+Precedence and associativity belong not to individual operators but to
+**families**. A family is identified by its leading character(s): ``+-->``
+belongs to the ``+`` family, ``*-->`` to the ``*`` family. Every token of a
+family parses with the same precedence and associativity, and no declaration is
+needed — ``x +--> y *--> z`` reads ``x +--> (y *--> z)`` because the ``*``
+family binds tighter than the ``+`` family.
+
+In the table below a family is written with a trailing ``..`` (``+..`` is "any
+token starting with ``+``"); a bare entry is a *fixed* token, the sole member
+of its family. A family marked ``[*]`` may not *end* with its starting
+character — that is what lets ``` `foo` ``` and ``'foo'`` be read as
+:ref:`quoted identifiers <quoted-identifiers>` rather than operators.
+
+.. rubric:: Precedence, lowest to highest
+
+.. code-block:: text
+
+   fixity                     | tokens / token families
+   -------------------------- + -----------------------------------
+   Infix   not   associative  | :-   ?-
+   Infix   right associative  | ;
+   Infix   right associative  | ==>                              (1)
+   Infix   right associative  | =!=>                             (1)
+   Infix   right associative  | ,   &
+   Infix   right associative  | ->
+   Infix   right associative  | =>
+   Infix   not   associative  | =  ==  =<  r<  i<  s<  r=<  i=<  s=<
+                                <..  r>  i>  s>  r>=  i>=  s>=  >..  is
+   Infix   right associative  | ::
+   Infix   not   associative  | '..                             [*]
+   Infix   left  associative  | ^..  r+  i+  s+  +..  -  r-  i-  s-
+   Infix   left  associative  | r*  i*  s*  *..  /  div  mod
+   Infix   right associative  | --..
+   Infix   not   associative  | `..                             [*]
+   Infix   right associative  | ==..
+   Infix   right associative  | ||..
+   Infix   right associative  | &&..
+   Infix   left  associative  | #..
+   Prefix  not   associative  | r~  i~  ~..
+   Postfix not   associative  | ?..
+
+(1) The left-hand side of ``==>`` and ``=!=>`` binds tighter than ``,``, so
+``a, b ==> c, d`` reads ``a, (b ==> (c, d))``.
+
+This is the table ``elpi -document-infix-syntax`` prints. To check how an
+expression parses, run ``echo '…' | elpi -parse-term``.
 
 
 Keywords
@@ -223,7 +271,7 @@ to end of line, nesting ``/* */``). They differ in:
   Elpi recognises ``\n \b \t \r \\ \"`` and the doubled ``""``.
 * **Empty list.** ``[]`` in Elpi, ``nil`` in Teyjus.
 * **Operators.** Teyjus programs declare operators with ``infix`` / ``prefix`` /
-  … ; Elpi's operator set is fixed (:doc:`../operators-and-grammar`).
+  … ; Elpi's operator set is fixed (`Operators`_).
 
 
 Example

@@ -96,7 +96,6 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
    :caption: Reference
 
    compatibility
-   operators-and-grammar
    pitfalls
    bibliography
 
