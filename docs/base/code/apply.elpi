@@ -1,6 +1,6 @@
 % An operator can be used as an ordinary constant by writing it (op).
 
-pred apply (int -> int -> int), int, int -> int.
-apply Op X Y R :- R = Op X Y.
-
-main :- apply (+) 2 3 T, S is T, print "the result is" S.
+main :-
+  Apply = (f\ a\ b\ f a b),
+  S is Apply (+) 2 3,
+  print "the result is" S.
