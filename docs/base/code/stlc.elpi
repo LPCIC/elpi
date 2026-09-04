@@ -1,11 +1,12 @@
-% Example used in the "Simply-typed lambda-calculus" chapter.
+% The "hello world" of lambda-tree syntax: simply-typed lambda calculus,
+% weak-head reduction, and a type checker.
 
 kind term  type.
-type app   term -> term -> term.
-type fun   (term -> term) -> term.
+symbol app : term -> term -> term.
+symbol fun : (term -> term) -> term.
 
 kind ty    type.
-type arr   ty -> ty -> ty.
+symbol arr : ty -> ty -> ty.
 
 % weak-head reduction
 pred whd term -> term.
@@ -19,5 +20,10 @@ of (fun F) (arr A B) :- pi x\ of x A ==> of (F x) B.
 
 main :-
   Fst = fun (x\ fun y\ x),
-  of Fst Ty,
-  print "type of Fst:" Ty.
+  of Fst Ty, print "type of Fst:" Ty,
+
+  Id = fun (z\ z),
+  whd (app Fst Id) Reduct, print "whd (Fst applied to the identity):" Reduct,
+
+  (of (fun (x\ app x x)) _
+   ; print "(fun x\ app x x) has no type: occur-check failure").
