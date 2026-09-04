@@ -1650,8 +1650,8 @@ let pp_variadictype fmt name doc_pred ty args =
         pp_comment doc name pp_ty_args args
 ;;
 
-let pp_variadicpred fmt docspec name doc_pred ty args =
-  let rargs = List.rev ((false, ty ^ ".. ","...") :: args) in
+let pp_variadicpred ?(input=false) fmt docspec name doc_pred ty args =
+  let rargs = List.rev ((input, ty ^ ".. ","...") :: args) in
   if is_std_moded rargs then
     match docspec with
     | DocNext ->
@@ -1681,7 +1681,7 @@ let document_pred fmt docspec name ffi =
     | Easy s -> pp_pred fmt docspec name s args
     | Full (_,s) -> pp_pred fmt docspec name s args
     | FullHO (_,s) -> pp_pred fmt docspec name s args
-    | VariadicIn( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | VariadicIn( _,{ ContextualConversion.ty }, s) -> pp_variadicpred ~input:true fmt docspec name s (Conversion.show_ty_ast ty) args
     | VariadicOut( _,{ ContextualConversion.ty }, s) -> pp_variadicpred fmt docspec name s (Conversion.show_ty_ast ty) args
     | VariadicInOut( _,{ ContextualConversion.ty }, s) -> pp_variadicpred fmt docspec name s (Conversion.show_ty_ast ty) args
   in

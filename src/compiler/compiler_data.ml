@@ -245,25 +245,25 @@ let update_ety ety eit = { ety with eit }
       | Any -> fprintf fmt "any"
       | Cons c -> F.pp fmt c
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
-      | Arr(m,NotVariadic,s,t) as x -> 
+      | Arr(m,v,s,t) as x ->
           begin match arrow_tail t with
-            | None -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
             | Some Ast.Structured.Function when is_func_modes true x -> fprintf fmt "@[<hov 2>(func%a)@]" (pretty_func ~fst:true true) x
             | Some Ast.Structured.Relation when is_func_modes true x -> fprintf fmt "@[<hov 2>(pred%a)@]" (pretty_func ~fst:true true) x
-            | Some _ -> fprintf fmt "@[<hov 2>(pred %a)@]" (pretty_pred_mode m) (s, t) 
+            | Some _ -> fprintf fmt "@[<hov 2>(pred %a)@]" (pretty_pred_mode ~variadic:(v = Variadic) m) (s, t)
+            | None when v = Variadic -> fprintf fmt "variadic %a %a" (pretty_parens ~lvl:arrs) s pretty t
+            | None -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
           end
-      | Arr(m,Variadic,s,t) -> fprintf fmt "variadic %a %a" (pretty_parens ~lvl:arrs) s pretty t
       | UVar m -> f fmt pretty m
       (* | UVar m -> MutableOnce.pretty fmt m *)
     and pretty_parens ~lvl fmt = function
       | UVar m -> f fmt (pretty_parens ~lvl) m
       | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
       | t -> pretty fmt t
-    and pretty_pred_mode m fmt (s, t) =
-      fprintf fmt "@[<hov 2>%a:%a@]" show_mode m (pretty_parens ~lvl:arrs) s;
+    and pretty_pred_mode ?(variadic=false) m fmt (s, t) =
+      fprintf fmt "@[<hov 2>%a:%a%s@]" show_mode m (pretty_parens ~lvl:arrs) s (if variadic then ".." else "");
       match t with
       | Prop _ -> ()
-      | Arr(m, v, s', r) -> fprintf fmt ", %s%a" (if v = Variadic then "variadic " else "") (pretty_pred_mode m) (s',r)
+      | Arr(m, v, s', r) -> fprintf fmt ", %a" (pretty_pred_mode ~variadic:(v = Variadic) m) (s',r)
       | _ -> assert false
     and pretty_func ?(fst=false) input fmt x =
       match x with
@@ -272,7 +272,7 @@ let update_ety ety eit = { ety with eit }
         let input =
           if not (is_input m) && input then begin fprintf fmt "@ ->"; false end
           else (if not fst then fprintf fmt ","; input) in
-        fprintf fmt "@[<hov 2>@ %a%a@]" (pretty_parens ~lvl:arrs) s (pretty_func input) r
+        fprintf fmt "@[<hov 2>@ %a%s%a@]" (pretty_parens ~lvl:arrs) s (if v = Variadic then ".." else "") (pretty_func input) r
       | _ -> assert false
     in
     let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t

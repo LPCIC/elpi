@@ -2,4 +2,17 @@ func f int, int -> int.. .
 f N D R :- R is N div D.
 f N D R M :- f N D R, M is N mod D.
 
-main :- f 3 2 R, f 3 2 _ Q, R = 1, Q = 1.
+% variadic in anonymous predicate position (parsed as (func .. ..))
+func apply2 (func int, int -> int..), int, int -> int.
+apply2 F A B R :- F A B R.
+
+func apply2' (func int, int.. ), int, int.
+apply2' F A B :- F A B.
+
+pred g i:int, i:int.. .
+g _ _.
+
+main :-
+  f 3 2 R, f 3 2 _ Q, R = 1, Q = 1,
+  apply2 f 7 2 3,
+  apply2' g 1 2.
