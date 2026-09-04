@@ -37,11 +37,26 @@ See :doc:`syntax/lexical-conventions` for the full lexical rules.
 Semantic differences
 ======================
 
-``;`` is not an ordinary predicate, despite being *defined* by two rules,
-``(A ; _) :- A.`` and ``(_ ; B) :- B.`` — the parser and the cut treat it as
-part of the enclosing rule, which is why ``!`` reaches through it
-(:doc:`features/control-and-cut`) instead of stopping at what looks like a
-call boundary.
+In Teyjus and standard λProlog, ``;`` is a special, built-in control
+construct, not an ordinary predicate: the cut is *transparent* through it, so
+a ``!`` written inside a disjunct is treated exactly as if it were written in
+the enclosing rule — it cuts that rule's own untried sibling rules too, not
+just the other disjunct.
+
+In Elpi, ``;`` genuinely *is* an ordinary (higher-order) predicate, actually
+called as such through the two rules it is defined by, ``(A ; _) :- A.`` and
+``(_ ; B) :- B.`` (:doc:`features/control-and-cut`) — so it is a real call, one
+more stack frame. A ``!`` written inside a disjunct only cuts back to *that*
+call: it discards ``;``'s own untried alternative (the other disjunct), but —
+unlike Teyjus — does not reach further out to cut the enclosing rule's own
+sibling rules:
+
+.. elpi:: code/cut-in-disjunct.elpi
+   :assert: p's second rule fired\nafter p
+
+``p``'s second rule still fires here: the ``!`` inside the first rule's
+disjunct only prevented falling back to ``true``, not the whole first rule
+from failing over to the second one.
 
 Unification outside the pattern fragment (:doc:`features/unification-and-variables`)
 aborts by default; Teyjus instead delays it as a constraint. Passing the

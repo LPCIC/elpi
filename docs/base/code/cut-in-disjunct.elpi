@@ -1,0 +1,13 @@
+% ; is a regular (higher-order) predicate in Elpi, defined by exactly two
+% rules -- so a ! written inside one of its disjuncts only cuts back to
+% that rule selection, one stack frame up: it discards ;'s own untried
+% alternative, but does not reach further out to cut p's own second rule.
+% In Teyjus and standard lambda-Prolog, where ; is a built-in control
+% construct and the cut is transparent through it, p's second rule would
+% be cut away too.
+
+pred p.
+p :- (!, fail ; true).
+p :- print "p's second rule fired".
+
+main :- p, print "after p".
