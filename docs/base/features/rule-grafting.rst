@@ -1,12 +1,12 @@
-###############
-Clause grafting
-###############
+#############
+Rule grafting
+#############
 
 .. note::
 
    **Stub — part of the manual outline.**
 
-   Planned content: ``:name``; ``:before`` / ``:after`` / ``:replace`` / ``:remove``; the restrictions on named clauses and on same-predicate rules.
+   Planned content: ``:name``; ``:before`` / ``:after`` / ``:replace`` / ``:remove``; the restrictions on named rules and on same-predicate rules.
 
    Source material: ELPI.md “Clause grafting”.
 

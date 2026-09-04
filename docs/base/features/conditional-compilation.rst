@@ -6,7 +6,7 @@ Conditional compilation
 
    **Stub — part of the manual outline.**
 
-   Planned content: The ``:if`` clause attribute with ``-D``; the lexer-level ``% elpi:if version <op> X`` / ``% elpi:endif``; ``% elpi:skip N``.
+   Planned content: The ``:if`` rule attribute with ``-D``; the lexer-level ``% elpi:if version <op> X`` / ``% elpi:endif``; ``% elpi:skip N``.
 
    Source material: ELPI.md “Conditional compilation”.
 

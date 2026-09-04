@@ -32,7 +32,7 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
 
    syntax/lexical-conventions
    syntax/terms-and-operators
-   syntax/clauses-and-queries
+   syntax/rules-and-queries
    syntax/declarations-and-attributes
 
 .. toctree::
@@ -51,14 +51,14 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
 
    features/unification-and-variables
    features/binders-and-hoas
-   features/hypothetical-clauses
+   features/hypothetical-rules
    features/control-and-cut
    features/spilling
    features/types-and-type-checking
    features/modes
    features/determinacy-checking
    features/program-organization
-   features/clause-grafting
+   features/rule-grafting
    features/conditional-compilation
    features/argument-indexing
    features/macros

@@ -1,12 +1,12 @@
-###################
-Clauses and queries
-###################
+#################
+Rules and queries
+#################
 
 .. note::
 
    **Stub — part of the manual outline.**
 
-   Planned content: The shape of a clause; ``:-``; ``,`` ``;`` ``&``; ``=>`` / ``==>`` / ``=!=>``; ``?-``; the ``.``-terminated clause; queries; naming a subterm of a clause head with ``as``.
+   Planned content: The shape of a rule (head and premises); ``:-``; ``,`` ``;`` ``&``; ``=>`` / ``==>`` / ``=!=>``; ``?-``; the ``.`` that ends a rule; queries; naming a subterm of a rule head with ``as``.
 
    Source material: coq-elpi tutorial “Facts and conditional rules”; ELPI.md “Subterm naming”; HDR §2.1.
 

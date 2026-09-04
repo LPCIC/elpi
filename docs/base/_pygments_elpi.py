@@ -1,7 +1,7 @@
 """A Pygments lexer for the Elpi code in this manual.
 
 Pygments ships an ``ElpiLexer`` but (as of 2.19) it only understands the old
-``pred name i:T, o:T.`` signature form and a handful of clause attributes. The
+``pred name i:T, o:T.`` signature form and a handful of rule attributes. The
 manual uses the current ``pred name In.. -> Out..`` / ``func name In.. -> Out..``
 forms and attributes such as ``:functional`` and ``:nooc``. This subclass adds
 those; everything else is inherited.
@@ -22,7 +22,7 @@ class ElpiManualLexer(ElpiLexer):
 
     tokens = {
         "elpi": [
-            # bare clause / rule attributes (no string argument)
+            # bare rule / signature attributes (no string argument)
             (r"(:functional|:nooc|:untyped|:external)\b", Keyword.Mode),
             # attributes taking a "string" argument
             (r'(:before|:after|:if|:name|:replace|:remove)(\s*)(")',

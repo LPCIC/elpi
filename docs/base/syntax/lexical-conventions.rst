@@ -2,7 +2,7 @@
 Lexical conventions
 ###################
 
-An Elpi source file is read as a stream of bytes. It is a sequence of *clauses*
+An Elpi source file is read as a stream of bytes. It is a sequence of *rules*
 and *directives*, each terminated by a full stop ``.``. Whitespace — spaces,
 tabs, carriage returns and newlines — separates tokens and is otherwise
 insignificant; the terminating ``.`` does not need to sit on a line of its own.
@@ -13,8 +13,8 @@ any byte is accepted and passed through unchanged — so UTF-8 text can appear
 there, but Elpi does not decode or validate it.
 
 This chapter describes how the text is broken into tokens. The grammar that
-assembles those tokens into terms and clauses is covered in
-:doc:`terms-and-operators` and :doc:`clauses-and-queries`.
+assembles those tokens into terms and rules is covered in
+:doc:`terms-and-operators` and :doc:`rules-and-queries`.
 
 
 Comments
@@ -72,7 +72,7 @@ macros conventionally do.
 A ``.`` immediately followed by a letter is part of the name: ``std.list.map``
 is a single constant, not ``std`` applied to ``list.map``. This is what
 :doc:`../features/program-organization` uses for namespaces. A ``.`` *not*
-followed by a letter is the clause terminator.
+followed by a letter is the full stop that ends a rule or directive.
 
 .. rubric:: The wildcard
 
@@ -110,7 +110,7 @@ separators (``1_000`` is not a number).
 
 A digit sequence, a ``.``, and a digit sequence: ``3.0``, ``-1.5``; a leading
 ``.`` is allowed (``.5``). Note that ``3.`` is the integer ``3`` followed by the
-clause terminator. There is no exponent notation.
+full stop. There is no exponent notation.
 
 .. rubric:: Strings
 
