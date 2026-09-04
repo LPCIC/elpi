@@ -235,9 +235,10 @@ anonymous_pred:
     let variadic = o <> None in
     { tloc = loc $loc; tit = TPred (det, args, variadic) }
   }
-| det = pred_or_func; in_args = separated_list(CONJ,fotype_term) {
+| det = pred_or_func; in_args = separated_list(CONJ,fotype_term); o=option(DOTS) {
     let args = List.map (fun x -> Mode.Input,x) in_args in
-    { tloc = loc $loc; tit = TPred (det, args, false) }
+    let variadic = o <> None in
+    { tloc = loc $loc; tit = TPred (det, args, variadic) }
   }
 
 pred_or_func:

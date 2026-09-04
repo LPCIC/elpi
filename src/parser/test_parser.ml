@@ -260,6 +260,12 @@ let _ =
   testT "pred x."  ();
   testT "pred x (pred)."  ();
   testT "pred x (pred) -> ."  ();
+  testT "func x int, int -> int.. ."  ();
+  testT "pred x i:int, i:int.. ."  ();
+  testT "type x (func any..)."  ();
+  testT "type x (func (func) ..)."  ();
+  testT "type x (func int, int -> int..)."  ();
+  testT "func x (func int, int -> int..), int -> int."  ();
   (*    01234567890123456789012345 *)
   test  "p :- f {{{ g }}}."    1 16 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [q 7 16 10 13 " g "]]);
   test  "p :- f {{ g }}."      1 14 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [q 7 14 9 12 " g "]]);

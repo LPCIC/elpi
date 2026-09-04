@@ -46,7 +46,7 @@ external symbol (:-)  : (func) -> (func) -> (func) = "core".
 
 external symbol (:-)  : (func) -> list (pred) -> (func) = "core".
 
-external symbol (,)   : variadic (func) (func).
+external symbol (,)   : (func (func) ..) .
 
 external symbol uvar  : A = "core".
 
@@ -78,7 +78,7 @@ external func declare_constraint (func) -> any .. .
 external func print_constraints.
 
 % [halt ...] halts the program and print the terms
-external type halt variadic any (func).
+external func halt any.. .
 
 func stop.
 
@@ -439,10 +439,10 @@ printterm S T :- term_to_string T T1, output S T1.
 % == Elpi builtins =====================================
 
 % [dprint ...] prints raw terms (debugging)
-external type dprint variadic any (func).
+external func dprint any.. .
 
 % [print ...] prints terms
-external type print variadic any (func).
+external func print any.. .
 
 % Deprecated, use trace.counter
 func counter string -> int.

@@ -1,3 +1,14 @@
+# UNRELEASED
+
+- Parser:
+  - Accept the trailing `..` variadic marker in anonymous `func`/`pred`
+    types, e.g. `(func any..)` and `(func (func) ..)`
+
+- Doc:
+  - `elpi -document-builtins` prints variadic signatures with the `..`
+    syntax instead of the legacy `variadic T R` type former (#440)
+
+
 # v3.7.3 (September 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
