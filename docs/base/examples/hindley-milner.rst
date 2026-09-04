@@ -9,7 +9,12 @@ types into **schemes**, universally quantified over the type variables used
 at two different types.
 
 .. elpi:: ../code/hindley-milner.elpi
-   :assert: well typed, of type mono integer
+   :assert: well typed, of type mono integer\nid generalized to all c0 \\ mono \(c0 ===> c0\)
+
+``IdTy``, the type scheme inferred for ``id``, prints as ``all c0 \ mono (c0
+===> c0)`` — universally quantified over the one type variable used only
+locally, exactly the scheme that then lets ``id`` be applied to both an
+``integer`` and a ``list # integer`` in the same body.
 
 A monotype is a type with no quantifiers — an arrow ``===>``, an applied type
 constructor ``#`` (as in ``list # integer``), or a type variable, itself an

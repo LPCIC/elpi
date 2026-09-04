@@ -107,6 +107,7 @@ quantify [X|XS] T (all x\ T2 x) :-
 main :-
   % let id = \x.x in plus (id one) (size (id empty))
   % `id` is generalized to a type scheme and used at two different types
-  P = let (lam x\ x) X_ (id\ app (app plus (app id one))
+  P = let (lam x\ x) IdTy (id\ app (app plus (app id one))
                                   (app size (app id empty))),
-  w P TP, print "well typed, of type" TP.
+  w P TP, print "well typed, of type" TP,
+  print "id generalized to" IdTy.
