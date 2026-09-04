@@ -151,9 +151,12 @@ The following words are reserved and cannot be used as names: the declaration
 and signature keywords ``kind``, ``type``, ``typeabbrev``, ``pred``, ``func``,
 ``external``, ``symbol``, ``macro``, ``namespace``, ``shorten``,
 ``accumulate``, ``constraint``, ``rule``, and the binders ``pi``, ``sigma`` and
-``as``. Immediately after a ``:``, the words ``before``, ``after``,
-``replace``, ``remove``, ``name``, ``if``, ``index``, ``functional``,
-``untyped`` and ``nooc`` introduce signature and rule attributes.
+``as``.
+
+The words that follow a ``:`` to form an attribute are reserved too:
+``:name``, ``:before``, ``:after``, ``:replace``, ``:remove`` and ``:if`` are
+attributes of a rule; ``:index``, ``:functional``, ``:untyped`` and ``:nooc``
+are attributes of a signature (see :doc:`declarations-and-attributes`).
 
 
 The token grammar
