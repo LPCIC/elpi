@@ -38,7 +38,7 @@ Namespaces
 .. code-block:: elpi
 
    namespace json {
-     pred parse string -> term.
+     func parse string -> term.
      parse S T :- tokenize S Ts, parse-tokens Ts T.
    }
 
@@ -76,15 +76,9 @@ names start with ``@`` (:doc:`lexical-conventions`); expansion is hygienic.
    macro @newline :- "\n".
    macro @of X N T :- (of X T, pp X N).
 
-A macro is not a predicate: it disappears before the program runs.
-
-
-Constraint blocks
-=================
-
-``constraint`` blocks and the ``rule`` keyword inside them are
-:doc:`constraint-handling-rules`.
-
+A macro is not a predicate: it disappears before the program runs. Currently a
+macro does not cross a file or block boundary — it is visible only in the file
+(or ``{ … }`` block) that defines it.
 
 Rule attributes
 ===============

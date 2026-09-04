@@ -62,8 +62,7 @@ act on their suspended goals:
    }
 
 ``rule`` may appear **only** inside such a block. The cliques of the program
-must be pairwise disjoint; two overlapping ``constraint`` blocks raise
-*overlapping constraint cliques*.
+must be pairwise disjoint, or Elpi raises *overlapping constraint cliques*.
 
 An optional **context filter**, written before ``?-``, lists further predicates
 whose rules are retained in the context a suspended goal carries with it (by
@@ -75,7 +74,7 @@ default a resumed goal keeps only the rules of its own clique):
      % rules for `infer`; a resumed `infer` goal also keeps the `ctx` rules
    }
 
-The ``?-`` is omitted when the filter is empty (``constraint infer { … }``).
+The ``?-`` is omitted when the filter is empty.
 
 
 CHR rules
@@ -88,25 +87,20 @@ A rule has four parts, each optional except the keyword:
    rule  TO-MATCH  \ TO-REMOVE  | GUARD  <=> NEW-GOAL .
 
 * **TO-MATCH** and **TO-REMOVE** are sequences of :ref:`sequent patterns
-  <chr-sequents>` matched against suspended goals. Everything left of ``\`` is
-  kept, everything right of it is removed from the store — a *simpagation*
-  rule. With no ``\``, every matched goal is removed.
+  <chr-sequents>` matched against suspended goals. Everything to the left of
+  ``\`` is matched and kept; everything to its right is matched and removed —
+  a *simpagation* rule. A rule with no ``\`` removes nothing: it only adds
+  ``NEW-GOAL`` (a *propagation* rule) and fires at most once per combination of
+  constraints.
 * **GUARD**, after ``|``, is a goal that must succeed for the rule to fire.
   Firing is *committed choice*: once the guard passes, no later rule is tried
   on the same constraints.
 * **NEW-GOAL**, after ``<=>``, is a sequent added as a fresh goal.
 
-So ``rule (even X) (odd X) <=> false`` removes both matched goals and then runs
-``false``. ``:name "…"`` (for trace output) and ``:if "…"``
-(:doc:`../features/conditional-compilation`) may precede a rule.
-
-.. code-block:: elpi
-
-   constraint gcd {
-     rule (gcd A _) \ (gcd B _) | (A = B).                  % drop a duplicate
-     rule (gcd A _) \ (gcd B G) | (A < B) <=> (C is B - A, gcd C G).
-   }
-
+So ``rule (even X) (odd X) <=> false`` runs ``false`` — which fails — whenever
+the store holds ``even X`` and ``odd X`` for one ``X``. ``:name "…"`` (for trace
+output) and ``:if "…"`` (:doc:`../features/conditional-compilation`) may precede
+a rule.
 
 .. _chr-sequents:
 
@@ -121,20 +115,31 @@ A sequent pattern is one of
    ( Context ?- Goal )
    ( Eigen :> Context ?- Goal )
 
-``Goal`` alone matches a suspended goal ignoring the hypotheses it was carrying.
+``Goal`` alone matches a suspended goal, ignoring the hypotheses it carried.
 ``Context`` matches those hypotheses — the rules added with ``=>`` that were in
-scope at suspension — and ``Eigen`` matches the list of eigenvariables
-(the ``pi``-introduced constants) it lives under. Both ``Context`` and ``Eigen``
-are ordinary patterns, so they can bind variables used in the guard and the new
-goal:
+scope at suspension — and ``Eigen`` matches the list of eigenvariables (the
+``pi``-introduced constants) it lives under. ``Context`` and ``Eigen`` are
+ordinary patterns and may bind variables used in the guard and the new goal.
+
+A **frozen** unification variable of the suspended goal appears in a pattern as
+``uvar K L``: ``K`` identifies the variable and ``L`` is the list of bound
+variables in its scope. Freezing — turning those variables into constants a
+rule cannot assign — is what makes a rule *match* the store rather than unify
+with it; two ``uvar K …`` with the same ``K`` are the same variable.
 
 .. code-block:: elpi
 
    constraint infer {
-     rule (G ?- infer (uvar K L1) T1)
-        \ (G ?- infer (uvar K L2) T2)
+     % a hole has one type: two `infer` goals about the same unification
+     % variable K, in the same context G, must agree on the type
+     rule (G ?- infer (uvar K _) T1)
+        \ (G ?- infer (uvar K _) T2)
         <=> (T1 = T2).
    }
+
+Each matched constraint is frozen into its own space of names, so with two
+*different* context patterns the rule has to relate the terms across them
+itself; see :doc:`../semantics/chr`.
 
 
 Example
