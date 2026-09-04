@@ -2,12 +2,41 @@
 Organizing a program
 ####################
 
-.. note::
+``accumulate``, ``namespace``, ``shorten`` and the leading-``.`` escape are
+:doc:`../syntax/file-structure-and-attributes`. This chapter is how they
+combine into an actual multi-file program.
 
-   **Stub — part of the manual outline.**
 
-   Planned content: The file model (each file accumulated once; relative and string paths); ``namespace { }`` prefixing; a leading ``.`` on a name escapes to the global scope (``.p`` inside ``namespace n`` is the top-level ``p``); ``shorten`` including the trie syntax, and its scope.
+The search path
+=================
 
-   Source material: ELPI.md “Namespaces” / “Accumulate with paths”; HDR §2.6.1.
+``accumulate name.`` first looks for ``name.elpi`` relative to the
+accumulating file; if that fails, it looks along every directory passed with
+``elpi -I PATH`` (repeatable). This is how a library can be accumulated by
+name from a program that does not know where it is installed.
 
-   Examples will live in external ``.elpi`` files under ``docs/base/code/`` and be injected with the ``.. elpi::`` directive plus an ``:assert:`` line pinning the printed output.
+
+Namespaces nest
+=================
+
+``namespace`` blocks nest, and so do their prefixes: a predicate declared
+inside ``namespace outer { namespace inner { … } }`` is reached from the
+outside as ``outer.inner.name``.
+
+
+A library's public surface
+=============================
+
+Combining namespacing and ``shorten`` is how a file exposes a small public
+API while keeping its helpers out of the way: nest the helpers under an
+``internal`` namespace, define the public predicates next to it (able to
+reach ``internal.…`` without qualification, since they are in the same
+enclosing namespace), and ``shorten`` only the public names for whoever
+accumulates the file — see the Example below.
+
+
+Example
+=======
+
+.. elpi:: ../code/library-api.elpi
+   :assert: result: 21
