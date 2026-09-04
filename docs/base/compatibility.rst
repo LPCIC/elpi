@@ -34,30 +34,74 @@ to end of line, nesting ``/* */``). They differ in:
 See :doc:`syntax/lexical-conventions` for the full lexical rules.
 
 
-.. note::
+Semantic differences
+======================
 
-   **Stub — still to write:**
+``;`` is not an ordinary predicate, despite being *defined* by two rules,
+``(A ; _) :- A.`` and ``(_ ; B) :- B.`` — the parser and the cut treat it as
+part of the enclosing rule, which is why ``!`` reaches through it
+(:doc:`features/control-and-cut`) instead of stopping at what looks like a
+call boundary.
 
-   * The semantic and module incompatibilities from ``INCOMPATIBILITIES.md``.
-   * The older signature forms kept for compatibility: ``type name … -> prop``,
-     the ``mode (name i o)`` directive and the ``i:`` / ``o:`` argument markers
-     — how they map onto the modern ``pred`` / ``func`` ``In.. -> Out..``
-     signatures, and the one case still needed today
-     (``:functional pred name o:.., i:..`` for a signature whose input and
-     output arguments are interleaved).
-   * The ``:nooc`` attribute: unification does an occur check by default (Prolog
-     does not); ``:nooc`` turns it off for one predicate. Example from the
-     standard library, ``std.unsound_unif``:
+Unification outside the pattern fragment (:doc:`features/unification-and-variables`)
+aborts by default; Teyjus instead delays it as a constraint. Passing the
+deprecated ``-delay-problems-outside-pattern-fragment`` flag restores that
+behaviour.
 
-     .. code-block:: elpi
 
-        % Unification without occur check. It can create infinite terms.
-        :nooc
-        func unsound_unif -> A, A.
-        unsound_unif X X.
+Older signature forms
+========================
 
-     Guard code that disables the occur check against building cyclic terms
-     with ``ground_term``. See also *Unification and variables*.
+``type name … -> prop`` gives a predicate a type with no mode information at
+all — every argument is unified, none matched, since there is nothing marking
+one as input. Standard λProlog and Teyjus pair such a declaration with a
+separate ``mode (name i o).`` directive to add that information; **current
+Elpi does not parse ``mode`` as a directive at all** — it is not a keyword,
+so ``mode (name i o).`` is read as an ordinary fact about a predicate called
+``mode``, and fails to type-check. The ``i:`` / ``o:`` markers survive, but
+only *inline*, inside the signature itself
+(:doc:`syntax/type-declarations`'s legacy forms): ``pred name i:int, o:string.``
+is the modern equivalent of the pair above, and remains the only way to
+write a signature whose input and output arguments are interleaved
+(``:functional pred name o:A, i:A.``).
 
-   Source material: ``INCOMPATIBILITIES.md``; ``src/builtin_stdlib.elpi``;
-   ELPI.md “Mode and type declaration” / “Occur check”.
+
+The ``:nooc`` attribute
+==========================
+
+Unification performs the occur check by default, unlike Prolog: assigning a
+variable to a term containing itself fails rather than building a cyclic
+term. ``:nooc`` turns this off for one predicate — the builtin
+``unsound_unif`` is defined exactly that way:
+
+.. code-block:: elpi
+
+   % Unification without occur check. It can create infinite terms.
+   :nooc
+   func unsound_unif -> A, A.
+   unsound_unif X X.
+
+.. elpi:: code/nooc.elpi
+   :assert: = rejects X = f X \(occur check\)\nunsound_unif Y \(f Y\) succeeds
+
+Code that relies on ``:nooc`` should guard against actually building a cyclic
+term — ``ground_term`` (:doc:`features/unification-and-variables`), and most
+other traversals, will not terminate on one.
+
+
+Modules
+========
+
+A ``.sig`` file's *signature* (which names a module exports) is ignored — Elpi
+has no separate notion of a module's public interface. ``import`` and
+``accum_sig``/``use_sig`` are parsed, looking for a compiled ``.mod`` /
+``.sig`` unit the way Teyjus would produce one, but Elpi has no such compiled
+unit format to begin with, so in practice they never find anything to load;
+``accumulate`` (:doc:`syntax/file-structure-and-attributes`) is the only way
+to pull in another file's code. Elpi accumulates each file **once**, even if
+several accumulated files each accumulate it too — Teyjus accumulates every
+time, which duplicates rules and is rarely what one wants. Relative
+``accumulate`` paths, and ``-I``, are :doc:`features/program-organization`;
+the ``elpi`` command line tool additionally reads the colon-separated
+``TJPATH`` environment variable as a fallback search path, for compatibility
+with Teyjus scripts that set it.

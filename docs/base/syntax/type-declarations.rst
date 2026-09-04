@@ -179,7 +179,9 @@ Two older ways of writing a signature are still accepted:
   and output arguments be *interleaved* (``:functional pred p o:A, i:A.``), but
   that is discouraged — keep the outputs last and use ``->``.
 
-The ``mode`` directive and the ``type name … -> prop`` predicate form are in
+The ``type name … -> prop`` predicate form, and how it relates to the
+standalone ``mode`` directive of standard λProlog (which current Elpi does
+not actually parse as a directive at all — :doc:`../compatibility`), are in
 :doc:`../compatibility`.
 
 
