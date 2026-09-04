@@ -13,13 +13,7 @@ Application
 ===========
 
 Application is written by juxtaposition, λ-calculus style — ``f a b``, not
-``f(a, b)``:
-
-.. code-block:: elpi
-
-   node 46 (node 93 leaf leaf) leaf
-   F a b
-
+``f(a, b)``. For example ``node 46 (node 93 leaf leaf) leaf`` or ``F a b``.
 The head is a constant or a unification variable. Each argument is a single
 term — a literal or an identifier, or a *delimited* term such as a list
 ``[…]``, a spilled expression ``{…}``, a quotation ``{{…}}`` or a parenthesised
