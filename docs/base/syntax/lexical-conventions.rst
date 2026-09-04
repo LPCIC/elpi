@@ -208,9 +208,9 @@ and signature keywords ``kind``, ``type``, ``typeabbrev``, ``pred``, ``func``,
 ``as``.
 
 The words that follow a ``:`` to form an attribute are reserved too:
-``:name``, ``:before``, ``:after``, ``:replace``, ``:remove`` and ``:if`` are
-attributes of a rule; ``:index``, ``:functional``, ``:untyped`` and ``:nooc``
-are attributes of a signature (see :doc:`type-declarations`).
+``:name``, ``:before``, ``:after``, ``:replace``, ``:remove``, ``:if`` and
+``:untyped`` are attributes of a rule; ``:index``, ``:functional`` and
+``:nooc`` are attributes of a signature (see :doc:`type-declarations`).
 
 Example
 =======

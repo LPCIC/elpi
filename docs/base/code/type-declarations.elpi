@@ -1,0 +1,23 @@
+% Type declarations: a kind, its data constructors, a type abbreviation,
+% and predicate signatures written over them.
+
+kind tree type -> type.               % a parametric kind
+
+type leaf tree A.                     % data constructors
+type node A -> tree A -> tree A -> tree A.
+
+typeabbrev names (list string).       % an abbreviation
+
+func size tree A -> int.              % a deterministic signature
+size leaf 0.
+size (node _ L R) N :- size L NL, size R NR, N is 1 + NL + NR.
+
+pred labels tree string -> names.     % a relational signature
+labels leaf [].
+labels (node X L R) All :-
+  labels L LL, labels R RL, std.append [X|LL] RL All.
+
+main :-
+  T = node "a" (node "b" leaf leaf) leaf,
+  size T N, labels T Ns,
+  print "size" N "labels" Ns.

@@ -16,9 +16,10 @@ File structure and attributes
    in *Constraint handling rules*.
 
    The rule-attribute catalogue, written ``:``-prefixed before a rule:
-   ``:name``, ``:before``, ``:after``, ``:replace``, ``:remove`` (grafting) and
-   ``:if`` (conditional compilation). The lexer-level ``% elpi:if`` /
-   ``% elpi:endif`` / ``% elpi:skip`` directives.
+   ``:name``, ``:before``, ``:after``, ``:replace``, ``:remove`` (grafting),
+   ``:if`` (conditional compilation) and ``:untyped`` (skip type checking for
+   that rule). The lexer-level ``% elpi:if`` / ``% elpi:endif`` /
+   ``% elpi:skip`` directives.
 
    Source material: ELPI.md; src/builtin.elpi.
 
