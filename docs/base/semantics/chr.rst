@@ -78,11 +78,28 @@ next combination:
 .. elpi:: ../code/chr-permutations.elpi
    :assert: declare c 1\nrule 2 on 1\ndeclare c 2\nrule 1 on 2 1\nrule 1 on 1 2\nrule 2 on 2
 
-``rule 1`` fires on ``(c 2) (c 1)`` and again on ``(c 1) (c 2)``. Removing one
-of the two constraints (``rule (c N) \ (c M) <=> …``) breaks the symmetry,
-since the removed copy is no longer in the store for the second permutation;
-a guard such as ``N < M`` breaks it just as well, by rejecting one of the two
-orderings.
+``rule 1`` fires on ``(c 2) (c 1)`` and again on ``(c 1) (c 2)``.
+
+
+Symmetric CHR rules
+======================
+
+A rule with two patterns of the *same* predicate and no ``\`` is symmetric,
+and it is exactly this shape — matching without removing — that lets step 3
+retry it on every ordering of a pair. Removing one of the two constraints
+(``rule (c N) \ (c M) <=> …``) breaks the symmetry: the removed copy is no
+longer in the store for the second permutation, so the rule fires only once,
+on whichever ordering step 3 reaches first — here ``(c 2) (c 1)``, since it
+keeps ``c 2`` and removes ``c 1`` — and that surviving, kept constraint is
+still in the store once the query answers:
+
+.. elpi:: ../code/chr-permutations-fixed.elpi
+   :assert: declare c 1\nrule 2 on 1\ndeclare c 2\nrule 1 on 2 1\nrule 2 on 2
+
+A guard such as ``N < M`` breaks the symmetry just as well, by rejecting one
+of the two orderings instead of removing a constraint; since either fix works
+and which one is right depends on the rule, Elpi does not warn about a
+symmetric pattern on its own.
 
 
 Cliques fix what a rule can see
