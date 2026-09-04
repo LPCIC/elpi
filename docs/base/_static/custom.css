@@ -1,0 +1,11 @@
+/* Wide MathJax formulas (formal-semantics.rst's inference rules) must not
+   push the page into horizontal scroll: let each one scroll on its own. */
+mjx-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+.math {
+  overflow-x: auto;
+  max-width: 100%;
+}

@@ -21,7 +21,8 @@ Abstract syntax
    p, q, f, g            & \in \mathrm{Pred}          & \text{functors (predicate / term constructors)} \\
    X, Y \ldots x, y       & \in \mathrm{Var}           & \text{unification variables, bound variables} \\
    \mathrm{App}          & ::= p\ \vec t \mid X\ \vec t & \text{applicative term} \\
-   \mathrm{Atom}         & ::= {!} \mid \Delta\ (\mathrm{App})\ \vec X \mid \mathrm{App} \mid \mathtt{pi}\ x{\backslash}\ \mathrm{Atom} \mid \mathrm{Clause} \Rightarrow \mathrm{Atom} & \text{goal atom} \\
+   \mathrm{Atom}         & ::= {!} \mid \Delta\ (\mathrm{App})\ \vec X \mid \mathrm{App} & \text{goal atom} \\
+                         & \ \ \mid\ \mathtt{pi}\ x{\backslash}\ \mathrm{Atom} \mid \mathrm{Clause} \Rightarrow \mathrm{Atom} & \\
    \mathrm{Term}         & ::= \mathrm{App} \mid \lambda x.\ \mathrm{Term} & \text{term} \\
    \mathrm{Clause}       & ::= \mathrm{App} \mathrel{{:}{-}} \vec{\mathrm{Atom}} & \text{rule} \\
    \mathrm{Chr}          & ::= \vec{\mathrm{App}} \mathrel{\backslash} \vec{\mathrm{App}} \mid \mathrm{App} \Leftrightarrow \vec{\mathrm{App}} & \text{constraint rule}
@@ -86,35 +87,43 @@ The ``run`` judgement
 ``run`` takes the current alternative — its pending goals, store and
 substitution — and the list of alternatives still available, and either
 returns an updated store, substitution and remaining alternatives, or
-:math:`\bot` when every alternative has been exhausted. The rules that touch
-the constraint store (**delay**, **resume**) take priority and are tried
-first, in the order below; the rest are syntax-directed on the first pending
-goal.
+:math:`\bot` when every alternative has been exhausted. We write a
+**configuration** :math:`\langle gs \mid a \mid \sigma \mid \kappa\rangle` for
+one pending goal list together with the rest of that state, and
+:math:`\longrightarrow` for one step of ``run``; repeating
+:math:`\longrightarrow` until it gets stuck at **stop** or **abort** below is
+what ``run`` computes. To keep the rules narrow we write a goal at the head of
+``gs`` as its program paired with its atom, :math:`\pi{:}\mathrm{atom}`,
+eliding the goal's own cut-to alternatives except in **cut**, the one rule
+that reads them.
+
+The rules that touch the constraint store (**delay**, **resume**) take
+priority and are tried first; the rest are syntax-directed on the goal at the
+head of ``gs``.
 
 **stop**
-   When the goal list is empty, ``run`` returns the current store,
-   substitution and alternatives unchanged:
-
    .. math::
 
-      \dfrac{}{\ \mathrm{run}(([\,],\, a,\, \sigma,\, \kappa)) = (\kappa,\, \sigma,\, a)\ }
+      \langle [\,] \mid a \mid \sigma \mid \kappa\rangle\ \Downarrow\ (\kappa,\ \sigma,\ a)
+
+   an empty goal list returns the current store, substitution and
+   alternatives.
 
 **call** (and **backtrack**, **abort**)
-   For a goal ``(π, p \vec t, a_{cut})`` at the head of the list,
    :math:`\mathrm{backchain}` (below) produces one alternative per rule that
-   applies:
+   applies to the goal at the head of ``gs``:
 
    .. math::
 
-      \dfrac{\mathrm{backchain}(\kappa, \pi, p\,\vec t, gs, \sigma, a) = a_1 :: rest}
-            {\mathrm{run}((p\,\vec t \mathbin{::} gs,\, a,\, \sigma,\, \kappa)) = \mathrm{run}(a_1 \text{ with } rest \mathbin{+\!+} a \text{ as alternatives})}
+      \dfrac{\mathrm{backchain}(\kappa, \pi, p\,\vec t, gs, \sigma, a) = (\kappa, \sigma_1, gs_1) :: rest}
+            {\langle \pi{:}p\,\vec t :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs_1 \mid rest \mathbin{+\!+} a \mid \sigma_1 \mid \kappa\rangle}
 
-   the first alternative becomes the new current one, and the rest are pushed
-   in front of ``a``. If no rule applies and ``a`` is not empty, the first
-   alternative of ``a`` is popped instead — *chronological backtracking* to
-   the most recent choice point, undoing every assignment made since. If no
-   rule applies and ``a`` is empty, the whole computation aborts:
-   :math:`\bot`.
+   the first alternative becomes the new configuration, its own leftover
+   rules (``rest``) pushed in front of ``a``. If :math:`\mathrm{backchain}`
+   is empty and :math:`a = a_0 :: a_s`, pop :math:`a_0` instead —
+   *chronological backtracking* to the most recent choice point, undoing
+   every assignment made since. If it is empty and :math:`a = [\,]`, the
+   whole computation aborts: :math:`\bot`.
 
 **cut**
    ``!`` at the head of the goal list discards every alternative created
@@ -150,8 +159,8 @@ goal.
 
    .. math::
 
-      \dfrac{\mathcal{CHR}(\kappa,\, \pi,\, c,\, \vec X,\, a) = (gs',\, \kappa')}
-            {\mathrm{run}((\Delta\ c\ \vec X \mathbin{::} gs,\, a,\, \sigma,\, \kappa)) = \mathrm{run}((gs' \mathbin{+\!+} gs,\, a,\, \sigma,\, \kappa'))}
+      \dfrac{\mathcal{CHR}(\kappa, \pi, c, \vec X, a) = (gs', \kappa')}
+            {\langle \pi{:}\Delta\ c\ \vec X :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs' \mathbin{+\!+} gs \mid a \mid \sigma \mid \kappa'\rangle}
 
 **resume**
    Whenever the store holds a constraint :math:`(\pi, c, t)` some variable of
@@ -163,7 +172,7 @@ goal.
    .. math::
 
       \dfrac{(\pi, c, t) \in \kappa \quad \exists X \in t,\ X \in \mathrm{dom}(\sigma)}
-            {\mathrm{run}((gs,\, a,\, \sigma,\, \kappa)) = \mathrm{run}((c \mathbin{::} gs,\, a,\, \sigma,\, \kappa - (\pi, c, t)))}
+            {\langle gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle \pi{:}c :: gs \mid a \mid \sigma \mid \kappa - (\pi, c, t)\rangle}
 
 
 Backchain
@@ -174,10 +183,11 @@ applies to the goal ``p \vec t``:
 
 .. math::
 
-   \mathrm{backchain}(\kappa, \pi, p\,\vec t, gs, \sigma, a) =
-     \Big[\ (\kappa,\ \sigma',\ [(\pi, g, a) \mid g \in \vec b] \mathbin{+\!+} gs)
-     \ \ \text{for}\ (p\ \vec u \mathrel{{:}{-}} \vec b) \in \pi\ p
-     \ \ \text{if}\ \mathrm{select}(\overline{\vec t\ \vec u},\, \sigma) = \sigma' \neq \bot\ \Big]
+   \begin{aligned}
+   \mathrm{backchain}(\kappa, \pi, p\,\vec t, gs, \sigma, a)\ = \Big[\ &(\kappa,\ \sigma',\ [(\pi, g, a) \mid g \in \vec b] \mathbin{+\!+} gs) \\
+     \text{for}\ &(p\ \vec u \mathrel{{:}{-}} \vec b) \in \pi\ p \\
+     \text{if}\ &\mathrm{select}(\overline{\vec t\ \vec u},\, \sigma) = \sigma' \neq \bot\ \Big]
+   \end{aligned}
 
 in the order the rules appear in :math:`\pi\ p`. Every new goal of every
 alternative carries the *same* cut-to list ``a`` — the alternatives that
@@ -195,9 +205,10 @@ over the output pairs:
 
 .. math::
 
-   \mathrm{select}(\overline{\vec t\ \vec u},\, \sigma) =
-     \mathrm{fold}\ \mathrm{unify}\ \overline{\vec t\ \vec u}_{\,\mathrm{out}}
-       \ \big(\mathrm{fold}\ \mathrm{match}\ \overline{\vec t\ \vec u}_{\,\mathrm{in}}\ \sigma\big)
+   \begin{aligned}
+   \mathrm{select}(\overline{\vec t\ \vec u},\, \sigma) =\ &\mathrm{fold}\ \mathrm{unify}\ \overline{\vec t\ \vec u}_{\,\mathrm{out}} \\
+     &\ \big(\mathrm{fold}\ \mathrm{match}\ \overline{\vec t\ \vec u}_{\,\mathrm{in}}\ \sigma\big)
+   \end{aligned}
 
 folding :math:`\bot` through either step aborts the whole rule, as does a
 failed ``match`` or ``unify`` on any one pair.
