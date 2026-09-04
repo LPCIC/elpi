@@ -1,0 +1,4 @@
+% A unification variable can stand for a goal: after `P = true`, the goal
+% `P` is beta-reduced against the substitution before it can be called.
+
+main :- P = true, P, print "ok: P was called through a variable".
