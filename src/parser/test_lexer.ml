@@ -81,6 +81,7 @@ type t = Tokens.token =
   | DIV
   | DDARROWBANG
   | DDARROW
+  | DATA
   | DARROW
   | CUT
   | CONSTRAINT

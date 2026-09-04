@@ -1460,26 +1460,31 @@ let compile_constructors allocated ty self self_name l =
       StrMap.add name (tyargs_of_args self_name args) sacc)
         (Constants.Map.empty,StrMap.empty) l
 
-let document_constructor fmt name variant doc argsdoc =
-  Fmt.fprintf fmt "@[<hov2>external symbol %s :@[<hov>%a@] = \"%d\". %s@]@\n"
-    name pp_ty_args argsdoc variant (if doc = "" then "" else " % " ^ doc)
+let document_constructor fmt max_name_len name variant doc argsdoc =
+  let pad = String.make (max_name_len - String.length name) ' ' in
+  Fmt.fprintf fmt "@[<hov2>builtin symb %s%s :@[<hov>%a@] = \"%d\". %s@]@\n"
+    name pad pp_ty_args argsdoc variant (if doc = "" then "" else " % " ^ doc)
+
+let kind_param i = if i < 26 then String.make 1 (Char.chr (Char.code 'A' + i)) else Printf.sprintf "A%d" i
 
 let document_kind fmt = function
   | Conversion.TyApp(s,_,l) ->
-      let n = List.length l + 2 in
-      let l = Array.init n (fun _ -> "type") in
-      Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n"
-        s (String.concat " -> " (Array.to_list l))
-  | Conversion.TyName s -> Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
+      let arity = List.length l + 1 in
+      let params = String.concat " " (List.init arity kind_param) in
+      Fmt.fprintf fmt "@[<hov 2>builtin data %s %s.@]@\n" s params
+  | Conversion.TyName s -> Fmt.fprintf fmt "@[<hov 2>builtin data %s.@]@\n" s
 
 let document_adt doc ty ks cks vks fmt () =
   if doc <> "" then
     begin pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n" end;
   document_kind fmt ty;
+  let max_name_len =
+    List.fold_left (fun m (K(name,_,_,_,_)) ->
+      if name = "uvar" then m else max m (String.length name)) 0 ks in
   List.iter (fun (K(name,doc,_,_,_)) ->
     if name <> "uvar" then
       let argsdoc = StrMap.find name cks in
-      document_constructor fmt name (StrMap.find name vks |> snd) doc argsdoc) ks
+      document_constructor fmt max_name_len name (StrMap.find name vks |> snd) doc argsdoc) ks
 
 let rec allocate_constructors: type t h c. mkinterval:(int -> int -> int -> term list) -> look:(depth:int -> term -> term) -> mkConst:(int -> term) -> alloc:(?name:doc -> State.t -> State.t * 'a) -> mkUnifVar:
     ('a -> args:term list -> State.t -> term) ->
@@ -1600,13 +1605,13 @@ let pp_pred fmt docspec name doc_pred args =
   if is_std_moded args then
     match docspec with
     | DocNext ->
-      Fmt.fprintf fmt "@[<v 2>external func %s %% %s@;%a@]@."
+      Fmt.fprintf fmt "@[<v 2>builtin func %s %% %s@;%a@]@."
         name doc_pred pp_tab_args args
     | DocAbove ->
       let doc =
         "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
         "] " ^ doc_pred in
-      Fmt.fprintf fmt "@[<v>%% %a@.external func %s@[<hov>%a.@]@]@.@."
+      Fmt.fprintf fmt "@[<v>%% %a@.builtin func %s@[<hov>%a.@]@]@.@."
         pp_comment doc name pp_args args
   else
     let pp_tab_arg i max sep fmt (dir,ty,doc) =
@@ -1631,14 +1636,14 @@ let pp_pred fmt docspec name doc_pred args =
     let pp_args = pplist (pp_arg "") ", " ~pplastelem:(pp_arg "") in
     match docspec with
     | DocNext ->
-        Fmt.fprintf fmt "@\n@[<v 2>:functional :external pred %s %% %s@;%a@]@."
+        Fmt.fprintf fmt "@\n@[<v 2>:functional :builtin pred %s %% %s@;%a@]@."
           name doc_pred pp_tab_args args
     | DocAbove ->
       let doc =
           "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
           "] " ^ doc_pred in
-        Fmt.fprintf fmt "@\n@[<v>%% %a@.:functional :external pred %s @[<hov>%a.@]@]@.@."
-          pp_comment doc name pp_args args   
+        Fmt.fprintf fmt "@\n@[<v>%% %a@.:functional :builtin pred %s @[<hov>%a.@]@]@.@."
+          pp_comment doc name pp_args args
 ;;
 
 let pp_variadictype fmt name doc_pred ty args =
@@ -1646,7 +1651,7 @@ let pp_variadictype fmt name doc_pred ty args =
   let doc =
     "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
     "...] " ^ doc_pred in
-  Fmt.fprintf fmt "@[<v>%% %a@.external type %s@[<hov>%a.@]@]@.@."
+  Fmt.fprintf fmt "@[<v>%% %a@.builtin type %s@[<hov>%a.@]@]@.@."
         pp_comment doc name pp_ty_args args
 ;;
 
@@ -1655,13 +1660,13 @@ let pp_variadicpred ?(input=false) fmt docspec name doc_pred ty args =
   if is_std_moded rargs then
     match docspec with
     | DocNext ->
-      Fmt.fprintf fmt "@[<v 2>external func %s %% %s@;%a@]@."
+      Fmt.fprintf fmt "@[<v 2>builtin func %s %% %s@;%a@]@."
         name doc_pred pp_tab_args rargs
     | DocAbove ->
       let doc =
         "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) rargs) ^
         "] " ^ doc_pred in
-      Fmt.fprintf fmt "@[<v>%% %a@.external func %s@[<hov>%a.@]@]@.@."
+      Fmt.fprintf fmt "@[<v>%% %a@.builtin func %s@[<hov>%a.@]@]@.@."
         pp_comment doc name pp_args rargs
   else
     pp_variadictype fmt name doc_pred ty args
