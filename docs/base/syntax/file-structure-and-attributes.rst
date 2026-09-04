@@ -44,10 +44,14 @@ Namespaces
 
    main :- json.parse Text T.
 
-A name only *used* inside the block, not defined there, stays global. A leading
-``.`` on a name escapes back to the global scope from inside a namespace
-(``.parse``); see :doc:`lexical-conventions`.
+A name only *used* inside the block, not defined there, stays global.
 
+A leading ``.`` on a name escapes back to the global scope, which is how code
+inside a namespace reaches a name it has itself shadowed (see
+:doc:`lexical-conventions`):
+
+.. elpi:: ../code/namespaces.elpi
+   :assert: \*hi\* \*hi\*!
 
 Shortening names
 ================

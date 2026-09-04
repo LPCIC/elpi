@@ -1,0 +1,12 @@
+% A namespace can redefine a name; a leading `.` on a name reaches the
+% global one from inside the namespace that shadows it.
+
+func emph string -> string.
+emph S R :- R is "*" ^ S ^ "*".
+
+namespace loud {
+  func emph string -> string.
+  emph S R :- .emph S E, R is E ^ "!".   % .emph is the *global* emph
+}
+
+main :- emph "hi" Plain, loud.emph "hi" Loud, print Plain Loud.
