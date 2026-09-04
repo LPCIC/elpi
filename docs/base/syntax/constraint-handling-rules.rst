@@ -129,8 +129,8 @@ suspends:
 
    func even int.
    even (uvar as X) :- !, declare_constraint (even X) [X].
-   even 0.
-   even N :- N > 0, M is N - 2, even M.
+   even 0 :- !.
+   even N :- N > 0, !, M is N - 2, even M.
 
 At the top-level prompt a leftover constraint is printed after the solution;
 ``print_constraints`` prints the store at any point:
