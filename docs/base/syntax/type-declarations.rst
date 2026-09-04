@@ -3,15 +3,17 @@ Type declarations
 #################
 
 Types play **no role at run time**: the type checker reads them, reports
-mismatches, and they are then discarded. Every declaration in this chapter is
-therefore optional — but a predicate you never declare draws a warning (with a
-suggested signature), and a data constructor you never declare is an error, so
-in practice a program declares its vocabulary.
+mismatches, and they are then discarded. They still earn their keep — they let
+the checker catch mistakes early, and some features such as spilling rely on
+knowing a predicate's arity. A predicate with no signature draws a warning
+(carrying a suggested one); an undeclared data constructor is an error. In
+practice a program declares its vocabulary.
 
 This chapter covers the declarations that introduce that vocabulary: ``kind``
-for type constructors, ``type`` for data constructors, ``typeabbrev`` for
-abbreviations, and ``pred`` / ``func`` for the **signature** of a predicate.
-The rules written over the vocabulary are :doc:`inference-rules-and-queries`.
+for type constructors, ``symbol`` (or ``type``) for data constructors,
+``typeabbrev`` for abbreviations, and ``pred`` / ``func`` for the **signature**
+of a predicate. The rules written over the vocabulary are
+:doc:`inference-rules-and-queries`.
 
 
 Kinds
@@ -35,21 +37,32 @@ Several names may share a kind: ``kind day, month type.``. The types ``int``,
 Data constructors
 =================
 
-``type`` gives a constant its type. The arrow ``->`` is the function-space
+``symbol`` gives a constant a type. The arrow ``->`` is the function-space
 constructor; an uppercase name in a type is a parameter, implicitly universally
 quantified:
+
+.. code-block:: elpi
+
+   symbol leaf : tree A.
+   symbol node : A -> tree A -> tree A -> tree A.
+
+Several constants may share a type: ``symbol alice, bob, carol : person.``.
+
+The older spelling ``type name <type>`` — no colon — is inherited from λProlog,
+means exactly the same, and is still common:
 
 .. code-block:: elpi
 
    type leaf tree A.
    type node A -> tree A -> tree A -> tree A.
 
-Several constants may share a type: ``type alice, bob, carol person.``.
+A constant that the host application provides through the FFI is declared
+``external symbol name : type`` (with a trailing ``= "variant"`` to pick one
+overload); see :doc:`../embedding`.
 
-``type`` is **not** used to declare a predicate. ``type p int -> prop.`` still
-works — it is the λProlog spelling — but this manual always gives a predicate a
-``pred`` / ``func`` signature instead; the older form is in
-:doc:`../compatibility`.
+``type p int -> prop.`` also declares a *predicate*, the λProlog way, but this
+manual always uses a ``pred`` / ``func`` signature instead (next section); the
+older form is in :doc:`../compatibility`.
 
 
 Type abbreviations
@@ -62,7 +75,8 @@ Type abbreviations
    typeabbrev int-tree (tree int).
    typeabbrev (assoc A) (list (pair string A)).
 
-The parenthesised form ``(assoc A)`` introduces parameters.
+The parenthesised form ``(assoc A)`` is used when the abbreviation takes
+parameters.
 
 
 Predicate signatures
@@ -93,35 +107,57 @@ A higher-order argument that is itself a signature must be parenthesised:
 
    func map  list A, (func A -> B) -> list B.
 
-A trailing ``..`` makes the last output *variadic* — the predicate accepts that
-argument any number of times: ``func f int, int -> int.. .`` is called with
-three or four arguments. This is mostly used by FFI builtins.
-
 ``func`` differs from ``pred`` in one way: it also declares the predicate
 **deterministic** — a call leaves no choice points — and this is checked.
-``:functional`` on a ``pred`` says the same thing. A predicate with input and
-output arguments *interleaved* cannot use the ``->`` form; it keeps the legacy
-``i:`` / ``o:`` markers together with ``:functional``. Determinacy is
-:doc:`../features/determinacy-checking`.
+Determinacy is described in :doc:`../features/determinacy-checking`.
+
+In a type: ``prop`` is the type of a goal — equivalently a predicate with no
+arguments — with ``o`` as an accepted alias; ``(func)`` is the type of a
+no-argument functional predicate; ``any`` matches any type.
+
+A ``pred`` / ``func`` signature is a shorthand for a ``symbol`` whose type is a
+``(pred …)`` / ``(func …)``, so ``map`` above can equally be declared
+
+.. code-block:: elpi
+
+   symbol map : (func list A, (func A -> B) -> list B).
 
 A predicate may be **overloaded** by repeating its signature with different
 argument types; each defining rule then needs a type ascription to say which
 one it belongs to. See :doc:`../features/types-and-type-checking`.
 
-In a type, ``prop`` is the type of a goal (``o`` is accepted as an alias),
-``any`` matches any type, and ``variadic T R`` is the type of a construct that
-takes any number of ``T`` arguments to build an ``R`` (``,`` has that type).
+
+Variadic predicates
+-------------------
+
+A trailing ``..`` after the last argument makes it *variadic*: the predicate
+accepts that argument any number of times.
+
+.. code-block:: elpi
+
+   func f int, int -> int.. .              % called with three or more arguments
+
+The defining rules then have heads of different arities, one per accepted
+length:
+
+.. code-block:: elpi
+
+   f N D R    :- R is N div D.             % three arguments
+   f N D R M  :- f N D R, M is N mod D.    % four arguments
+
+``variadic T R`` is the older type-level spelling for the same thing, still
+used by builtins such as ``print`` and ``halt``. Variadic predicates are
+otherwise mostly an FFI concern.
 
 
 Signature attributes
 ====================
 
-Attributes written before a ``pred`` / ``func`` / ``type`` describe the
-predicate itself:
+Attributes written before a ``pred`` / ``func`` / ``symbol`` / ``type``
+describe the predicate itself:
 
 * ``:index (…)`` chooses how the predicate is indexed for rule selection —
   :doc:`../features/argument-indexing`;
-* ``:functional`` marks a ``pred`` deterministic, exactly like ``func``;
 * ``:external``, or the bare keyword ``external`` before the declaration, says
   the predicate is implemented in OCaml through the FFI — :doc:`../embedding`.
 
@@ -130,9 +166,21 @@ predicate itself:
 ``:if``, ``:untyped``, …) go on the rule, not the signature —
 :doc:`file-structure-and-attributes`.
 
-The ``symbol`` keyword is a variant of ``type`` that ascribes a type to an
-operator symbol (``external symbol`` for an FFI one); it is used mostly in the
-standard library.
+
+Legacy forms
+------------
+
+Two older ways of writing a signature are still accepted:
+
+* ``:functional`` before a ``pred`` marks it deterministic, exactly like
+  writing ``func`` — which is preferred.
+* ``i:`` / ``o:`` markers, one per argument, in place of the single ``->``:
+  ``pred append i:list A, i:list A, o:list A.``. Unlike ``->`` they let input
+  and output arguments be *interleaved* (``:functional pred p o:A, i:A.``), but
+  that is discouraged — keep the outputs last and use ``->``.
+
+The ``mode`` directive and the ``type name … -> prop`` predicate form are in
+:doc:`../compatibility`.
 
 
 Example
