@@ -48,8 +48,8 @@ quantified:
 
 Several constants may share a type: ``symbol alice, bob, carol : person.``.
 
-The older spelling ``type name <type>`` — no colon — is inherited from λProlog,
-means exactly the same, and is still common:
+The older spelling ``type name <type>`` — no colon — is inherited from λProlog
+and means exactly the same; it is still common and is not going away:
 
 .. code-block:: elpi
 
@@ -88,7 +88,7 @@ listed comma-separated, and a single ``->`` splits the **input** arguments
 
 .. code-block:: elpi
 
-   pred append  list A, list A -> list A.  % two inputs, one output
+   func append  list A, list A -> list A.  % two inputs, one output
    func size    tree A -> int.             % one input, one output
 
 An input argument is *matched* against the pattern in each rule head; an output
@@ -98,7 +98,7 @@ omit it:
 
 .. code-block:: elpi
 
-   pred same-length  list A, list B.       % no arrow: every argument is an input
+   func same-length  list A, list B.       % no arrow: every argument is an input
    pred ancestor  -> person, person.       % leading arrow: every argument is an output
 
 A higher-order argument that is itself a signature must be parenthesised:
@@ -111,9 +111,9 @@ A higher-order argument that is itself a signature must be parenthesised:
 **deterministic** — a call leaves no choice points — and this is checked.
 Determinacy is described in :doc:`../features/determinacy-checking`.
 
-In a type: ``prop`` is the type of a goal — equivalently a predicate with no
-arguments — with ``o`` as an accepted alias; ``(func)`` is the type of a
-no-argument functional predicate; ``any`` matches any type.
+``(pred)`` is the type of a predicate that takes no arguments — a goal. It is
+also spelled ``prop``, or ``o`` in the λProlog tradition. ``(func)`` is the
+same for a functional predicate. ``any`` matches any type.
 
 A ``pred`` / ``func`` signature is a shorthand for a ``symbol`` whose type is a
 ``(pred …)`` / ``(func …)``, so ``map`` above can equally be declared
@@ -135,17 +135,17 @@ accepts that argument any number of times.
 
 .. code-block:: elpi
 
-   func f int, int -> int.. .              % called with three or more arguments
+   func divmod int, int -> int.. .         % here, called with three or four arguments
 
 The defining rules then have heads of different arities, one per accepted
 length:
 
 .. code-block:: elpi
 
-   f N D R    :- R is N div D.             % three arguments
-   f N D R M  :- f N D R, M is N mod D.    % four arguments
+   divmod N D R    :- R is N div D.                  % three arguments
+   divmod N D R M  :- divmod N D R, M is N mod D.    % four arguments
 
-``variadic T R`` is the older type-level spelling for the same thing, still
+``variadic T R`` is the legacy type-level spelling for the same thing, still
 used by builtins such as ``print`` and ``halt``. Variadic predicates are
 otherwise mostly an FFI concern.
 
@@ -153,18 +153,18 @@ otherwise mostly an FFI concern.
 Signature attributes
 ====================
 
-Attributes written before a ``pred`` / ``func`` / ``symbol`` / ``type``
-describe the predicate itself:
+Attributes written before a ``pred``, ``func``, ``symbol`` or ``type`` describe
+the predicate itself:
 
 * ``:index (…)`` chooses how the predicate is indexed for rule selection —
   :doc:`../features/argument-indexing`;
 * ``:external``, or the bare keyword ``external`` before the declaration, says
-  the predicate is implemented in OCaml through the FFI — :doc:`../embedding`.
+  the predicate is implemented in OCaml through the FFI — :doc:`../embedding`;
+* ``:nooc`` turns off the occur check for the predicate; it is described in
+  :doc:`../compatibility`.
 
-``:nooc``, which turns off the occur check for one predicate, is in
-:doc:`../compatibility`. Attributes that graft or guard a *rule* (``:name``,
-``:if``, ``:untyped``, …) go on the rule, not the signature —
-:doc:`file-structure-and-attributes`.
+Attributes that graft or guard a *rule* (``:name``, ``:if``, ``:untyped``, …)
+go on the rule, not the signature — :doc:`file-structure-and-attributes`.
 
 
 Legacy forms
