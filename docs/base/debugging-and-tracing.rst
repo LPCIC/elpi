@@ -41,6 +41,9 @@ goals — for a program to condition its own debug output on, the way
 compilation pass; ``elpi -print FILE`` prints it after most of them —
 including spilling (:doc:`features/spilling`) — so any question about how a
 particular piece of surface syntax desugared can be checked directly.
+``elpi FILE -deps`` prints the ``accumulate`` graph of ``FILE`` and everything
+it pulls in, as a Graphviz ``digraph`` — handy to untangle a large project's
+file structure (:doc:`features/program-organization`).
 
 
 The trace browser
