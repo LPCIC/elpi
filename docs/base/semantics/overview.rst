@@ -29,6 +29,16 @@ each other and replacing both with ``false``, or merging two identical
 branches into one (in effect building a DAG, not just a tree, of the proof
 search).
 
+.. figure:: /_static/chr.png
+   :alt: A proof tree under construction, with an active goal, inert goals, a
+         branch suspended into a constraint, and a constraint handling rule
+         connecting two suspended branches.
+   :width: 70%
+   :align: center
+
+   The four actions on an Elpi computation — run (1), suspend (2), resume (3),
+   handle (4) — from the author's HDR thesis.
+
 This part of the manual follows that split:
 :doc:`logic-programming-model` covers ``run`` — Elpi as Prolog, and as
 λProlog with binders; :doc:`constraints` covers ``suspend`` and ``resume`` —
