@@ -85,10 +85,15 @@ write a signature whose input and output arguments are interleaved
 The ``:nooc`` attribute
 ==========================
 
-Unification performs the occur check by default, unlike Prolog: assigning a
-variable to a term containing itself fails rather than building a cyclic
-term. ``:nooc`` turns this off for one predicate — the builtin
-``unsound_unif`` is defined exactly that way:
+Unification performs the occur check by default: assigning a variable to a
+term containing itself fails rather than building a cyclic term. SWI-Prolog
+(and ISO Prolog in general) defaults the other way — its ``occurs_check``
+flag is ``false`` by default, so ordinary unification (``=/2``) happily
+builds a cyclic term, and a program that wants the check has to ask for it
+explicitly, per call, with ``unify_with_occurs_check/2``. Elpi's default is
+the reverse of that: checked unification everywhere, with ``:nooc`` opting a
+single predicate *out* of it — the builtin ``unsound_unif`` is defined
+exactly that way:
 
 .. code-block:: elpi
 
