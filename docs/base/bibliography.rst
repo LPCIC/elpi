@@ -23,6 +23,16 @@ Cvetan Dunchev, Ferruccio Guidi, Claudio Sacerdoti Coen and Enrico Tassi,
 <https://inria.hal.science/hal-01176856>`_, LPAR-20 (2015). The original
 system description; cite this one for Elpi itself.
 
+.. _bib-chr2004:
+
+Gregory J. Duck, Peter J. Stuckey, María García de la Banda and Christian
+Holzbaur, `The Refined Operational Semantics of Constraint Handling Rules
+<https://doi.org/10.1007/978-3-540-27775-0_7>`_, Logic Programming (ICLP
+2004), Springer, pages 90–104. The paper that names and defines the refined
+operational semantics Elpi implements for CHR — the finer, still
+non-deterministic-from-the-user's-view semantics behind
+:doc:`semantics/chr` and :doc:`semantics/formal-semantics`.
+
 .. _bib-tassi2019:
 
 Ferruccio Guidi, Claudio Sacerdoti Coen and Enrico Tassi, `Implementing type
@@ -40,6 +50,15 @@ from the ML Family Workshop 2018. A lightweight, slide-shaped introduction;
 its companion code, `toyml <https://github.com/gares/mlws18/tree/master/toyml>`_,
 implements Algorithm W in Elpi and is a second, independent take on
 :doc:`examples/hindley-milner`.
+
+.. _bib-miller92:
+
+Dale Miller, `Unification under a mixed prefix
+<https://doi.org/10.1016/0747-7171(92)90011-R>`_, Journal of Symbolic
+Computation 14(4), 1992, pages 321–358. The higher-order unification result
+behind the pattern fragment (Lλ) unification variables are restricted to —
+see :doc:`features/unification-and-variables` — and behind the ``unify`` /
+``match`` functions of :doc:`semantics/formal-semantics`.
 
 .. _bib-miller-nadathur:
 

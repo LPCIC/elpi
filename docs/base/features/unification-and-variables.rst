@@ -13,10 +13,11 @@ The pattern fragment
 =====================
 
 Elpi's unification is decidable and well-behaved as long as it stays within
-the **pattern fragment** (Lλ, Miller's higher-order patterns): a unification
-variable applied only to *distinct* bound names. Outside of it, unification
-can have several — or infinitely many — most general solutions, and Elpi
-either picks one heuristically or delays the problem as a constraint.
+the **pattern fragment** (Lλ, Miller's higher-order patterns —
+:ref:`Miller, 1992 <bib-miller92>`): a unification variable applied only to
+*distinct* bound names. Outside of it, unification can have several — or
+infinitely many — most general solutions, and Elpi either picks one
+heuristically or delays the problem as a constraint.
 
 Two builtins expose this. ``var V Hd Args`` decomposes an applied unification
 variable into its identity ``Hd`` and its argument list ``Args`` (with no

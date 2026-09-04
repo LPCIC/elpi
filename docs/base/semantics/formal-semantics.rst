@@ -54,7 +54,8 @@ extend a substitution:
    \end{aligned}
 
 :math:`\mathrm{unify}(t_1, t_2, \sigma) = \sigma'` is the most general
-extension of :math:`\sigma` such that :math:`\sigma' t_1 = \sigma' t_2`.
+extension of :math:`\sigma` such that :math:`\sigma' t_1 = \sigma' t_2`
+(:ref:`Miller, 1992 <bib-miller92>`).
 :math:`\mathrm{match}(t, p, \sigma) = \sigma'` is the most general extension of
 :math:`\sigma` such that :math:`\sigma' p = \sigma t` — it only ever assigns
 variables of the *pattern* :math:`p`, never ones already in :math:`t`; this is
@@ -223,8 +224,9 @@ has a logical reading: :math:`T \land G_1 \Rightarrow (G_2 \Leftrightarrow G_3)`
 — when the guard :math:`T` holds, :math:`G_2` may be replaced by :math:`G_3`,
 provided :math:`G_1` still needs to be solved. :math:`\mathcal{CHR}` computes
 this for one freshly declared or resumed constraint — the **active**
-constraint — following the refined operational semantics of
-:ref:`Guidi, Sacerdoti Coen & Tassi, 2019 <bib-tassi2019>`
+constraint — following the *refined operational semantics* of
+:ref:`Duck, Stuckey, García de la Banda & Holzbaur, 2004 <bib-chr2004>`, as
+formalized by :ref:`Guidi, Sacerdoti Coen & Tassi, 2019 <bib-tassi2019>`
 (:doc:`chr` gives the informal, 8-step version of exactly this procedure):
 
 .. math::
