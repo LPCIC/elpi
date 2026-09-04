@@ -3,9 +3,9 @@
 
 kind tm type.
 kind ty type.
-type app tm -> tm -> tm.
-type lam (tm -> tm) -> tm.
-type arr ty -> ty -> ty.
+symbol app : tm -> tm -> tm.
+symbol lam : (tm -> tm) -> tm.
+symbol arr : ty -> ty -> ty.
 
 func of tm -> ty.
 of (app H A) T :- of H (arr S T), of A S.
