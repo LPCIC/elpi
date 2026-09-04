@@ -9,7 +9,7 @@ those; everything else is inherited.
 
 from pygments.lexer import inherit, bygroups, include
 from pygments.lexers import ElpiLexer
-from pygments.token import Keyword, Name, Text, String
+from pygments.token import Keyword, Name, Text, String, Punctuation
 
 _cs = ElpiLexer.const_sym_re
 _const = ElpiLexer.constant_re
@@ -32,6 +32,10 @@ class ElpiManualLexer(ElpiLexer):
             (rf"\b(external func|external pred|external symbol|func|pred)(\s+)({_cs})",
              bygroups(Keyword.Declaration, Text.Whitespace, Name.Function),
              "elpi-signature"),
+            # the lambda binder (the stock lexer only handles lowercase `x\`)
+            (r"\\", Keyword.Declaration),
+            # a bare colon: type ascription `(t : ty)`, sequent `?-` context, ...
+            (r":", Punctuation),
             inherit,
         ],
         # a signature body: accepts both `i:T, o:T` and `In.. -> Out..`
