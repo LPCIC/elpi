@@ -36,11 +36,11 @@ than ordinary comments (``% elpi:skip``, ``% elpi:if`` / ``% elpi:endif``); see
 :doc:`../features/conditional-compilation`.
 
 
-Names
-=====
+Identifiers
+===========
 
-A name (an identifier) starts with a letter, ``_`` or ``@``, and continues with
-any number of letters, digits, ``_``, ``-``, ``$`` and the *symbol characters*
+An identifier starts with a letter or ``_``, and continues with any number of
+letters, digits, ``_``, ``-``, ``$`` and the *symbol characters*
 
 .. code-block:: text
 
@@ -55,7 +55,7 @@ The **first character decides the role of the name**:
   ``X``, ``Acc``, ``Result1`` (a name starting with ``_`` is also variable-like,
   but a *wildcard* — see below);
 * every other name is a **constant** — a predicate or a term constructor:
-  ``append``, ``red``, ``std.length``, ``make-palindrome``, ``@of``.
+  ``append``, ``red``, ``std.length``, ``make-palindrome``.
 
 .. code-block:: elpi
 
@@ -64,8 +64,7 @@ The **first character decides the role of the name**:
 
 A name may not *start* with ``-`` or a digit, but it may *contain* them: a
 lowercase-initial name like ``make-palindrome`` or ``v1`` is a single token.
-Write ``X - Y`` (with spaces) for subtraction. A name may start with ``@``, and
-macros conventionally do.
+Write ``X - Y`` (with spaces) for subtraction.
 
 .. rubric:: Qualified names
 
@@ -79,6 +78,14 @@ followed by a letter is the full stop that ends a rule or directive.
 A bare ``_`` is a fresh anonymous variable. A name that *starts* with ``_``
 (``_x``, ``_Acc``) is also a wildcard — never a variable that can be referred
 to again. See :doc:`../features/unification-and-variables`.
+
+.. rubric:: Macro names
+
+The character ``@`` is reserved to start macro names. A name that *begins*
+with ``@`` always refers to a macro, which must have been defined with
+``macro @name … :- ….`` — it can appear nowhere else. (``@`` anywhere other
+than the first character is an ordinary name character.) See
+:doc:`../features/macros`.
 
 
 Literals
@@ -105,9 +112,9 @@ Delimited by ``"``. A string literal may span several lines. The escapes
 
    Msg = "he said ""hi"" and\nleft"
 
+.. _quoted-identifiers:
 
-Quoted identifiers
-==================
+.. rubric:: Quoted identifiers
 
 A run of *identifier* characters — letters, digits, the symbol characters and
 also ``:`` — enclosed in back-quotes or single quotes, with **no spaces**
@@ -170,25 +177,27 @@ lexer uses:
    :start-at: let digit =
    :end-at: let symbcharplus
 
-``num`` is an integer; ``num "." pnum`` or ``"." pnum`` is a float. A name comes
-from exactly one of these productions (the keyword rules in between are elided):
+``num`` is an integer; ``num "." pnum`` or ``"." pnum`` is a float. A constant
+name comes from exactly one of these productions (the keyword rules in between are elided):
 
 .. code-block:: ocaml
-
-   | "_" idchar+           
-   | "_"                   
-   | ucase idcharstar      
-   | lcase idcharstarns    
-   | "." idcharstarns      
-   | '@' idcharstar        
-   | '\'' symbcharstar '\''
-   | '`'  symbcharstar '`' 
+   
+   let constant =
+      | "_" idchar+           
+      | "_"                   
+      | ucase idcharstar      
+      | lcase idcharstarns    
+      | "." idcharstarns      
+      | '@' idcharstar        
+      | '\'' symbcharstar '\''
+      | '`'  symbcharstar '`' 
 
 ``idcharstarns`` is ``idcharstar`` extended with an embedded ``.`` before a
 letter — that is what makes ``std.rev`` a single token. The last two are the
-`Quoted identifiers`_. The bare ``_`` is the anonymous variable; the other
-seven productions all yield one ``CONSTANT`` token, and the compiler decides
-what it stands for afterwards, from the first character.
+:ref:`quoted identifiers <quoted-identifiers>`. The bare ``_`` is the anonymous
+variable; the other seven productions all yield one ``CONSTANT`` token, and the
+compiler decides what it stands for from the first character: ``@`` a macro, an
+upper-case letter a variable, otherwise a constant.
 
 
 Relation to Teyjus
