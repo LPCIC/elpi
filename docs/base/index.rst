@@ -32,9 +32,9 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
 
    syntax/lexical-conventions
    syntax/terms-and-operators
+   syntax/type-declarations
    syntax/inference-rules-and-queries
    syntax/constraint-handling-rules
-   syntax/type-declarations
    syntax/file-structure-and-attributes
 
 .. toctree::
