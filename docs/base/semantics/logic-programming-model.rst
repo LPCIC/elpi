@@ -57,8 +57,8 @@ programming language's own bound variable — Higher-Order Abstract Syntax, or
 .. code-block:: elpi
 
    kind tm type.
-   symbol app : tm -> tm -> tm.
-   symbol lam : (tm -> tm) -> tm.
+   symbol app tm -> tm -> tm.
+   symbol lam (tm -> tm) -> tm.
 
 ``lam`` takes an Elpi function ``tm -> tm``: the identity ``λx.x`` is written
 ``lam x\ x``, and applying that function to a term substitutes it for the
@@ -76,7 +76,7 @@ terms, with one constructor ``arr`` for the function space:
 .. code-block:: elpi
 
    kind ty type.
-   symbol arr : ty -> ty -> ty.
+   symbol arr ty -> ty -> ty.
 
    pred of tm -> ty.
    of (app H A) T :- of H (arr S T), of A S.

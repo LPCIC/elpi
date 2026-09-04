@@ -14,24 +14,24 @@ mem [_|XS] X :- mem XS X.
 
 % terms
 kind term type.
-symbol app : term -> term -> term.
-symbol lam : (term -> term) -> term.
-symbol let : term -> ty -> (term -> term) -> term.
+symbol app term -> term -> term.
+symbol lam (term -> term) -> term.
+symbol let term -> ty -> (term -> term) -> term.
 
 % monotypes: type constructors applied to arguments (#) and the arrow (===>)
 % (===> and # are recognised as infix automatically, by token family)
 kind tye type.
-symbol (===>) : tye -> tye -> tye.
-symbol (#) : tye -> tye -> tye.
+symbol (===>) tye -> tye -> tye.
+symbol (#) tye -> tye -> tye.
 
 % type schemes: mono wraps a monotype, all quantifies a type variable
 kind ty type.
-symbol all  : (tye -> ty) -> ty.
-symbol mono : tye -> ty.
+symbol all (tye -> ty) -> ty.
+symbol mono tye -> ty.
 
 % a handful of constants and their (possibly polymorphic) schemes
-symbol one, plus, size, empty, comma : term.
-symbol integer, list, pair : tye.
+symbol one, plus, size, empty, comma term.
+symbol integer, list, pair tye.
 
 pred w term -> ty.
 w one    (mono integer).

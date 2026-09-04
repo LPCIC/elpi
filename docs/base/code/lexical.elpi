@@ -3,7 +3,7 @@
 /* Block comments  /* nest */  like this. */
 
 kind item type.
-symbol apple, pear : item.
+symbol apple, pear item.
 
 pred price -> item, float.
 price apple 0.30.

@@ -5,8 +5,8 @@
 % `copy a Z`.
 
 kind tm type.
-symbol a : tm.
-symbol b : tm.
+symbol a tm.
+symbol b tm.
 
 func copy tm -> tm.
 copy X X.

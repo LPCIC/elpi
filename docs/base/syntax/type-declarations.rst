@@ -39,17 +39,19 @@ Data constructors
 
 ``symbol`` gives a constant a type. The arrow ``->`` is the function-space
 constructor; an uppercase name in a type is a parameter, implicitly universally
-quantified:
+quantified. The ``:`` between the name(s) and the type is optional — it reads
+well but adds nothing — and this manual omits it:
 
 .. code-block:: elpi
 
-   symbol leaf : tree A.
-   symbol node : A -> tree A -> tree A -> tree A.
+   symbol leaf tree A.
+   symbol node A -> tree A -> tree A -> tree A.
 
-Several constants may share a type: ``symbol alice, bob, carol : person.``.
+Several constants may share a type: ``symbol alice, bob, carol person.``
+(with or without the ``:``).
 
-The older spelling ``type name <type>`` — no colon — is inherited from λProlog
-and means exactly the same; it is still common and is not going away:
+``type name <type>`` is an older, equivalent spelling inherited from
+λProlog; it is still common and is not going away:
 
 .. code-block:: elpi
 
@@ -57,7 +59,7 @@ and means exactly the same; it is still common and is not going away:
    type node A -> tree A -> tree A -> tree A.
 
 A constant that the host application provides through the FFI is declared
-``external symbol name : type`` (with a trailing ``= "variant"`` to pick one
+``external symbol name type`` (with a trailing ``= "variant"`` to pick one
 overload); see :doc:`../embedding`.
 
 ``type p int -> prop.`` also declares a *predicate*, the λProlog way, but this
@@ -120,7 +122,7 @@ A ``pred`` / ``func`` signature is a shorthand for a ``symbol`` whose type is a
 
 .. code-block:: elpi
 
-   symbol map : (func list A, (func A -> B) -> list B).
+   symbol map (func list A, (func A -> B) -> list B).
 
 A predicate may be **overloaded** by repeating its signature with different
 argument types; each defining rule then needs a type ascription to say which

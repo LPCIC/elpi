@@ -1,7 +1,7 @@
 % Example used in the "The logic programming model" chapter.
 
 kind person  type.
-symbol mallory, bob, alice : person.
+symbol mallory, bob, alice person.
 
 pred age -> person, int.
 age mallory 23.

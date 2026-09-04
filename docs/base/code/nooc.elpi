@@ -2,7 +2,7 @@
 % :nooc, like the builtin unsound_unif, does not.
 
 kind tm type.
-symbol f : tm -> tm.
+symbol f tm -> tm.
 
 main :-
   (pi x\ sigma X\ (X = f X, print "should not happen")

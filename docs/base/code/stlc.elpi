@@ -2,11 +2,11 @@
 % weak-head reduction, and a type checker.
 
 kind term  type.
-symbol app : term -> term -> term.
-symbol fun : (term -> term) -> term.
+symbol app term -> term -> term.
+symbol fun (term -> term) -> term.
 
 kind ty    type.
-symbol arr : ty -> ty -> ty.
+symbol arr ty -> ty -> ty.
 
 % weak-head reduction
 pred whd term -> term.

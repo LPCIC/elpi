@@ -3,7 +3,7 @@
 % number per group is left — its GCD.
 
 kind group type.
-symbol group-1, group-2 : group.
+symbol group-1, group-2 group.
 
 func gcd int, group.
 
