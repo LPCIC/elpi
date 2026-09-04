@@ -1,0 +1,25 @@
+% A global variable, implemented on top of the constraint store: `value`
+% holds the current content, `set` overwrites it, `get` reads it.
+
+func set int.
+set I :- declare_constraint (set I) [_].
+
+func get -> int.
+get I :- declare_constraint (get I) [_].
+
+func value int.
+value I :- declare_constraint (value I) [_].
+
+constraint set get value {
+  rule \ (set I) (value _) <=> (value I).
+  rule (value J) \ (get I) <=> (I = J).
+  rule (set _)             <=> (halt "no global variable").
+  rule (get _)             <=> (halt "no global variable").
+  rule (value _) (value _) <=> (halt "double initialization").
+}
+
+main :-
+  value 2,       % initialize
+  get N,         % read the current value
+  set 3,         % overwrite it
+  print "N =" N.
