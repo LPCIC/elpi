@@ -3,6 +3,10 @@
 - Parser:
   - Accept the trailing `..` variadic marker in anonymous `func`/`pred`
     types, e.g. `(func any..)` and `(func (func) ..)`
+  - New `data` declaration, sugar for `kind`: `data t A1 .. An.` stands
+    for `kind t type -> .. -> type.` (n arrows), e.g. `data tm.` and
+    `data list A.`
+  - Accept `symb` as a synonym for the `symbol` keyword
 
 - Doc:
   - `elpi -document-builtins` prints variadic signatures with the `..`
