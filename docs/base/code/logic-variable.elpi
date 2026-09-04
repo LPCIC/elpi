@@ -3,7 +3,6 @@
 % unless it happens to agree.
 
 main :-
-  sigma X\
-    ( X = 1, print "X is now" X,
-      (X = 2, print "reassigned to" X
-       ; print "cannot reassign: X is already 1, not 2") ).
+  X = 1, print "X is now" X,
+  (X = 2, print "reassigned to" X
+   ; print "cannot reassign: X is already 1, not 2").
