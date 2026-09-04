@@ -2,27 +2,145 @@
 File structure and attributes
 #############################
 
-.. note::
+A program is one or more files, each a sequence of rules, signatures
+(:doc:`type-declarations`) and directives. This chapter covers the directives
+that stitch files together and organise names, and the attributes that decorate
+individual rules. How scoping actually resolves is
+:doc:`../features/program-organization`.
 
-   **Stub — part of the manual outline.**
 
-   Planned content: how a program is split across files and how its rules and
-   signatures are decorated with attributes.
+Accumulating files
+==================
 
-   The file model: ``accumulate`` (each file is loaded once; relative paths and
-   quoted string paths). ``namespace { … }`` prefixing. ``shorten`` (including
-   the trie syntax) and its scope. ``macro @name Args :- Body.`` — hygienic,
-   compile-time expansion. ``constraint`` / ``rule`` blocks — their syntax is
-   in *Constraint handling rules*.
+``accumulate`` loads another file:
 
-   The rule-attribute catalogue, written ``:``-prefixed before a rule:
-   ``:name``, ``:before``, ``:after``, ``:replace``, ``:remove`` (grafting),
-   ``:if`` (conditional compilation) and ``:untyped`` (skip type checking for
-   that rule). The lexer-level ``% elpi:if`` / ``% elpi:endif`` /
-   ``% elpi:skip`` directives.
+.. code-block:: elpi
 
-   Source material: ELPI.md; src/builtin.elpi.
+   accumulate stdlib.            % loads stdlib.elpi
+   accumulate parser, printer.   % several at once
+   accumulate "lib/json".        % a quoted path, for names with . or /
 
-   Examples will live in external ``.elpi`` files under ``docs/base/code/`` and
-   be injected with the ``.. elpi::`` directive plus an ``:assert:`` line
-   pinning the printed output.
+The ``.elpi`` extension is added automatically; a plain name is resolved
+relative to the file that accumulates it (and then along the ``-I`` search
+path). A file is loaded **once** even if it is accumulated from several places,
+so accumulation forms a graph, not a tree.
+
+``import`` and ``accum_sig`` load Teyjus ``.mod`` / ``.sig`` files and are
+covered in :doc:`../compatibility`.
+
+
+Namespaces
+==========
+
+``namespace n { … }`` prefixes every name **defined** inside the block with
+``n.``:
+
+.. code-block:: elpi
+
+   namespace json {
+     pred parse string -> term.
+     parse S T :- tokenize S Ts, parse-tokens Ts T.
+   }
+
+   main :- json.parse Text T.
+
+A name only *used* inside the block, not defined there, stays global. A leading
+``.`` on a name escapes back to the global scope from inside a namespace
+(``.parse``); see :doc:`lexical-conventions`.
+
+
+Shortening names
+================
+
+``shorten`` introduces a local alias for a qualified name:
+
+.. code-block:: elpi
+
+   shorten std.{ map, rev }.          % write `map` for `std.map`
+   shorten std.{ list.map, string.{ concat, escape } }.   % a trie of names
+
+The part before ``{`` is dropped, what is inside is kept: the second line makes
+``list.map``, ``string.concat`` and ``string.escape`` stand for the
+corresponding ``std.…`` names. A ``shorten`` is in effect until the end of the
+file or of the enclosing ``{ … }`` block.
+
+
+Macros
+======
+
+``macro @name Args :- Body.`` defines a macro, expanded at compile time. Macro
+names start with ``@`` (:doc:`lexical-conventions`); expansion is hygienic.
+
+.. code-block:: elpi
+
+   macro @newline :- "\n".
+   macro @of X N T :- (of X T, pp X N).
+
+A macro is not a predicate: it disappears before the program runs.
+
+
+Constraint blocks
+=================
+
+``constraint`` blocks and the ``rule`` keyword inside them are
+:doc:`constraint-handling-rules`.
+
+
+Rule attributes
+===============
+
+An attribute is written ``:``-prefixed before a rule — a fact or a
+``head :- body`` — and may sit on its own line; several may be stacked.
+
+.. code-block:: elpi
+
+   :name "step" :if "DEBUG"
+   step X :- ...
+
+* ``:name "N"`` names the rule, for grafting and for trace output.
+* ``:before "N"`` / ``:after "N"`` insert the rule immediately before / after
+  the rule named ``N`` instead of at the end of the predicate's rules.
+* ``:replace "N"`` / ``:remove "N"`` swap out / delete the rule named ``N``.
+  They only apply to a rule of the *same* predicate, and the new rule may not
+  itself carry ``:name``. See :doc:`../features/rule-grafting`.
+* ``:if "V"`` keeps the rule only when the compiler variable ``V`` is defined
+  (``elpi -D V``); it also works on CHR rules. See
+  :doc:`../features/conditional-compilation`.
+* ``:untyped`` turns the type checker off for that one rule.
+
+Attributes that describe a *predicate* — ``:index``, ``:functional``,
+``:external`` — go on its ``pred`` / ``func`` signature instead
+(:doc:`type-declarations`).
+
+
+Lexer directives
+================
+
+Two directives are read by the lexer, before parsing, as ``%`` line comments:
+
+.. code-block:: text
+
+   % elpi:if version < 2.0.0
+   text kept only for Elpi older than 2.0.0
+   % elpi:endif
+
+   % elpi:skip 2
+   infixr ==> 120.       % two lines Elpi should ignore (e.g. Teyjus directives)
+   infixr <== 120.
+
+``% elpi:if`` takes a single ``version <component> <op> X.Y.Z`` test
+(``<component>`` defaults to ``elpi``, ``<op>`` is one of ``< > = <= >=``) and
+cannot be nested; ``% elpi:skip N`` drops the next ``N`` lines unconditionally.
+See :doc:`../features/conditional-compilation`.
+
+
+Example
+=======
+
+The accumulated library:
+
+.. literalinclude:: ../code/table-lib.elpi
+   :language: elpi
+
+.. elpi:: ../code/file-structure.elpi
+   :assert: two = 2 / nope = 0
