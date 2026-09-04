@@ -133,6 +133,11 @@ let testK = test_decl_eq (function Program.Kind k -> Some k | _ -> None) (fun k 
 
 (* checks that s1 and s2 parse to the same type declaration, up to location *)
 let testS = test_decl_eq (function Program.Type k -> Some k | _ -> None) (fun k -> Program.Type k)
+
+(* checks that s1 and s2 parse to the same pred/func declaration, up to location *)
+let testP = test_decl_eq
+  (function Program.Pred t -> Some [t] | _ -> None)
+  (function [t] -> Program.Pred t | _ -> assert false)
       
 let testF s i msg =
   let lexbuf = Lexing.from_string s in
@@ -328,11 +333,22 @@ let _ =
   testK "data pair A B."   "kind pair type -> type -> type."          ();
   testK "data pair A B C." "kind pair type -> type -> type -> type."  ();
   testF "data foo, bar."   9 "syntax error";
+  testT "builtin data tm."  ();
+  testT "external data tm."  ();
+  testK "builtin data tm."   "data tm."   ();
+  testK "external data tm."  "data tm."   ();
   (*    01234567890123456789012345 *)
   testT "symbol x : int."  ();
   testT "symb x : int."  ();
   testS "symb x : int." "symbol x : int." ();
   testS "external symb x : int." "external symbol x : int." ();
+  testT "builtin symb x : int."  ();
+  testS "builtin symb x : int." "external symbol x : int." ();
+  (*    01234567890123456789012345 *)
+  testT ":external pred x."  ();
+  testT ":builtin pred x."  ();
+  testP ":builtin pred x." ":external pred x." ();
+  testP ":builtin func x." ":external func x." ();
   (*    01234567890123456789012345 *)
   test  "p :- f {{{ g }}}."    1 16 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [q 7 16 10 13 " g "]]);
   test  "p :- f {{ g }}."      1 14 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [q 7 14 9 12 " g "]]);

@@ -250,7 +250,7 @@ kind:
     names |> List.map (fun n ->
      { Type.loc=loc $sloc; attributes=[]; name =  n; ty = k })
   }
-| DATA; name = constant; params = list(constant_w_loc) {
+| option(EXTERNAL); DATA; name = constant; params = list(constant_w_loc) {
     let type_ = { tloc = loc $sloc; tit = TConst (Func.from_string "type") } in
     let k = List.fold_right (fun _ arr -> { tloc = loc $sloc; tit = TArr (type_, arr) }) params type_ in
     [ { Type.loc = loc $sloc; attributes = []; name; ty = k } ]

@@ -331,7 +331,8 @@ program: COLON EXTERNAL VDASH
 program: COLON EXTERNAL COLON VDASH
 
 Malformed 'external' attribute. Example:
-:external pred
+:builtin pred
+:external pred % legacy
 
 program: TYPE VDASH
 program: TYPE AFTER TYPE
@@ -342,10 +343,11 @@ program: SYMBOL AFTER TYPE
 program: SYMBOL USE_SIG
 
 Malformed type declaration. Examples:
-type app tm -> tm -> tm.
-type lam (tm -> tm) -> tm.
-type (++) list A -> list A -> list A.
+symb app : tm -> tm -> tm.
 symbol app : tm -> tm -> tm.
+type app tm -> tm -> tm. % legacy
+type lam (tm -> tm) -> tm. % legacy
+type (++) list A -> list A -> list A. % legacy
 
 program: RULE LPAREN USE_SIG
 program: RULE VDASH
@@ -438,8 +440,10 @@ program: KIND AFTER TYPE ARROW VDASH
 program: KIND AFTER UNTYPED
 
 Kind declaration expected. Examples:
-kind term  type.
-kind list  type -> type.
+data term.
+data list A.
+kind term  type. % legacy
+kind list  type -> type. % legacy
 
 program: CONSTRAINT VDASH
 program: CONSTRAINT AFTER VDASH
@@ -453,8 +457,11 @@ constraint foo bar {
 program: EXTERNAL VDASH
 
 External declaration expected. Examples:
-external type foo term -> prop.
-external pred foo i:term.
+builtin func foo term -> ty.
+builtin type foo term -> prop. % legacy
+builtin pred foo i:term. % legacy
+external type foo term -> prop. % legacy
+external pred foo i:term. % legacy
 
 program: PRED VDASH
 program: PRED AFTER VDASH

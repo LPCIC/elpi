@@ -7,10 +7,18 @@
     for `kind t type -> .. -> type.` (n arrows), e.g. `data tm.` and
     `data list A.`
   - Accept `symb` as a synonym for the `symbol` keyword
+  - Accept `builtin` as a synonym for the `external` keyword
+  - Accept (and ignore) `builtin`/`external` before a `data` declaration
 
 - Doc:
   - `elpi -document-builtins` prints variadic signatures with the `..`
     syntax instead of the legacy `variadic T R` type former (#440)
+  - `elpi -document-builtins` now documents ADTs with
+    `builtin data`/`builtin symb` instead of `kind`/`external symbol`,
+    aligning the `:` of `builtin symb` declarations sharing an ADT
+  - `elpi -document-builtins` prints `builtin` instead of `external` in
+    front of predicates too (`builtin func`, `builtin type`,
+    `:functional :builtin pred`)
 
 
 # v3.7.3 (September 2026)

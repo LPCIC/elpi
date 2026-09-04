@@ -206,7 +206,7 @@ and token v = parse
 | "data" { DATA }
 | "type" { TYPE }
 | "typeabbrev" { TYPEABBREV }
-| "external" { EXTERNAL }
+| ("external" | "builtin") { EXTERNAL }
 | "module" { MODULE }
 | "sig" { SIG }
 | ("symbol" | "symb") { SYMBOL }
