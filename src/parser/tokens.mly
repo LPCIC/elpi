@@ -42,6 +42,7 @@
 %token NAMESPACE
 %token CONSTRAINT
 %token KIND
+%token DATA
 %token TYPE
 %token TYPEABBREV
 %token EXTERNAL

@@ -203,12 +203,13 @@ and token v = parse
 | "namespace" { NAMESPACE }
 | "constraint" { CONSTRAINT }
 | "kind" { KIND }
+| "data" { DATA }
 | "type" { TYPE }
 | "typeabbrev" { TYPEABBREV }
 | "external" { EXTERNAL }
 | "module" { MODULE }
 | "sig" { SIG }
-| "symbol" { SYMBOL }
+| ("symbol" | "symb") { SYMBOL }
 | "import" { IMPORT }
 | "accum_sig" { ACCUM_SIG }
 | "use_sig" { USE_SIG }

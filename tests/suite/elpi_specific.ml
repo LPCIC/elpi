@@ -545,6 +545,11 @@ let () = declare "variadic"
   ~description:"variadic"
   ()
 
+let () = declare "data"
+  ~source_elpi:"data.elpi"
+  ~description:"data as sugar for kind"
+  ()
+
 let () = declare "implbang"
   ~source_elpi:"implbang.elpi"
   ~description:"tail cut =!=>"

@@ -1,0 +1,19 @@
+% `data` is sugar for `kind`: `data t A1..An.` is `kind t type -> .. -> type.`
+% (n arrows), the parameter names are only documentation.
+
+data tm.
+type app tm -> tm -> tm.
+type lam (tm -> tm) -> tm.
+
+data mylist A.
+type mynil mylist A.
+type mycons A -> mylist A -> mylist A.
+
+data mypair A B.
+type mkpair A -> B -> mypair A B.
+
+main :-
+  X = app (lam x\ x) (lam x\ x),
+  L = mycons X (mycons X mynil),
+  P = mkpair X 1,
+  X = X, L = L, P = P.

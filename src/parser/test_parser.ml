@@ -76,12 +76,63 @@ let testT s () =
     match ast with
     | [Program.Pred _] -> ()
     | [Program.Type _] -> ()
-    | _ -> 
+    | [Program.Kind _] -> ()
+    | _ ->
       Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) "not a type declaration";
       exit 1
   with Parse.ParseError(loc,message) ->
       Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
       exit 1
+
+(* strip locations so two ASTs can be compared up to source position *)
+let no_loc = mkLoc 0 0 0 0
+let rec norm_te (t : 'a TypeExpression.t) : 'a TypeExpression.t =
+  { tloc = no_loc; tit = norm_te_ t.tit }
+and norm_te_ : 'a TypeExpression.t_ -> 'a TypeExpression.t_ = function
+  | TConst c -> TConst c
+  | TApp (c,x,xs) -> TApp (c, norm_te x, List.map norm_te xs)
+  | TPred (a,l,v) -> TPred (a, List.map (fun (m,t) -> (m, norm_te t)) l, v)
+  | TArr (a,b) -> TArr (norm_te a, norm_te b)
+let norm_tys l =
+  List.map (fun { Type.loc = _; attributes; name; ty } ->
+    { Type.loc = no_loc; attributes; name; ty = norm_te ty }) l
+
+(* checks that s1 and s2 parse to the same declaration, up to location;
+   [get] extracts the (normalizable) payload and [wrap] rebuilds a decl
+   from it for error reporting *)
+let test_decl_eq get wrap s1 s2 () =
+  let parse s =
+    let lexbuf = Lexing.from_string s in
+    let loc = Loc.initial "(input)" in
+    try
+      let { ast } = Parser.program_from ~loc ~digest:(Digest.string s) lexbuf in
+      match ast with
+      | [d] ->
+        (match get d with
+         | Some l -> norm_tys l
+         | None ->
+           Printf.eprintf "error parsing '%s': unexpected declaration\n%!" s;
+           exit 1)
+      | _ ->
+        Printf.eprintf "error parsing '%s': not a single declaration\n%!" s;
+        exit 1
+    with Parse.ParseError(loc,message) ->
+      Printf.eprintf "error parsing '%s' at %s\n%s%!" s (Loc.show loc) message;
+      exit 1 in
+  let k1 = parse s1 and k2 = parse s2 in
+  if k1 <> k2 then begin
+    Printf.eprintf "'%s' and '%s' do not parse to the same declaration:\n%s\n<>\n%s\n%!"
+      s1 s2
+      (Program.show_decl_list [wrap k1])
+      (Program.show_decl_list [wrap k2]);
+    exit 1
+  end
+
+(* checks that s1 and s2 parse to the same kind declaration, up to location *)
+let testK = test_decl_eq (function Program.Kind k -> Some k | _ -> None) (fun k -> Program.Kind k)
+
+(* checks that s1 and s2 parse to the same type declaration, up to location *)
+let testS = test_decl_eq (function Program.Type k -> Some k | _ -> None) (fun k -> Program.Type k)
       
 let testF s i msg =
   let lexbuf = Lexing.from_string s in
@@ -266,6 +317,22 @@ let _ =
   testT "type x (func (func) ..)."  ();
   testT "type x (func int, int -> int..)."  ();
   testT "func x (func int, int -> int..), int -> int."  ();
+  (*    01234567890123456789012345 *)
+  testT "kind tm type."  ();
+  testT "kind list type -> type."  ();
+  testT "data tm."  ();
+  testT "data list A."  ();
+  testT "data pair A B."  ();
+  testK "data tm."         "kind tm type."                            ();
+  testK "data list A."     "kind list type -> type."                  ();
+  testK "data pair A B."   "kind pair type -> type -> type."          ();
+  testK "data pair A B C." "kind pair type -> type -> type -> type."  ();
+  testF "data foo, bar."   9 "syntax error";
+  (*    01234567890123456789012345 *)
+  testT "symbol x : int."  ();
+  testT "symb x : int."  ();
+  testS "symb x : int." "symbol x : int." ();
+  testS "external symb x : int." "external symbol x : int." ();
   (*    01234567890123456789012345 *)
   test  "p :- f {{{ g }}}."    1 16 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [q 7 16 10 13 " g "]]);
   test  "p :- f {{ g }}."      1 14 1 0 [] (app ":-" 2 [c 0 "p"; app "f" 5 [q 7 14 9 12 " g "]]);
