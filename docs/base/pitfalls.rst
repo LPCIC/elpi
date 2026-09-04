@@ -9,12 +9,15 @@ cross-referencing where it is covered in depth.
 Misleading precedence of ``,``, ``=>`` and ``==>``
 ======================================================
 
-``A, B => C, D`` means ``A, (B => (C, D))`` — the implication's right-hand
-side swallows every conjunct after it, not just the next one. Adding a debug
-print before ``D`` as ``A, B => print D, D`` reads as ``A, (B => print D), D``:
-the print runs, but *outside* the hypothesis ``B``. ``==>`` was introduced
-with different precedence specifically to avoid this — ``A, B ==> C, D`` reads
-``A, (B ==> (C, D))`` — and Elpi warns on the traditional ``=>`` spelling; see
+``=>`` binds *tighter* than ``,``: ``A, B => C, D`` means ``A, (B => C), D`` —
+the hypothesis ``B`` is available only to ``C``, not to the rest of the
+conjunction. This is a common mistake, since a newcomer typically expects
+``B`` to hold for everything that follows. Adding a debug print between ``C``
+and ``D``, as in ``A, B => print C, D``, shows exactly where the hypothesis
+ends: ``print C`` still sees ``B``, but ``D`` runs *outside* it. ``==>`` was
+introduced with the opposite precedence specifically to avoid this —
+``A, B ==> C, D`` reads ``A, (B ==> (C, D))``, so the hypothesis reaches
+everything after it — and Elpi warns on the traditional ``=>`` spelling; see
 :doc:`syntax/inference-rules-and-queries`.
 
 
