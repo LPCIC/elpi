@@ -83,11 +83,3 @@ Code that needs an evolving value across a computation should thread a fresh
 variable through each step (:doc:`binders-and-hoas` — ``sigma`` for
 each new one) or use the constraint store as an explicit global
 (:doc:`../semantics/chr`), not repeated assignment to the same variable.
-
-
-Symmetric CHR rules and the multiset store
-==============================================
-
-A constraint handling rule with two patterns and no ``\`` can fire once per
-*ordering* of two matching constraints, since the store is a multiset — a
-surprise the first time it is seen. See :doc:`../semantics/chr`.
