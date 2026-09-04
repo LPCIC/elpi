@@ -43,6 +43,4 @@ Editor support
 ================
 
 An `extension for Visual Studio Code <https://github.com/LPCIC/elpi-lang>`_ is
-available in the marketplace (search for "Elpi"). For Vim, the project's
-``README.md`` ships a ``.vimrc`` snippet that gives ``.elpi`` files λProlog
-syntax highlighting plus Elpi's own keywords, macros and spilling braces.
+available in the marketplace (search for "Elpi").
