@@ -3,8 +3,9 @@
 Pygments ships an ``ElpiLexer`` but (as of 2.19) it only understands the old
 ``pred name i:T, o:T.`` signature form and a handful of rule attributes. The
 manual uses the current ``pred name In.. -> Out..`` / ``func name In.. -> Out..``
-forms and attributes such as ``:functional`` and ``:nooc``. This subclass adds
-those; everything else is inherited.
+forms, ``symbol name : ty``, and attributes such as ``:functional`` and
+``:nooc``, plus the ``builtin`` / ``symb`` spellings of ``external`` /
+``symbol``. This subclass adds those; everything else is inherited.
 """
 
 from pygments.lexer import inherit, bygroups, include
@@ -13,6 +14,12 @@ from pygments.token import Keyword, Name, Text, String, Punctuation
 
 _cs = ElpiLexer.const_sym_re
 _const = ElpiLexer.constant_re
+# On the (unreleased) nice-type-syntx branch, "builtin" and "symb" are
+# accepted as alternate spellings of "external" and "symbol" respectively
+# (src/parser/lexer.mll.in: ("external"|"builtin") / ("symbol"|"symb")).
+# Colour them the same way once that syntax is in use here.
+_ext = r"(?:external|builtin)"
+_symkw = r"(?:symbol|symb)"
 
 
 class ElpiManualLexer(ElpiLexer):
@@ -28,14 +35,15 @@ class ElpiManualLexer(ElpiLexer):
             (r'(:before|:after|:if|:name|:replace|:remove)(\s*)(")',
              bygroups(Keyword.Mode, Text.Whitespace, String.Double),
              "elpi-string"),
-            # predicate signatures: pred / func / external {pred,func}
-            (rf"\b(external func|external pred|func|pred)(\s+)({_cs})",
+            # predicate signatures: pred / func / external (or builtin) {pred,func}
+            (rf"\b({_ext} func|{_ext} pred|func|pred)(\s+)({_cs})",
              bygroups(Keyword.Declaration, Text.Whitespace, Name.Function),
              "elpi-signature"),
             # data constructors: `symbol name : ty` / `external symbol name : ty`
             # (the modern spelling of `type name ty`, which the stock lexer
-            # already handles — render this the same way, `:` included)
-            (rf"\b(external symbol|symbol)(\s+)(({_cs}(,\s*)?)+)",
+            # already handles — render this the same way, `:` included);
+            # `symb` and `builtin` are accepted spellings of `symbol` / `external`
+            (rf"\b({_ext} {_symkw}|{_symkw})(\s+)(({_cs}(,\s*)?)+)",
              bygroups(Keyword.Declaration, Text.Whitespace, Name.Function),
              "elpi-symbol-type"),
             # the lambda binder (the stock lexer only handles lowercase `x\`)
