@@ -2,10 +2,15 @@
 Lexical conventions
 ###################
 
-An Elpi source file is UTF-8 text. It is a sequence of *clauses* and
-*directives*, each terminated by a full stop ``.``. Whitespace — spaces, tabs,
-carriage returns and newlines — separates tokens and is otherwise insignificant;
-the terminating ``.`` does not need to sit on a line of its own.
+An Elpi source file is read as a stream of bytes. It is a sequence of *clauses*
+and *directives*, each terminated by a full stop ``.``. Whitespace — spaces,
+tabs, carriage returns and newlines — separates tokens and is otherwise
+insignificant; the terminating ``.`` does not need to sit on a line of its own.
+
+Outside string literals and comments only ASCII characters are used; a
+non-ASCII byte there is a lexical error. Inside a string literal or a comment
+any byte is accepted and passed through unchanged — so UTF-8 text can appear
+there, but Elpi does not decode or validate it.
 
 This chapter describes how the text is broken into tokens. The grammar that
 assembles those tokens into terms and clauses is covered in
@@ -156,19 +161,20 @@ from exactly one of these productions (the keyword rules in between are elided):
 
 .. code-block:: ocaml
 
-   | "_" idchar+            { CONSTANT }   (* _foo, _Acc : a wildcard   *)
-   | "_"                    { FRESHUV  }   (* the anonymous variable    *)
-   | ucase idcharstar       { CONSTANT }   (* X, Foo1, X+Y : a variable *)
-   | lcase idcharstarns     { CONSTANT }   (* foo, std.rev, x+y         *)
-   | "." idcharstarns       { CONSTANT }   (* .aux : a qualified tail   *)
-   | '@' idcharstar         { CONSTANT }   (* @macro                    *)
-   | '\'' symbcharstar '\'' { CONSTANT }   (* 'eq'                      *)
-   | '`'  symbcharstar '`'  { CONSTANT }   (* `->`                      *)
+   | "_" idchar+           
+   | "_"                   
+   | ucase idcharstar      
+   | lcase idcharstarns    
+   | "." idcharstarns      
+   | '@' idcharstar        
+   | '\'' symbcharstar '\''
+   | '`'  symbcharstar '`' 
 
 ``idcharstarns`` is ``idcharstar`` extended with an embedded ``.`` before a
-letter — that is what makes ``std.rev`` a single token. All eight productions
-emit the same ``CONSTANT`` token; the compiler decides *variable vs constant*
-afterwards, from the first character.
+letter — that is what makes ``std.rev`` a single token. The bare ``_`` is the
+anonymous variable; the other seven productions all yield one ``CONSTANT``
+token, and the compiler decides *variable vs constant* afterwards, from the
+first character.
 
 
 Relation to Teyjus
