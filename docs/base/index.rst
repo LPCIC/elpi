@@ -32,8 +32,10 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
 
    syntax/lexical-conventions
    syntax/terms-and-operators
-   syntax/rules-and-queries
-   syntax/declarations-and-attributes
+   syntax/inference-rules-and-queries
+   syntax/constraint-handling-rules
+   syntax/type-declarations
+   syntax/file-structure-and-attributes
 
 .. toctree::
    :maxdepth: 2
@@ -62,7 +64,6 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
    features/conditional-compilation
    features/argument-indexing
    features/macros
-   features/constraints-syntax
    features/quotations
 
 .. toctree::

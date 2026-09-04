@@ -6,7 +6,7 @@ A **term** is Elpi's data. It is built from the tokens of
 :doc:`lexical-conventions` — constants, unification variables, integers,
 floats and strings — by application, λ-abstraction, operators and lists.
 This chapter is about the shape of terms; how terms are assembled into rules
-and queries is :doc:`rules-and-queries`.
+and queries is :doc:`inference-rules-and-queries`.
 
 
 Application
@@ -25,7 +25,7 @@ Application binds tighter than every operator: ``f a + g b`` is
 
 Parentheses only group: ``(f a b)`` is the same term as ``f a b``. They are
 needed only to override operator precedence — most often around ``,``, ``=>``
-and ``:-`` in a rule body, see :doc:`rules-and-queries`.
+and ``:-`` in a rule body, see :doc:`inference-rules-and-queries`.
 
 λ-abstraction
 =============
@@ -93,7 +93,7 @@ Naming a subterm with ``as``
 
 ``(t as N)`` binds ``N`` to the term ``t`` — the parentheses are required and
 ``as`` takes everything to its left. It names a part of a rule head so the rest
-of the rule can refer to it; see :doc:`rules-and-queries`.
+of the rule can refer to it; see :doc:`inference-rules-and-queries`.
 
 .. code-block:: elpi
 

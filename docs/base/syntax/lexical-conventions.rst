@@ -14,7 +14,7 @@ there, but Elpi does not decode or validate it.
 
 This chapter describes how the text is broken into tokens. The grammar that
 assembles those tokens into terms and rules is covered in
-:doc:`terms-and-operators` and :doc:`rules-and-queries`.
+:doc:`terms-and-operators` and :doc:`inference-rules-and-queries`.
 
 To see how a piece of source is tokenised and parsed, run
 ``echo '…' | elpi -parse-term``.
@@ -210,7 +210,7 @@ and signature keywords ``kind``, ``type``, ``typeabbrev``, ``pred``, ``func``,
 The words that follow a ``:`` to form an attribute are reserved too:
 ``:name``, ``:before``, ``:after``, ``:replace``, ``:remove`` and ``:if`` are
 attributes of a rule; ``:index``, ``:functional``, ``:untyped`` and ``:nooc``
-are attributes of a signature (see :doc:`declarations-and-attributes`).
+are attributes of a signature (see :doc:`type-declarations`).
 
 Example
 =======

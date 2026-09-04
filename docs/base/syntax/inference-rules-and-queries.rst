@@ -1,11 +1,13 @@
-#################
-Rules and queries
-#################
+###########################
+Inference rules and queries
+###########################
 
 A program is a sequence of **rules** and directives (``kind``, ``type``,
 ``pred``, ``accumulate``, ``namespace { … }``, …). This chapter is the syntax
 of rules and of the **goals** that make up their bodies and the queries you run
-against them.
+against them. The rules here are the program's *inference rules* — Horn clauses
+that drive the proof search; the *constraint handling rules* that act on
+suspended goals have their own syntax, see :doc:`constraint-handling-rules`.
 
 
 Rules
@@ -87,7 +89,7 @@ the rule goes among the alternatives (:doc:`../features/rule-grafting`);
 
 Attributes that describe the
 predicate itself (``:index``, ``:functional``, …) go on its ``pred`` / ``func``
-signature instead — :doc:`declarations-and-attributes`.
+signature instead — :doc:`type-declarations`.
 
 
 Queries
@@ -104,7 +106,7 @@ A query is a goal run against a program:
 * from a host application, through the OCaml API — see :doc:`../embedding`.
 
 ``?-`` is **not** a query prefix in Elpi; it is the sequent separator used in
-``constraint`` blocks and CHR rules (:doc:`../features/constraints-syntax`).
+``constraint`` blocks and CHR rules (:doc:`constraint-handling-rules`).
 
 
 Example
