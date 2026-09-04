@@ -1,0 +1,7 @@
+% A polymorphic signature: the same predicate works at list int and at
+% list string, its type variable A instantiated differently at each call.
+
+pred rev list A -> list A.
+rev L R :- std.rev L R.
+
+main :- rev [1, 2, 3] R1, rev ["a", "b"] R2, print R1 R2.
