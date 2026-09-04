@@ -81,3 +81,12 @@ than expecting one chapter to be self-contained.
 
 For the full formal account of Elpi's design, see the author's
 :ref:`HDR manuscript <bib-hdr>` and the papers listed in :doc:`bibliography`.
+
+This manual is largely a recombination of that material: prose and examples
+from the HDR thesis and from several of the author's own papers, reworked
+into one reference organized around Elpi's syntax, semantics and features
+rather than around each paper's own narrative. An AI coding assistant did
+most of that reorganizing, adapting and drafting, under the author's
+direction and review. The result is not as polished as the author would have
+written by hand, but the AI's help in putting a document this size together
+has been substantial.
