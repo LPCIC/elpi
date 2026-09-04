@@ -1,0 +1,14 @@
+% =!=> adds a hard cut to the tail of a hypothetical rule, so a `func`
+% predicate stays provably deterministic even when a rule is added for it
+% at run time. With plain ==> instead, this raises "mutual exclusion
+% violated": `copy a b` and the static `copy X X` could both apply to
+% `copy a Z`.
+
+kind tm type.
+symbol a : tm.
+symbol b : tm.
+
+func copy tm -> tm.
+copy X X.
+
+main :- copy a b =!=> copy a Z, print "copy a gives" Z.

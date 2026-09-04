@@ -2,12 +2,28 @@
 Hypothetical rules
 ##################
 
-.. note::
+:doc:`../syntax/inference-rules-and-queries` covers the syntax:
+``H ==> G`` adds ``H`` to the program for the duration of ``G``, ``[H1, H2]
+==> G`` adds several, and the traditional λProlog spelling ``=>`` means the
+same thing but binds differently — this manual always uses ``==>``. This
+chapter is the one thing that spelling doesn't cover: ``=!=>``.
 
-   **Stub — part of the manual outline.**
 
-   Planned content: ``=>`` and its precedence; the ``==>`` variant; n-ary implication ``[p,q] => g``; ``=!=>`` (automatic tail cut).
+Committing a hypothetical rule
+================================
 
-   Source material: ELPI.md “Implication”; HDR §2.8.1; coq-elpi tutorial “Precedence of , ==> and =>”.
+Adding a rule for a ``func`` predicate at run time can conflict with its
+static rules from the determinacy checker's point of view — even when, in
+practice, the new rule always fires first. ``H =!=> G`` is ``(H :- !) ==> G``:
+it adds ``H`` with an automatic tail cut, so the hypothesis commits as soon as
+its head matches instead of leaving a choice point the checker would have to
+rule out. Because the hypothesis may only be known at run time (it can be a
+variable bound to a rule computed on the fly), the cut is added dynamically
+too — it is not just sugar expanded once at compile time.
 
-   Examples will live in external ``.elpi`` files under ``docs/base/code/`` and be injected with the ``.. elpi::`` directive plus an ``:assert:`` line pinning the printed output.
+
+Example
+=======
+
+.. elpi:: ../code/tail-cut.elpi
+   :assert: copy a gives b
