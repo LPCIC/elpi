@@ -1,0 +1,16 @@
+% std.map (list combinator) vs the FFI std.string.map (a map data structure,
+% not to be confused despite the shared name); std.mem! (first result only)
+% vs an R-suffixed relation, which works in any direction.
+
+main :-
+  std.map [1, 2, 3] (x\ y\ y is x * x) Squares,
+  print "std.map (list):" Squares,
+
+  std.string.map.empty M0,
+  std.string.map.add "a" 1 M0 M1,
+  std.string.map.add "b" 2 M1 M2,
+  std.string.map.find "b" M2 V, print "std.string.map.find b:" V,
+
+  std.mem! [3, 1, 4, 1, 5] 1, print "std.mem! finds the first 1: yes",
+
+  (std.appendR X Y [1, 2, 3], print "appendR generated:" X Y, fail ; true).
