@@ -5,11 +5,12 @@ Formal semantics
 The previous three chapters give the *intuition* — proof trees, holes, a
 constraint store. This one gives the reference-level formalization behind it:
 an abstract syntax, the runtime objects the interpreter manipulates, and the
-big-step rules that define how a query is run. It follows HDR §2.5.1; the
-operational semantics of *dynamic* predicates specifically (rules added and
-retracted while running, as Rocq-Elpi does) is due to Fissore & Tassi, PADL
-2026. Read the previous three chapters first — this one names things rather
-than motivating them.
+big-step rules that define how a query is run. It follows the
+:ref:`HDR thesis <bib-hdr>` §2.5.1; the operational semantics of *dynamic*
+predicates specifically (rules added and retracted while running, as
+Rocq-Elpi does) is due to :ref:`Fissore & Tassi, PADL 2026 <bib-padl2026>`.
+Read the previous three chapters first — this one names things rather than
+motivating them.
 
 
 Abstract syntax
@@ -222,7 +223,8 @@ has a logical reading: :math:`T \land G_1 \Rightarrow (G_2 \Leftrightarrow G_3)`
 — when the guard :math:`T` holds, :math:`G_2` may be replaced by :math:`G_3`,
 provided :math:`G_1` still needs to be solved. :math:`\mathcal{CHR}` computes
 this for one freshly declared or resumed constraint — the **active**
-constraint — following the refined operational semantics
+constraint — following the refined operational semantics of
+:ref:`Guidi, Sacerdoti Coen & Tassi, 2019 <bib-tassi2019>`
 (:doc:`chr` gives the informal, 8-step version of exactly this procedure):
 
 .. math::

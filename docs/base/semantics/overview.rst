@@ -37,7 +37,7 @@ search).
    :align: center
 
    The four actions on an Elpi computation — run (1), suspend (2), resume (3),
-   handle (4) — from the author's HDR thesis.
+   handle (4) — from the author's :ref:`HDR thesis <bib-hdr>`.
 
 This part of the manual follows that split:
 :doc:`logic-programming-model` covers ``run`` — Elpi as Prolog, and as

@@ -17,7 +17,7 @@ This manual describes Elpi's syntax, its execution model (including CHR), every
 language feature, the standard library and built-in predicates, the debugging
 and tracing tools, and the OCaml API used to embed and extend the interpreter.
 It assumes familiarity with λProlog; the reference for standard λProlog is
-*Programming with Higher-Order Logic* by Miller and Nadathur.
+:ref:`Programming with Higher-Order Logic, by Miller and Nadathur <bib-miller-nadathur>`.
 
 .. toctree::
    :maxdepth: 2

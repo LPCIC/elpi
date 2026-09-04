@@ -59,5 +59,6 @@ This covers the core of the algorithm; the full version in
 ``tests/sources/w.elpi`` this example is adapted from, and the richer
 ``tests/sources/toyml/`` (equality-type variables — Standard ML's ``''a`` —
 and a bidirectional variant that propagates a known result type inward
-instead of only inferring one outward), are further reading for anyone
-implementing a real ML-style checker in Elpi.
+instead of only inferring one outward, from the
+:ref:`ML Family Workshop slides <bib-mlws18>`), are further reading for
+anyone implementing a real ML-style checker in Elpi.

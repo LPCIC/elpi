@@ -7,7 +7,8 @@ Handling Rules (:doc:`semantics/overview`) — a logic programming language
 well suited to manipulate syntax trees with binders and unification
 variables. It is designed to be embedded into a larger OCaml application as
 an extension language (:doc:`embedding`), with a foreign function interface
-to add built-in predicates and data types.
+to add built-in predicates and data types. The original system description is
+:ref:`Dunchev, Guidi, Sacerdoti Coen & Tassi, LPAR-20 (2015) <bib-lpar2015>`.
 
 
 Why Elpi
@@ -59,9 +60,10 @@ Relation to standard λProlog and to Teyjus
 
 Elpi is close enough to standard λProlog to run most λProlog programs
 unmodified; :doc:`compatibility` collects the known lexical and semantic
-differences from the Teyjus implementation. Reading *Programming with
-Higher-Order Logic* by Miller and Nadathur is recommended background for
-standard λProlog itself — this manual assumes it and does not repeat it.
+differences from the Teyjus implementation. Reading
+:ref:`Programming with Higher-Order Logic, by Miller and Nadathur
+<bib-miller-nadathur>`, is recommended background for standard λProlog
+itself — this manual assumes it and does not repeat it.
 
 
 How to read this manual
@@ -77,5 +79,5 @@ extending* / *Reference* round out the rest. Chapters cross-reference each
 other liberally rather than repeating themselves — follow the links rather
 than expecting one chapter to be self-contained.
 
-For the full formal account of Elpi's design, see the author's HDR
-manuscript and the papers listed in :doc:`bibliography`.
+For the full formal account of Elpi's design, see the author's
+:ref:`HDR manuscript <bib-hdr>` and the papers listed in :doc:`bibliography`.

@@ -8,9 +8,8 @@ leaves no choice point: every call has at most one solution. Internally its
 type is tagged ``fprop`` rather than ``prop`` — it may show up that way in an
 error message. This chapter is what the checker does with that promise. It is
 a static, best-effort analysis: not every non-deterministic call is caught,
-as the example below shows. Cite Fissore & Tassi, *Determinacy Checking for
-Elpi: Higher Order Prolog with Cut*, PADL 2026, for the full formal treatment;
-``elpi -no-det`` turns the analysis off.
+as the example below shows. See :ref:`Fissore & Tassi, PADL 2026 <bib-padl2026>`
+for the full formal treatment; ``elpi -no-det`` turns the analysis off.
 
 
 Signatures as a subtyping relation

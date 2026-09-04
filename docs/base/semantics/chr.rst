@@ -46,7 +46,10 @@ The refined operational semantics
 ==================================
 
 As soon as a constraint ``C`` is declared or resumed, Elpi looks for a rule to
-fire:
+fire, following the refined operational semantics of
+:ref:`Guidi, Sacerdoti Coen & Tassi, 2019 <bib-tassi2019>`
+(:doc:`formal-semantics` gives the formal, rather than 8-step informal,
+version of exactly this procedure):
 
 1. every rule of ``C``'s clique is considered, in the order it was written;
 2. every constraint in the store whose trigger intersects ``C``'s is
