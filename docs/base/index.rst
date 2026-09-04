@@ -65,6 +65,7 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
    features/argument-indexing
    features/macros
    features/quotations
+   features/pitfalls
 
 .. toctree::
    :maxdepth: 2
@@ -97,7 +98,6 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
    :caption: Reference
 
    compatibility
-   pitfalls
    bibliography
 
 .. toctree::
