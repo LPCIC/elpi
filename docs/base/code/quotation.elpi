@@ -1,0 +1,6 @@
+% elpi_REPL.exe registers one named quotation, "elpi", for testing: it
+% parses its content as Elpi syntax and hands back the resulting term
+% unevaluated. A host application registers its own quotations (for its own
+% object language) through the OCaml API instead.
+
+main :- X = {{:elpi 1 + 2 }}, print X.
