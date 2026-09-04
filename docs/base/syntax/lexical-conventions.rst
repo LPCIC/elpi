@@ -119,8 +119,7 @@ Delimited by ``"``. A string literal may span several lines. The escapes
 
 .. rubric:: Quoted identifiers
 
-A run of *identifier* characters — letters, digits, the symbol characters and
-also ``:`` — enclosed in back-quotes or single quotes, with **no spaces**
+A run of *identifier* characters enclosed in back-quotes or single quotes, with **no spaces**
 inside. It is not a string, and on its own it is not a constant: it is an
 identifier that the host application can choose to *compile* in a special way.
 It looks like a string but can be given, for instance, case-insensitive
@@ -129,8 +128,8 @@ comparison. Quoting is also the only way to write an identifier that contains
 
 .. code-block:: elpi
 
-   X = `a:b`,        % one identifier (a bare name cannot contain ':')
-   Y = 'CamelCase'.  % one identifier (a bare CamelCase would be a variable)
+   X = `a:b`,
+   Y = 'CamelCase'.
 
 The compilation hooks are ``declare_backtick`` and ``declare_singlequote`` in
 the ``Quotation`` module of ``src/API.mli``:
@@ -215,9 +214,14 @@ The words that follow a ``:`` to form an attribute are reserved too:
 attributes of a rule; ``:index``, ``:functional``, ``:untyped`` and ``:nooc``
 are attributes of a signature (see :doc:`declarations-and-attributes`).
 
+Example
+=======
 
-The token grammar
-=================
+.. elpi:: ../code/lexical.elpi
+   :assert: items: 2 discount: -5
+
+The reference tokenizer 
+=======================
 
 The character classes named above are, verbatim, the ones the ``ocamllex``
 lexer uses:
@@ -276,8 +280,3 @@ to end of line, nesting ``/* */``). They differ in:
   … ; Elpi's operator set is fixed (`Operators`_).
 
 
-Example
-=======
-
-.. elpi:: ../code/lexical.elpi
-   :assert: items: 2 discount: -5
