@@ -20,13 +20,13 @@ A rule is an atom — a *fact* — or an atom and a body separated by ``:-`` —
    older P Q :- age P N, age Q M, N > M.      % a conditional rule
 
 The head is an application ``p t1 … tn`` (or just ``p``). A conditional rule
-reads "the head holds if the body holds". The variables are universally
-quantified over the whole rule, and every use of the rule gets fresh ones —
-so ``symmetric (node _ T T).`` is a fact for *any* ``T``.
+reads "the head holds if the body holds". Its variables are universally
+quantified over the whole rule, and every use of the rule gets fresh ones — so
+``same-two [T, T].`` is a fact for *any* ``T``.
 
-Several rules for the same predicate are **alternatives**: they are tried in
-the order they were added, and the search backtracks into them. That order can
-be adjusted with attributes (below).
+Several rules for the same predicate are **alternatives**, tried top to bottom;
+the search backtracks into them. That order can be adjusted with attributes
+(see below).
 
 
 Goals
@@ -38,18 +38,26 @@ The body of a rule, and a query, are *goals*. A goal is one of:
 * ``g1, g2`` — conjunction (``&`` is an accepted synonym, and a list
   ``[g1, g2, g3]`` also means ``g1, g2, g3``);
 * ``g1 ; g2`` — disjunction;
-* ``H => g`` — solve ``g`` with the extra rule ``H`` added to the program for
-  the duration of ``g``; ``[H1, H2] => g`` adds several. ``==>`` is the same
-  with a different precedence and ``=!=>`` also gives ``H`` a tail cut — see
+* ``H ==> g`` — solve ``g`` with the extra rule ``H`` added to the program for
+  the duration of ``g``; ``[H1, H2] ==> g`` adds several and reads
+  ``H2 ==> H1 ==> g``. ``=>`` is the traditional λProlog spelling and means the
+  same, but binds differently: ``a, b ==> c, d`` reads ``a, (b ==> (c, d))``
+  whereas ``a, b => c, d`` reads ``a, (b => c), d`` — a frequent mistake, so
+  Elpi warns about the second and the manual uses ``==>``. ``=!=>`` is like
+  ``==>`` but also gives the extra rule a tail cut. See
   :doc:`../features/hypothetical-rules`;
-* ``pi x\ g`` — solve ``g`` with a fresh constant for ``x``; ``sigma X\ g`` —
-  with a fresh unification variable — see :doc:`../features/binders-and-hoas`;
+* ``pi x\ g`` — solve ``g`` with a fresh constant standing for ``x``;
+  ``sigma X\ g`` — with a fresh unification variable — see
+  :doc:`../features/binders-and-hoas`;
 * ``!`` — cut — see :doc:`../features/control-and-cut`.
 
-``,`` binds loosely, so parentheses are often needed around ``=>`` and ``;``
-inside a larger body; the precedence of ``=>`` in particular is a common
-surprise, covered in :doc:`../pitfalls`.
+Because ``\`` extends its body as far right as possible, a ``pi`` or ``sigma``
+inside a conjunction swallows the goals after it: ``a, pi x\ b, c`` means
+``a, (pi x\ (b, c))``. Parenthesise the binder to keep a later goal out of the
+fresh constant's scope.
 
+.. elpi:: ../code/pi-scope.elpi
+   :assert: inside sees 1 name.s.\nafter sees 0 name.s.
 
 Naming a subterm of the head
 ============================
@@ -59,8 +67,7 @@ can refer to it. It cannot wrap the whole head.
 
 .. code-block:: elpi
 
-   lex-max (pair A B as L) (pair X Y) L :- A > X ; (A = X, B >= Y).
-
+   whd (lam F as T) T. % a lambda is in weak head normal form
 
 Attributes
 ==========
@@ -75,8 +82,10 @@ line:
 
 ``:name``, ``:before``, ``:after``, ``:replace`` and ``:remove`` control where
 the rule goes among the alternatives (:doc:`../features/rule-grafting`);
-``:if`` keeps the rule only when a variable is defined
-(:doc:`../features/conditional-compilation`). Attributes that describe the
+``:if`` keeps the rule only when a compiler variable is defined
+(:doc:`../features/conditional-compilation`). 
+
+Attributes that describe the
 predicate itself (``:index``, ``:functional``, …) go on its ``pred`` / ``func``
 signature instead — :doc:`declarations-and-attributes`.
 
