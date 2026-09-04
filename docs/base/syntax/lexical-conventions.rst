@@ -80,31 +80,14 @@ A bare ``_`` is a fresh anonymous variable. A name that *starts* with ``_``
 (``_x``, ``_Acc``) is also a wildcard — never a variable that can be referred
 to again. See :doc:`../features/unification-and-variables`.
 
-.. rubric:: Quoted names
-
-A name may be wrapped in back-quotes or single quotes so that a symbol which is
-normally an operator can be used as a plain constant; the quotes are part of the
-name, and the wrapped text may only contain letters, digits and symbol
-characters (no spaces, no ``.``).
-
-.. code-block:: elpi
-
-   X = `->`,     % one constant whose name is:  `->`
-   Y = 'eq'.     % one constant whose name is:  'eq'
-
-These forms pair with the back-quote and single-quote quotations of the OCaml
-API.
-
 
 Literals
 ========
 
 .. rubric:: Integers
 
-A run of digits, optionally with a leading ``-`` **and no space in between**:
-``0``, ``42``, ``-2``. With a space, ``- 2`` and ``~ 2`` are the unary minus
-applied to ``2``. There is no ``0x`` / ``0o`` / ``0b`` notation and no digit
-separators (``1_000`` is not a number).
+A run of digits, optionally preceded by ``-`` with no space: ``0``, ``42``,
+``-2``.
 
 .. rubric:: Floating point
 
@@ -121,6 +104,34 @@ Delimited by ``"``. A string literal may span several lines. The escapes
 .. code-block:: elpi
 
    Msg = "he said ""hi"" and\nleft"
+
+
+Quoted identifiers
+==================
+
+A run of *identifier* characters — letters, digits, the symbol characters and
+also ``:`` — enclosed in back-quotes or single quotes, with **no spaces**
+inside. It is not a string, and on its own it is not a constant: it is an
+identifier that the host application can choose to *compile* in a special way.
+It looks like a string but can be given, for instance, case-insensitive
+comparison. Quoting is also the only way to write an identifier that contains
+``:`` or that begins with a symbol character.
+
+.. code-block:: elpi
+
+   X = `a:b`,        % one identifier (a bare name cannot contain ':')
+   Y = 'CamelCase'.  % one identifier (a bare CamelCase would be a variable)
+
+The compilation hooks are ``declare_backtick`` and ``declare_singlequote`` in
+the ``Quotation`` module of ``src/API.mli``:
+
+.. literalinclude:: ../../../src/API.mli
+   :language: ocaml
+   :start-at: (** Like quotations but for identifiers
+   :end-before: val new_quotations_descriptor
+
+With no hook registered, a quoted identifier is simply a constant with that
+name.
 
 
 Operators
@@ -171,10 +182,10 @@ from exactly one of these productions (the keyword rules in between are elided):
    | '`'  symbcharstar '`' 
 
 ``idcharstarns`` is ``idcharstar`` extended with an embedded ``.`` before a
-letter — that is what makes ``std.rev`` a single token. The bare ``_`` is the
-anonymous variable; the other seven productions all yield one ``CONSTANT``
-token, and the compiler decides *variable vs constant* afterwards, from the
-first character.
+letter — that is what makes ``std.rev`` a single token. The last two are the
+`Quoted identifiers`_. The bare ``_`` is the anonymous variable; the other
+seven productions all yield one ``CONSTANT`` token, and the compiler decides
+what it stands for afterwards, from the first character.
 
 
 Relation to Teyjus
