@@ -2,18 +2,18 @@
 Constraint handling rules
 #########################
 
-A goal can be **suspended** instead of solved, kept in a *constraint store*, and
-woken up later. **Constraint handling rules** (CHR) inspect that store as a
-whole: they can drop suspended goals or spawn new ones. This chapter is the
-syntax; the execution model — how the store evolves, how rules fire — is
-:doc:`../semantics/chr`.
+A goal can be **suspended** instead of solved: it becomes a **constraint**,
+kept in the *constraint store* until it is woken up. **Constraint handling
+rules** (CHR) inspect that store as a whole: they can drop constraints or spawn
+new goals. This chapter is the syntax; the execution model — how the store
+evolves, how rules fire — is :doc:`../semantics/chr`.
 
 
 The constraint block
 ====================
 
 A ``constraint`` block names a **clique** of predicates and holds the rules that
-act on their suspended goals:
+act on their constraints:
 
 .. code-block:: elpi
 
@@ -26,13 +26,13 @@ program must be pairwise disjoint, or Elpi raises *overlapping constraint
 cliques*.
 
 An optional **context filter**, written before ``?-``, lists further predicates
-whose rules are retained in the context a suspended goal carries with it (by
-default a resumed goal keeps only the rules of its own clique):
+whose rules are retained in the context a constraint carries with it (by
+default a resumed constraint keeps only the rules of its own clique):
 
 .. code-block:: elpi
 
    constraint ctx ?- infer {
-     % rules for `infer`; a resumed `infer` goal also keeps the `ctx` rules
+     % rules for `infer`; a resumed `infer` constraint also keeps the `ctx` rules
    }
 
 The ``?-`` is omitted when the filter is empty.
@@ -48,10 +48,10 @@ A rule has four parts, every one optional except the ``rule`` keyword itself:
    rule  TO-MATCH  \ TO-REMOVE  | GUARD  <=> NEW-GOAL .
 
 * **TO-MATCH** and **TO-REMOVE** are sequences of :ref:`sequent patterns
-  <chr-sequents>` matched against suspended goals. A goal matched to the left
-  of ``\`` stays in the store; a goal matched to its right is taken out. With
-  no ``\`` nothing is removed, and the rule fires at most once for a given set
-  of matched goals.
+  <chr-sequents>` matched against the constraints in the store. A constraint
+  matched to the left of ``\`` stays in the store; one matched to its right is
+  taken out. With no ``\`` nothing is removed, and the rule fires at most once
+  for a given set of matched constraints.
 * **GUARD**, after ``|``, is a goal that must succeed for the rule to fire. The
   choice is then committed: no later rule is tried on those goals.
 * **NEW-GOAL**, after ``<=>``, is a sequent run as a fresh goal.
@@ -69,11 +69,11 @@ Sequent patterns
 
 A sequent pattern is one of:
 
-* ``Goal`` — matches a suspended goal, ignoring the hypotheses it carried;
+* ``Goal`` — matches a constraint, ignoring the hypotheses it carried;
 * ``(Context ?- Goal)`` — also matches those hypotheses: the rules added with
-  ``=>`` that were in scope when the goal was suspended;
+  ``=>`` that were in scope when the constraint was suspended;
 * ``(Eigen :> Context ?- Goal)`` — also matches ``Eigen``, the list of
-  eigenvariables (the ``pi``-introduced constants) the goal lives under.
+  eigenvariables (the ``pi``-introduced constants) the constraint lives under.
 
 ``Context`` and ``Eigen`` are ordinary patterns and may bind variables used in
 the guard and the new goal.
@@ -87,8 +87,8 @@ store rather than unify with it. A frozen variable is shown to the rule as
 .. code-block:: elpi
 
    constraint infer {
-     % a hole has one type: two `infer` goals about the same unification
-     % variable K, in the same context G, must agree on the type
+     % a hole has one type: two `infer` constraints about the same
+     % unification variable K, in the same context G, must agree on the type
      rule (G ?- infer (uvar K _) T1)
         \ (G ?- infer (uvar K _) T2)
         <=> (T1 = T2).
@@ -102,23 +102,24 @@ itself; see :doc:`../semantics/chr`.
 Generating a constraint
 =======================
 
-``declare_constraint`` suspends a goal and puts it in the store. What the store
-holds is called a *constraint*; it is almost always a suspended goal, as here.
-The goal must be a **function** (a ``func`` signature,
-:doc:`type-declarations`) — a relational predicate is rejected. It is suspended
-on one or more **keys**, which must be unification variables (or ``_``):
+``declare_constraint`` turns a goal into a **constraint** and puts it in the
+store. The goal must be a **function** (a ``func`` signature,
+:doc:`type-declarations`) — a relational predicate is rejected. The constraint
+is suspended on one or more **keys**, which must be unification variables (or
+``_``):
 
 .. code-block:: elpi
 
    declare_constraint (even X) [X]
 
-The goal is parked until one of the keys is assigned, then run as an ordinary
-goal. A key given as ``_``, or a goal keyed on the empty list, is never resumed.
-Several keys may be passed as one list — ``[X, Y]`` — or as separate arguments.
+The constraint sits in the store until one of its keys is assigned, then runs
+as an ordinary goal again. A key given as ``_``, or a constraint keyed on the
+empty list, is never resumed. Several keys may be passed as one list —
+``[X, Y]`` — or as separate arguments.
 
-Every unification variable that occurs in the goal should be among the keys;
-an assignment to an omitted one will not wake the goal. Elpi does not check this
-yet (`issue #441 <https://github.com/LPCIC/elpi/issues/441>`_).
+Every unification variable that occurs in the constraint should be among the
+keys; an assignment to an omitted one will not wake it. Elpi does not check
+this yet (`issue #441 <https://github.com/LPCIC/elpi/issues/441>`_).
 
 The idiom is a rule that fires while the interesting argument is still a
 variable, matched with the ``uvar`` pattern (:doc:`../features/modes`), and
