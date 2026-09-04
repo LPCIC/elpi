@@ -6,7 +6,10 @@ Algorithm W infers a type for every expression without type annotations,
 and — the part that makes it a good showcase for Elpi — turns some inferred
 types into **schemes**, universally quantified over the type variables used
 *only* locally: ``let id = λx.x in (id one, id empty)`` has to accept ``id``
-at two different types.
+at two different types. This walks through the core of it; the
+:ref:`HDR thesis <bib-hdr>`, §2.7, works through the same example in much
+more detail, subsection by subsection — syntax, typing rules, generalization,
+a full execution trace, and bidirectional type inference.
 
 .. elpi:: ../code/hindley-milner.elpi
    :assert: well typed, of type mono integer\nid generalized to all c0 \\ mono \(c0 ===> c0\)
@@ -58,7 +61,10 @@ to is later matched:
 
 ``generalize`` collects the free variables of the monotype and of Γ, and
 quantifies exactly those that are free in the former but not the latter — the
-ones the surrounding context makes no assumption about.
+ones the surrounding context makes no assumption about. The
+:ref:`HDR thesis <bib-hdr>`, §2.7.4 ("Type generalization"), spells out this
+step in full, including why it has to be deferred to a constraint in the
+first place.
 
 This covers the core of the algorithm; the full version in
 ``tests/sources/w.elpi`` this example is adapted from, and the richer
