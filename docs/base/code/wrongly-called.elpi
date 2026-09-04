@@ -1,0 +1,27 @@
+% map is func: deterministic *if* its function argument is. Calling it with
+% the deterministic wrapper likes! keeps that promise; calling it with the
+% plain relation likes silently breaks it — map still runs, but leaves a
+% choice point despite its signature.
+
+kind guest type.
+kind dish type.
+symbol mario, anna : guest.
+symbol pizza, pasta, gelato : dish.
+
+pred likes i:guest, o:dish.
+likes mario pizza.
+likes mario pasta.
+likes anna gelato.
+
+func likes! guest -> dish.
+likes! A B :- likes A B, !.
+
+func map list A, (func A -> B) -> list B.
+map [] _ [].
+map [X|XS] F [Y|YS] :- F X Y, map XS F YS.
+
+main :-
+  map [mario, anna] likes! Correct,
+  print "correctly called:" Correct,
+  map [mario, anna] likes Wrong, print "wrongly called:" Wrong, fail.
+main :- print "wrongly called: backtracked into a second result".
