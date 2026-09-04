@@ -28,10 +28,16 @@ class ElpiManualLexer(ElpiLexer):
             (r'(:before|:after|:if|:name|:replace|:remove)(\s*)(")',
              bygroups(Keyword.Mode, Text.Whitespace, String.Double),
              "elpi-string"),
-            # predicate signatures: pred / func / external {pred,func,symbol}
-            (rf"\b(external func|external pred|external symbol|func|pred)(\s+)({_cs})",
+            # predicate signatures: pred / func / external {pred,func}
+            (rf"\b(external func|external pred|func|pred)(\s+)({_cs})",
              bygroups(Keyword.Declaration, Text.Whitespace, Name.Function),
              "elpi-signature"),
+            # data constructors: `symbol name : ty` / `external symbol name : ty`
+            # (the modern spelling of `type name ty`, which the stock lexer
+            # already handles — render this the same way, `:` included)
+            (rf"\b(external symbol|symbol)(\s+)(({_cs}(,\s*)?)+)",
+             bygroups(Keyword.Declaration, Text.Whitespace, Name.Function),
+             "elpi-symbol-type"),
             # the lambda binder (the stock lexer only handles lowercase `x\`)
             (r"\\", Keyword.Declaration),
             # a bare colon: type ascription `(t : ty)`, sequent `?-` context, ...
@@ -47,6 +53,22 @@ class ElpiManualLexer(ElpiLexer):
              "elpi-string"),
             (_const, Keyword.Type),
             (r"[():=]", Keyword.Type),
+            (r'"', String.Double, "elpi-string"),
+            (r"\.", Text, "#pop"),
+            include("_elpi-comment"),
+        ],
+        # the type after `symbol name :` (or `external symbol name :`), up to
+        # the closing `.` — same shape as the stock lexer's `elpi-type`, plus
+        # the leading `:` and, for the external form, a trailing `= "variant"`
+        "elpi-symbol-type": [
+            (r":", Punctuation),
+            (r"=", Punctuation),
+            (r'(ctype\s+)(")', bygroups(Keyword.Type, String.Double),
+             "elpi-string"),
+            (r"->|\.\.", Keyword.Type),
+            (r",", Text),
+            (_const, Keyword.Type),
+            (r"\(|\)", Keyword.Type),
             (r'"', String.Double, "elpi-string"),
             (r"\.", Text, "#pop"),
             include("_elpi-comment"),
