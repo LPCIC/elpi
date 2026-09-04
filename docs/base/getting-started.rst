@@ -24,7 +24,7 @@ Running a program
 
    $ elpi hello.elpi -test
 
-parses ``hello.elpi``, and every other file it ``accumulate``s
+parses ``hello.elpi``, and every other file it accumulates
 (:doc:`syntax/file-structure-and-attributes`), type-checks and determinacy-checks
 the result, and runs the query ``main``. ``elpi hello.elpi -exec p -- a b c``
 runs ``p ["a", "b", "c"]`` instead; with no ``-test``/``-exec`` and a goal
