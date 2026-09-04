@@ -6,7 +6,7 @@ Organizing a program
 
    **Stub — part of the manual outline.**
 
-   Planned content: The file model (each file accumulated once; relative and string paths); ``namespace { }`` prefixing; ``shorten`` including the trie syntax, and its scope.
+   Planned content: The file model (each file accumulated once; relative and string paths); ``namespace { }`` prefixing; a leading ``.`` on a name escapes to the global scope (``.p`` inside ``namespace n`` is the top-level ``p``); ``shorten`` including the trie syntax, and its scope.
 
    Source material: ELPI.md “Namespaces” / “Accumulate with paths”; HDR §2.6.1.
 

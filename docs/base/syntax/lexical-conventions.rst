@@ -49,7 +49,7 @@ letters, digits, ``_``, ``-``, ``$`` and the *symbol characters*
 
    +  *  /  ^  <  >  `  '  ?  @  #  ~  =  &  !
 
-(a run made only of symbol characters is instead read as an operator — see
+(a run made only of symbol characters is instead read as a mixfix operator — see
 `Operators`_ below).
 
 The **first character decides the role of the name**:
@@ -60,11 +60,6 @@ The **first character decides the role of the name**:
 * every other name is a **constant** — a predicate or a term constructor:
   ``append``, ``red``, ``std.length``, ``make-palindrome``.
 
-.. code-block:: elpi
-
-   copy (app A B) (app C D) :- copy A C, copy B D.
-   %    ^^^ ^ ^   constructors (lowercase)      ^ variables (uppercase)
-
 A name may not *start* with ``-`` or a digit, but it may *contain* them: a
 lowercase-initial name like ``make-palindrome`` or ``v1`` is a single token.
 Write ``X - Y`` (with spaces) for subtraction.
@@ -72,9 +67,12 @@ Write ``X - Y`` (with spaces) for subtraction.
 .. rubric:: Qualified names
 
 A ``.`` immediately followed by a letter is part of the name: ``std.list.map``
-is a single constant, not ``std`` applied to ``list.map``. This is what
-:doc:`../features/program-organization` uses for namespaces. A ``.`` *not*
-followed by a letter is the full stop that ends a rule or directive.
+is a single constant, not ``std`` applied to ``list.map``. A name written with
+a **leading** ``.`` is looked up in the global scope, ignoring any enclosing
+``namespace`` — inside ``namespace n`` the name ``.p`` is the top-level ``p``,
+not ``n.p``. Namespaces and these qualified names are covered in
+:doc:`../features/program-organization`. A ``.`` *not* followed by a letter is
+the full stop that ends a rule or directive.
 
 .. rubric:: The wildcard
 
@@ -231,20 +229,21 @@ lexer uses:
    :start-at: let digit =
    :end-at: let symbcharplus
 
-``num`` is an integer; ``num "." pnum`` or ``"." pnum`` is a float. A constant
-name comes from exactly one of these productions (the keyword rules in between are elided):
+``num`` is an integer; ``num "." pnum`` or ``"." pnum`` is a float. An
+identifier comes from exactly one of these productions (the keyword rules in
+between are elided):
 
 .. code-block:: ocaml
-   
-   let constant =
-      | "_" idchar+           
-      | "_"                   
-      | ucase idcharstar      
-      | lcase idcharstarns    
-      | "." idcharstarns      
-      | '@' idcharstar        
-      | '\'' symbcharstar '\''
-      | '`'  symbcharstar '`' 
+
+   let identifier =
+      | "_" idchar+               (* wildcard (linear unification variable)  *)
+      | "_"                       (* wildcard (linear unification variable)  *)
+      | ucase idcharstar          (* unification variable                    *)
+      | lcase idcharstarns        (* constant                                *)
+      | "." idcharstarns          (* namespace escaping                      *)
+      | '@' idcharstar            (* macro                                   *)
+      | '\'' symbcharstar '\''    (* quoted identifier                       *)
+      | '`'  symbcharstar '`'     (* quoted identifier                       *)
 
 ``idcharstarns`` is ``idcharstar`` extended with an embedded ``.`` before a
 letter — that is what makes ``std.rev`` a single token. The last two are the
@@ -275,7 +274,6 @@ to end of line, nesting ``/* */``). They differ in:
 * **Strings.** An Elpi string may contain a literal newline; a Teyjus string may
   not. Teyjus recognises many more escapes (``\a \v \f \e \d \^c \ddd \xhh`` …);
   Elpi recognises ``\n \b \t \r \\ \"`` and the doubled ``""``.
-* **Empty list.** ``[]`` in Elpi, ``nil`` in Teyjus.
 * **Operators.** Teyjus programs declare operators with ``infix`` / ``prefix`` /
   … ; Elpi's operator set is fixed (`Operators`_).
 
