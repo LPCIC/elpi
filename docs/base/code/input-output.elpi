@@ -3,8 +3,8 @@
 % assign it. An output argument is unified: it does get assigned.
 
 kind tm type.
-symbol z tm.
-symbol s tm -> tm.
+symb z tm.
+symb s tm -> tm.
 
 pred as-input i:tm.
 as-input z :- print "matched z".

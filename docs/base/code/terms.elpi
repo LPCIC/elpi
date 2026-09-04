@@ -1,8 +1,8 @@
 % Terms — a small sample.
 
 kind tree type.
-symbol leaf tree.
-symbol node tree -> tree -> tree.
+symb leaf tree.
+symb node tree -> tree -> tree.
 
 pred leaves -> tree, list tree.
 leaves leaf [leaf].

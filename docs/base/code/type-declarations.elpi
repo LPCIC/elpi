@@ -3,8 +3,8 @@
 
 kind tree type -> type.               % a parametric kind
 
-symbol leaf tree A.                   % data constructors
-symbol node A -> tree A -> tree A -> tree A.
+symb leaf tree A.                   % data constructors
+symb node A -> tree A -> tree A -> tree A.
 
 typeabbrev names (list string).       % an abbreviation
 

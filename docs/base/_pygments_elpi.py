@@ -3,9 +3,9 @@
 Pygments ships an ``ElpiLexer`` but (as of 2.19) it only understands the old
 ``pred name i:T, o:T.`` signature form and a handful of rule attributes. The
 manual uses the current ``pred name In.. -> Out..`` / ``func name In.. -> Out..``
-forms, ``symbol name : ty``, and attributes such as ``:functional`` and
-``:nooc``, plus the ``builtin`` / ``symb`` spellings of ``external`` /
-``symbol``. This subclass adds those; everything else is inherited.
+forms, ``symb name ty`` (and the older ``symbol name : ty``), the ``builtin``
+spelling of ``external``, and attributes such as ``:functional`` and
+``:nooc``. This subclass adds those; everything else is inherited.
 """
 
 from pygments.lexer import inherit, bygroups, include
@@ -14,10 +14,11 @@ from pygments.token import Keyword, Name, Text, String, Punctuation
 
 _cs = ElpiLexer.const_sym_re
 _const = ElpiLexer.constant_re
-# On the (unreleased) nice-type-syntx branch, "builtin" and "symb" are
-# accepted as alternate spellings of "external" and "symbol" respectively
-# (src/parser/lexer.mll.in: ("external"|"builtin") / ("symbol"|"symb")).
-# Colour them the same way once that syntax is in use here.
+# "builtin" and "symb" are accepted as alternate spellings of "external" and
+# "symbol" respectively (src/parser/lexer.mll.in:
+# ("external"|"builtin") / ("symbol"|"symb")) — "builtin"/"symb" are now the
+# manual's preferred spelling, "external"/"symbol" the older, still-legal one.
+# Colour every combination the same way.
 _ext = r"(?:external|builtin)"
 _symkw = r"(?:symbol|symb)"
 

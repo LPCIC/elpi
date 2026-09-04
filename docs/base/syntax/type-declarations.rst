@@ -10,14 +10,14 @@ knowing a predicate's arity. A predicate with no signature draws a warning
 practice a program declares its vocabulary.
 
 This chapter covers the declarations that introduce that vocabulary: ``kind``
-for type constructors, ``symbol`` (or ``type``) for data constructors,
-``typeabbrev`` for abbreviations, and ``pred`` / ``func`` for the **signature**
-of a predicate. The rules written over the vocabulary are
+for type constructors, ``symb`` (or the legacy ``symbol`` / ``type``) for data
+constructors, ``typeabbrev`` for abbreviations, and ``pred`` / ``func`` for the
+**signature** of a predicate. The rules written over the vocabulary are
 :doc:`inference-rules-and-queries`.
 
 
-Kinds
-=====
+Data types
+==========
 
 ``kind`` introduces a new type or type constructor. On the right, ``type`` is
 the kind of a type that takes no parameters; each ``type ->`` in front adds a
@@ -37,30 +37,32 @@ Several names may share a kind: ``kind day, month type.``. The types ``int``,
 Data constructors
 =================
 
-``symbol`` gives a constant a type. The arrow ``->`` is the function-space
+``symb`` gives a constant a type. The arrow ``->`` is the function-space
 constructor; an uppercase name in a type is a parameter, implicitly universally
 quantified. The ``:`` between the name(s) and the type is optional — it reads
 well but adds nothing — and this manual omits it:
 
 .. code-block:: elpi
 
-   symbol leaf tree A.
-   symbol node A -> tree A -> tree A -> tree A.
+   symb leaf tree A.
+   symb node A -> tree A -> tree A -> tree A.
 
-Several constants may share a type: ``symbol alice, bob, carol person.``
+Several constants may share a type: ``symb alice, bob, carol person.``
 (with or without the ``:``).
 
-``type name <type>`` is an older, equivalent spelling inherited from
-λProlog; it is still common and is not going away:
+Two older, equivalent spellings are still common and are not going away:
+``symbol`` — identical to ``symb`` in every way but the name — and, inherited
+directly from λProlog, ``type name <type>``:
 
 .. code-block:: elpi
 
+   symbol leaf tree A.
    type leaf tree A.
    type node A -> tree A -> tree A -> tree A.
 
 A constant that the host application provides through the FFI is declared
-``external symbol name type`` (with a trailing ``= "variant"`` to pick one
-overload); see :doc:`../embedding`.
+``builtin symb name type`` (with a trailing ``= "variant"`` to pick one
+overload; ``external symbol`` is the older spelling) — see :doc:`../embedding`.
 
 ``type p int -> prop.`` also declares a *predicate*, the λProlog way, but this
 manual always uses a ``pred`` / ``func`` signature instead (next section); the
@@ -117,12 +119,12 @@ Determinacy is described in :doc:`../features/determinacy-checking`.
 also spelled ``prop``, or ``o`` in the λProlog tradition. ``(func)`` is the
 same for a functional predicate. ``any`` matches any type.
 
-A ``pred`` / ``func`` signature is a shorthand for a ``symbol`` whose type is a
+A ``pred`` / ``func`` signature is a shorthand for a ``symb`` whose type is a
 ``(pred …)`` / ``(func …)``, so ``map`` above can equally be declared
 
 .. code-block:: elpi
 
-   symbol map (func list A, (func A -> B) -> list B).
+   symb map (func list A, (func A -> B) -> list B).
 
 A predicate may be **overloaded** by repeating its signature with different
 argument types; each defining rule then needs a type ascription to say which
@@ -155,13 +157,14 @@ otherwise mostly an FFI concern.
 Signature attributes
 ====================
 
-Attributes written before a ``pred``, ``func``, ``symbol`` or ``type`` describe
+Attributes written before a ``pred``, ``func``, ``symb`` or ``type`` describe
 the predicate itself:
 
 * ``:index (…)`` chooses how the predicate is indexed for rule selection —
   :doc:`../features/argument-indexing`;
-* ``:external``, or the bare keyword ``external`` before the declaration, says
-  the predicate is implemented in OCaml through the FFI — :doc:`../embedding`;
+* ``:external``, or the bare keyword ``builtin`` (``external`` is the older
+  spelling) before the declaration, says the predicate is implemented in
+  OCaml through the FFI — :doc:`../embedding`;
 * ``:nooc`` turns off the occur check for the predicate; it is described in
   :doc:`../compatibility`.
 
@@ -172,7 +175,7 @@ go on the rule, not the signature — :doc:`file-structure-and-attributes`.
 Legacy forms
 ------------
 
-Two older ways of writing a signature are still accepted:
+Older ways of writing a signature or a data constructor are still accepted:
 
 * ``:functional`` before a ``pred`` marks it deterministic, exactly like
   writing ``func`` — which is preferred.
@@ -180,6 +183,10 @@ Two older ways of writing a signature are still accepted:
   ``pred append i:list A, i:list A, o:list A.``. Unlike ``->`` they let input
   and output arguments be *interleaved* (``:functional pred p o:A, i:A.``), but
   that is discouraged — keep the outputs last and use ``->``.
+* ``symbol`` and, oldest of all, ``type name <type>`` in place of ``symb`` for
+  a data constructor; ``external`` in place of the bare ``builtin`` keyword
+  before a declaration provided through the FFI (shown above, under
+  *Data constructors*).
 
 The ``type name … -> prop`` predicate form, and how it relates to the
 standalone ``mode`` directive of standard λProlog (which current Elpi does

@@ -2,8 +2,8 @@
 % currently in scope (names / occurs / closed_term).
 
 kind tm type.
-symbol app tm -> tm -> tm.
-symbol lam (tm -> tm) -> tm.
+symb app tm -> tm -> tm.
+symb lam (tm -> tm) -> tm.
 
 pred depth i:tm, o:int.
 depth (app H A) N :- !, depth H N1, depth A N2, N is {std.max N1 N2}.

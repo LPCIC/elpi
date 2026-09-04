@@ -5,8 +5,8 @@
 
 kind guest type.
 kind dish type.
-symbol mario, anna guest.
-symbol pizza, pasta, gelato dish.
+symb mario, anna guest.
+symb pizza, pasta, gelato dish.
 
 pred likes guest -> dish.
 likes mario pizza.

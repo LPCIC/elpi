@@ -203,7 +203,8 @@ Keywords
 
 The following words are reserved and cannot be used as names: the declaration
 and signature keywords ``kind``, ``type``, ``typeabbrev``, ``pred``, ``func``,
-``external``, ``symbol``, ``macro``, ``namespace``, ``shorten``,
+``symb`` (and its older spelling ``symbol``), ``builtin`` (and its older
+spelling ``external``), ``macro``, ``namespace``, ``shorten``,
 ``accumulate``, ``constraint``, ``rule``, and the binders ``pi``, ``sigma`` and
 ``as``.
 

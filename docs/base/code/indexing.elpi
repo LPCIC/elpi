@@ -3,7 +3,7 @@
 % of the default first one.
 
 kind color type.
-symbol red, green, blue color.
+symb red, green, blue color.
 
 :index (2) "Hash"
 pred name-of i:int, i:color, o:string.
