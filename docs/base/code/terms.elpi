@@ -1,6 +1,6 @@
 % Terms — a small sample.
 
-kind tree type.
+data tree.
 symb leaf tree.
 symb node tree -> tree -> tree.
 

@@ -2,7 +2,7 @@
 
 /* Block comments  /* nest */  like this. */
 
-kind item type.
+data item.
 symb apple, pear item.
 
 pred price -> item, float.

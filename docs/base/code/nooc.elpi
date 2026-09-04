@@ -1,7 +1,7 @@
 % Unification (=) performs the occur check by default; a predicate marked
 % :nooc, like the builtin unsound_unif, does not.
 
-kind tm type.
+data tm.
 symb f tm -> tm.
 
 main :-

@@ -2,7 +2,7 @@
 % program computes. Here the second argument (depth 1) is indexed instead
 % of the default first one.
 
-kind color type.
+data color.
 symb red, green, blue color.
 
 :index (2) "Hash"

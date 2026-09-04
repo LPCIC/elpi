@@ -13,19 +13,19 @@ mem [X|_] X :- !.
 mem [_|XS] X :- mem XS X.
 
 % terms
-kind term type.
+data term.
 symb app term -> term -> term.
 symb lam (term -> term) -> term.
 symb let term -> ty -> (term -> term) -> term.
 
 % monotypes: type constructors applied to arguments (#) and the arrow (===>)
 % (===> and # are recognised as infix automatically, by token family)
-kind tye type.
+data tye.
 symb (===>) tye -> tye -> tye.
 symb (#) tye -> tye -> tye.
 
 % type schemes: mono wraps a monotype, all quantifies a type variable
-kind ty type.
+data ty.
 symb all (tye -> ty) -> ty.
 symb mono tye -> ty.
 

@@ -2,7 +2,7 @@
 % of the numbers of group G"; the rules keep reducing the store until a single
 % number per group is left — its GCD.
 
-kind group type.
+data group.
 symb group-1, group-2 group.
 
 func gcd int, group.

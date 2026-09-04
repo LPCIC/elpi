@@ -202,11 +202,11 @@ Keywords
 ========
 
 The following words are reserved and cannot be used as names: the declaration
-and signature keywords ``kind``, ``type``, ``typeabbrev``, ``pred``, ``func``,
-``symb`` (and its older spelling ``symbol``), ``builtin`` (and its older
-spelling ``external``), ``macro``, ``namespace``, ``shorten``,
-``accumulate``, ``constraint``, ``rule``, and the binders ``pi``, ``sigma`` and
-``as``.
+and signature keywords ``data`` (and its older spelling ``kind``), ``type``,
+``typeabbrev``, ``pred``, ``func``, ``symb`` (and its older spelling
+``symbol``), ``builtin`` (and its older spelling ``external``), ``macro``,
+``namespace``, ``shorten``, ``accumulate``, ``constraint``, ``rule``, and the
+binders ``pi``, ``sigma`` and ``as``.
 
 The words that follow a ``:`` to form an attribute are reserved too:
 ``:name``, ``:before``, ``:after``, ``:replace``, ``:remove``, ``:if`` and

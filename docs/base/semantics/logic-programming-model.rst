@@ -56,7 +56,7 @@ programming language's own bound variable — Higher-Order Abstract Syntax, or
 
 .. code-block:: elpi
 
-   kind tm type.
+   data tm.
    symb app tm -> tm -> tm.
    symb lam (tm -> tm) -> tm.
 
@@ -75,7 +75,7 @@ terms, with one constructor ``arr`` for the function space:
 
 .. code-block:: elpi
 
-   kind ty type.
+   data ty.
    symb arr ty -> ty -> ty.
 
    pred of tm -> ty.

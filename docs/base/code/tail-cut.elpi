@@ -4,7 +4,7 @@
 % violated": `copy a b` and the static `copy X X` could both apply to
 % `copy a Z`.
 
-kind tm type.
+data tm.
 symb a tm.
 symb b tm.
 

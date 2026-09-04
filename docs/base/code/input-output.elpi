@@ -2,7 +2,7 @@
 % rule, since matching a variable against a rule's pattern would have to
 % assign it. An output argument is unified: it does get assigned.
 
-kind tm type.
+data tm.
 symb z tm.
 symb s tm -> tm.
 

@@ -1,6 +1,6 @@
 % Rules and queries — a small sample.
 
-kind person  type.
+data person.
 symb alice, bob, carol person.
 
 pred parent -> person, person.        % two facts

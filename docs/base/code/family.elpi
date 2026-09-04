@@ -1,6 +1,6 @@
 % Example used in the "The logic programming model" chapter.
 
-kind person  type.
+data person.
 symb mallory, bob, alice person.
 
 pred age -> person, int.

@@ -2,7 +2,7 @@
 Inference rules and queries
 ###########################
 
-A program is a sequence of **rules** and directives (``kind``, ``type``,
+A program is a sequence of **rules** and directives (``data``, ``symb``,
 ``pred``, ``accumulate``, ``namespace { … }``, …). This chapter is the syntax
 of rules and of the **goals** that make up their bodies and the queries you run
 against them. The rules here are the program's *inference rules* — Horn clauses

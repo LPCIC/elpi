@@ -9,7 +9,7 @@ knowing a predicate's arity. A predicate with no signature draws a warning
 (carrying a suggested one); an undeclared data constructor is an error. In
 practice a program declares its vocabulary.
 
-This chapter covers the declarations that introduce that vocabulary: ``kind``
+This chapter covers the declarations that introduce that vocabulary: ``data``
 for type constructors, ``symb`` (or the legacy ``symbol`` / ``type``) for data
 constructors, ``typeabbrev`` for abbreviations, and ``pred`` / ``func`` for the
 **signature** of a predicate. The rules written over the vocabulary are
@@ -19,19 +19,33 @@ constructors, ``typeabbrev`` for abbreviations, and ``pred`` / ``func`` for the
 Data types
 ==========
 
-``kind`` introduces a new type or type constructor. On the right, ``type`` is
-the kind of a type that takes no parameters; each ``type ->`` in front adds a
-parameter:
+``data`` introduces a new type or type constructor: a bare name for a type
+with no parameters, or a name followed by one placeholder per parameter for a
+type constructor. A placeholder's own spelling is irrelevant — only how many
+there are matters — but this manual spells it like a type variable:
 
 .. code-block:: elpi
 
-   kind i32  type.                 % a type
-   kind tree type -> type.         % a one-parameter type constructor
+   data i32.        % a type
+   data tree A.     % a one-parameter type constructor
+   data map A B.
+
+``kind`` is an older, equivalent way to say the same thing, one arrow per
+parameter instead of one placeholder, and — unlike ``data`` — able to declare
+several names at once (``kind day, month type.``):
+
+.. code-block:: elpi
+
+   kind i32  type.
+   kind tree type -> type.
    kind map  type -> type -> type.
 
-Several names may share a kind: ``kind day, month type.``. The types ``int``,
-``string``, ``float`` and ``prop`` (the type of goals) are built in, as are
-``list``, ``pair`` and ``option``.
+A bare ``builtin``/``external`` may also prefix a ``data`` declaration; it is
+accepted for symmetry with ``symb``/``pred``/``func`` but has no effect —
+``data`` never generates OCaml-side code, unlike those.
+
+The types ``int``, ``string``, ``float`` and ``prop`` (the type of goals) are
+built in, as are ``list``, ``pair`` and ``option``.
 
 
 Data constructors
@@ -175,7 +189,8 @@ go on the rule, not the signature — :doc:`file-structure-and-attributes`.
 Legacy forms
 ------------
 
-Older ways of writing a signature or a data constructor are still accepted:
+Older ways of writing a signature, data type or data constructor are still
+accepted:
 
 * ``:functional`` before a ``pred`` marks it deterministic, exactly like
   writing ``func`` — which is preferred.
@@ -183,6 +198,9 @@ Older ways of writing a signature or a data constructor are still accepted:
   ``pred append i:list A, i:list A, o:list A.``. Unlike ``->`` they let input
   and output arguments be *interleaved* (``:functional pred p o:A, i:A.``), but
   that is discouraged — keep the outputs last and use ``->``.
+* ``kind``, spelling a type constructor's arity as one ``type ->`` per
+  parameter instead of one placeholder, in place of ``data`` (shown above,
+  under *Data types*).
 * ``symbol`` and, oldest of all, ``type name <type>`` in place of ``symb`` for
   a data constructor; ``external`` in place of the bare ``builtin`` keyword
   before a declaration provided through the FFI (shown above, under

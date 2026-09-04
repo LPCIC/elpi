@@ -3,8 +3,8 @@
 % plain relation likes silently breaks it — map still runs, but leaves a
 % choice point despite its signature.
 
-kind guest type.
-kind dish type.
+data guest.
+data dish.
 symb mario, anna guest.
 symb pizza, pasta, gelato dish.
 

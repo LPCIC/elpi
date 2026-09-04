@@ -1,11 +1,11 @@
 % The "hello world" of lambda-tree syntax: simply-typed lambda calculus,
 % weak-head reduction, and a type checker.
 
-kind term  type.
+data term.
 symb app term -> term -> term.
 symb fun (term -> term) -> term.
 
-kind ty    type.
+data ty.
 symb arr ty -> ty -> ty.
 
 % weak-head reduction

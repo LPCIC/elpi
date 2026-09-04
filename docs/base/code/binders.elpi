@@ -1,7 +1,7 @@
 % Recursing under a binder (depth), and introspecting the eigenvariables
 % currently in scope (names / occurs / closed_term).
 
-kind tm type.
+data tm.
 symb app tm -> tm -> tm.
 symb lam (tm -> tm) -> tm.
 

@@ -1,8 +1,8 @@
 % The STLC type checker from "The logic programming model", now handling
 % incomplete terms: a hole in argument position suspends instead of looping.
 
-kind tm type.
-kind ty type.
+data tm.
+data ty.
 symb app tm -> tm -> tm.
 symb lam (tm -> tm) -> tm.
 symb arr ty -> ty -> ty.
