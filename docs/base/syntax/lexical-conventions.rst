@@ -16,6 +16,9 @@ This chapter describes how the text is broken into tokens. The grammar that
 assembles those tokens into terms and rules is covered in
 :doc:`terms-and-operators` and :doc:`rules-and-queries`.
 
+To see how a piece of source is tokenised and parsed, run
+``echo '…' | elpi -parse-term``.
+
 
 Comments
 ========
@@ -161,7 +164,7 @@ family binds tighter than the ``+`` family.
 In the table below a family is written with a trailing ``..`` (``+..`` is "any
 token starting with ``+``"); a bare entry is a *fixed* token, the sole member
 of its family. A family marked ``[*]`` may not *end* with its starting
-character — that is what lets ``` `foo` ``` and ``'foo'`` be read as
+character — that is what lets ```foo``` and ``'foo'`` be read as
 :ref:`quoted identifiers <quoted-identifiers>` rather than operators.
 
 .. rubric:: Precedence, lowest to highest
@@ -195,8 +198,7 @@ character — that is what lets ``` `foo` ``` and ``'foo'`` be read as
 (1) The left-hand side of ``==>`` and ``=!=>`` binds tighter than ``,``, so
 ``a, b ==> c, d`` reads ``a, (b ==> (c, d))``.
 
-This is the table ``elpi -document-infix-syntax`` prints. To check how an
-expression parses, run ``echo '…' | elpi -parse-term``.
+This is the table ``elpi -document-infix-syntax`` prints.
 
 
 Keywords
