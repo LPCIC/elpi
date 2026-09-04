@@ -8,7 +8,7 @@ kind dish type.
 symbol mario, anna : guest.
 symbol pizza, pasta, gelato : dish.
 
-pred likes i:guest, o:dish.
+pred likes guest -> dish.
 likes mario pizza.
 likes mario pasta.
 likes anna gelato.

@@ -49,7 +49,7 @@ function by picking its first solution and cutting:
 
 .. code-block:: elpi
 
-   func make-deterministic (pred i:A, o:B) -> (func A -> B).
+   func make-deterministic (pred A -> B) -> (func A -> B).
    make-deterministic P (x\y\ P x y, !).
 
 ``make-deterministic likes F`` gives an ``F`` the checker can treat as a
