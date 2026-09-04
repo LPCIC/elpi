@@ -4,7 +4,7 @@ Terms and operators
 
 A **term** is Elpi's data. It is built from the tokens of
 :doc:`lexical-conventions` — constants, unification variables, integers,
-floats and strings — by application, operators, lists and λ-abstraction.
+floats and strings — by application, λ-abstraction, operators and lists.
 This chapter is about the shape of terms; how terms are assembled into rules
 and queries is :doc:`rules-and-queries`.
 
@@ -18,19 +18,39 @@ Application is written by juxtaposition, λ-calculus style — ``f a b``, not
 .. code-block:: elpi
 
    node 46 (node 93 leaf leaf) leaf
+   F a b
 
-The head (``node`` here) is a constant or a unification variable — a variable
-head is a higher-order application, ``F a b``. Each argument is a single
-*closed* term: a constant, a literal, a list, a ``{…}`` / ``{{…}}`` group, or a
-parenthesised term. So in ``f g x`` the head ``f`` is applied to the two
-arguments ``g`` and ``x``; write ``f (g x)`` for the other reading.
+The head is a constant or a unification variable. Each argument is a single
+term — a literal or an identifier, or a *delimited* term such as a list
+``[…]``, a spilled expression ``{…}``, a quotation ``{{…}}`` or a parenthesised
+term. So in ``f g x`` the head ``f`` is applied to the two arguments ``g`` and
+``x``; write ``f (g x)`` for the other reading.
 
 Application binds tighter than every operator: ``f a + g b`` is
 ``(f a) + (g b)``.
 
-Parentheses only group; ``(f a b)`` and ``f a b`` are the same term. The one
-place they matter is around ``,``, ``;``, ``=>``, ``==>`` and ``:-`` — see
-:doc:`rules-and-queries`.
+Parentheses only group: ``(f a b)`` is the same term as ``f a b``. They are
+needed only to override operator precedence — most often around ``,``, ``=>``
+and ``:-`` in a rule body, see :doc:`rules-and-queries`.
+
+λ-abstraction
+=============
+
+``x\ t`` is the function that binds ``x`` in ``t``. Because the bound variable
+is introduced explicitly, its name may be capitalised — ``X\ X`` is the
+identity. The body extends as far to the right as possible.
+
+.. code-block:: elpi
+
+   x\ x                   % identity
+   x\ y\ x                % first projection
+   f\ a\ b\ f a b         % application, as a function
+
+The ``\`` is always its own token: ``x\t`` and ``x \ t`` are identical.
+Each ``\`` binds exactly one variable — ``x y\ z`` reads ``x (y\ z)``. The
+``pi`` and ``sigma`` keywords are the exception: they take several binders at
+once, so ``pi x y\ …`` reads ``pi x\ pi y\ …``. See also
+:doc:`../features/binders-and-hoas`.
 
 
 Operators
@@ -42,12 +62,8 @@ from the operator's *family* and are listed in the table in
 :doc:`lexical-conventions`. To use an operator as an ordinary constant, wrap it
 in parentheses:
 
-.. code-block:: elpi
-
-   Apply = (F\ A\ B\ F A B),
-   S is Apply (+) 2 3           % S = 5
-
-Elpi has no ``infix`` / ``prefix`` directive: the set of operators is fixed.
+.. elpi:: ../code/apply.elpi
+   :assert: the result is 5
 
 
 Lists
@@ -60,28 +76,11 @@ Lists
    [a, b | Tail]     % a list with an explicit tail
    a :: b :: []      % the same as [a, b];  ::  is also written  cons
 
-Inside ``[ … ]`` a comma separates elements, so ``[p X, q Y]`` is a
-two-element list, not a conjunction.
+Inside ``[ … ]`` a comma separates elements, so ``[p X, q Y]`` is a two-element
+list, not a conjunction; ``[(p X, q Y)]`` is a one-element list whose element is
+a conjunction.
 
-
-λ-abstraction
-=============
-
-``x\ t`` is the function that binds ``x`` in ``t``. Because the bound variable
-is introduced explicitly, its name may be capitalised — ``X\ X`` is the
-identity. The body extends as far to the right as possible.
-
-.. code-block:: elpi
-
-   x\ x                   % identity
-   x\ y\ x                % first projection;  x y\ x  is the same
-   f\ a\ b\ f a b         % application, as a function
-
-The ``\`` is always its own token: ``x\t`` and ``x \ t`` are identical.
-``pi`` and ``sigma`` are binders too (``pi x y\ …``) and are covered in
-:doc:`../features/binders-and-hoas`. A binder may carry a type,
-``x : ty\ t``.
-
+The names ``nil`` and ``cons`` are accepted for ``[]`` and ``::``.
 
 Type ascription
 ===============
@@ -93,14 +92,14 @@ has no effect at run time.
 
    Empty = ([] : list int)
 
+A binder may carry a type ascription too: ``x : ty\ t``.
 
 Naming a subterm with ``as``
 ============================
 
 ``(t as N)`` binds ``N`` to the term ``t`` — the parentheses are required and
-``as`` takes everything to its left. It is used almost exclusively to name a
-part of a rule head so the rest of the rule can refer to it; see
-:doc:`rules-and-queries`.
+``as`` takes everything to its left. It names a part of a rule head so the rest
+of the rule can refer to it; see :doc:`rules-and-queries`.
 
 .. code-block:: elpi
 
@@ -114,7 +113,6 @@ Braces
 enclosing goal; see :doc:`../features/spilling`. ``{{ t }}`` is a *quotation*,
 custom syntax that a host application translates into a term; see
 :doc:`../features/quotations`.
-
 
 Example
 =======
