@@ -73,16 +73,22 @@ that fresh variable applied to ``x`` alone (``x`` prints as ``c0``): it may
 name ``x`` but not ``y``.
 
 ``closed_term T`` is ``prune T []`` — a variable that can see *nothing*. It is
-the way to produce a value that must not depend on the current binders: unify
-the result of some computation with a ``closed_term`` and it fails cleanly if
-the value turned out to mention a bound name.
+the way to produce a value that must not depend on the current binders.
 
-An assignment that would violate the scope fails silently, like any other
-scope error (:doc:`pitfalls`).
+The narrowing is a *unification*, so it can also **fail**: if ``V`` is already
+bound to a term that mentions a name outside ``L`` (outside all names, for
+``closed_term``), there is no way to satisfy both scopes and the call fails —
+``closed_term (app x y)`` under ``pi x\ pi y\`` fails rather than quietly
+forgetting ``x`` and ``y``. On an *unbound* variable it always succeeds; the
+failure is the useful signal when it is the output of a computation that was
+supposed to stay closed.
+
+A scope violation that happens by ordinary unification, rather than through
+``prune``/``closed_term``, fails silently instead — see :doc:`pitfalls`.
 
 
 Example
 =======
 
 .. elpi:: ../code/binders.elpi
-   :assert: depth: 2\neigenvariables in scope: 2\nx occurs in \(app x y\): yes\nT sees both eigenvariables: X\d+\^2\nP pruned to just x: X\d+ c\d+\nT after closed_term, sees none: X\d+
+   :assert: depth: 2\neigenvariables in scope: 2\nx occurs in \(app x y\): yes\nT sees both eigenvariables: X\d+\^2\nP pruned to just x: X\d+ c\d+\nT after closed_term, sees none: X\d+\nclosed_term \(app x y\) fails: it already mentions x and y

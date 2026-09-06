@@ -19,4 +19,6 @@ main :-
       (occurs x (app x y), print "x occurs in (app x y): yes" ; print "no"),
       print "T sees both eigenvariables:" T,
       prune P [x], print "P pruned to just x:" P,
-      closed_term T, print "T after closed_term, sees none:" T ).
+      closed_term T, print "T after closed_term, sees none:" T,
+      ( closed_term (app x y), print "unreachable"
+      ; print "closed_term (app x y) fails: it already mentions x and y" ) ).
