@@ -14,7 +14,7 @@ installs the ``elpi`` command-line tool and the ``elpi`` findlib package
 ``opam pin add elpi https://github.com/LPCIC/elpi.git``, or clone the
 repository and run ``make build``. Every CI run also produces statically
 linked binaries for Linux, macOS and Windows, downloadable from the
-project's Actions tab.
+`project's Actions tab <https://github.com/LPCIC/elpi/actions>`_.
 
 
 Running a program
