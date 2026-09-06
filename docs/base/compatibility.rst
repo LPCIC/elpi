@@ -96,12 +96,15 @@ one as input. Older Elpi paired such a declaration with a separate
 Teyjus or standard λProlog feature, just Elpi's own now-legacy syntax.
 **Current Elpi does not parse ``mode`` as a directive at all** — it is not a
 keyword, so ``mode (name i o).`` is read as an ordinary fact about a
-predicate called ``mode``, and fails to type-check. The ``i:`` / ``o:``
-markers survive, but only *inline*, inside the signature itself
-(:doc:`syntax/type-declarations`'s legacy forms): ``pred name i:int, o:string.``
-is the modern equivalent of the pair above, and remains the only way to
-write a signature whose input and output arguments are interleaved
-(``:functional pred name o:A, i:A.``).
+predicate called ``mode``, and fails to type-check.
+
+The ``i:`` / ``o:`` markers survive, but only *inline*, one before each
+argument type, in place of the single ``->`` a modern signature uses
+(:doc:`syntax/type-declarations`): ``pred name i:int, o:string.`` is the old
+spelling of ``pred name int -> string.``. Unlike ``->`` they can also
+*interleave* inputs and outputs (``:functional pred name o:A, i:A.``) — the
+one thing ``->`` cannot express — but that is discouraged: keep the outputs
+last.
 
 
 The ``:nooc`` attribute

@@ -1,6 +1,6 @@
 % A library rule, named so client code can graft in front of it.
 
-pred report i:string.
+pred report string.
 
 :name "default-report"
 report Msg :- print "default:" Msg.

@@ -28,7 +28,7 @@ the pattern fragment:
 
 .. code-block:: elpi
 
-   pred in-pattern-fragment i:any.
+   pred in-pattern-fragment any.
    in-pattern-fragment X :- var X _ Args, distinct_names Args, !.
    in-pattern-fragment _ :- print "outside the pattern fragment".
 

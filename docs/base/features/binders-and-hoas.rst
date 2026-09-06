@@ -37,7 +37,7 @@ function applied to it. A predicate computing the nesting depth of a term:
 
 .. code-block:: elpi
 
-   pred depth i:tm, o:int.
+   pred depth tm -> int.
    depth (app H A) N :- !, depth H N1, depth A N2, N is {std.max N1 N2}.
    depth (lam F) N :- !, pi x\ depth (F x) N1, N is N1 + 1.
    depth _ 0.

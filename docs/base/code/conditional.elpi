@@ -2,7 +2,7 @@
 % compiler variable DEBUG is defined (run with `elpi conditional.elpi -test
 % -D DEBUG` to see it fire).
 
-pred trace i:string.
+pred trace string.
 
 :if "DEBUG"
 trace Msg :- print "[debug]" Msg.

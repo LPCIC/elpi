@@ -6,7 +6,7 @@ data color.
 symb red, green, blue color.
 
 :index (2) "Hash"
-pred name-of i:int, i:color, o:string.
+pred name-of int, color -> string.
 name-of _ red "red".
 name-of _ green "green".
 name-of _ blue "blue".

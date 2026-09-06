@@ -194,10 +194,6 @@ accepted:
 
 * ``:functional`` before a ``pred`` marks it deterministic, exactly like
   writing ``func`` — which is preferred.
-* ``i:`` / ``o:`` markers, one per argument, in place of the single ``->``:
-  ``pred append i:list A, i:list A, o:list A.``. Unlike ``->`` they let input
-  and output arguments be *interleaved* (``:functional pred p o:A, i:A.``), but
-  that is discouraged — keep the outputs last and use ``->``.
 * ``kind``, spelling a type constructor's arity as one ``type ->`` per
   parameter instead of one placeholder, in place of ``data`` (shown above,
   under *Data types*).
@@ -206,10 +202,9 @@ accepted:
   before a declaration provided through the FFI (shown above, under
   *Data constructors*).
 
-The ``type name … -> prop`` predicate form, and how it relates to the
-standalone ``mode`` directive of standard λProlog (which current Elpi does
-not actually parse as a directive at all — :doc:`../compatibility`), are in
-:doc:`../compatibility`.
+The per-argument ``i:`` / ``o:`` mode markers (in place of the single ``->``),
+the ``type name … -> prop`` predicate form, and the standalone ``mode``
+directive of standard λProlog are all in :doc:`../compatibility`.
 
 
 Example

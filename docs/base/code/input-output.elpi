@@ -6,11 +6,11 @@ data tm.
 symb z tm.
 symb s tm -> tm.
 
-pred as-input i:tm.
+pred as-input tm.
 as-input z :- print "matched z".
 as-input (s _) :- print "matched s _".
 
-pred as-output o:tm.
+pred as-output -> tm.
 as-output z.
 
 main :-

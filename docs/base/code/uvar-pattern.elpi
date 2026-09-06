@@ -6,7 +6,7 @@
 %                       Args the list of arguments it is applied to
 %   uvar Hd Args as X — ... and bind X to the whole applied term
 
-pred classify i:any.
+pred classify any.
 classify (uvar _ [] as X)    :- !, print "unapplied hole:" X.
 classify (uvar Hd Args as X) :- !, print "applied hole:" X "-- head" Hd "args" Args.
 classify T                   :- print "not a hole:" T.

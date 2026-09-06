@@ -19,7 +19,7 @@ changes this — before a ``pred`` / ``func`` signature
 .. code-block:: elpi
 
    :index (_ 1)
-   pred mymap i:(A -> B), i:list A, o:list B.
+   pred mymap (A -> B), list A -> list B.
 
 ``<spec>`` is one number or ``_`` per argument, the depth to index that
 argument at (``_`` means "don't index it" — depth 0); ``(_ 1)`` indexes only

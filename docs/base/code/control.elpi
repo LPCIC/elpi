@@ -1,10 +1,10 @@
 % Cut committing a disjunction (describe), not, if, std.once, std.do!.
 
-pred describe i:int, o:string.
+pred describe int -> string.
 describe N R :- 0 is N mod 2, !, R = "even".
 describe _ "odd".
 
-pred even i:int.
+pred even int.
 even N :- 0 is N mod 2.
 
 main :-

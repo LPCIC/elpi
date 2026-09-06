@@ -1,10 +1,10 @@
 % A repeated named variable forces its occurrences to be equal; `_` never
 % does, even used more than once in the same head.
 
-pred same i:int, i:int.
+pred same int, int.
 same X X.                % the repeated X forces the two arguments to be equal
 
-pred any i:int, i:int.
+pred any int, int.
 any _ _.                 % each _ is an independent wildcard: never forces anything
 
 main :-
