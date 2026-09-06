@@ -29,7 +29,7 @@ parses ``hello.elpi``, and every other file it accumulates
 the result, and runs the query ``main``. ``elpi hello.elpi -exec p -- a b c``
 runs ``p ["a", "b", "c"]`` instead; with no ``-test``/``-exec`` and a goal
 piped or typed on standard input, ``elpi`` opens an interactive ``goal>``
-prompt. All three are :doc:`syntax/inference-rules-and-queries`.
+prompt.
 
 A few flags matter from the first program on: ``-D NAME`` defines a compiler
 variable, for ``:if`` (:doc:`features/conditional-compilation`); ``-I PATH``
