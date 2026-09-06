@@ -2,10 +2,10 @@ open Elpi.API
 
 let global = Ast.Loc.initial "init"
 let base_str = 
-  {| kind foo type. 
-     external symbol mk_t : int -> foo = "1".
+  {| data foo. 
+     external symb mk_t : int -> foo = "0".
 
-     type is_t foo -> int -> (pred).
+     pred is_t -> foo, int.
      is_t (mk_t N) N.
   |}
 
