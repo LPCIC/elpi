@@ -11,8 +11,8 @@ handful already covered in depth elsewhere cross-referenced rather than
 repeated.
 
 
-Logic and control
-====================
+Logic, control and inspection
+================================
 
 ``=`` unifies; ``pi``/``sigma``/``pattern_match`` and the cut ``!`` are
 :doc:`syntax/terms-and-operators`, :doc:`syntax/inference-rules-and-queries`,
@@ -20,26 +20,68 @@ Logic and control
 ``halt``/``stop``, ``std.once`` and ``std.do!``. ``declare_constraint`` and
 ``print_constraints`` are :doc:`syntax/constraint-handling-rules`.
 
+``var``, ``name``/``names``, ``constant``, ``occurs`` and ``closed_term``
+inspect a term without touching it — :doc:`features/unification-and-variables`,
+:doc:`features/binders-and-hoas`. ``same_term`` and ``cmp_term`` compare two
+terms without unifying them (structural / syntactic equality and ordering,
+rather than unifiability); ``new_int`` and ``new_safe`` hand out fresh,
+globally unique values outside of Elpi's usual scoping — an escape hatch, to
+use sparingly. ``unsound_unif`` unifies without the occur check and so can
+build a cyclic term (:doc:`compatibility` — it is defined with ``:nooc``).
+
 
 Arithmetic
 ============
 
 ``X is Expr`` evaluates ``Expr`` and unifies the result with ``X``; ``calc``
 is the same as a function, handy with spilling (:doc:`features/spilling`):
-``f {calc (N + 1)}``. The arithmetic and comparison operators themselves —
-``+``, ``-``, ``<``, the type-specific ``i+``/``r+``/``s+`` families, and so
-on — are listed in full in :doc:`syntax/lexical-conventions`.
+``f {calc (N + 1)}``. The precedences of every operator below are in
+:doc:`syntax/lexical-conventions`.
+
+Evaluated inside ``is`` / ``calc``:
+
+* **binary** ``+`` ``-`` ``*`` (``int`` or ``float``), ``/`` (``float``),
+  ``div`` ``mod`` (``int``), ``^`` (``string`` concatenation);
+* **unary** ``~`` (negation), ``abs``, and, for ``float``, ``sqrt`` ``sin``
+  ``cos`` ``arctan`` ``ln``;
+* **two-argument functions** ``min`` ``max``;
+* **conversions** ``int_to_real`` ``truncate`` ``floor`` ``ceil``
+  (``int`` ↔ ``float``), ``int_to_string`` ``string_to_int``
+  ``real_to_string`` ``substring`` ``size`` (``string``), ``chr`` ``rhc``
+  (``int`` ↔ one-character ``string``);
+* type-suffixed variants that fix the operand type instead of inferring it:
+  ``i+ i- i* i~ iabs`` for ``int``, ``r+ r- r* r~ rabs`` for ``float``.
+
+Comparisons are *goals*, not expressions — ``X < Y`` succeeds or fails, it is
+not written under ``is``: ``<`` ``>`` ``=<`` ``>=`` work on ``int``,
+``float`` or ``string``, with ``i< r< s<`` … fixing the type.
+
+This set is **extensible from the host application**: ``API.Calc.register``
+adds an operation (a symbol, its argument types, and an OCaml function) to a
+``calc_descriptor`` passed to ``API.Setup.init ~calc`` — see :doc:`embedding`.
 
 
 Standard data types
 ======================
 
-``bool`` (``tt``/``ff`` — not ``true``/``false``, which are goals), ``pair``
-(constructor ``pr``, since ``,`` means conjunction), ``option``
-(``some``/``none``), ``triple``, ``cmp`` (``eq``/``lt``/``gt``, the result of
-a three-way comparison) and ``diagnostic`` (``ok``/``error S``, used by
-builtins that report a reason for failure rather than just failing) are all
-declared in the builtin library, ready to use without an ``accumulate``.
+These are declared in the builtin library, ready to use without an
+``accumulate``:
+
+.. code-block:: elpi
+
+   data bool.        symb tt bool.  symb ff bool.
+   data pair A B.    symb pr A -> B -> pair A B.            % + func fst, func snd
+   data option A.    symb none option A.  symb some A -> option A.
+   data cmp.         symb eq cmp.  symb lt cmp.  symb gt cmp.
+   data diagnostic.  symb ok diagnostic.  symb error string -> diagnostic.
+   data triple A B C.  symb triple A -> B -> C -> triple A B C.  % + triple_1..3
+
+``bool`` uses ``tt``/``ff`` because ``true``/``false`` are goals; ``pair``'s
+constructor is ``pr`` because ``,`` is conjunction; ``cmp`` is the result of a
+three-way comparison (``cmp_term``, ``std.compare``); ``diagnostic`` is
+returned by builtins that report a *reason* for failing rather than just
+failing (``ok`` / ``error "message"``). ``list`` (``::`` / ``[]``) is built
+in too — :doc:`syntax/terms-and-operators`.
 
 
 I/O and the file system
@@ -61,18 +103,6 @@ PCRE) cover the common text-processing needs. ``random.int N`` draws a
 uniform integer in :math:`[0, N)`; ``random.init Seed`` reseeds the
 generator, making a sequence reproducible — the same seed always draws the
 same numbers, as the Example below shows.
-
-
-Non-logical inspection
-=========================
-
-``var``, ``name``/``names``, ``constant``, ``occurs`` and ``closed_term`` are
-:doc:`features/unification-and-variables` and
-:doc:`features/binders-and-hoas`. ``same_term`` and ``cmp_term`` compare two
-terms without unifying them (structural / syntactic equality and ordering,
-rather than unifiability); ``new_int`` and ``new_safe`` hand out fresh,
-globally unique values outside of Elpi's usual scoping — an escape hatch, to
-use sparingly.
 
 
 Example
