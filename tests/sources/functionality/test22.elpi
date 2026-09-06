@@ -1,6 +1,6 @@
 % YES
-:functional pred f -> int.
-:functional pred r -> (func -> int).
+func f -> int.
+func r -> (func -> int).
 
 f R :- r X, X R.
 

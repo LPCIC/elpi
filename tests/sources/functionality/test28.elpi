@@ -4,15 +4,15 @@ q 1.
 q 2.
 
 
-:functional
-pred q' -> int.
 
-:functional 
-pred do' (pred), (func).
+func q' -> int.
+
+
+func do' (pred), (func).
 do' X Y :- X, !, Y.
 
-:functional
-pred x -> int.
+
+func x -> int.
 
 % similar to test20. The non functional argument Y is returned
 % as the output of x. However, a non functional pred passed to a functional

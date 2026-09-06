@@ -1,14 +1,14 @@
 % YES
 pred q -> int.
-:functional
-pred q' -> int.
 
-:functional 
-pred do' (pred), (func).
+func q' -> int.
+
+
+func do' (pred), (func).
 do' X Y :- X, !, Y.
 
-:functional
-pred x -> int.
+
+func x -> int.
 
 % similar to test19, with non-functional argument
 x Z :- do' (q Z) (q' Z).

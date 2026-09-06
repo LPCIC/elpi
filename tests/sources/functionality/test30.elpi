@@ -2,9 +2,9 @@
 % HERE WE HAVE A MODE ERROR
 pred r int -> int.
 
-:functional pred p (func -> int).
+func p (func -> int).
 
-:functional pred q -> int.
+func q -> int.
 q X :- p (r X).
 
 main.

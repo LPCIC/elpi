@@ -5,8 +5,8 @@ symb app tm -> tm -> tm.
 symb lam (tm -> tm) -> tm.
 symb const int -> tm.
 
-:functional
-pred p tm -> tm.
+
+func p tm -> tm.
 p (lam (x\ lam (y\ B x y))) (lam (x\ lam (y\ B x y))).
 % Overlap with HO terms: B x y overlaps with A x
 p (lam (x\ lam (A x))) (lam (x\ lam (A x))).

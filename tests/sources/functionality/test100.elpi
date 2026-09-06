@@ -1,9 +1,9 @@
 % .YES
-:functional 
-pred p int -> int.
 
-:functional
-pred q int -> int.
+func p int -> int.
+
+
+func q int -> int.
 
 p 2 X :- pi x\ q x 2 => q 1 X.
 

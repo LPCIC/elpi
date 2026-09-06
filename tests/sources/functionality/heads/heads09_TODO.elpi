@@ -1,6 +1,6 @@
-:functional pred p ((:functional pred) -> (:functional pred)).
+func p ((func) -> (func)).
 
-:functional pred q (:functional pred).
+func q (func).
 
 p (x\q x).
 

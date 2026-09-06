@@ -1,6 +1,6 @@
 % NO
-:functional 
-pred p int -> int.
+
+func p int -> int.
 
 pred f -> int, int, int.
 

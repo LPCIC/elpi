@@ -1,4 +1,4 @@
-:functional pred p (pred (pred)), (:functional pred i:(pred)).
+func p (pred (pred)), (func (pred)).
 
 % THIS FAILS: first A is relational. The second A is functional.
 % However relational ⊈ functional

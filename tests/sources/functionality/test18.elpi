@@ -1,12 +1,12 @@
 % NO
 pred q -> int.
 
-:functional 
-pred do (func).
+
+func do (func).
 % do X :- X.
 
-:functional
-pred x -> int.
+
+func x -> int.
 
 % this rule is not functional since `do`
 % is functional if its first argument is functional

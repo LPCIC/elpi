@@ -1,6 +1,6 @@
 % NO
-:functional
-pred q -> int.
+
+func q -> int.
 
 pred t -> int.
 

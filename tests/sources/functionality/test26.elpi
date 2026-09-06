@@ -5,8 +5,8 @@ symb app tm -> tm -> tm.
 symb lam (tm -> tm) -> tm.
 symb const int -> tm.
 
-:functional
-pred p tm -> tm.
+
+func p tm -> tm.
 p (const A) (const A).
 
 % Overlap with as operator

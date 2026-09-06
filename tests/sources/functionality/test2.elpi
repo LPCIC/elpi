@@ -1,9 +1,9 @@
 % YES
-:functional 
-pred p int -> int.
 
-:functional 
-pred s -> int.
+func p int -> int.
+
+
+func s -> int.
 
 pred r int -> int.
 pred q -> int.

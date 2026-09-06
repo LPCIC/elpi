@@ -1,6 +1,6 @@
-:functional pred q.
+func q.
 
-:functional pred p (:functional pred).
+func p (func).
 
 % THIS IS OK:
 % functionality relation of q is (Functional [])

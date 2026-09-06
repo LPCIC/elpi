@@ -1,6 +1,6 @@
 % NO
-:functional
-pred p int -> int.
+
+func p int -> int.
 
 /* another version of test11.elpi and test12.elpi
  * here the query `p 1 X` has clearly one distinct solution,

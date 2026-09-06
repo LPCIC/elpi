@@ -1,4 +1,4 @@
-:functional pred p ((:functional pred) -> prop).
+func p ((func) -> (pred)).
 
 pred q -> (pred).
 
