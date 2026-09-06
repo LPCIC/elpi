@@ -45,12 +45,15 @@ names and hypotheses are in scope there. A pretty-printer that recurses under
 .. elpi:: ../code/spilling-under-binder.elpi
    :assert: \\x.\(x x\)
 
-``elpi -print`` shows what the ``lam`` rule became — the spilled goal sits
-after the ``=>``, inside the ``pi``:
+``elpi -print FILE`` shows where the spilled goal landed: in the ``lam`` rule
+it sits after the ``==>``, inside the ``pi`` and under its own ``sigma``,
+equivalent to writing
 
-.. code-block:: text
+.. code-block:: elpi
 
-   pp (lam F) S :- pi x\ pp x "x" => sigma R\ pp (F x) R, S is "\x." ^ R.
+   pp (lam F) S :- pi x\ pp x "x" ==> sigma R\ (pp (F x) R, S is "\x." ^ R).
+
+(``-print`` writes ``==>`` back as its lower-level equivalent ``=>``.)
 
 When ``{ }`` wraps a conjunction, only its **last** conjunct is spilled; the
 earlier ones just run, for their effect:
