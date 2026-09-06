@@ -228,38 +228,39 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode {|
 % [X = T] unifies X with Y, possibly assigning unification
 % variables in X and Y.
-external func (=) -> A, A.
+builtin func (=) -> A, A.
 
 % [pattern_matching T P] matches T against pattern P, only
 % variables in P are assigned.
-external func pattern_match A -> A.|};
+builtin func pattern_match A -> A.|};
 
-  LPCode "external func (pi) (func A).";
-  LPCode "external func (sigma) (func A).";
+  LPCode "builtin func (pi) (func A).";
+  LPCode "builtin func (sigma) (func A).";
 
   MLData BuiltInData.int;
   MLData BuiltInData.string;
   MLData BuiltInData.float;
 
-  LPCode "external symbol (;) (pred) -> (pred) -> (pred).";
+  LPCode "builtin pred (;) (pred), (pred).";
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
-  LPCode "external symbol (:-)  : (func) -> (func) -> (func) = \"core\".";
-  LPCode "external symbol (:-)  : (func) -> list (pred) -> (func) = \"core\".";
-  LPCode "external symbol (,)   : (func (func) ..) .";
-  LPCode "external symbol uvar  : A = \"core\".";
-  LPCode "external symbol (as)  : A -> A -> A = \"core\".";
-  LPCode "external symbol (=>)  : (pred) -> (func) -> (func) = \"core\".";
-  LPCode "external symbol (=>)  : list (pred) -> (func) -> (func) = \"core\"."; (* HACK in TC to handle this*)
-  LPCode "external symbol (==>) : (pred) -> (func) -> (func).";
-  LPCode "external symbol (==>) : list (pred) -> (func) -> (func).";
+  (* cannot use pred syntax here, because they are core *)
+  LPCode "builtin symb (:-)  : (func) -> (func) -> (func) = \"core\".";
+  LPCode "builtin symb (:-)  : (func) -> list (pred) -> (func) = \"core\".";
+  LPCode "builtin symb (,)   : (func (func) ..) .";
+  LPCode "builtin symb uvar  : A = \"core\".";
+  LPCode "builtin symb (as)  : A -> A -> A = \"core\".";
+  LPCode "builtin symb (=>)  : (pred) -> (func) -> (func) = \"core\".";
+  LPCode "builtin symb (=>)  : list (pred) -> (func) -> (func) = \"core\"."; (* HACK in TC to handle this*)
+  LPCode "builtin symb (==>) : (pred) -> (func) -> (func).";
+  LPCode "builtin symb (==>) : list (pred) -> (func) -> (func).";
 
   LPDoc " -- Control --";
 
   (* This is not implemented here, since the API had no access to the
    * choice points *)
-  LPCode "external func !. % The cut operator";
+  LPCode "builtin func !. % The cut operator";
 
   LPCode "func not prop.";
   LPCode "not X :- X, !, fail.";
@@ -269,7 +270,7 @@ external func pattern_match A -> A.|};
    * store of syntactic constraints *)
   LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
           "% on Key1 Key2 ... (variables, or lists thereof).\n"^
-          "external func declare_constraint (func) -> any .. .");
+          "builtin func declare_constraint (func) -> any .. .");
   MLCode(Pred("print_constraints",
     Full(raw_ctx,"prints all constraints"),
     (fun ~depth _ constraints state ->
@@ -338,8 +339,8 @@ external func pattern_match A -> A.|};
   LPDoc " -- Standard data types (supported in the FFI) --";
 
   LPCode "kind list type -> type.";
-  LPCode "external symbol (::) : X -> list X -> list X = \"core\".";
-  LPCode "external symbol ([]) : list X = \"core\".";
+  LPCode "builtin symb (::) : X -> list X -> list X = \"core\".";
+  LPCode "builtin symb ([]) : list X = \"core\".";
 
   MLData bool;
 
@@ -1054,7 +1055,7 @@ unsound_unif X X.
   DocAbove);
 
   LPDoc  {|[findall_solution P L] finds all the solved instances of P and puts them in L in the order in which they are found. Instances can contain eigenvariables and unification variables. P may or may not be instantiated. Instances should be found in L.|};
-  LPCode "external func findall_solutions prop -> list prop.";
+  LPCode "builtin func findall_solutions prop -> list prop.";
 
   MLData safe;
 

@@ -17,15 +17,15 @@ func false.
 
 % [X = T] unifies X with Y, possibly assigning unification
 % variables in X and Y.
-external func (=) -> A, A.
+builtin func (=) -> A, A.
 
 % [pattern_matching T P] matches T against pattern P, only
 % variables in P are assigned.
-external func pattern_match A -> A.
+builtin func pattern_match A -> A.
 
-external func (pi) (func A).
+builtin func (pi) (func A).
 
-external func (sigma) (func A).
+builtin func (sigma) (func A).
 
 kind int type.
 
@@ -36,33 +36,33 @@ kind string type.
 kind float type.
 
 
-external symbol (;) (pred) -> (pred) -> (pred).
+builtin pred (;) (pred), (pred).
 
 (A ; _) :- A.
 
 (_ ; B) :- B.
 
-external symbol (:-)  : (func) -> (func) -> (func) = "core".
+builtin symb (:-)  : (func) -> (func) -> (func) = "core".
 
-external symbol (:-)  : (func) -> list (pred) -> (func) = "core".
+builtin symb (:-)  : (func) -> list (pred) -> (func) = "core".
 
-external symbol (,)   : (func (func) ..) .
+builtin symb (,)   : (func (func) ..) .
 
-external symbol uvar  : A = "core".
+builtin symb uvar  : A = "core".
 
-external symbol (as)  : A -> A -> A = "core".
+builtin symb (as)  : A -> A -> A = "core".
 
-external symbol (=>)  : (pred) -> (func) -> (func) = "core".
+builtin symb (=>)  : (pred) -> (func) -> (func) = "core".
 
-external symbol (=>)  : list (pred) -> (func) -> (func) = "core".
+builtin symb (=>)  : list (pred) -> (func) -> (func) = "core".
 
-external symbol (==>) : (pred) -> (func) -> (func).
+builtin symb (==>) : (pred) -> (func) -> (func).
 
-external symbol (==>) : list (pred) -> (func) -> (func).
+builtin symb (==>) : list (pred) -> (func) -> (func).
 
 %  -- Control --
 
-external func !. % The cut operator
+builtin func !. % The cut operator
 
 func not prop.
 
@@ -72,7 +72,7 @@ not _.
 
 % [declare_constraint C Key1 Key2...] declares C blocked
 % on Key1 Key2 ... (variables, or lists thereof).
-external func declare_constraint (func) -> any .. .
+builtin func declare_constraint (func) -> any .. .
 
 % [print_constraints] prints all constraints
 builtin func print_constraints.
@@ -96,87 +96,87 @@ builtin func calc A -> A.
 
 %  --- Operators ---
 
-external symbol (-) : A -> A -> A = "1". 
+builtin symb (-) : A -> A -> A = "1". 
 
-external symbol (i-) : int -> int -> int = "1". 
+builtin symb (i-) : int -> int -> int = "1". 
 
-external symbol (r-) : float -> float -> float = "1". 
+builtin symb (r-) : float -> float -> float = "1". 
 
-external symbol (+) : float -> float -> float = "2". 
+builtin symb (+) : float -> float -> float = "2". 
 
-external symbol (+) : int -> int -> int = "1". 
+builtin symb (+) : int -> int -> int = "1". 
 
-external symbol (i+) : int -> int -> int = "1". 
+builtin symb (i+) : int -> int -> int = "1". 
 
-external symbol (r+) : float -> float -> float = "1". 
+builtin symb (r+) : float -> float -> float = "1". 
 
-external symbol (*) : float -> float -> float = "2". 
+builtin symb (*) : float -> float -> float = "2". 
 
-external symbol (*) : int -> int -> int = "1". 
+builtin symb (*) : int -> int -> int = "1". 
 
-external symbol (/) : float -> float -> float = "1". 
+builtin symb (/) : float -> float -> float = "1". 
 
-external symbol (mod) : int -> int -> int = "1". 
+builtin symb (mod) : int -> int -> int = "1". 
 
-external symbol (div) : int -> int -> int = "1". 
+builtin symb (div) : int -> int -> int = "1". 
 
-external symbol (^) : string -> string -> string = "1". 
+builtin symb (^) : string -> string -> string = "1". 
 
-external symbol (~) : float -> float = "2". 
+builtin symb (~) : float -> float = "2". 
 
-external symbol (~) : int -> int = "1". 
+builtin symb (~) : int -> int = "1". 
 
-external symbol (i~) : int -> int = "1". 
+builtin symb (i~) : int -> int = "1". 
 
-external symbol (r~) : float -> float = "1". 
+builtin symb (r~) : float -> float = "1". 
 
-external symbol abs : float -> float = "2".
+builtin symb abs : float -> float = "2".
 
-external symbol abs : int -> int = "1".
+builtin symb abs : int -> int = "1".
 
-external symbol iabs : int -> int = "1".
+builtin symb iabs : int -> int = "1".
 
-external symbol rabs : float -> float = "1".
+builtin symb rabs : float -> float = "1".
 
-external symbol max : float -> float -> float = "2".
+builtin symb max : float -> float -> float = "2".
 
-external symbol max : int -> int -> int = "1".
+builtin symb max : int -> int -> int = "1".
 
-external symbol min : float -> float -> float = "2".
+builtin symb min : float -> float -> float = "2".
 
-external symbol min : int -> int -> int = "1".
+builtin symb min : int -> int -> int = "1".
 
-external symbol sqrt : float -> float = "1".
+builtin symb sqrt : float -> float = "1".
 
-external symbol sin : float -> float = "1".
+builtin symb sin : float -> float = "1".
 
-external symbol cos : float -> float = "1".
+builtin symb cos : float -> float = "1".
 
-external symbol arctan : float -> float = "1".
+builtin symb arctan : float -> float = "1".
 
-external symbol ln : float -> float = "1".
+builtin symb ln : float -> float = "1".
 
-external symbol int_to_real : int -> float = "1".
+builtin symb int_to_real : int -> float = "1".
 
-external symbol floor : float -> int = "1".
+builtin symb floor : float -> int = "1".
 
-external symbol ceil : float -> int = "1".
+builtin symb ceil : float -> int = "1".
 
-external symbol truncate : float -> int = "1".
+builtin symb truncate : float -> int = "1".
 
-external symbol size : string -> int = "1".
+builtin symb size : string -> int = "1".
 
-external symbol chr : int -> string = "1".
+builtin symb chr : int -> string = "1".
 
-external symbol rhc : string -> int = "1".
+builtin symb rhc : string -> int = "1".
 
-external symbol string_to_int : string -> int = "1".
+builtin symb string_to_int : string -> int = "1".
 
-external symbol int_to_string : int -> string = "1".
+builtin symb int_to_string : int -> string = "1".
 
-external symbol substring : string -> int -> int -> string = "1".
+builtin symb substring : string -> int -> int -> string = "1".
 
-external symbol real_to_string : float -> string = "1".
+builtin symb real_to_string : float -> string = "1".
 
 %  -- Arithmetic tests --
 
@@ -244,9 +244,9 @@ X s>= Y :- ge_ X Y.
 
 kind list type -> type.
 
-external symbol (::) : X -> list X -> list X = "core".
+builtin symb (::) : X -> list X -> list X = "core".
 
-external symbol ([]) : list X = "core".
+builtin symb ([]) : list X = "core".
 
 % Boolean values: tt and ff since true and false are predicates
 builtin data bool.
@@ -302,12 +302,12 @@ builtin symb error : string -> diagnostic = "1".  % Failure
 
 kind in_stream type.
 
-external symbol std_in : in_stream = "1".
+builtin symb std_in : in_stream = "1".
 
 kind out_stream type.
 
-external symbol std_err : out_stream = "1".
-external symbol std_out : out_stream = "1".
+builtin symb std_err : out_stream = "1".
+builtin symb std_out : out_stream = "1".
 
 % [open_in FileName InStream] opens FileName for input
 builtin func open_in string -> in_stream.
@@ -560,7 +560,7 @@ builtin func new_int -> int.
 % eigenvariables and unification variables. P may or may not be
 % instantiated. Instances should be found in L.
 
-external func findall_solutions prop -> list prop.
+builtin func findall_solutions prop -> list prop.
 
 % Holds data across bracktracking; can only contain closed terms
 kind safe type.

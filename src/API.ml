@@ -347,7 +347,7 @@ module RawOpaqueData = struct
     end;
     Format.fprintf fmt "@[<hov 2>kind %s type.@]@\n@\n" name;
     List.iter (fun (variant,(c,_)) ->
-      Format.fprintf fmt "@[<hov 2>external symbol %s : %s = \"%d\".@]@\n" c name variant)
+      Format.fprintf fmt "@[<hov 2>builtin symb %s : %s = \"%d\".@]@\n" c name variant)
       constants
     in
   { cin; cino; cout; isc; name = c },
@@ -1115,9 +1115,9 @@ module Calc = struct
     let ty_decl args =
       let c, variant = ED.Global_symbols.declare_overloaded_global_symbol symbol in
       let ty_decl = if infix then
-        Printf.sprintf "external symbol (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
+        Printf.sprintf "builtin symb (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
       else
-        Printf.sprintf "external symbol %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
+        Printf.sprintf "builtin symb %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
       c, { ED.CalcHooks.ty_decl = ty_decl; code }
     in
     List.map ty_decl args
