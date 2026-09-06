@@ -82,7 +82,8 @@ parse and mean exactly the same thing (:doc:`syntax/type-declarations`):
   ``symb p int -> prop.`` becomes ``pred p int.`` (or ``func p int.`` when it
   is deterministic).
 * The type ``prop`` — and its λProlog spelling ``o`` — is now ``(pred)``, with
-  ``(func)`` for the deterministic case.
+  ``(func)`` for the deterministic case. ``fprop``, a former keyword for the
+  latter, has been removed entirely: write ``(func)``.
 
 
 Older signature forms
