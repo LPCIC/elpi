@@ -43,6 +43,9 @@ to matching any term and then checking it is unassigned:
    % equivalent to:
    of E T :- var E, declare_constraint (of E T) [E].
 
+:doc:`../features/modes` has the full set of ``uvar`` head patterns, including
+``uvar Hd Args`` for taking apart an *applied* hole.
+
 ``declare_constraint`` (:doc:`../syntax/constraint-handling-rules`) is how a
 goal is turned into a constraint; its own goal argument must itself be a
 **function** — a ``func`` signature — since a constraint that could produce

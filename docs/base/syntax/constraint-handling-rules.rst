@@ -81,8 +81,9 @@ the guard and the new goal.
 Every unification variable inside a matched constraint is **frozen**: replaced
 by a constant the rule cannot assign. This is what makes a rule *match* the
 store rather than unify with it. A frozen variable is shown to the rule as
-``uvar K L`` — ``K`` names it, ``L`` is the list of bound variables in its scope
-— and two ``uvar K …`` with the same ``K`` are the same variable.
+``uvar K L`` (the ``uvar`` head pattern — :doc:`../features/modes`) — ``K``
+names it, ``L`` is the list of bound variables in its scope — and two
+``uvar K …`` with the same ``K`` are the same variable.
 
 .. code-block:: elpi
 
