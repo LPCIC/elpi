@@ -14,20 +14,34 @@ repeated.
 Logic, control and inspection
 ================================
 
-``=`` unifies; ``pi``/``sigma``/``pattern_match`` and the cut ``!`` are
-:doc:`syntax/terms-and-operators`, :doc:`syntax/inference-rules-and-queries`,
-:doc:`features/control-and-cut` — which also covers ``not``, ``if``/``if2``,
-``halt``/``stop``, ``std.once`` and ``std.do!``. ``declare_constraint`` and
-``print_constraints`` are :doc:`syntax/constraint-handling-rules`.
+``=`` unifies, with the occur check; ``unsound_unif`` does the same *without*
+it and so can build a cyclic term (:doc:`compatibility`, where it is defined
+with ``:nooc``). ``same_term`` — infix ``==`` — tests plain syntactic
+equality, assigning nothing. ``pattern_match T P`` matches ``T`` against the
+pattern ``P``, assigning only ``P``'s variables
+(:doc:`syntax/terms-and-operators`).
 
-``var``, ``name``/``names``, ``constant``, ``occurs`` and ``closed_term``
-inspect a term without touching it — :doc:`features/unification-and-variables`,
-:doc:`features/binders-and-hoas`. ``same_term`` and ``cmp_term`` compare two
-terms without unifying them (structural / syntactic equality and ordering,
-rather than unifiability); ``new_int`` and ``new_safe`` hand out fresh,
-globally unique values outside of Elpi's usual scoping — an escape hatch, to
-use sparingly. ``unsound_unif`` unifies without the occur check and so can
-build a cyclic term (:doc:`compatibility` — it is defined with ``:nooc``).
+``declare_constraint`` and ``print_constraints`` are
+:doc:`syntax/constraint-handling-rules`.
+
+The cut ``!``, ``not``, ``if``/``if2``, ``halt``/``stop``, ``std.once`` and
+``std.do!`` are :doc:`features/control-and-cut`; ``pi``/``sigma`` are
+:doc:`syntax/inference-rules-and-queries`.
+
+``ground_term T`` checks that ``T`` has no unification variables left;
+``closed_term`` yields a fresh variable barred from naming any eigenvariable
+(:doc:`features/binders-and-hoas`); ``cmp_term`` orders two terms
+structurally, and only works when both are ground.
+
+``name``/``names`` list the eigenvariables in scope, ``var`` recognises and
+takes apart a unification variable (:doc:`features/modes` for its
+``uvar Hd Args`` form), ``constant`` a global constant, and ``occurs A T``
+checks whether the atom ``A`` appears in ``T`` —
+:doc:`features/unification-and-variables`.
+
+``new_int`` hands out a strictly increasing integer and ``new_safe`` a store
+that survives backtracking; both step outside Elpi's usual scoping, so use
+them sparingly.
 
 
 Arithmetic
