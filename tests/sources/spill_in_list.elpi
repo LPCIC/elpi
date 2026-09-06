@@ -1,7 +1,7 @@
-pred p i:A, o:A.
+pred p A -> A.
 p X X.
 
-pred print-list i:list A.
+pred print-list list A.
 print-list [].
 print-list [X|XS] :- print X, print-list XS.
 

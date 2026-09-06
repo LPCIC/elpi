@@ -1,5 +1,5 @@
-type foo int.
-type bar int.
+symb foo int.
+symb bar int.
 main :-
   foo = _,
   _ = 4,

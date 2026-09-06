@@ -6,7 +6,7 @@ func trig1.
 func acc int.
 func acc1 int.
 
-func tester string, list prop, int.
+func tester string, list (pred), int.
 tester Str Ctx Var :-
   print "In" Str "ctx is" Ctx,
   print "Doing acc with" Var,

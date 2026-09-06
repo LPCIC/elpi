@@ -1,6 +1,6 @@
 % NO
-:functional pred f o:int.
-:functional pred r o:(pred o:int).
+:functional pred f -> int.
+:functional pred r -> (pred -> int).
 
 % similar to test22, but the output of r is non-functional
 % therefore it cannot be called on variable used in the output of f

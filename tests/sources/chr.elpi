@@ -1,18 +1,18 @@
-kind term type.
-type app term -> term -> term.
-type lam (term -> term) -> term.
+data term.
+symb app term -> term -> term.
+symb lam (term -> term) -> term.
 
-kind ty type.
-type arr ty -> ty -> ty.
-type nat ty.
-type bool ty.
+data ty.
+symb arr ty -> ty -> ty.
+symb nat ty.
+symb bool ty.
 
 func term term -> ty.
 term (app HD ARG) TGT :- term HD (arr SRC TGT), term ARG SRC.
 term (lam F) (arr SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
 term (uvar as X) T :- declare_constraint (term X T) [X].
 
-pred len i:list A, o:int.
+pred len list A -> int.
 len [] 0.
 len [_|XS] N :- len XS M, N is M + 1.
 
@@ -30,7 +30,7 @@ constraint term {
 
 }
 
-pred compatible i:list prop, i:list term,i:list prop,i:list term,o:list (func).
+pred compatible list (pred), list term, list (pred), list term -> list (func).
 compatible _ [] _ [] [] :- !.
 compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
  (GX => term X TX),

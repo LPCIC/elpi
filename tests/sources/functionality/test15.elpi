@@ -1,11 +1,11 @@
 % YES
 :functional
-pred f i:int, o:int.
+pred f int -> int.
 
-pred q o:int.
+pred q -> int.
 
 :functional
-pred r i:int, o:int.
+pred r int -> int.
 
 q 1.
 q 2.

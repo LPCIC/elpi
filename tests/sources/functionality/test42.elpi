@@ -1,7 +1,7 @@
 % YES
 func succ int -> int.
 
-pred p o:(func).
+pred p -> (func).
 p X :-
   % OK, we can return a discard as output of a clause
   p _ => X = true.

@@ -1,8 +1,8 @@
 % q X yields X=ok
 
-pred p o:int.
-pred q o:int.
-pred r o:int, o:(int -> prop).
+pred p -> int.
+pred q -> int.
+pred r -> int, (int -> (pred)).
 symbol g : int -> prop.
 symbol ok, ko : int.
 

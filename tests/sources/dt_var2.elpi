@@ -1,5 +1,5 @@
 :index(20)
-pred f o:int.
+pred f -> int.
 f uvar :- print "uvar".
 f X :- var X, print "X".
 f 1 :- print "Y".

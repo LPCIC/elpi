@@ -1,4 +1,4 @@
-pred map2 i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
+pred map2 list A, list B, (A -> B -> C -> (pred)) -> list C.
 map2 [] [_|_] _ _ :- fail.
 map2 [_|_] [] _ _ :- fail.
 map2 [] [] _ [].

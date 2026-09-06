@@ -1,6 +1,6 @@
-kind tm type.
+data tm.
 
-pred q o:(tm -> tm -> tm -> prop).
+pred q -> (tm -> tm -> tm -> (pred)).
 symbol f : tm -> prop.
 symbol z : tm.
 

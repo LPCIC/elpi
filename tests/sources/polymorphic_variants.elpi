@@ -9,35 +9,35 @@
 %
 %      constant and funnames are distinct lambda-prolog names
 
-kind i type.
-type a i.
-type app i -> i -> i.
-type check list (list i -> i) -> list i -> list i -> prop.
-type union list i -> list i -> list i -> prop.
-type propagate list prop -> list prop -> prop -> prop.
+data i.
+symb a i.
+symb app i -> i -> i.
+pred check -> list (list i -> i), list i, list i.
+pred union -> list i, list i, list i.
+pred propagate -> list (pred), list (pred), (pred).
 func mem_ list i, i.
 func mem list i, i.
-type main2 prop.
-type main1 prop.
+symb main2 (pred).
+symb main1 (pred).
 func is_subset_ list i, list i.
 func is_subset list i, list i.
-type is_ground list i -> prop.
-type inter list i -> list i -> list i -> prop.
-type inputs list i -> list i -> prop.
-type h2 i.
-type h1 i.
-type g i.
-type fun i -> list i -> list i -> i.
-type find list i -> i -> list i -> list i -> prop.
-type f i.
-type e i.
-type d i.
-type check_term i -> list i -> list i -> prop.
-type check_domain list i -> list i -> prop.
-type check_codomain list i -> list i -> list i -> prop.
-type case i -> i -> i.
-type c i.
-type b i.
+pred is_ground -> list i.
+pred inter -> list i, list i, list i.
+pred inputs -> list i, list i.
+symb h2 i.
+symb h1 i.
+symb g i.
+symb fun i -> list i -> list i -> i.
+pred find -> list i, i, list i, list i.
+symb f i.
+symb e i.
+symb d i.
+pred check_term -> i, list i, list i.
+pred check_domain -> list i, list i.
+pred check_codomain -> list i, list i, list i.
+symb case i -> i -> i.
+symb c i.
+symb b i.
 
 % check types program types
 % the functions must be listed in the same order in both

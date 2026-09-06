@@ -1,16 +1,16 @@
 % Engine for \lambda\delta version 3C - types
 
 % label of global constant: L
-kind label type.
+data label.
 
 % sort index: S
-kind universe type.
+data universe.
 
 % abstraction layer: E
-kind layer type.
+data layer.
 
 % closed term: T, U, V, W
-kind term type.
+data term.
 
 % term body: B
 macro @body :- term -> term.
@@ -19,73 +19,73 @@ macro @body :- term -> term.
 macro @args :- list term.
 
 % sort S: sort of index S
-type sort universe -> term.
+symb sort universe -> term.
 % abbr V B: abbreviation of V in B
-type abbr term -> @body -> term.
+symb abbr term -> @body -> term.
 % abst E W B: abstraction of type W in B
-type abst layer -> term -> @body -> term.
+symb abst layer -> term -> @body -> term.
 % appl V T: application of T to V
-type appl term -> term -> term.
+symb appl term -> term -> term.
 % cast U T: annotation with type U of T
-type cast term -> term -> term.
+symb cast term -> term -> term.
 % impl: implicit (to be inferred)
-type impl term.
+symb impl term.
 
 % rt-reduction side: D
-kind side type.
+data side.
 
 % context side
-type d_rc side.
+symb d_rc side.
 
 % inferred side
-type d_sn side.
+symb d_sn side.
 
 % expected side
-type d_dx side.
+symb d_dx side.
 
 % ldef X V: local definition of X with V
-type ldef term -> side -> term -> prop.
+pred ldef -> term, side, term.
 % ldec X W: local declaration of X of type W
-type ldec term -> side -> term -> prop.
+pred ldec -> term, side, term.
 
 % whd mode: M
-kind whm type.
+data whm.
 
 % no \upsilon-reduction detected (full mode)
-type m_f whm.
+symb m_f whm.
 
 % \upsilon-reduction detected (restricted mode)
-type m_y whm.
+symb m_y whm.
 
 % PARAMETER: no \Pi-reuctions needed
-type no_pir prop.
+symb no_pir (pred).
 
 % PARAMETER: successive sort
-type succ universe -> universe -> prop.
+pred succ -> universe, universe.
 
 % PARAMETER: layer has beta-reduction
-type has_beta layer -> prop.
+pred has_beta -> layer.
 
 % PARAMETER: layer has upsilon-reduction
-type has_upsilon layer -> prop.
+pred has_upsilon -> layer.
 
 % PARAMETER: preceding layer
-type prec layer -> layer -> prop.
+pred prec -> layer, layer.
 
 % predicates
 
-type valid_c term -> @args -> term -> @args -> prop.
-type valid_t term -> term -> prop.
-type valid_v @args -> @args -> prop.
+pred valid_c -> term, @args, term, @args.
+pred valid_t -> term, term.
+pred valid_v -> @args, @args.
 
-type sta_t term -> side -> term -> prop.
+pred sta_t -> term, side, term.
 
-type appl_c term -> @args -> @args -> side -> prop.
-type appl_t @args -> term -> prop.
+pred appl_c -> term, @args, @args, side.
+pred appl_t -> @args, term.
 
-type conv_c term -> @args -> whm -> term -> @args -> whm -> prop.
-type conv_d term -> term -> @args -> whm -> term -> @args -> whm -> prop.
-type conv_t term -> term -> prop.
-type conv_v @args -> @args -> prop.
+pred conv_c -> term, @args, whm, term, @args, whm.
+pred conv_d -> term, term, @args, whm, term, @args, whm.
+pred conv_t -> term, term.
+pred conv_v -> @args, @args.
 
-type cast_t term -> term -> prop.
+pred cast_t -> term, term.

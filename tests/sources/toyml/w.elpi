@@ -1,41 +1,41 @@
 %%%%%%%%%%% datatypes %%%%%%%%%%%%%%%
 
 % terms
-kind term type.
+data term.
 
-type literal int -> term.
-type global  string -> term.
+symb literal int -> term.
+symb global  string -> term.
 
-type app term -> term -> term.
-type lam (term -> term) -> term.
-type let term -> ty -> (term -> term) -> term.
-type eq  term -> term -> term.
+symb app term -> term -> term.
+symb lam (term -> term) -> term.
+symb let term -> ty -> (term -> term) -> term.
+symb eq  term -> term -> term.
 
 
 % type expressions
-kind tye type.
+data tye.
 
 infixr ==> 50.
 
-type (==>)   tye -> tye -> tye.
-type integer tye.
-type boolean tye.
-type list    tye -> tye.
-type pair    tye -> tye -> tye.
+symb (==>)   tye -> tye -> tye.
+symb integer tye.
+symb boolean tye.
+symb list    tye -> tye.
+symb pair    tye -> tye -> tye.
 
 % types
-kind eq? type.
-type any eq?.
-type eqt eq?.
+data eq?.
+symb any eq?.
+symb eqt eq?.
 
-kind ty type.
+data ty.
 
-type all    eq? -> (tye -> ty) -> ty.
-type mono   tye -> ty.
+symb all    eq? -> (tye -> ty) -> ty.
+symb mono   tye -> ty.
 
 %%%%%%%%%%%% w %%%%%%%%%%%%%%
 
-pred w i:term, o:ty.
+pred w term -> ty.
 
 % constants
 
@@ -75,7 +75,7 @@ pred err.
 w X (mono ETY) :- not err, err => w X (mono TY), type-error X TY ETY.
 
 % schemas
-pred specialize i:term, i:ty, o:tye.
+pred specialize term, ty -> tye.
 
 specialize X (all any F) T :- specialize X (F E_) T.
 specialize X (all eqt F) T :- specialize X (F E) T, (eqbar X E).
@@ -88,7 +88,7 @@ main T TY :- theta [], w T TY.
 
 %%%%%%%%%%%%% theta %%%%%%%%%%%%%%%%
 
-pred theta i:list tye.
+pred theta list tye.
 
 theta L :- new_constraint (theta L) [_].
 
@@ -104,7 +104,7 @@ mem-theta (uvar _ _ :: XS) Y :- mem-theta XS Y.
 
 %%%%%%%%%%%%% eqbar %%%%%%%%%%%%%%%%
 
-pred eqbar i:term, i:tye.
+pred eqbar term, tye.
 
 eqbar _ boolean.
 eqbar _ integer.
@@ -117,7 +117,7 @@ eqbar X _ :- eqtype-error X.
 
 %%%%%%%%%%%% gammabar %%%%%%%%%%%%%
 
-pred gammabar i:ty, o:ty.
+pred gammabar ty -> ty.
 
 gammabar (mono T) TS :-
   new_constraint (gammabar (mono T) TS) [_].

@@ -1,6 +1,6 @@
 % YES
 :functional
-pred p i:int, o:int.
+pred p int -> int.
 
 /* this slightly differs from test11.elpi since 
  * we explicitly put the uvar keyword in place of a unification variable

@@ -1,16 +1,16 @@
 % Engine for \lambda\delta version 3C - line-based global environment
 
-type g+line term -> label -> term -> prop.
+pred g+line -> term, label, term.
 
-kind genv type.
+data genv.
 
-type gtop genv.
+symb gtop genv.
 
-type gdec+2 term -> genv -> genv.
+symb gdec+2 term -> genv -> genv.
 
-type gdef+2 term -> genv -> genv.
+symb gdef+2 term -> genv -> genv.
 
-type gv+ genv -> prop.
+pred gv+ -> genv.
 
 % validity predicate (global environment) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

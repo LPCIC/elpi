@@ -1,16 +1,16 @@
 :index (12) % DT is on
-pred f i:list int. 
+pred f list int.
 
-pred mk-index i:int, i:(pred i:list int), o:list prop.
+pred mk-index int, (pred list int) -> list (pred).
 mk-index 0 _ [].
 mk-index N P [C|CL] :- N > 0, N1 is N - 1, mk-clause P 10 [N] C, mk-index N1 P CL.
 
-pred mk-clause i:(pred i:list int), i:int, i:list int, o:prop.
+pred mk-clause (pred list int), int, list int -> (pred).
 mk-clause P 0 X (P X).
 mk-clause P N ACC C :- N > 0, N1 is N - 1,
   mk-clause P N1 [N|ACC] C.
 
-pred repeat i:int, i:prop.
+pred repeat int, (pred).
 repeat 0 _.
 repeat N P :- N > 0, N1 is N - 1, P, !, repeat N1 P.
 

@@ -1,5 +1,5 @@
 :nooc
-pred (===) o:A, o:A.
+pred (===) -> A, A.
 X === X.
 
 main :-

@@ -1,5 +1,5 @@
 pred d.
 pred c.
-pred ignore i:prop.
+pred ignore (pred).
 ignore _.
 main :- pi c\ Y c = (x\ X c x), ignore (Y c d).

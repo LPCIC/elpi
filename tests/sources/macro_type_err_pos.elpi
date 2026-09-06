@@ -1,5 +1,5 @@
 macro @m A :- f A.
 
-pred f i:int.
+pred f int.
 
 main :- @m "4".

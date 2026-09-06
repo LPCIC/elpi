@@ -1,7 +1,7 @@
 % NO
 func succ int -> int.
 
-pred p i:(pred), o:(func).
+pred p (pred) -> (func).
 p X X :-
   % X should not be set functional in the body of the following clause:
   % we can't know if the clause will be called in the body

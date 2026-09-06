@@ -1,6 +1,6 @@
-:functional pred p i:(int -> (:functional pred) -> prop).
+:functional pred p (int -> (:functional pred) -> prop).
 
-pred q i:int, o:(:functional pred).
+pred q int -> (:functional pred).
 
 % THIS IS OK:
 % functionality relation of q is 

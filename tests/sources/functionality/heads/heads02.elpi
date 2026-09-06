@@ -1,6 +1,6 @@
 pred q.
 
-:functional pred p i:(:functional pred).
+:functional pred p (:functional pred).
 
 % THIS FAILS:
 % functionality relation of q is (Relational [])

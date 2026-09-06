@@ -1,16 +1,16 @@
-kind n type.
-type z n.
-type succ n.
+data n.
+symb z n.
+symb succ n.
 
 :index (10) 
-pred p o:list n.
+pred p -> list n.
 p [z,z,z,z,z,z,z,z,z,z,z,z,z,z,z].
 
-pred make_n i:int, o:n.
+pred make_n int -> n.
 make_n 0 z.
 make_n N (succ X) :- N > 0, N1 is N - 1, make_n N1 X. 
 
-pred make_list i:int, i:n, i:n, o:list n.
+pred make_list int, n, n -> list n.
 make_list 0 _ LastN [LastN] :- !.
 make_list ListLen N LastN [N | TL] :-
   ListLen > 0, ListLen' is ListLen - 1,

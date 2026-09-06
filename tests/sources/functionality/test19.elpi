@@ -1,12 +1,12 @@
 % NO
-pred q o:int.
+pred q -> int.
 
 :functional 
-pred do i:(func).
+pred do (func).
 do X :- X.
 
 :functional
-pred x o:int.
+pred x -> int.
 
 % similar to test18 but with nested 
 % non functional call

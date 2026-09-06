@@ -1,5 +1,5 @@
 :index (1) % "Hash" "DTree"
-pred p o:int.
+pred p -> int.
 :name "replace_me"
 p 1.
 

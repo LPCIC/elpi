@@ -1,7 +1,7 @@
-kind tm type.
-type f tm -> tm -> tm.
+data tm.
+symb f tm -> tm -> tm.
 
-pred move i:tm, i:tm, i:tm -> tm, o:tm -> tm.
+pred move tm, tm, (tm -> tm) -> (tm -> tm).
 move A B (x\f B x) (x\f A x).
 
 func c tm, (tm -> tm).

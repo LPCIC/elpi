@@ -1,6 +1,6 @@
-kind nat type.
-type zero nat.
-type succ nat -> nat.
+data nat.
+symb zero nat.
+symb succ nat -> nat.
 
 func odd nat.
 func even nat.

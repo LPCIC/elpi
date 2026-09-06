@@ -1,7 +1,7 @@
 % q X yields X=\0, i.e. X=b\b
 
-pred z o:any.
-pred q o:any.
+pred z -> any.
+pred q -> any.
 q X :- pi x\ pi y\ z (w\ X).
 z (a\ a).
 z (a\ b\ b).

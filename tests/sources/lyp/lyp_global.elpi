@@ -3,29 +3,29 @@
 % Syntax %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % annotation: R
-kind ann type.
+data ann.
 
 % signature: G
-kind genv type.
+data genv.
 
 % empty signature
-type g_top genv.
+symb g_top genv.
 
 % referred declaration
-type g_dec id -> genv -> genv.
+symb g_dec id -> genv -> genv.
 
 % referred definition
-type g_def id -> genv -> genv.
+symb g_def id -> genv -> genv.
 
 % specification for referred declaration
-type type_g id -> ann -> deg -> term -> prop.
+pred type_g -> id, ann, deg, term.
 
 % specification for referred definition
-type cast_g id -> ann -> deg -> term -> term -> prop.
+pred cast_g -> id, ann, deg, term, term.
 
 % Signature Validity %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type valid_g genv -> prop.
+pred valid_g -> genv.
 
 valid_g g_top.
 

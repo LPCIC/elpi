@@ -1,9 +1,9 @@
 % NO
 :functional 
-pred p i:int, o:int.
+pred p int -> int.
 
 :functional
-pred q i:int, o:int.
+pred q int -> int.
 
 q 1 1.
       /* the local premise may break functionality */

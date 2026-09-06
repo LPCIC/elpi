@@ -1,5 +1,5 @@
 % NO
-pred q o:int.
+pred q -> int.
 
 func f -> int.
 

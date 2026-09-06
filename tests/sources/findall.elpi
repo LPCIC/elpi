@@ -1,10 +1,10 @@
-pred p o:int, o:int.
+pred p -> int, int.
 % pred q o:int, o:int.
 p 1 1.
 p 1 2.
 p 2 2.
 
-type test1, test2, test3, test4, test5 prop.
+symb test1, test2, test3, test4, test5 (pred).
 
 test1 :- std.findall (p _A _B) [p 1 1, p 1 2, p 2 2].
 test2 :- std.findall (p _ _) [p X 1, p 1 2, p 2 2], not(var X).

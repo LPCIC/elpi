@@ -1,5 +1,5 @@
-kind tm type.
-type lam (tm -> list tm) -> tm.
+data tm.
+symb lam (tm -> list tm) -> tm.
 
 main :-
   pi x\ std.do! [

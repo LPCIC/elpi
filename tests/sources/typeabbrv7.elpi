@@ -2,7 +2,7 @@ typeabbrev xx bool.
 
 namespace foo {
 
-pred f i:xx.
+pred f xx.
 f _.
 
 }

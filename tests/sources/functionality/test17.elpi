@@ -1,15 +1,15 @@
 % YES
-pred q o:int.
+pred q -> int.
 
 :functional 
-pred do i:(func).
+pred do (func).
 do X :- X.
 
 :functional
-pred p i:int, o:int.
+pred p int -> int.
 
 :functional
-pred x i:int, o:int.
+pred x int -> int.
 % x 1 Y :- do (q X), Y = 3.        % ->  `do (q X)` is not functional, but X is not used in the output
 % x 2 Z :- p 3 Y, do (q Y), Z = 3. % -> Y is not functional determined, but not used in the output
 x 3 Y :- do (q Y), !.            % -> `do (q X)` is not functional, but there is a bang after

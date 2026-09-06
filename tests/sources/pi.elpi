@@ -1,7 +1,7 @@
 % q X yields X=ok
-type z int -> int -> int -> prop.
-type r int -> prop.
-type p int -> prop.
+pred z -> int, int, int.
+pred r -> int.
+pred p -> int.
 symbol ok, ko : int.
 q X :- pi x\ p x => pi y\ r y => z x y X.
 z A B ko :- r A, p B.

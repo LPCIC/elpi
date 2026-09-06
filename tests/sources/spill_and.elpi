@@ -1,7 +1,7 @@
-kind term type.
-type app term -> term -> term.
-type lam (term -> term) -> term.
-type t term.
+data term.
+symb app term -> term -> term.
+symb lam (term -> term) -> term.
+symb t term.
 
 func copy term -> term.
 copy (app A B) (app A1 B1) :- copy A A1, copy B B1.

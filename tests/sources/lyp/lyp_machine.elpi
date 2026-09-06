@@ -3,40 +3,40 @@
 % Syntax %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % fragment: F
-kind frag type.
+data frag.
 
 % (star, star) fragment
-type f_ss frag.
+symb f_ss frag.
 
 % (star, box) fragment
-type f_sb frag.
+symb f_sb frag.
 
 % (box, box) fragment
-type f_bb frag.
+symb f_bb frag.
 
 % (box, star) fragment
-type f_bs frag.
+symb f_bs frag.
 
 % (box, star) fragment and (box, box) fragment
-type f_ho frag.
+symb f_ho frag.
 
 % general term: T, U, V, W
-kind term type.
+data term.
 
 % sort 
-type sort term.
+symb sort term.
 
 % application 
-type appl frag -> term -> term -> term.
+symb appl frag -> term -> term -> term.
 
 % functional abstraction
-type abst frag -> term -> (term -> term) -> term.
+symb abst frag -> term -> (term -> term) -> term.
 
 % full quantification
-type prod frag -> term -> (term -> term) -> term.
+symb prod frag -> term -> (term -> term) -> term.
 
 % restricted quantification
-type rest frag -> term -> (term -> term) -> term.
+symb rest frag -> term -> (term -> term) -> term.
 
 % identifier
 typeabbrev id term.
@@ -45,50 +45,50 @@ typeabbrev id term.
 typeabbrev stack (list term).
 
 % degree: D
-kind deg type.
+data deg.
 
 % degree of families
-type d_1 deg.
+symb d_1 deg.
 
 % degree of objects
-type d_2 deg.
+symb d_2 deg.
 
 % local assumption
-type dec_l id -> deg -> term -> prop.
+pred dec_l -> id, deg, term.
 
 % local definition for substitution
-type def_l id -> term -> prop.
+pred def_l -> id, term.
 
 % deferred whd mode: M
-kind whd_mode type.
+data whd_mode.
 
 % full mode (sort, rest)
-type m_full whd_mode.
+symb m_full whd_mode.
 
 % restricted mode (sort only)
-type m_sort whd_mode.
+symb m_sort whd_mode.
 
 % deferred actions: P
-kind prog type.
+data prog.
 
 % deferred delta expansion
-type p_expand term -> prog.
+symb p_expand term -> prog.
 
 % deferred whd to kind
-type p_whd whd_mode -> term -> prog.
+symb p_whd whd_mode -> term -> prog.
 
 % deferred conversion
-type p_conv term -> prog.
+symb p_conv term -> prog.
 
 % deferred application
-type p_appl frag -> term -> prog -> prog.
+symb p_appl frag -> term -> prog -> prog.
 
 % deferred static typing
-type p_type deg -> prog -> prog.
+symb p_type deg -> prog -> prog.
 
 % Processor %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type proc_t prog -> term -> prop.
+pred proc_t -> prog, term.
 
 proc_t (p_expand T2) T1 :- expand_t T1 T2.
 
@@ -114,7 +114,7 @@ macro @AC_T D F V T P :- proc_t (p_type D (p_appl F V P)) T.
 
 % Delta expansion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type expand_t term -> term -> prop.
+pred expand_t -> term, term.
 
 % reflexivity 
 expand_t T T :- !.
@@ -144,7 +144,7 @@ expand_t (rest F W1 T1) (rest F W2 T2) :-
 
 % Weak normal form to kind %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type whd_t term -> stack -> whd_mode -> term -> prop.
+pred whd_t -> term, stack, whd_mode, term.
 
 whd_t (sort) [] _ T :- (sort) = T.
 
@@ -168,7 +168,7 @@ whd_t (rest _ _ T1) [V|S] M T2 :- % print "br",
 
 % Stack Conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv_s stack -> stack -> prop.
+pred conv_s -> stack, stack.
 
 conv_s [] [].
 
@@ -176,7 +176,7 @@ conv_s [V1|S1] [V2|S2] :- conv_t V1 [] [] V2, conv_s S1 S2.
 
 % Term Conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv_t term -> stack -> stack -> term -> prop.
+pred conv_t -> term, stack, stack, term.
 
 % reflexivity 
 conv_t T S1 S2 T :- conv_s S1 S2, !. %, %, %, print "r".
@@ -243,7 +243,7 @@ conv_i _ T1 S1 S2 _ X2 :- conv_t T1 S1 S2 X2.
 
 % Applicability condition %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type ac_t term -> stack -> prog -> prop.
+pred ac_t -> term, stack, prog.
 
 ac_t (prod f_sb W U) [] (p_appl f_sb V P) :- !, % print "Bf",
   @TYPE_T d_2 V W,
@@ -278,7 +278,7 @@ ac_t (rest _ _ T) [V|S] P :- % print "br",
 
 % Static type assignment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type sta_t term -> deg -> prog -> prop.
+pred sta_t -> term, deg, prog.
 
 sta_t X D P :- dec_l X D U, !, proc_t P U.
 
@@ -312,7 +312,7 @@ sta_t (appl F V T) D P :-
 
 % Kind Validity %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type valid_k term -> prop.
+pred valid_k -> term.
 
 valid_k (sort).
 
@@ -326,7 +326,7 @@ valid_k (rest f_bb W T) :-
 
 % Declaration %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type dec_t deg -> term -> prop.
+pred dec_t -> deg, term.
 
 dec_t d_1 U :- valid_k U.
 
@@ -334,6 +334,6 @@ dec_t d_2 U :- @KIND_T m_full U _.
 
 % Definition %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type def_t deg -> term -> term -> prop.
+pred def_t -> deg, term, term.
 
 def_t D U T :- dec_t D U, @TYPE_T D T U.

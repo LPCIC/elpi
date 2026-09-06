@@ -11,5 +11,5 @@ constraint mk-uvar {
 
 }
 
-type meta-mk-uvar list A -> B -> C -> D -> E -> o.
+symb meta-mk-uvar list A -> B -> C -> D -> E -> o.
 meta-mk-uvar L (uvar _ _) (uvar _ _) X XL :- X = (uvar D []), XL = (uvar D L).

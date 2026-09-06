@@ -1,4 +1,4 @@
-pred u o:(int -> int).
+pred u -> (int -> int).
 u (y\y).
 
 main :-
@@ -9,10 +9,10 @@ main :-
   t3,
   true.
 
-pred p o:any.
-pred q o:any.
-type f int -> prop.
-type g any -> any -> any -> int.
+pred p -> any.
+pred q -> any.
+pred f -> int.
+symb g any -> any -> any -> int.
 
 pred t1.
 t1 :- pi x\ u (y\ X x y), std.assert! (X 1 2 = 2) "bug".

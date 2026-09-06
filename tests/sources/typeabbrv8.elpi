@@ -1,8 +1,8 @@
 { typeabbrev xx bool. }
 
-type g xx -> xx.
+symb g xx -> xx.
 {
-pred f i:xx.
+pred f xx.
 f (g _).
 
 }

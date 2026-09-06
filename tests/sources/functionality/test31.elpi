@@ -1,9 +1,9 @@
 % NO
 % Test on func of outputs
-pred twice i:prop.
+pred twice (pred).
 twice X :- X; X.
 
-pred give-fun o:(func).
+pred give-fun -> (func).
 give-fun (twice X).
 
 main.

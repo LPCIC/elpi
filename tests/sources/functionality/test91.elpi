@@ -1,7 +1,7 @@
 % NO
 
-kind t type -> type.
-type k A -> (func) -> t A.
+data t A.
+symb k A -> (func) -> t A.
 
 func f1 (func) ->.
 

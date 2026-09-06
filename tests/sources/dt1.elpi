@@ -1,19 +1,19 @@
 :index (20) % DT is on
-pred f i:list int. 
+pred f list int.
 
 macro @listlength :- 16.
 macro @maxlist :- 1000.
 
-pred mk-index i:int, i:(list int -> prop), o:list prop.
+pred mk-index int, (list int -> (pred)) -> list (pred).
 mk-index 0 _ [].
 mk-index N P [C|CL] :- N > 0, N1 is N - 1, mk-clause P @listlength [N] C, mk-index N1 P CL.
 
-pred mk-clause i:(list int -> prop), i:int, i:list int, o:prop.
+pred mk-clause (list int -> (pred)), int, list int -> (pred).
 mk-clause P 0 X (P X).
 mk-clause P N ACC C :- N > 0, N1 is N - 1,
   mk-clause P N1 [N1|ACC] C.
 
-pred repeat i:int, i:prop.
+pred repeat int, (pred).
 repeat 0 _.
 repeat N P :- N > 0, N1 is N - 1, P, !, repeat N1 P.
 

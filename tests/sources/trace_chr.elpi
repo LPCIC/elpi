@@ -2,9 +2,9 @@ constraint even odd {
   rule \ (even X) (odd X) | (odd z) <=> true.
   rule \ (even X) (odd X) | (odd (s z)) <=> fail.
 }
-kind nat type.
-type s nat -> nat.
-type z nat.
+data nat.
+symb s nat -> nat.
+symb z nat.
 
 func even nat.
 func odd nat.

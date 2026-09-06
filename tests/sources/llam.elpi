@@ -1,8 +1,8 @@
-pred spy i:prop.
+pred spy (pred).
 spy X :-  counter "run" N, print N "test " X, 
   not(not(X)).
 
-type test ((A -> A -> prop) -> B -> prop) -> B -> prop.
+pred test -> ((A -> A -> (pred)) -> B -> (pred)), B.
 test P T :-
   spy(P (x\y\x = y) F, F = T),
   spy(P (x\y\y = x) F, F = T),
@@ -11,23 +11,23 @@ test P T :-
   , print "----------------------------------------"
   .
 
-pred clause o:any.
+pred clause -> any.
 clause (x\y\F y x) :- F = a\b\b.
-pred clause1 o:any.
+pred clause1 -> any.
 clause1 (x\y\x).
-pred clause2 o:any.
+pred clause2 -> any.
 clause2 (x\y\(X x : prop), (F y (X x) : prop)) :- F = a\b\b.
-pred clause3 o:any.
+pred clause3 -> any.
 
-type r A -> B.
-pred prune_arg o:any.
-pred prune_arg2 o:any.
-pred prune_arg3 o:any.
+symb r A -> B.
+pred prune_arg -> any.
+pred prune_arg2 -> any.
+pred prune_arg3 -> any.
 prune_arg (r F).
 prune_arg2 (r (x\F x)).
 prune_arg3 (r (x\y\F y x)).
 
-type whatever, h, f, v A.
+symb whatever, h, f, v A.
 
 main :-
   test (eq\F\        pi x\ pi y\ eq (F y x) x)             (a\b\b),

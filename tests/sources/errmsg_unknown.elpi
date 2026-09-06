@@ -1,5 +1,5 @@
-pred p1 o:(pair int bool).
+pred p1 -> (pair int bool).
 p1 (pair 1 true).
 
-pred p2 o:(pair bool int).
+pred p2 -> (pair bool int).
 p2 (pair true 1).

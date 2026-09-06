@@ -1,5 +1,5 @@
 :index (1) "DTree"
-pred p o:list int.
+pred p -> list int.
 p [].
 p [_|_].
 

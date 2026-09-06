@@ -5,7 +5,7 @@ map F :- F 3 G, G.
 func good -> int, (func).
 good 3 true.
 
-func bad int, (func) -> .
+func bad int, (func) ->.
 bad _ _.
 
 main :-

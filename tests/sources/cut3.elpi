@@ -1,12 +1,12 @@
 % Test with q X; should yield X=ok
 
-kind i type.
-type ko i.
-type ok i.
-type q i -> prop.
-type c i -> prop.
-type b prop.
-type a i -> prop.
+data i.
+symb ko i.
+symb ok i.
+pred q -> i.
+pred c -> i.
+symb b (pred).
+pred a -> i.
 
 q X :- a X, b, c X.
 

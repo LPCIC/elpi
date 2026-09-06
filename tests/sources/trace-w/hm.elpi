@@ -1,4 +1,4 @@
-pred of i:term, o:ty.
+pred of term -> ty.
 
 % terms
 of (app H A) (mono T) :-

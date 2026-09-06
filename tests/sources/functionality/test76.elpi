@@ -1,6 +1,6 @@
 % YES
 
-pred p i:prop, i:list prop, o:prop.
+pred p (pred), list (pred) -> (pred).
 p Head Body (Head :- Body).
 
 main.

@@ -1,4 +1,4 @@
-pred doomed o:int.
+pred doomed -> int.
 accumulate accumulated.
 accumulate accumulated.
 main :-

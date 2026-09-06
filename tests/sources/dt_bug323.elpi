@@ -1,8 +1,8 @@
-kind term type.
-type prod string -> term -> term.
+data term.
+symb prod string -> term -> term.
 
 :index (3)
-pred f o:term, o:int.
+pred f -> term, int.
 f (prod _ _) 1 :- print "AA".
 f X 2 :- print "BB".
 

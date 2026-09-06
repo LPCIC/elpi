@@ -1,5 +1,5 @@
 :index (2 2)
-pred p o:list int, o:int.
+pred p -> list int, int.
 p [1] 0.
 p [1,2|_] 0.
 p [1,2,3|_] 0.
@@ -7,7 +7,7 @@ p [1,2,3,4|_] 0.
 p [1,2,3,4,5|_] 0.
 
 :index (2)
-pred p1 o:list (list int).
+pred p1 -> list (list int).
 p1 [].
 p1 [[3] | _].
 p1 [_|_].
@@ -15,14 +15,14 @@ p1 [X_, [Y_] | _].
 p1 [X_, Y_ | _].
 p1 [X_, Y_].
 
-kind arity-one type.
-type list-wrapper list int -> arity-one.
+data arity-one.
+symb list-wrapper list int -> arity-one.
 
 :index(5)
-pred p2 o:arity-one.
+pred p2 -> arity-one.
 p2 (list-wrapper [1]).
 
-pred findall-length i:prop, i:int.
+pred findall-length (pred), int.
 findall-length P Len :-
   std.findall P L,
   % print "Elpi result is" L,

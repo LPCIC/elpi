@@ -1,10 +1,10 @@
-kind foo type.
+data foo.
 
-type a ((int -> foo) -> foo) -> foo.
-type b foo -> foo.
+symb a ((int -> foo) -> foo) -> foo.
+symb b foo -> foo.
 
-type p (foo -> foo) -> foo -> prop.
-type q (foo -> foo) -> foo -> prop.
+pred p -> (foo -> foo), foo.
+pred q -> (foo -> foo), foo.
 
 p K (a f\ K (f 0)).
 q K R :- R = (a f\ K (f 0)).

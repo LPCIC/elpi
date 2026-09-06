@@ -1,17 +1,17 @@
-kind term type.
-pred foo o:term, o:term.
+data term.
+pred foo -> term, term.
 
-type debug-print string -> A -> prop.
+pred debug-print -> string, A.
 debug-print A B :- print A B.
 
-pred spy i:prop.
+pred spy (pred).
 spy P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
          debug-print "----<<---- enter: " P,
          P, !,
          debug-print "---->>---- exit: " P.
 spy P :- debug-print "---->>---- fail: " P, fail.
 
-type lam (term -> term) -> term.
+symb lam (term -> term) -> term.
 
 foo A B :-
   spy(A = lam i\ lam j\ X_ i j),

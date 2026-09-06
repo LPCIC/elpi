@@ -1,6 +1,6 @@
 % main should succeed
 
-kind tm type.
+data tm.
 symbol d : tm.
 
 q X X A.

@@ -1,7 +1,7 @@
 % NO
 % test for spilling
 
-func p -> prop, (func).
+func p -> (pred), (func).
 
 func q.
 

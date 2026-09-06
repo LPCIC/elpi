@@ -1,4 +1,4 @@
-pred p i:list int.
+pred p list int.
 p L :- L = [1,2], not(L = [2,2]).
 
 main :-

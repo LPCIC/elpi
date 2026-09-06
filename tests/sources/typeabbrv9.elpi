@@ -4,7 +4,7 @@ namespace xx {
     typeabbrev t int.
 }
 
-pred f i:t, i:xx.t.
+pred f t, xx.t.
 f 0 0.
 
 main :- f 0 0.

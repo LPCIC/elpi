@@ -1,14 +1,14 @@
 % An assumption asserting that the constant rbtree is of kind (type -> type).
-kind rbtree type -> type.
-kind color type.
+data rbtree A.
+data color.
 
 % We assume (not necessarily exhaustive) constructors of this type, somewhat similar to polymorphic variants in OCaml.
-type empty rbtree A.
-type red rbtree A -> A -> rbtree A -> rbtree A.
-type black rbtree A -> A -> rbtree A -> rbtree A.
+symb empty rbtree A.
+symb red rbtree A -> A -> rbtree A -> rbtree A.
+symb black rbtree A -> A -> rbtree A -> rbtree A.
 
 :nooc
-pred (===) o:A, o:A.
+pred (===) -> A, A.
 X === X.
 
 % Assumes both input trees have the same black-depth.
@@ -17,7 +17,7 @@ X === X.
 % Output is a red-black tree.
 :index(2 2)
 :nooc 
-pred balance i:rbtree A, i:A, i:rbtree A, o:rbtree A.
+pred balance rbtree A, A, rbtree A -> rbtree A.
 balance (red (red T0 V0 T1) V1 T2) V2 T3 O :- !, O === (red (black T0 V0 T1) V1 (black T2 V2 T3)).
 balance (red T0 V0 (red T1 V1 T2)) V2 T3 O :- !, O === (red (black T0 V0 T1) V1 (black T2 V2 T3)).
 balance T0 V0 (red (red T1 V1 T2) V2 T3) O :- !, O === (red (black T0 V0 T1) V1 (black T2 V2 T3)).
@@ -31,7 +31,7 @@ balance L X R (black L X R).
 % by a predicate in an argument marked with i.
 :index(0 0 1)
 :nooc 
-pred ins i:(pred i:A, i:A, o:cmp), i:A, i:rbtree A, o:rbtree A.
+pred ins (pred A, A -> cmp), A, rbtree A -> rbtree A.
 ins _ X empty (red empty X empty).
 
 % For this example, we'll say that if the inserted value is in the tree,
@@ -60,31 +60,31 @@ ins Cmp X (black L Val R) Y :-
     Cmp X Val gt, !,
     balance L Val {ins Cmp X R} Y.
 
-pred int_cmp i:int, i:int, o:cmp.
+pred int_cmp int, int -> cmp.
 int_cmp X Y lt :- X < Y.
 int_cmp X Y gt :- X > Y.
 int_cmp X Y eq :- X = Y.
 
 :nooc 
-pred insert i:(pred i:A, i:A, o:cmp), i:A, i:rbtree A, o:rbtree A.
+pred insert (pred A, A -> cmp), A, rbtree A -> rbtree A.
 insert Cmp X T (black L V R) :- std.assert! (ground_term X) "not ground", ins Cmp X T S, !, (S === red L V R; S === black L V R), !.
 
-pred of_list_acc i:list int, i:rbtree int, o:rbtree int.
+pred of_list_acc list int, rbtree int -> rbtree int.
 of_list_acc [] T T.
 of_list_acc (Hd :: Tl) T S :- of_list_acc Tl {insert int_cmp Hd T} S.
 
-pred of_list i:list int, o:rbtree int.
+pred of_list list int -> rbtree int.
 of_list L T :- of_list_acc L empty T.
 
-pred to_list_acc i:rbtree int, i:list int, o:list int.
+pred to_list_acc rbtree int, list int -> list int.
 to_list_acc empty S S.
 to_list_acc (red L V R) T S :- to_list_acc R T T', to_list_acc L (V :: T') S.
 to_list_acc (black L V R) T S :- to_list_acc R T T', to_list_acc L (V :: T') S.
 
-pred to_list i:rbtree int, o:list int.
+pred to_list rbtree int -> list int.
 to_list A B :- to_list_acc A [] B.
 
-pred check_sorted i:list int.
+pred check_sorted list int.
 check_sorted [].
 check_sorted [_].
 check_sorted (A :: B :: C) :- le_ A B, check_sorted (B :: C).

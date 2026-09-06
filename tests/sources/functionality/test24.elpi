@@ -1,12 +1,12 @@
 % OK
 :functional 
-pred f o:int.
+pred f -> int.
 
 :functional 
-pred r o:(func -> int).
+pred r -> (func -> int).
 
 :functional 
-pred r' o:(pred o:int).
+pred r' -> (pred -> int).
 
 f R :- r X, r' X, X R. % X is used 2 times with different functionalities: we
                        % keep the minimum of them
