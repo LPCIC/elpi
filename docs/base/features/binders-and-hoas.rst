@@ -50,19 +50,39 @@ to inspect it.
 Inspecting the context
 ========================
 
-Three builtins introspect the eigenvariables — the eigen names ``pi`` has
+Two builtins introspect the eigenvariables — the eigen names ``pi`` has
 introduced so far — a call is running under:
 
 * ``names L`` lists them, youngest first;
 * ``occurs N T`` checks whether the name (or global constant) ``N`` appears in
-  ``T``;
-* ``closed_term T`` unifies ``T`` with a fresh variable that cannot see *any*
-  of them — a way to produce a value that must not depend on the current
-  binders, and get a clear failure if it accidentally does.
+  ``T``.
+
+
+Restricting a variable's scope
+================================
+
+A fresh unification variable created under ``pi x\ pi y\`` may mention ``x``
+and ``y`` in its eventual assignment — its **scope**. Elpi's printer writes
+that as ``X0^2``: the variable ``X0``, with two eigenvariables in scope.
+
+``prune V L`` shrinks that: it unifies ``V`` with a *fresh* variable whose
+scope is exactly the names in ``L``. It does not edit ``V`` in place — the old
+variable and the new, narrower one are simply unified, so any later
+assignment has to satisfy both. After ``prune P [x]``, printing ``P`` shows
+that fresh variable applied to ``x`` alone (``x`` prints as ``c0``): it may
+name ``x`` but not ``y``.
+
+``closed_term T`` is ``prune T []`` — a variable that can see *nothing*. It is
+the way to produce a value that must not depend on the current binders: unify
+the result of some computation with a ``closed_term`` and it fails cleanly if
+the value turned out to mention a bound name.
+
+An assignment that would violate the scope fails silently, like any other
+scope error (:doc:`pitfalls`).
 
 
 Example
 =======
 
 .. elpi:: ../code/binders.elpi
-   :assert: depth: 2\neigenvariables in scope: 2\nx occurs in \(app x y\): yes\nclosed_term succeeded
+   :assert: depth: 2\neigenvariables in scope: 2\nx occurs in \(app x y\): yes\nT sees both eigenvariables: X\d+\^2\nP pruned to just x: X\d+ c\d+\nT after closed_term, sees none: X\d+
