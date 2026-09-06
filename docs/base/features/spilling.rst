@@ -3,32 +3,26 @@ Spilling
 ########
 
 ``{ E }`` (:doc:`../syntax/terms-and-operators`) lifts the goal ``E`` out to
-just before the smallest enclosing predicate call, replacing ``{ E }`` itself
-with a fresh variable bound to ``E``'s last argument:
+just before the smallest enclosing predicate call, replacing ``{ E }`` with a
+fresh variable for each argument ``E`` is not given — its output arguments,
+so exactly one in the common case:
 
 .. code-block:: elpi
 
    f X R :- foo X Y, bar Y R.      % written out
    f X R :- bar {foo X} R.         % the same, spilled
 
-For this to work Elpi has to know ``foo``'s arity — from its ``pred`` / ``func``
-signature (:doc:`../syntax/type-declarations`); an undeclared predicate cannot
-be spilled.
-
-Spilling reaches into a binder: under ``pi``, under a bare lambda, and under
-``==>``, the inserted goal is placed *inside* the binder, so the fresh
-variable still depends on whatever names or hypotheses are in scope there —
-spilling a conjunction spills only its last conjunct:
+If ``E`` has several missing arguments, ``{ E }`` becomes that many variables
+at once:
 
 .. code-block:: elpi
 
-   foo :- pi x\ f {g x}.
-   % becomes
-   foo :- pi x\ sigma S\ g x S, f S.
+   g X R :- h X Y Z, k Y Z R.      % h has two outputs
+   g X R :- k {h X} R.             % {h X} stands for the two of them, Y and Z
 
-   foo R :- R = x\ g {h x, mk-app f [x, g x]}.
-   % becomes
-   foo R :- (pi x\ sigma S\ h x, mk-app f [x, g x] S), R = x\ g S.
+For this to work Elpi has to know the spilled predicate's arity — from its
+``pred`` / ``func`` signature (:doc:`../syntax/type-declarations`); an
+undeclared predicate cannot be spilled.
 
 The spilled call is inserted just before the *closest* call recognised as a
 predicate — today that means a monomorphic, first-order signature; a
@@ -37,6 +31,35 @@ passed to ``std.map``) may place it one level up if the callee's own type
 isn't precise enough to pin it down. ``elpi -print FILE`` prints a program
 after spilling (and other compilation passes), so any doubt about where a
 particular ``{ }`` ended up can be checked directly.
+
+
+Spilling into a binder
+========================
+
+Under ``pi``, under a bare lambda, and under ``==>``, the spilled goal is
+placed *inside* the binder, so its fresh variable can still mention whatever
+names and hypotheses are in scope there. A pretty-printer that recurses under
+``lam`` spills ``{pp (F x)}`` right where the fresh ``x`` and its
+``pp x "x"`` hypothesis are visible:
+
+.. elpi:: ../code/spilling-under-binder.elpi
+   :assert: \\x.\(x x\)
+
+``elpi -print`` shows what the ``lam`` rule became — the spilled goal sits
+after the ``=>``, inside the ``pi``:
+
+.. code-block:: text
+
+   pp (lam F) S :- pi x\ pp x "x" => sigma R\ pp (F x) R, S is "\x." ^ R.
+
+When ``{ }`` wraps a conjunction, only its **last** conjunct is spilled; the
+earlier ones just run, for their effect:
+
+.. code-block:: elpi
+
+   foo :- pi x\ f {g x, h x}.
+   % becomes
+   foo :- pi x\ sigma S\ (g x, h x S), f S.
 
 
 Example
