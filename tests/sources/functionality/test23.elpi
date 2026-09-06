@@ -1,9 +1,7 @@
 % NO
-
 func f int -> int.
 
 pred q -> int.
-
 
 func r int -> int.
 

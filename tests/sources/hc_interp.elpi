@@ -15,8 +15,8 @@ symb xcons i -> i -> i.
 symb xnil i.
 pred try_clause -> i, i, i.
 symb tru i.
-symb test2 (pred).
-symb test1 (pred).
+pred test2.
+pred test1.
 pred subst -> (i -> i), i, i.
 symb perp i.
 symb or i -> i -> i.

@@ -1,5 +1,4 @@
 % NO
-
 func p int -> int.
 
 pred f -> int, int, int.

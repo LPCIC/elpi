@@ -58,7 +58,7 @@ symb m_f whm.
 symb m_y whm.
 
 % PARAMETER: no \Pi-reuctions needed
-symb no_pir (pred).
+pred no_pir.
 
 % PARAMETER: successive sort
 pred succ -> universe, universe.

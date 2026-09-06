@@ -1,12 +1,9 @@
 % YES
 pred q -> int.
-
 func q' -> int.
-
 
 func do' (pred), (func).
 do' X Y :- X, !, Y.
-
 
 func x -> int.
 

@@ -9,6 +9,6 @@ accumulate grundlagen_2b_lyp.
 
 % Validation of the Grundlagen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-symb main (pred).
+pred main.
 
 main :- grundlagen.

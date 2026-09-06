@@ -4,13 +4,10 @@ q 1.
 q 2.
 
 
-
 func q' -> int.
-
 
 func do' (pred), (func).
 do' X Y :- X, !, Y.
-
 
 func x -> int.
 

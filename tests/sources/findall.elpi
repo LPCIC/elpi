@@ -4,7 +4,11 @@ p 1 1.
 p 1 2.
 p 2 2.
 
-symb test1, test2, test3, test4, test5 (pred).
+pred test1.
+pred test2.
+pred test3.
+pred test4.
+pred test5.
 
 test1 :- std.findall (p _A _B) [p 1 1, p 1 2, p 2 2].
 test2 :- std.findall (p _ _) [p X 1, p 1 2, p 2 2], not(var X).

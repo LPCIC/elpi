@@ -7,9 +7,9 @@ constraint a b c d1 d2 d3 d11 d22 d33 {
   rule \ (C ?- d3 X) (C ?- d33 X).
 }
 pred p -> (pred).
-symb a (pred).
-symb b (pred).
-symb c (pred).
+pred a.
+pred b.
+pred c.
 func d1 (pred).
 func d2 (pred).
 func d3 (pred).

@@ -1,5 +1,4 @@
 % NO
-
 func p int -> int.
 
 % here we have variables in input position, overlap detection,

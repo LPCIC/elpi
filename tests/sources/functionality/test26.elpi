@@ -5,7 +5,6 @@ symb app tm -> tm -> tm.
 symb lam (tm -> tm) -> tm.
 symb const int -> tm.
 
-
 func p tm -> tm.
 p (const A) (const A).
 

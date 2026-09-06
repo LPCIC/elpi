@@ -17,8 +17,8 @@ pred union -> list i, list i, list i.
 pred propagate -> list (pred), list (pred), (pred).
 func mem_ list i, i.
 func mem list i, i.
-symb main2 (pred).
-symb main1 (pred).
+pred main2.
+pred main1.
 func is_subset_ list i, list i.
 func is_subset list i, list i.
 pred is_ground -> list i.

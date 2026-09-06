@@ -5,7 +5,7 @@ symb ko i.
 symb ok i.
 pred q -> i.
 pred c -> i.
-symb b (pred).
+pred b.
 pred a -> i.
 
 q X :- a X, b, c X.

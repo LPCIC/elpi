@@ -48349,7 +48349,7 @@ cast_g l_e_st_eq_landau_n_rt_rp_r_c_satz301f c_6911 d_2
        (abst f_ss l_e_st_eq_landau_n_rt_rp_r_real r\ (abst f_ss l_e_st_eq_landau_n_rt_rp_r_real s\ (abst f_ss l_e_st_eq_landau_n_rt_rp_r_real t\ (abst f_ss l_e_st_eq_landau_n_rt_rp_r_real u\ (abst f_ss (appl f_sb (appl f_ss (appl f_ss l_e_st_eq_landau_n_rt_rp_r_c_ic (appl f_ss (appl f_ss u l_e_st_eq_landau_n_rt_rp_r_c_cofrl) l_e_st_eq_landau_n_rt_rp_r_c_ts)) (appl f_ss (appl f_ss t l_e_st_eq_landau_n_rt_rp_r_c_cofrl) l_e_st_eq_landau_n_rt_rp_r_c_pl)) (appl f_sb (appl f_ss (appl f_ss l_e_st_eq_landau_n_rt_rp_r_c_ic (appl f_ss (appl f_ss s l_e_st_eq_landau_n_rt_rp_r_c_cofrl) l_e_st_eq_landau_n_rt_rp_r_c_ts)) (appl f_ss (appl f_ss r l_e_st_eq_landau_n_rt_rp_r_c_cofrl) l_e_st_eq_landau_n_rt_rp_r_c_pl)) l_e_st_eq_landau_n_rt_rp_r_c_is)) i\ (appl f_ss (appl f_ss u (appl f_ss t l_e_st_eq_landau_n_rt_rp_r_c_imis)) (appl f_ss (appl f_ss (appl f_ss i (appl f_ss u (appl f_ss t (appl f_ss s (appl f_ss r l_e_st_eq_landau_n_rt_rp_r_c_10301_t9))))) (appl f_ss (appl f_ss u (appl f_ss t l_e_st_eq_landau_n_rt_rp_r_c_pli)) (appl f_ss (appl f_ss s (appl f_ss r l_e_st_eq_landau_n_rt_rp_r_c_pli)) l_e_st_eq_landau_n_rt_rp_r_c_isceim))) (appl f_ss (appl f_ss s (appl f_ss r l_e_st_eq_landau_n_rt_rp_r_c_isim)) (appl f_ss u (appl f_ss (appl f_ss (appl f_ss u (appl f_ss t l_e_st_eq_landau_n_rt_rp_r_c_pli)) l_e_st_eq_landau_n_rt_rp_r_c_im) (appl f_ss (appl f_ss (appl f_ss s (appl f_ss r l_e_st_eq_landau_n_rt_rp_r_c_pli)) l_e_st_eq_landau_n_rt_rp_r_c_im) (appl f_ss s (appl f_bs l_e_st_eq_landau_n_rt_rp_r_real l_e_tr3is)))))))))))))
 .
 
-symb grundlagen (pred).
+pred grundlagen.
 
 grundlagen :- valid_g
 

@@ -3,7 +3,7 @@ open Elpi.API
 let global = Ast.Loc.initial "init"
 let base_str = 
   {| data foo.
-     external symb mk_t : int -> foo = "1".
+     builtin symb mk_t : int -> foo = "1".
 
      pred is_t -> foo, int.
      is_t (mk_t N) N.

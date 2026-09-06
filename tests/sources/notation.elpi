@@ -17,7 +17,18 @@ x *x y +x z *x w.
 a +x b +x c +x d +x e.
 a ++x b ++x c ++x d ++x e.
 
-symb a, b, d, x, xx, w, y, z, c, cd, e, uu (pred).
+pred a.
+pred b.
+pred d.
+pred x.
+pred xx.
+pred w.
+pred y.
+pred z.
+pred c.
+pred cd.
+pred e.
+pred uu.
 pred f -> (pred).
 pred g -> list (pred).
 pred foo -> (pred), (pred).

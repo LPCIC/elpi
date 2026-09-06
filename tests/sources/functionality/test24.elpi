@@ -1,10 +1,7 @@
 % OK
-
 func f -> int.
 
-
 func r -> (func -> int).
-
 
 func r' -> (pred -> int).
 

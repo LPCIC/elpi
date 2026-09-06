@@ -1,13 +1,10 @@
 % YES
 pred q -> int.
 
-
 func do (func).
 do X :- X.
 
-
 func p int -> int.
-
 
 func x int -> int.
 % x 1 Y :- do (q X), Y = 3.        % ->  `do (q X)` is not functional, but X is not used in the output

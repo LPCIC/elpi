@@ -1,5 +1,4 @@
 % YES
-
 func p int -> int.
 
 /* this slightly differs from test11.elpi since 

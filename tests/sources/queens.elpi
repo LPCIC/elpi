@@ -23,7 +23,7 @@ pred queens_aux -> i, i, i.
 pred queens -> i, i.
 pred q -> i.
 pred plus -> i, i, i.
-symb once (pred).
+pred once.
 pred not_attack_aux -> i, i.
 pred neq -> i, i.
 pred mult -> i, i, i.

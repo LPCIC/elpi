@@ -1,10 +1,8 @@
 % NO
 pred q -> int.
 
-
 func do (func).
 % do X :- X.
-
 
 func x -> int.
 

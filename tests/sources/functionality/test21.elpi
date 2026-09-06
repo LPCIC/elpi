@@ -1,5 +1,4 @@
 % NO
-
 func wrong-if (pred), (func), (func).
 
 % The problem is the call to P: P is relational

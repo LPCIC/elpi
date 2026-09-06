@@ -1,7 +1,5 @@
 % .YES
-
 func p int -> int.
-
 
 func q int -> int.
 

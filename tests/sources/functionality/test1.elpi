@@ -1,5 +1,4 @@
 % NO
-
 func p int -> int.
 
 p 1 3.

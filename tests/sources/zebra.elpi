@@ -19,7 +19,7 @@ pred print_houses -> list i.
 pred plus0 -> i, i, i.
 symb parliaments i.
 symb orange_juice i.
-symb once (pred).
+pred once.
 symb norwegian i.
 pred next_to -> i, i, list i.
 pred mult0 -> i, i, i.

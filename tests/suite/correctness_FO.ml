@@ -233,12 +233,12 @@ let () =
   let constr_error l1 l2 = !(Format.asprintf "line %d, column %d.*\n.*Invalid determinacy of constructor" l1 l2) in
   let mut_excl_eigen l p = !(Format.asprintf "line %d.*\nMutual exclusion violated for rules of predicate %s" l p) in
   let status = Test.
-    [|(* 01*) mut_excl 9 6; Success; det_check 9 7; mut_excl_eigen 10 "q"; mut_excl_eigen 10 "q";            (*05*)
-      (* 06*) mut_excl_eigen 10 "q"; mut_excl_eigen 10 "q"; mut_excl_eigen 11 "q"; mut_excl 10 10; mut_excl 10 10; (*10*)
-      (* 11*) mut_excl 9 8; Success; mut_excl 11 10; det_check 21 9; Success;    (*15*)
-      (* 16*) det_check 8 9; Success; det_check 14 11; det_check 13 15; Success;   (*20*)
-      (* 21*) det_check 7 21; Success; det_check 16 9; Success; det_check 7 12;  (*25*)
-      (* 26*) mut_excl 13 10; mut_excl 12 10; Success; Success; det_check 8 10;   (*30*)
+    [|(* 01*) mut_excl 8 5; Success; det_check 8 7; mut_excl_eigen 8 "q"; mut_excl_eigen 8 "q";            (*05*)
+      (* 06*) mut_excl_eigen 8 "q"; mut_excl_eigen 8 "q"; mut_excl_eigen 9 "q"; mut_excl 8 8; mut_excl 8 8; (*10*)
+      (* 11*) mut_excl 8 7; Success; mut_excl 10 9; det_check 19 9; Success;    (*15*)
+      (* 16*) det_check 7 9; Success; det_check 12 11; det_check 11 15; Success;   (*20*)
+      (* 21*) det_check 6 21; Success; det_check 14 9; Success; det_check 7 12;  (*25*)
+      (* 26*) mut_excl 12 9; mut_excl 11 9; Success; Success; det_check 8 10;   (*30*)
       (* 31*) out_err 7 10; Success; out_err 10 14; out_err 9 21; out_err 9 13;  (*35*)
       (* 36*) Success; out_err 6 10; out_err 7 3; Success; Success;              (*40*)
       (* 41*) det_check 6 21; Success; out_err 5 4; Success; det_check 11 38;(*45*)

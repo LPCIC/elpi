@@ -2,7 +2,7 @@ data i.
 pred app -> ((pred) -> (pred)), (pred).
 pred ignore -> A.
 pred foo -> A.
-symb c (pred).
+pred c.
 app F X :- F X. 
 c.
 ignore _.
