@@ -59,29 +59,28 @@ such compensation, and the checker rejects it:
 
    DetCheck: Found relational atom (likes) in the body of function meal.
    Offending term: (likes)
-    - Inferred: (Exp [] i-> (Exp [] o-> Rel))
-    - Expected: (Exp [] i-> (Exp [] o-> Det))
+    - Inferred: (pred any -> any)
+    - Expected: (func any -> any)
    Contained in: (map likes Gs Ds)
-    - Inferred: Rel
-    - Expected: Det
-
-``Rel`` and ``Det`` are how the checker writes ``(pred)`` and ``(func)`` in
-its own messages.
+    - Inferred: (pred)
+    - Expected: (func)
 
 Nothing forces the fix to be a cut in ``meal``'s own body. A wrapper whose
 signature says "the argument may be any predicate, but the result is a
 function" packages the commit safely:
 
+.. TODO: pick a better name than "once2" here. It is a *different* predicate
+   from std.once (which wraps a whole goal, not a predicate + its arguments);
+   the near-collision is confusing.
+
 .. code-block:: elpi
 
-   func once (pred A -> B), A -> B.
-   once P X R :- P X R, !.
-   meal Gs Ds :- map (once likes) Gs Ds.     % accepted
+   func once2 (pred A -> B), A -> B.
+   once2 P X R :- P X R, !.
+   meal Gs Ds :- map (once2 likes) Gs Ds.     % accepted
 
-The signature is the interesting part: ``once``'s input is a plain ``pred``,
-so passing ``likes`` is *not* a wrong call, yet ``once likes`` is a ``func``.
-(This overloads the standard library's ``once``, which wraps a whole goal
-rather than a predicate and its arguments.)
+The signature is the interesting part: ``once2``'s input is a plain ``pred``,
+so passing ``likes`` is *not* a wrong call, yet ``once2 likes`` is a ``func``.
 
 A ``pred`` body is not checked, so a *relational* ``meal`` may call
 ``map likes`` freely — the call runs, it just quietly leaves a choice point
