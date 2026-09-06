@@ -1,10 +1,12 @@
-####################################
-Compatibility with Teyjus and Prolog
-####################################
+##################################################
+Compatibility with Teyjus, Prolog and legacy Elpi
+##################################################
 
 Elpi is a dialect of λProlog and runs most programs written for
 `Teyjus <https://github.com/teyjus/teyjus>`_. This chapter collects the
-places where it deviates from Teyjus or from standard Prolog.
+places where it deviates from Teyjus or from standard Prolog, and the older
+Elpi syntax that newer spellings have superseded but that a program may
+still be written in.
 
 
 Lexical differences
@@ -62,6 +64,25 @@ Unification outside the pattern fragment (:doc:`features/unification-and-variabl
 aborts by default; Teyjus instead delays it as a constraint. Passing the
 deprecated ``-delay-problems-outside-pattern-fragment`` flag restores that
 behaviour.
+
+
+Superseded Elpi keywords
+=========================
+
+Newer spellings have replaced several older Elpi keywords. The old ones still
+parse and mean exactly the same thing (:doc:`syntax/type-declarations`):
+
+* ``kind name type -> … -> type`` is now ``data name A … Z`` — one placeholder
+  per parameter instead of one ``type ->``.
+* ``type name <type>`` for a *data constructor* is now ``symb name <type>``;
+  ``symbol`` is a slightly-less-old spelling of ``symb``.
+* ``external`` before a declaration is now ``builtin``.
+* A ``symb`` (or ``type``) whose type *ends in* ``prop`` is really a
+  predicate: write it as a ``pred`` or ``func`` signature instead —
+  ``symb p int -> prop.`` becomes ``pred p int.`` (or ``func p int.`` when it
+  is deterministic).
+* The type ``prop`` — and its λProlog spelling ``o`` — is now ``(pred)``, with
+  ``(func)`` for the deterministic case.
 
 
 Older signature forms
