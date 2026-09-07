@@ -61,8 +61,9 @@ handling rules start combining constraints.
 Suspending and resuming
 =========================
 
-Adding the ``uvar`` rule to the STLC checker gives an incomplete term a
-sensible meaning in place of the infinite loop:
+The STLC checker of :doc:`../examples/stlc` handles an incomplete term with
+one extra rule — the ``uvar`` one below — that gives a hole a sensible
+meaning in place of the failure or the infinite loop:
 
 .. code-block:: elpi
 
