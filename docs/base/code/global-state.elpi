@@ -1,26 +1,29 @@
-% A global variable, implemented on top of the constraint store: `value`
-% holds the current content, `set` overwrites it, `get` reads it.
+% Named global variables, built on top of the constraint store: `value` holds
+% a variable's current content, `set` overwrites it, `get` reads it. The
+% string argument is the variable's name, so several can coexist.
 
-func set int.
-set I :- declare_constraint (set I) [_].
+func set string, int.
+set Name I :- declare_constraint (set Name I) [_].
 
-func get -> int.
-get I :- declare_constraint (get I) [_].
+func get string -> int.
+get Name I :- declare_constraint (get Name I) [_].
 
-func value int.
-value I :- declare_constraint (value I) [_].
+func value string, int.
+value Name I :- declare_constraint (value Name I) [_].
 
 constraint set get value {
-  rule \ (set I) (value _) <=> (value I).
-  rule (value J) \ (get I) <=> (I = J).
-  rule (set _)             <=> (halt "no global variable").
-  rule (get _)             <=> (halt "no global variable").
-  rule (value _) (value _) <=> (halt "double initialization").
+  rule \ (set Name I) (value Name _) <=> (value Name I).
+  rule (value Name J) \ (get Name I) <=> (I = J).
+  rule (set Name _)                  <=> (halt "unknown global variable" Name).
+  rule (get Name _)                  <=> (halt "unknown global variable" Name).
+  rule (value Name _) (value Name _) <=> (halt "double initialization of" Name).
 }
 
 main :-
-  value 2,       % initialize
-  get N,         % read the current value
-  set 3,         % overwrite it
-  get M,         % read it again
-  print "before set:" N "after set:" M.
+  value "x" 2,       % initialize x
+  value "y" 10,      % and y
+  get "x" N,         % read x
+  set "x" 3,         % overwrite x
+  get "x" M,         % read x again
+  get "y" Y,         % y is untouched
+  print "x before:" N "x after:" M "y:" Y.
