@@ -560,7 +560,7 @@ builtin func new_int -> int.
 % eigenvariables and unification variables. P may or may not be
 % instantiated. Instances should be found in L.
 
-builtin func findall_solutions prop -> list prop.
+builtin func findall_solutions (pred) -> list (pred).
 
 % Holds data across bracktracking; can only contain closed terms
 kind safe type.

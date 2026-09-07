@@ -1,6 +1,6 @@
 % q X, r X, s X all yields X=ok
 data i.
-symb lam, bam (i -> i) -> i.
+symb lam, bam : (i -> i) -> i.
 pred of -> i.
 symb stop i.
 pred s -> diagnostic.

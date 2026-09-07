@@ -1055,7 +1055,7 @@ unsound_unif X X.
   DocAbove);
 
   LPDoc  {|[findall_solution P L] finds all the solved instances of P and puts them in L in the order in which they are found. Instances can contain eigenvariables and unification variables. P may or may not be instantiated. Instances should be found in L.|};
-  LPCode "builtin func findall_solutions prop -> list prop.";
+  LPCode "builtin func findall_solutions (pred) -> list (pred).";
 
   MLData safe;
 

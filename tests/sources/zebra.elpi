@@ -2,7 +2,7 @@
 % Puzzle solution written by Claude Sammut.
 
 data i.
-symb blue, chesterfields, coffee, dog, english, zero i.
+symb blue, chesterfields, coffee, dog, english, zero : i.
 symb s i -> i.
 pred member -> i, list i.
 symb zebra i.

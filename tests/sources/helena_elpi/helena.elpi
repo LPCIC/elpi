@@ -59,10 +59,10 @@
 data term.
 data label.
 
-symb k+0, l+0, m+0 term.
-symb k+1, l+1, m+1 term.
-symb k+2, l+2, m+2 term.
-symb k+y, l+y, m+y term.
+symb k+0, l+0, m+0 : term.
+symb k+1, l+1, m+1 : term.
+symb k+2, l+2, m+2 : term.
+symb k+y, l+y, m+y : term.
 pred m+pred -> term, term.
 
 m+pred m+1 m+0.

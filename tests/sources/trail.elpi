@@ -2,7 +2,7 @@
 % Expected outcome: X=ok, Z=ok.
 
 data tm.
-symb a, b tm.
+symb a, b : tm.
 
 pred p -> diagnostic, diagnostic.
 p X Z :- foo Y X, r Y Z.

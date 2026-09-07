@@ -27,7 +27,7 @@ prune_arg (r F).
 prune_arg2 (r (x\F x)).
 prune_arg3 (r (x\y\F y x)).
 
-symb whatever, h, f, v A.
+symb whatever, h, f, v : A.
 
 main :-
   test (eq\F\        pi x\ pi y\ eq (F y x) x)             (a\b\b),

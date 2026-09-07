@@ -11,10 +11,10 @@
 %type  merge  (form -> form -> o).
 data term.
 data formula.
-symb perp, tru formula.
-symb and, or, imp formula -> formula -> formula.
-symb adj, path term -> term -> formula.
-symb all, ex (term -> formula) -> formula.
+symb perp, tru : formula.
+symb and, or, imp : formula -> formula -> formula.
+symb adj, path : term -> term -> formula.
+symb all, ex : (term -> formula) -> formula.
 
 pred quant_free -> formula.
 quant_free perp.
@@ -28,7 +28,7 @@ pred atom -> formula.
 atom (path X Y) :- termp X, termp Y.
 atom (adj X Y) :- termp X, termp Y.
 
-symb a, b, c term.
+symb a, b, c : term.
 symb f term -> term.
 
 pred termp -> term.
@@ -86,7 +86,7 @@ pred merge -> formula, formula.
 
 (merge B B) :- (quant_free B).
 
-symb one, two, three, four term.
+symb one, two, three, four : term.
 pred formula -> term, formula.
 
 formula one  (imp (all (x \ (path a x))) tru).

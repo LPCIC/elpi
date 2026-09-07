@@ -228,8 +228,6 @@ check WHAT :-
 %ppp X (F # G # H) :- var X, (var F ; var G ; var H), !,
 % X = (F # G # H).
 
-mode (ppp o i) xas ppterm, (ppp i o) xas parseterm.
-
 ppp (! F2) (forall ## _ # lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (! TY F2) (forall ## TY # lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (? F2) (exists ## _ # lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
@@ -253,9 +251,6 @@ safe_list_map L1 F L2 :- list_map L1 F L2.
 
 % pptac(ppterm)/parsetac(parseterm)
 % pptac X Y :- ppptac X Y.  parsetac X Y :- ppptac X Y.
-
-mode (ppptac i o) xas parsetac(ppp -> parseterm),
-     (ppptac o i) xas pptac(ppp -> ppterm).
 
 ppptac daemon daemon.
 ppptac r r.

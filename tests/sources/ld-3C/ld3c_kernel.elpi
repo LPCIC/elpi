@@ -2,8 +2,6 @@
 
 % validity predicate (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mode (valid_c i i o o).
-
 % structural application
 valid_c (appl V1 T1) Vs1 (appl V2 T2) Vs2:- !,
   valid_c T1 [V1|Vs1] T2 [V2|Vs2].
@@ -44,13 +42,9 @@ valid_c X Vs1 X Vs2 :- ldec X d_rc _, !,
 
 % validity predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mode (valid_v i o).
-
 valid_t T1 T2 :- valid_c T1 [] T2 [].
 
 % validity predicate (arguments) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-mode (valid i o).
 
 % empty
 valid_v [] [].
@@ -60,8 +54,6 @@ valid_v [V1|Vs1] [V2|Vs2] :-
   valid_t V1 V2, valid_v Vs1 Vs2.
 
 % static type predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-mode (sta_t i i o).
 
 % structural application
 sta_t (appl V T1) D (appl V T2) :- !,
@@ -96,8 +88,6 @@ sta_t X D T2 :- ldef X D T1, !, sta_t T1 D T2. %, print "d".
 sta_t X D T2 :- ldef X d_rc T1, !, sta_t T1 D T2. %, print "D".
 
 % applicability predicate (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-mode (appl_c i i i i).
 
 % empty
 appl_c _ _ [] _ :- !.
@@ -146,15 +136,11 @@ appl_c X Vs Ws D :-
 
 % applicability predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mode (appl_t i i).
-
 appl_t Ws T :- no_pir, !, sta_t T d_dx U, appl_c U [] Ws d_dx.
 
 appl_t Ws T :- appl_c T [] Ws d_dx.
 
 % convertibility predicate (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-mode (conv_c i i i i i i).
 
 % reflexivity
 conv_c T Vs1 _ T Vs2 _ :- conv_v Vs1 Vs2, !. %, print "r". 
@@ -230,8 +216,6 @@ conv_c T1 Vs1 M1 X2 Vs2 M2 :-
 
 % controlled convertibility predicate (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mode (conv_c_cd i i i i i i i).
-
 % forced context delta (bi)
 conv_d X T Vs1 M1 X Vs2 M2 :- !, % print "P",
   conv_c T Vs1 M1 T Vs2 M2.
@@ -247,13 +231,9 @@ conv_d _ T1 Vs1 M1 T2 Vs2 M2 :- !, % print "D",
 
 % convertibility predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mode (conv_t i i).
-
 conv_t T1 T2 :- conv_c T1 [] m_f T2 [] m_f.
 
 % convertibility predicate (arguments) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-mode (conv_v i i).
 
 % empty
 conv_v [] [] :- !.
@@ -262,7 +242,5 @@ conv_v [] [] :- !.
 conv_v [V1|Vs1] [V2|Vs2] :- conv_t V1 V2, conv_v Vs1 Vs2.
 
 % castability predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-mode (cast_t i i).
 
 cast_t T1 U2 :- sta_t T1 d_sn U1, conv_t U1 U2.
