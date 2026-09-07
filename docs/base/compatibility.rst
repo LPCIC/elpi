@@ -75,7 +75,17 @@ parse and mean exactly the same thing (:doc:`syntax/type-declarations`):
 * ``kind name type -> … -> type`` is now ``data name A … Z`` — one placeholder
   per parameter instead of one ``type ->``.
 * ``type name <type>`` for a *data constructor* is now ``symb name <type>``;
-  ``symbol`` is a slightly-less-old spelling of ``symb``.
+  ``symbol`` is a slightly-less-old spelling of ``symb``. All three of
+
+  .. code-block:: elpi
+
+     symb  leaf tree A.
+     symbol leaf tree A.       % or  symbol leaf : tree A.
+     type  leaf tree A.
+
+  declare the same constant, and all three take a comma-separated list of
+  names (``type apple, pear item.``). ``symbol`` — like ``symb`` — also takes
+  an optional ``:`` before the type; ``type`` does not.
 * ``external`` before a declaration is now ``builtin``.
 * A ``symb`` (or ``type``) whose type *ends in* ``prop`` is really a
   predicate: write it as a ``pred`` or ``func`` signature instead —

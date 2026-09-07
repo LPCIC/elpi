@@ -74,15 +74,9 @@ means three constants of type ``person``. Without the ``:``,
 ``symb alice, bob, carol person.`` parses the same (``person``, with no comma
 before it, is the type) but reads less clearly.
 
-Two older, equivalent spellings are still common and are not going away:
-``symbol`` — identical to ``symb`` in every way but the name — and, inherited
-directly from λProlog, ``type name <type>``:
-
-.. code-block:: elpi
-
-   symbol leaf tree A.
-   type leaf tree A.
-   type node A -> tree A -> tree A -> tree A.
+Two older spellings — ``symbol name : type`` and, inherited from λProlog,
+``type name <type>`` — are still accepted and mean the same; see
+:doc:`../compatibility`.
 
 A constant that the host application provides through the FFI is declared
 ``builtin symb name type`` (with a trailing ``= "variant"`` to pick one
@@ -209,12 +203,11 @@ accepted:
   under *Data types*).
 * ``symbol`` and, oldest of all, ``type name <type>`` in place of ``symb`` for
   a data constructor; ``external`` in place of the bare ``builtin`` keyword
-  before a declaration provided through the FFI (shown above, under
-  *Data constructors*).
+  before a declaration provided through the FFI.
 
-The per-argument ``i:`` / ``o:`` mode markers (in place of the single ``->``),
-the ``type name … -> prop`` predicate form, and the standalone ``mode``
-directive of standard λProlog are all in :doc:`../compatibility`.
+These, the per-argument ``i:`` / ``o:`` mode markers (in place of the single
+``->``), the ``type name … -> prop`` predicate form, and the standalone
+``mode`` directive of standard λProlog are all in :doc:`../compatibility`.
 
 
 Example
