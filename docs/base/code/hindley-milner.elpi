@@ -3,15 +3,6 @@
 % it, which happens after type-checking the let-bound expression, not before.
 % Adapted from tests/sources/w.elpi.
 
-func filter list A, (pred A) -> list A.
-filter [] _ [].
-filter [X|XS] P [X|YS] :- P X, !, filter XS P YS.
-filter [_|XS] P YS :- filter XS P YS.
-
-func mem list A, A.
-mem [X|_] X :- !.
-mem [_|XS] X :- mem XS X.
-
 % terms
 data term.
 symb app term -> term -> term.
@@ -65,9 +56,11 @@ specialize (all F) T :- specialize (F FRESH_) T.
 specialize (mono X) X.
 
 % overbar generalizes a monotype into a type scheme, once its context Gamma
-% (the hypothetical `w` rules in scope) is fully known
+% (the hypothetical `w` rules in scope) is fully known. `w ?-` is the context
+% filter: it keeps those `w` rules in the context a suspended `overbar`
+% constraint carries, so the rule below can see Gamma as `G`.
 func overbar ty -> ty.
-constraint w overbar {
+constraint w ?- overbar {
   rule \ (G ?- overbar T T1)
        | (generalize G T POLYT) <=> (T1 = POLYT).
 }
@@ -88,25 +81,34 @@ free-gamma [] L L.
 free-gamma [w _ T|X] L L2 :- free-ty T L L1, free-gamma X L1 L2.
 
 func free tye, list any -> list any.
-free (A # B) L L2 :- !, free A L L1, free B L1 L2.
-free (A ===> B) L L2 :- !, free A L L1, free B L1 L2.
-free (uvar X _) L L1 :- !, if (mem L X) (L1 = L) (L1 = [X|L]).
-free _X L L.
+free (A # B) L L2 :- free A L L1, free B L1 L2.
+free (A ===> B) L L2 :- free A L L1, free B L1 L2.
+free (uvar X _) L L1 :- if (mem L X) (L1 = L) (L1 = [X|L]).
 
 func copy-ty ty -> ty.
 copy-ty (mono X1) (mono X2) :- copy X1 X2.
 copy-ty (all F1) (all F2) :- pi x\ copy x x =!=> copy-ty (F1 x) (F2 x).
 
 func copy tye -> tye.
-copy (A ===> B) (A1 ===> B1) :- !, copy A A1, copy B B1.
-copy (A # B) (A1 # B1) :- !, copy A A1, copy B B1.
-copy X X.
+copy (A ===> B) (A1 ===> B1) :- copy A A1, copy B B1.
+copy (A # B) (A1 # B1) :- copy A A1, copy B B1.
+copy (uvar _ _ as X) X.
 
 func quantify list tye, tye -> ty.
 quantify [] X (mono X1) :- copy X X1.
 quantify [X|XS] T (all x\ T2 x) :-
   quantify XS T T1,
   pi x\ copy (uvar X _) x =!=> copy-ty T1 (T2 x).
+
+% generic list helpers
+func filter list A, (pred A) -> list A.
+filter [] _ [].
+filter [X|XS] P [X|YS] :- P X, !, filter XS P YS.
+filter [_|XS] P YS :- filter XS P YS.
+
+func mem list A, A.
+mem [X|_] X :- !.
+mem [_|XS] X :- mem XS X.
 
 main :-
   % let id = \x.x in plus (id one) (size (id empty))

@@ -54,10 +54,15 @@ to is later matched:
 
 .. code-block:: elpi
 
-   constraint w overbar {
+   constraint w ?- overbar {
      rule \ (G ?- overbar T T1)
           | (generalize G T POLYT) <=> (T1 = POLYT).
    }
+
+The ``w ?-`` before the clique is the context filter: without it, ``G`` would
+keep only ``overbar``'s own (empty) set of clique rules; naming ``w`` there
+keeps the hypothetical ``w`` rules — Γ — in the context the suspended
+``overbar`` constraint carries, which is exactly what ``generalize`` reads.
 
 ``generalize`` collects the free variables of the monotype and of Γ, and
 quantifies exactly those that are free in the former but not the latter — the
