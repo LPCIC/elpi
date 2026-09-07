@@ -2,22 +2,22 @@
 Lexical conventions
 ###################
 
-An Elpi source file is read as a stream of bytes. It is a sequence of *rules*
-and *directives*, each terminated by a full stop ``.``. Whitespace — spaces,
-tabs, carriage returns and newlines — separates tokens and is otherwise
-insignificant; the terminating ``.`` does not need to sit on a line of its own.
+An Elpi source file is read as a stream of bytes. At the top level it is a
+sequence of *rules* and *directives*, each terminated by a full stop ``.``.
+Whitespace — spaces, tabs, carriage returns and newlines — separates tokens
+and is otherwise insignificant: indentation carries no meaning, and the
+terminating ``.`` need not sit on a line of its own.
 
 Outside string literals and comments only ASCII characters are used; a
 non-ASCII byte there is a lexical error. Inside a string literal or a comment
-any byte is accepted and passed through unchanged — so UTF-8 text can appear
-there, but Elpi does not decode or validate it.
+any byte is accepted and passed through unchanged, so UTF-8 text can appear
+there, but Elpi neither decodes nor validates it.
 
 This chapter describes how the text is broken into tokens. The grammar that
 assembles those tokens into terms and rules is covered in
-:doc:`terms-and-operators` and :doc:`inference-rules-and-queries`.
-
-To see how a piece of source is tokenised and parsed, run
-``echo '…' | elpi -parse-term``.
+:doc:`terms-and-operators` and :doc:`inference-rules-and-queries`. To see how
+a concrete piece of source is tokenised and parsed, run it through
+``echo '…' | elpi -parse-term``, which prints the resulting term.
 
 
 Comments
@@ -32,37 +32,64 @@ Comments
       up to the matching close */
 
 Block comments nest, so commenting out a region that already contains a
-``/* … */`` works as expected.
+``/* … */`` pair works as expected — the inner close does not end the outer
+comment.
 
-Line comments that start with ``% elpi:`` are directives to the lexer rather
-than ordinary comments (``% elpi:skip``, ``% elpi:if`` / ``% elpi:endif``); see
-:doc:`../features/conditional-compilation`.
+A line comment whose text begins with ``elpi:`` is a directive to the lexer
+rather than an ordinary comment. The three are ``% elpi:skip N`` (skip the
+next ``N`` rules), ``% elpi:if version …`` and ``% elpi:endif``; they are
+described in :doc:`../features/conditional-compilation`.
 
 
 Identifiers
 ===========
 
-An identifier starts with a letter or ``_``, and continues with any number of
+An identifier starts with a letter or ``_`` and continues with any number of
 letters, digits, ``_``, ``-``, ``$`` and the *symbol characters*
 
 .. code-block:: text
 
    +  *  /  ^  <  >  `  '  ?  @  #  ~  =  &  !
 
-(a run made only of symbol characters is instead read as a mixfix operator — see
-`Operators`_ below).
+The lexer is greedy: a maximal run of those characters is **one** identifier,
+even when it contains something that reads like an operator. The characters
+that are *not* identifier characters — whitespace, and the punctuation
+``, ; : | ( ) [ ] { } "`` — are what ends one identifier and begins the next
+token. A name is therefore glued together by ``+``, ``-``, ``>``, ``!``,
+``@`` and the rest, but split apart by a comma or a colon:
 
-The **first character decides the role of the name**:
+.. code-block:: text
 
-* a name starting with an **uppercase letter** is a **unification variable** —
-  ``X``, ``Acc``, ``Result1`` (a name starting with ``_`` is also variable-like,
-  but a *wildcard* — see below);
+   a->b        one identifier   (write  a -> b  for the implication)
+   n+1         one identifier   (write  n + 1   for the addition)
+   foo!        one identifier
+   foo@bar     one identifier   (@ is special only as the first character)
+   foo.bar     one identifier   (a qualified name — see below)
+
+   foo,bar     three tokens:   foo   ,   bar
+   foo;bar     three tokens:   foo   ;   bar
+   foo:bar     three tokens:   foo   :   bar
+
+A run made *only* of symbol characters, with no leading letter, is not an
+identifier at all: it is a mixfix operator, covered under `Operators`_ below.
+
+An identifier may not *start* with ``-`` or a digit, although it may contain
+them: ``make-palindrome`` and ``v1`` are each a single token. The everyday
+consequence is that an infix operator written between two bare names needs
+spaces around it — ``X - Y`` for subtraction, ``A -> B`` for implication,
+``N = M`` for unification. Without the spaces, ``X-Y`` and ``A->B`` are just
+long names.
+
+.. rubric:: Variables and constants
+
+The **first character** of an identifier fixes its role, and no declaration
+is needed to tell the two kinds apart:
+
+* a name starting with an **uppercase letter** is a **unification variable**
+  — ``X``, ``Acc``, ``Result1``. A name starting with ``_`` is variable-like
+  too, but is a *wildcard* (see below);
 * every other name is a **constant** — a predicate or a term constructor:
   ``append``, ``red``, ``std.length``, ``make-palindrome``.
-
-A name may not *start* with ``-`` or a digit, but it may *contain* them: a
-lowercase-initial name like ``make-palindrome`` or ``v1`` is a single token.
-Write ``X - Y`` (with spaces) for subtraction.
 
 .. rubric:: Qualified names
 
@@ -71,22 +98,23 @@ is a single constant, not ``std`` applied to ``list.map``. A name written with
 a **leading** ``.`` is looked up in the global scope, ignoring any enclosing
 ``namespace`` — inside ``namespace n`` the name ``.p`` is the top-level ``p``,
 not ``n.p``. Namespaces and these qualified names are covered in
-:doc:`../features/program-organization`. A ``.`` *not* followed by a letter is
-the full stop that ends a rule or directive.
+:doc:`../features/program-organization`. A ``.`` that is *not* followed by a
+letter is the full stop that ends a rule or directive.
 
 .. rubric:: The wildcard
 
 A bare ``_`` is a fresh anonymous variable. A name that *starts* with ``_``
-(``_x``, ``_Acc``) is also a wildcard — never a variable that can be referred
-to again. See :doc:`../features/unification-and-variables`.
+(``_x``, ``_Acc``) is also a wildcard — a fresh variable each time it is
+written, never one that can be referred to again. See
+:doc:`../features/unification-and-variables`.
 
 .. rubric:: Macro names
 
-The character ``@`` is reserved to start macro names. A name that *begins*
-with ``@`` always refers to a macro, which must have been defined with
-``macro @name … :- ….`` — it can appear nowhere else. (``@`` anywhere other
-than the first character is an ordinary name character.) See
-:doc:`../features/macros`.
+The character ``@`` starts a macro name. A name that *begins* with ``@``
+always refers to a macro, which must have been defined with
+``macro @name … :- ….``; it can appear nowhere else. (Anywhere other than the
+first position, ``@`` is an ordinary identifier character, as the ``foo@bar``
+example above shows.) See :doc:`../features/macros`.
 
 
 Literals
@@ -94,35 +122,39 @@ Literals
 
 .. rubric:: Integers
 
-A run of digits, optionally preceded by ``-`` with no space: ``0``, ``42``,
-``-2``.
+A run of digits, optionally with a leading ``-`` and no space before the
+first digit: ``0``, ``42``, ``-2``. Subtraction is the infix operator ``-``
+and takes an operand on each side, as in ``5 - 2``.
 
 .. rubric:: Floating point
 
-A digit sequence, a ``.``, and a digit sequence: ``3.0``, ``-1.5``; a leading
-``.`` is allowed (``.5``). Note that ``3.`` is the integer ``3`` followed by the
-full stop. There is no exponent notation.
+A digit sequence, a ``.``, and another digit sequence: ``3.0``, ``-1.5``. The
+leading digit sequence may be empty, so ``.5`` is a float; the trailing one
+may not, so ``3.`` is the integer ``3`` followed by the full stop that ends
+the rule. There is no exponent notation.
 
 .. rubric:: Strings
 
-Delimited by ``"``. A string literal may span several lines. The escapes
-``\n``, ``\t``, ``\b``, ``\r``, ``\\`` and ``\"`` are recognised, and a doubled
-``""`` stands for one ``"``. There are no octal or hexadecimal escapes.
+Delimited by ``"``. A string literal may span several lines, the newline
+being part of the string. The escapes ``\n``, ``\t``, ``\b``, ``\r``, ``\\``
+and ``\"`` are recognised, and a doubled ``""`` stands for one ``"``. There
+are no octal or hexadecimal escapes.
 
 .. code-block:: elpi
 
    Msg = "he said ""hi"" and\nleft"
 
-.. _quoted-identifiers:
+.. raw:: html
 
-.. rubric:: Quoted identifiers
+   <details class="elpi-fold" id="quoted-identifiers"><summary>Quoted identifiers</summary>
 
-A run of *identifier* characters enclosed in back-quotes or single quotes, with **no spaces**
-inside. It is not a string, and on its own it is not a constant: it is an
-identifier that the host application can choose to *compile* in a special way.
-It looks like a string but can be given, for instance, case-insensitive
-comparison. Quoting is also the only way to write an identifier that contains
-``:`` or that begins with a symbol character.
+A run of *identifier* characters — ``:`` included — enclosed in back-quotes
+or single quotes, with **no spaces** inside. A quoted identifier is not a
+string, and on its own it is not an ordinary constant either: it is an
+identifier that the host application may choose to *compile* in a special
+way, for instance giving it case-insensitive comparison. It looks like a
+string but behaves like a name. Quoting is also the only way to write an
+identifier that contains a ``:``, or one that begins with a symbol character.
 
 .. code-block:: elpi
 
@@ -140,29 +172,35 @@ the ``Quotation`` module of ``src/API.mli``:
 With no hook registered, a quoted identifier is simply a constant with that
 name.
 
+.. raw:: html
+
+   </details>
+
 
 Operators
 =========
 
-Operators are built in: there is no ``infix`` / ``prefix`` directive to declare
-your own (Teyjus has one). An operator token is a run of symbol characters
-(``,``, ``::``, ``=>``, ``+``, …); a few are ordinary words (``is``, ``div``,
-``mod``).
+Operators are built in: there is no ``infix`` / ``prefix`` directive to
+declare your own, as there is in Teyjus. An operator is written either as a
+run of symbol characters (``=>``, ``::``, ``+``, …) or as one of the reserved
+words ``is``, ``div`` and ``mod``; the comma ``,`` is an infix operator too —
+conjunction — even though it is punctuation rather than a symbol-character
+run.
 
 .. rubric:: Token families
 
 Precedence and associativity belong not to individual operators but to
 **families**. A family is identified by its leading character(s): ``+-->``
 belongs to the ``+`` family, ``*-->`` to the ``*`` family. Every token of a
-family parses with the same precedence and associativity, and no declaration is
-needed — ``x +--> y *--> z`` reads ``x +--> (y *--> z)`` because the ``*``
+family parses with the same precedence and associativity, and no declaration
+is needed — ``x +--> y *--> z`` reads ``x +--> (y *--> z)`` because the ``*``
 family binds tighter than the ``+`` family.
 
 In the table below a family is written with a trailing ``..`` (``+..`` is "any
 token starting with ``+``"); a bare entry is a *fixed* token, the sole member
 of its family. A family marked ``[*]`` may not *end* with its starting
 character — that is what lets ```foo``` and ``'foo'`` be read as
-:ref:`quoted identifiers <quoted-identifiers>` rather than operators.
+`quoted identifiers <#quoted-identifiers>`__ rather than operators.
 
 .. rubric:: Precedence, lowest to highest
 
@@ -176,7 +214,7 @@ character — that is what lets ```foo``` and ``'foo'`` be read as
    Infix   right associative  | =!=>                             (1)
    Infix   right associative  | ,   &
    Infix   right associative  | ->
-   Infix   right associative  | =>
+   Infix   right associative  | =>                               (2)
    Infix   not   associative  | =  ==  =<  r<  i<  s<  r=<  i=<  s=<
                                 <..  r>  i>  s>  r>=  i>=  s>=  >..  is
    Infix   right associative  | ::
@@ -195,23 +233,30 @@ character — that is what lets ```foo``` and ``'foo'`` be read as
 (1) The left-hand side of ``==>`` and ``=!=>`` binds tighter than ``,``, so
 ``a, b ==> c, d`` reads ``a, (b ==> (c, d))``.
 
+(2) ``=>`` is the traditional λProlog spelling of implication. It denotes the
+same connective as ``==>`` but binds *tighter* than ``,``, so ``a => b, c``
+reads ``(a => b), c`` rather than ``a => (b, c)``. This manual uses ``==>``
+throughout — see :doc:`../features/hypothetical-rules`.
+
 This is the table ``elpi -document-infix-syntax`` prints.
 
 
 Keywords
 ========
 
-The following words are reserved and cannot be used as names: the declaration
-and signature keywords ``data``, ``type``, ``typeabbrev``, ``pred``, ``func``,
+The following words are reserved and cannot be used as names. The declaration
+and signature keywords are ``data``, ``typeabbrev``, ``pred``, ``func``,
 ``symb``, ``builtin``, ``macro``, ``namespace``, ``shorten``, ``accumulate``,
-``constraint``, ``rule``, and the binders ``pi``, ``sigma`` and ``as``. The
-superseded spellings ``kind``, ``symbol`` and ``external`` (:doc:`../compatibility`)
-are reserved too.
+``constraint`` and ``rule``; the binders are ``pi``, ``sigma`` and ``as``.
+The legacy spellings ``kind``, ``type``, ``symbol`` and ``external`` are
+reserved as well, and remain available — see :doc:`../compatibility`.
 
-The words that follow a ``:`` to form an attribute are reserved too:
-``:name``, ``:before``, ``:after``, ``:replace``, ``:remove``, ``:if`` and
-``:untyped`` are attributes of a rule; ``:index``, ``:functional`` and
-``:nooc`` are attributes of a signature (see :doc:`type-declarations`).
+The words that follow a ``:`` to form an attribute are reserved in that
+position too: ``:name``, ``:before``, ``:after``, ``:replace``, ``:remove``,
+``:if`` and ``:untyped`` on a rule; ``:index``, ``:functional`` and ``:nooc``
+on a signature (see :doc:`type-declarations`). Outside an attribute the same
+words — ``name``, ``if``, ``index`` and so on — are ordinary constants; the
+builtin ``name``, for one, relies on that.
 
 Example
 =======
@@ -219,7 +264,8 @@ Example
 .. elpi:: ../code/lexical.elpi
    :assert: items: 2 discount: -5
 
-The reference tokenizer 
+
+The reference tokenizer
 =======================
 
 The character classes named above are, verbatim, the ones the ``ocamllex``
@@ -247,13 +293,12 @@ between are elided):
       | '`'  symbcharstar '`'     (* quoted identifier                       *)
 
 ``idcharstarns`` is ``idcharstar`` extended with an embedded ``.`` before a
-letter — that is what makes ``std.rev`` a single token. The last two are the
-:ref:`quoted identifiers <quoted-identifiers>`. The bare ``_`` is the anonymous
-variable; the other seven productions all yield one ``CONSTANT`` token, and the
-compiler decides what it stands for from the first character: ``@`` a macro, an
-upper-case letter a variable, otherwise a constant.
+letter — that is what makes ``std.rev`` a single token. The last two
+productions are the `quoted identifiers <#quoted-identifiers>`__. The bare
+``_`` is the anonymous variable; the other seven productions all yield one
+``CONSTANT`` token, and the compiler decides what it stands for from the
+first character: ``@`` a macro, an upper-case letter a variable, otherwise a
+constant.
 
-How these conventions differ from Teyjus and from standard Prolog is covered in
-:doc:`../compatibility`.
-
-
+How these conventions differ from Teyjus and from standard Prolog is covered
+in :doc:`../compatibility`.

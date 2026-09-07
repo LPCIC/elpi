@@ -2,37 +2,50 @@
 Terms and operators
 ###################
 
-A **term** is Elpi's data. It is built from the tokens of
+A term is Elpi's data: the goals it runs, the rules it stores and the values
+it computes are all terms. A term is built from the tokens of
 :doc:`lexical-conventions` — constants, unification variables, integers,
-floats and strings — by application, λ-abstraction, operators and lists.
-This chapter is about the shape of terms; how terms are assembled into rules
-and queries is :doc:`inference-rules-and-queries`.
+floats and strings — by four constructions: application, λ-abstraction,
+operators and lists. This chapter is about the shape of a term on its own;
+how terms are assembled into rules and queries is
+:doc:`inference-rules-and-queries`.
 
 
 Application
 ===========
 
-Application is written by juxtaposition, λ-calculus style — ``f a b``, not
-``f(a, b)``. For example ``node 46 (node 93 leaf leaf) leaf`` or ``F a b``.
-The head is a constant or a unification variable. Each argument is a single
-term — a literal or an identifier, or a *delimited* term such as a list
-``[…]``, a spilled expression ``{…}``, a quotation ``{{…}}`` or a parenthesised
-term. So in ``f g x`` the head ``f`` is applied to the two arguments ``g`` and
-``x``; write ``f (g x)`` for the other reading.
+Application is written by juxtaposition, λ-calculus style: ``f a b``, never
+``f(a, b)``. Longer examples are ``node 46 (node 93 leaf leaf) leaf`` and
+``F a b``, the latter with a unification variable in head position.
+
+The head of an application — its leftmost term — must be a constant or a
+unification variable. The parser rejects anything else, so ``(x\ t) a`` is a
+syntax error, not a β-redex written by hand. β-redexes still occur, but only
+at run time, once a variable in head position has been bound to a
+λ-abstraction.
+
+Each argument is a single term: a literal or an identifier, or a *delimited*
+term — a list ``[…]``, a spilled expression ``{…}``, a quotation ``{{…}}`` or
+a parenthesised term. Nothing wider than that is an argument, so in ``f g x``
+the head ``f`` is applied to the two separate arguments ``g`` and ``x``;
+write ``f (g x)`` for the reading in which ``g x`` is one argument.
 
 Application binds tighter than every operator: ``f a + g b`` is
-``(f a) + (g b)``.
+``(f a) + (g b)``, not ``f (a + g) b``.
 
-Parentheses only group: ``(f a b)`` is the same term as ``f a b``. They are
-needed only to override operator precedence — most often around ``,``, ``=>``
-and ``:-`` in a rule body, see :doc:`inference-rules-and-queries`.
+Parentheses only group; they build no term of their own, so ``(f a b)`` is
+the very same term as ``f a b``. They are needed only to override the
+precedence of an operator — most often around ``,`` and ``:-`` in a rule
+body, see :doc:`inference-rules-and-queries`.
+
 
 λ-abstraction
 =============
 
-``x\ t`` is the function that binds ``x`` in ``t``. Because the bound variable
-is introduced explicitly, its name may be capitalised — ``X\ X`` is the
-identity. The body extends as far to the right as possible.
+``x\ t`` is the function that binds ``x`` in ``t``. Because the ``\``
+introduces the bound variable explicitly, its name may be capitalised without
+being read as a unification variable — ``X\ X`` is the identity function. The
+body extends as far to the right as possible, so ``x\ f x`` is ``x\ (f x)``.
 
 .. code-block:: elpi
 
@@ -40,21 +53,25 @@ identity. The body extends as far to the right as possible.
    x\ y\ x                % first projection
    f\ a\ b\ f a b         % application, as a function
 
-The ``\`` is always its own token: ``x\t`` and ``x \ t`` are identical.
-Each ``\`` binds exactly one variable — ``x y\ z`` reads ``x (y\ z)``. The
-``pi`` and ``sigma`` keywords are the exception: they take several binders at
-once, so ``pi x y\ …`` reads ``pi x\ pi y\ …``. See also
+The ``\`` is always a token on its own: ``x\t``, ``x \t`` and ``x \ t`` are
+all the same. Each ``\`` binds exactly one variable, so ``x y\ z`` reads
+``x (y\ z)`` — an application whose argument is a function. The ``pi`` and
+``sigma`` quantifiers are the one exception: each takes several binders at
+once, so ``pi x y\ …`` reads ``pi x\ pi y\ …``. Binders, their scope, and how
+Elpi uses them to represent object-language binders are the subject of
 :doc:`../features/binders-and-hoas`.
 
 
 Operators
 =========
 
-An infix, prefix or postfix operator is just another way to write an
-application: ``a + b`` is the term ``+ a b``. Precedence and associativity come
-from the operator's *family* and are listed in the table in
-:doc:`lexical-conventions`. To use an operator as an ordinary constant, wrap it
-in parentheses:
+An infix, prefix or postfix operator is just another notation for an
+application: ``a + b`` *is* the term ``+ a b``. Which symbols are operators,
+and with what precedence and associativity, is fixed by the language; the
+table is in :doc:`lexical-conventions`. To use an operator as an ordinary
+constant — to pass it as an argument, or to give it a rule — wrap it in
+parentheses. In the example below ``(+)`` is the bare constant behind
+``a + b``, passed as the first argument of a higher-order ``Apply``:
 
 .. elpi:: ../code/apply.elpi
    :assert: the result is 5
@@ -67,46 +84,64 @@ Lists
 
    []                % the empty list, also written  nil
    [a, b, c]         % a trailing comma is allowed:  [a, b, c,]
-   [a, b | Tail]     % a list with an explicit tail
+   [a, b | Tail]     % a partial list: the elements a and b, then a tail
    a :: b :: []      % the same as [a, b];  ::  is also written  cons
 
-Inside ``[ … ]`` a comma separates elements, so ``[p X, q Y]`` is a two-element
-list, not a conjunction; ``[(p X, q Y)]`` is a one-element list whose element is
-a conjunction.
+``[a, b, c]`` is sugar for ``a :: b :: c :: []``, that is
+``cons a (cons b (cons c nil))``. The term after ``|`` is arbitrary: ``[a | X]``
+is exactly ``cons a X``, and ``X`` need not be a list yet — it may be an
+unbound variable that a later goal fills in.
 
-The names ``nil`` and ``cons`` are accepted for ``[]`` and ``::``.
+Inside ``[ … ]`` a comma separates elements; it is not the conjunction
+operator. ``[p X, q Y]`` is a two-element list, whereas ``[(p X, q Y)]`` is a
+one-element list whose single element is a conjunction.
+
 
 Type ascription
 ===============
 
-``(t : ty)`` annotates ``t`` with a type. It is read by the type checker and
-has no effect at run time.
+``(t : ty)`` annotates ``t`` with the type ``ty``; the parentheses are part
+of the form. The annotation is read by the type checker and has no effect at
+run time. Its purpose is to resolve an overloaded name, or to pin down a
+polymorphic term the checker would otherwise leave ambiguous:
 
 .. code-block:: elpi
 
    Empty = ([] : list int)
 
-A binder may carry a type ascription too: ``x : ty\ t``.
+A binder may carry an ascription on the variable it introduces: ``x : ty\ t``
+reads ``(x : ty)\ t``.
+
 
 Naming a subterm with ``as``
 ============================
 
-``(t as N)`` binds ``N`` to the term ``t`` — the parentheses are required and
-``as`` takes everything to its left. It names a part of a rule head so the rest
-of the rule can refer to it; see :doc:`inference-rules-and-queries`.
+``(t as N)`` binds ``N`` to the term ``t``. The parentheses are required, and
+``as`` takes everything to its left as ``t``. It is used in a rule head to
+give a name to a part of the matched term, so the body can refer to that part
+without spelling it out a second time:
 
 .. code-block:: elpi
 
-   copy (lam F as L) L :- ...
+   sort ([X, Y] as L) L :- X < Y.   % a two-element list, already sorted
+
+Matching this head against a goal binds ``L`` to the whole first argument and,
+at the same time, ``X`` and ``Y`` to its two elements. See
+:doc:`inference-rules-and-queries`.
 
 
 Braces
 ======
 
-``{ t }`` is *spilling* — it lifts the call ``t`` out to just before the
-enclosing goal; see :doc:`../features/spilling`. ``{{ t }}`` is a *quotation*,
-custom syntax that a host application translates into a term; see
+``{ t }`` is *spilling*: it lifts the call ``t`` out of the term it sits in,
+runs it just before the enclosing goal, and leaves ``t``'s output argument in
+its place. It is shorthand for functional-style code and is described in
+:doc:`../features/spilling`.
+
+``{{ t }}`` is a *quotation*: custom syntax, delimited by the double braces,
+that a host application parses and turns into a term of its own choosing. See
 :doc:`../features/quotations`.
+
 
 Example
 =======
