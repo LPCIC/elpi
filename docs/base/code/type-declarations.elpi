@@ -12,12 +12,13 @@ func size tree A -> int.             % a deterministic signature: one answer
 size leaf 0.
 size (node _ L R) N :- size L NL, size R NR, N is 1 + NL + NR.
 
-pred has-label tree A -> A.          % a relational signature: a label may sit
+pred has-label tree A, A.            % a relational signature: the label may be
 has-label (node X _ _) X.            % at this node,
 has-label (node _ L _) X :- has-label L X.   % or somewhere on the left,
 has-label (node _ _ R) X :- has-label R X.   % or somewhere on the right
 
 main :-
   T = node "a" (node "b" leaf leaf) (node "a" leaf leaf),
-  size T N, print "size" N,
-  ( has-label T X, print "found label" X, fail ; true ).
+  size T N,
+  has-label T "a",
+  print "size is" N "and a is a label".

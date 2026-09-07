@@ -213,12 +213,11 @@ Example
 
 The program below declares a parametric ``data`` type, its constructors, a
 ``typeabbrev``, and two predicates over trees. ``size`` is a ``func``: every
-call has exactly one answer. ``has-label`` is a ``pred``: its ``node`` case
-is covered by three overlapping rules — the label may be at the node itself,
-or anywhere in the left subtree, or anywhere in the right — so a call
-succeeds once per occurrence, and ``main`` drives it with a failure loop to
-print them all. The label ``"a"`` appears twice in the tree, and is found
-twice.
+call has exactly one answer. ``has-label`` is only a ``pred``: its ``node``
+case is covered by three overlapping rules — the label may be at the node
+itself, in the left subtree, or in the right — so the search for a label can
+succeed by more than one path and a call may leave a choice point behind. It
+could not be declared ``func``, even though ``main`` here calls it just once.
 
 .. elpi:: ../code/type-declarations.elpi
-   :assert: size 3\nfound label a\nfound label b\nfound label a
+   :assert: size is 3 and a is a label
