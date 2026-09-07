@@ -76,3 +76,11 @@ Dale Miller and Gopalan Nadathur, *Programming with Higher-Order Logic*,
 Cambridge University Press, 2012. The reference for standard λProlog, which
 this manual assumes throughout rather than re-teaching
 (:doc:`introduction`).
+
+.. _bib-bprolog:
+
+Neng-Fa Zhou, `The Language Features and Architecture of B-Prolog
+<https://arxiv.org/abs/1103.0812>`_, Theory and Practice of Logic Programming
+12(1–2), 2012, pages 189–218. Introduces B-Prolog's *matching clauses*, whose
+one-way head matching is the idea behind Elpi's input-mode arguments — see
+:doc:`semantics/logic-programming-model` and :doc:`features/modes`.
