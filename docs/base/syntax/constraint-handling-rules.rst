@@ -70,8 +70,12 @@ Sequent patterns
 A sequent pattern is one of:
 
 * ``Goal`` — matches a constraint, ignoring the hypotheses it carried;
-* ``(Context ?- Goal)`` — also matches those hypotheses: the rules added with
-  ``=>`` that were in scope when the constraint was suspended;
+* ``(Context ?- Goal)`` — also matches those hypotheses. ``Context`` is the
+  **list** of rules that ``==>`` (or ``=>``) had added when the constraint was
+  suspended, ordered most-recently-added first — so ``Context``'s head is the
+  highest-priority rule. It holds only the rules for the predicates the
+  context filter admits: the clique's own, plus any listed before ``?-`` in
+  the ``constraint`` block;
 * ``(Eigen :> Context ?- Goal)`` — also matches ``Eigen``, the list of
   eigenvariables (the ``pi``-introduced constants) the constraint lives under.
 
