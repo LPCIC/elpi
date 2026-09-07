@@ -5,20 +5,25 @@ Introduction
 Elpi is an embeddable implementation of λProlog extended with Constraint
 Handling Rules (:doc:`semantics/overview`). λProlog is the logic programming
 language built on higher-order hereditary Harrop formulas described by
-:ref:`Miller and Nadathur <bib-miller-nadathur>`; the constraint handling
-rules follow the refined operational semantics of
-:ref:`Duck et al., ICLP 2004 <bib-chr2004>`. Like every logic programming
-language Elpi computes by proof search, but its terms are those of the
-simply-typed λ-calculus rather than first-order trees. That is what makes it
-well suited to manipulating syntax trees that contain binders and unification
-variables — the *holes* that stand for information not yet known.
+:ref:`Miller and Nadathur <bib-miller-nadathur>`. Constraint Handling Rules
+(:ref:`Sneyers et al. <bib-chr-survey>`) are a rule-based formalism for
+rewriting a store of constraints — adding to it, removing from it, combining
+its elements — which Elpi puts to work inspecting and simplifying goals it
+has set aside for later (:doc:`semantics/chr`).
+
+Like every logic programming language Elpi computes by proof search, but its
+terms are those of the simply-typed λ-calculus rather than first-order trees.
+That is what makes it well suited to manipulating syntax trees that contain
+binders and unification variables — the *holes* that stand for information
+not yet known.
 
 Elpi is designed to be embedded into a larger OCaml application as an
 extension language. A foreign function interface lets the host application
 contribute its own built-in predicates and data types, so that Elpi programs
-can call back into OCaml and exchange values with it (:doc:`embedding`). The
-original system description is :ref:`Dunchev, Guidi, Sacerdoti Coen & Tassi,
-LPAR-20 (2015) <bib-lpar2015>`.
+can call back into OCaml and exchange values with it.
+
+The original system description is :ref:`Dunchev, Guidi, Sacerdoti Coen &
+Tassi, LPAR-20 (2015) <bib-lpar2015>`.
 
 
 Why Elpi
@@ -64,10 +69,10 @@ than something each application rebuilds on top of it:
 * a rule (:doc:`syntax/inference-rules-and-queries`) can be grafted into an
   existing program either at compile time, by accumulating a file
   (:doc:`syntax/file-structure-and-attributes`), or at run time, through
-  ``==>`` (:doc:`features/hypothetical-rules`).
+  implication (:doc:`features/hypothetical-rules`).
 
 Most of this Elpi inherits from λProlog; the constraints and the constraint
-handling rules of the fourth point are its own addition.
+handling rules are its own addition.
 
 
 Relation to standard λProlog and to Teyjus

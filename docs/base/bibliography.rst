@@ -33,6 +33,16 @@ operational semantics Elpi implements for CHR — the finer, still
 non-deterministic-from-the-user's-view semantics behind
 :doc:`semantics/chr` and :doc:`semantics/formal-semantics`.
 
+.. _bib-chr-survey:
+
+Jon Sneyers, Peter Van Weert, Tom Schrijvers and Leslie De Koninck, `As time
+goes by: Constraint Handling Rules — A survey of CHR research from 1998 to
+2007 <https://arxiv.org/abs/0906.4474>`_, Theory and Practice of Logic
+Programming 10(1), 2010, pages 1–47. A broad survey of CHR as a
+general-purpose declarative formalism — its semantics, program analysis,
+implementations, extensions and applications; cited from :doc:`introduction`
+for what CHR is.
+
 .. _bib-tassi2019:
 
 Ferruccio Guidi, Claudio Sacerdoti Coen and Enrico Tassi, `Implementing type
