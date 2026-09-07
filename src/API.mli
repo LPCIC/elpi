@@ -805,6 +805,8 @@ module BuiltInPredicate : sig
 
     val pred1 : 'a Conversion.t -> 'a pred1 Conversion.t
     val pred2 : 'a Conversion.t -> 'b Conversion.t -> ('a,'b) pred2 Conversion.t
+    (* like pred2 but rendered as (func In -> Out); for map1 *)
+    val mapper : 'a Conversion.t -> 'b Conversion.t -> ('a,'b) pred2 Conversion.t
     val pred3 : 'a Conversion.t -> 'b Conversion.t -> 'c Conversion.t -> ('a,'b,'c) pred3 Conversion.t
     val pred2a : 'a Conversion.t -> string -> ('a) pred2a Conversion.t
     val pred3a : 'a Conversion.t -> 'b Conversion.t -> string -> ('a,'b) pred3a Conversion.t

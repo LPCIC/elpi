@@ -40,7 +40,7 @@ assert! Cond Msg :- (Cond ; fatal-error-w-data Msg Cond), !.
 
 % [assert-ok! C M] like assert! but the last argument of the predicate must
 % be a diagnostic that is printed after M in case it is not ok
-func assert-ok! (pred o:diagnostic), string.
+func assert-ok! (pred -> diagnostic), string.
 assert-ok! Cond Msg :- Cond Diagnostic, !, (Diagnostic = ok ; Diagnostic = error S, fatal-error-w-data Msg S), !.
 assert-ok! _ Msg :- fatal-error-w-data Msg "no diagnostic returned".
 

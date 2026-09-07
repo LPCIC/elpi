@@ -1138,7 +1138,7 @@ let open BuiltIn in let open BuiltInData in
 
 set,
 [
-  LPCode ("kind "^name^" type.");
+  LPCode ("data "^name^".");
 
   MLCode(Pred(name^".empty",
     Out(set,"A",
@@ -1258,7 +1258,7 @@ set,
 
   MLCode(Pred(name^".map",
     In(set,"M",
-    In(HOAdaptors.pred2 alpha alpha,"F",
+    In(HOAdaptors.mapper alpha alpha,"F",
     Out(set,"M1",
     FullHO(ContextualConversion.unit_ctx, "Map M w.r.t. the predicate F")))),
     (fun m f _ ~once ~depth _ _ state ->
@@ -1326,7 +1326,7 @@ let open BuiltIn in let open BuiltInData in
 
 [
   LPDoc ("CAVEAT: the type parameter of "^name^" must be a closed term");
-  LPCode ("kind "^name^" type -> type.");
+  LPCode ("data "^name^" A.");
 
   MLCode(Pred(name^".empty",
     Out(map "A","M",
