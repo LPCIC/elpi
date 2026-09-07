@@ -104,7 +104,14 @@ An attribute is written ``:``-prefixed before a rule — a fact or a
 * ``:if "V"`` keeps the rule only when the compiler variable ``V`` is defined
   (``elpi -D V``); it also works on CHR rules. See
   :doc:`../features/conditional-compilation`.
-* ``:untyped`` turns the type checker off for that one rule.
+* ``:untyped`` turns the type checker off for that one rule. It is a last
+  resort, for a rule the checker cannot be taught to accept — usually one
+  that builds terms too dynamically for any signature to describe. Prefer
+  fixing the signature, or widening an argument to ``any``
+  (:doc:`type-declarations`); reach for ``:untyped`` only when neither works.
+  An untyped rule also loses the features that depend on type information: in
+  particular spilling (``{ … }``, :doc:`../features/spilling`) is not expanded
+  inside it and the compiler reports ``term contains spill``.
 
 Attributes that describe a *predicate* — ``:index``, ``:functional``,
 ``:external`` — go on its ``pred`` / ``func`` signature instead
