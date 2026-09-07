@@ -1,18 +1,15 @@
 % YES
-pred q o:int.
+pred q -> int.
 q 1.
 q 2.
 
 
-:functional
-pred q' o:int.
+func q' -> int.
 
-:functional 
-pred do' i:prop, i:(func).
+func do' (pred), (func).
 do' X Y :- X, !, Y.
 
-:functional
-pred x o:int.
+func x -> int.
 
 % similar to test20. The non functional argument Y is returned
 % as the output of x. However, a non functional pred passed to a functional

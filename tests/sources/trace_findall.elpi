@@ -1,4 +1,4 @@
-pred p o:int.
+pred p -> int.
 p 1.
 p 2.
 p 3 :- p 2.

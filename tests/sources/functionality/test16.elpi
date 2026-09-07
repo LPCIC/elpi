@@ -1,8 +1,7 @@
 % NO
-:functional 
-pred p i:int, o:int.
+func p int -> int.
 
-pred f o:int, o:int, o:int.
+pred f -> int, int, int.
 
 % the variables of f are not used in the output, therefore, p remains functional 
 p 4 Y :- f Z X W, Y = 4.

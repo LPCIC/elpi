@@ -1,6 +1,6 @@
-typeabbrev x prop.
+typeabbrev x (pred).
 
-type f x.
+symb f x.
 f.
 
 main :- f.

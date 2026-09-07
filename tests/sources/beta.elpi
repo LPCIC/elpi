@@ -1,5 +1,5 @@
-kind tm type.
-type f tm -> tm -> tm.
-type a, b tm.
+data tm.
+symb f tm -> tm -> tm.
+symb a, b : tm.
 
 main :- X = (x\ y\ f x y), X a b = f a b.

@@ -6,16 +6,16 @@ constraint a b c d1 d2 d3 d11 d22 d33 {
   rule \ (C ?- d2 X) (C ?- d22 X).
   rule \ (C ?- d3 X) (C ?- d33 X).
 }
-type p prop -> prop.
-type a prop.
-type b prop.
-type c prop.
-func d1 prop.
-func d2 prop.
-func d3 prop.
-func d11 prop.
-func d22 prop.
-func d33 prop.
+pred p -> (pred).
+pred a.
+pred b.
+pred c.
+func d1 (pred).
+func d2 (pred).
+func d3 (pred).
+func d11 (pred).
+func d22 (pred).
+func d33 (pred).
 
 main :-
   (p b ==> p a ==> p W), !, W = a,

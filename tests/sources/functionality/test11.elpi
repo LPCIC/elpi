@@ -1,6 +1,5 @@
 % NO
-:functional
-pred p i:int, o:int.
+func p int -> int.
 
 % here we have variables in input position, overlap detection,
 % makes the predicate not functional...

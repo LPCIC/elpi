@@ -1,7 +1,7 @@
 % YES
 func succ int -> int.
 
-pred p o:(func).
+pred p -> (func).
 p (pi x\ succ x Y :- true).
 
 main.

@@ -132,8 +132,14 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability; occ
   let quotient =
     let to_unify must bsymb =
       match Symbol.RawMap.find bsymb Elpi_runtime.Data.Global_symbols.table.s2ct with
-      | _ -> Some bsymb 
-      | exception Not_found when must -> error ~loc ("Symbol " ^ Symbol.pretty bsymb ^ " marked as external is not declared in OCaml.\nCheck for calls to Constants.declare_global_symbol")
+      | _ -> Some bsymb
+      | exception Not_found when must ->
+          let hint =
+            match Symbol.get_provenance bsymb with
+            | Builtin { variant } when variant <> 0 ->
+                Printf.sprintf "Constants.declare_global_symbol ~variant:%d %S" variant (Symbol.get_str bsymb)
+            | _ -> Printf.sprintf "Constants.declare_global_symbol %S" (Symbol.get_str bsymb) in
+          error ~loc ("Symbol " ^ Symbol.pretty bsymb ^ " marked as external is not declared in OCaml.\nCheck for calls to " ^ hint)
       | exception Not_found -> None in
     match availability with
     | Elpi -> None

@@ -1,19 +1,19 @@
 :index(1 1)
-pred map2 i:list A, i:list B, i:(pred i:A, i:B, o:C), o:list C.
+pred map2 list A, list B, (pred A, B -> C) -> list C.
 map2 [] [] _ [].
 map2 [A|As] [B|Bs] F [C|Cs] :- F A B C, map2 As Bs F Cs.
 
-pred any_list i:int, o:list int.
+pred any_list int -> list int.
 any_list 0 [] :- !.
 any_list N [N|L] :- any_list {calc (N - 1)} L.
 
-pred any_pred i:int, i:int, o:int.
+pred any_pred int, int -> int.
 any_pred A B R :- R is A + B.
 
-pred test i:int, o:list int.
+pred test int -> list int.
 test N R :- any_list N L, map2 L L any_pred R.
 
-pred loop i:int, i:int.
+pred loop int, int.
 loop N N :- !.
 loop N M :-
   test N _,

@@ -1,12 +1,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type k+type universe.
-type k+set universe.
-type k+prop universe.
+symb k+type universe.
+symb k+set universe.
+symb k+prop universe.
 
-type l+0 layer.
-type l+1 layer.
-type l+2 layer.
+symb l+0 layer.
+symb l+1 layer.
+symb l+2 layer.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

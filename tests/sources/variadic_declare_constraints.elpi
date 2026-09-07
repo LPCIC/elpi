@@ -1,4 +1,4 @@
-kind tm type.
+data tm.
 func foo tm, (tm -> tm).
 
 main :-

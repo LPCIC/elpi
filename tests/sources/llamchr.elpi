@@ -1,4 +1,4 @@
-kind tm type.
+data tm.
 symbol true : tm.
 symbol false : tm.
 symbol bool : tm.
@@ -27,7 +27,7 @@ constraint term {
 }
 
 % resilient to dummy ctx variables
-pred both_or_none i:prop, i:prop.
+pred both_or_none (pred), (pred).
 both_or_none P Q :- P, !, Q.
 both_or_none P Q :- not P, not Q.
 
@@ -42,7 +42,7 @@ func spy (func).
 spy P :- print "[" P, P, print "]ok", !.
 spy P :- print "]fail", fail.
 
-pred watch i:A.
+pred watch A.
 watch (uvar as X) :- declare_constraint (print "watch" X) [X], !.
 watch X :- print "watch" X.
 

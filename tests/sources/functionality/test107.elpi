@@ -1,12 +1,12 @@
-kind k1 type.
-kind k2 type -> type.
+data k1.
+data k2 A.
 
-type t11 list (func) -> k1.
-type t21 list A -> k2 A.
+symb t11 list (func) -> k1.
+symb t21 list A -> k2 A.
 
-kind k3 type.
-type t31 k2 (func) -> k3.
-type t32 k1 -> k3.
+data k3.
+symb t31 k2 (func) -> k3.
+symb t32 k1 -> k3.
 
 pred rel.
 

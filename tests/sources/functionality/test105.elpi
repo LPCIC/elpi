@@ -1,7 +1,7 @@
 func eq-db A, B, C.
 
 :index (1)
-func quantify-eq-db-idx prop -> prop.
+func quantify-eq-db-idx (pred) -> (pred).
 quantify-eq-db-idx (eq-db _ _ _ :- L) (pi x y\ eq-db _ _ _ :- L).
 
 

@@ -1,14 +1,14 @@
 % NO
 
-kind k type.
-type k0 (func -> (func)) -> k.
+data k.
+symb k0 (func -> (func)) -> k.
 
 func fst-proj k -> (func -> (func)).
 fst-proj (k0 F) F.
 
 pred g.
 
-func give-rel -> prop.
+func give-rel -> (pred).
 give-rel g.
 
 func f.

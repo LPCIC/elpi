@@ -1,9 +1,9 @@
 % The indexing with trie is used and returns only
 % one matching clause
 :index (1 1)
-pred p o:int, o:int.
+pred p -> int, int.
 
-pred build_p i:int, i:int, i:int, o:list prop.
+pred build_p int, int, int -> list (pred).
 build_p _ 0 0 [p 0 0] :- !.
 build_p Mem X 0 [p X 0 | TL] :-
   X > 0, X' is X - 1,

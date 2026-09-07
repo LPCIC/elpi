@@ -1,6 +1,6 @@
 % Classic index
 :index (1) "Map"
-pred p o:int.
+pred p -> int.
 
 :name "p0" p 0.
 
@@ -8,7 +8,7 @@ pred p o:int.
 
 % Dtree
 :index (1) "DTree" 
-pred q o:int.
+pred q -> int.
 
 :name "q0" q 0.
 
@@ -16,7 +16,7 @@ pred q o:int.
 
 % Hmap
 :index (1) "Hash" 
-pred r o:int.
+pred r -> int.
 
 :name "r0" r 0.
 

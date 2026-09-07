@@ -1,5 +1,5 @@
-:functional pred p i:(:functional pred i:(pred)).
-:functional pred r i:(:functional pred).
+func p (func (pred)).
+func r (func).
 
 % THIS IS OK:
 % functionality relation of p is (Functional [Functional [Relational []]])

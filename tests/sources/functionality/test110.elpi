@@ -4,10 +4,10 @@
 % This data should assume its arguments to have the determinacy declared in
 % the signature of the constructor being taken into account
 
-kind derive type.
-type derive string -> (func -> list (pred)) -> prop -> derive. 
+data derive.
+symb derive string -> (func -> list (pred)) -> (pred) -> derive. 
 
-pred derivation o:derive.
+pred derivation -> derive.
 
 func unfold-constants.
 unfold-constants :-

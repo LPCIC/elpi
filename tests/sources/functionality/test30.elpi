@@ -1,10 +1,10 @@
 % NO
 % HERE WE HAVE A MODE ERROR
-pred r i:int, o:int.
+pred r int -> int.
 
-:functional pred p i:(func -> int).
+func p (func -> int).
 
-:functional pred q o:int.
+func q -> int.
 q X :- p (r X).
 
 main.

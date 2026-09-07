@@ -10,6 +10,17 @@
   - Accept `builtin` as a synonym for the `external` keyword
   - Accept (and ignore) `builtin`/`external` before a `data` declaration
 
+- API:
+  - `BuiltInPredicate.HOAdaptors`: the higher-order argument helpers are
+    renamed after the `func` type they now document, and their types are
+    rendered as `(func In.. -> Out)` rather than `(In.. -> (func))`:
+    - `pred1` -> `func_A` printed	`(func A)`
+    - `pred2` -> `func_AB` printed `(func A, B)`
+    - `pred3` -> `func_AB_C` printed `(func A, B -> C)`
+    - `pred2a` -> `func_AB_B` printed `(func A, B -> B)`
+    - `pred3a` -> `func_ABC_C` printed `(func A, B, C -> C)`
+    - `func_A_B` printed `(func A -> B)`
+
 - Doc:
   - `elpi -document-builtins` prints variadic signatures with the `..`
     syntax instead of the legacy `variadic T R` type former (#440)

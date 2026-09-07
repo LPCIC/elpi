@@ -1,18 +1,18 @@
-kind term type.
-type app list term -> term.
-type t term.
-type prod term -> term -> term.
+data term.
+symb app list term -> term.
+symb t term.
+symb prod term -> term -> term.
 
 
 :index (100 100)
-pred p o:term, o:term.
+pred p -> term, term.
 
 
 :index (3)
-pred q o:term.
+pred q -> term.
 
 :index (2)
-pred r o:term.
+pred r -> term.
 
 
 % Instances are loaded locally to get the correct printing in

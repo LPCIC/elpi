@@ -2,15 +2,15 @@
 % (n arrows), the parameter names are only documentation.
 
 data tm.
-type app tm -> tm -> tm.
-type lam (tm -> tm) -> tm.
+symb app tm -> tm -> tm.
+symb lam (tm -> tm) -> tm.
 
 data mylist A.
-type mynil mylist A.
-type mycons A -> mylist A -> mylist A.
+symb mynil mylist A.
+symb mycons A -> mylist A -> mylist A.
 
 data mypair A B.
-type mkpair A -> B -> mypair A B.
+symb mkpair A -> B -> mypair A B.
 
 main :-
   X = app (lam x\ x) (lam x\ x),

@@ -228,40 +228,41 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode {|
 % [X = T] unifies X with Y, possibly assigning unification
 % variables in X and Y.
-external func (=) -> A, A.
+builtin func (=) -> A, A.
 
 % [pattern_matching T P] matches T against pattern P, only
 % variables in P are assigned.
-external func pattern_match A -> A.|};
+builtin func pattern_match A -> A.|};
 
-  LPCode "external func (pi) (func A).";
-  LPCode "external func (sigma) (func A).";
+  LPCode "builtin func (pi) (func A).";
+  LPCode "builtin func (sigma) (func A).";
 
   MLData BuiltInData.int;
   MLData BuiltInData.string;
   MLData BuiltInData.float;
 
-  LPCode "external symbol (;) (pred) -> (pred) -> (pred).";
+  LPCode "builtin pred (;) (pred), (pred).";
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
-  LPCode "external symbol (:-)  : (func) -> (func) -> (func) = \"core\".";
-  LPCode "external symbol (:-)  : (func) -> list (pred) -> (func) = \"core\".";
-  LPCode "external symbol (,)   : (func (func) ..) .";
-  LPCode "external symbol uvar  : A = \"core\".";
-  LPCode "external symbol (as)  : A -> A -> A = \"core\".";
-  LPCode "external symbol (=>)  : (pred) -> (func) -> (func) = \"core\".";
-  LPCode "external symbol (=>)  : list (pred) -> (func) -> (func) = \"core\"."; (* HACK in TC to handle this*)
-  LPCode "external symbol (==>) : (pred) -> (func) -> (func).";
-  LPCode "external symbol (==>) : list (pred) -> (func) -> (func).";
+  (* cannot use pred syntax here, because they are core *)
+  LPCode "builtin symb (:-)  : (func) -> (func) -> (func) = \"core\".";
+  LPCode "builtin symb (:-)  : (func) -> list (pred) -> (func) = \"core\".";
+  LPCode "builtin symb (,)   : (func (func) ..) .";
+  LPCode "builtin symb uvar  : A = \"core\".";
+  LPCode "builtin symb (as)  : A -> A -> A = \"core\".";
+  LPCode "builtin symb (=>)  : (pred) -> (func) -> (func) = \"core\".";
+  LPCode "builtin symb (=>)  : list (pred) -> (func) -> (func) = \"core\"."; (* HACK in TC to handle this*)
+  LPCode "builtin symb (==>) : (pred) -> (func) -> (func).";
+  LPCode "builtin symb (==>) : list (pred) -> (func) -> (func).";
 
   LPDoc " -- Control --";
 
   (* This is not implemented here, since the API had no access to the
    * choice points *)
-  LPCode "external func !. % The cut operator";
+  LPCode "builtin func !. % The cut operator";
 
-  LPCode "func not prop.";
+  LPCode "func not (pred).";
   LPCode "not X :- X, !, fail.";
   LPCode "not _.";
 
@@ -269,7 +270,7 @@ external func pattern_match A -> A.|};
    * store of syntactic constraints *)
   LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
           "% on Key1 Key2 ... (variables, or lists thereof).\n"^
-          "external func declare_constraint (func) -> any .. .");
+          "builtin func declare_constraint (func) -> any .. .");
   MLCode(Pred("print_constraints",
     Full(raw_ctx,"prints all constraints"),
     (fun ~depth _ constraints state ->
@@ -338,8 +339,8 @@ external func pattern_match A -> A.|};
   LPDoc " -- Standard data types (supported in the FFI) --";
 
   LPCode "kind list type -> type.";
-  LPCode "external symbol (::) : X -> list X -> list X = \"core\".";
-  LPCode "external symbol ([]) : list X = \"core\".";
+  LPCode "builtin symb (::) : X -> list X -> list X = \"core\".";
+  LPCode "builtin symb ([]) : list X = \"core\".";
 
   MLData bool;
 
@@ -1054,7 +1055,7 @@ unsound_unif X X.
   DocAbove);
 
   LPDoc  {|[findall_solution P L] finds all the solved instances of P and puts them in L in the order in which they are found. Instances can contain eigenvariables and unification variables. P may or may not be instantiated. Instances should be found in L.|};
-  LPCode "external func findall_solutions prop -> list prop.";
+  LPCode "builtin func findall_solutions (pred) -> list (pred).";
 
   MLData safe;
 
@@ -1137,7 +1138,7 @@ let open BuiltIn in let open BuiltInData in
 
 set,
 [
-  LPCode ("kind "^name^" type.");
+  LPCode ("data "^name^".");
 
   MLCode(Pred(name^".empty",
     Out(set,"A",
@@ -1244,7 +1245,7 @@ set,
 
   MLCode(Pred(name^".filter",
     In(set,"M",
-    In(HOAdaptors.pred1 alpha,"F",
+    In(HOAdaptors.func_A alpha,"F",
     Out(set,"M1",
     FullHO(ContextualConversion.unit_ctx, "Filter M w.r.t. the predicate F")))),
     (fun m f _ ~once ~depth _ _ state ->
@@ -1257,7 +1258,7 @@ set,
 
   MLCode(Pred(name^".map",
     In(set,"M",
-    In(HOAdaptors.pred2 alpha alpha,"F",
+    In(HOAdaptors.func_A_B alpha alpha,"F",
     Out(set,"M1",
     FullHO(ContextualConversion.unit_ctx, "Map M w.r.t. the predicate F")))),
     (fun m f _ ~once ~depth _ _ state ->
@@ -1271,7 +1272,7 @@ set,
   MLCode(Pred(name^".fold",
     In(set,"M",
     In(poly "A","Acc",
-    In(HOAdaptors.pred2a alpha "A","F",
+    In(HOAdaptors.func_AB_B alpha "A","F",
     Out(poly "A","Acc1",
     FullHO(ContextualConversion.unit_ctx, "fold M w.r.t. the predicate F"))))),
     (fun m a f _ ~once ~depth _ _ state ->
@@ -1285,7 +1286,7 @@ set,
 
   MLCode(Pred(name^".partition",
   In(set,"M",
-  In(HOAdaptors.pred1 alpha,"F",
+  In(HOAdaptors.func_A alpha,"F",
   Out(set,"M1",
   Out(set,"M2",
   FullHO(ContextualConversion.unit_ctx, "Partitions M w.r.t. the predicate F, M1 is where F holds"))))),
@@ -1325,7 +1326,7 @@ let open BuiltIn in let open BuiltInData in
 
 [
   LPDoc ("CAVEAT: the type parameter of "^name^" must be a closed term");
-  LPCode ("kind "^name^" type -> type.");
+  LPCode ("data "^name^" A.");
 
   MLCode(Pred(name^".empty",
     Out(map "A","M",
@@ -1377,7 +1378,7 @@ let open BuiltIn in let open BuiltInData in
 
   MLCode(Pred(name^".filter",
     In(map "A","M",
-    In(HOAdaptors.pred2 alpha closed_A,"F",
+    In(HOAdaptors.func_AB alpha closed_A,"F",
     Out(map "A","M1",
     FullHO(ContextualConversion.unit_ctx, "Filter M w.r.t. the predicate F")))),
     (fun m f _ ~once ~depth _ _ state ->
@@ -1390,7 +1391,7 @@ let open BuiltIn in let open BuiltInData in
 
   MLCode(Pred(name^".map",
     In(map "A","M",
-    In(HOAdaptors.pred3 alpha closed_A closed_B,"F",
+    In(HOAdaptors.func_AB_C alpha closed_A closed_B,"F",
     Out(map "B","M1",
     FullHO(ContextualConversion.unit_ctx, "Map M w.r.t. the predicate F")))),
     (fun m f _ ~once ~depth _ _ state ->
@@ -1405,7 +1406,7 @@ let open BuiltIn in let open BuiltInData in
   MLCode(Pred(name^".fold",
     In(map "A","M",
     In(poly "C","Acc",
-    In(HOAdaptors.pred3a alpha closed_A "C","F",
+    In(HOAdaptors.func_ABC_C alpha closed_A "C","F",
     Out(poly "C","Acc1",
     FullHO(ContextualConversion.unit_ctx, "fold M w.r.t. the predicate F"))))),
     (fun m a f _ ~once ~depth _ _ state ->

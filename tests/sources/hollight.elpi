@@ -62,14 +62,14 @@ typ' (univ ## A ## B) :- typ A, typ B.
 typ' (A --> B) :- typ A, typ B.
 typ' (disj_union ## A ## B) :- typ A, typ B.
 
-pred term i:A, o:B.
+pred term A -> B.
 term (lam A F) (A --> B) :- typ A, pi x\ term x A => term (F x) B.
 term (F # T) B :- term F (A --> B), term T A.
 term (eq ## A) (A --> A --> prop) :- typ A.
 term (uvar as T) TY :- declare_constraint (term T TY) T.
 
 /* like term, but on terms that are already known to be well-typed */
-pred reterm i:A, o:B.
+pred reterm A -> B.
 reterm (lam A F) (A --> B) :- pi x\ reterm x A => reterm (F x) B.
 reterm (F # T) B :- reterm F (A --> B).
 reterm (eq ## A) (A --> A --> prop).
@@ -228,8 +228,6 @@ check WHAT :-
 %ppp X (F # G # H) :- var X, (var F ; var G ; var H), !,
 % X = (F # G # H).
 
-mode (ppp o i) xas ppterm, (ppp i o) xas parseterm.
-
 ppp (! F2) (forall ## _ # lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (! TY F2) (forall ## TY # lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (? F2) (exists ## _ # lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
@@ -253,9 +251,6 @@ safe_list_map L1 F L2 :- list_map L1 F L2.
 
 % pptac(ppterm)/parsetac(parseterm)
 % pptac X Y :- ppptac X Y.  parsetac X Y :- ppptac X Y.
-
-mode (ppptac i o) xas parsetac(ppp -> parseterm),
-     (ppptac o i) xas pptac(ppp -> ppterm).
 
 ppptac daemon daemon.
 ppptac r r.

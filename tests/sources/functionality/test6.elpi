@@ -1,9 +1,7 @@
 % NO
-:functional 
-pred p i:int, o:int.
+func p int -> int.
 
-:functional
-pred q i:int, o:int.
+func q int -> int.
 
 q 1 1.
         % Nested local clauses error...

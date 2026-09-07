@@ -1,12 +1,12 @@
 
-kind term type.
-type fun (term -> term) -> term.
-pred f o:(term -> term) o:term.
+data term.
+symb fun (term -> term) -> term.
+pred f -> (term -> term), term.
 f R (fun d\ R d).
 %f R N :- N = (fun d\ R d).
 
 
-pred foo o:(term -> term) o:term.
+pred foo -> (term -> term), term.
 foo R N :-
   pi d\
     f R N.

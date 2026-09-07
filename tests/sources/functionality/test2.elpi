@@ -1,12 +1,10 @@
 % YES
-:functional 
-pred p i:int, o:int.
+func p int -> int.
 
-:functional 
-pred s o:int.
+func s -> int.
 
-pred r i:int, o:int.
-pred q o:int.
+pred r int -> int.
+pred q -> int.
 
 % THIS IS OK since a bang preclude distinct outputs 
 p 1 3.

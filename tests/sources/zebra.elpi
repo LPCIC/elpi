@@ -1,40 +1,40 @@
 % Where does the zebra live?
 % Puzzle solution written by Claude Sammut.
 
-kind i type.
-type blue, chesterfields, coffee, dog, english, zero i.
-type s i -> i.
-type member i -> list i -> prop.
-type zebra i.
-type yellow i.
-type winstons i.
-type water i.
-type ukrainian i.
-type tea i.
-type spanish i.
-type snails i.
-type right_of i -> i -> list i -> prop.
-type red i.
-type print_houses list i -> prop.
-type plus0 i -> i -> i -> prop.
-type parliaments i.
-type orange_juice i.
-type once prop.
-type norwegian i.
-type next_to i -> i -> list i -> prop.
-type mult0 i -> i -> i -> prop.
-type milk i.
-type lucky_strikes i.
-type kools i.
-type japanese i.
-type ivory i.
-type iter0 i -> prop -> prop.
-type houses list i -> prop.
-type house i -> i -> i -> i -> i -> i.
-type horse i.
-type green i.
-type fox i.
-type exp0 i -> i -> i -> prop.
+data i.
+symb blue, chesterfields, coffee, dog, english, zero : i.
+symb s i -> i.
+pred member -> i, list i.
+symb zebra i.
+symb yellow i.
+symb winstons i.
+symb water i.
+symb ukrainian i.
+symb tea i.
+symb spanish i.
+symb snails i.
+pred right_of -> i, i, list i.
+symb red i.
+pred print_houses -> list i.
+pred plus0 -> i, i, i.
+symb parliaments i.
+symb orange_juice i.
+pred once.
+symb norwegian i.
+pred next_to -> i, i, list i.
+pred mult0 -> i, i, i.
+symb milk i.
+symb lucky_strikes i.
+symb kools i.
+symb japanese i.
+symb ivory i.
+pred iter0 -> i, (pred).
+pred houses -> list i.
+symb house i -> i -> i -> i -> i -> i.
+symb horse i.
+symb green i.
+symb fox i.
+pred exp0 -> i, i, i.
 
 iter0 zero X.
 iter0 (s N) X :- X, iter0 N X.

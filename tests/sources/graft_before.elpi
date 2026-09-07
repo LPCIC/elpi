@@ -1,5 +1,5 @@
-pred p o:int, o:int.
-pred q o:int.
+pred p -> int, int.
+pred q -> int.
 
 p 0 0.
 

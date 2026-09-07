@@ -1,13 +1,13 @@
-pred as_1 i:any.
-pred as_2 i:any.
-pred as_3 i:any.
+pred as_1 any.
+pred as_2 any.
+pred as_3 any.
 
-pred uvar_1 i:any.
-pred uvar_2 i:any.
-pred uvar_3 i:any.
-pred uvar_4 i:A.
-pred uvar_5 i:A.
-pred uvar_6 i:A.
+pred uvar_1 any.
+pred uvar_2 any.
+pred uvar_3 any.
+pred uvar_4 A.
+pred uvar_5 A.
+pred uvar_6 A.
 
 pred tests-as.
 pred tests-uvar.
@@ -15,8 +15,8 @@ pred tests-var.
 pred tests-unif.
 pred tests-declare-constraint.
 
-type bar variadic any int.
-type c variadic any int.
+symb bar variadic any int.
+symb c variadic any int.
 uvar_1 (bar (uvar K Args)) :- std.assert! (var K) "uvar_1 bar X, not a var", print K Args.
 uvar_2 (bar X) :- std.assert! (var X K Args) "uvar_2 bar X, not a var", print K Args.
 uvar_3 (uvar K) :- std.assert! (var K) "uvar_3 X, not a var", print K.
@@ -30,13 +30,13 @@ as_1 (bar (uvar as K)) :- std.assert! (var K) "bar (uvar as_1 X), not a var", pr
 as_2 (uvar as K) :- std.assert! (var K) "uvar as_2 X, not a var", print K.
 as_3 (uvar as K) :- std.assert! (var K) "uvar as_3 X, not a var", print K.
 
-pred unif_1 o:any.
-pred unif_2 o:any.
+pred unif_1 -> any.
+pred unif_2 -> any.
 
 unif_1 (x\ X x).
 unif_2 (x\ y\ X x y).
 
-type u int.
+symb u int.
 
 :untyped
 tests-uvar :-

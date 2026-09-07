@@ -1,6 +1,6 @@
 typeabbrev y (list int).
 
-pred f i:y.
+pred f y.
 f "x".
 
 main.

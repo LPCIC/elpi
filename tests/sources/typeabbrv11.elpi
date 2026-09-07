@@ -1,6 +1,6 @@
 typeabbrev x int.
 
-pred f i:x.
+pred f x.
 f "x".
 
 main.

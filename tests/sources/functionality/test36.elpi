@@ -2,7 +2,7 @@
 % Test on func of outputs
 func do (func) ->.
 
-pred give-fun o:(func).
+pred give-fun -> (func).
 give-fun (do true).
 
 func f.

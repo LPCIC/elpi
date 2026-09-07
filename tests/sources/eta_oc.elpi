@@ -1,11 +1,11 @@
-type test-unif o -> o.
+symb test-unif o -> o.
 test-unif T :- print "Original goal is" T, fail.
 test-unif T :- T, !, print "--> Unif success" T "\n".
 % test-unif T :- print "--> FAIL in this unification:" T "\n".
 
-pred p o:A.
-type f A -> B.
-type a A.
+pred p -> A.
+symb f A -> B.
+symb a A.
 
 main :-
   test-unif ((x\y\X x y) = (x\y\X y x)), !,

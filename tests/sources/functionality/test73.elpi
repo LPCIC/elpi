@@ -1,7 +1,7 @@
 % NO
 
-kind t type.
-type k (func) -> t.
+data t.
+symb k (func) -> t.
 
 pred q.
 

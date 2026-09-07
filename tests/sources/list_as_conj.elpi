@@ -1,4 +1,6 @@
-type a, b, f prop.
+pred a.
+pred b.
+pred f.
 f :- [print a, print b, a].
 a :- (b :- [print "done"]) => b.
 a :- (X : list prop).

@@ -1,4 +1,4 @@
-pred p o:int, o:int.
+pred p -> int, int.
 
 p 0 0.
 

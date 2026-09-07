@@ -1,6 +1,6 @@
 typeabbrev t1 int.
 
-pred f i:t1.
+pred f t1.
 f _.
 
 typeabbrev t1 int.

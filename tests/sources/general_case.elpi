@@ -1,7 +1,8 @@
-kind i type.
-type app (prop -> prop) -> prop -> prop.
-type ignore, foo A -> prop.
-type c prop.
+data i.
+pred app -> ((pred) -> (pred)), (pred).
+pred ignore -> A.
+pred foo -> A.
+pred c.
 app F X :- F X. 
 c.
 ignore _.

@@ -1,7 +1,7 @@
 % to be traced
 
 :index(_ _ _ _ _ _ _ _ 1)
-pred p i:int, i:int, i:int, i:int, i:int, i:int, i:int, i:int, i:int.
+pred p int, int, int, int, int, int, int, int, int.
 p X X X X X X X X 2.
 p X X X X X X X X 2.
 p X X X X X X X X 2.
@@ -108,7 +108,7 @@ p X X X X X X X X 2.
 p X X X X X X X X 2.
 p X X X X X X X X 1.
 
-pred iter i:int, i:prop.
+pred iter int, (pred).
 iter N P :- N > 0, !, P, M is N - 1, iter M P.
 iter 0 _.
 

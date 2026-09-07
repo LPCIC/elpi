@@ -1,7 +1,7 @@
-kind dl type -> type.
+data dl A.
 typeabbrev (dl A) (dl A).
 
-pred p i:dl (dl A).
+pred p dl (dl A).
 
 main.
 

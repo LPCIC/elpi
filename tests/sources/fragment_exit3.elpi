@@ -1,4 +1,4 @@
-pred ignore i:prop.
-pred f i:prop.
+pred ignore (pred).
+pred f (pred).
 ignore _.
 main :- (pi c\ sigma Y\ X c = Y), ignore (X (f d)).

@@ -3,8 +3,8 @@ constraint foo good bad {
 }
 
 func good int.
-func bad  int.
-func foo  int, int.
+func bad int.
+func foo int, int.
 foo A B :- print A B, good A, bad B.
 
 main :-

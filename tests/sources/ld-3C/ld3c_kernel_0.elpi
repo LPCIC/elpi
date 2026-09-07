@@ -8,8 +8,7 @@ macro @tasks :- list task.
 
 % validity predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type valid term -> @args -> term -> @args -> prop.
-mode (valid i o).
+pred valid -> term, @args, term, @args.
 
 % structural application
 valid (appl V1 T1) Vs1 (appl V2 T2) Vs2:- !,
@@ -51,8 +50,7 @@ valid X Vs1 X Vs2 :- ldec X d_rc _, !,
 
 % validity predicate (arguments) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type valids @args -> @args -> prop.
-mode (valid i o).
+pred valids -> @args, @args.
 
 % empty
 valids [] [].
@@ -63,8 +61,7 @@ valids [V1|Vs1] [V2|Vs2] :-
 
 % static type predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type sta term -> side -> term -> prop.
-mode (sta i i o).
+pred sta -> term, side, term.
 
 % structural abbreviation
 sta (abbr V B1) D (abbr V B2) :- !,
@@ -100,8 +97,7 @@ sta X D T2 :- ldef X d_rc T1, !, sta T1 D T2. %, print "Gd".
 
 % task manager %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type exec @tasks -> term -> @args -> whm -> prop.
-mode (exec i i i i i).
+pred exec -> @tasks, term, @args, whm.
 
 % whd
 exec [k_whd D|Ks] T Vs M :- !, whd T Vs M D Ks.
@@ -127,8 +123,7 @@ exec [k_conv_dx T2 Vs2 M2|Ks] T1 Vs1 M1 :- !,
 
 % weak head task (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type whd term -> @args -> whm -> side -> @tasks -> prop.
-mode (whd i i i i i).
+pred whd -> term, @args, whm, side, @tasks.
 
 % structural abbreviation
 whd (abbr V B) Vs M D Ks :- !,
@@ -162,8 +157,7 @@ whd T Vs M _ Ks :- !,
 
 % applicability condition task (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type acnd term -> @args -> whm -> @args -> prop.
-mode (acnd i i i i).
+pred acnd -> term, @args, whm, @args.
 
 % beta
 acnd (abst _ W B) [] m_f [V|Vs] :- !,
@@ -184,8 +178,7 @@ acnd X Vs M Vs0 :-
 
 % compare task (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type comp term -> @args -> whm -> term -> @args -> whm -> prop.
-mode (comp i i i i i i).
+pred comp -> term, @args, whm, term, @args, whm.
 
 % reflexivity
 comp T Vs1 _ T Vs2 _ :- convs Vs1 Vs2, !. %, print "r".
@@ -219,8 +212,7 @@ comp T1 Vs1 M1 X2 Vs2 M2 :-
 
 % compare task for controlled delta (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type comp_cd term -> term -> @args -> whm -> term -> @args -> whm -> prop.
-mode (comp_cd i i i i i i i).
+pred comp_cd -> term, term, @args, whm, term, @args, whm.
 
 % forced context delta (bi)
 comp_cd X T Vs1 M1 X Vs2 M2 :- !, % print "Gp",
@@ -237,16 +229,14 @@ comp_cd _ T1 Vs1 M1 T2 Vs2 M2 :- !, % print "Gd",
 
 % applicable rc task helper (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type applicable_rc @args -> term -> @args -> whm -> prop.
-mode (applicable_rc i i i i).
+pred applicable_rc -> @args, term, @args, whm.
 
 applicable_rc Vs0 T Vs M :-
   exec [k_whd d_dx, k_acnd Vs0] T Vs M.
 
 % applicable task helper (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type applicable @args -> term -> prop.
-mode (applicable i i).
+pred applicable -> @args, term.
 
 % empty
 applicable [] _ :- !.
@@ -256,39 +246,34 @@ applicable Vs T :- applicable_rc Vs T [] m_f.
 
 % convert sn task helper (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv_sn term -> @args -> whm -> term -> @args -> whm -> prop.
-mode (conv_sn i i i i i i).
+pred conv_sn -> term, @args, whm, term, @args, whm.
 
 conv_sn T1 Vs1 M1 T2 Vs2 M2 :- 
   exec [k_whd d_sn, k_comp_dx T2 Vs2 M2] T1 Vs1 M1.
 
 % convert dx task helper (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv_dx term -> @args -> whm -> term -> @args -> whm -> prop.
-mode (conv_dx i i i i i i).
+pred conv_dx -> term, @args, whm, term, @args, whm.
 
 conv_dx T1 Vs1 M1 T2 Vs2 M2 :- 
   exec [k_whd d_dx, k_comp_sn T1 Vs1 M1] T2 Vs2 M2.
 
 % convert rc task helper (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv_rc term -> @args -> whm -> term -> @args -> whm -> prop.
-mode (conv_rc i i i i i i).
+pred conv_rc -> term, @args, whm, term, @args, whm.
 
 conv_rc T1 Vs1 M1 T2 Vs2 M2 :- 
   exec [k_whd d_sn, k_conv_dx T2 Vs2 M2] T1 Vs1 M1.
 
 % convert task helper (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv term -> term -> prop.
-mode (conv i i).
+pred conv -> term, term.
 
 conv T1 T2 :- conv_rc T1 [] m_f T2 [] m_f.
 
 % convert task helper (arguments) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type convs @args -> @args -> prop.
-mode (convs i i).
+pred convs -> @args, @args.
 
 % empty
 convs [] [] :- !.
@@ -298,7 +283,6 @@ convs [V1|Vs1] [V2|Vs2] :- conv V1 V2, convs Vs1 Vs2.
 
 % castable (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type castable term -> term -> prop.
-mode (castable i i).
+pred castable -> term, term.
 
 castable T1 U2 :- sta T1 d_sn U1, conv U1 U2.

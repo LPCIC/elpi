@@ -1,9 +1,9 @@
 % YES
-:functional pred r o:int, i:int.
+func r o:int, i:int.
 
-:functional pred p i:(pred i:int).
+func p (pred int).
 
-:functional pred q o:int.
+func q -> int.
 q X :- p (r X).
 
 main.

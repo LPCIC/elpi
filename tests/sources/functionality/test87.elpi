@@ -1,5 +1,5 @@
 
-pred p i:(func A, B, C -> D), i:C, o:D.
+pred p (func A, B, C -> D), C -> D.
 p F X Y :- F A B X Y.
 
 main :-

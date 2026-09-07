@@ -1,8 +1,7 @@
 % NO
-:functional
-pred q o:int.
+func q -> int.
 
-pred t o:int.
+pred t -> int.
 
 
 % TEST 3

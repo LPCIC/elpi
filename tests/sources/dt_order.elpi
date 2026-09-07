@@ -1,5 +1,5 @@
 :index(1 1 _)
-pred f i:bool, i:string, o:int.
+pred f bool, string -> int.
 
 :name "a"
 f tt X _ :- halt "what is" X.

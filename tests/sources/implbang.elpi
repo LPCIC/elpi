@@ -1,4 +1,4 @@
-pred p o:int.
+pred p -> int.
 
 main :- (pi x\ p x :- x = 1) =!=> (pi x\ p x :- x = 2) =!=> std.findall (p 1) [ _ ].
 

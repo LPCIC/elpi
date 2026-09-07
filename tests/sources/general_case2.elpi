@@ -1,5 +1,5 @@
-pred c o:int.
-pred q o:int -> prop.
+pred c -> int.
+pred q -> (int -> (pred)).
 p F :- F (x\ c x).
 q (x\ c x).
 main :- p (y\ pi z\ q y).

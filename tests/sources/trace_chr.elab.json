@@ -28,7 +28,7 @@
                       "filename": "tests/sources/trace_chr.elpi",
                       "line": 19,
                       "column": 0,
-                      "character": 349
+                      "character": 344
                     }
                   ]
                 }
@@ -57,7 +57,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -93,7 +93,7 @@
                       "filename": "tests/sources/trace_chr.elpi",
                       "line": 16,
                       "column": 0,
-                      "character": 248
+                      "character": 243
                     }
                   ]
                 }
@@ -122,7 +122,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
-                    "character": 248
+                    "character": 243
                   }
                 ]
               }
@@ -141,7 +141,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -183,7 +183,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
-                    "character": 248
+                    "character": 243
                   }
                 ]
               }
@@ -202,7 +202,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -244,7 +244,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -302,7 +302,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -409,7 +409,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -445,7 +445,7 @@
                       "filename": "tests/sources/trace_chr.elpi",
                       "line": 14,
                       "column": 0,
-                      "character": 226
+                      "character": 221
                     }
                   ]
                 }
@@ -469,7 +469,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 14,
                     "column": 0,
-                    "character": 226
+                    "character": 221
                   }
                 ]
               }
@@ -504,7 +504,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
-                    "character": 248
+                    "character": 243
                   }
                 ]
               }
@@ -523,7 +523,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -559,7 +559,7 @@
                       "filename": "tests/sources/trace_chr.elpi",
                       "line": 17,
                       "column": 0,
-                      "character": 299
+                      "character": 294
                     }
                   ]
                 }
@@ -588,7 +588,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 17,
                     "column": 0,
-                    "character": 299
+                    "character": 294
                   }
                 ]
               }
@@ -607,7 +607,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 14,
                     "column": 0,
-                    "character": 226
+                    "character": 221
                   }
                 ]
               }
@@ -642,7 +642,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
-                    "character": 248
+                    "character": 243
                   }
                 ]
               }
@@ -661,7 +661,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -703,7 +703,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 17,
                     "column": 0,
-                    "character": 299
+                    "character": 294
                   }
                 ]
               }
@@ -722,7 +722,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 14,
                     "column": 0,
-                    "character": 226
+                    "character": 221
                   }
                 ]
               }
@@ -757,7 +757,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
-                    "character": 248
+                    "character": 243
                   }
                 ]
               }
@@ -776,7 +776,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -812,7 +812,7 @@
                       "filename": "builtin.elpi",
                       "line": 69,
                       "column": 0,
-                      "character": 1184
+                      "character": 1139
                     }
                   ]
                 }
@@ -840,7 +840,7 @@
                     "filename": "builtin.elpi",
                     "line": 69,
                     "column": 0,
-                    "character": 1184
+                    "character": 1139
                   }
                 ]
               }
@@ -859,7 +859,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -895,7 +895,7 @@
                       "filename": "tests/sources/trace_chr.elpi",
                       "line": 16,
                       "column": 0,
-                      "character": 248
+                      "character": 243
                     }
                   ]
                 }
@@ -924,7 +924,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
-                    "character": 248
+                    "character": 243
                   }
                 ]
               }
@@ -943,7 +943,7 @@
                     "filename": "builtin.elpi",
                     "line": 69,
                     "column": 0,
-                    "character": 1184
+                    "character": 1139
                   }
                 ]
               }
@@ -962,7 +962,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -1004,7 +1004,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 16,
                     "column": 0,
-                    "character": 248
+                    "character": 243
                   }
                 ]
               }
@@ -1023,7 +1023,7 @@
                     "filename": "builtin.elpi",
                     "line": 69,
                     "column": 0,
-                    "character": 1184
+                    "character": 1139
                   }
                 ]
               }
@@ -1042,7 +1042,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }
@@ -1139,7 +1139,7 @@
                                     "filename": "tests/sources/trace_chr.elpi",
                                     "line": 13,
                                     "column": 0,
-                                    "character": 205
+                                    "character": 200
                                   }
                                 ]
                               }
@@ -1165,7 +1165,7 @@
                                   "filename": "tests/sources/trace_chr.elpi",
                                   "line": 13,
                                   "column": 0,
-                                  "character": 205
+                                  "character": 200
                                 }
                               ]
                             }
@@ -1201,7 +1201,7 @@
                                     "filename": "tests/sources/trace_chr.elpi",
                                     "line": 11,
                                     "column": 0,
-                                    "character": 196
+                                    "character": 191
                                   }
                                 ]
                               }
@@ -1225,7 +1225,7 @@
                                   "filename": "tests/sources/trace_chr.elpi",
                                   "line": 11,
                                   "column": 0,
-                                  "character": 196
+                                  "character": 191
                                 }
                               ]
                             }
@@ -1244,7 +1244,7 @@
                                   "filename": "tests/sources/trace_chr.elpi",
                                   "line": 13,
                                   "column": 0,
-                                  "character": 205
+                                  "character": 200
                                 }
                               ]
                             }
@@ -1359,7 +1359,7 @@
                       "filename": "builtin.elpi",
                       "line": 71,
                       "column": 0,
-                      "character": 1206
+                      "character": 1161
                     }
                   ]
                 }
@@ -1383,7 +1383,7 @@
                     "filename": "builtin.elpi",
                     "line": 71,
                     "column": 0,
-                    "character": 1206
+                    "character": 1161
                   }
                 ]
               }
@@ -1402,7 +1402,7 @@
                     "filename": "tests/sources/trace_chr.elpi",
                     "line": 19,
                     "column": 0,
-                    "character": 349
+                    "character": 344
                   }
                 ]
               }

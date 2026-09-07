@@ -1,5 +1,5 @@
 
-pred p o:int, o:int.
+pred p -> int, int.
 p 1 1.
 p 2 2.
 p 3 3 :- fail.

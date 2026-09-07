@@ -6,10 +6,10 @@ f N D R M :- f N D R, M is N mod D.
 func apply2 (func int, int -> int..), int, int -> int.
 apply2 F A B R :- F A B R.
 
-func apply2' (func int, int.. ), int, int.
+func apply2' (func int, int..), int, int.
 apply2' F A B :- F A B.
 
-pred g i:int, i:int.. .
+pred g int, int.. .
 g _ _.
 
 main :-

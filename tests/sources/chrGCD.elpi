@@ -1,7 +1,7 @@
 func gcd int, group.
-kind group type.
-type group-1 group.
-type group-2 group.
+data group.
+symb group-1 group.
+symb group-2 group.
 
 gcd A (uvar as B) :- !, declare_constraint (gcd A B) [B].
 

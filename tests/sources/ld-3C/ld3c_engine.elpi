@@ -9,5 +9,5 @@ accumulate grundlagen_pars.
 %accumulate grundlagen_types.
 accumulate grundlagen_2b_ld3.
 
-type main prop.
+pred main.
 main :- grundlagen.

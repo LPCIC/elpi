@@ -1,11 +1,11 @@
 % q X should yield X=ok
-kind i type.
-type ko i.
-type ok i.
-type q i -> prop.
-type c i -> prop.
-type b i -> prop.
-type a i -> prop.
+data i.
+symb ko i.
+symb ok i.
+pred q -> i.
+pred c -> i.
+pred b -> i.
+pred a -> i.
 
 q X :- a X, !.
 q X :- b X.

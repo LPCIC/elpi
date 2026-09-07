@@ -1,11 +1,11 @@
-kind i type.
-type app i -> i -> i.
-type lam (i -> i) -> i.
-type copy i -> i -> prop.
-type cbv i -> i -> prop.
-type beta i -> i -> i -> prop.
-type subst (i -> i) -> i -> i -> prop.
-type cbn i -> i -> prop.
+data i.
+symb app i -> i -> i.
+symb lam (i -> i) -> i.
+pred copy -> i, i.
+pred cbv -> i, i.
+pred beta -> i, i, i.
+pred subst -> (i -> i), i, i.
+pred cbn -> i, i.
 
 %copy X Y :- print "XXXXXXXXX" (copy X Y), fail.
 copy (app M N) (app M2 N2) :- copy M M2, copy N N2.

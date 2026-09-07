@@ -1,8 +1,8 @@
 % q X Y shoud yield X=ok Y=ok
 
-pred f o:int, o:int.
+pred f -> int, int.
 symbol a : int.
-pred r o:int.
+pred r -> int.
 symbol ok : int.
 symbol ko : int.
 

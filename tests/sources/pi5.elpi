@@ -1,11 +1,11 @@
 % q X, r X, s X all yields X=ok
-kind i type.
-type lam, bam (i -> i) -> i.
-type of i -> prop.
-type stop i.
-type s diagnostic -> prop.
-type r diagnostic -> prop.
-type q diagnostic -> prop.
+data i.
+symb lam, bam : (i -> i) -> i.
+pred of -> i.
+symb stop i.
+pred s -> diagnostic.
+pred r -> diagnostic.
+pred q -> diagnostic.
 
 of stop.
 of (bam x\x).

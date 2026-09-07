@@ -1,6 +1,5 @@
 % NO
-:functional
-pred wrong-if i:prop, i:(func), i:(func).
+func wrong-if (pred), (func), (func).
 
 % The problem is the call to P: P is relational
 % and having it in the body could make wrong-if behave as a relation

@@ -1,7 +1,7 @@
 % Engine for \lambda\delta version 3C - trace facility
 
-type current label -> o.
-type is_current o.
+symb current label -> o.
+symb is_current o.
 
 is_current :- current c+113.
 

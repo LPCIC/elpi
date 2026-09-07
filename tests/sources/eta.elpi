@@ -1,16 +1,16 @@
-kind tm type.
-type c (tm -> A) -> tm.
-type g tm -> tm.
+data tm.
+symb c (tm -> A) -> tm.
+symb g tm -> tm.
 macro @ctx A :- c (_\ A). % to have depth > 0 in unif
 
 % to test the indexing
-pred k1 o:tm -> tm.
+pred k1 -> (tm -> tm).
 k1 (x\ g x).
-pred k2 o:tm -> tm.
+pred k2 -> (tm -> tm).
 k2 g.
 
 %mode (foo i i).
-pred foo i:(X -> X), i:(X -> X -> X).
+pred foo (X -> X), (X -> X -> X).
 foo X (x1 \ (x2 \ X x2)) :- (print X).
 %% Fails, but should output `y`
 

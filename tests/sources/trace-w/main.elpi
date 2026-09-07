@@ -1,39 +1,39 @@
 %%%%%%%%%%% syntax %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % terms
-kind term type.
+data term.
 
-type global  string -> term.
+symb global  string -> term.
 
-type app term -> term -> term.
-type lam (term -> term) -> term.
-type let term -> ty -> (term -> term) -> term.
-type eq  term -> term -> term.
+symb app term -> term -> term.
+symb lam (term -> term) -> term.
+symb let term -> ty -> (term -> term) -> term.
+symb eq  term -> term -> term.
 
 
 % type expressions
-kind tye type.
+data tye.
 
-type (===>) tye -> tye -> tye.
-type int   tye.
-type bool  tye.
-type list  tye -> tye.
-type pair  tye -> tye -> tye.
+symb (===>) tye -> tye -> tye.
+symb int   tye.
+symb bool  tye.
+symb list  tye -> tye.
+symb pair  tye -> tye -> tye.
 
 % types
-kind ty type.
+data ty.
 
-type all    eq? -> (tye -> ty) -> ty.
-type mono   tye -> ty.
+symb all    eq? -> (tye -> ty) -> ty.
+symb mono   tye -> ty.
 
-kind eq? type.
+data eq?.
 
-type any eq?.
-type eqt eq?.
+symb any eq?.
+symb eqt eq?.
 
 %%%%%%%%%%%% typing %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-pred of i:term, o:ty.
+pred of term -> ty.
 
 of (global "1")      (mono int).
 of (global "2")      (mono int).
@@ -51,7 +51,7 @@ accumulate hm.
 % accumulate j.
 
 %%%%%%%%%%%% type schema elimination %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pred specialize i:ty, o:tye.
+pred specialize ty -> tye.
 
 specialize (mono T) T.
 specialize (all any F) T :- specialize (F Fresh_) T.
@@ -93,7 +93,7 @@ rule (eqbar V) \ (theta L) | (not(mem L V)) <=> (theta [V | L]).
 
 }
 
-pred generalize i:list tye, i:list prop, i:ty, o:ty.
+pred generalize list tye, list (pred), ty -> ty.
 generalize Theta Gamma (mono T) PolyT :-
   free-ty (mono T) [] VT,
   free-gamma Gamma [] VGamma,
@@ -101,15 +101,15 @@ generalize Theta Gamma (mono T) PolyT :-
   bind ToQuantify Theta T PolyT.
 
 % computation of free (unification) variables %%%%%%%%%%%%%%%%%%%%%%%
-pred free-ty i:ty, i:list tye, o:list tye.
+pred free-ty ty, list tye -> list tye.
 free-ty (mono X) L L1 :- free X L L1.
 free-ty (all _ F) L L1 :- pi x\ free-ty (F x) L L1.
 
-pred free-gamma i:list prop, i:list tye, o:list tye.
+pred free-gamma list (pred), list tye -> list tye.
 free-gamma [] L L.
 free-gamma [of _ T|X] L L2 :- free-ty T L L1, free-gamma X L1 L2.
 
-pred free i:tye, i:list tye, o:list tye.
+pred free tye, list tye -> list tye.
 free int L L.
 free bool L L.
 free (list A) L L1 :- free A L L1.
@@ -118,13 +118,13 @@ free (A ===> B) L L2 :- free A L L1, free B L1 L2.
 free (uvar _ _ as X) L L1 :- if (mem L X) (L1 = L) (L1 = [X|L]).
 
 % quantification (binding) of a list of variables %%%%%%%%%%%%%%%%%%%%%%%
-pred bind i:list tye, i:list tye, i:tye, o:ty.
+pred bind list tye, list tye, tye -> ty.
 bind [] _ T (mono T1) :- copy T T1.
 bind [X|XS] Theta T (all E x\ T1 x) :-
   if (mem Theta X) (E = eqt) (E = any),
   pi c\ copy X c => bind XS Theta T (T1 c).
 
-pred copy i:tye, o:tye.
+pred copy tye -> tye.
 copy int int.
 copy bool bool.
 copy (A ===> B) (A1 ===> B1) :- copy A A1, copy B B1.
@@ -134,24 +134,24 @@ copy (uvar U L) (uvar U L).
 
 % boring stuff %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-pred filter i:list A, i:(A -> prop), o:list A.
+pred filter list A, (A -> (pred)) -> list A.
 filter [] _ [].
 filter [X|XS] P [X|YS] :- P X, !, filter XS P YS.
 filter [_|XS] P YS :- filter XS P YS.
 
-pred mem! i:list A, o:A.
+pred mem! list A -> A.
 mem! [X|_] X :- !.
 mem! [_|XS] X :- mem! XS X.
 
 % 'uvar X L' is the frozen 'X' and its arguments 'L'
-pred mem i:list tye, i:tye.
+pred mem list tye, tye.
 mem L (uvar X _) :- mem! L (uvar X Fresh_).
 
-pred assert i:term, i:tye, i:tye.
+pred assert term, tye, tye.
 assert _ TY ETY :- TY = ETY, !.
 assert T TY ETY :- print "KO: term (" T ") has type (" TY ") but its context expects (" ETY ")\n", halt.
 
-pred eqtype-error i:tye.
+pred eqtype-error tye.
 eqtype-error T :- print "KO: type (" T ") has no equality\n", halt.
 
 func new_constraint (func), A.
@@ -163,7 +163,7 @@ pred err.
 of X (mono ETY) :- not err, !, err => of X (mono TY), assert X TY ETY.
 of X (mono _) :- print "KO: term (" X ") has no type\n", halt.
 
-pred typecheck i:term.
+pred typecheck term.
 typecheck T :-
   print "Checking:" T,
   theta [],
@@ -171,12 +171,12 @@ typecheck T :-
   print T " : " TY,
   print.
 
-pred tests i:list string.
+pred tests list string.
 tests [X] :- test X PL, typecheck PL.
 
 main :- tests ["2"].
 
-pred test i:string, o:term.
+pred test string -> term.
 % 3 = 2
 test "1" (eq (global "3") (global "2")).
 

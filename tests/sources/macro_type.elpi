@@ -5,10 +5,10 @@
 % fatal error
 macro @m A :- X.
 
-pred p o:(int -> bool).
+pred p -> (int -> bool).
 p (@m).
 
-pred q o:(string -> int).
+pred q -> (string -> int).
 q (@m).
 
 main.

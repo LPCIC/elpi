@@ -1,10 +1,10 @@
-type a.foo4 prop.
-type a.foo3 prop.
-type a.foo2 prop.
-type a.foo1 prop.
-type a.b.foo2 prop.
-type a.b.foo1 prop.
-type a.b.c.foo prop.
+pred a.foo4.
+pred a.foo3.
+pred a.foo2.
+pred a.foo1.
+pred a.b.foo2.
+pred a.b.foo1.
+pred a.b.c.foo.
 
 namespace a {
 

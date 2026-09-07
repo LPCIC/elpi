@@ -1,5 +1,5 @@
 % r Y yields Y=\0
-pred q o:(int -> int), o:(int -> int).
+pred q -> (int -> int), (int -> int).
 q (a\ X a) X.
 r A :- pi c\ q (a\a) A.
 

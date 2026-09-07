@@ -1,6 +1,6 @@
 namespace x {
   namespace acc { accumulate namespaces00. }
-  pred rev.aux i:list int, i:list int, o:list int.
+  pred rev.aux list int, list int -> list int.
   foo :- rev.aux [] [] []. % does not exists, since it is inside acc
 }
 

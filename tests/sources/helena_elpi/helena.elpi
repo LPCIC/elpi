@@ -56,14 +56,14 @@
 
 % AUXILIARY PREDICATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-kind term type.
-kind label type.
+data term.
+data label.
 
-type k+0, l+0, m+0 term.
-type k+1, l+1, m+1 term.
-type k+2, l+2, m+2 term.
-type k+y, l+y, m+y term.
-pred m+pred o:term, o:term.
+symb k+0, l+0, m+0 : term.
+symb k+1, l+1, m+1 : term.
+symb k+2, l+2, m+2 : term.
+symb k+y, l+y, m+y : term.
+pred m+pred -> term, term.
 
 m+pred m+1 m+0.
 
@@ -75,39 +75,39 @@ m+pred m+y m+y.
 pred maybe+sn i:term,i:term,o:term,o:term,o:term,o:term,i:term,i:term.
 pred age+check i:term,i:term,o:term,o:term,o:term,o:term,i:term,o:term,i:term,i:term.
 pred conv+ o:term,i:term,o:term,o:term,i:term,i:term.
-pred conv+s i:term,i:term.
+pred conv+s term, term.
 pred conv+r i:term,i:term,o:term,o:term,i:term,o:term.
 pred conv+l o:term,i:term,o:term,o:term,i:term,i:term.
 pred conv+0 o:term,i:term,o:term,o:term,i:term,i:term.
-pred k+succ o:term,o:term.
-type k+prop term.
-type k+set term.
-pred l+pred o:term,o:term.
-pred l+zero o:term.
-pred r+exp o:term,o:term,o:term,o:term,o:term.
-type e+sn term.
-type e+dx term.
-pred rtm+0 o:term,o:term, o:term,o:term,o:term,o:term.
-type satom term.
-type appr term -> term -> term.
-type scons term -> term -> term.
+pred k+succ -> term, term.
+symb k+prop term.
+symb k+set term.
+pred l+pred -> term, term.
+pred l+zero -> term.
+pred r+exp -> term, term, term, term, term.
+symb e+sn term.
+symb e+dx term.
+pred rtm+0 -> term, term, term, term, term, term.
+symb satom term.
+symb appr term -> term -> term.
+symb scons term -> term -> term.
 % type appr term -> term -> term -> term.
-type appx term -> term -> term.
-type cast term -> term -> term.
-type sort term -> term.
-type abst term -> term -> (term -> term) -> term.
-type abbr term -> (term -> term) -> term.
-type prod term -> term -> (term -> term) -> term.
-pred appl+ i:term,o:term,o:term,o:term.
-pred gv+ o:term.
-pred tv+ o:term.
-type gtop term.
-type gdef+1 label -> term -> (term -> term) -> term.
-type gdef+2 term -> term -> term.
+symb appx term -> term -> term.
+symb cast term -> term -> term.
+symb sort term -> term.
+symb abst term -> term -> (term -> term) -> term.
+symb abbr term -> (term -> term) -> term.
+symb prod term -> term -> (term -> term) -> term.
+pred appl+ term -> term, term, term.
+pred gv+ -> term.
+pred tv+ -> term.
+symb gtop term.
+symb gdef+1 label -> term -> (term -> term) -> term.
+symb gdef+2 term -> term -> term.
 
-type gdec+1 label -> term -> (term -> term) -> term.
-type gdec+2 term -> term -> term.
-type g+line term -> label -> term -> prop.
+symb gdec+1 label -> term -> (term -> term) -> term.
+symb gdec+2 term -> term -> term.
+pred g+line -> term, label, term.
 
 % rtm+0 T1 S1 M1 M2 S2 T2 :- before, print begin-rtm1 T1 S1 M1, fail.
 

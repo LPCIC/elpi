@@ -1547,7 +1547,17 @@ type declaration =
   | LPCode of string
 
 (* doc *)
-let parens ?(sep = " ") str = if Re.Str.(string_match (regexp (".*" ^ sep ^ ".*")) str 0) then "("^str^")" else str
+let already_parenthesized str =
+  let n = String.length str in
+  n >= 2 && str.[0] = '(' && str.[n-1] = ')' &&
+  (let d = ref 0 and ok = ref true in
+   String.iteri (fun i c ->
+     if c = '(' then incr d
+     else if c = ')' then begin decr d; if !d = 0 && i < n-1 then ok := false end) str;
+   !ok && !d = 0)
+let parens ?(sep = " ") str =
+  if already_parenthesized str then str
+  else if Re.Str.(string_match (regexp (".*" ^ sep ^ ".*")) str 0) then "("^str^")" else str
 let parens_arr = parens ~sep:("->")
 
 let ws_to_max fmt max n =
