@@ -69,18 +69,17 @@ Nothing forces the fix to be a cut in ``meal``'s own body. A wrapper whose
 signature says "the argument may be any predicate, but the result is a
 function" packages the commit safely:
 
-.. TODO: pick a better name than "once2" here. It is a *different* predicate
-   from std.once (which wraps a whole goal, not a predicate + its arguments);
-   the near-collision is confusing.
-
 .. code-block:: elpi
 
-   func once2 (pred A -> B), A -> B.
-   once2 P X R :- P X R, !.
-   meal Gs Ds :- map (once2 likes) Gs Ds.     % accepted
+   func commit (pred A -> B), A -> B.
+   commit P X R :- P X R, !.
+   meal Gs Ds :- map (commit likes) Gs Ds.     % accepted
 
-The signature is the interesting part: ``once2``'s input is a plain ``pred``,
-so passing ``likes`` is *not* a wrong call, yet ``once2 likes`` is a ``func``.
+The signature is the interesting part: ``commit``'s input is a plain
+``pred``, so passing ``likes`` is *not* a wrong call, yet ``commit likes`` is
+a ``func``. (This is a two-argument analogue of the standard library's
+``std.once``, which commits a whole goal rather than a predicate applied to
+its arguments.)
 
 A ``pred`` body is not checked, so a *relational* ``meal`` may call
 ``map likes`` freely — the call runs, it just quietly leaves a choice point

@@ -21,9 +21,16 @@ rule out. Because the hypothesis may only be known at run time (it can be a
 variable bound to a rule computed on the fly), the cut is added dynamically
 too — it is not just sugar expanded once at compile time.
 
-
 Example
 =======
 
+The static rule ``copy X X`` on its own would let ``copy a Z`` answer
+``Z = a``. The example adds ``copy a b`` with ``=!=>`` and then asks
+``std.findall`` for *every* solution of ``copy a Z``: there is exactly one,
+``copy a b``. The tail cut on the hypothesis discarded the fall-through to
+``copy X X``. Written with plain ``==>`` the program would not compile —
+``copy`` is a ``func``, and the determinacy checker rejects the two
+overlapping rules it would then have.
+
 .. elpi:: ../code/tail-cut.elpi
-   :assert: copy a gives b
+   :assert: solutions of copy a: \[copy a b\]

@@ -53,17 +53,20 @@ equivalent to writing
 
    pp (lam F) S :- pi x\ pp x "x" ==> sigma R\ (pp (F x) R, S is "\x." ^ R).
 
-(``-print`` writes ``==>`` back as its lower-level equivalent ``=>``.)
 
-When ``{ }`` wraps a conjunction, only its **last** conjunct is spilled; the
-earlier ones just run, for their effect:
+When ``{ }`` wraps a conjunction, only its *last* conjunct is spilled — that
+conjunct's missing output is what becomes the fresh variable. The earlier
+conjuncts run in place, typically to bind a variable the last one then reads:
 
 .. code-block:: elpi
 
-   foo :- pi x\ f {g x, h x}.
+   foo :- pi x\ f {g x Y, h Y}.
    % becomes
-   foo :- pi x\ sigma S\ (g x, h x S), f S.
+   foo :- pi x\ sigma S\ (g x Y, h Y S), f S.
 
+``g x Y`` runs first and binds ``Y``; ``h Y`` is the spilled conjunct, so
+``h Y S`` computes the value ``S`` that takes the place of the whole
+``{ … }``.
 
 Example
 =======
