@@ -2,9 +2,9 @@
 Determinacy checking
 ####################
 
-A **functional** predicate — declared with ``func``, or ``:functional`` on a
-``pred`` (:doc:`../syntax/type-declarations`) — is one the checker can prove
-leaves no choice point: every call has at most one solution. Its type is
+A **functional** predicate — one declared with ``func``
+(:doc:`../syntax/type-declarations`) — is one the checker can prove leaves no
+choice point: every call has at most one solution. Its type is
 ``(func)`` where a relation's is ``(pred)``. This chapter is what the checker
 does with that promise. It is a static, best-effort analysis: not every
 non-deterministic call is caught, as the example below shows. See

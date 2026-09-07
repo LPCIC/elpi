@@ -73,7 +73,16 @@ Newer spellings have replaced several older Elpi keywords. The old ones still
 parse and mean exactly the same thing (:doc:`syntax/type-declarations`):
 
 * ``kind name type -> … -> type`` is now ``data name A … Z`` — one placeholder
-  per parameter instead of one ``type ->``.
+  per parameter instead of one ``type ->``:
+
+  .. code-block:: elpi
+
+     data i32.        kind i32  type.
+     data tree A.     kind tree type -> type.
+     data map A B.    kind map  type -> type -> type.
+
+  ``kind`` also takes a comma-separated list of names (``kind day, month type.``);
+  ``data`` takes one name.
 * ``type name <type>`` for a *data constructor* is now ``symb name <type>``;
   ``symbol`` is a slightly-less-old spelling of ``symb``. All three of
 
@@ -118,6 +127,11 @@ spelling of ``pred name int -> string.``. Unlike ``->`` they can also
 *interleave* inputs and outputs (``:functional pred name o:A, i:A.``) — the
 one thing ``->`` cannot express — but that is discouraged: keep the outputs
 last.
+
+``:functional`` before a ``pred`` marks it deterministic, exactly like the
+``func`` keyword — which is preferred. It is still needed for a signature
+with interleaved arguments as above, where ``func`` (which implies ``->``)
+cannot be used.
 
 
 The ``:nooc`` attribute

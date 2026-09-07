@@ -10,10 +10,10 @@ knowing a predicate's arity. A predicate with no signature draws a warning
 practice a program declares its vocabulary.
 
 This chapter covers the declarations that introduce that vocabulary: ``data``
-for type constructors, ``symb`` (or the legacy ``symbol`` / ``type``) for data
-constructors, ``typeabbrev`` for abbreviations, and ``pred`` / ``func`` for the
-**signature** of a predicate. The rules written over the vocabulary are
-:doc:`inference-rules-and-queries`.
+for type constructors, ``symb`` for data constructors, ``typeabbrev`` for
+abbreviations, and ``pred`` / ``func`` for the **signature** of a predicate.
+Older spellings of each are collected in :doc:`../compatibility`. The rules
+written over the vocabulary are :doc:`inference-rules-and-queries`.
 
 
 Data types
@@ -30,19 +30,13 @@ there are matters — but this manual spells it like a type variable:
    data tree A.     % a one-parameter type constructor
    data map A B.
 
-``kind`` is an older, equivalent way to say the same thing, one arrow per
-parameter instead of one placeholder, and — unlike ``data`` — able to declare
-several names at once (``kind day, month type.``):
+One ``data`` takes a single name; the older spelling ``kind`` — which writes
+the arity as one ``type ->`` per parameter, and does take a comma-separated
+list of names — is in :doc:`../compatibility`.
 
-.. code-block:: elpi
-
-   kind i32  type.
-   kind tree type -> type.
-   kind map  type -> type -> type.
-
-A bare ``builtin``/``external`` may also prefix a ``data`` declaration; it is
-accepted for symmetry with ``symb``/``pred``/``func`` but has no effect —
-``data`` never generates OCaml-side code, unlike those.
+A bare ``builtin`` may also prefix a ``data`` declaration; it is accepted for
+symmetry with ``symb``/``pred``/``func`` but has no effect — ``data`` never
+generates OCaml-side code, unlike those.
 
 The types ``int``, ``string``, ``float`` and ``prop`` (the type of goals) are
 built in, as are ``list``, ``pair`` and ``option``.
@@ -74,17 +68,16 @@ means three constants of type ``person``. Without the ``:``,
 ``symb alice, bob, carol person.`` parses the same (``person``, with no comma
 before it, is the type) but reads less clearly.
 
-Two older spellings — ``symbol name : type`` and, inherited from λProlog,
-``type name <type>`` — are still accepted and mean the same; see
+Two older spellings, ``symbol`` and ``type``, are still accepted; see
 :doc:`../compatibility`.
 
 A constant that the host application provides through the FFI is declared
 ``builtin symb name type`` (with a trailing ``= "variant"`` to pick one
-overload; ``external symbol`` is the older spelling) — see :doc:`../embedding`.
+overload) — see :doc:`../embedding`.
 
-``type p int -> prop.`` also declares a *predicate*, the λProlog way, but this
-manual always uses a ``pred`` / ``func`` signature instead (next section); the
-older form is in :doc:`../compatibility`.
+A predicate is always given a ``pred`` / ``func`` signature (next section),
+never a plain ``symb`` whose type ends in ``prop`` — the λProlog way, kept
+for compatibility (:doc:`../compatibility`).
 
 
 Type abbreviations
@@ -176,14 +169,13 @@ Variadic predicates are mostly an FFI concern. An older type-level spelling,
 Signature attributes
 ====================
 
-Attributes written before a ``pred``, ``func``, ``symb`` or ``type`` describe
-the predicate itself:
+Attributes written before a ``pred``, ``func`` or ``symb`` describe the
+predicate itself:
 
 * ``:index (…)`` chooses how the predicate is indexed for rule selection —
   :doc:`../features/argument-indexing`;
-* ``:external``, or the bare keyword ``builtin`` (``external`` is the older
-  spelling) before the declaration, says the predicate is implemented in
-  OCaml through the FFI — :doc:`../embedding`;
+* ``:external``, or the bare keyword ``builtin`` before the declaration, says
+  the predicate is implemented in OCaml through the FFI — :doc:`../embedding`;
 * ``:nooc`` turns off the occur check for the predicate; it is described in
   :doc:`../compatibility`.
 
@@ -191,27 +183,15 @@ Attributes that graft or guard a *rule* (``:name``, ``:if``, ``:untyped``, …)
 go on the rule, not the signature — :doc:`file-structure-and-attributes`.
 
 
-Legacy forms
-------------
+Older spellings
+---------------
 
-Older ways of writing a signature, data type or data constructor are still
-accepted:
-
-* ``:functional`` before a ``pred`` marks it deterministic, exactly like
-  writing ``func`` — which is preferred.
-* ``kind``, spelling a type constructor's arity as one ``type ->`` per
-  parameter instead of one placeholder, in place of ``data`` (shown above,
-  under *Data types*).
-* ``symbol`` and, oldest of all, ``type name <type>`` in place of ``symb`` for
-  a data constructor.
-* ``external`` in place of the bare ``builtin`` keyword before a declaration
-  provided through the FFI.
-* ``variadic T R`` in a type in place of a trailing ``..`` (shown above,
-  under *Variadic predicates*).
-
-These, the per-argument ``i:`` / ``o:`` mode markers (in place of the single
-``->``), the ``type name … -> prop`` predicate form, and the standalone
-``mode`` directive of standard λProlog are all in :doc:`../compatibility`.
+Every construct above has an older, still-accepted spelling — ``kind`` for
+``data``, ``symbol`` / ``type`` for ``symb``, ``external`` for ``builtin``,
+``variadic T R`` for a trailing ``..``, the ``i:`` / ``o:`` mode markers and
+``:functional`` for a ``pred`` / ``func`` signature, ``type name … -> prop``
+for a predicate, and the standalone ``mode`` directive. They are collected,
+with what maps to what, in :doc:`../compatibility`.
 
 
 Example
