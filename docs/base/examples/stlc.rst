@@ -25,7 +25,11 @@ Anything else is already in normal form.
 the rule for ``fun`` needs a fresh name for the bound variable and a rule
 that only holds while checking under it — exactly what ``pi``/``==>``
 provide (:doc:`../features/hypothetical-rules`,
-:doc:`../semantics/logic-programming-model`). Applying a term to itself,
+:doc:`../semantics/logic-programming-model`). Both ``whd`` and ``of`` are
+declared ``func`` — each has at most one result — and the determinacy
+checker (:doc:`../features/determinacy-checking`) confirms it: ``whd``'s two
+overlapping rules are kept apart by the cut, ``of``'s by their distinct head
+constructors. Applying a term to itself,
 ``fun (x\ app x x)``, has no type: to type-check it, ``x``'s type would have
 to be a function space with itself as the argument type, and the occur check
 (:doc:`../features/unification-and-variables`) rejects the resulting cyclic
