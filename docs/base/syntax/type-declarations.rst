@@ -40,10 +40,9 @@ backed directly by OCaml values. They have literal syntax (``42``, ``"hi"``,
 ``3.14``) but no constructors to take apart and no structure to match on — a
 string, in particular, is not a list of characters. There is no character
 type at all; a one-character string stands in for one. Everything done with
-an opaque value goes through a builtin (:doc:`../builtins`). ``prop``, the
-type of goals, is built in as well. The container types ``list`` (with its
-``[…]`` syntax), ``option`` and ``pair`` come from the standard prelude, and
-are documented in :doc:`../builtins`.
+an opaque value goes through a builtin (:doc:`../builtins`). The container
+types ``list`` (with its ``[…]`` syntax), ``option`` and ``pair`` come from
+the standard prelude, and are documented in :doc:`../builtins`.
 
 
 Data constructors
@@ -134,12 +133,10 @@ signature:
 Determinacy is described in :doc:`../features/determinacy-checking`.
 
 ``(pred)`` is the type of a goal: a predicate applied to all its arguments,
-or one that takes none. ``(func)`` is the same for a functional predicate.
-(``prop``, and its λProlog spelling ``o``, are older names for ``(pred)``;
-:doc:`../compatibility` maps them out.) A signature with arguments builds on
-these: ``(pred A -> B)`` is the type ``A -> B -> (pred)`` of a two-argument
-predicate, and additionally records that the first argument is an input and
-the second an output.
+or one that takes none. ``(func)`` is the same for a functional predicate. A
+signature with arguments builds on these: ``(pred A -> B)`` is the type
+``A -> B -> (pred)`` of a two-argument predicate, and additionally records
+that the first argument is an input and the second an output.
 
 ``any`` is a type that unifies with every other type. It switches type
 checking off for the argument it covers, so it is used sparingly — chiefly in
@@ -205,9 +202,8 @@ Older spellings
 
 Every construct above has an older, still-accepted spelling: ``kind`` for
 ``data``, ``symbol`` / ``type`` for ``symb``, ``external`` for ``builtin``,
-``variadic T R`` for a trailing ``..``, ``prop`` / ``o`` for ``(pred)``, the
-``i:`` / ``o:`` mode markers and ``:functional`` for a ``pred`` / ``func``
-signature, ``type name … -> prop`` for a predicate, and the standalone
+``variadic T R`` for a trailing ``..``, the ``i:`` / ``o:`` mode markers and
+``:functional`` for a ``pred`` / ``func`` signature, and the standalone
 ``mode`` directive. They are collected, with what maps to what, in
 :doc:`../compatibility`.
 
