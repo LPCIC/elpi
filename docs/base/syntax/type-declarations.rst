@@ -145,8 +145,10 @@ A ``pred`` / ``func`` signature is a shorthand for a ``symb`` whose type is a
    symb map (func list A, (func A -> B) -> list B).
 
 A predicate may be **overloaded** by repeating its signature with different
-argument types; each defining rule then needs a type ascription to say which
-one it belongs to. See :doc:`../features/types-and-type-checking`.
+argument types. A defining rule then needs a type ascription (``(X : int)``)
+only where its own arguments leave the overload ambiguous — a variable in a
+position where the signatures differ; a literal there is enough on its own.
+See :doc:`../features/types-and-type-checking`.
 
 
 Variadic predicates
@@ -167,9 +169,8 @@ length:
    divmod N D R    :- R is N div D.                  % three arguments
    divmod N D R M  :- divmod N D R, M is N mod D.    % four arguments
 
-``variadic T R`` is the legacy type-level spelling for the same thing, still
-used by builtins such as ``print`` and ``halt``. Variadic predicates are
-otherwise mostly an FFI concern.
+Variadic predicates are mostly an FFI concern. An older type-level spelling,
+``variadic T R``, is in :doc:`../compatibility`.
 
 
 Signature attributes
@@ -202,8 +203,11 @@ accepted:
   parameter instead of one placeholder, in place of ``data`` (shown above,
   under *Data types*).
 * ``symbol`` and, oldest of all, ``type name <type>`` in place of ``symb`` for
-  a data constructor; ``external`` in place of the bare ``builtin`` keyword
-  before a declaration provided through the FFI.
+  a data constructor.
+* ``external`` in place of the bare ``builtin`` keyword before a declaration
+  provided through the FFI.
+* ``variadic T R`` in a type in place of a trailing ``..`` (shown above,
+  under *Variadic predicates*).
 
 These, the per-argument ``i:`` / ``o:`` mode markers (in place of the single
 ``->``), the ``type name … -> prop`` predicate form, and the standalone

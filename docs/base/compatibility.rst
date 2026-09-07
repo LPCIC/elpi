@@ -94,6 +94,9 @@ parse and mean exactly the same thing (:doc:`syntax/type-declarations`):
 * The type ``prop`` — and its λProlog spelling ``o`` — is now ``(pred)``, with
   ``(func)`` for the deterministic case. ``fprop``, a former keyword for the
   latter, has been removed entirely: write ``(func)``.
+* ``variadic T R`` in a type is the old spelling of a trailing ``..`` on the
+  last argument (:doc:`syntax/type-declarations`): ``type f variadic int prop.``
+  is now ``pred f int.. .`` (``func`` if deterministic).
 
 
 Older signature forms
