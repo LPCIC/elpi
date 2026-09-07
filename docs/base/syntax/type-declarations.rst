@@ -53,16 +53,26 @@ Data constructors
 
 ``symb`` gives a constant a type. The arrow ``->`` is the function-space
 constructor; an uppercase name in a type is a parameter, implicitly universally
-quantified. The ``:`` between the name(s) and the type is optional — it reads
-well but adds nothing — and this manual omits it:
+quantified. The ``:`` between the name and the type is optional; this manual
+usually omits it:
 
 .. code-block:: elpi
 
    symb leaf tree A.
    symb node A -> tree A -> tree A -> tree A.
 
-Several constants may share a type: ``symb alice, bob, carol person.``
-(with or without the ``:``).
+One ``symb`` can give the **same type to several constants** at once, their
+names comma-separated. With more than one name the ``:`` earns its keep: it
+says plainly where the names stop and the type starts, rather than leaving
+that to whether a comma precedes the token —
+
+.. code-block:: elpi
+
+   symb alice, bob, carol : person.
+
+means three constants of type ``person``. Without the ``:``,
+``symb alice, bob, carol person.`` parses the same (``person``, with no comma
+before it, is the type) but reads less clearly.
 
 Two older, equivalent spellings are still common and are not going away:
 ``symbol`` — identical to ``symb`` in every way but the name — and, inherited
