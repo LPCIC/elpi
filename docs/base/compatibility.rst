@@ -143,23 +143,10 @@ term containing itself fails rather than building a cyclic term. SWI-Prolog
 flag is ``false`` by default, so ordinary unification (``=/2``) happily
 builds a cyclic term, and a program that wants the check has to ask for it
 explicitly, per call, with ``unify_with_occurs_check/2``. Elpi's default is
-the reverse of that: checked unification everywhere, with ``:nooc`` opting a
-single predicate *out* of it — the builtin ``unsound_unif`` is defined
-exactly that way:
-
-.. code-block:: elpi
-
-   % Unification without occur check. It can create infinite terms.
-   :nooc
-   func unsound_unif -> A, A.
-   unsound_unif X X.
-
-.. elpi:: code/nooc.elpi
-   :assert: = rejects X = f X \(occur check\)\nunsound_unif Y \(f Y\) succeeds
-
-Code that relies on ``:nooc`` should guard against actually building a cyclic
-term — ``ground_term`` (:doc:`features/unification-and-variables`), and most
-other traversals, will not terminate on one.
+the reverse of that: checked unification everywhere, with the ``:nooc``
+signature attribute opting a single predicate *out* of it. The builtin
+``unsound_unif`` is defined that way; :doc:`features/unification-and-variables`
+shows it and what removing the check lets it do.
 
 
 Modules

@@ -13,7 +13,7 @@ The pattern fragment
 =====================
 
 Elpi's unification is decidable and well-behaved as long as it stays within
-the **pattern fragment** (Lλ, Miller's higher-order patterns —
+the *pattern fragment* (Lλ, Miller's higher-order patterns —
 :ref:`Miller, 1992 <bib-miller92>`): a unification variable applied only to
 *distinct* bound names. Outside of it, unification can have several — or
 infinitely many — most general solutions, and Elpi either picks one
@@ -41,13 +41,34 @@ explicit reuse across scopes that can push a term outside it.
 The occur check
 =================
 
-Unlike Prolog, unification performs the **occur check** by default: assigning
-a variable to a term that contains itself is rejected instead of building a
-cyclic term. ``ground_term T`` checks that ``T`` has no unification variables
-left in it at all — useful to assert a computation really finished, e.g.
-before serializing a term. Turning the occur check off for one predicate is
-:doc:`../compatibility` (``:nooc``); doing so can build a cyclic term, which
-``ground_term`` (and most other traversals) will not terminate on.
+Unification performs the *occur check* by default: assigning a variable to a
+term that already contains it is rejected, rather than building a cyclic
+term. Most Prolog systems default the other way, and Elpi's choice is one of
+the deliberate departures collected in :doc:`../compatibility`.
+
+``ground_term T`` checks that ``T`` holds no unification variables at all —
+useful for asserting that a computation has fully finished, for instance
+before serializing a term.
+
+The occur check can be turned off for one predicate with the ``:nooc``
+signature attribute. The standard library's ``unsound_unif`` is plain
+unification with the check removed, and is defined with ``:nooc`` and
+nothing else:
+
+.. literalinclude:: ../../../src/builtin.elpi
+   :language: elpi
+   :start-at: % Unification without occur check
+   :end-at: unsound_unif X X.
+
+So ``X = f X`` fails the occur check, but ``unsound_unif Y (f Y)`` succeeds,
+tying ``Y`` into a cyclic term:
+
+.. elpi:: ../code/nooc.elpi
+   :assert: = rejects X = f X \(occur check\)\nunsound_unif Y \(f Y\) succeeds
+
+Code that uses ``:nooc`` then has to keep from ever building such a term:
+``ground_term`` does not terminate on a cyclic term, and neither do most
+other term traversals.
 
 
 The wildcard ``_``
