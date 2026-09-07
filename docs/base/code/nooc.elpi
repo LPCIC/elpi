@@ -5,7 +5,7 @@ data tm.
 symb f tm -> tm.
 
 main :-
-  (pi x\ sigma X\ (X = f X, print "should not happen")
-   ; print "= rejects X = f X (occur check)"),
-  (pi x\ sigma Y\ (unsound_unif Y (f Y), print "unsound_unif Y (f Y) succeeds")
-   ; print "should not happen").
+  ( X = f X, print "should not happen"
+  ; print "= rejects X = f X (occur check)" ),
+  ( unsound_unif Y (f Y), print "unsound_unif Y (f Y) succeeds"
+  ; print "should not happen" ).

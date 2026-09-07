@@ -21,14 +21,14 @@ constant pattern would have to assign it, so it simply fails to match instead
 hand, succeeds and assigns it:
 
 .. elpi:: ../code/input-output.elpi
-   :assert: as-input X: no rule matched an unassigned X\nas-output assigned Y to z
+   :assert: as-input: an unassigned variable matched no rule\nas-output assigned Y to z
 
 This is what makes input arguments safe to leave partially unknown: a call
 with a hole in an input position does not force a guess, it just finds no
 matching rule (or suspends, if the predicate has an ``uvar`` rule of its own —
 :doc:`../syntax/constraint-handling-rules`).
 
-
+MOVE this section to unification variables and rename it unification variable inspection
 Matching an open input on purpose
 ====================================
 
