@@ -33,5 +33,4 @@ constructors. Applying a term to itself,
 ``fun (x\ app x x)``, has no type: to type-check it, ``x``'s type would have
 to be a function space with itself as the argument type, and the occur check
 (:doc:`../features/unification-and-variables`) rejects the resulting cyclic
-assignment — exactly the ill-typed term the untyped λ-calculus admits but the
-simply-typed one does not.
+assignment.
