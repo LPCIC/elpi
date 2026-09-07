@@ -47,6 +47,53 @@ Collisions can make the check imprecise (the whole hash must fit one machine
 word), but with more than one indexed argument it tends to prune better than
 a discrimination tree at a similar cost.
 
+.. raw:: html
+
+   <details class="elpi-fold"><summary>Hash indexing, worked out</summary>
+
+Each indexed argument is reduced to a fixed-width string of bits, built
+hierarchically down to that argument's indexing depth. A unification variable
+in a rule head becomes a run of ``1``\ s; the same variable in a goal becomes
+a run of ``0``\ s; a constant becomes a fixed mix of the two. A rule is tried
+for a goal exactly when ``hgoal & hrule`` equals ``hgoal`` — the goal's
+``1`` bits are a subset of the rule's.
+
+The reading is: a ``1`` means "this piece of information is present". In a
+rule it is *provided*, in a goal it is *required*. A flexible goal is all
+``0``\ s and so requires nothing (``0 & x = 0``); a flexible rule is all
+``1``\ s and so provides everything (``x & 1 = x``).
+
+.. code-block:: elpi
+
+   :index (2) "Hash"
+   pred mult -> nat, nat, nat.
+   mult o X o.
+   mult (s (s o)) X C :- plus X X C.
+   mult (s A) B C :- mult A B R, plus B R C.
+
+``:index (2)`` indexes the first argument down to depth 2. Suppose the head
+symbols hash as ``o = 1001 1011`` and ``s = 1011 0010`` (left-trimmed to one
+machine word, eight bits here). The three rules' first arguments then hash to
+
+.. code-block:: text
+
+   1:  mult o          1001 1011
+   2:  mult (s (s o))  0010 0010
+   3:  mult (s A)      0010 1111     % A is a variable: 1s in its slot
+
+and some goals select as follows (only the indexed first argument is shown),
+keeping a rule when ``hgoal & hrule == hgoal``:
+
+.. code-block:: text
+
+   mult (s o) …    0010 1011    matches rule 3 only
+   mult (s X) …    0010 0000    matches rules 2 and 3
+   mult X …        0000 0000    matches every rule
+
+.. raw:: html
+
+   </details>
+
 
 Example
 =======
