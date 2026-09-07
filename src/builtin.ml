@@ -262,7 +262,7 @@ builtin func pattern_match A -> A.|};
    * choice points *)
   LPCode "builtin func !. % The cut operator";
 
-  LPCode "func not prop.";
+  LPCode "func not (pred).";
   LPCode "not X :- X, !, fail.";
   LPCode "not _.";
 

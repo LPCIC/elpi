@@ -27,15 +27,15 @@ debug-print Msg Data :- print Msg Data.
 
 %  -- Errors, Debugging, Hacks --
 
-func ignore-failure! prop ->.
+func ignore-failure! (pred) ->.
 ignore-failure! P :- P, !.
 ignore-failure! _.
 
-func once prop ->.
+func once (pred) ->.
 once P :- P, !.
 
 % [assert! C M] takes the first success of C or fails with message M 
-func assert! prop, string.
+func assert! (pred), string.
 assert! Cond Msg :- (Cond ; fatal-error-w-data Msg Cond), !.
 
 % [assert-ok! C M] like assert! but the last argument of the predicate must
@@ -53,7 +53,7 @@ spy P :- trace.counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
 spy P :- debug-print "---->>---- fail: " P, fail.
 
 % [spy! P] traces the first call to P without leaving a choice point
-func spy! prop.
+func spy! (pred).
 spy! P :- trace.counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
          debug-print "----<<---- enter: " P,
          P,
@@ -289,7 +289,7 @@ flip P X Y :- P Y X.
 func time (func) -> float.
 time P T :- gettimeofday Before, P, gettimeofday After, T is After - Before.
 
-func do! list prop.
+func do! list (pred).
 do! [].
 do! [P|PS] :- P, !, do! PS.
 
@@ -302,7 +302,7 @@ do-ok! S [P|PS] :- P S0, !, if (S0 = ok) (do-ok! S PS) (S = S0).
 pred lift-ok (pred), string -> diagnostic.
 lift-ok P Msg R :- (P, R = ok; R = error Msg).
 
-func spy-do! list prop.
+func spy-do! list (pred).
 spy-do! L :- map L (x\y\y = spy x) L1, do! L1.
 
 func while-ok-do! diagnostic, list (pred -> diagnostic) -> diagnostic.
@@ -318,7 +318,7 @@ max N M N :- N >= M, !.
 max _ M M.
 
 % [findall P L] L is the list [P1,P2,P3..] where each Pi is a solution to P.
-func findall prop -> list prop.
+func findall (pred) -> list (pred).
 findall P L :- findall_solutions P L.
 
 }

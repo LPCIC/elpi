@@ -931,13 +931,13 @@ module BuiltInPredicate = struct
 
     let pred1_ty x = Conversion.TyApp("->",x.Conversion.ty,[Conversion.TyName"(func)"])
     let pred1 x = { Conversion.ty = pred1_ty x; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<pred1>"); pp_doc = (fun fmt () -> ()) }
-    let pred2_ty x y = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[Conversion.TyName"prop"])]))
+    let pred2_ty x y = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[Conversion.TyName"(pred)"])]))
     let pred2 x y = { Conversion.ty = pred2_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<pred2>"); pp_doc = (fun fmt () -> ()) }
-    let pred3_ty x y z = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[TyApp("->",z.Conversion.ty,[Conversion.TyName"prop"])])]))
+    let pred3_ty x y z = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[TyApp("->",z.Conversion.ty,[Conversion.TyName"(pred)"])])]))
     let pred3 x y z = { Conversion.ty = pred3_ty x y z; readback = (fun ~depth state e -> state,(e,x,y,z),[]); embed = (fun ~depth state (x,_,_,_) -> state,x,[]); pp = (fun fmt (x,_,_,_) -> Format.fprintf fmt "<pred3>"); pp_doc = (fun fmt () -> ()) }
-    let pred2a_ty x a = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",Conversion.TyName a,[TyApp("->",Conversion.TyName a,[Conversion.TyName"prop"])])]))
+    let pred2a_ty x a = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",Conversion.TyName a,[TyApp("->",Conversion.TyName a,[Conversion.TyName"(pred)"])])]))
     let pred2a x a = { Conversion.ty = pred2a_ty x a; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<pred2a>"); pp_doc = (fun fmt () -> ()) }
-    let pred3a_ty x y a = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[TyApp("->",Conversion.TyName a,[TyApp("->",Conversion.TyName a,[Conversion.TyName"prop"])])])]))
+    let pred3a_ty x y a = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[TyApp("->",Conversion.TyName a,[TyApp("->",Conversion.TyName a,[Conversion.TyName"(pred)"])])])]))
     let pred3a x y a = { Conversion.ty = pred3a_ty x y a; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<pred3a>"); pp_doc = (fun fmt () -> ()) }
 
 
