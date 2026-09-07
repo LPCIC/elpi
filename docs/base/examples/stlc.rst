@@ -12,7 +12,7 @@ rather than unifying is what lets it suspend, and how a constraint handling
 rule then rejects the holes that admit no consistent type.
 
 .. elpi:: ../code/stlc.elpi
-   :assert: type of Fst: arr X\d+ \(arr X\d+ X\d+\)\nwhd \(Fst applied to the identity\): fun c\d+ \\ fun c\d+ \\ c\d+\n\(fun x\\ app x x\) has no type: occur-check failure\nof \(app H _\): H unknown, so of suspends:\n of X\d+ X\d+  /\* suspended on X\d+ \*/ of X\d+ \(arr X\d+ X\d+\)  /\* suspended on X\d+ \*/\nafter H := the identity, its constraint resumed:\n of X\d+ X\d+  /\* suspended on X\d+ \*/
+   :assert: type of Fst: arr X\d+ \(arr X\d+ X\d+\)\n\nwhd of Fst applied to the identity: fun c\d+ \\ fun c\d+ \\ c\d+\n\nfun \(x\\ app x x\) has no type: occur-check failure\n\nof \(app H _\): H still unknown, type X\d+ -- of has suspended:\n of X\d+ X\d+  /\* suspended on X\d+ \*/ of X\d+ \(arr X\d+ X\d+\)  /\* suspended on X\d+ \*/\n\nafter H := the identity, one constraint resolved:\n of X\d+ X\d+  /\* suspended on X\d+ \*/
 
 Terms are HOAS (:doc:`../syntax/terms-and-operators`): ``app`` pairs a
 function with its argument, ``fun`` carries an actual Elpi function
@@ -46,7 +46,8 @@ variable — a hole — and instead of failing (no term to inspect) or looping
 (if the argument were unified rather than matched,
 :doc:`../semantics/logic-programming-model`), it suspends: ``of Hole T``
 becomes a constraint, keyed on ``Hole``, to be retried once ``Hole`` is
-known. So ``of (app H _) _`` with ``H`` unknown succeeds, leaving two
-suspended ``of`` goals in the store; assigning ``H`` the identity wakes its
-constraint, which resolves and leaves just the one still waiting on the
-argument.
+known. So ``of (app H _) AppTy`` with ``H`` unknown succeeds — ``AppTy`` left
+an unbound type, and two ``of`` goals suspended in the store. Assigning
+``H`` the identity function wakes its constraint, which resolves; the goal
+still waiting on the argument now carries ``AppTy`` as that argument's type,
+the identity having tied the two together.

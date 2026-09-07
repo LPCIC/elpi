@@ -22,15 +22,19 @@ of (uvar as Hole) T :- declare_constraint (of Hole T) [Hole].
 
 main :-
   Fst = fun (x\ fun y\ x),
-  of Fst Ty, print "type of Fst:" Ty,
+  of Fst FstTy,
+  print "type of Fst:" FstTy,
 
   Id = fun (z\ z),
-  whd (app Fst Id) Reduct, print "whd (Fst applied to the identity):" Reduct,
+  whd (app Fst Id) Reduct,
+  print "\nwhd of Fst applied to the identity:" Reduct,
 
   ( of (fun (x\ app x x)) _
-  ; print "(fun x\ app x x) has no type: occur-check failure" ),
+  ; print "\nfun (x\\ app x x) has no type: occur-check failure" ),
 
-  of (app H _) _,
-  print "of (app H _): H unknown, so of suspends:", print_constraints,
+  of (app H _) AppTy,
+  print "\nof (app H _): H still unknown, type" AppTy "-- of has suspended:",
+  print_constraints,
   H = Id,
-  print "after H := the identity, its constraint resumed:", print_constraints.
+  print "\nafter H := the identity, one constraint resolved:",
+  print_constraints.
