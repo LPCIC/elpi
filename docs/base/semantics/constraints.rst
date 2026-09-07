@@ -2,40 +2,44 @@
 Constraints
 ###########
 
-:doc:`logic-programming-model` ended on a problem: run over a term with an
-unconstrained hole, the STLC type checker's own rules make it loop forever,
-because unification is happy to invent an ``app`` (or a ``lam``) out of thin
-air for an unassigned variable and try again. Elpi is meant to run on
-*incomplete* terms — the kind an interactive prover's elaborator manipulates,
-full of holes still to be filled in — so this has to be solved.
+:doc:`logic-programming-model` ended on a problem. The STLC type checker,
+asked about a term that still has a hole in it, has nothing sensible to do:
+because its first argument is an input, no rule head matches a bare variable
+and the goal simply fails — and with unification in place of matching it does
+worse, inventing an ``app`` (then a ``lam`` inside that, and so on) for the
+hole and looping forever. Neither is any use to an elaborator, which works
+with exactly such *incomplete* terms — full of holes still to be filled in —
+all the time. The fix is to let the checker *suspend* on a hole rather than
+guess.
 
 
 Controlling instantiation
 ==========================
 
 When a rule's search meets a hole, one of two things should happen instead of
-guessing: **suspend** the computation and record it as a constraint, or
-**synthesize** a value for the hole through some dedicated routine (richer
-than plain unification, and out of scope for this chapter). Elpi also lets a
-suspended computation carry data along — anything from one flag to a whole
-typing sequent — and later combine the data attached to the same hole by
-several suspended computations. This chapter covers the first two: how to
-suspend and resume; combining what several constraints know about the same
-hole is :doc:`chr`.
+guessing: *suspend* the computation, recording it as a constraint to be
+retried later, or *synthesize* a value for the hole through some dedicated
+routine — one richer than plain unification, and out of scope for this
+chapter. A suspended computation can also carry data along, anything from a
+single flag to a whole typing sequent, and the data that several suspended
+computations have attached to one hole can later be combined. This chapter
+covers suspending and resuming; combining what several constraints know about
+the same hole is :doc:`chr`.
 
 
 Matching, not unifying
 =======================
 
-The **input** arguments of a signature (:doc:`../syntax/type-declarations`,
+The *input* arguments of a signature (:doc:`../syntax/type-declarations`,
 :doc:`../features/modes`) are not unified with the goal when a rule is
-selected: they are *matched* against the rule's head instead. This means no
-unification variable occurring in an input argument of the goal is ever
-assigned just because a rule was tried.
+selected; they are *matched* against the rule's head instead. A unification
+variable that the goal left unassigned in an input position therefore stays
+unassigned — trying a rule never fills it in.
 
-Matching is spelled out with the ``uvar`` keyword, which stands for a hole in
-the head of a rule. ``uvar as E`` binds ``E`` to that hole, and is equivalent
-to matching any term and then checking it is unassigned:
+That is what lets a rule detect a hole and act on it. The ``uvar`` keyword is
+a head pattern that matches only an unassigned variable, and ``uvar as E``
+binds ``E`` to it. The two rules below are equivalent — the second spells out
+what the first means:
 
 .. code-block:: elpi
 
@@ -43,40 +47,41 @@ to matching any term and then checking it is unassigned:
    % equivalent to:
    of E T :- var E, declare_constraint (of E T) [E].
 
-:doc:`../features/modes` has the full set of ``uvar`` head patterns, including
-``uvar Hd Args`` for taking apart an *applied* hole.
+:doc:`../features/modes` has the full set of ``uvar`` head patterns, among
+them ``uvar Hd Args`` for taking apart a hole that has been *applied* to
+arguments.
 
-``declare_constraint`` (:doc:`../syntax/constraint-handling-rules`) is how a
-goal is turned into a constraint; its own goal argument must itself be a
-**function** — a ``func`` signature — since a constraint that could produce
-several different resumptions would make the search behave unpredictably once
-combined with constraint handling rules.
+``declare_constraint`` (:doc:`../syntax/constraint-handling-rules`) is what
+turns a goal into a constraint. Its goal argument must itself be a *function*
+— it needs a ``func`` signature — because a constraint that could be resumed
+in more than one way would make the search unpredictable once constraint
+handling rules start combining constraints.
 
 
 Suspending and resuming
 =========================
 
-Adding an ``uvar`` rule to the STLC checker gives incomplete terms a sensible
-meaning instead of an infinite loop:
+Adding the ``uvar`` rule to the STLC checker gives an incomplete term a
+sensible meaning in place of the infinite loop:
 
 .. code-block:: elpi
 
    func of tm -> ty.
    of (app H A) T :- of H (arr S T), of A S.
-   of (lam F) (arr S T) :- pi c\ of c S => of (F c) T.
+   of (lam F) (arr S T) :- pi c\ of c S ==> of (F c) T.
    of (uvar as E) T :- declare_constraint (of E T) [E].
 
-Now ``of (app H A) T``, with ``H`` and ``A`` both unknown, succeeds — with two
-suspended goals recording what remains to be checked once ``H`` and ``A`` are
-known (see the Example below). When ``H`` is later assigned, its constraint is
-resumed like any other suspended goal, and simplifies: the constraint left
-over now mentions ``H``'s former unknown type directly, instead of behind an
-arrow.
+Now ``of (app H A) T`` with ``H`` and ``A`` both unknown succeeds, leaving two
+suspended goals that record what is still to be checked once ``H`` and ``A``
+become known (the Example below shows the store). When ``H`` is later
+assigned, its constraint is resumed like any other suspended goal and
+simplifies: the constraint left over now mentions ``H``'s former unknown type
+directly, rather than behind an arrow.
 
-The list passed to ``declare_constraint`` is the constraint's **trigger**: the
+The list passed to ``declare_constraint`` is the constraint's *trigger* — the
 variables whose assignment wakes it up. A constraint honours backtracking
-exactly like a plain unification assignment does — undoing an assignment
-un-suspends the constraint it had resumed, as if nothing had happened:
+just as a plain unification assignment does: undoing the assignment that
+resumed a constraint suspends it again, as though nothing had happened.
 
 .. elpi:: ../code/backtracking-constraints.elpi
    :assert: before:\n even X\d+  /\* suspended on X\d+ \*/\nafter backtracking:\n even X\d+  /\* suspended on X\d+ \*/
@@ -85,14 +90,33 @@ un-suspends the constraint it had resumed, as if nothing had happened:
 Incompatible constraints
 ==========================
 
-Suspending and resuming alone is not quite enough. The goal ``of (app D D) T``
-— applying an unknown ``D`` to itself — succeeds with two constraints about
-the very same ``D``: one says ``D`` has some type ``S``, the other that ``D``
-has a function type ``S -> T``. Individually each is a perfectly fine
-suspended goal; together they are contradictory, so the type checker should
-have rejected the term outright. Nothing seen so far can express "look at
-every constraint about the same hole together and decide" — that is exactly
-what :doc:`chr` adds.
+Suspending and resuming on their own are not quite enough. The goal
+``of (app D D) T`` — an unknown ``D`` applied to itself — succeeds, with two
+constraints about that one ``D``: one says ``D`` has some type ``S``, the
+other that ``D`` has a function type ``S -> T``. Each is a perfectly good
+suspended goal on its own; together they are contradictory, and the term
+should have been rejected. Nothing covered so far can express "take every
+constraint about the same hole together and decide" — that is what
+:doc:`chr` adds.
+
+One rule is enough for this case: whenever two ``of`` constraints are about
+the same hole, keep the first and unify the second type with it.
+
+.. code-block:: elpi
+
+   constraint of {
+     rule (of X S1) \ (of X S2) <=> (S1 = S2).
+   }
+
+On ``of (app D D) T`` that rule fires on the two constraints above and runs
+``S = arr S T``, which fails the occur check — so the term is now rejected,
+as it should be:
+
+.. elpi:: ../code/incompatible.elpi
+   :assert: of \(app D D\): rejected
+
+The rule, the ``constraint`` block it lives in, and how such a rule sees the
+store are :doc:`../syntax/constraint-handling-rules` and :doc:`chr`.
 
 
 Example

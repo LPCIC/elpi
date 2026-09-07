@@ -9,7 +9,7 @@ symb arr ty -> ty -> ty.
 
 func of tm -> ty.
 of (app H A) T :- of H (arr S T), of A S.
-of (lam F) (arr S T) :- pi c\ of c S => of (F c) T.
+of (lam F) (arr S T) :- pi c\ of c S ==> of (F c) T.
 of (uvar as E) T :- declare_constraint (of E T) [E].
 
 main :-
