@@ -84,7 +84,7 @@ scope.
 Type-checking this calculus needs one ingredient a Prolog rule cannot express
 on its own: a rule that holds only for the lifetime of one bound variable's
 scope. ``pi`` introduces a fresh constant for the duration of a goal, and
-``=>`` adds a rule for the duration of a goal; together they give a bound
+``==>`` adds a rule for the duration of a goal; together they give a bound
 variable exactly the context it needs. Types are declared like terms, with a
 constructor ``arr`` for the function space:
 
@@ -95,7 +95,7 @@ constructor ``arr`` for the function space:
 
    pred of tm -> ty.
    of (app H A) T :- of H (arr S T), of A S.
-   of (lam F) (arr S T) :- pi c\ of c S => of (F c) T.
+   of (lam F) (arr S T) :- pi c\ of c S ==> of (F c) T.
 
 To type-check ``lam F``: introduce a fresh constant ``c`` for the bound
 variable, add the rule ``of c S`` — in force only for the rest of this goal —
@@ -103,7 +103,7 @@ and check that the body ``F c``, the function applied to ``c``, has type
 ``T``. The application rule on its own is a Horn clause, exactly as in
 Prolog; the abstraction rule genuinely needs the ``∀`` and the nested ``⇒``
 of a *Hereditary Harrop formula*, the richer logic that λProlog, and so Elpi,
-is built on. A rule added by ``=>`` is called *dynamic*, or *hypothetical*,
+is built on. A rule added by ``==>`` is called *dynamic*, or *hypothetical*,
 and — unlike Prolog's ``assert`` / ``retract`` — its scope is exactly the
 goal that added it, never the rest of the program
 (:doc:`../features/hypothetical-rules`).
