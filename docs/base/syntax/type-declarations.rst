@@ -203,9 +203,9 @@ Older spellings
 Every construct above has an older, still-accepted spelling: ``kind`` for
 ``data``, ``symbol`` / ``type`` for ``symb``, ``external`` for ``builtin``,
 ``variadic T R`` for a trailing ``..``, the ``i:`` / ``o:`` mode markers and
-``:functional`` for a ``pred`` / ``func`` signature, and the standalone
-``mode`` directive. They are collected, with what maps to what, in
-:doc:`../compatibility`.
+``:functional`` for a ``pred`` / ``func`` signature, ``type name … -> prop``
+for a predicate, and the standalone ``mode`` directive. They are collected,
+with what maps to what, in :doc:`../compatibility`.
 
 
 Example
