@@ -797,24 +797,24 @@ module BuiltInPredicate : sig
   (** Adaptors for standard HO functions *)
   module HOAdaptors : sig
 
-    type 'a pred1
-    type ('a,'b) pred2
-    type ('a) pred2a
-    type ('a,'b,'c) pred3
-    type ('a,'b) pred3a
+    type 'a func_A
+    type ('a,'b) func_AB
+    type ('a) func_AB_B
+    type ('a,'b,'c) func_AB_C
+    type ('a,'b) func_ABC_C
 
-    val pred1 : 'a Conversion.t -> 'a pred1 Conversion.t
-    val pred2 : 'a Conversion.t -> 'b Conversion.t -> ('a,'b) pred2 Conversion.t
-    (* like pred2 but rendered as (func In -> Out); for map1 *)
-    val mapper : 'a Conversion.t -> 'b Conversion.t -> ('a,'b) pred2 Conversion.t
-    val pred3 : 'a Conversion.t -> 'b Conversion.t -> 'c Conversion.t -> ('a,'b,'c) pred3 Conversion.t
-    val pred2a : 'a Conversion.t -> string -> ('a) pred2a Conversion.t
-    val pred3a : 'a Conversion.t -> 'b Conversion.t -> string -> ('a,'b) pred3a Conversion.t
+    val func_A : 'a Conversion.t -> 'a func_A Conversion.t
+    val func_AB : 'a Conversion.t -> 'b Conversion.t -> ('a,'b) func_AB Conversion.t
+    (* like func_AB but rendered as (func In -> Out); for map1 *)
+    val func_A_B : 'a Conversion.t -> 'b Conversion.t -> ('a,'b) func_AB Conversion.t
+    val func_AB_C : 'a Conversion.t -> 'b Conversion.t -> 'c Conversion.t -> ('a,'b,'c) func_AB_C Conversion.t
+    val func_AB_B : 'a Conversion.t -> string -> ('a) func_AB_B Conversion.t
+    val func_ABC_C : 'a Conversion.t -> 'b Conversion.t -> string -> ('a,'b) func_ABC_C Conversion.t
 
     val filter1 :
       once:once -> depth:int ->
       filter:(('a -> bool) -> 's -> 't) ->
-      'a pred1 ->
+      'a func_A ->
       's ->
       Data.state ->
       Data.state * 't * Conversion.extra_goals
@@ -822,7 +822,7 @@ module BuiltInPredicate : sig
     val filter2 :
       once:once -> depth:int ->
       filter:(('a -> 'b -> bool) -> 's -> 't) ->
-      ('a,'b) pred2 ->
+      ('a,'b) func_AB ->
       's ->
       Data.state ->
       Data.state * 't * Conversion.extra_goals
@@ -830,7 +830,7 @@ module BuiltInPredicate : sig
     val map1 :
       once:once -> depth:int ->
       map:(('a -> 'c) -> 's -> 't) ->
-      ('a,'c) pred2 ->
+      ('a,'c) func_AB ->
       's ->
       Data.state ->
       Data.state * 't * Conversion.extra_goals
@@ -838,7 +838,7 @@ module BuiltInPredicate : sig
     val map2 :
       once:once -> depth:int ->
       map:(('a -> 'b -> 'c) -> 's -> 't) ->
-      ('a,'b,'c) pred3 ->
+      ('a,'b,'c) func_AB_C ->
       's ->
       Data.state ->
       Data.state * 't * Conversion.extra_goals
@@ -846,7 +846,7 @@ module BuiltInPredicate : sig
     val fold1 :
       once:once -> depth:int ->
       fold:(('a -> Data.term -> Data.term) -> 's -> Data.term -> Data.term) ->
-      ('a) pred2a ->
+      ('a) func_AB_B ->
       's ->
       Data.term ->
       Data.state ->
@@ -855,7 +855,7 @@ module BuiltInPredicate : sig
     val fold2 :
       once:once -> depth:int ->
       fold:(('a -> 'b -> Data.term -> Data.term) -> 's -> Data.term -> Data.term) ->
-      ('a,'b) pred3a ->
+      ('a,'b) func_ABC_C ->
       's ->
       Data.term ->
       Data.state ->

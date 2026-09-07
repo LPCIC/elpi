@@ -1245,7 +1245,7 @@ set,
 
   MLCode(Pred(name^".filter",
     In(set,"M",
-    In(HOAdaptors.pred1 alpha,"F",
+    In(HOAdaptors.func_A alpha,"F",
     Out(set,"M1",
     FullHO(ContextualConversion.unit_ctx, "Filter M w.r.t. the predicate F")))),
     (fun m f _ ~once ~depth _ _ state ->
@@ -1258,7 +1258,7 @@ set,
 
   MLCode(Pred(name^".map",
     In(set,"M",
-    In(HOAdaptors.mapper alpha alpha,"F",
+    In(HOAdaptors.func_A_B alpha alpha,"F",
     Out(set,"M1",
     FullHO(ContextualConversion.unit_ctx, "Map M w.r.t. the predicate F")))),
     (fun m f _ ~once ~depth _ _ state ->
@@ -1272,7 +1272,7 @@ set,
   MLCode(Pred(name^".fold",
     In(set,"M",
     In(poly "A","Acc",
-    In(HOAdaptors.pred2a alpha "A","F",
+    In(HOAdaptors.func_AB_B alpha "A","F",
     Out(poly "A","Acc1",
     FullHO(ContextualConversion.unit_ctx, "fold M w.r.t. the predicate F"))))),
     (fun m a f _ ~once ~depth _ _ state ->
@@ -1286,7 +1286,7 @@ set,
 
   MLCode(Pred(name^".partition",
   In(set,"M",
-  In(HOAdaptors.pred1 alpha,"F",
+  In(HOAdaptors.func_A alpha,"F",
   Out(set,"M1",
   Out(set,"M2",
   FullHO(ContextualConversion.unit_ctx, "Partitions M w.r.t. the predicate F, M1 is where F holds"))))),
@@ -1378,7 +1378,7 @@ let open BuiltIn in let open BuiltInData in
 
   MLCode(Pred(name^".filter",
     In(map "A","M",
-    In(HOAdaptors.pred2 alpha closed_A,"F",
+    In(HOAdaptors.func_AB alpha closed_A,"F",
     Out(map "A","M1",
     FullHO(ContextualConversion.unit_ctx, "Filter M w.r.t. the predicate F")))),
     (fun m f _ ~once ~depth _ _ state ->
@@ -1391,7 +1391,7 @@ let open BuiltIn in let open BuiltInData in
 
   MLCode(Pred(name^".map",
     In(map "A","M",
-    In(HOAdaptors.pred3 alpha closed_A closed_B,"F",
+    In(HOAdaptors.func_AB_C alpha closed_A closed_B,"F",
     Out(map "B","M1",
     FullHO(ContextualConversion.unit_ctx, "Map M w.r.t. the predicate F")))),
     (fun m f _ ~once ~depth _ _ state ->
@@ -1406,7 +1406,7 @@ let open BuiltIn in let open BuiltInData in
   MLCode(Pred(name^".fold",
     In(map "A","M",
     In(poly "C","Acc",
-    In(HOAdaptors.pred3a alpha closed_A "C","F",
+    In(HOAdaptors.func_ABC_C alpha closed_A "C","F",
     Out(poly "C","Acc1",
     FullHO(ContextualConversion.unit_ctx, "fold M w.r.t. the predicate F"))))),
     (fun m a f _ ~once ~depth _ _ state ->

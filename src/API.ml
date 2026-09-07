@@ -923,29 +923,29 @@ module BuiltInPredicate = struct
 
   module HOAdaptors = struct
 
-    type 'a pred1 = Data.term * 'a Conversion.t
-    type ('a,'b) pred2 = Data.term * 'a Conversion.t * 'b Conversion.t
-    type ('a) pred2a = Data.term * 'a Conversion.t
-    type ('a,'b,'c) pred3 = Data.term * 'a Conversion.t * 'b Conversion.t * 'c Conversion.t
-    type ('a,'b) pred3a = Data.term * 'a Conversion.t * 'b Conversion.t
+    type 'a func_A = Data.term * 'a Conversion.t
+    type ('a,'b) func_AB = Data.term * 'a Conversion.t * 'b Conversion.t
+    type ('a) func_AB_B = Data.term * 'a Conversion.t
+    type ('a,'b,'c) func_AB_C = Data.term * 'a Conversion.t * 'b Conversion.t * 'c Conversion.t
+    type ('a,'b) func_ABC_C = Data.term * 'a Conversion.t * 'b Conversion.t
 
     (* Types are rendered to match how each adaptor calls its predicate:
        - filter1/filter2: all arguments are inputs, no output   -> (func In..)
-       - map1 (mapper): one input mapped to one output          -> (func In -> Out)
+       - map1 (func_A_B): one input mapped to one output          -> (func In -> Out)
        - map2, fold1, fold2: several inputs, last is the output  -> (func In.. -> Out) *)
     let sty x = ED.Conversion.show_ty_ast x.Conversion.ty
-    let pred1_ty x = Conversion.TyName (Printf.sprintf "(func %s)" (sty x))
-    let pred1 x = { Conversion.ty = pred1_ty x; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<pred1>"); pp_doc = (fun fmt () -> ()) }
-    let pred2_ty x y = Conversion.TyName (Printf.sprintf "(func %s, %s)" (sty x) (sty y))
-    let pred2 x y = { Conversion.ty = pred2_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<pred2>"); pp_doc = (fun fmt () -> ()) }
-    let mapper_ty x y = Conversion.TyName (Printf.sprintf "(func %s -> %s)" (sty x) (sty y))
-    let mapper x y = { Conversion.ty = mapper_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<mapper>"); pp_doc = (fun fmt () -> ()) }
-    let pred3_ty x y z = Conversion.TyName (Printf.sprintf "(func %s, %s -> %s)" (sty x) (sty y) (sty z))
-    let pred3 x y z = { Conversion.ty = pred3_ty x y z; readback = (fun ~depth state e -> state,(e,x,y,z),[]); embed = (fun ~depth state (x,_,_,_) -> state,x,[]); pp = (fun fmt (x,_,_,_) -> Format.fprintf fmt "<pred3>"); pp_doc = (fun fmt () -> ()) }
-    let pred2a_ty x a = Conversion.TyName (Printf.sprintf "(func %s, %s -> %s)" (sty x) a a)
-    let pred2a x a = { Conversion.ty = pred2a_ty x a; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<pred2a>"); pp_doc = (fun fmt () -> ()) }
-    let pred3a_ty x y a = Conversion.TyName (Printf.sprintf "(func %s, %s, %s -> %s)" (sty x) (sty y) a a)
-    let pred3a x y a = { Conversion.ty = pred3a_ty x y a; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<pred3a>"); pp_doc = (fun fmt () -> ()) }
+    let func_A_ty x = Conversion.TyName (Printf.sprintf "(func %s)" (sty x))
+    let func_A x = { Conversion.ty = func_A_ty x; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<func_A>"); pp_doc = (fun fmt () -> ()) }
+    let func_AB_ty x y = Conversion.TyName (Printf.sprintf "(func %s, %s)" (sty x) (sty y))
+    let func_AB x y = { Conversion.ty = func_AB_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<func_AB>"); pp_doc = (fun fmt () -> ()) }
+    let func_A_B_ty x y = Conversion.TyName (Printf.sprintf "(func %s -> %s)" (sty x) (sty y))
+    let func_A_B x y = { Conversion.ty = func_A_B_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<func_A_B>"); pp_doc = (fun fmt () -> ()) }
+    let func_AB_C_ty x y z = Conversion.TyName (Printf.sprintf "(func %s, %s -> %s)" (sty x) (sty y) (sty z))
+    let func_AB_C x y z = { Conversion.ty = func_AB_C_ty x y z; readback = (fun ~depth state e -> state,(e,x,y,z),[]); embed = (fun ~depth state (x,_,_,_) -> state,x,[]); pp = (fun fmt (x,_,_,_) -> Format.fprintf fmt "<func_AB_C>"); pp_doc = (fun fmt () -> ()) }
+    let func_AB_B_ty x a = Conversion.TyName (Printf.sprintf "(func %s, %s -> %s)" (sty x) a a)
+    let func_AB_B x a = { Conversion.ty = func_AB_B_ty x a; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<func_AB_B>"); pp_doc = (fun fmt () -> ()) }
+    let func_ABC_C_ty x y a = Conversion.TyName (Printf.sprintf "(func %s, %s, %s -> %s)" (sty x) (sty y) a a)
+    let func_ABC_C x y a = { Conversion.ty = func_ABC_C_ty x y a; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<func_ABC_C>"); pp_doc = (fun fmt () -> ()) }
 
 
     let filter1 ~once ~depth ~filter (f,c1) m state =
