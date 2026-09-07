@@ -110,7 +110,9 @@ Example
 
 Elpi has no built-in global variable, but the constraint store — a place that
 outlives individual goals and honours backtracking — makes it easy to build
-one on top of CHR:
+one on top of CHR. The program below implements ``get`` and ``set``; ``main``
+reads the value, overwrites it, and reads again, so the two reads print the
+old value and then the new one:
 
 .. elpi:: ../code/global-state.elpi
-   :assert: N = 2
+   :assert: before set: 2 after set: 3

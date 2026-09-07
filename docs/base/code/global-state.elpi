@@ -22,4 +22,5 @@ main :-
   value 2,       % initialize
   get N,         % read the current value
   set 3,         % overwrite it
-  print "N =" N.
+  get M,         % read it again
+  print "before set:" N "after set:" M.
