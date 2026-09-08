@@ -128,27 +128,53 @@ head of ``gs``.
    whole computation aborts: :math:`\bot`.
 
 **cut**
+   .. math::
+
+      \dfrac{}{\langle \pi{:}{!}^{\,a_{cut}} :: gs \mid a \mid \sigma \mid \kappa\rangle
+              \longrightarrow
+              \langle gs \mid a_{cut} \mid \sigma \mid \kappa\rangle}
+
    ``!`` at the head of the goal list discards every alternative created
    since the enclosing rule was selected, by replacing the current
-   alternatives with the goal's own cut-to alternatives :math:`a_{cut}` —
-   this is why the cut is *hard*: alternatives left over from premises solved
-   earlier in the same rule are discarded too, not only the untried rules for
-   the predicate.
+   alternatives :math:`a` with the goal's own cut-to alternatives
+   :math:`a_{cut}` — the ``!`` goal is the one place a goal's third component
+   is read. This is why the cut is *hard*: alternatives left over from
+   premises solved earlier in the same rule are discarded too, not only the
+   untried rules for the predicate.
 
 **β**
-   If the head of the goal is a unification variable, e.g. the goal is
-   :math:`(X\ \vec t)`, and :math:`\sigma X` applied to :math:`\vec t`
-   β/η-reduces to :math:`p\ \vec u`, the goal is replaced by
-   :math:`p\ \vec u`. This is what lets a unification variable stand for a
-   predicate, as in ``P = true, P``.
+   .. math::
+
+      \dfrac{\sigma\,(X\,\vec t) \;=_{\beta\eta}\; p\,\vec u}
+            {\langle \pi{:}(X\,\vec t) :: gs \mid a \mid \sigma \mid \kappa\rangle
+             \longrightarrow
+             \langle \pi{:}p\,\vec u :: gs \mid a \mid \sigma \mid \kappa\rangle}
+
+   if the head of the goal is a unification variable and :math:`\sigma X`
+   applied to :math:`\vec t` β/η-reduces to an applicative term
+   :math:`p\,\vec u`, the goal is replaced by it. This is what lets a
+   unification variable stand for a predicate, as in ``P = true, P``.
 
 **pi**
-   ``pi x\ g`` picks a name :math:`y` fresh for the program (:math:`y \# \pi`,
-   HDR's notation for "fresh in"), adds it to :math:`\pi`, and continues with
-   :math:`g[x/y]` — the body with the fresh name substituted for the bound
-   variable.
+   .. math::
+
+      \dfrac{y \mathbin{\#} \pi}
+            {\langle \pi{:}(\mathtt{pi}\ x{\backslash}\ g) :: gs \mid a \mid \sigma \mid \kappa\rangle
+             \longrightarrow
+             \langle (y{+}\pi){:}\,g[x/y] :: gs \mid a \mid \sigma \mid \kappa\rangle}
+
+   ``pi x\ g`` picks a name :math:`y` fresh for the program
+   (:math:`y \mathbin{\#} \pi`, HDR's notation for "fresh in"), adds it to
+   :math:`\pi`, and continues with :math:`g[x/y]` — the body with the fresh
+   name put in for the bound variable.
 
 **⇒**
+   .. math::
+
+      \dfrac{}{\langle \pi{:}(h \Rightarrow g) :: gs \mid a \mid \sigma \mid \kappa\rangle
+              \longrightarrow
+              \langle (h{+}\pi){:}\,g :: gs \mid a \mid \sigma \mid \kappa\rangle}
+
    ``h => g`` continues with :math:`g` under :math:`h + \pi`: the extra rules
    ``h`` prepended to the program, for the duration of ``g`` only.
 
