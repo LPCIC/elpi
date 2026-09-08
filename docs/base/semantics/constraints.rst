@@ -91,33 +91,30 @@ resumed a constraint suspends it again, as though nothing had happened.
 Incompatible constraints
 ==========================
 
-Suspending and resuming on their own are not quite enough. The goal
-``of (app D D) T`` — an unknown ``D`` applied to itself — succeeds, with two
-constraints about that one ``D``: one says ``D`` has some type ``S``, the
-other that ``D`` has a function type ``S -> T``. Each is a perfectly good
-suspended goal on its own; together they are contradictory, and the term
-should have been rejected. Nothing covered so far can express "take every
-constraint about the same hole together and decide" — that is what
-:doc:`chr` adds.
+Suspending and resuming on their own are not quite enough. Asked about an
+unknown ``N``, both ``even N`` and ``odd N`` suspend without complaint — yet
+no number is both, so a goal that suspended the two of them should have
+failed. Nothing seen so far looks at a pair of constraints together and
+decides they cannot coexist; that is what :doc:`chr` adds.
 
-One rule is enough for this case: whenever two ``of`` constraints are about
-the same hole, keep the first and unify the second type with it.
+One rule is enough here: whenever the store holds ``even N`` and ``odd N``
+for the same ``N``, run the goal ``false``.
 
 .. code-block:: elpi
 
-   constraint of {
-     rule (of X S1) \ (of X S2) <=> (S1 = S2).
+   constraint even odd {
+     rule (even X) (odd X) <=> false.
    }
 
-On ``of (app D D) T`` that rule fires on the two constraints above and runs
-``S = arr S T``, which fails the occur check — so the term is now rejected,
-as it should be:
+With that rule in the program, ``even N, odd N`` fails as soon as the second
+constraint enters the store:
 
 .. elpi:: ../code/incompatible.elpi
-   :assert: of \(app D D\): rejected
+   :assert: even N and odd N: rejected, no number is both
 
-The rule, the ``constraint`` block it lives in, and how such a rule sees the
-store are :doc:`../syntax/constraint-handling-rules` and :doc:`chr`.
+The ``rule`` shape, the ``constraint`` block it lives in, and how a rule
+matches the store rather than unifying with it are
+:doc:`../syntax/constraint-handling-rules` and :doc:`chr`.
 
 
 Example

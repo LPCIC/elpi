@@ -1,24 +1,23 @@
-% `of (app D D) T` applies an unknown D to itself. The checker suspends two
-% goals about D — "D : X1" and "D : arr X1 X2" — which cannot both hold. The
-% one-line constraint rule below (explained in "The constraint store")
-% combines them into X1 = arr X1 X2, which fails the occur check, so the
-% term is rejected, as it should be.
+% `even N` and `odd N`, each asked about an unknown N, both suspend without
+% complaint -- but no number is both even and odd. Suspending and resuming
+% cannot notice that. The one CHR rule below runs `false` whenever the store
+% holds `even N` and `odd N` for the same N, so the goal fails as it should.
 
-data tm.
-data ty.
-symb app tm -> tm -> tm.
-symb lam (tm -> tm) -> tm.
-symb arr ty -> ty -> ty.
+func even int.
+even (uvar as X) :- !, declare_constraint (even X) [X].
+even 0 :- !.
+even N :- N > 0, !, M is N - 2, even M.
 
-func of tm -> ty.
-of (app H A) T :- of H (arr S T), of A S.
-of (lam F) (arr S T) :- pi c\ of c S ==> of (F c) T.
-of (uvar as E) T :- declare_constraint (of E T) [E].
+func odd int.
+odd (uvar as X) :- !, declare_constraint (odd X) [X].
+odd 1 :- !.
+odd N :- N > 1, !, M is N - 2, odd M.
 
-constraint of {
-  rule (of X S1) \ (of X S2) <=> (S1 = S2).
+constraint even odd {
+  rule (even X) (odd X) <=> false.
 }
 
 main :-
-  ( of (app D D) _T, print "of (app D D): typed"
-  ; print "of (app D D): rejected" ).
+  ( even N, odd N,
+    print "even N and odd N: accepted (wrong!)", print_constraints
+  ; print "even N and odd N: rejected, no number is both" ).

@@ -254,10 +254,3 @@ every constraint against every other one (:doc:`chr`). Second, step 1
 actually freshens :math:`(\pi, c, t)`'s own names before adding it, so that
 the names of every constraint in the store stay pairwise disjoint — this is
 the "frozen into its own space of names" of :doc:`chr`.
-
-
-Example
-=======
-
-.. elpi:: ../code/beta-rule.elpi
-   :assert: ok: P was called through a variable
