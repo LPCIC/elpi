@@ -129,14 +129,3 @@ against ``app H1 A1`` for fresh ``H1``, ``A1``, then against ``app H2 A2``
 inside that, and so on without end. Neither outcome is what an elaborator
 needs. The way out — suspend the goal on the hole until its shape is known,
 instead of guessing — is :doc:`constraints`.
-
-
-Example
-=======
-
-A program is a set of rules; a rule fires when its head matches the goal,
-turning the rule's premises into new goals; the search backtracks over the
-rules.
-
-.. elpi:: ../code/family.elpi
-   :assert: bob is older than alice
