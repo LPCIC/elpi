@@ -61,7 +61,7 @@ extension of :math:`\sigma` such that :math:`\sigma' t_1 = \sigma' t_2`
 :math:`\sigma` such that :math:`\sigma' p = \sigma t` — it only ever assigns
 variables of the *pattern* :math:`p`, never ones already in :math:`t`; this is
 what makes a signature's input arguments matched rather than unified
-(:doc:`constraints`). Both are partial: on failure they are :math:`\bot`.
+(:doc:`constraints`). Both are partial: on failure they return :math:`\bot`.
 
 A *program* :math:`\pi = (N, I)` pairs a set of names :math:`N` — the
 constants introduced by :math:`\mathtt{pi}` — with an index :math:`I` mapping
@@ -222,7 +222,7 @@ applies to the goal :math:`p \vec t`:
    \begin{aligned}
    \mathrm{backchain}(\kappa, \pi, p\,\vec t, gs, \sigma, a)\ = \Big[\ &(\kappa,\ \sigma',\ [(\pi, g, a) \mid g \in \vec b] \mathbin{+\!+} gs) \\
      \text{for}\ &(p\ \vec u \mathrel{{:}{-}} \vec b) \in \pi\ p \\
-     \text{if}\ &\mathrm{select}(\overline{\vec t\ \vec u},\, \sigma) = \sigma' \neq \bot\ \Big]
+     \text{if}\ &\mathrm{select}({\vec t\ \vec u},\, \sigma) = \sigma' \neq \bot\ \Big]
    \end{aligned}
 
 in the order the rules appear in :math:`\pi\ p`. Every new goal of every
@@ -242,8 +242,8 @@ over the output pairs:
 .. math::
 
    \begin{aligned}
-   \mathrm{select}(\overline{\vec t\ \vec u},\, \sigma) =\ &\mathrm{fold}\ \mathrm{unify}\ \overline{\vec t\ \vec u}_{\,\mathrm{out}} \\
-     &\ \big(\mathrm{fold}\ \mathrm{match}\ \overline{\vec t\ \vec u}_{\,\mathrm{in}}\ \sigma\big)
+   \mathrm{select}({\vec t\ \vec u},\, \sigma) =\ &\mathrm{fold}\ \mathrm{unify}\ {\vec t\ \vec u}_{\,\mathrm{out}} \\
+     &\ \big(\mathrm{fold}\ \mathrm{match}\ {\vec t\ \vec u}_{\,\mathrm{in}}\ \sigma\big)
    \end{aligned}
 
 folding :math:`\bot` through either step aborts the whole rule, as does a
