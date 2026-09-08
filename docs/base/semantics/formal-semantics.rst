@@ -97,7 +97,7 @@ one pending goal list together with the rest of that state, and
 :math:`\longrightarrow` until it gets stuck at :math:`\mathrm{stop}` or
 :math:`\mathrm{abort}` below is what :math:`\mathrm{run}` computes. To keep
 the rules narrow we write a goal at the head of :math:`gs` as its program
-paired with its atom, :math:`\pi{:}\mathrm{atom}`, eliding the goal's own
+paired with its atom, :math:`(\pi, \mathrm{atom})`, eliding the goal's own
 cut-to alternatives except in :math:`\mathrm{cut}`, the one rule that reads
 them.
 
@@ -123,7 +123,7 @@ constraint logic programming one.
    .. math::
 
       \dfrac{\mathrm{backchain}(\kappa, \pi, p\,\vec t, gs, \sigma, a) = (\kappa, \sigma_1, gs_1) :: rest}
-            {\langle \pi{:}p\,\vec t :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs_1 \mid rest \mathbin{+\!+} a \mid \sigma_1 \mid \kappa\rangle}
+            {\langle (\pi, p\,\vec t) :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs_1 \mid rest \mathbin{+\!+} a \mid \sigma_1 \mid \kappa\rangle}
 
    the first alternative becomes the new configuration, its own leftover
    rules :math:`rest` pushed in front of :math:`a`. If
@@ -135,7 +135,7 @@ constraint logic programming one.
 :math:`\mathrm{cut}`
    .. math::
 
-      \dfrac{}{\langle \pi{:}\mathrm{cut}^{\,a_{cut}} :: gs \mid a \mid \sigma \mid \kappa\rangle
+      \dfrac{}{\langle (\pi, \mathrm{cut}, a_{cut}) :: gs \mid a \mid \sigma \mid \kappa\rangle
               \longrightarrow
               \langle gs \mid a_{cut} \mid \sigma \mid \kappa\rangle}
 
@@ -151,9 +151,9 @@ constraint logic programming one.
    .. math::
 
       \dfrac{\sigma\,(X\,\vec t) \;=_{\beta\eta}\; p\,\vec u}
-            {\langle \pi{:}(X\,\vec t) :: gs \mid a \mid \sigma \mid \kappa\rangle
+            {\langle (\pi, X\,\vec t) :: gs \mid a \mid \sigma \mid \kappa\rangle
              \longrightarrow
-             \langle \pi{:}p\,\vec u :: gs \mid a \mid \sigma \mid \kappa\rangle}
+             \langle (\pi, p\,\vec u) :: gs \mid a \mid \sigma \mid \kappa\rangle}
 
    if the head of the goal is a unification variable and :math:`\sigma X`
    applied to :math:`\vec t` :math:`\beta`/:math:`\eta`-reduces to an
@@ -165,9 +165,9 @@ constraint logic programming one.
    .. math::
 
       \dfrac{y \mathbin{\#} \pi}
-            {\langle \pi{:}(\mathtt{pi}\ x{\backslash}\ g) :: gs \mid a \mid \sigma \mid \kappa\rangle
+            {\langle (\pi, \mathtt{pi}\ x{\backslash}\ g) :: gs \mid a \mid \sigma \mid \kappa\rangle
              \longrightarrow
-             \langle (y{+}\pi){:}\,g[x/y] :: gs \mid a \mid \sigma \mid \kappa\rangle}
+             \langle (y{+}\pi, g[x/y]) :: gs \mid a \mid \sigma \mid \kappa\rangle}
 
    :math:`\mathtt{pi}\ x{\backslash}\ g` picks a name :math:`y` fresh for the
    program (:math:`y \mathbin{\#} \pi`, HDR's notation for "fresh in"), adds
@@ -177,9 +177,9 @@ constraint logic programming one.
 :math:`{\Rightarrow}`
    .. math::
 
-      \dfrac{}{\langle \pi{:}(h \Rightarrow g) :: gs \mid a \mid \sigma \mid \kappa\rangle
+      \dfrac{}{\langle (\pi, h \Rightarrow g) :: gs \mid a \mid \sigma \mid \kappa\rangle
               \longrightarrow
-              \langle (h{+}\pi){:}\,g :: gs \mid a \mid \sigma \mid \kappa\rangle}
+              \langle (h{+}\pi, g) :: gs \mid a \mid \sigma \mid \kappa\rangle}
 
    :math:`h \Rightarrow g` continues with :math:`g` under :math:`h + \pi`:
    the extra rules :math:`h` prepended to the program, for the duration of
@@ -196,7 +196,7 @@ constraint logic programming one.
    .. math::
 
       \dfrac{\mathcal{CHR}(\kappa, \pi, c, \vec X, a) = (gs', \kappa')}
-            {\langle \pi{:}\mathrm{delay}\ c\ \vec X :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs' \mathbin{+\!+} gs \mid a \mid \sigma \mid \kappa'\rangle}
+            {\langle (\pi, \mathrm{delay}\ c\ \vec X) :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs' \mathbin{+\!+} gs \mid a \mid \sigma \mid \kappa'\rangle}
 
 :math:`\mathrm{resume}`
    whenever the store holds a constraint :math:`(\pi, c, t)` some variable of
@@ -208,7 +208,7 @@ constraint logic programming one.
    .. math::
 
       \dfrac{(\pi, c, t) \in \kappa \quad \exists X \in t,\ X \in \mathrm{dom}(\sigma)}
-            {\langle gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle \pi{:}c :: gs \mid a \mid \sigma \mid \kappa - (\pi, c, t)\rangle}
+            {\langle gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle (\pi, c) :: gs \mid a \mid \sigma \mid \kappa - (\pi, c, t)\rangle}
 
 
 Backchain
