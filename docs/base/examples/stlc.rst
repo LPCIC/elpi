@@ -43,9 +43,8 @@ assignment.
 The last rule of ``of`` is what makes the checker usable on a term that is
 still being built. ``of (uvar as Hole) T`` matches a bare unification
 variable — a hole — and instead of failing (no term to inspect) or looping
-(if the argument were unified rather than matched,
-:doc:`../semantics/logic-programming-model`), it suspends: ``of Hole T``
-becomes a constraint, keyed on ``Hole``, to be retried once ``Hole`` is
+(if the argument were unified rather than matched), it suspends: ``of Hole
+T`` becomes a constraint, keyed on ``Hole``, to be retried once ``Hole`` is
 known. So ``of (app H _) AppTy`` with ``H`` unknown succeeds — ``AppTy`` left
 an unbound type, and two ``of`` goals suspended in the store. Assigning
 ``H`` the identity function wakes its constraint, which resolves; the goal
