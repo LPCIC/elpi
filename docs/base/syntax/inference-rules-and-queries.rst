@@ -72,7 +72,7 @@ Naming a subterm of the head
 
 ``(t as N)`` inside a rule head binds ``N`` to whatever ``t`` matched, so the
 body can name that subterm without describing it a second time. The
-parentheses are part of the syntax (:doc:`terms-and-operators`), and ``as``
+parentheses are part of the syntax (:doc:`terms`), and ``as``
 may wrap an argument or a piece of one, but not the head as a whole:
 
 .. code-block:: elpi

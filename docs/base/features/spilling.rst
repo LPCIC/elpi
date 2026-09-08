@@ -2,7 +2,7 @@
 Spilling
 ########
 
-``{ E }`` (:doc:`../syntax/terms-and-operators`) lifts the goal ``E`` out to
+``{ E }`` (:doc:`../syntax/terms`) lifts the goal ``E`` out to
 just before the smallest enclosing predicate call, replacing ``{ E }`` with a
 fresh variable for each argument ``E`` is not given — its output arguments,
 so exactly one in the common case:

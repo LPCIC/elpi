@@ -1,6 +1,6 @@
-###################
-Terms and operators
-###################
+#####
+Terms
+#####
 
 A term is Elpi's data: the goals it runs, the rules it stores and the values
 it computes are all terms. A term is built from the tokens of

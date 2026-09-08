@@ -14,7 +14,7 @@ rule then rejects the holes that admit no consistent type.
 .. elpi:: ../code/stlc.elpi
    :assert: type of Fst: arr X\d+ \(arr X\d+ X\d+\)\n\nwhd of Fst applied to the identity: fun c\d+ \\ fun c\d+ \\ c\d+\n\nfun \(x\\ app x x\) has no type: occur-check failure\n\nof \(app H _\): H still unknown, type X\d+ -- of has suspended:\n of X\d+ X\d+  /\* suspended on X\d+ \*/ of X\d+ \(arr X\d+ X\d+\)  /\* suspended on X\d+ \*/\n\nafter H := the identity, one constraint resolved:\n of X\d+ X\d+  /\* suspended on X\d+ \*/
 
-Terms are HOAS (:doc:`../syntax/terms-and-operators`): ``app`` pairs a
+Terms are HOAS (:doc:`../syntax/terms`): ``app`` pairs a
 function with its argument, ``fun`` carries an actual Elpi function
 ``term -> term`` — so ``λx.λy.x`` is ``fun (x\ fun y\ x)``, and applying that
 Elpi function *is* substitution, with no substitution code to write. Types

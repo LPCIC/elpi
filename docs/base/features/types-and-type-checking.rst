@@ -46,7 +46,7 @@ one the arguments fit:
 
 ``0`` and ``tt`` pin their rules to one signature each. The third rule's
 ``N`` does not — an integer *or* a boolean would type-check — so it carries a
-type ascription ``(N : int)`` (:doc:`../syntax/terms-and-operators`). A *call*
+type ascription ``(N : int)`` (:doc:`../syntax/terms`). A *call*
 with an unknown argument in a position where the signatures differ needs one
 the same way: ``px X S`` is ambiguous, ``px (X : int) S`` is not.
 

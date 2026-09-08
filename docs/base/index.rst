@@ -31,7 +31,7 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
    :caption: Syntax
 
    syntax/lexical-conventions
-   syntax/terms-and-operators
+   syntax/terms
    syntax/type-declarations
    syntax/inference-rules-and-queries
    syntax/constraint-handling-rules

@@ -15,7 +15,7 @@ there, but Elpi neither decodes nor validates it.
 
 This chapter describes how the text is broken into tokens. The grammar that
 assembles those tokens into terms and rules is covered in
-:doc:`terms-and-operators` and :doc:`inference-rules-and-queries`. To see how
+:doc:`terms` and :doc:`inference-rules-and-queries`. To see how
 a concrete piece of source is tokenised and parsed, run it through
 ``echo '…' | elpi -parse-term``, which prints the resulting term.
 

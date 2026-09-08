@@ -19,7 +19,7 @@ it and so can build a cyclic term (:doc:`compatibility`, where it is defined
 with ``:nooc``). ``same_term`` — infix ``==`` — tests plain syntactic
 equality, assigning nothing. ``pattern_match T P`` matches ``T`` against the
 pattern ``P``, assigning only ``P``'s variables
-(:doc:`syntax/terms-and-operators`).
+(:doc:`syntax/terms`).
 
 ``declare_constraint`` and ``print_constraints`` are
 :doc:`syntax/constraint-handling-rules`.
@@ -95,7 +95,7 @@ constructor is ``pr`` because ``,`` is conjunction; ``cmp`` is the result of a
 three-way comparison (``cmp_term``, ``std.compare``); ``diagnostic`` is
 returned by builtins that report a *reason* for failing rather than just
 failing (``ok`` / ``error "message"``). ``list`` (``::`` / ``[]``) is built
-in too — :doc:`syntax/terms-and-operators`.
+in too — :doc:`syntax/terms`.
 
 
 I/O and the file system

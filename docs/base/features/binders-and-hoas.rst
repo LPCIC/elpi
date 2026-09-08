@@ -3,7 +3,7 @@ Binders and HOAS
 ################
 
 :doc:`../semantics/logic-programming-model` introduces ``x\ t`` and ``pi`` for
-encoding object-language binders (:doc:`../syntax/terms-and-operators`,
+encoding object-language binders (:doc:`../syntax/terms`,
 :doc:`../syntax/inference-rules-and-queries`). This chapter is the practical
 side: writing code that goes under a binder, and inspecting what is currently
 in scope.
