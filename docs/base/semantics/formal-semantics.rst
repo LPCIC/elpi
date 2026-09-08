@@ -79,41 +79,45 @@ constraint store, a substitution, and the list of goals still to solve along
 that branch.
 
 
-The ``run`` judgement
-=======================
+The semantics
+=============
 
 .. math::
 
    \mathrm{run} : \mathrm{Alt} \times [\mathrm{Alt}] \to (K \times \Sigma \times [\mathrm{Alt}]) \uplus \{\bot\}
 
-``run`` takes the current alternative — its pending goals, store and
-substitution — and the list of alternatives still available, and either
+:math:`\mathrm{run}` takes the current alternative — its pending goals, store
+and substitution — and the list of alternatives still available, and either
 returns an updated store, substitution and remaining alternatives, or
 :math:`\bot` when every alternative has been exhausted. We write a
-**configuration** :math:`\langle gs \mid a \mid \sigma \mid \kappa\rangle` for
+*configuration* :math:`\langle gs \mid a \mid \sigma \mid \kappa\rangle` for
 one pending goal list together with the rest of that state, and
-:math:`\longrightarrow` for one step of ``run``; repeating
-:math:`\longrightarrow` until it gets stuck at **stop** or **abort** below is
-what ``run`` computes. To keep the rules narrow we write a goal at the head of
-``gs`` as its program paired with its atom, :math:`\pi{:}\mathrm{atom}`,
-eliding the goal's own cut-to alternatives except in **cut**, the one rule
-that reads them.
+:math:`\longrightarrow` for one step of :math:`\mathrm{run}`; repeating
+:math:`\longrightarrow` until it gets stuck at :math:`\textsf{stop}` or
+:math:`\textsf{abort}` below is what :math:`\mathrm{run}` computes. To keep
+the rules narrow we write a goal at the head of :math:`gs` as its program
+paired with its atom, :math:`\pi{:}\mathrm{atom}`, eliding the goal's own
+cut-to alternatives except in :math:`\textsf{cut}`, the one rule that reads
+them.
 
-The rules that touch the constraint store (**delay**, **resume**) take
-priority and are tried first; the rest are syntax-directed on the goal at the
-head of ``gs``.
+The rules that touch the constraint store (:math:`\textsf{delay}`,
+:math:`\textsf{resume}`) take priority and are tried first; the rest are
+syntax-directed on the goal at the head of :math:`gs`. The
+:math:`\textsf{resume}` rule follows :ref:`Michaylov & Pfenning, 1993
+<bib-michaylov>`, which reads a higher-order logic programming language as a
+constraint logic programming one.
 
-**stop**
+:math:`\textsf{stop}`
    .. math::
 
-      \langle [\,] \mid a \mid \sigma \mid \kappa\rangle\ \Downarrow\ (\kappa,\ \sigma,\ a)
+      \dfrac{}{\langle [\,] \mid a \mid \sigma \mid \kappa\rangle\ \to\ (\kappa,\ \sigma,\ a)}
 
    an empty goal list returns the current store, substitution and
    alternatives.
 
-**call** (and **backtrack**, **abort**)
+:math:`\textsf{call}` (and :math:`\textsf{backtrack}`, :math:`\textsf{abort}`)
    :math:`\mathrm{backchain}` (below) produces one alternative per rule that
-   applies to the goal at the head of ``gs``:
+   applies to the goal at the head of :math:`gs`:
 
    .. math::
 
@@ -121,28 +125,28 @@ head of ``gs``.
             {\langle \pi{:}p\,\vec t :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs_1 \mid rest \mathbin{+\!+} a \mid \sigma_1 \mid \kappa\rangle}
 
    the first alternative becomes the new configuration, its own leftover
-   rules (``rest``) pushed in front of ``a``. If :math:`\mathrm{backchain}`
-   is empty and :math:`a = a_0 :: a_s`, pop :math:`a_0` instead —
-   *chronological backtracking* to the most recent choice point, undoing
-   every assignment made since. If it is empty and :math:`a = [\,]`, the
-   whole computation aborts: :math:`\bot`.
+   rules :math:`rest` pushed in front of :math:`a`. If
+   :math:`\mathrm{backchain}` is empty and :math:`a = a_0 :: a_s`, pop
+   :math:`a_0` instead — *chronological backtracking* to the most recent
+   choice point, undoing every assignment made since. If it is empty and
+   :math:`a = [\,]`, the whole computation aborts: :math:`\bot`.
 
-**cut**
+:math:`\textsf{cut}`
    .. math::
 
       \dfrac{}{\langle \pi{:}{!}^{\,a_{cut}} :: gs \mid a \mid \sigma \mid \kappa\rangle
               \longrightarrow
               \langle gs \mid a_{cut} \mid \sigma \mid \kappa\rangle}
 
-   ``!`` at the head of the goal list discards every alternative created
+   :math:`{!}` at the head of the goal list discards every alternative created
    since the enclosing rule was selected, by replacing the current
    alternatives :math:`a` with the goal's own cut-to alternatives
-   :math:`a_{cut}` — the ``!`` goal is the one place a goal's third component
-   is read. This is why the cut is *hard*: alternatives left over from
-   premises solved earlier in the same rule are discarded too, not only the
-   untried rules for the predicate.
+   :math:`a_{cut}` — the :math:`{!}` goal is the one place a goal's third
+   component is read. This is why the cut is *hard*: alternatives left over
+   from premises solved earlier in the same rule are discarded too, not only
+   the untried rules for the predicate.
 
-**β**
+:math:`\beta`
    .. math::
 
       \dfrac{\sigma\,(X\,\vec t) \;=_{\beta\eta}\; p\,\vec u}
@@ -151,11 +155,12 @@ head of ``gs``.
              \langle \pi{:}p\,\vec u :: gs \mid a \mid \sigma \mid \kappa\rangle}
 
    if the head of the goal is a unification variable and :math:`\sigma X`
-   applied to :math:`\vec t` β/η-reduces to an applicative term
-   :math:`p\,\vec u`, the goal is replaced by it. This is what lets a
-   unification variable stand for a predicate, as in ``P = true, P``.
+   applied to :math:`\vec t` :math:`\beta`/:math:`\eta`-reduces to an
+   applicative term :math:`p\,\vec u`, the goal is replaced by it. This is
+   what lets a unification variable stand for a predicate, as in
+   :math:`P = \mathtt{true},\ P`.
 
-**pi**
+:math:`\textsf{pi}`
    .. math::
 
       \dfrac{y \mathbin{\#} \pi}
@@ -163,39 +168,40 @@ head of ``gs``.
              \longrightarrow
              \langle (y{+}\pi){:}\,g[x/y] :: gs \mid a \mid \sigma \mid \kappa\rangle}
 
-   ``pi x\ g`` picks a name :math:`y` fresh for the program
-   (:math:`y \mathbin{\#} \pi`, HDR's notation for "fresh in"), adds it to
-   :math:`\pi`, and continues with :math:`g[x/y]` — the body with the fresh
-   name put in for the bound variable.
+   :math:`\mathtt{pi}\ x{\backslash}\ g` picks a name :math:`y` fresh for the
+   program (:math:`y \mathbin{\#} \pi`, HDR's notation for "fresh in"), adds
+   it to :math:`\pi`, and continues with :math:`g[x/y]` — the body with the
+   fresh name put in for the bound variable.
 
-**⇒**
+:math:`{\Rightarrow}`
    .. math::
 
       \dfrac{}{\langle \pi{:}(h \Rightarrow g) :: gs \mid a \mid \sigma \mid \kappa\rangle
               \longrightarrow
               \langle (h{+}\pi){:}\,g :: gs \mid a \mid \sigma \mid \kappa\rangle}
 
-   ``h => g`` continues with :math:`g` under :math:`h + \pi`: the extra rules
-   ``h`` prepended to the program, for the duration of ``g`` only.
+   :math:`h \Rightarrow g` continues with :math:`g` under :math:`h + \pi`:
+   the extra rules :math:`h` prepended to the program, for the duration of
+   :math:`g` only.
 
-**delay**
-   ``declare_constraint c \vec X``, written :math:`\Delta\ c\ \vec X`, adds
+:math:`\textsf{delay}`
+   :math:`\Delta\ c\ \vec X` — :math:`\mathrm{declare\_constraint}` — adds
    :math:`(\pi, c, \vec X)` to the store. Because a new constraint may
-   immediately enable a constraint handling rule, :math:`\mathcal{CHR}` (below)
-   runs right away; whatever goals it produces are solved *before* the rest of
-   the current branch:
+   immediately enable a constraint handling rule, :math:`\mathcal{CHR}`
+   (below) runs right away; whatever goals it produces are solved *before*
+   the rest of the current branch:
 
    .. math::
 
       \dfrac{\mathcal{CHR}(\kappa, \pi, c, \vec X, a) = (gs', \kappa')}
             {\langle \pi{:}\Delta\ c\ \vec X :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs' \mathbin{+\!+} gs \mid a \mid \sigma \mid \kappa'\rangle}
 
-**resume**
-   Whenever the store holds a constraint :math:`(\pi, c, t)` some variable of
+:math:`\textsf{resume}`
+   whenever the store holds a constraint :math:`(\pi, c, t)` some variable of
    which is now in :math:`\mathrm{dom}(\sigma)`, it is removed from the store
    and :math:`c` is solved next, ahead of every pending goal, under program
-   :math:`\pi` and the current alternatives as its (irrelevant, since ``c`` is
-   never ``!``) cut-to list:
+   :math:`\pi` and the current alternatives as its cut-to list — irrelevant
+   there, since :math:`c` is an applicative term, never :math:`{!}`:
 
    .. math::
 

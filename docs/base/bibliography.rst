@@ -84,3 +84,12 @@ Neng-Fa Zhou, `The Language Features and Architecture of B-Prolog
 12(1–2), 2012, pages 189–218. Introduces B-Prolog's *matching clauses*, whose
 one-way head matching is the idea behind Elpi's input-mode arguments — see
 :doc:`semantics/logic-programming-model` and :doc:`features/modes`.
+
+.. _bib-michaylov:
+
+Spiro Michaylov and Frank Pfenning, `Higher-Order Logic Programming as
+Constraint Logic Programming <https://api.semanticscholar.org/CorpusID:9980455>`_,
+Proceedings of the First Workshop on Principles and Practice of Constraint
+Programming, Brown University, 1993, pages 221–229. Reads a higher-order
+logic programming language as a constraint logic programming one; the
+constraint-resume rule of :doc:`semantics/formal-semantics` follows it.
