@@ -26,34 +26,9 @@ hand, succeeds and assigns it:
 This is what makes input arguments safe to leave partially unknown: a call
 with a hole in an input position does not force a guess, it just finds no
 matching rule (or suspends, if the predicate has an ``uvar`` rule of its own —
-:doc:`../syntax/constraint-handling-rules`).
-
-TODO: move this section to unification variables and rename it unification variable inspection
-Matching an open input on purpose
-====================================
-
-To write a rule that *does* fire on an unassigned input, match it with the
-``uvar`` keyword in the rule head. It comes in a few shapes:
-
-* ``uvar`` — matches any hole;
-* ``uvar as X`` — matches a hole and binds ``X`` to the whole term, for the
-  rest of the rule to use:
-
-  .. code-block:: elpi
-
-     even (uvar as X) :- !, declare_constraint (even X) [X].
-
-* ``uvar Hd Args`` — matches an *applied* hole, binding ``Hd`` to the bare
-  variable and ``Args`` to the list of arguments it is applied to (the names in
-  scope where it was created, followed by any it is explicitly applied to);
-* ``uvar Hd Args as X`` — the same, and binds ``X`` to the whole applied term.
-
-.. elpi:: ../code/uvar-pattern.elpi
-   :assert: unapplied hole: X\d+\napplied hole: X\d+ c\d+ c\d+ -- head X\d+ args \[c\d+, c\d+\]\nnot a hole: 42
-
-``var`` (:doc:`unification-and-variables`) is the same decomposition as a
-*builtin*, callable in a rule body on a term the rule head did not already
-match with ``uvar``.
+:doc:`../syntax/constraint-handling-rules`). To write a rule that *does* fire
+on an unassigned input, match it with the ``uvar`` keyword —
+:doc:`unification-and-variables`.
 
 The standalone ``mode`` directive — the older, separate way of marking
 arguments input/output — is :doc:`../compatibility`.

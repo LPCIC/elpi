@@ -34,9 +34,9 @@ The cut ``!``, ``not``, ``if``/``if2``, ``halt``/``stop``, ``std.once`` and
 structurally, and only works when both are ground.
 
 ``name``/``names`` list the eigenvariables in scope, ``var`` recognises and
-takes apart a unification variable (:doc:`features/modes` for its
-``uvar Hd Args`` form), ``constant`` a global constant, and ``occurs A T``
-checks whether the atom ``A`` appears in ``T`` —
+takes apart a unification variable (:doc:`features/unification-and-variables`
+for its ``uvar Hd Args`` form), ``constant`` a global constant, and
+``occurs A T`` checks whether the atom ``A`` appears in ``T`` —
 :doc:`features/unification-and-variables`.
 
 ``new_int`` hands out a strictly increasing integer and ``new_safe`` a store

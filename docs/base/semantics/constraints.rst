@@ -47,9 +47,9 @@ what the first means:
    % equivalent to:
    of E T :- var E, declare_constraint (of E T) [E].
 
-:doc:`../features/modes` has the full set of ``uvar`` head patterns, among
-them ``uvar Hd Args`` for taking apart a hole that has been *applied* to
-arguments.
+:doc:`../features/unification-and-variables` has the full set of ``uvar``
+head patterns, among them ``uvar Hd Args`` for taking apart a hole that has
+been *applied* to arguments.
 
 ``declare_constraint`` (:doc:`../syntax/constraint-handling-rules`) is what
 turns a goal into a constraint. Its goal argument must itself be a *function*

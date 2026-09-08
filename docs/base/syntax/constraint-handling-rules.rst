@@ -105,7 +105,7 @@ by a fresh constant that the rule cannot assign. Freezing is what makes a
 rule *match* the store rather than unify with it: the non-linear ``K`` in the
 rule below does not merge two unrelated constraints, it only fires when two
 constraints really are about the same variable. A frozen variable is shown to
-the rule through the ``uvar`` head pattern (:doc:`../features/modes`) as
+the rule through the ``uvar`` head pattern (:doc:`../features/unification-and-variables`) as
 ``uvar K L`` — ``K`` identifies it, ``L`` is the list of bound variables in
 its scope — and two ``uvar K …`` with the same ``K`` are the same variable.
 
@@ -172,7 +172,7 @@ Elpi does not check this yet (`issue #441
 <https://github.com/LPCIC/elpi/issues/441>`_).
 
 The usual idiom is a rule that fires while the interesting argument is still a
-variable — matched with the ``uvar`` pattern (:doc:`../features/modes`) — and
+variable — matched with the ``uvar`` pattern (:doc:`../features/unification-and-variables`) — and
 suspends the goal on it:
 
 .. code-block:: elpi

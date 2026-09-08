@@ -5,8 +5,40 @@ Unification and variables
 A unification variable stands for a term not yet known; it is assigned at
 most once, and backtracking undoes the assignment (:doc:`../semantics/logic-programming-model`,
 :doc:`../semantics/constraints`). This chapter covers the flags and builtins
-around that mechanism: the pattern fragment, the occur check, and the
-wildcard.
+around that mechanism: inspecting a variable, the pattern fragment, the occur
+check, and the wildcard.
+
+
+Unification variable inspection
+===============================
+
+A rule head does not normally fire on an unassigned variable: an input
+argument is *matched*, and matching against a rigid pattern would have to
+assign the hole (:doc:`modes`). To write a rule that *does* fire on a hole,
+match it in the head with the ``uvar`` keyword. It comes in a few shapes:
+
+* ``uvar`` — matches any hole;
+* ``uvar as X`` — matches a hole and binds ``X`` to the whole term, for the
+  rest of the rule to use:
+
+  .. code-block:: elpi
+
+     even (uvar as X) :- !, declare_constraint (even X) [X].
+
+* ``uvar Hd Args`` — matches an *applied* hole, binding ``Hd`` to the bare
+  variable and ``Args`` to the list of arguments it is applied to (the names
+  in scope where it was created, followed by any it is explicitly applied
+  to);
+* ``uvar Hd Args as X`` — the same, and binds ``X`` to the whole applied
+  term.
+
+.. elpi:: ../code/uvar-pattern.elpi
+   :assert: unapplied hole: X\d+\napplied hole: X\d+ c\d+ c\d+ -- head X\d+ args \[c\d+, c\d+\]\nnot a hole: 42
+
+The builtin ``var`` is the same decomposition from a rule body, on a term the
+head did not already take apart with ``uvar``: ``var V`` checks that ``V`` is
+unassigned, and ``var V Hd Args`` splits an applied one into its head ``Hd``
+and its argument list ``Args``.
 
 
 The pattern fragment
@@ -19,12 +51,9 @@ the *pattern fragment* (Lλ, Miller's higher-order patterns —
 infinitely many — most general solutions, and Elpi either picks one
 heuristically or delays the problem as a constraint.
 
-Two builtins expose this. ``var V Hd Args`` decomposes an applied unification
-variable into its identity ``Hd`` and its argument list ``Args`` (with no
-extra arguments, ``var V`` just checks ``V`` is unassigned).
 ``distinct_names L`` checks that ``L`` is a list of pairwise-distinct bound
-names — so, given ``Args`` from ``var``, whether a variable is currently in
-the pattern fragment:
+names, so — given the ``Args`` from ``var`` above — it tells whether a
+variable is currently in the pattern fragment:
 
 .. code-block:: elpi
 
