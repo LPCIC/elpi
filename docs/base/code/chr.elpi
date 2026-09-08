@@ -11,8 +11,8 @@ func gcd int, group.
 gcd A (uvar as G) :- !, declare_constraint (gcd A G) [G].
 
 % once resumed on a concrete group, report the surviving number
-gcd 11 group-1 :- print "group 1 GCD is 11".
-gcd 7  group-2 :- print "group 2 GCD is 7".
+gcd X group-1 :- print "group 1 GCD is" X.
+gcd X group-2 :- print "group 2 GCD is" X.
 
 constraint gcd {
   % drop a duplicate number

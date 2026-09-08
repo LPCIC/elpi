@@ -3,13 +3,13 @@ Introduction
 ############
 
 Elpi is an embeddable implementation of λProlog extended with Constraint
-Handling Rules (:doc:`semantics/overview`). λProlog is the logic programming
+Handling Rules. λProlog is the logic programming
 language built on higher-order hereditary Harrop formulas described by
 :ref:`Miller and Nadathur <bib-miller-nadathur>`. Constraint Handling Rules
 (:ref:`Sneyers et al. <bib-chr-survey>`) are a rule-based formalism for
 rewriting a store of constraints — adding to it, removing from it, combining
 its elements — which Elpi puts to work inspecting and simplifying goals it
-has set aside for later (:doc:`semantics/chr`).
+has set aside for later.
 
 Like every logic programming language Elpi computes by proof search, but its
 terms are those of the simply-typed λ-calculus rather than first-order trees.

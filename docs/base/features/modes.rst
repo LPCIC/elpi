@@ -28,7 +28,7 @@ with a hole in an input position does not force a guess, it just finds no
 matching rule (or suspends, if the predicate has an ``uvar`` rule of its own —
 :doc:`../syntax/constraint-handling-rules`).
 
-MOVE this section to unification variables and rename it unification variable inspection
+TODO: move this section to unification variables and rename it unification variable inspection
 Matching an open input on purpose
 ====================================
 

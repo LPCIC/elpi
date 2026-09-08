@@ -15,9 +15,7 @@ This installs the ``elpi`` command-line tool used throughout this manual and
 the ``elpi`` findlib package that an OCaml application links against to embed
 the interpreter (``-package elpi``, see :doc:`embedding`).
 
-Elpi is also packaged for Nix and for Debian and its derivatives, and it
-builds from a clone of the repository with ``make build`` once its opam
-dependencies are installed.
+Elpi is also packaged for Nix and for Debian and its derivatives.
 
 In addition, every continuous-integration run produces statically linked
 binaries for Linux, macOS and Windows, downloadable from the `project's
@@ -30,8 +28,7 @@ Running a program
 ====================
 
 An Elpi program is a collection of rules kept in one or more ``.elpi`` files.
-Here is a complete one. Running it with ``-test`` compiles the file,
-type-checks and determinacy-checks it, and executes the query ``main``; the
+Here is a complete one. Running it with ``-test`` executes the query ``main``; the
 output ``main`` prints is shown below the listing:
 
 .. elpi:: code/hello.elpi
@@ -69,10 +66,8 @@ A few command-line flags matter from the first program on:
 * ``-I PATH`` adds a directory to the search path used to resolve
   ``accumulate`` directives (:doc:`features/program-organization`); it may be
   passed more than once;
-* ``-D NAME`` defines a compiler variable, as read by ``:if`` conditional
-  compilation (:doc:`features/conditional-compilation`);
-* ``--version`` prints the Elpi version, and ``--help`` lists every flag —
-  including the tracing options covered in :doc:`debugging-and-tracing`.
+* ``--help`` lists every flag;
+* ``--version`` prints the Elpi version
 
 
 Editor support

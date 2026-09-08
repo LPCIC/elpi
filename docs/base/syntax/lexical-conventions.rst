@@ -3,7 +3,7 @@ Lexical conventions
 ###################
 
 An Elpi source file is read as a stream of bytes. At the top level it is a
-sequence of *rules* and *directives*, each terminated by a full stop ``.``.
+sequence of *rules* and *directives*, each terminated by a full stop.
 Whitespace — spaces, tabs, carriage returns and newlines — separates tokens
 and is otherwise insignificant: indentation carries no meaning, and the
 terminating ``.`` need not sit on a line of its own.
@@ -60,7 +60,7 @@ token. A name is therefore glued together by ``+``, ``-``, ``>``, ``!``,
 
 .. code-block:: text
 
-   a->b        one identifier   (write  a -> b  for the implication)
+   a->b        one identifier   (write  a -> b  for the function space)
    n+1         one identifier   (write  n + 1   for the addition)
    foo!        one identifier
    foo@bar     one identifier   (@ is special only as the first character)
@@ -76,8 +76,8 @@ identifier at all: it is a mixfix operator, covered under `Operators`_ below.
 An identifier may not *start* with ``-`` or a digit, although it may contain
 them: ``make-palindrome`` and ``v1`` are each a single token. The everyday
 consequence is that an infix operator written between two bare names needs
-spaces around it — ``X - Y`` for subtraction, ``A -> B`` for implication,
-``N = M`` for unification. Without the spaces, ``X-Y`` and ``A->B`` are just
+spaces around it — ``X - Y`` for subtraction, 
+``N = M`` for unification. Without the spaces, ``X-Y`` and ``N=M`` are just
 long names.
 
 .. rubric:: Variables and constants

@@ -61,24 +61,6 @@ handling rules start combining constraints.
 Suspending and resuming
 =========================
 
-The STLC checker of :doc:`../examples/stlc` handles an incomplete term with
-one extra rule — the ``uvar`` one below — that gives a hole a sensible
-meaning in place of the failure or the infinite loop:
-
-.. code-block:: elpi
-
-   func of tm -> ty.
-   of (app H A) T :- of H (arr S T), of A S.
-   of (lam F) (arr S T) :- pi c\ of c S ==> of (F c) T.
-   of (uvar as E) T :- declare_constraint (of E T) [E].
-
-Now ``of (app H A) T`` with ``H`` and ``A`` both unknown succeeds, leaving two
-suspended goals that record what is still to be checked once ``H`` and ``A``
-become known (the Example below shows the store). When ``H`` is later
-assigned, its constraint is resumed like any other suspended goal and
-simplifies: the constraint left over now mentions ``H``'s former unknown type
-directly, rather than behind an arrow.
-
 The list passed to ``declare_constraint`` is the constraint's *trigger* — the
 variables whose assignment wakes it up. A constraint honours backtracking
 just as a plain unification assignment does: undoing the assignment that

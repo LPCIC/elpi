@@ -212,7 +212,7 @@ constraint logic programming one.
 
 
 Backchain
-==========
++++++++++++++
 
 :math:`\mathrm{backchain}` builds one alternative per rule of :math:`p` that
 applies to the goal :math:`p \vec t`:
@@ -232,7 +232,7 @@ results.
 
 
 Select
-=======
+++++++++
 
 :math:`\mathrm{select}` is what makes a signature's inputs matched and its
 outputs unified: given the pairs of a rule's head arguments with the goal's,
@@ -250,8 +250,8 @@ folding :math:`\bot` through either step aborts the whole rule, as does a
 failed :math:`\mathrm{match}` or :math:`\mathrm{unify}` on any one pair.
 
 
-The CHR procedure
-=================
+The :math:`\mathcal{CHR}` procedure
+++++++++++++++++++++++++++++++++++++
 
 A constraint rule :math:`G_1 \mathrel{\backslash} G_2 \mid T \Leftrightarrow G_3`
 has a logical reading: :math:`T \land G_1 \Rightarrow (G_2 \Leftrightarrow G_3)`
