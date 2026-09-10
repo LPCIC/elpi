@@ -82,6 +82,59 @@ let rec pp_dtype fmt = function
   | Arrow (m, _, l, r) -> Format.fprintf fmt "(%a %a-> %a)" pp_dtype l Mode.pretty m pp_dtype r
   | Exp l -> Format.fprintf fmt "Exp [%a]" (pplist pp_dtype ", ") l
 
+(* User-facing rendering of a dtype, in the surface [(func ...)] / [(pred ...)]
+   syntax (no line-break hints: these expressions are short). [pp_dtype] above
+   stays as-is for debug traces. *)
+let dtype_to_string d =
+  let is_in m = m = Mode.Input in
+  let mode m = Mode.show_pretty m in
+  let var v = if v = Structured.Variadic then ".." else "" in
+  let rec arrow_tail = function
+    | (Det | Rel) as x -> Some x
+    | Arrow (_, _, _, t) -> arrow_tail t
+    | _ -> None
+  in
+  (* true when all inputs precede all outputs: renderable as [A, B -> C, D] *)
+  let rec std_modes input = function
+    | Arrow (m, _, _, t) when is_in m && input -> std_modes true t
+    | Arrow (m, _, _, t) when not (is_in m) -> std_modes false t
+    | Det | Rel -> true
+    | _ -> false
+  in
+  let rec s = function
+    | Det -> "(func)"
+    | Rel -> "(pred)"
+    | Any | Exp _ -> "any"
+    | BVar b -> Format.asprintf "%a" F.pp b
+    | Arrow _ as x -> begin
+        match arrow_tail x with
+        | Some Det when std_modes true x -> "(func" ^ spine ~fst:true true x ^ ")"
+        | Some Rel when std_modes true x -> "(pred" ^ spine ~fst:true true x ^ ")"
+        | Some tl -> "(" ^ (match tl with Det -> "func" | _ -> "pred") ^ " " ^ marked x ^ ")"
+        | None -> plain x
+      end
+  and paren t = match t with Arrow _ -> "(" ^ s t ^ ")" | _ -> s t
+  and spine ~fst input = function
+    | Arrow (m, v, l, r) ->
+        let sep, input =
+          if not (is_in m) && input then " -> ", false
+          else (if fst then " " else ", "), input
+        in
+        sep ^ paren l ^ var v ^ spine ~fst:false input r
+    | _ -> ""
+  and marked = function
+    | Arrow (m, v, l, r) ->
+        let rest = match r with Det | Rel -> "" | _ -> ", " ^ marked r in
+        mode m ^ ":" ^ paren l ^ var v ^ rest
+    | _ -> ""
+  and plain = function
+    | Arrow (m, v, l, r) -> paren l ^ " " ^ var v ^ mode m ^ "-> " ^ plain r
+    | t -> s t
+  in
+  s d
+
+let pretty_dtype fmt d = Format.fprintf fmt "%s" (dtype_to_string d)
+
 type t = (TypeAssignment.skema * Loc.t) F.Map.t [@@deriving show, ord]
 
 let arr m ~v a b = Arrow (m, v, a, b)
@@ -784,7 +837,7 @@ let check_clause, check_chr_guard_and_newgoal =
     let pp_bt i Good_call.{ exp; found; term } =
       let start =
         if i = 0 then "Offending term" else "Contained in" in
-      Format.asprintf "%s: (@[%a@]) \n - Inferred: %a \n - Expected: %a" start ScopedTerm.pretty term pp_dtype found pp_dtype exp
+      Format.asprintf "%s: (@[%a@]) \n - Inferred: %a \n - Expected: %a" start ScopedTerm.pretty term pretty_dtype found pretty_dtype exp
     in
     let l = Good_call.get gc |> List.rev in
     assert (l <> []);
@@ -796,25 +849,25 @@ let check_clause, check_chr_guard_and_newgoal =
       | FatalDetError (pred_name, gc) | DetError (pred_name, gc) ->
         let f Good_call.{ exp; found; term } =
           Format.asprintf "%sInvalid determinacy of output term %a.\n Expected: %a\n Found: %a"
-            (undecl_disclaimer ~types ~unknown pred_name) ScopedTerm.pretty term pp_dtype exp pp_dtype found 
+            (undecl_disclaimer ~types ~unknown pred_name) ScopedTerm.pretty term pretty_dtype exp pretty_dtype found 
         in
         err gc f
     | KError (`UVar pred_name, gc) ->
         let f Good_call.{ exp; found; term } =
           Format.asprintf "Invalid determinacy of constructor/builtin argument %a.\n Expected: %a\n Found: %a"
-            ScopedTerm.pretty term pp_dtype exp pp_dtype found 
+            ScopedTerm.pretty term pretty_dtype exp pretty_dtype found 
         in
         err gc f
     | KError (`Const pred_name, gc) ->
         let f Good_call.{ exp; found; term } =
           Format.asprintf "%sInvalid determinacy of constructor/builtin argument %a.\n Expected: %a\n Found: %a"
-            (undecl_disclaimer ~types ~unknown (Some pred_name)) ScopedTerm.pretty term pp_dtype exp pp_dtype found 
+            (undecl_disclaimer ~types ~unknown (Some pred_name)) ScopedTerm.pretty term pretty_dtype exp pretty_dtype found 
         in
         err gc f
     | CastError (_,gc) -> 
         let f Good_call.{ exp; found; term } =
           Format.asprintf "Cast error on term %a.\n Expected: %a\n Found: %a"
-            ScopedTerm.pretty term pp_dtype exp pp_dtype found 
+            ScopedTerm.pretty term pretty_dtype exp pretty_dtype found 
         in
         err gc f
     | RelationalBody (pred_name, gc) -> 

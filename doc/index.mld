@@ -1,0 +1,23 @@
+{0 elpi}
+
+This is the API reference for the [elpi] OCaml package.
+
+{1 Public API}
+
+{!module:Elpi} (library [elpi], findlib [-package elpi]) is the only
+public, supported entry point: everything a host application needs to
+embed the interpreter, drive it, and extend it with custom builtins,
+data types and quotations lives under this one module (see the
+{{:../embedding.html} Embedding and extending} chapter of the user
+manual for a guided tour).
+
+{1 Internal libraries}
+
+The rest of this package's libraries are Elpi's own implementation, split
+into separate dune libraries for internal build reasons:
+{!module:Elpi_compiler}, {!module:Elpi_lexer_config}, {!module:Elpi_parser},
+{!module:Elpi_runtime}, {!module:Elpi_trace_atd}, {!module:Trace_ppx},
+{!module:Trace_ppx_runtime} and {!module:Elpi_util}. They are documented
+here only because they are part of the same opam package; they are
+{b not} a supported API, carry no compatibility guarantees across releases,
+and a host application should never depend on them directly.

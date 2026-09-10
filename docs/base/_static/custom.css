@@ -1,0 +1,29 @@
+/* Wide MathJax formulas (formal-semantics.rst's inference rules) must not
+   push the page into horizontal scroll: let each one scroll on its own. */
+mjx-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+.math {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Click-to-expand asides (e.g. "Quoted identifiers" in
+   syntax/lexical-conventions). Collapsed by default; the summary is the
+   heading. */
+details.elpi-fold {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border: 1px solid #e1e4e5;
+  border-radius: 3px;
+  background: #fcfcfc;
+}
+details.elpi-fold > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+details.elpi-fold[open] > summary {
+  margin-bottom: 0.8em;
+}

@@ -1,0 +1,29 @@
+% Named global variables, built on top of the constraint store: `value` holds
+% a variable's current content, `set` overwrites it, `get` reads it. The
+% string argument is the variable's name, so several can coexist.
+
+func set string, int.
+set Name I :- declare_constraint (set Name I) [_].
+
+func get string -> int.
+get Name I :- declare_constraint (get Name I) [_].
+
+func value string, int.
+value Name I :- declare_constraint (value Name I) [_].
+
+constraint set get value {
+  rule \ (set Name I) (value Name _) <=> (value Name I).
+  rule (value Name J) \ (get Name I) <=> (I = J).
+  rule (set Name _)                  <=> (halt "unknown global variable" Name).
+  rule (get Name _)                  <=> (halt "unknown global variable" Name).
+  rule (value Name _) (value Name _) <=> (halt "double initialization of" Name).
+}
+
+main :-
+  value "x" 2,       % initialize x
+  value "y" 10,      % and y
+  get "x" N,         % read x
+  set "x" 3,         % overwrite x
+  get "x" M,         % read x again
+  get "y" Y,         % y is untouched
+  print "x before:" N "x after:" M "y:" Y.

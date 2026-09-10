@@ -1,0 +1,11 @@
+% Unification (=) performs the occur check by default; a predicate marked
+% :nooc, like the builtin unsound_unif, does not.
+
+data tm.
+symb f tm -> tm.
+
+main :-
+  ( X = f X, print "should not happen"
+  ; print "= rejects X = f X (occur check)" ),
+  ( unsound_unif Y (f Y), print "unsound_unif Y (f Y) succeeds"
+  ; print "should not happen" ).

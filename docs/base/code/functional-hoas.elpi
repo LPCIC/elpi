@@ -1,0 +1,15 @@
+data tm.
+symb app tm -> tm -> tm.
+symb lam (tm -> tm) -> tm.
+
+% `copy` is a function: one output per input. Going under `lam`, it adds a
+% `copy x x` rule for the fresh bound variable. Written with =!=> so a cut is
+% appended to that rule's body -- the determinacy checker still sees `copy` as
+% a func, where plain ==> would flag the two overlapping `copy` rules.
+func copy tm -> tm.
+copy (app A B) (app A1 B1) :- copy A A1, copy B B1.
+copy (lam F) (lam F1) :- pi x\ copy x x =!=> copy (F x) (F1 x).
+
+main :-
+  copy (lam x\ app x x) T,
+  print "copied:" T.

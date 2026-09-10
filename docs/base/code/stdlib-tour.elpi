@@ -1,0 +1,20 @@
+% Suffix conventions of the std. library: -i passes the index, -filter drops
+% where the callback fails, 2 walks two lists in lockstep. Then a comparator
+% map (any key type), and the one R-suffixed relation, std.appendR.
+
+main :-
+  std.map-i [10, 20, 30] (i\ x\ y\ y is x + i) R1,
+  print "map-i (index added):" R1,
+
+  std.map-filter [1, 2, 3, 4, 5] (x\ y\ 0 is x mod 2, y = x) Evens,
+  print "map-filter (evens kept):" Evens,
+
+  std.fold2 [1, 2, 3] [10, 20, 30] 0 (a\ b\ acc\ acc'\ acc' is acc + a * b) Dot,
+  print "fold2 (dot product):" Dot,
+
+  std.map.make cmp_term M0,
+  std.map.add "x" 1 M0 M1,
+  std.map.find "x" M1 V,
+  print "std.map, x ->" V,
+
+  ( std.appendR A B [1, 2], print "appendR split:" A B, fail ; true ).

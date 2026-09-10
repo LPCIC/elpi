@@ -1,0 +1,11 @@
+% A debug-only rule: present in the program, but only fires when the
+% compiler variable DEBUG is defined (run with `elpi conditional.elpi -test
+% -D DEBUG` to see it fire).
+
+func trace string.
+
+:if "DEBUG"
+trace Msg :- print "[debug]" Msg, !.
+trace _.
+
+main :- trace "checkpoint 1", print "done".

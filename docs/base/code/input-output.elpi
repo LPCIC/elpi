@@ -1,0 +1,18 @@
+% An input argument is matched: passing an unassigned variable matches no
+% rule, since matching a variable against a rule's pattern would have to
+% assign it. An output argument is unified: it does get assigned.
+
+data tm.
+symb z tm.
+symb s tm -> tm.
+
+pred as-input tm.
+as-input z :- print "matched z".
+as-input (s _) :- print "matched s _".
+
+pred as-output -> tm.
+as-output z.
+
+main :-
+  ( as-input _ ; print "as-input: an unassigned variable matched no rule" ),
+  as-output Y, print "as-output assigned Y to" Y.

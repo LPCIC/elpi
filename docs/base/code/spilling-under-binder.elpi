@@ -1,0 +1,14 @@
+% Spilling reaches into a binder: in the `lam` rule, `{pp (F x)}` is lifted
+% to a `pp (F x) R` goal placed *inside* the `pi x\ ... ==>`, so it can use the
+% fresh `x` and the `pp x "x"` hypothesis. The `app` rule spills twice in one
+% `is`, both lifted before the enclosing call.
+
+data tm.
+symb app tm -> tm -> tm.
+symb lam (tm -> tm) -> tm.
+
+func pp tm -> string.
+pp (app F X) S :- S is "(" ^ {pp F} ^ " " ^ {pp X} ^ ")".
+pp (lam F) S :- pi x\ pp x "x" ==> S is "\\x." ^ {pp (F x)}.
+
+main :- pp (lam f\ app f f) S, print S.

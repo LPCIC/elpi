@@ -1,0 +1,8 @@
+% Example used in the "Spilling" chapter.
+% The spilled call {std.rev L} is rewritten to a fresh variable bound by an
+% std.rev goal inserted just before std.append.
+
+pred make-palindrome list A -> list A.
+make-palindrome L Result :- std.append L {std.rev L} Result.
+
+main :- make-palindrome [1, 2, 3] R, print R.
