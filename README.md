@@ -75,33 +75,19 @@ autocmd FileType lprolog hi def link elpiSpill Special
 
 ## Documentation
 
+The main entry point is the [reference manual](https://lpcic.github.io/elpi/).
+
 The language is quite compatible with standard
 [λProlog](http://www.lix.polytechnique.fr/Labo/Dale.Miller/lProlog/)
 and ELPI is known to be able to run most of the λProlog programs out there
-(see the list of [known incompatibilities](INCOMPATIBILITIES.md) 
-with the [Teyjus](https://github.com/teyjus/teyjus) system).
 Reading [Programming with Higher-Order Logic](https://sites.google.com/site/proghol/)
 by Miller and Nadathur is highly recommended and covers standard λProlog.
 
-The extensions to λProlog implemented in ELPI are described in the
-[ELPI](ELPI.md) file, built-in predicates are documented in
+Built-in predicates are documented in
 [builtin](src/builtin.elpi).
 
-This [thesis](https://inria.hal.science/hal-05294918) is the most comprehensive
-document about Elpi and its applications. This [paper](https://inria.hal.science/hal-05026472)
-describes the determinacy checker.
-
 To cite Elpi use the [system description](https://hal.inria.fr/hal-01176856/)
-of the interpreter. A [longer paper](https://hal.inria.fr/hal-01410567v2) describes,
-among other things, the part of the language
-for declaring and manipulating constraints.
-
-For a lightweight introduction to Elpi one can look at the
-[slides](https://github.com/gares/mlws18/blob/master/slides.pdf) of 
-the talk given at the ML Family workshop 2018 titled "Elpi: an extension 
-language with binders and unification variables". The companion
-code of [toyml](https://github.com/gares/mlws18/tree/master/toyml)
-that implements W (ML type inference) in Elpi is also available.
+of the interpreter. 
 
 ### How to embed ELPI in your software
 
