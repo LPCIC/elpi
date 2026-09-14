@@ -1,0 +1,18 @@
+% One goal touching all four actions: run, suspend, handle (a CHR rule),
+% resume.
+
+func even int.
+even (uvar as X) :- !, print "suspend", declare_constraint (even X) [X].
+even 0 :- !, print "run: base case".
+even N :- N > 0, !, print "run: recurse", M is N - 2, even M.
+
+constraint even {
+  rule (even X) \ (even X) <=> (print "handle: drop a duplicate").
+}
+
+main :-
+  even Y,                    % run -> suspend: Y is still unknown
+  even Y,                    % a second constraint on the same Y
+  print "resuming, Y = 4",
+  Y = 4,                     % resume: the survivor becomes an active goal again
+  print "done".

@@ -1,0 +1,17 @@
+% Rules and queries — a small sample.
+
+data person.
+symb alice, bob, carol person.
+
+pred parent -> person, person.        % two facts
+parent alice bob.
+parent bob carol.
+
+pred ancestor -> person, person.      % two rules
+ancestor X Y :- parent X Y.
+ancestor X Y :- parent X Z, ancestor Z Y.
+
+main :-
+  std.findall (ancestor alice _) All,   % the query: every Y with `ancestor alice Y`
+  std.length All N,
+  print "alice has" N "descendants".

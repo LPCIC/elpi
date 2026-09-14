@@ -1,0 +1,22 @@
+% The even/odd generators from incompatible.elpi (Constraints), plus the CHR
+% rule that catches the contradiction: it fires whenever the store holds
+% `even N` and `odd N` for the same, still-unknown `N`, matching them by the
+% identity of the frozen variable they share rather than unifying it.
+
+func even int.
+even (uvar as X) :- !, declare_constraint (even X) [X].
+even 0 :- !.
+even N :- N > 0, !, M is N - 2, even M.
+
+func odd int.
+odd (uvar as X) :- !, declare_constraint (odd X) [X].
+odd 1 :- !.
+odd N :- N > 1, !, M is N - 2, odd M.
+
+constraint even odd {
+  rule (even X) (odd X) <=> false.
+}
+
+main :-
+  ( even N, odd N, print "accepted (wrong!)"
+  ; print "rejected, no number is both" ).

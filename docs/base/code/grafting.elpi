@@ -1,0 +1,12 @@
+% A library rule, named so client code can graft in front of it.
+
+pred report string.
+
+:name "default-report"
+report Msg :- print "default:" Msg.
+
+% accumulated after the library, this rule takes over for good
+:name "custom-report" :before "default-report"
+report Msg :- print "custom:" Msg, !.
+
+main :- report "hello".

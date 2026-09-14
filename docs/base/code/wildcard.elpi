@@ -1,0 +1,12 @@
+% A repeated named variable forces its occurrences to be equal; `_` never
+% does, even used more than once in the same head.
+
+pred same int, int.
+same X X.                % the repeated X forces the two arguments to be equal
+
+pred any int, int.
+any _ _.                 % each _ is an independent wildcard: never forces anything
+
+main :-
+  (same 1 2, print "same 1 2 succeeds (unexpected)" ; print "same 1 2 fails, as expected"),
+  (any 1 2, print "any 1 2 succeeds, as expected" ; print "any 1 2 fails").

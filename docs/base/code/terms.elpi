@@ -1,0 +1,17 @@
+% Terms — a small sample.
+
+data tree.
+symb leaf tree.
+symb node tree -> tree -> tree.
+
+pred leaves -> tree, list tree.
+leaves leaf [leaf].
+leaves (node L R) All :- leaves L A, leaves R B, std.append A B All.
+
+main :-
+  T = node (node leaf leaf) leaf,   % application: node applied to two trees
+  leaves T Ls,                      % Ls is a list term
+  std.length Ls N,
+  Twice = (x\ [x, x]),              % a lambda term
+  Twice leaf = Pair,                % applied to leaf -> [leaf, leaf]
+  print "leaves:" N "pair:" Pair.

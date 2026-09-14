@@ -1,0 +1,7 @@
+% A macro's own variables are fresh at every expansion site, even when they
+% happen to share a name with a variable already in scope where the macro
+% is used.
+
+macro @check X :- (Tmp = X, print "macro's Tmp =" Tmp).
+
+main :- Tmp = 999, @check 5, print "caller's Tmp is still" Tmp.

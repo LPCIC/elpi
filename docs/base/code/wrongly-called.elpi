@@ -1,0 +1,33 @@
+% map's better signature promises: if F is a function, map F is a function.
+% `meal` is a func, so its body must be functional -- calling map with the
+% deterministic `likes!` keeps the promise. `wrong-meal` is only a pred, so
+% the checker lets it call map with the plain relation `likes`: the call
+% still runs, it just leaves a choice point that backtracking walks into.
+
+data guest.
+data dish.
+symb mario, anna guest.
+symb pizza, pasta, gelato dish.
+
+pred likes guest -> dish.            % relational: mario likes two dishes
+likes mario pizza.
+likes mario pasta.
+likes anna gelato.
+
+func likes! guest -> dish.           % functional: commit to the first
+likes! G D :- likes G D, !.
+
+func map (func A -> B), list A -> list B.
+map _ [] [].
+map F [X|XS] [Y|YS] :- F X Y, map F XS YS.
+
+func meal list guest -> list dish.
+meal Gs Ds :- map likes! Gs Ds.
+
+pred wrong-meal list guest -> list dish.
+wrong-meal Gs Ds :- map likes Gs Ds.
+
+main :-
+  meal [mario, anna] Ds, print "meal:" Ds,
+  ( wrong-meal [mario, anna] Ds1, print "wrong-meal:" Ds1, fail
+  ; true ).
