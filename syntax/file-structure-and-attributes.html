@@ -1,0 +1,357 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>File structure and attributes &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Rule attributes" href="rule-attributes.html" />
+    <link rel="prev" title="Constraint handling rules" href="constraint-handling-rules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">File structure and attributes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#accumulating-files">Accumulating files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#namespaces">Namespaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#shortening-names">Shortening names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-library-s-public-surface">A library’s public surface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#macros">Macros</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-multi-file-program">A multi-file program</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">File structure and attributes</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/syntax/file-structure-and-attributes.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="file-structure-and-attributes">
+<h1>File structure and attributes<a class="headerlink" href="#file-structure-and-attributes" title="Link to this heading"></a></h1>
+<p>A program is one or more files, each a sequence of rules, signatures
+(<a class="reference internal" href="type-declarations.html"><span class="doc">Type declarations</span></a>) and directives. What follows are the directives
+that stitch files together and organise names, and how they combine into a
+multi-file program. The attributes that decorate individual rules (<code class="docutils literal notranslate"><span class="pre">:name</span></code>,
+<code class="docutils literal notranslate"><span class="pre">:if</span></code>, <code class="docutils literal notranslate"><span class="pre">:untyped</span></code> and the rest) are described in <a class="reference internal" href="rule-attributes.html"><span class="doc">Rule attributes</span></a>.</p>
+<section id="accumulating-files">
+<h2>Accumulating files<a class="headerlink" href="#accumulating-files" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">accumulate</span></code> loads another file:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">accumulate</span><span class="w"> </span>stdlib<span class="o">.</span><span class="w">            </span><span class="c">% loads stdlib.elpi</span>
+<span class="kd">accumulate</span><span class="w"> </span>parser<span class="kd">,</span><span class="w"> </span>printer<span class="o">.</span><span class="w">   </span><span class="c">% several at once</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;lib/json&quot;</span><span class="o">.</span><span class="w">        </span><span class="c">% a quoted path, for names with . or /</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">.elpi</span></code> extension is added automatically. A plain name is resolved first
+relative to the file that accumulates it, and then along every directory
+passed with <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-I</span> <span class="pre">PATH</span></code> (repeatable); this is how a program accumulates
+an installed library by name without knowing where it sits on disk. A file is
+loaded <strong>once</strong> even if it is accumulated from several places, so accumulation
+forms a graph, not a tree.</p>
+<p><code class="docutils literal notranslate"><span class="pre">import</span></code> and <code class="docutils literal notranslate"><span class="pre">accum_sig</span></code> load Teyjus <code class="docutils literal notranslate"><span class="pre">.mod</span></code> / <code class="docutils literal notranslate"><span class="pre">.sig</span></code> files and are
+covered in <a class="reference internal" href="../compatibility.html"><span class="doc">Compatibility with Teyjus, Prolog and legacy Elpi</span></a>.</p>
+</section>
+<section id="namespaces">
+<h2>Namespaces<a class="headerlink" href="#namespaces" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">namespace</span> <span class="pre">n</span> <span class="pre">{</span> <span class="pre">…</span> <span class="pre">}</span></code> prefixes every name <strong>defined</strong> inside the block with
+<code class="docutils literal notranslate"><span class="pre">n.</span></code>:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">namespace</span><span class="w"> </span>json<span class="w"> </span>{
+<span class="w">  </span><span class="kd">func</span><span class="w"> </span><span class="nf">parse</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span>.
+<span class="w">  </span>parse<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>tokenize<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">Ts</span><span class="kd">,</span><span class="w"> </span>parse-tokens<span class="w"> </span><span class="nv">Ts</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span>
+}
+
+main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>json.parse<span class="w"> </span><span class="nv">Text</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>A name only <em>used</em> inside the block, not defined there, stays global.</p>
+<p><code class="docutils literal notranslate"><span class="pre">namespace</span></code> blocks nest, and so do their prefixes: a predicate declared in
+<code class="docutils literal notranslate"><span class="pre">namespace</span> <span class="pre">outer</span> <span class="pre">{</span> <span class="pre">namespace</span> <span class="pre">inner</span> <span class="pre">{</span> <span class="pre">…</span> <span class="pre">}</span> <span class="pre">}</span></code> is reached from outside as
+<code class="docutils literal notranslate"><span class="pre">outer.inner.name</span></code>.</p>
+<p>A leading <code class="docutils literal notranslate"><span class="pre">.</span></code> on a name escapes back to the global scope, which is how code
+inside a namespace reaches a name it has itself shadowed (see
+<a class="reference internal" href="lexical-conventions.html"><span class="doc">Lexical conventions</span></a>):</p>
+<p><strong>../code/namespaces.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% A namespace can redefine a name; a leading `.` on a name reaches the</span>
+<span class="linenos"> 2</span><span class="c">% global one from inside the namespace that shadows it.</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span><span class="kd">func</span><span class="w"> </span><span class="nf">emph</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>.
+<span class="linenos"> 5</span>emph<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="s2">&quot;*&quot;</span><span class="w"> </span><span class="kd">^</span><span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="kd">^</span><span class="w"> </span><span class="s2">&quot;*&quot;</span><span class="o">.</span>
+<span class="linenos"> 6</span>
+<span class="linenos"> 7</span><span class="kd">namespace</span><span class="w"> </span>loud<span class="w"> </span>{
+<span class="linenos"> 8</span><span class="w">  </span><span class="kd">func</span><span class="w"> </span><span class="nf">emph</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>.
+<span class="linenos"> 9</span><span class="w">  </span>emph<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="o">.</span>emph<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">E</span><span class="kd">,</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">E</span><span class="w"> </span><span class="kd">^</span><span class="w"> </span><span class="s2">&quot;!&quot;</span><span class="o">.</span><span class="w">   </span><span class="c">% .emph is the *global* emph</span>
+<span class="linenos">10</span>}
+<span class="linenos">11</span>
+<span class="linenos">12</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>emph<span class="w"> </span><span class="s2">&quot;hi&quot;</span><span class="w"> </span><span class="nv">Plain</span><span class="kd">,</span><span class="w"> </span>loud.emph<span class="w"> </span><span class="s2">&quot;hi&quot;</span><span class="w"> </span><span class="nv">Loud</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">Plain</span><span class="w"> </span><span class="nv">Loud</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">*hi* *hi*!</span>
+</pre></div>
+</div>
+</section>
+<section id="shortening-names">
+<h2>Shortening names<a class="headerlink" href="#shortening-names" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">shorten</span></code> introduces a local alias for a qualified name:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">shorten</span><span class="w"> </span>std.{ map<span class="kd">,</span><span class="w"> </span>rev<span class="w"> </span>}.<span class="w">          </span><span class="c">% write `map` for `std.map`</span>
+<span class="kd">shorten</span><span class="w"> </span>std.{ list.map<span class="kd">,</span><span class="w"> </span>string<span class="o">.</span>{ concat<span class="kd">,</span><span class="w"> </span>escape<span class="w"> </span>} }.<span class="w">   </span><span class="c">% a trie of names</span>
+</pre></div>
+</div>
+<p>The part before <code class="docutils literal notranslate"><span class="pre">{</span></code> is dropped, what is inside is kept: the second line makes
+<code class="docutils literal notranslate"><span class="pre">list.map</span></code>, <code class="docutils literal notranslate"><span class="pre">string.concat</span></code> and <code class="docutils literal notranslate"><span class="pre">string.escape</span></code> stand for the
+corresponding <code class="docutils literal notranslate"><span class="pre">std.…</span></code> names. A <code class="docutils literal notranslate"><span class="pre">shorten</span></code> is in effect until the end of the
+file or of the enclosing <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">…</span> <span class="pre">}</span></code> block.</p>
+</section>
+<section id="a-library-s-public-surface">
+<h2>A library’s public surface<a class="headerlink" href="#a-library-s-public-surface" title="Link to this heading"></a></h2>
+<p>Namespacing and <code class="docutils literal notranslate"><span class="pre">shorten</span></code> together let a file expose a small public API and
+keep its helpers out of the way: nest the helpers under an <code class="docutils literal notranslate"><span class="pre">internal</span></code>
+namespace, define the public predicates alongside it (they reach
+<code class="docutils literal notranslate"><span class="pre">internal.…</span></code> unqualified, being in the same enclosing namespace), and
+<code class="docutils literal notranslate"><span class="pre">shorten</span></code> only the public names for whoever accumulates the file.</p>
+<p><strong>../code/library-api.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% A library hides its helpers in a nested namespace and exposes only the</span>
+<span class="linenos"> 2</span><span class="c">% public entry point through `shorten`.</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span><span class="kd">namespace</span><span class="w"> </span>mylib<span class="w"> </span>{
+<span class="linenos"> 5</span><span class="w">  </span><span class="kd">namespace</span><span class="w"> </span>internal<span class="w"> </span>{
+<span class="linenos"> 6</span><span class="w">    </span><span class="kd">func</span><span class="w"> </span><span class="nf">helper</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 7</span><span class="w">    </span>helper<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">*</span><span class="w"> </span><span class="mi">2</span><span class="o">.</span>
+<span class="linenos"> 8</span><span class="w">  </span>}
+<span class="linenos"> 9</span><span class="w">  </span><span class="kd">func</span><span class="w"> </span><span class="nf">public-api</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos">10</span><span class="w">  </span>public-api<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>internal.helper<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y0</span><span class="kd">,</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">Y0</span><span class="w"> </span><span class="kd">+</span><span class="w"> </span><span class="mi">1</span><span class="o">.</span>
+<span class="linenos">11</span>}
+<span class="linenos">12</span>
+<span class="linenos">13</span><span class="kd">shorten</span><span class="w"> </span>mylib.{ public-api<span class="w"> </span>}.
+<span class="linenos">14</span>
+<span class="linenos">15</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>public-api<span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="nv">R</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;result:&quot;</span><span class="w"> </span><span class="nv">R</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">result: 21</span>
+</pre></div>
+</div>
+</section>
+<section id="macros">
+<h2>Macros<a class="headerlink" href="#macros" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">macro</span> <span class="pre">&#64;name</span> <span class="pre">Args</span> <span class="pre">:-</span> <span class="pre">Body.</span></code> defines a macro, expanded at compile time. Macro
+names start with <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> (<a class="reference internal" href="lexical-conventions.html"><span class="doc">Lexical conventions</span></a>). A macro is not a
+predicate: it disappears before the program runs, and it does not cross a file
+or block boundary, being visible only in the file (or <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">…</span> <span class="pre">}</span></code> block) that
+defines it.</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>macro<span class="w"> </span><span class="kd">@</span>newline<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="s2">&quot;\n&quot;</span><span class="o">.</span>
+macro<span class="w"> </span><span class="kd">@</span>of<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(of<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">T</span><span class="kd">,</span><span class="w"> </span>pp<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">N</span><span class="o">).</span>
+</pre></div>
+</div>
+<p>Expansion is <em>hygienic</em>: a macro’s own variables, those in <code class="docutils literal notranslate"><span class="pre">Body</span></code> not among
+<code class="docutils literal notranslate"><span class="pre">Args</span></code>, get a fresh instance at every expansion, distinct from anything at
+the use site, even a variable spelled the same way. Writing a macro is
+therefore as safe as writing a predicate with its own local variables, with no
+need to pick unlikely names to avoid a clash.</p>
+<p><strong>../code/macro-hygiene.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="c">% A macro&#39;s own variables are fresh at every expansion site, even when they</span>
+<span class="linenos">2</span><span class="c">% happen to share a name with a variable already in scope where the macro</span>
+<span class="linenos">3</span><span class="c">% is used.</span>
+<span class="linenos">4</span>
+<span class="linenos">5</span>macro<span class="w"> </span><span class="kd">@</span>check<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(<span class="nv">Tmp</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;macro&#39;s Tmp =&quot;</span><span class="w"> </span><span class="nv">Tmp</span><span class="o">).</span>
+<span class="linenos">6</span>
+<span class="linenos">7</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">Tmp</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="mi">999</span><span class="kd">,</span><span class="w"> </span><span class="kd">@</span>check<span class="w"> </span><span class="mi">5</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;caller&#39;s Tmp is still&quot;</span><span class="w"> </span><span class="nv">Tmp</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">macro&#39;s Tmp = 5</span>
+<span class="go">caller&#39;s Tmp is still 999</span>
+</pre></div>
+</div>
+<p>A macro is a natural way to name a recurring combination of goals. <code class="docutils literal notranslate"><span class="pre">&#64;of</span></code>
+above pairs the “typed” and “pretty-printed” facts that a hypothetical rule
+(<a class="reference internal" href="inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>) must add together at every bound variable
+of a term with binders; each <code class="docutils literal notranslate"><span class="pre">&#64;of</span> <span class="pre">x</span> <span class="pre">Name</span> <span class="pre">A</span></code> expands to <code class="docutils literal notranslate"><span class="pre">of</span> <span class="pre">x</span> <span class="pre">A,</span> <span class="pre">pp</span> <span class="pre">x</span> <span class="pre">Name</span></code>
+in place, so the two cannot drift apart as the surrounding code changes:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>of<span class="w"> </span>(lambda<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span>(arr<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span><span class="kd">@</span>of<span class="w"> </span>x<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>of<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="nv">B</span><span class="o">.</span>
+</pre></div>
+</div>
+</section>
+<section id="a-multi-file-program">
+<h2>A multi-file program<a class="headerlink" href="#a-multi-file-program" title="Link to this heading"></a></h2>
+<p>A library file, its predicate under a <code class="docutils literal notranslate"><span class="pre">table</span></code> namespace:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="c">% A small library, accumulated by file-structure.elpi.</span>
+
+<span class="kd">namespace</span><span class="w"> </span>table<span class="w"> </span>{
+<span class="w">  </span><span class="kd">func</span><span class="w"> </span><span class="nf">lookup</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">int</span>.
+<span class="w">  </span>lookup<span class="w"> </span><span class="s2">&quot;one&quot;</span><span class="w"> </span><span class="mi">1</span><span class="o">.</span>
+<span class="w">  </span>lookup<span class="w"> </span><span class="s2">&quot;two&quot;</span><span class="w"> </span><span class="mi">2</span><span class="o">.</span>
+}
+</pre></div>
+</div>
+<p>and a program that accumulates it, <code class="docutils literal notranslate"><span class="pre">shorten</span></code>s the namespaced name, defines
+a macro, and grafts a rule before a named fallback:</p>
+<p><strong>../code/file-structure.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Pulls in table-lib.elpi, shortens a namespaced name, defines a macro, and</span>
+<span class="linenos"> 2</span><span class="c">% grafts a rule before a named fallback.</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span><span class="kd">accumulate</span><span class="w"> </span>table-lib<span class="o">.</span>
+<span class="linenos"> 5</span>
+<span class="linenos"> 6</span><span class="kd">shorten</span><span class="w"> </span>table.{ lookup<span class="w"> </span>}.<span class="w">        </span><span class="c">% `lookup` now means `table.lookup`</span>
+<span class="linenos"> 7</span>
+<span class="linenos"> 8</span>macro<span class="w"> </span><span class="kd">@</span>missing<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="mi">0</span><span class="o">.</span>
+<span class="linenos"> 9</span>
+<span class="linenos">10</span><span class="kd">pred</span><span class="w"> </span><span class="nf">value</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos">11</span>
+<span class="linenos">12</span><span class="k k-Mode">:name</span><span class="w"> </span><span class="s2">&quot;default&quot;</span>
+<span class="linenos">13</span>value<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="kd">@</span>missing<span class="o">.</span>
+<span class="linenos">14</span>
+<span class="linenos">15</span><span class="k k-Mode">:before</span><span class="w"> </span><span class="s2">&quot;default&quot;</span>
+<span class="linenos">16</span>value<span class="w"> </span><span class="nv">K</span><span class="w"> </span><span class="nv">V</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>lookup<span class="w"> </span><span class="nv">K</span><span class="w"> </span><span class="nv">V</span><span class="kd">,</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos">17</span>
+<span class="linenos">18</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">19</span><span class="w">  </span>value<span class="w"> </span><span class="s2">&quot;two&quot;</span><span class="w"> </span><span class="nv">A</span><span class="kd">,</span><span class="w"> </span>value<span class="w"> </span><span class="s2">&quot;nope&quot;</span><span class="w"> </span><span class="nv">B</span><span class="kd">,</span>
+<span class="linenos">20</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;two =&quot;</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="s2">&quot;/ nope =&quot;</span><span class="w"> </span><span class="nv">B</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">two = 2 / nope = 0</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="constraint-handling-rules.html" class="btn btn-neutral float-left" title="Constraint handling rules" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="rule-attributes.html" class="btn btn-neutral float-right" title="Rule attributes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,243 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elpi = λProlog + CHR &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Logic Programming" href="logic-programming-model.html" />
+    <link rel="prev" title="Rule attributes" href="../syntax/rule-attributes.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Elpi = λProlog + CHR</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/semantics/overview.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="elpi-prolog-chr">
+<h1>Elpi = λProlog + CHR<a class="headerlink" href="#elpi-prolog-chr" title="Link to this heading"></a></h1>
+<p>Elpi runs a query by building a <strong>proof tree</strong>, depth-first: a rule becomes a
+node whose branching factor is its number of premises. At any point one open
+branch is <em>active</em>, its tip the goal currently being worked on, and every
+other open branch is <em>inert</em>. Four actions drive the construction:</p>
+<ol class="arabic simple">
+<li><p><strong>run</strong>: solve the active goal against the program. Pick a rule whose head
+unifies with it (<a class="reference internal" href="../syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>) and continue
+with its first premise; when a branch closes, the next open goal in the
+depth-first walk becomes active;</p></li>
+<li><p><strong>suspend</strong>: instead of solving the active goal, turn it into a
+<strong>constraint</strong> kept in the <em>constraint store</em>, recording which variables
+should wake it up (<a class="reference internal" href="../syntax/constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>). The branch
+pauses and the search moves to that same next open goal: in <code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">:-</span> <span class="pre">a,</span> <span class="pre">b</span></code>
+with <code class="docutils literal notranslate"><span class="pre">a</span></code> suspended, <code class="docutils literal notranslate"><span class="pre">b</span></code> is worked on next;</p></li>
+<li><p><strong>resume</strong>: when one of those variables is assigned, by <code class="docutils literal notranslate"><span class="pre">run</span></code> acting
+elsewhere in the tree, the constraint is turned back into an active goal
+and its branch continues;</p></li>
+<li><p><strong>handle</strong>: after each of the above, a <strong>constraint handling rule</strong> may
+fire over <em>all</em> suspended branches at once. It can drop a constraint,
+pruning its branch for good, or add a fresh goal, starting a new one.</p></li>
+</ol>
+<p><code class="docutils literal notranslate"><span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">suspend</span></code> and <code class="docutils literal notranslate"><span class="pre">resume</span></code> build an ordinary, if pausable, proof
+tree, one branch at a time. <code class="docutils literal notranslate"><span class="pre">handle</span></code> is different in kind: it is a step
+over the <em>whole</em> set of suspended branches, so it can do things no
+single-branch step can, such as noticing that two suspended goals contradict
+each other and replacing both with <code class="docutils literal notranslate"><span class="pre">false</span></code>, or merging two identical
+branches into one (in effect building a DAG, not just a tree, of the proof
+search).</p>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="../_images/chr.png"><img alt="A proof tree under construction, with an active goal, inert goals, a branch suspended into a constraint, and a constraint handling rule connecting two suspended branches." src="../_images/chr.png" style="width: 70%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The four actions on an Elpi computation, run (1), suspend (2), resume (3)
+and handle (4), from the author’s <a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">HDR thesis</span></a>.</span><a class="headerlink" href="#id1" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>This part of the manual follows that split. <code class="docutils literal notranslate"><span class="pre">run</span></code> is covered in
+<a class="reference internal" href="logic-programming-model.html"><span class="doc">Logic Programming</span></a>: Elpi as Prolog, and as λProlog with binders.
+<code class="docutils literal notranslate"><span class="pre">suspend</span></code> and <code class="docutils literal notranslate"><span class="pre">resume</span></code> are covered in <a class="reference internal" href="constraints.html"><span class="doc">Constraints</span></a>: why an
+incomplete term needs them and what a constraint is. <code class="docutils literal notranslate"><span class="pre">handle</span></code> is covered in
+<a class="reference internal" href="chr.html"><span class="doc">The constraint store</span></a>: the constraint store and constraint handling rules in detail. A
+reference-level formalization of all four is given in <a class="reference internal" href="formal-semantics.html"><span class="doc">Formal semantics</span></a>.</p>
+<p>A single goal exercises all four: it runs, suspends twice on an unknown <code class="docutils literal notranslate"><span class="pre">Y</span></code>,
+has a constraint handling rule drop one of the duplicates, then resumes and
+runs to completion once <code class="docutils literal notranslate"><span class="pre">Y</span></code> is filled in.</p>
+<p><strong>../code/four-actions.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% One goal touching all four actions: run, suspend, handle (a CHR rule),</span>
+<span class="linenos"> 2</span><span class="c">% resume.</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span><span class="kd">func</span><span class="w"> </span><span class="nf">even</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 5</span>even<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;suspend&quot;</span><span class="kd">,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos"> 6</span>even<span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;run: base case&quot;</span><span class="o">.</span>
+<span class="linenos"> 7</span>even<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;run: recurse&quot;</span><span class="kd">,</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">-</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>even<span class="w"> </span><span class="nv">M</span><span class="o">.</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="kd">constraint</span><span class="w"> </span><span class="nf">even </span>{
+<span class="linenos">10</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">\</span><span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(print<span class="w"> </span><span class="s2">&quot;handle: drop a duplicate&quot;</span><span class="o">).</span>
+<span class="linenos">11</span>}
+<span class="linenos">12</span>
+<span class="linenos">13</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">14</span><span class="w">  </span>even<span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w">                    </span><span class="c">% run -&gt; suspend: Y is still unknown</span>
+<span class="linenos">15</span><span class="w">  </span>even<span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w">                    </span><span class="c">% a second constraint on the same Y</span>
+<span class="linenos">16</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;resuming, Y = 4&quot;</span><span class="kd">,</span>
+<span class="linenos">17</span><span class="w">  </span><span class="nv">Y</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="mi">4</span><span class="kd">,</span><span class="w">                     </span><span class="c">% resume: the survivor becomes an active goal again</span>
+<span class="linenos">18</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;done&quot;</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">suspend</span>
+<span class="go">suspend</span>
+<span class="go">handle: drop a duplicate</span>
+<span class="go">resuming, Y = 4</span>
+<span class="go">run: recurse</span>
+<span class="go">run: recurse</span>
+<span class="go">run: base case</span>
+<span class="go">done</span>
+</pre></div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../syntax/rule-attributes.html" class="btn btn-neutral float-left" title="Rule attributes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="logic-programming-model.html" class="btn btn-neutral float-right" title="Logic Programming" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

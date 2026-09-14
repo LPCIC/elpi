@@ -3,25 +3,24 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Search &mdash; Elpi  documentation</title>
+  <title>Bibliography &mdash; Elpi  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=78bb11f5" />
 
   
-    
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=5929fcd5"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
-    <script src="_static/searchtools.js"></script>
-    <script src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="#" /> 
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Compatibility with Teyjus, Prolog and legacy Elpi" href="compatibility.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -36,7 +35,7 @@
             Elpi
           </a>
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="#" method="get">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -96,9 +95,9 @@
 <li class="toctree-l1"><a class="reference internal" href="embedding.html">Embedding and extending Elpi</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Reference</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
-<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Bibliography</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API</span></p>
 <ul>
@@ -119,8 +118,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Search</li>
+      <li class="breadcrumb-item active">Bibliography</li>
       <li class="wy-breadcrumbs-aside">
+            <a href="_sources/bibliography.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -128,22 +128,69 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <noscript>
-  <div id="fallback" class="admonition warning">
-    <p class="last">
-      Please activate JavaScript to enable the search functionality.
-    </p>
-  </div>
-  </noscript>
+  <section id="bibliography">
+<h1>Bibliography<a class="headerlink" href="#bibliography" title="Link to this heading"></a></h1>
+<p id="bib-hdr">Enrico Tassi, <a class="reference external" href="https://inria.hal.science/hal-05294918">Elpi: rule-based extension language</a>, HDR thesis (9 January 2026). The
+most complete account of Elpi’s design and its applications; the primary
+source for this manual’s <em>Semantics</em> part.</p>
+<p id="bib-padl2026">Davide Fissore and Enrico Tassi, <a class="reference external" href="https://inria.hal.science/hal-05026472">Determinacy Checking for Elpi: an
+Higher-Order Logic Programming language with Cut</a>, PADL 2026 (LNCS 16401). The
+formal treatment behind <a class="reference internal" href="features/determinacy-checking.html"><span class="doc">Determinacy checking</span></a>.</p>
+<p id="bib-lpar2015">Cvetan Dunchev, Ferruccio Guidi, Claudio Sacerdoti Coen and Enrico Tassi,
+<a class="reference external" href="https://inria.hal.science/hal-01176856">ELPI: Fast, Embeddable, λProlog Interpreter</a>, LPAR-20 (2015). The original
+system description; cite this one for Elpi itself.</p>
+<p id="bib-chr2004">Gregory J. Duck, Peter J. Stuckey, María García de la Banda and Christian
+Holzbaur, <a class="reference external" href="https://doi.org/10.1007/978-3-540-27775-0_7">The Refined Operational Semantics of Constraint Handling Rules</a>, Logic Programming (ICLP
+2004), Springer, pages 90–104. The paper that names and defines the refined
+operational semantics Elpi implements for CHR, behind <a class="reference internal" href="semantics/chr.html"><span class="doc">The constraint store</span></a>
+and <a class="reference internal" href="semantics/formal-semantics.html"><span class="doc">Formal semantics</span></a>.</p>
+<p id="bib-chr-survey">Jon Sneyers, Peter Van Weert, Tom Schrijvers and Leslie De Koninck, <a class="reference external" href="https://arxiv.org/abs/0906.4474">As time
+goes by: Constraint Handling Rules — A survey of CHR research from 1998 to
+2007</a>, Theory and Practice of Logic
+Programming 10(1), 2010, pages 1–47. A broad survey of CHR as a
+general-purpose declarative formalism: its semantics, program analysis,
+implementations, extensions and applications; cited from <a class="reference internal" href="introduction.html"><span class="doc">Introduction</span></a>
+for what CHR is.</p>
+<p id="bib-tassi2019">Ferruccio Guidi, Claudio Sacerdoti Coen and Enrico Tassi, <a class="reference external" href="https://hal.inria.fr/hal-01410567v2">Implementing type
+theory in higher order constraint logic programming</a>, Mathematical Structures in Computer
+Science 29(8), 2019. Constraints and constraint handling rules, formally;
+cited throughout <a class="reference internal" href="semantics/chr.html"><span class="doc">The constraint store</span></a> and <a class="reference internal" href="semantics/formal-semantics.html"><span class="doc">Formal semantics</span></a>.</p>
+<p id="bib-mlws18">Enrico Tassi, <a class="reference external" href="https://github.com/gares/mlws18/blob/master/slides.pdf">Elpi: an extension language with binders and unification
+variables</a>, slides
+from the ML Family Workshop 2018. A lightweight, slide-shaped introduction;
+its companion code, <a class="reference external" href="https://github.com/gares/mlws18/tree/master/toyml">toyml</a>,
+implements Algorithm W in Elpi and is a second, independent take on
+<a class="reference internal" href="examples/hindley-milner.html"><span class="doc">Hindley-Milner type inference</span></a>.</p>
+<p id="bib-miller91">Dale Miller, <a class="reference external" href="https://doi.org/10.1093/logcom/1.4.497">A logic programming language with lambda-abstraction, function
+variables, and simple unification</a>, Journal of Logic and Computation
+1(4), 1991, pages 497–536. Introduces the higher-order pattern fragment (Lλ)
+that Elpi restricts unification variables to; see
+<a class="reference internal" href="features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>.</p>
+<p id="bib-miller92">Dale Miller, <a class="reference external" href="https://doi.org/10.1016/0747-7171(92)90011-R">Unification under a mixed prefix</a>, Journal of Symbolic
+Computation 14(4), 1992, pages 321–358. The most-general-extension property
+behind the unify function of <a class="reference internal" href="semantics/formal-semantics.html"><span class="doc">Formal semantics</span></a>.</p>
+<p id="bib-miller-nadathur">Dale Miller and Gopalan Nadathur, <em>Programming with Higher-Order Logic</em>,
+Cambridge University Press, 2012. The reference for standard λProlog, which
+this manual assumes throughout rather than re-teaching
+(<a class="reference internal" href="introduction.html"><span class="doc">Introduction</span></a>).</p>
+<p id="bib-bprolog">Neng-Fa Zhou, <a class="reference external" href="https://arxiv.org/abs/1103.0812">The Language Features and Architecture of B-Prolog</a>, Theory and Practice of Logic Programming
+12(1–2), 2012, pages 189–218. Introduces B-Prolog’s <em>matching clauses</em>, whose
+one-way head matching is the idea behind Elpi’s input-mode arguments; see
+<a class="reference internal" href="semantics/logic-programming-model.html"><span class="doc">Logic Programming</span></a> and <a class="reference internal" href="semantics/constraints.html"><span class="doc">Constraints</span></a>.</p>
+<p id="bib-michaylov">Spiro Michaylov and Frank Pfenning, <a class="reference external" href="https://api.semanticscholar.org/CorpusID:9980455">Higher-Order Logic Programming as
+Constraint Logic Programming</a>,
+Proceedings of the First Workshop on Principles and Practice of Constraint
+Programming, Brown University, 1993, pages 221–229. Reads a higher-order
+logic programming language as a constraint logic programming one; the
+constraint-resume rule of <a class="reference internal" href="semantics/formal-semantics.html"><span class="doc">Formal semantics</span></a> follows it.</p>
+</section>
 
-  
-  <div id="search-results">
-  
-  </div>
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="compatibility.html" class="btn btn-neutral float-left" title="Compatibility with Teyjus, Prolog and legacy Elpi" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
 
   <hr/>
 
@@ -165,14 +212,7 @@
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-  <script>
-    jQuery(function() { Search.loadIndex("searchindex.js"); });
-  </script>
-  
-  <script id="searchindexloader"></script>
-   
-
+  </script> 
 
 </body>
 </html>

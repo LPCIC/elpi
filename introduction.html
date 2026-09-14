@@ -1,0 +1,278 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Introduction &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting started" href="getting-started.html" />
+    <link rel="prev" title="Elpi — Embeddable λProlog Interpreter" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#why-elpi">Why Elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#relation-to-standard-prolog-and-to-teyjus">Relation to standard λProlog and to Teyjus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-read-this-manual">How to read this manual</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Introduction</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/introduction.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h1>
+<p>Elpi is an embeddable implementation of λProlog extended with Constraint
+Handling Rules. λProlog is the logic programming
+language built on higher-order hereditary Harrop formulas described by
+<a class="reference internal" href="bibliography.html#bib-miller-nadathur"><span class="std std-ref">Miller and Nadathur</span></a>. Constraint Handling Rules
+(<a class="reference internal" href="bibliography.html#bib-chr-survey"><span class="std std-ref">Sneyers et al.</span></a>) are a rule-based formalism for
+rewriting a store of constraints, adding to it, removing from it and combining
+its elements, which Elpi puts to work inspecting and simplifying goals it
+has set aside for later.</p>
+<p>Like every logic programming language Elpi computes by proof search, but its
+terms are those of the simply-typed λ-calculus rather than first-order trees.
+That is what makes it well suited to manipulating syntax trees that contain
+binders and unification variables, the <em>holes</em> that stand for information
+not yet known.</p>
+<p>Elpi is designed to be embedded into a larger OCaml application as an
+extension language. A foreign function interface lets the host application
+contribute its own built-in predicates and data types, so that Elpi programs
+can call back into OCaml and exchange values with it.</p>
+<p>The original system is described by <a class="reference internal" href="bibliography.html#bib-lpar2015"><span class="std std-ref">Dunchev, Guidi, Sacerdoti Coen &amp;
+Tassi, LPAR-20 (2015)</span></a>.</p>
+<section id="why-elpi">
+<h2>Why Elpi<a class="headerlink" href="#why-elpi" title="Link to this heading"></a></h2>
+<p>Elpi is a research project aimed at providing a programming platform for the
+<em>elaborator</em> component of an interactive theorem prover, the part that turns
+a term as input by the user into a well-typed one, performing type inference
+and offering the user hooks to customize it (ad-hoc polymorphism, and the
+like). Such a component works with terms full of binders and holes:
+unification variables standing for missing information, some to be filled in
+so that the term type-checks, some filled deliberately by an extension. This
+makes it unusually demanding to write. The interplay of binders, reduction
+and unification is delicate on its own; on top of it come the heuristics that
+make the elaborator practical and the hooks that let users extend it. That is
+a large amount of machinery to get right from scratch, and every prover that
+builds it from scratch builds a slightly different, slightly incompatible
+version of it.</p>
+<p>Elpi’s answer is to make that machinery part of the language itself, rather
+than something each application rebuilds on top of it:</p>
+<ul class="simple">
+<li><p>binders and substitution are native, through Higher-Order Abstract Syntax
+(<a class="reference internal" href="features/binders-and-hoas.html"><span class="doc">Binders and HOAS</span></a>): an object-language binder is
+represented by a meta-language λ-abstraction, so capture-avoiding
+substitution is ordinary β-reduction and there are no de Bruijn indices to
+shift by hand;</p></li>
+<li><p>a hypothetical context is native too. Attaching information to a bound
+variable, and discarding it again when that variable goes out of scope, is
+what <code class="docutils literal notranslate"><span class="pre">pi</span></code> and <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> already do
+(<a class="reference internal" href="syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>): a type checker written in Elpi
+does not maintain its own typing context, it uses Elpi’s;</p></li>
+<li><p>the object language’s own unification variables can reuse the
+meta-language’s, once more through HOAS
+(<a class="reference internal" href="features/binders-and-hoas.html"><span class="doc">Binders and HOAS</span></a>), so that instantiating a hole in the
+object term is instantiating an Elpi variable;</p></li>
+<li><p>the generative, backtracking search inherited from Prolog can be switched
+off selectively: a goal is suspended as a <em>syntactic constraint</em>, resumed
+only once the variables it waits on are known, and then inspected as a
+whole by constraint handling rules (<a class="reference internal" href="semantics/constraints.html"><span class="doc">Constraints</span></a>,
+<a class="reference internal" href="semantics/chr.html"><span class="doc">The constraint store</span></a>). A host application can extend the constraint store
+with constraints and solvers of its own, which need not be syntactic;</p></li>
+<li><p>a rule (<a class="reference internal" href="syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>) can be grafted into an
+existing program either at compile time, by accumulating a file
+(<a class="reference internal" href="syntax/file-structure-and-attributes.html"><span class="doc">File structure and attributes</span></a>), or at run time, through
+implication (<a class="reference internal" href="syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>).</p></li>
+</ul>
+<p>Most of this Elpi inherits from λProlog; the constraints and the constraint
+handling rules are its own addition.</p>
+</section>
+<section id="relation-to-standard-prolog-and-to-teyjus">
+<h2>Relation to standard λProlog and to Teyjus<a class="headerlink" href="#relation-to-standard-prolog-and-to-teyjus" title="Link to this heading"></a></h2>
+<p>Elpi stays close enough to standard λProlog to run most λProlog programs
+unmodified. <a class="reference internal" href="compatibility.html"><span class="doc">Compatibility with Teyjus, Prolog and legacy Elpi</span></a> collects the lexical and semantic points on
+which it knowingly departs from the earlier Teyjus implementation, together
+with the older Elpi spellings that newer ones have since replaced. For
+λProlog itself, <a class="reference internal" href="bibliography.html#bib-miller-nadathur"><span class="std std-ref">Programming with Higher-Order Logic, by Miller and
+Nadathur</span></a> is the recommended background: this manual
+assumes it throughout and does not re-teach it.</p>
+</section>
+<section id="how-to-read-this-manual">
+<h2>How to read this manual<a class="headerlink" href="#how-to-read-this-manual" title="Link to this heading"></a></h2>
+<p>This is a reference manual. It describes Elpi’s syntax and semantics feature
+by feature, each point illustrated by a runnable example, rather than
+teaching λProlog from first principles. The one tutorial-shaped chapter is
+<a class="reference internal" href="getting-started.html"><span class="doc">Getting started</span></a>, which covers just enough to get a program running.
+After it, the parts of the manual are:</p>
+<ul class="simple">
+<li><p><em>Syntax</em> and <em>Semantics</em> describe the language model: <em>Syntax</em> as the
+concrete surface notation, <em>Semantics</em> as the computation that notation
+denotes;</p></li>
+<li><p><em>Language features</em> is the feature-by-feature catalogue; each entry gives
+the syntax, the operational meaning, the flags that affect it and the
+caveats;</p></li>
+<li><p><em>Examples</em> collects full worked programs;</p></li>
+<li><p><em>Libraries</em>, <em>Debugging &amp; tooling</em>, <em>Embedding and extending</em> and
+<em>Reference</em> cover the remaining ground.</p></li>
+</ul>
+<p>Chapters cross-reference one another freely rather than repeating material,
+so following the links is part of reading the manual; no single chapter is
+meant to stand entirely on its own. For the full formal account of Elpi’s
+design, see the author’s <a class="reference internal" href="bibliography.html#bib-hdr"><span class="std std-ref">HDR manuscript</span></a> and the papers
+listed in <a class="reference internal" href="bibliography.html"><span class="doc">Bibliography</span></a>.</p>
+<p>This manual is largely a recombination of that material: prose and examples
+drawn from the HDR thesis and from several of the author’s own papers,
+reworked into a single reference organized around Elpi’s syntax, semantics
+and features rather than around each paper’s own narrative. The result is not
+as polished as the author would have written entirely by hand, but the help
+of an AI agent in putting a document this size together, under the author’s
+direction and review, has been substantial.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Elpi — Embeddable λProlog Interpreter" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="getting-started.html" class="btn btn-neutral float-right" title="Getting started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

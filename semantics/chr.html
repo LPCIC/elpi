@@ -1,0 +1,387 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The constraint store &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Formal semantics" href="formal-semantics.html" />
+    <link rel="prev" title="Constraints" href="constraints.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constraints.html">Constraints</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The constraint store</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#frozen-variables">Frozen variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#triggers-and-clustering">Triggers and clustering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#application-of-chr-rules">Application of CHR rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#symmetric-chr-rules">Symmetric CHR rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cliques-fix-what-a-rule-can-see">Cliques fix what a rule can see</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-global-variable-built-on-chr">A global variable built on CHR</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">The constraint store</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/semantics/chr.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="the-constraint-store">
+<h1>The constraint store<a class="headerlink" href="#the-constraint-store" title="Link to this heading"></a></h1>
+<p>The constraint store introduced in <a class="reference internal" href="constraints.html"><span class="doc">Constraints</span></a> is a <em>multiset</em> of
+constraints, each one a suspended goal together with the hypotheses it carried
+and the variables that trigger its resumption. A constraint handling rule
+(<a class="reference internal" href="../syntax/constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a> for its syntax) inspects that
+multiset as a whole. What follows is what the store holds, and in what order
+its rules are tried.</p>
+<section id="frozen-variables">
+<h2>Frozen variables<a class="headerlink" href="#frozen-variables" title="Link to this heading"></a></h2>
+<p>A constraint handling rule <em>matches</em> the store, it never unifies with it. The
+whole point of <code class="docutils literal notranslate"><span class="pre">declare_constraint</span></code> is to stop guessing values for a hole,
+not to let a CHR rule guess one instead. So every unification variable
+occurring in a matched constraint is <em>frozen</em>: replaced with a fresh constant
+that no rule can assign. A frozen variable <code class="docutils literal notranslate"><span class="pre">F</span></code>, with the bound variables
+<code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> in its scope, is shown to rules as <code class="docutils literal notranslate"><span class="pre">uvar</span> <span class="pre">f</span> <span class="pre">[x,</span> <span class="pre">y]</span></code> for a
+fresh constant <code class="docutils literal notranslate"><span class="pre">f</span></code>. This reification is what lets a rule pattern name the
+identity of a hole (<code class="docutils literal notranslate"><span class="pre">K</span></code> in <code class="docutils literal notranslate"><span class="pre">uvar</span> <span class="pre">K</span> <span class="pre">_</span></code>, see
+<a class="reference internal" href="../syntax/constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>) and read off its scope, with no
+way of assigning it. Each matched constraint is frozen into its <em>own</em>,
+disjoint space of names, so terms coming from two different constraints never
+accidentally share a fresh constant.</p>
+<p>The even/odd example from <a class="reference internal" href="constraints.html"><span class="doc">Constraints</span></a> is fixed by exactly the CHR rule
+already shown as syntax in <a class="reference internal" href="../syntax/constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>:
+<code class="docutils literal notranslate"><span class="pre">even</span> <span class="pre">N</span></code> and <code class="docutils literal notranslate"><span class="pre">odd</span> <span class="pre">N</span></code>, suspended on the same still-unknown <code class="docutils literal notranslate"><span class="pre">N</span></code>, freeze it
+to the same constant, and the rule’s non-linear <code class="docutils literal notranslate"><span class="pre">X</span></code> matches only when both
+constraints carry it, so the two are caught for what they are, one
+contradiction, instead of passing as two unrelated, silent suspensions.</p>
+<p><strong>../code/incompatible-fixed.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% The even/odd generators from incompatible.elpi (Constraints), plus the CHR</span>
+<span class="linenos"> 2</span><span class="c">% rule that catches the contradiction: it fires whenever the store holds</span>
+<span class="linenos"> 3</span><span class="c">% `even N` and `odd N` for the same, still-unknown `N`, matching them by the</span>
+<span class="linenos"> 4</span><span class="c">% identity of the frozen variable they share rather than unifying it.</span>
+<span class="linenos"> 5</span>
+<span class="linenos"> 6</span><span class="kd">func</span><span class="w"> </span><span class="nf">even</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 7</span>even<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos"> 8</span>even<span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos"> 9</span>even<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">-</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>even<span class="w"> </span><span class="nv">M</span><span class="o">.</span>
+<span class="linenos">10</span>
+<span class="linenos">11</span><span class="kd">func</span><span class="w"> </span><span class="nf">odd</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos">12</span>odd<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(odd<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos">13</span>odd<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos">14</span>odd<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">-</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>odd<span class="w"> </span><span class="nv">M</span><span class="o">.</span>
+<span class="linenos">15</span>
+<span class="linenos">16</span><span class="kd">constraint</span><span class="w"> </span><span class="nf">even odd </span>{
+<span class="linenos">17</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span>(odd<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>false<span class="o">.</span>
+<span class="linenos">18</span>}
+<span class="linenos">19</span>
+<span class="linenos">20</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">21</span><span class="w">  </span>(<span class="w"> </span>even<span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w"> </span>odd<span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;accepted (wrong!)&quot;</span>
+<span class="linenos">22</span><span class="w">  </span><span class="kd">;</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;rejected, no number is both&quot;</span><span class="w"> </span><span class="o">).</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">rejected, no number is both</span>
+</pre></div>
+</div>
+</section>
+<section id="triggers-and-clustering">
+<h2>Triggers and clustering<a class="headerlink" href="#triggers-and-clustering" title="Link to this heading"></a></h2>
+<p>A rule is only ever tried against constraints that could plausibly be
+related: those whose trigger, the key list given to <code class="docutils literal notranslate"><span class="pre">declare_constraint</span></code>,
+has a non-empty intersection with the constraint that was just declared or
+resumed. A constraint keyed on <code class="docutils literal notranslate"><span class="pre">_</span></code> is never resumed (<code class="docutils literal notranslate"><span class="pre">_</span></code> can never be
+assigned), but <code class="docutils literal notranslate"><span class="pre">_</span></code> is a single shared placeholder, so passing it as one of
+several keys (<code class="docutils literal notranslate"><span class="pre">declare_constraint</span> <span class="pre">(even</span> <span class="pre">X)</span> <span class="pre">[_,</span> <span class="pre">X]</span></code>) forces two otherwise
+unrelated constraints to be considered together by CHR without expecting
+either to trigger a resumption on its own. A constraint keyed on <code class="docutils literal notranslate"><span class="pre">[]</span></code> has
+no trigger at all: it is never resumed, and, sharing nothing, no
+<em>multi-headed</em> rule ever considers it jointly with another constraint. A
+<em>single-headed</em> rule needs no partner, so it is still tried on such a
+constraint, once, when the constraint is declared. <code class="docutils literal notranslate"><span class="pre">code/hindley-milner.elpi</span></code>
+relies on this: it keys its <code class="docutils literal notranslate"><span class="pre">overbar</span></code> constraint on <code class="docutils literal notranslate"><span class="pre">[]</span></code> and generalizes
+it with a single-headed rule.</p>
+</section>
+<section id="application-of-chr-rules">
+<h2>Application of CHR rules<a class="headerlink" href="#application-of-chr-rules" title="Link to this heading"></a></h2>
+<p>As soon as a constraint <code class="docutils literal notranslate"><span class="pre">C</span></code> is declared or resumed, Elpi looks for a rule
+to fire on it. It goes through the rules of <code class="docutils literal notranslate"><span class="pre">C</span></code>’s clique from top to
+bottom. For each rule it gathers the store constraints whose trigger overlaps
+<code class="docutils literal notranslate"><span class="pre">C</span></code>’s, and tries every way of matching the rule’s patterns against <code class="docutils literal notranslate"><span class="pre">C</span></code>
+placed among enough of those others; <code class="docutils literal notranslate"><span class="pre">C</span></code> may land in any one of the
+patterns, not only the first. The candidate constraints are frozen first
+(see above). If they all match their patterns and the guard then succeeds,
+the rule fires: the constraints matched to the right of the <code class="docutils literal notranslate"><span class="pre">\</span></code> are removed
+from the store, and the goal after <code class="docutils literal notranslate"><span class="pre">&lt;=&gt;</span></code>, if any, is run at once, ahead of
+any other pending goal. The choice is committed at that point: no other
+rule, and no other way of matching this one, is tried for <code class="docutils literal notranslate"><span class="pre">C</span></code>.</p>
+<p>This is the <em>refined operational semantics</em> of
+<a class="reference internal" href="../bibliography.html#bib-chr2004"><span class="std std-ref">Duck, Stuckey, García de la Banda &amp; Holzbaur</span></a>; it is given
+precisely in <a class="reference internal" href="formal-semantics.html"><span class="doc">Formal semantics</span></a>, following in turn
+<a class="reference internal" href="../bibliography.html#bib-tassi2019"><span class="std std-ref">Guidi, Sacerdoti Coen &amp; Tassi</span></a>.</p>
+</section>
+<section id="symmetric-chr-rules">
+<h2>Symmetric CHR rules<a class="headerlink" href="#symmetric-chr-rules" title="Link to this heading"></a></h2>
+<p>The case most likely to surprise is a rule with no <code class="docutils literal notranslate"><span class="pre">\</span></code>. With two matching
+constraints in the store, a two-pattern rule fires <em>once per ordering</em> of
+them: removing nothing leaves both in the store, still eligible when the next
+combination is tried.</p>
+<p><strong>../code/chr-permutations.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Two constraints share a trigger, so a 2-pattern rule is tried on every</span>
+<span class="linenos"> 2</span><span class="c">% permutation of them: &quot;rule 1&quot; fires once per ordering of (c 1, c 2).</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span><span class="kd">func</span><span class="w"> </span><span class="nf">c</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 5</span>
+<span class="linenos"> 6</span><span class="kd">constraint</span><span class="w"> </span><span class="nf">c </span>{
+<span class="linenos"> 7</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(c<span class="w"> </span><span class="nv">N</span><span class="o">)</span><span class="w"> </span>(c<span class="w"> </span><span class="nv">M</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(print<span class="w"> </span><span class="s2">&quot;rule 1 on&quot;</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="nv">M</span><span class="o">).</span>
+<span class="linenos"> 8</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(c<span class="w"> </span><span class="nv">N</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(print<span class="w"> </span><span class="s2">&quot;rule 2 on&quot;</span><span class="w"> </span><span class="nv">N</span><span class="o">).</span>
+<span class="linenos"> 9</span>}
+<span class="linenos">10</span>
+<span class="linenos">11</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">12</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;declare c 1&quot;</span><span class="kd">,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(c<span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">],</span>
+<span class="linenos">13</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;declare c 2&quot;</span><span class="kd">,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(c<span class="w"> </span><span class="mi">2</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">]</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">declare c 1</span>
+<span class="go">rule 2 on 1</span>
+<span class="go">declare c 2</span>
+<span class="go">rule 1 on 2 1</span>
+<span class="go">rule 1 on 1 2</span>
+<span class="go">rule 2 on 2</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">rule</span> <span class="pre">1</span></code> fires on <code class="docutils literal notranslate"><span class="pre">(c</span> <span class="pre">2)</span> <span class="pre">(c</span> <span class="pre">1)</span></code> and then again on <code class="docutils literal notranslate"><span class="pre">(c</span> <span class="pre">1)</span> <span class="pre">(c</span> <span class="pre">2)</span></code>.</p>
+<p>A rule whose two patterns are of the <em>same</em> predicate and which removes
+nothing is <em>symmetric</em>, and it is this matching-without-removing shape that
+gets retried on every ordering of a pair. Removing one of the two matched
+constraints (<code class="docutils literal notranslate"><span class="pre">rule</span> <span class="pre">(c</span> <span class="pre">N)</span> <span class="pre">\</span> <span class="pre">(c</span> <span class="pre">M)</span> <span class="pre">&lt;=&gt;</span> <span class="pre">…</span></code>) breaks the symmetry: the removed
+copy is gone from the store before the second ordering is tried, so the rule
+fires only once, on whichever ordering comes up first (here <code class="docutils literal notranslate"><span class="pre">(c</span> <span class="pre">2)</span> <span class="pre">(c</span> <span class="pre">1)</span></code>,
+keeping <code class="docutils literal notranslate"><span class="pre">c</span> <span class="pre">2</span></code> and removing <code class="docutils literal notranslate"><span class="pre">c</span> <span class="pre">1</span></code>). That kept constraint stays in the
+store:</p>
+<p><strong>../code/chr-permutations-fixed.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Same store as chr-permutations.elpi, but the first rule now removes one of</span>
+<span class="linenos"> 2</span><span class="c">% the two constraints it matches (`\`), so the second permutation has nothing</span>
+<span class="linenos"> 3</span><span class="c">% left to fire on: &quot;rule 1&quot; fires only once.</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">func</span><span class="w"> </span><span class="nf">c</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 6</span>
+<span class="linenos"> 7</span><span class="kd">constraint</span><span class="w"> </span><span class="nf">c </span>{
+<span class="linenos"> 8</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(c<span class="w"> </span><span class="nv">N</span><span class="o">)</span><span class="w"> </span><span class="kd">\</span><span class="w"> </span>(c<span class="w"> </span><span class="nv">M</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(print<span class="w"> </span><span class="s2">&quot;rule 1 on&quot;</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="nv">M</span><span class="o">).</span>
+<span class="linenos"> 9</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(c<span class="w"> </span><span class="nv">N</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(print<span class="w"> </span><span class="s2">&quot;rule 2 on&quot;</span><span class="w"> </span><span class="nv">N</span><span class="o">).</span>
+<span class="linenos">10</span>}
+<span class="linenos">11</span>
+<span class="linenos">12</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">13</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;declare c 1&quot;</span><span class="kd">,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(c<span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">],</span>
+<span class="linenos">14</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;declare c 2&quot;</span><span class="kd">,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(c<span class="w"> </span><span class="mi">2</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">]</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">declare c 1</span>
+<span class="go">rule 2 on 1</span>
+<span class="go">declare c 2</span>
+<span class="go">rule 1 on 2 1</span>
+<span class="go">rule 2 on 2</span>
+</pre></div>
+</div>
+<p>A guard such as <code class="docutils literal notranslate"><span class="pre">N</span> <span class="pre">&lt;</span> <span class="pre">M</span></code> breaks the symmetry equally well, by rejecting one
+of the two orderings rather than removing a constraint. Since either fix
+works, and which one is correct depends on the rule, Elpi does not warn about
+a symmetric pattern on its own.</p>
+</section>
+<section id="cliques-fix-what-a-rule-can-see">
+<h2>Cliques fix what a rule can see<a class="headerlink" href="#cliques-fix-what-a-rule-can-see" title="Link to this heading"></a></h2>
+<p>A clique (<a class="reference internal" href="../syntax/constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>) is the fixed set of
+predicates a group of rules may talk about. Rule search only ever considers
+the rules of <code class="docutils literal notranslate"><span class="pre">C</span></code>’s own clique, which is why two cliques must be disjoint: a
+rule could otherwise be reached from two unrelated triggers. The context
+filter widens only what a <em>resumed</em> goal remembers of the hypothetical rules
+it was suspended under, not which CHR rules may act on it.</p>
+</section>
+<section id="a-global-variable-built-on-chr">
+<h2>A global variable built on CHR<a class="headerlink" href="#a-global-variable-built-on-chr" title="Link to this heading"></a></h2>
+<p>Elpi has no built-in global variable, but the constraint store, a place that
+outlives individual goals and honours backtracking, makes it easy to build
+one on top of CHR. The program below implements named global variables:
+<code class="docutils literal notranslate"><span class="pre">get</span></code> and <code class="docutils literal notranslate"><span class="pre">set</span></code> take the variable’s name as a string, so several can
+coexist. <code class="docutils literal notranslate"><span class="pre">main</span></code> initialises <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code>, reads <code class="docutils literal notranslate"><span class="pre">x</span></code>, overwrites it,
+and reads both again, so <code class="docutils literal notranslate"><span class="pre">x</span></code>’s two reads print the old value then the new
+one while <code class="docutils literal notranslate"><span class="pre">y</span></code> is unchanged:</p>
+<p><strong>../code/global-state.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Named global variables, built on top of the constraint store: `value` holds</span>
+<span class="linenos"> 2</span><span class="c">% a variable&#39;s current content, `set` overwrites it, `get` reads it. The</span>
+<span class="linenos"> 3</span><span class="c">% string argument is the variable&#39;s name, so several can coexist.</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">func</span><span class="w"> </span><span class="nf">set</span><span class="w"> </span><span class="kt">string</span>,<span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 6</span>set<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">I</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>declare_constraint<span class="w"> </span>(set<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">I</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos"> 7</span>
+<span class="linenos"> 8</span><span class="kd">func</span><span class="w"> </span><span class="nf">get</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 9</span>get<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">I</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>declare_constraint<span class="w"> </span>(get<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">I</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos">10</span>
+<span class="linenos">11</span><span class="kd">func</span><span class="w"> </span><span class="nf">value</span><span class="w"> </span><span class="kt">string</span>,<span class="w"> </span><span class="kt">int</span>.
+<span class="linenos">12</span>value<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">I</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>declare_constraint<span class="w"> </span>(value<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">I</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos">13</span>
+<span class="linenos">14</span><span class="kd">constraint</span><span class="w"> </span><span class="nf">set get value </span>{
+<span class="linenos">15</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span><span class="kd">\</span><span class="w"> </span>(set<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">I</span><span class="o">)</span><span class="w"> </span>(value<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(value<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">I</span><span class="o">).</span>
+<span class="linenos">16</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(value<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">J</span><span class="o">)</span><span class="w"> </span><span class="kd">\</span><span class="w"> </span>(get<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">I</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(<span class="nv">I</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">J</span><span class="o">).</span>
+<span class="linenos">17</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(set<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w">                  </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(halt<span class="w"> </span><span class="s2">&quot;unknown global variable&quot;</span><span class="w"> </span><span class="nv">Name</span><span class="o">).</span>
+<span class="linenos">18</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(get<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w">                  </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(halt<span class="w"> </span><span class="s2">&quot;unknown global variable&quot;</span><span class="w"> </span><span class="nv">Name</span><span class="o">).</span>
+<span class="linenos">19</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(value<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span>(value<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(halt<span class="w"> </span><span class="s2">&quot;double initialization of&quot;</span><span class="w"> </span><span class="nv">Name</span><span class="o">).</span>
+<span class="linenos">20</span>}
+<span class="linenos">21</span>
+<span class="linenos">22</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">23</span><span class="w">  </span>value<span class="w"> </span><span class="s2">&quot;x&quot;</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w">       </span><span class="c">% initialize x</span>
+<span class="linenos">24</span><span class="w">  </span>value<span class="w"> </span><span class="s2">&quot;y&quot;</span><span class="w"> </span><span class="mi">10</span><span class="kd">,</span><span class="w">      </span><span class="c">% and y</span>
+<span class="linenos">25</span><span class="w">  </span>get<span class="w"> </span><span class="s2">&quot;x&quot;</span><span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w">         </span><span class="c">% read x</span>
+<span class="linenos">26</span><span class="w">  </span>set<span class="w"> </span><span class="s2">&quot;x&quot;</span><span class="w"> </span><span class="mi">3</span><span class="kd">,</span><span class="w">         </span><span class="c">% overwrite x</span>
+<span class="linenos">27</span><span class="w">  </span>get<span class="w"> </span><span class="s2">&quot;x&quot;</span><span class="w"> </span><span class="nv">M</span><span class="kd">,</span><span class="w">         </span><span class="c">% read x again</span>
+<span class="linenos">28</span><span class="w">  </span>get<span class="w"> </span><span class="s2">&quot;y&quot;</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w">         </span><span class="c">% y is untouched</span>
+<span class="linenos">29</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;x before:&quot;</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="s2">&quot;x after:&quot;</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="s2">&quot;y:&quot;</span><span class="w"> </span><span class="nv">Y</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">x before: 2 x after: 3 y: 10</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="constraints.html" class="btn btn-neutral float-left" title="Constraints" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="formal-semantics.html" class="btn btn-neutral float-right" title="Formal semantics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

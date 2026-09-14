@@ -1,0 +1,412 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Formal semantics &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Unification and variables" href="../features/unification-and-variables.html" />
+    <link rel="prev" title="The constraint store" href="chr.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chr.html">The constraint store</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Formal semantics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#abstract-syntax">Abstract syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#runtime-objects">Runtime objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-semantics">The semantics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#backchain">Backchain</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#select">Select</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#the-mathcal-chr-procedure">The <span class="math notranslate nohighlight">\(\mathcal{CHR}\)</span> procedure</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Formal semantics</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/semantics/formal-semantics.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="formal-semantics">
+<h1>Formal semantics<a class="headerlink" href="#formal-semantics" title="Link to this heading"></a></h1>
+<p>A reference-level formalization of the previous three chapters: an abstract
+syntax, the runtime objects the interpreter manipulates, and the big-step
+rules that define how a query is run. It follows the
+<a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">HDR thesis</span></a> §2.5.1; the operational semantics of <em>dynamic</em>
+predicates specifically (rules added and retracted while running, as
+Rocq-Elpi does) is due to <a class="reference internal" href="../bibliography.html#bib-padl2026"><span class="std std-ref">Fissore &amp; Tassi, PADL 2026</span></a>.
+Read the previous three chapters first; this one names things rather than
+motivating them.</p>
+<section id="abstract-syntax">
+<h2>Abstract syntax<a class="headerlink" href="#abstract-syntax" title="Link to this heading"></a></h2>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{rll}
+p, q, f, g            &amp; \in \mathrm{Pred}          &amp; \text{functors (predicate / term constructors)} \\
+X, Y \ldots x, y       &amp; \in \mathrm{Var}           &amp; \text{unification variables, bound variables} \\
+\mathrm{App}          &amp; ::= p\ \vec t \mid X\ \vec t &amp; \text{applicative term} \\
+\mathrm{Atom}         &amp; ::= \mathrm{cut} \mid \mathrm{delay}\ (\mathrm{App})\ \vec X \mid \mathrm{App} &amp; \text{goal atom} \\
+                      &amp; \ \ \mid\ \mathtt{pi}\ x{\backslash}\ \mathrm{Atom} \mid \mathrm{Clause} \Rightarrow \mathrm{Atom} &amp; \\
+\mathrm{Term}         &amp; ::= \mathrm{App} \mid \lambda x.\ \mathrm{Term} &amp; \text{term} \\
+\mathrm{Clause}       &amp; ::= \mathrm{App} \mathrel{{:}{-}} \vec{\mathrm{Atom}} &amp; \text{rule} \\
+\mathrm{Chr}          &amp; ::= \vec{\mathrm{App}} \mathrel{\backslash} \vec{\mathrm{App}} \mid \mathrm{App} \Leftrightarrow \vec{\mathrm{App}} &amp; \text{constraint rule}
+\end{array}\end{split}\]</div>
+<p><span class="math notranslate nohighlight">\(\mathrm{cut}\)</span> is the cut.
+<span class="math notranslate nohighlight">\(\mathrm{delay}\ c\ \vec X\)</span> is the abstract form of
+<span class="math notranslate nohighlight">\(\mathtt{declare\_constraint}\)</span>: it carries the applicative term
+<span class="math notranslate nohighlight">\(c\)</span> to suspend and the variables <span class="math notranslate nohighlight">\(\vec X\)</span> that trigger its
+resumption. A <span class="math notranslate nohighlight">\(\mathrm{Chr}\)</span> rule is a list of patterns to match, a
+list of patterns to match <em>and remove</em>, a guard (defaulting to “always true”
+in the concrete syntax) and a list of new goals; its concrete-syntax spelling
+is described in <a class="reference internal" href="../syntax/constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>.</p>
+</section>
+<section id="runtime-objects">
+<h2>Runtime objects<a class="headerlink" href="#runtime-objects" title="Link to this heading"></a></h2>
+<p>A <em>substitution</em> <span class="math notranslate nohighlight">\(\sigma\)</span> is a partial map from unification variables
+to terms; <span class="math notranslate nohighlight">\(\sigma\ t\)</span> applies it to <span class="math notranslate nohighlight">\(t\)</span>, and
+<span class="math notranslate nohighlight">\(\mathrm{dom}(\sigma)\)</span> is the set of variables it assigns. Two functions
+extend a substitution:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+\mathrm{unify} &amp;: \mathrm{Term} \times \mathrm{Term} \times \Sigma \rightharpoonup \Sigma \\
+\mathrm{match}  &amp;: \mathrm{Term} \times \mathrm{Term} \times \Sigma \rightharpoonup \Sigma
+\end{aligned}\end{split}\]</div>
+<p><span class="math notranslate nohighlight">\(\mathrm{unify}(t_1, t_2, \sigma) = \sigma'\)</span> is the most general
+extension of <span class="math notranslate nohighlight">\(\sigma\)</span> such that <span class="math notranslate nohighlight">\(\sigma' t_1 = \sigma' t_2\)</span>
+(<a class="reference internal" href="../bibliography.html#bib-miller92"><span class="std std-ref">Miller, 1992</span></a>).
+<span class="math notranslate nohighlight">\(\mathrm{match}(t, p, \sigma) = \sigma'\)</span> is the most general extension of
+<span class="math notranslate nohighlight">\(\sigma\)</span> such that <span class="math notranslate nohighlight">\(\sigma' p = \sigma t\)</span>; it only ever assigns
+variables of the <em>pattern</em> <span class="math notranslate nohighlight">\(p\)</span>, never ones already in <span class="math notranslate nohighlight">\(t\)</span>, and this is
+what makes a signature’s input arguments matched rather than unified
+(<a class="reference internal" href="constraints.html"><span class="doc">Constraints</span></a>). Both are partial: on failure they return <span class="math notranslate nohighlight">\(\bot\)</span>.</p>
+<p>A <em>program</em> <span class="math notranslate nohighlight">\(\pi = (N, I)\)</span> pairs a set of names <span class="math notranslate nohighlight">\(N\)</span> (the
+constants introduced by <span class="math notranslate nohighlight">\(\mathtt{pi}\)</span>) with an index <span class="math notranslate nohighlight">\(I\)</span> mapping
+each predicate to an <em>ordered</em> list of rules. <span class="math notranslate nohighlight">\(h + \pi\)</span> prepends the
+rules <span class="math notranslate nohighlight">\(h\)</span> to that index, giving them top priority; this is how
+<span class="math notranslate nohighlight">\({\Rightarrow}\)</span> extends the program for one goal.</p>
+<p>A <em>constraint store</em> <span class="math notranslate nohighlight">\(\kappa\)</span> is a <em>multiset</em> of triples
+<span class="math notranslate nohighlight">\((\pi, c, t)\)</span>: a program, a constraint (an applicative term), and a
+trigger (a list of variables). The store’s semantics is covered in detail in
+<a class="reference internal" href="chr.html"><span class="doc">The constraint store</span></a>.</p>
+<p>A <em>goal</em> is a triple <span class="math notranslate nohighlight">\((\pi, \mathrm{atom}, a)\)</span>: the program to solve
+the atom against, and the list of <em>cut-to</em> <em>alternatives</em>, what
+<span class="math notranslate nohighlight">\(\mathrm{cut}\)</span> restores. An alternative is itself a triple
+<span class="math notranslate nohighlight">\((\kappa, \sigma, gs)\)</span>: a constraint store, a substitution, and the
+list of goals still to solve along that branch.</p>
+</section>
+<section id="the-semantics">
+<h2>The semantics<a class="headerlink" href="#the-semantics" title="Link to this heading"></a></h2>
+<div class="math notranslate nohighlight">
+\[\mathrm{run} : \mathrm{Alt} \times [\mathrm{Alt}] \rightharpoonup K \times \Sigma \times [\mathrm{Alt}]\]</div>
+<p><span class="math notranslate nohighlight">\(\mathrm{run}\)</span> takes the current alternative (its pending goals, store
+and substitution) and the list of alternatives still available, and either
+returns an updated store, substitution and remaining alternatives, or
+<span class="math notranslate nohighlight">\(\bot\)</span> when every alternative has been exhausted. We write a
+<em>configuration</em> <span class="math notranslate nohighlight">\(\langle gs \mid a \mid \sigma \mid \kappa\rangle\)</span> for
+one pending goal list together with the rest of that state, and
+<span class="math notranslate nohighlight">\(\longrightarrow\)</span> for one step of <span class="math notranslate nohighlight">\(\mathrm{run}\)</span>; repeating
+<span class="math notranslate nohighlight">\(\longrightarrow\)</span> until it gets stuck at <span class="math notranslate nohighlight">\(\mathrm{stop}\)</span> or
+<span class="math notranslate nohighlight">\(\mathrm{abort}\)</span> below is what <span class="math notranslate nohighlight">\(\mathrm{run}\)</span> computes. To keep
+the rules narrow we write a goal at the head of <span class="math notranslate nohighlight">\(gs\)</span> as its program
+paired with its atom, <span class="math notranslate nohighlight">\((\pi, \mathrm{atom})\)</span>, eliding the goal’s own
+cut-to alternatives except in <span class="math notranslate nohighlight">\(\mathrm{cut}\)</span>, the one rule that reads
+them.</p>
+<p>The rules that touch the constraint store (<span class="math notranslate nohighlight">\(\mathrm{delay}\)</span>,
+<span class="math notranslate nohighlight">\(\mathrm{resume}\)</span>) take priority and are tried first; the rest are
+syntax-directed on the goal at the head of <span class="math notranslate nohighlight">\(gs\)</span>. The
+<span class="math notranslate nohighlight">\(\mathrm{resume}\)</span> rule follows <a class="reference internal" href="../bibliography.html#bib-michaylov"><span class="std std-ref">Michaylov &amp; Pfenning, 1993</span></a>, which reads a higher-order logic programming language as a
+constraint logic programming one.</p>
+<dl>
+<dt><span class="math notranslate nohighlight">\(\mathrm{stop}\)</span></dt><dd><div class="math notranslate nohighlight">
+\[\dfrac{}{\langle [\,] \mid a \mid \sigma \mid \kappa\rangle\ \to\ (\kappa,\ \sigma,\ a)}\]</div>
+<p>an empty goal list returns the current store, substitution and
+alternatives.</p>
+</dd>
+<dt><span class="math notranslate nohighlight">\(\mathrm{call}\)</span> (and <span class="math notranslate nohighlight">\(\mathrm{backtrack}\)</span>, <span class="math notranslate nohighlight">\(\mathrm{abort}\)</span>)</dt><dd><p><span class="math notranslate nohighlight">\(\mathrm{backchain}\)</span> (below) produces one alternative per rule that
+applies to the goal at the head of <span class="math notranslate nohighlight">\(gs\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\dfrac{\mathrm{backchain}(\kappa, \pi, p\,\vec t, gs, \sigma, a) = (\kappa, \sigma_1, gs_1) :: rest}
+      {\langle (\pi, p\,\vec t) :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs_1 \mid rest \mathbin{+\!+} a \mid \sigma_1 \mid \kappa\rangle}\]</div>
+<p>the first alternative becomes the new configuration, its own leftover
+rules <span class="math notranslate nohighlight">\(rest\)</span> pushed in front of <span class="math notranslate nohighlight">\(a\)</span>. If
+<span class="math notranslate nohighlight">\(\mathrm{backchain}\)</span> is empty and <span class="math notranslate nohighlight">\(a = a_0 :: a_s\)</span>, pop
+<span class="math notranslate nohighlight">\(a_0\)</span> instead, <em>chronological backtracking</em> to the most recent
+choice point, undoing every assignment made since. If it is empty and
+<span class="math notranslate nohighlight">\(a = [\,]\)</span>, the computation stops.</p>
+</dd>
+<dt><span class="math notranslate nohighlight">\(\mathrm{cut}\)</span></dt><dd><div class="math notranslate nohighlight">
+\[\dfrac{}{\langle (\pi, \mathrm{cut}, a_{cut}) :: gs \mid a \mid \sigma \mid \kappa\rangle
+        \longrightarrow
+        \langle gs \mid a_{cut} \mid \sigma \mid \kappa\rangle}\]</div>
+<p><span class="math notranslate nohighlight">\(\mathrm{cut}\)</span> at the head of the goal list discards every alternative created
+since the enclosing rule was selected, by replacing the current
+alternatives <span class="math notranslate nohighlight">\(a\)</span> with the goal’s own cut-to alternatives
+<span class="math notranslate nohighlight">\(a_{cut}\)</span>; the <span class="math notranslate nohighlight">\(\mathrm{cut}\)</span> goal is the one place a goal’s third
+component is read. This is why the cut is <em>hard</em>: alternatives left over
+from premises solved earlier in the same rule are discarded too, not only
+the untried rules for the predicate.</p>
+</dd>
+<dt><span class="math notranslate nohighlight">\(\beta\)</span></dt><dd><div class="math notranslate nohighlight">
+\[\dfrac{\sigma\,(X\,\vec t) \;=_{\beta\eta}\; p\,\vec u}
+      {\langle (\pi, X\,\vec t) :: gs \mid a \mid \sigma \mid \kappa\rangle
+       \longrightarrow
+       \langle (\pi, p\,\vec u) :: gs \mid a \mid \sigma \mid \kappa\rangle}\]</div>
+<p>if the head of the goal is a unification variable and <span class="math notranslate nohighlight">\(\sigma X\)</span>
+applied to <span class="math notranslate nohighlight">\(\vec t\)</span> <span class="math notranslate nohighlight">\(\beta\)</span>/<span class="math notranslate nohighlight">\(\eta\)</span>-reduces to an
+applicative term <span class="math notranslate nohighlight">\(p\,\vec u\)</span>, the goal is replaced by it. This is
+what lets a unification variable stand for a predicate, as in
+<span class="math notranslate nohighlight">\(P = \mathtt{true},\ P\)</span>.</p>
+</dd>
+<dt><span class="math notranslate nohighlight">\(\mathtt{pi}\)</span></dt><dd><div class="math notranslate nohighlight">
+\[\dfrac{y \mathbin{\#} \pi}
+      {\langle (\pi, \mathtt{pi}\ x{\backslash}\ g) :: gs \mid a \mid \sigma \mid \kappa\rangle
+       \longrightarrow
+       \langle (y{+}\pi, g[x/y]) :: gs \mid a \mid \sigma \mid \kappa\rangle}\]</div>
+<p><span class="math notranslate nohighlight">\(\mathtt{pi}\ x{\backslash}\ g\)</span> picks a name <span class="math notranslate nohighlight">\(y\)</span> fresh for the
+program (<span class="math notranslate nohighlight">\(y \mathbin{\#} \pi\)</span>, HDR’s notation for “fresh in”), adds
+it to <span class="math notranslate nohighlight">\(\pi\)</span>, and continues with <span class="math notranslate nohighlight">\(g[x/y]\)</span>, the body with the
+fresh name put in for the bound variable.</p>
+</dd>
+<dt><span class="math notranslate nohighlight">\({\Rightarrow}\)</span></dt><dd><div class="math notranslate nohighlight">
+\[\dfrac{}{\langle (\pi, h \Rightarrow g) :: gs \mid a \mid \sigma \mid \kappa\rangle
+        \longrightarrow
+        \langle (h{+}\pi, g) :: gs \mid a \mid \sigma \mid \kappa\rangle}\]</div>
+<p><span class="math notranslate nohighlight">\(h \Rightarrow g\)</span> continues with <span class="math notranslate nohighlight">\(g\)</span> under <span class="math notranslate nohighlight">\(h + \pi\)</span>:
+the extra rules <span class="math notranslate nohighlight">\(h\)</span> prepended to the program, for the duration of
+<span class="math notranslate nohighlight">\(g\)</span> only.</p>
+</dd>
+<dt><span class="math notranslate nohighlight">\(\mathrm{delay}\)</span></dt><dd><p><span class="math notranslate nohighlight">\(\mathrm{delay}\ c\ \vec X\)</span>, the abstract form of
+<span class="math notranslate nohighlight">\(\mathtt{declare\_constraint}\)</span>, adds <span class="math notranslate nohighlight">\((\pi, c, \vec X)\)</span> to
+the store. Because a new constraint may
+immediately enable a constraint handling rule, <span class="math notranslate nohighlight">\(\mathcal{CHR}\)</span>
+(below) runs right away; whatever goals it produces are solved <em>before</em>
+the rest of the current branch:</p>
+<div class="math notranslate nohighlight">
+\[\dfrac{\mathcal{CHR}(\kappa, \pi, c, \vec X, a) = (gs', \kappa')}
+      {\langle (\pi, \mathrm{delay}\ c\ \vec X) :: gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle gs' \mathbin{+\!+} gs \mid a \mid \sigma \mid \kappa'\rangle}\]</div>
+</dd>
+<dt><span class="math notranslate nohighlight">\(\mathrm{resume}\)</span></dt><dd><p>whenever the store holds a constraint <span class="math notranslate nohighlight">\((\pi, c, t)\)</span> some variable of
+which is now in <span class="math notranslate nohighlight">\(\mathrm{dom}(\sigma)\)</span>, it is removed from the store
+and <span class="math notranslate nohighlight">\(c\)</span> is solved next, ahead of every pending goal, under program
+<span class="math notranslate nohighlight">\(\pi\)</span> and the current alternatives as its cut-to list (irrelevant
+there, since <span class="math notranslate nohighlight">\(c\)</span> is an applicative term, never <span class="math notranslate nohighlight">\(\mathrm{cut}\)</span>):</p>
+<div class="math notranslate nohighlight">
+\[\dfrac{(\pi, c, t) \in \kappa \quad \exists X \in t,\ X \in \mathrm{dom}(\sigma)}
+      {\langle gs \mid a \mid \sigma \mid \kappa\rangle \longrightarrow \langle (\pi, c) :: gs \mid a \mid \sigma \mid \kappa - (\pi, c, t)\rangle}\]</div>
+</dd>
+</dl>
+<section id="backchain">
+<h3>Backchain<a class="headerlink" href="#backchain" title="Link to this heading"></a></h3>
+<p><span class="math notranslate nohighlight">\(\mathrm{backchain}\)</span> builds one alternative per rule of <span class="math notranslate nohighlight">\(p\)</span> that
+applies to the goal <span class="math notranslate nohighlight">\(p \vec t\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+\mathrm{backchain}(\kappa, \pi, p\,\vec t, gs, \sigma, a)\ = \Big[\ &amp;(\kappa,\ \sigma',\ [(\pi, g, a) \mid g \in \vec b] \mathbin{+\!+} gs) \\
+  \text{for}\ &amp;(p\ \vec u \mathrel{{:}{-}} \vec b) \in \pi\ p \\
+  \text{if}\ &amp;\mathrm{select}({\vec t\ \vec u},\, \sigma) = \sigma' \neq \bot\ \Big]
+\end{aligned}\end{split}\]</div>
+<p>in the order the rules appear in <span class="math notranslate nohighlight">\(\pi\ p\)</span>. Every new goal of every
+alternative carries the <em>same</em> cut-to list <span class="math notranslate nohighlight">\(a\)</span>, the alternatives that
+existed right before backchaining, not any created by it or by exploring its
+results.</p>
+</section>
+<section id="select">
+<h3>Select<a class="headerlink" href="#select" title="Link to this heading"></a></h3>
+<p><span class="math notranslate nohighlight">\(\mathrm{select}\)</span> is what makes a signature’s inputs matched and its
+outputs unified: given the pairs of a rule’s head arguments with the goal’s,
+it folds <span class="math notranslate nohighlight">\(\mathrm{match}\)</span> over the input pairs and <span class="math notranslate nohighlight">\(\mathrm{unify}\)</span>
+over the output pairs:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+\mathrm{select}({\vec t\ \vec u},\, \sigma) =\ &amp;\mathrm{fold}\ \mathrm{unify}\ {\vec t\ \vec u}_{\,\mathrm{out}} \\
+  &amp;\ \big(\mathrm{fold}\ \mathrm{match}\ {\vec t\ \vec u}_{\,\mathrm{in}}\ \sigma\big)
+\end{aligned}\end{split}\]</div>
+<p>folding <span class="math notranslate nohighlight">\(\bot\)</span> through either step aborts the whole rule, as does a
+failed <span class="math notranslate nohighlight">\(\mathrm{match}\)</span> or <span class="math notranslate nohighlight">\(\mathrm{unify}\)</span> on any one pair.</p>
+</section>
+<section id="the-mathcal-chr-procedure">
+<h3>The <span class="math notranslate nohighlight">\(\mathcal{CHR}\)</span> procedure<a class="headerlink" href="#the-mathcal-chr-procedure" title="Link to this heading"></a></h3>
+<p>A constraint rule <span class="math notranslate nohighlight">\(G_1 \mathrel{\backslash} G_2 \mid T \Leftrightarrow G_3\)</span>
+has a logical reading, <span class="math notranslate nohighlight">\(T \land G_1 \Rightarrow (G_2 \Leftrightarrow G_3)\)</span>:
+when the guard <span class="math notranslate nohighlight">\(T\)</span> holds, <span class="math notranslate nohighlight">\(G_2\)</span> may be replaced by <span class="math notranslate nohighlight">\(G_3\)</span>,
+provided <span class="math notranslate nohighlight">\(G_1\)</span> still needs to be solved. <span class="math notranslate nohighlight">\(\mathcal{CHR}\)</span> computes
+this for one freshly declared or resumed constraint, the <em>active</em>
+constraint, following the <em>refined operational semantics</em> of
+<a class="reference internal" href="../bibliography.html#bib-chr2004"><span class="std std-ref">Duck, Stuckey, García de la Banda &amp; Holzbaur, 2004</span></a>, as
+formalized by <a class="reference internal" href="../bibliography.html#bib-tassi2019"><span class="std std-ref">Guidi, Sacerdoti Coen &amp; Tassi, 2019</span></a>
+(<a class="reference internal" href="chr.html"><span class="doc">The constraint store</span></a> gives the informal, 8-step version of exactly this procedure):</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{CHR}(\kappa, \pi, c, t, a) = (g', \kappa')\ \text{where}\]</div>
+<ol class="arabic simple">
+<li><p>the active constraint <span class="math notranslate nohighlight">\((\pi, c, t)\)</span> is added to <span class="math notranslate nohighlight">\(\kappa\)</span> to get
+<span class="math notranslate nohighlight">\(\kappa'\)</span>, and <span class="math notranslate nohighlight">\(g'\)</span> starts empty;</p></li>
+<li><p>for each rule <span class="math notranslate nohighlight">\(P_1 \ldots P_x \mathrel{\backslash} P_{x+1} \ldots P_n \mid Q \Leftrightarrow G\)</span>
+of the active constraint’s clique, in declaration order;</p></li>
+<li><p>for each position <span class="math notranslate nohighlight">\(0 &lt; j \le n\)</span>, in increasing order;</p></li>
+<li><p>for each permutation <span class="math notranslate nohighlight">\(C_1 \ldots C_n\)</span> of constraints in
+<span class="math notranslate nohighlight">\(\kappa'\)</span> with <span class="math notranslate nohighlight">\(C_j = (\pi, c, t)\)</span>;</p></li>
+<li><p>match every <span class="math notranslate nohighlight">\(C_i\)</span> against <span class="math notranslate nohighlight">\(P_i\)</span>, and run the guard <span class="math notranslate nohighlight">\(Q\)</span> in
+the program the top-level query was launched against, not in the <span class="math notranslate nohighlight">\(\pi\)</span>
+carried by any matched constraint (<a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">HDR</span></a> §2.5.1);
+on success, committing to this rule, this position and this permutation,
+remove <span class="math notranslate nohighlight">\(C_{x+1} \ldots C_n\)</span> from <span class="math notranslate nohighlight">\(\kappa'\)</span>, discard every
+remaining permutation that mentions any of them, and add the (substituted)
+<span class="math notranslate nohighlight">\(G\)</span> to <span class="math notranslate nohighlight">\(g'\)</span>;</p></li>
+<li><p>continue with the next rule at step 2.</p></li>
+</ol>
+<p>Two refinements make this tractable. First, unless a constraint’s trigger is
+the shared wildcard that opts it out (<a class="reference internal" href="chr.html"><span class="doc">The constraint store</span></a>), step 4 only considers
+permutations whose constraints have a trigger overlapping <span class="math notranslate nohighlight">\(t\)</span>,
+clustering the store instead of considering every constraint against every
+other one. Second, step 1
+actually freshens <span class="math notranslate nohighlight">\((\pi, c, t)\)</span>’s own names before adding it, so that
+the names of every constraint in the store stay pairwise disjoint; this is
+the “frozen into its own space of names” of <a class="reference internal" href="chr.html"><span class="doc">The constraint store</span></a>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="chr.html" class="btn btn-neutral float-left" title="The constraint store" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../features/unification-and-variables.html" class="btn btn-neutral float-right" title="Unification and variables" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

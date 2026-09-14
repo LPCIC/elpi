@@ -1,0 +1,339 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compatibility with Teyjus, Prolog and legacy Elpi &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Bibliography" href="bibliography.html" />
+    <link rel="prev" title="Embedding and extending Elpi" href="embedding.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Compatibility with Teyjus, Prolog and legacy Elpi</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#lexical-differences">Lexical differences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#semantic-differences">Semantic differences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#superseded-elpi-keywords">Superseded Elpi keywords</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#older-signature-forms">Older signature forms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-occur-check">The occur check</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#modules">Modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Compatibility with Teyjus, Prolog and legacy Elpi</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/compatibility.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="compatibility-with-teyjus-prolog-and-legacy-elpi">
+<h1>Compatibility with Teyjus, Prolog and legacy Elpi<a class="headerlink" href="#compatibility-with-teyjus-prolog-and-legacy-elpi" title="Link to this heading"></a></h1>
+<p>Elpi is a dialect of λProlog and runs most programs written for
+<a class="reference external" href="https://github.com/teyjus/teyjus">Teyjus</a>. Collected here are the
+places where it deviates from Teyjus or from standard Prolog, and the older
+Elpi syntax that newer spellings have superseded but that a program may
+still be written in.</p>
+<section id="lexical-differences">
+<h2>Lexical differences<a class="headerlink" href="#lexical-differences" title="Link to this heading"></a></h2>
+<p>Elpi’s tokens are close to those of <a class="reference external" href="https://github.com/teyjus/teyjus/wiki/TeyjusTokens">Teyjus</a>. Both share:</p>
+<ul class="simple">
+<li><p>the identifier character set: letters, digits and the sign characters
+<code class="docutils literal notranslate"><span class="pre">+</span> <span class="pre">-</span> <span class="pre">*</span> <span class="pre">/</span> <span class="pre">^</span> <span class="pre">&lt;</span> <span class="pre">&gt;</span> <span class="pre">=</span> <span class="pre">`</span> <span class="pre">'</span> <span class="pre">?</span> <span class="pre">&#64;</span> <span class="pre">#</span> <span class="pre">$</span> <span class="pre">&amp;</span> <span class="pre">!</span> <span class="pre">_</span> <span class="pre">~</span></code>;</p></li>
+<li><p>the rule for telling a variable from a constant: a leading <code class="docutils literal notranslate"><span class="pre">_</span></code> or
+upper-case letter marks a variable;</p></li>
+<li><p>the integer and real shapes: <code class="docutils literal notranslate"><span class="pre">.5</span></code> yes, <code class="docutils literal notranslate"><span class="pre">3.</span></code> no;</p></li>
+<li><p>the comments: <code class="docutils literal notranslate"><span class="pre">%</span></code> to end of line, nesting <code class="docutils literal notranslate"><span class="pre">/*</span> <span class="pre">*/</span></code>.</p></li>
+</ul>
+<p>They differ in:</p>
+<ul class="simple">
+<li><p><strong>Name start.</strong> A Teyjus name may start with a sign character (<code class="docutils literal notranslate"><span class="pre">=abc</span></code> is one
+name). An Elpi name must start with a letter, <code class="docutils literal notranslate"><span class="pre">_</span></code>, <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> or <code class="docutils literal notranslate"><span class="pre">.</span></code>; a leading
+sign character begins an operator.</p></li>
+<li><p><strong>Dot.</strong> <code class="docutils literal notranslate"><span class="pre">.</span></code> is punctuation in Teyjus. In Elpi <code class="docutils literal notranslate"><span class="pre">.</span></code> before a letter
+continues a qualified name.</p></li>
+<li><p><strong>Negative numbers.</strong> <code class="docutils literal notranslate"><span class="pre">-2</span></code> (no space) is an integer literal in Elpi; Teyjus
+has no negative numeric literal.</p></li>
+<li><p><strong>Strings.</strong> An Elpi string may contain a literal newline; a Teyjus string may
+not. Teyjus recognises many more escapes (<code class="docutils literal notranslate"><span class="pre">\a</span> <span class="pre">\v</span> <span class="pre">\f</span> <span class="pre">\e</span> <span class="pre">\d</span> <span class="pre">\^c</span> <span class="pre">\ddd</span> <span class="pre">\xhh</span></code> …);
+Elpi recognises <code class="docutils literal notranslate"><span class="pre">\n</span> <span class="pre">\b</span> <span class="pre">\t</span> <span class="pre">\r</span> <span class="pre">\\</span> <span class="pre">\&quot;</span></code> and the doubled <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code>.</p></li>
+<li><p><strong>Operators.</strong> Teyjus programs declare operators with <code class="docutils literal notranslate"><span class="pre">infix</span></code> / <code class="docutils literal notranslate"><span class="pre">prefix</span></code> /
+… ; Elpi’s operator set is fixed (see <a class="reference internal" href="syntax/lexical-conventions.html"><span class="doc">Lexical conventions</span></a>).</p></li>
+</ul>
+<p>See <a class="reference internal" href="syntax/lexical-conventions.html"><span class="doc">Lexical conventions</span></a> for the full lexical rules.</p>
+</section>
+<section id="semantic-differences">
+<h2>Semantic differences<a class="headerlink" href="#semantic-differences" title="Link to this heading"></a></h2>
+<p>In Teyjus and standard λProlog, <code class="docutils literal notranslate"><span class="pre">;</span></code> is a special, built-in control
+construct, not an ordinary predicate: the cut is <em>transparent</em> through it, so
+a <code class="docutils literal notranslate"><span class="pre">!</span></code> written inside a disjunct is treated as if it were written in
+the enclosing rule: it cuts that rule’s own untried sibling rules too, not
+just the other disjunct.</p>
+<p>In Elpi, <code class="docutils literal notranslate"><span class="pre">;</span></code> genuinely <em>is</em> an ordinary (higher-order) predicate, actually
+called as such through the two rules it is defined by, <code class="docutils literal notranslate"><span class="pre">(A</span> <span class="pre">;</span> <span class="pre">_)</span> <span class="pre">:-</span> <span class="pre">A.</span></code> and
+<code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">;</span> <span class="pre">B)</span> <span class="pre">:-</span> <span class="pre">B.</span></code> (<a class="reference internal" href="features/control-and-cut.html"><span class="doc">Control and cut</span></a>), so it is a real call, one
+more stack frame. A <code class="docutils literal notranslate"><span class="pre">!</span></code> written inside a disjunct only cuts back to <em>that</em>
+call: it discards <code class="docutils literal notranslate"><span class="pre">;</span></code>’s own untried alternative (the other disjunct) but,
+unlike Teyjus, does not reach further out to cut the enclosing rule’s own
+sibling rules:</p>
+<p><strong>code/cut-in-disjunct.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% ; is a regular (higher-order) predicate in Elpi, defined by exactly two</span>
+<span class="linenos"> 2</span><span class="c">% rules -- so a ! written inside one of its disjuncts only cuts back to</span>
+<span class="linenos"> 3</span><span class="c">% that rule selection, one stack frame up: it discards ;&#39;s own untried</span>
+<span class="linenos"> 4</span><span class="c">% alternative, but does not reach further out to cut p&#39;s own second rule.</span>
+<span class="linenos"> 5</span><span class="c">% In Teyjus and standard lambda-Prolog, where ; is a built-in control</span>
+<span class="linenos"> 6</span><span class="c">% construct and the cut is transparent through it, p&#39;s second rule would</span>
+<span class="linenos"> 7</span><span class="c">% be cut away too.</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="kd">pred</span><span class="w"> </span><span class="nf">p</span>.
+<span class="linenos">10</span>p<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(<span class="kd">!,</span><span class="w"> </span>fail<span class="w"> </span><span class="kd">;</span><span class="w"> </span>true<span class="o">).</span>
+<span class="linenos">11</span>p<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;p&#39;s second rule fired&quot;</span><span class="o">.</span>
+<span class="linenos">12</span>
+<span class="linenos">13</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>p<span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;after p&quot;</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">p&#39;s second rule fired</span>
+<span class="go">after p</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">p</span></code>’s second rule still fires here: the <code class="docutils literal notranslate"><span class="pre">!</span></code> inside the first rule’s
+disjunct only prevented falling back to <code class="docutils literal notranslate"><span class="pre">true</span></code>, not the whole first rule
+from failing over to the second one.</p>
+<p>Unification outside the pattern fragment (<a class="reference internal" href="features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>)
+aborts by default; Teyjus instead delays it as a constraint. Passing the
+deprecated <code class="docutils literal notranslate"><span class="pre">-delay-problems-outside-pattern-fragment</span></code> flag restores that
+behaviour.</p>
+</section>
+<section id="superseded-elpi-keywords">
+<h2>Superseded Elpi keywords<a class="headerlink" href="#superseded-elpi-keywords" title="Link to this heading"></a></h2>
+<p>Newer spellings have replaced several older Elpi keywords. The old ones still
+parse and mean the same thing (<a class="reference internal" href="syntax/type-declarations.html"><span class="doc">Type declarations</span></a>):</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">kind</span> <span class="pre">name</span> <span class="pre">type</span> <span class="pre">-&gt;</span> <span class="pre">…</span> <span class="pre">-&gt;</span> <span class="pre">type</span></code> is now <code class="docutils literal notranslate"><span class="pre">data</span> <span class="pre">name</span> <span class="pre">A</span> <span class="pre">…</span> <span class="pre">Z</span></code>, one placeholder
+per parameter instead of one <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">-&gt;</span></code>:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">data</span><span class="w"> </span><span class="nf">i32</span>.<span class="w">        </span><span class="kd">kind</span><span class="w"> </span><span class="nf">i32</span><span class="w">  </span><span class="kt">type</span>.
+<span class="kd">data</span><span class="w"> </span><span class="nf">tree</span><span class="w"> </span><span class="kt">A</span>.<span class="w">     </span><span class="kd">kind</span><span class="w"> </span><span class="nf">tree</span><span class="w"> </span><span class="kt">type</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">type</span>.
+<span class="kd">data</span><span class="w"> </span><span class="nf">map</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">B</span>.<span class="w">    </span><span class="kd">kind</span><span class="w"> </span><span class="nf">map</span><span class="w">  </span><span class="kt">type</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">type</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">type</span>.
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">kind</span></code> also takes a comma-separated list of names (<code class="docutils literal notranslate"><span class="pre">kind</span> <span class="pre">day,</span> <span class="pre">month</span> <span class="pre">type.</span></code>);
+<code class="docutils literal notranslate"><span class="pre">data</span></code> takes one name.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">name</span> <span class="pre">&lt;type&gt;</span></code> for a <em>data constructor</em> is now <code class="docutils literal notranslate"><span class="pre">symb</span> <span class="pre">name</span> <span class="pre">&lt;type&gt;</span></code>;
+<code class="docutils literal notranslate"><span class="pre">symbol</span></code> is a slightly-less-old spelling of <code class="docutils literal notranslate"><span class="pre">symb</span></code>. All three of</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">symb</span><span class="w">  </span><span class="nf">leaf</span><span class="w"> </span><span class="kt">tree</span><span class="w"> </span><span class="kt">A</span>.
+<span class="kd">symbol</span><span class="w"> </span><span class="nf">leaf</span><span class="w"> </span><span class="kt">tree</span><span class="w"> </span><span class="kt">A</span>.<span class="w">       </span><span class="c">% or  symbol leaf : tree A.</span>
+<span class="kd">type</span><span class="w">  </span><span class="nf">leaf</span><span class="w"> </span><span class="kt">tree</span><span class="w"> </span><span class="kt">A</span>.
+</pre></div>
+</div>
+<p>declare the same constant, and all three take a comma-separated list of
+names (<code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">apple,</span> <span class="pre">pear</span> <span class="pre">item.</span></code>). <code class="docutils literal notranslate"><span class="pre">symbol</span></code>, like <code class="docutils literal notranslate"><span class="pre">symb</span></code>, also takes
+an optional <code class="docutils literal notranslate"><span class="pre">:</span></code> before the type; <code class="docutils literal notranslate"><span class="pre">type</span></code> does not.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">external</span></code> before a declaration is now <code class="docutils literal notranslate"><span class="pre">builtin</span></code>.</p></li>
+<li><p>A <code class="docutils literal notranslate"><span class="pre">symb</span></code> (or <code class="docutils literal notranslate"><span class="pre">type</span></code>) whose type <em>ends in</em> <code class="docutils literal notranslate"><span class="pre">prop</span></code> is really a
+predicate: write it as a <code class="docutils literal notranslate"><span class="pre">pred</span></code> or <code class="docutils literal notranslate"><span class="pre">func</span></code> signature instead, so
+<code class="docutils literal notranslate"><span class="pre">symb</span> <span class="pre">p</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">prop.</span></code> becomes <code class="docutils literal notranslate"><span class="pre">pred</span> <span class="pre">p</span> <span class="pre">int.</span></code> (or <code class="docutils literal notranslate"><span class="pre">func</span> <span class="pre">p</span> <span class="pre">int.</span></code> when it
+is deterministic).</p></li>
+<li><p>The type <code class="docutils literal notranslate"><span class="pre">prop</span></code>, and its λProlog spelling <code class="docutils literal notranslate"><span class="pre">o</span></code>, is now <code class="docutils literal notranslate"><span class="pre">(pred)</span></code>, with
+<code class="docutils literal notranslate"><span class="pre">(func)</span></code> for the deterministic case. <code class="docutils literal notranslate"><span class="pre">fprop</span></code>, a former keyword for the
+latter, has been removed entirely: write <code class="docutils literal notranslate"><span class="pre">(func)</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">variadic</span> <span class="pre">T</span> <span class="pre">R</span></code> in a type is the old spelling of a trailing <code class="docutils literal notranslate"><span class="pre">..</span></code> on the
+last argument (<a class="reference internal" href="syntax/type-declarations.html"><span class="doc">Type declarations</span></a>): <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">f</span> <span class="pre">variadic</span> <span class="pre">int</span> <span class="pre">prop.</span></code>
+is now <code class="docutils literal notranslate"><span class="pre">pred</span> <span class="pre">f</span> <span class="pre">int..</span> <span class="pre">.</span></code> (<code class="docutils literal notranslate"><span class="pre">func</span></code> if deterministic).</p></li>
+</ul>
+</section>
+<section id="older-signature-forms">
+<h2>Older signature forms<a class="headerlink" href="#older-signature-forms" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">name</span> <span class="pre">…</span> <span class="pre">-&gt;</span> <span class="pre">prop</span></code> gives a predicate a type with no mode information at
+all: every argument is unified, none matched, since there is nothing marking
+one as input. Older Elpi paired such a declaration with a separate
+<code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">(name</span> <span class="pre">i</span> <span class="pre">o).</span></code> directive to add that information; this was never a
+Teyjus or standard λProlog feature, only Elpi’s own now-legacy syntax.
+<strong>Current Elpi does not parse ``mode`` as a directive at all.</strong> It is not a
+keyword, so <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">(name</span> <span class="pre">i</span> <span class="pre">o).</span></code> is read as an ordinary fact about a
+predicate called <code class="docutils literal notranslate"><span class="pre">mode</span></code>, and fails to type-check.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">i:</span></code> / <code class="docutils literal notranslate"><span class="pre">o:</span></code> markers survive, but only <em>inline</em>, one before each
+argument type, in place of the single <code class="docutils literal notranslate"><span class="pre">-&gt;</span></code> a modern signature uses
+(<a class="reference internal" href="syntax/type-declarations.html"><span class="doc">Type declarations</span></a>): <code class="docutils literal notranslate"><span class="pre">pred</span> <span class="pre">name</span> <span class="pre">i:int,</span> <span class="pre">o:string.</span></code> is the old
+spelling of <code class="docutils literal notranslate"><span class="pre">pred</span> <span class="pre">name</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">string.</span></code>. Unlike <code class="docutils literal notranslate"><span class="pre">-&gt;</span></code> they can also
+<em>interleave</em> inputs and outputs (<code class="docutils literal notranslate"><span class="pre">:functional</span> <span class="pre">pred</span> <span class="pre">name</span> <span class="pre">o:A,</span> <span class="pre">i:A.</span></code>), the
+one thing <code class="docutils literal notranslate"><span class="pre">-&gt;</span></code> cannot express, but that is discouraged: keep the outputs
+last.</p>
+<p><code class="docutils literal notranslate"><span class="pre">:functional</span></code> before a <code class="docutils literal notranslate"><span class="pre">pred</span></code> marks it deterministic, like the <code class="docutils literal notranslate"><span class="pre">func</span></code>
+keyword, which is preferred. It is still needed for a signature with
+interleaved arguments as above, where <code class="docutils literal notranslate"><span class="pre">func</span></code> (which implies <code class="docutils literal notranslate"><span class="pre">-&gt;</span></code>) cannot
+be used.</p>
+</section>
+<section id="the-occur-check">
+<h2>The occur check<a class="headerlink" href="#the-occur-check" title="Link to this heading"></a></h2>
+<p>Elpi performs the occur check by default: unifying a variable with a term
+that already contains it fails, rather than building a cyclic term. SWI-Prolog
+and ISO Prolog default the other way: <code class="docutils literal notranslate"><span class="pre">occurs_check</span></code> is <code class="docutils literal notranslate"><span class="pre">false</span></code>, ordinary
+<code class="docutils literal notranslate"><span class="pre">=/2</span></code> builds the cyclic term, and a program that wants the check asks for it
+per call with <code class="docutils literal notranslate"><span class="pre">unify_with_occurs_check/2</span></code>. Elpi is the reverse: checked
+everywhere, with the <code class="docutils literal notranslate"><span class="pre">:nooc</span></code> attribute opting one predicate out. The
+attribute, the <code class="docutils literal notranslate"><span class="pre">unsound_unif</span></code> builtin and <code class="docutils literal notranslate"><span class="pre">ground_term</span></code> are described in
+<a class="reference internal" href="features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>.</p>
+</section>
+<section id="modules">
+<h2>Modules<a class="headerlink" href="#modules" title="Link to this heading"></a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">.sig</span></code> file’s <em>signature</em> (which names a module exports) is ignored; Elpi
+has no separate notion of a module’s public interface. <code class="docutils literal notranslate"><span class="pre">import</span></code> and
+<code class="docutils literal notranslate"><span class="pre">accum_sig</span></code>/<code class="docutils literal notranslate"><span class="pre">use_sig</span></code> are parsed, looking for a compiled <code class="docutils literal notranslate"><span class="pre">.mod</span></code> /
+<code class="docutils literal notranslate"><span class="pre">.sig</span></code> unit the way Teyjus would produce one, but Elpi has no such compiled
+unit format to begin with, so in practice they never find anything to load;
+<code class="docutils literal notranslate"><span class="pre">accumulate</span></code> (<a class="reference internal" href="syntax/file-structure-and-attributes.html"><span class="doc">File structure and attributes</span></a>) is the only way
+to pull in another file’s code. Elpi accumulates each file <strong>once</strong>, even if
+several accumulated files each accumulate it too; Teyjus accumulates every
+time, which duplicates rules and is rarely what one wants. Relative
+<code class="docutils literal notranslate"><span class="pre">accumulate</span></code> paths, and <code class="docutils literal notranslate"><span class="pre">-I</span></code>, are
+<a class="reference internal" href="syntax/file-structure-and-attributes.html"><span class="doc">File structure and attributes</span></a>; the <code class="docutils literal notranslate"><span class="pre">elpi</span></code> command line tool
+additionally reads the colon-separated
+<code class="docutils literal notranslate"><span class="pre">TJPATH</span></code> environment variable as a fallback search path, for compatibility
+with Teyjus scripts that set it.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="embedding.html" class="btn btn-neutral float-left" title="Embedding and extending Elpi" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="bibliography.html" class="btn btn-neutral float-right" title="Bibliography" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,279 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Debugging and tracing &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Embedding and extending Elpi" href="embedding.html" />
+    <link rel="prev" title="The standard library" href="standard-library.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Debugging and tracing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-tracing-facility">The tracing facility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-spy-predicate">The spy predicate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#debugging-the-parser">Debugging the parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#conditional-debug-rules">Conditional debug rules</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Debugging and tracing</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/debugging-and-tracing.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="debugging-and-tracing">
+<h1>Debugging and tracing<a class="headerlink" href="#debugging-and-tracing" title="Link to this heading"></a></h1>
+<section id="the-tracing-facility">
+<h2>The tracing facility<a class="headerlink" href="#the-tracing-facility" title="Link to this heading"></a></h2>
+<p>Elpi’s interpreter is instrumented. Each traced event is one application of a
+rule of <a class="reference internal" href="semantics/formal-semantics.html"><span class="doc">Formal semantics</span></a>: <code class="docutils literal notranslate"><span class="pre">curgoal</span></code> marks the goal now
+active, <code class="docutils literal notranslate"><span class="pre">rule</span></code> the backchain step that picks a clause for it, <code class="docutils literal notranslate"><span class="pre">newgoal</span></code>
+the premises that step pushes, <code class="docutils literal notranslate"><span class="pre">assign</span></code> an extension of the substitution,
+<code class="docutils literal notranslate"><span class="pre">new-hyps</span></code> and <code class="docutils literal notranslate"><span class="pre">new-quant</span></code> the <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">pi</span></code> steps. The operational
+semantics rewrites a single configuration and keeps no call stack, so the
+event stream is flat and linear; a separate <em>elaborator</em> rebuilds the goal
+tree from the parent/child links in the stream, and that reconstructed tree is
+what the interactive browser shows.</p>
+<p><code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">prog.elpi</span> <span class="pre">-test</span> <span class="pre">-trace-on</span> <span class="pre">-trace-at</span> <span class="pre">run</span> <span class="pre">1</span> <span class="pre">9999</span> <span class="pre">-trace-only</span> <span class="pre">'user:'</span></code>
+prints one line per traced event (a goal selected (<code class="docutils literal notranslate"><span class="pre">run</span></code>), a rule tried
+(<code class="docutils literal notranslate"><span class="pre">select</span></code>), a variable assigned (<code class="docutils literal notranslate"><span class="pre">assign</span></code>), and more) between step 1 and
+step 9999 of the <code class="docutils literal notranslate"><span class="pre">run</span></code> trace point:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>elpi<span class="w"> </span>prog.elpi<span class="w"> </span>-test<span class="w"> </span>-trace-on<span class="w"> </span>-trace-at<span class="w"> </span>run<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">5</span><span class="w"> </span>-trace-only<span class="w"> </span><span class="s1">&#39;user:&#39;</span>
+<span class="go">  rid:0 step:1 gid:4 user:curgoal = main ...</span>
+<span class="go">  rid:0 step:1 gid:4 user:rule = backchain</span>
+<span class="go">  rid:0 step:1 gid:5 user:newgoal = double 5 X0</span>
+<span class="go">  ...</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">-trace-only-pred</span> <span class="pre">REX</span></code> narrows the trace to goals matching a predicate
+name; <code class="docutils literal notranslate"><span class="pre">-trace-skip</span> <span class="pre">REX</span></code> excludes matching items instead. Events prefixed
+<code class="docutils literal notranslate"><span class="pre">user:</span></code> come from the program; <code class="docutils literal notranslate"><span class="pre">dev:</span></code> ones are for debugging Elpi itself.
+<code class="docutils literal notranslate"><span class="pre">trace.counter</span> <span class="pre">&quot;NAME&quot;</span> <span class="pre">N</span></code> reads a named counter (<code class="docutils literal notranslate"><span class="pre">&quot;run&quot;</span></code> counts solved
+goals) for a program to condition its own debug output on, the way
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L649"><code class="docutils literal notranslate"><span class="pre">std.spy</span></code></a> does.</p>
+<p><code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">prog.elpi</span> <span class="pre">-test</span> <span class="pre">-trace-on</span> <span class="pre">json</span> <span class="pre">FILE</span> <span class="pre">-trace-at</span> <span class="pre">run</span> <span class="pre">1</span> <span class="pre">9999</span></code> writes a
+machine-readable trace instead of a text one. <code class="docutils literal notranslate"><span class="pre">elpi-trace-elaborator</span></code>, a
+separate binary shipped with Elpi, reads such a trace from standard input and
+groups it into “cards”, one per step with its rule and its subgoals; the VS
+Code extension’s trace browser (<a class="reference internal" href="getting-started.html"><span class="doc">Getting started</span></a>) displays them and
+steps through them interactively, rather than as a flat log:</p>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="_images/trace-browser.png"><img alt="The VS Code trace browser, with a column of cards on the left (one per traced step, each naming its rule and predicate) and, on the right, the successful attempt and subgoals of the step currently selected." src="_images/trace-browser.png" style="width: 90%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The trace browser.</span><a class="headerlink" href="#id1" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="the-spy-predicate">
+<h2>The spy predicate<a class="headerlink" href="#the-spy-predicate" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">std.spy</span> <span class="pre">G</span></code> runs <code class="docutils literal notranslate"><span class="pre">G</span></code> and prints it on entry, and again on exit or on
+failure, through <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L625"><code class="docutils literal notranslate"><span class="pre">std.debug-print</span></code></a>, so it is subject to the same
+overriding as any other library hook (<a class="reference internal" href="standard-library.html"><span class="doc">The standard library</span></a>). <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L657"><code class="docutils literal notranslate"><span class="pre">std.spy!</span></code></a>
+is the same with a cut, for a goal that should only ever succeed once.</p>
+<p><strong>code/spy-tour.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="c">% std.spy prints a call&#39;s arguments on entry and on exit (or failure),</span>
+<span class="linenos">2</span><span class="c">% without needing any command-line flag.</span>
+<span class="linenos">3</span>
+<span class="linenos">4</span><span class="kd">pred</span><span class="w"> </span><span class="nf">double</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos">5</span>double<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">*</span><span class="w"> </span><span class="mi">2</span><span class="o">.</span>
+<span class="linenos">6</span>
+<span class="linenos">7</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>std.spy<span class="w"> </span>(double<span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="nv">R</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;result:&quot;</span><span class="w"> </span><span class="nv">R</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">----&lt;&lt;---- enter:  double 5 X0</span>
+<span class="go">----&gt;&gt;---- exit:  double 5 10</span>
+<span class="go">result: 10</span>
+</pre></div>
+</div>
+</section>
+<section id="debugging-the-parser">
+<h2>Debugging the parser<a class="headerlink" href="#debugging-the-parser" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-print-ast</span> <span class="pre">FILE</span></code> prints a program as parsed, before any compilation
+pass; <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-print</span> <span class="pre">FILE</span></code> prints it after most of them, spilling
+(<a class="reference internal" href="features/spilling.html"><span class="doc">Spilling</span></a>) included, so any question about how a particular
+piece of surface syntax desugared can be checked directly. <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">FILE</span> <span class="pre">-deps</span></code>
+prints the <code class="docutils literal notranslate"><span class="pre">accumulate</span></code> graph of <code class="docutils literal notranslate"><span class="pre">FILE</span></code> and everything it pulls in, as a
+Graphviz <code class="docutils literal notranslate"><span class="pre">digraph</span></code>, useful for untangling a large project’s file structure
+(<a class="reference internal" href="syntax/file-structure-and-attributes.html"><span class="doc">File structure and attributes</span></a>).</p>
+</section>
+<section id="conditional-debug-rules">
+<h2>Conditional debug rules<a class="headerlink" href="#conditional-debug-rules" title="Link to this heading"></a></h2>
+<p>A debug rule can be removed from the program entirely, rather than merely
+kept quiet: <code class="docutils literal notranslate"><span class="pre">:if</span> <span class="pre">&quot;NAME&quot;</span></code> (<a class="reference internal" href="syntax/rule-attributes.html"><span class="doc">Rule attributes</span></a>) drops a rule at
+compile time unless <code class="docutils literal notranslate"><span class="pre">NAME</span></code> is defined with <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-D</span> <span class="pre">NAME</span></code>, so a
+<code class="docutils literal notranslate"><span class="pre">trace</span></code>-style helper costs nothing when debugging is off, instead of
+running and choosing not to print:</p>
+<p><strong>code/conditional.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% A debug-only rule: present in the program, but only fires when the</span>
+<span class="linenos"> 2</span><span class="c">% compiler variable DEBUG is defined (run with `elpi conditional.elpi -test</span>
+<span class="linenos"> 3</span><span class="c">% -D DEBUG` to see it fire).</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">func</span><span class="w"> </span><span class="nf">trace</span><span class="w"> </span><span class="kt">string</span>.
+<span class="linenos"> 6</span>
+<span class="linenos"> 7</span><span class="k k-Mode">:if</span><span class="w"> </span><span class="s2">&quot;DEBUG&quot;</span>
+<span class="linenos"> 8</span>trace<span class="w"> </span><span class="nv">Msg</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;[debug]&quot;</span><span class="w"> </span><span class="nv">Msg</span><span class="kd">,</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos"> 9</span>trace<span class="w"> </span><span class="nv">_</span><span class="o">.</span>
+<span class="linenos">10</span>
+<span class="linenos">11</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>trace<span class="w"> </span><span class="s2">&quot;checkpoint 1&quot;</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;done&quot;</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">done</span>
+</pre></div>
+</div>
+<p>Compiled plain, the guarded rule is gone and <code class="docutils literal notranslate"><span class="pre">trace</span></code> falls through to the
+catch-all, printing nothing; <code class="docutils literal notranslate"><span class="pre">-D</span> <span class="pre">DEBUG</span></code> compiles it back in:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>elpi<span class="w"> </span>conditional.elpi<span class="w"> </span>-test<span class="w"> </span>-D<span class="w"> </span>DEBUG
+<span class="go">[debug] checkpoint 1</span>
+<span class="go">done</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="standard-library.html" class="btn btn-neutral float-left" title="The standard library" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="embedding.html" class="btn btn-neutral float-right" title="Embedding and extending Elpi" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

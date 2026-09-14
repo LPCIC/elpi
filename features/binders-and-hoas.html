@@ -1,0 +1,284 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Binders and HOAS &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Control and cut" href="control-and-cut.html" />
+    <link rel="prev" title="Unification and variables" href="unification-and-variables.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Binders and HOAS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#moving-under-a-binder">Moving under a binder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sigma-for-per-call-locals"><code class="docutils literal notranslate"><span class="pre">sigma</span></code> for per-call locals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inspecting-the-context">Inspecting the context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#restricting-a-variable-s-scope">Restricting a variable’s scope</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Binders and HOAS</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/features/binders-and-hoas.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="binders-and-hoas">
+<h1>Binders and HOAS<a class="headerlink" href="#binders-and-hoas" title="Link to this heading"></a></h1>
+<p>Writing code that goes under a binder, and inspecting what is currently in
+scope. The encoding of object-language binders with <code class="docutils literal notranslate"><span class="pre">x\</span> <span class="pre">t</span></code> and <code class="docutils literal notranslate"><span class="pre">pi</span></code> is
+<a class="reference internal" href="../semantics/logic-programming-model.html"><span class="doc">Logic Programming</span></a> (<a class="reference internal" href="../syntax/terms.html"><span class="doc">Terms</span></a>,
+<a class="reference internal" href="../syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>).</p>
+<section id="moving-under-a-binder">
+<h2>Moving under a binder<a class="headerlink" href="#moving-under-a-binder" title="Link to this heading"></a></h2>
+<p>Recursing into a <code class="docutils literal notranslate"><span class="pre">lam</span></code> argument follows the same shape as the STLC type
+checker’s abstraction rule: introduce a fresh name with <code class="docutils literal notranslate"><span class="pre">pi</span></code>, then recurse
+on the function applied to it. A function computing the nesting depth of a
+term:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">depth</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">int</span>.
+depth<span class="w"> </span>(app<span class="w"> </span><span class="nv">H</span><span class="w"> </span><span class="nv">A</span><span class="o">)</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>depth<span class="w"> </span><span class="nv">H</span><span class="w"> </span><span class="nv">N1</span><span class="kd">,</span><span class="w"> </span>depth<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">N2</span><span class="kd">,</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span>{std.max<span class="w"> </span><span class="nv">N1</span><span class="w"> </span><span class="nv">N2</span>}.
+depth<span class="w"> </span>(lam<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>depth<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="nv">N1</span><span class="kd">,</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N1</span><span class="w"> </span><span class="kd">+</span><span class="w"> </span><span class="mi">1</span><span class="o">.</span>
+depth<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>name<span class="w"> </span><span class="nv">X</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>It goes one level deeper each time it opens a <code class="docutils literal notranslate"><span class="pre">lam</span></code>. The fresh <code class="docutils literal notranslate"><span class="pre">x</span></code> is
+never inspected, the recursive call only needing it to instantiate <code class="docutils literal notranslate"><span class="pre">F</span></code>, and
+the base rule guards on <code class="docutils literal notranslate"><span class="pre">name</span> <span class="pre">X</span></code>, so it fires for a bound variable but not
+for an <code class="docutils literal notranslate"><span class="pre">app</span></code>, a <code class="docutils literal notranslate"><span class="pre">lam</span></code>, or an unassigned hole.</p>
+</section>
+<section id="sigma-for-per-call-locals">
+<h2><code class="docutils literal notranslate"><span class="pre">sigma</span></code> for per-call locals<a class="headerlink" href="#sigma-for-per-call-locals" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">sigma</span> <span class="pre">X\</span> <span class="pre">g</span></code> allocates a fresh unification variable <code class="docutils literal notranslate"><span class="pre">X</span></code> for the duration
+of <code class="docutils literal notranslate"><span class="pre">g</span></code>. An ordinary rule variable does not need it: each use of a rule
+already gets its own fresh variables
+(<a class="reference internal" href="../syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>). <code class="docutils literal notranslate"><span class="pre">sigma</span></code> matters in the two
+situations where that is not enough.</p>
+<p>The first is a variable used inside an anonymous predicate, the callback
+passed to <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a> and the like. Such a variable belongs to the enclosing
+rule, not to the callback, so it is the <em>same</em> variable on every call the
+traversal makes; a <code class="docutils literal notranslate"><span class="pre">sigma</span></code> inside the callback gives each call its own.</p>
+<p>The second is a variable first used <em>after</em> a <code class="docutils literal notranslate"><span class="pre">pi</span></code> or <code class="docutils literal notranslate"><span class="pre">sigma</span></code>. A
+variable’s scope is fixed where it is introduced, not where it is later
+mentioned, so <code class="docutils literal notranslate"><span class="pre">main</span> <span class="pre">:-</span> <span class="pre">pi</span> <span class="pre">x\</span> <span class="pre">(names</span> <span class="pre">Ns,</span> <span class="pre">…)</span></code> fails silently: <code class="docutils literal notranslate"><span class="pre">Ns</span></code> belongs
+to <code class="docutils literal notranslate"><span class="pre">main</span></code>’s outer scope, which cannot see <code class="docutils literal notranslate"><span class="pre">x</span></code>, so assigning it the list
+<code class="docutils literal notranslate"><span class="pre">[x]</span></code> is a scope error. Writing <code class="docutils literal notranslate"><span class="pre">main</span> <span class="pre">:-</span> <span class="pre">pi</span> <span class="pre">x\</span> <span class="pre">sigma</span> <span class="pre">Ns\</span> <span class="pre">(names</span> <span class="pre">Ns,</span> <span class="pre">…)</span></code>
+introduces <code class="docutils literal notranslate"><span class="pre">Ns</span></code> in the right place and works.</p>
+</section>
+<section id="inspecting-the-context">
+<h2>Inspecting the context<a class="headerlink" href="#inspecting-the-context" title="Link to this heading"></a></h2>
+<p>Two builtins introspect the eigenvariables (the names <code class="docutils literal notranslate"><span class="pre">pi</span></code> has introduced
+so far) that a call is running under:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">names</span> <span class="pre">L</span></code> lists them, youngest first;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">occurs</span> <span class="pre">N</span> <span class="pre">T</span></code> checks whether the name (or global constant) <code class="docutils literal notranslate"><span class="pre">N</span></code> appears in
+<code class="docutils literal notranslate"><span class="pre">T</span></code>.</p></li>
+</ul>
+</section>
+<section id="restricting-a-variable-s-scope">
+<h2>Restricting a variable’s scope<a class="headerlink" href="#restricting-a-variable-s-scope" title="Link to this heading"></a></h2>
+<p>A fresh unification variable created under <code class="docutils literal notranslate"><span class="pre">pi</span> <span class="pre">x\</span> <span class="pre">pi</span> <span class="pre">y\</span></code> may mention <code class="docutils literal notranslate"><span class="pre">x</span></code>
+and <code class="docutils literal notranslate"><span class="pre">y</span></code> in its eventual assignment: its <em>scope</em>. Elpi’s printer writes that
+as <code class="docutils literal notranslate"><span class="pre">X0^2</span></code>: the variable <code class="docutils literal notranslate"><span class="pre">X0</span></code>, with two eigenvariables in scope.</p>
+<p><code class="docutils literal notranslate"><span class="pre">prune</span> <span class="pre">V</span> <span class="pre">L</span></code> shrinks that: it unifies <code class="docutils literal notranslate"><span class="pre">V</span></code> with a <em>fresh</em> variable whose
+scope is the names in <code class="docutils literal notranslate"><span class="pre">L</span></code>. It does not edit <code class="docutils literal notranslate"><span class="pre">V</span></code> in place; the old
+variable and the new, narrower one are simply unified, so any later
+assignment has to satisfy both. After <code class="docutils literal notranslate"><span class="pre">prune</span> <span class="pre">P</span> <span class="pre">[x]</span></code>, printing <code class="docutils literal notranslate"><span class="pre">P</span></code> shows
+that fresh variable applied to <code class="docutils literal notranslate"><span class="pre">x</span></code> alone (<code class="docutils literal notranslate"><span class="pre">x</span></code> prints as <code class="docutils literal notranslate"><span class="pre">c0</span></code>): it may
+name <code class="docutils literal notranslate"><span class="pre">x</span></code> but not <code class="docutils literal notranslate"><span class="pre">y</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">closed_term</span> <span class="pre">T</span></code> is <code class="docutils literal notranslate"><span class="pre">prune</span> <span class="pre">T</span> <span class="pre">[]</span></code>: a variable that can see <em>nothing</em>. It is
+the way to produce a value that must not depend on the current binders.</p>
+<p>The narrowing is a <em>unification</em>, so it can also fail: if <code class="docutils literal notranslate"><span class="pre">V</span></code> is already
+bound to a term that mentions a name outside <code class="docutils literal notranslate"><span class="pre">L</span></code> (outside all names, for
+<code class="docutils literal notranslate"><span class="pre">closed_term</span></code>), there is no way to satisfy both scopes and the call fails.
+<code class="docutils literal notranslate"><span class="pre">closed_term</span> <span class="pre">(app</span> <span class="pre">x</span> <span class="pre">y)</span></code> under <code class="docutils literal notranslate"><span class="pre">pi</span> <span class="pre">x\</span> <span class="pre">pi</span> <span class="pre">y\</span></code> fails rather than quietly
+forgetting <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code>. On an <em>unbound</em> variable it always succeeds; the
+failure is the useful signal when the argument is the output of a computation
+that was supposed to stay closed.</p>
+<p>A scope violation that happens through ordinary unification, rather than
+through <code class="docutils literal notranslate"><span class="pre">prune</span></code> / <code class="docutils literal notranslate"><span class="pre">closed_term</span></code>, fails silently instead.</p>
+<p>Recursing under a binder, inspecting the eigenvariables in scope, and
+narrowing a variable’s scope with <code class="docutils literal notranslate"><span class="pre">prune</span></code> and <code class="docutils literal notranslate"><span class="pre">closed_term</span></code>, in one
+program:</p>
+<p><strong>../code/binders.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Recursing under a binder (depth), and introspecting the eigenvariables</span>
+<span class="linenos"> 2</span><span class="c">% currently in scope (names / occurs), then restricting a unification</span>
+<span class="linenos"> 3</span><span class="c">% variable&#39;s scope with prune / closed_term.</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">data</span><span class="w"> </span><span class="nf">tm</span>.
+<span class="linenos"> 6</span><span class="kd">symb</span><span class="w"> </span><span class="nf">app</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos"> 7</span><span class="kd">symb</span><span class="w"> </span><span class="nf">lam</span><span class="w"> </span><span class="kt">(tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="kd">func</span><span class="w"> </span><span class="nf">depth</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos">10</span>depth<span class="w"> </span>(app<span class="w"> </span><span class="nv">H</span><span class="w"> </span><span class="nv">A</span><span class="o">)</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>depth<span class="w"> </span><span class="nv">H</span><span class="w"> </span><span class="nv">N1</span><span class="kd">,</span><span class="w"> </span>depth<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">N2</span><span class="kd">,</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span>{std.max<span class="w"> </span><span class="nv">N1</span><span class="w"> </span><span class="nv">N2</span>}.
+<span class="linenos">11</span>depth<span class="w"> </span>(lam<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>depth<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="nv">N1</span><span class="kd">,</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N1</span><span class="w"> </span><span class="kd">+</span><span class="w"> </span><span class="mi">1</span><span class="o">.</span>
+<span class="linenos">12</span>depth<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>name<span class="w"> </span><span class="nv">X</span><span class="o">.</span><span class="w">   </span><span class="c">% X is an eigenvariable, not an app or a lam</span>
+<span class="linenos">13</span>
+<span class="linenos">14</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">15</span><span class="w">  </span>depth<span class="w"> </span>(lam<span class="w"> </span><span class="nv">x\</span><span class="w"> </span>lam<span class="w"> </span><span class="nv">y\</span><span class="w"> </span>app<span class="w"> </span>x<span class="w"> </span>y<span class="o">)</span><span class="w"> </span><span class="nv">D</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;depth:&quot;</span><span class="w"> </span><span class="nv">D</span><span class="kd">,</span>
+<span class="linenos">16</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">y</span>\<span class="w"> </span><span class="kd">sigma</span><span class="w"> </span><span class="nv">Ns</span>\<span class="w"> </span><span class="kd">sigma</span><span class="w"> </span><span class="nv">Len</span>\<span class="w"> </span><span class="kd">sigma</span><span class="w"> </span><span class="nv">T</span>\<span class="w"> </span><span class="kd">sigma</span><span class="w"> </span><span class="nv">P</span>\
+<span class="linenos">17</span><span class="w">    </span>(<span class="w"> </span>names<span class="w"> </span><span class="nv">Ns</span><span class="kd">,</span><span class="w"> </span>std.length<span class="w"> </span><span class="nv">Ns</span><span class="w"> </span><span class="nv">Len</span><span class="kd">,</span>
+<span class="linenos">18</span><span class="w">      </span>print<span class="w"> </span><span class="s2">&quot;eigenvariables in scope:&quot;</span><span class="w"> </span><span class="nv">Len</span><span class="kd">,</span>
+<span class="linenos">19</span><span class="w">      </span><span class="o">(</span>occurs<span class="w"> </span>x<span class="w"> </span><span class="o">(</span>app<span class="w"> </span>x<span class="w"> </span>y<span class="o">)</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;x occurs in (app x y): yes&quot;</span><span class="w"> </span><span class="kd">;</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;no&quot;</span><span class="o">)</span><span class="kd">,</span>
+<span class="linenos">20</span><span class="w">      </span>print<span class="w"> </span><span class="s2">&quot;T sees both eigenvariables:&quot;</span><span class="w"> </span><span class="nv">T</span><span class="kd">,</span>
+<span class="linenos">21</span><span class="w">      </span>prune<span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="kd">[</span>x<span class="kd">],</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;P pruned to just x:&quot;</span><span class="w"> </span><span class="nv">P</span><span class="kd">,</span>
+<span class="linenos">22</span><span class="w">      </span>closed_term<span class="w"> </span><span class="nv">T</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;T after closed_term, sees none:&quot;</span><span class="w"> </span><span class="nv">T</span><span class="kd">,</span>
+<span class="linenos">23</span><span class="w">      </span><span class="o">(</span><span class="w"> </span>closed_term<span class="w"> </span><span class="o">(</span>app<span class="w"> </span>x<span class="w"> </span>y<span class="o">)</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;unreachable&quot;</span>
+<span class="linenos">24</span><span class="w">      </span><span class="kd">;</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;closed_term (app x y) fails: it already mentions x and y&quot;</span><span class="w"> </span><span class="o">)</span><span class="w"> </span><span class="o">).</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">depth: 2</span>
+<span class="go">eigenvariables in scope: 2</span>
+<span class="go">x occurs in (app x y): yes</span>
+<span class="go">T sees both eigenvariables: X0^2</span>
+<span class="go">P pruned to just x: X1 c0</span>
+<span class="go">T after closed_term, sees none: X2</span>
+<span class="go">closed_term (app x y) fails: it already mentions x and y</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="unification-and-variables.html" class="btn btn-neutral float-left" title="Unification and variables" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="control-and-cut.html" class="btn btn-neutral float-right" title="Control and cut" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

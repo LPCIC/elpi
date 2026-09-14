@@ -1,0 +1,369 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Constraint handling rules &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="File structure and attributes" href="file-structure-and-attributes.html" />
+    <link rel="prev" title="Inference rules and queries" href="inference-rules-and-queries.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Constraint handling rules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-constraint-block">The constraint block</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#rules">Rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sequent-patterns">Sequent patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#generating-a-constraint">Generating a constraint</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Constraint handling rules</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/syntax/constraint-handling-rules.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="constraint-handling-rules">
+<h1>Constraint handling rules<a class="headerlink" href="#constraint-handling-rules" title="Link to this heading"></a></h1>
+<p>A goal can be <em>suspended</em> instead of solved: it becomes a <em>constraint</em>, and
+sits in the <em>constraint store</em> until it is woken up. <em>Constraint handling
+rules</em> (CHR) look at that store as a whole, and can drop constraints from it
+and spawn new goals. The syntax has three parts: the <code class="docutils literal notranslate"><span class="pre">constraint</span></code> block, the
+rules inside it, and the <code class="docutils literal notranslate"><span class="pre">declare_constraint</span></code> builtin that puts a goal in
+the store. How the store then evolves and how rules fire is covered in
+<a class="reference internal" href="../semantics/chr.html"><span class="doc">The constraint store</span></a>.</p>
+<section id="the-constraint-block">
+<h2>The constraint block<a class="headerlink" href="#the-constraint-block" title="Link to this heading"></a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">constraint</span></code> block names a <em>clique</em> of predicates and holds the rules
+that act on their constraints:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">constraint</span><span class="w"> </span><span class="nf">even odd </span>{
+<span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span>(odd<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>false<span class="o">.</span>
+}
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">rule</span></code> keyword may appear only inside such a block. The cliques of a
+program must be pairwise disjoint.</p>
+<p>A resumed constraint carries a context with it: the hypothetical rules that
+were in force when it was suspended (see <a class="reference internal" href="#sequent-patterns">Sequent patterns</a> below). By
+default that context is trimmed to the rules of the constraint’s own clique.
+An optional <em>context filter</em>, written before <code class="docutils literal notranslate"><span class="pre">?-</span></code>, names further predicates
+whose rules are kept as well:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">constraint</span><span class="w"> </span><span class="nf">ctx ?- infer </span>{
+<span class="w">  </span><span class="c">% rules for `infer`; a resumed `infer` constraint also keeps</span>
+<span class="w">  </span><span class="c">% the rules it accumulated for `ctx`</span>
+}
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">?-</span></code> is omitted when the filter is empty, as in the <code class="docutils literal notranslate"><span class="pre">even</span> <span class="pre">odd</span></code> block
+above.</p>
+</section>
+<section id="rules">
+<h2>Rules<a class="headerlink" href="#rules" title="Link to this heading"></a></h2>
+<p>A rule has four parts. Only the <code class="docutils literal notranslate"><span class="pre">rule</span></code> keyword itself is required; each of
+the others may be left out:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>rule  TO-MATCH  \ TO-REMOVE  | GUARD  &lt;=&gt; NEW-GOAL .
+</pre></div>
+</div>
+<p><em>TO-MATCH</em> and <em>TO-REMOVE</em> are sequences of <a class="reference internal" href="#chr-sequents"><span class="std std-ref">sequent patterns</span></a>, matched against the constraints in the store. A constraint
+matched on the left of the <code class="docutils literal notranslate"><span class="pre">\</span></code> stays in the store; one matched on its right
+is taken out. With no <code class="docutils literal notranslate"><span class="pre">\</span></code> at all, nothing is removed, and the rule fires at
+most once for each <em>ordering</em> of the constraints it matches, so a rule that
+only adds goals does not loop. A two-pattern rule with two matching
+constraints in the store therefore fires twice, once per ordering of the
+pair, not once; <a class="reference internal" href="../semantics/chr.html"><span class="doc">The constraint store</span></a> works this through.</p>
+<p><em>GUARD</em>, after the <code class="docutils literal notranslate"><span class="pre">|</span></code>, is a goal that must succeed for the rule to fire.
+Once it does, the choice is committed: no later rule is tried on the same
+constraints.</p>
+<p><em>NEW-GOAL</em>, after the <code class="docutils literal notranslate"><span class="pre">&lt;=&gt;</span></code>, is a sequent (see below) that is run as a
+fresh goal when the rule fires.</p>
+<p>So <code class="docutils literal notranslate"><span class="pre">rule</span> <span class="pre">(even</span> <span class="pre">X)</span> <span class="pre">(odd</span> <span class="pre">X)</span> <span class="pre">&lt;=&gt;</span> <span class="pre">false</span></code> runs the goal <code class="docutils literal notranslate"><span class="pre">false</span></code>, which fails,
+whenever the store holds both <code class="docutils literal notranslate"><span class="pre">even</span> <span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">odd</span> <span class="pre">X</span></code> for one <code class="docutils literal notranslate"><span class="pre">X</span></code>; because
+a rule that has fired is not reconsidered, that failure is final. A rule may
+be preceded by <code class="docutils literal notranslate"><span class="pre">:name</span> <span class="pre">&quot;…&quot;</span></code> (naming it for trace output) and <code class="docutils literal notranslate"><span class="pre">:if</span> <span class="pre">&quot;…&quot;</span></code>
+(<a class="reference internal" href="rule-attributes.html"><span class="doc">Rule attributes</span></a>).</p>
+</section>
+<section id="sequent-patterns">
+<span id="chr-sequents"></span><h2>Sequent patterns<a class="headerlink" href="#sequent-patterns" title="Link to this heading"></a></h2>
+<p>Elpi manages a context for every goal: the eigenvariables introduced by
+<code class="docutils literal notranslate"><span class="pre">pi</span></code> and the hypothetical rules introduced by <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code>. A suspended goal
+therefore is not a bare predicate but a sequent, <code class="docutils literal notranslate"><span class="pre">Eigen</span> <span class="pre">▷</span> <span class="pre">Context</span> <span class="pre">⊢</span> <span class="pre">Goal</span></code>,
+and a sequent pattern chooses how much of that to match:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Goal</span></code> matches only the goal, ignoring the eigenvariables and
+hypotheses the constraint carried;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">(Context</span> <span class="pre">?-</span> <span class="pre">Goal)</span></code> also matches the hypotheses. <code class="docutils literal notranslate"><span class="pre">Context</span></code> is the
+list of rules added by implication before the constraint was suspended,
+ordered most-recently-added first, so its head is the highest-priority
+rule. It holds only the rules for the predicates the context filter admits:
+the clique’s own, plus any named before <code class="docutils literal notranslate"><span class="pre">?-</span></code> in the <code class="docutils literal notranslate"><span class="pre">constraint</span></code> block;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">(Eigen</span> <span class="pre">:&gt;</span> <span class="pre">Context</span> <span class="pre">?-</span> <span class="pre">Goal)</span></code> also matches <code class="docutils literal notranslate"><span class="pre">Eigen</span></code>, the list of
+eigenvariables (the <code class="docutils literal notranslate"><span class="pre">pi</span></code>-introduced constants) the constraint lives
+under.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">Context</span></code> and <code class="docutils literal notranslate"><span class="pre">Eigen</span></code> are ordinary patterns: they may be <code class="docutils literal notranslate"><span class="pre">_</span></code>, a
+variable, or a list pattern, and any variable they bind is in scope in the
+guard and in the new goal.</p>
+<p>Every unification variable inside a matched constraint is <em>frozen</em>: replaced
+by a fresh constant that the rule cannot assign. Freezing is what makes a
+rule <em>match</em> the store rather than unify with it: the non-linear <code class="docutils literal notranslate"><span class="pre">K</span></code> in the
+rule below does not merge two unrelated constraints, it only fires when two
+constraints really are about the same variable. A frozen variable is shown to
+the rule through the <code class="docutils literal notranslate"><span class="pre">uvar</span></code> head pattern
+(<a class="reference internal" href="../features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>) as <code class="docutils literal notranslate"><span class="pre">uvar</span> <span class="pre">K</span> <span class="pre">L</span></code>, where <code class="docutils literal notranslate"><span class="pre">K</span></code>
+identifies it and <code class="docutils literal notranslate"><span class="pre">L</span></code> is the list of bound variables in its scope; two
+<code class="docutils literal notranslate"><span class="pre">uvar</span> <span class="pre">K</span> <span class="pre">…</span></code> with the same <code class="docutils literal notranslate"><span class="pre">K</span></code> are the same variable.</p>
+<p>When holes never appear under a binder, the “a hole has one type” rule needs
+no context at all: keep the first typing, unify the second with it.</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">constraint</span><span class="w"> </span><span class="nf">infer </span>{
+<span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(infer<span class="w"> </span><span class="o">(</span><span class="kd">uvar</span><span class="w"> </span><span class="nv">K</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="nv">T1</span><span class="o">)</span>
+<span class="w">     </span><span class="kd">\</span><span class="w"> </span>(infer<span class="w"> </span><span class="o">(</span><span class="kd">uvar</span><span class="w"> </span><span class="nv">K</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="nv">T2</span><span class="o">)</span>
+<span class="w">     </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(<span class="nv">T1</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">T2</span><span class="o">).</span>
+}
+</pre></div>
+</div>
+<p>Once holes can occur under binders, the same hole shows up in different
+contexts, and the two types live in different scopes. Each matched constraint
+is frozen into <em>its own</em> space of names (the <code class="docutils literal notranslate"><span class="pre">Eigen</span></code> lists of two matched
+sequents are disjoint), so the rule must relate the terms across them itself,
+in the guard, before it can compare them. This is the rule coq-elpi’s
+elaborator actually uses for uniqueness of typing:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">constraint</span><span class="w"> </span><span class="nf">declare-evar evar decl def cache rm-evar </span>{
+<span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(<span class="nv">E1</span><span class="w"> </span><span class="p">:</span><span class="kd">&gt;</span><span class="w"> </span><span class="nv">G1</span><span class="w"> </span><span class="kd">?-</span><span class="w"> </span>evar<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">T1</span><span class="w"> </span><span class="o">(</span><span class="kd">uvar</span><span class="w"> </span><span class="nv">K</span><span class="w"> </span><span class="nv">L1</span><span class="o">))</span><span class="w">         </span><span class="c">% K&#39;s declared type, in scope L1</span>
+<span class="w">     </span><span class="kd">\</span><span class="w"> </span>(<span class="nv">E2</span><span class="w"> </span><span class="p">:</span><span class="kd">&gt;</span><span class="w"> </span><span class="nv">G2</span><span class="w"> </span><span class="kd">?-</span><span class="w"> </span>evar<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">T2</span><span class="w"> </span><span class="o">(</span><span class="kd">uvar</span><span class="w"> </span><span class="nv">K</span><span class="w"> </span><span class="nv">L2</span><span class="o">))</span><span class="w">         </span><span class="c">% a use of K, in scope L2</span>
+<span class="w">     </span><span class="kd">|</span><span class="w"> </span>(canonical?<span class="w"> </span><span class="nv">L1</span><span class="kd">,</span><span class="w"> </span>utc<span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="nv">T1</span><span class="w"> </span><span class="nv">L2</span><span class="w"> </span><span class="nv">T2</span><span class="w"> </span><span class="nv">Condition</span><span class="o">)</span><span class="w">  </span><span class="c">% relocate T1 into L2&#39;s scope,</span>
+<span class="w">                                                   </span><span class="c">% producing a goal `Condition`</span>
+<span class="w">    </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(<span class="nv">E2</span><span class="w"> </span><span class="p">:</span><span class="kd">&gt;</span><span class="w"> </span><span class="nv">G2</span><span class="w"> </span><span class="kd">?-</span><span class="w"> </span><span class="nv">Condition</span><span class="o">).</span><span class="w">                   </span><span class="c">% run it under the using</span>
+}<span class="w">                                                  </span><span class="c">% sequent&#39;s eigenvars and hypotheses</span>
+</pre></div>
+</div>
+<p>The guard <code class="docutils literal notranslate"><span class="pre">utc</span></code> (“uniqueness of typing”) walks <code class="docutils literal notranslate"><span class="pre">L1</span></code> and <code class="docutils literal notranslate"><span class="pre">L2</span></code> in step,
+substituting the canonical eigenvariables for the ones actually supplied, and
+hands back <code class="docutils literal notranslate"><span class="pre">Condition</span></code>, the goal that checks the two relocated types
+agree. <code class="docutils literal notranslate"><span class="pre">&lt;=&gt;</span> <span class="pre">(E2</span> <span class="pre">:&gt;</span> <span class="pre">G2</span> <span class="pre">?-</span> <span class="pre">Condition)</span></code> then runs that goal back inside the
+second sequent’s context, where its eigenvariables and hypotheses are in
+scope again. The full treatment, for a type theory where terms occur in
+types, is given by <a class="reference internal" href="../bibliography.html#bib-tassi2019"><span class="std std-ref">Guidi, Sacerdoti Coen &amp; Tassi</span></a>; see
+also <a class="reference internal" href="../semantics/chr.html"><span class="doc">The constraint store</span></a>.</p>
+</section>
+<section id="generating-a-constraint">
+<h2>Generating a constraint<a class="headerlink" href="#generating-a-constraint" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">declare_constraint</span></code> turns a goal into a constraint and puts it in the
+store. The goal must be a <em>function</em>: it needs a <code class="docutils literal notranslate"><span class="pre">func</span></code> signature
+(<a class="reference internal" href="type-declarations.html"><span class="doc">Type declarations</span></a>), and a relational predicate is rejected. The
+constraint is suspended on one or more <em>keys</em>, each of which must be a
+unification variable (or <code class="docutils literal notranslate"><span class="pre">_</span></code>):</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>declare_constraint<span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">]</span>
+</pre></div>
+</div>
+<p>The constraint sits in the store until one of its keys is assigned, and then
+runs as an ordinary goal again. A key given as <code class="docutils literal notranslate"><span class="pre">_</span></code>, and a constraint keyed
+on the empty list, are never resumed. Several keys may be passed as one list,
+<code class="docutils literal notranslate"><span class="pre">[X,</span> <span class="pre">Y]</span></code>, or as separate arguments.</p>
+<p>Every unification variable that occurs in the constraint should be among the
+keys; an assignment to one that is left out will not wake the constraint.
+Elpi does not check this yet (<a class="reference external" href="https://github.com/LPCIC/elpi/issues/441">issue #441</a>).</p>
+<p>The usual idiom is a rule that fires while the interesting argument is still a
+variable, matched with the <code class="docutils literal notranslate"><span class="pre">uvar</span></code> pattern
+(<a class="reference internal" href="../features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>), and suspends the goal on it:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">even</span><span class="w"> </span><span class="kt">int</span>.
+even<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">]</span><span class="o">.</span>
+even<span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+even<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">-</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>even<span class="w"> </span><span class="nv">M</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>At the top-level prompt a leftover constraint is printed after the solution;
+<code class="docutils literal notranslate"><span class="pre">print_constraints</span></code> prints the store at any point:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>goal&gt; declare_constraint (even X) [X].
+Success:
+  X = X0
+Constraints:
+ even X0  /* suspended on X0 */
+
+goal&gt; declare_constraint (even X) [X], X = 1.
+Failure
+</pre></div>
+</div>
+<p>A larger program using every part of the syntax above is Euclid’s GCD, with
+each <code class="docutils literal notranslate"><span class="pre">gcd</span></code> fact reduced against the others in its group until one number is
+left:</p>
+<p><strong>../code/chr.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Euclid&#39;s GCD as constraint handling rules. Each `gcd N G` fact says &quot;N is one</span>
+<span class="linenos"> 2</span><span class="c">% of the numbers of group G&quot;; the rules keep reducing the store until a single</span>
+<span class="linenos"> 3</span><span class="c">% number per group is left — its GCD.</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">data</span><span class="w"> </span><span class="nf">group</span>.
+<span class="linenos"> 6</span><span class="kd">symb</span><span class="w"> </span><span class="nf">group-1, group-2</span><span class="w"> </span><span class="kt">group</span>.
+<span class="linenos"> 7</span>
+<span class="linenos"> 8</span><span class="kd">func</span><span class="w"> </span><span class="nf">gcd</span><span class="w"> </span><span class="kt">int</span>,<span class="w"> </span><span class="kt">group</span>.
+<span class="linenos"> 9</span>
+<span class="linenos">10</span><span class="c">% suspend until the group is known</span>
+<span class="linenos">11</span>gcd<span class="w"> </span><span class="nv">A</span><span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">G</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(gcd<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">G</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">G</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos">12</span>
+<span class="linenos">13</span><span class="c">% once resumed on a concrete group, report the surviving number</span>
+<span class="linenos">14</span>gcd<span class="w"> </span><span class="nv">X</span><span class="w"> </span>group-1<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;group 1 GCD is&quot;</span><span class="w"> </span><span class="nv">X</span><span class="o">.</span>
+<span class="linenos">15</span>gcd<span class="w"> </span><span class="nv">X</span><span class="w"> </span>group-2<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;group 2 GCD is&quot;</span><span class="w"> </span><span class="nv">X</span><span class="o">.</span>
+<span class="linenos">16</span>
+<span class="linenos">17</span><span class="kd">constraint</span><span class="w"> </span><span class="nf">gcd </span>{
+<span class="linenos">18</span><span class="w">  </span><span class="c">% drop a duplicate number</span>
+<span class="linenos">19</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(gcd<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="kd">\</span><span class="w"> </span>(gcd<span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="kd">|</span><span class="w"> </span>(<span class="nv">A</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">B</span><span class="o">).</span>
+<span class="linenos">20</span><span class="w">  </span><span class="c">% replace the larger number by the difference</span>
+<span class="linenos">21</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span>(gcd<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="kd">\</span><span class="w"> </span>(gcd<span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">G</span><span class="o">)</span><span class="w"> </span><span class="kd">|</span><span class="w"> </span>(<span class="nv">A</span><span class="w"> </span><span class="kd">&lt;</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(<span class="nv">C</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="kd">-</span><span class="w"> </span><span class="nv">A</span><span class="kd">,</span><span class="w"> </span>gcd<span class="w"> </span><span class="nv">C</span><span class="w"> </span><span class="nv">G</span><span class="o">).</span>
+<span class="linenos">22</span>}
+<span class="linenos">23</span>
+<span class="linenos">24</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">25</span><span class="w">  </span>gcd<span class="w"> </span><span class="mi">99</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>gcd<span class="w"> </span><span class="mi">66</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>gcd<span class="w"> </span><span class="mi">22</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w">      </span><span class="c">% group X = { 99, 66, 22 }</span>
+<span class="linenos">26</span><span class="w">  </span>gcd<span class="w"> </span><span class="mi">14</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span>gcd<span class="w"> </span><span class="mi">77</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w">                </span><span class="c">% group Y = { 14, 77 }</span>
+<span class="linenos">27</span><span class="w">  </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>group-1<span class="kd">,</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>group-2<span class="o">.</span><span class="w">          </span><span class="c">% force resumption</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">group 1 GCD is 11</span>
+<span class="go">group 2 GCD is 7</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="inference-rules-and-queries.html" class="btn btn-neutral float-left" title="Inference rules and queries" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="file-structure-and-attributes.html" class="btn btn-neutral float-right" title="File structure and attributes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

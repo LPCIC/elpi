@@ -1,0 +1,378 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Determinacy checking &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Argument indexing" href="argument-indexing.html" />
+    <link rel="prev" title="Types and type checking" href="types-and-type-checking.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Determinacy checking</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#what-a-functional-signature-promises">What a functional signature promises</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#what-the-checker-requires">What the checker requires</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wrongly-called-predicates">Wrongly called predicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-function-that-extends-the-program">A function that extends the program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#signatures-as-a-subtyping-relation">Signatures as a subtyping relation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#functional-status-of-outputs">Functional status of outputs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Determinacy checking</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/features/determinacy-checking.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="determinacy-checking">
+<h1>Determinacy checking<a class="headerlink" href="#determinacy-checking" title="Link to this heading"></a></h1>
+<p>A <strong>functional</strong> predicate, one declared with <code class="docutils literal notranslate"><span class="pre">func</span></code>
+(<a class="reference internal" href="../syntax/type-declarations.html"><span class="doc">Type declarations</span></a>), is one the checker can prove leaves no
+choice point: every call has at most one solution. Its type is
+<code class="docutils literal notranslate"><span class="pre">(func)</span></code> where a relation’s is <code class="docutils literal notranslate"><span class="pre">(pred)</span></code>. What the checker does with that
+promise is a static, best-effort analysis: not every non-deterministic call
+is caught. See
+<a class="reference internal" href="../bibliography.html#bib-padl2026"><span class="std std-ref">Fissore &amp; Tassi, PADL 2026</span></a> for the full formal
+treatment; <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-no-det</span></code> turns the analysis off.</p>
+<p>The check is worth having because the code it applies to is overwhelmingly
+functional: <a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">the HDR thesis</span></a> measures around 96% of the
+predicates in Elpi’s own code and in coq-elpi as computing a function rather
+than a relation. A left-over choice point in one of them is almost always a
+bug, and one that surfaces far from its cause.</p>
+<section id="what-a-functional-signature-promises">
+<h2>What a functional signature promises<a class="headerlink" href="#what-a-functional-signature-promises" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">map</span></code> is the running example (<a class="reference internal" href="../bibliography.html#bib-padl2026"><span class="std std-ref">Fissore &amp; Tassi, PADL 2026</span></a> opens with it). Its <em>basic</em> signature says only that <code class="docutils literal notranslate"><span class="pre">map</span></code>
+relates a higher-order argument and two lists:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">pred</span><span class="w"> </span><span class="nf">map</span><span class="w"> </span><span class="kt">(pred</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B)</span>,<span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">B</span>.<span class="w">       </span><span class="c">% basic</span>
+<span class="kd">func</span><span class="w"> </span><span class="nf">map</span><span class="w"> </span><span class="kt">(func</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B)</span>,<span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">B</span>.<span class="w">        </span><span class="c">% better (this checker)</span>
+map<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="kd">[]</span><span class="o">.</span>
+map<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">|</span><span class="nv">XS</span><span class="kd">]</span><span class="w"> </span><span class="kd">[</span><span class="nv">Y</span><span class="kd">|</span><span class="nv">YS</span><span class="kd">]</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span>map<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="nv">XS</span><span class="w"> </span><span class="nv">YS</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>The <em>better</em> signature says more: <strong>if the higher-order argument ``F`` is a
+function, then ``map F`` is a function too</strong>: a call <code class="docutils literal notranslate"><span class="pre">map</span> <span class="pre">F</span> <span class="pre">L</span> <span class="pre">R</span></code> with a
+functional <code class="docutils literal notranslate"><span class="pre">F</span></code> produces a single <code class="docutils literal notranslate"><span class="pre">R</span></code>. That is the whole content of
+writing <code class="docutils literal notranslate"><span class="pre">func</span></code> here: a promise about <code class="docutils literal notranslate"><span class="pre">map</span></code>’s determinacy <em>conditional on</em>
+its argument’s.</p>
+</section>
+<section id="what-the-checker-requires">
+<h2>What the checker requires<a class="headerlink" href="#what-the-checker-requires" title="Link to this heading"></a></h2>
+<p>For a <code class="docutils literal notranslate"><span class="pre">func</span></code> to be accepted, three things must hold, and each has its own
+error message so a rejection says which one failed:</p>
+<ul class="simple">
+<li><p><strong>its rules are mutually exclusive</strong>: no two can fire for the same call
+without one of them cutting. Two overlapping heads with no cut give
+<code class="docutils literal notranslate"><span class="pre">Mutual</span> <span class="pre">exclusion</span> <span class="pre">violated</span> <span class="pre">for</span> <span class="pre">rules</span> <span class="pre">of</span> <span class="pre">predicate</span> <span class="pre">…</span></code>.</p></li>
+<li><p><strong>every atom in its body is itself functional</strong>: a relational call in a
+<code class="docutils literal notranslate"><span class="pre">func</span></code> body is <code class="docutils literal notranslate"><span class="pre">Found</span> <span class="pre">relational</span> <span class="pre">atom</span> <span class="pre">(…)</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">body</span> <span class="pre">of</span> <span class="pre">function</span> <span class="pre">…</span></code>,
+unless a <code class="docutils literal notranslate"><span class="pre">!</span></code> after it collapses the choice point.</p></li>
+<li><p><strong>its outputs come back as single values</strong>: an output argument left as a
+relation, rather than pinned to one term, is rejected where the <code class="docutils literal notranslate"><span class="pre">func</span></code>
+signature promised a function.</p></li>
+</ul>
+<p>The checker does not run the body; it reasons from the signatures. A call it
+cannot prove functional it rejects, even when the program would in fact be
+deterministic. <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-no-det</span></code>, or a wider <code class="docutils literal notranslate"><span class="pre">pred</span></code> signature, is the way
+out when that happens.</p>
+</section>
+<section id="wrongly-called-predicates">
+<h2>Wrongly called predicates<a class="headerlink" href="#wrongly-called-predicates" title="Link to this heading"></a></h2>
+<p>A predicate is <strong>wrongly called</strong> when an argument passed to it is weaker
+than its signature asks for, the usual case being a relation passed where a
+function was expected. Three one-line definitions of a <code class="docutils literal notranslate"><span class="pre">meal</span></code> predicate,
+building a list of dishes for a list of guests, show what the checker does
+with that (<code class="docutils literal notranslate"><span class="pre">likes</span></code> is relational, since a guest may like several dishes;
+<code class="docutils literal notranslate"><span class="pre">likes!</span></code> is <code class="docutils literal notranslate"><span class="pre">likes</span></code> with a trailing cut, so functional):</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">meal</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">guest</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">dish</span>.
+meal<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>map<span class="w"> </span>likes!<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="o">.</span><span class="w">        </span><span class="c">% accepted: likes! is a function</span>
+meal<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>map<span class="w"> </span>likes<span class="w">  </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="kd">,</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span><span class="w">     </span><span class="c">% accepted: the cut makes the body one</span>
+meal<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>map<span class="w"> </span>likes<span class="w">  </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="o">.</span><span class="w">        </span><span class="c">% rejected</span>
+</pre></div>
+</div>
+<p>The first is fine: <code class="docutils literal notranslate"><span class="pre">likes!</span></code> is a function, so <code class="docutils literal notranslate"><span class="pre">map</span> <span class="pre">likes!</span></code> is, so
+<code class="docutils literal notranslate"><span class="pre">meal</span></code>’s body is. The second wrongly calls <code class="docutils literal notranslate"><span class="pre">map</span></code>, since <code class="docutils literal notranslate"><span class="pre">likes</span></code> is only
+a relation, but then commits with <code class="docutils literal notranslate"><span class="pre">!</span></code>, which is enough. The third gets no
+such compensation, and the checker rejects it:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>DetCheck: Found relational atom (likes) in the body of function meal.
+Offending term: (likes)
+ - Inferred: (pred any -&gt; any)
+ - Expected: (func any -&gt; any)
+Contained in: (map likes Gs Ds)
+ - Inferred: (pred)
+ - Expected: (func)
+</pre></div>
+</div>
+<p>Nothing forces the fix to be a cut in <code class="docutils literal notranslate"><span class="pre">meal</span></code>’s own body. A wrapper whose
+signature says “the argument may be any predicate, but the result is a
+function” packages the commit safely:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">commit</span><span class="w"> </span><span class="kt">(pred</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B)</span>,<span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B</span>.
+commit<span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">R</span><span class="kd">,</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+meal<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>map<span class="w"> </span>(commit<span class="w"> </span>likes<span class="o">)</span><span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="o">.</span><span class="w">     </span><span class="c">% accepted</span>
+</pre></div>
+</div>
+<p>The signature is the interesting part: <code class="docutils literal notranslate"><span class="pre">commit</span></code>’s input is a plain
+<code class="docutils literal notranslate"><span class="pre">pred</span></code>, so passing <code class="docutils literal notranslate"><span class="pre">likes</span></code> is <em>not</em> a wrong call, yet <code class="docutils literal notranslate"><span class="pre">commit</span> <span class="pre">likes</span></code> is
+a <code class="docutils literal notranslate"><span class="pre">func</span></code>. PADL calls this combinator <code class="docutils literal notranslate"><span class="pre">once</span></code>; it is a two-argument
+analogue of the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a>, which commits a whole goal
+rather than a predicate applied to its arguments.</p>
+<p>The body of a <code class="docutils literal notranslate"><span class="pre">pred</span></code> is still traversed, but the comparison that would
+reject a relational atom in it is vacuous (a <code class="docutils literal notranslate"><span class="pre">pred</span></code> body is allowed to be
+relational), so a <em>relational</em> <code class="docutils literal notranslate"><span class="pre">meal</span></code> may call <code class="docutils literal notranslate"><span class="pre">map</span> <span class="pre">likes</span></code> freely: the
+call runs, it just quietly leaves a choice point. The output signatures of a
+<code class="docutils literal notranslate"><span class="pre">pred</span></code> are checked all the same. This is how a codebase adopts determinacy
+checking incrementally: leave the relations alone, mark <code class="docutils literal notranslate"><span class="pre">func</span></code> only what is
+ready.</p>
+<p><strong>../code/wrongly-called.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% map&#39;s better signature promises: if F is a function, map F is a function.</span>
+<span class="linenos"> 2</span><span class="c">% `meal` is a func, so its body must be functional -- calling map with the</span>
+<span class="linenos"> 3</span><span class="c">% deterministic `likes!` keeps the promise. `wrong-meal` is only a pred, so</span>
+<span class="linenos"> 4</span><span class="c">% the checker lets it call map with the plain relation `likes`: the call</span>
+<span class="linenos"> 5</span><span class="c">% still runs, it just leaves a choice point that backtracking walks into.</span>
+<span class="linenos"> 6</span>
+<span class="linenos"> 7</span><span class="kd">data</span><span class="w"> </span><span class="nf">guest</span>.
+<span class="linenos"> 8</span><span class="kd">data</span><span class="w"> </span><span class="nf">dish</span>.
+<span class="linenos"> 9</span><span class="kd">symb</span><span class="w"> </span><span class="nf">mario, anna</span><span class="w"> </span><span class="kt">guest</span>.
+<span class="linenos">10</span><span class="kd">symb</span><span class="w"> </span><span class="nf">pizza, pasta, gelato</span><span class="w"> </span><span class="kt">dish</span>.
+<span class="linenos">11</span>
+<span class="linenos">12</span><span class="kd">pred</span><span class="w"> </span><span class="nf">likes</span><span class="w"> </span><span class="kt">guest</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">dish</span>.<span class="w">            </span><span class="c">% relational: mario likes two dishes</span>
+<span class="linenos">13</span>likes<span class="w"> </span>mario<span class="w"> </span>pizza<span class="o">.</span>
+<span class="linenos">14</span>likes<span class="w"> </span>mario<span class="w"> </span>pasta<span class="o">.</span>
+<span class="linenos">15</span>likes<span class="w"> </span>anna<span class="w"> </span>gelato<span class="o">.</span>
+<span class="linenos">16</span>
+<span class="linenos">17</span><span class="kd">func</span><span class="w"> </span><span class="nf">likes!</span><span class="w"> </span><span class="kt">guest</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">dish</span>.<span class="w">           </span><span class="c">% functional: commit to the first</span>
+<span class="linenos">18</span>likes!<span class="w"> </span><span class="nv">G</span><span class="w"> </span><span class="nv">D</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>likes<span class="w"> </span><span class="nv">G</span><span class="w"> </span><span class="nv">D</span><span class="kd">,</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos">19</span>
+<span class="linenos">20</span><span class="kd">func</span><span class="w"> </span><span class="nf">map</span><span class="w"> </span><span class="kt">(func</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B)</span>,<span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">B</span>.
+<span class="linenos">21</span>map<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="kd">[]</span><span class="o">.</span>
+<span class="linenos">22</span>map<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">|</span><span class="nv">XS</span><span class="kd">]</span><span class="w"> </span><span class="kd">[</span><span class="nv">Y</span><span class="kd">|</span><span class="nv">YS</span><span class="kd">]</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span>map<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="nv">XS</span><span class="w"> </span><span class="nv">YS</span><span class="o">.</span>
+<span class="linenos">23</span>
+<span class="linenos">24</span><span class="kd">func</span><span class="w"> </span><span class="nf">meal</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">guest</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">dish</span>.
+<span class="linenos">25</span>meal<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>map<span class="w"> </span>likes!<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="o">.</span>
+<span class="linenos">26</span>
+<span class="linenos">27</span><span class="kd">pred</span><span class="w"> </span><span class="nf">wrong-meal</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">guest</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">dish</span>.
+<span class="linenos">28</span>wrong-meal<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>map<span class="w"> </span>likes<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><span class="nv">Ds</span><span class="o">.</span>
+<span class="linenos">29</span>
+<span class="linenos">30</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">31</span><span class="w">  </span>meal<span class="w"> </span><span class="kd">[</span>mario<span class="kd">,</span><span class="w"> </span>anna<span class="kd">]</span><span class="w"> </span><span class="nv">Ds</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;meal:&quot;</span><span class="w"> </span><span class="nv">Ds</span><span class="kd">,</span>
+<span class="linenos">32</span><span class="w">  </span>(<span class="w"> </span>wrong-meal<span class="w"> </span><span class="kd">[</span>mario<span class="kd">,</span><span class="w"> </span>anna<span class="kd">]</span><span class="w"> </span><span class="nv">Ds1</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;wrong-meal:&quot;</span><span class="w"> </span><span class="nv">Ds1</span><span class="kd">,</span><span class="w"> </span>fail
+<span class="linenos">33</span><span class="w">  </span><span class="kd">;</span><span class="w"> </span>true<span class="w"> </span><span class="o">).</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">meal: [pizza, gelato]</span>
+<span class="go">wrong-meal: [pizza, gelato]</span>
+<span class="go">wrong-meal: [pasta, gelato]</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">meal</span></code> is a <code class="docutils literal notranslate"><span class="pre">func</span></code> and passes <code class="docutils literal notranslate"><span class="pre">likes!</span></code>; <code class="docutils literal notranslate"><span class="pre">wrong-meal</span></code> is a <code class="docutils literal notranslate"><span class="pre">pred</span></code> and
+gets away with the plain relation <code class="docutils literal notranslate"><span class="pre">likes</span></code>, whose extra solutions
+backtracking then walks into.</p>
+</section>
+<section id="a-function-that-extends-the-program">
+<h2>A function that extends the program<a class="headerlink" href="#a-function-that-extends-the-program" title="Link to this heading"></a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">func</span></code> may add rules to itself at run time and stay a <code class="docutils literal notranslate"><span class="pre">func</span></code>. The
+standard shape is a HOAS traversal that goes under a binder: <code class="docutils literal notranslate"><span class="pre">copy</span></code> copies a
+term, and under <code class="docutils literal notranslate"><span class="pre">lam</span></code> it needs a <code class="docutils literal notranslate"><span class="pre">copy</span> <span class="pre">x</span> <span class="pre">x</span></code> rule for the fresh bound
+variable. Added with plain <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> that rule overlaps the structural ones and
+mutual exclusion fails; added with <code class="docutils literal notranslate"><span class="pre">=!=&gt;</span></code>
+(<a class="reference internal" href="../syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>) it carries a cut at the end of
+its body, so the checker still sees a single-valued <code class="docutils literal notranslate"><span class="pre">copy</span></code>:</p>
+<p><strong>../code/functional-hoas.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kd">data</span><span class="w"> </span><span class="nf">tm</span>.
+<span class="linenos"> 2</span><span class="kd">symb</span><span class="w"> </span><span class="nf">app</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos"> 3</span><span class="kd">symb</span><span class="w"> </span><span class="nf">lam</span><span class="w"> </span><span class="kt">(tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="c">% `copy` is a function: one output per input. Going under `lam`, it adds a</span>
+<span class="linenos"> 6</span><span class="c">% `copy x x` rule for the fresh bound variable. Written with =!=&gt; so a cut is</span>
+<span class="linenos"> 7</span><span class="c">% appended to that rule&#39;s body -- the determinacy checker still sees `copy` as</span>
+<span class="linenos"> 8</span><span class="c">% a func, where plain ==&gt; would flag the two overlapping `copy` rules.</span>
+<span class="linenos"> 9</span><span class="kd">func</span><span class="w"> </span><span class="nf">copy</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos">10</span>copy<span class="w"> </span>(app<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span>(app<span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>copy<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">A1</span><span class="kd">,</span><span class="w"> </span>copy<span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">B1</span><span class="o">.</span>
+<span class="linenos">11</span>copy<span class="w"> </span>(lam<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span>(lam<span class="w"> </span><span class="nv">F1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>copy<span class="w"> </span>x<span class="w"> </span>x<span class="w"> </span><span class="kd">=!=&gt;</span><span class="w"> </span>copy<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span>(<span class="nv">F1</span><span class="w"> </span>x<span class="o">).</span>
+<span class="linenos">12</span>
+<span class="linenos">13</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">14</span><span class="w">  </span>copy<span class="w"> </span>(lam<span class="w"> </span><span class="nv">x\</span><span class="w"> </span>app<span class="w"> </span>x<span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="kd">,</span>
+<span class="linenos">15</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;copied:&quot;</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">copied: lam c0 \ app c0 c0</span>
+</pre></div>
+</div>
+<p>This is what <code class="docutils literal notranslate"><span class="pre">=!=&gt;</span></code> is <em>for</em>: a rule known only at run time, meant to fire
+once, in a predicate the checker must keep treating as deterministic.</p>
+</section>
+<section id="signatures-as-a-subtyping-relation">
+<h2>Signatures as a subtyping relation<a class="headerlink" href="#signatures-as-a-subtyping-relation" title="Link to this heading"></a></h2>
+<p>A functional signature is <em>stronger</em> than a relational one: whatever a
+<code class="docutils literal notranslate"><span class="pre">func</span></code> can do, a <code class="docutils literal notranslate"><span class="pre">pred</span></code> can do too, but not the other way round. The
+checker compares signatures with a subtyping relation ⊆, read “is at least as
+strong as”, contravariant on inputs and covariant on outputs: a function
+expecting a weaker (more relational) predicate as an input argument accepts a
+stronger (more functional) one in its place, and a function promising a
+stronger output may be used wherever a weaker one is expected. <code class="docutils literal notranslate"><span class="pre">map</span></code>’s
+better signature is exactly the ⊆-smallest one above the basic one that still
+carries the conditional-determinacy promise.</p>
+</section>
+<section id="functional-status-of-outputs">
+<h2>Functional status of outputs<a class="headerlink" href="#functional-status-of-outputs" title="Link to this heading"></a></h2>
+<p>A signature’s <em>output</em> being functional is itself information a caller can
+use. For instance <code class="docutils literal notranslate"><span class="pre">func</span> <span class="pre">id</span> <span class="pre">A</span> <span class="pre">-&gt;</span> <span class="pre">A</span></code> (with the single rule <code class="docutils literal notranslate"><span class="pre">id</span> <span class="pre">X</span> <span class="pre">X</span></code>)
+promises whoever receives its output a value, not a choice among values.</p>
+<p>That guarantee cannot be conjured from a relation for free. <code class="docutils literal notranslate"><span class="pre">make-deterministic</span></code>
+(PADL’s <code class="docutils literal notranslate"><span class="pre">commit</span></code>) manufactures it, turning a two-argument relation into a
+one-argument function by picking the first solution and cutting:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">make-deterministic</span><span class="w"> </span><span class="kt">(pred</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">(func</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B)</span>.
+make-deterministic<span class="w"> </span><span class="nv">P</span><span class="w"> </span>(<span class="nv">x\y\</span><span class="w"> </span><span class="nv">P</span><span class="w"> </span>x<span class="w"> </span>y<span class="kd">,</span><span class="w"> </span><span class="kd">!</span><span class="o">).</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">make-deterministic</span> <span class="pre">likes</span> <span class="pre">F</span></code> gives an <code class="docutils literal notranslate"><span class="pre">F</span></code> the checker can treat as a
+<code class="docutils literal notranslate"><span class="pre">func</span> <span class="pre">A</span> <span class="pre">-&gt;</span> <span class="pre">B</span></code> from then on, for instance as the argument to <code class="docutils literal notranslate"><span class="pre">map</span></code>,
+now correctly called. Passing <code class="docutils literal notranslate"><span class="pre">likes</span></code> itself in that position, with no
+<code class="docutils literal notranslate"><span class="pre">make-deterministic</span></code> around it, is the wrong call of the previous section.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="types-and-type-checking.html" class="btn btn-neutral float-left" title="Types and type checking" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="argument-indexing.html" class="btn btn-neutral float-right" title="Argument indexing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

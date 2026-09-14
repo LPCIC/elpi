@@ -1,0 +1,267 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The standard library &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Debugging and tracing" href="debugging-and-tracing.html" />
+    <link rel="prev" title="Built-in predicates" href="builtins.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The standard library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#naming-conventions">Naming conventions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#list-and-option-combinators">List and option combinators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#associative-structures">Associative structures</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">The standard library</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/standard-library.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="the-standard-library">
+<h1>The standard library<a class="headerlink" href="#the-standard-library" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">accumulate</span> <span class="pre">std.</span></code>, or nothing since most programs pull it in transitively,
+puts the <code class="docutils literal notranslate"><span class="pre">std.</span></code> namespace (<a class="reference internal" href="syntax/file-structure-and-attributes.html"><span class="doc">File structure and attributes</span></a>) in
+scope: list and option combinators, associative structures, and a few
+overridable hooks. It is written in Elpi, and its full signatures are printed
+by <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-document-builtins</span></code> (or read straight from <a class="reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi">src/builtin.elpi</a>). What
+those signatures do not tell you is what follows: the naming conventions,
+and which structure to reach for.</p>
+<section id="naming-conventions">
+<h2>Naming conventions<a class="headerlink" href="#naming-conventions" title="Link to this heading"></a></h2>
+<p>A suffix on a combinator’s name says how it varies from the plain form:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">!</span></code>: a cut is baked in, so the call commits to its first solution.
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L797"><code class="docutils literal notranslate"><span class="pre">std.mem!</span></code></a> beside the backtracking <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L802"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L792"><code class="docutils literal notranslate"><span class="pre">std.lookup!</span></code></a>
+beside <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L787"><code class="docutils literal notranslate"><span class="pre">std.lookup</span></code></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">2</span></code>: walks two lists in lockstep, raising a fatal error if their lengths
+differ. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L754"><code class="docutils literal notranslate"><span class="pre">std.map2</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L731"><code class="docutils literal notranslate"><span class="pre">std.fold2</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L828"><code class="docutils literal notranslate"><span class="pre">std.forall2</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L814"><code class="docutils literal notranslate"><span class="pre">std.exists2</span></code></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-i</span></code>: the callback also receives the element’s 0-based index.
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L741"><code class="docutils literal notranslate"><span class="pre">std.map-i</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L868"><code class="docutils literal notranslate"><span class="pre">std.list.init</span></code></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-filter</span></code>: the callback may fail, and where it does the element is
+dropped. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L748"><code class="docutils literal notranslate"><span class="pre">std.map-filter</span></code></a> is map and filter in one pass.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-ok</span></code>: the callback’s last output is a <code class="docutils literal notranslate"><span class="pre">diagnostic</span></code>; the first
+<code class="docutils literal notranslate"><span class="pre">error</span></code> stops the traversal and is returned. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L767"><code class="docutils literal notranslate"><span class="pre">std.map-ok</span></code></a>,
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L824"><code class="docutils literal notranslate"><span class="pre">std.forall-ok</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L909"><code class="docutils literal notranslate"><span class="pre">std.while-ok-do!</span></code></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">R</span></code>: a <em>relation</em>, with every argument output-mode, so the predicate runs
+in any direction. Only one predicate has it,
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L693"><code class="docutils literal notranslate"><span class="pre">std.appendR</span></code></a>: <code class="docutils literal notranslate"><span class="pre">std.appendR</span> <span class="pre">X</span> <span class="pre">Y</span> <span class="pre">[1,2,3]</span></code> enumerates every way to
+split the list, not only the one where <code class="docutils literal notranslate"><span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">Y</span></code> are already known.</p></li>
+</ul>
+<p>Two hooks are ordinary named rules (<a class="reference internal" href="syntax/rule-attributes.html"><span class="doc">Rule attributes</span></a>) that a
+program can graft over to change how the library behaves. Every error the
+library raises goes through <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L617"><code class="docutils literal notranslate"><span class="pre">std.fatal-error</span></code></a> / <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L621"><code class="docutils literal notranslate"><span class="pre">std.fatal-error-w-data</span></code></a>,
+and every debug line through <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L625"><code class="docutils literal notranslate"><span class="pre">std.debug-print</span></code></a>; grafting a rule
+<code class="docutils literal notranslate"><span class="pre">:before</span> <span class="pre">&quot;default-fatal-error&quot;</span></code> turns a library error into something the
+host catches instead of a <code class="docutils literal notranslate"><span class="pre">halt</span></code>.</p>
+</section>
+<section id="list-and-option-combinators">
+<h2>List and option combinators<a class="headerlink" href="#list-and-option-combinators" title="Link to this heading"></a></h2>
+<p><a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L834"><code class="docutils literal notranslate"><span class="pre">std.filter</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L722"><code class="docutils literal notranslate"><span class="pre">std.fold</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L810"><code class="docutils literal notranslate"><span class="pre">std.exists</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L820"><code class="docutils literal notranslate"><span class="pre">std.forall</span></code></a>,
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L802"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L689"><code class="docutils literal notranslate"><span class="pre">std.append</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L674"><code class="docutils literal notranslate"><span class="pre">std.rev</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L670"><code class="docutils literal notranslate"><span class="pre">std.length</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L780"><code class="docutils literal notranslate"><span class="pre">std.nth</span></code></a>,
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L697"><code class="docutils literal notranslate"><span class="pre">std.take</span></code></a> / <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L708"><code class="docutils literal notranslate"><span class="pre">std.drop</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L845"><code class="docutils literal notranslate"><span class="pre">std.zip</span></code></a> / <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L851"><code class="docutils literal notranslate"><span class="pre">std.unzip</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L875"><code class="docutils literal notranslate"><span class="pre">std.iota</span></code></a> and
+their relatives mirror what a functional language’s list module offers; the
+suffix conventions above generate the rest of the family from each base name.
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L775"><code class="docutils literal notranslate"><span class="pre">std.omap</span></code></a> is the <code class="docutils literal notranslate"><span class="pre">option</span></code> counterpart of <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>.</p>
+<p><strong>code/stdlib-tour.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Suffix conventions of the std. library: -i passes the index, -filter drops</span>
+<span class="linenos"> 2</span><span class="c">% where the callback fails, 2 walks two lists in lockstep. Then a comparator</span>
+<span class="linenos"> 3</span><span class="c">% map (any key type), and the one R-suffixed relation, std.appendR.</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos"> 6</span><span class="w">  </span>std.map-i<span class="w"> </span><span class="kd">[</span><span class="mi">10</span><span class="kd">,</span><span class="w"> </span><span class="mi">20</span><span class="kd">,</span><span class="w"> </span><span class="mi">30</span><span class="kd">]</span><span class="w"> </span>(<span class="nv">i\</span><span class="w"> </span><span class="nv">x\</span><span class="w"> </span><span class="nv">y\</span><span class="w"> </span>y<span class="w"> </span><span class="kd">is</span><span class="w"> </span>x<span class="w"> </span><span class="kd">+</span><span class="w"> </span>i<span class="o">)</span><span class="w"> </span><span class="nv">R1</span><span class="kd">,</span>
+<span class="linenos"> 7</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;map-i (index added):&quot;</span><span class="w"> </span><span class="nv">R1</span><span class="kd">,</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="w">  </span>std.map-filter<span class="w"> </span><span class="kd">[</span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span><span class="mi">3</span><span class="kd">,</span><span class="w"> </span><span class="mi">4</span><span class="kd">,</span><span class="w"> </span><span class="mi">5</span><span class="kd">]</span><span class="w"> </span>(<span class="nv">x\</span><span class="w"> </span><span class="nv">y\</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span>x<span class="w"> </span><span class="kd">mod</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>y<span class="w"> </span><span class="kd">=</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="nv">Evens</span><span class="kd">,</span>
+<span class="linenos">10</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;map-filter (evens kept):&quot;</span><span class="w"> </span><span class="nv">Evens</span><span class="kd">,</span>
+<span class="linenos">11</span>
+<span class="linenos">12</span><span class="w">  </span>std.fold2<span class="w"> </span><span class="kd">[</span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span><span class="mi">3</span><span class="kd">]</span><span class="w"> </span><span class="kd">[</span><span class="mi">10</span><span class="kd">,</span><span class="w"> </span><span class="mi">20</span><span class="kd">,</span><span class="w"> </span><span class="mi">30</span><span class="kd">]</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span>(<span class="nv">a\</span><span class="w"> </span><span class="nv">b\</span><span class="w"> </span><span class="nv">acc\</span><span class="w"> </span><span class="nv">acc&#39;\</span><span class="w"> </span>acc&#39;<span class="w"> </span><span class="kd">is</span><span class="w"> </span>acc<span class="w"> </span><span class="kd">+</span><span class="w"> </span>a<span class="w"> </span><span class="kd">*</span><span class="w"> </span>b<span class="o">)</span><span class="w"> </span><span class="nv">Dot</span><span class="kd">,</span>
+<span class="linenos">13</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;fold2 (dot product):&quot;</span><span class="w"> </span><span class="nv">Dot</span><span class="kd">,</span>
+<span class="linenos">14</span>
+<span class="linenos">15</span><span class="w">  </span>std.map.make<span class="w"> </span>cmp_term<span class="w"> </span><span class="nv">M0</span><span class="kd">,</span>
+<span class="linenos">16</span><span class="w">  </span>std.map.add<span class="w"> </span><span class="s2">&quot;x&quot;</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nv">M0</span><span class="w"> </span><span class="nv">M1</span><span class="kd">,</span>
+<span class="linenos">17</span><span class="w">  </span>std.map.find<span class="w"> </span><span class="s2">&quot;x&quot;</span><span class="w"> </span><span class="nv">M1</span><span class="w"> </span><span class="nv">V</span><span class="kd">,</span>
+<span class="linenos">18</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;std.map, x -&gt;&quot;</span><span class="w"> </span><span class="nv">V</span><span class="kd">,</span>
+<span class="linenos">19</span>
+<span class="linenos">20</span><span class="w">  </span>(<span class="w"> </span>std.appendR<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="kd">[</span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span><span class="mi">2</span><span class="kd">],</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;appendR split:&quot;</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="kd">,</span><span class="w"> </span>fail<span class="w"> </span><span class="kd">;</span><span class="w"> </span>true<span class="w"> </span><span class="o">).</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">map-i (index added): [10, 21, 32]</span>
+<span class="go">map-filter (evens kept): [2, 4]</span>
+<span class="go">fold2 (dot product): 140</span>
+<span class="go">std.map, x -&gt; 1</span>
+<span class="go">appendR split: [] [1, 2]</span>
+<span class="go">appendR split: [1] [2]</span>
+<span class="go">appendR split: [1, 2] []</span>
+</pre></div>
+</div>
+</section>
+<section id="associative-structures">
+<h2>Associative structures<a class="headerlink" href="#associative-structures" title="Link to this heading"></a></h2>
+<p>Four map/set families, differing in what keys they take and how they are
+implemented:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">std.map</span></code> and <code class="docutils literal notranslate"><span class="pre">std.set</span></code> take any key type, given a comparator
+<code class="docutils literal notranslate"><span class="pre">func</span> <span class="pre">K,</span> <span class="pre">K</span> <span class="pre">-&gt;</span> <span class="pre">cmp</span></code> passed to <code class="docutils literal notranslate"><span class="pre">.make</span></code>. They are balanced search trees
+written in Elpi, so a key may contain unification variables.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">std.fmap</span></code> and <code class="docutils literal notranslate"><span class="pre">std.fset</span></code> are the same trees, but skip the occur check
+for a speed gain. They require every key to be a <em>ground</em> term and raise a
+fatal error otherwise.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">std.string.map</span></code>, <code class="docutils literal notranslate"><span class="pre">std.int.map</span></code>, <code class="docutils literal notranslate"><span class="pre">std.loc.map</span></code> (and
+<code class="docutils literal notranslate"><span class="pre">std.string.set</span></code> / <code class="docutils literal notranslate"><span class="pre">std.int.set</span></code>) are the FFI-backed structures for one
+fixed key type, backed by OCaml’s own maps (<a class="reference internal" href="builtins.html"><span class="doc">Built-in predicates</span></a>).</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">std.map</span></code> shares its name with the list-mapping combinator; a predicate and
+a type live in different namespaces, so this is unambiguous but easy to
+misread.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="builtins.html" class="btn btn-neutral float-left" title="Built-in predicates" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="debugging-and-tracing.html" class="btn btn-neutral float-right" title="Debugging and tracing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

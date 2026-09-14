@@ -1,0 +1,228 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Types and type checking &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Determinacy checking" href="determinacy-checking.html" />
+    <link rel="prev" title="Spilling" href="spilling.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spilling.html">Spilling</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Types and type checking</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#polymorphic-predicates">Polymorphic predicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overloading">Overloading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#undeclared-constants">Undeclared constants</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Types and type checking</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/features/types-and-type-checking.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="types-and-type-checking">
+<h1>Types and type checking<a class="headerlink" href="#types-and-type-checking" title="Link to this heading"></a></h1>
+<p>Types have no role at run time (<a class="reference internal" href="../syntax/type-declarations.html"><span class="doc">Type declarations</span></a>); they only
+feed the type checker, which reports mismatches ahead of time. What the
+checker does beyond the signature syntax itself is polymorphism, overloading
+and the treatment of undeclared names.</p>
+<section id="polymorphic-predicates">
+<h2>Polymorphic predicates<a class="headerlink" href="#polymorphic-predicates" title="Link to this heading"></a></h2>
+<p>An uppercase name in a signature is a type variable, universally quantified.
+A signature is inferred, never explicitly instantiated, so the same predicate
+works at every type its rules type-check at:</p>
+<p><strong>../code/polymorphic.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="c">% A polymorphic signature: the same predicate works at list int and at</span>
+<span class="linenos">2</span><span class="c">% list string, its type variable A instantiated differently at each call.</span>
+<span class="linenos">3</span>
+<span class="linenos">4</span><span class="kd">pred</span><span class="w"> </span><span class="nf">rev</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span>.
+<span class="linenos">5</span>rev<span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>std.rev<span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">R</span><span class="o">.</span>
+<span class="linenos">6</span>
+<span class="linenos">7</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>rev<span class="w"> </span><span class="kd">[</span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span><span class="mi">3</span><span class="kd">]</span><span class="w"> </span><span class="nv">R1</span><span class="kd">,</span><span class="w"> </span>rev<span class="w"> </span><span class="kd">[</span><span class="s2">&quot;a&quot;</span><span class="kd">,</span><span class="w"> </span><span class="s2">&quot;b&quot;</span><span class="kd">]</span><span class="w"> </span><span class="nv">R2</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">R1</span><span class="w"> </span><span class="nv">R2</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">[3, 2, 1] [b, a]</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">R1</span></code> is instantiated at <code class="docutils literal notranslate"><span class="pre">list</span> <span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">R2</span></code> at <code class="docutils literal notranslate"><span class="pre">list</span> <span class="pre">string</span></code>, from the
+very same <code class="docutils literal notranslate"><span class="pre">rev</span></code>. This only happens because the signature spells out the type
+variable <code class="docutils literal notranslate"><span class="pre">A</span></code> explicitly: the checker does not <em>infer</em> that a predicate is
+polymorphic the way, say, OCaml’s <code class="docutils literal notranslate"><span class="pre">let</span></code>-polymorphism would. A predicate
+with no signature at all is checked at whatever concrete types its call sites
+happen to use, and a mismatch between two call sites is then a type error.</p>
+</section>
+<section id="overloading">
+<h2>Overloading<a class="headerlink" href="#overloading" title="Link to this heading"></a></h2>
+<p>Repeating a signature with different argument types <strong>overloads</strong> the
+predicate: the checker keeps every alternative and, at each use, picks the
+one the arguments fit:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">pred</span><span class="w"> </span><span class="nf">px</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>.
+<span class="kd">pred</span><span class="w"> </span><span class="nf">px</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>.
+px<span class="w"> </span><span class="mi">0</span><span class="w">  </span><span class="s2">&quot;zero&quot;</span><span class="o">.</span>
+px<span class="w"> </span>tt<span class="w"> </span><span class="s2">&quot;true&quot;</span><span class="o">.</span>
+px<span class="w"> </span>(<span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="w"> </span>int<span class="o">)</span><span class="w"> </span><span class="s2">&quot;nonzero&quot;</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="o">.</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">tt</span></code> pin their rules to one signature each. The third rule’s
+<code class="docutils literal notranslate"><span class="pre">N</span></code> does not, since an integer <em>or</em> a boolean would type-check, so it
+carries a type ascription <code class="docutils literal notranslate"><span class="pre">(N</span> <span class="pre">:</span> <span class="pre">int)</span></code> (<a class="reference internal" href="../syntax/terms.html"><span class="doc">Terms</span></a>). A <em>call</em>
+with an unknown argument in a position where the signatures differ needs one
+the same way: <code class="docutils literal notranslate"><span class="pre">px</span> <span class="pre">X</span> <span class="pre">S</span></code> is ambiguous, <code class="docutils literal notranslate"><span class="pre">px</span> <span class="pre">(X</span> <span class="pre">:</span> <span class="pre">int)</span> <span class="pre">S</span></code> is not.</p>
+</section>
+<section id="undeclared-constants">
+<h2>Undeclared constants<a class="headerlink" href="#undeclared-constants" title="Link to this heading"></a></h2>
+<p>A constant that is used but never given a signature draws a warning naming a
+signature that would fit, and the program still runs. A data constructor,
+though, is a hard error the moment it is used (<a class="reference internal" href="../syntax/type-declarations.html"><span class="doc">Type declarations</span></a>).
+The warning is skipped for two names: the predicate called <code class="docutils literal notranslate"><span class="pre">main</span></code>, and any
+name ending in <code class="docutils literal notranslate"><span class="pre">.aux</span></code> or containing <code class="docutils literal notranslate"><span class="pre">.aux.</span></code>, conventionally used for
+generated or throwaway helper code that is not worth a signature.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="spilling.html" class="btn btn-neutral float-left" title="Spilling" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="determinacy-checking.html" class="btn btn-neutral float-right" title="Determinacy checking" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,276 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Logic Programming &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Constraints" href="constraints.html" />
+    <link rel="prev" title="Elpi = λProlog + CHR" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Logic Programming</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#elpi-vs-prolog">Elpi vs Prolog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">Elpi vs λProlog</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Logic Programming</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/semantics/logic-programming-model.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="logic-programming">
+<h1>Logic Programming<a class="headerlink" href="#logic-programming" title="Link to this heading"></a></h1>
+<p>Elpi computes by reducing a query to smaller goals. What follows is when a
+rule applies to a goal, and what a rule means on its own. The surface syntax
+it refers to is the <em>Syntax</em> part of the manual, linked as it comes up. Elpi’s
+model is Prolog’s, rules and backtracking search, with λProlog’s treatment of
+syntax that contains binders layered on top.</p>
+<section id="elpi-vs-prolog">
+<h2>Elpi vs Prolog<a class="headerlink" href="#elpi-vs-prolog" title="Link to this heading"></a></h2>
+<p>Elpi keeps Prolog’s core. Data is built from constructors, which in Elpi are
+declared and typed (<a class="reference internal" href="../syntax/type-declarations.html"><span class="doc">Type declarations</span></a>) rather than used
+freely as in Prolog. A program is a set of <em>rules</em>, each one a self-contained
+unit of meaning. And the search is <em>backtracking</em>: rules are tried in order,
+and when a goal fails the search retreats to the most recent still-open
+choice and takes its next alternative.</p>
+<p>Where Elpi departs is in how a rule’s <em>head</em> meets the goal. Prolog unifies
+the two. Elpi unifies only a predicate’s <em>output</em> arguments and one-way
+<em>matches</em> the <em>input</em> ones: the head may inspect the goal but not instantiate
+a variable the goal left unbound. Which arguments are which is fixed by the
+signature (<a class="reference internal" href="../syntax/type-declarations.html"><span class="doc">Type declarations</span></a>); what the split is for is
+<a class="reference internal" href="constraints.html"><span class="doc">Constraints</span></a>. This is the <em>matching clauses</em> idea of
+<a class="reference internal" href="../bibliography.html#bib-bprolog"><span class="std std-ref">B-Prolog</span></a>, marked per argument rather than per clause.</p>
+<p>A head need not be linear: a variable may occur in it more than once, which
+forces the two positions to hold the same term:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">pred</span><span class="w"> </span><span class="nf">symmetric</span><span class="w"> </span><span class="kt">tree</span>.
+symmetric<span class="w"> </span>leaf<span class="o">.</span>
+symmetric<span class="w"> </span>(node<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">T</span><span class="o">).</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">symmetric</span></code> succeeds on a tree that is a leaf, or a <code class="docutils literal notranslate"><span class="pre">node</span></code> whose two
+children are the very same term; the repeated <code class="docutils literal notranslate"><span class="pre">T</span></code> in the second head is
+what ties them together. (It does not recurse, so it does not check that the
+children are themselves symmetric.)</p>
+<p>Several rules may apply to one goal. Elpi tries them top to bottom and
+backtracks into the next on failure. The only control over this search is the
+cut, <code class="docutils literal notranslate"><span class="pre">!</span></code> (<a class="reference internal" href="../syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>), and Elpi’s is a
+<em>hard</em> cut: besides discarding the current rule’s untried alternatives, it
+also discards any alternative solutions still available for the premises
+already solved earlier in the same rule.</p>
+<p>A rule is meaningful in isolation: adding one to a program, or taking one
+away, is a well-defined change, unlike an assignment or a function definition,
+which only mean something in a larger context. It is closer to adding or
+removing an axiom in a proof system. This is why the order in which rules are
+accumulated matters, why their relative order matters too once cut is in play,
+and why <a class="reference internal" href="../syntax/file-structure-and-attributes.html"><span class="doc">File structure and attributes</span></a> gives a rule a name and
+a place among its siblings.</p>
+</section>
+<section id="id1">
+<h2>Elpi vs λProlog<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
+<p>λProlog adds <em>binders</em>. An object-language variable is represented directly
+by a bound variable of the programming language, a technique called
+<em>Higher-Order Abstract Syntax</em>, or <em>λ-tree syntax</em>. A simply-typed
+λ-calculus term is declared as</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">data</span><span class="w"> </span><span class="nf">tm</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">app</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">lam</span><span class="w"> </span><span class="kt">(tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">lam</span></code> takes an Elpi function of type <code class="docutils literal notranslate"><span class="pre">tm</span> <span class="pre">-&gt;</span> <span class="pre">tm</span></code>: the identity <code class="docutils literal notranslate"><span class="pre">λx.x</span></code> is
+written <code class="docutils literal notranslate"><span class="pre">lam</span> <span class="pre">x\</span> <span class="pre">x</span></code>, and applying that function to a term substitutes the
+term for the bound <code class="docutils literal notranslate"><span class="pre">x</span></code>, with no substitution code to write. A bound
+variable like <code class="docutils literal notranslate"><span class="pre">x</span></code> is not a unification variable: it can never be assigned,
+only substituted for, and it is fresh, distinct from every other name in
+scope.</p>
+<p>Type-checking this calculus needs one ingredient a Prolog rule cannot express
+on its own: a rule that holds only for the lifetime of one bound variable’s
+scope. <code class="docutils literal notranslate"><span class="pre">pi</span></code> introduces a fresh constant for the duration of a goal, and
+<code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> adds a rule for the duration of a goal; together they give a bound
+variable exactly the context it needs. Types are declared like terms, with a
+constructor <code class="docutils literal notranslate"><span class="pre">arr</span></code> for the function space:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">data</span><span class="w"> </span><span class="nf">ty</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">arr</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+
+<span class="kd">pred</span><span class="w"> </span><span class="nf">of</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+of<span class="w"> </span>(app<span class="w"> </span><span class="nv">H</span><span class="w"> </span><span class="nv">A</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>of<span class="w"> </span><span class="nv">H</span><span class="w"> </span>(arr<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>of<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">S</span><span class="o">.</span>
+of<span class="w"> </span>(lam<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span>(arr<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">c</span>\<span class="w"> </span>of<span class="w"> </span>c<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>of<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>c<span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>To type-check <code class="docutils literal notranslate"><span class="pre">lam</span> <span class="pre">F</span></code>, the second rule introduces a fresh constant <code class="docutils literal notranslate"><span class="pre">c</span></code> for
+the bound variable, adds <code class="docutils literal notranslate"><span class="pre">of</span> <span class="pre">c</span> <span class="pre">S</span></code> for the rest of that goal only, and checks
+the body <code class="docutils literal notranslate"><span class="pre">F</span> <span class="pre">c</span></code>. The application rule is an ordinary Horn clause; the
+abstraction rule needs the <code class="docutils literal notranslate"><span class="pre">∀</span></code> and nested <code class="docutils literal notranslate"><span class="pre">⇒</span></code> of a <em>Hereditary Harrop
+formula</em>, the richer logic that λProlog, and so Elpi, is built on. A rule
+added by <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> is <em>hypothetical</em>: unlike Prolog’s <code class="docutils literal notranslate"><span class="pre">assert</span></code> / <code class="docutils literal notranslate"><span class="pre">retract</span></code>
+its scope is exactly the goal that added it, never the rest of the program
+(<a class="reference internal" href="../syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>). The full checker, with
+weak-head reduction, is worked through in <a class="reference internal" href="../examples/stlc.html"><span class="doc">Simply-typed λ-calculus</span></a>.</p>
+<p>Run on a closed term, the checker infers a type without committing to what
+the bound variables stand for:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>goal&gt; Fst = (lam x\ lam y\ x), of Fst Ty.
+Success:
+  Fst = lam c0 \ lam c1 \ c0
+  Ty = arr X0 (arr X1 X0)
+</pre></div>
+</div>
+<p>This is as far as λProlog alone goes. Elpi is meant to type-check <em>incomplete</em>
+terms as well, the terms an interactive prover’s elaborator manipulates, still
+full of holes to be filled in. Ask the checker above for <code class="docutils literal notranslate"><span class="pre">of</span> <span class="pre">X</span> <span class="pre">T</span></code> with <code class="docutils literal notranslate"><span class="pre">X</span></code>
+an unknown hole and nothing useful happens: because the first argument of
+<code class="docutils literal notranslate"><span class="pre">of</span></code> is an input, no rule head matches a bare variable, and the goal simply
+fails. Made an output instead, the way plain λProlog with no modes would have
+it, the goal does worse: the first rule matches <code class="docutils literal notranslate"><span class="pre">X</span></code> against <code class="docutils literal notranslate"><span class="pre">app</span> <span class="pre">H1</span> <span class="pre">A1</span></code>
+for fresh <code class="docutils literal notranslate"><span class="pre">H1</span></code>, <code class="docutils literal notranslate"><span class="pre">A1</span></code>, then against <code class="docutils literal notranslate"><span class="pre">app</span> <span class="pre">H2</span> <span class="pre">A2</span></code> inside that, and so on
+without end. Neither outcome is what an elaborator needs. The way out is to
+suspend the goal on the hole until its shape is known instead of guessing,
+which is covered in <a class="reference internal" href="constraints.html"><span class="doc">Constraints</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="overview.html" class="btn btn-neutral float-left" title="Elpi = λProlog + CHR" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="constraints.html" class="btn btn-neutral float-right" title="Constraints" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

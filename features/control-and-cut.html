@@ -1,0 +1,250 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control and cut &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Spilling" href="spilling.html" />
+    <link rel="prev" title="Binders and HOAS" href="binders-and-hoas.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Control and cut</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#cut-and-disjunction">Cut and disjunction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#not-if-and-if2"><code class="docutils literal notranslate"><span class="pre">not</span></code>, <code class="docutils literal notranslate"><span class="pre">if</span></code> and <code class="docutils literal notranslate"><span class="pre">if2</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#halt-and-stop"><code class="docutils literal notranslate"><span class="pre">halt</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#taming-backtracking">Taming backtracking</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Control and cut</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/features/control-and-cut.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="control-and-cut">
+<h1>Control and cut<a class="headerlink" href="#control-and-cut" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">!</span></code> is a hard cut: it discards not only a predicate’s untried rules but the
+choice points of premises already solved in the same rule
+(<a class="reference internal" href="../semantics/logic-programming-model.html"><span class="doc">Logic Programming</span></a>,
+<a class="reference internal" href="../semantics/formal-semantics.html"><span class="doc">Formal semantics</span></a>). The rest are the control constructs
+built on it.</p>
+<section id="cut-and-disjunction">
+<h2>Cut and disjunction<a class="headerlink" href="#cut-and-disjunction" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">!</span></code> discards every choice point created since the <em>rule</em> it appears in was
+selected, including one opened by a <code class="docutils literal notranslate"><span class="pre">;</span></code> earlier in the same body, not only
+the rule’s own untried alternatives:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>describe<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">mod</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="s2">&quot;even&quot;</span><span class="o">.</span>
+describe<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="s2">&quot;odd&quot;</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>Once the first rule’s guard succeeds, <code class="docutils literal notranslate"><span class="pre">!</span></code> commits: on backtracking, Elpi
+does not try to make <code class="docutils literal notranslate"><span class="pre">R</span></code> something other than <code class="docutils literal notranslate"><span class="pre">&quot;even&quot;</span></code>, and does not fall
+through to the second rule either. Both were choices made after the cut’s
+rule was entered.</p>
+</section>
+<section id="not-if-and-if2">
+<h2><code class="docutils literal notranslate"><span class="pre">not</span></code>, <code class="docutils literal notranslate"><span class="pre">if</span></code> and <code class="docutils literal notranslate"><span class="pre">if2</span></code><a class="headerlink" href="#not-if-and-if2" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">not</span> <span class="pre">G</span></code> succeeds iff <code class="docutils literal notranslate"><span class="pre">G</span></code> has no solution. It is defined as
+<code class="docutils literal notranslate"><span class="pre">not</span> <span class="pre">X</span> <span class="pre">:-</span> <span class="pre">X,</span> <span class="pre">!,</span> <span class="pre">fail.</span> <span class="pre">not</span> <span class="pre">_.</span></code>, so it commits to the first solution of <code class="docutils literal notranslate"><span class="pre">G</span></code>,
+if any, before failing. <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">C</span> <span class="pre">T</span> <span class="pre">E</span></code> commits to the first solution of <code class="docutils literal notranslate"><span class="pre">C</span></code>,
+if any, and runs <code class="docutils literal notranslate"><span class="pre">T</span></code>; otherwise it runs <code class="docutils literal notranslate"><span class="pre">E</span></code>. It is a packaged cut,
+cheaper to read than <code class="docutils literal notranslate"><span class="pre">(C,</span> <span class="pre">!,</span> <span class="pre">T</span> <span class="pre">;</span> <span class="pre">E)</span></code>. <code class="docutils literal notranslate"><span class="pre">if2</span></code> is the same with two
+conditions tried in order, and a final <code class="docutils literal notranslate"><span class="pre">else</span></code>:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">if</span><span class="w">  </span><span class="kt">(pred)</span>,<span class="w"> </span><span class="kt">(func)</span>,<span class="w"> </span><span class="kt">(func)</span>.
+<span class="kd">func</span><span class="w"> </span><span class="nf">if2</span><span class="w"> </span><span class="kt">(pred)</span>,<span class="w"> </span><span class="kt">(func)</span>,<span class="w"> </span><span class="kt">(pred)</span>,<span class="w"> </span><span class="kt">(func)</span>,<span class="w"> </span><span class="kt">(func)</span>.
+</pre></div>
+</div>
+</section>
+<section id="halt-and-stop">
+<h2><code class="docutils literal notranslate"><span class="pre">halt</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code><a class="headerlink" href="#halt-and-stop" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">halt</span></code> (variadic: it accepts anything <code class="docutils literal notranslate"><span class="pre">print</span></code>-able) stops the whole
+process immediately, printing its arguments first, for a fatal error.
+<code class="docutils literal notranslate"><span class="pre">stop</span></code> fails the current goal without terminating the process, so outer
+alternatives are still tried.</p>
+</section>
+<section id="taming-backtracking">
+<h2>Taming backtracking<a class="headerlink" href="#taming-backtracking" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">std.once</span> <span class="pre">G</span></code> is <code class="docutils literal notranslate"><span class="pre">G</span></code> with an implicit cut right after its first success,
+for a relation that naturally has several solutions when only the first is
+wanted. <code class="docutils literal notranslate"><span class="pre">std.do!</span> <span class="pre">[G1,</span> <span class="pre">G2,</span> <span class="pre">…]</span></code> runs a sequence of goals each followed by a
+cut, so a failure never triggers backtracking into an earlier one, closer to
+imperative sequencing than a plain conjunction.</p>
+<p>Each of these in one program, a cut committing a disjunction, then <code class="docutils literal notranslate"><span class="pre">not</span></code>,
+<code class="docutils literal notranslate"><span class="pre">if</span></code>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a> and <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L893"><code class="docutils literal notranslate"><span class="pre">std.do!</span></code></a>:</p>
+<p><strong>../code/control.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Cut committing a disjunction (describe), not, if, std.once, std.do!.</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="kd">pred</span><span class="w"> </span><span class="nf">describe</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>.
+<span class="linenos"> 4</span>describe<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">mod</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="s2">&quot;even&quot;</span><span class="o">.</span>
+<span class="linenos"> 5</span>describe<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="s2">&quot;odd&quot;</span><span class="o">.</span>
+<span class="linenos"> 6</span>
+<span class="linenos"> 7</span><span class="kd">pred</span><span class="w"> </span><span class="nf">even</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 8</span>even<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">mod</span><span class="w"> </span><span class="mi">2</span><span class="o">.</span>
+<span class="linenos"> 9</span>
+<span class="linenos">10</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">11</span><span class="w">  </span>describe<span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="nv">R1</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;4 is&quot;</span><span class="w"> </span><span class="nv">R1</span><span class="kd">,</span>
+<span class="linenos">12</span><span class="w">  </span>describe<span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="nv">R2</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;3 is&quot;</span><span class="w"> </span><span class="nv">R2</span><span class="kd">,</span>
+<span class="linenos">13</span><span class="w">  </span>not<span class="w"> </span>(even<span class="w"> </span><span class="mi">3</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;not (even 3) succeeds&quot;</span><span class="kd">,</span>
+<span class="linenos">14</span><span class="w">  </span>if<span class="w"> </span>(even<span class="w"> </span><span class="mi">4</span><span class="o">)</span><span class="w"> </span>(print<span class="w"> </span><span class="s2">&quot;if: 4 is even&quot;</span><span class="o">)</span><span class="w"> </span>(print<span class="w"> </span><span class="s2">&quot;if: 4 is odd&quot;</span><span class="o">)</span><span class="kd">,</span>
+<span class="linenos">15</span><span class="w">  </span>std.once<span class="w"> </span>(std.mem<span class="w"> </span><span class="kd">[</span><span class="mi">3</span><span class="kd">,</span><span class="mi">4</span><span class="kd">,</span><span class="mi">5</span><span class="kd">]</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;once picked the first match:&quot;</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span>
+<span class="linenos">16</span><span class="w">  </span>std.do!<span class="w"> </span><span class="kd">[</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;do!: step 1&quot;</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;do!: step 2&quot;</span><span class="w"> </span><span class="kd">]</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">4 is even</span>
+<span class="go">3 is odd</span>
+<span class="go">not (even 3) succeeds</span>
+<span class="go">if: 4 is even</span>
+<span class="go">once picked the first match: 3</span>
+<span class="go">do!: step 1</span>
+<span class="go">do!: step 2</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="binders-and-hoas.html" class="btn btn-neutral float-left" title="Binders and HOAS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="spilling.html" class="btn btn-neutral float-right" title="Spilling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,19 +1,425 @@
+
+
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <title>index</title>
-    <link rel="stylesheet" href="./odoc.support/odoc.css"/>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  </head>
-  <body>
-    <main class="content">
-      <div class="by-name">
-      <h2>OCaml package documentation</h2>
-      <ol>
-      <li><a href="elpi/index.html">elpi</a></li>
-      </ol>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elpi — Embeddable λProlog Interpreter &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Introduction" href="introduction.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
       </div>
-    </main>
-  </body>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Elpi — Embeddable λProlog Interpreter</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="elpi-embeddable-prolog-interpreter">
+<h1>Elpi — Embeddable λProlog Interpreter<a class="headerlink" href="#elpi-embeddable-prolog-interpreter" title="Link to this heading"></a></h1>
+<p>Elpi is an embeddable implementation of <a class="reference external" href="http://www.lix.polytechnique.fr/~dale/lProlog/">λProlog</a> extended with Constraint
+Handling Rules (CHR). It is a logic programming language well suited to
+manipulate abstract syntax trees with binders and unification variables, the
+kind of data the <em>elaborator</em> of an interactive theorem prover works with. Elpi
+is designed to be embedded into larger applications written in OCaml as an
+extension language, and it comes with an API to drive the interpreter and a
+foreign function interface (FFI) to add built-in predicates and data types.</p>
+<p>This manual describes Elpi’s syntax, its execution model (including CHR), every
+language feature, the standard library and built-in predicates, the debugging
+and tracing tools, and the OCaml API used to embed and extend the interpreter.
+It assumes familiarity with λProlog; the reference for standard λProlog is
+<a class="reference internal" href="bibliography.html#bib-miller-nadathur"><span class="std std-ref">Programming with Higher-Order Logic, by Miller and Nadathur</span></a>.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#why-elpi">Why Elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#relation-to-standard-prolog-and-to-teyjus">Relation to standard λProlog and to Teyjus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#how-to-read-this-manual">How to read this manual</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#installing-elpi">Installing Elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#running-a-program">Running a program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#editor-support">Editor support</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="syntax/lexical-conventions.html">Lexical conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="syntax/lexical-conventions.html#comments">Comments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/lexical-conventions.html#identifiers">Identifiers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/lexical-conventions.html#literals">Literals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/lexical-conventions.html#operators">Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/lexical-conventions.html#keywords">Keywords</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/lexical-conventions.html#the-reference-tokenizer">The reference tokenizer</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/terms.html">Terms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="syntax/terms.html#application">Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/terms.html#abstraction">λ-abstraction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/terms.html#operators">Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/terms.html#lists">Lists</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/terms.html#type-ascription">Type ascription</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/terms.html#naming-a-subterm-with-as">Naming a subterm with <code class="docutils literal notranslate"><span class="pre">as</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/terms.html#braces">Braces</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/type-declarations.html">Type declarations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="syntax/type-declarations.html#data-types">Data types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/type-declarations.html#data-constructors">Data constructors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/type-declarations.html#type-abbreviations">Type abbreviations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/type-declarations.html#predicate-signatures">Predicate signatures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/type-declarations.html#signature-attributes">Signature attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/type-declarations.html#a-worked-set-of-declarations">A worked set of declarations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/inference-rules-and-queries.html">Inference rules and queries</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="syntax/inference-rules-and-queries.html#rules">Rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/inference-rules-and-queries.html#goals">Goals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/inference-rules-and-queries.html#committing-a-hypothetical-rule">Committing a hypothetical rule</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/inference-rules-and-queries.html#naming-a-subterm-of-the-head">Naming a subterm of the head</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/inference-rules-and-queries.html#attributes">Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/inference-rules-and-queries.html#queries">Queries</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/constraint-handling-rules.html">Constraint handling rules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="syntax/constraint-handling-rules.html#the-constraint-block">The constraint block</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/constraint-handling-rules.html#rules">Rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/constraint-handling-rules.html#sequent-patterns">Sequent patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/constraint-handling-rules.html#generating-a-constraint">Generating a constraint</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/file-structure-and-attributes.html">File structure and attributes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="syntax/file-structure-and-attributes.html#accumulating-files">Accumulating files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/file-structure-and-attributes.html#namespaces">Namespaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/file-structure-and-attributes.html#shortening-names">Shortening names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/file-structure-and-attributes.html#a-library-s-public-surface">A library’s public surface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/file-structure-and-attributes.html#macros">Macros</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/file-structure-and-attributes.html#a-multi-file-program">A multi-file program</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/rule-attributes.html">Rule attributes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="syntax/rule-attributes.html#grafting">Grafting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/rule-attributes.html#conditional-compilation">Conditional compilation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="syntax/rule-attributes.html#suppressing-the-type-checker">Suppressing the type checker</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/logic-programming-model.html">Logic Programming</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="semantics/logic-programming-model.html#elpi-vs-prolog">Elpi vs Prolog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/logic-programming-model.html#id1">Elpi vs λProlog</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/constraints.html">Constraints</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="semantics/constraints.html#controlling-instantiation">Controlling instantiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/constraints.html#matching-not-unifying">Matching, not unifying</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/constraints.html#suspending-and-resuming">Suspending and resuming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/constraints.html#incompatible-constraints">Incompatible constraints</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/chr.html">The constraint store</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="semantics/chr.html#frozen-variables">Frozen variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/chr.html#triggers-and-clustering">Triggers and clustering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/chr.html#application-of-chr-rules">Application of CHR rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/chr.html#symmetric-chr-rules">Symmetric CHR rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/chr.html#cliques-fix-what-a-rule-can-see">Cliques fix what a rule can see</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/chr.html#a-global-variable-built-on-chr">A global variable built on CHR</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/formal-semantics.html">Formal semantics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="semantics/formal-semantics.html#abstract-syntax">Abstract syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/formal-semantics.html#runtime-objects">Runtime objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="semantics/formal-semantics.html#the-semantics">The semantics</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/unification-and-variables.html#unification-variable-inspection">Unification variable inspection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/unification-and-variables.html#the-pattern-fragment">The pattern fragment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/unification-and-variables.html#the-occur-check">The occur check</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/unification-and-variables.html#the-wildcard">The wildcard <code class="docutils literal notranslate"><span class="pre">_</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/binders-and-hoas.html#moving-under-a-binder">Moving under a binder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/binders-and-hoas.html#sigma-for-per-call-locals"><code class="docutils literal notranslate"><span class="pre">sigma</span></code> for per-call locals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/binders-and-hoas.html#inspecting-the-context">Inspecting the context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/binders-and-hoas.html#restricting-a-variable-s-scope">Restricting a variable’s scope</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/control-and-cut.html#cut-and-disjunction">Cut and disjunction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/control-and-cut.html#not-if-and-if2"><code class="docutils literal notranslate"><span class="pre">not</span></code>, <code class="docutils literal notranslate"><span class="pre">if</span></code> and <code class="docutils literal notranslate"><span class="pre">if2</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/control-and-cut.html#halt-and-stop"><code class="docutils literal notranslate"><span class="pre">halt</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/control-and-cut.html#taming-backtracking">Taming backtracking</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/spilling.html#spilling-into-a-binder">Spilling into a binder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/spilling.html#spilling-out-of-a-term-level-lambda">Spilling out of a term-level lambda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/spilling.html#spilling-a-conjunction">Spilling a conjunction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/types-and-type-checking.html#polymorphic-predicates">Polymorphic predicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/types-and-type-checking.html#overloading">Overloading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/types-and-type-checking.html#undeclared-constants">Undeclared constants</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/determinacy-checking.html#what-a-functional-signature-promises">What a functional signature promises</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/determinacy-checking.html#what-the-checker-requires">What the checker requires</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/determinacy-checking.html#wrongly-called-predicates">Wrongly called predicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/determinacy-checking.html#a-function-that-extends-the-program">A function that extends the program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/determinacy-checking.html#signatures-as-a-subtyping-relation">Signatures as a subtyping relation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/determinacy-checking.html#functional-status-of-outputs">Functional status of outputs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/argument-indexing.html#the-default-and-index">The default and <code class="docutils literal notranslate"><span class="pre">:index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/argument-indexing.html#which-index-to-use">Which index to use</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/argument-indexing.html#discrimination-trees-and-hashes">Discrimination trees and hashes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/pitfalls.html">Pitfalls</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/pitfalls.html#misleading-precedence-of">Misleading precedence of <code class="docutils literal notranslate"><span class="pre">=&gt;</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/pitfalls.html#treacherous-one-rule-anonymous-predicates">Treacherous one-rule anonymous predicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/pitfalls.html#scope-error-as-a-silent-failure">Scope error as a silent failure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/pitfalls.html#and-functional-predicates"><code class="docutils literal notranslate"><span class="pre">=!=&gt;</span></code> and functional predicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/pitfalls.html#unification-variables-are-not-imperative-variables">Unification variables are not imperative variables</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="builtins.html">Built-in predicates</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="builtins.html#logic-control-and-inspection">Logic, control and inspection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builtins.html#arithmetic">Arithmetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builtins.html#standard-data-types">Standard data types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builtins.html#regular-expressions-and-randomness">Regular expressions and randomness</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builtins.html#input-output-and-the-file-system">Input, output and the file system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builtins.html#typed-finite-maps">Typed finite maps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builtins.html#garbage-collector-and-runtime">Garbage collector and runtime</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="standard-library.html">The standard library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="standard-library.html#naming-conventions">Naming conventions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard-library.html#list-and-option-combinators">List and option combinators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="standard-library.html#associative-structures">Associative structures</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="debugging-and-tracing.html">Debugging and tracing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="debugging-and-tracing.html#the-tracing-facility">The tracing facility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="debugging-and-tracing.html#the-spy-predicate">The spy predicate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="debugging-and-tracing.html#debugging-the-parser">Debugging the parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="debugging-and-tracing.html#conditional-debug-rules">Conditional debug rules</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="embedding.html">Embedding and extending Elpi</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="embedding.html#embedding">Embedding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="embedding.html#extending-a-builtin-written-in-ocaml">Extending: a builtin written in OCaml</a></li>
+<li class="toctree-l2"><a class="reference internal" href="embedding.html#extending-a-quotation">Extending: a quotation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="embedding.html#also-worth-knowing">Also worth knowing</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="compatibility.html#lexical-differences">Lexical differences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="compatibility.html#semantic-differences">Semantic differences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="compatibility.html#superseded-elpi-keywords">Superseded Elpi keywords</a></li>
+<li class="toctree-l2"><a class="reference internal" href="compatibility.html#older-signature-forms">Older signature forms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="compatibility.html#the-occur-check">The occur check</a></li>
+<li class="toctree-l2"><a class="reference internal" href="compatibility.html#modules">Modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="introduction.html" class="btn btn-neutral float-right" title="Introduction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
 </html>

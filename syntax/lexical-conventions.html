@@ -1,0 +1,453 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lexical conventions &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Terms" href="terms.html" />
+    <link rel="prev" title="Getting started" href="../getting-started.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Lexical conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#comments">Comments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#identifiers">Identifiers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#literals">Literals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#operators">Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#keywords">Keywords</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-reference-tokenizer">The reference tokenizer</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Lexical conventions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/syntax/lexical-conventions.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="lexical-conventions">
+<h1>Lexical conventions<a class="headerlink" href="#lexical-conventions" title="Link to this heading"></a></h1>
+<p>An Elpi source file is read as a stream of bytes. At the top level it is a
+sequence of <em>rules</em> and <em>directives</em>, each terminated by a full stop.
+Whitespace (spaces, tabs, carriage returns and newlines) separates tokens and
+is otherwise insignificant: indentation carries no meaning, and the
+terminating <code class="docutils literal notranslate"><span class="pre">.</span></code> need not sit on a line of its own.</p>
+<p>Outside string literals and comments only ASCII characters are used; a
+non-ASCII byte there is a lexical error. Inside a string literal or a comment
+any byte is accepted and passed through unchanged, so UTF-8 text can appear
+there, but Elpi neither decodes nor validates it.</p>
+<p>The rules for breaking source text into tokens follow. The grammar that
+assembles those tokens into terms and rules is covered in <a class="reference internal" href="terms.html"><span class="doc">Terms</span></a> and
+<a class="reference internal" href="inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>. To see how a concrete piece of source is
+tokenised and parsed, run it through <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">'…'</span> <span class="pre">|</span> <span class="pre">elpi</span> <span class="pre">-parse-term</span></code>, which
+prints the resulting term.</p>
+<section id="comments">
+<h2>Comments<a class="headerlink" href="#comments" title="Link to this heading"></a></h2>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="c">% a line comment runs to the end of the line</span>
+
+<span class="c">/* a block comment,</span>
+<span class="w">   </span><span class="c">/* which may be nested */</span>
+<span class="w">   </span>up<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>matching<span class="w"> </span>close<span class="w"> </span><span class="kd">*/</span>
+</pre></div>
+</div>
+<p>Block comments nest, so commenting out a region that already contains a
+<code class="docutils literal notranslate"><span class="pre">/*</span> <span class="pre">…</span> <span class="pre">*/</span></code> pair works as expected: the inner close does not end the outer
+comment.</p>
+<p>A line comment whose text begins with <code class="docutils literal notranslate"><span class="pre">elpi:</span></code> is a directive to the lexer
+rather than an ordinary comment. The three are <code class="docutils literal notranslate"><span class="pre">%</span> <span class="pre">elpi:skip</span> <span class="pre">N</span></code> (skip the
+next <code class="docutils literal notranslate"><span class="pre">N</span></code> lines), <code class="docutils literal notranslate"><span class="pre">%</span> <span class="pre">elpi:if</span> <span class="pre">version</span> <span class="pre">…</span></code> and <code class="docutils literal notranslate"><span class="pre">%</span> <span class="pre">elpi:endif</span></code>; they are
+described in <a class="reference internal" href="rule-attributes.html"><span class="doc">Rule attributes</span></a>.</p>
+</section>
+<section id="identifiers">
+<h2>Identifiers<a class="headerlink" href="#identifiers" title="Link to this heading"></a></h2>
+<p>An identifier starts with a letter or <code class="docutils literal notranslate"><span class="pre">_</span></code> and continues with any number of
+letters, digits, <code class="docutils literal notranslate"><span class="pre">_</span></code>, <code class="docutils literal notranslate"><span class="pre">-</span></code>, <code class="docutils literal notranslate"><span class="pre">$</span></code> and the <em>symbol characters</em></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>+  *  /  ^  &lt;  &gt;  `  &#39;  ?  @  #  ~  =  &amp;  !
+</pre></div>
+</div>
+<p>The lexer is greedy: a maximal run of those characters is <strong>one</strong> identifier,
+even when it contains something that reads like an operator. The characters
+that are <em>not</em> identifier characters, namely whitespace and the punctuation
+<code class="docutils literal notranslate"><span class="pre">,</span> <span class="pre">;</span> <span class="pre">:</span> <span class="pre">|</span> <span class="pre">(</span> <span class="pre">)</span> <span class="pre">[</span> <span class="pre">]</span> <span class="pre">{</span> <span class="pre">}</span> <span class="pre">&quot;</span></code>, are what ends one identifier and begins the next
+token. A name is therefore glued together by <code class="docutils literal notranslate"><span class="pre">+</span></code>, <code class="docutils literal notranslate"><span class="pre">-</span></code>, <code class="docutils literal notranslate"><span class="pre">&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">!</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&#64;</span></code> and the rest, but split apart by a comma or a colon:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>a-&gt;b        one identifier   (write  a -&gt; b  for the function space)
+n+1         one identifier   (write  n + 1   for the addition)
+foo!        one identifier
+foo@bar     one identifier   (@ is special only as the first character)
+foo.bar     one identifier   (a qualified name, see below)
+
+foo,bar     three tokens:   foo   ,   bar
+foo;bar     three tokens:   foo   ;   bar
+foo:bar     three tokens:   foo   :   bar
+</pre></div>
+</div>
+<p>A run made <em>only</em> of symbol characters, with no leading letter, is not an
+identifier at all: it is a mixfix operator, covered under <a class="reference internal" href="#operators">Operators</a> below.</p>
+<p>An identifier may not <em>start</em> with <code class="docutils literal notranslate"><span class="pre">-</span></code> or a digit, although it may contain
+them: <code class="docutils literal notranslate"><span class="pre">make-palindrome</span></code> and <code class="docutils literal notranslate"><span class="pre">v1</span></code> are each a single token. The everyday
+consequence is that an infix operator written between two bare names needs
+spaces around it: <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">-</span> <span class="pre">Y</span></code> for subtraction, <code class="docutils literal notranslate"><span class="pre">N</span> <span class="pre">=</span> <span class="pre">M</span></code> for unification.
+Without the spaces, <code class="docutils literal notranslate"><span class="pre">X-Y</span></code> and <code class="docutils literal notranslate"><span class="pre">N=M</span></code> are long names.</p>
+<p class="rubric">Variables and constants</p>
+<p>The <strong>first character</strong> of an identifier fixes its role, and no declaration
+is needed to tell the two kinds apart:</p>
+<ul class="simple">
+<li><p>a name starting with an <strong>uppercase letter</strong> is a <strong>unification variable</strong>:
+<code class="docutils literal notranslate"><span class="pre">X</span></code>, <code class="docutils literal notranslate"><span class="pre">Acc</span></code>, <code class="docutils literal notranslate"><span class="pre">Result1</span></code>. A name starting with <code class="docutils literal notranslate"><span class="pre">_</span></code> is variable-like
+too, but is a <em>wildcard</em> (see below);</p></li>
+<li><p>every other name is a <strong>constant</strong>, a predicate or a term constructor:
+<code class="docutils literal notranslate"><span class="pre">append</span></code>, <code class="docutils literal notranslate"><span class="pre">red</span></code>, <code class="docutils literal notranslate"><span class="pre">std.length</span></code>, <code class="docutils literal notranslate"><span class="pre">make-palindrome</span></code>.</p></li>
+</ul>
+<p class="rubric">Qualified names</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">.</span></code> immediately followed by a letter is part of the name: <code class="docutils literal notranslate"><span class="pre">std.list.map</span></code>
+is a single constant, not <code class="docutils literal notranslate"><span class="pre">std</span></code> applied to <code class="docutils literal notranslate"><span class="pre">list.map</span></code>. A name written with
+a <strong>leading</strong> <code class="docutils literal notranslate"><span class="pre">.</span></code> is looked up in the global scope, ignoring any enclosing
+<code class="docutils literal notranslate"><span class="pre">namespace</span></code>: inside <code class="docutils literal notranslate"><span class="pre">namespace</span> <span class="pre">n</span></code> the name <code class="docutils literal notranslate"><span class="pre">.p</span></code> is the top-level <code class="docutils literal notranslate"><span class="pre">p</span></code>,
+not <code class="docutils literal notranslate"><span class="pre">n.p</span></code>. Namespaces and these qualified names are covered in
+<a class="reference internal" href="file-structure-and-attributes.html"><span class="doc">File structure and attributes</span></a>. A <code class="docutils literal notranslate"><span class="pre">.</span></code> that is <em>not</em> followed by a
+letter is the full stop that ends a rule or directive.</p>
+<p class="rubric">The wildcard</p>
+<p>A bare <code class="docutils literal notranslate"><span class="pre">_</span></code> is a fresh anonymous variable. A name that <em>starts</em> with <code class="docutils literal notranslate"><span class="pre">_</span></code>
+(<code class="docutils literal notranslate"><span class="pre">_x</span></code>, <code class="docutils literal notranslate"><span class="pre">_Acc</span></code>) is also a wildcard: a fresh variable each time it is
+written, never one that can be referred to again. See
+<a class="reference internal" href="../features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>.</p>
+<p class="rubric">Macro names</p>
+<p>The character <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> starts a macro name. A name that <em>begins</em> with <code class="docutils literal notranslate"><span class="pre">&#64;</span></code>
+always refers to a macro, which must have been defined with
+<code class="docutils literal notranslate"><span class="pre">macro</span> <span class="pre">&#64;name</span> <span class="pre">…</span> <span class="pre">:-</span> <span class="pre">….</span></code>; it can appear nowhere else. (Anywhere other than the
+first position, <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> is an ordinary identifier character, as the <code class="docutils literal notranslate"><span class="pre">foo&#64;bar</span></code>
+example above shows.) See <a class="reference internal" href="file-structure-and-attributes.html"><span class="doc">File structure and attributes</span></a>.</p>
+</section>
+<section id="literals">
+<h2>Literals<a class="headerlink" href="#literals" title="Link to this heading"></a></h2>
+<p class="rubric">Integers</p>
+<p>A run of digits, optionally with a leading <code class="docutils literal notranslate"><span class="pre">-</span></code> and no space before the
+first digit: <code class="docutils literal notranslate"><span class="pre">0</span></code>, <code class="docutils literal notranslate"><span class="pre">42</span></code>, <code class="docutils literal notranslate"><span class="pre">-2</span></code>. Subtraction is the infix operator <code class="docutils literal notranslate"><span class="pre">-</span></code>
+and takes an operand on each side, as in <code class="docutils literal notranslate"><span class="pre">5</span> <span class="pre">-</span> <span class="pre">2</span></code>.</p>
+<p class="rubric">Floating point</p>
+<p>A digit sequence, a <code class="docutils literal notranslate"><span class="pre">.</span></code>, and another digit sequence: <code class="docutils literal notranslate"><span class="pre">3.0</span></code>, <code class="docutils literal notranslate"><span class="pre">-1.5</span></code>. The
+leading digit sequence may be empty, so <code class="docutils literal notranslate"><span class="pre">.5</span></code> is a float; the trailing one
+may not, so <code class="docutils literal notranslate"><span class="pre">3.</span></code> is the integer <code class="docutils literal notranslate"><span class="pre">3</span></code> followed by the full stop that ends
+the rule. There is no exponent notation.</p>
+<p class="rubric">Strings</p>
+<p>Delimited by <code class="docutils literal notranslate"><span class="pre">&quot;</span></code>. A string literal may span several lines, the newline
+being part of the string. The escapes <code class="docutils literal notranslate"><span class="pre">\n</span></code>, <code class="docutils literal notranslate"><span class="pre">\t</span></code>, <code class="docutils literal notranslate"><span class="pre">\b</span></code>, <code class="docutils literal notranslate"><span class="pre">\r</span></code>, <code class="docutils literal notranslate"><span class="pre">\\</span></code>
+and <code class="docutils literal notranslate"><span class="pre">\&quot;</span></code> are recognised, and a doubled <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> stands for one <code class="docutils literal notranslate"><span class="pre">&quot;</span></code>. There
+are no octal or hexadecimal escapes.</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="nv">Msg</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="s2">&quot;he said &quot;&quot;hi&quot;&quot; and\nleft&quot;</span>
+</pre></div>
+</div>
+<details class="elpi-fold" id="quoted-identifiers"><summary>Quoted identifiers</summary><p>A run of <em>identifier</em> characters, <code class="docutils literal notranslate"><span class="pre">:</span></code> included, enclosed in back-quotes
+or single quotes, with <strong>no spaces</strong> inside. A quoted identifier is not a
+string, and on its own it is not an ordinary constant either: it is an
+identifier that the host application may choose to <em>compile</em> in a special
+way, for instance giving it case-insensitive comparison. It looks like a
+string but behaves like a name. Quoting is also the only way to write an
+identifier that contains a <code class="docutils literal notranslate"><span class="pre">:</span></code>, or one that begins with a symbol character.</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>`a:b`<span class="kd">,</span>
+<span class="nv">Y</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>&#39;CamelCase&#39;<span class="o">.</span>
+</pre></div>
+</div>
+<p>The compilation hooks are <code class="docutils literal notranslate"><span class="pre">declare_backtick</span></code> and <code class="docutils literal notranslate"><span class="pre">declare_singlequote</span></code> in
+the <code class="docutils literal notranslate"><span class="pre">Quotation</span></code> module of <code class="docutils literal notranslate"><span class="pre">src/API.mli</span></code>:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>  <span class="c">(** Like quotations but for identifiers that begin and end with</span>
+<span class="c">   * &quot;`&quot; or &quot;&#39;&quot;, e.g. `this` and &#39;that&#39;. Useful if the object language</span>
+<span class="c">   * needs something that looks like a string but with a custom compilation</span>
+<span class="c">   * (e.g. CD.string like but with a case insensitive comparison) *)</span>
+
+  <span class="k">val</span> <span class="n">declare_backtick</span> <span class="o">:</span> <span class="o">?</span><span class="n">descriptor</span><span class="o">:</span><span class="nn">Setup</span><span class="p">.</span><span class="n">quotations_descriptor</span> <span class="o">-&gt;</span> <span class="n">name</span><span class="o">:</span><span class="kt">string</span> <span class="o">-&gt;</span>
+    <span class="n">quotation</span> <span class="o">-&gt;</span> <span class="nn">Ast</span><span class="p">.</span><span class="nn">Scope</span><span class="p">.</span><span class="n">language</span>
+
+  <span class="k">val</span> <span class="n">declare_singlequote</span> <span class="o">:</span> <span class="o">?</span><span class="n">descriptor</span><span class="o">:</span><span class="nn">Setup</span><span class="p">.</span><span class="n">quotations_descriptor</span> <span class="o">-&gt;</span> <span class="n">name</span><span class="o">:</span><span class="kt">string</span> <span class="o">-&gt;</span>
+    <span class="n">quotation</span> <span class="o">-&gt;</span> <span class="nn">Ast</span><span class="p">.</span><span class="nn">Scope</span><span class="p">.</span><span class="n">language</span>
+</pre></div>
+</div>
+<p>With no hook registered, a quoted identifier is simply a constant with that
+name.</p>
+</details></section>
+<section id="operators">
+<h2>Operators<a class="headerlink" href="#operators" title="Link to this heading"></a></h2>
+<p>Operators are built in: there is no <code class="docutils literal notranslate"><span class="pre">infix</span></code> / <code class="docutils literal notranslate"><span class="pre">prefix</span></code> directive to
+declare your own, as there is in Teyjus. An operator is written either as a
+run of symbol characters (<code class="docutils literal notranslate"><span class="pre">=&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">::</span></code>, <code class="docutils literal notranslate"><span class="pre">+</span></code>, …) or as one of the reserved
+words <code class="docutils literal notranslate"><span class="pre">is</span></code>, <code class="docutils literal notranslate"><span class="pre">div</span></code> and <code class="docutils literal notranslate"><span class="pre">mod</span></code>; the comma <code class="docutils literal notranslate"><span class="pre">,</span></code> is an infix operator too
+(conjunction), even though it is punctuation, not a symbol-character run.</p>
+<p class="rubric">Token families</p>
+<p>Precedence and associativity belong not to individual operators but to
+<strong>families</strong>. A family is identified by its leading character(s): <code class="docutils literal notranslate"><span class="pre">+--&gt;</span></code>
+belongs to the <code class="docutils literal notranslate"><span class="pre">+</span></code> family, <code class="docutils literal notranslate"><span class="pre">*--&gt;</span></code> to the <code class="docutils literal notranslate"><span class="pre">*</span></code> family. Every token of a
+family parses with the same precedence and associativity, and no declaration
+is needed: <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">+--&gt;</span> <span class="pre">y</span> <span class="pre">*--&gt;</span> <span class="pre">z</span></code> reads <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">+--&gt;</span> <span class="pre">(y</span> <span class="pre">*--&gt;</span> <span class="pre">z)</span></code> because the <code class="docutils literal notranslate"><span class="pre">*</span></code>
+family binds tighter than the <code class="docutils literal notranslate"><span class="pre">+</span></code> family.</p>
+<p>In the table below a family is written with a trailing <code class="docutils literal notranslate"><span class="pre">..</span></code> (<code class="docutils literal notranslate"><span class="pre">+..</span></code> is “any
+token starting with <code class="docutils literal notranslate"><span class="pre">+</span></code>”); a bare entry is a <em>fixed</em> token, the sole member
+of its family. A family marked <code class="docutils literal notranslate"><span class="pre">[*]</span></code> may not <em>end</em> with its starting
+character, which is what lets <code class="docutils literal notranslate"><span class="pre">`foo`</span></code> and <code class="docutils literal notranslate"><span class="pre">'foo'</span></code> be read as
+<a class="reference external" href="#quoted-identifiers">quoted identifiers</a> rather than operators.</p>
+<p class="rubric">Precedence, lowest to highest</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>fixity                     | tokens / token families
+-------------------------- + -----------------------------------
+Infix   not   associative  | :-   ?-
+Infix   right associative  | ;
+Infix   right associative  | ==&gt;                              (1)
+Infix   right associative  | =!=&gt;                             (1)
+Infix   right associative  | ,   &amp;
+Infix   right associative  | -&gt;
+Infix   right associative  | =&gt;                               (2)
+Infix   not   associative  | =  ==  =&lt;  r&lt;  i&lt;  s&lt;  r=&lt;  i=&lt;  s=&lt;
+                             &lt;..  r&gt;  i&gt;  s&gt;  r&gt;=  i&gt;=  s&gt;=  &gt;..  is
+Infix   right associative  | ::
+Infix   not   associative  | &#39;..                             [*]
+Infix   left  associative  | ^..  r+  i+  s+  +..  -  r-  i-  s-
+Infix   left  associative  | r*  i*  s*  *..  /  div  mod
+Infix   right associative  | --..
+Infix   not   associative  | `..                             [*]
+Infix   right associative  | ==..
+Infix   right associative  | ||..
+Infix   right associative  | &amp;&amp;..
+Infix   left  associative  | #..
+Prefix  not   associative  | r~  i~  ~..
+Postfix not   associative  | ?..
+</pre></div>
+</div>
+<p>(1) The left-hand side of <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">=!=&gt;</span></code> binds tighter than <code class="docutils literal notranslate"><span class="pre">,</span></code>, so
+<code class="docutils literal notranslate"><span class="pre">a,</span> <span class="pre">b</span> <span class="pre">==&gt;</span> <span class="pre">c,</span> <span class="pre">d</span></code> reads <code class="docutils literal notranslate"><span class="pre">a,</span> <span class="pre">(b</span> <span class="pre">==&gt;</span> <span class="pre">(c,</span> <span class="pre">d))</span></code>.</p>
+<p>(2) <code class="docutils literal notranslate"><span class="pre">=&gt;</span></code> is the traditional λProlog spelling of implication, the same
+connective as <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> but binding <em>tighter</em> than <code class="docutils literal notranslate"><span class="pre">,</span></code>. This manual uses
+<code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> throughout; see <a class="reference internal" href="inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>.</p>
+<p>This is the table <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-document-infix-syntax</span></code> prints.</p>
+</section>
+<section id="keywords">
+<h2>Keywords<a class="headerlink" href="#keywords" title="Link to this heading"></a></h2>
+<p>The following words are reserved and cannot be used as names. The declaration
+and signature keywords are <code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">typeabbrev</span></code>, <code class="docutils literal notranslate"><span class="pre">pred</span></code>, <code class="docutils literal notranslate"><span class="pre">func</span></code>,
+<code class="docutils literal notranslate"><span class="pre">symb</span></code>, <code class="docutils literal notranslate"><span class="pre">builtin</span></code>, <code class="docutils literal notranslate"><span class="pre">macro</span></code>, <code class="docutils literal notranslate"><span class="pre">namespace</span></code>, <code class="docutils literal notranslate"><span class="pre">shorten</span></code>, <code class="docutils literal notranslate"><span class="pre">accumulate</span></code>,
+<code class="docutils literal notranslate"><span class="pre">constraint</span></code> and <code class="docutils literal notranslate"><span class="pre">rule</span></code>; the binders are <code class="docutils literal notranslate"><span class="pre">pi</span></code>, <code class="docutils literal notranslate"><span class="pre">sigma</span></code> and <code class="docutils literal notranslate"><span class="pre">as</span></code>.
+The legacy spellings <code class="docutils literal notranslate"><span class="pre">kind</span></code>, <code class="docutils literal notranslate"><span class="pre">type</span></code>, <code class="docutils literal notranslate"><span class="pre">symbol</span></code> and <code class="docutils literal notranslate"><span class="pre">external</span></code> are
+reserved as well, and remain available (see <a class="reference internal" href="../compatibility.html"><span class="doc">Compatibility with Teyjus, Prolog and legacy Elpi</span></a>).</p>
+<p>The words that follow a <code class="docutils literal notranslate"><span class="pre">:</span></code> to form an attribute are reserved in that
+position too: <code class="docutils literal notranslate"><span class="pre">:name</span></code>, <code class="docutils literal notranslate"><span class="pre">:before</span></code>, <code class="docutils literal notranslate"><span class="pre">:after</span></code>, <code class="docutils literal notranslate"><span class="pre">:replace</span></code>, <code class="docutils literal notranslate"><span class="pre">:remove</span></code>,
+<code class="docutils literal notranslate"><span class="pre">:if</span></code> and <code class="docutils literal notranslate"><span class="pre">:untyped</span></code> on a rule; <code class="docutils literal notranslate"><span class="pre">:index</span></code>, <code class="docutils literal notranslate"><span class="pre">:functional</span></code> and <code class="docutils literal notranslate"><span class="pre">:nooc</span></code>
+on a signature (see <a class="reference internal" href="type-declarations.html"><span class="doc">Type declarations</span></a>). Outside an attribute the same
+words (<code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">if</span></code>, <code class="docutils literal notranslate"><span class="pre">index</span></code> and so on) are ordinary constants; the
+builtin <code class="docutils literal notranslate"><span class="pre">name</span></code>, for one, relies on that.</p>
+</section>
+<section id="the-reference-tokenizer">
+<h2>The reference tokenizer<a class="headerlink" href="#the-reference-tokenizer" title="Link to this heading"></a></h2>
+<p>The character classes named above are, verbatim, the ones the <code class="docutils literal notranslate"><span class="pre">ocamllex</span></code>
+lexer uses:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="k">let</span> <span class="n">digit</span> <span class="o">=</span> <span class="o">[</span> <span class="sc">&#39;0&#39;</span> <span class="o">-</span> <span class="sc">&#39;9&#39;</span> <span class="o">]</span>
+<span class="k">let</span> <span class="n">pnum</span> <span class="o">=</span> <span class="o">(</span><span class="n">digit</span> <span class="o">+)</span>
+<span class="k">let</span> <span class="n">num</span> <span class="o">=</span> <span class="sc">&#39;-&#39;</span> <span class="o">?</span> <span class="n">pnum</span>
+<span class="k">let</span> <span class="n">ucase</span> <span class="o">=</span> <span class="o">[</span> <span class="sc">&#39;A&#39;</span> <span class="o">-</span> <span class="sc">&#39;Z&#39;</span> <span class="o">]</span>
+<span class="k">let</span> <span class="n">lcase</span> <span class="o">=</span> <span class="o">[</span> <span class="sc">&#39;a&#39;</span> <span class="o">-</span> <span class="sc">&#39;z&#39;</span> <span class="o">]</span>
+<span class="k">let</span> <span class="n">schar2</span> <span class="o">=</span> <span class="sc">&#39;+&#39;</span>  <span class="o">|</span> <span class="sc">&#39;*&#39;</span> <span class="o">|</span> <span class="sc">&#39;/&#39;</span> <span class="o">|</span> <span class="sc">&#39;^&#39;</span> <span class="o">|</span> <span class="sc">&#39;&lt;&#39;</span> <span class="o">|</span> <span class="sc">&#39;&gt;&#39;</span> <span class="o">|</span> <span class="sc">&#39;`&#39;</span> <span class="o">|</span> <span class="sc">&#39;\&#39;&#39;</span> <span class="o">|</span> <span class="sc">&#39;?&#39;</span> <span class="o">|</span> <span class="sc">&#39;@&#39;</span> <span class="o">|</span> <span class="sc">&#39;#&#39;</span> <span class="o">|</span> <span class="sc">&#39;~&#39;</span> <span class="o">|</span> <span class="sc">&#39;=&#39;</span> <span class="o">|</span> <span class="sc">&#39;&amp;&#39;</span> <span class="o">|</span> <span class="sc">&#39;!&#39;</span>
+<span class="k">let</span> <span class="n">schar</span> <span class="o">=</span> <span class="n">schar2</span> <span class="o">|</span> <span class="sc">&#39;-&#39;</span> <span class="o">|</span> <span class="sc">&#39;$&#39;</span> <span class="o">|</span> <span class="sc">&#39;_&#39;</span>
+<span class="k">let</span> <span class="n">idchar</span> <span class="o">=</span> <span class="n">lcase</span> <span class="o">|</span> <span class="n">ucase</span> <span class="o">|</span> <span class="n">digit</span> <span class="o">|</span> <span class="n">schar</span>
+<span class="k">let</span> <span class="n">idcharstar</span> <span class="o">=</span> <span class="n">idchar</span> <span class="o">*</span>
+<span class="k">let</span> <span class="n">idcharstarns</span> <span class="o">=</span> <span class="o">(</span><span class="n">idchar</span> <span class="o">|</span> <span class="s2">&quot;.&quot;</span> <span class="o">(</span> <span class="n">ucase</span> <span class="o">|</span> <span class="n">lcase</span> <span class="o">))</span> <span class="o">*</span>
+<span class="k">let</span> <span class="n">symbchar</span> <span class="o">=</span> <span class="n">lcase</span> <span class="o">|</span> <span class="n">ucase</span> <span class="o">|</span> <span class="n">digit</span> <span class="o">|</span> <span class="n">schar</span> <span class="o">|</span> <span class="sc">&#39;:&#39;</span>
+<span class="k">let</span> <span class="n">symbcharstar</span> <span class="o">=</span> <span class="n">symbchar</span> <span class="o">*</span>
+<span class="k">let</span> <span class="n">symbcharplus</span> <span class="o">=</span> <span class="n">symbchar</span> <span class="o">+</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">num</span></code> is an integer; <code class="docutils literal notranslate"><span class="pre">num</span> <span class="pre">&quot;.&quot;</span> <span class="pre">pnum</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;.&quot;</span> <span class="pre">pnum</span></code> is a float. An
+identifier comes from one of these productions (the keyword rules in
+between are elided):</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="k">let</span> <span class="n">identifier</span> <span class="o">=</span>
+   <span class="o">|</span> <span class="s2">&quot;_&quot;</span> <span class="n">idchar</span><span class="o">+</span>               <span class="c">(* wildcard (linear unification variable)  *)</span>
+   <span class="o">|</span> <span class="s2">&quot;_&quot;</span>                       <span class="c">(* wildcard (linear unification variable)  *)</span>
+   <span class="o">|</span> <span class="n">ucase</span> <span class="n">idcharstar</span>          <span class="c">(* unification variable                    *)</span>
+   <span class="o">|</span> <span class="n">lcase</span> <span class="n">idcharstarns</span>        <span class="c">(* constant                                *)</span>
+   <span class="o">|</span> <span class="s2">&quot;.&quot;</span> <span class="n">idcharstarns</span>          <span class="c">(* namespace escaping                      *)</span>
+   <span class="o">|</span> <span class="sc">&#39;@&#39;</span> <span class="n">idcharstar</span>            <span class="c">(* macro                                   *)</span>
+   <span class="o">|</span> <span class="sc">&#39;\&#39;&#39;</span> <span class="n">symbcharstar</span> <span class="sc">&#39;\&#39;&#39;</span>    <span class="c">(* quoted identifier                       *)</span>
+   <span class="o">|</span> <span class="sc">&#39;`&#39;</span>  <span class="n">symbcharstar</span> <span class="sc">&#39;`&#39;</span>     <span class="c">(* quoted identifier                       *)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">idcharstarns</span></code> is <code class="docutils literal notranslate"><span class="pre">idcharstar</span></code> extended with an embedded <code class="docutils literal notranslate"><span class="pre">.</span></code> before a
+letter, which is what makes <code class="docutils literal notranslate"><span class="pre">std.rev</span></code> a single token. The last two
+productions are the <a class="reference external" href="#quoted-identifiers">quoted identifiers</a>. The bare
+<code class="docutils literal notranslate"><span class="pre">_</span></code> is the anonymous variable; the other seven productions all yield one
+<code class="docutils literal notranslate"><span class="pre">CONSTANT</span></code> token, and the compiler decides what it stands for from the
+first character: <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> a macro, an upper-case letter a variable, otherwise a
+constant.</p>
+<p>How these conventions differ from Teyjus and from standard Prolog is covered
+in <a class="reference internal" href="../compatibility.html"><span class="doc">Compatibility with Teyjus, Prolog and legacy Elpi</span></a>.</p>
+<p>Nested block comments, the wildcard, a qualified name, a negative integer
+literal and a two-line string, in one small program:</p>
+<p><strong>../code/lexical.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Lexical conventions — a small sample.</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="c">/* Block comments  /* nest */</span><span class="w">  </span>like<span class="w"> </span>this<span class="o">.</span><span class="w"> </span><span class="kd">*/</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">data</span><span class="w"> </span><span class="nf">item</span>.
+<span class="linenos"> 6</span><span class="kd">symb</span><span class="w"> </span><span class="nf">apple, pear</span><span class="w"> </span><span class="kt">item</span>.
+<span class="linenos"> 7</span>
+<span class="linenos"> 8</span><span class="kd">pred</span><span class="w"> </span><span class="nf">price</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">item</span>,<span class="w"> </span><span class="kt">float</span>.
+<span class="linenos"> 9</span>price<span class="w"> </span>apple<span class="w"> </span><span class="mi">0</span><span class="o">.</span><span class="mi">30</span><span class="o">.</span>
+<span class="linenos">10</span>price<span class="w"> </span>pear<span class="w">  </span><span class="mi">0</span><span class="o">.</span><span class="mi">45</span><span class="o">.</span>
+<span class="linenos">11</span>
+<span class="linenos">12</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">13</span><span class="w">  </span>std.findall<span class="w"> </span>(price<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="nv">All</span><span class="kd">,</span><span class="w">   </span><span class="c">% _ is the wildcard</span>
+<span class="linenos">14</span><span class="w">  </span>std.length<span class="w"> </span><span class="nv">All</span><span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w">              </span><span class="c">% std.length is one qualified name</span>
+<span class="linenos">15</span><span class="w">  </span><span class="nv">Discount</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="kd">-</span><span class="mi">5</span><span class="kd">,</span><span class="w">                 </span><span class="c">% a negative integer literal</span>
+<span class="linenos">16</span><span class="w">  </span><span class="nv">Note</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="s2">&quot;prices in euro,</span>
+<span class="linenos">17</span><span class="s2">VAT included&quot;</span><span class="kd">,</span><span class="w">                    </span><span class="c">% a string spanning two lines</span>
+<span class="linenos">18</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;items:&quot;</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="s2">&quot;discount:&quot;</span><span class="w"> </span><span class="nv">Discount</span><span class="kd">,</span>
+<span class="linenos">19</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Note</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">items: 2 discount: -5</span>
+<span class="go">prices in euro,</span>
+<span class="go">VAT included</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../getting-started.html" class="btn btn-neutral float-left" title="Getting started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="terms.html" class="btn btn-neutral float-right" title="Terms" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

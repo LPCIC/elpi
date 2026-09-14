@@ -1,0 +1,262 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simply-typed λ-calculus &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Hindley-Milner type inference" href="hindley-milner.html" />
+    <link rel="prev" title="Pitfalls" href="../features/pitfalls.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Simply-typed λ-calculus</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/examples/stlc.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="simply-typed-calculus">
+<h1>Simply-typed λ-calculus<a class="headerlink" href="#simply-typed-calculus" title="Link to this heading"></a></h1>
+<p>The “hello world”: terms and types for the simply-typed λ-calculus,
+weak-head reduction, and a type checker that goes under binders with
+<code class="docutils literal notranslate"><span class="pre">pi</span></code>/<code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> and suspends on the holes of an incomplete term rather than
+guessing what they stand for.</p>
+<p>The checker is picked up from here in <a class="reference internal" href="../semantics/constraints.html"><span class="doc">Constraints</span></a>: why
+matching rather than unifying is what lets it suspend, and how a constraint
+handling rule then rejects the holes that admit no consistent type.</p>
+<p><strong>../code/stlc.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% The &quot;hello world&quot; of lambda-tree syntax: simply-typed lambda calculus,</span>
+<span class="linenos"> 2</span><span class="c">% weak-head reduction, and a type checker -- one that also handles terms with</span>
+<span class="linenos"> 3</span><span class="c">% holes in them, by suspending on a hole instead of guessing its shape.</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">data</span><span class="w"> </span><span class="nf">term</span>.
+<span class="linenos"> 6</span><span class="kd">symb</span><span class="w"> </span><span class="nf">app</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span>.
+<span class="linenos"> 7</span><span class="kd">symb</span><span class="w"> </span><span class="nf">fun</span><span class="w"> </span><span class="kt">(term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span>.
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="kd">data</span><span class="w"> </span><span class="nf">ty</span>.
+<span class="linenos">10</span><span class="kd">symb</span><span class="w"> </span><span class="nf">arr</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos">11</span>
+<span class="linenos">12</span><span class="c">% weak-head reduction</span>
+<span class="linenos">13</span><span class="kd">func</span><span class="w"> </span><span class="nf">whd</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span>.
+<span class="linenos">14</span>whd<span class="w"> </span>(app<span class="w"> </span><span class="nv">Hd</span><span class="w"> </span><span class="nv">Arg</span><span class="o">)</span><span class="w"> </span><span class="nv">Reduct</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>whd<span class="w"> </span><span class="nv">Hd</span><span class="w"> </span>(fun<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>whd<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span><span class="nv">Arg</span><span class="o">)</span><span class="w"> </span><span class="nv">Reduct</span><span class="o">.</span>
+<span class="linenos">15</span>whd<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">X</span><span class="o">.</span>
+<span class="linenos">16</span>
+<span class="linenos">17</span><span class="c">% type checking</span>
+<span class="linenos">18</span><span class="kd">func</span><span class="w"> </span><span class="nf">of</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos">19</span>of<span class="w"> </span>(app<span class="w"> </span><span class="nv">Hd</span><span class="w"> </span><span class="nv">Arg</span><span class="o">)</span><span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>of<span class="w"> </span><span class="nv">Hd</span><span class="w"> </span>(arr<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>of<span class="w"> </span><span class="nv">Arg</span><span class="w"> </span><span class="nv">A</span><span class="o">.</span>
+<span class="linenos">20</span>of<span class="w"> </span>(fun<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span>(arr<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>of<span class="w"> </span>x<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>of<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="nv">B</span><span class="o">.</span>
+<span class="linenos">21</span>of<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">Hole</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>declare_constraint<span class="w"> </span>(of<span class="w"> </span><span class="nv">Hole</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">Hole</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos">22</span>
+<span class="linenos">23</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">24</span><span class="w">  </span><span class="nv">Fst</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>fun<span class="w"> </span>(<span class="nv">x\</span><span class="w"> </span>fun<span class="w"> </span><span class="nv">y\</span><span class="w"> </span>x<span class="o">)</span><span class="kd">,</span>
+<span class="linenos">25</span><span class="w">  </span>of<span class="w"> </span><span class="nv">Fst</span><span class="w"> </span><span class="nv">FstTy</span><span class="kd">,</span>
+<span class="linenos">26</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;type of Fst:&quot;</span><span class="w"> </span><span class="nv">FstTy</span><span class="kd">,</span>
+<span class="linenos">27</span>
+<span class="linenos">28</span><span class="w">  </span><span class="nv">Id</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>fun<span class="w"> </span>(<span class="nv">z\</span><span class="w"> </span>z<span class="o">)</span><span class="kd">,</span>
+<span class="linenos">29</span><span class="w">  </span>whd<span class="w"> </span>(app<span class="w"> </span><span class="nv">Fst</span><span class="w"> </span><span class="nv">Id</span><span class="o">)</span><span class="w"> </span><span class="nv">Reduct</span><span class="kd">,</span>
+<span class="linenos">30</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;\nwhd of Fst applied to the identity:&quot;</span><span class="w"> </span><span class="nv">Reduct</span><span class="kd">,</span>
+<span class="linenos">31</span>
+<span class="linenos">32</span><span class="w">  </span>(<span class="w"> </span>of<span class="w"> </span><span class="o">(</span>fun<span class="w"> </span><span class="o">(</span><span class="nv">x\</span><span class="w"> </span>app<span class="w"> </span>x<span class="w"> </span>x<span class="o">))</span><span class="w"> </span><span class="nv">_</span>
+<span class="linenos">33</span><span class="w">  </span><span class="kd">;</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;\nfun (x\\ app x x) has no type: occur-check failure&quot;</span><span class="w"> </span><span class="o">)</span><span class="kd">,</span>
+<span class="linenos">34</span>
+<span class="linenos">35</span><span class="w">  </span>of<span class="w"> </span>(app<span class="w"> </span><span class="nv">H</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="nv">AppTy</span><span class="kd">,</span>
+<span class="linenos">36</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;\nof (app H _): H still unknown, type&quot;</span><span class="w"> </span><span class="nv">AppTy</span><span class="w"> </span><span class="s2">&quot;-- of has suspended:&quot;</span><span class="kd">,</span>
+<span class="linenos">37</span><span class="w">  </span>print_constraints<span class="kd">,</span>
+<span class="linenos">38</span><span class="w">  </span><span class="nv">H</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">Id</span><span class="kd">,</span>
+<span class="linenos">39</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;\nafter H := the identity, one constraint resolved:&quot;</span><span class="kd">,</span>
+<span class="linenos">40</span><span class="w">  </span>print_constraints<span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">type of Fst: arr X0 (arr X1 X0)</span>
+
+<span class="go">whd of Fst applied to the identity: fun c0 \ fun c1 \ c1</span>
+
+<span class="go">fun (x\ app x x) has no type: occur-check failure</span>
+
+<span class="go">of (app H _): H still unknown, type X2 -- of has suspended:</span>
+<span class="go"> of X3 X4  /* suspended on X3 */ of X5 (arr X4 X2)  /* suspended on X5 */</span>
+
+<span class="go">after H := the identity, one constraint resolved:</span>
+<span class="go"> of X3 X2  /* suspended on X3 */</span>
+</pre></div>
+</div>
+<p>Terms are HOAS (<a class="reference internal" href="../syntax/terms.html"><span class="doc">Terms</span></a>): <code class="docutils literal notranslate"><span class="pre">app</span></code> pairs a
+function with its argument, <code class="docutils literal notranslate"><span class="pre">fun</span></code> carries an actual Elpi function
+<code class="docutils literal notranslate"><span class="pre">term</span> <span class="pre">-&gt;</span> <span class="pre">term</span></code>, so <code class="docutils literal notranslate"><span class="pre">λx.λy.x</span></code> is <code class="docutils literal notranslate"><span class="pre">fun</span> <span class="pre">(x\</span> <span class="pre">fun</span> <span class="pre">y\</span> <span class="pre">x)</span></code>, and applying that
+Elpi function <em>is</em> substitution, with no substitution code to write. Types
+have one constructor, <code class="docutils literal notranslate"><span class="pre">arr</span></code>, for the function space.</p>
+<p><code class="docutils literal notranslate"><span class="pre">whd</span></code> reduces a term to weak-head normal form: unfold <code class="docutils literal notranslate"><span class="pre">app</span></code> until the
+head is a <code class="docutils literal notranslate"><span class="pre">fun</span></code>, then β-reduce (apply the Elpi function) and keep going.
+Anything else is already in normal form.</p>
+<p><code class="docutils literal notranslate"><span class="pre">of</span></code> is the type checker. The rule for <code class="docutils literal notranslate"><span class="pre">app</span></code> is an ordinary Horn clause;
+the rule for <code class="docutils literal notranslate"><span class="pre">fun</span></code> needs a fresh name for the bound variable and a rule
+that only holds while checking under it, which is what <code class="docutils literal notranslate"><span class="pre">pi</span></code>/<code class="docutils literal notranslate"><span class="pre">==&gt;</span></code>
+provide (<a class="reference internal" href="../syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>,
+<a class="reference internal" href="../semantics/logic-programming-model.html"><span class="doc">Logic Programming</span></a>). Both <code class="docutils literal notranslate"><span class="pre">whd</span></code> and <code class="docutils literal notranslate"><span class="pre">of</span></code> are
+declared <code class="docutils literal notranslate"><span class="pre">func</span></code>, each with at most one result, and the determinacy checker
+(<a class="reference internal" href="../features/determinacy-checking.html"><span class="doc">Determinacy checking</span></a>) confirms it: <code class="docutils literal notranslate"><span class="pre">whd</span></code>’s two
+overlapping rules are kept apart by the cut, <code class="docutils literal notranslate"><span class="pre">of</span></code>’s three by their distinct
+heads.</p>
+<p>Applying a term to itself, <code class="docutils literal notranslate"><span class="pre">fun</span> <span class="pre">(x\</span> <span class="pre">app</span> <span class="pre">x</span> <span class="pre">x)</span></code>, has no type: to type-check
+it, <code class="docutils literal notranslate"><span class="pre">x</span></code>’s type would have to be a function space with itself as the
+argument type, and the occur check
+(<a class="reference internal" href="../features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>) rejects the resulting cyclic
+assignment.</p>
+<p>The last rule of <code class="docutils literal notranslate"><span class="pre">of</span></code> is what makes the checker usable on a term that is
+still being built. <code class="docutils literal notranslate"><span class="pre">of</span> <span class="pre">(uvar</span> <span class="pre">as</span> <span class="pre">Hole)</span> <span class="pre">T</span></code> matches a bare unification
+variable, a hole, and instead of failing (no term to inspect) or looping
+(if the argument were unified rather than matched), it suspends: <code class="docutils literal notranslate"><span class="pre">of</span> <span class="pre">Hole</span>
+<span class="pre">T</span></code> becomes a constraint, keyed on <code class="docutils literal notranslate"><span class="pre">Hole</span></code>, to be retried once <code class="docutils literal notranslate"><span class="pre">Hole</span></code> is
+known. So <code class="docutils literal notranslate"><span class="pre">of</span> <span class="pre">(app</span> <span class="pre">H</span> <span class="pre">_)</span> <span class="pre">AppTy</span></code> with <code class="docutils literal notranslate"><span class="pre">H</span></code> unknown succeeds, <code class="docutils literal notranslate"><span class="pre">AppTy</span></code> left
+an unbound type, and two <code class="docutils literal notranslate"><span class="pre">of</span></code> goals suspended in the store. Assigning
+<code class="docutils literal notranslate"><span class="pre">H</span></code> the identity function wakes its constraint, which resolves; the goal
+still waiting on the argument now carries <code class="docutils literal notranslate"><span class="pre">AppTy</span></code> as that argument’s type,
+the identity having tied the two together.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../features/pitfalls.html" class="btn btn-neutral float-left" title="Pitfalls" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="hindley-milner.html" class="btn btn-neutral float-right" title="Hindley-Milner type inference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

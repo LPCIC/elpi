@@ -1,0 +1,357 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hindley-Milner type inference &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Built-in predicates" href="../builtins.html" />
+    <link rel="prev" title="Simply-typed λ-calculus" href="stlc.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Hindley-Milner type inference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/examples/hindley-milner.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="hindley-milner-type-inference">
+<h1>Hindley-Milner type inference<a class="headerlink" href="#hindley-milner-type-inference" title="Link to this heading"></a></h1>
+<p>Algorithm W infers a type for every expression without type annotations. The
+part that makes it a good showcase for Elpi is that it turns some inferred
+types into <strong>schemes</strong>, universally quantified over the type variables used
+<em>only</em> locally: <code class="docutils literal notranslate"><span class="pre">let</span> <span class="pre">id</span> <span class="pre">=</span> <span class="pre">λx.x</span> <span class="pre">in</span> <span class="pre">(id</span> <span class="pre">one,</span> <span class="pre">id</span> <span class="pre">empty)</span></code> has to accept <code class="docutils literal notranslate"><span class="pre">id</span></code>
+at two different types. What follows walks through the core of it. The
+<a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">HDR thesis</span></a>, §2.7, works through the same example in much
+more detail, subsection by subsection: syntax, typing rules, generalization,
+a full execution trace, and bidirectional type inference.</p>
+<p><strong>../code/hindley-milner.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">  1</span><span class="c">% Algorithm W, with let-generalization deferred through a constraint: a type</span>
+<span class="linenos">  2</span><span class="c">% scheme is only generalized once we know everything that was unified into</span>
+<span class="linenos">  3</span><span class="c">% it, which happens after type-checking the let-bound expression, not before.</span>
+<span class="linenos">  4</span><span class="c">% Adapted from tests/sources/w.elpi.</span>
+<span class="linenos">  5</span>
+<span class="linenos">  6</span><span class="c">% terms</span>
+<span class="linenos">  7</span><span class="kd">data</span><span class="w"> </span><span class="nf">term</span>.
+<span class="linenos">  8</span><span class="kd">symb</span><span class="w"> </span><span class="nf">app</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span>.
+<span class="linenos">  9</span><span class="kd">symb</span><span class="w"> </span><span class="nf">lam</span><span class="w"> </span><span class="kt">(term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span>.
+<span class="linenos"> 10</span><span class="kd">symb</span><span class="w"> </span><span class="nf">let</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">(term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span>.
+<span class="linenos"> 11</span>
+<span class="linenos"> 12</span><span class="c">% monotypes: type constructors applied to arguments (#) and the arrow (===&gt;)</span>
+<span class="linenos"> 13</span><span class="c">% (===&gt; and # are recognised as infix automatically, by token family)</span>
+<span class="linenos"> 14</span><span class="kd">data</span><span class="w"> </span><span class="nf">tye</span>.
+<span class="linenos"> 15</span><span class="kd">symb</span><span class="w"> </span><span class="nf">(===&gt;)</span><span class="w"> </span><span class="kt">tye</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tye</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tye</span>.
+<span class="linenos"> 16</span><span class="kd">symb</span><span class="w"> </span><span class="nf">(#)</span><span class="w">    </span><span class="kt">tye</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tye</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tye</span>.
+<span class="linenos"> 17</span>
+<span class="linenos"> 18</span><span class="c">% type schemes: mono wraps a monotype, all quantifies a type variable</span>
+<span class="linenos"> 19</span><span class="kd">data</span><span class="w"> </span><span class="nf">ty</span>.
+<span class="linenos"> 20</span><span class="kd">symb</span><span class="w"> </span><span class="nf">all</span><span class="w">  </span><span class="kt">(tye</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos"> 21</span><span class="kd">symb</span><span class="w"> </span><span class="nf">mono</span><span class="w"> </span><span class="kt">tye</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos"> 22</span>
+<span class="linenos"> 23</span><span class="c">% a handful of constants and their (possibly polymorphic) schemes</span>
+<span class="linenos"> 24</span><span class="kd">symb</span><span class="w"> </span><span class="nf">one, plus, size, empty, comma</span><span class="w">  </span><span class="kt">term</span>.
+<span class="linenos"> 25</span><span class="kd">symb</span><span class="w"> </span><span class="nf">integer, list, pair</span><span class="w">            </span><span class="kt">tye</span>.
+<span class="linenos"> 26</span>
+<span class="linenos"> 27</span><span class="c">% `w` stays relational: its last rule turns a type *scheme* into an instance</span>
+<span class="linenos"> 28</span><span class="c">% by dispatching on whether the (output) type came back as `mono` or `all`,</span>
+<span class="linenos"> 29</span><span class="c">% which the determinacy checker cannot follow through an output argument.</span>
+<span class="linenos"> 30</span><span class="c">% In practice every top-level call has a single, principal type.</span>
+<span class="linenos"> 31</span><span class="kd">pred</span><span class="w"> </span><span class="nf">w</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos"> 32</span>w<span class="w"> </span>one<span class="w">    </span>(mono<span class="w"> </span>integer<span class="o">).</span>
+<span class="linenos"> 33</span>w<span class="w"> </span>plus<span class="w">   </span>(mono<span class="w"> </span><span class="o">(</span>integer<span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span>integer<span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span>integer<span class="o">)).</span>
+<span class="linenos"> 34</span>w<span class="w"> </span>size<span class="w">   </span>(all<span class="w"> </span><span class="nv">x\</span><span class="w"> </span>mono<span class="w"> </span><span class="o">(</span>list<span class="w"> </span>#<span class="w"> </span>x<span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span>integer<span class="o">)).</span>
+<span class="linenos"> 35</span>w<span class="w"> </span>empty<span class="w">  </span>(all<span class="w"> </span><span class="nv">x\</span><span class="w"> </span>mono<span class="w"> </span><span class="o">(</span>list<span class="w"> </span>#<span class="w"> </span>x<span class="o">)).</span>
+<span class="linenos"> 36</span>w<span class="w"> </span>comma<span class="w">  </span>(all<span class="w"> </span><span class="nv">x\</span><span class="w"> </span>all<span class="w"> </span><span class="nv">y\</span><span class="w"> </span>mono<span class="w"> </span><span class="o">(</span>x<span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span>y<span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span><span class="o">(</span>pair<span class="w"> </span>#<span class="w"> </span>x<span class="w"> </span>#<span class="w"> </span>y<span class="o">))).</span>
+<span class="linenos"> 37</span>
+<span class="linenos"> 38</span>w<span class="w"> </span>(app<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">R</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos"> 39</span><span class="w">  </span>w<span class="w"> </span><span class="nv">F</span><span class="w"> </span>(mono<span class="w"> </span><span class="o">(</span><span class="nv">A</span><span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span><span class="nv">R</span><span class="o">))</span><span class="kd">,</span>
+<span class="linenos"> 40</span><span class="w">  </span>w<span class="w"> </span><span class="nv">X</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">A</span><span class="o">).</span>
+<span class="linenos"> 41</span>
+<span class="linenos"> 42</span>w<span class="w"> </span>(lam<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span>(mono<span class="w"> </span><span class="o">(</span><span class="nv">A</span><span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span><span class="nv">R</span><span class="o">))</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos"> 43</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>w<span class="w"> </span>x<span class="w"> </span>(mono<span class="w"> </span><span class="nv">A</span><span class="o">)</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>w<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">R</span><span class="o">).</span>
+<span class="linenos"> 44</span>
+<span class="linenos"> 45</span>w<span class="w"> </span>(let<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="nv">FP</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">TC</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos"> 46</span><span class="w">  </span>w<span class="w"> </span><span class="nv">F</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">FT</span><span class="o">)</span><span class="kd">,</span>
+<span class="linenos"> 47</span><span class="w">  </span><span class="c">% FP is generalized only once, by the CHR rule below, after this branch</span>
+<span class="linenos"> 48</span><span class="w">  </span><span class="c">% of the search is done computing constraints on FT</span>
+<span class="linenos"> 49</span><span class="w">  </span>declare_constraint<span class="w"> </span>(overbar<span class="w"> </span><span class="o">(</span>mono<span class="w"> </span><span class="nv">FT</span><span class="o">)</span><span class="w"> </span><span class="nv">FP</span><span class="o">)</span><span class="w"> </span><span class="kd">[],</span>
+<span class="linenos"> 50</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>w<span class="w"> </span>x<span class="w"> </span><span class="nv">FP</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>w<span class="w"> </span>(<span class="nv">B</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">TC</span><span class="o">).</span>
+<span class="linenos"> 51</span>
+<span class="linenos"> 52</span>w<span class="w"> </span><span class="nv">X</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>w<span class="w"> </span><span class="nv">X</span><span class="w"> </span>(all<span class="w"> </span><span class="nv">Poly</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>specialize<span class="w"> </span>(all<span class="w"> </span><span class="nv">Poly</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span>
+<span class="linenos"> 53</span>
+<span class="linenos"> 54</span><span class="kd">func</span><span class="w"> </span><span class="nf">specialize</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tye</span>.
+<span class="linenos"> 55</span>specialize<span class="w"> </span>(all<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>specialize<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span><span class="nv">FRESH_</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span>
+<span class="linenos"> 56</span>specialize<span class="w"> </span>(mono<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="nv">X</span><span class="o">.</span>
+<span class="linenos"> 57</span>
+<span class="linenos"> 58</span><span class="c">% overbar generalizes a monotype into a type scheme, once its context Gamma</span>
+<span class="linenos"> 59</span><span class="c">% (the hypothetical `w` rules in scope) is fully known. `w ?-` is the context</span>
+<span class="linenos"> 60</span><span class="c">% filter: it keeps those `w` rules in the context a suspended `overbar`</span>
+<span class="linenos"> 61</span><span class="c">% constraint carries, so the rule below can see Gamma as `G`.</span>
+<span class="linenos"> 62</span><span class="kd">func</span><span class="w"> </span><span class="nf">overbar</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos"> 63</span><span class="kd">constraint</span><span class="w"> </span><span class="nf">w ?- overbar </span>{
+<span class="linenos"> 64</span><span class="w">  </span><span class="kd">rule</span><span class="w"> </span><span class="kd">\</span><span class="w"> </span>(<span class="nv">G</span><span class="w"> </span><span class="kd">?-</span><span class="w"> </span>overbar<span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">T1</span><span class="o">)</span>
+<span class="linenos"> 65</span><span class="w">       </span><span class="kd">|</span><span class="w"> </span>(generalize<span class="w"> </span><span class="nv">G</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">POLYT</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(<span class="nv">T1</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">POLYT</span><span class="o">).</span>
+<span class="linenos"> 66</span>}
+<span class="linenos"> 67</span>
+<span class="linenos"> 68</span><span class="kd">func</span><span class="w"> </span><span class="nf">generalize</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">(pred)</span>,<span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos"> 69</span>generalize<span class="w"> </span><span class="nv">G</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="nv">ALL</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos"> 70</span><span class="w">  </span>free-ty<span class="w"> </span>(mono<span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="nv">VT</span><span class="kd">,</span>
+<span class="linenos"> 71</span><span class="w">  </span>free-gamma<span class="w"> </span><span class="nv">G</span><span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="nv">VG</span><span class="kd">,</span>
+<span class="linenos"> 72</span><span class="w">  </span>filter<span class="w"> </span><span class="nv">VT</span><span class="w"> </span>(<span class="nv">x\</span><span class="w"> </span>not<span class="w"> </span><span class="o">(</span>mem<span class="w"> </span><span class="nv">VG</span><span class="w"> </span>x<span class="o">))</span><span class="w"> </span><span class="nv">Q</span><span class="kd">,</span>
+<span class="linenos"> 73</span><span class="w">  </span>quantify<span class="w"> </span><span class="nv">Q</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">ALL</span><span class="o">.</span>
+<span class="linenos"> 74</span>
+<span class="linenos"> 75</span><span class="kd">func</span><span class="w"> </span><span class="nf">free-ty</span><span class="w"> </span><span class="kt">ty</span>,<span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">any</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">any</span>.
+<span class="linenos"> 76</span>free-ty<span class="w"> </span>(mono<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>free<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L1</span><span class="o">.</span>
+<span class="linenos"> 77</span>free-ty<span class="w"> </span>(all<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>free-ty<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L1</span><span class="o">.</span>
+<span class="linenos"> 78</span>
+<span class="linenos"> 79</span><span class="kd">func</span><span class="w"> </span><span class="nf">free-gamma</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">(pred)</span>,<span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">any</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">any</span>.
+<span class="linenos"> 80</span>free-gamma<span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L</span><span class="o">.</span>
+<span class="linenos"> 81</span>free-gamma<span class="w"> </span><span class="kd">[</span>w<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">T</span><span class="kd">|</span><span class="nv">X</span><span class="kd">]</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L2</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>free-ty<span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L1</span><span class="kd">,</span><span class="w"> </span>free-gamma<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="nv">L2</span><span class="o">.</span>
+<span class="linenos"> 82</span>
+<span class="linenos"> 83</span><span class="kd">func</span><span class="w"> </span><span class="nf">free</span><span class="w"> </span><span class="kt">tye</span>,<span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">any</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">any</span>.
+<span class="linenos"> 84</span>free<span class="w"> </span>(<span class="nv">A</span><span class="w"> </span>#<span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L2</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>free<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L1</span><span class="kd">,</span><span class="w"> </span>free<span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="nv">L2</span><span class="o">.</span>
+<span class="linenos"> 85</span>free<span class="w"> </span>(<span class="nv">A</span><span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L2</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>free<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L1</span><span class="kd">,</span><span class="w"> </span>free<span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="nv">L2</span><span class="o">.</span>
+<span class="linenos"> 86</span>free<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>if<span class="w"> </span>(mem<span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span>(<span class="nv">L1</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">L</span><span class="o">)</span><span class="w"> </span>(<span class="nv">L1</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">|</span><span class="nv">L</span><span class="kd">]</span><span class="o">).</span>
+<span class="linenos"> 87</span>
+<span class="linenos"> 88</span><span class="kd">func</span><span class="w"> </span><span class="nf">copy-ty</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos"> 89</span>copy-ty<span class="w"> </span>(mono<span class="w"> </span><span class="nv">X1</span><span class="o">)</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">X2</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>copy<span class="w"> </span><span class="nv">X1</span><span class="w"> </span><span class="nv">X2</span><span class="o">.</span>
+<span class="linenos"> 90</span>copy-ty<span class="w"> </span>(all<span class="w"> </span><span class="nv">F1</span><span class="o">)</span><span class="w"> </span>(all<span class="w"> </span><span class="nv">F2</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>copy<span class="w"> </span>x<span class="w"> </span>x<span class="w"> </span><span class="kd">=!=&gt;</span><span class="w"> </span>copy-ty<span class="w"> </span>(<span class="nv">F1</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span>(<span class="nv">F2</span><span class="w"> </span>x<span class="o">).</span>
+<span class="linenos"> 91</span>
+<span class="linenos"> 92</span><span class="kd">func</span><span class="w"> </span><span class="nf">copy</span><span class="w"> </span><span class="kt">tye</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tye</span>.
+<span class="linenos"> 93</span>copy<span class="w"> </span>(<span class="nv">A</span><span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span>(<span class="nv">A1</span><span class="w"> </span><span class="kd">===&gt;</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>copy<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">A1</span><span class="kd">,</span><span class="w"> </span>copy<span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">B1</span><span class="o">.</span>
+<span class="linenos"> 94</span>copy<span class="w"> </span>(<span class="nv">A</span><span class="w"> </span>#<span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span>(<span class="nv">A1</span><span class="w"> </span>#<span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>copy<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">A1</span><span class="kd">,</span><span class="w"> </span>copy<span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">B1</span><span class="o">.</span>
+<span class="linenos"> 95</span>copy<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="nv">X</span><span class="o">.</span>
+<span class="linenos"> 96</span>
+<span class="linenos"> 97</span><span class="kd">func</span><span class="w"> </span><span class="nf">quantify</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">tye</span>,<span class="w"> </span><span class="kt">tye</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos"> 98</span>quantify<span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">X1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>copy<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">X1</span><span class="o">.</span>
+<span class="linenos"> 99</span>quantify<span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">|</span><span class="nv">XS</span><span class="kd">]</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span>(all<span class="w"> </span><span class="nv">x\</span><span class="w"> </span><span class="nv">T2</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">100</span><span class="w">  </span>quantify<span class="w"> </span><span class="nv">XS</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">T1</span><span class="kd">,</span>
+<span class="linenos">101</span><span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>copy<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span>x<span class="w"> </span><span class="kd">=!=&gt;</span><span class="w"> </span>copy-ty<span class="w"> </span><span class="nv">T1</span><span class="w"> </span>(<span class="nv">T2</span><span class="w"> </span>x<span class="o">).</span>
+<span class="linenos">102</span>
+<span class="linenos">103</span><span class="c">% generic list helpers</span>
+<span class="linenos">104</span><span class="kd">func</span><span class="w"> </span><span class="nf">filter</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span>,<span class="w"> </span><span class="kt">(pred</span><span class="w"> </span><span class="kt">A)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span>.
+<span class="linenos">105</span>filter<span class="w"> </span><span class="kd">[]</span><span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="kd">[]</span><span class="o">.</span>
+<span class="linenos">106</span>filter<span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">|</span><span class="nv">XS</span><span class="kd">]</span><span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">|</span><span class="nv">YS</span><span class="kd">]</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>filter<span class="w"> </span><span class="nv">XS</span><span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">YS</span><span class="o">.</span>
+<span class="linenos">107</span>filter<span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">|</span><span class="nv">XS</span><span class="kd">]</span><span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">YS</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>filter<span class="w"> </span><span class="nv">XS</span><span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">YS</span><span class="o">.</span>
+<span class="linenos">108</span>
+<span class="linenos">109</span><span class="kd">func</span><span class="w"> </span><span class="nf">mem</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span>,<span class="w"> </span><span class="kt">A</span>.
+<span class="linenos">110</span>mem<span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">|</span><span class="nv">_</span><span class="kd">]</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos">111</span>mem<span class="w"> </span><span class="kd">[</span><span class="nv">_</span><span class="kd">|</span><span class="nv">XS</span><span class="kd">]</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>mem<span class="w"> </span><span class="nv">XS</span><span class="w"> </span><span class="nv">X</span><span class="o">.</span>
+<span class="linenos">112</span>
+<span class="linenos">113</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">114</span><span class="w">  </span><span class="c">% let id = \x.x in plus (id one) (size (id empty))</span>
+<span class="linenos">115</span><span class="w">  </span><span class="c">% `id` is generalized to a type scheme and used at two different types</span>
+<span class="linenos">116</span><span class="w">  </span><span class="nv">P</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>let<span class="w"> </span>(lam<span class="w"> </span><span class="nv">x\</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="nv">IdTy</span><span class="w"> </span>(<span class="nv">id\</span><span class="w"> </span>app<span class="w"> </span><span class="o">(</span>app<span class="w"> </span>plus<span class="w"> </span><span class="o">(</span>app<span class="w"> </span>id<span class="w"> </span>one<span class="o">))</span>
+<span class="linenos">117</span><span class="w">                                  </span><span class="o">(</span>app<span class="w"> </span>size<span class="w"> </span><span class="o">(</span>app<span class="w"> </span>id<span class="w"> </span>empty<span class="o">)))</span><span class="kd">,</span>
+<span class="linenos">118</span><span class="w">  </span>w<span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">TP</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;well typed, of type&quot;</span><span class="w"> </span><span class="nv">TP</span><span class="kd">,</span>
+<span class="linenos">119</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;id generalized to&quot;</span><span class="w"> </span><span class="nv">IdTy</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">well typed, of type mono integer</span>
+<span class="go">id generalized to all c0 \ mono (c0 ===&gt; c0)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">IdTy</span></code>, the type scheme inferred for <code class="docutils literal notranslate"><span class="pre">id</span></code>, prints as <code class="docutils literal notranslate"><span class="pre">all</span> <span class="pre">c0</span> <span class="pre">\</span> <span class="pre">mono</span> <span class="pre">(c0</span>
+<span class="pre">===&gt;</span> <span class="pre">c0)</span></code>, universally quantified over the one type variable used only
+locally, the scheme that then lets <code class="docutils literal notranslate"><span class="pre">id</span></code> be applied to both an <code class="docutils literal notranslate"><span class="pre">integer</span></code>
+and a <code class="docutils literal notranslate"><span class="pre">list</span> <span class="pre">#</span> <span class="pre">integer</span></code> in the same body.</p>
+<p>A monotype is a type with no quantifiers: an arrow <code class="docutils literal notranslate"><span class="pre">===&gt;</span></code>, an applied type
+constructor <code class="docutils literal notranslate"><span class="pre">#</span></code> (as in <code class="docutils literal notranslate"><span class="pre">list</span> <span class="pre">#</span> <span class="pre">integer</span></code>), or a type variable, itself an
+ordinary Elpi unification variable, an existential hole
+(<a class="reference internal" href="../semantics/constraints.html"><span class="doc">Constraints</span></a>). A <strong>scheme</strong> is <code class="docutils literal notranslate"><span class="pre">mono</span> <span class="pre">T</span></code> (no
+quantification) or <code class="docutils literal notranslate"><span class="pre">all</span> <span class="pre">F</span></code>, universally quantifying one more variable and
+continuing as <code class="docutils literal notranslate"><span class="pre">F</span></code> applied to it. <code class="docutils literal notranslate"><span class="pre">specialize</span></code> goes the other way: given a
+scheme, it produces one monotype by picking a <em>fresh</em> unification variable
+for every <code class="docutils literal notranslate"><span class="pre">all</span></code>, the same mechanism <code class="docutils literal notranslate"><span class="pre">pi</span></code> uses for a fresh bound name,
+here applied to open a scheme’s quantifiers into fresh holes to be filled in
+by whatever unifies with them at this particular use.</p>
+<p>The interesting rule is <code class="docutils literal notranslate"><span class="pre">let</span></code>:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>w<span class="w"> </span>(let<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="nv">FP</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">TC</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="w">  </span>w<span class="w"> </span><span class="nv">F</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">FT</span><span class="o">)</span><span class="kd">,</span>
+<span class="w">  </span>declare_constraint<span class="w"> </span>(overbar<span class="w"> </span><span class="o">(</span>mono<span class="w"> </span><span class="nv">FT</span><span class="o">)</span><span class="w"> </span><span class="nv">FP</span><span class="o">)</span><span class="w"> </span><span class="kd">[],</span>
+<span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>w<span class="w"> </span>x<span class="w"> </span><span class="nv">FP</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>w<span class="w"> </span>(<span class="nv">B</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span>(mono<span class="w"> </span><span class="nv">TC</span><span class="o">).</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">FP</span></code>, the scheme eventually given to the let-bound name, is not computed
+on the spot. Generalizing <code class="docutils literal notranslate"><span class="pre">FT</span></code> means comparing its free type variables
+against the free type variables of Γ, the <em>set of hypothetical</em> <code class="docutils literal notranslate"><span class="pre">w</span></code> <em>rules
+currently in scope</em>: the <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> rules nested <code class="docutils literal notranslate"><span class="pre">pi</span></code>/<code class="docutils literal notranslate"><span class="pre">let``s</span> <span class="pre">have</span> <span class="pre">added</span> <span class="pre">so</span>
+<span class="pre">far.</span> <span class="pre">Γ</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">a</span> <span class="pre">first-class</span> <span class="pre">value</span> <span class="pre">an</span> <span class="pre">ordinary</span> <span class="pre">goal</span> <span class="pre">can</span> <span class="pre">inspect,</span> <span class="pre">which</span> <span class="pre">is</span>
+<span class="pre">beyond</span> <span class="pre">what</span> <span class="pre">``pi</span></code>/<code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> alone can do
+(<a class="reference internal" href="../semantics/logic-programming-model.html"><span class="doc">Logic Programming</span></a>). A constraint handling rule
+can: its sequent pattern <code class="docutils literal notranslate"><span class="pre">(G</span> <span class="pre">?-</span> <span class="pre">goal)</span></code> binds <code class="docutils literal notranslate"><span class="pre">G</span></code> to the very context a
+suspended goal carries with it (<a class="reference internal" href="../syntax/constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>,
+<a class="reference internal" href="../semantics/chr.html"><span class="doc">The constraint store</span></a>). So generalization is written as a suspended
+<code class="docutils literal notranslate"><span class="pre">overbar</span></code> constraint, resolved by one CHR rule once the goal it is attached
+to is later matched:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">constraint</span><span class="w"> </span><span class="nf">w ?- overbar </span>{
+<span class="w">  </span><span class="kd">rule</span><span class="w"> </span><span class="kd">\</span><span class="w"> </span>(<span class="nv">G</span><span class="w"> </span><span class="kd">?-</span><span class="w"> </span>overbar<span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">T1</span><span class="o">)</span>
+<span class="w">       </span><span class="kd">|</span><span class="w"> </span>(generalize<span class="w"> </span><span class="nv">G</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">POLYT</span><span class="o">)</span><span class="w"> </span><span class="kd">&lt;=&gt;</span><span class="w"> </span>(<span class="nv">T1</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">POLYT</span><span class="o">).</span>
+}
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">w</span> <span class="pre">?-</span></code> before the clique is the context filter: without it, <code class="docutils literal notranslate"><span class="pre">G</span></code> would
+keep only <code class="docutils literal notranslate"><span class="pre">overbar</span></code>’s own (empty) set of clique rules; naming <code class="docutils literal notranslate"><span class="pre">w</span></code> there
+keeps the hypothetical <code class="docutils literal notranslate"><span class="pre">w</span></code> rules, Γ, in the context the suspended
+<code class="docutils literal notranslate"><span class="pre">overbar</span></code> constraint carries, which is what <code class="docutils literal notranslate"><span class="pre">generalize</span></code> reads.</p>
+<p><code class="docutils literal notranslate"><span class="pre">generalize</span></code> collects the free variables of the monotype and of Γ, and
+quantifies those that are free in the former but not the latter, the
+ones the surrounding context makes no assumption about. The
+<a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">HDR thesis</span></a>, §2.7.4 (“Type generalization”), spells out this
+step in full, including why it has to be deferred to a constraint in the
+first place.</p>
+<p>This covers the core of the algorithm. Two fuller programs are further
+reading for anyone implementing a real ML-style checker in Elpi.
+<code class="docutils literal notranslate"><span class="pre">tests/sources/w.elpi</span></code>, which this example is adapted from, is the complete
+version. <code class="docutils literal notranslate"><span class="pre">tests/sources/toyml/</span></code> is richer still: it adds equality-type
+variables (Standard ML’s <code class="docutils literal notranslate"><span class="pre">''a</span></code>) and a bidirectional variant that propagates
+a known result type inward instead of only inferring one outward, from the
+<a class="reference internal" href="../bibliography.html#bib-mlws18"><span class="std std-ref">ML Family Workshop slides</span></a>.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="stlc.html" class="btn btn-neutral float-left" title="Simply-typed λ-calculus" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../builtins.html" class="btn btn-neutral float-right" title="Built-in predicates" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

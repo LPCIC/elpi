@@ -1,0 +1,378 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Built-in predicates &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The standard library" href="standard-library.html" />
+    <link rel="prev" title="Hindley-Milner type inference" href="examples/hindley-milner.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Built-in predicates</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#logic-control-and-inspection">Logic, control and inspection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#arithmetic">Arithmetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#standard-data-types">Standard data types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#regular-expressions-and-randomness">Regular expressions and randomness</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#input-output-and-the-file-system">Input, output and the file system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#typed-finite-maps">Typed finite maps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#garbage-collector-and-runtime">Garbage collector and runtime</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Built-in predicates</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/builtins.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="built-in-predicates">
+<h1>Built-in predicates<a class="headerlink" href="#built-in-predicates" title="Link to this heading"></a></h1>
+<p>A <strong>builtin</strong> is a predicate whose body is OCaml rather than Elpi, reached
+through the foreign function interface (<a class="reference internal" href="embedding.html"><span class="doc">Embedding and extending Elpi</span></a>). Elpi’s own library
+ships close to two hundred of them, from <code class="docutils literal notranslate"><span class="pre">=</span></code> to the garbage-collector
+controls; a host application registers more the same way.</p>
+<p>The FFI fixes the shape a builtin can have. Each argument is declared <em>input</em>
+or <em>output</em> and carries a <em>conversion</em> between an Elpi term and an OCaml
+value, so the OCaml code receives its inputs already converted and hands back
+its outputs to be converted on the way out. A builtin succeeds once or fails
+(by raising <code class="docutils literal notranslate"><span class="pre">No_clause</span></code>); it does not backtrack and does not offer a second
+solution on its own, so one that needs to enumerate returns a list. A term it
+has no conversion for it can still carry through untouched, as <code class="docutils literal notranslate"><span class="pre">any</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-document-builtins</span></code> prints the exhaustive, generated reference: one
+signature and doc comment per predicate, the same text checked in as
+<code class="docutils literal notranslate"><span class="pre">src/builtin.elpi</span></code>. Throughout this manual a name written like
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L445"><code class="docutils literal notranslate"><span class="pre">print</span></code></a> links to that predicate’s declaration line in
+<code class="docutils literal notranslate"><span class="pre">src/builtin.elpi</span></code> on GitHub, pinned to commit cfce5c6f30 of this file
+(content hash 006f63d9a22b). What follows is a tour by category, saying what
+each group is for and which chapter covers it in depth where one does.</p>
+<section id="logic-control-and-inspection">
+<h2>Logic, control and inspection<a class="headerlink" href="#logic-control-and-inspection" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">=</span></code> unifies, with the occur check; <code class="docutils literal notranslate"><span class="pre">unsound_unif</span></code> does the same <em>without</em>
+it and so can build a cyclic term (<a class="reference internal" href="features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>,
+where it is defined with <code class="docutils literal notranslate"><span class="pre">:nooc</span></code>). <code class="docutils literal notranslate"><span class="pre">same_term</span></code>, infix <code class="docutils literal notranslate"><span class="pre">==</span></code>, tests
+plain syntactic equality, assigning nothing. <code class="docutils literal notranslate"><span class="pre">pattern_match</span> <span class="pre">T</span> <span class="pre">P</span></code> matches
+<code class="docutils literal notranslate"><span class="pre">T</span></code> against the pattern <code class="docutils literal notranslate"><span class="pre">P</span></code>, assigning only <code class="docutils literal notranslate"><span class="pre">P</span></code>’s variables
+(<a class="reference internal" href="syntax/terms.html"><span class="doc">Terms</span></a>).</p>
+<p><code class="docutils literal notranslate"><span class="pre">declare_constraint</span></code> and <code class="docutils literal notranslate"><span class="pre">print_constraints</span></code> are covered in
+<a class="reference internal" href="syntax/constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>.</p>
+<p>The cut <code class="docutils literal notranslate"><span class="pre">!</span></code>, <code class="docutils literal notranslate"><span class="pre">not</span></code>, <code class="docutils literal notranslate"><span class="pre">if</span></code> / <code class="docutils literal notranslate"><span class="pre">if2</span></code>, <code class="docutils literal notranslate"><span class="pre">halt</span></code> / <code class="docutils literal notranslate"><span class="pre">stop</span></code>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a>
+and <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L893"><code class="docutils literal notranslate"><span class="pre">std.do!</span></code></a> are covered in <a class="reference internal" href="features/control-and-cut.html"><span class="doc">Control and cut</span></a>, and
+<code class="docutils literal notranslate"><span class="pre">pi</span></code> / <code class="docutils literal notranslate"><span class="pre">sigma</span></code> in <a class="reference internal" href="syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">ground_term</span> <span class="pre">T</span></code> checks that <code class="docutils literal notranslate"><span class="pre">T</span></code> has no unification variables left;
+<code class="docutils literal notranslate"><span class="pre">closed_term</span></code> yields a fresh variable barred from naming any eigenvariable
+(<a class="reference internal" href="features/binders-and-hoas.html"><span class="doc">Binders and HOAS</span></a>); <code class="docutils literal notranslate"><span class="pre">cmp_term</span></code> orders two terms
+structurally, and only works when both are ground.</p>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code> / <code class="docutils literal notranslate"><span class="pre">names</span></code> list the eigenvariables in scope, <code class="docutils literal notranslate"><span class="pre">var</span></code> recognises and
+takes apart a unification variable (<a class="reference internal" href="features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>
+for its <code class="docutils literal notranslate"><span class="pre">uvar</span> <span class="pre">Hd</span> <span class="pre">Args</span></code> form), <code class="docutils literal notranslate"><span class="pre">constant</span></code> a global constant, and
+<code class="docutils literal notranslate"><span class="pre">occurs</span> <span class="pre">A</span> <span class="pre">T</span></code> checks whether the atom <code class="docutils literal notranslate"><span class="pre">A</span></code> appears in <code class="docutils literal notranslate"><span class="pre">T</span></code>
+(<a class="reference internal" href="features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>).</p>
+<p><code class="docutils literal notranslate"><span class="pre">new_int</span></code> hands out a strictly increasing integer and <code class="docutils literal notranslate"><span class="pre">new_safe</span></code> a store
+that survives backtracking; both step outside Elpi’s usual scoping, so use
+them sparingly.</p>
+</section>
+<section id="arithmetic">
+<h2>Arithmetic<a class="headerlink" href="#arithmetic" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">is</span> <span class="pre">Expr</span></code> evaluates <code class="docutils literal notranslate"><span class="pre">Expr</span></code> and unifies the result with <code class="docutils literal notranslate"><span class="pre">X</span></code>; <code class="docutils literal notranslate"><span class="pre">calc</span></code>
+is the same as a function, for use with spilling (<a class="reference internal" href="features/spilling.html"><span class="doc">Spilling</span></a>):
+<code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">{calc</span> <span class="pre">(N</span> <span class="pre">+</span> <span class="pre">1)}</span></code>. The precedences of every operator below are in
+<a class="reference internal" href="syntax/lexical-conventions.html"><span class="doc">Lexical conventions</span></a>.</p>
+<p>Evaluated inside <code class="docutils literal notranslate"><span class="pre">is</span></code> / <code class="docutils literal notranslate"><span class="pre">calc</span></code>:</p>
+<ul class="simple">
+<li><p><strong>binary</strong> <code class="docutils literal notranslate"><span class="pre">+</span></code> <code class="docutils literal notranslate"><span class="pre">-</span></code> <code class="docutils literal notranslate"><span class="pre">*</span></code> (<code class="docutils literal notranslate"><span class="pre">int</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code>), <code class="docutils literal notranslate"><span class="pre">/</span></code> (<code class="docutils literal notranslate"><span class="pre">float</span></code>),
+<code class="docutils literal notranslate"><span class="pre">div</span></code> <code class="docutils literal notranslate"><span class="pre">mod</span></code> (<code class="docutils literal notranslate"><span class="pre">int</span></code>), <code class="docutils literal notranslate"><span class="pre">^</span></code> (<code class="docutils literal notranslate"><span class="pre">string</span></code> concatenation);</p></li>
+<li><p><strong>unary</strong> <code class="docutils literal notranslate"><span class="pre">~</span></code> (negation), <code class="docutils literal notranslate"><span class="pre">abs</span></code>, and, for <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">sqrt</span></code> <code class="docutils literal notranslate"><span class="pre">sin</span></code>
+<code class="docutils literal notranslate"><span class="pre">cos</span></code> <code class="docutils literal notranslate"><span class="pre">arctan</span></code> <code class="docutils literal notranslate"><span class="pre">ln</span></code>;</p></li>
+<li><p><strong>two-argument functions</strong> <code class="docutils literal notranslate"><span class="pre">min</span></code> <code class="docutils literal notranslate"><span class="pre">max</span></code>;</p></li>
+<li><p><strong>conversions</strong> <code class="docutils literal notranslate"><span class="pre">int_to_real</span></code> <code class="docutils literal notranslate"><span class="pre">truncate</span></code> <code class="docutils literal notranslate"><span class="pre">floor</span></code> <code class="docutils literal notranslate"><span class="pre">ceil</span></code>
+(<code class="docutils literal notranslate"><span class="pre">int</span></code> ↔ <code class="docutils literal notranslate"><span class="pre">float</span></code>), <code class="docutils literal notranslate"><span class="pre">int_to_string</span></code> <code class="docutils literal notranslate"><span class="pre">string_to_int</span></code>
+<code class="docutils literal notranslate"><span class="pre">real_to_string</span></code> <code class="docutils literal notranslate"><span class="pre">substring</span></code> <code class="docutils literal notranslate"><span class="pre">size</span></code> (<code class="docutils literal notranslate"><span class="pre">string</span></code>), <code class="docutils literal notranslate"><span class="pre">chr</span></code> <code class="docutils literal notranslate"><span class="pre">rhc</span></code>
+(<code class="docutils literal notranslate"><span class="pre">int</span></code> ↔ one-character <code class="docutils literal notranslate"><span class="pre">string</span></code>);</p></li>
+<li><p>type-suffixed variants that fix the operand type instead of inferring it:
+<code class="docutils literal notranslate"><span class="pre">i+</span> <span class="pre">i-</span> <span class="pre">i*</span> <span class="pre">i~</span> <span class="pre">iabs</span></code> for <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">r+</span> <span class="pre">r-</span> <span class="pre">r*</span> <span class="pre">r~</span> <span class="pre">rabs</span></code> for <code class="docutils literal notranslate"><span class="pre">float</span></code>.</p></li>
+</ul>
+<p>Comparisons are <em>goals</em>, not expressions: <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">&lt;</span> <span class="pre">Y</span></code> succeeds or fails, it is
+not written under <code class="docutils literal notranslate"><span class="pre">is</span></code>. <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> <code class="docutils literal notranslate"><span class="pre">=&lt;</span></code> <code class="docutils literal notranslate"><span class="pre">&gt;=</span></code> work on <code class="docutils literal notranslate"><span class="pre">int</span></code>,
+<code class="docutils literal notranslate"><span class="pre">float</span></code> or <code class="docutils literal notranslate"><span class="pre">string</span></code>, with <code class="docutils literal notranslate"><span class="pre">i&lt;</span> <span class="pre">r&lt;</span> <span class="pre">s&lt;</span></code> … fixing the type.</p>
+<p>This set is <strong>extensible from the host application</strong>: <code class="docutils literal notranslate"><span class="pre">API.Calc.register</span></code>
+adds an operation (a symbol, its argument types, and an OCaml function) to a
+<code class="docutils literal notranslate"><span class="pre">calc_descriptor</span></code> passed to <code class="docutils literal notranslate"><span class="pre">API.Setup.init</span> <span class="pre">~calc</span></code> (<a class="reference internal" href="embedding.html"><span class="doc">Embedding and extending Elpi</span></a>).</p>
+</section>
+<section id="standard-data-types">
+<h2>Standard data types<a class="headerlink" href="#standard-data-types" title="Link to this heading"></a></h2>
+<p>These are declared in the builtin library, ready to use without an
+<code class="docutils literal notranslate"><span class="pre">accumulate</span></code>:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">data</span><span class="w"> </span><span class="nf">bool</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">tt</span><span class="w"> </span><span class="kt">bool</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">ff</span><span class="w"> </span><span class="kt">bool</span>.
+
+<span class="kd">data</span><span class="w"> </span><span class="nf">pair</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">B</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">pr</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">pair</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">B</span>.<span class="w">       </span><span class="c">% + func fst, func snd</span>
+
+<span class="kd">data</span><span class="w"> </span><span class="nf">option</span><span class="w"> </span><span class="kt">A</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">none</span><span class="w"> </span><span class="kt">option</span><span class="w"> </span><span class="kt">A</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">some</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">option</span><span class="w"> </span><span class="kt">A</span>.
+
+<span class="kd">data</span><span class="w"> </span><span class="nf">cmp</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">eq</span><span class="w"> </span><span class="kt">cmp</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">lt</span><span class="w"> </span><span class="kt">cmp</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">gt</span><span class="w"> </span><span class="kt">cmp</span>.
+
+<span class="kd">data</span><span class="w"> </span><span class="nf">diagnostic</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">ok</span><span class="w"> </span><span class="kt">diagnostic</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">error</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">diagnostic</span>.
+
+<span class="kd">data</span><span class="w"> </span><span class="nf">triple</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">B</span><span class="w"> </span><span class="kt">C</span>.
+<span class="kd">symb</span><span class="w"> </span><span class="nf">triple</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">C</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">triple</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">B</span><span class="w"> </span><span class="kt">C</span>.<span class="w">   </span><span class="c">% + triple_1..3</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">bool</span></code> uses <code class="docutils literal notranslate"><span class="pre">tt</span></code> / <code class="docutils literal notranslate"><span class="pre">ff</span></code> because <code class="docutils literal notranslate"><span class="pre">true</span></code> / <code class="docutils literal notranslate"><span class="pre">false</span></code> are goals; <code class="docutils literal notranslate"><span class="pre">pair</span></code>’s
+constructor is <code class="docutils literal notranslate"><span class="pre">pr</span></code> because <code class="docutils literal notranslate"><span class="pre">,</span></code> is conjunction; <code class="docutils literal notranslate"><span class="pre">cmp</span></code> is the result of a
+three-way comparison: <code class="docutils literal notranslate"><span class="pre">cmp_term</span></code>, or a comparator a caller supplies, as
+<code class="docutils literal notranslate"><span class="pre">std.map</span></code> and <code class="docutils literal notranslate"><span class="pre">std.set</span></code> require; <code class="docutils literal notranslate"><span class="pre">diagnostic</span></code> is
+returned by builtins that report a <em>reason</em> for failing rather than just
+failing (<code class="docutils literal notranslate"><span class="pre">ok</span></code> / <code class="docutils literal notranslate"><span class="pre">error</span> <span class="pre">&quot;message&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">list</span></code> (<code class="docutils literal notranslate"><span class="pre">::</span></code> / <code class="docutils literal notranslate"><span class="pre">[]</span></code>) is built
+in too (<a class="reference internal" href="syntax/terms.html"><span class="doc">Terms</span></a>).</p>
+<p>A short tour of <code class="docutils literal notranslate"><span class="pre">calc</span></code>, a <code class="docutils literal notranslate"><span class="pre">pair</span></code>, <code class="docutils literal notranslate"><span class="pre">term_to_string</span></code>, <code class="docutils literal notranslate"><span class="pre">rex.split</span></code> and a
+reseeded generator:</p>
+<p><strong>code/builtins-tour.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% A cross-section of the builtin library: arithmetic, standard data types,</span>
+<span class="linenos"> 2</span><span class="c">% string/term conversion, regular expressions, seeded randomness.</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos"> 5</span><span class="w">  </span><span class="nv">X</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="kd">+</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="kd">*</span><span class="w"> </span><span class="mi">4</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;calc:&quot;</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span>
+<span class="linenos"> 6</span><span class="w">  </span><span class="nv">P</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>pr<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="s2">&quot;one&quot;</span><span class="kd">,</span><span class="w"> </span>term_to_string<span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">S</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;term_to_string:&quot;</span><span class="w"> </span><span class="nv">S</span><span class="kd">,</span>
+<span class="linenos"> 7</span><span class="w">  </span>rex.split<span class="w"> </span><span class="s2">&quot;,&quot;</span><span class="w"> </span><span class="s2">&quot;a,b,c&quot;</span><span class="w"> </span><span class="nv">Parts</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;rex.split:&quot;</span><span class="w"> </span><span class="nv">Parts</span><span class="kd">,</span>
+<span class="linenos"> 8</span><span class="w">  </span>random.init<span class="w"> </span><span class="mi">42</span><span class="kd">,</span><span class="w"> </span>random.int<span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="nv">R1</span><span class="kd">,</span>
+<span class="linenos"> 9</span><span class="w">  </span>random.init<span class="w"> </span><span class="mi">42</span><span class="kd">,</span><span class="w"> </span>random.int<span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="nv">R2</span><span class="kd">,</span><span class="w">      </span><span class="c">% same seed, same draw</span>
+<span class="linenos">10</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;seeded random repeats:&quot;</span><span class="w"> </span><span class="nv">R1</span><span class="w"> </span><span class="nv">R2</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">calc: 14</span>
+<span class="go">term_to_string: pr 1 one</span>
+<span class="go">rex.split: [a, b, c]</span>
+<span class="go">seeded random repeats: 14 14</span>
+</pre></div>
+</div>
+</section>
+<section id="regular-expressions-and-randomness">
+<h2>Regular expressions and randomness<a class="headerlink" href="#regular-expressions-and-randomness" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">rex.match</span></code>, <code class="docutils literal notranslate"><span class="pre">rex.replace</span></code> and <code class="docutils literal notranslate"><span class="pre">rex.split</span></code> (OCaml’s <code class="docutils literal notranslate"><span class="pre">Str</span></code> syntax, not
+PCRE) cover the common text-processing needs. <code class="docutils literal notranslate"><span class="pre">random.int</span> <span class="pre">N</span></code> draws a
+uniform integer in <span class="math notranslate nohighlight">\([0, N)\)</span>; <code class="docutils literal notranslate"><span class="pre">random.init</span> <span class="pre">Seed</span></code> reseeds the
+generator, making a sequence reproducible: the same seed always draws the
+same numbers.</p>
+</section>
+<section id="input-output-and-the-file-system">
+<h2>Input, output and the file system<a class="headerlink" href="#input-output-and-the-file-system" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">print</span></code> and <code class="docutils literal notranslate"><span class="pre">dprint</span></code> write their arguments to standard output (<code class="docutils literal notranslate"><span class="pre">dprint</span></code>
+shows raw terms); <code class="docutils literal notranslate"><span class="pre">term_to_string</span></code> renders a term to a <code class="docutils literal notranslate"><span class="pre">string</span></code> instead of
+printing it. Beyond that Elpi has the stream I/O of a small scripting
+language:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">open_in</span></code> / <code class="docutils literal notranslate"><span class="pre">open_out</span></code> / <code class="docutils literal notranslate"><span class="pre">open_append</span></code> open a file; <code class="docutils literal notranslate"><span class="pre">open_string</span></code>
+turns a string into a readable stream; <code class="docutils literal notranslate"><span class="pre">std_in</span></code> / <code class="docutils literal notranslate"><span class="pre">std_out</span></code> /
+<code class="docutils literal notranslate"><span class="pre">std_err</span></code> are the standard streams;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">input</span> <span class="pre">InStream</span> <span class="pre">Bytes</span> <span class="pre">S</span></code> reads a fixed number of bytes, <code class="docutils literal notranslate"><span class="pre">input_line</span></code>
+reads up to the newline, <code class="docutils literal notranslate"><span class="pre">lookahead</span></code> peeks one byte, <code class="docutils literal notranslate"><span class="pre">eof</span></code> tests for
+end of input;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output</span> <span class="pre">OutStream</span> <span class="pre">S</span></code> writes, <code class="docutils literal notranslate"><span class="pre">flush</span></code> forces pending output out,
+<code class="docutils literal notranslate"><span class="pre">close_in</span></code> / <code class="docutils literal notranslate"><span class="pre">close_out</span></code> close.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">sys.*</span></code> reaches the file system and the process environment:
+<code class="docutils literal notranslate"><span class="pre">sys.file_exists</span></code>, <code class="docutils literal notranslate"><span class="pre">sys.is_directory</span></code>, <code class="docutils literal notranslate"><span class="pre">sys.mkdir</span></code> / <code class="docutils literal notranslate"><span class="pre">sys.rmdir</span></code>,
+<code class="docutils literal notranslate"><span class="pre">sys.remove</span></code> / <code class="docutils literal notranslate"><span class="pre">sys.rename</span></code>, <code class="docutils literal notranslate"><span class="pre">sys.readdir</span></code>, <code class="docutils literal notranslate"><span class="pre">sys.chdir</span></code> /
+<code class="docutils literal notranslate"><span class="pre">sys.getcwd</span></code>, plus <code class="docutils literal notranslate"><span class="pre">getenv</span></code>, <code class="docutils literal notranslate"><span class="pre">gettimeofday</span></code> and <code class="docutils literal notranslate"><span class="pre">system</span></code> (run a shell
+command). The calls that can fail for an external reason return a
+<code class="docutils literal notranslate"><span class="pre">diagnostic</span></code> (<code class="docutils literal notranslate"><span class="pre">ok</span></code> or <code class="docutils literal notranslate"><span class="pre">error</span> <span class="pre">&quot;…&quot;</span></code>) rather than just failing.
+<code class="docutils literal notranslate"><span class="pre">unix.process.open</span></code> / <code class="docutils literal notranslate"><span class="pre">unix.process.close</span></code> spawn a subprocess and reap
+it, handing back its three standard streams.</p>
+<p><strong>code/builtins-io.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Stream input (without touching the file system) and a typed finite map.</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos"> 4</span><span class="w">  </span>open_string<span class="w"> </span><span class="s2">&quot;alpha\nbeta\ngamma\n&quot;</span><span class="w"> </span><span class="nv">S</span><span class="kd">,</span>
+<span class="linenos"> 5</span><span class="w">  </span>input_line<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">L1</span><span class="kd">,</span>
+<span class="linenos"> 6</span><span class="w">  </span>input_line<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">L2</span><span class="kd">,</span>
+<span class="linenos"> 7</span><span class="w">  </span>close_in<span class="w"> </span><span class="nv">S</span><span class="kd">,</span>
+<span class="linenos"> 8</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;first two lines:&quot;</span><span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="nv">L2</span><span class="kd">,</span>
+<span class="linenos"> 9</span>
+<span class="linenos">10</span><span class="w">  </span>std.string.map.empty<span class="w"> </span><span class="nv">M0</span><span class="kd">,</span>
+<span class="linenos">11</span><span class="w">  </span>std.string.map.add<span class="w"> </span><span class="s2">&quot;one&quot;</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="nv">M0</span><span class="w"> </span><span class="nv">M1</span><span class="kd">,</span>
+<span class="linenos">12</span><span class="w">  </span>std.string.map.add<span class="w"> </span><span class="s2">&quot;two&quot;</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">M1</span><span class="w"> </span><span class="nv">M2</span><span class="kd">,</span>
+<span class="linenos">13</span><span class="w">  </span>std.string.map.find<span class="w"> </span><span class="s2">&quot;two&quot;</span><span class="w"> </span><span class="nv">M2</span><span class="w"> </span><span class="nv">V</span><span class="kd">,</span>
+<span class="linenos">14</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;string map, two -&gt;&quot;</span><span class="w"> </span><span class="nv">V</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">first two lines: alpha beta</span>
+<span class="go">string map, two -&gt; 2</span>
+</pre></div>
+</div>
+</section>
+<section id="typed-finite-maps">
+<h2>Typed finite maps<a class="headerlink" href="#typed-finite-maps" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">std.string.map</span></code>, <code class="docutils literal notranslate"><span class="pre">std.int.map</span></code> and <code class="docutils literal notranslate"><span class="pre">std.loc.map</span></code> are FFI-backed
+persistent maps over one fixed key type (<code class="docutils literal notranslate"><span class="pre">std.string.set</span></code> and
+<code class="docutils literal notranslate"><span class="pre">std.int.set</span></code> are the matching sets). Each map has <code class="docutils literal notranslate"><span class="pre">.empty</span></code>, <code class="docutils literal notranslate"><span class="pre">.mem</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.add</span></code>, <code class="docutils literal notranslate"><span class="pre">.remove</span></code>, <code class="docutils literal notranslate"><span class="pre">.find</span></code> and <code class="docutils literal notranslate"><span class="pre">.bindings</span></code>, plus <code class="docutils literal notranslate"><span class="pre">.filter</span></code> /
+<code class="docutils literal notranslate"><span class="pre">.map</span></code> / <code class="docutils literal notranslate"><span class="pre">.fold</span></code> taking an Elpi <code class="docutils literal notranslate"><span class="pre">func</span></code>; the value type has to be a
+closed term. The general, any-key structures <code class="docutils literal notranslate"><span class="pre">std.map</span></code> and <code class="docutils literal notranslate"><span class="pre">std.set</span></code>,
+written in Elpi rather than OCaml, are covered in <a class="reference internal" href="standard-library.html"><span class="doc">The standard library</span></a>.</p>
+</section>
+<section id="garbage-collector-and-runtime">
+<h2>Garbage collector and runtime<a class="headerlink" href="#garbage-collector-and-runtime" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">gc.get</span></code> / <code class="docutils literal notranslate"><span class="pre">gc.set</span></code> read and write the OCaml garbage-collector
+parameters, <code class="docutils literal notranslate"><span class="pre">gc.stat</span></code> / <code class="docutils literal notranslate"><span class="pre">gc.quick-stat</span></code> report live statistics, and
+<code class="docutils literal notranslate"><span class="pre">gc.minor</span></code> / <code class="docutils literal notranslate"><span class="pre">gc.major</span></code> / <code class="docutils literal notranslate"><span class="pre">gc.full</span></code> / <code class="docutils literal notranslate"><span class="pre">gc.compact</span></code> force a
+collection. <code class="docutils literal notranslate"><span class="pre">trace.counter</span></code> reads a named trace point
+(<a class="reference internal" href="debugging-and-tracing.html"><span class="doc">Debugging and tracing</span></a>). These matter only when profiling or trimming
+the footprint of a long-running embedding.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="examples/hindley-milner.html" class="btn btn-neutral float-left" title="Hindley-Milner type inference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="standard-library.html" class="btn btn-neutral float-right" title="The standard library" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

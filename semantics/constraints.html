@@ -1,0 +1,337 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Constraints &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="The constraint store" href="chr.html" />
+    <link rel="prev" title="Logic Programming" href="logic-programming-model.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Constraints</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#controlling-instantiation">Controlling instantiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#matching-not-unifying">Matching, not unifying</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#suspending-and-resuming">Suspending and resuming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#incompatible-constraints">Incompatible constraints</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Constraints</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/semantics/constraints.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="constraints">
+<h1>Constraints<a class="headerlink" href="#constraints" title="Link to this heading"></a></h1>
+<p>The previous chapter, <a class="reference internal" href="logic-programming-model.html"><span class="doc">Logic Programming</span></a>, ended on a problem. The
+STLC type checker, asked about a term that still has a hole in it, has nothing
+sensible to do:
+because its first argument is an input, no rule head matches a bare variable
+and the goal simply fails. With unification in place of matching it does
+worse, inventing an <code class="docutils literal notranslate"><span class="pre">app</span></code> (then a <code class="docutils literal notranslate"><span class="pre">lam</span></code> inside that, and so on) for the
+hole and looping forever. Neither is any use to an elaborator, which works
+with such <em>incomplete</em> terms, full of holes still to be filled in, all the
+time. The fix is to let the checker <em>suspend</em> on a hole rather than guess.</p>
+<section id="controlling-instantiation">
+<h2>Controlling instantiation<a class="headerlink" href="#controlling-instantiation" title="Link to this heading"></a></h2>
+<p>When a rule’s search meets a hole, one of two things should happen instead of
+guessing: <em>suspend</em> the computation, recording it as a constraint to be
+retried later, or <em>synthesize</em> a value for the hole through some dedicated
+routine richer than plain unification (out of scope for this chapter). A
+suspended computation can also carry data along, anything from a single flag
+to a whole typing sequent, and the data that several suspended computations
+have attached to one hole can later be combined. Suspending and resuming are
+what follow; combining what several constraints know about the same hole is
+covered in <a class="reference internal" href="chr.html"><span class="doc">The constraint store</span></a>.</p>
+</section>
+<section id="matching-not-unifying">
+<h2>Matching, not unifying<a class="headerlink" href="#matching-not-unifying" title="Link to this heading"></a></h2>
+<p>A signature (<a class="reference internal" href="../syntax/type-declarations.html"><span class="doc">Type declarations</span></a>) splits a predicate’s
+arguments into <em>input</em>, before the <code class="docutils literal notranslate"><span class="pre">-&gt;</span></code>, and <em>output</em>, after it. When a
+rule is selected the two are treated differently: the goal’s input arguments
+are <em>matched</em> against the rule head’s patterns, its output arguments are
+<em>unified</em> with them (<a class="reference internal" href="formal-semantics.html"><span class="doc">Formal semantics</span></a>’s <code class="docutils literal notranslate"><span class="pre">select</span></code>). The difference
+shows as soon as an argument is an unassigned variable. Matching it against a
+constant pattern would have to assign it, so it simply fails to match, no rule
+fires, and the variable is left untouched. Unifying it succeeds and assigns
+it:</p>
+<p><strong>../code/input-output.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% An input argument is matched: passing an unassigned variable matches no</span>
+<span class="linenos"> 2</span><span class="c">% rule, since matching a variable against a rule&#39;s pattern would have to</span>
+<span class="linenos"> 3</span><span class="c">% assign it. An output argument is unified: it does get assigned.</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">data</span><span class="w"> </span><span class="nf">tm</span>.
+<span class="linenos"> 6</span><span class="kd">symb</span><span class="w"> </span><span class="nf">z</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos"> 7</span><span class="kd">symb</span><span class="w"> </span><span class="nf">s</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="kd">pred</span><span class="w"> </span><span class="nf">as-input</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos">10</span><span class="kd">as-</span>input<span class="w"> </span>z<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;matched z&quot;</span><span class="o">.</span>
+<span class="linenos">11</span><span class="kd">as-</span>input<span class="w"> </span>(s<span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;matched s _&quot;</span><span class="o">.</span>
+<span class="linenos">12</span>
+<span class="linenos">13</span><span class="kd">pred</span><span class="w"> </span><span class="nf">as-output</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos">14</span><span class="kd">as-</span>output<span class="w"> </span>z<span class="o">.</span>
+<span class="linenos">15</span>
+<span class="linenos">16</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">17</span><span class="w">  </span>(<span class="w"> </span><span class="kd">as-</span>input<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="kd">;</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;as-input: an unassigned variable matched no rule&quot;</span><span class="w"> </span><span class="o">)</span><span class="kd">,</span>
+<span class="linenos">18</span><span class="w">  </span><span class="kd">as-</span>output<span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;as-output assigned Y to&quot;</span><span class="w"> </span><span class="nv">Y</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">as-input: an unassigned variable matched no rule</span>
+<span class="go">as-output assigned Y to z</span>
+</pre></div>
+</div>
+<p>An input argument is therefore safe to leave partly unknown: a call with a
+hole in an input position does not force a guess, it finds no matching rule.
+And that is what lets a rule detect a hole and act on it. The <code class="docutils literal notranslate"><span class="pre">uvar</span></code>
+keyword is a head pattern that matches only an unassigned variable, and
+<code class="docutils literal notranslate"><span class="pre">uvar</span> <span class="pre">as</span> <span class="pre">E</span></code> binds <code class="docutils literal notranslate"><span class="pre">E</span></code> to it. The two rules below are equivalent, the
+second spelling out what the first means:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>of<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">E</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>declare_constraint<span class="w"> </span>(of<span class="w"> </span><span class="nv">E</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">E</span><span class="kd">]</span><span class="o">.</span>
+<span class="c">% equivalent to:</span>
+of<span class="w"> </span><span class="nv">E</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>var<span class="w"> </span><span class="nv">E</span><span class="kd">,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(of<span class="w"> </span><span class="nv">E</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">E</span><span class="kd">]</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>The full set of <code class="docutils literal notranslate"><span class="pre">uvar</span></code> head patterns is in
+<a class="reference internal" href="../features/unification-and-variables.html"><span class="doc">Unification and variables</span></a>. The standalone <code class="docutils literal notranslate"><span class="pre">mode</span></code>
+directive, the older and separate way of
+marking arguments input or output, is described in <a class="reference internal" href="../compatibility.html"><span class="doc">Compatibility with Teyjus, Prolog and legacy Elpi</span></a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">declare_constraint</span></code> (<a class="reference internal" href="../syntax/constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>) is what
+turns a goal into a constraint. Its goal argument must itself be a <em>function</em>,
+needing a <code class="docutils literal notranslate"><span class="pre">func</span></code> signature, because a constraint that could be resumed in
+more than one way would make the search unpredictable once constraint handling
+rules start combining constraints.</p>
+</section>
+<section id="suspending-and-resuming">
+<h2>Suspending and resuming<a class="headerlink" href="#suspending-and-resuming" title="Link to this heading"></a></h2>
+<p>The list passed to <code class="docutils literal notranslate"><span class="pre">declare_constraint</span></code> is the constraint’s <em>trigger</em>: the
+variables whose assignment wakes it up. A constraint honours backtracking
+just as a plain unification assignment does: undoing the assignment that
+resumed a constraint suspends it again, as though nothing had happened.</p>
+<p><strong>../code/backtracking-constraints.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% The constraint store honours backtracking: an assignment made and then</span>
+<span class="linenos"> 2</span><span class="c">% undone leaves a resumed-and-reverted constraint exactly as it was.</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span><span class="kd">func</span><span class="w"> </span><span class="nf">even</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 5</span>even<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos"> 6</span>even<span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos"> 7</span>even<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="kd">,</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">-</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>even<span class="w"> </span><span class="nv">M</span><span class="o">.</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">10</span><span class="w">  </span>even<span class="w"> </span><span class="nv">Y</span><span class="kd">,</span>
+<span class="linenos">11</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;before:&quot;</span><span class="kd">,</span><span class="w"> </span>print_constraints<span class="kd">,</span>
+<span class="linenos">12</span><span class="w">  </span>(<span class="nv">Y</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="mi">3</span><span class="kd">,</span><span class="w"> </span>fail<span class="w"> </span><span class="kd">;</span><span class="w"> </span>true<span class="o">)</span><span class="kd">,</span><span class="w">        </span><span class="c">% assign, resume, fail (3 is not even), backtrack</span>
+<span class="linenos">13</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;after backtracking:&quot;</span><span class="kd">,</span><span class="w"> </span>print_constraints<span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">before:</span>
+<span class="go"> even X0  /* suspended on X0 */</span>
+<span class="go">after backtracking:</span>
+<span class="go"> even X0  /* suspended on X0 */</span>
+</pre></div>
+</div>
+<p>The STLC checker from <a class="reference internal" href="logic-programming-model.html"><span class="doc">Logic Programming</span></a>, with one rule added,
+closes the problem that chapter ended on: a hole in argument position now
+suspends instead of looping, and resumes when the hole is filled.</p>
+<p><strong>../code/holes.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% The STLC type checker from &quot;The logic programming model&quot;, now handling</span>
+<span class="linenos"> 2</span><span class="c">% incomplete terms: a hole in argument position suspends instead of looping.</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span><span class="kd">data</span><span class="w"> </span><span class="nf">tm</span>.
+<span class="linenos"> 5</span><span class="kd">data</span><span class="w"> </span><span class="nf">ty</span>.
+<span class="linenos"> 6</span><span class="kd">symb</span><span class="w"> </span><span class="nf">app</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos"> 7</span><span class="kd">symb</span><span class="w"> </span><span class="nf">lam</span><span class="w"> </span><span class="kt">(tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos"> 8</span><span class="kd">symb</span><span class="w"> </span><span class="nf">arr</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos"> 9</span>
+<span class="linenos">10</span><span class="kd">func</span><span class="w"> </span><span class="nf">of</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">ty</span>.
+<span class="linenos">11</span>of<span class="w"> </span>(app<span class="w"> </span><span class="nv">H</span><span class="w"> </span><span class="nv">A</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>of<span class="w"> </span><span class="nv">H</span><span class="w"> </span>(arr<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>of<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">S</span><span class="o">.</span>
+<span class="linenos">12</span>of<span class="w"> </span>(lam<span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span>(arr<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">c</span>\<span class="w"> </span>of<span class="w"> </span>c<span class="w"> </span><span class="nv">S</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>of<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>c<span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span>
+<span class="linenos">13</span>of<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">E</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>declare_constraint<span class="w"> </span>(of<span class="w"> </span><span class="nv">E</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">E</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos">14</span>
+<span class="linenos">15</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">16</span><span class="w">  </span>of<span class="w"> </span>(app<span class="w"> </span><span class="nv">H</span><span class="w"> </span><span class="nv">_A</span><span class="o">)</span><span class="w"> </span><span class="nv">_T</span><span class="kd">,</span><span class="w">      </span><span class="c">% H and A are holes: two constraints appear</span>
+<span class="linenos">17</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;before:&quot;</span><span class="kd">,</span><span class="w"> </span>print_constraints<span class="kd">,</span>
+<span class="linenos">18</span><span class="w">  </span><span class="nv">H</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>(lam<span class="w"> </span><span class="nv">x\</span><span class="w"> </span>x<span class="o">)</span><span class="kd">,</span><span class="w">        </span><span class="c">% filling one hole resumes its constraint</span>
+<span class="linenos">19</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;after:&quot;</span><span class="kd">,</span><span class="w"> </span>print_constraints<span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">before:</span>
+<span class="go"> of X0 X1  /* suspended on X0 */ of X2 (arr X1 X3)  /* suspended on X2 */</span>
+<span class="go">after:</span>
+<span class="go"> of X0 X1  /* suspended on X0 */</span>
+</pre></div>
+</div>
+</section>
+<section id="incompatible-constraints">
+<h2>Incompatible constraints<a class="headerlink" href="#incompatible-constraints" title="Link to this heading"></a></h2>
+<p>Suspending and resuming on their own are not quite enough. Asked about an
+unknown <code class="docutils literal notranslate"><span class="pre">N</span></code>, both <code class="docutils literal notranslate"><span class="pre">even</span> <span class="pre">N</span></code> and <code class="docutils literal notranslate"><span class="pre">odd</span> <span class="pre">N</span></code> suspend without complaint. Yet
+no number is both, so a goal that suspended the two of them should have
+failed.</p>
+<p><strong>../code/incompatible.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kd">func</span><span class="w"> </span><span class="nf">even</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 2</span>even<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(even<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos"> 3</span>even<span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos"> 4</span>even<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">-</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>even<span class="w"> </span><span class="nv">M</span><span class="o">.</span>
+<span class="linenos"> 5</span>
+<span class="linenos"> 6</span><span class="kd">func</span><span class="w"> </span><span class="nf">odd</span><span class="w"> </span><span class="kt">int</span>.
+<span class="linenos"> 7</span>odd<span class="w"> </span>(<span class="kd">uvar</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span>declare_constraint<span class="w"> </span>(odd<span class="w"> </span><span class="nv">X</span><span class="o">)</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">]</span><span class="o">.</span>
+<span class="linenos"> 8</span>odd<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos"> 9</span>odd<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">-</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span>odd<span class="w"> </span><span class="nv">M</span><span class="o">.</span>
+<span class="linenos">10</span>
+<span class="linenos">11</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>even<span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w"> </span>odd<span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w"> </span>print_constraints<span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">odd X0  /* suspended on X0 */ even X0  /* suspended on X0 */</span>
+</pre></div>
+</div>
+<p>Both constraints are accepted, quietly, side by side. The remedy is given in
+the next chapter (<a class="reference internal" href="chr.html"><span class="doc">The constraint store</span></a>).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="logic-programming-model.html" class="btn btn-neutral float-left" title="Logic Programming" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="chr.html" class="btn btn-neutral float-right" title="The constraint store" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

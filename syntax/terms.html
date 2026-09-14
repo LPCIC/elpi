@@ -1,0 +1,322 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Type declarations" href="type-declarations.html" />
+    <link rel="prev" title="Lexical conventions" href="lexical-conventions.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Terms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#application">Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#abstraction">λ-abstraction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#operators">Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lists">Lists</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#type-ascription">Type ascription</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#naming-a-subterm-with-as">Naming a subterm with <code class="docutils literal notranslate"><span class="pre">as</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#braces">Braces</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Terms</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/syntax/terms.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="terms">
+<h1>Terms<a class="headerlink" href="#terms" title="Link to this heading"></a></h1>
+<p>A term is Elpi’s data: the goals it runs, the rules it stores and the values
+it computes are all terms. A term is built from the tokens of
+<a class="reference internal" href="lexical-conventions.html"><span class="doc">Lexical conventions</span></a> (constants, unification variables, integers, floats
+and strings) by four constructions: application, λ-abstraction, operators and
+lists. Assembling terms into rules and queries is discussed in
+<a class="reference internal" href="inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>.</p>
+<section id="application">
+<h2>Application<a class="headerlink" href="#application" title="Link to this heading"></a></h2>
+<p>Application is written by juxtaposition, λ-calculus style: <code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">a</span> <span class="pre">b</span></code>, never
+<code class="docutils literal notranslate"><span class="pre">f(a,</span> <span class="pre">b)</span></code>. Longer examples are <code class="docutils literal notranslate"><span class="pre">node</span> <span class="pre">46</span> <span class="pre">(node</span> <span class="pre">93</span> <span class="pre">leaf</span> <span class="pre">leaf)</span> <span class="pre">leaf</span></code> and
+<code class="docutils literal notranslate"><span class="pre">F</span> <span class="pre">a</span> <span class="pre">b</span></code>, the latter with a unification variable in head position.</p>
+<p>The head of an application, its leftmost term, must be a constant or a
+unification variable. The parser rejects anything else, so <code class="docutils literal notranslate"><span class="pre">(x\</span> <span class="pre">t)</span> <span class="pre">a</span></code> is a
+syntax error, not a β-redex written by hand. β-redexes still occur, but only
+at run time, once a variable in head position has been bound to a
+λ-abstraction.</p>
+<p>Each argument is a single term: a literal or an identifier, or a <em>delimited</em>
+term (a list <code class="docutils literal notranslate"><span class="pre">[…]</span></code>, a spilled expression <code class="docutils literal notranslate"><span class="pre">{…}</span></code>, a quotation <code class="docutils literal notranslate"><span class="pre">{{…}}</span></code> or
+a parenthesised term). Nothing wider than that is an argument, so in <code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">g</span> <span class="pre">x</span></code>
+the head <code class="docutils literal notranslate"><span class="pre">f</span></code> is applied to the two separate arguments <code class="docutils literal notranslate"><span class="pre">g</span></code> and <code class="docutils literal notranslate"><span class="pre">x</span></code>;
+write <code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">(g</span> <span class="pre">x)</span></code> for the reading in which <code class="docutils literal notranslate"><span class="pre">g</span> <span class="pre">x</span></code> is one argument.</p>
+<p>Application binds tighter than every operator: <code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">a</span> <span class="pre">+</span> <span class="pre">g</span> <span class="pre">b</span></code> is
+<code class="docutils literal notranslate"><span class="pre">(f</span> <span class="pre">a)</span> <span class="pre">+</span> <span class="pre">(g</span> <span class="pre">b)</span></code>, not <code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">(a</span> <span class="pre">+</span> <span class="pre">g)</span> <span class="pre">b</span></code>.</p>
+<p>Parentheses only group; they build no term of their own, so <code class="docutils literal notranslate"><span class="pre">(f</span> <span class="pre">a</span> <span class="pre">b)</span></code> is
+the very same term as <code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">a</span> <span class="pre">b</span></code>. They are needed only to override the
+precedence of an operator, most often around <code class="docutils literal notranslate"><span class="pre">,</span></code> and <code class="docutils literal notranslate"><span class="pre">:-</span></code> in a rule
+body, see <a class="reference internal" href="inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>.</p>
+</section>
+<section id="abstraction">
+<h2>λ-abstraction<a class="headerlink" href="#abstraction" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">x\</span> <span class="pre">t</span></code> is the function that binds <code class="docutils literal notranslate"><span class="pre">x</span></code> in <code class="docutils literal notranslate"><span class="pre">t</span></code>. Because the <code class="docutils literal notranslate"><span class="pre">\</span></code>
+introduces the bound variable explicitly, its name may be capitalised without
+being read as a unification variable, so <code class="docutils literal notranslate"><span class="pre">X\</span> <span class="pre">X</span></code> is the identity function.
+The body extends as far to the right as possible, so <code class="docutils literal notranslate"><span class="pre">x\</span> <span class="pre">f</span> <span class="pre">x</span></code> is
+<code class="docutils literal notranslate"><span class="pre">x\</span> <span class="pre">(f</span> <span class="pre">x)</span></code>.</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="nv">x\</span><span class="w"> </span>x<span class="w">                   </span><span class="c">% identity</span>
+<span class="nv">x\</span><span class="w"> </span><span class="nv">y\</span><span class="w"> </span>x<span class="w">                </span><span class="c">% first projection</span>
+<span class="nv">f\</span><span class="w"> </span><span class="nv">a\</span><span class="w"> </span><span class="nv">b\</span><span class="w"> </span>f<span class="w"> </span>a<span class="w"> </span>b<span class="w">         </span><span class="c">% application, as a function</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">\</span></code> is always a token on its own: <code class="docutils literal notranslate"><span class="pre">x\t</span></code>, <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">\t</span></code> and <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">\</span> <span class="pre">t</span></code> are
+all the same. Each <code class="docutils literal notranslate"><span class="pre">\</span></code> binds one variable, so <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">y\</span> <span class="pre">z</span></code> reads
+<code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">(y\</span> <span class="pre">z)</span></code>, an application whose argument is a function. The <code class="docutils literal notranslate"><span class="pre">pi</span></code> and
+<code class="docutils literal notranslate"><span class="pre">sigma</span></code> quantifiers are the one exception: each takes several binders at
+once, so <code class="docutils literal notranslate"><span class="pre">pi</span> <span class="pre">x</span> <span class="pre">y\</span> <span class="pre">…</span></code> reads <code class="docutils literal notranslate"><span class="pre">pi</span> <span class="pre">x\</span> <span class="pre">pi</span> <span class="pre">y\</span> <span class="pre">…</span></code>. Binders, their scope, and how
+Elpi uses them to represent object-language binders are covered in
+<a class="reference internal" href="../features/binders-and-hoas.html"><span class="doc">Binders and HOAS</span></a>.</p>
+</section>
+<section id="operators">
+<h2>Operators<a class="headerlink" href="#operators" title="Link to this heading"></a></h2>
+<p>An infix, prefix or postfix operator is another notation for an application:
+<code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">+</span> <span class="pre">b</span></code> <em>is</em> the term <code class="docutils literal notranslate"><span class="pre">+</span> <span class="pre">a</span> <span class="pre">b</span></code>. Which symbols are operators, and with what
+precedence and associativity, is fixed by the language; the table is in
+<a class="reference internal" href="lexical-conventions.html"><span class="doc">Lexical conventions</span></a>. To use an operator as an ordinary constant, say to
+pass it as an argument or give it a rule, wrap it in parentheses. Here <code class="docutils literal notranslate"><span class="pre">(+)</span></code> is the bare constant behind <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">+</span> <span class="pre">b</span></code>, passed as the
+first argument of a higher-order <code class="docutils literal notranslate"><span class="pre">Apply</span></code>:</p>
+<p><strong>../code/apply.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="c">% An operator can be used as an ordinary constant by writing it (op).</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">4</span><span class="w">  </span><span class="nv">Apply</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>(<span class="nv">f\</span><span class="w"> </span><span class="nv">a\</span><span class="w"> </span><span class="nv">b\</span><span class="w"> </span>f<span class="w"> </span>a<span class="w"> </span>b<span class="o">)</span><span class="kd">,</span>
+<span class="linenos">5</span><span class="w">  </span><span class="nv">S</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">Apply</span><span class="w"> </span>(<span class="kd">+</span><span class="o">)</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="kd">,</span>
+<span class="linenos">6</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;the result is&quot;</span><span class="w"> </span><span class="nv">S</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">the result is 5</span>
+</pre></div>
+</div>
+</section>
+<section id="lists">
+<h2>Lists<a class="headerlink" href="#lists" title="Link to this heading"></a></h2>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">[]</span><span class="w">                </span><span class="c">% the empty list, also written  nil</span>
+<span class="kd">[</span>a<span class="kd">,</span><span class="w"> </span>b<span class="kd">,</span><span class="w"> </span>c<span class="kd">]</span><span class="w">         </span><span class="c">% a trailing comma is allowed:  [a, b, c,]</span>
+<span class="kd">[</span>a<span class="kd">,</span><span class="w"> </span>b<span class="w"> </span><span class="kd">|</span><span class="w"> </span><span class="nv">Tail</span><span class="kd">]</span><span class="w">     </span><span class="c">% a partial list: the elements a and b, then a tail</span>
+a<span class="w"> </span><span class="p">::</span><span class="w"> </span>b<span class="w"> </span><span class="p">::</span><span class="w"> </span><span class="kd">[]</span><span class="w">      </span><span class="c">% the same as [a, b];  ::  is also written  cons</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">[a,</span> <span class="pre">b,</span> <span class="pre">c]</span></code> is sugar for <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">::</span> <span class="pre">b</span> <span class="pre">::</span> <span class="pre">c</span> <span class="pre">::</span> <span class="pre">[]</span></code>, that is
+<code class="docutils literal notranslate"><span class="pre">cons</span> <span class="pre">a</span> <span class="pre">(cons</span> <span class="pre">b</span> <span class="pre">(cons</span> <span class="pre">c</span> <span class="pre">nil))</span></code>. The term after <code class="docutils literal notranslate"><span class="pre">|</span></code> is arbitrary: <code class="docutils literal notranslate"><span class="pre">[a</span> <span class="pre">|</span> <span class="pre">X]</span></code>
+is <code class="docutils literal notranslate"><span class="pre">cons</span> <span class="pre">a</span> <span class="pre">X</span></code>, and <code class="docutils literal notranslate"><span class="pre">X</span></code> need not be a list yet; it may be an unbound
+variable that a later goal fills in.</p>
+<p>Inside <code class="docutils literal notranslate"><span class="pre">[</span> <span class="pre">…</span> <span class="pre">]</span></code> a comma separates elements; it is not the conjunction
+operator. <code class="docutils literal notranslate"><span class="pre">[p</span> <span class="pre">X,</span> <span class="pre">q</span> <span class="pre">Y]</span></code> is a two-element list, whereas <code class="docutils literal notranslate"><span class="pre">[(p</span> <span class="pre">X,</span> <span class="pre">q</span> <span class="pre">Y)]</span></code> is a
+one-element list whose single element is a conjunction.</p>
+</section>
+<section id="type-ascription">
+<h2>Type ascription<a class="headerlink" href="#type-ascription" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">(t</span> <span class="pre">:</span> <span class="pre">ty)</span></code> annotates <code class="docutils literal notranslate"><span class="pre">t</span></code> with the type <code class="docutils literal notranslate"><span class="pre">ty</span></code>; the parentheses are part
+of the form. The annotation is read by the type checker and has no effect at
+run time. Its purpose is to resolve an overloaded name, or to pin down a
+polymorphic term the checker would otherwise leave ambiguous:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="nv">Empty</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>(<span class="kd">[]</span><span class="w"> </span><span class="p">:</span><span class="w"> </span>list<span class="w"> </span>int<span class="o">)</span>
+</pre></div>
+</div>
+<p>A binder may carry an ascription on the variable it introduces, and there the
+parentheses are dropped: <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">:</span> <span class="pre">ty\</span> <span class="pre">t</span></code> binds <code class="docutils literal notranslate"><span class="pre">x</span></code> at type <code class="docutils literal notranslate"><span class="pre">ty</span></code>, with body
+<code class="docutils literal notranslate"><span class="pre">t</span></code> (the <code class="docutils literal notranslate"><span class="pre">:</span></code> groups with the variable, not the body). Adding the
+parentheses, <code class="docutils literal notranslate"><span class="pre">(x</span> <span class="pre">:</span> <span class="pre">ty)\</span> <span class="pre">t</span></code>, is a parse error, since <code class="docutils literal notranslate"><span class="pre">(x</span> <span class="pre">:</span> <span class="pre">ty)</span></code> is then the
+cast form above, which is not a binder.</p>
+</section>
+<section id="naming-a-subterm-with-as">
+<h2>Naming a subterm with <code class="docutils literal notranslate"><span class="pre">as</span></code><a class="headerlink" href="#naming-a-subterm-with-as" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">(t</span> <span class="pre">as</span> <span class="pre">N)</span></code> binds <code class="docutils literal notranslate"><span class="pre">N</span></code> to the term <code class="docutils literal notranslate"><span class="pre">t</span></code>. The parentheses are required, and
+<code class="docutils literal notranslate"><span class="pre">as</span></code> takes everything to its left as <code class="docutils literal notranslate"><span class="pre">t</span></code>. It is used in a rule head to
+give a name to a part of the matched term, so the body can refer to that part
+without spelling it out a second time:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>sort<span class="w"> </span>(<span class="kd">[</span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">Y</span><span class="kd">]</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">L</span><span class="o">)</span><span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">&lt;</span><span class="w"> </span><span class="nv">Y</span><span class="o">.</span><span class="w">   </span><span class="c">% a two-element list, already sorted</span>
+</pre></div>
+</div>
+<p>Matching this head against a goal binds <code class="docutils literal notranslate"><span class="pre">L</span></code> to the whole first argument and,
+at the same time, <code class="docutils literal notranslate"><span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">Y</span></code> to its two elements.</p>
+</section>
+<section id="braces">
+<h2>Braces<a class="headerlink" href="#braces" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">t</span> <span class="pre">}</span></code> is <em>spilling</em>: it lifts the call <code class="docutils literal notranslate"><span class="pre">t</span></code> out of the term it sits in,
+runs it just before the enclosing goal, and leaves <code class="docutils literal notranslate"><span class="pre">t</span></code>’s output argument in
+its place. It is shorthand for functional-style code and is described in
+<a class="reference internal" href="../features/spilling.html"><span class="doc">Spilling</span></a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">t</span> <span class="pre">}}</span></code> is a <em>quotation</em>: custom syntax, delimited by the double braces,
+that a host application parses and turns into a term of its own choosing. See
+<a class="reference internal" href="../embedding.html"><span class="doc">Embedding and extending Elpi</span></a>.</p>
+<p>Application, a list term and a lambda term in one small program:</p>
+<p><strong>../code/terms.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Terms — a small sample.</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="kd">data</span><span class="w"> </span><span class="nf">tree</span>.
+<span class="linenos"> 4</span><span class="kd">symb</span><span class="w"> </span><span class="nf">leaf</span><span class="w"> </span><span class="kt">tree</span>.
+<span class="linenos"> 5</span><span class="kd">symb</span><span class="w"> </span><span class="nf">node</span><span class="w"> </span><span class="kt">tree</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tree</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tree</span>.
+<span class="linenos"> 6</span>
+<span class="linenos"> 7</span><span class="kd">pred</span><span class="w"> </span><span class="nf">leaves</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tree</span>,<span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">tree</span>.
+<span class="linenos"> 8</span>leaves<span class="w"> </span>leaf<span class="w"> </span><span class="kd">[</span>leaf<span class="kd">]</span><span class="o">.</span>
+<span class="linenos"> 9</span>leaves<span class="w"> </span>(node<span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">R</span><span class="o">)</span><span class="w"> </span><span class="nv">All</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>leaves<span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="nv">A</span><span class="kd">,</span><span class="w"> </span>leaves<span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="nv">B</span><span class="kd">,</span><span class="w"> </span>std.append<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">All</span><span class="o">.</span>
+<span class="linenos">10</span>
+<span class="linenos">11</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">12</span><span class="w">  </span><span class="nv">T</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>node<span class="w"> </span>(node<span class="w"> </span>leaf<span class="w"> </span>leaf<span class="o">)</span><span class="w"> </span>leaf<span class="kd">,</span><span class="w">   </span><span class="c">% application: node applied to two trees</span>
+<span class="linenos">13</span><span class="w">  </span>leaves<span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">Ls</span><span class="kd">,</span><span class="w">                      </span><span class="c">% Ls is a list term</span>
+<span class="linenos">14</span><span class="w">  </span>std.length<span class="w"> </span><span class="nv">Ls</span><span class="w"> </span><span class="nv">N</span><span class="kd">,</span>
+<span class="linenos">15</span><span class="w">  </span><span class="nv">Twice</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>(<span class="nv">x\</span><span class="w"> </span><span class="kd">[</span>x<span class="kd">,</span><span class="w"> </span>x<span class="kd">]</span><span class="o">)</span><span class="kd">,</span><span class="w">              </span><span class="c">% a lambda term</span>
+<span class="linenos">16</span><span class="w">  </span><span class="nv">Twice</span><span class="w"> </span>leaf<span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">Pair</span><span class="kd">,</span><span class="w">                </span><span class="c">% applied to leaf -&gt; [leaf, leaf]</span>
+<span class="linenos">17</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;leaves:&quot;</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="s2">&quot;pair:&quot;</span><span class="w"> </span><span class="nv">Pair</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">leaves: 3 pair: [leaf, leaf]</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="lexical-conventions.html" class="btn btn-neutral float-left" title="Lexical conventions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="type-declarations.html" class="btn btn-neutral float-right" title="Type declarations" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

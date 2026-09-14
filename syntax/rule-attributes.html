@@ -1,0 +1,297 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rule attributes &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Elpi = λProlog + CHR" href="../semantics/overview.html" />
+    <link rel="prev" title="File structure and attributes" href="file-structure-and-attributes.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Rule attributes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#grafting">Grafting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#conditional-compilation">Conditional compilation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#lexer-directives">Lexer directives</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#suppressing-the-type-checker">Suppressing the type checker</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Rule attributes</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/syntax/rule-attributes.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="rule-attributes">
+<h1>Rule attributes<a class="headerlink" href="#rule-attributes" title="Link to this heading"></a></h1>
+<p>An attribute decorates a single rule (a fact or a <code class="docutils literal notranslate"><span class="pre">head</span> <span class="pre">:-</span> <span class="pre">body</span></code>) with
+information the compiler acts on before the program runs: where the rule sits
+among its predicate’s alternatives, whether it is kept at all, whether the
+type checker inspects it. An attribute is written <code class="docutils literal notranslate"><span class="pre">:</span></code>-prefixed before the
+rule and may sit on its own line; several may be stacked.</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="k k-Mode">:name</span><span class="w"> </span><span class="s2">&quot;step&quot;</span><span class="w"> </span><span class="k k-Mode">:if</span><span class="w"> </span><span class="s2">&quot;DEBUG&quot;</span>
+step<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="o">...</span>
+</pre></div>
+</div>
+<p>Attributes that describe a <em>predicate</em> rather than one of its rules
+(<code class="docutils literal notranslate"><span class="pre">:index</span></code>, <code class="docutils literal notranslate"><span class="pre">:functional</span></code>, <code class="docutils literal notranslate"><span class="pre">:external</span></code>) go on the <code class="docutils literal notranslate"><span class="pre">pred</span></code> / <code class="docutils literal notranslate"><span class="pre">func</span></code>
+signature instead (<a class="reference internal" href="type-declarations.html"><span class="doc">Type declarations</span></a>).</p>
+<section id="grafting">
+<h2>Grafting<a class="headerlink" href="#grafting" title="Link to this heading"></a></h2>
+<p>Five attributes place a rule relative to the others of its predicate:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">:name</span> <span class="pre">&quot;N&quot;</span></code> gives the rule a stable name, used for grafting and in trace
+output.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">:before</span> <span class="pre">&quot;N&quot;</span></code> / <code class="docutils literal notranslate"><span class="pre">:after</span> <span class="pre">&quot;N&quot;</span></code> insert the rule immediately before or after
+the rule named <code class="docutils literal notranslate"><span class="pre">N</span></code>, instead of at the end of the predicate’s rules.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">:replace</span> <span class="pre">&quot;N&quot;</span></code> / <code class="docutils literal notranslate"><span class="pre">:remove</span> <span class="pre">&quot;N&quot;</span></code> swap out or delete the rule named <code class="docutils literal notranslate"><span class="pre">N</span></code>.</p></li>
+</ul>
+<p>Grafting lets code accumulated later change what a library does without
+touching the library file. The library gives a rule a stable name (a “fatal
+error” or “default handler” rule is the usual candidate), and a client
+accumulated afterwards grafts its own rule in front:</p>
+<p><strong>../code/grafting.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% A library rule, named so client code can graft in front of it.</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="kd">pred</span><span class="w"> </span><span class="nf">report</span><span class="w"> </span><span class="kt">string</span>.
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="k k-Mode">:name</span><span class="w"> </span><span class="s2">&quot;default-report&quot;</span>
+<span class="linenos"> 6</span>report<span class="w"> </span><span class="nv">Msg</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;default:&quot;</span><span class="w"> </span><span class="nv">Msg</span><span class="o">.</span>
+<span class="linenos"> 7</span>
+<span class="linenos"> 8</span><span class="c">% accumulated after the library, this rule takes over for good</span>
+<span class="linenos"> 9</span><span class="k k-Mode">:name</span><span class="w"> </span><span class="s2">&quot;custom-report&quot;</span><span class="w"> </span><span class="k k-Mode">:before</span><span class="w"> </span><span class="s2">&quot;default-report&quot;</span>
+<span class="linenos">10</span>report<span class="w"> </span><span class="nv">Msg</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;custom:&quot;</span><span class="w"> </span><span class="nv">Msg</span><span class="kd">,</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos">11</span>
+<span class="linenos">12</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>report<span class="w"> </span><span class="s2">&quot;hello&quot;</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">custom: hello</span>
+</pre></div>
+</div>
+<p>Once <code class="docutils literal notranslate"><span class="pre">custom-report</span></code> cuts, <code class="docutils literal notranslate"><span class="pre">default-report</span></code> is never tried for that call;
+without the cut both would run on backtracking. <code class="docutils literal notranslate"><span class="pre">:after</span></code> inserts the other
+way round.</p>
+<p><code class="docutils literal notranslate"><span class="pre">:replace</span></code> and <code class="docutils literal notranslate"><span class="pre">:remove</span></code> act only on a rule of the <em>same</em> predicate.
+Naming another predicate’s rule is a hard error (“cannot remove a clause for
+another predicate”), so a typo in the name string fails loudly instead of
+doing nothing silently. The replacing or removed rule may not itself carry
+<code class="docutils literal notranslate"><span class="pre">:name</span></code>: allowing it would make the outcome depend on the order in which two
+files that both replace the same rule are accumulated.</p>
+</section>
+<section id="conditional-compilation">
+<h2>Conditional compilation<a class="headerlink" href="#conditional-compilation" title="Link to this heading"></a></h2>
+<p>A rule marked <code class="docutils literal notranslate"><span class="pre">:if</span> <span class="pre">&quot;NAME&quot;</span></code> is part of the program only when the compiler
+variable <code class="docutils literal notranslate"><span class="pre">NAME</span></code> is defined; otherwise it is dropped as though never written,
+with no trace at run time. <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-D</span> <span class="pre">NAME</span></code> (repeatable) defines one. The name
+is an arbitrary string, not tied to any predicate. The typical use is a
+debug-only rule, silent unless <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> is set:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>elpi<span class="w"> </span>conditional.elpi<span class="w"> </span>-test<span class="w"> </span>-D<span class="w"> </span>DEBUG
+<span class="go">[debug] checkpoint 1</span>
+<span class="go">done</span>
+</pre></div>
+</div>
+<p><strong>../code/conditional.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% A debug-only rule: present in the program, but only fires when the</span>
+<span class="linenos"> 2</span><span class="c">% compiler variable DEBUG is defined (run with `elpi conditional.elpi -test</span>
+<span class="linenos"> 3</span><span class="c">% -D DEBUG` to see it fire).</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">func</span><span class="w"> </span><span class="nf">trace</span><span class="w"> </span><span class="kt">string</span>.
+<span class="linenos"> 6</span>
+<span class="linenos"> 7</span><span class="k k-Mode">:if</span><span class="w"> </span><span class="s2">&quot;DEBUG&quot;</span>
+<span class="linenos"> 8</span>trace<span class="w"> </span><span class="nv">Msg</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;[debug]&quot;</span><span class="w"> </span><span class="nv">Msg</span><span class="kd">,</span><span class="w"> </span><span class="kd">!</span><span class="o">.</span>
+<span class="linenos"> 9</span>trace<span class="w"> </span><span class="nv">_</span><span class="o">.</span>
+<span class="linenos">10</span>
+<span class="linenos">11</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>trace<span class="w"> </span><span class="s2">&quot;checkpoint 1&quot;</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;done&quot;</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">done</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">:if</span></code> also works on CHR rules (<a class="reference internal" href="constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>).</p>
+<section id="lexer-directives">
+<h3>Lexer directives<a class="headerlink" href="#lexer-directives" title="Link to this heading"></a></h3>
+<p>Two directives are read by the lexer, before parsing, as <code class="docutils literal notranslate"><span class="pre">%</span></code> line comments:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>% elpi:if version &lt; 2.0.0
+text kept only for Elpi older than 2.0.0
+% elpi:endif
+
+% elpi:skip 2
+infixr ==&gt; 120.       % two lines Elpi should ignore (e.g. Teyjus directives)
+infixr &lt;== 120.
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">%</span> <span class="pre">elpi:if</span></code> takes a single <code class="docutils literal notranslate"><span class="pre">version</span> <span class="pre">&lt;component&gt;</span> <span class="pre">&lt;op&gt;</span> <span class="pre">X.Y.Z</span></code> test
+(<code class="docutils literal notranslate"><span class="pre">&lt;component&gt;</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">elpi</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;op&gt;</span></code> is one of <code class="docutils literal notranslate"><span class="pre">&lt;</span> <span class="pre">&gt;</span> <span class="pre">=</span> <span class="pre">&lt;=</span> <span class="pre">&gt;=</span></code>) and
+cannot be nested; <code class="docutils literal notranslate"><span class="pre">%</span> <span class="pre">elpi:skip</span> <span class="pre">N</span></code> drops the next <code class="docutils literal notranslate"><span class="pre">N</span></code> lines unconditionally.</p>
+<p>The default <code class="docutils literal notranslate"><span class="pre">elpi</span></code> component is compared against Elpi’s own version. Any
+other component name is compared against a version the host registers through
+<code class="docutils literal notranslate"><span class="pre">?versions</span></code> on <code class="docutils literal notranslate"><span class="pre">API.Setup.init</span></code> (<a class="reference internal" href="../embedding.html"><span class="doc">Embedding and extending Elpi</span></a>), a map from name to
+a <code class="docutils literal notranslate"><span class="pre">(major,</span> <span class="pre">minor,</span> <span class="pre">patch)</span></code> triple; an unregistered name is a lexer error.
+coq-elpi registers <code class="docutils literal notranslate"><span class="pre">coq</span></code> this way, so <code class="docutils literal notranslate"><span class="pre">.elpi</span></code> files it loads can guard on
+the Rocq version with <code class="docutils literal notranslate"><span class="pre">%</span> <span class="pre">elpi:if</span> <span class="pre">version</span> <span class="pre">coq</span> <span class="pre">&gt;=</span> <span class="pre">X.Y.Z</span></code>.</p>
+<p>Unlike <code class="docutils literal notranslate"><span class="pre">:if</span></code>, these act on <em>text</em> rather than rules, which is what lets them
+hide syntax Elpi itself does not accept, such as a directive meant for Teyjus
+kept in a file the two interpreters share.</p>
+</section>
+</section>
+<section id="suppressing-the-type-checker">
+<h2>Suppressing the type checker<a class="headerlink" href="#suppressing-the-type-checker" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">:untyped</span></code> turns the type checker off for one rule. It is a last resort, for
+a rule the checker cannot be taught to accept, usually one that builds terms
+too dynamically for any signature to describe. Prefer fixing the signature, or
+widening an argument to <code class="docutils literal notranslate"><span class="pre">any</span></code> (<a class="reference internal" href="type-declarations.html"><span class="doc">Type declarations</span></a>); at a single spot,
+the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L665"><code class="docutils literal notranslate"><span class="pre">std.unsafe-cast</span></code></a> (<code class="docutils literal notranslate"><span class="pre">func</span> <span class="pre">unsafe-cast</span> <span class="pre">A</span> <span class="pre">-&gt;</span> <span class="pre">B</span></code>, itself
+a <code class="docutils literal notranslate"><span class="pre">:untyped</span></code> rule) coerces one term without disarming the checker over the
+whole rule. Reach for <code class="docutils literal notranslate"><span class="pre">:untyped</span></code> only when none of these works. An untyped
+rule also loses the features that depend on type information: in particular
+spilling (<code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">…</span> <span class="pre">}</span></code>, <a class="reference internal" href="../features/spilling.html"><span class="doc">Spilling</span></a>) is not expanded inside it.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="file-structure-and-attributes.html" class="btn btn-neutral float-left" title="File structure and attributes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../semantics/overview.html" class="btn btn-neutral float-right" title="Elpi = λProlog + CHR" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

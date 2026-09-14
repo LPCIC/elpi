@@ -1,0 +1,320 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Embedding and extending Elpi &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Compatibility with Teyjus, Prolog and legacy Elpi" href="compatibility.html" />
+    <link rel="prev" title="Debugging and tracing" href="debugging-and-tracing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Embedding and extending Elpi</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#embedding">Embedding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#extending-a-builtin-written-in-ocaml">Extending: a builtin written in OCaml</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#extending-a-quotation">Extending: a quotation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#also-worth-knowing">Also worth knowing</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Embedding and extending Elpi</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/embedding.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="embedding-and-extending-elpi">
+<h1>Embedding and extending Elpi<a class="headerlink" href="#embedding-and-extending-elpi" title="Link to this heading"></a></h1>
+<p>Elpi is a library first: the <code class="docutils literal notranslate"><span class="pre">elpi</span></code> command-line tool
+(<a class="reference internal" href="getting-started.html"><span class="doc">Getting started</span></a>) is itself a thin client of the <code class="docutils literal notranslate"><span class="pre">elpi</span></code> OCaml
+package, and every host application, from a five-line script to coq-elpi (the
+largest one), drives the same API.</p>
+<section id="embedding">
+<h2>Embedding<a class="headerlink" href="#embedding" title="Link to this heading"></a></h2>
+<p>Link with <code class="docutils literal notranslate"><span class="pre">ocamlfind</span></code> (<code class="docutils literal notranslate"><span class="pre">-package</span> <span class="pre">elpi</span></code>) or dune (<code class="docutils literal notranslate"><span class="pre">(libraries</span> <span class="pre">elpi)</span></code>).
+Driving the interpreter is a handful of calls, in order: <code class="docutils literal notranslate"><span class="pre">Setup.init</span></code>
+builds an interpreter equipped with a set of builtins; <code class="docutils literal notranslate"><span class="pre">Parse.program</span></code> and
+<code class="docutils literal notranslate"><span class="pre">Parse.goal</span></code> read a program and a query from source text;
+<code class="docutils literal notranslate"><span class="pre">Compile.program</span></code>, <code class="docutils literal notranslate"><span class="pre">Compile.query</span></code> and <code class="docutils literal notranslate"><span class="pre">Compile.optimize</span></code> produce a
+runnable executable; <code class="docutils literal notranslate"><span class="pre">Execute.once</span></code> (or <code class="docutils literal notranslate"><span class="pre">Execute.loop</span></code>, for a REPL) runs
+it. <code class="docutils literal notranslate"><span class="pre">elpi_REPL.ml</span></code>, the source of the <code class="docutils literal notranslate"><span class="pre">elpi</span></code> command itself, is the
+canonical minimal client: every flag aside, it is this sequence.</p>
+</section>
+<section id="extending-a-builtin-written-in-ocaml">
+<h2>Extending: a builtin written in OCaml<a class="headerlink" href="#extending-a-builtin-written-in-ocaml" title="Link to this heading"></a></h2>
+<p>The FFI shape of a builtin is <code class="docutils literal notranslate"><span class="pre">MLCode</span> <span class="pre">(Pred</span> <span class="pre">(name,</span> <span class="pre">signature,</span> <span class="pre">function),</span>
+<span class="pre">doc)</span></code>: <code class="docutils literal notranslate"><span class="pre">signature</span></code> describes each argument with <code class="docutils literal notranslate"><span class="pre">In</span></code>/<code class="docutils literal notranslate"><span class="pre">Out</span></code>/<code class="docutils literal notranslate"><span class="pre">InOut</span></code>
+(direction) and a <em>conversion</em> (how an Elpi term becomes an OCaml value and
+back: <code class="docutils literal notranslate"><span class="pre">string</span></code>, <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">list</span></code>, <code class="docutils literal notranslate"><span class="pre">BuiltInData.any</span></code>, or one of your
+own), and the OCaml function receives the <code class="docutils literal notranslate"><span class="pre">In</span></code>/<code class="docutils literal notranslate"><span class="pre">InOut</span></code> arguments already
+converted and returns the <code class="docutils literal notranslate"><span class="pre">Out</span></code>/<code class="docutils literal notranslate"><span class="pre">InOut</span></code> ones. <code class="docutils literal notranslate"><span class="pre">sys.file_exists</span></code>, one of
+the simplest real builtins in Elpi’s own standard library, needs only one
+<code class="docutils literal notranslate"><span class="pre">In</span></code> and no output at all: its two outcomes are to succeed (return <code class="docutils literal notranslate"><span class="pre">()</span></code>)
+or to fail by raising <code class="docutils literal notranslate"><span class="pre">No_clause</span></code> (an <em>output</em> argument that may or may not
+be produced is wrapped with the <code class="docutils literal notranslate"><span class="pre">!:</span></code> / <code class="docutils literal notranslate"><span class="pre">?:</span></code> notation instead; see
+<code class="docutils literal notranslate"><span class="pre">BuiltInPredicate.Notation</span></code> in the API for the details):</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span>  <span class="nc">MLCode</span> <span class="o">(</span><span class="nc">Pred</span> <span class="o">(</span><span class="s2">&quot;sys.file_exists&quot;</span><span class="o">,</span>
+    <span class="nc">In</span>  <span class="o">(</span><span class="kt">string</span><span class="o">,</span> <span class="s2">&quot;Path&quot;</span><span class="o">,</span>
+    <span class="nc">Easy</span> <span class="s2">&quot;is like [Sys.file_exists]. It succeeds if the file at [Path] exists&quot;</span><span class="o">),</span>
+  <span class="o">(</span><span class="k">fun</span> <span class="n">path</span> <span class="o">~</span><span class="n">depth</span><span class="o">:_</span> <span class="o">-&gt;</span>
+    <span class="k">match</span> <span class="nn">Sys</span><span class="p">.</span><span class="n">file_exists</span> <span class="n">path</span> <span class="k">with</span>
+    <span class="o">|</span> <span class="bp">true</span> <span class="o">-&gt;</span> <span class="bp">()</span>
+    <span class="o">|</span> <span class="bp">false</span> <span class="o">-&gt;</span> <span class="k">raise</span> <span class="nc">No_clause</span>
+    <span class="o">|</span> <span class="k">exception</span> <span class="nc">Sys_error</span> <span class="n">e</span> <span class="o">-&gt;</span>
+      <span class="c">(* No recoverable errors are produced by Sys.file_exists *)</span>
+      <span class="nn">Utils</span><span class="p">.</span><span class="n">error</span> <span class="o">(</span><span class="s2">&quot;file_exists: &quot;</span> <span class="o">^</span> <span class="n">e</span><span class="o">))),</span>
+</pre></div>
+</div>
+<p>A declaration list, built with <code class="docutils literal notranslate"><span class="pre">BuiltIn.declare</span> <span class="pre">~file_name</span></code>, bundles one or
+more such predicates (and, optionally, plain doc strings or Elpi source via
+<code class="docutils literal notranslate"><span class="pre">LPDoc</span></code>/<code class="docutils literal notranslate"><span class="pre">LPCode</span></code>) into a <code class="docutils literal notranslate"><span class="pre">Setup.builtins</span></code> value, the same kind of
+value as <code class="docutils literal notranslate"><span class="pre">Elpi.Builtin.std_builtins</span></code>, and passed to <code class="docutils literal notranslate"><span class="pre">Setup.init</span></code> the same
+way, in a list alongside it:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="c">(* A minimal Elpi embedding: registers one custom builtin (sys.file_exists,</span>
+<span class="c">   the same implementation as builtin.ml&#39;s own, shown above) alongside the</span>
+<span class="c">   standard library, then parses, compiles and runs a program&#39;s main goal. *)</span>
+
+<span class="k">module</span> <span class="nc">E</span> <span class="o">=</span> <span class="nn">Elpi</span><span class="p">.</span><span class="nc">API</span>
+
+<span class="k">let</span> <span class="n">my_builtins</span> <span class="o">=</span>
+  <span class="k">let</span> <span class="k">open</span> <span class="nn">E</span><span class="p">.</span><span class="nc">BuiltIn</span> <span class="k">in</span>
+  <span class="k">let</span> <span class="k">open</span> <span class="nn">E</span><span class="p">.</span><span class="nc">BuiltInPredicate</span> <span class="k">in</span>
+  <span class="k">let</span> <span class="k">open</span> <span class="nn">E</span><span class="p">.</span><span class="nc">BuiltInData</span> <span class="k">in</span>
+  <span class="n">declare</span> <span class="o">~</span><span class="n">file_name</span><span class="o">:</span><span class="s2">&quot;my_builtins.elpi&quot;</span> <span class="o">[</span>
+    <span class="nc">MLCode</span> <span class="o">(</span><span class="nc">Pred</span> <span class="o">(</span><span class="s2">&quot;sys.file_exists&quot;</span><span class="o">,</span>
+      <span class="nc">In</span>  <span class="o">(</span><span class="kt">string</span><span class="o">,</span> <span class="s2">&quot;Path&quot;</span><span class="o">,</span>
+      <span class="nc">Easy</span> <span class="s2">&quot;is like [Sys.file_exists]. It succeeds if the file at [Path] exists&quot;</span><span class="o">),</span>
+    <span class="o">(</span><span class="k">fun</span> <span class="n">path</span> <span class="o">~</span><span class="n">depth</span><span class="o">:_</span> <span class="o">-&gt;</span>
+      <span class="k">match</span> <span class="nn">Sys</span><span class="p">.</span><span class="n">file_exists</span> <span class="n">path</span> <span class="k">with</span>
+      <span class="o">|</span> <span class="bp">true</span> <span class="o">-&gt;</span> <span class="bp">()</span>
+      <span class="o">|</span> <span class="bp">false</span> <span class="o">-&gt;</span> <span class="k">raise</span> <span class="nc">No_clause</span>
+      <span class="o">|</span> <span class="k">exception</span> <span class="nc">Sys_error</span> <span class="n">e</span> <span class="o">-&gt;</span>
+        <span class="c">(* No recoverable errors are produced by Sys.file_exists *)</span>
+        <span class="nn">E</span><span class="p">.</span><span class="nn">Utils</span><span class="p">.</span><span class="n">error</span> <span class="o">(</span><span class="s2">&quot;file_exists: &quot;</span> <span class="o">^</span> <span class="n">e</span><span class="o">))),</span>
+    <span class="nc">DocAbove</span><span class="o">);</span>
+  <span class="o">]</span>
+
+<span class="k">let</span> <span class="bp">()</span> <span class="o">=</span>
+  <span class="k">let</span> <span class="n">elpi</span> <span class="o">=</span>
+    <span class="nn">E</span><span class="p">.</span><span class="nn">Setup</span><span class="p">.</span><span class="n">init</span>
+      <span class="o">~</span><span class="n">builtins</span><span class="o">:[</span><span class="nn">Elpi</span><span class="p">.</span><span class="nn">Builtin</span><span class="p">.</span><span class="n">std_builtins</span><span class="o">;</span> <span class="n">my_builtins</span><span class="o">]</span>
+      <span class="o">~</span><span class="n">file_resolver</span><span class="o">:(</span><span class="nn">E</span><span class="p">.</span><span class="nn">Parse</span><span class="p">.</span><span class="n">std_resolver</span> <span class="o">~</span><span class="n">paths</span><span class="o">:</span><span class="bp">[]</span> <span class="bp">()</span><span class="o">)</span>
+      <span class="bp">()</span> <span class="k">in</span>
+  <span class="k">let</span> <span class="n">program</span> <span class="o">=</span> <span class="nn">E</span><span class="p">.</span><span class="nn">Parse</span><span class="p">.</span><span class="n">program</span> <span class="o">~</span><span class="n">elpi</span> <span class="o">~</span><span class="n">file</span><span class="o">:</span><span class="s2">&quot;my_program.elpi&quot;</span> <span class="k">in</span>
+  <span class="k">let</span> <span class="n">goal</span> <span class="o">=</span> <span class="nn">E</span><span class="p">.</span><span class="nn">Parse</span><span class="p">.</span><span class="n">goal</span> <span class="o">~</span><span class="n">elpi</span> <span class="o">~</span><span class="n">loc</span><span class="o">:(</span><span class="nn">E</span><span class="p">.</span><span class="nn">Ast</span><span class="p">.</span><span class="nn">Loc</span><span class="p">.</span><span class="n">initial</span> <span class="s2">&quot;cli&quot;</span><span class="o">)</span> <span class="o">~</span><span class="n">text</span><span class="o">:</span><span class="s2">&quot;main.&quot;</span> <span class="k">in</span>
+  <span class="k">let</span> <span class="n">prog</span> <span class="o">=</span> <span class="nn">E</span><span class="p">.</span><span class="nn">Compile</span><span class="p">.</span><span class="n">program</span> <span class="o">~</span><span class="n">flags</span><span class="o">:</span><span class="nn">E</span><span class="p">.</span><span class="nn">Compile</span><span class="p">.</span><span class="n">default_flags</span> <span class="o">~</span><span class="n">elpi</span> <span class="n">program</span> <span class="k">in</span>
+  <span class="k">let</span> <span class="n">executable</span> <span class="o">=</span> <span class="nn">E</span><span class="p">.</span><span class="nn">Compile</span><span class="p">.</span><span class="n">optimize</span> <span class="o">(</span><span class="nn">E</span><span class="p">.</span><span class="nn">Compile</span><span class="p">.</span><span class="n">query</span> <span class="n">prog</span> <span class="n">goal</span><span class="o">)</span> <span class="k">in</span>
+  <span class="k">match</span> <span class="nn">E</span><span class="p">.</span><span class="nn">Execute</span><span class="p">.</span><span class="n">once</span> <span class="n">executable</span> <span class="k">with</span>
+  <span class="o">|</span> <span class="nn">E</span><span class="p">.</span><span class="nn">Execute</span><span class="p">.</span><span class="nc">Success</span> <span class="o">_</span> <span class="o">-&gt;</span> <span class="n">print_endline</span> <span class="s2">&quot;Success&quot;</span>
+  <span class="o">|</span> <span class="nn">E</span><span class="p">.</span><span class="nn">Execute</span><span class="p">.</span><span class="nc">Failure</span> <span class="o">-&gt;</span> <span class="n">print_endline</span> <span class="s2">&quot;Failure&quot;</span>
+  <span class="o">|</span> <span class="nn">E</span><span class="p">.</span><span class="nn">Execute</span><span class="p">.</span><span class="nc">NoMoreSteps</span> <span class="o">-&gt;</span> <span class="n">print_endline</span> <span class="s2">&quot;NoMoreSteps&quot;</span>
+</pre></div>
+</div>
+<p>Once <code class="docutils literal notranslate"><span class="pre">my_builtins.elpi</span></code> accumulates automatically wherever <code class="docutils literal notranslate"><span class="pre">my_builtins</span></code>
+is passed to <code class="docutils literal notranslate"><span class="pre">Setup.init</span></code>, <code class="docutils literal notranslate"><span class="pre">my_program.elpi</span></code> can call <code class="docutils literal notranslate"><span class="pre">sys.file_exists</span></code>
+like any other predicate, with no further wiring on the Elpi side.</p>
+</section>
+<section id="extending-a-quotation">
+<h2>Extending: a quotation<a class="headerlink" href="#extending-a-quotation" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">…</span> <span class="pre">}}</span></code> (the <em>default</em> quotation) and <code class="docutils literal notranslate"><span class="pre">{{:name</span> <span class="pre">…</span> <span class="pre">}}</span></code> (a <em>named</em> one,
+<code class="docutils literal notranslate"><span class="pre">name</span></code> any run of non-space characters) let a term be written in a
+different, custom syntax and turned into an Elpi term at compile time
+(<a class="reference internal" href="syntax/terms.html"><span class="doc">Terms</span></a>). A quotation is not built in: the host registers each
+one through <code class="docutils literal notranslate"><span class="pre">API.Quotation.set_default_quotation</span></code> or
+<code class="docutils literal notranslate"><span class="pre">register_named_quotation</span></code>, giving Elpi a parser from source text to a term.
+With none registered, <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">…</span> <span class="pre">}}</span></code> is the compile-time error “No default
+quotation”.</p>
+<p>For its own testing the <code class="docutils literal notranslate"><span class="pre">elpi</span></code> command-line tool registers one named
+quotation, also called <code class="docutils literal notranslate"><span class="pre">elpi</span></code>, whose custom syntax is Elpi syntax itself: it
+parses the quoted text as an ordinary term and hands it back unevaluated. That
+is enough to show the mechanism, foreign-looking source turning into a term
+the surrounding program can inspect and build on, even with Elpi standing in
+for the foreign language:</p>
+<p><strong>code/quotation.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="c">% elpi_REPL.exe registers one named quotation, &quot;elpi&quot;, for testing: it</span>
+<span class="linenos">2</span><span class="c">% parses its content as Elpi syntax and hands back the resulting term</span>
+<span class="linenos">3</span><span class="c">% unevaluated. A host application registers its own quotations (for its own</span>
+<span class="linenos">4</span><span class="c">% object language) through the OCaml API instead.</span>
+<span class="linenos">5</span>
+<span class="linenos">6</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="p">{{</span>:elpi 1 + 2 <span class="p">}}</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">X</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">1 + 2</span>
+</pre></div>
+</div>
+<p>A quotation can also embed a piece of the surrounding Elpi program inside the
+foreign syntax, an <em>antiquotation</em>. There is no fixed antiquotation syntax; it
+is whatever the quotation’s own parser recognises. coq-elpi quotes Rocq’s term
+syntax and antiquotes back to Elpi with an <code class="docutils literal notranslate"><span class="pre">lp:</span></code> prefix, so that in
+<code class="docutils literal notranslate"><span class="pre">prod</span> <span class="pre">&quot;x&quot;</span> <span class="pre">t</span> <span class="pre">x\</span> <span class="pre">{{</span> <span class="pre">nat</span> <span class="pre">-&gt;</span> <span class="pre">lp:x</span> <span class="pre">*</span> <span class="pre">bool</span> <span class="pre">}}</span></code> the <code class="docutils literal notranslate"><span class="pre">lp:x</span></code> splices the
+just-bound Elpi variable <code class="docutils literal notranslate"><span class="pre">x</span></code> into the quoted Rocq term.</p>
+</section>
+<section id="also-worth-knowing">
+<h2>Also worth knowing<a class="headerlink" href="#also-worth-knowing" title="Link to this heading"></a></h2>
+<p>A <strong>custom data type</strong>, an OCaml value that should look like a plain Elpi
+term rather than being converted through <code class="docutils literal notranslate"><span class="pre">string</span></code>/<code class="docutils literal notranslate"><span class="pre">int</span></code>/<code class="docutils literal notranslate"><span class="pre">list</span></code>, is
+declared with <code class="docutils literal notranslate"><span class="pre">MLData:</span> <span class="pre">'a</span> <span class="pre">Conversion.t</span> <span class="pre">-&gt;</span> <span class="pre">declaration</span></code>, giving Elpi a pair
+of functions to read a term back into the OCaml value and to embed it as a
+term. <strong>Extensible state</strong>, data threaded through compilation and execution
+that is not itself an Elpi term, such as a symbol table built while
+compiling, is a <code class="docutils literal notranslate"><span class="pre">State.component</span></code>, declared with
+<code class="docutils literal notranslate"><span class="pre">API.State.declare_component</span></code> and read and written through the <code class="docutils literal notranslate"><span class="pre">state</span></code>
+value every advanced FFI hook (<code class="docutils literal notranslate"><span class="pre">Full</span></code>, <code class="docutils literal notranslate"><span class="pre">Read</span></code>, …) receives.</p>
+<p>The odoc <strong>API reference</strong> (linked from this manual’s sidebar) is the
+complete signature of every module mentioned here. Its landing page lists
+several libraries; only <code class="docutils literal notranslate"><span class="pre">elpi</span></code> (the <code class="docutils literal notranslate"><span class="pre">Elpi.API</span></code> module used throughout
+this chapter) is the public, supported one. The others,
+<code class="docutils literal notranslate"><span class="pre">elpi.compiler</span></code>, <code class="docutils literal notranslate"><span class="pre">elpi.parser</span></code>, <code class="docutils literal notranslate"><span class="pre">elpi.runtime</span></code>, <code class="docutils literal notranslate"><span class="pre">elpi.util</span></code>,
+<code class="docutils literal notranslate"><span class="pre">elpi.lexer_config</span></code> and <code class="docutils literal notranslate"><span class="pre">elpi.trace.*</span></code>, are Elpi’s own implementation,
+split into separate libraries for internal build reasons and documented
+there only incidentally; a host application should never depend on them
+directly. coq-elpi is the largest real-world embedding, using custom data
+types, quotations and extensible state alike to embed Rocq’s own term
+syntax into Elpi.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="debugging-and-tracing.html" class="btn btn-neutral float-left" title="Debugging and tracing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="compatibility.html" class="btn btn-neutral float-right" title="Compatibility with Teyjus, Prolog and legacy Elpi" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

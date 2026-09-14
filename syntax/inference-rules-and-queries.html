@@ -1,0 +1,354 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inference rules and queries &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Constraint handling rules" href="constraint-handling-rules.html" />
+    <link rel="prev" title="Type declarations" href="type-declarations.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Inference rules and queries</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#rules">Rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#goals">Goals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#committing-a-hypothetical-rule">Committing a hypothetical rule</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#naming-a-subterm-of-the-head">Naming a subterm of the head</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#attributes">Attributes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#queries">Queries</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../embedding.html">Embedding and extending Elpi</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Inference rules and queries</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/syntax/inference-rules-and-queries.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="inference-rules-and-queries">
+<h1>Inference rules and queries<a class="headerlink" href="#inference-rules-and-queries" title="Link to this heading"></a></h1>
+<p>A program is a sequence of <em>rules</em> and directives (<code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">symb</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pred</span></code>, <code class="docutils literal notranslate"><span class="pre">accumulate</span></code>, <code class="docutils literal notranslate"><span class="pre">namespace</span> <span class="pre">{</span> <span class="pre">…</span> <span class="pre">}</span></code>, …). What follows is the syntax
+of a rule, of the <em>goals</em> that make up a rule’s body, and of the queries run
+against a program. The rules here are the program’s <em>inference rules</em>: they
+are what the proof search chains together. The
+<em>constraint handling rules</em> that act on suspended goals are a separate
+construct with a syntax of their own (<a class="reference internal" href="constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>).</p>
+<section id="rules">
+<h2>Rules<a class="headerlink" href="#rules" title="Link to this heading"></a></h2>
+<p>A rule is either a bare atom, called a <em>fact</em>, or an atom followed by <code class="docutils literal notranslate"><span class="pre">:-</span></code>
+and a body, called a <em>conditional rule</em>. Either way it ends with a full stop:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>age<span class="w"> </span>alice<span class="w"> </span><span class="mi">20</span><span class="o">.</span><span class="w">                              </span><span class="c">% a fact</span>
+older<span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">Q</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>age<span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w"> </span>age<span class="w"> </span><span class="nv">Q</span><span class="w"> </span><span class="nv">M</span><span class="kd">,</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">&gt;</span><span class="w"> </span><span class="nv">M</span><span class="o">.</span><span class="w">      </span><span class="c">% a conditional rule</span>
+</pre></div>
+</div>
+<p>The head is an application <code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">t1</span> <span class="pre">…</span> <span class="pre">tn</span></code> (or just <code class="docutils literal notranslate"><span class="pre">p</span></code>). A conditional rule
+reads “the head holds if the body holds”. A rule’s variables are universally
+quantified over the whole rule, and every use of the rule gets a fresh set of
+them, so the fact <code class="docutils literal notranslate"><span class="pre">same-two</span> <span class="pre">[T,</span> <span class="pre">T].</span></code> holds for any <code class="docutils literal notranslate"><span class="pre">T</span></code>, a different <code class="docutils literal notranslate"><span class="pre">T</span></code>
+on each call.</p>
+<p>Several rules for the same predicate are <em>alternatives</em>. The search tries
+them in source order and backtracks into the next one whenever a later goal
+fails. That order can be adjusted with attributes (see below).</p>
+</section>
+<section id="goals">
+<h2>Goals<a class="headerlink" href="#goals" title="Link to this heading"></a></h2>
+<p>The body of a rule, and a query, are <em>goals</em>. A goal is one of:</p>
+<ul class="simple">
+<li><p>an atom, <code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">t1</span> <span class="pre">…</span> <span class="pre">tn</span></code>: a call;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">g1,</span> <span class="pre">g2</span></code>: conjunction (<code class="docutils literal notranslate"><span class="pre">&amp;</span></code> is an accepted synonym, and a list
+<code class="docutils literal notranslate"><span class="pre">[g1,</span> <span class="pre">g2,</span> <span class="pre">g3]</span></code> also means <code class="docutils literal notranslate"><span class="pre">g1,</span> <span class="pre">g2,</span> <span class="pre">g3</span></code>);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">g1</span> <span class="pre">;</span> <span class="pre">g2</span></code>: disjunction;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">H</span> <span class="pre">==&gt;</span> <span class="pre">g</span></code>: solve <code class="docutils literal notranslate"><span class="pre">g</span></code> with the extra rule <code class="docutils literal notranslate"><span class="pre">H</span></code> added to the program for
+the duration of <code class="docutils literal notranslate"><span class="pre">g</span></code>; <code class="docutils literal notranslate"><span class="pre">[H1,</span> <span class="pre">H2]</span> <span class="pre">==&gt;</span> <span class="pre">g</span></code> adds several, and is read
+<code class="docutils literal notranslate"><span class="pre">H2</span> <span class="pre">==&gt;</span> <span class="pre">(H1</span> <span class="pre">==&gt;</span> <span class="pre">g)</span></code> so that <code class="docutils literal notranslate"><span class="pre">H1</span></code> is the one tried first. <code class="docutils literal notranslate"><span class="pre">=!=&gt;</span></code> is
+<code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> with a cut automatically appended to <code class="docutils literal notranslate"><span class="pre">H</span></code>’s body (<a class="reference internal" href="#committing-a-hypothetical-rule">Committing a
+hypothetical rule</a>, below);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pi</span> <span class="pre">x\</span> <span class="pre">g</span></code>: solve <code class="docutils literal notranslate"><span class="pre">g</span></code> with a fresh constant standing for <code class="docutils literal notranslate"><span class="pre">x</span></code>;
+<code class="docutils literal notranslate"><span class="pre">sigma</span> <span class="pre">X\</span> <span class="pre">g</span></code> uses a fresh unification variable instead
+(<a class="reference internal" href="../features/binders-and-hoas.html"><span class="doc">Binders and HOAS</span></a>);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">!</span></code>: cut (<a class="reference internal" href="../features/control-and-cut.html"><span class="doc">Control and cut</span></a>).</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">=&gt;</span></code> is the traditional λProlog spelling of the same implication as <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code>.
+The two differ only in precedence. <code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> binds looser than <code class="docutils literal notranslate"><span class="pre">,</span></code>, so
+<code class="docutils literal notranslate"><span class="pre">a,</span> <span class="pre">b</span> <span class="pre">==&gt;</span> <span class="pre">c,</span> <span class="pre">d</span></code> reads <code class="docutils literal notranslate"><span class="pre">a,</span> <span class="pre">(b</span> <span class="pre">==&gt;</span> <span class="pre">(c,</span> <span class="pre">d))</span></code>; <code class="docutils literal notranslate"><span class="pre">=&gt;</span></code> binds tighter, so
+<code class="docutils literal notranslate"><span class="pre">a,</span> <span class="pre">b</span> <span class="pre">=&gt;</span> <span class="pre">c,</span> <span class="pre">d</span></code> reads <code class="docutils literal notranslate"><span class="pre">a,</span> <span class="pre">(b</span> <span class="pre">=&gt;</span> <span class="pre">c),</span> <span class="pre">d</span></code>, which makes <code class="docutils literal notranslate"><span class="pre">b</span></code> available to
+<code class="docutils literal notranslate"><span class="pre">c</span></code> but not to <code class="docutils literal notranslate"><span class="pre">d</span></code>. That is usually a mistake, and Elpi prints a warning
+when a <code class="docutils literal notranslate"><span class="pre">=&gt;</span></code> appears as a non-final conjunct like this. This manual writes
+<code class="docutils literal notranslate"><span class="pre">==&gt;</span></code> throughout.</p>
+<p>Because <code class="docutils literal notranslate"><span class="pre">\</span></code> extends its body as far right as possible, a <code class="docutils literal notranslate"><span class="pre">pi</span></code> or <code class="docutils literal notranslate"><span class="pre">sigma</span></code>
+inside a conjunction swallows the goals after it: <code class="docutils literal notranslate"><span class="pre">a,</span> <span class="pre">pi</span> <span class="pre">x\</span> <span class="pre">b,</span> <span class="pre">c</span></code> means
+<code class="docutils literal notranslate"><span class="pre">a,</span> <span class="pre">(pi</span> <span class="pre">x\</span> <span class="pre">(b,</span> <span class="pre">c))</span></code>. Parenthesise the binder to keep a later goal out of the
+fresh constant’s scope.</p>
+<p><strong>../code/pi-scope.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% `pi x\ …` extends its body as far right as possible, so inside a conjunction</span>
+<span class="linenos"> 2</span><span class="c">% it swallows the goals that follow it. Parenthesise the binder to keep a later</span>
+<span class="linenos"> 3</span><span class="c">% goal out of the fresh constant&#39;s scope.</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="kd">pred</span><span class="w"> </span><span class="nf">count-names</span><span class="w"> </span><span class="kt">string</span>.
+<span class="linenos"> 6</span>count-names<span class="w"> </span><span class="nv">Where</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>names<span class="w"> </span><span class="nv">Ns</span><span class="kd">,</span><span class="w"> </span>std.length<span class="w"> </span><span class="nv">Ns</span><span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">Where</span><span class="w"> </span><span class="s2">&quot;sees&quot;</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="s2">&quot;name(s)&quot;</span><span class="o">.</span>
+<span class="linenos"> 7</span>
+<span class="linenos"> 8</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos"> 9</span><span class="w">  </span>(<span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>count-names<span class="w"> </span><span class="s2">&quot;inside&quot;</span><span class="w"> </span><span class="o">)</span><span class="w"> </span><span class="kd">,</span><span class="w">   </span><span class="c">% without the ( ) the next line is inside too</span>
+<span class="linenos">10</span><span class="w">  </span>count-names<span class="w"> </span><span class="s2">&quot;after&quot;</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">inside sees 1 name(s)</span>
+<span class="go">after sees 0 name(s)</span>
+</pre></div>
+</div>
+</section>
+<section id="committing-a-hypothetical-rule">
+<h2>Committing a hypothetical rule<a class="headerlink" href="#committing-a-hypothetical-rule" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">H</span> <span class="pre">=!=&gt;</span> <span class="pre">G</span></code> adds <code class="docutils literal notranslate"><span class="pre">H</span></code> for the duration of <code class="docutils literal notranslate"><span class="pre">G</span></code> with a cut appended to its
+body: a rule <code class="docutils literal notranslate"><span class="pre">head</span> <span class="pre">:-</span> <span class="pre">body</span></code> becomes <code class="docutils literal notranslate"><span class="pre">head</span> <span class="pre">:-</span> <span class="pre">body,</span> <span class="pre">!</span></code>, and a bare fact
+<code class="docutils literal notranslate"><span class="pre">head</span></code> becomes <code class="docutils literal notranslate"><span class="pre">head</span> <span class="pre">:-</span> <span class="pre">!</span></code>. Once <code class="docutils literal notranslate"><span class="pre">H</span></code> yields its first solution the cut
+fires, so <code class="docutils literal notranslate"><span class="pre">G</span></code> finds no choice point to backtrack into and no later rule of
+the same predicate is tried. When <code class="docutils literal notranslate"><span class="pre">H</span></code> is a term the compiler can see it
+appends the cut up front; when <code class="docutils literal notranslate"><span class="pre">H</span></code> is only known at run time (a variable
+bound to a rule computed on the fly) the cut is appended dynamically, as the
+rule is added.</p>
+<p>The use for it is a <code class="docutils literal notranslate"><span class="pre">func</span></code> predicate handed an extra rule at run time. The
+static rule <code class="docutils literal notranslate"><span class="pre">copy</span> <span class="pre">X</span> <span class="pre">X</span></code> alone lets <code class="docutils literal notranslate"><span class="pre">copy</span> <span class="pre">a</span> <span class="pre">Z</span></code> answer <code class="docutils literal notranslate"><span class="pre">Z</span> <span class="pre">=</span> <span class="pre">a</span></code>; adding
+<code class="docutils literal notranslate"><span class="pre">copy</span> <span class="pre">a</span> <span class="pre">b</span></code> beside it creates a second solution, and the determinacy checker
+(<a class="reference internal" href="../features/determinacy-checking.html"><span class="doc">Determinacy checking</span></a>) rejects the <code class="docutils literal notranslate"><span class="pre">func</span></code> for that choice
+point. <code class="docutils literal notranslate"><span class="pre">=!=&gt;</span></code> removes it, so the program compiles and <code class="docutils literal notranslate"><span class="pre">copy</span> <span class="pre">a</span> <span class="pre">Z</span></code> has the
+single solution <code class="docutils literal notranslate"><span class="pre">copy</span> <span class="pre">a</span> <span class="pre">b</span></code>:</p>
+<p><strong>../code/tail-cut.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% =!=&gt; adds a hard cut to the tail of a hypothetical rule. Here `copy a b` is</span>
+<span class="linenos"> 2</span><span class="c">% added while the rest of main runs; the cut means a later `copy a Z` commits</span>
+<span class="linenos"> 3</span><span class="c">% to Z = b and does not also backtrack into the static rule `copy X X` (which</span>
+<span class="linenos"> 4</span><span class="c">% would give Z = a). std.findall collects every solution and finds just one.</span>
+<span class="linenos"> 5</span><span class="c">%</span>
+<span class="linenos"> 6</span><span class="c">% With plain ==&gt; this program would not compile: `copy` is a func, and adding</span>
+<span class="linenos"> 7</span><span class="c">% `copy a b` next to the static rule is flagged as &quot;mutual exclusion</span>
+<span class="linenos"> 8</span><span class="c">% violated&quot; -- exactly the choice point =!=&gt; removes.</span>
+<span class="linenos"> 9</span>
+<span class="linenos">10</span><span class="kd">data</span><span class="w"> </span><span class="nf">tm</span>.
+<span class="linenos">11</span><span class="kd">symb</span><span class="w"> </span><span class="nf">a</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos">12</span><span class="kd">symb</span><span class="w"> </span><span class="nf">b</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos">13</span>
+<span class="linenos">14</span><span class="kd">func</span><span class="w"> </span><span class="nf">copy</span><span class="w"> </span><span class="kt">tm</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">tm</span>.
+<span class="linenos">15</span>copy<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">X</span><span class="o">.</span>
+<span class="linenos">16</span>
+<span class="linenos">17</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">18</span><span class="w">  </span>copy<span class="w"> </span>a<span class="w"> </span>b<span class="w"> </span><span class="kd">=!=&gt;</span><span class="w"> </span>std.findall<span class="w"> </span>(copy<span class="w"> </span>a<span class="w"> </span><span class="nv">Z_</span><span class="o">)</span><span class="w"> </span><span class="nv">Sols</span><span class="kd">,</span>
+<span class="linenos">19</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;solutions of copy a:&quot;</span><span class="w"> </span><span class="nv">Sols</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">solutions of copy a: [copy a b]</span>
+</pre></div>
+</div>
+</section>
+<section id="naming-a-subterm-of-the-head">
+<h2>Naming a subterm of the head<a class="headerlink" href="#naming-a-subterm-of-the-head" title="Link to this heading"></a></h2>
+<p>A rule head can name a subterm with <code class="docutils literal notranslate"><span class="pre">(t</span> <span class="pre">as</span> <span class="pre">N)</span></code> (<a class="reference internal" href="terms.html"><span class="doc">Terms</span></a>), so the body
+refers to it without spelling it out again. In a head, <code class="docutils literal notranslate"><span class="pre">as</span></code> may wrap an
+argument or a piece of one, but not the head as a whole:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>whd<span class="w"> </span>(lam<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span><span class="w"> </span><span class="c">% a lambda is already in weak head normal form</span>
+</pre></div>
+</div>
+</section>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<p>An attribute is written <code class="docutils literal notranslate"><span class="pre">:</span></code>-prefixed before the rule and may sit on its own
+line:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="k k-Mode">:name</span><span class="w"> </span><span class="s2">&quot;step&quot;</span><span class="w"> </span><span class="k k-Mode">:if</span><span class="w"> </span><span class="s2">&quot;DEBUG&quot;</span>
+step<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="o">...</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">:name</span></code>, <code class="docutils literal notranslate"><span class="pre">:before</span></code>, <code class="docutils literal notranslate"><span class="pre">:after</span></code>, <code class="docutils literal notranslate"><span class="pre">:replace</span></code> and <code class="docutils literal notranslate"><span class="pre">:remove</span></code> graft the
+rule among its predicate’s alternatives; <code class="docutils literal notranslate"><span class="pre">:if</span></code> keeps it only when a compiler
+variable is defined; <code class="docutils literal notranslate"><span class="pre">:untyped</span></code> exempts it from the type checker. All of
+them are described in <a class="reference internal" href="rule-attributes.html"><span class="doc">Rule attributes</span></a>. Attributes that describe the
+<em>predicate</em> instead (<code class="docutils literal notranslate"><span class="pre">:index</span></code>, <code class="docutils literal notranslate"><span class="pre">:functional</span></code> and the like) go on the
+<code class="docutils literal notranslate"><span class="pre">pred</span></code> /
+<code class="docutils literal notranslate"><span class="pre">func</span></code> signature (<a class="reference internal" href="type-declarations.html"><span class="doc">Type declarations</span></a>).</p>
+</section>
+<section id="queries">
+<h2>Queries<a class="headerlink" href="#queries" title="Link to this heading"></a></h2>
+<p>A query is a goal run against a program:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">prog.elpi</span> <span class="pre">-test</span></code> runs the goal <code class="docutils literal notranslate"><span class="pre">main</span></code>;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">prog.elpi</span> <span class="pre">-exec</span> <span class="pre">p</span> <span class="pre">--</span> <span class="pre">a</span> <span class="pre">b</span> <span class="pre">c</span></code> runs <code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">[&quot;a&quot;,</span> <span class="pre">&quot;b&quot;,</span> <span class="pre">&quot;c&quot;]</span></code> (the predicate
+receives a single <code class="docutils literal notranslate"><span class="pre">list</span> <span class="pre">string</span></code>);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">prog.elpi</span></code> with a goal typed or piped on standard input opens a
+<code class="docutils literal notranslate"><span class="pre">goal&gt;</span></code> prompt, reads one goal, prints the value bound to each of its
+unification variables in the first solution, then asks whether to look for
+another;</p></li>
+<li><p>from a host application, through the OCaml API (<a class="reference internal" href="../embedding.html"><span class="doc">Embedding and extending Elpi</span></a>).</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">?-</span></code> is not a query prefix in Elpi, as it is in some Prolog systems; it is
+the sequent separator used in <code class="docutils literal notranslate"><span class="pre">constraint</span></code> blocks and CHR rules
+(<a class="reference internal" href="constraint-handling-rules.html"><span class="doc">Constraint handling rules</span></a>).</p>
+<p>Facts, conditional rules and a query together:</p>
+<p><strong>../code/rules.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Rules and queries — a small sample.</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="kd">data</span><span class="w"> </span><span class="nf">person</span>.
+<span class="linenos"> 4</span><span class="kd">symb</span><span class="w"> </span><span class="nf">alice, bob, carol</span><span class="w"> </span><span class="kt">person</span>.
+<span class="linenos"> 5</span>
+<span class="linenos"> 6</span><span class="kd">pred</span><span class="w"> </span><span class="nf">parent</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">person</span>,<span class="w"> </span><span class="kt">person</span>.<span class="w">        </span><span class="c">% two facts</span>
+<span class="linenos"> 7</span>parent<span class="w"> </span>alice<span class="w"> </span>bob<span class="o">.</span>
+<span class="linenos"> 8</span>parent<span class="w"> </span>bob<span class="w"> </span>carol<span class="o">.</span>
+<span class="linenos"> 9</span>
+<span class="linenos">10</span><span class="kd">pred</span><span class="w"> </span><span class="nf">ancestor</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">person</span>,<span class="w"> </span><span class="kt">person</span>.<span class="w">      </span><span class="c">% two rules</span>
+<span class="linenos">11</span>ancestor<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>parent<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="o">.</span>
+<span class="linenos">12</span>ancestor<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>parent<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Z</span><span class="kd">,</span><span class="w"> </span>ancestor<span class="w"> </span><span class="nv">Z</span><span class="w"> </span><span class="nv">Y</span><span class="o">.</span>
+<span class="linenos">13</span>
+<span class="linenos">14</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">15</span><span class="w">  </span>std.findall<span class="w"> </span>(ancestor<span class="w"> </span>alice<span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="nv">All</span><span class="kd">,</span><span class="w">   </span><span class="c">% the query: every Y with `ancestor alice Y`</span>
+<span class="linenos">16</span><span class="w">  </span>std.length<span class="w"> </span><span class="nv">All</span><span class="w"> </span><span class="nv">N</span><span class="kd">,</span>
+<span class="linenos">17</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;alice has&quot;</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="s2">&quot;descendants&quot;</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">alice has 2 descendants</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="type-declarations.html" class="btn btn-neutral float-left" title="Type declarations" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="constraint-handling-rules.html" class="btn btn-neutral float-right" title="Constraint handling rules" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
