@@ -226,7 +226,7 @@ meal<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><s
 <p>The signature is the interesting part: <code class="docutils literal notranslate"><span class="pre">commit</span></code>’s input is a plain
 <code class="docutils literal notranslate"><span class="pre">pred</span></code>, so passing <code class="docutils literal notranslate"><span class="pre">likes</span></code> is <em>not</em> a wrong call, yet <code class="docutils literal notranslate"><span class="pre">commit</span> <span class="pre">likes</span></code> is
 a <code class="docutils literal notranslate"><span class="pre">func</span></code>. PADL calls this combinator <code class="docutils literal notranslate"><span class="pre">once</span></code>; it is a two-argument
-analogue of the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/cfce5c6f304bfb4609068e17cb92ab714f6f318a/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a>, which commits a whole goal
+analogue of the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/5a375fd6a33ba6a0bed1b68e501bdecca8ec8fd0/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a>, which commits a whole goal
 rather than a predicate applied to its arguments.</p>
 <p>The body of a <code class="docutils literal notranslate"><span class="pre">pred</span></code> is still traversed, but the comparison that would
 reject a relational atom in it is vacuous (a <code class="docutils literal notranslate"><span class="pre">pred</span></code> body is allowed to be
