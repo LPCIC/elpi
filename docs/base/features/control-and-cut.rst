@@ -2,7 +2,7 @@
 Control and cut
 ###############
 
-``!`` is a hard cut: it discards not only a predicate's untried rules but the
+:stdlib:`!` is a hard cut: it discards not only a predicate's untried rules but the
 choice points of premises already solved in the same rule
 (:doc:`../semantics/logic-programming-model`,
 :doc:`../semantics/formal-semantics`). The rest are the control constructs
@@ -12,7 +12,7 @@ built on it.
 Cut and disjunction
 =====================
 
-``!`` discards every choice point created since the *rule* it appears in was
+:stdlib:`!` discards every choice point created since the *rule* it appears in was
 selected, including one opened by a ``;`` earlier in the same body, not only
 the rule's own untried alternatives:
 
@@ -21,7 +21,7 @@ the rule's own untried alternatives:
    describe N R :- 0 is N mod 2, !, R = "even".
    describe _ "odd".
 
-Once the first rule's guard succeeds, ``!`` commits: on backtracking, Elpi
+Once the first rule's guard succeeds, :stdlib:`!` commits: on backtracking, Elpi
 does not try to make ``R`` something other than ``"even"``, and does not fall
 through to the second rule either. Both were choices made after the cut's
 rule was entered.
@@ -34,7 +34,7 @@ rule was entered.
 ``not X :- X, !, fail. not _.``, so it commits to the first solution of ``G``,
 if any, before failing. ``if C T E`` commits to the first solution of ``C``,
 if any, and runs ``T``; otherwise it runs ``E``. It is a packaged cut,
-cheaper to read than ``(C, !, T ; E)``. ``if2`` is the same with two
+cheaper to read than ``(C, !, T ; E)``. :stdlib:`if2` is the same with two
 conditions tried in order, and a final ``else``:
 
 .. code-block:: elpi
@@ -46,9 +46,9 @@ conditions tried in order, and a final ``else``:
 ``halt`` and ``stop``
 =======================
 
-``halt`` (variadic: it accepts anything ``print``-able) stops the whole
+:stdlib:`halt` (variadic: it accepts anything :stdlib:`print`-able) stops the whole
 process immediately, printing its arguments first, for a fatal error.
-``stop`` fails the current goal without terminating the process, so outer
+:stdlib:`stop` fails the current goal without terminating the process, so outer
 alternatives are still tried.
 
 
