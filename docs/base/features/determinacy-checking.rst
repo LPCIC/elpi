@@ -161,8 +161,7 @@ A signature's *output* being functional is itself information a caller can
 use. For instance ``func id A -> A`` (with the single rule ``id X X``)
 promises whoever receives its output a value, not a choice among values.
 
-That guarantee cannot be conjured from a relation for free. ``make-deterministic``
-(PADL's ``commit``) manufactures it, turning a two-argument relation into a
+The code below turns a two-argument relation into a
 one-argument function by picking the first solution and cutting:
 
 .. code-block:: elpi
