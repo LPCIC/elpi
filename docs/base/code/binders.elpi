@@ -13,7 +13,7 @@ depth X 0 :- name X.   % X is an eigenvariable, not an app or a lam
 
 main :-
   depth (lam x\ lam y\ app x y) D, print "depth:" D,
-  pi x\ pi y\ sigma Ns\ sigma Len\ sigma T\ sigma P\
+  pi x y\ sigma Ns Len T P\
     ( names Ns, std.length Ns Len,
       print "eigenvariables in scope:" Len,
       (occurs x (app x y), print "x occurs in (app x y): yes" ; print "no"),
