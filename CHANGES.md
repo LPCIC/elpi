@@ -1,4 +1,7 @@
-# UNRELEASED
+# v3.8.0 (September 2026)
+
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
 
 - Parser:
   - Accept the trailing `..` variadic marker in anonymous `func`/`pred`
@@ -22,6 +25,7 @@
     - `func_A_B` printed `(func A -> B)`
 
 - Doc:
+  - User manual
   - `elpi -document-builtins` prints variadic signatures with the `..`
     syntax instead of the legacy `variadic T R` type former (#440)
   - `elpi -document-builtins` now documents ADTs with
