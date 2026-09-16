@@ -102,7 +102,7 @@ function" packages the commit safely:
 
 The signature is the interesting part: ``commit``'s input is a plain
 ``pred``, so passing ``likes`` is *not* a wrong call, yet ``commit likes`` is
-a ``func``. PADL calls this combinator ``once``; it is a two-argument
+a ``func``. ``commit`` is a two-argument
 analogue of the standard library's :stdlib:`std.once`, which commits a whole goal
 rather than a predicate applied to its arguments.
 
