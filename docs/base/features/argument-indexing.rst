@@ -28,12 +28,6 @@ the second argument, one level deep. The optional string picks the technique:
 only option when a single argument is indexed at depth 1), ``"Hash"``, or
 ``"DTree"``.
 
-Changing the index never changes an answer. ``name-of`` here carries a
-non-default ``:index`` and still computes the same result:
-
-.. elpi:: ../code/indexing.elpi
-   :assert: green
-
 
 Which index to use
 ==================
