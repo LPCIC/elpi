@@ -61,8 +61,8 @@ wanted. ``std.do! [G1, G2, …]`` runs a sequence of goals each followed by a
 cut, so a failure never triggers backtracking into an earlier one, closer to
 imperative sequencing than a plain conjunction.
 
-Each of these in one program, a cut committing a disjunction, then ``not``,
-``if``, :stdlib:`std.once` and :stdlib:`std.do!`:
+Each of these in one program, a cut committing a disjunction, then
+:stdlib:`not`, :stdlib:`if`, :stdlib:`std.once` and :stdlib:`std.do!`:
 
 .. elpi:: ../code/control.elpi
    :assert: 4 is even\n3 is odd\nnot \(even 3\) succeeds\nif: 4 is even\nonce picked the first match: 3\ndo!: step 1\ndo!: step 2
