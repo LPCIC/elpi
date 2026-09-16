@@ -54,8 +54,9 @@ introduces ``Ns`` in the right place and works.
 Inspecting the context
 ========================
 
-Two builtins introspect the eigenvariables (the names ``pi`` has introduced
-so far) that a call is running under:
+Two builtins, :stdlib:`names` and :stdlib:`occurs`, introspect the
+eigenvariables (the names ``pi`` has introduced so far) that a call is
+running under:
 
 * ``names L`` lists them, youngest first;
 * ``occurs N T`` checks whether the name (or global constant) ``N`` appears in
@@ -81,17 +82,17 @@ the way to produce a value that must not depend on the current binders.
 
 The narrowing is a *unification*, so it can also fail: if ``V`` is already
 bound to a term that mentions a name outside ``L`` (outside all names, for
-``closed_term``), there is no way to satisfy both scopes and the call fails.
+:stdlib:`closed_term`), there is no way to satisfy both scopes and the call fails.
 ``closed_term (app x y)`` under ``pi x\ pi y\`` fails rather than quietly
 forgetting ``x`` and ``y``. On an *unbound* variable it always succeeds; the
 failure is the useful signal when the argument is the output of a computation
 that was supposed to stay closed.
 
 A scope violation that happens through ordinary unification, rather than
-through ``prune`` / ``closed_term``, fails silently instead.
+through :stdlib:`prune` / :stdlib:`closed_term`, fails silently instead.
 
 Recursing under a binder, inspecting the eigenvariables in scope, and
-narrowing a variable's scope with ``prune`` and ``closed_term``, in one
+narrowing a variable's scope with :stdlib:`prune` and :stdlib:`closed_term`, in one
 program:
 
 .. elpi:: ../code/binders.elpi
