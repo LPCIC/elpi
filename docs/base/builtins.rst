@@ -12,22 +12,21 @@ or *output* and carries a *conversion* between an Elpi term and an OCaml
 value, so the OCaml code receives its inputs already converted and hands back
 its outputs to be converted on the way out. A builtin succeeds once or fails
 (by raising ``No_clause``); it does not backtrack and does not offer a second
-solution on its own, so one that needs to enumerate returns a list. A term it
+solution. A term it
 has no conversion for it can still carry through untouched, as ``any``.
 
 ``elpi -document-builtins`` prints the exhaustive, generated reference: one
 signature and doc comment per predicate, the same text checked in as
 ``src/builtin.elpi``. Throughout this manual a name written like
 :stdlib:`print` links to that predicate's declaration line in
-``src/builtin.elpi`` on GitHub, pinned to commit |stdlib_pin| of this file
-(content hash |stdlib_hash|). What follows is a tour by category, saying what
+``src/builtin.elpi`` on GitHub. What follows is a tour by category, saying what
 each group is for and which chapter covers it in depth where one does.
 
 
 Logic, control and inspection
 =============================
 
-``=`` unifies, with the occur check; :stdlib:`unsound_unif` does the same *without*
+:stdlib:`=` unifies, with the occur check; :stdlib:`unsound_unif` does the same *without*
 it and so can build a cyclic term (:doc:`features/unification-and-variables`,
 where it is defined with ``:nooc``). :stdlib:`same_term`, infix ``==``, tests
 plain syntactic equality, assigning nothing. ``pattern_match T P`` matches
@@ -52,7 +51,8 @@ for its ``uvar Hd Args`` form), :stdlib:`constant` a global constant, and
 ``occurs A T`` checks whether the atom ``A`` appears in ``T``
 (:doc:`features/unification-and-variables`).
 
-:stdlib:`new_int` hands out a strictly increasing integer and :stdlib:`new_safe` a store
+:stdlib:`new_int` hands out a strictly increasing integer and :stdlib:`new_safe` hands
+out a store
 that survives backtracking; both step outside Elpi's usual scoping, so use
 them sparingly.
 
@@ -149,8 +149,7 @@ Input, output and the file system
 
 :stdlib:`print` and :stdlib:`dprint` write their arguments to standard output (:stdlib:`dprint`
 shows raw terms); :stdlib:`term_to_string` renders a term to a ``string`` instead of
-printing it. Beyond that Elpi has the stream I/O of a small scripting
-language:
+printing it. Beyond that Elpi has the stream I/O of OCaml:
 
 * :stdlib:`open_in` / :stdlib:`open_out` / :stdlib:`open_append` open a file; :stdlib:`open_string`
   turns a string into a readable stream; ``std_in`` / ``std_out`` /
