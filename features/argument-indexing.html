@@ -77,7 +77,10 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Argument indexing</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#the-default-and-index">The default and <code class="docutils literal notranslate"><span class="pre">:index</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#which-index-to-use">Which index to use</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#discrimination-trees-and-hashes">Discrimination trees and hashes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#discrimination-trees-and-hashes">Discrimination trees and hashes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#hash-indexing-worked-out">Hash indexing, worked out</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="pitfalls.html">Pitfalls</a></li>
@@ -156,34 +159,12 @@ the second argument, one level deep. The optional string picks the technique:
 <code class="docutils literal notranslate"><span class="pre">&quot;Map&quot;</span></code> (a Patricia tree keyed on the head symbol, the default and the
 only option when a single argument is indexed at depth 1), <code class="docutils literal notranslate"><span class="pre">&quot;Hash&quot;</span></code>, or
 <code class="docutils literal notranslate"><span class="pre">&quot;DTree&quot;</span></code>.</p>
-<p>Changing the index never changes an answer. <code class="docutils literal notranslate"><span class="pre">name-of</span></code> here carries a
-non-default <code class="docutils literal notranslate"><span class="pre">:index</span></code> and still computes the same result:</p>
-<p><strong>../code/indexing.elpi:</strong></p>
-<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% :index changes how rules are pre-filtered before matching, never what a</span>
-<span class="linenos"> 2</span><span class="c">% program computes. Here the second argument (depth 1) is indexed instead</span>
-<span class="linenos"> 3</span><span class="c">% of the default first one.</span>
-<span class="linenos"> 4</span>
-<span class="linenos"> 5</span><span class="kd">data</span><span class="w"> </span><span class="nf">color</span>.
-<span class="linenos"> 6</span><span class="kd">symb</span><span class="w"> </span><span class="nf">red, green, blue</span><span class="w"> </span><span class="kt">color</span>.
-<span class="linenos"> 7</span>
-<span class="linenos"> 8</span><span class="p">:</span>index<span class="w"> </span>(<span class="mi">2</span><span class="o">)</span><span class="w"> </span><span class="s2">&quot;Hash&quot;</span>
-<span class="linenos"> 9</span><span class="kd">pred</span><span class="w"> </span><span class="nf">name-of</span><span class="w"> </span><span class="kt">int</span>,<span class="w"> </span><span class="kt">color</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>.
-<span class="linenos">10</span>name-of<span class="w"> </span><span class="nv">_</span><span class="w"> </span>red<span class="w"> </span><span class="s2">&quot;red&quot;</span><span class="o">.</span>
-<span class="linenos">11</span>name-of<span class="w"> </span><span class="nv">_</span><span class="w"> </span>green<span class="w"> </span><span class="s2">&quot;green&quot;</span><span class="o">.</span>
-<span class="linenos">12</span>name-of<span class="w"> </span><span class="nv">_</span><span class="w"> </span>blue<span class="w"> </span><span class="s2">&quot;blue&quot;</span><span class="o">.</span>
-<span class="linenos">13</span>
-<span class="linenos">14</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>name-of<span class="w"> </span><span class="mi">1</span><span class="w"> </span>green<span class="w"> </span><span class="nv">S</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">S</span><span class="o">.</span>
-</pre></div>
-</div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">green</span>
-</pre></div>
-</div>
 </section>
 <section id="which-index-to-use">
 <h2>Which index to use<a class="headerlink" href="#which-index-to-use" title="Link to this heading"></a></h2>
 <p>The default costs almost nothing and fits almost every predicate. It looks at
 one thing, the head symbol of the first argument, so it tells two rules
-apart exactly when that symbol does. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/5a375fd6a33ba6a0bed1b68e501bdecca8ec8fd0/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/5a375fd6a33ba6a0bed1b68e501bdecca8ec8fd0/src/builtin.elpi#L802"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a> and most
+apart exactly when that symbol does. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L802"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a> and most
 λProlog predicates have a few rules distinguished by precisely that, and the
 index with the least overhead wins; <a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">the HDR thesis</span></a> §3.2.5
 reports that for the bulk of λProlog code the default beats the richer
@@ -215,7 +196,9 @@ is also provided (the bitwise AND of the two hashes equals the goal’s own
 hash): a flexible goal demands nothing, a flexible rule provides everything.
 Collisions can make the check imprecise, since the whole hash must fit one
 machine word.</p>
-<details class="elpi-fold"><summary>Hash indexing, worked out</summary><p>Each indexed argument is reduced to a fixed-width string of bits, built
+<section id="hash-indexing-worked-out">
+<h3>Hash indexing, worked out<a class="headerlink" href="#hash-indexing-worked-out" title="Link to this heading"></a></h3>
+<p>Each indexed argument is reduced to a fixed-width string of bits, built
 hierarchically down to that argument’s indexing depth. A unification variable
 in a rule head becomes a run of <code class="docutils literal notranslate"><span class="pre">1</span></code>s; the same variable in a goal becomes
 a run of <code class="docutils literal notranslate"><span class="pre">0</span></code>s; a constant becomes a fixed mix of the two. A rule is tried
@@ -247,7 +230,8 @@ mult (s X) …    0010 0000    matches rules 2 and 3
 mult X …        0000 0000    matches every rule
 </pre></div>
 </div>
-</details></section>
+</section>
+</section>
 </section>
 
 

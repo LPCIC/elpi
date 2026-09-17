@@ -137,21 +137,21 @@
              
   <section id="control-and-cut">
 <h1>Control and cut<a class="headerlink" href="#control-and-cut" title="Link to this heading"></a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">!</span></code> is a hard cut: it discards not only a predicate’s untried rules but the
+<p><a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L65"><code class="docutils literal notranslate"><span class="pre">!</span></code></a> is a hard cut: it discards not only a predicate’s untried rules but the
 choice points of premises already solved in the same rule
 (<a class="reference internal" href="../semantics/logic-programming-model.html"><span class="doc">Logic Programming</span></a>,
 <a class="reference internal" href="../semantics/formal-semantics.html"><span class="doc">Formal semantics</span></a>). The rest are the control constructs
 built on it.</p>
 <section id="cut-and-disjunction">
 <h2>Cut and disjunction<a class="headerlink" href="#cut-and-disjunction" title="Link to this heading"></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">!</span></code> discards every choice point created since the <em>rule</em> it appears in was
+<p><a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L65"><code class="docutils literal notranslate"><span class="pre">!</span></code></a> discards every choice point created since the <em>rule</em> it appears in was
 selected, including one opened by a <code class="docutils literal notranslate"><span class="pre">;</span></code> earlier in the same body, not only
 the rule’s own untried alternatives:</p>
 <div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>describe<span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="kd">is</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="kd">mod</span><span class="w"> </span><span class="mi">2</span><span class="kd">,</span><span class="w"> </span><span class="kd">!,</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="s2">&quot;even&quot;</span><span class="o">.</span>
 describe<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="s2">&quot;odd&quot;</span><span class="o">.</span>
 </pre></div>
 </div>
-<p>Once the first rule’s guard succeeds, <code class="docutils literal notranslate"><span class="pre">!</span></code> commits: on backtracking, Elpi
+<p>Once the first rule’s guard succeeds, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L65"><code class="docutils literal notranslate"><span class="pre">!</span></code></a> commits: on backtracking, Elpi
 does not try to make <code class="docutils literal notranslate"><span class="pre">R</span></code> something other than <code class="docutils literal notranslate"><span class="pre">&quot;even&quot;</span></code>, and does not fall
 through to the second rule either. Both were choices made after the cut’s
 rule was entered.</p>
@@ -162,7 +162,7 @@ rule was entered.</p>
 <code class="docutils literal notranslate"><span class="pre">not</span> <span class="pre">X</span> <span class="pre">:-</span> <span class="pre">X,</span> <span class="pre">!,</span> <span class="pre">fail.</span> <span class="pre">not</span> <span class="pre">_.</span></code>, so it commits to the first solution of <code class="docutils literal notranslate"><span class="pre">G</span></code>,
 if any, before failing. <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">C</span> <span class="pre">T</span> <span class="pre">E</span></code> commits to the first solution of <code class="docutils literal notranslate"><span class="pre">C</span></code>,
 if any, and runs <code class="docutils literal notranslate"><span class="pre">T</span></code>; otherwise it runs <code class="docutils literal notranslate"><span class="pre">E</span></code>. It is a packaged cut,
-cheaper to read than <code class="docutils literal notranslate"><span class="pre">(C,</span> <span class="pre">!,</span> <span class="pre">T</span> <span class="pre">;</span> <span class="pre">E)</span></code>. <code class="docutils literal notranslate"><span class="pre">if2</span></code> is the same with two
+cheaper to read than <code class="docutils literal notranslate"><span class="pre">(C,</span> <span class="pre">!,</span> <span class="pre">T</span> <span class="pre">;</span> <span class="pre">E)</span></code>. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L586"><code class="docutils literal notranslate"><span class="pre">if2</span></code></a> is the same with two
 conditions tried in order, and a final <code class="docutils literal notranslate"><span class="pre">else</span></code>:</p>
 <div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">if</span><span class="w">  </span><span class="kt">(pred)</span>,<span class="w"> </span><span class="kt">(func)</span>,<span class="w"> </span><span class="kt">(func)</span>.
 <span class="kd">func</span><span class="w"> </span><span class="nf">if2</span><span class="w"> </span><span class="kt">(pred)</span>,<span class="w"> </span><span class="kt">(func)</span>,<span class="w"> </span><span class="kt">(pred)</span>,<span class="w"> </span><span class="kt">(func)</span>,<span class="w"> </span><span class="kt">(func)</span>.
@@ -171,9 +171,9 @@ conditions tried in order, and a final <code class="docutils literal notranslate
 </section>
 <section id="halt-and-stop">
 <h2><code class="docutils literal notranslate"><span class="pre">halt</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code><a class="headerlink" href="#halt-and-stop" title="Link to this heading"></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">halt</span></code> (variadic: it accepts anything <code class="docutils literal notranslate"><span class="pre">print</span></code>-able) stops the whole
+<p><a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L81"><code class="docutils literal notranslate"><span class="pre">halt</span></code></a> (variadic: it accepts anything <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L445"><code class="docutils literal notranslate"><span class="pre">print</span></code></a>-able) stops the whole
 process immediately, printing its arguments first, for a fatal error.
-<code class="docutils literal notranslate"><span class="pre">stop</span></code> fails the current goal without terminating the process, so outer
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L83"><code class="docutils literal notranslate"><span class="pre">stop</span></code></a> fails the current goal without terminating the process, so outer
 alternatives are still tried.</p>
 </section>
 <section id="taming-backtracking">
@@ -183,8 +183,8 @@ for a relation that naturally has several solutions when only the first is
 wanted. <code class="docutils literal notranslate"><span class="pre">std.do!</span> <span class="pre">[G1,</span> <span class="pre">G2,</span> <span class="pre">…]</span></code> runs a sequence of goals each followed by a
 cut, so a failure never triggers backtracking into an earlier one, closer to
 imperative sequencing than a plain conjunction.</p>
-<p>Each of these in one program, a cut committing a disjunction, then <code class="docutils literal notranslate"><span class="pre">not</span></code>,
-<code class="docutils literal notranslate"><span class="pre">if</span></code>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/5a375fd6a33ba6a0bed1b68e501bdecca8ec8fd0/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a> and <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/5a375fd6a33ba6a0bed1b68e501bdecca8ec8fd0/src/builtin.elpi#L893"><code class="docutils literal notranslate"><span class="pre">std.do!</span></code></a>:</p>
+<p>Each of these in one program, a cut committing a disjunction, then
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L67"><code class="docutils literal notranslate"><span class="pre">not</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L581"><code class="docutils literal notranslate"><span class="pre">if</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a> and <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L893"><code class="docutils literal notranslate"><span class="pre">std.do!</span></code></a>:</p>
 <p><strong>../code/control.elpi:</strong></p>
 <div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Cut committing a disjunction (describe), not, if, std.once, std.do!.</span>
 <span class="linenos"> 2</span>

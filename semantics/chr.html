@@ -207,9 +207,9 @@ either to trigger a resumption on its own. A constraint keyed on <code class="do
 no trigger at all: it is never resumed, and, sharing nothing, no
 <em>multi-headed</em> rule ever considers it jointly with another constraint. A
 <em>single-headed</em> rule needs no partner, so it is still tried on such a
-constraint, once, when the constraint is declared. <code class="docutils literal notranslate"><span class="pre">code/hindley-milner.elpi</span></code>
-relies on this: it keys its <code class="docutils literal notranslate"><span class="pre">overbar</span></code> constraint on <code class="docutils literal notranslate"><span class="pre">[]</span></code> and generalizes
-it with a single-headed rule.</p>
+constraint, once, when the constraint is declared. The generalization step of
+<a class="reference internal" href="../examples/hindley-milner.html"><span class="doc">Hindley-Milner type inference</span></a> relies on this: it keys its <code class="docutils literal notranslate"><span class="pre">overbar</span></code>
+constraint on <code class="docutils literal notranslate"><span class="pre">[]</span></code> and generalizes it with a single-headed rule.</p>
 </section>
 <section id="application-of-chr-rules">
 <h2>Application of CHR rules<a class="headerlink" href="#application-of-chr-rules" title="Link to this heading"></a></h2>
@@ -225,9 +225,7 @@ from the store, and the goal after <code class="docutils literal notranslate"><s
 any other pending goal. The choice is committed at that point: no other
 rule, and no other way of matching this one, is tried for <code class="docutils literal notranslate"><span class="pre">C</span></code>.</p>
 <p>This is the <em>refined operational semantics</em> of
-<a class="reference internal" href="../bibliography.html#bib-chr2004"><span class="std std-ref">Duck, Stuckey, García de la Banda &amp; Holzbaur</span></a>; it is given
-precisely in <a class="reference internal" href="formal-semantics.html"><span class="doc">Formal semantics</span></a>, following in turn
-<a class="reference internal" href="../bibliography.html#bib-tassi2019"><span class="std std-ref">Guidi, Sacerdoti Coen &amp; Tassi</span></a>.</p>
+<a class="reference internal" href="../bibliography.html#bib-chr2004"><span class="std std-ref">Duck, Stuckey, García de la Banda &amp; Holzbaur</span></a>.</p>
 </section>
 <section id="symmetric-chr-rules">
 <h2>Symmetric CHR rules<a class="headerlink" href="#symmetric-chr-rules" title="Link to this heading"></a></h2>

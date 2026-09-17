@@ -59,9 +59,9 @@ either to trigger a resumption on its own. A constraint keyed on ``[]`` has
 no trigger at all: it is never resumed, and, sharing nothing, no
 *multi-headed* rule ever considers it jointly with another constraint. A
 *single-headed* rule needs no partner, so it is still tried on such a
-constraint, once, when the constraint is declared. ``code/hindley-milner.elpi``
-relies on this: it keys its ``overbar`` constraint on ``[]`` and generalizes
-it with a single-headed rule.
+constraint, once, when the constraint is declared. The generalization step of
+:doc:`../examples/hindley-milner` relies on this: it keys its ``overbar``
+constraint on ``[]`` and generalizes it with a single-headed rule.
 
 
 Application of CHR rules
@@ -80,9 +80,7 @@ any other pending goal. The choice is committed at that point: no other
 rule, and no other way of matching this one, is tried for ``C``.
 
 This is the *refined operational semantics* of
-:ref:`Duck, Stuckey, García de la Banda & Holzbaur <bib-chr2004>`; it is given
-precisely in :doc:`formal-semantics`, following in turn
-:ref:`Guidi, Sacerdoti Coen & Tassi <bib-tassi2019>`.
+:ref:`Duck, Stuckey, García de la Banda & Holzbaur <bib-chr2004>`.
 
 
 Symmetric CHR rules

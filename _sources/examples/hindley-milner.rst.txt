@@ -75,15 +75,4 @@ keeps the hypothetical ``w`` rules, Γ, in the context the suspended
 
 ``generalize`` collects the free variables of the monotype and of Γ, and
 quantifies those that are free in the former but not the latter, the
-ones the surrounding context makes no assumption about. The
-:ref:`HDR thesis <bib-hdr>`, §2.7.4 ("Type generalization"), spells out this
-step in full, including why it has to be deferred to a constraint in the
-first place.
-
-This covers the core of the algorithm. Two fuller programs are further
-reading for anyone implementing a real ML-style checker in Elpi.
-``tests/sources/w.elpi``, which this example is adapted from, is the complete
-version. ``tests/sources/toyml/`` is richer still: it adds equality-type
-variables (Standard ML's ``''a``) and a bidirectional variant that propagates
-a known result type inward instead of only inferring one outward, from the
-:ref:`ML Family Workshop slides <bib-mlws18>`.
+ones the surrounding context makes no assumption about. 

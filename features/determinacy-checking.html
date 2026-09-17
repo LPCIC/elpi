@@ -162,8 +162,8 @@ map<span class="w"> </span><span class="nv">_</span><span class="w"> </span><spa
 map<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="kd">[</span><span class="nv">X</span><span class="kd">|</span><span class="nv">XS</span><span class="kd">]</span><span class="w"> </span><span class="kd">[</span><span class="nv">Y</span><span class="kd">|</span><span class="nv">YS</span><span class="kd">]</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span>map<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="nv">XS</span><span class="w"> </span><span class="nv">YS</span><span class="o">.</span>
 </pre></div>
 </div>
-<p>The <em>better</em> signature says more: <strong>if the higher-order argument ``F`` is a
-function, then ``map F`` is a function too</strong>: a call <code class="docutils literal notranslate"><span class="pre">map</span> <span class="pre">F</span> <span class="pre">L</span> <span class="pre">R</span></code> with a
+<p>The <em>better</em> signature says more: if the higher-order argument <code class="docutils literal notranslate"><span class="pre">F</span></code> is a
+function, then <code class="docutils literal notranslate"><span class="pre">map</span> <span class="pre">F</span></code> is a function too. A call <code class="docutils literal notranslate"><span class="pre">map</span> <span class="pre">F</span> <span class="pre">L</span> <span class="pre">R</span></code> with a
 functional <code class="docutils literal notranslate"><span class="pre">F</span></code> produces a single <code class="docutils literal notranslate"><span class="pre">R</span></code>. That is the whole content of
 writing <code class="docutils literal notranslate"><span class="pre">func</span></code> here: a promise about <code class="docutils literal notranslate"><span class="pre">map</span></code>’s determinacy <em>conditional on</em>
 its argument’s.</p>
@@ -179,9 +179,6 @@ without one of them cutting. Two overlapping heads with no cut give
 <li><p><strong>every atom in its body is itself functional</strong>: a relational call in a
 <code class="docutils literal notranslate"><span class="pre">func</span></code> body is <code class="docutils literal notranslate"><span class="pre">Found</span> <span class="pre">relational</span> <span class="pre">atom</span> <span class="pre">(…)</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">body</span> <span class="pre">of</span> <span class="pre">function</span> <span class="pre">…</span></code>,
 unless a <code class="docutils literal notranslate"><span class="pre">!</span></code> after it collapses the choice point.</p></li>
-<li><p><strong>its outputs come back as single values</strong>: an output argument left as a
-relation, rather than pinned to one term, is rejected where the <code class="docutils literal notranslate"><span class="pre">func</span></code>
-signature promised a function.</p></li>
 </ul>
 <p>The checker does not run the body; it reasons from the signatures. A call it
 cannot prove functional it rejects, even when the program would in fact be
@@ -225,8 +222,8 @@ meal<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><s
 </div>
 <p>The signature is the interesting part: <code class="docutils literal notranslate"><span class="pre">commit</span></code>’s input is a plain
 <code class="docutils literal notranslate"><span class="pre">pred</span></code>, so passing <code class="docutils literal notranslate"><span class="pre">likes</span></code> is <em>not</em> a wrong call, yet <code class="docutils literal notranslate"><span class="pre">commit</span> <span class="pre">likes</span></code> is
-a <code class="docutils literal notranslate"><span class="pre">func</span></code>. PADL calls this combinator <code class="docutils literal notranslate"><span class="pre">once</span></code>; it is a two-argument
-analogue of the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/5a375fd6a33ba6a0bed1b68e501bdecca8ec8fd0/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a>, which commits a whole goal
+a <code class="docutils literal notranslate"><span class="pre">func</span></code>. <code class="docutils literal notranslate"><span class="pre">commit</span></code> is a two-argument
+analogue of the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a>, which commits a whole goal
 rather than a predicate applied to its arguments.</p>
 <p>The body of a <code class="docutils literal notranslate"><span class="pre">pred</span></code> is still traversed, but the comparison that would
 reject a relational atom in it is vacuous (a <code class="docutils literal notranslate"><span class="pre">pred</span></code> body is allowed to be
@@ -330,8 +327,7 @@ carries the conditional-determinacy promise.</p>
 <p>A signature’s <em>output</em> being functional is itself information a caller can
 use. For instance <code class="docutils literal notranslate"><span class="pre">func</span> <span class="pre">id</span> <span class="pre">A</span> <span class="pre">-&gt;</span> <span class="pre">A</span></code> (with the single rule <code class="docutils literal notranslate"><span class="pre">id</span> <span class="pre">X</span> <span class="pre">X</span></code>)
 promises whoever receives its output a value, not a choice among values.</p>
-<p>That guarantee cannot be conjured from a relation for free. <code class="docutils literal notranslate"><span class="pre">make-deterministic</span></code>
-(PADL’s <code class="docutils literal notranslate"><span class="pre">commit</span></code>) manufactures it, turning a two-argument relation into a
+<p>The code below turns a two-argument relation into a
 one-argument function by picking the first solution and cutting:</p>
 <div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">make-deterministic</span><span class="w"> </span><span class="kt">(pred</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">(func</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B)</span>.
 make-deterministic<span class="w"> </span><span class="nv">P</span><span class="w"> </span>(<span class="nv">x\y\</span><span class="w"> </span><span class="nv">P</span><span class="w"> </span>x<span class="w"> </span>y<span class="kd">,</span><span class="w"> </span><span class="kd">!</span><span class="o">).</span>

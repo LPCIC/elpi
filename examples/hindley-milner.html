@@ -310,17 +310,7 @@ keeps the hypothetical <code class="docutils literal notranslate"><span class="p
 <code class="docutils literal notranslate"><span class="pre">overbar</span></code> constraint carries, which is what <code class="docutils literal notranslate"><span class="pre">generalize</span></code> reads.</p>
 <p><code class="docutils literal notranslate"><span class="pre">generalize</span></code> collects the free variables of the monotype and of Γ, and
 quantifies those that are free in the former but not the latter, the
-ones the surrounding context makes no assumption about. The
-<a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">HDR thesis</span></a>, §2.7.4 (“Type generalization”), spells out this
-step in full, including why it has to be deferred to a constraint in the
-first place.</p>
-<p>This covers the core of the algorithm. Two fuller programs are further
-reading for anyone implementing a real ML-style checker in Elpi.
-<code class="docutils literal notranslate"><span class="pre">tests/sources/w.elpi</span></code>, which this example is adapted from, is the complete
-version. <code class="docutils literal notranslate"><span class="pre">tests/sources/toyml/</span></code> is richer still: it adds equality-type
-variables (Standard ML’s <code class="docutils literal notranslate"><span class="pre">''a</span></code>) and a bidirectional variant that propagates
-a known result type inward instead of only inferring one outward, from the
-<a class="reference internal" href="../bibliography.html#bib-mlws18"><span class="std std-ref">ML Family Workshop slides</span></a>.</p>
+ones the surrounding context makes no assumption about.</p>
 </section>
 
 
