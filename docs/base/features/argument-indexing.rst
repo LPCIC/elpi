@@ -28,12 +28,6 @@ the second argument, one level deep. The optional string picks the technique:
 only option when a single argument is indexed at depth 1), ``"Hash"``, or
 ``"DTree"``.
 
-Changing the index never changes an answer. ``name-of`` here carries a
-non-default ``:index`` and still computes the same result:
-
-.. elpi:: ../code/indexing.elpi
-   :assert: green
-
 
 Which index to use
 ==================
@@ -78,9 +72,8 @@ hash): a flexible goal demands nothing, a flexible rule provides everything.
 Collisions can make the check imprecise, since the whole hash must fit one
 machine word.
 
-.. raw:: html
-
-   <details class="elpi-fold"><summary>Hash indexing, worked out</summary>
+Hash indexing, worked out
+-------------------------
 
 Each indexed argument is reduced to a fixed-width string of bits, built
 hierarchically down to that argument's indexing depth. A unification variable
@@ -121,6 +114,3 @@ keeping a rule when ``hgoal & hrule == hgoal``:
    mult (s X) …    0010 0000    matches rules 2 and 3
    mult X …        0000 0000    matches every rule
 
-.. raw:: html
-
-   </details>

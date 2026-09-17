@@ -2,9 +2,10 @@
 % incomplete terms: a hole in argument position suspends instead of looping.
 
 data tm.
-data ty.
 symb app tm -> tm -> tm.
 symb lam (tm -> tm) -> tm.
+
+data ty.
 symb arr ty -> ty -> ty.
 
 func of tm -> ty.

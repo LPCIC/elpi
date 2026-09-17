@@ -2,9 +2,8 @@
 The standard library
 ####################
 
-``accumulate std.``, or nothing since most programs pull it in transitively,
-puts the ``std.`` namespace (:doc:`syntax/file-structure-and-attributes`) in
-scope: list and option combinators, associative structures, and a few
+The ``std.`` namespace (:doc:`syntax/file-structure-and-attributes`) gathers
+list and option combinators, associative structures, and a few
 overridable hooks. It is written in Elpi, and its full signatures are printed
 by ``elpi -document-builtins`` (or read straight from |stdlib_file|). What
 those signatures do not tell you is what follows: the naming conventions,

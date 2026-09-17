@@ -12,47 +12,47 @@ or *output* and carries a *conversion* between an Elpi term and an OCaml
 value, so the OCaml code receives its inputs already converted and hands back
 its outputs to be converted on the way out. A builtin succeeds once or fails
 (by raising ``No_clause``); it does not backtrack and does not offer a second
-solution on its own, so one that needs to enumerate returns a list. A term it
+solution. A term it
 has no conversion for it can still carry through untouched, as ``any``.
 
 ``elpi -document-builtins`` prints the exhaustive, generated reference: one
 signature and doc comment per predicate, the same text checked in as
 ``src/builtin.elpi``. Throughout this manual a name written like
 :stdlib:`print` links to that predicate's declaration line in
-``src/builtin.elpi`` on GitHub, pinned to commit |stdlib_pin| of this file
-(content hash |stdlib_hash|). What follows is a tour by category, saying what
+``src/builtin.elpi`` on GitHub. What follows is a tour by category, saying what
 each group is for and which chapter covers it in depth where one does.
 
 
 Logic, control and inspection
 =============================
 
-``=`` unifies, with the occur check; ``unsound_unif`` does the same *without*
+:stdlib:`=` unifies, with the occur check; :stdlib:`unsound_unif` does the same *without*
 it and so can build a cyclic term (:doc:`features/unification-and-variables`,
-where it is defined with ``:nooc``). ``same_term``, infix ``==``, tests
+where it is defined with ``:nooc``). :stdlib:`same_term`, infix ``==``, tests
 plain syntactic equality, assigning nothing. ``pattern_match T P`` matches
 ``T`` against the pattern ``P``, assigning only ``P``'s variables
 (:doc:`syntax/terms`).
 
-``declare_constraint`` and ``print_constraints`` are covered in
+:stdlib:`declare_constraint` and :stdlib:`print_constraints` are covered in
 :doc:`syntax/constraint-handling-rules`.
 
-The cut ``!``, ``not``, ``if`` / ``if2``, ``halt`` / ``stop``, :stdlib:`std.once`
+The cut :stdlib:`!`, :stdlib:`not`, :stdlib:`if` / :stdlib:`if2`, :stdlib:`halt` / :stdlib:`stop`, :stdlib:`std.once`
 and :stdlib:`std.do!` are covered in :doc:`features/control-and-cut`, and
 ``pi`` / ``sigma`` in :doc:`syntax/inference-rules-and-queries`.
 
 ``ground_term T`` checks that ``T`` has no unification variables left;
-``closed_term`` yields a fresh variable barred from naming any eigenvariable
-(:doc:`features/binders-and-hoas`); ``cmp_term`` orders two terms
+:stdlib:`closed_term` yields a fresh variable barred from naming any eigenvariable
+(:doc:`features/binders-and-hoas`); :stdlib:`cmp_term` orders two terms
 structurally, and only works when both are ground.
 
-``name`` / ``names`` list the eigenvariables in scope, ``var`` recognises and
+:stdlib:`name` / :stdlib:`names` list the eigenvariables in scope, :stdlib:`var` recognises and
 takes apart a unification variable (:doc:`features/unification-and-variables`
-for its ``uvar Hd Args`` form), ``constant`` a global constant, and
+for its ``uvar Hd Args`` form), :stdlib:`constant` a global constant, and
 ``occurs A T`` checks whether the atom ``A`` appears in ``T``
 (:doc:`features/unification-and-variables`).
 
-``new_int`` hands out a strictly increasing integer and ``new_safe`` a store
+:stdlib:`new_int` hands out a strictly increasing integer and :stdlib:`new_safe` hands
+out a store
 that survives backtracking; both step outside Elpi's usual scoping, so use
 them sparingly.
 
@@ -60,12 +60,12 @@ them sparingly.
 Arithmetic
 ==========
 
-``X is Expr`` evaluates ``Expr`` and unifies the result with ``X``; ``calc``
+``X is Expr`` evaluates ``Expr`` and unifies the result with ``X``; :stdlib:`calc`
 is the same as a function, for use with spilling (:doc:`features/spilling`):
 ``f {calc (N + 1)}``. The precedences of every operator below are in
 :doc:`syntax/lexical-conventions`.
 
-Evaluated inside ``is`` / ``calc``:
+Evaluated inside ``is`` / :stdlib:`calc`:
 
 * **binary** ``+`` ``-`` ``*`` (``int`` or ``float``), ``/`` (``float``),
   ``div`` ``mod`` (``int``), ``^`` (``string`` concatenation);
@@ -119,15 +119,15 @@ These are declared in the builtin library, ready to use without an
    data triple A B C.
    symb triple A -> B -> C -> triple A B C.   % + triple_1..3
 
-``bool`` uses ``tt`` / ``ff`` because ``true`` / ``false`` are goals; ``pair``'s
+``bool`` uses ``tt`` / ``ff`` because :stdlib:`true` / :stdlib:`false` are goals; ``pair``'s
 constructor is ``pr`` because ``,`` is conjunction; ``cmp`` is the result of a
-three-way comparison: ``cmp_term``, or a comparator a caller supplies, as
-``std.map`` and ``std.set`` require; ``diagnostic`` is
+three-way comparison: :stdlib:`cmp_term`, or a comparator a caller supplies, as
+:stdlib:`std.map` and ``std.set`` require; ``diagnostic`` is
 returned by builtins that report a *reason* for failing rather than just
 failing (``ok`` / ``error "message"``). ``list`` (``::`` / ``[]``) is built
 in too (:doc:`syntax/terms`).
 
-A short tour of ``calc``, a ``pair``, ``term_to_string``, ``rex.split`` and a
+A short tour of :stdlib:`calc`, a ``pair``, :stdlib:`term_to_string`, :stdlib:`rex.split` and a
 reseeded generator:
 
 .. elpi:: code/builtins-tour.elpi
@@ -137,7 +137,7 @@ reseeded generator:
 Regular expressions and randomness
 ==================================
 
-``rex.match``, ``rex.replace`` and ``rex.split`` (OCaml's ``Str`` syntax, not
+:stdlib:`rex.match`, :stdlib:`rex.replace` and :stdlib:`rex.split` (OCaml's ``Str`` syntax, not
 PCRE) cover the common text-processing needs. ``random.int N`` draws a
 uniform integer in :math:`[0, N)`; ``random.init Seed`` reseeds the
 generator, making a sequence reproducible: the same seed always draws the
@@ -147,27 +147,26 @@ same numbers.
 Input, output and the file system
 =================================
 
-``print`` and ``dprint`` write their arguments to standard output (``dprint``
-shows raw terms); ``term_to_string`` renders a term to a ``string`` instead of
-printing it. Beyond that Elpi has the stream I/O of a small scripting
-language:
+:stdlib:`print` and :stdlib:`dprint` write their arguments to standard output (:stdlib:`dprint`
+shows raw terms); :stdlib:`term_to_string` renders a term to a ``string`` instead of
+printing it. Beyond that Elpi has the stream I/O of OCaml:
 
-* ``open_in`` / ``open_out`` / ``open_append`` open a file; ``open_string``
+* :stdlib:`open_in` / :stdlib:`open_out` / :stdlib:`open_append` open a file; :stdlib:`open_string`
   turns a string into a readable stream; ``std_in`` / ``std_out`` /
   ``std_err`` are the standard streams;
-* ``input InStream Bytes S`` reads a fixed number of bytes, ``input_line``
-  reads up to the newline, ``lookahead`` peeks one byte, ``eof`` tests for
+* ``input InStream Bytes S`` reads a fixed number of bytes, :stdlib:`input_line`
+  reads up to the newline, :stdlib:`lookahead` peeks one byte, :stdlib:`eof` tests for
   end of input;
-* ``output OutStream S`` writes, ``flush`` forces pending output out,
-  ``close_in`` / ``close_out`` close.
+* ``output OutStream S`` writes, :stdlib:`flush` forces pending output out,
+  :stdlib:`close_in` / :stdlib:`close_out` close.
 
 ``sys.*`` reaches the file system and the process environment:
-``sys.file_exists``, ``sys.is_directory``, ``sys.mkdir`` / ``sys.rmdir``,
-``sys.remove`` / ``sys.rename``, ``sys.readdir``, ``sys.chdir`` /
-``sys.getcwd``, plus ``getenv``, ``gettimeofday`` and ``system`` (run a shell
+:stdlib:`sys.file_exists`, :stdlib:`sys.is_directory`, :stdlib:`sys.mkdir` / :stdlib:`sys.rmdir`,
+:stdlib:`sys.remove` / :stdlib:`sys.rename`, :stdlib:`sys.readdir`, :stdlib:`sys.chdir` /
+:stdlib:`sys.getcwd`, plus :stdlib:`getenv`, :stdlib:`gettimeofday` and :stdlib:`system` (run a shell
 command). The calls that can fail for an external reason return a
 ``diagnostic`` (``ok`` or ``error "…"``) rather than just failing.
-``unix.process.open`` / ``unix.process.close`` spawn a subprocess and reap
+:stdlib:`unix.process.open` / :stdlib:`unix.process.close` spawn a subprocess and reap
 it, handing back its three standard streams.
 
 .. elpi:: code/builtins-io.elpi
@@ -182,16 +181,16 @@ persistent maps over one fixed key type (``std.string.set`` and
 ``std.int.set`` are the matching sets). Each map has ``.empty``, ``.mem``,
 ``.add``, ``.remove``, ``.find`` and ``.bindings``, plus ``.filter`` /
 ``.map`` / ``.fold`` taking an Elpi ``func``; the value type has to be a
-closed term. The general, any-key structures ``std.map`` and ``std.set``,
+closed term. The general, any-key structures :stdlib:`std.map` and ``std.set``,
 written in Elpi rather than OCaml, are covered in :doc:`standard-library`.
 
 
 Garbage collector and runtime
 =============================
 
-``gc.get`` / ``gc.set`` read and write the OCaml garbage-collector
-parameters, ``gc.stat`` / ``gc.quick-stat`` report live statistics, and
-``gc.minor`` / ``gc.major`` / ``gc.full`` / ``gc.compact`` force a
-collection. ``trace.counter`` reads a named trace point
+:stdlib:`gc.get` / :stdlib:`gc.set` read and write the OCaml garbage-collector
+parameters, :stdlib:`gc.stat` / :stdlib:`gc.quick-stat` report live statistics, and
+:stdlib:`gc.minor` / :stdlib:`gc.major` / :stdlib:`gc.full` / :stdlib:`gc.compact` force a
+collection. :stdlib:`trace.counter` reads a named trace point
 (:doc:`debugging-and-tracing`). These matter only when profiling or trimming
 the footprint of a long-running embedding.

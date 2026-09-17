@@ -32,8 +32,8 @@ relates a higher-order argument and two lists:
    map _ [] [].
    map F [X|XS] [Y|YS] :- F X Y, map F XS YS.
 
-The *better* signature says more: **if the higher-order argument ``F`` is a
-function, then ``map F`` is a function too**: a call ``map F L R`` with a
+The *better* signature says more: if the higher-order argument ``F`` is a
+function, then ``map F`` is a function too. A call ``map F L R`` with a
 functional ``F`` produces a single ``R``. That is the whole content of
 writing ``func`` here: a promise about ``map``'s determinacy *conditional on*
 its argument's.
@@ -51,9 +51,6 @@ error message so a rejection says which one failed:
 * **every atom in its body is itself functional**: a relational call in a
   ``func`` body is ``Found relational atom (…) in the body of function …``,
   unless a ``!`` after it collapses the choice point.
-* **its outputs come back as single values**: an output argument left as a
-  relation, rather than pinned to one term, is rejected where the ``func``
-  signature promised a function.
 
 The checker does not run the body; it reasons from the signatures. A call it
 cannot prove functional it rejects, even when the program would in fact be
@@ -105,7 +102,7 @@ function" packages the commit safely:
 
 The signature is the interesting part: ``commit``'s input is a plain
 ``pred``, so passing ``likes`` is *not* a wrong call, yet ``commit likes`` is
-a ``func``. PADL calls this combinator ``once``; it is a two-argument
+a ``func``. ``commit`` is a two-argument
 analogue of the standard library's :stdlib:`std.once`, which commits a whole goal
 rather than a predicate applied to its arguments.
 
@@ -164,8 +161,7 @@ A signature's *output* being functional is itself information a caller can
 use. For instance ``func id A -> A`` (with the single rule ``id X X``)
 promises whoever receives its output a value, not a choice among values.
 
-That guarantee cannot be conjured from a relation for free. ``make-deterministic``
-(PADL's ``commit``) manufactures it, turning a two-argument relation into a
+The code below turns a two-argument relation into a
 one-argument function by picking the first solution and cutting:
 
 .. code-block:: elpi
