@@ -223,7 +223,7 @@ meal<span class="w"> </span><span class="nv">Gs</span><span class="w"> </span><s
 <p>The signature is the interesting part: <code class="docutils literal notranslate"><span class="pre">commit</span></code>’s input is a plain
 <code class="docutils literal notranslate"><span class="pre">pred</span></code>, so passing <code class="docutils literal notranslate"><span class="pre">likes</span></code> is <em>not</em> a wrong call, yet <code class="docutils literal notranslate"><span class="pre">commit</span> <span class="pre">likes</span></code> is
 a <code class="docutils literal notranslate"><span class="pre">func</span></code>. <code class="docutils literal notranslate"><span class="pre">commit</span></code> is a two-argument
-analogue of the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a>, which commits a whole goal
+analogue of the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/e96c217a6841cc6ed10ae5f3babbb7e0f988bbc5/src/builtin.elpi#L635"><code class="docutils literal notranslate"><span class="pre">std.once</span></code></a>, which commits a whole goal
 rather than a predicate applied to its arguments.</p>
 <p>The body of a <code class="docutils literal notranslate"><span class="pre">pred</span></code> is still traversed, but the comparison that would
 reject a relational atom in it is vacuous (a <code class="docutils literal notranslate"><span class="pre">pred</span></code> body is allowed to be

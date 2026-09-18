@@ -164,7 +164,7 @@ only option when a single argument is indexed at depth 1), <code class="docutils
 <h2>Which index to use<a class="headerlink" href="#which-index-to-use" title="Link to this heading"></a></h2>
 <p>The default costs almost nothing and fits almost every predicate. It looks at
 one thing, the head symbol of the first argument, so it tells two rules
-apart exactly when that symbol does. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L802"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a> and most
+apart exactly when that symbol does. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/e96c217a6841cc6ed10ae5f3babbb7e0f988bbc5/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/e96c217a6841cc6ed10ae5f3babbb7e0f988bbc5/src/builtin.elpi#L802"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a> and most
 λProlog predicates have a few rules distinguished by precisely that, and the
 index with the least overhead wins; <a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">the HDR thesis</span></a> §3.2.5
 reports that for the bulk of λProlog code the default beats the richer

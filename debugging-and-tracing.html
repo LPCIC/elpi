@@ -164,7 +164,7 @@ name; <code class="docutils literal notranslate"><span class="pre">-trace-skip</
 <code class="docutils literal notranslate"><span class="pre">user:</span></code> come from the program; <code class="docutils literal notranslate"><span class="pre">dev:</span></code> ones are for debugging Elpi itself.
 <code class="docutils literal notranslate"><span class="pre">trace.counter</span> <span class="pre">&quot;NAME&quot;</span> <span class="pre">N</span></code> reads a named counter (<code class="docutils literal notranslate"><span class="pre">&quot;run&quot;</span></code> counts solved
 goals) for a program to condition its own debug output on, the way
-<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L649"><code class="docutils literal notranslate"><span class="pre">std.spy</span></code></a> does.</p>
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/e96c217a6841cc6ed10ae5f3babbb7e0f988bbc5/src/builtin.elpi#L649"><code class="docutils literal notranslate"><span class="pre">std.spy</span></code></a> does.</p>
 <p><code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">prog.elpi</span> <span class="pre">-test</span> <span class="pre">-trace-on</span> <span class="pre">json</span> <span class="pre">FILE</span> <span class="pre">-trace-at</span> <span class="pre">run</span> <span class="pre">1</span> <span class="pre">9999</span></code> writes a
 machine-readable trace instead of a text one. <code class="docutils literal notranslate"><span class="pre">elpi-trace-elaborator</span></code>, a
 separate binary shipped with Elpi, reads such a trace from standard input and
@@ -182,8 +182,8 @@ steps through them interactively, rather than as a flat log:</p>
 <section id="the-spy-predicate">
 <h2>The spy predicate<a class="headerlink" href="#the-spy-predicate" title="Link to this heading"></a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">std.spy</span> <span class="pre">G</span></code> runs <code class="docutils literal notranslate"><span class="pre">G</span></code> and prints it on entry, and again on exit or on
-failure, through <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L625"><code class="docutils literal notranslate"><span class="pre">std.debug-print</span></code></a>, so it is subject to the same
-overriding as any other library hook (<a class="reference internal" href="standard-library.html"><span class="doc">The standard library</span></a>). <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0164a529ab74530adf4936b44d8233a5c4d81915/src/builtin.elpi#L657"><code class="docutils literal notranslate"><span class="pre">std.spy!</span></code></a>
+failure, through <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/e96c217a6841cc6ed10ae5f3babbb7e0f988bbc5/src/builtin.elpi#L625"><code class="docutils literal notranslate"><span class="pre">std.debug-print</span></code></a>, so it is subject to the same
+overriding as any other library hook (<a class="reference internal" href="standard-library.html"><span class="doc">The standard library</span></a>). <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/e96c217a6841cc6ed10ae5f3babbb7e0f988bbc5/src/builtin.elpi#L657"><code class="docutils literal notranslate"><span class="pre">std.spy!</span></code></a>
 is the same with a cut, for a goal that should only ever succeed once.</p>
 <p><strong>code/spy-tour.elpi:</strong></p>
 <div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="c">% std.spy prints a call&#39;s arguments on entry and on exit (or failure),</span>
