@@ -172,8 +172,7 @@ let unix_error_to_diagnostic e f a =
 let fail_or_mkERROR (d : diagnostic ioarg) msg =
   match d with
   | Data (OK)      -> raise No_clause    (* fail *)
-  | NoData         -> None               (* discard *)
-  | Data (ERROR _) -> Some (mkERROR msg) (* construct the needed error *)
+  | _ -> Some (mkERROR msg) (* construct the needed error *)
 
 let cmp = let open AlgebraicData in declare {
   ty = TyName "cmp";
