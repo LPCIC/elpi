@@ -27,13 +27,13 @@ builtin func (pi) (func A).
 
 builtin func (sigma) (func A).
 
-kind int type.
+data int.
 
 
-kind string type.
+data string.
 
 
-kind float type.
+data float.
 
 
 builtin pred (;) (pred), (pred).
@@ -300,11 +300,11 @@ builtin symb error : string -> diagnostic = "1".  % Failure
 
 %  -- I/O --
 
-kind in_stream type.
+data in_stream.
 
 builtin symb std_in : in_stream = "1".
 
-kind out_stream type.
+data out_stream.
 
 builtin symb std_err : out_stream = "1".
 builtin symb std_out : out_stream = "1".
@@ -448,7 +448,7 @@ builtin func print any.. .
 func counter string -> int.
 counter C N :- trace.counter C N.
 
-kind loc type.
+data loc.
 
 
 % [loc.fields Loc File StartChar StopChar Line LineStartsAtChar] Decomposes
@@ -563,7 +563,7 @@ builtin func new_int -> int.
 builtin func findall_solutions (pred) -> list (pred).
 
 % Holds data across bracktracking; can only contain closed terms
-kind safe type.
+data safe.
 
 
 % [new_safe Safe] creates a safe: a store that persists across backtracking

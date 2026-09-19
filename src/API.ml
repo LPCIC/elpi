@@ -345,7 +345,7 @@ module RawOpaqueData = struct
       ED.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
       Format.fprintf fmt "@\n";
     end;
-    Format.fprintf fmt "@[<hov 2>kind %s type.@]@\n@\n" name;
+    Format.fprintf fmt "@[<hov 2>data %s.@]@\n@\n" name;
     List.iter (fun (variant,(c,_)) ->
       Format.fprintf fmt "@[<hov 2>builtin symb %s : %s = \"%d\".@]@\n" c name variant)
       constants
