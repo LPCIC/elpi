@@ -154,7 +154,7 @@ warns where the <code class="docutils literal notranslate"><span class="pre">=&g
 <h2>Treacherous one-rule anonymous predicates<a class="headerlink" href="#treacherous-one-rule-anonymous-predicates" title="Link to this heading"></a></h2>
 <p>A variable is a parameter of the <em>whole rule</em> it occurs in, not of an
 anonymous predicate nested inside it, so a variable used only inside a
-<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/e96c217a6841cc6ed10ae5f3babbb7e0f988bbc5/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a> (or similar) callback is shared by every call the traversal
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/0f03c2bc43d64979421129cc2f58c4130676bd83/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a> (or similar) callback is shared by every call the traversal
 makes, not fresh per call, unless a <code class="docutils literal notranslate"><span class="pre">sigma</span></code> says otherwise
 (<a class="reference internal" href="binders-and-hoas.html"><span class="doc">Binders and HOAS</span></a>):</p>
 <p><strong>../code/anonymous-predicate.elpi:</strong></p>
