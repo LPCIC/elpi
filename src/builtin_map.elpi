@@ -1,4 +1,4 @@
-kind std.map type -> type -> type.
+data std.map K V.
 type std.map std.map.private.map K V -> (func K, K -> cmp) -> std.map K V.
 
 namespace std.map {
@@ -26,7 +26,7 @@ bindings (std.map M _) L :- private.bindings M [] L.
 namespace private {
 
 % Taken from OCaml's map.ml
-kind map type -> type -> type.
+data map K V.
 type empty map K V.
 type node map K V -> K -> V -> map K V -> int -> map K V.
 
@@ -114,7 +114,7 @@ bindings (node L V D R _) X X1 :-
 
 % Fast maps only work ground terms but do not perform occur check
 
-kind std.fmap type -> type -> type.
+data std.fmap K V.
 type std.fmap std.fmap.private.map K V -> (func K, K -> cmp) -> std.fmap K V.
 
 namespace std.fmap {
@@ -154,7 +154,7 @@ func assert-ground A.
 assert-ground A :- std.assert! (ground_term A) "std.fmap: not ground".
 
 % Taken from OCaml's map.ml
-kind map type -> type -> type.
+data map K V.
 type empty map K V.
 type node map K V -> K -> V -> map K V -> int -> map K V.
 
