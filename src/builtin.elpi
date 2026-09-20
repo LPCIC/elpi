@@ -267,7 +267,7 @@ snd (pr _ B) B.
 
 
 data triple A B C.
-type triple A -> B -> C -> triple A B C.
+symb triple A -> B -> C -> triple A B C.
 
 func triple_1 triple A B C -> A.
 triple_1 (triple A _ _) A.
@@ -1218,7 +1218,7 @@ builtin func std.loc.set.partition std.loc.set,
 
 #line 1 "builtin_map.elpi"
 data std.map K V.
-type std.map std.map.private.map K V -> (func K, K -> cmp) -> std.map K V.
+symb std.map std.map.private.map K V -> (func K, K -> cmp) -> std.map K V.
 
 namespace std.map {
 
@@ -1246,8 +1246,8 @@ namespace private {
 
 % Taken from OCaml's map.ml
 data map K V.
-type empty map K V.
-type node map K V -> K -> V -> map K V -> int -> map K V.
+symb empty map K V.
+symb node map K V -> K -> V -> map K V -> int -> map K V.
 
 func height map K V -> int.
 height empty 0.
@@ -1334,7 +1334,7 @@ bindings (node L V D R _) X X1 :-
 % Fast maps only work ground terms but do not perform occur check
 
 data std.fmap K V.
-type std.fmap std.fmap.private.map K V -> (func K, K -> cmp) -> std.fmap K V.
+symb std.fmap std.fmap.private.map K V -> (func K, K -> cmp) -> std.fmap K V.
 
 namespace std.fmap {
 
@@ -1374,8 +1374,8 @@ assert-ground A :- std.assert! (ground_term A) "std.fmap: not ground".
 
 % Taken from OCaml's map.ml
 data map K V.
-type empty map K V.
-type node map K V -> K -> V -> map K V -> int -> map K V.
+symb empty map K V.
+symb node map K V -> K -> V -> map K V -> int -> map K V.
 
 func height map K V -> int.
 height empty 0.
@@ -1462,7 +1462,7 @@ bindings (node L V D R _) X X1 :-
 
 #line 1 "builtin_set.elpi"
 data std.set E.
-type std.set std.set.private.set E -> (func E, E -> cmp) -> std.set E.
+symb std.set std.set.private.set E -> (func E, E -> cmp) -> std.set E.
 
 namespace std.set {
 
@@ -1493,8 +1493,8 @@ namespace private {
 
 % Taken from OCaml's set.ml
 data set E.
-type empty set E.
-type node set E -> E -> set E -> int -> set E.
+symb empty set E.
+symb node set E -> E -> set E -> int -> set E.
 
 func height set E -> int.
 height empty 0.
@@ -1584,7 +1584,7 @@ elements (node L E R _) Acc X :-
 % Fast sets only work ground terms but do not perform occur check
 
 data std.fset E.
-type std.fset std.fset.private.set E -> (func E, E -> cmp) -> std.fset E.
+symb std.fset std.fset.private.set E -> (func E, E -> cmp) -> std.fset E.
 
 namespace std.fset {
 
@@ -1624,8 +1624,8 @@ assert-ground A :- std.assert! (ground_term A) "std.fset: not ground".
 
 % Taken from OCaml's set.ml
 data set E.
-type empty set E.
-type node set E -> E -> set E -> int -> set E.
+symb empty set E.
+symb node set E -> E -> set E -> int -> set E.
 
 func height set E -> int.
 height empty 0.

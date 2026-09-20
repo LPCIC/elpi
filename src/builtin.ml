@@ -352,7 +352,7 @@ builtin func pattern_match A -> A.|};
 
   LPCode {|
 data triple A B C.
-type triple A -> B -> C -> triple A B C.
+symb triple A -> B -> C -> triple A B C.
 
 func triple_1 triple A B C -> A.
 triple_1 (triple A _ _) A.
