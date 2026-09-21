@@ -4151,6 +4151,9 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
       | exception No_clause ->
          [%spy "user:rule:builtin" ~rid ~gid pp_string "fail"];
          [%tcall next_alt alts]
+      | exception host_exn ->
+         [%spy "user:rule:builtin" ~rid ~gid pp_string "fail"];
+         raise host_exn
       end
    | Cons (g,gs') -> [%spy "user:rule" ~rid ~gid pp_string "and"];
        let gid'[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
