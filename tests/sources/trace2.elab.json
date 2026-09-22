@@ -21,7 +21,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
+                  "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ ((fail) ==> (true , fail))))).",
                   "rule_loc": [
                     "File",
                     {
@@ -38,7 +38,7 @@
             "siblings": [
               { "goal_text": "print 1", "goal_id": 5 },
               {
-                "goal_text": "pi c0 \\ sigma c1 \\ fail => (true , fail)",
+                "goal_text": "pi c0 \\ sigma c1 \\ (fail) ==> true , fail",
                 "goal_id": 6
               }
             ],
@@ -51,7 +51,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ ((fail) ==> (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -108,7 +108,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ ((fail) ==> (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -135,7 +135,7 @@
       "Inference",
       {
         "current_goal_id": 6,
-        "current_goal_text": "pi c0 \\ sigma c1 \\ fail => (true , fail)",
+        "current_goal_text": "pi c0 \\ sigma c1 \\ (fail) ==> true , fail",
         "current_goal_predicate": "pi",
         "failed_attempts": [],
         "successful_attempts": [
@@ -149,7 +149,7 @@
             },
             "siblings": [
               {
-                "goal_text": "sigma c1 \\ fail => (true , fail)",
+                "goal_text": "sigma c1 \\ (fail) ==> true , fail",
                 "goal_id": 7
               }
             ],
@@ -170,7 +170,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ ((fail) ==> (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -197,7 +197,7 @@
       "Inference",
       {
         "current_goal_id": 7,
-        "current_goal_text": "sigma c1 \\ fail => (true , fail)",
+        "current_goal_text": "sigma c1 \\ (fail) ==> true , fail",
         "current_goal_predicate": "sigma",
         "failed_attempts": [],
         "successful_attempts": [
@@ -210,7 +210,7 @@
               "events": []
             },
             "siblings": [
-              { "goal_text": "fail => (true , fail)", "goal_id": 8 }
+              { "goal_text": "(fail) ==> true , fail", "goal_id": 8 }
             ],
             "siblings_aggregated_outcome": "Success"
           }
@@ -237,7 +237,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ ((fail) ==> (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -264,7 +264,7 @@
       "Inference",
       {
         "current_goal_id": 8,
-        "current_goal_text": "fail => (true , fail)",
+        "current_goal_text": "(fail) ==> true , fail",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -314,7 +314,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ ((fail) ==> (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -402,7 +402,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ ((fail) ==> (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -517,7 +517,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ ((fail) ==> (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -610,7 +610,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ (fail => (true , fail))))).",
+                "rule_text": "main :- (print 1), (pi c0 \\ (sigma (c1 \\ ((fail) ==> (true , fail))))).",
                 "rule_loc": [
                   "File",
                   {

@@ -1,0 +1,9 @@
+% Example used in the "Spilling" chapter: `f A -> B` in a clause head is
+% sugar for `f A B` with :autospill set. Here `succ X` is under-applied
+% (missing its output), so it is auto-spilled into that missing argument,
+% with no `{ }` written at all.
+
+func succ int -> int.
+succ X -> (calc (X + 1)).
+
+main -> :- print (succ 3).

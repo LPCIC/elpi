@@ -21,7 +21,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                  "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                   "rule_loc": [
                     "File",
                     {
@@ -37,7 +37,7 @@
             },
             "siblings": [
               {
-                "goal_text": "x0 => z0 ;\n (x1 , y1) => z1 ;\n  [x2, y2] => z2 ;\n   [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+                "goal_text": "(x0) ==> z0 ;\n (x1 , y1) ==> z1 ;\n  ([x2, y2]) ==> z2 ;\n   ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n    (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
                 "goal_id": 5
               }
             ],
@@ -50,7 +50,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -77,7 +77,7 @@
       "Inference",
       {
         "current_goal_id": 5,
-        "current_goal_text": "x0 => z0 ;\n (x1 , y1) => z1 ;\n  [x2, y2] => z2 ;\n   [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "(x0) ==> z0 ;\n (x1 , y1) ==> z1 ;\n  ([x2, y2]) ==> z2 ;\n   ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n    (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -98,9 +98,9 @@
                   ]
                 }
               ],
-              "events": [ [ "Assign", "A0 := x0 => z0" ] ]
+              "events": [ [ "Assign", "A0 := (x0) ==> z0" ] ]
             },
-            "siblings": [ { "goal_text": "x0 => z0", "goal_id": 6 } ],
+            "siblings": [ { "goal_text": "(x0) ==> z0", "goal_id": 6 } ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -129,7 +129,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -156,7 +156,7 @@
       "Inference",
       {
         "current_goal_id": 6,
-        "current_goal_text": "x0 => z0",
+        "current_goal_text": "(x0) ==> z0",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -209,7 +209,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -277,7 +277,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -304,7 +304,7 @@
       "Inference",
       {
         "current_goal_id": 5,
-        "current_goal_text": "x0 => z0 ;\n (x1 , y1) => z1 ;\n  [x2, y2] => z2 ;\n   [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "(x0) ==> z0 ;\n (x1 , y1) ==> z1 ;\n  ([x2, y2]) ==> z2 ;\n   ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n    (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -328,13 +328,13 @@
               "events": [
                 [
                   "Assign",
-                  "A0 := (x1 , y1) => z1 ;\n       [x2, y2] => z2 ;\n        [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true"
+                  "A0 := (x1 , y1) ==> z1 ;\n       ([x2, y2]) ==> z2 ;\n        ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n         (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true"
                 ]
               ]
             },
             "siblings": [
               {
-                "goal_text": "(x1 , y1) => z1 ;\n [x2, y2] => z2 ;\n  [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+                "goal_text": "(x1 , y1) ==> z1 ;\n ([x2, y2]) ==> z2 ;\n  ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n   (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
                 "goal_id": 8
               }
             ],
@@ -366,7 +366,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -393,7 +393,7 @@
       "Inference",
       {
         "current_goal_id": 8,
-        "current_goal_text": "(x1 , y1) => z1 ;\n [x2, y2] => z2 ;\n  [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "(x1 , y1) ==> z1 ;\n ([x2, y2]) ==> z2 ;\n  ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n   (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -414,9 +414,9 @@
                   ]
                 }
               ],
-              "events": [ [ "Assign", "A0 := (x1 , y1) => z1" ] ]
+              "events": [ [ "Assign", "A0 := (x1 , y1) ==> z1" ] ]
             },
-            "siblings": [ { "goal_text": "(x1 , y1) => z1", "goal_id": 9 } ],
+            "siblings": [ { "goal_text": "(x1 , y1) ==> z1", "goal_id": 9 } ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -464,7 +464,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -491,7 +491,7 @@
       "Inference",
       {
         "current_goal_id": 9,
-        "current_goal_text": "(x1 , y1) => z1",
+        "current_goal_text": "(x1 , y1) ==> z1",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -563,7 +563,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -650,7 +650,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -677,7 +677,7 @@
       "Inference",
       {
         "current_goal_id": 8,
-        "current_goal_text": "(x1 , y1) => z1 ;\n [x2, y2] => z2 ;\n  [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "(x1 , y1) ==> z1 ;\n ([x2, y2]) ==> z2 ;\n  ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n   (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -701,13 +701,13 @@
               "events": [
                 [
                   "Assign",
-                  "A0 := [x2, y2] => z2 ;\n       [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true"
+                  "A0 := ([x2, y2]) ==> z2 ;\n       ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n        (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true"
                 ]
               ]
             },
             "siblings": [
               {
-                "goal_text": "[x2, y2] => z2 ;\n [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+                "goal_text": "([x2, y2]) ==> z2 ;\n ([(x3 :- !), (y3 :- !)]) ==> z3 ; (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
                 "goal_id": 11
               }
             ],
@@ -758,7 +758,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -785,7 +785,7 @@
       "Inference",
       {
         "current_goal_id": 11,
-        "current_goal_text": "[x2, y2] => z2 ;\n [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "([x2, y2]) ==> z2 ;\n ([(x3 :- !), (y3 :- !)]) ==> z3 ; (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -806,9 +806,11 @@
                   ]
                 }
               ],
-              "events": [ [ "Assign", "A0 := [x2, y2] => z2" ] ]
+              "events": [ [ "Assign", "A0 := ([x2, y2]) ==> z2" ] ]
             },
-            "siblings": [ { "goal_text": "[x2, y2] => z2", "goal_id": 12 } ],
+            "siblings": [
+              { "goal_text": "([x2, y2]) ==> z2", "goal_id": 12 }
+            ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -875,7 +877,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -902,7 +904,7 @@
       "Inference",
       {
         "current_goal_id": 12,
-        "current_goal_text": "[x2, y2] => z2",
+        "current_goal_text": "([x2, y2]) ==> z2",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -993,7 +995,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -1099,7 +1101,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -1126,7 +1128,7 @@
       "Inference",
       {
         "current_goal_id": 11,
-        "current_goal_text": "[x2, y2] => z2 ;\n [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "([x2, y2]) ==> z2 ;\n ([(x3 :- !), (y3 :- !)]) ==> z3 ; (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -1150,13 +1152,13 @@
               "events": [
                 [
                   "Assign",
-                  "A0 := [(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true"
+                  "A0 := ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n       (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true"
                 ]
               ]
             },
             "siblings": [
               {
-                "goal_text": "[(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+                "goal_text": "([(x3 :- !), (y3 :- !)]) ==> z3 ; (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
                 "goal_id": 14
               }
             ],
@@ -1226,7 +1228,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -1253,7 +1255,7 @@
       "Inference",
       {
         "current_goal_id": 14,
-        "current_goal_text": "[(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "([(x3 :- !), (y3 :- !)]) ==> z3 ; (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -1275,11 +1277,14 @@
                 }
               ],
               "events": [
-                [ "Assign", "A0 := [(x3 :- !), (y3 :- !)] => z3" ]
+                [ "Assign", "A0 := ([(x3 :- !), (y3 :- !)]) ==> z3" ]
               ]
             },
             "siblings": [
-              { "goal_text": "[(x3 :- !), (y3 :- !)] => z3", "goal_id": 15 }
+              {
+                "goal_text": "([(x3 :- !), (y3 :- !)]) ==> z3",
+                "goal_id": 15
+              }
             ],
             "siblings_aggregated_outcome": "Fail"
           }
@@ -1366,7 +1371,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -1393,7 +1398,7 @@
       "Inference",
       {
         "current_goal_id": 15,
-        "current_goal_text": "[(x3 :- !), (y3 :- !)] => z3",
+        "current_goal_text": "([(x3 :- !), (y3 :- !)]) ==> z3",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -1503,7 +1508,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -1628,7 +1633,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -1655,7 +1660,7 @@
       "Inference",
       {
         "current_goal_id": 14,
-        "current_goal_text": "[(x3 :- !), (y3 :- !)] => z3 ; (x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "([(x3 :- !), (y3 :- !)]) ==> z3 ; (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -1677,12 +1682,15 @@
                 }
               ],
               "events": [
-                [ "Assign", "A0 := (x4 :- y4 , !) => z4 ; [] => z5 ; true" ]
+                [
+                  "Assign",
+                  "A0 := (x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true"
+                ]
               ]
             },
             "siblings": [
               {
-                "goal_text": "(x4 :- y4 , !) => z4 ; [] => z5 ; true",
+                "goal_text": "(x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
                 "goal_id": 17
               }
             ],
@@ -1771,7 +1779,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -1798,7 +1806,7 @@
       "Inference",
       {
         "current_goal_id": 17,
-        "current_goal_text": "(x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "(x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -1819,10 +1827,10 @@
                   ]
                 }
               ],
-              "events": [ [ "Assign", "A0 := (x4 :- y4 , !) => z4" ] ]
+              "events": [ [ "Assign", "A0 := (x4 :- y4 , !) ==> z4" ] ]
             },
             "siblings": [
-              { "goal_text": "(x4 :- y4 , !) => z4", "goal_id": 18 }
+              { "goal_text": "(x4 :- y4 , !) ==> z4", "goal_id": 18 }
             ],
             "siblings_aggregated_outcome": "Fail"
           }
@@ -1928,7 +1936,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -1955,7 +1963,7 @@
       "Inference",
       {
         "current_goal_id": 18,
-        "current_goal_text": "(x4 :- y4 , !) => z4",
+        "current_goal_text": "(x4 :- y4 , !) ==> z4",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -2084,7 +2092,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -2228,7 +2236,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -2255,7 +2263,7 @@
       "Inference",
       {
         "current_goal_id": 17,
-        "current_goal_text": "(x4 :- y4 , !) => z4 ; [] => z5 ; true",
+        "current_goal_text": "(x4 :- y4 , !) ==> z4 ; ([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -2276,9 +2284,11 @@
                   ]
                 }
               ],
-              "events": [ [ "Assign", "A0 := [] => z5 ; true" ] ]
+              "events": [ [ "Assign", "A0 := ([]) ==> z5 ; true" ] ]
             },
-            "siblings": [ { "goal_text": "[] => z5 ; true", "goal_id": 20 } ],
+            "siblings": [
+              { "goal_text": "([]) ==> z5 ; true", "goal_id": 20 }
+            ],
             "siblings_aggregated_outcome": "Success"
           }
         ],
@@ -2383,7 +2393,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -2410,7 +2420,7 @@
       "Inference",
       {
         "current_goal_id": 20,
-        "current_goal_text": "[] => z5 ; true",
+        "current_goal_text": "([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -2431,9 +2441,9 @@
                   ]
                 }
               ],
-              "events": [ [ "Assign", "A0 := [] => z5" ] ]
+              "events": [ [ "Assign", "A0 := ([]) ==> z5" ] ]
             },
-            "siblings": [ { "goal_text": "[] => z5", "goal_id": 21 } ],
+            "siblings": [ { "goal_text": "([]) ==> z5", "goal_id": 21 } ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -2557,7 +2567,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -2584,7 +2594,7 @@
       "Inference",
       {
         "current_goal_id": 21,
-        "current_goal_text": "[] => z5",
+        "current_goal_text": "([]) ==> z5",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -2728,7 +2738,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -2887,7 +2897,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -2914,7 +2924,7 @@
       "Inference",
       {
         "current_goal_id": 20,
-        "current_goal_text": "[] => z5 ; true",
+        "current_goal_text": "([]) ==> z5 ; true",
         "current_goal_predicate": ";",
         "failed_attempts": [],
         "successful_attempts": [
@@ -3061,7 +3071,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {
@@ -3254,7 +3264,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (x0 => z0 ;\n          (x1 , y1) => z1 ;\n           [x2, y2] => z2 ;\n            [(x3 :- !), (y3 :- !)] => z3 ;\n             (x4 :- y4 , !) => z4 ; [] => z5 ; true).",
+                "rule_text": "main :- ((x0) ==> z0 ;\n          ((x1 , y1)) ==> z1 ;\n           ([x2, y2]) ==> z2 ;\n            ([(x3 :- !), (y3 :- !)]) ==> z3 ;\n             ((x4 :- y4 , !)) ==> z4 ; ([]) ==> z5 ; true).",
                 "rule_loc": [
                   "File",
                   {

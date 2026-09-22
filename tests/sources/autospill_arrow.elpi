@@ -1,0 +1,4 @@
+func split list int -> int, list int.
+split [X|XS] -> X XS.
+
+main :- split [1,2,3] H T, H = 1, T = [2,3].

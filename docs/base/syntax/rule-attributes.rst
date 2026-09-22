@@ -17,6 +17,10 @@ Attributes that describe a *predicate* rather than one of its rules
 (``:index``, ``:functional``, ``:external``) go on the ``pred`` / ``func``
 signature instead (:doc:`type-declarations`).
 
+``:autospill`` spills every under-applied call in the rule, without needing
+an explicit ``{ }`` around each one; it is covered together with ``{ }``
+itself in :doc:`../features/spilling`.
+
 
 Grafting
 ========

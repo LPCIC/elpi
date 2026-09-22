@@ -1,0 +1,1 @@
+:autospill main :- X = {std.appendR [] []}, X L, L = [].

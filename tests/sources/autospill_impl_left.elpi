@@ -1,0 +1,7 @@
+func succ int -> int.
+succ X -> (calc (X + 1)).
+
+
+pred p -> int, int.
+
+main -> :- (p (succ 1) R :- (p (succ 3) 42 ==> R = (succ 2))) ==> p X Y, X = 2, Y = 3.

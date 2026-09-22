@@ -23,14 +23,28 @@ let rec substrings i len_s s =
   else []
 let substrings s = List.rev @@ substrings 1 (String.length s) s
 
+let is_identifier_start c =
+  (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c = '_' || c = '.' || c = '@'
+let is_identifier_char c =
+  (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+  || c = '_' || c = '-' || c = '.' || c = '$' || c = '@'
+  || c = '+' || c = '*' || c = '/' || c = '^' || c = '<' || c = '>'
+  || c = '`' || c = '\'' || c = '?' || c = '#' || c = '~' || c = '=' || c = '&' || c = '!'
+let is_identifier s =
+  let len = String.length s in
+  let rec aux i = i >= len || (is_identifier_char s.[i] && aux (i+1)) in
+  len > 0 && is_identifier_start s.[0] && aux 1
+
 let find_sub tab s =
-  let rec aux = function
-    | [] -> raise Not_found
-    | x :: xs ->
-        try Hashtbl.find tab x
-        with Not_found -> aux xs
-  in
-    aux (substrings s)
+  if is_identifier s then Hashtbl.find tab s
+  else
+    let rec aux = function
+      | [] -> raise Not_found
+      | x :: xs ->
+          try Hashtbl.find tab x
+          with Not_found -> aux xs
+    in
+      aux (substrings s)
 
 let precedence_of, umax_precedence, appl_precedence, inf_precedence =
   let tab = Hashtbl.create 21 in

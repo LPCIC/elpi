@@ -1,0 +1,3 @@
+func map (func A -> B), list A -> list B.
+map _ [] -> [].
+map F [X|XS] -> [F X|map F XS].

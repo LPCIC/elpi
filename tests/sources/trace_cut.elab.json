@@ -397,7 +397,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- q, !, (q => (q :- !) => q).",
+                  "rule_text": "main :- q, !, ((q) ==> (((q :- !)) ==> q)).",
                   "rule_loc": [
                     "File",
                     {
@@ -414,7 +414,7 @@
             "siblings": [
               { "goal_text": "q", "goal_id": 9 },
               { "goal_text": "!", "goal_id": 10 },
-              { "goal_text": "q => (q :- !) => q", "goal_id": 11 }
+              { "goal_text": "(q) ==> (q :- !) ==> q", "goal_id": 11 }
             ],
             "siblings_aggregated_outcome": "Success"
           }
@@ -425,7 +425,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, !, (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, ((q) ==> (((q :- !)) ==> q)).",
                 "rule_loc": [
                   "File",
                   {
@@ -504,7 +504,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, !, (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, ((q) ==> (((q :- !)) ==> q)).",
                 "rule_loc": [
                   "File",
                   {
@@ -559,7 +559,7 @@
       "Inference",
       {
         "current_goal_id": 11,
-        "current_goal_text": "q => (q :- !) => q",
+        "current_goal_text": "(q) ==> (q :- !) ==> q",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -571,7 +571,7 @@
               ],
               "events": []
             },
-            "siblings": [ { "goal_text": "(q :- !) => q", "goal_id": 12 } ],
+            "siblings": [ { "goal_text": "(q :- !) ==> q", "goal_id": 12 } ],
             "siblings_aggregated_outcome": "Success"
           }
         ],
@@ -593,7 +593,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, !, (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, ((q) ==> (((q :- !)) ==> q)).",
                 "rule_loc": [
                   "File",
                   {
@@ -620,7 +620,7 @@
       "Inference",
       {
         "current_goal_id": 12,
-        "current_goal_text": "(q :- !) => q",
+        "current_goal_text": "(q :- !) ==> q",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [
@@ -666,7 +666,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, !, (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, ((q) ==> (((q :- !)) ==> q)).",
                 "rule_loc": [
                   "File",
                   {
@@ -747,7 +747,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- q, !, (q => (q :- !) => q).",
+                "rule_text": "main :- q, !, ((q) ==> (((q :- !)) ==> q)).",
                 "rule_loc": [
                   "File",
                   {

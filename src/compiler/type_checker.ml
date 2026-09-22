@@ -169,6 +169,17 @@ let arrow_of_tys tys ety =
     | (m,x) :: xs -> TypeAssignment.Arr(m,Ast.Structured.NotVariadic,x,aux xs) in
   aux tys
 
+let same_args a b = try List.for_all2 (==) a b with Invalid_argument _ -> false
+
+(* Rebuilds [orig] (an App or UVar node) with [args'] in place of its own
+   args, reusing [orig] itself (preserving physical equality) when [args']
+   did not actually change anything. *)
+let rebuild_orig orig args' =
+  match orig with
+  | ScopedTerm.App(hd,args) -> if same_args args args' then orig else ScopedTerm.App(hd,args')
+  | ScopedTerm.UVar(hd,args) -> if same_args args args' then orig else ScopedTerm.UVar(hd,args')
+  | _ -> anomaly "rebuild_orig: not an App/UVar node"
+
 
 type runtime_types = Symbol.t F.Map.t
 [@@deriving show]
@@ -376,11 +387,11 @@ let silence_linear_warn f =
   len > 0 && (s.[0] = '_' || s.[len-1] = '_'
               || s.[0] = '%') (* generated name *)
 
-let checker ~type_abbrevs ~kinds ~types:env ~unknown :
-  (ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared) * 
-  (ScopedTerm.t -> exp:TypeAssignment.t -> env_undeclared * bool) * 
-  ((_, ScopedTerm.t) Ast.Chr.t -> env_undeclared) *
-  (ScopedTerm.t * Ast.Loc.t -> env_undeclared)
+let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) () :
+  (ScopedTerm.t -> exp:TypeAssignment.t -> ScopedTerm.t * env_undeclared) *
+  (ScopedTerm.t -> exp:TypeAssignment.t -> ScopedTerm.t * env_undeclared * bool) *
+  (('a, ScopedTerm.t) Ast.Chr.t -> ('a, ScopedTerm.t) Ast.Chr.t * env_undeclared) *
+  (ScopedTerm.t * Ast.Loc.t -> ScopedTerm.t * env_undeclared)
 =
   let valid_mode = ref true in
 
@@ -403,25 +414,27 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
   in
 
 
-  let rec check ~positive (ctx : ctx Scope.Map.t) ~loc ~tyctx x (ety : ety) : spilled_phantoms =
+  let rec check ~positive ~auto_spill (ctx : ctx Scope.Map.t) ~loc ~tyctx x (ety : ety) : ScopedTerm.t_ * spilled_phantoms =
     (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty_mut_once ety.eit; *)
     match x with
-    | Impl(b,_,t1,t2) -> check_impl ~positive ctx ~loc ~tyctx b t1 t2 ety
-    | App({ scope = Global _} as c,[]) -> check_global ctx ~loc ~tyctx c ety
-    | App({ scope = Bound _} as c,[]) -> check_local ctx ~loc ~tyctx c ety
-    | CData c -> check_cdata ~loc ~tyctx kinds c ety
+    | Impl(b,_,t1,t2) -> check_impl ~auto_spill ~positive ctx ~loc ~tyctx x b t1 t2 ety
+    | App({ scope = Global _} as c,[]) -> x, check_global ctx ~loc ~tyctx c ety
+    | App({ scope = Bound _} as c,[]) -> x, check_local ctx ~loc ~tyctx c ety
+    | CData c -> x, check_cdata ~loc ~tyctx kinds c ety
     | Spill(_,{contents = Phantom _}) -> assert false
-    | Spill(sp,info) -> 
-      if not positive then error ~loc "Spilling in negative position is forbidden";
-      check_spill ~positive ctx ~loc ~tyctx sp info ety
-    | App({ scope = gid } as hd,xs) -> check_app ~positive ctx ~loc ~tyctx gid (drop_scope hd) (get_hd_type ~loc ctx env hd ety) xs ety 
-    | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx c cty t ety
-    | Discard _ -> []
-    | UVar({ name = c } as hd,args) -> check_app ~positive ctx ~loc ~tyctx (Scope.Bound elpi_var) hd (uvar_type ~loc c) args ety
-    | Cast(t,ty) ->
-        let ty = TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty ty in
-        let spills = check_loc ~positive ctx ~tyctx:None t ~ety:(TypeAssignment.mk_ety ty) in
-        if unify ty ety then spills
+    | Spill(x,_) when auto_spill ->
+        let x, spills = check_loc ~positive ~tyctx ctx x ~ety ~auto_spill:false in
+        x.it, spills
+    | Spill(sp,info) ->
+        x, check_spill ~positive ctx ~loc ~tyctx sp info ety
+    | App({ scope = gid } as hd,xs) -> check_app ~auto_spill ~positive ctx ~loc ~tyctx x gid (drop_scope hd) (get_hd_type ~loc ctx env hd ety) xs ety
+    | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx x c cty t ety
+    | Discard _ -> x, []
+    | UVar({ name = c } as hd,args) -> check_app ~auto_spill ~positive ctx ~loc ~tyctx x (Scope.Bound elpi_var) hd (uvar_type ~loc c) args ety
+    | Cast(t,tye) ->
+        let ty = TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty tye in
+        let t', spills = check_loc ~positive ctx ~tyctx:None t ~ety:(TypeAssignment.mk_ety ty) ~auto_spill  in
+        if unify ty ety then (if t' == t then x else Cast(t',tye)), spills
         else error_bad_ety ~valid_mode ~loc ~tyctx ScopedTerm.pretty_ x ty ~ety
 
   and resolve_gid ~loc id gid ety ty =
@@ -432,23 +445,38 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       SymbolResolver.resolve env x.resolved_to id
     | _ -> ()
 
-  and check_impl ~positive ctx ~loc ~tyctx b t1 t2 ety =
-    if not @@ unify prop ety then
+  and check_impl ~auto_spill ~positive ctx ~loc ~tyctx orig b t1 t2 ety =
+    let lhs, rhs,c,positive (* of => *) =
+      match b with
+      | L2R -> t1,t2,F.implf,positive
+      | L2RBang -> t1,t2,F.implbangf,positive
+      | R2L -> t2,t1,F.rimplf,not positive in
+    (* In autospill mode `H => {G}` becomes `{H => G}` *)
+    let as_goal = try_unify prop ety in
+    if not as_goal && not (auto_spill && (b = L2R || b = L2RBang)) then
       error_bad_ety ~valid_mode ~loc ~tyctx ~ety:(TypeAssignment.mk_ety prop) ScopedTerm.pretty_ (Impl(b,loc,t1,t2)) ety.eit
     else
-      let lhs, rhs,c,positive (* of => *) =
-        match b with
-        | L2R -> t1,t2,F.implf,positive
-        | L2RBang -> t1,t2,F.implbangf,positive
-        | R2L -> t2,t1,F.rimplf,not positive in
-      let spills = check_loc ~positive ~tyctx:(Some c) ctx rhs ~ety:(TypeAssignment.mk_ety prop) in
+      let conclusion_ety = if as_goal then TypeAssignment.mk_ety prop else ety in
+      let rhs, spills = check_loc ~positive ~tyctx:(Some c) ctx rhs ~ety:conclusion_ety in
       let lhs_ty = mk_uvar "Src" in
-      let more_spills = check_loc ~positive:(not positive) ~tyctx:None ctx ~ety:(TypeAssignment.mk_ety ~arity:0 lhs_ty) lhs in
+      let lhs, more_spills = check_loc ~positive:(not positive) ~tyctx:None ctx ~ety:(TypeAssignment.mk_ety ~arity:0 lhs_ty) lhs in
       let ety1 = TypeAssignment.mk_ety prop in
       let ety2 = TypeAssignment.mk_ety @@ TypeAssignment.App(F.from_string "list",prop,[]) in
-      if try_unify lhs_ty ety1 then spills @ more_spills (* probably an error if not empty *)
-      else if unify lhs_ty ety2 then spills @ more_spills (* probably an error if not empty *)
-      else error_bad_ety2 ~valid_mode ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
+      if not (try_unify lhs_ty ety1 || unify lhs_ty ety2) then
+        error_bad_ety2 ~valid_mode ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
+      else
+      match rhs.it with
+      | Spill(sp, ({ contents = Main _ } as info)) when not as_goal ->
+          (* sp.ty is the residual (still-missing-arguments) arrow type of
+             the call: Spilling.main_goal only cares about it to
+             know how many/what type of values are missing, regardless of
+             whether the Spill wraps just the call or the whole implication *)
+          let impl_t = { loc; ty = sp.ty; it = Impl(b,loc,lhs,sp) } in
+          Spill(impl_t, info), spills @ more_spills
+      | _ ->
+          let t1', t2' = match b with L2R | L2RBang -> lhs, rhs | R2L -> rhs, lhs in
+          let x = if t1' == t1 && t2' == t2 then orig else Impl(b,loc,t1',t2') in
+          x, spills @ more_spills
 
   and check_global ctx ~loc ~tyctx { scope = gid; name = c; ty = tya } ety =
     match global_type ~ety env ~loc c with
@@ -473,7 +501,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     if unify ty ety then []
     else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
-  and check_lam ~positive ctx ~loc ~tyctx sc c_type_cast t ety =
+  and check_lam ~positive ctx ~loc ~tyctx orig sc c_type_cast t ety =
     let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_binder ~lang:elpi_language (fresh_name ()) ~loc in
     let src = match c_type_cast with
       | None -> mk_uvar "Src"
@@ -487,7 +515,8 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     if unify (TypeAssignment.Arr(mode, Ast.Structured.NotVariadic,src,tgt.eit)) ety then
       (* let () = Format.eprintf "add to ctx %a : %a\n" F.pp name TypeAssignment.pretty src in *)
       let ctx = Scope.Map.add (c,name_lang) { ret = src; mode; binder = Symbol.make (File loc) c } ctx in
-      check_loc ~positive ~tyctx ctx t ~ety:tgt
+      let t', spills = check_loc ~positive ~tyctx ctx t ~ety:tgt in
+      (if t' == t then orig else Lam(sc,c_type_cast,t')), spills
     else
       error_bad_function_ety ~valid_mode ~loc ~tyctx ~ety sc t
 
@@ -523,21 +552,23 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
           let srcs = drop n srcs in unify_then_undo (arrow_of_tys srcs tgt) ety
     | Variadic _ -> true (* TODO *)
 
-  and check_app ~positive ctx ~loc ~tyctx cid ({ name = c; ty = tya; loc = cloc } as hd) cty args ety =
+  and check_app ~positive ~auto_spill ctx ~loc ~tyctx orig cid ({ name = c; ty = tya; loc = cloc } as hd) cty args ety : ScopedTerm.t_ * spilled_phantoms =
     match cty with
     | Overloaded all ->
       (* Format.eprintf "@[options %a, ety:%a, nargs:%d :@ %a@]\n" F.pp c TypeAssignment.pretty_mut_once ety.eit (List.length args) (pplist (fun fmt (_,x) -> TypeAssignment.pretty_mut_once fmt x) "; ") all; *)
       let l = List.filter (unify_tgt_ety (List.length args) ety) all in
       begin match l with
       | [] -> error_overloaded_app_tgt ~valid_mode ~loc ~ety c all
-      | [ty] -> 
+      | [ty] ->
       (* Format.eprintf "1option left: %a\n" TypeAssignment.pretty (snd ty); *)
-        check_app ~positive ctx ~loc ~tyctx cid hd (Single ty) args ety
+        check_app ~positive ~auto_spill ctx ~loc ~tyctx orig cid hd (Single ty) args ety
       | l ->
       (* Format.eprintf "newoptions: %a\n" (pplist (fun fmt (_,x) -> TypeAssignment.pretty_mut_once fmt x) "; ") l; *)
-          let args = List.concat_map (fun x -> x :: check_loc ~positive ~tyctx:None ctx ~ety:(TypeAssignment.mk_ety @@ mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x) args in
+          let args = List.concat_map (fun x ->
+            let x', spills = check_loc ~positive ~tyctx:None ctx ~ety:(TypeAssignment.mk_ety @@ mk_uvar (Format.asprintf "Ety_%a" F.pp c)) x in
+            x' :: spills) args in
           let targs = List.map ScopedTerm.type_of args in
-          check_app_overloaded ~positive ctx ~loc (c,cid,tya) ety args targs l l
+          check_app_overloaded ~positive ctx ~loc ~orig (c,cid,tya) ety args targs l l
       end
     | Single (id,ty) ->
       (* Format.eprintf "%a: 1 option: %a@." F.pp c TypeAssignment.pretty_mut_once_raw ty; *)
@@ -546,24 +577,58 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
           else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_global_const ~escape_ns:true c ~loc,args)) ty in
         let monodirectional () =
           (* Format.eprintf "checking app mono %a\n" F.pp c; *)
-          let tgt = check_app_single ~positive ctx ~loc (cid,c,tya) ty [] args in
-          if unify tgt ety then (resolve_gid ~loc id cid ty tya; [])
+          let tgt, term = check_app_single ~positive ~auto_spill ctx ~loc ~orig (cid,c,tya) ty [] args in
+          if unify tgt ety then (resolve_gid ~loc id cid ty tya; term, [])
           else err tgt in
-        let bidirectional srcs tgt =
-          (* Format.eprintf "checking app bidi %a\n" F.pp c; *)
-          let rec consume args srcs =
+        let consume srcs tgt =
+          let rec aux args srcs =
             match args, srcs with
             | [], srcs -> arrow_of_tys srcs tgt
-            | _ :: args, _ :: srcs -> consume args srcs
+            | _ :: args, _ :: srcs -> aux args srcs
             | _ :: _, [] -> assert false
           in
-          let rest_tgt = consume args srcs in
+          aux args srcs in
+        let bidirectional srcs tgt =
+          (* Format.eprintf "checking app bidi %a\n" F.pp c; *)
+          let rest_tgt = consume srcs tgt in
           (* Format.eprintf "Setting the type of %a to %a old is %a (%a)@." F.pp c TypeAssignment.pretty_mut_once ty (TypeAssignment.pretty_mut_once) (UVar tya) Loc.pp loc; *)
           if unify rest_tgt ety then
-            let _ = check_app_single ~positive ctx ~loc (cid,c,tya) ty [] args in (resolve_gid ~loc id cid ty tya; [])
+            let _, term = check_app_single ~positive ~auto_spill ctx ~loc ~orig (cid,c,tya) ty [] args in
+            (resolve_gid ~loc id cid ty tya; term, [])
           else err rest_tgt in
+        let auto_spill_missing_args srcs args tgt =
+          let args_no = List.length args in
+          let srcs_no = List.length srcs in
+          let given_srcs = List.filteri (fun i _ -> i < args_no) srcs in
+          let missing_srcs = List.filteri (fun i _ -> i >= args_no) srcs in
+          auto_spill
+          && args_no < srcs_no
+          && unify_then_undo tgt (TypeAssignment.mk_ety prop)
+          && missing_srcs |> List.for_all (fun (m,_) -> not (TypeAssignment.is_input m))
+          && given_srcs |> List.for_all (fun (m,_) -> TypeAssignment.is_input m)
+         in
+        let auto_spill_it srcs tgt =
+          let rest_ty, term = check_app_single ~positive ~auto_spill ctx ~loc ~orig (cid,c,tya) ty [] args in
+          let sp = { loc; ty = TypeAssignment.create rest_ty; it = term } in
+          match classify_arrow rest_ty with
+          | Simple { srcs = missing_srcs; _ } when List.exists (fun (m,_) -> TypeAssignment.is_input m) missing_srcs ->
+              error ~loc "cannot spill: some of the missing arguments are in input mode"
+          | Simple { srcs = missing_srcs; _ } ->
+              let missing = List.map snd missing_srcs in
+              (match missing with
+               | [] -> error ~loc "nothing to spill, the expression lacks no arguments"
+               | first_missing :: rest_missing ->
+                   if unify first_missing ety then begin
+                     resolve_gid ~loc id cid ty tya;
+                     let info = ref (Main (List.length missing)) in
+                     let phantom_of_spill_ty i mty = { loc; it = Spill(sp, ref (Phantom (i+1))); ty = TypeAssignment.create mty } in
+                     Spill(sp, info), List.mapi phantom_of_spill_ty rest_missing
+                   end else
+                     error_bad_ety ~valid_mode ~tyctx ~loc ~ety ScopedTerm.pretty_ (Spill(sp, ref NoInfo)) first_missing)
+          | _ -> error ~loc "hard spill" in
         match classify_arrow ty with
         | Unknown | Variadic _ -> monodirectional ()
+        | Simple { srcs; tgt } when auto_spill_missing_args srcs args tgt -> auto_spill_it srcs tgt
         | Simple { srcs; tgt } ->
           if List.length args > List.length srcs then monodirectional () (* will error *)
           else
@@ -571,7 +636,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
             else bidirectional srcs tgt
 
   (* REDO PROCESSING ONE SRC at a time *)
-  and check_app_overloaded ~positive ctx ~loc (c, cid, tya) ety args targs alltys l =
+  and check_app_overloaded ~positive ctx ~loc ~orig (c, cid, tya) ety args targs alltys l =
     let rec filter = function
     | [] -> []
     | (id,t)::ts ->
@@ -592,9 +657,10 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
   in
   match filter l with
   | [] -> error_overloaded_app ~valid_mode ~loc c args ~ety alltys
-  | [(id,t),(ul,ur)] -> 
+  | [(id,t),(ul,ur)] ->
       assert(unify ul ur);
-      resolve_gid ~loc id cid t tya;[]
+      resolve_gid ~loc id cid t tya;
+      rebuild_orig orig args, []
   | l -> error_overloaded_app_ambiguous ~valid_mode ~loc c args ~ety (List.map fst l)
 
   and infer_mode ctx m { loc; it } =
@@ -608,49 +674,54 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
       end
     | _ -> ()
 
-  and check_app_single ~positive ctx ~loc (_,c,_ as fc) ty consumed args =
+  and check_app_single ~positive ~auto_spill ctx ~loc ~orig (_,c,_ as fc) ty consumed args =
     match args with
-    | [] -> ty
+    | [] -> ty, rebuild_orig orig (List.rev consumed)
     | x :: xs ->
       (* Format.eprintf "@[<h>Checking term %a with type %a@]@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once_raw ty;
       Format.eprintf "checking app %a against %a@." ScopedTerm.pretty_ (ScopedTerm.App(fc,x,xs)) TypeAssignment.pretty_mut_once_raw ty; *)
       match ty with
         | TypeAssignment.Arr(_, Variadic,s,t) ->
-            let xs = check_loc_if_not_phantom ~positive ~tyctx:(Some c) ctx x ~ety:(TypeAssignment.mk_ety s) @ xs in
-            if xs = [] then t else check_app_single ~positive ctx ~loc fc ty (x::consumed) xs
+            let x, phantoms = check_loc_if_not_phantom ~positive ~tyctx:(Some c) ctx x ~ety:(TypeAssignment.mk_ety s) in
+            let consumed = match x with None -> consumed | Some x' -> x' :: consumed in
+            let xs = phantoms @ xs in
+            if xs = [] then t, rebuild_orig orig (List.rev consumed) else check_app_single ~positive ~auto_spill ctx ~loc ~orig fc ty consumed xs
         | Arr(m,NotVariadic,s,t) ->
-            let xs = check_loc_if_not_phantom ~positive ~tyctx:(Some c) ctx x ~ety:(TypeAssignment.mk_ety s) @ xs in
+            let x, phantoms = check_loc_if_not_phantom ~positive ~tyctx:(Some c) ctx x ~ety:(TypeAssignment.mk_ety s) in
+            let xs = phantoms @ xs in
+            let consumed = match x with None -> consumed | Some x -> x :: consumed in
             (* Format.eprintf "-- Checked term %a with ety %a; mode is %a@." ScopedTerm.pretty x TypeAssignment.pretty_mut_once s TypeAssignment.pretty_tmode m; *)
-            infer_mode ctx m x;
-          check_app_single ~positive ctx ~loc fc t (x::consumed) xs
-        | Any -> check_app_single ~positive ctx ~loc fc ty (x::consumed) xs
+            Option.iter (infer_mode ctx m) x;
+          check_app_single ~positive ~auto_spill ctx ~loc ~orig fc t consumed xs
+        | Any -> check_app_single ~positive ~auto_spill ctx ~loc ~orig fc ty (x::consumed) xs
         | UVar m when MutableOnce.is_set m ->
-            check_app_single ~positive ctx ~loc fc (TypeAssignment.deref m) consumed (x :: xs)
+            check_app_single ~positive ~auto_spill ctx ~loc ~orig fc (TypeAssignment.deref m) consumed (x :: xs)
         | UVar m ->
             let s = mk_uvar "Src" in
             let t = mk_uvar "Tgt" in
             let _ = unify ty (TypeAssignment.mk_ety TypeAssignment.(Arr(MRef (MutableOnce.make F.dummyname),Ast.Structured.NotVariadic,s,t))) in
-            check_app_single ~positive ctx ~loc fc ty consumed (x :: xs)
+            check_app_single ~positive ~auto_spill ctx ~loc ~orig fc ty consumed (x :: xs)
         | Cons a when F.Map.mem a type_abbrevs ->
             let ty = TypeAssignment.apply (fst @@ F.Map.find a type_abbrevs) [] in
-            check_app_single ~positive ctx ~loc fc ty consumed args
+            check_app_single ~positive ~auto_spill ctx ~loc ~orig fc ty consumed args
         | App(a,x,xs) when F.Map.mem a type_abbrevs ->
             let ty = TypeAssignment.apply (fst @@ F.Map.find a type_abbrevs) (x::xs) in
-            check_app_single ~positive ctx ~loc fc ty consumed args
+            check_app_single ~positive ~auto_spill ctx ~loc ~orig fc ty consumed args
         | _ -> error_not_a_function ~loc:x.loc c ty (List.rev consumed) x (* TODO: trim loc up to x *)
 
-  and check_loc ~positive ~tyctx ctx ({ loc; it; ty } as t) ~ety : spilled_phantoms =
+  and check_loc ~positive ?(auto_spill=global_auto_spill) ~tyctx ctx ({ loc; it; ty } as t) ~ety : ScopedTerm.t * spilled_phantoms =
       begin
-        let extra_spill = check ~positive ~tyctx ctx ~loc it ety in
+        let it', extra_spill = check ~positive ~auto_spill ~tyctx ctx ~loc it ety in
         if not @@ MutableOnce.is_set ty then MutableOnce.set ty (Val ety.eit);
         check_discard_allowed t;
-        extra_spill
+        let t' = if it' == it then t else { t with it = it' } in
+        t', extra_spill
       end
 
-  and check_loc_if_not_phantom ~positive ~tyctx ctx x ~ety : spilled_phantoms =
+  and check_loc_if_not_phantom ~positive ~tyctx ctx x ~ety : ScopedTerm.t option * spilled_phantoms =
     match x.it with
-    | Spill(_,{ contents = Phantom _}) -> []
-    | _ -> check_loc ~positive ~tyctx ctx x ~ety
+    | Spill(_,{ contents = Phantom _}) -> None, []
+    | _ -> let x, spills = check_loc ~positive ~tyctx ctx x ~ety in Some x, spills
 
   and check_spill_conclusion_loc ~positive ~tyctx ctx { loc; it; ty } ~ety : spilled_phantoms =
     (* A spill can be duplicate by a macro for example *)
@@ -661,25 +732,25 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
 
   (* This descent to find the spilled term is a bit ad hoc, since it
   inlines => and , typing... but leaves the rest of the code clean *)
-  and check_spill_conclusion ~positive ~tyctx ctx ~loc it (ety:ety) =
+  and check_spill_conclusion ~positive ~tyctx ctx ~loc it (ety:ety) : spilled_phantoms =
     match it with
     | Impl((L2R|L2RBang),_,x,y) ->
         let lhs = TypeAssignment.mk_ety ~arity:0 @@ mk_uvar "LHS" in
-        let spills = check_loc ~positive ~tyctx ctx x ~ety:lhs in
+        let _, spills = check_loc ~positive ~tyctx ctx x ~ety:lhs in
         if spills <> [] then error ~loc "Hard spill";
         if try_unify prop lhs || try_unify (App(F.from_string "list",prop,[])) lhs
         then check_spill_conclusion_loc ~positive ~tyctx ctx y ~ety
         else error ~loc "Bad impl in spill"
     | App({ scope = Global _; name = c; ty = tya } as sc,x::xs) when F.equal c F.andf ->
         let _ = check_global ctx ~loc ~tyctx sc (TypeAssignment.mk_ety @@ mk_uvar "spill_and") in
-        let spills = check_loc ~positive ~tyctx ctx x ~ety:(TypeAssignment.mk_ety fprop) in
+        let _, spills = check_loc ~positive ~tyctx ctx x ~ety:(TypeAssignment.mk_ety fprop) in
         if spills <> [] then error ~loc "Hard spill";
         begin match xs with
         | [] -> assert false
-        | [x] -> check_loc ~positive ~tyctx ctx x ~ety
+        | [x] -> let _, spills = check_loc ~positive ~tyctx ctx x ~ety in spills
         | x::xs -> check_spill_conclusion ~positive ~tyctx ctx ~loc (App(sc,x::xs)) ety
         end
-    | _ -> check ~positive ~tyctx ctx ~loc it ety
+    | _ -> let _, spills = check ~auto_spill:global_auto_spill ~positive ~tyctx ctx ~loc it ety in spills
 
   and rule_head ~loc it =
     match it with
@@ -871,12 +942,12 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
     (* if MutableOnce.is_set t.ty then !unknown_global else *)
 
   let check_query t ~exp =
-    let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.mk_ety @@ TypeAssignment.unval exp) in
+    let t, spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.mk_ety @@ TypeAssignment.unval exp) ~auto_spill:global_auto_spill in
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
-    !unknown_global in
+    t, !unknown_global in
 
   let check_rule t ~exp =
-    let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.mk_ety @@ TypeAssignment.unval exp) in
+    let t, spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.mk_ety @@ TypeAssignment.unval exp) ~auto_spill:global_auto_spill in
     check_matches_poly_skema_loc ~unknown:!unknown_global t;
     let oc = occur_check_pred t in
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
@@ -886,47 +957,54 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown :
           (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
         F.pp k F.pp k F.pp k))
       !sigma;
-    !unknown_global, oc in
+    t, !unknown_global, oc in
 
-  let check_chr { Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes } =
-    let check_sequent { Ast.Chr.context; conclusion; eigen } =
-      let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(TypeAssignment.mk_ety @@ mk_uvar "eigen") eigen in
+  let check_chr ({ Ast.Chr.to_match; to_remove; guard; new_goal; loc; attributes } as chr : (_, ScopedTerm.t) Ast.Chr.t) =
+    let check_sequent ({ Ast.Chr.context; conclusion; eigen } as sequent : ScopedTerm.t Ast.Chr.sequent) =
+      let eigen', spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(TypeAssignment.mk_ety @@ mk_uvar "eigen") eigen ~auto_spill:global_auto_spill in
       if spills <> [] then error ~loc "cannot spill in eigen";
-      let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(TypeAssignment.mk_ety @@ Prop Relation) conclusion in
+      let conclusion', spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(TypeAssignment.mk_ety @@ Prop Relation) conclusion ~auto_spill:global_auto_spill in
       if spills <> [] then error ~loc "cannot spill in conclusion";
-      let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(TypeAssignment.mk_ety @@ App(F.from_string "list",Prop Relation,[])) context in
-      if spills <> [] then error ~loc "cannot spill in context" in
+      let context', spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(TypeAssignment.mk_ety @@ App(F.from_string "list",Prop Relation,[])) context ~auto_spill:global_auto_spill in
+      if spills <> [] then error ~loc "cannot spill in context";
+      if eigen' == eigen && conclusion' == conclusion && context' == context then sequent
+      else { Ast.Chr.context = context'; conclusion = conclusion'; eigen = eigen' } in
     let check_guard t =
-      let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(TypeAssignment.mk_ety @@ Prop Relation) t in
-      if spills <> [] then error ~loc "cannot spill in guard" in
-    List.iter check_sequent to_match;
-    List.iter check_sequent to_remove;
-    Option.iter check_guard guard;
-    Option.iter check_sequent new_goal;
-    !unknown_global in
+      let t, spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty ~ety:(TypeAssignment.mk_ety @@ Prop Relation) t ~auto_spill:global_auto_spill in
+      if spills <> [] then error ~loc "cannot spill in guard";
+      t in
+    let to_match' = Util.smart_map check_sequent to_match in
+    let to_remove' = Util.smart_map check_sequent to_remove in
+    let guard' = Option.map check_guard guard in
+    let new_goal' = Option.map check_sequent new_goal in
+    let chr =
+      if to_match' == to_match && to_remove' == to_remove && guard' == guard && new_goal' == new_goal
+      then chr
+      else { Ast.Chr.to_match = to_match'; to_remove = to_remove'; guard = guard'; new_goal = new_goal'; loc; attributes } in
+    chr, !unknown_global in
 
   let check_macro (t,loc) =
-    let spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.mk_ety @@ mk_uvar "macro") in
+    let t, spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.mk_ety @@ mk_uvar "macro") ~auto_spill:global_auto_spill in
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
-    !unknown_global in
+    t, !unknown_global in
   check_query, check_rule, check_chr, check_macro
 
-let check_query ~type_abbrevs ~kinds ~types ~unknown t ~exp =
-  let check_query, _, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown in
+let check_query ~type_abbrevs ~kinds ~types ~unknown ?auto_spill t ~exp =
+  let check_query, _, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown ?global_auto_spill:auto_spill () in
   check_query t ~exp
 
-let check_rule ~type_abbrevs ~kinds ~types ~unknown t ~exp =
-  let _, check_rule, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown in
+let check_rule ~type_abbrevs ~kinds ~types ~unknown ?auto_spill t ~exp =
+  let _, check_rule, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown ?global_auto_spill:auto_spill () in
   check_rule t ~exp
 
-let check_chr_rule ~type_abbrevs ~kinds ~types ~unknown r =
-  let _, _, check_chr, _ = checker  ~type_abbrevs ~kinds ~types ~unknown in
+let check_chr_rule ~type_abbrevs ~kinds ~types ~unknown ?auto_spill r =
+  let _, _, check_chr, _ = checker  ~type_abbrevs ~kinds ~types ~unknown ?global_auto_spill:auto_spill () in
   check_chr r
 
-let check_macro ~type_abbrevs ~kinds ~types k m =
+let check_macro ~type_abbrevs ~kinds ~types ?auto_spill k m =
   let unknown = F.Map.empty in
-  let _, _, _, check_macro = checker  ~type_abbrevs ~kinds ~types ~unknown in
-  let unknown = check_macro m in
+  let _, _, _, check_macro = checker  ~type_abbrevs ~kinds ~types ~unknown ?global_auto_spill:auto_spill () in
+  let _, unknown = check_macro m in
   if F.Map.is_empty unknown then ()
   else
     F.Map.iter (fun _ (_,s) -> error ~loc:(Symbol.get_loc s) ("Undeclared symbol in macro " ^ F.show k ^": " ^ Symbol.get_str s)) unknown
