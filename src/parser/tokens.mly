@@ -69,6 +69,7 @@
 %token NAME 
 %token INDEX 
 %token NOOC
+%token AUTOSPILL
 %token CONS
 %token CONJ
 %token CONJ2

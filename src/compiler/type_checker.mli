@@ -20,6 +20,7 @@ val check_macro :
   type_abbrevs:type_abbrevs ->
   kinds:arities ->
   types:TypingEnv.t ->
+  ?auto_spill:bool ->
     F.t ->
     ScopedTerm.t * Ast.Loc.t -> unit
 
@@ -37,26 +38,29 @@ val check_rule :
   kinds:arities ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->
+  ?auto_spill:bool ->
   ScopedTerm.t ->
   exp:TypeAssignment.t ->
-  env_undeclared * bool (* occur_check *)
+  ScopedTerm.t * env_undeclared * bool (* occur_check *)
 
 val check_query :
   type_abbrevs:type_abbrevs ->
   kinds:arities ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->
+  ?auto_spill:bool ->
   ScopedTerm.t ->
   exp:TypeAssignment.t ->
-  env_undeclared
+  ScopedTerm.t * env_undeclared
 
 val check_chr_rule :
   type_abbrevs:type_abbrevs ->
   kinds:arities ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->
+  ?auto_spill:bool ->
   ('a,ScopedTerm.t) Ast.Chr.t ->
-    env_undeclared
+    ('a,ScopedTerm.t) Ast.Chr.t * env_undeclared
 
 val check_undeclared :
   type_abbrevs:type_abbrevs ->

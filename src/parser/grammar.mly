@@ -392,6 +392,7 @@ attribute:
 | UNTYPED { Untyped }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
 | NOOC { NoOC }
+| AUTOSPILL { AutoSpill }
 
 indexing:
 | FRESHUV { 0 }

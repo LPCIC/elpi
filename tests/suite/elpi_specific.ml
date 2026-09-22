@@ -180,6 +180,36 @@ let () = declare "spill-chr"
   ~description:"spilling in chr"
   ()
 
+let () = declare "autospill"
+  ~source_elpi:"autospill.elpi"
+  ~description:"the :autospill attribute auto-spills under-applied functional calls"
+  ()
+
+let () = declare "autospill_noop"
+  ~source_elpi:"autospill_noop.elpi"
+  ~description:"the :autospill attribute does not spill fully applied calls"
+  ()
+
+let () = declare "autospill_explicit"
+  ~source_elpi:"autospill_explicit.elpi"
+  ~description:"explicit {} spilling still works under the :autospill attribute"
+  ()
+
+let () = declare "autospill_appendR"
+  ~source_elpi:"autospill_appendR.elpi"
+  ~description:"the :autospill attribute auto-spills under-applied calls to a plain (non-func) predicate"
+  ()
+
+let () = declare "autospill_noop_appendR"
+  ~source_elpi:"autospill_noop_appendR.elpi"
+  ~description:"the :autospill attribute does not spill fully applied calls to a plain (non-func) predicate"
+  ()
+
+let () = declare "autospill_explicit_appendR"
+  ~source_elpi:"autospill_explicit_appendR.elpi"
+  ~description:"explicit {} spilling of a plain (non-func) predicate still works under the :autospill attribute"
+  ()
+
 let () = declare "spill_sigma"
   ~source_elpi:"spill_sigma.elpi"
   ~description:"spilling under sigma"

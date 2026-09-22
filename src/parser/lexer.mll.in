@@ -232,6 +232,7 @@ and token v = parse
 | "if" { IF }
 | "index" { INDEX }
 | "nooc" { NOOC }
+| "autospill" { AUTOSPILL }
 @@MIXFIX@@
 | ucase idcharstar as c { CONSTANT c }
 | lcase idcharstarns as c { CONSTANT c }
