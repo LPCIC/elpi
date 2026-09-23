@@ -67,8 +67,9 @@ let usage =
   "\t--help prints this help (also -h or -help)\n" ^ 
  API.Setup.usage ^
   "\nDebug options (for debugging Elpi, not your program):\n" ^ 
-  "\t-parse-term parses a term from standard input and prints it\n" ^ 
-  "\t-print-ast prints files as parsed, then exit\n" ^ 
+  "\t-parse-term parses a term from standard input and prints it\n" ^
+  "\t-parse-clause parses a rule from standard input and prints it\n" ^
+  "\t-print-ast prints files as parsed, then exit\n" ^
   "\t-print prints files after most compilation passes, then exit\n" ^ 
   "\t-print-units prints compilation units data, then exit\n"
 ;;
@@ -94,6 +95,7 @@ let _ =
   let print_units = ref false in
   let extra_paths = ref [] in
   let parse_term = ref false in
+  let parse_clause = ref false in
   let skip_det_check = ref false in
   let print_deps = ref false in
   let vars =
@@ -108,6 +110,7 @@ let _ =
     | "-print-ast" :: rest -> print_ast := true; eat_options rest
     | "-print-units" :: rest -> print_units := true; eat_options rest
     | "-parse-term" :: rest -> parse_term := true; eat_options rest
+    | "-parse-clause" :: rest -> parse_clause := true; eat_options rest
     | "-deps" :: rest -> print_deps := true; eat_options rest
     | "-document-builtins" :: rest -> doc_builtins := true; eat_options rest
     | "-document-infix-syntax" :: rest -> doc_infix := true; eat_options rest
@@ -156,6 +159,13 @@ let _ =
     let prog = API.Compile.program ~flags ~elpi p in
     let query = API.Compile.query prog g in
     Format.printf "Compiled term: %a\n" API.Pp.goal query;
+    exit 0;
+  end;
+  if !parse_clause then begin
+    let p =
+      try API.Parse.program_from ~elpi ~loc:(API.Ast.Loc.initial "(-parse-clause)") ~digest:(Digest.string "") (Lexing.from_channel stdin)
+      with API.Parse.ParseError(loc,msg) -> Format.eprintf "%a@;%s\n" API.Ast.Loc.pp loc msg; exit 1 in
+    Format.printf "Raw clause: %a\n" API.Pp.Ast.program p;
     exit 0;
   end;
   let argv = API.Setup.trace argv in
