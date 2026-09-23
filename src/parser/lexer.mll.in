@@ -177,6 +177,7 @@ and token v = parse
 | "." pnum as f { FLOAT (float_of_string f) }
 | '"' { start_token (string lexbuf.lex_curr_p (Buffer.create 80)) lexbuf }
 | ":" { COLON }
+| ":=" { COLONEQ }
 | ":>" { RTRI }
 | "\\" { BIND }
 | "(" { LPAREN }
@@ -233,6 +234,9 @@ and token v = parse
 | "index" { INDEX }
 | "nooc" { NOOC }
 | "autospill" { AUTOSPILL }
+| "when" { WHEN }
+| "use" { USE }
+| "in" { IN }
 @@MIXFIX@@
 | ucase idcharstar as c { CONSTANT c }
 | lcase idcharstarns as c { CONSTANT c }

@@ -48,7 +48,7 @@ prim_poly plus     (c (num --> num --> num)).
 prim_poly minus    (c (num --> num --> num)).
 prim_poly zerop    (c (num --> bool)).
 prim_poly greater  (c (num --> num --> bool)).
-prim_poly (in N)   (c  num).
+prim_poly (embed N)   (c  num).
 
 
 % % Representing typing judgements; these are essentially term, type pairs

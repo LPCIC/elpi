@@ -70,6 +70,10 @@
 %token INDEX 
 %token NOOC
 %token AUTOSPILL
+%token WHEN
+%token COLONEQ
+%token USE
+%token IN
 %token CONS
 %token CONJ
 %token CONJ2

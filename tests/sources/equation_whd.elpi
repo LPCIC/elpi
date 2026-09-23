@@ -1,0 +1,11 @@
+data tm.
+symb app tm -> tm -> tm.
+symb lam (tm -> tm) -> tm.
+symb y tm.
+
+func whd tm -> tm.
+whd (app A B) when whd A = lam F := whd (F B).
+whd X := X.
+
+:autospill
+main :- std.findall (whd (app (lam x\ app x x) y) _) [_].

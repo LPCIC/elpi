@@ -16,7 +16,7 @@ eval (M # N)   V :- eval M Fun, eval N U, apply Fun U V.
 eval (fixpt R) V :- eval (R (fixpt R)) V.
 eval (cond Cond Then Else) V :- 
   eval Cond Bool, if (Bool = truth) (eval Then V) (eval Else V).
-eval (in N)    (in N).
+eval (embed N)    (embed N).
 eval truth     truth.
 eval false     false.
 eval empty     empty.
@@ -63,10 +63,10 @@ eval_special or  (B2::B1::nil) V :-
   if (B1 = truth) (V = truth) (if (B2 = truth) (V = truth) (V = false)).
 
 % Integer primitives
-eval_special minus ((in N)::(in M)::nil) (in V) :- V is M - N.
-eval_special plus  ((in N)::(in M)::nil) (in V) :- V is M + N.
-eval_special times ((in N)::(in M)::nil) (in V) :- V is M * N.
-eval_special zerop ((in N)::nil) V :- if (N = 0) (V = truth) (V = false).
+eval_special minus ((embed N)::(embed M)::nil) (embed V) :- V is M - N.
+eval_special plus  ((embed N)::(embed M)::nil) (embed V) :- V is M + N.
+eval_special times ((embed N)::(embed M)::nil) (embed V) :- V is M * N.
+eval_special zerop ((embed N)::nil) V :- if (N = 0) (V = truth) (V = false).
 eval_special equal (B2::B1::nil) V :- if (B1 = B2) (V = truth) (V = false).
-eval_special greater ((in N)::(in M)::nil) V :- 
+eval_special greater ((embed N)::(embed M)::nil) V :- 
   if (M > N) (V = truth) (V = false).

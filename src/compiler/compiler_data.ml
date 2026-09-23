@@ -866,6 +866,8 @@ module ScopedTerm = struct
   [@@ deriving show]
   
   let is_implf f = let open Ast in Func.equal f Func.implf || Func.equal f Func.implbangf || Func.equal f Func.rimplf
+
+  let is_coloneqf f = Ast.Func.equal f Ast.Func.coloneqf
   
   let func_to_impl_kind f =
     let open Ast in
@@ -962,6 +964,7 @@ module ScopedTerm = struct
    | CData of CData.t
    | Spill of t * spill_info ref
    | Cast of t * ScopedTypeExpression.e
+   | Equation of t * t option * t (* `Equation(lhs,guard,rhs)` ≡ `lhs [when guard] := rhs`, eliminated by the type checker before typing *)
    and t = { it : t_; loc : Loc.t; ty : TypeAssignment.t MutableOnce.t }
   [@@ deriving show]
 
@@ -1030,6 +1033,8 @@ module ScopedTerm = struct
     | Spill (t,{ contents = Main _ }) -> fprintf fmt "{%a}" pretty t
     | Spill (t,{ contents = Phantom n}) -> fprintf fmt "{%a}/*%d*/" pretty t n
     | Cast (t,ty) -> fprintf fmt "(%a : %a)" pretty t ScopedTypeExpression.pretty_e ty (* TODO pretty *)
+    | Equation (t1,None,t2) -> fprintf fmt "@[<hov 2>(%a :=@ %a)@]" pretty t1 pretty t2
+    | Equation (t1,Some g,t2) -> fprintf fmt "@[<hov 2>(%a when@ %a :=@ %a)@]" pretty t1 pretty g pretty t2
   and pretty_parens ~lvl fmt { it } =
     if lvl >= lvl_of it then fprintf fmt "(%a)" pretty_ it
     else pretty_ fmt it
@@ -1049,6 +1054,7 @@ module ScopedTerm = struct
       | CData c1, CData c2 -> CData.equal c1 c2
       | Cast(t1,ty1), Cast(t2,ty2) -> eq ctx t1 t2 && (not types || ScopedTypeExpression.eqt env (empty ()) ty1 ty2)
       | Impl(b1,_,s1,t1), Impl(b2,_,s2,t2) -> b1 = b2 && eq ctx t1 t2 && eq ctx s1 s2
+      | Equation(s1,g1,t1), Equation(s2,g2,t2) -> eq ctx s1 s2 && Option.equal (eq ctx) g1 g2 && eq ctx t1 t2
       | _ -> false
     in
       let b = eq (empty ()) t1 t2 in
@@ -1079,6 +1085,12 @@ module ScopedTerm = struct
         | [y] -> Impl(SimpleTerm.func_to_impl_kind c,cloc,of_simple_term_loc x, of_simple_term_loc y)
         | _ -> error ~loc "Use of App for Impl is allowed, but the length of the list in 3rd position must be 1"
       end
+    | App(_,c,_,x,xs) when SimpleTerm.is_coloneqf c ->
+      begin match xs with
+        | [y] -> Equation(of_simple_term_loc x, None, of_simple_term_loc y)
+        | [g;y] -> Equation(of_simple_term_loc x, Some (of_simple_term_loc g), of_simple_term_loc y)
+        | _ -> error ~loc "Use of App for := is allowed, but the length of the list in 3rd position must be 1 or 2"
+      end
     | App(s,c,cloc,x,xs) -> App(mk_w_ty_loc ~scope:s c ~loc, of_simple_term_loc x :: List.map of_simple_term_loc xs)
     | Var(c,cloc,xs) -> UVar(mk_uvar c ~loc:cloc,List.map of_simple_term_loc xs)
   and of_simple_term_loc { SimpleTerm.it; loc } =
@@ -1104,6 +1116,7 @@ module ScopedTerm = struct
       | Lam(v,tya,t) -> Lam(v,tya,rename_loc l c d t)
       | Spill(t,i) -> Spill(rename_loc l c d t,i)
       | Cast(t,ty) -> Cast(rename_loc l c d t,ty)
+      | Equation(t1,g,t2) -> Equation(rename_loc l c d t1, Option.map (rename_loc l c d) g, rename_loc l c d t2)
       | UVar(v,xs) -> UVar(v,List.map (rename_loc l c d) xs)
       | Discard _ | CData _ -> t
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
@@ -1125,9 +1138,10 @@ module ScopedTerm = struct
             let v = { v with name } in
             UVar (clone_const v, List.map (clone_loc ~loc) xs)
         | App (g, xs) -> App (clone_const g, List.map (clone_loc ~loc) xs)
-        | CData _ as t -> t 
+        | CData _ as t -> t
         | Spill (t, _) -> Spill (clone_loc ~loc t, ref NoInfo)
-        | Cast (t, ty) -> Cast (clone_loc ~loc t, ty) in
+        | Cast (t, ty) -> Cast (clone_loc ~loc t, ty)
+        | Equation (t1, g, t2) -> Equation (clone_loc ~loc t1, Option.map (clone_loc ~loc) g, clone_loc ~loc t2) in
       clone_loc ~loc t
 
     let beta t args =
@@ -1141,6 +1155,7 @@ module ScopedTerm = struct
         | Lam(Some { scope = c; name = l },_,t) -> Scope.Set.union acc @@ Scope.Set.remove (l,c) (fv Scope.Set.empty t)
         | Spill(t,_) -> fv acc t
         | Cast(t,_) -> fv acc t
+        | Equation(a,g,b) -> List.fold_left fv acc (a :: Option.to_list g @ [b])
         | Discard _ | CData _ -> acc in
       let rec load_subst ~loc t (args : t list) map fvset =
         match t, args with
@@ -1165,6 +1180,7 @@ module ScopedTerm = struct
         | UVar(c,xs) -> UVar(c,List.map (subst_loc map fv) xs)
         | Spill(t,i) -> Spill(subst_loc map fv t,i)
         | Cast(t,ty) -> Cast(subst_loc map fv t,ty)
+        | Equation(t1,g,t2) -> Equation(subst_loc map fv t1, Option.map (subst_loc map fv) g, subst_loc map fv t2)
         | Discard _ | CData _ -> t
       and subst_loc map fv { it; ty; loc } = {loc; it = (subst map fv it); ty}
       and app_loc { it; loc; ty } args : t = {loc; it = (app ~loc it args); ty}
@@ -1178,6 +1194,7 @@ module ScopedTerm = struct
         | Spill _ -> error ~loc "cannot apply spill"
         | Discard _ -> error ~loc "cannot apply discard"
         | Cast _ -> error ~loc "cannot apply cast"
+        | Equation _ -> error ~loc "cannot apply equation"
         | Lam _ -> load_subst ~loc t args Scope.Map.empty Scope.Set.empty
       in
         if args = [] then unlock t else

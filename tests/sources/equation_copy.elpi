@@ -1,0 +1,11 @@
+data tm.
+symb app tm -> tm -> tm.
+symb x tm.
+symb y tm.
+
+func copy tm -> tm.
+copy (app A B) := copy A A', copy B B', app A' B'.
+copy x x.
+copy y y.
+
+main :- copy (app x y) R, print R.

@@ -987,11 +987,17 @@ end = struct
         needs_spilling := true;
         ScopedTerm.Spill (scope_loc_term ~state ctx x,ref ScopedTerm.NoInfo)
     | App({ it = Const c; loc = cloc }, l) when ScopedTerm.SimpleTerm.is_implf c ->
-        begin match l with 
-        | [t1;t2] ->           
+        begin match l with
+        | [t1;t2] ->
           (* Printf.eprintf "LHS= %s\n" (Ast.Term.show t1); *)
           Impl (ScopedTerm.SimpleTerm.func_to_impl_kind c, cloc, scope_loc_term ~state ctx  t1, scope_loc_term ~state ctx t2)
         | _ -> error ~loc "implication is a binary operator"
+        end
+    | App({ it = Const c; loc = cloc }, l) when ScopedTerm.SimpleTerm.is_coloneqf c ->
+        begin match l with
+        | [t1;t2] -> ScopedTerm.Equation (scope_loc_term ~state ctx t1, None, scope_loc_term ~state ctx t2)
+        | [t1;g;t2] -> ScopedTerm.Equation (scope_loc_term ~state ctx t1, Some (scope_loc_term ~state ctx g), scope_loc_term ~state ctx t2)
+        | _ -> error ~loc ":= is a binary operator, optionally with a guard (when ... :=)"
         end
     | App({ it = Const c; loc = cloc }, xs) ->
          if is_discard c then error ~loc "Applied discard";
@@ -1075,6 +1081,7 @@ end = struct
     let add1 ~loc s t =
       match t.it with
       | App({ scope = Global _; name = c },_) -> F.Set.add c s
+      | Equation({ it = App({ scope = Global _; name = c },_) },_,_) -> F.Set.add c s
       | Impl(R2L,_,{ it = (App({ scope = Global _; name = c },_)) }, _) -> F.Set.add c s
       | Impl(R2L,_,{ it = (UVar _) }, _) | UVar _ -> error ~loc "Variables cannot be used as predicate names"
       | _ -> error ~loc "Cannot determine the predicate for this rule" in
@@ -1277,6 +1284,12 @@ module Flatten : sig
           if t' == t && ty' == ty then it else Cast(t',ty')
       | Discard _ -> it
       | CData _ -> it
+      | Equation(t1,g,t2) ->
+          let t1' = aux_loc t1 in
+          let g' = Option.map aux_loc g in
+          let t2' = aux_loc t2 in
+          if t1 == t1' && g == g' && t2 == t2' then it
+          else Equation(t1',g',t2')
     and aux_loc ({ it; loc; ty } as orig) =
       let it' = aux it in
       if it == it' then orig
@@ -1789,6 +1802,8 @@ end = struct
       | CData c -> D.mkCData (CData.hcons c)
       | Spill(t,_) ->
           error ~loc:t.loc (Format.asprintf "todbl: term contains spill: %a" ScopedTerm.pretty t)
+      | Equation(t1,_,_) ->
+          error ~loc:t1.loc (Format.asprintf "todbl: term contains an un-eliminated Equation: %a" ScopedTerm.pretty t)
       | Cast(t,_) -> todbl ctx t
       (* lists *)
       | App({ scope = Global _; name = c },[]) when F.(equal c nilf) -> D.mkNil
@@ -2723,6 +2738,7 @@ let info_of_scoped_term ~types t =
     | Cast(t,_) -> log_ty loc ty; aux_loc t
     | Lam(Some { loc = sloc; ty = sty},_,_t) -> log_ty sloc (TypeAssignment.deref_opt sty); log_ty loc ty; aux_loc t
     | Lam(None,_,_t) -> log_ty loc ty; aux_loc t
+    | Equation(t1,g,t2) -> log_ty loc ty; aux_loc t1; Option.iter aux_loc g; aux_loc t2
   and aux_loc x = aux x.loc (TypeAssignment.deref_opt x.ty) x.it
   in
   aux_loc t;
@@ -2766,6 +2782,11 @@ let smart_map_cdata_in_scoped_term (f : CData.t -> CData.t) t =
     | Cast(t,ty) ->
         let t' = aux_loc t in
         if t' == t then it else Cast(t',ty)
+    | Equation(t1,g,t2) ->
+        let t1' = aux_loc t1 in
+        let g' = Option.map aux_loc g in
+        let t2' = aux_loc t2 in
+        if t1 == t1' && g == g' && t2 == t2' then it else Equation(t1',g',t2')
     | Discard _ -> it
   and aux_loc ({ it; loc; ty } as orig) =
     let it' = aux it in

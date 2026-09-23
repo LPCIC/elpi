@@ -39,4 +39,4 @@ prim plus     (num --> num --> num).
 prim minus    (num --> num --> num).
 prim zerop    (num --> bool).
 prim greater  (num --> num --> bool).
-prim (in N)    num.
+prim (embed N)    num.

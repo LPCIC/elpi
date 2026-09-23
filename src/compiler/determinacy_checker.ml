@@ -337,6 +337,7 @@ let get_dtype ~type_abbrevs ~ctx ~var ~loc = function
   | `UVar x -> get_uvar_dtype ~type_abbrevs ~ctx ~var ~loc x
   | `Const x -> get_const_dtype ~type_abbrevs ~ctx ~var ~loc x
 let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
+let equation_err ~loc = anomaly ~loc "Equation should have already been eliminated by the type checker"
 
   let same_symb ~types symb symb' =
     match symb' with
@@ -512,6 +513,7 @@ let check_clause, check_chr_guard_and_newgoal =
           if Good_call.is_wrong good then raise (FatalDetError (None, good));
           (d, good)
       | Spill (_, _) -> spill_err ~loc
+      | Equation (_, _, _) -> equation_err ~loc
     in
     let ((det, gc) as r) = infer ~exp ~was_input:false ctx t in
     Format.eprintf "Result of infer for %a is (%a,%a)@." ScopedTerm.pretty t pp_dtype det Good_call.pp gc;
@@ -614,6 +616,7 @@ let check_clause, check_chr_guard_and_newgoal =
           | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype d))
       | CData _ -> ()
       | Spill _ -> spill_err ~loc
+      | Equation _ -> equation_err ~loc
       | Cast (t, _) -> assume ~was_input ctx d t
     in
     assume ~was_input ctx d t;
@@ -718,6 +721,7 @@ let check_clause, check_chr_guard_and_newgoal =
             (d, Good_call.init ())
           with DetError x -> raise (FatalDetError x))
       | Spill _ -> spill_err ~loc
+      | Equation _ -> equation_err ~loc
       | CData _ -> anomaly ~loc "Found CData in prop position"
       | Lam _ -> anomaly ~loc "Lambda-abstractions are not props"
       | Discard _ -> anomaly ~loc "Discard found in prop position"

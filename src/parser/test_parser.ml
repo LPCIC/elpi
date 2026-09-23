@@ -207,6 +207,7 @@ let spill n m ?bug b =
   mkApp (mkLoc (n + (if bug = Some true then -1 else 0)) m 1 0) [c ; b]
 
 let str n m s = mkC (mkLoc n m 1 0) (cstring.Elpi_util.Util.CData.cin s)
+let i n m v = mkC (mkLoc n m 1 0) (cint.Elpi_util.Util.CData.cin v)
 
 let ss n m t = { Chr.eigen = underscore n ~len:m; context = underscore n ~len:m; conclusion = t }
 let s e g t = { Chr.eigen = e; context = g; conclusion = t }
@@ -256,7 +257,14 @@ let _ =
   test  "p :- [ ]."         1 8  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 8 [mkNil 5 ~len:3]);
   test  "p :- []."          1 7  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 7 [mkNil 5]);
   test  "name."             1 4  1 0 [] (c 0 "name");
-  test  "p :- a => b => c." 1 16 1 0 [] (app ":-" 2 [c 0 "p";app "=>" 7 [c 5 "a";app "=>" 12 [c 10 "b";c 15 "c"]]]); 
+  test  "p :- a => b => c." 1 16 1 0 [] (app ":-" 2 [c 0 "p";app "=>" 7 [c 5 "a";app "=>" 12 [c 10 "b";c 15 "c"]]]);
+  (*    01234567890123456789012345 *)
+  test  "copy F (A x) := 2, X = 3, 4." 1 27 1 0 [AutoSpill]
+    (app ":=" 13 [app "copy" 0 ~parenr:1 [c 5 "F"; app "A" 8 [c 10 "x"]];
+      app "," 17 [i 16 17 2; app "=" 21 [c 19 "X"; i 23 24 3]; i 26 27 4]]);
+  (*    01234567890123456789012345 *)
+  test  "f X when g X := X." 1 17 1 0 [AutoSpill]
+    (app ":=" 13 [app "f" 0 [c 2 "X"]; app "g" 9 [c 11 "X"]; c 16 "X"]);
   (*    01234567890123456789012345 *)
   test  "p :- [ a , b ]."   1 14  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 14 [c 7 "a";c 11 "b";mkNil 13 ~len:1]);
   test  "p :- [a,b]."       1 10  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 10 [c 6 "a";c 8 "b";mkNil 9 ~len:1]);

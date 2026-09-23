@@ -210,6 +210,26 @@ let () = declare "autospill_explicit_appendR"
   ~description:"explicit {} spilling of a plain (non-func) predicate still works under the :autospill attribute"
   ()
 
+let () = declare "equation_copy"
+  ~source_elpi:"equation_copy.elpi"
+  ~description:"the := clause syntax is elaborated into an ordinary :- clause"
+  ()
+
+let () = declare "equation_copy_autospill"
+  ~source_elpi:"equation_copy_autospill.elpi"
+  ~description:"the := clause syntax implicitly enables :autospill, auto-spilling under-applied calls in its body"
+  ()
+
+let () = declare "equation_of"
+  ~source_elpi:"equation_of.elpi"
+  ~description:"the := clause syntax with a `when` guard, crossing pi/=> in the rhs, and auto-spilling under-applied func calls used as an argument of the polymorphic `=`"
+  ()
+
+let () = declare "equation_whd"
+  ~source_elpi:"equation_whd.elpi"
+  ~description:"the := clause syntax with a `when` guard, evaluating a whd function via beta reduction"
+  ()
+
 let () = declare "spill_sigma"
   ~source_elpi:"spill_sigma.elpi"
   ~description:"spilling under sigma"

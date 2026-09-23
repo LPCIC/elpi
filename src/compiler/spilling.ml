@@ -110,7 +110,7 @@ let app ~type_abbrevs ~types t args =
         | Impl (b, l, s, t) -> Impl (b,l, s, aux t), ty
         | App (n, xs) -> mkApp n (xs @ args), eat ~type_abbrevs args ty
         | UVar(c,l) -> UVar (c,l @ args), eat ~type_abbrevs args ty
-        | Discard _ | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) -> assert false
+        | Discard _ | Lam (_, _, _) | CData _ | Spill (_, _) | Cast (_, _) | Equation (_, _, _) -> assert false
       in  
         mk_loc ~loc ~ty it
     and aux_last = function [] -> assert false | [ x ] -> [ aux x ] | x :: xs -> x :: aux_last xs in
@@ -156,6 +156,7 @@ let rec bc ctx t =
   | Cast (t, ty) -> Cast (bc_loc ctx t, ty)
   | Spill (t, i) -> Spill (bc_loc ctx t, i)
   | App (hd, xs) -> App (hd, List.map (bc_loc ctx) xs)
+  | Equation (_, _, _) -> assert false (* escapes type checker *)
   | Discard _ | UVar _ | CData _ -> t
 
 and bc_loc ctx { loc; ty; it } = { loc; ty; it = bc ctx it }
@@ -171,6 +172,7 @@ let rec apply what v = function
   | Impl(d,l,t1,t2) -> Impl(d,l,apply_loc what v t1,apply_loc what v t2)
   | Cast(t,e) -> Cast(apply_loc what v t,e)
   | Spill _ -> assert false
+  | Equation _ -> assert false (* escapes type checker *)
   | CData _ | Discard _ | UVar _ as x -> x
 and apply_loc what v { loc; ty; it } = { loc; ty; it = apply what v it }
 
@@ -185,6 +187,7 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
   match it with
   | CData _ | Discard _ -> ([], [ t ])
   | Cast (t, _) -> spill ~types ~type_abbrevs args t
+  | Equation (_, _, _) -> assert false (* escapes type checker *)
   | Spill (t, { contents = NoInfo }) -> assert false (* no type checking *)
   | Spill (t, { contents = Phantom _ }) -> assert false (* escapes type checker *)
   | Spill (t, { contents = Main n }) ->

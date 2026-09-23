@@ -8,19 +8,19 @@ module examples.
 type prog    string -> tm -> o.
 
 prog "successor" 
-  (fn x\ plus # x # (in 1)).
+  (fn x\ plus # x # (embed 1)).
 
 prog "onep" 
-  (fn w\ fn u\ fn v\ cond (equal # (in 1) # w) u v).
+  (fn w\ fn u\ fn v\ cond (equal # (embed 1) # w) u v).
 
 prog "is_sym"
   (fn f\ fn x\ fn y\ equal # (f # x # y) # (f # y # x)).
 
 prog "fib" 
-  (fixpt fib\ fn n\ cond (zerop # n) (in 0) 
-                     (cond (equal # n # (in 1)) (in 1) 
-                           (plus # (fib # (minus # n # (in 1))) # 
-                                   (fib # (minus # n # (in 2)))))).
+  (fixpt fib\ fn n\ cond (zerop # n) (embed 0) 
+                     (cond (equal # n # (embed 1)) (embed 1) 
+                           (plus # (fib # (minus # n # (embed 1))) # 
+                                   (fib # (minus # n # (embed 2)))))).
 
 prog "map" 
   (fixpt map\ fn f\ fn l\ 
@@ -35,8 +35,8 @@ prog "mem"
 
 prog "fact" 
   (fixpt f\ fn n\ fn m\
-    cond (equal # n # (in 0)) m
-         (f # (minus # n # (in 1)) # (times # n # m))).
+    cond (equal # n # (embed 0)) m
+         (f # (minus # n # (embed 1)) # (times # n # m))).
 
 prog "app"
   (fixpt app\ fn l\ fn k\
@@ -44,15 +44,15 @@ prog "app"
 
 prog "gcd" 
   (fixpt f\ fn x\ fn y\ 
-    cond (equal # (in 1) # x) (in 1)
+    cond (equal # (embed 1) # x) (embed 1)
          (cond (greater # y # x) (f # y # x)
                (cond (equal # x # y) x (f # (minus # x # y) # y)))).
 
-prog "ex1"   (lcons # (in 1) # (in 2)).
-prog "ex2"   (plus # empty # (in 1)).
-prog "ex3"   (cond truth (in 3) empty).
+prog "ex1"   (lcons # (embed 1) # (embed 2)).
+prog "ex2"   (plus # empty # (embed 1)).
+prog "ex3"   (cond truth (embed 3) empty).
 prog "ex4"   (fn x\ fn x\x).
-prog "ex5"   (cond truth (in 3) (in 5)).
+prog "ex5"   (cond truth (embed 3) (embed 5)).
 prog "ex6"   ((fn x\x) # (fn y\y)).
 prog "i"     (fn x\ x).
 prog "k"     (fn x\ fn y\x).

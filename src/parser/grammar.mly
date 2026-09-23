@@ -367,10 +367,18 @@ clause:
       needs_spilling = ();
     }
   }
-| attributes = attributes; l = clause_hd_term; v = VDASH; r = term { 
+| attributes = attributes; l = clause_hd_term; v = VDASH; r = term {
     { Clause.loc = loc $sloc;
       attributes;
       body = mkApp (loc $sloc) [mkConst (loc $loc(v)) Func.rimplf;l;r];
+      needs_spilling = ();
+    }
+}
+| attributes = attributes; l = clause_hd_term; g = preceded(WHEN,term)?; v = COLONEQ; r = term {
+    let args = match g with Some g -> [l;g;r] | None -> [l;r] in
+    { Clause.loc = loc $sloc;
+      attributes = AutoSpill :: attributes;
+      body = mkApp (loc $sloc) (mkConst (loc $loc(v)) Func.coloneqf :: args);
       needs_spilling = ();
     }
 }
@@ -457,6 +465,11 @@ binder_term_noconj:
 open_term:
 | hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
 | hd = SIGMA; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "sigma") :: binder args b) }
+| USE; hd = head_term; args = list(closed_term); v = COLONEQ; t2 = term; IN; t3 = term {
+    let t1 = mkApp (loc $loc) (hd :: args) in
+    let eqn = mkApp (loc $loc) [mkConst (loc $loc(v)) Func.coloneqf; t1; t2] in
+    mkAppF (loc $loc) (loc $loc(v), Func.implf) [eqn; t3]
+  }
 | hd = head_term; args = nonempty_list(closed_term) ; b = option(binder_body_no_ty) {
     let args = binder1 args b in
     let t = mkApp (loc $loc) (hd :: args) in
@@ -469,6 +482,11 @@ open_term:
 open_term_noconj:
 | hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
 | hd = SIGMA; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "sigma") :: binder args b) }
+| USE; hd = head_term; args = list(closed_term); v = COLONEQ; t2 = term; IN; t3 = term {
+    let t1 = mkApp (loc $loc) (hd :: args) in
+    let eqn = mkApp (loc $loc) [mkConst (loc $loc(v)) Func.coloneqf; t1; t2] in
+    mkAppF (loc $loc) (loc $loc(v), Func.implf) [eqn; t3]
+  }
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body_no_ty) {
     let args = binder1 args b in
     let t = mkApp (loc $loc) (hd :: args) in
@@ -490,6 +508,11 @@ clause_hd_closed_term:
 clause_hd_open_term:
 | hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
 | hd = SIGMA; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "sigma") :: binder args b) }
+| USE; hd = head_term; args = list(closed_term); v = COLONEQ; t2 = term; IN; t3 = term {
+    let t1 = mkApp (loc $loc) (hd :: args) in
+    let eqn = mkApp (loc $loc) [mkConst (loc $loc(v)) Func.coloneqf; t1; t2] in
+    mkAppF (loc $loc) (loc $loc(v), Func.implf) [eqn; t3]
+  }
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body_no_ty) {
     let args = binder1 args b in
     let t = mkApp (loc $loc) (hd :: args) in

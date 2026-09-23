@@ -318,6 +318,16 @@ let mk_uvar =
   let i = ref 0 in
   fun s -> incr i; TypeAssignment.UVar(MutableOnce.make (F.from_string (s ^ string_of_int !i)))
 
+(* Fresh, never-colliding names for the variables elaborate_equation
+   introduces for the missing arguments of a := rule: a plain per-call
+   counter would collide when elaborate_equation is invoked multiple times
+   within the same clause (e.g. a top-level `:=` whose body also contains a
+   `use ... := ... in ...`), since ScopedTerm variables are scoped by name
+   within the whole clause. *)
+let fresh_eqn_var_name =
+  let i = ref 0 in
+  fun () -> incr i; F.from_string (Printf.sprintf "%%eqn_out%d" !i)
+
 let local_type ctx ~loc { scope = lang; name = c } : ret_id TypeAssignment.overloaded =
   let lang = match lang with Scope.Bound c -> c | _ -> assert false in
   try
@@ -394,6 +404,11 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(auto_spill=false) () :
   (ScopedTerm.t * Ast.Loc.t -> ScopedTerm.t * env_undeclared)
 =
   let valid_mode = ref true in
+  (* one-shot flag so that explicit {} spilling can locally disable auto_spill
+     just for its immediate sub-expression's own head symbol, without
+     affecting auto-spilling further down inside that sub-expression's
+     arguments (see the Spill case in check, and its use in check_app below) *)
+  let suppress_auto_spill_once = ref false in
 
   (* Format.eprintf "============================ checking %a\n" ScopedTerm.pretty t; *)
   let sigma : sigma F.Map.t ref = ref F.Map.empty in
@@ -422,8 +437,18 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(auto_spill=false) () :
     | App({ scope = Bound _} as c,[]) -> x, check_local ctx ~loc ~tyctx c ety
     | CData c -> x, check_cdata ~loc ~tyctx kinds c ety
     | Spill(_,{contents = Phantom _}) -> assert false
-    | Spill(x,_) when auto_spill -> (* :autospill handles {...} as plain parentheses *)
-        let x, spills = check_loc ~positive ~tyctx ctx x ~ety in
+    | Spill(x,_) when auto_spill ->
+        (* :autospill handles {...} as plain parentheses, except that explicit
+           braces disable auto-spilling for the immediate sub-expression's own
+           head symbol (consumed once by check_app below), so that e.g.
+           {std.append [] []} isn't itself further auto-spilled just because
+           :autospill is on; auto-spilling deeper inside its arguments is
+           unaffected *)
+        suppress_auto_spill_once := true;
+        let x, spills =
+          match check_loc ~positive ~tyctx ctx x ~ety with
+          | r -> suppress_auto_spill_once := false; r
+          | exception e -> suppress_auto_spill_once := false; raise e in
         x.it, spills
     | Spill(sp,info) ->
       if not positive then error ~loc "Spilling in negative position is forbidden";
@@ -437,6 +462,9 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(auto_spill=false) () :
         let t', spills = check_loc ~positive ctx ~tyctx:None t ~ety:(TypeAssignment.mk_ety ty) in
         if unify ty ety then (if t' == t then x else Cast(t',tye)), spills
         else error_bad_ety ~valid_mode ~loc ~tyctx ScopedTerm.pretty_ x ty ~ety
+    | Equation(_,_,_) ->
+        let t' = elaborate_equation ~inner:true { ScopedTerm.it = x; loc; ty = MutableOnce.make (F.from_string "Ty") } in
+        check ~positive ctx ~loc ~tyctx t'.it ety
 
   and resolve_gid ~loc id gid ety ty =
     if not @@ MutableOnce.is_set ty then MutableOnce.set ~loc ty (TypeAssignment.Val ety);
@@ -447,24 +475,46 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(auto_spill=false) () :
     | _ -> ()
 
   and check_impl ~positive ctx ~loc ~tyctx orig b t1 t2 ety =
-    if not @@ unify prop ety then
+    let lhs, rhs,c,positive (* of => *) =
+      match b with
+      | L2R -> t1,t2,F.implf,positive
+      | L2RBang -> t1,t2,F.implbangf,positive
+      | R2L -> t2,t1,F.rimplf,not positive in
+    (* Normally `t1 OP t2` is a goal, so it must have type prop. But in
+       auto_spill mode a `=>`/`=!=>` whose conclusion is itself an
+       under-applied call may be used as a VALUE-producing expression (e.g.
+       as the body of a lambda): if ety isn't prop-compatible, let the
+       conclusion be checked against ety directly instead of forcing prop,
+       so that auto-spilling it can succeed and produce a value of type ety,
+       and hoist the resulting spill so it wraps the whole implication
+       (keeping the hypothesis in scope for the goal the spill injects),
+       e.g. `{H => G}` rather than `H => {G}`. *)
+    let as_goal = try_unify prop ety in
+    if not as_goal && not (auto_spill && (b = L2R || b = L2RBang)) then
       error_bad_ety ~valid_mode ~loc ~tyctx ~ety:(TypeAssignment.mk_ety prop) ScopedTerm.pretty_ (Impl(b,loc,t1,t2)) ety.eit
     else
-      let lhs, rhs,c,positive (* of => *) =
-        match b with
-        | L2R -> t1,t2,F.implf,positive
-        | L2RBang -> t1,t2,F.implbangf,positive
-        | R2L -> t2,t1,F.rimplf,not positive in
-      let rhs, spills = check_loc ~positive ~tyctx:(Some c) ctx rhs ~ety:(TypeAssignment.mk_ety prop) in
+      let conclusion_ety = if as_goal then TypeAssignment.mk_ety prop else ety in
+      let rhs, spills = check_loc ~positive ~tyctx:(Some c) ctx rhs ~ety:conclusion_ety in
       let lhs_ty = mk_uvar "Src" in
       let lhs, more_spills = check_loc ~positive:(not positive) ~tyctx:None ctx ~ety:(TypeAssignment.mk_ety ~arity:0 lhs_ty) lhs in
       let ety1 = TypeAssignment.mk_ety prop in
       let ety2 = TypeAssignment.mk_ety @@ TypeAssignment.App(F.from_string "list",prop,[]) in
-      let t1', t2' = match b with L2R | L2RBang -> lhs, rhs | R2L -> rhs, lhs in
-      let x = if t1' == t1 && t2' == t2 then orig else Impl(b,loc,t1',t2') in
-      if try_unify lhs_ty ety1 then x, spills @ more_spills (* probably an error if not empty *)
-      else if unify lhs_ty ety2 then x, spills @ more_spills (* probably an error if not empty *)
-      else error_bad_ety2 ~valid_mode ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
+      if not (try_unify lhs_ty ety1 || unify lhs_ty ety2) then
+        error_bad_ety2 ~valid_mode ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
+      else
+      match rhs.it with
+      | Spill(sp, ({ contents = Main _ } as info)) when not as_goal ->
+          (* sp.ty is the residual (still-missing-arguments) arrow type of
+             the under-applied call: Spilling.main only cares about it to
+             know how many/what type of values are missing, regardless of
+             whether the Spill wraps just the call or the whole implication,
+             so it is reused here instead of a fresh, unset one. *)
+          let impl_t = { loc; ty = sp.ty; it = Impl(b,loc,lhs,sp) } in
+          Spill(impl_t, info), spills @ more_spills
+      | _ ->
+          let t1', t2' = match b with L2R | L2RBang -> lhs, rhs | R2L -> rhs, lhs in
+          let x = if t1' == t1 && t2' == t2 then orig else Impl(b,loc,t1',t2') in
+          x, spills @ more_spills
 
   and check_global ctx ~loc ~tyctx { scope = gid; name = c; ty = tya } ety =
     match global_type ~ety env ~loc c with
@@ -584,11 +634,32 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(auto_spill=false) () :
             let _, term = check_app_single ~positive ctx ~loc ~orig (cid,c,tya) ty [] args in
             (resolve_gid ~loc id cid ty tya; term, [])
           else err rest_tgt in
+        let ety_is_unresolved () =
+          match ety.eit with
+          | TypeAssignment.UVar m -> not (MutableOnce.is_set m)
+          | _ -> false in
+        (* consumed (at most) once: suppresses auto-spilling for this one head
+           symbol only, leaving auto_spill untouched for anything checked
+           afterwards (in particular this head's own arguments) *)
+        let auto_spill =
+          if !suppress_auto_spill_once then (suppress_auto_spill_once := false; false)
+          else auto_spill in
         let auto_spill_missing_args srcs tgt =
           auto_spill
           && List.length args < List.length srcs
           && unify_then_undo tgt (TypeAssignment.mk_ety prop)
-          && not (unify_then_undo (consume srcs tgt) ety) in
+          && (if ety_is_unresolved () then
+                (* ety carries no information (e.g. this term is an argument of
+                   a polymorphic constant like `=`, whose own argument type is
+                   still an unconstrained metavariable at this point): fall
+                   back to mode information, since `not (unify_then_undo
+                   (consume srcs tgt) ety)` would trivially be false (an
+                   unresolved metavariable unifies with anything) *)
+                let given = List.length args in
+                let missing_modes = List.filteri (fun i _ -> i >= given) srcs in
+                List.for_all (fun (m,_) -> not (TypeAssignment.is_input m)) missing_modes
+              else
+                not (unify_then_undo (consume srcs tgt) ety)) in
         let auto_spill_it srcs tgt =
           let rest_ty, term = check_app_single ~positive ctx ~loc ~orig (cid,c,tya) ty [] args in
           let sp = { loc; ty = TypeAssignment.create rest_ty; it = term } in
@@ -772,6 +843,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(auto_spill=false) () :
     | Lam (_,_,x) -> ensure_no_discard x
     | UVar(u,xs) -> List.iter ensure_no_discard xs
     | Spill(t,_) -> ensure_no_discard t
+    | Equation(x,g,y) -> ensure_no_discard x; Option.iter ensure_no_discard g; ensure_no_discard y
     | CData _ -> ()
 
   and check_matches_poly_skema_loc ~unknown { loc; it } =
@@ -919,6 +991,82 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(auto_spill=false) () :
     | UVar n when MutableOnce.is_set n -> oc m (TypeAssignment.deref n)
     | UVar _ -> true
 
+  (* Elaborates Equation. Example:
+       func f int, int -> string, string.
+       f 0 1 := X = "hello", "A", X.
+     becomes
+       f 0 1 R1 R2 :- X = "hello", R1 = "A", R2 = X.
+     ~inner is true when called from within check (e.g. for an Equation
+     nested inside a term, such as the one generated by `use ... := ... in
+     ...`), as opposed to the top-level call from check_rule; for now it is
+     ignored. *)
+  and elaborate_equation ~inner:_ ({ ScopedTerm.it; loc } as t) =
+    match it with
+    | Equation(lhs, guard, rhs) ->
+        let rhs =
+          let cut = { ScopedTerm.it = ScopedTerm.mkGlobalApp ~loc F.cutf []; loc; ty = MutableOnce.make (F.from_string "Ty") } in
+          let conjuncts = Option.to_list guard @ [cut; rhs] in
+          { ScopedTerm.it = ScopedTerm.mkGlobalApp ~loc:rhs.loc F.andf conjuncts; loc = rhs.loc; ty = MutableOnce.make (F.from_string "Ty") } in
+        let hd, args = match lhs.it with
+          | App(hd, args) -> hd, args
+          | _ -> error ~loc:lhs.loc "the left hand side of := must be an application" in
+        let ety = TypeAssignment.mk_ety @@ mk_uvar "EquationHead" in
+        let cty = get_hd_type ~loc:lhs.loc Scope.Map.empty env hd ety in
+        let ty = match cty with
+          | Overloaded _ -> error ~loc:lhs.loc "the head symbol of := must have a single, non overloaded, type"
+          | Single (_, ty) -> ty in
+        let modes = match classify_arrow ty with
+          | Simple { srcs; _ } -> List.map fst srcs
+          | Unknown | Variadic _ -> error ~loc:lhs.loc "cannot determine the arity of the head symbol of :=" in
+        let total_arity = List.length modes in
+        let given = List.length args in
+        let missing = total_arity - given in
+        if missing < 0 then error ~loc:lhs.loc "too many arguments in the head of a := rule";
+        let given_modes = List.filteri (fun i _ -> i < given) modes in
+        let missing_modes = List.filteri (fun i _ -> i >= given) modes in
+        let n_input = List.length (List.filter TypeAssignment.is_input modes) in
+        if given <> n_input then
+          error ~loc:lhs.loc "the number of arguments given in the head of a := rule must match the number of input arguments of the head symbol";
+        if not (List.for_all TypeAssignment.is_input given_modes) then
+          error ~loc:lhs.loc "the arguments given in the head of a := rule must all have input mode";
+        if List.exists TypeAssignment.is_input missing_modes then
+          error ~loc:lhs.loc "the arguments missing from the head of a := rule must all have output mode";
+        let fresh_var () =
+          { ScopedTerm.it = ScopedTerm.mkUVar ~loc (fresh_eqn_var_name ()) []; loc; ty = MutableOnce.make (F.from_string "Ty") } in
+        let rs = List.init missing (fun _ -> fresh_var ()) in
+        let new_lhs = { lhs with it = App(hd, args @ rs) } in
+        let rec flatten (t : ScopedTerm.t) =
+          match t.it with
+          | App({ scope = Global _; name = c }, xs) when F.equal c F.andf -> List.concat_map flatten xs
+          | _ -> [ t ] in
+        let conjuncts = flatten rhs in
+        let n_conjuncts = List.length conjuncts in
+        if n_conjuncts < missing then
+          error ~loc:rhs.loc "not enough goals in the body of a := rule to bind all the missing arguments";
+        let k = n_conjuncts - missing in
+        let leading = List.filteri (fun i _ -> i < k) conjuncts in
+        let last_n = List.filteri (fun i _ -> i >= k) conjuncts in
+        (* binds r to the goal ti is expected to produce, crossing pi and => so that
+           `pi x\ b` becomes `pi x\ r = b` and `pi x\ h => b` becomes `pi x\ h => r = b` *)
+        let rec bind_result (r : ScopedTerm.t) (ti : ScopedTerm.t) : ScopedTerm.t =
+          match ti.it with
+          | App(({ scope = Global _; name = c } as hd), [ ({ it = Lam(v,lty,body) } as lam) ]) when F.equal c F.pif ->
+              let body' = bind_result r body in
+              { ti with it = App(hd, [ { lam with it = Lam(v,lty,body') } ]) }
+          | Impl(kind, iloc, hyp, concl) ->
+              let concl' = bind_result r concl in
+              { ti with it = Impl(kind, iloc, hyp, concl') }
+          | _ -> { ScopedTerm.it = ScopedTerm.mkGlobalApp ~loc:ti.loc F.eqf [r; ti]; loc = ti.loc; ty = MutableOnce.make (F.from_string "Ty") } in
+        let transformed = List.map2 bind_result rs last_n in
+        let new_conjuncts = leading @ transformed in
+        let assemble = function
+          | [] -> anomaly ~loc "elaborate_equation: empty body"
+          | [x] -> x
+          | (x : ScopedTerm.t) :: _ as xs ->
+              { ScopedTerm.it = ScopedTerm.mkGlobalApp ~loc:x.loc F.andf xs; loc = x.loc; ty = MutableOnce.make (F.from_string "Ty") } in
+        let new_rhs = assemble new_conjuncts in
+        { t with it = Impl(R2L, loc, new_lhs, new_rhs) }
+    | _ -> t
   in
     (* this is wrong, since the same unit may be checked against different contexts *)
     (* if MutableOnce.is_set t.ty then !unknown_global else *)
@@ -929,6 +1077,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(auto_spill=false) () :
     t, !unknown_global in
 
   let check_rule t ~exp =
+    let t = elaborate_equation ~inner:false t in
     let t, spills = check_loc ~positive:true ~tyctx:None Scope.Map.empty t ~ety:(TypeAssignment.mk_ety @@ TypeAssignment.unval exp) in
     check_matches_poly_skema_loc ~unknown:!unknown_global t;
     let oc = occur_check_pred t in

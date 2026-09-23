@@ -1,0 +1,13 @@
+data tm.
+symb app tm -> tm -> tm.
+symb lam (tm -> tm) -> tm.
+symb y tm.
+
+data ty.
+symb arr ty -> ty -> ty.
+
+func of tm -> ty.
+of (lam F) := pi x\ use of x := A in arr A (of (F x)).
+of (app A B) := of A = arr S T, of B = S, T.
+
+main :- of (lam x\ lam y\ app x y) T, print T.

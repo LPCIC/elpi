@@ -13,7 +13,7 @@ type   (#)    tm -> tm -> tm.         % application constructor
 
 type fixpt (tm -> tm) -> tm.        % fixed point constructor for recursion
 type cond  tm -> tm -> tm -> tm.    % conditional
-type in    int -> tm.               % constructor for embedding integers
+type embed    int -> tm.               % constructor for embedding integers
 
 type and, or, false, truth,                      % boolean functions
      car, cdr, lcons, nullp, consp, empty,        % lists functions

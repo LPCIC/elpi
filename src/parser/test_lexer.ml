@@ -2,9 +2,11 @@ open Elpi_lexer_config
 open Elpi_parser
 
 type t = Tokens.token =
+  | WHEN
   | VDASH
   | USE_SIG
   | USEONLY
+  | USE
   | UNTYPED
   | TYPEABBREV
   | TYPE
@@ -49,6 +51,7 @@ type t = Tokens.token =
   | IO of (char)
   | INTEGER of ( int )
   | INDEX
+  | IN
   | IMPORT
   | IFF
   | IF
@@ -89,6 +92,7 @@ type t = Tokens.token =
   | CONS
   | CONJ2
   | CONJ
+  | COLONEQ
   | COLON
   | CLOSED
   | BIND
@@ -201,12 +205,15 @@ b"|}                                  [T(STRING "a\nb", 2, 3, 0, 5)];
   test  "foo :- bar."                 [T(CONSTANT "foo", 1, 0, 0,3); T(VDASH, 1, 0, 4,6); T(CONSTANT "bar", 1, 0, 7,10); T(FULLSTOP, 1, 0, 10,11)];
   test  "foo ?- bar."                 [T(CONSTANT "foo", 1, 0, 0,3); T(QDASH, 1, 0, 4,6); T(CONSTANT "bar", 1, 0, 7,10); T(FULLSTOP, 1, 0, 10,11)];
   test  "foo :- x \\ bar."            [T(CONSTANT "foo", 1, 0, 0,3); T(VDASH, 1, 0, 4,6); T(CONSTANT "x", 1, 0, 7,8); T(BIND, 1, 0, 9,10); T(CONSTANT "bar", 1, 0, 11,14); T(FULLSTOP, 1, 0, 14,15)];
+  test  "foo := bar."                 [T(CONSTANT "foo", 1, 0, 0,3); T(COLONEQ, 1, 0, 4,6); T(CONSTANT "bar", 1, 0, 7,10); T(FULLSTOP, 1, 0, 10,11)];
   test  "foo, bar"                    [T(CONSTANT "foo", 1, 0, 0,3); T(CONJ, 1, 0, 3,4); T(CONSTANT "bar", 1, 0, 5,8) ];
   test  "foo & bar"                    [T(CONSTANT "foo", 1, 0, 0,3); T(CONJ2, 1, 0, 4,5); T(CONSTANT "bar", 1, 0, 6,9) ];
   test  "[]"                          [T(LBRACKET, 1, 0, 0,1); T(RBRACKET, 1, 0, 1,2)];
   (*    01234567890123456789012345 *)
   test  "X"                           [T(CONSTANT "X", 1, 0, 0,1) ];
   test  "is"                          [T(IS, 1, 0, 0,2) ];
+  test  "when"                        [T(WHEN, 1, 0, 0,4) ];
+  test  "whenever"                    [T(CONSTANT "whenever", 1, 0, 0,8) ];
   test  "#line 3 \"xx\"\na"           [T(CONSTANT "a", 3, 0, 0,1) ];
   test  "b\n#line 3 \"xx\"\na"        [T(CONSTANT "b", 1, 0, 0,1);T(CONSTANT "a", 3, 2, 0,1) ];
   test  {|

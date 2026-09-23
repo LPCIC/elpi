@@ -1,0 +1,12 @@
+data tm.
+symb app tm -> tm -> tm.
+symb lam (tm -> tm) -> tm.
+symb y tm.
+
+func copy tm -> tm.
+copy (app A B) := app (copy A) (copy B).
+copy (lam F) := lam x\ use copy x := x in copy (F x).
+copy y := y.
+
+:autospill
+main :- print (copy (lam x\ app x y)).
