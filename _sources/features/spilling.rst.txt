@@ -28,10 +28,7 @@ For this to work Elpi has to know the spilled predicate's arity, from its
 undeclared predicate cannot be spilled.
 
 The spilled call is inserted just before the *closest* call recognised as a
-predicate, which today means a monomorphic, first-order signature; a
-polymorphic or higher-order argument position (as in an anonymous predicate
-passed to :stdlib:`std.map`) may place it one level up if the callee's own type
-isn't precise enough to pin it down. ``elpi -print FILE`` prints a program
+predicate, walking basward, inside out. ``elpi -print FILE`` prints a program
 after spilling (and other compilation passes), so any doubt about where a
 particular ``{ }`` ended up can be checked directly.
 

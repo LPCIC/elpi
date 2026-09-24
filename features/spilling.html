@@ -157,14 +157,11 @@ g<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span 
 <code class="docutils literal notranslate"><span class="pre">pred</span></code> / <code class="docutils literal notranslate"><span class="pre">func</span></code> signature (<a class="reference internal" href="../syntax/type-declarations.html"><span class="doc">Type declarations</span></a>); an
 undeclared predicate cannot be spilled.</p>
 <p>The spilled call is inserted just before the <em>closest</em> call recognised as a
-predicate, which today means a monomorphic, first-order signature; a
-polymorphic or higher-order argument position (as in an anonymous predicate
-passed to <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>) may place it one level up if the callee’s own type
-isn’t precise enough to pin it down. <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-print</span> <span class="pre">FILE</span></code> prints a program
+predicate, walking basward, inside out. <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-print</span> <span class="pre">FILE</span></code> prints a program
 after spilling (and other compilation passes), so any doubt about where a
 particular <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">}</span></code> ended up can be checked directly.</p>
-<p>Here <code class="docutils literal notranslate"><span class="pre">{std.rev</span> <span class="pre">L}</span></code> becomes a fresh variable produced by an <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L674"><code class="docutils literal notranslate"><span class="pre">std.rev</span></code></a> goal
-inserted right before <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L689"><code class="docutils literal notranslate"><span class="pre">std.append</span></code></a>:</p>
+<p>Here <code class="docutils literal notranslate"><span class="pre">{std.rev</span> <span class="pre">L}</span></code> becomes a fresh variable produced by an <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L674"><code class="docutils literal notranslate"><span class="pre">std.rev</span></code></a> goal
+inserted right before <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L689"><code class="docutils literal notranslate"><span class="pre">std.append</span></code></a>:</p>
 <p><strong>../code/palindrome.elpi:</strong></p>
 <div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="c">% Example used in the &quot;Spilling&quot; chapter.</span>
 <span class="linenos">2</span><span class="c">% The spilled call {std.rev L} is rewritten to a fresh variable bound by an</span>

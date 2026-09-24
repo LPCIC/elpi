@@ -255,7 +255,7 @@ kept in a file the two interpreters share.</p>
 a rule the checker cannot be taught to accept, usually one that builds terms
 too dynamically for any signature to describe. Prefer fixing the signature, or
 widening an argument to <code class="docutils literal notranslate"><span class="pre">any</span></code> (<a class="reference internal" href="type-declarations.html"><span class="doc">Type declarations</span></a>); at a single spot,
-the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L665"><code class="docutils literal notranslate"><span class="pre">std.unsafe-cast</span></code></a> (<code class="docutils literal notranslate"><span class="pre">func</span> <span class="pre">unsafe-cast</span> <span class="pre">A</span> <span class="pre">-&gt;</span> <span class="pre">B</span></code>, itself
+the standard library’s <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L665"><code class="docutils literal notranslate"><span class="pre">std.unsafe-cast</span></code></a> (<code class="docutils literal notranslate"><span class="pre">func</span> <span class="pre">unsafe-cast</span> <span class="pre">A</span> <span class="pre">-&gt;</span> <span class="pre">B</span></code>, itself
 a <code class="docutils literal notranslate"><span class="pre">:untyped</span></code> rule) coerces one term without disarming the checker over the
 whole rule. Reach for <code class="docutils literal notranslate"><span class="pre">:untyped</span></code> only when none of these works. An untyped
 rule also loses the features that depend on type information: in particular

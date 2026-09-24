@@ -166,7 +166,7 @@ already gets its own fresh variables
 (<a class="reference internal" href="../syntax/inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>). <code class="docutils literal notranslate"><span class="pre">sigma</span></code> matters in the two
 situations where that is not enough.</p>
 <p>The first is a variable used inside an anonymous predicate, the callback
-passed to <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a> and the like. Such a variable belongs to the enclosing
+passed to <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a> and the like. Such a variable belongs to the enclosing
 rule, not to the callback, so it is the <em>same</em> variable on every call the
 traversal makes; a <code class="docutils literal notranslate"><span class="pre">sigma</span></code> inside the callback gives each call its own.</p>
 <p>The second is a variable first used <em>after</em> a <code class="docutils literal notranslate"><span class="pre">pi</span></code> or <code class="docutils literal notranslate"><span class="pre">sigma</span></code>. A
@@ -178,7 +178,7 @@ introduces <code class="docutils literal notranslate"><span class="pre">Ns</span
 </section>
 <section id="inspecting-the-context">
 <h2>Inspecting the context<a class="headerlink" href="#inspecting-the-context" title="Link to this heading"></a></h2>
-<p>Two builtins, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L533"><code class="docutils literal notranslate"><span class="pre">names</span></code></a> and <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L536"><code class="docutils literal notranslate"><span class="pre">occurs</span></code></a>, introspect the
+<p>Two builtins, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L533"><code class="docutils literal notranslate"><span class="pre">names</span></code></a> and <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L536"><code class="docutils literal notranslate"><span class="pre">occurs</span></code></a>, introspect the
 eigenvariables (the names <code class="docutils literal notranslate"><span class="pre">pi</span></code> has introduced so far) that a call is
 running under:</p>
 <ul class="simple">
@@ -202,15 +202,15 @@ name <code class="docutils literal notranslate"><span class="pre">x</span></code
 the way to produce a value that must not depend on the current binders.</p>
 <p>The narrowing is a <em>unification</em>, so it can also fail: if <code class="docutils literal notranslate"><span class="pre">V</span></code> is already
 bound to a term that mentions a name outside <code class="docutils literal notranslate"><span class="pre">L</span></code> (outside all names, for
-<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L542"><code class="docutils literal notranslate"><span class="pre">closed_term</span></code></a>), there is no way to satisfy both scopes and the call fails.
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L542"><code class="docutils literal notranslate"><span class="pre">closed_term</span></code></a>), there is no way to satisfy both scopes and the call fails.
 <code class="docutils literal notranslate"><span class="pre">closed_term</span> <span class="pre">(app</span> <span class="pre">x</span> <span class="pre">y)</span></code> under <code class="docutils literal notranslate"><span class="pre">pi</span> <span class="pre">x\</span> <span class="pre">pi</span> <span class="pre">y\</span></code> fails rather than quietly
 forgetting <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code>. On an <em>unbound</em> variable it always succeeds; the
 failure is the useful signal when the argument is the output of a computation
 that was supposed to stay closed.</p>
 <p>A scope violation that happens through ordinary unification, rather than
-through <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L494"><code class="docutils literal notranslate"><span class="pre">prune</span></code></a> / <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L542"><code class="docutils literal notranslate"><span class="pre">closed_term</span></code></a>, fails silently instead.</p>
+through <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L494"><code class="docutils literal notranslate"><span class="pre">prune</span></code></a> / <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L542"><code class="docutils literal notranslate"><span class="pre">closed_term</span></code></a>, fails silently instead.</p>
 <p>Recursing under a binder, inspecting the eigenvariables in scope, and
-narrowing a variable’s scope with <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L494"><code class="docutils literal notranslate"><span class="pre">prune</span></code></a> and <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/78cc7aaed98d4b9d211bdc18d324f07126cc5287/src/builtin.elpi#L542"><code class="docutils literal notranslate"><span class="pre">closed_term</span></code></a>, in one
+narrowing a variable’s scope with <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L494"><code class="docutils literal notranslate"><span class="pre">prune</span></code></a> and <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23c32e346b8f54a8a0de92a810fd96fb405731e9/src/builtin.elpi#L542"><code class="docutils literal notranslate"><span class="pre">closed_term</span></code></a>, in one
 program:</p>
 <p><strong>../code/binders.elpi:</strong></p>
 <div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="c">% Recursing under a binder (depth), and introspecting the eigenvariables</span>
