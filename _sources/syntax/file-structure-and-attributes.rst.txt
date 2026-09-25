@@ -130,9 +130,11 @@ need to pick unlikely names to avoid a clash.
    :linenos:
    :language: elpi
 
-.. raw:: html
+.. code-block:: console
 
-   <div class="highlight-console notranslate"><div class="highlight" style="background-color: rgb(248, 148, 148);"><pre>Injection failure: result did not pass regexp check (macro's Tmp = 5\ncaller's Tmp is still 999)</pre></div></div>
+   macro's Tmp = 5
+   caller's Tmp is still 999
+   
 
 A macro is a natural way to name a recurring combination of goals. ``@of``
 above pairs the "typed" and "pretty-printed" facts that a hypothetical rule
