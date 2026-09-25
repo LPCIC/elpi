@@ -3,12 +3,12 @@
 % during the typechecking of the rule for p, otherwise
 % the mutable once field would be affected twice with consequent
 % fatal error
-macro @m A :- X.
+macro @m A :- A.
 
-pred p -> (int -> bool).
+pred p -> (int -> int).
 p (@m).
 
-pred q -> (string -> int).
+pred q -> (string -> string).
 q (@m).
 
 main.

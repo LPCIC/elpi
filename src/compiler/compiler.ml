@@ -1119,6 +1119,17 @@ end = struct
       error ~loc (Format.asprintf "duplicate macro %a, previous declaration %a" F.pp name Loc.pp oloc)
     with Not_found ->
       let body = scope_loc_term ~state:(set_mtm state { empty_mtm with macros = m }) body in
+      let uvars = ScopedTerm.uvars_of_term body in
+      begin
+        match uvars with
+        | [] -> ()
+        | (uv, loc) :: _ ->
+            error ~loc (
+              Format.asprintf "The body of macro %a contains the unification variable %a, which is unbound in the macro definition.\n" F.pp name F.pp uv.name
+              ^ Format.asprintf "Its allocation, and hence its quantification, would depend on the usage site of the macro,\n"
+              ^ Format.asprintf "therefore it is not hygienic.\n"
+              ^ Format.asprintf "Consider quantifying it explicitly with sigma %a\\" F.pp uv.name)
+      end;
       F.Map.add name (body,loc) am, F.Map.add name (body,loc) m
 
   let run state ~toplevel_macros p : Scoped.program =
