@@ -1231,19 +1231,6 @@ module ScopedTerm = struct
   end
 
   let is_var = function UVar _ -> true | _ -> false
-
-  let uvars_of_term t =
-    let rec aux acc { it; loc } =
-      match it with
-      | Impl(_,_,t1,t2) -> aux (aux acc t1) t2
-      | UVar(v,args) -> List.fold_left aux ((v,loc) :: acc) args
-      | App(_,xs) -> List.fold_left aux acc xs
-      | Lam(_,_,t) -> aux acc t
-      | Spill(t,_) -> aux acc t
-      | Cast(t,_) -> aux acc t
-      | Discard _ | CData _ -> acc
-    in
-    List.rev (aux [] t)
 end
 
 

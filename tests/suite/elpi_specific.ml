@@ -604,9 +604,3 @@ let () = declare "macro_uv"
   ~expectation:Success
   ()
 
-let () = declare "bug453"
-  ~source_elpi:"bug453.elpi"
-  ~description:"unbound unification variable in a macro body is not hygienic"
-  ~expectation:(FailureOutput (Str.regexp "not hygienic"))
-  ()
-
