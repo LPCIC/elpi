@@ -1,0 +1,9 @@
+macro @m A B :-
+  % sigma T\
+  A = T,
+  T = B.
+
+main :-
+  L1 = [1, 2, 3],
+  std.map L1 (a\ b\ @m a b) L2,
+  print L2.
