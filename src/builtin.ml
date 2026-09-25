@@ -337,7 +337,7 @@ builtin func pattern_match A -> A.|};
 
   LPDoc " -- Standard data types (supported in the FFI) --";
 
-  LPCode "kind list type -> type.";
+  LPCode "data list A.";
   LPCode "builtin symb (::) : X -> list X -> list X = \"core\".";
   LPCode "builtin symb ([]) : list X = \"core\".";
 
@@ -351,8 +351,8 @@ builtin func pattern_match A -> A.|};
   LPCode "snd (pr _ B) B.";
 
   LPCode {|
-kind triple type -> type -> type -> type.
-type triple A -> B -> C -> triple A B C.
+data triple A B C.
+symb triple A -> B -> C -> triple A B C.
 
 func triple_1 triple A B C -> A.
 triple_1 (triple A _ _) A.

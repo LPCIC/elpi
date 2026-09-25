@@ -1,5 +1,5 @@
-kind std.set type -> type.
-type std.set std.set.private.set E -> (func E, E -> cmp) -> std.set E.
+data std.set E.
+symb std.set std.set.private.set E -> (func E, E -> cmp) -> std.set E.
 
 namespace std.set {
 
@@ -29,9 +29,9 @@ elements (std.set M _) L :- private.elements M [] L.
 namespace private {
 
 % Taken from OCaml's set.ml
-kind set type -> type.
-type empty set E.
-type node set E -> E -> set E -> int -> set E.
+data set E.
+symb empty set E.
+symb node set E -> E -> set E -> int -> set E.
 
 func height set E -> int.
 height empty 0.
@@ -120,8 +120,8 @@ elements (node L E R _) Acc X :-
 
 % Fast sets only work ground terms but do not perform occur check
 
-kind std.fset type -> type.
-type std.fset std.fset.private.set E -> (func E, E -> cmp) -> std.fset E.
+data std.fset E.
+symb std.fset std.fset.private.set E -> (func E, E -> cmp) -> std.fset E.
 
 namespace std.fset {
 
@@ -160,9 +160,9 @@ func assert-ground A.
 assert-ground A :- std.assert! (ground_term A) "std.fset: not ground".
 
 % Taken from OCaml's set.ml
-kind set type -> type.
-type empty set E.
-type node set E -> E -> set E -> int -> set E.
+data set E.
+symb empty set E.
+symb node set E -> E -> set E -> int -> set E.
 
 func height set E -> int.
 height empty 0.
