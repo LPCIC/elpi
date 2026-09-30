@@ -221,7 +221,16 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
             ([], [ t ])
         end
   (* TODO: positive/negative postion, for now we assume :- and => are used in the obvious way *)
-  | Impl (R2L, l, head, premise) -> error ~loc "use ==> here, not :- "
+  | Impl (R2L, _,_,_) -> 
+      let t =
+        let premise, head_vars = spill_premise ~type_abbrevs ~types args t in
+        List.fold_right (fun (v : binder) t ->
+            mk_loc ~loc:premise.loc ~ty:(pif_ty ~types v) @@
+              App (pif_w_name_ty ~types v, [ 
+                mk_loc ~loc:premise.loc ~ty:(pif_arg_ty ~types v) @@ Lam (Some v, None, t) ])
+          ) head_vars premise
+      in
+      ([],[t])
   | Impl ((L2R|L2RBang) as kind, l, premise, conclusion) ->
       let pi_closed_premise =
         let premise, head_vars = spill_premise ~type_abbrevs ~types args premise in
