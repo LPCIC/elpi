@@ -1053,7 +1053,7 @@ module ScopedTerm = struct
     | Lam(n, ste, it) -> pretty_lam fmt n ste it
     | App({ name = f },[x]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App({ name = f },x::xs) when F.equal F.pif f || F.equal F.sigmaf f -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
-    | App({ scope = Global _; name = f } as n,x::xs) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist ~boxed:true (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant n) (x::xs))
+    | App({ scope = Global _; name = f } as n,x::(_::_ as xs)) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist ~boxed:true (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant n) (x::xs))
     | App({ name = f },x::xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist ~boxed:true (pretty_parens ~lvl:app) " ") (x::xs)
     | UVar({ name = f },[]) -> fprintf fmt "@[%a@]" F.pp f
     | UVar({ name = f },xs) -> fprintf fmt "@[%a@ %a@]" F.pp f (Util.pplist ~boxed:true (pretty_parens ~lvl:app) " ") xs

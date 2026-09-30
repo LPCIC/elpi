@@ -219,12 +219,27 @@ let pretty_ty valid_mode =
 
 let error ~loc msg = error ~loc ("Typechecker: " ^ msg)
 
-let error_not_a_function ~loc c tyc args x =
-  let t =
-    if args = [] then ScopedTerm.App(mk_global_const ~escape_ns:true c ~loc,[])
-    else ScopedTerm.(App(mk_global_const ~escape_ns:true c ~loc,args)) in
-  let msg = Format.asprintf "@[<hov>%a is not a function but it is passed the argument@ @[<hov>%a@].@ The type of %a is %a@]"
-    ScopedTerm.pretty_ t ScopedTerm.pretty x F.pp c TypeAssignment.pretty_mut_once tyc in
+let error_not_a_function ~loc c orig_ty args extra =
+  let all = args @ extra |> List.filter (fun t -> match t.it with
+    | ScopedTerm.Spill (_, { contents = Phantom _ }) -> false
+    | _ -> true
+  ) in
+  let pp_arg fmt (t : ScopedTerm.t) =
+    match t.it with
+    | ScopedTerm.Spill (_, { contents = Main n }) when n > 1 ->
+        Format.fprintf fmt "%a (%d arguments)" ScopedTerm.pretty t n
+    | _ -> ScopedTerm.pretty fmt t in
+  let pp_args fmt = function
+    | [] -> ()
+    | [x] -> pp_arg fmt x
+    | [x;y] -> Format.fprintf fmt "%a and %a" pp_arg x pp_arg y
+    | l ->
+        let args, last = match List.rev l with
+          | last :: rest -> List.rev rest, last
+          | [] -> assert false in
+        Format.fprintf fmt "%a, and %a" (pplist pp_arg ", ") args pp_arg last in
+  let msg = Format.asprintf "@[<hov>The type of %a is %a,@ and it is applied to@ @[<hov>%a@].@ Too many arguments were supplied.@]"
+    F.pp c TypeAssignment.pretty_mut_once orig_ty pp_args all in
   error ~loc msg
 
 let pp_tyctx fmt = function
@@ -577,7 +592,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
           else error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ (App(mk_global_const ~escape_ns:true c ~loc,args)) ty in
         let monodirectional () =
           (* Format.eprintf "checking app mono %a\n" F.pp c; *)
-          let tgt, term = check_app_single ~positive ~auto_spill ctx ~loc ~orig (cid,c,tya) ty [] args in
+          let tgt, term = check_app_single ~positive ~auto_spill ctx ~loc ~orig (cid,c,tya,ty) ty [] args in
           if unify tgt ety then (resolve_gid ~loc id cid ty tya; term, [])
           else err tgt in
         let consume srcs tgt =
@@ -593,7 +608,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
           let rest_tgt = consume srcs tgt in
           (* Format.eprintf "Setting the type of %a to %a old is %a (%a)@." F.pp c TypeAssignment.pretty_mut_once ty (TypeAssignment.pretty_mut_once) (UVar tya) Loc.pp loc; *)
           if unify rest_tgt ety then
-            let _, term = check_app_single ~positive ~auto_spill ctx ~loc ~orig (cid,c,tya) ty [] args in
+            let _, term = check_app_single ~positive ~auto_spill ctx ~loc ~orig (cid,c,tya,ty) ty [] args in
             (resolve_gid ~loc id cid ty tya; term, [])
           else err rest_tgt in
         let auto_spill_missing_args srcs args tgt =
@@ -608,7 +623,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
           && given_srcs |> List.for_all (fun (m,_) -> TypeAssignment.is_input m)
          in
         let auto_spill_it srcs tgt =
-          let rest_ty, term = check_app_single ~positive ~auto_spill ctx ~loc ~orig (cid,c,tya) ty [] args in
+          let rest_ty, term = check_app_single ~positive ~auto_spill ctx ~loc ~orig (cid,c,tya,ty) ty [] args in
           let sp = { loc; ty = TypeAssignment.create rest_ty; it = term } in
           match classify_arrow rest_ty with
           | Simple { srcs = missing_srcs; _ } when List.exists (fun (m,_) -> TypeAssignment.is_input m) missing_srcs ->
@@ -674,7 +689,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
       end
     | _ -> ()
 
-  and check_app_single ~positive ~auto_spill ctx ~loc ~orig (_,c,_ as fc) ty consumed args =
+  and check_app_single ~positive ~auto_spill ctx ~loc ~orig (_,c,_,orig_ty as fc) ty consumed args =
     match args with
     | [] -> ty, rebuild_orig orig (List.rev consumed)
     | x :: xs ->
@@ -707,7 +722,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
         | App(a,x,xs) when F.Map.mem a type_abbrevs ->
             let ty = TypeAssignment.apply (fst @@ F.Map.find a type_abbrevs) (x::xs) in
             check_app_single ~positive ~auto_spill ctx ~loc ~orig fc ty consumed args
-        | _ -> error_not_a_function ~loc:x.loc c ty (List.rev consumed) x (* TODO: trim loc up to x *)
+        | _ -> error_not_a_function ~loc:x.loc c orig_ty (List.rev consumed) (x :: xs) (* TODO: trim loc up to x *)
 
   and check_loc ~positive ?(auto_spill=global_auto_spill) ~tyctx ctx ({ loc; it; ty } as t) ~ety : ScopedTerm.t * spilled_phantoms =
       begin
