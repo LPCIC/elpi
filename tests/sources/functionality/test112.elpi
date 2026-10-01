@@ -1,3 +1,5 @@
+% YES
+
 func foo int ->.
 pred bad.
 

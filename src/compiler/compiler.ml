@@ -1838,19 +1838,7 @@ end = struct
       Format.fprintf fmt "predicate %a" F.pp f in
 
     let preds_w_eigen_var_no_cut = ref C.Map.empty in
-    let add_pred_w_eigen_var_no_cut pred loc =
-      preds_w_eigen_var_no_cut := C.Map.add pred loc !preds_w_eigen_var_no_cut 
-    in
 
-    let get_fresh_loc =
-      let n = ref 0 in
-      fun loc -> 
-        incr n;
-        Loc.extend !n loc in
-    let runtime_tick = 
-      let tick = ref 0 in
-      fun () -> decr tick; !tick 
-    in
     let get_opt x = Constants.Map.find_opt x pred_info in
     let can_overlap x = match get_opt x with
       | Some { overlap = Allowed } -> true
@@ -1873,72 +1861,24 @@ end = struct
           (* Format.eprintf "@[<hov 2>Getting clause for@ %a with query@ %a@]@." pp_global_predicate c pp_term query; *)
           R.CompileTime.get_clauses ~depth:0 query dt |> Bl.to_list
     in
-    let rec to_heap ~depth t = 
-      match t with
-      | Builtin (x, xs) -> Builtin (x, List.map (to_heap ~depth) xs) 
-      | App (h,x,xs) -> App (h, (to_heap ~depth) x, List.map (to_heap ~depth) xs)
-      | Const x -> t
-      | Lam t -> Lam ((to_heap ~depth) t)
-      | (Nil | CData _ | Discard | AppUVar _ | UVar _) -> t
-      | Arg _ -> UVar (R.CompileTime.fresh_uvar ~depth,0)
-      | AppArg (_, args) -> AppUVar (R.CompileTime.fresh_uvar ~depth, List.map (to_heap ~depth) args)
-      | Cons (a, b) -> Cons ((to_heap ~depth) a, (to_heap ~depth) b)
-    in
 
     let pretty_term ~depth = 
       let pp_ctx = ({ uv_names = ref (IntMap.empty,0); table = SymbolMap.compile symbols }) in
       R.Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||] in
 
-    let error_overlapping ~loc ~is_local pred overlaps (cl_st,depth : term * int) = 
-      let local = if is_local then "local " else "" in
+    let error_overlapping ~loc pred overlaps (cl_st,depth : term * int) = 
       let to_str fmt x =
         match x.overlap_loc with
         | None -> Format.fprintf fmt "- anonymous rule" 
         | Some loc2 when Loc.equal loc loc2 -> Format.fprintf fmt "- @[<v 0>itself at %a@,did you accumulate %s twice?@]" Loc.pp loc2 (Filename.basename loc2.Loc.source_name)
         | Some loc2 -> Format.fprintf fmt "- rule at %a" Loc.pp loc2
       in
-      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,@[Offending rule is:@ @[<hov 2>%a@]@]@,This %srule overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@ @]"
+      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,@[Offending rule is:@ @[<hov 2>%a@]@]@,This rule overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem, add a cut in its body.@]@ @]"
         pp_global_predicate pred
         (pretty_term ~depth) cl_st
-        local
         (pplist to_str " ") overlaps)
     in
 
-    let error_overlapping_eigen_variables ~loc pred (cl_st,depth : term * int) = 
-      error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,This rule (displayed below) does not respects the principles of mutual exclution@]@ @[Principles: there is a cut in the body of the local rule and/or all indexed input arguments are eigenvariables@] @[To solve the problem, add a cut in its body.@]@ @[Offending rule:@ @[<hov 2>%a@]@] @]" pp_global_predicate pred
-        (pretty_term ~depth) cl_st) 
-    in
-
-    (* check if the term has a rigid occurence of a bound variable *)
-    (* 
-    (* We prefere to use a simpler version of has_rigid_occurrence which is
-       there is the function is_eigen_variable below: that is, the term is
-       exactly a name. This is to simplify the check when a catchall is loaded *)
-    let has_rigid_occurence ~depth (t:term) = 
-      (* Format.eprintf "Computing has rigid of %a from depth %d@." pp_term t depth; *)
-      let rec aux = function
-        | Const b -> 0 <= b && b < depth
-        | Builtin (Impl, [l; r]) -> aux l || aux r
-        | Builtin (ImplBang, [l; r]) -> aux l || aux r
-        | Builtin (Cut, _) -> false
-        | Builtin ((Pi|Sigma), l)
-        | Builtin ((And|RImpl|Eq|Match|Findall), l)
-        | Builtin ((Delay|Host _), l) -> List.exists aux l
-        | Cons (l, r) -> aux l || aux r
-        | Nil | UVar (_, _, _) | AppUVar (_, _, _) | Arg (_, _) | AppArg (_, _) -> false
-        | Builtin (Impl, _) -> assert false
-        | Builtin (ImplBang, _) -> assert false
-        | App (b, hd, tl) -> b < 0 || aux hd || List.exists aux tl
-        | Lam b -> aux b
-        | Discard | CData _ -> false in
-      let b = aux t in
-      (* Format.eprintf "Bool is %b@." b; *)
-      b
-    in *)
-    let is_eigen_variable ~min_depth ~depth = function
-      | Const b -> min_depth <= b && b < depth
-      | _ -> false
-    in
     let rec is_unif_var = function
       | AppUVar _ | UVar (_, _) | Discard | Arg (_, _)|AppArg (_, _) -> true
       | App (h,x,xs) when h == Global_symbols.asc -> is_unif_var x && List.for_all is_unif_var xs
@@ -1953,12 +1893,10 @@ end = struct
     let hd_query ~loc ~depth ~min_depth p args =
       let mode, indexed_args = get_info p in
       (* all inputs are exactely an eigen_variable *)
-      let rig_occ = ref true in
       let has_input = ref false in
       let is_catchall = ref true in
       let update_bools m t =
         has_input := !has_input || m;
-        rig_occ := !rig_occ && (is_eigen_variable ~min_depth ~depth t);
         is_catchall := !is_catchall && is_unif_var t
       in
       let remove_as = function
@@ -1974,11 +1912,11 @@ end = struct
         | (([] as is) | (_::is)), _::args, [] -> mkDiscard :: mkpats is args mode
         | _ -> assert false
       in
-      (not !has_input || !rig_occ), (not !has_input || !is_catchall), R.mkAppL p @@ mkpats indexed_args args mode 
+      (not !has_input || !is_catchall), R.mkAppL p @@ mkpats indexed_args args mode 
     in
 
     (* Returns if the clause has a bang *)
-    let check_overlaps ~is_local ~loc ~min_depth ~depth (cl:clause) h (cl_overlap:overlap_clause option) p args (index : int * pred_info) =
+    let check_overlaps ~loc ~min_depth ~depth (cl:clause) h (cl_overlap:overlap_clause option) p args (index : int * pred_info) =
       match cl_overlap with
         | None -> ()
         | Some cl_overlap ->
@@ -1993,73 +1931,27 @@ end = struct
               if not x.has_cut && arg_nb = x.arg_nb then (x::filter_overlaps arg_nb xs)
               else filter_overlaps arg_nb xs
           in
-          let all_input_eigen_vars, all_input_catchall, hd = hd_query ~loc ~min_depth ~depth p args in
+          let all_input_catchall, hd = hd_query ~loc ~min_depth ~depth p args in
           (* Format.eprintf "Is_local:%b -- Has bang? %b -- rig_occ:%b -- is_chatchall:%b@." is_local cl_overlap.has_cut has_input_w_eigen_var is_catchall; *)
-          if is_local && not cl_overlap.has_cut && not all_input_eigen_vars then (
-            error_overlapping_eigen_variables ~loc p h);
-          if not is_local && all_input_catchall then
+          if all_input_catchall then
             (* We check if there is a local clause for p loading a local clause without cut, if this is the case,
                we throw an error, the catchall make $p$ non functional *)
             (match get_opt p with
             | None | Some {has_local_without_cut = None} -> ()
             | Some {has_local_without_cut = (Some _) as loc1} ->
-              error_overlapping ~is_local ~loc p [{ overlap_loc = loc1; timestamp =[]; has_cut = false; arg_nb = 0 }] h);
-          if is_local && not cl_overlap.has_cut && all_input_eigen_vars then
-            (* Here we have a local clause with all input vars being eigenvars + the has no cut in the body, we add the info to the pred *)
-            add_pred_w_eigen_var_no_cut p loc;
-          if not is_local || (is_local && not cl_overlap.has_cut) then
-            let all_overlapping = get_overlapping index p hd in
-            let overlapping =  filter_overlaps cl_overlap.arg_nb all_overlapping in
-            if overlapping <> [] then error_overlapping ~loc ~is_local p overlapping h
-    in
+              error_overlapping ~loc p [{ overlap_loc = loc1; timestamp =[]; has_cut = false; arg_nb = 0 }] h);
+          let all_overlapping = get_overlapping index p hd in
+          let overlapping =  filter_overlaps cl_overlap.arg_nb all_overlapping in
+          if overlapping <> [] then error_overlapping ~loc p overlapping h
+  in
 
-    (* If a local clause is found it is added to the index and check_clause is launched on it *)
-    let rec check_local ~min_depth ~depth ~loc ~lcs index amap (t : term) : unit =
-      let t = to_heap ~depth t in
-      (* let t = R.hmove ~from:depth ~to_:(depth+lcs) t in *)
-      let rec aux ~min_depth ~depth (index: pred_info C.Map.t) t =
-        match t with
-        | Builtin (Cut, []) -> ()
-        | Builtin (Pi, [Lam b]) -> aux ~min_depth ~depth:(depth+1) index b
-        | Builtin (Sigma, [Lam b]) ->
-          let uvar = UVar(R.CompileTime.fresh_uvar ~depth,0) in 
-          let b = Runtime.subst ~depth [uvar] b in
-          aux ~min_depth ~depth:(depth+1) index b
-        | Builtin ((Impl| ImplBang), [Nil; l])
-        | Builtin ((Impl| ImplBang), [Builtin(And,[]); l]) -> aux ~min_depth ~depth index l
-        | Builtin ((Impl| ImplBang as ik), [Cons(h,hl); l]) ->
-            aux ~min_depth ~depth index (Builtin (ik, [h; Builtin(ik,[hl; l])]))
-        | Builtin ((Impl| ImplBang as ik), [Builtin(And,h::hl); l]) ->
-            aux ~min_depth ~depth index (Builtin (ik, [h; Builtin(ik,[Builtin(And,hl); l])]))
-        | Builtin ((Impl | ImplBang as ik), [h; l]) ->
-            (* Format.eprintf "Adding local clause %a@." pp_term h; *)
-            begin try
-              let fresh_loc = get_fresh_loc loc in
-              let (p,cl), _, morelcs =
-                try R.CompileTime.clausify1 ~tail_cut:(ik = ImplBang) ~loc:fresh_loc ~modes:(fun x -> fst (get_info x)) ~nargs:(F.Map.cardinal amap) ~depth h
-                with D.CannotDeclareClauseForBuiltin(loc,c) ->
-                  error ?loc ("Declaring a rule for built predicate:" ^ show_builtin_predicate (fun ?table x -> F.show @@ SymbolMap.global_name state symbols x) c)
-                in
-
-              let cl_overlap, index = R.Indexing.add1clause_overlap_runtime ~depth ~time:(runtime_tick ()) index p cl in
-              check_clause ~min_depth ~is_local:true ~depth ~loc:fresh_loc ~lcs:morelcs index cl h cl_overlap p amap;
-              aux ~min_depth ~depth index l
-            with 
-            | CompileError _ as e -> raise e
-            | Flex_head -> aux ~min_depth ~depth index l end
-        | Builtin (And, l) -> 
-            List.iter (aux ~min_depth ~depth index) l
-        | _ -> () (* TODO: missing cases *)
-      in
-      aux ~min_depth ~depth index t 
-    and check_clause ~min_depth ~is_local ~depth ~loc ~lcs index cl h cl_overlap p amap =
-      if not @@ can_overlap p then check_overlaps ~is_local ~loc ~min_depth ~depth cl (h,depth) cl_overlap p cl.args (0, C.Map.find p index);
-      List.iter (check_local ~min_depth:depth ~loc ~depth ~lcs index amap) cl.hyps
-    in
-    check_clause ~min_depth:0 ~loc ~is_local:false ~lcs:0 ~depth:0 pred_info cl cl_st oc p amap;
-    let pred_info = C.Map.fold (fun k v -> C.Map.add k {(C.Map.find k pred_info) with has_local_without_cut = Some v}) !preds_w_eigen_var_no_cut pred_info in
-    pred_info 
-    (* Format.eprintf "The predicates with local clauses bla is :@ @[%a@]@." (C.Map.pp (Loc.pp)) !preds_w_eigen_var_no_cut *)
+  let rec check_clause ~min_depth ~depth ~loc ~lcs index cl h cl_overlap p amap =
+    if not @@ can_overlap p then check_overlaps ~loc ~min_depth ~depth cl (h,depth) cl_overlap p cl.args (0, C.Map.find p index)
+  in
+  check_clause ~min_depth:0 ~loc ~lcs:0 ~depth:0 pred_info cl cl_st oc p amap;
+  let pred_info = C.Map.fold (fun k v -> C.Map.add k {(C.Map.find k pred_info) with has_local_without_cut = Some v}) !preds_w_eigen_var_no_cut pred_info in
+  pred_info 
+  (* Format.eprintf "The predicates with local clauses bla is :@ @[%a@]@." (C.Map.pp (Loc.pp)) !preds_w_eigen_var_no_cut *)
 
   let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~type_abbrevs ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
     let t = if needs_spilling then Spilling.main_goal ~types ~type_abbrevs t else t in

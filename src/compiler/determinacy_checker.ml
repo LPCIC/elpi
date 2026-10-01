@@ -10,7 +10,7 @@ module S = Elpi_runtime.Data.Global_symbols
 
 module Format = struct
   include Format
-
+ 
   let eprintf = fun e -> Format.ifprintf Format.err_formatter e
 end
 
@@ -310,6 +310,23 @@ module BVar = struct
     match oname with None -> ctx | Some { ScopedTerm.scope; name; ty = tya } -> add ~new_ ~loc ctx (name, scope) ~v:(f tya)
 end
 
+let same_symb ~types symb symb' =
+  match symb' with
+  | Scope.Global { resolved_to = x } ->
+      begin match SymbolResolver.resolved_to types x with
+      | Some symb' -> TypingEnv.same_symbol types symb symb'
+      | _ -> false
+      end
+  | _ -> false
+
+let is_global ~types { ScopedTerm.scope = b } name = same_symb ~types name b
+
+let is_cut ~types ScopedTerm.{ it } = match it with App(b,[]) -> is_global ~types b S.cut | _ -> false
+
+let is_pi ~types x = is_global ~types x S.pi
+
+let is_quantifier ~types x = is_pi ~types x || is_global ~types x S.sigma
+
 let get_const_dtype ~type_abbrevs ~ctx ~var ~loc { ScopedTerm.scope = t; name; ty = tya } =
   let get_ctx = function
     | None -> error ~loc (Format.asprintf "DetCheck: Bound var %a should be in the local map" F.pp name)
@@ -338,33 +355,82 @@ let get_dtype ~type_abbrevs ~ctx ~var ~loc = function
   | `Const x -> get_const_dtype ~type_abbrevs ~ctx ~var ~loc x
 let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
 
-  let same_symb ~types symb symb' =
-    match symb' with
-    | Scope.Global { resolved_to = x } ->
-        begin match SymbolResolver.resolved_to types x with
-        | Some symb' -> TypingEnv.same_symbol types symb symb'
-        | _ -> false
-        end
-    | _ -> false
+let get_user_type ~type_abbrevs ~types ~loc s = match s.ScopedTerm.scope with
+  | Scope.Global {resolved_to = x } ->
+    let open TypeAssignment in
+    let rec mk_args = function Ty t -> [] | Lam (_, b) -> Any :: mk_args b in
+    let apply ty = TypeAssignment.apply ty (mk_args ty) in
+    let compile TypingEnv.{ty} = Compilation.type_ass_2func ~loc ~type_abbrevs (apply ty) in
+    let to_dtype x = Option.map compile @@ TypingEnv.resolve_symbol_opt x types in
+    Option.bind (SymbolResolver.resolved_to types x) to_dtype
+  | Bound _ -> None
 
-
-  let get_user_type ~type_abbrevs ~types ~loc s = match s.ScopedTerm.scope with
-    | Scope.Global {resolved_to = x } ->
-      let open TypeAssignment in
-      let rec mk_args = function Ty t -> [] | Lam (_, b) -> Any :: mk_args b in
-      let apply ty = TypeAssignment.apply ty (mk_args ty) in
-      let compile TypingEnv.{ty} = Compilation.type_ass_2func ~loc ~type_abbrevs (apply ty) in
-      let to_dtype x = Option.map compile @@ TypingEnv.resolve_symbol_opt x types in
-      Option.bind (SymbolResolver.resolved_to types x) to_dtype
-    | Bound _ -> None
+module Fset = Set.Make(F)
   
+let add_pivars ~types pivars q (b:ScopedTerm.binder option) =
+  if is_pi ~types q && Option.is_some b then Fset.add (Option.get b).name pivars else pivars
+
+let local_mut_excl_check ~types ~pivars t : unit =
+  Format.eprintf "Checking local rule %a with pivars %a@." ScopedTerm.pretty t Fset.pp pivars;
+  let pivars = ref pivars in
+  let pop v = pivars := Fset.remove v !pivars in
+  let is_bound ScopedTerm.{it} =
+    match it with
+    | App ({scope=Bound "lp"; name},_) -> Fset.mem name !pivars
+    | _ -> false
+  in
+
+  let rec forall_input ty f args =
+    match ty with
+    | TypeAssignment.Arr (m,_,_,r) ->
+      (match args with
+      | x :: xs -> (not (TypeAssignment.is_input m) || f x) && forall_input r f xs
+      | _ -> true)
+    | _ -> true
+  in
+
+  let error_overlapping_eigen_variables (rule:ScopedTerm.t) = 
+    error ~loc:rule.loc (Format.asprintf "@[<v 0>Mutual exclusion violated@ The following local rule (displayed below) does not respects the principles of mutual exclution@]@ @[Principles: there is a cut in its body and/or all input arguments are eigenvariables@] @[To solve the problem, add a cut in its body.@]@ @[Offending rule:@ @[<hov 2>%a@]@] @]"
+      ScopedTerm.pretty rule) 
+  in
+
+  let rec is_func = function
+    | TypeAssignment.Prop v -> v == Function
+    | Arr (_, _, _, t) -> is_func t
+    | Any | Cons _  | App (_, _, _) |UVar _ -> false
+  in
+
+  let rec has_cut t =
+    is_cut ~types t ||
+    match t.ScopedTerm.it with
+    | Impl (L2R, _, _, b) -> has_cut b
+    | App (b,l) when is_global ~types b S.and_ -> List.exists has_cut l
+    | Discard _ | UVar _ | Lam _ | CData _| Spill _ | Cast _ | App _ | Impl _ -> false
+  in
+
+  let valid_head (t : ScopedTerm.const) (a: ScopedTerm.t list) =
+    let ty = TypeAssignment.unval @@ MutableOnce.get t.ty in
+    not (is_func ty) || forall_input ty is_bound a
+  in
+
+  let rec aux ScopedTerm.{it; loc} =
+    match it with
+    | Impl (R2L, _, {it=App(h,a)}, b) -> valid_head h a || has_cut b
+    | App (x,[{it=Lam (b,_,t)}]) when is_quantifier ~types x ->
+        Option.iter (fun x -> pop x.ScopedTerm.name) b;
+        aux t
+    | App (h,a) -> valid_head h a
+    | Spill _ | Discard _ |UVar _ | Lam _ |CData _ | Impl _ | Cast _ -> true
+  in
+
+  if not @@ aux t then  error_overlapping_eigen_variables t
+  
+
 let check_clause, check_chr_guard_and_newgoal =
 
   let has_undeclared_signature ~types ~unknown { ScopedTerm.scope = b; name = f } =
     match F.Map.find_opt f unknown with Some (_, symb) -> same_symb ~types symb b | _ -> false
   in
-  let is_global ~types { ScopedTerm.scope = b } name = same_symb ~types name b in
-  let is_quantifier ~types x = is_global ~types x S.pi || is_global ~types x S.sigma in
   let undecl_disclaimer ~types ~unknown = function
     | Some ({ ScopedTerm.name; ty } as pred_name) when has_undeclared_signature ~types ~unknown pred_name ->
         Format.asprintf
@@ -385,8 +451,6 @@ let check_clause, check_chr_guard_and_newgoal =
     F.from_string ("*dummy" ^ string_of_int !cnt)
   in
   let rec get_tl = function Arrow (_, _, _, r) -> get_tl r | e -> e in
-
-  let is_cut ~types ScopedTerm.{ it } = match it with App(b,[]) -> is_global ~types b S.cut | _ -> false in
 
   let rec replace_signature_tgt ~loc ~with_ d' = function 
     | [] -> with_
@@ -480,18 +544,21 @@ let check_clause, check_chr_guard_and_newgoal =
           infer_and ~was_input ctx ~loc xs (d,gc))
         else if Good_call.is_wrong gc then infer_and ~was_input ctx ~loc xs (d,gc)
         else infer_and ~was_input ctx ~loc xs dr
-    and infer ~was_input ~exp ctx ScopedTerm.({ it; ty; loc } as t) : dtype * Good_call.t =
+    and infer ?(pivars=Fset.empty) ~was_input ~exp ctx ScopedTerm.({ it; ty; loc } as t) : dtype * Good_call.t =
+      Format.eprintf "Entering infer with %a@." ScopedTerm.pretty t;
       match it with
       | UVar (b, xs) -> infer_var ~exp ~was_input ~loc ctx t ty b xs
       | App (q, [{ it = Lam (b, _, bo) }]) when is_quantifier ~types q ->
-          infer ~exp ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ~type_abbrevs x) ctx) bo
+          let pivars = add_pivars ~types pivars q b in
+          infer ~pivars ~exp ~was_input (BVar.add_oname ~new_:false ~loc b (fun x -> Compilation.type_ass_2func_mut ~loc ~type_abbrevs x) ctx) bo
       | App (g, x :: xs) when is_global ~types g S.and_ ->
           Format.eprintf "Calling deduce on a comma separated list of subgoals@.";
           infer_and ~was_input ctx ~loc (x :: xs) (Det, Good_call.init ())
       | App (b, xs) -> infer_app ~exp ~was_input ~loc ctx t ty b xs
       | Impl (L2R,_, c, b) ->
+          local_mut_excl_check ~types ~pivars c;
           check_clause ~type_abbrevs ~types ~ctx ~var c |> ignore;
-          infer ~exp ~was_input ctx b
+          infer ~pivars ~exp ~was_input ctx b
       | Impl (L2RBang,_, c, b) ->
           check_clause ~type_abbrevs ~types ~ctx ~var ~has_tail_cut:true c |> ignore;
           infer ~exp ~was_input ctx b
@@ -677,21 +744,25 @@ let check_clause, check_chr_guard_and_newgoal =
              (* bad_atom1 else bad_atom in *)
           (* Format.eprintf "Loc:%a --> Badatom is %a@." Loc.pp bad_atom.loc ScopedTerm.pretty bad_atom; *)
           check_comma ctx ~loc (d1, bad_atom) xs
-    and check ~ctx (d : dtype) ScopedTerm.({ it; loc } as t) : dtype * Good_call.t =
+    and check ?(pivars=Fset.empty) ~ctx (d : dtype) ScopedTerm.({ it; loc } as t) : dtype * Good_call.t =
       match it with
       | Impl (L2R, _,h, b) ->
+          local_mut_excl_check ~types ~pivars h;
           check_clause ~type_abbrevs ~types ~ctx ~var:!var h |> ignore;
           check ~ctx d b
       | Impl (L2RBang,_, h, b) ->
-        check_clause ~type_abbrevs ~types ~ctx ~var:!var ~has_tail_cut:true h |> ignore;
-        check ~ctx d b
+          (* No need to check mut_excl for the local rule since it has a cut *)
+          check_clause ~type_abbrevs ~types ~ctx ~var:!var ~has_tail_cut:true h |> ignore;
+          check ~ctx d b
       | App(b,[]) when is_global ~types b S.cut -> (Det, Good_call.init ())
       | App (q, [{ it = Lam (b, _, bo) }]) when is_quantifier ~types q ->
-          check ~ctx:(BVar.add_oname ~new_:true ~loc b (Compilation.type_ass_2func_mut ~loc ~type_abbrevs) ctx) d bo
+          let pivars = add_pivars ~types pivars q b in
+          check ~pivars ~ctx:(BVar.add_oname ~new_:true ~loc b (Compilation.type_ass_2func_mut ~loc ~type_abbrevs) ctx) d bo
       (* Cons and nil case may appear in prop position for example in : `f :- [print a, print b, a].` *)
       | App (b, [x; xs ]) when is_global ~types b S.cons -> check ~ctx (check ~ctx d x |> fst) xs
       | App(b,[]) when is_global ~types b S.nil -> (d, Good_call.init ())
-      | App (b, x :: xs) when is_global ~types b S.and_ -> check_comma ctx ~loc (d, Good_call.init ()) (x :: xs)
+      | App (b, x :: xs) when is_global ~types b S.and_ -> 
+          check_comma ctx ~loc (check ~pivars ~ctx d x) xs
       (* smarter than paper, we assume the min of the inference of both. Equivalent
          to elaboration t = s ---> eq1 t s, eq1 s t
          with func eq1 A -> A. *)
