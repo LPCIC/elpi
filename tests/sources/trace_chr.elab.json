@@ -1260,7 +1260,9 @@
               ]
             },
             "chr_removed_goals": [ 19, 14 ],
-            "chr_new_goals": [ { "goal_text": "_ => fail", "goal_id": 23 } ]
+            "chr_new_goals": [
+              { "goal_text": "(_) ==> fail", "goal_id": 23 }
+            ]
           }
         ],
         "chr_store_before": [
@@ -1279,7 +1281,7 @@
       "Inference",
       {
         "current_goal_id": 23,
-        "current_goal_text": "_ => fail",
+        "current_goal_text": "(_) ==> fail",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
         "successful_attempts": [

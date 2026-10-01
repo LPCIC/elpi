@@ -360,16 +360,18 @@ goal:
 | g = term; FULLSTOP { g }
 
 clause:
-| attributes = attributes; body = clause_hd_term; {
+| attributes = attributes; hd = clause_hd_term; {
+    let autospill, body = hd in
     { Clause.loc = loc $sloc;
-      attributes;
+      attributes = (if autospill then AutoSpill :: attributes else attributes);
       body;
       needs_spilling = ();
     }
   }
-| attributes = attributes; l = clause_hd_term; v = VDASH; r = term { 
+| attributes = attributes; hd = clause_hd_term; v = VDASH; r = term {
+    let autospill, l = hd in
     { Clause.loc = loc $sloc;
-      attributes;
+      attributes = (if autospill then AutoSpill :: attributes else attributes);
       body = mkApp (loc $sloc) [mkConst (loc $loc(v)) Func.rimplf;l;r];
       needs_spilling = ();
     }
@@ -392,6 +394,7 @@ attribute:
 | UNTYPED { Untyped }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }
 | NOOC { NoOC }
+| AUTOSPILL { AutoSpill }
 
 indexing:
 | FRESHUV { 0 }
@@ -478,25 +481,29 @@ open_term_noconj:
 | l = term_noconj; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
 (* avoids the conflict between `{` (Program.Begin) and `{spilled}` (Program.Clause) *)
+(* Each alternative below returns (autospill, term) *)
 clause_hd_term:
 | t = clause_hd_open_term { t }
 | t = clause_hd_closed_term { t }
 
 clause_hd_closed_term:
-| t = constant { mkConst (loc $sloc) t }
-| LPAREN; t = term; RPAREN { mkParens_if_impl_or_conj (loc $loc) t }
+| t = constant { false, mkConst (loc $sloc) t }
+| LPAREN; t = term; RPAREN { false, mkParens_if_impl_or_conj (loc $loc) t }
 
 clause_hd_open_term:
-| hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b) }
-| hd = SIGMA; args = nonempty_list(constant_w_loc); b = binder_body { desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "sigma") :: binder args b) }
+| hd = PI; args = nonempty_list(constant_w_loc); b = binder_body { false, (desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "pi") :: binder args b)) }
+| hd = SIGMA; args = nonempty_list(constant_w_loc); b = binder_body { false, (desugar_multi_binder (loc $loc) @@ mkApp (loc $loc) (mkConst (loc $loc(hd)) (Func.from_string "sigma") :: binder args b)) }
 | hd = head_term; args = nonempty_list(closed_term); b = option(binder_body_no_ty) {
     let args = binder1 args b in
     let t = mkApp (loc $loc) (hd :: args) in
-    t
-} (*%prec OR*)
-| l = clause_hd_term; s = infix_novdash; r = term { mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
-| s = prefix; r = term { mkAppF (loc $loc) (loc $loc(s),s) [r] }
-| l = clause_hd_term; s = postfix; { mkAppF (loc $loc) (loc $loc(s),s) [l] }
+    false, t
+}
+| hd = head_term; in_args = list(closed_term); ARROW; out_args = list(closed_term) {
+    true, mkApp (loc $loc) (hd :: in_args @ out_args)
+  }
+| l = clause_hd_term; s = infix_novdash_noarrow; r = term { let (_,l) = l in false, mkAppF (loc $loc) (loc $loc(s),s) [l;r] }
+| s = prefix; r = term { false, mkAppF (loc $loc) (loc $loc(s),s) [r] }
+| l = clause_hd_term; s = postfix; { let (_,l) = l in false, mkAppF (loc $loc) (loc $loc(s),s) [l] }
 
 constant:
 | c = CONSTANT {
@@ -594,6 +601,30 @@ postfix_SYMB:
 
 %inline non_extensible_infix_novdash:
 | x = non_extensible_infix_novdash_noconj { x }
+| CONJ   { Func.andf }
+
+%inline non_extensible_infix_novdash_noconj_noarrow:
+| CONS   { Func.consf }
+| EQ     { Func.eqf }
+| MINUS  { Func.from_string "-" }
+| MINUSr { Func.from_string "r-" }
+| MINUSi { Func.from_string "i-" }
+| MINUSs { Func.from_string "s-" }
+| EQ2    { Func.from_string "==" }
+| OR     { Func.orf }
+| IS     { Func.isf }
+| MOD    { Func.from_string "mod" }
+| DIV    { Func.from_string "div" }
+| DARROW { Func.implf }
+| DDARROW { Func.implf }
+| DDARROWBANG { Func.implbangf }
+| QDASH  { Func.sequentf }
+| SLASH  { Func.from_string "/" }
+| CONJ2  { Func.andf }
+
+%inline infix_novdash_noarrow:
+| x = extensible_infix { x }
+| x = non_extensible_infix_novdash_noconj_noarrow { x }
 | CONJ   { Func.andf }
 
 %inline non_extensible_infix_noconj:

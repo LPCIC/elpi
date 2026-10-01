@@ -1,0 +1,7 @@
+func succ int -> int.
+succ X Y :- Y is X + 1.
+
+func apply_succ int -> int.
+apply_succ X -> (succ X).
+
+main -> :- succ 3 = 4.

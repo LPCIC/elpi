@@ -1,0 +1,1 @@
+:autospill main :- X = {std.append [1] (std.append [2] [3])}, X L, L = [1,2,3].

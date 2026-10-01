@@ -1,0 +1,164 @@
+% A simplified mockup of the compiler's spilling algorithm, in Elpi itself.
+data qkind.
+symb piK    qkind.
+symb sigmaK qkind.
+
+data term.
+% core syntax of data
+symb con string -> term.             % constants
+symb app list term -> term.          % f X Y
+symb lam (term -> term) -> term.     % x\
+
+% injection of predicate call inside terms, always missing one argument
+symb spill_call string -> list term -> term. % {p X}
+% temporary node: output of a spilled call
+symb spill_bound string -> term.
+
+% syntax of goals and rules, rules are pi-closed
+data goal.
+typeabbrev goals (list goal).
+symb quantifier   qkind -> (term -> goals) -> goal. % pi x\, sigma x\
+symb implication  goal -> goals -> goal.            % h ==>  g
+symb goal         string -> list term -> goal.      % p X Y
+
+% auxiliary data: each spilled call is a goal and the one variable used
+% for its missing (output) argument
+data spilled.
+typeabbrev spills (list spilled).
+symb spilled string -> goal -> spilled.
+
+% ------------------------------------------------------------------
+% Helpers
+% ------------------------------------------------------------------
+
+func flip_quantifier qkind -> qkind.
+flip_quantifier piK sigmaK.
+flip_quantifier sigmaK piK.
+
+func fresh_name -> string.
+fresh_name Name :- new_int N, Name is "%Spill" ^ int_to_string N.
+
+func copy_term term -> term.
+copy_term (con S) (con S) :- !.
+copy_term (spill_bound S) (spill_bound S) :- !.
+copy_term (app Args) (app Args') :- !, std.map Args copy_term Args'.
+copy_term (lam F) (lam F') :- !, pi x\ copy_term (F x) (F' x).
+copy_term (spill_call N Args) (spill_call N Args') :- !, std.map Args copy_term Args'.
+copy_term X X :- name X.
+
+func copy_goal goal -> goal.
+copy_goal (quantifier K F) (quantifier K F') :-
+  pi x\ std.map (F x) copy_goal (F' x).
+copy_goal (implication H B) (implication H' B') :-
+  copy_goal H H', std.map B copy_goal B'.
+copy_goal (goal S B) (goal S B') :-
+  std.map B copy_term B'.
+
+func bind_var_in_goals string, goals -> (term -> goals).
+bind_var_in_goals V G G' :- pi Y\ copy_term (spill_bound V) Y =!=> std.map G copy_goal (G' Y).
+
+func bind_name_in_goal term, goal -> (term -> goal).
+bind_name_in_goal V G G' :- name V, pi Y\ copy_term V Y =!=> copy_goal G (G' Y).
+
+% ------------------------------------------------------------------
+% Main algorithm
+% ------------------------------------------------------------------
+func spill_term qkind, term -> spills, term.
+
+spill_term _ T [] T :- (T = con _ ; name T), !.
+
+spill_term Q (app Args) Spills (app Args') :- !,
+  spill_term_list Q Args Spills Args'.
+
+spill_term Q (lam F) Sbody' (lam F') :- !,
+  pi x\
+  spill_term Q (F x) (Sbody x) (Body' x),
+  lift_out_of_lambda x (Sbody x) (Body' x) Sbody' (F' x).
+
+spill_term Q (spill_call Name Args) AllSpills (spill_bound Fresh) :- !,
+  spill_term_list Q Args Sargs Args',
+  fresh_name Fresh,
+  std.append Args' [spill_bound Fresh] CallArgs,
+  std.append Sargs [spilled Fresh (goal Name CallArgs)] AllSpills.
+
+func spill_term_list qkind, list term -> spills, list term.
+spill_term_list _ [] [] [].
+spill_term_list Q [X|XS] Spills [Y|YS] :-
+  spill_term Q X Sx Y, spill_term_list Q XS Rxs YS,
+  std.append Sx Rxs Spills.
+
+func spill_goal qkind, goal -> goal.
+
+spill_goal Q (quantifier K F) (quantifier K F') :- !,
+  pi x\ std.map (F x) (spill_goal Q) (F' x).
+
+spill_goal Q (implication Head Body) (implication Head' Body') :- !,
+  flip_quantifier Q Q',
+  spill_rule Q' Head Head',
+  std.map Body (spill_goal Q) Body'.
+
+spill_goal Q (goal Name Args) G' :- !,
+  spill_call_args Q Name Args Sargs Call,
+  add_spilled Q Sargs [Call] [G'].
+
+func spill_call_args qkind, string, list term -> spills, goal.
+spill_call_args Q Name Args Sargs (goal Name Args') :- !,
+  spill_term_list Q Args Sargs Args'.
+
+func quantify_spill qkind, spilled, goal -> goal.
+quantify_spill Q (spilled Var _) Acc Res :-
+  place_spilling_quantifier Q Var [Acc] Res.
+
+func spill_rule qkind, goal -> goal.
+
+spill_rule Q (quantifier piK x\[Inner x]) (quantifier piK x\[Inner' x]) :- !,
+  pi x\ spill_rule Q (Inner x) (Inner' x).
+
+spill_rule Q (implication (goal Name Args) Body) Result :- !,
+  spill_call_args Q Name Args Sh Head',
+  flip_quantifier Q Q',
+  std.map Body (spill_goal Q') Body0,
+  std.fold-right Sh Body0 place_spilled_call Body',
+  std.fold-right Sh (implication Head' Body') (quantify_spill Q) Result.
+
+spill_rule Q (goal Name Args) Result :- !,
+  spill_call_args Q Name Args Sh T',
+  if (Sh = [])
+     (Result = T')
+     (std.fold-right Sh [] place_spilled_call Body',
+      std.fold-right Sh (implication T' Body') (quantify_spill Q) Result).
+
+func place_spilled_call spilled, goals -> goals.
+place_spilled_call (spilled _ Goal) Rest [Goal|Rest] :- !.
+
+func place_spilling_quantifier qkind, string, goals -> goal.
+place_spilling_quantifier Q Var Gs (quantifier Q Gs') :-
+  bind_var_in_goals Var Gs Gs'.
+
+func add_spilled_one qkind, spilled, goals -> goals.
+add_spilled_one Q (spilled Var _ as S) GL [SG] :- !,
+  place_spilled_call S GL SGL,
+  place_spilling_quantifier Q Var SGL SG.
+
+func add_spilled qkind, spills, goals -> goals.
+add_spilled Q Spills Rest Result :- !, std.fold-right Spills Rest (add_spilled_one Q) Result.
+
+func apply_spilled_var_to (func A -> A), term, string, A -> A.
+apply_spilled_var_to F X V T T' :-
+  (copy_term (spill_bound V) (app [spill_bound V,X])) =!=>
+  (pi Rest RestX\
+    copy_term (app [spill_bound V|Rest]) (app [spill_bound V|RestX]) :- std.append Rest [X] RestX) =!=>
+  F T T'.
+
+func apply_spilled_vars_to (func A -> A), term, spilled, A -> A.
+apply_spilled_vars_to F X (spilled Var _) T T' :- apply_spilled_var_to F X Var T T'.
+
+func lift_out_of_lambda term, spills, term -> spills, term.
+lift_out_of_lambda X Spills Body Spills' Body' :- !,
+  std.fold Spills Body (apply_spilled_vars_to copy_term X) Body',
+  std.map Spills (s\r\ sigma Var G G0 G'\
+    s = spilled Var G,
+    bind_name_in_goal X G G0,
+    (pi y\ apply_spilled_vars_to copy_goal y s (G0 y) (G' y)),
+    r = spilled Var (quantifier piK y\[G' y]))
+  Spills'.

@@ -1,0 +1,5 @@
+func map (func A -> B), list A -> list B.
+map _ [] -> [].
+map F [X|XS] -> [F X|map F XS].
+
+main -> :- map (x\ r\ r = calc (x + 1)) [1,2] = [2,3].

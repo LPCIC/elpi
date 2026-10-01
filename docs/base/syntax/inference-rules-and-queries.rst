@@ -145,3 +145,20 @@ Facts, conditional rules and a query together:
 
 .. elpi:: ../code/rules.elpi
    :assert: alice has 2 descendants
+
+Functional syntax
+==================
+
+A rule's head can separate its input arguments from its output ones with a
+``->``, the same separator a ``pred``/``func`` signature itself uses between
+the two (:doc:`type-declarations`): ``f A B -> C D`` stands for the
+ordinary, fully-applied head ``f A B C D``. Writing the head this way also
+turns on ``:autospill`` (:doc:`../features/spilling`) for the whole rule, so
+a call that is missing exactly its output — typically a recursive call,
+whose own result is that missing value — can be written as an argument
+as-is, with no ``{ }``. The two definitions of ``map`` below are the same
+predicate, one written out in full and the other using both:
+
+.. elpi:: ../code/map.elpi
+
+.. elpi:: ../code/autospill-map.elpi

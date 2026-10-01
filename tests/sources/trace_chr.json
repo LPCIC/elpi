@@ -120,13 +120,13 @@
 {"step":2,"kind":["Info"],"goal_id":22,"runtime_id":2,"name":"user:rule:backchain:try","payload":["File \"tests/sources/trace_chr.elpi\", line 11, column 0, characters 191-197:","(even z) :- ."]}
 {"step":2,"kind":["Info"],"goal_id":22,"runtime_id":2,"name":"user:rule:backchain","payload":["success"]}
 {"step":14,"kind":["Info"],"goal_id":19,"runtime_id":0,"name":"user:subgoal","payload":["23"]}
-{"step":14,"kind":["Info"],"goal_id":23,"runtime_id":0,"name":"user:newgoal","payload":["_ => fail"]}
+{"step":14,"kind":["Info"],"goal_id":23,"runtime_id":0,"name":"user:newgoal","payload":["(_) ==> fail"]}
 {"step":14,"kind":["Info"],"goal_id":19,"runtime_id":0,"name":"user:CHR:rule-fired","payload":["File \"tests/sources/trace_chr.elpi\", line 2, column 45, characters 67-116:"]}
 {"step":14,"kind":["Info"],"goal_id":19,"runtime_id":0,"name":"user:CHR:rule-remove-constraints","payload":["19","14"]}
 {"step":14,"kind":["Info"],"goal_id":0,"runtime_id":0,"name":"user:CHR:store:before","payload":["19"," even X1  /* suspended on X1 */"]}
 {"step":14,"kind":["Info"],"goal_id":0,"runtime_id":0,"name":"user:CHR:store:before","payload":["14"," odd X1  /* suspended on X1 */"]}
-{"step":14,"kind":["Info"],"goal_id":23,"runtime_id":0,"name":"user:CHR:resumed","payload":["_ => fail"]}
-{"step":15,"kind":["Info"],"goal_id":23,"runtime_id":0,"name":"user:curgoal","payload":["=>","_ => fail"]}
+{"step":14,"kind":["Info"],"goal_id":23,"runtime_id":0,"name":"user:CHR:resumed","payload":["(_) ==> fail"]}
+{"step":15,"kind":["Info"],"goal_id":23,"runtime_id":0,"name":"user:curgoal","payload":["=>","(_) ==> fail"]}
 {"step":15,"kind":["Info"],"goal_id":23,"runtime_id":0,"name":"user:rule","payload":["implication"]}
 {"step":15,"kind":["Info"],"goal_id":23,"runtime_id":0,"name":"user:subgoal","payload":["24"]}
 {"step":15,"kind":["Info"],"goal_id":24,"runtime_id":0,"name":"user:newgoal","payload":["fail"]}

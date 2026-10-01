@@ -1,0 +1,1 @@
+:autospill main :- X = {(std.append [] [] : list int -> prop)}, X L, L = [].

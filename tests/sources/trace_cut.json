@@ -38,13 +38,13 @@
 {"step":7,"kind":["Info"],"goal_id":4,"runtime_id":0,"name":"user:curgoal","payload":["main","main (! !)"]}
 {"step":7,"kind":["Info"],"goal_id":4,"runtime_id":0,"name":"user:rule","payload":["backchain"]}
 {"step":7,"kind":["Info"],"goal_id":4,"runtime_id":0,"name":"user:rule:backchain:candidates","payload":["File \"tests/sources/trace_cut.elpi\", line 13, column 0, characters 89-121:"]}
-{"step":7,"kind":["Info"],"goal_id":4,"runtime_id":0,"name":"user:rule:backchain:try","payload":["File \"tests/sources/trace_cut.elpi\", line 13, column 0, characters 89-121:","main :- q, !, (q => (q :- !) => q)."]}
+{"step":7,"kind":["Info"],"goal_id":4,"runtime_id":0,"name":"user:rule:backchain:try","payload":["File \"tests/sources/trace_cut.elpi\", line 13, column 0, characters 89-121:","main :- q, !, ((q) ==> (((q :- !)) ==> q))."]}
 {"step":7,"kind":["Info"],"goal_id":4,"runtime_id":0,"name":"user:subgoal","payload":["9"]}
 {"step":7,"kind":["Info"],"goal_id":9,"runtime_id":0,"name":"user:newgoal","payload":["q"]}
 {"step":7,"kind":["Info"],"goal_id":9,"runtime_id":0,"name":"user:subgoal","payload":["10"]}
 {"step":7,"kind":["Info"],"goal_id":10,"runtime_id":0,"name":"user:newgoal","payload":["!"]}
 {"step":7,"kind":["Info"],"goal_id":9,"runtime_id":0,"name":"user:subgoal","payload":["11"]}
-{"step":7,"kind":["Info"],"goal_id":11,"runtime_id":0,"name":"user:newgoal","payload":["q => (q :- !) => q"]}
+{"step":7,"kind":["Info"],"goal_id":11,"runtime_id":0,"name":"user:newgoal","payload":["(q) ==> (q :- !) ==> q"]}
 {"step":7,"kind":["Info"],"goal_id":9,"runtime_id":0,"name":"user:rule:backchain","payload":["success"]}
 {"step":8,"kind":["Info"],"goal_id":9,"runtime_id":0,"name":"user:curgoal","payload":["q","q"]}
 {"step":8,"kind":["Info"],"goal_id":9,"runtime_id":0,"name":"user:rule","payload":["backchain"]}
@@ -55,13 +55,13 @@
 {"step":9,"kind":["Info"],"goal_id":10,"runtime_id":0,"name":"user:rule","payload":["cut"]}
 {"step":9,"kind":["Info"],"goal_id":0,"runtime_id":0,"name":"user:rule:cut:branch","payload":["9","File \"tests/sources/trace_cut.elpi\", line 10, column 0, characters 63-75:","q :- (print 2)."]}
 {"step":9,"kind":["Info"],"goal_id":10,"runtime_id":0,"name":"user:rule:cut","payload":["success"]}
-{"step":10,"kind":["Info"],"goal_id":11,"runtime_id":0,"name":"user:curgoal","payload":["=>","q => (q :- !) => q"]}
+{"step":10,"kind":["Info"],"goal_id":11,"runtime_id":0,"name":"user:curgoal","payload":["=>","(q) ==> (q :- !) ==> q"]}
 {"step":10,"kind":["Info"],"goal_id":11,"runtime_id":0,"name":"user:rule","payload":["implication"]}
 {"step":10,"kind":["Info"],"goal_id":11,"runtime_id":0,"name":"user:subgoal","payload":["12"]}
-{"step":10,"kind":["Info"],"goal_id":12,"runtime_id":0,"name":"user:newgoal","payload":["(q :- !) => q"]}
+{"step":10,"kind":["Info"],"goal_id":12,"runtime_id":0,"name":"user:newgoal","payload":["(q :- !) ==> q"]}
 {"step":10,"kind":["Info"],"goal_id":12,"runtime_id":0,"name":"user:new-hyps","payload":["q :- ."]}
 {"step":10,"kind":["Info"],"goal_id":12,"runtime_id":0,"name":"user:rule:implication","payload":["success"]}
-{"step":11,"kind":["Info"],"goal_id":12,"runtime_id":0,"name":"user:curgoal","payload":["=>","(q :- !) => q"]}
+{"step":11,"kind":["Info"],"goal_id":12,"runtime_id":0,"name":"user:curgoal","payload":["=>","(q :- !) ==> q"]}
 {"step":11,"kind":["Info"],"goal_id":12,"runtime_id":0,"name":"user:rule","payload":["implication"]}
 {"step":11,"kind":["Info"],"goal_id":12,"runtime_id":0,"name":"user:subgoal","payload":["13"]}
 {"step":11,"kind":["Info"],"goal_id":13,"runtime_id":0,"name":"user:newgoal","payload":["q"]}

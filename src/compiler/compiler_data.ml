@@ -444,6 +444,38 @@ let update_ety ety eit = { ety with eit }
     | Lam (_,x) -> skema_to_func_mode ~type_abbrevs x
     | Ty t ->  to_func_mode ~type_abbrevs t
 
+  let rec look ~type_abbrevs = function
+    | UVar r when MutableOnce.is_set r -> look ~type_abbrevs @@ deref r
+    | App(c,x,xs) when F.Map.mem c type_abbrevs -> look ~type_abbrevs @@ apply (fst @@ F.Map.find c type_abbrevs) (x::xs)
+    | Cons c when F.Map.mem c type_abbrevs -> look ~type_abbrevs @@ apply (fst @@ F.Map.find c type_abbrevs) []
+    | ty -> ty
+
+  (* The list of (type, arrow-type) pairs of the arguments still missing to become a prop.
+    `ty = A -> B -> prop` gives (A, A -> B -> prop) :: (B, B -> prop)
+    *)
+  let args_missing_to_prop ~type_abbrevs x =
+    let ty = deref x in
+    let rec aux extra ty =
+      match look ~type_abbrevs ty with
+      | Prop _ -> Some (List.rev extra)
+      (* | (App(f,Prop _,[])) when F.show f = "list" -> true hack since the type checker unifies prop with list prop *)
+      | Arr (_,Elpi_parser.Ast.Structured.NotVariadic, ty, t) as arrow -> aux ((create ty,create arrow) :: extra) t
+      | Arr (_,Elpi_parser.Ast.Structured.Variadic, _, t) -> aux extra t
+      | _ -> None
+    in
+    aux [] ty
+
+  (* The mode of each argument *)
+  let modes_of_ty ~type_abbrevs x =
+    let ty = deref x in
+    let rec aux ty =
+      match look ~type_abbrevs ty with
+      | Arr (m,Elpi_parser.Ast.Structured.NotVariadic, _, t) -> is_input m :: aux t
+      | Arr (_,Elpi_parser.Ast.Structured.Variadic, _, _) -> []
+      | _ -> []
+    in
+    aux ty
+
 end
 
 type ety = TypeAssignment.ety = { arity : int option; eit : TypeAssignment.ty }
@@ -1021,7 +1053,7 @@ module ScopedTerm = struct
     | Lam(n, ste, it) -> pretty_lam fmt n ste it
     | App({ name = f },[x]) when F.equal F.spillf f -> fprintf fmt "{%a}" pretty x
     | App({ name = f },x::xs) when F.equal F.pif f || F.equal F.sigmaf f -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist ~pplastelem:(pretty_parens_lam ~lvl:app)  (pretty_parens ~lvl:app) " ") (x::xs)
-    | App({ scope = Global _; name = f } as n,x::xs) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist ~boxed:true (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant n) (x::xs))
+    | App({ scope = Global _; name = f } as n,x::(_::_ as xs)) when is_infix_constant f -> fprintf fmt "%a" (Util.pplist ~boxed:true (pretty_parens ~lvl:0) " ") (intersperse (build_infix_constant n) (x::xs))
     | App({ name = f },x::xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist ~boxed:true (pretty_parens ~lvl:app) " ") (x::xs)
     | UVar({ name = f },[]) -> fprintf fmt "@[%a@]" F.pp f
     | UVar({ name = f },xs) -> fprintf fmt "@[%a@ %a@]" F.pp f (Util.pplist ~boxed:true (pretty_parens ~lvl:app) " ") xs

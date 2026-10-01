@@ -17,6 +17,13 @@ def exec(path, base_path):
 def process(source, base_path):
     atext = '   :assert:'
     stext = '.. elpi::'
+    # Like `.. elpi::`: still executed and still checked against a following
+    # `:assert:`, but leaves no trace in the rendered manual -- not the
+    # directive line itself, not a source listing, not its console output.
+    # For a program that must stay verified by the doc build without being
+    # reader-facing content (e.g. a test/validation file, as opposed to a
+    # worked example).
+    htext = '.. elpi-hidden::'
     rtext = '.. literalinclude::'
 
     file_ = open(source, 'r')
@@ -25,22 +32,23 @@ def process(source, base_path):
     with in_place.InPlace(source) as file:
 
         index = 0
-        
+
         for line in file:
 
             path = ''
 
             output = ''
             errors = ''
-            matchr = ''
 
             if line.startswith(atext):
                 index += 1
                 #file.write('')
                 continue
 
-            if line.startswith(stext):
-                path = line[10:]
+            hidden = line.startswith(htext)
+
+            if hidden or line.startswith(stext):
+                path = line[len(htext)+1:] if hidden else line[len(stext)+1:]
 
                 # Resolve the program path relative to the directory of the
                 # .rst file being processed, i.e. the same way Sphinx resolves
@@ -48,20 +56,26 @@ def process(source, base_path):
                 # the source root, which only coincides with the .rst dir for
                 # files sitting at the top of docs/source.)
                 output, errors = exec(path, pathlib.Path(source).parent)
-                
+
                 if index < len(lines)-1:
                     next = lines[index+1]
-                    
-                    if next.startswith(atext):
-                        
-                        expression = next[12:].rstrip()
-                        
-                        if check(output, expression) is None:
-                            output = ''
-                            errors = ''
-                            matchr = 'Injection failure: result did not pass regexp check (' + expression + ')'
 
-            if line.startswith(stext):
+                    if next.startswith(atext):
+
+                        expression = next[12:].rstrip()
+
+                        if check(output, expression) is None:
+                            print('Injection failure: ' + path.strip() +
+                                  ' did not pass the :assert: check (' + expression + ')',
+                                  file=sys.stderr)
+                            print('  output was: ' + repr(output), file=sys.stderr)
+                            sys.exit(1)
+
+            if hidden:
+                # Run and checked above like any other `.. elpi::`; nothing
+                # written out below is what keeps it out of the manual.
+                pass
+            elif line.startswith(stext):
                 block = '**' + path.strip() + ':' + '**' + '\n' + '\n'
                 block += line.replace(stext, rtext)
                 block += '   :linenos:' + '\n'
@@ -70,17 +84,17 @@ def process(source, base_path):
             else:
                 file.write(line)
 
-            if len(output) > 0:
+            if not hidden and len(output) > 0:
                 block  = '\n'
                 block += '.. code-block:: console' + '\n'
                 block += '\n   '
                 block += output.replace('\n', '\n   ')
                 block += '\n'
                 file.write(block)
-                
+
             # `elpi -test` always prints timing/"Success" boilerplate on stderr;
             # only surface it when it carries a real diagnostic.
-            if len(errors) > 0 and re.search(r'(?i)(error|warning|\bfailure\b)', errors):
+            if not hidden and len(errors) > 0 and re.search(r'(?i)(error|warning|\bfailure\b)', errors):
                 block  = '\n'
                 block += '.. code-block:: console' + '\n'
                 block += '\n   '
@@ -88,16 +102,6 @@ def process(source, base_path):
                 block += '\n'
                 file.write(block)
 
-            if len(matchr) > 0:
-                block  = '\n'
-                block += '.. raw:: html' + '\n'
-                block += '\n   '
-                block += '<div class="highlight-console notranslate"><div class="highlight" style="background-color: rgb(248, 148, 148);"><pre>'
-                block += matchr
-                block += '</pre></div></div>'
-                block += '\n'
-                file.write(block)
-            
             index += 1
 
 def find(path):

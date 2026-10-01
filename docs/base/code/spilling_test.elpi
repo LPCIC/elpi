@@ -1,0 +1,130 @@
+% this file just test the spilling documentation is not breaking down
+accumulate spilling_spec.
+
+% some tests
+func example_a -> goal, goal.
+example_a
+  (quantifier piK (x\ [quantifier piK (r\
+             [implication (goal "f" [x, r])
+                     [goal "bar" [spill_call "foo" [x], r]]])]))
+  % f/2 X R :- sigma S\ (foo/2 X S, bar/2 S R).
+  (quantifier piK (x\ [quantifier piK (r\
+             [implication (goal "f" [x, r])
+                     [quantifier sigmaK (s\ [goal "foo" [x, s], goal "bar" [s, r]])]])])).
+
+% main :- apply/1 (x\ {f/2 x}).
+func example_b -> goal, goal.
+example_b
+  (implication (goal "main" [])
+                  [goal "apply" [lam (x\ spill_call "f" [x])]])
+  % main :- sigma S\ (pi C\ f/2 C (S C), apply/1 (c\ S c)).
+  (implication (goal "main" [])
+                  [quantifier sigmaK (s\
+                     [ quantifier piK (c\ [goal "f" [c, app [s, c]]])
+                     , goal "apply" [lam (c\ app [s, c])]
+                     ])]).
+
+% main :- p {succ one} => p X, print X.
+func example_c -> goal, goal.
+example_c
+  (quantifier piK (x\
+             [implication (goal "main" [])
+                     [ implication (goal "p" [spill_call "succ" [con "one"]]) [goal "p" [x]]
+                     , goal "print" [x]
+                     ]]))
+  % main :- (pi R\ p R :- succ one R) => p X, print X.
+  (quantifier piK (x\
+             [implication (goal "main" [])
+                     [ implication
+                         (quantifier piK (r\ [implication (goal "p" [r]) [goal "succ" [con "one", r]]]))
+                         [goal "p" [x]]
+                     , goal "print" [x]
+                     ]])).
+
+% main :- (p {succ one} :- p {succ one}) => p X, print X.
+func example_d -> goal, goal.
+example_d
+  (quantifier piK (x\
+             [implication (goal "main" [])
+                     [ implication (implication (goal "p" [spill_call "succ" [con "one"]])
+                                    [goal "p" [spill_call "succ" [con "one"]]])
+                             [goal "p" [x]]
+                     , goal "print" [x]
+                     ]]))
+  % main :- (pi R\ p R :- succ one R, sigma S\ (succ one S, p S)) => p X, print X.
+  (quantifier piK (x\
+             [implication (goal "main" [])
+                     [ implication
+                         (quantifier piK (r\
+                           [implication (goal "p" [r])
+                             [goal "succ" [con "one", r],
+                              quantifier sigmaK (s\ [goal "succ" [con "one", s], goal "p" [s]])]]))
+                         [goal "p" [x]]
+                     , goal "print" [x]
+                     ]])).
+
+% main :- (pi W\ p/2 W {succ one} :- p/2 W {succ one}) => p Y X, print X.
+func example_e -> goal, goal.
+example_e
+  (quantifier piK (y\ [quantifier piK (x\
+             [implication (goal "main" [])
+                     [ implication (quantifier piK (w\ [implication (goal "p" [w, spill_call "succ" [con "one"]])
+                                    [goal "p" [w, spill_call "succ" [con "one"]]]]))
+                             [goal "p" [y, x]]
+                     , goal "print" [x]
+                     ]])]))
+  % main :- (pi W\ (pi R\ p/2 W R :- succ one R, sigma S\ (succ one S, p/2 W S)))
+  %           => p Y X, print X.
+  (quantifier piK (y\ [quantifier piK (x\
+             [implication (goal "main" [])
+                     [ implication
+                         (quantifier piK (w\ [quantifier piK (r\
+                           [implication (goal "p" [w, r])
+                             [goal "succ" [con "one", r],
+                              quantifier sigmaK (s\ [goal "succ" [con "one", s], goal "p" [w, s]])]])]))
+                         [goal "p" [y, x]]
+                     , goal "print" [x]
+                     ]])])).
+
+% main :- p {succ {succ one}}.
+func example_f -> goal, goal.
+example_f
+  (implication (goal "main" [])
+                  [goal "p" [spill_call "succ" [spill_call "succ" [con "one"]]]])
+  % main :- sigma S1\ (succ one S1, sigma S2\ (succ S1 S2, p S2)).
+  (implication (goal "main" [])
+                  [quantifier sigmaK (s1\
+                     [ goal "succ" [con "one", s1]
+                     , quantifier sigmaK (s2\
+                         [ goal "succ" [s1, s2]
+                         , goal "p" [s2]
+                         ])
+                     ])]).
+
+% assert no leftover
+func no_spill_term term.
+no_spill_term (con _) :- !.
+no_spill_term (app Args) :- !, std.forall Args no_spill_term.
+no_spill_term (lam F) :- !, pi x\ no_spill_term x ==> no_spill_term (F x).
+no_spill_term (spill_bound N) :- !, std.fatal-error ("no_spill_term: leftover spill_bound \"" ^ N ^ "\"").
+no_spill_term (spill_call N _) :- !, std.fatal-error ("no_spill_term: leftover spill_call \"" ^ N ^ "\"").
+
+func no_spill_goal goal.
+no_spill_goal (quantifier _ F) :- !, pi x\ no_spill_term x ==> no_spill_goals (F x).
+no_spill_goal (implication H Gs) :- !, no_spill_goal H, no_spill_goals Gs.
+no_spill_goal (goal _ Args) :- !, std.forall Args no_spill_term.
+
+func no_spill_goals goals.
+no_spill_goals Gs :- std.forall Gs no_spill_goal.
+
+pred test (func -> goal, goal).
+test -> F :-
+  F Ea Expected,
+  spill_rule piK Ea Ra,
+  no_spill_goal Ra,
+  if (Ra = Expected) true (print "error" Ra "!=" Expected, halt).
+
+pred main.
+main :-
+  std.forall [example_a, example_b, example_c, example_d, example_e, example_f] test,
+  print "ok".

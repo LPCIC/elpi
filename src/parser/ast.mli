@@ -63,6 +63,7 @@ type raw_attribute =
   | Functional
   | Untyped
   | NoOC
+  | AutoSpill
 [@@ deriving show]
 
 module TypeExpression : sig
@@ -251,6 +252,7 @@ and attribute = {
   ifexpr : string option;
   typecheck : bool;
   occur_check : bool;
+  autospill : bool;
 }
 and insertion = Insert of insertion_place | Replace of string | Remove of string
 and insertion_place = Before of string | After of string

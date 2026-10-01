@@ -140,6 +140,11 @@ let () = declare "spilling_impl"
   ~description:"spilling implication"
   ()
 
+let () = declare "spilling_impl_left"
+  ~source_elpi:"spill_impl_left.elpi"
+  ~description:"spilling in the premise (left) of an implication turns it into a rule, pi-quantified locally to that hypothesis, re-evaluated on every lookup"
+  ()
+
 let () = declare "spilling_and"
   ~source_elpi:"spill_and.elpi"
   ~description:"spilling anonymous compound goal"
@@ -178,6 +183,61 @@ let () = declare "spill2"
 let () = declare "spill-chr"
   ~source_elpi:"bug_419.elpi"
   ~description:"spilling in chr"
+  ()
+
+let () = declare "autospill"
+  ~source_elpi:"autospill.elpi"
+  ~description:"the :autospill attribute auto-spills under-applied functional calls"
+  ()
+
+let () = declare "autospill_noop"
+  ~source_elpi:"autospill_noop.elpi"
+  ~description:"the :autospill attribute does not spill fully applied calls"
+  ()
+
+let () = declare "autospill_explicit"
+  ~source_elpi:"autospill_explicit.elpi"
+  ~description:"explicit {} spilling still works under the :autospill attribute"
+  ()
+
+let () = declare "autospill_noop_appendR"
+  ~source_elpi:"autospill_noop_appendR.elpi"
+  ~description:"the :autospill attribute does not spill fully applied calls to a plain (non-func) predicate"
+  ()
+
+let () = declare "autospill_explicit_appendR"
+  ~source_elpi:"autospill_explicit_appendR.elpi"
+  ~description:"explicit {} spilling of a plain (non-func) predicate still works under the :autospill attribute"
+  ()
+
+let () = declare "autospill_explicit_cast"
+  ~source_elpi:"autospill_explicit_cast.elpi"
+  ~description:"explicit {} spilling of a type-cast around an under-applied call leaves it un-spilled, just like {} around the call itself"
+  ()
+
+let () = declare "autospill_nested"
+  ~source_elpi:"autospill_nested.elpi"
+  ~description:"an under-applied call used as an argument of an explicitly {}-spilled call is still auto-spilled on its own"
+  ()
+
+let () = declare "autospill_arrow"
+  ~source_elpi:"autospill_arrow.elpi"
+  ~description:"`f A B -> C D` in a clause head is parsed as `f A B C D` with the :autospill attribute implicitly set"
+  ()
+
+let () = declare "autospill_arrow_head"
+  ~source_elpi:"autospill_arrow_head.elpi"
+  ~description:"the :autospill attribute implicitly set by `f A -> B` auto-spills an under-applied call in the head, with no explicit {} braces"
+  ()
+
+let () = declare "autospill_impl_left"
+  ~source_elpi:"autospill_impl_left.elpi"
+  ~description:"the :autospill attribute auto-spills under-applied calls in the head of a rule used as the premise (left) of an implication, including through a further implication nested in that rule's own body"
+  ()
+
+let () = declare "autospill_map"
+  ~source_elpi:"autospill_map.elpi"
+  ~description:"the :autospill attribute auto-spills an under-applied call whose head is a variable (a higher-order argument), not just a named predicate"
   ()
 
 let () = declare "spill_sigma"

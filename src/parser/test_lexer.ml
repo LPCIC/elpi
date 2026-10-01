@@ -93,6 +93,7 @@ type t = Tokens.token =
   | CLOSED
   | BIND
   | BEFORE
+  | AUTOSPILL
   | AS
   | ARROW
   | AFTER

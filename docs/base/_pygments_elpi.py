@@ -58,6 +58,14 @@ class ElpiManualLexer(ElpiLexer):
              "elpi-data-params"),
             # the lambda binder (the stock lexer only handles lowercase `x\`)
             (r"\\", Keyword.Declaration),
+            # `-->` and `:>` are accepted operators (see src/parser/*) that
+            # predate this file but postdate the symbol_re the stock lexer
+            # was generated from, so they're missing from it; since
+            # `symbol_re` is baked into the stock lexer's own 'elpi' rules
+            # as an already-interpolated string, overriding the class
+            # attribute here wouldn't reach them -- match explicitly instead,
+            # before the bare `:` rule below (else `:>` splits into `:`+`>`).
+            (r"-->|:>", Keyword.Declaration),
             # a bare colon: type ascription `(t : ty)`, sequent `?-` context, ...
             (r":", Punctuation),
             inherit,

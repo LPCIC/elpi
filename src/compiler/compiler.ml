@@ -531,10 +531,11 @@ end = struct (* {{{ *)
          if r.ifexpr <> None then duplicate_err "if";
          aux_attrs { r with ifexpr = Some s } rest
       | Untyped :: rest -> aux_attrs { r with typecheck = false } rest
+      | AutoSpill :: rest -> aux_attrs { r with autospill = true } rest
       | (NoOC (* is set by the predicate *)
         | External _ | Index _ | Functional) as a :: _-> illegal_err a
     in
-    let attributes = aux_attrs { insertion = None; id = None; ifexpr = None; typecheck = true; occur_check = true } attributes in
+    let attributes = aux_attrs { insertion = None; id = None; ifexpr = None; typecheck = true; occur_check = true; autospill = false } attributes in
     begin
       match attributes.insertion, attributes.id with
       | Some (Replace x), Some _ -> illegal_replace x
@@ -555,7 +556,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux_chr { r with cifexpr = Some s } rest
-      | (Before _ | After _ | Replace _ | Remove _ | External _ | Index _ | Functional | Untyped | NoOC) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | External _ | Index _ | Functional | Untyped | NoOC | AutoSpill) as a :: _ -> illegal_err a
     in
     let cid = Loc.show loc in
     { c with Chr.attributes = aux_chr { cid; cifexpr = None } attributes }
@@ -646,7 +647,7 @@ end = struct (* {{{ *)
          end
       | NoOC :: rest -> aux_tatt { r with occur_check_pred = false } f rest
       | Functional :: rest -> aux_tatt r Structured.Function rest
-      | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _ | Untyped) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Remove _ | Name _ | If _ | Untyped | AutoSpill) as a :: _ -> illegal_err a
     in
     let attributes, toplevel_func = aux_tatt { availability = Elpi; index = None; occur_check_pred = true } Structured.Relation attributes in
     let is_functional_from_ty () = match ty.tit with
@@ -1481,9 +1482,9 @@ end = struct
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types
 
-  let check_and_spill_pred ~time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types t =
-    let unknown, occur_check = time_this time (fun () -> Type_checker.check_rule ~unknown ~type_abbrevs ~kinds ~types t ~exp:(Val (Prop Relation))) in
-    let t = if needs_spilling then Spilling.main ~types ~type_abbrevs t else t in
+  let check_and_spill_pred ~time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types ?auto_spill t =
+    let t, unknown, occur_check = time_this time (fun () -> Type_checker.check_rule ~unknown ~type_abbrevs ~kinds ~types ?auto_spill t ~exp:(Val (Prop Relation))) in
+    let t = if needs_spilling || auto_spill = Some true then Spilling.main_clause ~types ~type_abbrevs t else t in
     unknown, t, occur_check
 
   let is_global ~types { ScopedTerm.scope = symb' } symb =
@@ -1501,10 +1502,10 @@ end = struct
     | _ -> false
 
   let check_and_spill_chr ~flags ~det_check_time ~time ~unknown ~type_abbrevs ~kinds ~types r =
-    let unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
+    let r, unknown = time_this time (fun () -> Type_checker.check_chr_rule ~unknown ~type_abbrevs ~kinds ~types r) in
 
-    let guard = Option.map (Spilling.main ~type_abbrevs ~types) r.guard in
-    let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main ~types ~type_abbrevs conclusion }) r.new_goal in
+    let guard = Option.map (Spilling.main_goal ~type_abbrevs ~types) r.guard in
+    let new_goal = Option.map (fun ({ Ast.Chr.conclusion } as x) -> { x with conclusion = Spilling.main_goal ~types ~type_abbrevs conclusion }) r.new_goal in
     if not flags.skip_det_checking then
         time_this det_check_time (fun () ->
           Option.iter (fun { Ast.Chr.conclusion } ->
@@ -1567,9 +1568,9 @@ end = struct
     ) u_types;
 
     (* returns unkown types + spilled clauses *)
-    let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = ({ Ast.Structured.typecheck; occur_check } as atts) } as clause) ->
-      let unknown, body, occur_check_pred = 
-        if typecheck then check_and_spill_pred ~time:type_check_time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types body
+    let unknown, clauses = List.fold_left (fun (unknown,clauses) ({ Ast.Clause.body; loc; needs_spilling; attributes = ({ Ast.Structured.typecheck; occur_check; autospill } as atts) } as clause) ->
+      let unknown, body, occur_check_pred =
+        if typecheck then check_and_spill_pred ~time:type_check_time ~needs_spilling ~unknown ~type_abbrevs ~kinds ~types ~auto_spill:autospill body
         else unknown, body, true in
       (* Format.eprintf "The checked clause is %a@." ScopedTerm.pp body; *)
       let spilled = {clause with body; needs_spilling = false; attributes = { atts with occur_check = occur_check && occur_check_pred }} in
@@ -2061,7 +2062,7 @@ end = struct
     (* Format.eprintf "The predicates with local clauses bla is :@ @[%a@]@." (C.Map.pp (Loc.pp)) !preds_w_eigen_var_no_cut *)
 
   let spill_todbl ?(ctx=Scope.Map.empty) ~builtins ~needs_spilling ~type_abbrevs ~types state symb ?(depth=0) ?(amap = F.Map.empty) t =
-    let t = if needs_spilling then Spilling.main ~types ~type_abbrevs t else t in
+    let t = if needs_spilling then Spilling.main_goal ~types ~type_abbrevs t else t in
     to_dbl ~ctx ~builtins state symb ~types ~depth ~amap t
 
   let extend1_clause ~time flags state ~builtins ~types (clauses, symbols, index, pred_info) { Ast.Clause.body = body_st; loc; needs_spilling; attributes = { Ast.Structured.insertion = graft; id; ifexpr; occur_check } } =
@@ -2397,7 +2398,7 @@ let query_of_ast (compiler_state, assembled_program) t state_update =
   let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let needs_spilling = ref false in
   let t = Scope_Quotation_Macro.scope_loc_term ~state:(set_mtm compiler_state { empty_mtm with macros = toplevel_macros; needs_spilling }) t in
-  let unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
+  let t, unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (!needs_spilling,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in
@@ -2422,11 +2423,11 @@ let compile_term_to_raw_term ?(check=true) state (_, assembled_program) ?ctx ~de
   if not @@ State.get Data.while_compiling state then
     anomaly "compile_term_to_raw_term called at run time";
   let { Assembled.signature = { kinds; types; type_abbrevs }; chr; prolog_program; total_type_checking_time } = assembled_program in
-  if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
-    let unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
+  let t = if check && Option.fold ~none:true ~some:Scope.Map.is_empty ctx then begin
+    let t, unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:(Type_checker.unknown_type_assignment "Ty") in
     let _ : TypingEnv.t= Type_checker.check_undeclared ~unknown ~type_abbrevs in
-    ()
-  end;
+    t
+  end else t in
   let amap = get_argmap state in
   let amap, t = Assemble.compile_query_term ?ctx ~amap state assembled_program ~depth t in
   set_argmap state amap,t
@@ -2447,7 +2448,7 @@ let query_of_scoped_term (compiler_state, assembled_program) f =
   let total_type_checking_time = assembled_program.Assembled.total_type_checking_time in
   let total_det_checking_time = assembled_program.Assembled.total_det_checking_time in
   let compiler_state,t = f compiler_state in
-  let unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
+  let t, unknown = Type_checker.check_query ~unknown:F.Map.empty ~type_abbrevs ~kinds ~types t ~exp:TypeAssignment.(Val (Prop Relation)) in
   let _ : TypingEnv.t = Type_checker.check_undeclared ~unknown ~type_abbrevs in
   let symbols, amap, query = Assemble.compile_query compiler_state assembled_program (false,t) in
   let query_env = Array.make (F.Map.cardinal amap) D.dummy in

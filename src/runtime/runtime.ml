@@ -294,6 +294,13 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
         Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
           (aux (hdlvl+1) depth) a F.pp F.eqf
           (aux (hdlvl+1) depth) b)
+    | Builtin (((Impl | ImplBang) as bp), [a;b]) ->
+      let op = if bp == Impl then "==>" else "=!=>" in
+      let _, hdlvl = Elpi_parser.Parser_config.precedence_of op in
+      with_parens prec hdlvl (fun _ ->
+        Fmt.fprintf f "@[<hov 1>(%a)@ %s@ %a@]"
+          (aux min_prec depth) a op
+          (aux min_prec depth) b)
     | Builtin (Pi, [body]) ->
       let _, hdlvl =
         Elpi_parser.Parser_config.precedence_of (F.show F.pif) in

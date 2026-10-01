@@ -1,3 +1,27 @@
+# UNRELEASED
+
+  - New `:autospill` rule attribute: spills every under-applied call in the
+    rule, without needing an explicit `{ }` around each one
+  - New `f A B -> C D` rule-head shorthand for `f A B C D` with
+    `:autospill` implicitly set, mirroring how a `func` signature itself
+    separates inputs from outputs with `->`; either side of `->` may be
+    empty
+
+- Compiler:
+  - `{ }` may now appear in a rule's head (a bare fact, or before `:-`);
+    the spilled goal is relocated to just after `:-`, introducing one for
+    a bare fact
+
+- Printer:
+  - Fix an identifier that happens to start with an operator's name (e.g.
+    `ispal` starting with `is`) being mistaken for that operator, silently
+    dropping the head symbol when printing an arity-1 application
+
+- REPL:
+  - New `-parse-clause`: parses a single clause from stdin and prints its
+    raw AST
+
+
 # v3.8.0 (September 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
