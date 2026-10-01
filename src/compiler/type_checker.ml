@@ -429,28 +429,28 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
   in
 
 
-  let rec check ~positive ~auto_spill (ctx : ctx Scope.Map.t) ~loc ~tyctx x (ety : ety) : ScopedTerm.t_ * spilled_phantoms =
+  let rec check ~positive ~auto_spill (ctx : ctx Scope.Map.t) ~loc ~tyctx orig (ety : ety) : ScopedTerm.t_ * spilled_phantoms =
     (* Format.eprintf "@[<hov 2>checking %a : %a@]\n" ScopedTerm.pretty_ x TypeAssignment.pretty_mut_once ety.eit; *)
-    match x with
-    | Impl(b,_,t1,t2) -> check_impl ~auto_spill ~positive ctx ~loc ~tyctx x b t1 t2 ety
-    | App({ scope = Global _} as c,[]) -> x, check_global ctx ~loc ~tyctx c ety
-    | App({ scope = Bound _} as c,[]) -> x, check_local ctx ~loc ~tyctx c ety
-    | CData c -> x, check_cdata ~loc ~tyctx kinds c ety
+    match orig with
+    | Impl(kind,_,lhs,rhs) -> check_impl ~auto_spill ~positive ctx ~loc ~tyctx ~orig kind lhs rhs ety
+    | App({ scope = Global _} as c,[]) -> orig, check_global ctx ~loc ~tyctx c ety
+    | App({ scope = Bound _} as c,[]) -> orig, check_local ctx ~loc ~tyctx c ety
+    | CData c -> orig, check_cdata ~loc ~tyctx kinds c ety
     | Spill(_,{contents = Phantom _}) -> assert false
     | Spill(x,_) when auto_spill ->
         let x, spills = check_loc ~positive ~tyctx ctx x ~ety ~auto_spill:false in
         x.it, spills
     | Spill(sp,info) ->
-        x, check_spill ~positive ctx ~loc ~tyctx sp info ety
-    | App({ scope = gid } as hd,xs) -> check_app ~auto_spill ~positive ctx ~loc ~tyctx x gid (drop_scope hd) (get_hd_type ~loc ctx env hd ety) xs ety
-    | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx x c cty t ety
-    | Discard _ -> x, []
-    | UVar({ name = c } as hd,args) -> check_app ~auto_spill ~positive ctx ~loc ~tyctx x (Scope.Bound elpi_var) hd (uvar_type ~loc c) args ety
+        orig, check_spill ~positive ctx ~loc ~tyctx sp info ety
+    | App({ scope = gid } as hd,xs) -> check_app ~auto_spill ~positive ctx ~loc ~tyctx ~orig gid (drop_scope hd) (get_hd_type ~loc ctx env hd ety) xs ety
+    | Lam(c,cty,t) -> check_lam ~positive ctx ~loc ~tyctx ~orig c cty t ety
+    | Discard _ -> orig, []
+    | UVar({ name = c } as hd,args) -> check_app ~auto_spill ~positive ctx ~loc ~tyctx ~orig (Scope.Bound elpi_var) hd (uvar_type ~loc c) args ety
     | Cast(t,tye) ->
         let ty = TypeAssignment.subst (fun f -> Some (UVar(MutableOnce.make f))) @@ check_loc_tye ~positive:true ~type_abbrevs ~kinds F.Set.empty tye in
         let t', spills = check_loc ~positive ctx ~tyctx:None t ~ety:(TypeAssignment.mk_ety ty) ~auto_spill  in
-        if unify ty ety then (if t' == t then x else Cast(t',tye)), spills
-        else error_bad_ety ~valid_mode ~loc ~tyctx ScopedTerm.pretty_ x ty ~ety
+        if unify ty ety then (if t' == t then orig else Cast(t',tye)), spills
+        else error_bad_ety ~valid_mode ~loc ~tyctx ScopedTerm.pretty_ orig ty ~ety
 
   and resolve_gid ~loc id gid ety ty =
     if not @@ MutableOnce.is_set ty then MutableOnce.set ~loc ty (TypeAssignment.Val ety);
@@ -460,38 +460,25 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
       SymbolResolver.resolve env x.resolved_to id
     | _ -> ()
 
-  and check_impl ~auto_spill ~positive ctx ~loc ~tyctx orig b t1 t2 ety =
-    let lhs, rhs,c,positive (* of => *) =
-      match b with
-      | L2R -> t1,t2,F.implf,positive
-      | L2RBang -> t1,t2,F.implbangf,positive
-      | R2L -> t2,t1,F.rimplf,not positive in
-    (* In autospill mode `H => {G}` becomes `{H => G}` *)
-    let as_goal = try_unify prop ety in
-    if not as_goal && not (auto_spill && (b = L2R || b = L2RBang)) then
-      error_bad_ety ~valid_mode ~loc ~tyctx ~ety:(TypeAssignment.mk_ety prop) ScopedTerm.pretty_ (Impl(b,loc,t1,t2)) ety.eit
+  and check_impl ~auto_spill ~positive ctx ~loc ~tyctx ~orig kind orig_lhs orig_rhs ety =
+    let premise, conclusion, symbol, positive, rebuild_Impl =
+      match kind with
+      | L2R -> orig_lhs,orig_rhs,F.implf,positive, fun x y -> if x == orig_lhs && y == orig_rhs then orig else Impl(kind,loc,x,y)
+      | L2RBang -> orig_lhs,orig_rhs,F.implbangf,positive, fun x y -> if x == orig_lhs && y == orig_rhs then orig else Impl(kind,loc,x,y)
+      | R2L -> orig_rhs,orig_lhs,F.rimplf,not positive, fun x y -> if x == orig_rhs && y == orig_lhs then orig else Impl(kind,loc,y,x) in
+    if not (unify prop ety) then
+      error_bad_ety ~valid_mode ~loc ~tyctx ~ety ScopedTerm.pretty_ orig prop
     else
-      let conclusion_ety = if as_goal then TypeAssignment.mk_ety prop else ety in
-      let rhs, spills = check_loc ~positive ~tyctx:(Some c) ctx rhs ~ety:conclusion_ety in
-      let lhs_ty = mk_uvar "Src" in
-      let lhs, more_spills = check_loc ~positive:(not positive) ~tyctx:None ctx ~ety:(TypeAssignment.mk_ety ~arity:0 lhs_ty) lhs in
+      let conclusion_ety = TypeAssignment.mk_ety prop in
+      let conclusion, spills = check_loc ~positive ~tyctx:(Some symbol) ctx conclusion ~ety:conclusion_ety in
+      let premise_ty = mk_uvar "Src" in
+      let premise, more_spills = check_loc ~positive:(not positive) ~tyctx:None ctx ~ety:(TypeAssignment.mk_ety ~arity:0 premise_ty) premise in
       let ety1 = TypeAssignment.mk_ety prop in
       let ety2 = TypeAssignment.mk_ety @@ TypeAssignment.App(F.from_string "list",prop,[]) in
-      if not (try_unify lhs_ty ety1 || unify lhs_ty ety2) then
-        error_bad_ety2 ~valid_mode ~tyctx:(Some c) ~loc ~ety1 ~ety2  ScopedTerm.pretty lhs lhs_ty
+      if not (try_unify premise_ty ety1 || unify premise_ty ety2) then
+        error_bad_ety2 ~valid_mode ~tyctx:(Some symbol) ~loc ~ety1 ~ety2  ScopedTerm.pretty premise premise_ty
       else
-      match rhs.it with
-      | Spill(sp, ({ contents = Main _ } as info)) when not as_goal ->
-          (* sp.ty is the residual (still-missing-arguments) arrow type of
-             the call: Spilling.main_goal only cares about it to
-             know how many/what type of values are missing, regardless of
-             whether the Spill wraps just the call or the whole implication *)
-          let impl_t = { loc; ty = sp.ty; it = Impl(b,loc,lhs,sp) } in
-          Spill(impl_t, info), spills @ more_spills
-      | _ ->
-          let t1', t2' = match b with L2R | L2RBang -> lhs, rhs | R2L -> rhs, lhs in
-          let x = if t1' == t1 && t2' == t2 then orig else Impl(b,loc,t1',t2') in
-          x, spills @ more_spills
+        rebuild_Impl premise conclusion, spills @ more_spills
 
   and check_global ctx ~loc ~tyctx { scope = gid; name = c; ty = tya } ety =
     match global_type ~ety env ~loc c with
@@ -516,7 +503,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
     if unify ty ety then []
     else error_bad_cdata_ety ~tyctx ~loc c ty ~ety
 
-  and check_lam ~positive ctx ~loc ~tyctx orig sc c_type_cast t ety =
+  and check_lam ~positive ctx ~loc ~tyctx ~orig sc c_type_cast t ety =
     let { scope = name_lang; name = c; ty = c_type } = match sc with Some c -> c | None -> mk_binder ~lang:elpi_language (fresh_name ()) ~loc in
     let src = match c_type_cast with
       | None -> mk_uvar "Src"
@@ -567,7 +554,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
           let srcs = drop n srcs in unify_then_undo (arrow_of_tys srcs tgt) ety
     | Variadic _ -> true (* TODO *)
 
-  and check_app ~positive ~auto_spill ctx ~loc ~tyctx orig cid ({ name = c; ty = tya; loc = cloc } as hd) cty args ety : ScopedTerm.t_ * spilled_phantoms =
+  and check_app ~positive ~auto_spill ctx ~loc ~tyctx ~orig cid ({ name = c; ty = tya; loc = cloc } as hd) cty args ety : ScopedTerm.t_ * spilled_phantoms =
     match cty with
     | Overloaded all ->
       (* Format.eprintf "@[options %a, ety:%a, nargs:%d :@ %a@]\n" F.pp c TypeAssignment.pretty_mut_once ety.eit (List.length args) (pplist (fun fmt (_,x) -> TypeAssignment.pretty_mut_once fmt x) "; ") all; *)
@@ -576,7 +563,7 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
       | [] -> error_overloaded_app_tgt ~valid_mode ~loc ~ety c all
       | [ty] ->
       (* Format.eprintf "1option left: %a\n" TypeAssignment.pretty (snd ty); *)
-        check_app ~positive ~auto_spill ctx ~loc ~tyctx orig cid hd (Single ty) args ety
+        check_app ~positive ~auto_spill ctx ~loc ~tyctx ~orig cid hd (Single ty) args ety
       | l ->
       (* Format.eprintf "newoptions: %a\n" (pplist (fun fmt (_,x) -> TypeAssignment.pretty_mut_once fmt x) "; ") l; *)
           let args = List.concat_map (fun x ->
