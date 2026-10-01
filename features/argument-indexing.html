@@ -71,7 +71,7 @@
 <li class="toctree-l1"><a class="reference internal" href="unification-and-variables.html">Unification and variables</a></li>
 <li class="toctree-l1"><a class="reference internal" href="binders-and-hoas.html">Binders and HOAS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="control-and-cut.html">Control and cut</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spilling.html">Spilling and functional syntax</a></li>
 <li class="toctree-l1"><a class="reference internal" href="types-and-type-checking.html">Types and type checking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="determinacy-checking.html">Determinacy checking</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Argument indexing</a><ul>
@@ -164,7 +164,7 @@ only option when a single argument is indexed at depth 1), <code class="docutils
 <h2>Which index to use<a class="headerlink" href="#which-index-to-use" title="Link to this heading"></a></h2>
 <p>The default costs almost nothing and fits almost every predicate. It looks at
 one thing, the head symbol of the first argument, so it tells two rules
-apart exactly when that symbol does. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/18b7c64a6abead7481ea3035b577cb76d1bf0d3d/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/18b7c64a6abead7481ea3035b577cb76d1bf0d3d/src/builtin.elpi#L802"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a> and most
+apart exactly when that symbol does. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23aad61556ad5314695ef9e43649cb2dfc0b559d/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23aad61556ad5314695ef9e43649cb2dfc0b559d/src/builtin.elpi#L802"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a> and most
 λProlog predicates have a few rules distinguished by precisely that, and the
 index with the least overhead wins; <a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">the HDR thesis</span></a> §3.2.5
 reports that for the bulk of λProlog code the default beats the richer

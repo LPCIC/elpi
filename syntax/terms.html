@@ -80,7 +80,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../features/unification-and-variables.html">Unification and variables</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/binders-and-hoas.html">Binders and HOAS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/control-and-cut.html">Control and cut</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/spilling.html">Spilling and functional syntax</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/types-and-type-checking.html">Types and type checking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/determinacy-checking.html">Determinacy checking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../features/argument-indexing.html">Argument indexing</a></li>
@@ -257,7 +257,7 @@ at the same time, <code class="docutils literal notranslate"><span class="pre">X
 <p><code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">t</span> <span class="pre">}</span></code> is <em>spilling</em>: it lifts the call <code class="docutils literal notranslate"><span class="pre">t</span></code> out of the term it sits in,
 runs it just before the enclosing goal, and leaves <code class="docutils literal notranslate"><span class="pre">t</span></code>’s output argument in
 its place. It is shorthand for functional-style code and is described in
-<a class="reference internal" href="../features/spilling.html"><span class="doc">Spilling</span></a>.</p>
+<a class="reference internal" href="../features/spilling.html"><span class="doc">Spilling and functional syntax</span></a>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">t</span> <span class="pre">}}</span></code> is a <em>quotation</em>: custom syntax, delimited by the double braces,
 that a host application parses and turns into a term of its own choosing. See
 <a class="reference internal" href="../embedding.html"><span class="doc">Embedding and extending Elpi</span></a>.</p>

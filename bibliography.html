@@ -70,7 +70,7 @@
 <li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a></li>
 <li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a></li>
-<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling and functional syntax</a></li>
 <li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a></li>
@@ -183,6 +183,29 @@ Proceedings of the First Workshop on Principles and Practice of Constraint
 Programming, Brown University, 1993, pages 221–229. Reads a higher-order
 logic programming language as a constraint logic programming one; the
 constraint-resume rule of <a class="reference internal" href="semantics/formal-semantics.html"><span class="doc">Formal semantics</span></a> follows it.</p>
+<p id="bib-picat">Neng-Fa Zhou, <a class="reference external" href="https://www.sci.brooklyn.cuny.edu/~zhou/papers/padl17.pdf">Canonicalizing High-Level Constructs in Picat</a>, PADL 2017.
+Picat replaces a function call <code class="docutils literal notranslate"><span class="pre">f(t1,...,tn)</span></code> by a new variable <code class="docutils literal notranslate"><span class="pre">V</span></code> and
+inserts a predicate call <code class="docutils literal notranslate"><span class="pre">p(t1,...,tn,V)</span></code> before the enclosing goal,
+independently arriving at close to the same transformation as <a class="reference internal" href="features/spilling.html"><span class="doc">spilling</span></a>, for the same reason: recovering functional syntax over
+a logic-programming core.</p>
+<p id="bib-icurry">Sergio Antoy, Michael Hanus, Andy Jost and Steven Libby, <a class="reference external" href="https://www.michaelhanus.de/papers/Declare19_ICurry.pdf">ICurry</a>, Declare 2019.
+Curry’s intermediate representation, FlatCurry, normalizes nested function
+calls the same way via let-insertion; cited from <a class="reference internal" href="features/spilling.html"><span class="doc">Spilling and functional syntax</span></a> as
+a relative of the same transformation.</p>
+<p id="bib-anf-lfp">Amr Sabry and Matthias Felleisen, <a class="reference external" href="https://3e8.org/pub/scheme/doc/lisp-pointers/v5i1/p288-sabry.pdf">Reasoning about Programs in
+Continuation-Passing Style</a>, LFP
+1992. With <a class="reference internal" href="#bib-anf-pldi"><span class="std std-ref">Flanagan, Sabry, Duba &amp; Felleisen, PLDI 1993</span></a>,
+introduces A-normal form, the functional-compiler ancestor of <a class="reference internal" href="features/spilling.html"><span class="doc">spilling</span></a>: both flatten nested expressions by let-binding every
+intermediate result, where Elpi’s <code class="docutils literal notranslate"><span class="pre">pi</span></code>/<code class="docutils literal notranslate"><span class="pre">sigma</span></code> play the role <code class="docutils literal notranslate"><span class="pre">let</span></code>/lambda
+play in ANF.</p>
+<p id="bib-anf-pldi">Cormac Flanagan, Amr Sabry, Bruce F. Duba and Matthias Felleisen, <a class="reference external" href="https://users.soe.ucsc.edu/~cormac/papers/best-pldi.pdf">The
+Essence of Compiling with Continuations</a>, PLDI 1993. See
+<a class="reference internal" href="#bib-anf-lfp"><span class="std std-ref">Sabry &amp; Felleisen, LFP 1992</span></a>, cited alongside it from
+<a class="reference internal" href="features/spilling.html"><span class="doc">Spilling and functional syntax</span></a>.</p>
+<p id="bib-clpfd">Markus Triska, <a class="reference external" href="https://www.metalevel.at/swiclpfd.pdf">The Finite Domain Constraint Solver of SWI-Prolog</a>, FLOPS 2012. Prolog’s CLP(FD)
+flattens arithmetic expressions the same way <a class="reference internal" href="features/spilling.html"><span class="doc">spilling</span></a> does, scoped to arithmetic: <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">#=</span> <span class="pre">Y+Z*W</span></code> compiles to a
+sequence of primitive constraint goals over fresh variables via
+<code class="docutils literal notranslate"><span class="pre">goal_expansion/2</span></code>.</p>
 </section>
 
 

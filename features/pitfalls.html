@@ -71,7 +71,7 @@
 <li class="toctree-l1"><a class="reference internal" href="unification-and-variables.html">Unification and variables</a></li>
 <li class="toctree-l1"><a class="reference internal" href="binders-and-hoas.html">Binders and HOAS</a></li>
 <li class="toctree-l1"><a class="reference internal" href="control-and-cut.html">Control and cut</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spilling.html">Spilling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spilling.html">Spilling and functional syntax</a></li>
 <li class="toctree-l1"><a class="reference internal" href="types-and-type-checking.html">Types and type checking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="determinacy-checking.html">Determinacy checking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="argument-indexing.html">Argument indexing</a></li>
@@ -154,7 +154,7 @@ warns where the <code class="docutils literal notranslate"><span class="pre">=&g
 <h2>Treacherous one-rule anonymous predicates<a class="headerlink" href="#treacherous-one-rule-anonymous-predicates" title="Link to this heading"></a></h2>
 <p>A variable is a parameter of the <em>whole rule</em> it occurs in, not of an
 anonymous predicate nested inside it, so a variable used only inside a
-<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/18b7c64a6abead7481ea3035b577cb76d1bf0d3d/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a> (or similar) callback is shared by every call the traversal
+<a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/23aad61556ad5314695ef9e43649cb2dfc0b559d/src/builtin.elpi#L737"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a> (or similar) callback is shared by every call the traversal
 makes, not fresh per call, unless a <code class="docutils literal notranslate"><span class="pre">sigma</span></code> says otherwise
 (<a class="reference internal" href="binders-and-hoas.html"><span class="doc">Binders and HOAS</span></a>):</p>
 <p><strong>../code/anonymous-predicate.elpi:</strong></p>

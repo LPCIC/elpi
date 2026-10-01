@@ -1,18 +1,23 @@
-########
-Spilling
-########
+##############################
+Spilling and functional syntax
+##############################
 
 A rule that threads a value from one call straight into the next has to name
 that value, and a name like ``Tmp`` or ``Aux1`` carries no information: it is
-there only to plumb the two calls together. Spilling removes the name. ``{ E }``
-(:doc:`../syntax/terms`) lifts the goal ``E`` out to just before the smallest
-enclosing predicate call and puts a fresh variable in its place, one for each
-argument ``E`` is not given (its output arguments, so one in the common
-case):
+there only to plumb the two calls together. Spilling removes the need for that name.
 
 .. code-block:: elpi
 
-   f X R :- foo X Y, bar Y R.      % written out, with the plumbing variable Y
+   pred f int -> int.
+   f X R :- foo X Tmp, bar Tmp R.  % the plumbing variable Tmp
+
+Wrapping a partially-applied call in braces, ``{ E }`` (:doc:`../syntax/terms`),
+lifts the goal ``E`` out to just before the smallest enclosing predicate call
+and puts a fresh variable in its place, one for each argument ``E`` is not
+given (its output arguments, so one in the common case):
+
+.. code-block:: elpi
+
    f X R :- bar {foo X} R.         % the same, spilled
 
 If ``E`` has several missing arguments, ``{ E }`` becomes that many variables
@@ -20,15 +25,16 @@ at once:
 
 .. code-block:: elpi
 
-   g X R :- h X Y Z, k Y Z R.      % h has two outputs
-   g X R :- k {h X} R.             % {h X} stands for the two of them, Y and Z
+   pred h int -> int, int.
+   g X R :- h X Tmp1 Tmp2, k Tmp1 Tmp2 R.   % h has two outputs: Tmp1 Tmp2
+   g X R :- k {h X} R.                      % {h X} stands for the two of them
 
 For this to work Elpi has to know the spilled predicate's arity, from its
 ``pred`` / ``func`` signature (:doc:`../syntax/type-declarations`); an
 undeclared predicate cannot be spilled.
 
 The spilled call is inserted just before the *closest* call recognised as a
-predicate, walking basward, inside out. ``elpi -print FILE`` prints a program
+predicate, walking backward, inside out. ``elpi -print FILE`` prints a program
 after spilling (and other compilation passes), so any doubt about where a
 particular ``{ }`` ended up can be checked directly.
 
@@ -46,6 +52,63 @@ inserted right before :stdlib:`std.append`:
    [1, 2, 3, 3, 2, 1]
    
 
+Spilling in the head of a rule
+==============================
+
+``{ }`` may also appear in a rule's head even though a head is not a goal
+sequence and cannot simply join a ``,`` conjunction the way a spill in the body can.
+The spilled goal is relocated to
+just after ``:-``, in front of whatever body the rule already had;:
+
+.. code-block:: elpi
+
+   func copy tm -> tm.
+   copy (app A B) (app {copy A} {copy B}).
+   % becomes
+   copy (app A B) (app R S) :- copy A R, copy B S.
+
+
+Spilling in the head is restricted to an output argument.
+
+Spilling without ``{ }``
+=========================
+
+``{ }`` marks explicitly *which* under-applied call to spill. The
+``:autospill`` rule attribute (:doc:`../syntax/rule-attributes`) spills
+*every* under-applied call in the rule instead, wherever it appears, exactly
+as if each had its own ``{ }``:
+
+.. code-block:: elpi
+
+   :autospill
+   main :- std.append (std.append [1] [2]) [3] L, L = [1,2,3].
+
+A call is spilled automatically when it is **applied to all of its input
+arguments but none of its outputs** arguments. A call that already supplies
+every argument, outputs included, is left untouched -- and so is a call
+already surrounded by ``{ }``, even though it too supplies all its inputs
+and no outputs.
+
+The ``:autospill`` attribute is **turned on automatically** by the functional
+rule syntax (:doc:`../syntax/inference-rules-and-queries`) — a rule head
+written with ``->`` to separate inputs from outputs. A recursive call is
+the typical beneficiary, since its own result is exactly the value still
+missing from it: below, ``map F XS`` stands for its own missing output:
+
+**../code/autospill-map.elpi:**
+
+.. literalinclude:: ../code/autospill-map.elpi
+   :linenos:
+   :language: elpi
+
+This is the same predicate as the version written out with every argument in
+place and an ordinary body:
+
+**../code/map.elpi:**
+
+.. literalinclude:: ../code/map.elpi
+   :linenos:
+   :language: elpi
 
 Spilling into a binder
 ======================
@@ -75,10 +138,21 @@ equivalent to writing
 
    pp (lam F) S :- pi x\ pp x "x" ==> sigma R\ (pp (F x) R, S is "\x." ^ R).
 
-Only the *conclusion* of an implication may spill. A ``{ }`` in the
-hypothesis is rejected at compile time (``Spilling in negative position is
-forbidden``), since the lifted goal would have to run before the hypothesis
-it depends on is in scope.
+``{ }`` may spill in the premise (the hypothesis) of ``==>`` too.
+Spilling in the premise is handled the same way
+as spilling in a rule's own head (above) and the premise becomes a rule with premises
+of its own and the fresh variable used for spilling is quantified with ``pi`` around the entire premise:
+
+.. code-block:: elpi
+
+   main :- p {succ 1} ==> p X, print X.
+
+is elaborated to:   
+   
+.. code-block:: elpi
+
+   main :- (pi R\ p R :- succ 1 R) ==> p X, print X.
+
 
 
 Spilling out of a term-level lambda
@@ -117,3 +191,40 @@ conjuncts run in place, typically to bind a variable the last one then reads:
 ``g x Y`` runs first and binds ``Y``; ``h Y`` is the spilled conjunct, so
 ``h Y S`` computes the value ``S`` that takes the place of the whole
 ``{ … }``.
+
+Spilling specification
+======================
+
+This sections is a
+deliberately simplified mockup of the real compiler pass in ``src/compiler/spilling.ml``
+and gives an informal account of how spilling is performed.
+The input syntax contains a ``spill_call`` node that is eliminated during
+spilling (``spill_term``, reached from the entry point ``spill_rule``);
+``spill_bound`` is an auxiliary node representing the output of a spilled
+predicate call.
+
+**../code/spilling_spec.elpi:**
+
+.. literalinclude:: ../code/spilling_spec.elpi
+   :linenos:
+   :language: elpi
+
+**Related work.** Similar transformations exist in other systems under different
+names, although none of them handles lambda-tree syntax. Here some pointers:
+
+- Picat replaces a function call ``f(t1,...,tn)`` by a new variable ``V``, and
+  inserts a new predicate call ``p(t1,...,tn,V)`` before the goal in which the
+  function call occurs (:ref:`Zhou, PADL 2017 <bib-picat>`).
+- Curry's intermediate representation, FlatCurry, normalizes nested function
+  calls the same way via let-insertion (``y:ins(x,ys)`` becomes
+  ``let {z = ins(x,ys)} in y:z``) (:ref:`Antoy, Hanus, Jost & Libby, Declare
+  2019 <bib-icurry>`).
+- A-normal form, the general functional-compiler ancestor of this family:
+  flatten nested expressions by let-binding every intermediate result
+  (:ref:`Sabry & Felleisen, LFP 1992 <bib-anf-lfp>`; :ref:`Flanagan, Sabry,
+  Duba & Felleisen, PLDI 1993 <bib-anf-pldi>`).
+- Prolog's CLP(FD) flattens arithmetic expressions the same way, scoped to
+  arithmetic: ``X #= Y+Z*W`` compiles to a sequence of primitive constraint
+  goals over fresh variables via ``goal_expansion/2`` (:ref:`Triska, FLOPS
+  2012 <bib-clpfd>`).
+

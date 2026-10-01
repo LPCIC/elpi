@@ -26,7 +26,7 @@ each group is for and which chapter covers it in depth where one does.
 Logic, control and inspection
 =============================
 
-:stdlib:`=` unifies, with the occur check; :stdlib:`unsound_unif` does the same *without*
+:stdlib:`(=)` unifies, with the occur check; :stdlib:`unsound_unif` does the same *without*
 it and so can build a cyclic term (:doc:`features/unification-and-variables`,
 where it is defined with ``:nooc``). :stdlib:`same_term`, infix ``==``, tests
 plain syntactic equality, assigning nothing. ``pattern_match T P`` matches

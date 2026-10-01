@@ -21,6 +21,7 @@
   <span><span class="label">type_abbrevs</span>:<a href="#type-type_abbrevs">type_abbrevs</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">kinds</span>:<a href="#type-arities">arities</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">types</span>:<a href="../Compiler_data/TypingEnv/index.html#type-t">Compiler_data.TypingEnv.t</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?auto_spill</span>:bool <span class="arrow">&#45;&gt;</span></span>
   <span><a href="../../Elpi_parser/Ast/Func/index.html#type-t">Elpi_compiler.Compiler_data.F.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span>(<a href="../Compiler_data/ScopedTerm/index.html#type-t">Compiler_data.ScopedTerm.t</a> * <a href="../../Elpi_util/Util/Loc/index.html#type-t">Elpi_parser.Ast.Loc.t</a>)</span> <span class="arrow">&#45;&gt;</span></span>
   unit</span></code></div></div><div class="odoc-spec"><div class="spec type anchored" id="type-runtime_types"><a href="#type-runtime_types" class="anchor"></a><code><span><span class="keyword">type</span> runtime_types</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-pp_runtime_types"><a href="#val-pp_runtime_types" class="anchor"></a><code><span><span class="keyword">val</span> pp_runtime_types : 
@@ -39,22 +40,25 @@
   <span><span class="label">kinds</span>:<a href="#type-arities">arities</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">types</span>:<a href="../Compiler_data/TypingEnv/index.html#type-t">Compiler_data.TypingEnv.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">unknown</span>:<a href="#type-env_undeclared">env_undeclared</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?auto_spill</span>:bool <span class="arrow">&#45;&gt;</span></span>
   <span><a href="../Compiler_data/ScopedTerm/index.html#type-t">Compiler_data.ScopedTerm.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">exp</span>:<a href="../Compiler_data/TypeAssignment/index.html#type-t">Compiler_data.TypeAssignment.t</a> <span class="arrow">&#45;&gt;</span></span>
-  <a href="#type-env_undeclared">env_undeclared</a> * bool</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-check_query"><a href="#val-check_query" class="anchor"></a><code><span><span class="keyword">val</span> check_query : 
+  <a href="../Compiler_data/ScopedTerm/index.html#type-t">Compiler_data.ScopedTerm.t</a> * <a href="#type-env_undeclared">env_undeclared</a> * bool</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-check_query"><a href="#val-check_query" class="anchor"></a><code><span><span class="keyword">val</span> check_query : 
   <span><span class="label">type_abbrevs</span>:<a href="#type-type_abbrevs">type_abbrevs</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">kinds</span>:<a href="#type-arities">arities</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">types</span>:<a href="../Compiler_data/TypingEnv/index.html#type-t">Compiler_data.TypingEnv.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">unknown</span>:<a href="#type-env_undeclared">env_undeclared</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?auto_spill</span>:bool <span class="arrow">&#45;&gt;</span></span>
   <span><a href="../Compiler_data/ScopedTerm/index.html#type-t">Compiler_data.ScopedTerm.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">exp</span>:<a href="../Compiler_data/TypeAssignment/index.html#type-t">Compiler_data.TypeAssignment.t</a> <span class="arrow">&#45;&gt;</span></span>
-  <a href="#type-env_undeclared">env_undeclared</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-check_chr_rule"><a href="#val-check_chr_rule" class="anchor"></a><code><span><span class="keyword">val</span> check_chr_rule : 
+  <a href="../Compiler_data/ScopedTerm/index.html#type-t">Compiler_data.ScopedTerm.t</a> * <a href="#type-env_undeclared">env_undeclared</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-check_chr_rule"><a href="#val-check_chr_rule" class="anchor"></a><code><span><span class="keyword">val</span> check_chr_rule : 
   <span><span class="label">type_abbrevs</span>:<a href="#type-type_abbrevs">type_abbrevs</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">kinds</span>:<a href="#type-arities">arities</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">types</span>:<a href="../Compiler_data/TypingEnv/index.html#type-t">Compiler_data.TypingEnv.t</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">unknown</span>:<a href="#type-env_undeclared">env_undeclared</a> <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?auto_spill</span>:bool <span class="arrow">&#45;&gt;</span></span>
   <span><span><span>(<span class="type-var">'a</span>, <a href="../Compiler_data/ScopedTerm/index.html#type-t">Compiler_data.ScopedTerm.t</a>)</span> <a href="../../Elpi_parser/Ast/Chr/index.html#type-t">Elpi_parser.Ast.Chr.t</a></span> <span class="arrow">&#45;&gt;</span></span>
-  <a href="#type-env_undeclared">env_undeclared</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-check_undeclared"><a href="#val-check_undeclared" class="anchor"></a><code><span><span class="keyword">val</span> check_undeclared : 
+  <span><span>(<span class="type-var">'a</span>, <a href="../Compiler_data/ScopedTerm/index.html#type-t">Compiler_data.ScopedTerm.t</a>)</span> <a href="../../Elpi_parser/Ast/Chr/index.html#type-t">Elpi_parser.Ast.Chr.t</a></span> * <a href="#type-env_undeclared">env_undeclared</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-check_undeclared"><a href="#val-check_undeclared" class="anchor"></a><code><span><span class="keyword">val</span> check_undeclared : 
   <span><span class="label">type_abbrevs</span>:<a href="#type-type_abbrevs">type_abbrevs</a> <span class="arrow">&#45;&gt;</span></span>
   <span><span class="label">unknown</span>:<a href="#type-env_undeclared">env_undeclared</a> <span class="arrow">&#45;&gt;</span></span>
   <a href="../Compiler_data/TypingEnv/index.html#type-t">Compiler_data.TypingEnv.t</a></span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-check_pred_name"><a href="#val-check_pred_name" class="anchor"></a><code><span><span class="keyword">val</span> check_pred_name : 

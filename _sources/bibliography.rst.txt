@@ -98,3 +98,49 @@ Proceedings of the First Workshop on Principles and Practice of Constraint
 Programming, Brown University, 1993, pages 221–229. Reads a higher-order
 logic programming language as a constraint logic programming one; the
 constraint-resume rule of :doc:`semantics/formal-semantics` follows it.
+
+.. _bib-picat:
+
+Neng-Fa Zhou, `Canonicalizing High-Level Constructs in Picat
+<https://www.sci.brooklyn.cuny.edu/~zhou/papers/padl17.pdf>`_, PADL 2017.
+Picat replaces a function call ``f(t1,...,tn)`` by a new variable ``V`` and
+inserts a predicate call ``p(t1,...,tn,V)`` before the enclosing goal,
+independently arriving at close to the same transformation as :doc:`spilling
+<features/spilling>`, for the same reason: recovering functional syntax over
+a logic-programming core.
+
+.. _bib-icurry:
+
+Sergio Antoy, Michael Hanus, Andy Jost and Steven Libby, `ICurry
+<https://www.michaelhanus.de/papers/Declare19_ICurry.pdf>`_, Declare 2019.
+Curry's intermediate representation, FlatCurry, normalizes nested function
+calls the same way via let-insertion; cited from :doc:`features/spilling` as
+a relative of the same transformation.
+
+.. _bib-anf-lfp:
+
+Amr Sabry and Matthias Felleisen, `Reasoning about Programs in
+Continuation-Passing Style
+<https://3e8.org/pub/scheme/doc/lisp-pointers/v5i1/p288-sabry.pdf>`_, LFP
+1992. With :ref:`Flanagan, Sabry, Duba & Felleisen, PLDI 1993 <bib-anf-pldi>`,
+introduces A-normal form, the functional-compiler ancestor of :doc:`spilling
+<features/spilling>`: both flatten nested expressions by let-binding every
+intermediate result, where Elpi's ``pi``/``sigma`` play the role ``let``/lambda
+play in ANF.
+
+.. _bib-anf-pldi:
+
+Cormac Flanagan, Amr Sabry, Bruce F. Duba and Matthias Felleisen, `The
+Essence of Compiling with Continuations
+<https://users.soe.ucsc.edu/~cormac/papers/best-pldi.pdf>`_, PLDI 1993. See
+:ref:`Sabry & Felleisen, LFP 1992 <bib-anf-lfp>`, cited alongside it from
+:doc:`features/spilling`.
+
+.. _bib-clpfd:
+
+Markus Triska, `The Finite Domain Constraint Solver of SWI-Prolog
+<https://www.metalevel.at/swiclpfd.pdf>`_, FLOPS 2012. Prolog's CLP(FD)
+flattens arithmetic expressions the same way :doc:`spilling
+<features/spilling>` does, scoped to arithmetic: ``X #= Y+Z*W`` compiles to a
+sequence of primitive constraint goals over fresh variables via
+``goal_expansion/2``.
