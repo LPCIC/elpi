@@ -217,6 +217,11 @@ let () = declare "is"
   ~description:"calc"
   ()
 
+let () = declare "is_float"
+  ~source_elpi:"is_float.elpi"
+  ~description:"calc on floats: fexp tan arcsin arccos arctan2 pow string_to_real"
+  ()
+
 let () = declare "trie"
   ~source_elpi:"trie.elpi"
   ~description:"discrimination_tree on trees"
