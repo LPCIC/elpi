@@ -1206,6 +1206,27 @@ module Calc = struct
    register_eval 1 ("ln",["float"]) (function
     | [ CData x ] when is_float x -> (map float float log x)
     | _ -> type_error "Wrong arguments to ln") ;
+   (* fexp, not exp: a calc function is a global symbol, and exp is a common
+      name for user predicates (e.g. exponentiation on naturals, as in the
+      test lambda3) that would stop typechecking when left undeclared *)
+   register_eval 1 ("fexp",["float"]) (function
+    | [ CData x ] when is_float x -> (map float float exp x)
+    | _ -> type_error "Wrong arguments to fexp") ;
+   register_eval 1 ("tan",["float"]) (function
+    | [ CData x ] when is_float x -> (map float float tan x)
+    | _ -> type_error "Wrong arguments to tan") ;
+   register_eval 1 ("arcsin",["float"]) (function
+    | [ CData x ] when is_float x -> (map float float asin x)
+    | _ -> type_error "Wrong arguments to arcsin") ;
+   register_eval 1 ("arccos",["float"]) (function
+    | [ CData x ] when is_float x -> (map float float acos x)
+    | _ -> type_error "Wrong arguments to arccos") ;
+   register_eval 2 ("arctan2",["float"]) (function
+    | [ CData y; CData x ] when ty2 float y x -> (morph2 float atan2 y x)
+    | _ -> type_error "Wrong arguments to arctan2") ;
+   register_eval 2 ("pow",["float"]) (function
+    | [ CData x; CData y ] when ty2 float x y -> (morph2 float Float.pow x y)
+    | _ -> type_error "Wrong arguments to pow") ;
    register_eval_ty "int_to_real" ["int";"float"] (function
     | [ CData x ] when is_int x -> (map int float float_of_int x)
     | _ -> type_error "Wrong arguments to int_to_real") ;
@@ -1249,7 +1270,15 @@ module Calc = struct
    register_eval_ty "real_to_string" ["float";"string"] (function
     | [ CData x ] when is_float x ->
           of_string (string_of_float (to_float x))
-    | _ -> type_error "Wrong arguments to real_to_string")
+    | _ -> type_error "Wrong arguments to real_to_string") ;
+   (* string_to_real, not string_to_float, for consistency with int_to_real
+      and real_to_string, although the type is float *)
+   register_eval_ty "string_to_real" ["string";"float"] (function
+    | [ CData x ] when is_string x ->
+        (match float_of_string_opt (to_string x) with
+         | Some f -> of_float f
+         | None -> type_error ("string_to_real: not a float: " ^ to_string x))
+    | _ -> type_error "Wrong arguments to string_to_real")
   ]
 
   let () = List.iter (register ~descriptor:Setup.default_calc_descriptor) default_calc
