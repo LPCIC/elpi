@@ -1333,8 +1333,9 @@ module Flatten : sig
 
   let merge_type_assignments = TypingEnv.merge_envs
   
-  let merge_checked_type_abbrevs m1 m2 =
-    let m = F.Map.union (fun k (sk,otherloc as x) (ty,loc) ->
+  let merge_checked_type_abbrevs (m1 : TypeAssignment.type_abbrevs) (m2 : TypeAssignment.type_abbrevs) =
+    let open TypeAssignment in
+    let m = F.Map.union (fun k ({ skema = sk; loc = otherloc} as x) { skema = ty; loc; } ->
       if TypeAssignment.compare_skema sk ty <> 0 then
         error ~loc
         ("Duplicate type abbreviation for " ^ F.show k ^
@@ -1441,7 +1442,7 @@ end = struct
         let loc = scoped_ty.ScopedTypeExpression.loc in
         let _, _, { TypingEnv.ty } = Type_checker.check_type ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds scoped_ty in
         if F.Map.mem name all_type_abbrevs then begin
-          let sk, otherloc = F.Map.find name all_type_abbrevs in
+          let TypeAssignment.{ skema = sk; loc = otherloc; } = F.Map.find name all_type_abbrevs in
           if TypeAssignment.compare_skema sk ty <> 0 then
           error ~loc
             ("Duplicate type abbreviation for " ^ F.show name ^
@@ -1450,8 +1451,9 @@ end = struct
         if F.Map.mem name ots && not (Loc.equal (F.Map.find name ots) loc) then begin
           error ~loc ("Illegal type abbreviation for " ^ F.show name ^ ". A type with the same name already exists in " ^ Loc.show (F.Map.find name ots))
         end;
-        F.Map.add name (ty,loc) all_type_abbrevs,
-        F.Map.add name (ty,loc) type_abbrevs,
+        let ta = TypeAssignment.{ skema = ty; loc; } in
+        F.Map.add name ta all_type_abbrevs,
+        F.Map.add name ta type_abbrevs,
         F.Map.add name loc all_ty_names,
         F.Map.add name loc ty_names
         )
@@ -2157,7 +2159,7 @@ let extend1_signature base_signature ({ signature } : checked_compilation_unit_s
   let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots } = base_signature in
   let { Assembled.toplevel_macros; kinds; types; type_abbrevs; ty_names } = signature in
   let kinds = Flatten.merge_kinds ok kinds in
-  F.Map.iter (fun k (_,loc) -> if F.Map.mem k ots && not (Loc.equal loc (F.Map.find k ots)) then error ~loc ("Illegal type abbreviation for " ^ F.show k ^ ". A type with the same name already exists in " ^ Loc.show (F.Map.find k ots))) type_abbrevs;
+  F.Map.iter (fun k TypeAssignment.{ loc; } -> if F.Map.mem k ots && not (Loc.equal loc (F.Map.find k ots)) then error ~loc ("Illegal type abbreviation for " ^ F.show k ^ ". A type with the same name already exists in " ^ Loc.show (F.Map.find k ots))) type_abbrevs;
   let type_abbrevs = Flatten.merge_checked_type_abbrevs ota type_abbrevs in
   let types = Flatten.merge_type_assignments ot types in
   let toplevel_macros = Flatten.merge_toplevel_macros types otlm toplevel_macros in
@@ -2593,7 +2595,7 @@ let pp_program (pp : pp_ctx:pp_ctx -> depth:int -> _) fmt (compiler_state, { Ass
     List.iter (fun ty ->
       Format.fprintf fmt "@[<h>type %s %a.@]@," name TypeAssignment.pretty_mut_once ty) tys;
   ) signature.types;
-  F.Map.iter (fun name (ty,_) ->
+  F.Map.iter (fun name TypeAssignment.{ skema = ty; } ->
     Format.fprintf fmt "@[<h>typeabbrv %a (%a).@]@," F.pp name TypeAssignment.pretty_mut_once (fst @@ TypeAssignment.fresh ty)
   ) signature.type_abbrevs;
   List.iter (fun (name,predicate,{ depth; args; hyps; loc; timestamp }) ->

@@ -159,7 +159,13 @@ module TypeAssignment = struct
   type skema = Lam of F.t * skema | Ty of F.t t_
   [@@ deriving show]
 
-  type type_abbrevs = (skema * Ast.Loc.t) F.Map.t
+  type type_abbrev = {
+    skema : skema;
+    loc : Ast.Loc.t;
+  }
+  [@@ deriving show]
+
+  type type_abbrevs = type_abbrev F.Map.t
   [@@deriving show]
 
   let compare_skema ~cmp_mode ~cmp_func sk1 sk2 =
@@ -350,8 +356,8 @@ let update_ety ety eit = { ety with eit }
 
   let rec is_prop ~type_abbrevs = function
     | Prop f -> Some f
-    | Cons a when F.Map.mem a type_abbrevs -> let ty = apply (fst @@ F.Map.find a type_abbrevs) [] in is_prop ~type_abbrevs ty
-    | App (a,x,xs) when F.Map.mem a type_abbrevs -> let ty = apply (fst @@ F.Map.find a type_abbrevs) (x::xs) in is_prop ~type_abbrevs ty
+    | Cons a when F.Map.mem a type_abbrevs -> let ty = apply (F.Map.find a type_abbrevs).skema [] in is_prop ~type_abbrevs ty
+    | App (a,x,xs) when F.Map.mem a type_abbrevs -> let ty = apply (F.Map.find a type_abbrevs).skema (x::xs) in is_prop ~type_abbrevs ty
     | Any | Cons _ | App _ | UVar _ -> None
     | Arr(_,_,_,t) -> is_prop ~type_abbrevs t
 
@@ -422,7 +428,7 @@ let update_ety ety eit = { ety with eit }
     let apply_ta f c acc l =
       match F.Map.find_opt c type_abbrevs with
       | None -> None
-      | Some (e,_) -> f acc (apply e l)
+      | Some { skema; } -> f acc (apply skema l)
     in
     let rec aux acc = function
     | Prop f -> Some (Some f, List.rev acc)
@@ -446,8 +452,8 @@ let update_ety ety eit = { ety with eit }
 
   let rec look ~type_abbrevs = function
     | UVar r when MutableOnce.is_set r -> look ~type_abbrevs @@ deref r
-    | App(c,x,xs) when F.Map.mem c type_abbrevs -> look ~type_abbrevs @@ apply (fst @@ F.Map.find c type_abbrevs) (x::xs)
-    | Cons c when F.Map.mem c type_abbrevs -> look ~type_abbrevs @@ apply (fst @@ F.Map.find c type_abbrevs) []
+    | App(c,x,xs) when F.Map.mem c type_abbrevs -> look ~type_abbrevs @@ apply (F.Map.find c type_abbrevs).skema (x::xs)
+    | Cons c when F.Map.mem c type_abbrevs -> look ~type_abbrevs @@ apply (F.Map.find c type_abbrevs).skema []
     | ty -> ty
 
   (* The list of (type, arrow-type) pairs of the arguments still missing to become a prop.

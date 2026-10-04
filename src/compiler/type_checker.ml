@@ -34,7 +34,8 @@ let check_global_exists ~loc c (type_abbrevs : type_abbrevs) arities nargs =
     if arity != nargs then
       error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
   end else if F.Map.mem c type_abbrevs then begin
-    let arity = TypeAssignment.nparams @@ fst @@ F.Map.find c type_abbrevs in
+    let sk = (F.Map.find c type_abbrevs).skema in
+    let arity = TypeAssignment.nparams sk in
     if arity != nargs then
       error ~loc (Format.asprintf "Type %a expects %d arguments but was given %d" F.pp c arity nargs)
   end else
@@ -704,10 +705,10 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
             let _ = unify ty (TypeAssignment.mk_ety TypeAssignment.(Arr(MRef (MutableOnce.make F.dummyname),Ast.Structured.NotVariadic,s,t))) in
             check_app_single ~positive ~auto_spill ctx ~loc ~orig fc ty consumed (x :: xs)
         | Cons a when F.Map.mem a type_abbrevs ->
-            let ty = TypeAssignment.apply (fst @@ F.Map.find a type_abbrevs) [] in
+            let ty = TypeAssignment.apply (F.Map.find a type_abbrevs).skema [] in
             check_app_single ~positive ~auto_spill ctx ~loc ~orig fc ty consumed args
         | App(a,x,xs) when F.Map.mem a type_abbrevs ->
-            let ty = TypeAssignment.apply (fst @@ F.Map.find a type_abbrevs) (x::xs) in
+            let ty = TypeAssignment.apply (F.Map.find a type_abbrevs).skema (x::xs) in
             check_app_single ~positive ~auto_spill ctx ~loc ~orig fc ty consumed args
         | _ -> error_not_a_function ~loc:x.loc c orig_ty (List.rev consumed) (x :: xs) (* TODO: trim loc up to x *)
 
@@ -889,16 +890,16 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
     | UVar m, _ when not matching -> assign m t2.eit
     | _, UVar m -> if TypeAssignment.arity_mismatch t1 t2 > 0 then false else assign m t1
     | Cons c, _ when F.Map.mem c type_abbrevs ->
-        let t1 = apply (fst @@ F.Map.find c type_abbrevs) [] in
+        let t1 = apply (F.Map.find c type_abbrevs).skema [] in
         unif ~matching ~positive t1 t2
     | _, Cons c when F.Map.mem c type_abbrevs ->
-        let t2 = mk_ety @@ apply (fst @@ F.Map.find c type_abbrevs) [] in
+        let t2 = mk_ety @@ apply (F.Map.find c type_abbrevs).skema [] in
         unif ~matching ~positive t1 t2
     | App(c,x,xs), _ when F.Map.mem c type_abbrevs ->
-        let t1 = apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
+        let t1 = apply (F.Map.find c type_abbrevs).skema (x::xs) in
         unif ~matching ~positive t1 t2
     | _, App(c,x,xs) when F.Map.mem c type_abbrevs ->
-        let t2 = mk_ety @@ apply (fst @@ F.Map.find c type_abbrevs) (x::xs) in
+        let t2 = mk_ety @@ apply (F.Map.find c type_abbrevs).skema (x::xs) in
         unif ~matching ~positive t1 t2
     | _,_ -> false
 
