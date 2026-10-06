@@ -156,6 +156,18 @@ builtin symb arctan : float -> float = "1".
 
 builtin symb ln : float -> float = "1".
 
+builtin symb exp : float -> float = "1".
+
+builtin symb tan : float -> float = "1".
+
+builtin symb arcsin : float -> float = "1".
+
+builtin symb arccos : float -> float = "1".
+
+builtin symb arctan2 : float -> float -> float = "1".
+
+builtin symb pow : float -> float -> float = "1".
+
 builtin symb int_to_real : int -> float = "1".
 
 builtin symb floor : float -> int = "1".
@@ -177,6 +189,8 @@ builtin symb int_to_string : int -> string = "1".
 builtin symb substring : string -> int -> int -> string = "1".
 
 builtin symb real_to_string : float -> string = "1".
+
+builtin symb string_to_real : string -> float = "1".
 
 %  -- Arithmetic tests --
 

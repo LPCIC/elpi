@@ -69,13 +69,15 @@ Evaluated inside ``is`` / :stdlib:`calc`:
 
 * **binary** ``+`` ``-`` ``*`` (``int`` or ``float``), ``/`` (``float``),
   ``div`` ``mod`` (``int``), ``^`` (``string`` concatenation);
-* **unary** ``~`` (negation), ``abs``, and, for ``float``, ``sqrt`` ``sin``
-  ``cos`` ``arctan`` ``ln``;
-* **two-argument functions** ``min`` ``max``;
+* **unary** ``~`` (negation), ``abs``, and, for ``float``, ``sqrt``
+  ``exp`` ``ln`` ``sin`` ``cos`` ``tan`` ``arcsin`` ``arccos`` ``arctan``;
+* **two-argument functions** ``min`` ``max``, and, for ``float``, ``pow``
+  (``pow X Y`` is X to the power Y) and ``arctan2`` (``arctan2 Y X`` is the
+  angle of the point (X, Y), as ``atan2`` in C);
 * **conversions** ``int_to_real`` ``truncate`` ``floor`` ``ceil``
   (``int`` ↔ ``float``), ``int_to_string`` ``string_to_int``
-  ``real_to_string`` ``substring`` ``size`` (``string``), ``chr`` ``rhc``
-  (``int`` ↔ one-character ``string``);
+  ``real_to_string`` ``string_to_real`` ``substring`` ``size``
+  (``string``), ``chr`` ``rhc`` (``int`` ↔ one-character ``string``);
 * type-suffixed variants that fix the operand type instead of inferring it:
   ``i+ i- i* i~ iabs`` for ``int``, ``r+ r- r* r~ rabs`` for ``float``.
 

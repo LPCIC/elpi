@@ -60,11 +60,11 @@ plus (s X) Y (s S) :- plus X Y S.
 mult zero X zero.
 mult (s X) Y Z :- mult X Y K, plus Y K Z.
 
-exp zero X (s zero).
-exp (s X) Y Z :- exp X Y K, mult Y K Z.
+power zero X (s zero).
+power (s X) Y Z :- power X Y K, mult Y K Z.
 
 main :-
  TEN = s (s (s (s (s (s (s (s (s (s zero))))))))),
- exp (s (s (s zero))) TEN THOUSAND,
+ power (s (s (s zero))) TEN THOUSAND,
  test L,
  iter THOUSAND (once L).

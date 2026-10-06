@@ -21,6 +21,11 @@
   - New `-parse-clause`: parses a single clause from stdin and prints its
     raw AST
 
+- Builtins:
+  - New float functions for `is` / `calc`: `exp`, `tan`, `arcsin`,
+    `arccos`, `arctan2`, `pow`, and the conversion `string_to_real`, the
+    inverse of `real_to_string` (a malformed string is a type error)
+
 
 # v3.8.0 (September 2026)
 

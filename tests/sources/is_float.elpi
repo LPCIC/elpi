@@ -1,0 +1,25 @@
+% The float functions of calc: exp, tan, arcsin, arccos, arctan2, pow,
+% string_to_real. Exact results where IEEE 754 guarantees them, identities
+% up to a tolerance otherwise.
+
+pred close i:float, i:float.
+close X Y :- D is abs (X - Y), D < 0.000000000001.
+
+main :-
+  1.0 is exp 0.0,
+  close {calc (exp 1.0)} 2.718281828459045,
+  close {calc (ln (exp 2.5))} 2.5,
+  0.0 is tan 0.0,
+  close {calc (tan 0.5)} {calc (sin 0.5 / cos 0.5)},
+  close {calc (arcsin 1.0)} {calc (2.0 * arctan 1.0)},
+  close {calc (arccos 0.0)} {calc (arcsin 1.0)},
+  close {calc (arcsin (sin 0.3))} 0.3,
+  close {calc (arccos (cos 0.3))} 0.3,
+  close {calc (arctan2 1.0 1.0)} {calc (arctan 1.0)},
+  close {calc (arctan2 1.0 (~ 1.0))} {calc (3.0 * arctan 1.0)},
+  1024.0 is pow 2.0 10.0,
+  0.5 is pow 4.0 (~ 0.5),
+  close {calc (pow 2.0 0.5)} {calc (sqrt 2.0)},
+  0.5 is string_to_real "0.5",
+  0.001 is string_to_real "1e-3",
+  "2.5" is real_to_string (string_to_real "2.5").

@@ -29,7 +29,7 @@ pred neq -> i, i.
 pred mult -> i, i, i.
 pred less -> i, i.
 pred iter -> i, (pred).
-pred exp -> i, i, i.
+pred power -> i, i, i.
 
 plus zero X X.
 plus (s X) Y (s S) :- plus X Y S.
@@ -73,12 +73,12 @@ iter (s N) X :- X, iter N X.
 mult zero X zero.
 mult (s X) Y Z :- mult X Y K, plus Y K Z.
 
-exp zero X (s zero).
-exp (s X) Y Z :- exp X Y K, mult Y K Z.
+power zero X (s zero).
+power (s X) Y Z :- power X Y K, mult Y K Z.
 
 main :-
  TEN = s (s (s (s (s (s (s (s (s (s zero))))))))),
- exp (s (s (s (s zero)))) TEN TENTHOUSAND,
+ power (s (s (s (s zero)))) TEN TENTHOUSAND,
  iter TENTHOUSAND once.
 
 % ----------------------------------------------------------
