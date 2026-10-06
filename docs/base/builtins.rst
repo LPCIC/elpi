@@ -121,6 +121,9 @@ These are declared in the builtin library, ready to use without an
    data triple A B C.
    symb triple A -> B -> C -> triple A B C.   % + triple_1..3
 
+   data quadruple A B C D.
+   symb quadruple A -> B -> C -> D -> quadruple A B C D.   % + quadruple_1..4
+
 ``bool`` uses ``tt`` / ``ff`` because :stdlib:`true` / :stdlib:`false` are goals; ``pair``'s
 constructor is ``pr`` because ``,`` is conjunction; ``cmp`` is the result of a
 three-way comparison: :stdlib:`cmp_term`, or a comparator a caller supplies, as

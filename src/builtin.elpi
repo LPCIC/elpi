@@ -279,9 +279,10 @@ func snd  pair A B -> B.
 
 snd (pr _ B) B.
 
+% Triple: the constructor is triple, since ',' is for conjunction
+builtin data triple A B C.
+builtin symb triple : A -> B -> C -> triple A B C = "1". 
 
-data triple A B C.
-symb triple A -> B -> C -> triple A B C.
 
 func triple_1 triple A B C -> A.
 triple_1 (triple A _ _) A.
@@ -294,10 +295,75 @@ triple_3 (triple _ _ C) C.
 
 
 
+% Quadruple: the constructor is quadruple, since ',' is for conjunction
+builtin data quadruple A B C D.
+builtin symb quadruple : A -> B -> C -> D -> quadruple A B C D = "1". 
+
+
+func quadruple_1 quadruple A B C D -> A.
+quadruple_1 (quadruple A _ _ _) A.
+
+func quadruple_2 quadruple A B C D -> B.
+quadruple_2 (quadruple _ B _ _) B.
+
+func quadruple_3 quadruple A B C D -> C.
+quadruple_3 (quadruple _ _ C _) C.
+
+func quadruple_4 quadruple A B C D -> D.
+quadruple_4 (quadruple _ _ _ D) D.
+
+
+
 % The option type (aka Maybe)
 builtin data option A.
 builtin symb none : option A = "1". 
 builtin symb some : A -> option A = "1". 
+
+
+func int.copy int -> int.
+int.copy X X.
+
+func float.copy float -> float.
+float.copy X X.
+
+func string.copy string -> string.
+string.copy X X.
+
+func loc.copy loc -> loc.
+loc.copy X X.
+
+func bool.copy bool -> bool.
+bool.copy X X.
+
+func cmp.copy cmp -> cmp.
+cmp.copy X X.
+
+func diagnostic.copy diagnostic -> diagnostic.
+diagnostic.copy X X.
+
+func in_stream.copy in_stream -> in_stream.
+in_stream.copy X X.
+
+func out_stream.copy out_stream -> out_stream.
+out_stream.copy X X.
+
+func list.copy (func A -> B), list A -> list B.
+list.copy F L R :- std.map L F R.
+
+func option.copy (func A -> B), option A -> option B.
+option.copy _ none none.
+option.copy F (some X) (some Y) :- F X Y.
+
+func pair.copy (func A -> B), (func C -> D), pair A C -> pair B D.
+pair.copy F G (pr X Y) (pr X1 Y1) :- F X X1, G Y Y1.
+
+func triple.copy (func A -> B), (func C -> D), (func E -> F), triple A C E -> triple B D F.
+triple.copy F G H (triple X Y Z) (triple X1 Y1 Z1) :- F X X1, G Y Y1, H Z Z1.
+
+func quadruple.copy (func A -> B), (func C -> D), (func E -> F), (func G -> H), quadruple A C E G -> quadruple B D F H.
+quadruple.copy F G H I (quadruple X Y Z W) (quadruple X1 Y1 Z1 W1) :- F X X1, G Y Y1, H Z Z1, I W W1.
+
+
 
 % Result of a comparison
 builtin data cmp.

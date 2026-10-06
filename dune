@@ -4,8 +4,7 @@
   (libraries elpi elpi.parser ;memtrace
   )
   (modules elpi_REPL)
-  (package elpi)
-)
+  (package elpi))
 
 (executable
   (name elpi_inspect_unit)

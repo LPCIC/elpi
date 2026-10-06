@@ -141,6 +141,19 @@ jobs:
           path: data.csv
           retention-days: 1
 
+# ppx_elpi ###################################################################
+#
+# Done last, so that it does not interfere with the above. ppx_elpi depends on
+# elpi, passing both opam files makes the local elpi.opam satisfy that
+# dependency.
+
+      - name: Install ppx_elpi dependencies
+        run: |
+          opam install ./elpi.opam ./ppx_elpi.opam --deps-only
+
+      - name: Build ppx_elpi
+        run: opam exec -- make build-ppx
+
   aggregate:
     name: Aggregate and plot benchmarking data
     runs-on: ubuntu-latest

@@ -2,6 +2,7 @@ help:
 	@echo 'Build targets:'
 	@echo
 	@echo '  build                  builds elpi'
+	@echo '  build-ppx              builds ppx_elpi (and its tests)'
 	@echo '  install                install elpi'
 	@echo '  clean                  remove build artifacts'
 	@echo '  release                release the software (note: git tag -s first)'
@@ -15,6 +16,9 @@ help:
 	@echo '  tests LN_NB=nb         sets max number of lines to print of failing tests'
 	@echo '                           (negave numbers means print all file)'
 	@echo '  tests STOP_ON_FST_ERROR=true stops the test suite after first error'
+	@echo
+	@echo '  tests-ppx              runs the ppx_elpi tests (alias runtest-ppx)'
+	@echo '  tests-ppx PROMOTE=true runs and promotes the ppx_elpi tests if different'
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
 	@echo
@@ -55,6 +59,12 @@ DUNE_OPTS=
 
 build:
 	dune build $(DUNE_OPTS) @all
+
+build-ppx:
+	dune build $(DUNE_OPTS) @ppx_elpi/all
+
+tests-ppx:
+	dune build $(DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-ppx
 
 install:
 	dune install $(DUNE_OPTS)
@@ -155,4 +165,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: tests help install build clean gh-pages doc doc-build doc-serve doc-publish
+.PHONY: tests tests-ppx build-ppx help install build clean gh-pages doc doc-build doc-serve doc-publish

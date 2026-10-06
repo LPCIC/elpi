@@ -1,0 +1,12 @@
+
+
+data simple.
+
+
+func simple.copy simple -> simple.
+simple.copy X X.
+
+
+
+
+

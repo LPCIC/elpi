@@ -1,0 +1,28 @@
+
+
+builtin data located A.
+builtin symb located : int -> A -> located A = "0".  % located
+
+func located.copy (func X0 -> Y0), located X0 -> located Y0.
+located.copy F0 (located A0 A1) (located B0 B1) :- (int.copy A0 B0), (F0 A1 B1).
+
+
+
+builtin data term.
+builtin symb a : int -> term = "0".  % A
+builtin symb b : string -> bool -> term = "0".  % B
+
+func term.copy term -> term.
+term.copy (a A0) (a B0) :- (int.copy A0 B0).
+term.copy (b A0 A1) (b B0 B1) :- (string.copy A0 B0), (bool.copy A1 B1).
+
+
+
+typeabbrev x (pair (located term) int). % x
+
+func x.copy x -> x.
+x.copy A B :- ((pair.copy (located.copy term.copy) int.copy) A B).
+
+
+
+

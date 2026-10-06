@@ -105,6 +105,20 @@ let bool = AlgebraicData.declare {
   ];
   }|> ContextualConversion.(!<)
 
+let char : char Conversion.t =  {
+  ty = TyName "char";
+  pp_doc = (fun fmt () -> Format.fprintf fmt "Char values: single character strings");
+  pp = (fun fmt b -> Format.fprintf fmt "%c" b);
+  embed = (fun ~depth (st: State.t) (c: char) -> BuiltInData.string.embed ~depth st (String.make 1 c));
+  readback = (fun ~depth st term  ->
+      let st,name,goals = BuiltInData.string.readback ~depth st term in
+      st,name.[0],goals
+    );
+}
+
+
+
+
 let pair_decl a b = let open AlgebraicData in Decl {
   ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
   doc = "Pair: the constructor is pr, since ',' is for conjunction";
@@ -121,6 +135,40 @@ let pair_alloc =
 let pair a b =
   let open AlgebraicData in
   declare_allocated pair_alloc (pair_decl a b) |> ContextualConversion.(!<)
+
+let triple_decl a b c = let open AlgebraicData in Decl {
+  ty = TyApp ("triple",a.Conversion.ty,[b.Conversion.ty;c.Conversion.ty]);
+  doc = "Triple: the constructor is triple, since ',' is for conjunction";
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_triple a.Conversion.pp b.Conversion.pp c.Conversion.pp) o);
+  constructors = [
+    K("triple","",A(a,A(b,A(c,N))),
+      B (fun a b c -> (a,b, c)),
+      M (fun ~ok ~ko:_ -> function (a,b,c) -> ok a b c));
+  ]
+  }
+let triple_alloc =
+  let open AlgebraicData in
+  allocate_constructors (Param (fun a -> Param (fun b -> Param (fun c -> triple_decl a b c))))
+let triple a b c =
+  let open AlgebraicData in
+  declare_allocated triple_alloc (triple_decl a b c) |> ContextualConversion.(!<)
+
+let quadruple_decl a b c d = let open AlgebraicData in Decl {
+  ty = TyApp ("quadruple",a.Conversion.ty,[b.Conversion.ty;c.Conversion.ty;d.Conversion.ty]);
+  doc = "Quadruple: the constructor is quadruple, since ',' is for conjunction";
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_quadruple a.Conversion.pp b.Conversion.pp c.Conversion.pp d.Conversion.pp) o);
+  constructors = [
+    K("quadruple","",A(a,A(b,A(c,A(d,N)))),
+      B (fun a b c d -> (a,b,c,d)),
+      M (fun ~ok ~ko:_ -> function (a,b,c,d) -> ok a b c d));
+  ]
+  }
+let quadruple_alloc =
+  let open AlgebraicData in
+  allocate_constructors (Param (fun a -> Param (fun b -> Param (fun c -> Param (fun d -> quadruple_decl a b c d)))))
+let quadruple a b c d =
+  let open AlgebraicData in
+  declare_allocated quadruple_alloc (quadruple_decl a b c d) |> ContextualConversion.(!<)
 
 let option_decl a = let open AlgebraicData in Decl {
   ty = TyApp("option",a.Conversion.ty,[]);
@@ -141,6 +189,110 @@ let option_alloc =
 let option a =
   let open AlgebraicData in
   declare_allocated option_alloc (option_decl a) |> ContextualConversion.(!<)
+
+module PPX = struct
+
+   let bool : (bool,'c,'csts) ContextualConversion.t = {
+      ty = TyName "bool";
+      pp_doc = (fun fmt () -> Format.fprintf fmt "Char values: single character strings");
+      pp = (fun fmt b -> Format.fprintf fmt "%b" b);
+      embed = (fun ~depth _ _ (st: State.t) c -> bool.embed ~depth st c);
+      readback = (fun ~depth _ _ st term  -> bool.readback ~depth st term);
+    }
+   let char : (char,'c,'csts) ContextualConversion.t = {
+    ty = TyName "char";
+    pp_doc = (fun fmt () -> Format.fprintf fmt "Char values: single character strings");
+    pp = (fun fmt b -> Format.fprintf fmt "%c" b);
+    embed = (fun ~depth _ _ (st: State.t) (c: char) -> BuiltInData.string.embed ~depth st (String.make 1 c));
+    readback = (fun ~depth _ _ st term  ->
+        let st,name,goals = BuiltInData.string.readback ~depth st term in
+        st,name.[0],goals
+      );
+  }
+  
+  let pair_decl a b = let open AlgebraicData in Decl {
+    ty = TyApp ("pair",a.ContextualConversion.ty,[b.ContextualConversion.ty]);
+    doc = "Pair: the constructor is pr, since ',' is for conjunction";
+    pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.ContextualConversion.pp b.ContextualConversion.pp) o);
+    constructors = [
+      K("pr","",CA(a,CA(b,N)),
+        B (fun a b -> (a,b)),
+        M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
+    ]
+  }
+  let pair a b =
+    let open AlgebraicData in
+    declare_allocated pair_alloc (pair_decl a b)
+
+  let triple_decl a b c = let open AlgebraicData in Decl {
+    ty = TyApp ("triple",a.ContextualConversion.ty,[b.ContextualConversion.ty;c.ContextualConversion.ty]);
+    doc = "Triple: the constructor is triple, since ',' is for conjunction";
+    pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_triple a.ContextualConversion.pp b.ContextualConversion.pp c.ContextualConversion.pp) o);
+    constructors = [
+      K("triple","",CA(a,CA(b,CA(c,N))),
+        B (fun a b c -> (a,b, c)),
+        M (fun ~ok ~ko:_ -> function (a,b,c) -> ok a b c));
+    ]
+  }
+  let triple a b c =
+    let open AlgebraicData in
+    declare_allocated triple_alloc (triple_decl a b c)
+
+  let quadruple_decl a b c d = let open AlgebraicData in Decl {
+    ty = TyApp ("quadruple",a.ContextualConversion.ty,[b.ContextualConversion.ty;c.ContextualConversion.ty;d.ContextualConversion.ty]);
+    doc = "Quadruple: the constructor is quadruple, since ',' is for conjunction";
+    pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_quadruple a.ContextualConversion.pp b.ContextualConversion.pp c.ContextualConversion.pp d.ContextualConversion.pp) o);
+    constructors = [
+      K("quadruple","",CA(a,CA(b,CA(c,CA(d,N)))),
+        B (fun a b c d -> (a,b,c,d)),
+        M (fun ~ok ~ko:_ -> function (a,b,c,d) -> ok a b c d));
+    ]
+  }
+  let quadruple a b c d =
+    let open AlgebraicData in
+    declare_allocated quadruple_alloc (quadruple_decl a b c d)
+
+  let option_decl a = let open AlgebraicData in Decl {
+    ty = TyApp("option",a.ContextualConversion.ty,[]);
+    doc = "The option type (aka Maybe)";
+    pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.ContextualConversion.pp) o);
+    constructors = [
+      K("none","",N,
+        B None,
+        M (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
+      K("some","",CA(a,N),
+        B (fun x -> Some x),
+        M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
+    ]
+  }
+  let option a =
+    let open AlgebraicData in
+    declare_allocated option_alloc (option_decl a)
+
+  let hack embed = {
+    ContextualConversion.embed;
+    readback = (fun ~depth _ _ st x -> assert false);
+    ty = Conversion.TyName "hack";
+    pp = (fun fmt x -> assert false);
+    pp_doc = (fun fmt x -> assert false);
+  }
+  let embed_option a = (option (hack a)).ContextualConversion.embed
+  let embed_pair a b = (pair (hack a) (hack b)).ContextualConversion.embed
+  let embed_triple a b c = (triple (hack a) (hack b) (hack c)).ContextualConversion.embed
+  let embed_quadruple a b c d = (quadruple (hack a) (hack b) (hack c) (hack d)).ContextualConversion.embed
+
+  let hack readback = {
+    ContextualConversion.readback;
+    embed = (fun ~depth _ _ st x -> assert false);
+    ty = ContextualConversion.TyName "hack";
+    pp = (fun fmt x -> assert false);
+    pp_doc = (fun fmt x -> assert false);
+  }
+  let readback_option a = (option (hack a)).ContextualConversion.readback
+  let readback_pair a b = (pair (hack a) (hack b)).ContextualConversion.readback
+  let readback_triple a b c = (triple (hack a) (hack b) (hack c)).ContextualConversion.readback
+  let readback_quadruple a b c d = (quadruple (hack a) (hack b) (hack c) (hack d)).ContextualConversion.readback
+end
 
 type diagnostic = OK | ERROR of string ioarg
 let mkOK = OK
@@ -207,6 +359,8 @@ let unspec d = API.ContextualConversion.(!<(unspecC (!> d)))
 
 let pair_decl = (pair (BuiltInData.poly "A") (BuiltInData.poly "B"))
 let option_decl = option (BuiltInData.poly "A")
+let triple_decl = triple (BuiltInData.poly "A") (BuiltInData.poly "B") (BuiltInData.poly "C")
+let quadruple_decl = quadruple (BuiltInData.poly "A") (BuiltInData.poly "B") (BuiltInData.poly "C") (BuiltInData.poly "D")
 
 (** Core built-in ********************************************************* *)
 
@@ -350,10 +504,9 @@ builtin func pattern_match A -> A.|};
   LPCode "func snd  pair A B -> B.";
   LPCode "snd (pr _ B) B.";
 
-  LPCode {|
-data triple A B C.
-symb triple A -> B -> C -> triple A B C.
+  MLData triple_decl;
 
+  LPCode {|
 func triple_1 triple A B C -> A.
 triple_1 (triple A _ _) A.
 
@@ -365,7 +518,72 @@ triple_3 (triple _ _ C) C.
 
 |};
 
+  MLData quadruple_decl;
+
+  LPCode {|
+func quadruple_1 quadruple A B C D -> A.
+quadruple_1 (quadruple A _ _ _) A.
+
+func quadruple_2 quadruple A B C D -> B.
+quadruple_2 (quadruple _ B _ _) B.
+
+func quadruple_3 quadruple A B C D -> C.
+quadruple_3 (quadruple _ _ C _) C.
+
+func quadruple_4 quadruple A B C D -> D.
+quadruple_4 (quadruple _ _ _ D) D.
+
+|};
+
   MLData option_decl;
+
+  (* Deep copy of the data types, used by the code generated by ppx_elpi for
+     [deep_copy] *)
+  LPCode {|
+func int.copy int -> int.
+int.copy X X.
+
+func float.copy float -> float.
+float.copy X X.
+
+func string.copy string -> string.
+string.copy X X.
+
+func loc.copy loc -> loc.
+loc.copy X X.
+
+func bool.copy bool -> bool.
+bool.copy X X.
+
+func cmp.copy cmp -> cmp.
+cmp.copy X X.
+
+func diagnostic.copy diagnostic -> diagnostic.
+diagnostic.copy X X.
+
+func in_stream.copy in_stream -> in_stream.
+in_stream.copy X X.
+
+func out_stream.copy out_stream -> out_stream.
+out_stream.copy X X.
+
+func list.copy (func A -> B), list A -> list B.
+list.copy F L R :- std.map L F R.
+
+func option.copy (func A -> B), option A -> option B.
+option.copy _ none none.
+option.copy F (some X) (some Y) :- F X Y.
+
+func pair.copy (func A -> B), (func C -> D), pair A C -> pair B D.
+pair.copy F G (pr X Y) (pr X1 Y1) :- F X X1, G Y Y1.
+
+func triple.copy (func A -> B), (func C -> D), (func E -> F), triple A C E -> triple B D F.
+triple.copy F G H (triple X Y Z) (triple X1 Y1 Z1) :- F X X1, G Y Y1, H Z Z1.
+
+func quadruple.copy (func A -> B), (func C -> D), (func E -> F), (func G -> H), quadruple A C E G -> quadruple B D F H.
+quadruple.copy F G H I (quadruple X Y Z W) (quadruple X1 Y1 Z1 W1) :- F X X1, G Y Y1, H Z Z1, I W W1.
+
+|};
 
   MLData cmp;
 

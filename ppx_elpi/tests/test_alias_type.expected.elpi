@@ -1,0 +1,10 @@
+
+
+typeabbrev simple int. % simple
+
+func simple.copy simple -> simple.
+simple.copy A B :- (int.copy A B).
+
+
+
+

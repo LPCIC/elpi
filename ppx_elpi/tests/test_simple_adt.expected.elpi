@@ -1,0 +1,15 @@
+
+
+builtin data simple.
+builtin symb a : simple = "0".  % A
+builtin symb b : int -> simple = "0".  % B
+
+func simple.copy simple -> simple.
+simple.copy a a.
+simple.copy (b A0) (b B0) :- (int.copy A0 B0).
+
+
+
+
+
+
