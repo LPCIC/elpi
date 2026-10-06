@@ -1268,8 +1268,6 @@ module Calc = struct
     | [ CData x ] when is_float x ->
           of_string (string_of_float (to_float x))
     | _ -> type_error "Wrong arguments to real_to_string") ;
-   (* string_to_real, not string_to_float, for consistency with int_to_real
-      and real_to_string, although the type is float *)
    register_eval_ty "string_to_real" ["string";"float"] (function
     | [ CData x ] when is_string x ->
         (match float_of_string_opt (to_string x) with
