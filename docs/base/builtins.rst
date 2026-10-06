@@ -70,10 +70,7 @@ Evaluated inside ``is`` / :stdlib:`calc`:
 * **binary** ``+`` ``-`` ``*`` (``int`` or ``float``), ``/`` (``float``),
   ``div`` ``mod`` (``int``), ``^`` (``string`` concatenation);
 * **unary** ``~`` (negation), ``abs``, and, for ``float``, ``sqrt``
-  ``fexp`` ``ln`` ``sin`` ``cos`` ``tan`` ``arcsin`` ``arccos`` ``arctan``.
-  The exponential is ``fexp``, not ``exp``: these functions are global
-  symbols, and ``exp`` is a common name for user predicates (exponentiation
-  on naturals, say), which would stop typechecking when not declared;
+  ``exp`` ``ln`` ``sin`` ``cos`` ``tan`` ``arcsin`` ``arccos`` ``arctan``;
 * **two-argument functions** ``min`` ``max``, and, for ``float``, ``pow``
   (``pow X Y`` is X to the power Y) and ``arctan2`` (``arctan2 Y X`` is the
   angle of the point (X, Y), as ``atan2`` in C);

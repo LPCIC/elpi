@@ -22,12 +22,9 @@
     raw AST
 
 - Builtins:
-  - New float functions for `is` / `calc`: `fexp` (the exponential),
-    `tan`, `arcsin`, `arccos`, `arctan2`, `pow`, and the conversion
-    `string_to_real`, the inverse of `real_to_string` (a malformed string is
-    a type error). The exponential is `fexp` rather than `exp` because a
-    `calc` function is a global symbol: `exp` is a common name for user
-    predicates, and an undeclared one would no longer typecheck
+  - New float functions for `is` / `calc`: `exp`, `tan`, `arcsin`,
+    `arccos`, `arctan2`, `pow`, and the conversion `string_to_real`, the
+    inverse of `real_to_string` (a malformed string is a type error)
 
 
 # v3.8.0 (September 2026)

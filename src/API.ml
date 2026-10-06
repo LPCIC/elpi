@@ -1206,12 +1206,9 @@ module Calc = struct
    register_eval 1 ("ln",["float"]) (function
     | [ CData x ] when is_float x -> (map float float log x)
     | _ -> type_error "Wrong arguments to ln") ;
-   (* fexp, not exp: a calc function is a global symbol, and exp is a common
-      name for user predicates (e.g. exponentiation on naturals, as in the
-      test lambda3) that would stop typechecking when left undeclared *)
-   register_eval 1 ("fexp",["float"]) (function
+   register_eval 1 ("exp",["float"]) (function
     | [ CData x ] when is_float x -> (map float float exp x)
-    | _ -> type_error "Wrong arguments to fexp") ;
+    | _ -> type_error "Wrong arguments to exp") ;
    register_eval 1 ("tan",["float"]) (function
     | [ CData x ] when is_float x -> (map float float tan x)
     | _ -> type_error "Wrong arguments to tan") ;

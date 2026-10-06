@@ -156,7 +156,7 @@ builtin symb arctan : float -> float = "1".
 
 builtin symb ln : float -> float = "1".
 
-builtin symb fexp : float -> float = "1".
+builtin symb exp : float -> float = "1".
 
 builtin symb tan : float -> float = "1".
 
