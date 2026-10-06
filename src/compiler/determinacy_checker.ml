@@ -135,7 +135,7 @@ let dtype_to_string d =
 
 let pretty_dtype fmt d = Format.fprintf fmt "%s" (dtype_to_string d)
 
-type t = (TypeAssignment.skema * Loc.t) F.Map.t [@@deriving show, ord]
+type t = TypeAssignment.type_abbrevs
 
 let arr m ~v a b = Arrow (m, v, a, b)
 let is_exp = function Exp _ -> true | _ -> false
@@ -147,8 +147,8 @@ module Compilation = struct
     let rec type2func_app ~loc c args =
       match F.Map.find_opt c env with
       | None -> Exp (List.map (type_ass_2func ~loc) args)
-      | Some (f, _) ->
-          let ta_app = TypeAssignment.apply f args in
+      | Some (ta: TypeAssignment.type_abbrev)  ->
+          let ta_app = TypeAssignment.apply ta.skema args in
           type_ass_2func ~loc ta_app
     and type_ass_2func ~loc = function
       | TypeAssignment.Prop Function -> Det
@@ -725,10 +725,10 @@ let check_clause, check_chr_guard_and_newgoal =
     in
     (!var, check ~ctx d t)
 
-  and check_lam ~type_abbrevs ~types ~ctx ~var t : dtype =
+  and check_lam ~(type_abbrevs: TypeAssignment.type_abbrevs) ~types ~ctx ~var t : dtype =
     Format.eprintf "check_lam: t = %a@." ScopedTerm.pretty t;
     let get_ta n args =
-      let ta_sk, _ = F.Map.find n type_abbrevs in
+      let ta_sk = (F.Map.find n type_abbrevs).skema in
       let ty = TypeAssignment.apply ta_sk args in
       TypeAssignment.create ty
     in

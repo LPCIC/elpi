@@ -9,7 +9,7 @@ open ScopedTerm
 type spill = { vars_names : binder list; expr : t }
 type spills = spill list
 
-let eat ~type_abbrevs args ty =
+let eat ~(type_abbrevs: TypeAssignment.type_abbrevs) args ty =
   let ty = TypeAssignment.deref ty in
   let rec aux args ty =
     match args with
