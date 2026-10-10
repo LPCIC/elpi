@@ -89,12 +89,17 @@ Deriving conversions: ppx_elpi
 ================================
 
 Writing by hand the conversion of an OCaml data type, and the matching
-declaration on the Elpi side, is repetitive. The ``ppx_elpi`` package
-(``(preprocess (pps ppx_deriving.show ppx_elpi))`` in a ``dune`` file) provides
-a deriver,
-``[@@deriving elpi]``, that synthesizes both, plus the glue needed to handle
-data types with binders. The generated conversion has type
-``Elpi.API.ContextualConversion.t``.
+declaration on the Elpi side, is repetitive. Attaching the deriver
+``[@@deriving elpi]`` of the ``ppx_elpi`` package to a type declaration
+synthesizes the conversion of the type, of type
+``Elpi.API.ContextualConversion.t`` and with all the glue needed to handle
+data types with binders, the matching Elpi declaration and a deep copy
+function for the type; it is enabled by preprocessing a module with the ppx in
+the ``dune`` file, as in the following one, where the ppx is enabled on the
+module ``my_code.ml`` only:
+
+.. literalinclude:: code/ppx-example.dune
+   :language: scheme
 
 Three kinds of OCaml types are supported:
 
