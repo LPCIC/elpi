@@ -339,7 +339,8 @@ func cmp.copy cmp -> cmp.
 cmp.copy X X.
 
 func diagnostic.copy diagnostic -> diagnostic.
-diagnostic.copy X X.
+diagnostic.copy ok ok.
+diagnostic.copy (error S) (error T) :- string.copy S T.
 
 func in_stream.copy in_stream -> in_stream.
 in_stream.copy X X.
