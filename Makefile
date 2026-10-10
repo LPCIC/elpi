@@ -103,7 +103,7 @@ clean:
 	rm -rf docs/build
 
 release:
-	dune-release -p elpi
+	dune-release -p elpi,ppx_elpi
 
 # testing
 tests:
