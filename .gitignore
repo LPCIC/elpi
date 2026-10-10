@@ -25,3 +25,8 @@ _log
 
 docs/build
 docs/source
+ppx_elpi/tests/pp.exe
+
+# promoted by dune, for inspection only
+ppx_elpi/tests/*.actual.ml
+ppx_elpi/tests/*.actual.elpi

@@ -1,0 +1,25 @@
+
+
+builtin data simple.
+builtin symb a : simple = "0".  % A
+builtin symb b : int -> mut -> simple = "0".  % B
+
+func simple.copy simple -> simple.
+simple.copy a a.
+simple.copy (b A0 A1) (b B0 B1) :- (int.copy A0 B0), (mut.copy A1 B1).
+
+
+
+builtin data mut.
+builtin symb c : mut = "0".  % C
+builtin symb d : simple -> mut = "0".  % D
+
+func mut.copy mut -> mut.
+mut.copy c c.
+mut.copy (d A0) (d B0) :- (simple.copy A0 B0).
+
+
+
+
+
+

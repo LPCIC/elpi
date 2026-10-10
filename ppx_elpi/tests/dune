@@ -1,0 +1,33 @@
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
+
+(library
+ (name ppx_tests_lib)
+ (modules ppx_tests_lib)
+ (libraries elpi))
+
+(executable
+ (name pp)
+ (modules pp)
+ (promote)
+ (libraries ppx_elpi ppx_deriving.show ppxlib))
+
+(include dune.inc)
+
+(executable
+  (name gen_dune)
+  (libraries re)
+  (modules gen_dune)
+)
+
+(rule
+  (targets dune.inc.gen)
+  (deps (:gen gen_dune.exe) (source_tree .))
+  (action (with-stdout-to %{targets} (run %{gen})))
+)
+
+(rule
+  (alias runtest-ppx)
+  (action (diff dune.inc dune.inc.gen))
+)

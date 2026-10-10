@@ -1,0 +1,11 @@
+; The library my_lib is made of the modules my_code and other
+(library
+ (name my_lib)
+ ; the Elpi API, used by the code that the ppx generates
+ (libraries elpi)
+ (preprocess
+  (per_module
+   ; the ppx is enabled on my_code.ml only: ppx_deriving.show provides the
+   ; pretty printer [@@deriving show] that ppx_elpi needs, ppx_elpi provides
+   ; [@@deriving elpi]
+   ((pps ppx_deriving.show ppx_elpi) my_code))))

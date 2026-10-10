@@ -1,0 +1,36 @@
+
+
+% The colours
+builtin data color.
+builtin symb red   : color = "0".  % Red
+builtin symb green : color = "0".  % Green
+builtin symb blue  : int -> color = "0".  % Blue
+
+func color.copy color -> color.
+color.copy red red.
+color.copy green green.
+color.copy (blue A0) (blue B0) :- (int.copy A0 B0).
+
+
+
+builtin data shape.
+builtin symb round  : int -> shape = "0".  % A circle
+builtin symb square : int -> shape = "0".  % Square
+
+func shape.copy shape -> shape.
+shape.copy (round A0) (round B0) :- (int.copy A0 B0).
+shape.copy (square A0) (square B0) :- (int.copy A0 B0).
+
+
+
+builtin data nest.
+builtin symb n : option (list shape) -> pair int (list color) -> nest = "0".  % N
+
+func nest.copy nest -> nest.
+nest.copy (n A0 A1) (n B0 B1) :- ((option.copy (list.copy shape.copy)) A0 B0), ((pair.copy int.copy (list.copy color.copy)) A1 B1).
+
+
+
+
+
+

@@ -1,0 +1,10 @@
+
+
+typeabbrev (simple A) (pair A int). % simple
+
+func simple.copy (func X0 -> Y0), simple X0 -> simple Y0.
+simple.copy F0 A B :- ((pair.copy F0 int.copy) A B).
+
+
+
+

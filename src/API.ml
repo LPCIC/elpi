@@ -19,6 +19,10 @@ let set_runtime b =
   let module R = (val !r) in
   Util.set_spaghetti_printer Util.pp_const R.Pp.pp_constant
 
+(* The printer of constants is installed with the runtime, hence it has to be
+   done at least once, not only when the host calls Setup.trace *)
+let () = set_runtime false
+
 let set_trace argv =
   let args = Trace_ppx_runtime.Runtime.parse_argv argv in
   set_runtime !Trace_ppx_runtime.Runtime.debug;
@@ -139,6 +143,13 @@ module Data = struct
     hsrc : term
   }
   type hyps = hyp list
+  type constant = int
+  module Constants = struct
+
+    module Map = Util.Constants.Map
+
+  end
+
 end
 
 module Compile = struct
@@ -274,7 +285,6 @@ end
 
 module Conversion = struct
 type ty_ast = ED.Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
-
 type extra_goal = ED.Conversion.extra_goal = ..
 type extra_goal +=
   | Unify = ED.Conversion.Unify
@@ -373,6 +383,15 @@ module RawOpaqueData = struct
    } in
    conversion_of_cdata ~name ~doc ~constants ~compare ~pp cdata
 
+   module PPX = struct
+     let declare d =
+       let (cd, _) = declare d in
+       cd, d.doc
+   end
+
+   let conversion_of_cdata ~name ?doc ?constants ~compare ~pp cd =
+     snd @@ conversion_of_cdata ~name ?doc ?constants ~compare ~pp cd
+
    let morph1 { cin; cout } f x = cin (f (cout x))
    let morph2 { cin; cout } f x y = cin (f (cout x) (cout y))
    let map { cout } { cin } f x = cin (f (cout x))
@@ -433,12 +452,13 @@ module OpaqueData = struct
 
 end
 
+
 module BuiltInData = struct
 
-  let int    = snd @@ RawOpaqueData.conversion_of_cdata ~name:"int"    ~compare:(fun x y -> x - y) ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.int.Util.CData.cin x)) ED.C.int
-  let float  = snd @@ RawOpaqueData.conversion_of_cdata ~name:"float"  ~compare:Float.compare      ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.float.Util.CData.cin x)) ED.C.float
-  let string = snd @@ RawOpaqueData.conversion_of_cdata ~name:"string" ~compare:String.compare     ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.string.Util.CData.cin x)) ED.C.string
-  let loc    = snd @@ RawOpaqueData.conversion_of_cdata ~name:"loc"    ~compare:Util.Loc.compare   ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.loc.Util.CData.cin x)) ED.C.loc
+  let int    = RawOpaqueData.conversion_of_cdata ~name:"int"    ~compare:(fun x y -> x - y) ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.int.Util.CData.cin x)) ED.C.int
+  let float  = RawOpaqueData.conversion_of_cdata ~name:"float"  ~compare:Float.compare      ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.float.Util.CData.cin x)) ED.C.float
+  let string = RawOpaqueData.conversion_of_cdata ~name:"string" ~compare:String.compare     ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.string.Util.CData.cin x)) ED.C.string
+  let loc    = RawOpaqueData.conversion_of_cdata ~name:"loc"    ~compare:Util.Loc.compare   ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.loc.Util.CData.cin x)) ED.C.loc
   let poly ty =
     let embed ~depth:_ state x = state, x, [] in
     let readback ~depth state t = state, t, [] in
@@ -526,6 +546,37 @@ module BuiltInData = struct
     ty = TyApp ("list",d.ContextualConversion.ty,[]);
     pp;
     pp_doc = (fun fmt () -> ()) }    
+
+  (* Conversions that can be used in any context, as the contextual ones *)
+  let intC : 'c 'csts. (int,'c,'csts) ContextualConversion.t = {
+    ContextualConversion.ty = int.Conversion.ty; pp = int.Conversion.pp; pp_doc = int.Conversion.pp_doc;
+    embed = (fun ~depth _ _ s x -> int.Conversion.embed ~depth s x);
+    readback = (fun ~depth _ _ s x -> int.Conversion.readback ~depth s x);
+  }
+  let floatC : 'c 'csts. (float,'c,'csts) ContextualConversion.t = {
+    ContextualConversion.ty = float.Conversion.ty; pp = float.Conversion.pp; pp_doc = float.Conversion.pp_doc;
+    embed = (fun ~depth _ _ s x -> float.Conversion.embed ~depth s x);
+    readback = (fun ~depth _ _ s x -> float.Conversion.readback ~depth s x);
+  }
+  let stringC : 'c 'csts. (string,'c,'csts) ContextualConversion.t = {
+    ContextualConversion.ty = string.Conversion.ty; pp = string.Conversion.pp; pp_doc = string.Conversion.pp_doc;
+    embed = (fun ~depth _ _ s x -> string.Conversion.embed ~depth s x);
+    readback = (fun ~depth _ _ s x -> string.Conversion.readback ~depth s x);
+  }
+  let locC : 'c 'csts. (Util.Loc.t,'c,'csts) ContextualConversion.t = {
+    ContextualConversion.ty = loc.Conversion.ty; pp = loc.Conversion.pp; pp_doc = loc.Conversion.pp_doc;
+    embed = (fun ~depth _ _ s x -> loc.Conversion.embed ~depth s x);
+    readback = (fun ~depth _ _ s x -> loc.Conversion.readback ~depth s x);
+  }
+
+  let polyC : 'c 'csts. string -> (ED.term,'c,'csts) ContextualConversion.t =
+    fun ty -> ContextualConversion.(!>) (poly ty)
+  let anyC : 'c 'csts. (ED.term,'c,'csts) ContextualConversion.t =
+    let embed ~depth:_ _ _ state x = state, x, [] in
+    let readback ~depth _ _ state t = state, t, [] in
+    { ContextualConversion.embed; readback; ty = Conversion.TyName "any";
+      pp = (fun fmt _ -> Format.fprintf fmt "<any>");
+      pp_doc = (fun fmt () -> ()) }
 
 end
 
@@ -672,6 +723,8 @@ module RawData = struct
 
   end
 
+  (* Data.hyp is now the same type as hyp, hence these do nothing (they are
+     kept for backward compatibility) *)
   let of_hyp x = x
   let of_hyps x = x
 
@@ -1517,4 +1570,90 @@ module RawPp = struct
        Pp.ppterm depth [] ~argsdepth:0 ED.empty_env fmt t
     let show_term = ED.show_term
   end
+end
+
+module PPX = struct
+  module Doc = struct
+    let comment = ED.BuiltInPredicate.pp_comment
+    let kind fmt ty ~doc =
+      if doc <> "" then begin
+        ED.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
+        Format.fprintf fmt "@\n"
+      end;
+      ED.BuiltInPredicate.ADT.document_kind fmt ty
+    (* builtin func name Key -> Field1, ..., FieldN, the declaration of an entry of a
+       context, a predicate about a bound variable of type Key *)
+    let context_entry fmt ~name ~doc ~key ~args =
+      let show = ED.Conversion.show_ty_ast ~prec:ED.Conversion.Arrow in
+      let outs =
+        if args = [] then ""
+        else " -> " ^ String.concat ", " (List.map show args) in
+      Format.fprintf fmt "%% context items for %s%s@\n"
+        (show key) (if doc = "" then "" else " (" ^ doc ^ ")");
+      Format.fprintf fmt "@[<hov2>builtin func %s %s%s.@]@\n@\n" name (show key) outs
+
+    let constructor fmt ~max_name_len ~variant ~name ~doc ~ty ~args =
+      ED.BuiltInPredicate.ADT.document_constructor
+        fmt max_name_len name variant doc (List.map (fun x -> (false,ED.Conversion.show_ty_ast ~prec:Arrow x,"")) (args @ [ty]))
+    type prec_level = ED.Conversion.prec_level = Arrow | AppArg
+    let show_ty_ast = ED.Conversion.show_ty_ast
+          
+  end
+  
+  (* The contexts of the data derived by the ppx are objects *)
+  class ctx (h : Data.hyps) =
+    object
+      method raw = h
+    end
+
+  type 'a ctx_entry = { entry : 'a; depth : int }
+  [@@deriving show]
+
+  type 'a ctx_field = 'a ctx_entry Data.Constants.Map.t
+
+  (* The declarations derived by the ppx. A mutable list that is extended from
+     the head, to_list reverses it *)
+  type declaration = BuiltIn.declaration list ref
+  let empty_declaration () = ref []
+  let add_declarations r l = List.iter (fun x -> r := x :: !r) l
+  let to_list r = List.rev !r
+
+  type ('a,'k,'c,'csts) context = {
+    is_entry_for_bound_var : Data.hyp -> Data.constant option;
+    to_key : depth:int -> 'a -> 'k;
+    push : depth:int -> Data.state -> 'k -> 'a ctx_entry -> Data.state;
+    pop : depth:int -> Data.state -> 'k -> Data.state;
+    conv : (Data.constant * 'a, 'c, 'csts) ContextualConversion.t;
+    init : Data.state -> Data.state;
+    get : Data.state -> 'a ctx_field
+  }
+
+  let readback_context { conv; to_key; push; is_entry_for_bound_var; init} ctx ~depth hyps constraints state =
+    let module CMap = RawData.Constants.Map in
+    let filtered_hyps =
+      List.fold_left (fun m hyp ->
+          match is_entry_for_bound_var hyp with
+          | None -> m
+          | Some idx ->
+              if CMap.mem idx m then
+                  Utils.type_error "more than one context entry for the same bound variable";
+              CMap.add idx hyp m) CMap.empty
+        hyps in
+    let rec aux state gls i =
+      if i = depth then state, List.concat (List.rev gls)
+      else
+        if not (CMap.mem i filtered_hyps) then aux state gls (i + 1)
+        else
+          let hyp = CMap.find i filtered_hyps in
+          let hyp_depth = hyp.Data.hdepth in
+          let state, (bound_var, t), gls_t =
+            conv.ContextualConversion.readback
+                ~depth:hyp_depth ctx constraints state hyp.Data.hsrc in
+          assert (bound_var = i);
+          let s = to_key ~depth:hyp_depth t in
+          let state =
+            push ~depth:i state s { entry = t; depth = hyp_depth } in
+          aux state (gls_t :: gls) (i + 1) in
+    let state = init state in
+    aux state [] 0
 end
