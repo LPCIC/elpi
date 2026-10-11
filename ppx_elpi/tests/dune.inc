@@ -720,6 +720,46 @@
 
 
 ; The output of the ppx and of the test executable is generated in
+; test_tuples_options.generated.* and compared with test_tuples_options.expected.*, but it is also promoted
+; to test_tuples_options.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_tuples_options.generated.ml)
+ (deps (:pp pp.exe) (:input test_tuples_options.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_tuples_options.generated.elpi)
+ (action (run ./test_tuples_options.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_tuples_options.actual.ml)
+ (action (copy test_tuples_options.generated.ml test_tuples_options.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_tuples_options.actual.elpi)
+ (action (copy test_tuples_options.generated.elpi test_tuples_options.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_tuples_options.actual.ml test_tuples_options.actual.elpi)
+ (action (diff test_tuples_options.expected.ml test_tuples_options.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_tuples_options.expected.elpi test_tuples_options.generated.elpi)))
+
+(executable
+  (name test_tuples_options)
+  (modules test_tuples_options)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
 ; test_two_binders.generated.* and compared with test_two_binders.expected.*, but it is also promoted
 ; to test_two_binders.actual.* (ignored by git) in order to be inspectable even when
 ; the test fails.
