@@ -240,6 +240,86 @@
 
 
 ; The output of the ppx and of the test executable is generated in
+; test_mixed_conversions.generated.* and compared with test_mixed_conversions.expected.*, but it is also promoted
+; to test_mixed_conversions.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_mixed_conversions.generated.ml)
+ (deps (:pp pp.exe) (:input test_mixed_conversions.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_mixed_conversions.generated.elpi)
+ (action (run ./test_mixed_conversions.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_mixed_conversions.actual.ml)
+ (action (copy test_mixed_conversions.generated.ml test_mixed_conversions.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_mixed_conversions.actual.elpi)
+ (action (copy test_mixed_conversions.generated.elpi test_mixed_conversions.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_mixed_conversions.actual.ml test_mixed_conversions.actual.elpi)
+ (action (diff test_mixed_conversions.expected.ml test_mixed_conversions.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_mixed_conversions.expected.elpi test_mixed_conversions.generated.elpi)))
+
+(executable
+  (name test_mixed_conversions)
+  (modules test_mixed_conversions)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
+; test_mixed_conversions_pred.generated.* and compared with test_mixed_conversions_pred.expected.*, but it is also promoted
+; to test_mixed_conversions_pred.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_mixed_conversions_pred.generated.ml)
+ (deps (:pp pp.exe) (:input test_mixed_conversions_pred.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_mixed_conversions_pred.generated.elpi)
+ (action (run ./test_mixed_conversions_pred.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_mixed_conversions_pred.actual.ml)
+ (action (copy test_mixed_conversions_pred.generated.ml test_mixed_conversions_pred.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_mixed_conversions_pred.actual.elpi)
+ (action (copy test_mixed_conversions_pred.generated.elpi test_mixed_conversions_pred.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_mixed_conversions_pred.actual.ml test_mixed_conversions_pred.actual.elpi)
+ (action (diff test_mixed_conversions_pred.expected.ml test_mixed_conversions_pred.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_mixed_conversions_pred.expected.elpi test_mixed_conversions_pred.generated.elpi)))
+
+(executable
+  (name test_mixed_conversions_pred)
+  (modules test_mixed_conversions_pred)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
 ; test_mutual_adt.generated.* and compared with test_mutual_adt.expected.*, but it is also promoted
 ; to test_mutual_adt.actual.* (ignored by git) in order to be inspectable even when
 ; the test fails.

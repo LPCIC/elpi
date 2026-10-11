@@ -1,0 +1,54 @@
+
+
+builtin data color.
+builtin symb red   : color = "0".  % Red
+builtin symb green : color = "0".  % Green
+builtin symb blue  : int -> color = "0".  % Blue
+
+func color.copy color -> color.
+color.copy red red.
+color.copy green green.
+color.copy (blue A0) (blue B0) :- (int.copy A0 B0).
+
+
+
+data lam.
+builtin symb ap : lam -> lam -> lam = "0".
+builtin symb lm : string -> (lam -> lam) -> lam = "0".
+
+
+builtin func known lam -> string.
+
+% [describe T C S R] describes a term and a colour, and applies the term to
+% y
+builtin func describe lam, color -> string, lam.
+
+
+
+
+
+
+main :-
+  pi a b\
+    known a "x" ==> known b "y" ==>
+      sigma S R\
+        describe (lm "z" z\ ap z (ap a b)) (blue 3) S R,
+        print S,
+        % the name y is mapped back to the constant b by the context
+        print R.
+
+/* OUTPUT
+(Test_mixed_conversions_pred.Blue 3) ; (Test_mixed_conversions_pred.Lm ("z",
+                                          (Test_mixed_conversions_pred.Ap (
+                                             (Test_mixed_conversions_pred.V
+                                                "z"),
+                                             (Test_mixed_conversions_pred.Ap (
+                                                (Test_mixed_conversions_pred.V
+                                                   "x"),
+                                                (Test_mixed_conversions_pred.V
+                                                   "y")
+                                                ))
+                                             ))
+                                          )) ; known: x, y
+ap (lm z c2 \ ap c2 (ap c0 c1)) c1
+*/
