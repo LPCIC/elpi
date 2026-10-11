@@ -1,0 +1,67 @@
+
+
+data ty.
+func ty.copy ty -> ty.
+
+% context items for term (TmEntry)
+builtin func tmentry term -> string.
+
+
+% context items for ty (TyEntry)
+builtin func tyentry ty -> string.
+
+
+builtin data term.
+builtin symb app  : term -> term -> term = "0".  % App
+builtin symb lam  : string -> (term -> term) -> term = "0".  % Lam
+builtin symb tlam : string -> (ty -> term) -> term = "0".  % TLam
+
+func term.copy term -> term.
+term.copy (app A0 A1) (app B0 B1) :- (term.copy A0 B0), (term.copy A1 B1).
+term.copy (lam A0 A1) (lam B0 B1) :- (string.copy A0 B0), (pi x\ tmentry x B0 ==> term.copy x x ==> (term.copy (A1 x) (B1 x))).
+term.copy (tlam A0 A1) (tlam B0 B1) :- (string.copy A0 B0), (pi x\ tyentry x B0 ==> ty.copy x x ==> (term.copy (A1 x) (B1 x))).
+
+
+
+% [term->string T S] what else
+builtin func term->string term -> string.
+
+
+
+
+
+
+main :-
+  pi x a\
+    tmentry x "x" ==>
+    tyentry a "a" ==>
+    term.copy x x ==> (
+      sigma T C\
+        T = (tlam "B" b\ lam "y" y\ app x y),
+        print {term->string T},
+        % the deep copy goes under both kinds of binders
+        term.copy T C,
+        print {term->string C}).
+
+/* OUTPUT
+{{ c0 -> { API.PPX.entry = (Test_two_binders.TmEntry "x"); depth = 2 };  }} ;
+{{ c1 -> { API.PPX.entry = (Test_two_binders.TyEntry "a"); depth = 2 };  }}
+|-
+(Test_two_binders.TLam ("B",
+   (Test_two_binders.Lam ("y",
+      (Test_two_binders.App ((Test_two_binders.Var "x"),
+         (Test_two_binders.Var "y")))
+      ))
+   ))
+
+{{ c0 -> { API.PPX.entry = (Test_two_binders.TmEntry "x"); depth = 2 };  }} ;
+{{ c1 -> { API.PPX.entry = (Test_two_binders.TyEntry "a"); depth = 2 };  }}
+|-
+(Test_two_binders.TLam ("B",
+   (Test_two_binders.Lam ("y",
+      (Test_two_binders.App ((Test_two_binders.Var "x"),
+         (Test_two_binders.Var "y")))
+      ))
+   ))
+
+*/

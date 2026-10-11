@@ -195,7 +195,7 @@ end = struct
   let empty = Constants.Map.empty
   let fold = Constants.Map.fold
 
-let register t (D.BuiltInPredicate.Pred(s,_,_) as b) idx =
+let register t (D.BuiltInPredicate.(Pred(s,_,_) | ContextualPred(s,_,_,_)) as b) idx =
   if s = "" then anomaly "Built-in predicate name must be non empty";
   if Constants.Map.mem idx t then
     anomaly ("Duplicate built-in predicate " ^ s);
@@ -254,7 +254,7 @@ let declared_builtins = ref StrMap.empty
 let build_predmap l =
   let m = ref StrMap.empty in
   l |> List.iter (function
-    | BuiltInPredicate.MLCode (Pred(name,_,_) as p, _) ->
+    | BuiltInPredicate.MLCode ((Pred(name,_,_) | ContextualPred(name,_,_,_)) as p, _) ->
         if StrMap.mem name !m then
           error ("Multiple declarations for builtin predicate " ^ name);
         m := StrMap.add name p !m
@@ -1530,7 +1530,7 @@ end = struct
 
     let builtins = builtins |> Option.map (fun file_name -> 
       let builtins, _ = declared_builtins ~file_name in
-      StrMap.fold (fun _ (BuiltInPredicate.Pred(name,_,_)) acc ->
+      StrMap.fold (fun _ (BuiltInPredicate.(Pred(name,_,_) | ContextualPred(name,_,_,_))) acc ->
       let symb =
         match TypingEnv.resolve_name (F.from_string name) new_types with
         | Single s -> s

@@ -1,0 +1,111 @@
+
+
+% context items for tye (TDecl)
+builtin func tdecl tye -> string, bool.
+
+
+builtin data tye.
+builtin symb tconst : string -> tye = "0".  % TConst
+builtin symb tarrow : tye -> tye -> tye = "0".  % TArrow
+
+func tye.copy tye -> tye.
+tye.copy (tconst A0) (tconst B0) :- (string.copy A0 B0).
+tye.copy (tarrow A0 A1) (tarrow B0 B1) :- (tye.copy A0 B0), (tye.copy A1 B1).
+
+
+
+builtin data ty.
+builtin symb mono   : tye -> ty = "0".  % Mono
+builtin symb forall : string -> bool -> (tye -> ty) -> ty = "0".  % Forall
+
+func ty.copy ty -> ty.
+ty.copy (mono A0) (mono B0) :- (tye.copy A0 B0).
+ty.copy (forall A0 A1 A2) (forall B0 B1 B2) :- (string.copy A0 B0), (bool.copy A1 B1), (pi x\ tdecl x B0 B1 ==> tye.copy x x ==> (ty.copy (A2 x) (B2 x))).
+
+
+
+% context items for term (Decl)
+builtin func decl term -> string, ty.
+
+
+builtin data term.
+builtin symb appl : list term -> term = "0".  % bla bla
+builtin symb lam  : string -> ty -> (term -> term) -> term = "0".  % Lam
+type type-cast term -> ty -> term. % Cast
+
+func term.copy term -> term.
+term.copy (appl A0) (appl B0) :- ((list.copy term.copy) A0 B0).
+term.copy (lam A0 A1 A2) (lam B0 B1 B2) :- (string.copy A0 B0), (ty.copy A1 B1), (pi x\ decl x B0 B1 ==> term.copy x x ==> (term.copy (A2 x) (B2 x))).
+term.copy (type-cast A0 A1) (type-cast B0 B1) :- (term.copy A0 B0), (ty.copy A1 B1).
+
+
+
+% [term->string T S] what else
+builtin func term->string term -> string.
+
+
+
+
+
+
+main :-
+  pi x w y q t\
+    tdecl t "alpha" tt ==>
+    decl y "arg" (forall "ss" tt s\ mono (tarrow (tconst "nat") s)) ==>
+    decl x "f" (mono (tarrow (tconst "nat") t)) ==>
+    % the bound variables are copied to themselves
+    tye.copy t t ==> term.copy x x ==> term.copy y y ==> (
+      sigma T C\
+        T = (appl [x, y, lam "zzzz" (mono t) z\ z]),
+        print {term->string T},
+        term.copy T C,
+        print {term->string C}).
+
+/* OUTPUT
+{{ c4 ->
+     { API.PPX.entry = (Test_two_layers_context.TDecl ("alpha", true));
+       depth = 5 };  }}
+{{ c0 ->
+     { API.PPX.entry =
+       (Test_two_layers_context.Decl ("f",
+          (Test_two_layers_context.Mono
+             (Test_two_layers_context.TArrow (
+                (Test_two_layers_context.TConst "nat"),
+                (Test_two_layers_context.TVar "alpha"))))
+          ));
+       depth = 5 }; c2 ->
+     { API.PPX.entry =
+       (Test_two_layers_context.Decl ("arg",
+          (Test_two_layers_context.Forall ("ss", true,
+             (Test_two_layers_context.Mono
+                (Test_two_layers_context.TArrow (
+                   (Test_two_layers_context.TConst "nat"),
+                   (Test_two_layers_context.TVar "ss"))))
+             ))
+          ));
+       depth = 5 };  }} |- App f arg Lam zzzz (zzzz)
+
+{{ c4 ->
+     { API.PPX.entry = (Test_two_layers_context.TDecl ("alpha", true));
+       depth = 5 };  }}
+{{ c0 ->
+     { API.PPX.entry =
+       (Test_two_layers_context.Decl ("f",
+          (Test_two_layers_context.Mono
+             (Test_two_layers_context.TArrow (
+                (Test_two_layers_context.TConst "nat"),
+                (Test_two_layers_context.TVar "alpha"))))
+          ));
+       depth = 5 }; c2 ->
+     { API.PPX.entry =
+       (Test_two_layers_context.Decl ("arg",
+          (Test_two_layers_context.Forall ("ss", true,
+             (Test_two_layers_context.Mono
+                (Test_two_layers_context.TArrow (
+                   (Test_two_layers_context.TConst "nat"),
+                   (Test_two_layers_context.TVar "ss"))))
+             ))
+          ));
+       depth = 5 };  }} |- App f arg Lam zzzz (zzzz)
+
+*/

@@ -1,0 +1,29 @@
+
+
+builtin data t1.
+builtin symb a : int -> t1 = "1".  % A
+
+func t1.copy t1 -> t1.
+t1.copy (a A0) (a B0) :- (int.copy A0 B0).
+
+
+
+builtin data t2.
+builtin symb a : string -> t2 = "2".  % A
+
+func t2.copy t2 -> t2.
+t2.copy (a A0) (a B0) :- (string.copy A0 B0).
+
+
+
+
+
+
+
+
+main :-
+  t1.copy (a 1) X, X = a 1,
+  t2.copy (a "s") Y, Y = a "s".
+
+/* OUTPUT
+*/

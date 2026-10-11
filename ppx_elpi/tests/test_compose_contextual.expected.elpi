@@ -1,0 +1,80 @@
+
+
+% context items for t1 (E1)
+builtin func e1 t1 -> string, bool.
+
+
+builtin data t1.
+builtin symb a1 : t1 -> t1 -> t1 = "0".  % A1
+builtin symb l1 : bool -> string -> (t1 -> t1) -> t1 = "0".  % L1
+
+func t1.copy t1 -> t1.
+t1.copy (a1 A0 A1) (a1 B0 B1) :- (t1.copy A0 B0), (t1.copy A1 B1).
+t1.copy (l1 A0 A1 A2) (l1 B0 B1 B2) :- (bool.copy A0 B0), (string.copy A1 B1), (pi x\ e1 x B1 B0 ==> t1.copy x x ==> (t1.copy (A2 x) (B2 x))).
+
+
+
+% context items for t2 (E2)
+builtin func e2 t2 -> string, int.
+
+
+builtin data t2.
+builtin symb a2 : t2 -> t2 -> t2 = "0".  % A2
+builtin symb l2 : int -> string -> (t2 -> t2) -> t2 = "0".  % L2
+
+func t2.copy t2 -> t2.
+t2.copy (a2 A0 A1) (a2 B0 B1) :- (t2.copy A0 B0), (t2.copy A1 B1).
+t2.copy (l2 A0 A1 A2) (l2 B0 B1 B2) :- (int.copy A0 B0), (string.copy A1 B1), (pi x\ e2 x B1 B0 ==> t2.copy x x ==> (t2.copy (A2 x) (B2 x))).
+
+
+
+% [t1->t2->string A B S] a t1 and a t2, each one under its own context
+builtin func t1->t2->string t1, t2 -> string.
+
+
+
+
+
+
+main :-
+  pi x\ pi y\
+    e1 x "x" tt ==>
+    e2 y "y" 1 ==>
+    % the bound variables are copied to themselves
+    t1.copy x x ==> t2.copy y y ==> (
+      sigma A B C D\
+        A = (l1 tt "z" z\ a1 z x),
+        B = (a2 y y),
+        print {t1->t2->string A B},
+        t1.copy A C,
+        t2.copy B D,
+        print {t1->t2->string C D}).
+
+/* OUTPUT
+{{ c0 ->
+     { API.PPX.entry = (Test_compose_contextual.E1 ("x", true)); depth = 2 };  }}
+|-
+(Test_compose_contextual.L1 (true, "z",
+   (Test_compose_contextual.A1 ((Test_compose_contextual.V1 "z"),
+      (Test_compose_contextual.V1 "x")))
+   )) ;
+{{ c1 ->
+     { API.PPX.entry = (Test_compose_contextual.E2 ("y", 1)); depth = 2 };  }}
+|-
+(Test_compose_contextual.A2 ((Test_compose_contextual.V2 "y"),
+   (Test_compose_contextual.V2 "y")))
+
+{{ c0 ->
+     { API.PPX.entry = (Test_compose_contextual.E1 ("x", true)); depth = 2 };  }}
+|-
+(Test_compose_contextual.L1 (true, "z",
+   (Test_compose_contextual.A1 ((Test_compose_contextual.V1 "z"),
+      (Test_compose_contextual.V1 "x")))
+   )) ;
+{{ c1 ->
+     { API.PPX.entry = (Test_compose_contextual.E2 ("y", 1)); depth = 2 };  }}
+|-
+(Test_compose_contextual.A2 ((Test_compose_contextual.V2 "y"),
+   (Test_compose_contextual.V2 "y")))
+
+*/

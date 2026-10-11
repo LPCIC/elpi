@@ -1,5 +1,9 @@
 # UNRELEASED
 
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
+
+- Language:
   - New `:autospill` rule attribute: spills every under-applied call in the
     rule, without needing an explicit `{ }` around each one
   - New `f A B -> C D` rule-head shorthand for `f A B C D` with
@@ -25,6 +29,13 @@
   - New float functions for `is` / `calc`: `exp`, `tan`, `arcsin`,
     `arccos`, `arctan2`, `pow`, and the conversion `string_to_real`, the
     inverse of `real_to_string` (a malformed string is a type error)
+
+- PPX:
+  - `[@@deriving elpi]` derives the contextual conversion of a type (data
+    with binders included) and a deep copy function for it.
+  - New `PPX` API module (`PPX.empty_declaration`, `PPX.to_list`, contexts)
+    and `ContextualPred` FFI (`BuiltInPredicate.PPX.ffi`) for builtins reading data
+    that lives in a context and that was bound via the ppx.
 
 
 # v3.8.0 (September 2026)

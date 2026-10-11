@@ -1,0 +1,36 @@
+
+
+% context items for ty (TEntry)
+builtin func tentry ty -> string, bool.
+
+
+builtin data ty.
+builtin symb tapp : string -> ty -> ty = "0".  % TApp
+builtin symb tall : bool -> string -> (ty -> ty) -> ty = "0".  % TAll
+
+func ty.copy ty -> ty.
+ty.copy (tapp A0 A1) (tapp B0 B1) :- (string.copy A0 B0), (ty.copy A1 B1).
+ty.copy (tall A0 A1 A2) (tall B0 B1 B2) :- (bool.copy A0 B0), (string.copy A1 B1), (pi x\ tentry x B1 B0 ==> ty.copy x x ==> (ty.copy (A2 x) (B2 x))).
+
+
+
+% context items for term (Entry)
+builtin func entry term -> string, ty.
+
+
+builtin data term.
+builtin symb app : term -> term -> term = "0".  % App
+builtin symb lam : ty -> string -> (term -> term) -> term = "0".  % Lam
+
+func term.copy term -> term.
+term.copy (app A0 A1) (app B0 B1) :- (term.copy A0 B0), (term.copy A1 B1).
+term.copy (lam A0 A1 A2) (lam B0 B1 B2) :- (ty.copy A0 B0), (string.copy A1 B1), (pi x\ entry x B1 B0 ==> term.copy x x ==> (term.copy (A2 x) (B2 x))).
+
+
+
+% [term->string T S] what else
+builtin func term->string term -> string.
+
+
+
+

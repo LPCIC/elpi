@@ -1,0 +1,51 @@
+
+
+builtin data color.
+builtin symb red   : color = "0".  % Red
+builtin symb green : color = "0".  % Green
+
+func color.copy color -> color.
+color.copy red red.
+color.copy green green.
+
+
+
+builtin data t.
+builtin symb p : int -> pair string bool -> t = "0".  % P
+builtin symb t : int -> string -> color -> t = "0".  % T
+builtin symb q : int -> string -> color -> bool -> t = "0".  % Q
+builtin symb o : list (option color) -> t = "0".  % O
+
+func t.copy t -> t.
+t.copy (p A0 A1) (p B0 B1) :- (int.copy A0 B0), ((pair.copy string.copy bool.copy) A1 B1).
+t.copy (t A0 A1 A2) (t B0 B1 B2) :- (int.copy A0 B0), (string.copy A1 B1), (color.copy A2 B2).
+t.copy (q A0 A1 A2 A3) (q B0 B1 B2 B3) :- (int.copy A0 B0), (string.copy A1 B1), (color.copy A2 B2), (bool.copy A3 B3).
+t.copy (o A0) (o B0) :- ((list.copy (option.copy color.copy)) A0 B0).
+
+
+
+typeabbrev tr (triple int string color). % tr
+
+func tr.copy tr -> tr.
+tr.copy A B :- ((triple.copy int.copy string.copy color.copy) A B).
+
+typeabbrev qd (quadruple int string color bool). % qd
+
+func qd.copy qd -> qd.
+qd.copy A B :- ((quadruple.copy int.copy string.copy color.copy bool.copy) A B).
+
+
+
+
+
+
+main :-
+  t.copy (p 1 (pr "s" tt)) (p 1 (pr "s" tt)),
+  t.copy (t 1 "s" red) (t 1 "s" red),
+  t.copy (q 1 "s" green ff) (q 1 "s" green ff),
+  t.copy (o [some red, none]) X, X = o [some red, none],
+  tr.copy (triple 1 "s" red) (triple 1 "s" red),
+  qd.copy (quadruple 1 "s" red tt) (quadruple 1 "s" red tt).
+
+/* OUTPUT
+*/

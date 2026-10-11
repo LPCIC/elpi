@@ -1,0 +1,30 @@
+
+
+typeabbrev id string. % id
+
+func id.copy id -> id.
+id.copy A B :- (string.copy A B).
+
+typeabbrev (counted A) (pair A int). % counted
+
+func counted.copy (func X0 -> Y0), counted X0 -> counted Y0.
+counted.copy F0 A B :- ((pair.copy F0 int.copy) A B).
+
+data secret.
+
+
+func secret.copy secret -> secret.
+secret.copy X X.
+
+
+builtin data entry.
+builtin symb e : id -> secret -> counted float -> entry = "0".  % E
+
+func entry.copy entry -> entry.
+entry.copy (e A0 A1 A2) (e B0 B1 B2) :- (id.copy A0 B0), (secret.copy A1 B1), ((counted.copy float.copy) A2 B2).
+
+
+
+
+
+

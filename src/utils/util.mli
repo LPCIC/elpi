@@ -203,6 +203,32 @@ val show_pair :
   (Format.formatter -> 'b -> unit) ->
     ('a * 'b) -> string
 
+val pp_triple :
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'b -> unit) ->
+  (Format.formatter -> 'c -> unit) ->
+    Format.formatter -> 'a * 'b * 'c -> unit
+val show_triple :
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'b -> unit) ->
+  (Format.formatter -> 'c -> unit) ->
+    ('a * 'b * 'c) -> string
+
+val pp_quadruple :
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'b -> unit) ->
+  (Format.formatter -> 'c -> unit) ->
+  (Format.formatter -> 'd -> unit) ->
+    Format.formatter -> 'a * 'b * 'c * 'd -> unit
+val show_quadruple :
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'b -> unit) ->
+  (Format.formatter -> 'c -> unit) ->
+  (Format.formatter -> 'd -> unit) ->
+    ('a * 'b * 'c * 'd) -> string
+
+
+
 (* for open types *)
 type 'a spaghetti_printer
 val mk_spaghetti_printer : unit -> 'a spaghetti_printer
@@ -306,7 +332,6 @@ end
 val std_resolver :
   ?cwd:string -> paths:string list -> unit ->
      (?cwd:string -> unit:string -> unit -> string)
-
 
 type constant = int
 val pp_constant : Format.formatter -> constant -> unit
