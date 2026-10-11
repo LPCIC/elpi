@@ -236,30 +236,30 @@ let () =
   let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*" l c) in
   let duplicate_err l1 l2 = !(Format.asprintf "line %d.*\n.*cannot only differ.*\n.*\n.*\n.*line %d" l1 l2) in
   let constr_error l1 l2 = !(Format.asprintf "line %d, column %d.*\n.*Invalid determinacy of constructor" l1 l2) in
-  let mut_excl_eigen l p = !(Format.asprintf "line %d.*\nMutual exclusion violated for rules of predicate %s" l p) in
+  let mut_excl_eigen l p = !(Format.asprintf "line %d.*\nDetCheck: Mutual exclusion violated" l) in
   let status = Test.
-    [|(* 01*) mut_excl 8 5; Success; det_check 8 7; mut_excl_eigen 8 "q"; mut_excl_eigen 8 "q";            (*05*)
-      (* 06*) mut_excl_eigen 8 "q"; mut_excl_eigen 8 "q"; mut_excl_eigen 9 "q"; mut_excl 8 8; mut_excl 8 8; (*10*)
-      (* 11*) mut_excl 8 7; Success; mut_excl 10 9; det_check 19 9; Success;    (*15*)
-      (* 16*) det_check 7 9; Success; det_check 12 11; det_check 11 15; Success;   (*20*)
-      (* 21*) det_check 6 21; Success; det_check 14 9; Success; det_check 7 12;  (*25*)
-      (* 26*) mut_excl 12 9; mut_excl 11 9; Success; Success; det_check 8 10;   (*30*)
-      (* 31*) out_err 7 10; Success; out_err 10 14; out_err 9 21; out_err 9 13;  (*35*)
-      (* 36*) Success; out_err 6 10; out_err 7 3; Success; Success;              (*40*)
-      (* 41*) det_check 6 21; Success; out_err 5 4; Success; det_check 11 38;(*45*)
-      (* 46*) Success; Success; Success; Success; det_check 8 16;                (*50*)
-      (* 51*) Success; det_check 19 9; Success; out_err 8 4; Success;            (*55*)
-      (* 56*) det_check 10 4; out_err 12 19; out_err 13 19; Success; Success;     (*60*)
-      (* 61*) det_check 12 4; Success; Success; Success; det_check 10 2;          (*65*)
+    [|(* 01*) mut_excl 8 5; Success; det_check 8 7; mut_excl_eigen 8 "q"; mut_excl_eigen 8 "q";                             (*05*)
+      (* 06*) mut_excl_eigen 8 "q"; mut_excl_eigen 8 "q"; mut_excl_eigen 9 "q"; mut_excl_eigen 8 "q"; mut_excl_eigen 8 "q"; (*10*)
+      (* 11*) mut_excl 8 7; Success; mut_excl 10 9; det_check 19 9; Success;           (*15*)
+      (* 16*) det_check 7 9; Success; det_check 12 11; det_check 11 15; Success;       (*20*)
+      (* 21*) det_check 6 21; Success; det_check 14 9; Success; det_check 7 12;        (*25*)
+      (* 26*) mut_excl 12 9; mut_excl 11 9; Success; Success; det_check 8 10;          (*30*)
+      (* 31*) out_err 7 10; Success; out_err 10 14; out_err 9 21; out_err 9 13;        (*35*)
+      (* 36*) Success; out_err 6 10; out_err 7 3; Success; Success;                    (*40*)
+      (* 41*) det_check 6 21; Success; out_err 5 4; Success; det_check 11 38;          (*45*)
+      (* 46*) Success; Success; Success; Success; det_check 8 16;                      (*50*)
+      (* 51*) Success; det_check 19 9; Success; out_err 8 4; Success;                  (*55*)
+      (* 56*) det_check 10 4; out_err 12 19; out_err 13 19; Success; Success;          (*60*)
+      (* 61*) det_check 12 4; Success; Success; Success; det_check 10 2;               (*65*)
       (* 66*) Success; det_check 9 31; det_check 11 5; det_check 7 39; det_check 2 21; (*70*)
-      (* 71*) Success; Success; constr_error 10 5; out_err 8 4; constr_error 17 18; (*75*)
-      (* 76*) Success; Success; det_check 7 16; Success; Success;                 (*80*)
-      (* 81*) mode_err 13 6; Success; mode_err 15 6; Success; mode_err 14 26;    (*85*)
-      (* 86*) Success; Success; Success; Success; Success;                       (*90*)
-      (* 91*) det_check 14 14; Success; Success; constr_error 14 17; mut_excl_eigen 6 "foo";         (*95*)
-      (* 96*) mut_excl_eigen 6 "foo"; mut_excl_eigen 6 "foo"; mut_excl_eigen 6 "foo"; Success; Success;             (*100*)
-      (*101*) Success; mut_excl_eigen 5 "f";  duplicate_err 2 1; Success; Success;(*105*)
-      (*106*) Success; constr_error 14 13; constr_error 14 13; mut_excl_eigen 9 "f"; Success; (*110*)
+      (* 71*) Success; Success; constr_error 10 5; out_err 8 4; constr_error 17 18;    (*75*)
+      (* 76*) Success; Success; det_check 7 16; Success; Success;                      (*80*)
+      (* 81*) mode_err 13 6; Success; mode_err 15 6; Success; mode_err 14 26;          (*85*)
+      (* 86*) Success; Success; Success; Success; Success;                             (*90*)
+      (* 91*) det_check 14 14; Success; Success; constr_error 14 17; mut_excl_eigen 7 "foo";             (*95*)
+      (* 96*) mut_excl_eigen 8 "foo"; mut_excl_eigen 9 "foo"; mut_excl_eigen 8 "foo"; Success; Success;  (*100*)
+      (*101*) Success; mut_excl_eigen 7 "f";  duplicate_err 2 1; Success; Success;                (*105*)
+      (*106*) Success; constr_error 14 13; constr_error 14 13; mut_excl_eigen 9 "f"; Success;     (*110*)
       (*111*) mut_excl_eigen 5 "foo"; Success; mut_excl_no_loc "f" false; Success; det_check 5 19;
       (*116*) Success; det_check 5 2; det_check 7 2; Success; mut_excl_no_loc "p" true
     |] in

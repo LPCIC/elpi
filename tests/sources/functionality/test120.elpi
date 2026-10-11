@@ -1,3 +1,5 @@
+% NO: line 6 is a catchall and there is a local rule for p at line 8
+
 func p int -> int.
 func q -> int.
 
