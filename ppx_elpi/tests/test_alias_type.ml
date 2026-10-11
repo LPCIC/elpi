@@ -9,4 +9,9 @@ type simple = int
 
 let builtin = BuiltIn.declare ~file_name (PPX.to_list declaration)
 
-let () = Ppx_tests_lib.check_declarations builtin
+let program = {|
+main :-
+  simple.copy 1 X, X = 1.
+|}
+
+let () = Ppx_tests_lib.run_program builtin program

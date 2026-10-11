@@ -456,4 +456,10 @@ include
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 let x : 'c 'csts . (x, 'c, 'csts) ContextualConversion.t = x
 let builtin = BuiltIn.declare ~file_name (PPX.to_list declaration)
-let () = Ppx_tests_lib.check_declarations builtin
+let program =
+  {|
+main :-
+  x.copy (pr (located 1 (b "s" tt)) 2) X,
+  X = pr (located 1 (b "s" tt)) 2.
+|}
+let () = Ppx_tests_lib.run_program builtin program

@@ -1,0 +1,27 @@
+
+
+% context items for term A (Entry)
+builtin func entry (term A) -> string.
+
+
+builtin data term A.
+builtin symb const : A -> term A = "0".  % Const
+builtin symb lam   : string -> (term A -> term A) -> term A = "0".  % Lam
+
+func term.copy (func X0 -> Y0), term X0 -> term Y0.
+term.copy F0 (const A0) (const B0) :- (F0 A0 B0).
+term.copy F0 (lam A0 A1) (lam B0 B1) :- (string.copy A0 B0), (pi x\ pi y\ entry x B0 ==> entry y B0 ==> (term.copy F0 x y :- !) ==> ((term.copy F0) (A1 x) (B1 y))).
+
+
+
+
+
+
+
+
+main :-
+  term.copy int.copy (lam "x" x\ lam "y" y\ const 1) T,
+  T = lam "x" x\ lam "y" y\ const 1.
+
+/* OUTPUT
+*/

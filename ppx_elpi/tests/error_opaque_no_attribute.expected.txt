@@ -1,0 +1,4 @@
+File "error_opaque_no_attribute.ml", lines 2-3, characters 0-33:
+2 | type t
+3 | [@@deriving elpi { declaration }]
+Error: opaque data types must have a [@elpi.opaque d] attribute

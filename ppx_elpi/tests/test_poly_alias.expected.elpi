@@ -8,3 +8,10 @@ simple.copy F0 A B :- ((pair.copy F0 int.copy) A B).
 
 
 
+
+
+main :-
+  simple.copy int.copy (pr 1 2) X, X = pr 1 2.
+
+/* OUTPUT
+*/

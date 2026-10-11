@@ -360,6 +360,46 @@
 
 
 ; The output of the ppx and of the test executable is generated in
+; test_mutual_contextual.generated.* and compared with test_mutual_contextual.expected.*, but it is also promoted
+; to test_mutual_contextual.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_mutual_contextual.generated.ml)
+ (deps (:pp pp.exe) (:input test_mutual_contextual.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_mutual_contextual.generated.elpi)
+ (action (run ./test_mutual_contextual.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_mutual_contextual.actual.ml)
+ (action (copy test_mutual_contextual.generated.ml test_mutual_contextual.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_mutual_contextual.actual.elpi)
+ (action (copy test_mutual_contextual.generated.elpi test_mutual_contextual.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_mutual_contextual.actual.ml test_mutual_contextual.actual.elpi)
+ (action (diff test_mutual_contextual.expected.ml test_mutual_contextual.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_mutual_contextual.expected.elpi test_mutual_contextual.generated.elpi)))
+
+(executable
+  (name test_mutual_contextual)
+  (modules test_mutual_contextual)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
 ; test_opaque_type.generated.* and compared with test_opaque_type.expected.*, but it is also promoted
 ; to test_opaque_type.actual.* (ignored by git) in order to be inspectable even when
 ; the test fails.
@@ -515,6 +555,86 @@
 (executable
   (name test_poly_alias)
   (modules test_poly_alias)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
+; test_poly_binder.generated.* and compared with test_poly_binder.expected.*, but it is also promoted
+; to test_poly_binder.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_poly_binder.generated.ml)
+ (deps (:pp pp.exe) (:input test_poly_binder.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_poly_binder.generated.elpi)
+ (action (run ./test_poly_binder.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_poly_binder.actual.ml)
+ (action (copy test_poly_binder.generated.ml test_poly_binder.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_poly_binder.actual.elpi)
+ (action (copy test_poly_binder.generated.elpi test_poly_binder.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_poly_binder.actual.ml test_poly_binder.actual.elpi)
+ (action (diff test_poly_binder.expected.ml test_poly_binder.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_poly_binder.expected.elpi test_poly_binder.generated.elpi)))
+
+(executable
+  (name test_poly_binder)
+  (modules test_poly_binder)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
+; test_record_binder.generated.* and compared with test_record_binder.expected.*, but it is also promoted
+; to test_record_binder.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_record_binder.generated.ml)
+ (deps (:pp pp.exe) (:input test_record_binder.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_record_binder.generated.elpi)
+ (action (run ./test_record_binder.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_record_binder.actual.ml)
+ (action (copy test_record_binder.generated.ml test_record_binder.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_record_binder.actual.elpi)
+ (action (copy test_record_binder.generated.elpi test_record_binder.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_record_binder.actual.ml test_record_binder.actual.elpi)
+ (action (diff test_record_binder.expected.ml test_record_binder.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_record_binder.expected.elpi test_record_binder.generated.elpi)))
+
+(executable
+  (name test_record_binder)
+  (modules test_record_binder)
   (libraries ppx_tests_lib)
   (preprocess (pps ppx_deriving.show ppx_elpi)))
 
@@ -720,6 +840,46 @@
 
 
 ; The output of the ppx and of the test executable is generated in
+; test_three_contexts.generated.* and compared with test_three_contexts.expected.*, but it is also promoted
+; to test_three_contexts.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_three_contexts.generated.ml)
+ (deps (:pp pp.exe) (:input test_three_contexts.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_three_contexts.generated.elpi)
+ (action (run ./test_three_contexts.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_three_contexts.actual.ml)
+ (action (copy test_three_contexts.generated.ml test_three_contexts.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_three_contexts.actual.elpi)
+ (action (copy test_three_contexts.generated.elpi test_three_contexts.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_three_contexts.actual.ml test_three_contexts.actual.elpi)
+ (action (diff test_three_contexts.expected.ml test_three_contexts.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_three_contexts.expected.elpi test_three_contexts.generated.elpi)))
+
+(executable
+  (name test_three_contexts)
+  (modules test_three_contexts)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
 ; test_tuples_options.generated.* and compared with test_tuples_options.expected.*, but it is also promoted
 ; to test_tuples_options.actual.* (ignored by git) in order to be inspectable even when
 ; the test fails.
@@ -877,4 +1037,213 @@
   (modules test_variant)
   (libraries ppx_tests_lib)
   (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+(rule
+ (target error_compose_empty.generated.txt)
+ (deps (:pp pp.exe) (:input error_compose_empty.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_compose_empty.actual.txt)
+ (action (copy error_compose_empty.generated.txt error_compose_empty.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_compose_empty.actual.txt)
+ (action (diff error_compose_empty.expected.txt error_compose_empty.generated.txt)))
+
+
+(rule
+ (target error_context_directive_too_small.generated.txt)
+ (deps (:pp pp.exe) (:input error_context_directive_too_small.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_context_directive_too_small.actual.txt)
+ (action (copy error_context_directive_too_small.generated.txt error_context_directive_too_small.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_context_directive_too_small.actual.txt)
+ (action (diff error_context_directive_too_small.expected.txt error_context_directive_too_small.generated.txt)))
+
+
+(rule
+ (target error_key_with_params.generated.txt)
+ (deps (:pp pp.exe) (:input error_key_with_params.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_key_with_params.actual.txt)
+ (action (copy error_key_with_params.generated.txt error_key_with_params.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_key_with_params.actual.txt)
+ (action (diff error_key_with_params.expected.txt error_key_with_params.generated.txt)))
+
+
+(rule
+ (target error_key_without_index.generated.txt)
+ (deps (:pp pp.exe) (:input error_key_without_index.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_key_without_index.actual.txt)
+ (action (copy error_key_without_index.generated.txt error_key_without_index.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_key_without_index.actual.txt)
+ (action (diff error_key_without_index.expected.txt error_key_without_index.generated.txt)))
+
+
+(rule
+ (target error_opaque_no_attribute.generated.txt)
+ (deps (:pp pp.exe) (:input error_opaque_no_attribute.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_opaque_no_attribute.actual.txt)
+ (action (copy error_opaque_no_attribute.generated.txt error_opaque_no_attribute.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_opaque_no_attribute.actual.txt)
+ (action (diff error_opaque_no_attribute.expected.txt error_opaque_no_attribute.generated.txt)))
+
+
+(rule
+ (target error_opaque_params.generated.txt)
+ (deps (:pp pp.exe) (:input error_opaque_params.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_opaque_params.actual.txt)
+ (action (copy error_opaque_params.generated.txt error_opaque_params.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_opaque_params.actual.txt)
+ (action (diff error_opaque_params.expected.txt error_opaque_params.generated.txt)))
+
+
+(rule
+ (target error_two_context_types.generated.txt)
+ (deps (:pp pp.exe) (:input error_two_context_types.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_two_context_types.actual.txt)
+ (action (copy error_two_context_types.generated.txt error_two_context_types.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_two_context_types.actual.txt)
+ (action (diff error_two_context_types.expected.txt error_two_context_types.generated.txt)))
+
+
+(rule
+ (target error_two_keys.generated.txt)
+ (deps (:pp pp.exe) (:input error_two_keys.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_two_keys.actual.txt)
+ (action (copy error_two_keys.generated.txt error_two_keys.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_two_keys.actual.txt)
+ (action (diff error_two_keys.expected.txt error_two_keys.generated.txt)))
+
+
+(rule
+ (target error_unsupported_tuple.generated.txt)
+ (deps (:pp pp.exe) (:input error_unsupported_tuple.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_unsupported_tuple.actual.txt)
+ (action (copy error_unsupported_tuple.generated.txt error_unsupported_tuple.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_unsupported_tuple.actual.txt)
+ (action (diff error_unsupported_tuple.expected.txt error_unsupported_tuple.generated.txt)))
+
+
+(rule
+ (target error_var_arity.generated.txt)
+ (deps (:pp pp.exe) (:input error_var_arity.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_var_arity.actual.txt)
+ (action (copy error_var_arity.generated.txt error_var_arity.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_var_arity.actual.txt)
+ (action (diff error_var_arity.expected.txt error_var_arity.generated.txt)))
+
+
+(rule
+ (target error_var_readback_embed.generated.txt)
+ (deps (:pp pp.exe) (:input error_var_readback_embed.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%{pp} --impl %{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target error_var_readback_embed.actual.txt)
+ (action (copy error_var_readback_embed.generated.txt error_var_readback_embed.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_var_readback_embed.actual.txt)
+ (action (diff error_var_readback_embed.expected.txt error_var_readback_embed.generated.txt)))
 

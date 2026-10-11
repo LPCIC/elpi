@@ -1,0 +1,5 @@
+File "error_two_keys.ml", lines 4-6, characters 0-33:
+4 | type tctx = Entry of (string[@elpi.key "term"]) * (string[@elpi.key "term"])
+5 | [@@elpi.index (module S)]
+6 | [@@deriving elpi { declaration }]
+Error: type tctx has constructor that does not have exactly one argumet marked as [@elpi.key]

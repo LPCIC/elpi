@@ -1,0 +1,4 @@
+File "error_var_arity.ml", lines 5-6, characters 0-33:
+5 | type term = Var of string * int [@elpi.var tctx]
+6 | [@@deriving elpi { declaration }]
+Error: [@elpi.var] on a constructor with zero or more than one argument and not [@elpi.readback]

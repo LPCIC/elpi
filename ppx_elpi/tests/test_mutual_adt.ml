@@ -10,4 +10,11 @@ and mut = C | D of simple
 
 let builtin = BuiltIn.declare ~file_name (PPX.to_list declaration)
 
-let () = Ppx_tests_lib.check_declarations builtin
+let program = {|
+main :-
+  simple.copy (b 1 (d (b 2 c))) X,
+  X = b 1 (d (b 2 c)),
+  mut.copy (d a) Y, Y = d a.
+|}
+
+let () = Ppx_tests_lib.run_program builtin program

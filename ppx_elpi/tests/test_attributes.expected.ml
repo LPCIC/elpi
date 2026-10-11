@@ -598,4 +598,12 @@ include
 let colors : (color list, PPX.ctx, Data.constraints) ContextualConversion.t =
   Elpi.API.BuiltInData.listC color
 let builtin = BuiltIn.declare ~file_name (PPX.to_list declaration)
-let () = Ppx_tests_lib.check_declarations builtin
+let program =
+  {|
+main :-
+  color.copy (blue 3) (blue 3),
+  shape.copy (round 1) (round 1),
+  nest.copy (n (some [square 1]) (pr 1 [red, green])) X,
+  X = n (some [square 1]) (pr 1 [red, green]).
+|}
+let () = Ppx_tests_lib.run_program builtin program

@@ -37,3 +37,15 @@ qd.copy A B :- ((quadruple.copy int.copy string.copy color.copy bool.copy) A B).
 
 
 
+
+
+main :-
+  t.copy (p 1 (pr "s" tt)) (p 1 (pr "s" tt)),
+  t.copy (t 1 "s" red) (t 1 "s" red),
+  t.copy (q 1 "s" green ff) (q 1 "s" green ff),
+  t.copy (o [some red, none]) X, X = o [some red, none],
+  tr.copy (triple 1 "s" red) (triple 1 "s" red),
+  qd.copy (quadruple 1 "s" red tt) (quadruple 1 "s" red tt).
+
+/* OUTPUT
+*/

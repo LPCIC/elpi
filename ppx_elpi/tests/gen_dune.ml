@@ -45,6 +45,36 @@ let output_stanzas filename =
 |}
   base base base base base base base base base base base base base base base base base base base base base
 
+(* Inputs that the ppx must reject: the diagnostic printed on stderr is
+   compared with the expected one *)
+let output_error_stanzas filename =
+  let base = Filename.remove_extension filename in
+  Printf.printf {|
+(rule
+ (target %s.generated.txt)
+ (deps (:pp pp.exe) (:input %s.ml))
+ (action
+  (with-stderr-to %%{target}
+   (with-accepted-exit-codes (not 0)
+    (run ./%%{pp} --impl %%{input} -o /dev/null)))))
+
+(rule
+ (mode promote)
+ (target %s.actual.txt)
+ (action (copy %s.generated.txt %s.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps %s.actual.txt)
+ (action (diff %s.expected.txt %s.generated.txt)))
+
+|}
+  base base base base base base base base
+
+let is_error_test filename =
+  Filename.check_suffix filename ".ml" &&
+  Re.Str.string_match (Re.Str.regexp_string "error_") filename 0
+
 let is_test filename =
   Filename.check_suffix filename ".ml" &&
   not (Filename.check_suffix (Filename.remove_extension filename) ".pp") &&
@@ -58,4 +88,9 @@ let () =
   |> Array.to_list
   |> List.sort String.compare
   |> List.filter is_test
-  |> List.iter output_stanzas
+  |> List.iter output_stanzas;
+  Sys.readdir "."
+  |> Array.to_list
+  |> List.sort String.compare
+  |> List.filter is_error_test
+  |> List.iter output_error_stanzas

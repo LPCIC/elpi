@@ -13,3 +13,11 @@ simple.copy (b A0) (b B0) :- (int.copy A0 B0).
 
 
 
+
+
+main :-
+  simple.copy (b 1) X, X = b 1,
+  simple.copy a Y, Y = a.
+
+/* OUTPUT
+*/

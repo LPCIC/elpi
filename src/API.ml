@@ -1590,7 +1590,7 @@ module PPX = struct
         else " -> " ^ String.concat ", " (List.map show args) in
       Format.fprintf fmt "%% context items for %s%s@\n"
         (show key) (if doc = "" then "" else " (" ^ doc ^ ")");
-      Format.fprintf fmt "@[<hov2>builtin func %s %s%s.@]@\n@\n" name (show key) outs
+      Format.fprintf fmt "@[<hov2>builtin func %s %s%s.@]@\n@\n" name (ED.Conversion.show_ty_ast ~prec:ED.Conversion.AppArg key) outs
 
     let constructor fmt ~max_name_len ~variant ~name ~doc ~ty ~args =
       ED.BuiltInPredicate.ADT.document_constructor

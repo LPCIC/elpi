@@ -27,4 +27,14 @@ let t : 'c 'csts. (t, 'c, 'csts) ContextualConversion.t = t
 
 let builtin = BuiltIn.declare ~file_name (PPX.to_list declaration)
 
-let () = Ppx_tests_lib.check_declarations builtin
+let program = {|
+main :-
+  t.copy (p 1 (pr "s" tt)) (p 1 (pr "s" tt)),
+  t.copy (t 1 "s" red) (t 1 "s" red),
+  t.copy (q 1 "s" green ff) (q 1 "s" green ff),
+  t.copy (o [some red, none]) X, X = o [some red, none],
+  tr.copy (triple 1 "s" red) (triple 1 "s" red),
+  qd.copy (quadruple 1 "s" red tt) (quadruple 1 "s" red tt).
+|}
+
+let () = Ppx_tests_lib.run_program builtin program

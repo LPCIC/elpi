@@ -288,4 +288,11 @@ include
         Elpi.API.BuiltIn.LPCode elpi__mut__deep_copy]
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 let builtin = BuiltIn.declare ~file_name (PPX.to_list declaration)
-let () = Ppx_tests_lib.check_declarations builtin
+let program =
+  {|
+main :-
+  simple.copy (b 1 (d (b 2 c))) X,
+  X = b 1 (d (b 2 c)),
+  mut.copy (d a) Y, Y = d a.
+|}
+let () = Ppx_tests_lib.run_program builtin program

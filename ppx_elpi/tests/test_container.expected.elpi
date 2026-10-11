@@ -26,3 +26,11 @@ x.copy A B :- ((pair.copy (located.copy term.copy) int.copy) A B).
 
 
 
+
+
+main :-
+  x.copy (pr (located 1 (b "s" tt)) 2) X,
+  X = pr (located 1 (b "s" tt)) 2.
+
+/* OUTPUT
+*/

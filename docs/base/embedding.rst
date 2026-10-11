@@ -265,6 +265,32 @@ variable in scope, is:
    :end-at: print {
 
 
+A polymorphic datum with binders
+---------------------------------
+
+If the datum has type parameters, so does the Elpi type of its bound
+variables, and the argument of ``[@elpi.key]`` and of ``[@elpi.binder]`` is
+the list ``["term"; "A"]`` instead of the string ``"term"``. By convention the
+parameters of a type are called ``A``, ``B``, ``C``, ... in Elpi, in the order
+in which they are declared in OCaml, and the elements of the list after the
+name of the type are among them. The context type itself has no parameters:
+
+.. literalinclude:: ../../ppx_elpi/tests/test_poly_binder.ml
+   :language: ocaml
+   :start-at: type tctx
+   :end-before: let in_ctx_for_term
+
+The entries of the context are polymorphic and, since the copy of a bound
+variable changes the type of the variable (from ``term A`` to ``term B``, if the
+copy function of the parameter goes from ``A`` to ``B``), the deep copy goes
+under the binder with two distinct variables, one for the datum and one for
+its copy, related by a rule that is not indexed:
+
+.. literalinclude:: ../../ppx_elpi/tests/test_poly_binder.expected.elpi
+   :language: elpi
+   :start-at: func term.copy
+   :end-at: term.copy F0 (lam
+
 .. _ppx-compose-ctx:
 
 Several data types under different contexts
@@ -428,14 +454,17 @@ On a field of a constructor:
   The field is the key of the entry in the context map; it can be any of the
   fields of the constructor. ``ty`` (mandatory) is
   the name of the Elpi type of the variables bound by the context, such as the
-  ``"term"`` of ``[@elpi.binder "term" ctx ...]``. A constructor of the
+  ``"term"`` of ``[@elpi.binder "term" ctx ...]``; if the type has parameters
+  it is the list ``["term"; "A"; ...]``, where ``A``, ``B``, ... are the
+  names of the parameters, in order. A constructor of the
   context is declared as ``builtin func name ty -> field1, ..., fieldN`` on the
   Elpi side.
 
 ``[@elpi.binder ty ctx mk_ctx_entry]``
   The field is under one binder. ``ty`` (optional) is the name of the Elpi
-  type of the abstraction, the ``XXX`` of ``(XXX -> term)``; the default is the
-  name of the type being defined. ``ctx`` (mandatory) is the context in which
+  type of the abstraction, the ``XXX`` of ``(XXX -> term)`` (a list
+  ``["XXX"; "A"; ...]`` if the type has parameters, as for ``[@elpi.key]``);
+  the default is the name of the type being defined. ``ctx`` (mandatory) is the context in which
   the variable is bound. ``mk_ctx_entry`` (mandatory) is a function taking all
   the other fields and returning an entry of ``ctx``.
 

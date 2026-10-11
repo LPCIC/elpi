@@ -16,6 +16,13 @@ To run tests and acknowledge a change
 make tests-ppx PROMOTE=true # promotes the output
 ```
 
+## Tests of the errors
+
+`error_XXX.ml` is an input the ppx must reject (one error per file, since the
+ppx stops at the first one): it is only preprocessed, and the diagnostic
+printed on stderr is compared with `error_XXX.expected.txt`. To add one,
+`touch` the `.expected.txt` and run `make tests-ppx PROMOTE=true`.
+
 ## Structure of a test
 
 `test_XXX.ml` derives some types and declares the builtins, then ends with

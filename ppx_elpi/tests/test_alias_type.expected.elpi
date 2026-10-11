@@ -8,3 +8,10 @@ simple.copy A B :- (int.copy A B).
 
 
 
+
+
+main :-
+  simple.copy 1 X, X = 1.
+
+/* OUTPUT
+*/
