@@ -97,6 +97,18 @@
 <li class="toctree-l2"><a class="reference internal" href="#embedding">Embedding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#extending-a-builtin-written-in-ocaml">Extending: a builtin written in OCaml</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#extending-a-quotation">Extending: a quotation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deriving-conversions-ppx-elpi">Deriving conversions: ppx_elpi</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#a-first-example-a-parametric-type">A first example: a parametric type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-with-binders-and-its-context">Data with binders and its context</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#a-datum-with-several-kinds-of-binders">A datum with several kinds of binders</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#a-polymorphic-datum-with-binders">A polymorphic datum with binders</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#several-data-types-under-different-contexts">Several data types under different contexts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#constructors-with-the-same-name">Constructors with the same name</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#deriving-directives">Deriving directives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#attributes">Attributes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#naming-conventions-of-the-generated-code">Naming conventions of the generated code</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#also-worth-knowing">Also worth knowing</a></li>
 </ul>
 </li>
@@ -261,6 +273,662 @@ is whatever the quotation’s own parser recognises. coq-elpi quotes Rocq’s te
 syntax and antiquotes back to Elpi with an <code class="docutils literal notranslate"><span class="pre">lp:</span></code> prefix, so that in
 <code class="docutils literal notranslate"><span class="pre">prod</span> <span class="pre">&quot;x&quot;</span> <span class="pre">t</span> <span class="pre">x\</span> <span class="pre">{{</span> <span class="pre">nat</span> <span class="pre">-&gt;</span> <span class="pre">lp:x</span> <span class="pre">*</span> <span class="pre">bool</span> <span class="pre">}}</span></code> the <code class="docutils literal notranslate"><span class="pre">lp:x</span></code> splices the
 just-bound Elpi variable <code class="docutils literal notranslate"><span class="pre">x</span></code> into the quoted Rocq term.</p>
+</section>
+<section id="deriving-conversions-ppx-elpi">
+<h2>Deriving conversions: ppx_elpi<a class="headerlink" href="#deriving-conversions-ppx-elpi" title="Link to this heading"></a></h2>
+<p>Writing by hand the conversion of an OCaml data type, and the matching
+declaration on the Elpi side, is repetitive. Attaching the deriver
+<code class="docutils literal notranslate"><span class="pre">[&#64;&#64;deriving</span> <span class="pre">elpi]</span></code> of the <code class="docutils literal notranslate"><span class="pre">ppx_elpi</span></code> package to a type declaration
+synthesizes the conversion of the type, of type
+<code class="docutils literal notranslate"><span class="pre">Elpi.API.ContextualConversion.t</span></code> and with all the glue needed to handle
+data types with binders, the matching Elpi declaration and a deep copy
+function for the type; it is enabled by preprocessing a module with the ppx in
+the <code class="docutils literal notranslate"><span class="pre">dune</span></code> file, as in the following one, where the ppx is enabled on the
+module <code class="docutils literal notranslate"><span class="pre">my_code.ml</span></code> only:</p>
+<div class="highlight-scheme notranslate"><div class="highlight"><pre><span></span><span class="c1">; The library my_lib is made of the modules my_code and other</span>
+<span class="p">(</span><span class="k">library</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">name</span><span class="w"> </span><span class="nv">my_lib</span><span class="p">)</span>
+<span class="w"> </span><span class="c1">; the Elpi API, used by the code that the ppx generates</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">libraries</span><span class="w"> </span><span class="nv">elpi</span><span class="p">)</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">preprocess</span>
+<span class="w">  </span><span class="p">(</span><span class="nf">per_module</span>
+<span class="w">   </span><span class="c1">; the ppx is enabled on my_code.ml only: ppx_deriving.show provides the</span>
+<span class="w">   </span><span class="c1">; pretty printer [@@deriving show] that ppx_elpi needs, ppx_elpi provides</span>
+<span class="w">   </span><span class="c1">; [@@deriving elpi]</span>
+<span class="w">   </span><span class="p">((</span><span class="nf">pps</span><span class="w"> </span><span class="nv">ppx_deriving</span><span class="o">.</span><span class="nv">show</span><span class="w"> </span><span class="nv">ppx_elpi</span><span class="p">)</span><span class="w"> </span><span class="nv">my_code</span><span class="p">))))</span>
+</pre></div>
+</div>
+<p>Three kinds of OCaml types are supported:</p>
+<ul class="simple">
+<li><p><strong>opaque</strong> types, such as <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">t</span></code>, or a type with a definition that is
+not meant to be exposed to Elpi (see <code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.opaque</span> <span class="pre">e]</span></code> below); phantom
+parameters are not supported;</p></li>
+<li><p><strong>aliases</strong>, such as <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">'a</span> <span class="pre">t</span> <span class="pre">=</span> <span class="pre">('a</span> <span class="pre">*</span> <span class="pre">int)</span> <span class="pre">list</span></code>;</p></li>
+<li><p><strong>algebraic</strong> types, such as <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">t</span> <span class="pre">=</span> <span class="pre">K</span> <span class="pre">|</span> <span class="pre">S</span></code>. An algebraic type has one
+of two roles: a <em>datum</em>, that is a syntax tree, possibly with binders, or the
+<em>context</em> of a datum. A datum with binders needs one or more context types
+describing the information attached to its bound variables.</p></li>
+</ul>
+<p>The type must come with a pretty printer named after the usual convention
+(<code class="docutils literal notranslate"><span class="pre">pp</span></code> if the type is called <code class="docutils literal notranslate"><span class="pre">t</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ty</span></code> for a type called <code class="docutils literal notranslate"><span class="pre">ty</span></code>).
+Deriving both <code class="docutils literal notranslate"><span class="pre">show</span></code> (from <code class="docutils literal notranslate"><span class="pre">ppx_deriving</span></code>, hence the <code class="docutils literal notranslate"><span class="pre">ppx_deriving.show</span></code>
+above) and <code class="docutils literal notranslate"><span class="pre">elpi</span></code>, as in <code class="docutils literal notranslate"><span class="pre">[&#64;&#64;deriving</span> <span class="pre">show,</span> <span class="pre">elpi]</span></code>, is the simplest way to
+get one; see also <code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.pp]</span></code>.</p>
+<section id="a-first-example-a-parametric-type">
+<h3>A first example: a parametric type<a class="headerlink" href="#a-first-example-a-parametric-type" title="Link to this heading"></a></h3>
+<p>The derived value has the name of the type. For a type with parameters it is
+a function from the conversions of the parameters. With
+<code class="docutils literal notranslate"><span class="pre">[&#64;&#64;deriving</span> <span class="pre">elpi</span> <span class="pre">{</span> <span class="pre">declaration</span> <span class="pre">=</span> <span class="pre">l</span> <span class="pre">}]</span></code> the declarations of the derived
+types are added to <code class="docutils literal notranslate"><span class="pre">l</span></code>, created by <code class="docutils literal notranslate"><span class="pre">Elpi.API.PPX.empty_declaration</span> <span class="pre">()</span></code>.
+<code class="docutils literal notranslate"><span class="pre">Elpi.API.PPX.to_list</span> <span class="pre">l</span></code> gives the declarations, in the order they were
+added, ready to be passed to <code class="docutils literal notranslate"><span class="pre">BuiltIn.declare</span></code>:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="k">open</span> <span class="nn">Elpi</span><span class="p">.</span><span class="nc">API</span>
+
+<span class="k">let</span> <span class="n">declaration</span> <span class="o">=</span> <span class="nn">PPX</span><span class="p">.</span><span class="n">empty_declaration</span> <span class="bp">()</span>
+
+<span class="k">type</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">simple</span> <span class="o">=</span> <span class="nc">A</span> <span class="o">|</span> <span class="nc">B</span> <span class="k">of</span> <span class="kt">int</span> <span class="o">|</span> <span class="nc">C</span> <span class="k">of</span> <span class="k">&#39;</span><span class="n">a</span> <span class="kt">list</span> <span class="o">*</span> <span class="kt">int</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}</span> <span class="o">]</span>
+
+<span class="k">let</span> <span class="n">simple</span> <span class="o">:</span>
+    <span class="k">&#39;</span><span class="n">a</span> <span class="k">&#39;</span><span class="n">c</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">.</span>
+    <span class="o">(</span><span class="k">&#39;</span><span class="n">a</span><span class="o">,</span> <span class="o">#</span><span class="nn">PPX</span><span class="p">.</span><span class="n">ctx</span> <span class="k">as</span> <span class="k">&#39;</span><span class="n">c</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">t</span> <span class="o">-&gt;</span>
+    <span class="o">(</span><span class="k">&#39;</span><span class="n">a</span> <span class="n">simple</span><span class="o">,</span> <span class="o">#</span><span class="nn">PPX</span><span class="p">.</span><span class="n">ctx</span> <span class="k">as</span> <span class="k">&#39;</span><span class="n">c</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">simple</span>
+
+<span class="c">(* in the base context *)</span>
+<span class="k">let</span> <span class="n">t2</span> <span class="o">:</span>
+    <span class="o">(</span><span class="kt">int</span> <span class="n">simple</span><span class="o">,</span> <span class="nn">PPX</span><span class="p">.</span><span class="n">ctx</span><span class="o">,</span>
+       <span class="nn">Data</span><span class="p">.</span><span class="n">constraints</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">t</span> <span class="o">=</span>
+  <span class="n">simple</span> <span class="nn">BuiltInData</span><span class="p">.</span><span class="n">intC</span>
+
+<span class="c">(* a context with more than what is needed by simple *)</span>
+<span class="k">class</span> <span class="k">type</span> <span class="n">my_context_subclass</span> <span class="o">=</span> <span class="k">object</span>
+  <span class="k">inherit</span> <span class="nn">PPX</span><span class="p">.</span><span class="n">ctx</span>
+  <span class="k">method</span> <span class="n">foobar</span> <span class="o">:</span> <span class="kt">bool</span>
+<span class="k">end</span>
+
+<span class="k">let</span> <span class="n">t3</span> <span class="o">:</span>
+    <span class="o">(</span><span class="kt">float</span> <span class="n">simple</span><span class="o">,</span> <span class="n">my_context_subclass</span><span class="o">,</span>
+       <span class="nn">Data</span><span class="p">.</span><span class="n">constraints</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">t</span> <span class="o">=</span>
+  <span class="n">simple</span> <span class="nn">BuiltInData</span><span class="p">.</span><span class="n">floatC</span>
+
+<span class="k">let</span> <span class="n">builtin</span> <span class="o">=</span> <span class="nn">BuiltIn</span><span class="p">.</span><span class="n">declare</span> <span class="o">~</span><span class="n">file_name</span> <span class="o">(</span><span class="nn">PPX</span><span class="p">.</span><span class="n">to_list</span> <span class="n">declaration</span><span class="o">)</span>
+
+<span class="k">let</span> <span class="n">program</span> <span class="o">=</span> <span class="o">{|</span>
+<span class="n">main</span> <span class="o">:-</span>
+  <span class="n">simple</span><span class="o">.</span><span class="n">copy</span> <span class="kt">int</span><span class="o">.</span><span class="n">copy</span> <span class="o">(</span><span class="n">c</span> <span class="o">[</span><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">]</span> <span class="mi">3</span><span class="o">)</span> <span class="nc">X</span><span class="o">,</span>
+  <span class="nc">X</span> <span class="o">=</span> <span class="n">c</span> <span class="o">[</span><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">]</span> <span class="mi">3</span><span class="o">.</span>
+<span class="o">|}</span>
+</pre></div>
+</div>
+<p>The Elpi declarations generated for it are the ones of the type and, since
+<code class="docutils literal notranslate"><span class="pre">declaration</span></code> also receives the <code class="docutils literal notranslate"><span class="pre">LPCode</span></code> of the string
+<code class="docutils literal notranslate"><span class="pre">elpi__simple__deep_copy</span></code> generated by the ppx, a <em>deep copy</em> function of the
+type:
+<code class="docutils literal notranslate"><span class="pre">func</span> <span class="pre">simple.copy</span> <span class="pre">(func</span> <span class="pre">X0</span> <span class="pre">-&gt;</span> <span class="pre">Y0),</span> <span class="pre">simple</span> <span class="pre">X0</span> <span class="pre">-&gt;</span> <span class="pre">simple</span> <span class="pre">Y0</span></code> relates a value
+to a copy of it, given a copy function for the parameter. The copy is the
+identity: the generated rules just rebuild each constructor, calling the copy
+function of the type (<code class="docutils literal notranslate"><span class="pre">name.copy</span></code>) on the fields of the same type and of the
+parameters (<code class="docutils literal notranslate"><span class="pre">F0</span></code>), on the elements of lists through <code class="docutils literal notranslate"><span class="pre">list.copy</span></code> (an alias
+of <code class="docutils literal notranslate"><span class="pre">std.map</span></code>) and of the other standard containers through <code class="docutils literal notranslate"><span class="pre">option.copy</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pair.copy</span></code>, <code class="docutils literal notranslate"><span class="pre">triple.copy</span></code> and <code class="docutils literal notranslate"><span class="pre">quadruple.copy</span></code>, and through <code class="docutils literal notranslate"><span class="pre">ty.copy</span></code> on the
+fields of any other type, which is assumed to exist. It does for the atomic
+types of the standard library (<code class="docutils literal notranslate"><span class="pre">int.copy</span></code>, <code class="docutils literal notranslate"><span class="pre">float.copy</span></code>, <code class="docutils literal notranslate"><span class="pre">string.copy</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bool.copy</span></code>, <code class="docutils literal notranslate"><span class="pre">loc.copy</span></code>, <code class="docutils literal notranslate"><span class="pre">cmp.copy</span></code>, <code class="docutils literal notranslate"><span class="pre">diagnostic.copy</span></code>,
+<code class="docutils literal notranslate"><span class="pre">in_stream.copy</span></code> and <code class="docutils literal notranslate"><span class="pre">out_stream.copy</span></code> are defined) and for the types
+derived by the ppx: a type abbreviation is copied as its definition is, and an
+opaque type by the identity. The name <code class="docutils literal notranslate"><span class="pre">ty</span></code> is the default Elpi name of the
+type, so a type renamed with <code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.type_code]</span></code> is found only if it is
+derived in the same block. The user is expected to place his own rules
+<em>before</em> the generated ones, to override the cases he cares about and obtain a
+non trivial copy, such as a substitution. No copy function is generated for
+context types.</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">builtin</span><span class="w"> </span><span class="kd">data</span><span class="w"> </span><span class="nf">simple</span><span class="w"> </span><span class="kt">A</span>.
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">a</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">simple</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>.<span class="w">  </span><span class="c">% A</span>
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">b</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">simple</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>.<span class="w">  </span><span class="c">% B</span>
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">c</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">simple</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>.<span class="w">  </span><span class="c">% C</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nf">simple.copy</span><span class="w"> </span><span class="kt">(func</span><span class="w"> </span><span class="kt">X0</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">Y0)</span>,<span class="w"> </span><span class="kt">simple</span><span class="w"> </span><span class="kt">X0</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">simple</span><span class="w"> </span><span class="kt">Y0</span>.
+simple.copy<span class="w"> </span><span class="nv">_</span><span class="w"> </span>a<span class="w"> </span>a<span class="o">.</span>
+simple.copy<span class="w"> </span><span class="nv">_</span><span class="w"> </span>(b<span class="w"> </span><span class="nv">A0</span><span class="o">)</span><span class="w"> </span>(b<span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(int.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">).</span>
+simple.copy<span class="w"> </span><span class="nv">F0</span><span class="w"> </span>(c<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="o">)</span><span class="w"> </span>(c<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(<span class="o">(</span>list.copy<span class="w"> </span><span class="nv">F0</span><span class="o">)</span><span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(int.copy<span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">B1</span><span class="o">).</span>
+
+
+
+
+
+
+
+
+main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="w">  </span>simple.copy<span class="w"> </span>int.copy<span class="w"> </span>(c<span class="w"> </span><span class="kd">[</span><span class="mi">1</span><span class="kd">,</span><span class="mi">2</span><span class="kd">]</span><span class="w"> </span><span class="mi">3</span><span class="o">)</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span>
+<span class="w">  </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>c<span class="w"> </span><span class="kd">[</span><span class="mi">1</span><span class="kd">,</span><span class="mi">2</span><span class="kd">]</span><span class="w"> </span><span class="mi">3</span><span class="o">.</span>
+
+<span class="c">/* OUTPUT</span>
+<span class="kd">*/</span>
+</pre></div>
+</div>
+</section>
+<section id="data-with-binders-and-its-context">
+<h3>Data with binders and its context<a class="headerlink" href="#data-with-binders-and-its-context" title="Link to this heading"></a></h3>
+<p>A datum with binders is converted in a <em>context</em>: when a term is read back,
+each bound variable is looked up in it, and when going under a binder a new
+entry is added to it. A context type is an algebraic type whose constructors
+each have exactly one field marked <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.key</span> <span class="pre">&quot;ty&quot;]</span></code>: the key under which
+the entry is stored, in a map built from the module given with
+<code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.index</span> <span class="pre">(module</span> <span class="pre">M)]</span></code>. A context type is not a data type for Elpi:
+each of its constructors is a function from a bound variable to the fields of
+the entry, <code class="docutils literal notranslate"><span class="pre">builtin</span> <span class="pre">func</span> <span class="pre">name</span> <span class="pre">ty</span> <span class="pre">-&gt;</span> <span class="pre">field1,</span> <span class="pre">...,</span> <span class="pre">fieldN</span></code>, where <code class="docutils literal notranslate"><span class="pre">ty</span></code> is the
+Elpi type of the variables that the context describes (in the example,
+<code class="docutils literal notranslate"><span class="pre">term</span></code>) and the fields are all the fields of the constructor, in order. The
+key field can be anywhere among them. The entry of a variable is a rule of that
+function, added to the program under the binder, for example
+<code class="docutils literal notranslate"><span class="pre">entry</span> <span class="pre">x</span> <span class="pre">&quot;x&quot;</span> <span class="pre">tt</span> <span class="pre">==&gt;</span> <span class="pre">...</span></code>.</p>
+<p>In the example <code class="docutils literal notranslate"><span class="pre">tctx</span></code> is the context and <code class="docutils literal notranslate"><span class="pre">term</span></code> is the datum. A
+<code class="docutils literal notranslate"><span class="pre">Var</span></code> constructor is a bound variable of <code class="docutils literal notranslate"><span class="pre">tctx</span></code> (<code class="docutils literal notranslate"><span class="pre">[&#64;elpi.var</span> <span class="pre">tctx]</span></code>),
+and the <code class="docutils literal notranslate"><span class="pre">Lam</span></code> constructor binds a variable, adding an entry to <code class="docutils literal notranslate"><span class="pre">tctx</span></code>
+(<code class="docutils literal notranslate"><span class="pre">[&#64;elpi.binder</span> <span class="pre">&quot;term&quot;</span> <span class="pre">tctx</span> <span class="pre">(fun</span> <span class="pre">b</span> <span class="pre">s</span> <span class="pre">-&gt;</span> <span class="pre">Entry(s,b))]</span></code>). A builtin using
+<code class="docutils literal notranslate"><span class="pre">term</span></code> has to declare a context rich enough for it. It is declared with
+<code class="docutils literal notranslate"><span class="pre">ContextualPred</span> <span class="pre">(name,</span> <span class="pre">in_ctx,</span> <span class="pre">ffi,</span> <span class="pre">f)</span></code> instead of <code class="docutils literal notranslate"><span class="pre">Pred</span></code>, where <code class="docutils literal notranslate"><span class="pre">in_ctx</span></code> is the
+<code class="docutils literal notranslate"><span class="pre">in_ctx_for_term</span></code> value generated for the type and <code class="docutils literal notranslate"><span class="pre">ffi</span></code> is a
+<code class="docutils literal notranslate"><span class="pre">BuiltInPredicate.PPX.ffi</span></code>. It has the same constructors as the <code class="docutils literal notranslate"><span class="pre">ffi</span></code> of
+<code class="docutils literal notranslate"><span class="pre">Pred</span></code> (<code class="docutils literal notranslate"><span class="pre">In</span></code>, <code class="docutils literal notranslate"><span class="pre">Out</span></code>, <code class="docutils literal notranslate"><span class="pre">InOut</span></code>, <code class="docutils literal notranslate"><span class="pre">Easy</span></code>, <code class="docutils literal notranslate"><span class="pre">Read</span></code>, <code class="docutils literal notranslate"><span class="pre">Full</span></code>, <code class="docutils literal notranslate"><span class="pre">FullHO</span></code>
+and the variadic ones), but its arguments are contextual conversions, and the
+OCaml function <code class="docutils literal notranslate"><span class="pre">f</span></code> also receives the context and the constraints. The
+context is an object whose methods, one per context type, give access to the
+entries:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="k">open</span> <span class="nn">Elpi</span><span class="p">.</span><span class="nc">API</span>
+
+<span class="k">let</span> <span class="n">declaration</span> <span class="o">=</span> <span class="nn">PPX</span><span class="p">.</span><span class="n">empty_declaration</span> <span class="bp">()</span>
+
+<span class="k">module</span> <span class="nc">String</span> <span class="o">=</span> <span class="k">struct</span>
+  <span class="k">include</span> <span class="nc">String</span>
+  <span class="k">let</span> <span class="n">pp</span> <span class="n">fmt</span> <span class="n">s</span> <span class="o">=</span> <span class="nn">Format</span><span class="p">.</span><span class="n">fprintf</span> <span class="n">fmt</span> <span class="s2">&quot;%s&quot;</span> <span class="n">s</span>
+  <span class="k">let</span> <span class="n">show</span> <span class="o">=</span> <span class="nn">Format</span><span class="p">.</span><span class="n">asprintf</span> <span class="s2">&quot;%a&quot;</span> <span class="n">pp</span>
+<span class="k">end</span>
+
+<span class="k">type</span> <span class="n">tctx</span> <span class="o">=</span> <span class="nc">Entry</span> <span class="k">of</span> <span class="o">(</span><span class="kt">string</span><span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">key</span> <span class="s2">&quot;term&quot;</span><span class="o">])</span> <span class="o">*</span> <span class="kt">bool</span>
+  <span class="o">[@@</span><span class="n">elpi</span><span class="o">.</span><span class="n">index</span> <span class="o">(</span><span class="k">module</span> <span class="nc">String</span><span class="o">)]</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}]</span>
+
+<span class="k">let</span> <span class="n">tctx</span> <span class="o">:</span>
+    <span class="k">&#39;</span><span class="n">c</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">.</span>
+    <span class="o">(</span><span class="kt">int</span> <span class="o">*</span> <span class="n">tctx</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">c</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">tctx</span>
+<span class="c">(* This class is also generated:</span>
+<span class="c">     class type ctx_for_tctx = object inherit PPX.ctx end *)</span>
+<span class="k">let</span> <span class="n">context_made_of_tctx</span> <span class="o">:</span>
+    <span class="k">&#39;</span><span class="n">c</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">.</span>
+    <span class="o">(</span><span class="n">tctx</span><span class="o">,</span> <span class="kt">string</span><span class="o">,</span> <span class="o">#</span><span class="n">ctx_for_tctx</span> <span class="k">as</span> <span class="k">&#39;</span><span class="n">c</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">)</span>
+      <span class="nn">PPX</span><span class="p">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">context_made_of_tctx</span>
+<span class="k">let</span> <span class="n">in_ctx_for_tctx</span> <span class="o">:</span>
+    <span class="o">(</span><span class="n">ctx_for_tctx</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">ctx_readback</span> <span class="o">=</span> <span class="n">in_ctx_for_tctx</span>
+
+<span class="k">type</span> <span class="n">term</span> <span class="o">=</span>
+  <span class="o">|</span> <span class="nc">Var</span> <span class="k">of</span> <span class="kt">string</span> <span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">var</span> <span class="n">tctx</span><span class="o">]</span>
+  <span class="o">|</span> <span class="nc">App</span> <span class="k">of</span> <span class="n">term</span> <span class="o">*</span> <span class="n">term</span>
+  <span class="o">|</span> <span class="nc">Lam</span> <span class="k">of</span> <span class="kt">bool</span> <span class="o">*</span> <span class="kt">string</span> <span class="o">*</span>
+      <span class="o">(</span><span class="n">term</span><span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">binder</span> <span class="s2">&quot;term&quot;</span> <span class="n">tctx</span>
+         <span class="o">(</span><span class="k">fun</span> <span class="n">b</span> <span class="n">s</span> <span class="o">-&gt;</span> <span class="nc">Entry</span><span class="o">(</span><span class="n">s</span><span class="o">,</span><span class="n">b</span><span class="o">))])</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}]</span>
+
+<span class="k">let</span> <span class="n">term</span> <span class="o">:</span>
+    <span class="k">&#39;</span><span class="n">c</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">.</span>
+    <span class="o">(</span><span class="n">term</span><span class="o">,</span> <span class="o">#</span><span class="n">ctx_for_term</span> <span class="k">as</span> <span class="k">&#39;</span><span class="n">c</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">term</span>
+<span class="k">let</span> <span class="n">in_ctx_for_term</span> <span class="o">:</span>
+    <span class="o">(</span><span class="n">ctx_for_term</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">ctx_readback</span> <span class="o">=</span> <span class="n">in_ctx_for_term</span>
+
+<span class="k">open</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="nc">Notation</span>
+
+<span class="k">let</span> <span class="n">term_to_string</span> <span class="o">=</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="nc">ContextualPred</span><span class="o">(</span><span class="s2">&quot;term-&gt;string&quot;</span><span class="o">,</span><span class="n">in_ctx_for_term</span><span class="o">,</span>
+  <span class="nc">In</span><span class="o">(</span><span class="n">term</span><span class="o">,</span><span class="s2">&quot;T&quot;</span><span class="o">,</span>
+  <span class="nc">Out</span><span class="o">(</span><span class="nn">BuiltInData</span><span class="p">.</span><span class="n">stringC</span><span class="o">,</span><span class="s2">&quot;S&quot;</span><span class="o">,</span>
+  <span class="nc">Read</span><span class="o">(</span><span class="s2">&quot;what else&quot;</span><span class="o">))),</span>
+  <span class="k">fun</span> <span class="o">(</span><span class="n">t</span> <span class="o">:</span> <span class="n">term</span><span class="o">)</span> <span class="o">(_</span><span class="n">ety</span> <span class="o">:</span> <span class="kt">string</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="n">oarg</span><span class="o">)</span>
+    <span class="o">~</span><span class="n">depth</span><span class="o">:_</span> <span class="n">c</span> <span class="o">(_</span><span class="n">cst</span> <span class="o">:</span> <span class="nn">Data</span><span class="p">.</span><span class="n">constraints</span><span class="o">)</span> <span class="o">(_</span><span class="n">state</span> <span class="o">:</span> <span class="nn">State</span><span class="p">.</span><span class="n">t</span><span class="o">)</span> <span class="o">-&gt;</span>
+
+    <span class="o">!:</span> <span class="o">(</span><span class="nn">Format</span><span class="p">.</span><span class="n">asprintf</span> <span class="s2">&quot;@[&lt;hov&gt;%a@ |-@ %a@]@</span><span class="se">\n</span><span class="s2">%!&quot;</span>
+      <span class="o">(</span><span class="nn">RawData</span><span class="p">.</span><span class="nn">Constants</span><span class="p">.</span><span class="nn">Map</span><span class="p">.</span><span class="n">pp</span>
+         <span class="o">(</span><span class="nn">PPX</span><span class="p">.</span><span class="n">pp_ctx_entry</span> <span class="n">pp_tctx</span><span class="o">))</span>
+        <span class="n">c</span><span class="o">#</span><span class="n">tctx</span>
+       <span class="n">term</span><span class="o">.</span><span class="n">pp</span> <span class="n">t</span><span class="o">)</span>
+
+<span class="o">)</span>
+
+<span class="k">let</span> <span class="n">builtin</span> <span class="o">=</span> <span class="k">let</span> <span class="k">open</span> <span class="nc">BuiltIn</span> <span class="k">in</span>
+  <span class="nn">BuiltIn</span><span class="p">.</span><span class="n">declare</span> <span class="o">~</span><span class="n">file_name</span> <span class="o">((</span><span class="nn">PPX</span><span class="p">.</span><span class="n">to_list</span> <span class="n">declaration</span><span class="o">)</span> <span class="o">@</span> <span class="o">[</span>
+    <span class="nc">MLCode</span><span class="o">(</span><span class="n">term_to_string</span><span class="o">,</span><span class="nc">DocAbove</span><span class="o">);</span>
+  <span class="o">])</span>
+</pre></div>
+</div>
+<p>The Elpi declarations generated for it, followed by the signature of the
+builtin, are:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="c">% context items for term (Entry)</span>
+<span class="kd">builtin func</span><span class="w"> </span><span class="nf">entry</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>,<span class="w"> </span><span class="kt">bool</span>.
+
+
+<span class="kd">builtin</span><span class="w"> </span><span class="kd">data</span><span class="w"> </span><span class="nf">term</span>.
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">app</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>.<span class="w">  </span><span class="c">% App</span>
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">lam</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">(term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>.<span class="w">  </span><span class="c">% Lam</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nf">term.copy</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span>.
+term.copy<span class="w"> </span>(app<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="o">)</span><span class="w"> </span>(app<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(term.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(term.copy<span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">B1</span><span class="o">).</span>
+term.copy<span class="w"> </span>(lam<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">A2</span><span class="o">)</span><span class="w"> </span>(lam<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="w"> </span><span class="nv">B2</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(bool.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(string.copy<span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(<span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>entry<span class="w"> </span>x<span class="w"> </span><span class="nv">B1</span><span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>term.copy<span class="w"> </span>x<span class="w"> </span>x<span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span><span class="o">(</span>term.copy<span class="w"> </span><span class="o">(</span><span class="nv">A2</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="nv">B2</span><span class="w"> </span>x<span class="o">))).</span>
+
+
+
+<span class="c">% [term-&gt;string T S] what else</span>
+<span class="kd">builtin func</span><span class="w"> </span><span class="nf">term-&gt;string</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>.
+</pre></div>
+</div>
+<p>The deep copy of a datum with binders goes under the binders. A field below a
+binder is copied under the binder, in the context extended with the entry of
+the bound variable, which is copied to itself, as in
+<code class="docutils literal notranslate"><span class="pre">pi</span> <span class="pre">x\</span> <span class="pre">entry</span> <span class="pre">x</span> <span class="pre">B1</span> <span class="pre">B0</span> <span class="pre">==&gt;</span> <span class="pre">term.copy</span> <span class="pre">x</span> <span class="pre">x</span> <span class="pre">==&gt;</span> <span class="pre">term.copy</span> <span class="pre">(A2</span> <span class="pre">x)</span> <span class="pre">(B2</span> <span class="pre">x)</span></code> (see the
+<code class="docutils literal notranslate"><span class="pre">term.copy</span></code> rules of the example above). Here <code class="docutils literal notranslate"><span class="pre">entry</span></code> is the constructor
+built by the function of the binder, <code class="docutils literal notranslate"><span class="pre">B1</span></code> and <code class="docutils literal notranslate"><span class="pre">B0</span></code> are the copies of the
+fields that the function receives, and <code class="docutils literal notranslate"><span class="pre">term</span></code> is the type of the bound
+variable, the first argument of <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.binder]</span></code>, which must come with its
+copy function. The function of the binder has to be of the form
+<code class="docutils literal notranslate"><span class="pre">fun</span> <span class="pre">p1</span> <span class="pre">...</span> <span class="pre">pn</span> <span class="pre">-&gt;</span> <span class="pre">C</span> <span class="pre">(e1,</span> <span class="pre">...,</span> <span class="pre">ek)</span></code> with the <code class="docutils literal notranslate"><span class="pre">ei</span></code> among the <code class="docutils literal notranslate"><span class="pre">pi</span></code>;
+otherwise no entry is added to the context. The variables that are not bound
+by the data being copied have no rule: add one, such as
+<code class="docutils literal notranslate"><span class="pre">term.copy</span> <span class="pre">x</span> <span class="pre">x</span> <span class="pre">==&gt;</span> <span class="pre">...</span></code>, for the ones that occur in the data, as the program
+of the example with two binders below does.</p>
+<p>For a datum <code class="docutils literal notranslate"><span class="pre">l</span></code> whose context is the type <code class="docutils literal notranslate"><span class="pre">lctx</span></code>, the generated code is
+made of:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">l</span></code>, the conversion (the name of the type);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">in_ctx_for_l</span></code>, a <code class="docutils literal notranslate"><span class="pre">ContextualConversion.ctx_readback</span></code> building a context
+rich enough to read back <code class="docutils literal notranslate"><span class="pre">l</span></code>, to be passed to <code class="docutils literal notranslate"><span class="pre">ContextualPred</span></code>;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ctx_for_l</span></code>, a class type with one method per context type (here
+<code class="docutils literal notranslate"><span class="pre">lctx</span> <span class="pre">:</span> <span class="pre">lctx</span> <span class="pre">Elpi.API.PPX.ctx_field</span></code>) that inherits <code class="docutils literal notranslate"><span class="pre">Elpi.API.PPX.ctx</span></code>,
+the type of the context received by the OCaml function of the builtin.</p></li>
+</ul>
+</section>
+<section id="a-datum-with-several-kinds-of-binders">
+<h3>A datum with several kinds of binders<a class="headerlink" href="#a-datum-with-several-kinds-of-binders" title="Link to this heading"></a></h3>
+<p>A single type can have binders for variables of different Elpi types, each
+kind of variable having its own context type. The context of the datum is then
+the merge of all of them: by default the list of the context types mentioned
+by its <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.binder]</span></code> and <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.var]</span></code> attributes, and the object
+received by a builtin has one method per context type. In the example, <code class="docutils literal notranslate"><span class="pre">Lam</span></code>
+binds a term variable, with context <code class="docutils literal notranslate"><span class="pre">tmctx</span></code>, and <code class="docutils literal notranslate"><span class="pre">TLam</span></code> binds a type
+variable, with context <code class="docutils literal notranslate"><span class="pre">tyctx</span></code>, as in System F. The <code class="docutils literal notranslate"><span class="pre">&quot;ty&quot;</span></code> named by
+<code class="docutils literal notranslate"><span class="pre">TLam</span></code> and by the key of <code class="docutils literal notranslate"><span class="pre">tyctx</span></code> is the Elpi type of the bound variables,
+and it has to be declared (here with <code class="docutils literal notranslate"><span class="pre">LPCode</span> <span class="pre">&quot;data</span> <span class="pre">ty.&quot;</span></code>); the Elpi type of
+the term variables is the type <code class="docutils literal notranslate"><span class="pre">term</span></code> being derived:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="n">tmctx</span> <span class="o">=</span> <span class="nc">TmEntry</span> <span class="k">of</span> <span class="o">(</span><span class="kt">string</span><span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">key</span> <span class="s2">&quot;term&quot;</span><span class="o">])</span>
+  <span class="o">[@@</span><span class="n">elpi</span><span class="o">.</span><span class="n">index</span> <span class="o">(</span><span class="k">module</span> <span class="nc">String</span><span class="o">)]</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}]</span>
+
+<span class="k">type</span> <span class="n">tyctx</span> <span class="o">=</span> <span class="nc">TyEntry</span> <span class="k">of</span> <span class="o">(</span><span class="kt">string</span><span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">key</span> <span class="s2">&quot;ty&quot;</span><span class="o">])</span>
+  <span class="o">[@@</span><span class="n">elpi</span><span class="o">.</span><span class="n">index</span> <span class="o">(</span><span class="k">module</span> <span class="nc">String</span><span class="o">)]</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}]</span>
+
+<span class="k">type</span> <span class="n">term</span> <span class="o">=</span>
+  <span class="o">|</span> <span class="nc">Var</span> <span class="k">of</span> <span class="kt">string</span> <span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">var</span> <span class="n">tmctx</span><span class="o">]</span>
+  <span class="o">|</span> <span class="nc">App</span> <span class="k">of</span> <span class="n">term</span> <span class="o">*</span> <span class="n">term</span>
+  <span class="o">|</span> <span class="nc">Lam</span> <span class="k">of</span> <span class="kt">string</span> <span class="o">*</span>
+      <span class="o">(</span><span class="n">term</span><span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">binder</span> <span class="s2">&quot;term&quot;</span> <span class="n">tmctx</span>
+         <span class="o">(</span><span class="k">fun</span> <span class="n">s</span> <span class="o">-&gt;</span> <span class="nc">TmEntry</span> <span class="n">s</span><span class="o">)])</span>
+  <span class="o">|</span> <span class="nc">TLam</span> <span class="k">of</span> <span class="kt">string</span> <span class="o">*</span>
+      <span class="o">(</span><span class="n">term</span><span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">binder</span> <span class="s2">&quot;ty&quot;</span> <span class="n">tyctx</span>
+         <span class="o">(</span><span class="k">fun</span> <span class="n">s</span> <span class="o">-&gt;</span> <span class="nc">TyEntry</span> <span class="n">s</span><span class="o">)])</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}]</span>
+
+<span class="k">let</span> <span class="n">term</span> <span class="o">:</span>
+    <span class="k">&#39;</span><span class="n">c</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">.</span>
+    <span class="o">(</span><span class="n">term</span><span class="o">,</span> <span class="o">#</span><span class="n">ctx_for_term</span> <span class="k">as</span> <span class="k">&#39;</span><span class="n">c</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">term</span>
+<span class="k">let</span> <span class="n">in_ctx_for_term</span> <span class="o">:</span>
+    <span class="o">(</span><span class="n">ctx_for_term</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">csts</span><span class="o">)</span>
+      <span class="nn">ContextualConversion</span><span class="p">.</span><span class="n">ctx_readback</span> <span class="o">=</span> <span class="n">in_ctx_for_term</span>
+
+
+<span class="k">open</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="nc">Notation</span>
+
+<span class="c">(* The context received by the predicate has both a method tmctx and a method</span>
+<span class="c">   tyctx *)</span>
+<span class="k">let</span> <span class="n">term_to_string</span> <span class="o">=</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="nc">ContextualPred</span><span class="o">(</span><span class="s2">&quot;term-&gt;string&quot;</span><span class="o">,</span><span class="n">in_ctx_for_term</span><span class="o">,</span>
+  <span class="nc">In</span><span class="o">(</span><span class="n">term</span><span class="o">,</span><span class="s2">&quot;T&quot;</span><span class="o">,</span>
+  <span class="nc">Out</span><span class="o">(</span><span class="nn">BuiltInData</span><span class="p">.</span><span class="n">stringC</span><span class="o">,</span><span class="s2">&quot;S&quot;</span><span class="o">,</span>
+  <span class="nc">Read</span><span class="o">(</span><span class="s2">&quot;what else&quot;</span><span class="o">))),</span>
+  <span class="k">fun</span> <span class="o">(</span><span class="n">x</span> <span class="o">:</span> <span class="n">term</span><span class="o">)</span> <span class="o">(_</span><span class="n">s</span> <span class="o">:</span> <span class="kt">string</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="n">oarg</span><span class="o">)</span>
+    <span class="o">~</span><span class="n">depth</span><span class="o">:_</span> <span class="n">c</span> <span class="o">(_</span><span class="n">cst</span> <span class="o">:</span> <span class="nn">Data</span><span class="p">.</span><span class="n">constraints</span><span class="o">)</span> <span class="o">(_</span><span class="n">state</span> <span class="o">:</span> <span class="nn">State</span><span class="p">.</span><span class="n">t</span><span class="o">)</span> <span class="o">-&gt;</span>
+
+    <span class="o">!:</span> <span class="o">(</span><span class="nn">Format</span><span class="p">.</span><span class="n">asprintf</span> <span class="s2">&quot;@[&lt;hov&gt;%a@ ;@ %a@ |-@ %a@]@</span><span class="se">\n</span><span class="s2">%!&quot;</span>
+      <span class="o">(</span><span class="nn">RawData</span><span class="p">.</span><span class="nn">Constants</span><span class="p">.</span><span class="nn">Map</span><span class="p">.</span><span class="n">pp</span>
+         <span class="o">(</span><span class="nn">PPX</span><span class="p">.</span><span class="n">pp_ctx_entry</span> <span class="n">pp_tmctx</span><span class="o">))</span>
+        <span class="n">c</span><span class="o">#</span><span class="n">tmctx</span>
+      <span class="o">(</span><span class="nn">RawData</span><span class="p">.</span><span class="nn">Constants</span><span class="p">.</span><span class="nn">Map</span><span class="p">.</span><span class="n">pp</span>
+         <span class="o">(</span><span class="nn">PPX</span><span class="p">.</span><span class="n">pp_ctx_entry</span> <span class="n">pp_tyctx</span><span class="o">))</span>
+        <span class="n">c</span><span class="o">#</span><span class="n">tyctx</span>
+       <span class="n">term</span><span class="o">.</span><span class="n">pp</span> <span class="n">x</span><span class="o">)</span>
+<span class="o">)</span>
+
+<span class="k">let</span> <span class="n">builtin</span> <span class="o">=</span> <span class="k">let</span> <span class="k">open</span> <span class="nc">BuiltIn</span> <span class="k">in</span>
+  <span class="nn">BuiltIn</span><span class="p">.</span><span class="n">declare</span> <span class="o">~</span><span class="n">file_name</span> <span class="o">(</span>
+    <span class="c">(* the type of the bound type variables *)</span>
+    <span class="nc">LPCode</span> <span class="s2">&quot;data ty.</span><span class="se">\n</span><span class="s2">func ty.copy ty -&gt; ty.&quot;</span> <span class="o">::</span>
+    <span class="o">(</span><span class="nn">PPX</span><span class="p">.</span><span class="n">to_list</span> <span class="n">declaration</span><span class="o">)</span> <span class="o">@</span> <span class="o">[</span>
+    <span class="nc">MLCode</span><span class="o">(</span><span class="n">term_to_string</span><span class="o">,</span><span class="nc">DocAbove</span><span class="o">);</span>
+  <span class="o">])</span>
+</pre></div>
+</div>
+<p>The deep copy of <code class="docutils literal notranslate"><span class="pre">term</span></code> goes under both kinds of binders, adding the entry of
+the bound variable to the context:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">term.copy</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span>.
+term.copy<span class="w"> </span>(app<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="o">)</span><span class="w"> </span>(app<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(term.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(term.copy<span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">B1</span><span class="o">).</span>
+term.copy<span class="w"> </span>(lam<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="o">)</span><span class="w"> </span>(lam<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(string.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(<span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>tmentry<span class="w"> </span>x<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>term.copy<span class="w"> </span>x<span class="w"> </span>x<span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span><span class="o">(</span>term.copy<span class="w"> </span><span class="o">(</span><span class="nv">A1</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="nv">B1</span><span class="w"> </span>x<span class="o">))).</span>
+term.copy<span class="w"> </span>(tlam<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="o">)</span><span class="w"> </span>(tlam<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(string.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(<span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>tyentry<span class="w"> </span>x<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>ty.copy<span class="w"> </span>x<span class="w"> </span>x<span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span><span class="o">(</span>term.copy<span class="w"> </span><span class="o">(</span><span class="nv">A1</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="nv">B1</span><span class="w"> </span>x<span class="o">))).</span>
+</pre></div>
+</div>
+<p>The Elpi program calling the builtin, with an entry for each kind of bound
+variable in scope, is:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x a</span>\
+<span class="w">    </span>tmentry<span class="w"> </span>x<span class="w"> </span><span class="s2">&quot;x&quot;</span><span class="w"> </span><span class="kd">==&gt;</span>
+<span class="w">    </span>tyentry<span class="w"> </span>a<span class="w"> </span><span class="s2">&quot;a&quot;</span><span class="w"> </span><span class="kd">==&gt;</span>
+<span class="w">    </span>term.copy<span class="w"> </span>x<span class="w"> </span>x<span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>(
+<span class="w">      </span><span class="kd">sigma</span><span class="w"> </span><span class="nv">T C</span>\
+<span class="w">        </span><span class="nv">T</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="o">(</span>tlam<span class="w"> </span><span class="s2">&quot;B&quot;</span><span class="w"> </span><span class="nv">b\</span><span class="w"> </span>lam<span class="w"> </span><span class="s2">&quot;y&quot;</span><span class="w"> </span><span class="nv">y\</span><span class="w"> </span>app<span class="w"> </span>x<span class="w"> </span>y<span class="o">)</span><span class="kd">,</span>
+<span class="w">        </span>print<span class="w"> </span>{term-&gt;string<span class="w"> </span><span class="nv">T</span>},
+</pre></div>
+</div>
+</section>
+<section id="a-polymorphic-datum-with-binders">
+<h3>A polymorphic datum with binders<a class="headerlink" href="#a-polymorphic-datum-with-binders" title="Link to this heading"></a></h3>
+<p>If the datum has type parameters, so does the Elpi type of its bound
+variables, and the argument of <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.key]</span></code> and of <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.binder]</span></code> is
+the list <code class="docutils literal notranslate"><span class="pre">[&quot;term&quot;;</span> <span class="pre">&quot;A&quot;]</span></code> instead of the string <code class="docutils literal notranslate"><span class="pre">&quot;term&quot;</span></code>. By convention the
+parameters of a type are called <code class="docutils literal notranslate"><span class="pre">A</span></code>, <code class="docutils literal notranslate"><span class="pre">B</span></code>, <code class="docutils literal notranslate"><span class="pre">C</span></code>, … in Elpi, in the order
+in which they are declared in OCaml, and the elements of the list after the
+name of the type are among them. The context type itself has no parameters:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="n">tctx</span> <span class="o">=</span> <span class="nc">Entry</span> <span class="k">of</span> <span class="o">(</span><span class="kt">string</span><span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">key</span> <span class="o">[</span><span class="s2">&quot;term&quot;</span><span class="o">;</span> <span class="s2">&quot;A&quot;</span><span class="o">]])</span>
+  <span class="o">[@@</span><span class="n">elpi</span><span class="o">.</span><span class="n">index</span> <span class="o">(</span><span class="k">module</span> <span class="nc">String</span><span class="o">)]</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}]</span>
+
+<span class="k">type</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">term</span> <span class="o">=</span>
+  <span class="o">|</span> <span class="nc">Var</span> <span class="k">of</span> <span class="kt">string</span> <span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">var</span> <span class="n">tctx</span><span class="o">]</span>
+  <span class="o">|</span> <span class="nc">Const</span> <span class="k">of</span> <span class="k">&#39;</span><span class="n">a</span>
+  <span class="o">|</span> <span class="nc">Lam</span> <span class="k">of</span> <span class="kt">string</span> <span class="o">*</span>
+      <span class="o">(</span><span class="k">&#39;</span><span class="n">a</span> <span class="n">term</span><span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">binder</span> <span class="o">[</span><span class="s2">&quot;term&quot;</span><span class="o">;</span> <span class="s2">&quot;A&quot;</span><span class="o">]</span> <span class="n">tctx</span> <span class="o">(</span><span class="k">fun</span> <span class="n">s</span> <span class="o">-&gt;</span> <span class="nc">Entry</span> <span class="n">s</span><span class="o">)])</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}]</span>
+</pre></div>
+</div>
+<p>The entries of the context are polymorphic and, since the copy of a bound
+variable changes the type of the variable (from <code class="docutils literal notranslate"><span class="pre">term</span> <span class="pre">A</span></code> to <code class="docutils literal notranslate"><span class="pre">term</span> <span class="pre">B</span></code>, if the
+copy function of the parameter goes from <code class="docutils literal notranslate"><span class="pre">A</span></code> to <code class="docutils literal notranslate"><span class="pre">B</span></code>), the deep copy goes
+under the binder with two distinct variables, one for the datum and one for
+its copy, related by a rule that is not indexed:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">func</span><span class="w"> </span><span class="nf">term.copy</span><span class="w"> </span><span class="kt">(func</span><span class="w"> </span><span class="kt">X0</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">Y0)</span>,<span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">X0</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">term</span><span class="w"> </span><span class="kt">Y0</span>.
+term.copy<span class="w"> </span><span class="nv">F0</span><span class="w"> </span>(const<span class="w"> </span><span class="nv">A0</span><span class="o">)</span><span class="w"> </span>(const<span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(<span class="nv">F0</span><span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">).</span>
+term.copy<span class="w"> </span><span class="nv">F0</span><span class="w"> </span>(lam<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="o">)</span><span class="w"> </span>(lam<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(string.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(<span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">y</span>\<span class="w"> </span>entry<span class="w"> </span>x<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>entry<span class="w"> </span>y<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span><span class="o">(</span>term.copy<span class="w"> </span><span class="nv">F0</span><span class="w"> </span>x<span class="w"> </span>y<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">!</span><span class="o">)</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span><span class="o">((</span>term.copy<span class="w"> </span><span class="nv">F0</span><span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="nv">A1</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="nv">B1</span><span class="w"> </span>y<span class="o">))).</span>
+</pre></div>
+</div>
+</section>
+<section id="several-data-types-under-different-contexts">
+<span id="ppx-compose-ctx"></span><h3>Several data types under different contexts<a class="headerlink" href="#several-data-types-under-different-contexts" title="Link to this heading"></a></h3>
+<p>A <code class="docutils literal notranslate"><span class="pre">ContextualPred</span></code> has a single context. A predicate taking in input data of types
+<code class="docutils literal notranslate"><span class="pre">t1</span></code> and <code class="docutils literal notranslate"><span class="pre">t2</span></code> that live under different contexts needs one rich enough
+for both, and none of the <code class="docutils literal notranslate"><span class="pre">in_ctx_for_t1</span></code>, <code class="docutils literal notranslate"><span class="pre">in_ctx_for_t2</span></code> values
+generated for the two types is. The structure item</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="o">[%%</span><span class="n">elpi</span><span class="o">.</span><span class="n">compose_ctx</span> <span class="n">both</span> <span class="o">[</span><span class="n">t1</span><span class="o">;</span> <span class="n">t2</span><span class="o">]]</span>
+</pre></div>
+</div>
+<p>builds it, once <code class="docutils literal notranslate"><span class="pre">t1</span></code> and <code class="docutils literal notranslate"><span class="pre">t2</span></code> have been derived (each one with its own
+context type, here <code class="docutils literal notranslate"><span class="pre">c1</span></code> and <code class="docutils literal notranslate"><span class="pre">c2</span></code>). It defines:</p>
+<ul class="simple">
+<li><p>the class <code class="docutils literal notranslate"><span class="pre">ctx_for_both</span></code>, which inherits <code class="docutils literal notranslate"><span class="pre">ctx_for_t1</span></code> and
+<code class="docutils literal notranslate"><span class="pre">ctx_for_t2</span></code>, hence has the methods of all the context types involved
+(<code class="docutils literal notranslate"><span class="pre">c1</span></code> and <code class="docutils literal notranslate"><span class="pre">c2</span></code>);</p></li>
+<li><p>the value <code class="docutils literal notranslate"><span class="pre">in_ctx_for_both</span></code>, of type
+<code class="docutils literal notranslate"><span class="pre">(ctx_for_both,</span> <span class="pre">'csts)</span> <span class="pre">ContextualConversion.ctx_readback</span></code>, which reads back
+the context of <code class="docutils literal notranslate"><span class="pre">t1</span></code>, then the one of <code class="docutils literal notranslate"><span class="pre">t2</span></code>, and builds the object.</p></li>
+</ul>
+<p>The list of types must contain at least one type and the types are read back
+in the order they are listed. A context shared by several of them is read back
+once for each, with the same result.</p>
+<p>The builtin below takes a <code class="docutils literal notranslate"><span class="pre">t1</span></code> and a <code class="docutils literal notranslate"><span class="pre">t2</span></code>, each one under its own context.
+It declares <code class="docutils literal notranslate"><span class="pre">in_ctx_for_both</span></code> as its context and reads the entries of both
+contexts from the object it receives (<code class="docutils literal notranslate"><span class="pre">c#c1</span></code> and <code class="docutils literal notranslate"><span class="pre">c#c2</span></code>):</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="c">(* The context in which both t1 and t2 can be read back *)</span>
+<span class="o">[%%</span><span class="n">elpi</span><span class="o">.</span><span class="n">compose_ctx</span> <span class="n">both</span> <span class="o">[</span><span class="n">t1</span><span class="o">;</span> <span class="n">t2</span><span class="o">]]</span>
+
+<span class="k">open</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="nc">Notation</span>
+
+<span class="c">(* A predicate taking in input two data living under different contexts *)</span>
+<span class="k">let</span> <span class="n">both_to_string</span> <span class="o">=</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="nc">ContextualPred</span><span class="o">(</span><span class="s2">&quot;t1-&gt;t2-&gt;string&quot;</span><span class="o">,</span><span class="n">in_ctx_for_both</span><span class="o">,</span>
+  <span class="nc">In</span><span class="o">(</span><span class="n">t1</span><span class="o">,</span><span class="s2">&quot;A&quot;</span><span class="o">,</span>
+  <span class="nc">In</span><span class="o">(</span><span class="n">t2</span><span class="o">,</span><span class="s2">&quot;B&quot;</span><span class="o">,</span>
+  <span class="nc">Out</span><span class="o">(</span><span class="nn">BuiltInData</span><span class="p">.</span><span class="n">stringC</span><span class="o">,</span><span class="s2">&quot;S&quot;</span><span class="o">,</span>
+  <span class="nc">Read</span><span class="o">(</span><span class="s2">&quot;a t1 and a t2, each one under its own context&quot;</span><span class="o">)))),</span>
+  <span class="k">fun</span> <span class="o">(</span><span class="n">a</span> <span class="o">:</span> <span class="n">t1</span><span class="o">)</span> <span class="o">(</span><span class="n">b</span> <span class="o">:</span> <span class="n">t2</span><span class="o">)</span> <span class="o">(_</span><span class="n">s</span> <span class="o">:</span> <span class="kt">string</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="n">oarg</span><span class="o">)</span>
+    <span class="o">~</span><span class="n">depth</span><span class="o">:_</span> <span class="n">c</span> <span class="o">(_</span><span class="n">cst</span> <span class="o">:</span> <span class="nn">Data</span><span class="p">.</span><span class="n">constraints</span><span class="o">)</span> <span class="o">(_</span><span class="n">state</span> <span class="o">:</span> <span class="nn">State</span><span class="p">.</span><span class="n">t</span><span class="o">)</span> <span class="o">-&gt;</span>
+
+    <span class="o">!:</span> <span class="o">(</span><span class="nn">Format</span><span class="p">.</span><span class="n">asprintf</span> <span class="s2">&quot;@[&lt;hov&gt;%a@ |-@ %a@ ;@ %a@ |-@ %a@]@</span><span class="se">\n</span><span class="s2">%!&quot;</span>
+      <span class="o">(</span><span class="nn">RawData</span><span class="p">.</span><span class="nn">Constants</span><span class="p">.</span><span class="nn">Map</span><span class="p">.</span><span class="n">pp</span>
+         <span class="o">(</span><span class="nn">PPX</span><span class="p">.</span><span class="n">pp_ctx_entry</span> <span class="n">pp_c1</span><span class="o">))</span>
+        <span class="n">c</span><span class="o">#</span><span class="n">c1</span>
+      <span class="n">t1</span><span class="o">.</span><span class="n">pp</span> <span class="n">a</span>
+      <span class="o">(</span><span class="nn">RawData</span><span class="p">.</span><span class="nn">Constants</span><span class="p">.</span><span class="nn">Map</span><span class="p">.</span><span class="n">pp</span>
+         <span class="o">(</span><span class="nn">PPX</span><span class="p">.</span><span class="n">pp_ctx_entry</span> <span class="n">pp_c2</span><span class="o">))</span>
+        <span class="n">c</span><span class="o">#</span><span class="n">c2</span>
+      <span class="n">t2</span><span class="o">.</span><span class="n">pp</span> <span class="n">b</span><span class="o">)</span>
+<span class="o">)</span>
+</pre></div>
+</div>
+<p>The Elpi declarations generated for the example, including the signature of
+the builtin, are:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="c">% context items for t1 (E1)</span>
+<span class="kd">builtin func</span><span class="w"> </span><span class="nf">e1</span><span class="w"> </span><span class="kt">t1</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>,<span class="w"> </span><span class="kt">bool</span>.
+
+
+<span class="kd">builtin</span><span class="w"> </span><span class="kd">data</span><span class="w"> </span><span class="nf">t1</span>.
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">a1</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">t1</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t1</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t1</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>.<span class="w">  </span><span class="c">% A1</span>
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">l1</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">(t1</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t1)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t1</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>.<span class="w">  </span><span class="c">% L1</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nf">t1.copy</span><span class="w"> </span><span class="kt">t1</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t1</span>.
+t1.copy<span class="w"> </span>(a1<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="o">)</span><span class="w"> </span>(a1<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(t1.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(t1.copy<span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">B1</span><span class="o">).</span>
+t1.copy<span class="w"> </span>(l1<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">A2</span><span class="o">)</span><span class="w"> </span>(l1<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="w"> </span><span class="nv">B2</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(bool.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(string.copy<span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(<span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>e1<span class="w"> </span>x<span class="w"> </span><span class="nv">B1</span><span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>t1.copy<span class="w"> </span>x<span class="w"> </span>x<span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span><span class="o">(</span>t1.copy<span class="w"> </span><span class="o">(</span><span class="nv">A2</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="nv">B2</span><span class="w"> </span>x<span class="o">))).</span>
+
+
+
+<span class="c">% context items for t2 (E2)</span>
+<span class="kd">builtin func</span><span class="w"> </span><span class="nf">e2</span><span class="w"> </span><span class="kt">t2</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>,<span class="w"> </span><span class="kt">int</span>.
+
+
+<span class="kd">builtin</span><span class="w"> </span><span class="kd">data</span><span class="w"> </span><span class="nf">t2</span>.
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">a2</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">t2</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t2</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t2</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>.<span class="w">  </span><span class="c">% A2</span>
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">l2</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">(t2</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t2)</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t2</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>.<span class="w">  </span><span class="c">% L2</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nf">t2.copy</span><span class="w"> </span><span class="kt">t2</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t2</span>.
+t2.copy<span class="w"> </span>(a2<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="o">)</span><span class="w"> </span>(a2<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(t2.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(t2.copy<span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">B1</span><span class="o">).</span>
+t2.copy<span class="w"> </span>(l2<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">A2</span><span class="o">)</span><span class="w"> </span>(l2<span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="nv">B1</span><span class="w"> </span><span class="nv">B2</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(int.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(string.copy<span class="w"> </span><span class="nv">A1</span><span class="w"> </span><span class="nv">B1</span><span class="o">)</span><span class="kd">,</span><span class="w"> </span>(<span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>e2<span class="w"> </span>x<span class="w"> </span><span class="nv">B1</span><span class="w"> </span><span class="nv">B0</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>t2.copy<span class="w"> </span>x<span class="w"> </span>x<span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span><span class="o">(</span>t2.copy<span class="w"> </span><span class="o">(</span><span class="nv">A2</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="nv">B2</span><span class="w"> </span>x<span class="o">))).</span>
+
+
+
+<span class="c">% [t1-&gt;t2-&gt;string A B S] a t1 and a t2, each one under its own context</span>
+<span class="kd">builtin func</span><span class="w"> </span><span class="nf">t1-&gt;t2-&gt;string</span><span class="w"> </span><span class="kt">t1</span>,<span class="w"> </span><span class="kt">t2</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">string</span>.
+</pre></div>
+</div>
+</section>
+<section id="constructors-with-the-same-name">
+<span id="ppx-variant"></span><h3>Constructors with the same name<a class="headerlink" href="#constructors-with-the-same-name" title="Link to this heading"></a></h3>
+<p>Two constructors with the same name, in two different types, are two different
+overloads of the same global symbol, and the type tells which one is meant. To
+let them coexist give each one its own <em>variant</em> with <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.variant</span> <span class="pre">n]</span></code>:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="k">let</span> <span class="n">declaration</span> <span class="o">=</span> <span class="nn">PPX</span><span class="p">.</span><span class="n">empty_declaration</span> <span class="bp">()</span>
+
+<span class="k">type</span> <span class="n">t1</span> <span class="o">=</span> <span class="nc">A</span> <span class="k">of</span> <span class="kt">int</span> <span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">variant</span> <span class="mi">1</span><span class="o">]</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}]</span>
+
+<span class="k">type</span> <span class="n">t2</span> <span class="o">=</span> <span class="nc">A</span> <span class="k">of</span> <span class="kt">string</span> <span class="o">[@</span><span class="n">elpi</span><span class="o">.</span><span class="n">variant</span> <span class="mi">2</span><span class="o">]</span>
+<span class="o">[@@</span><span class="n">deriving</span> <span class="n">show</span><span class="o">,</span> <span class="n">elpi</span> <span class="o">{</span> <span class="n">declaration</span> <span class="o">}]</span>
+
+<span class="k">let</span> <span class="n">builtin</span> <span class="o">=</span> <span class="nn">BuiltIn</span><span class="p">.</span><span class="n">declare</span> <span class="o">~</span><span class="n">file_name</span> <span class="o">(</span><span class="nn">PPX</span><span class="p">.</span><span class="n">to_list</span> <span class="n">declaration</span><span class="o">)</span>
+
+<span class="c">(* Both constructors are called a, the type tells which one is meant *)</span>
+<span class="k">let</span> <span class="n">program</span> <span class="o">=</span> <span class="o">{|</span>
+<span class="n">main</span> <span class="o">:-</span>
+  <span class="n">t1</span><span class="o">.</span><span class="n">copy</span> <span class="o">(</span><span class="n">a</span> <span class="mi">1</span><span class="o">)</span> <span class="nc">X</span><span class="o">,</span> <span class="nc">X</span> <span class="o">=</span> <span class="n">a</span> <span class="mi">1</span><span class="o">,</span>
+  <span class="n">t2</span><span class="o">.</span><span class="n">copy</span> <span class="o">(</span><span class="n">a</span> <span class="s2">&quot;s&quot;</span><span class="o">)</span> <span class="nc">Y</span><span class="o">,</span> <span class="nc">Y</span> <span class="o">=</span> <span class="n">a</span> <span class="s2">&quot;s&quot;</span><span class="o">.</span>
+<span class="o">|}</span>
+</pre></div>
+</div>
+<p>The declarations generated for it carry the variant, and both <code class="docutils literal notranslate"><span class="pre">a</span></code> are used
+in the same program:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">builtin</span><span class="w"> </span><span class="kd">data</span><span class="w"> </span><span class="nf">t1</span>.
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">a</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t1</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;1&quot;</span>.<span class="w">  </span><span class="c">% A</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nf">t1.copy</span><span class="w"> </span><span class="kt">t1</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t1</span>.
+t1.copy<span class="w"> </span>(a<span class="w"> </span><span class="nv">A0</span><span class="o">)</span><span class="w"> </span>(a<span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(int.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">).</span>
+
+
+
+<span class="kd">builtin</span><span class="w"> </span><span class="kd">data</span><span class="w"> </span><span class="nf">t2</span>.
+<span class="kd">builtin symb</span><span class="w"> </span><span class="nf">a</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t2</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;2&quot;</span>.<span class="w">  </span><span class="c">% A</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nf">t2.copy</span><span class="w"> </span><span class="kt">t2</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">t2</span>.
+t2.copy<span class="w"> </span>(a<span class="w"> </span><span class="nv">A0</span><span class="o">)</span><span class="w"> </span>(a<span class="w"> </span><span class="nv">B0</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(string.copy<span class="w"> </span><span class="nv">A0</span><span class="w"> </span><span class="nv">B0</span><span class="o">).</span>
+
+
+
+
+
+
+
+
+main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="w">  </span>t1.copy<span class="w"> </span>(a<span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>a<span class="w"> </span><span class="mi">1</span><span class="kd">,</span>
+<span class="w">  </span>t2.copy<span class="w"> </span>(a<span class="w"> </span><span class="s2">&quot;s&quot;</span><span class="o">)</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span>a<span class="w"> </span><span class="s2">&quot;s&quot;</span><span class="o">.</span>
+
+<span class="c">/* OUTPUT</span>
+<span class="kd">*/</span>
+</pre></div>
+</div>
+</section>
+<section id="deriving-directives">
+<h3>Deriving directives<a class="headerlink" href="#deriving-directives" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;&#64;deriving</span> <span class="pre">elpi]</span></code></dt><dd><p>Derive a <code class="docutils literal notranslate"><span class="pre">ContextualConversion.t</span></code> for the types of the (possibly mutually
+recursive) block. The conversion is named like the type.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;&#64;deriving</span> <span class="pre">elpi</span> <span class="pre">{</span> <span class="pre">context</span> <span class="pre">=</span> <span class="pre">[ty1;</span> <span class="pre">...;</span> <span class="pre">tyn]</span> <span class="pre">}]</span></code></dt><dd><p>The types describing the context under which the datum lives, in the order
+in which they are read back. The default is the list of the types mentioned
+in <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.binder]</span></code> and <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.var]</span></code>, in no specified order.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;&#64;deriving</span> <span class="pre">elpi</span> <span class="pre">{</span> <span class="pre">declaration</span> <span class="pre">=</span> <span class="pre">l</span> <span class="pre">}]</span></code></dt><dd><p>Also add to <code class="docutils literal notranslate"><span class="pre">l</span></code> (an <code class="docutils literal notranslate"><span class="pre">Elpi.API.PPX.declaration</span></code>) the <code class="docutils literal notranslate"><span class="pre">MLDataC</span></code>
+declarations of the derived types, each one followed by the <code class="docutils literal notranslate"><span class="pre">LPCode</span></code> of its
+deep copy function; see the first example.</p>
+</dd>
+</dl>
+</section>
+<section id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h3>
+<p>On a type declaration:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.pp</span> <span class="pre">f]</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">f</span></code> (mandatory) is the code of the pretty printer of the type, of the type
+<code class="docutils literal notranslate"><span class="pre">ppx_deriving.show</span></code> would produce.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.type_code</span> <span class="pre">&quot;name&quot;</span> <span class="pre">&quot;code&quot;]</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">name</span></code> (mandatory) is a string, the name of the type in Elpi; the default
+is the name of the OCaml type in lowercase with <code class="docutils literal notranslate"><span class="pre">_</span></code> replaced by <code class="docutils literal notranslate"><span class="pre">-</span></code>.
+<code class="docutils literal notranslate"><span class="pre">code</span></code> (optional) is a string used as the Elpi kind declaration of the
+type, instead of the generated one.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.type_doc</span> <span class="pre">s]</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">s</span></code> (mandatory) is a string, a comment printed before the declaration of
+the type. There is none by default.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.default_constructor_readback</span> <span class="pre">f]</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">f</span></code> (mandatory) is a function of type
+<code class="docutils literal notranslate"><span class="pre">ContextualConversion.(readback</span> <span class="pre">-&gt;</span> <span class="pre">readback)</span></code>, used when the term is none
+of the constructors (variants and records only). Its argument is the default
+behavior, a runtime type error. It can be used to read back flexible terms,
+in addition to the regular constructors.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.index</span> <span class="pre">(module</span> <span class="pre">M)]</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">M</span></code> (mandatory) is a module with an <code class="docutils literal notranslate"><span class="pre">OrderedType</span></code> and a <code class="docutils literal notranslate"><span class="pre">show</span></code>, used
+to instantiate the functor <code class="docutils literal notranslate"><span class="pre">Elpi.Utils.Map.Make</span></code>. In a type carrying it,
+each constructor must have exactly one field marked <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.key]</span></code>, and
+that field must have type <code class="docutils literal notranslate"><span class="pre">M.t</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.opaque</span> <span class="pre">e]</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">e</span></code> (mandatory) is an <code class="docutils literal notranslate"><span class="pre">Elpi.API.OpaqueData.declaration</span></code>. It is required
+for opaque types.</p>
+</dd>
+</dl>
+<p>On a constructor:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;elpi.var</span> <span class="pre">ctx</span> <span class="pre">to_key]</span></code></dt><dd><p>The constructor is a bound variable. <code class="docutils literal notranslate"><span class="pre">ctx</span></code> (mandatory) is the context in
+which the variable is bound; <code class="docutils literal notranslate"><span class="pre">to_key</span></code> (optional) is a function from the
+constructor arguments to the value that is the <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.key]</span></code> of the entry
+in <code class="docutils literal notranslate"><span class="pre">ctx</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;elpi.skip]</span></code></dt><dd><p>The constructor is not exposed to Elpi.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;elpi.variant</span> <span class="pre">n]</span></code></dt><dd><p>The variant of the global symbol of the constructor. <code class="docutils literal notranslate"><span class="pre">n</span></code> (mandatory) is an
+integer literal, at least 1. Constructors with the same name, for example in
+different types, need different variants, and the Elpi declaration is
+<code class="docutils literal notranslate"><span class="pre">builtin</span> <span class="pre">symb</span> <span class="pre">name</span> <span class="pre">:</span> <span class="pre">...</span> <span class="pre">=</span> <span class="pre">&quot;n&quot;</span></code>; see <a class="reference internal" href="#ppx-variant"><span class="std std-ref">Constructors with the same name</span></a>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;elpi.embed</span> <span class="pre">f]</span></code>, <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.readback</span> <span class="pre">f]</span></code></dt><dd><p>Custom embedding (resp. readback) code. <code class="docutils literal notranslate"><span class="pre">f</span></code> (mandatory) has type
+<code class="docutils literal notranslate"><span class="pre">ContextualConversion.(embedding</span> <span class="pre">-&gt;</span> <span class="pre">embedding)</span></code> (resp.
+<code class="docutils literal notranslate"><span class="pre">(readback</span> <span class="pre">-&gt;</span> <span class="pre">readback)</span></code>), and its argument is the function the ppx would
+have generated. To override the default only in some cases, call it in the
+other ones.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;elpi.code</span> <span class="pre">name</span> <span class="pre">code]</span></code></dt><dd><p>A custom Elpi declaration. <code class="docutils literal notranslate"><span class="pre">name</span></code> (mandatory) is a string, the name of the
+constructor in Elpi; the default is the name of the OCaml constructor in
+lowercase with <code class="docutils literal notranslate"><span class="pre">_</span></code> replaced by <code class="docutils literal notranslate"><span class="pre">-</span></code>, so <code class="docutils literal notranslate"><span class="pre">Foo_BAR</span></code> becomes <code class="docutils literal notranslate"><span class="pre">foo-bar</span></code>.
+<code class="docutils literal notranslate"><span class="pre">code</span></code> (optional) is a string used as the declaration of the constructor,
+the default one being derived from the types of its fields, for example
+<code class="docutils literal notranslate"><span class="pre">&quot;type</span> <span class="pre">lam</span> <span class="pre">(term</span> <span class="pre">-&gt;</span> <span class="pre">term)</span> <span class="pre">-&gt;</span> <span class="pre">term.</span> <span class="pre">%</span> <span class="pre">Lam&quot;</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;elpi.doc</span> <span class="pre">s]</span></code></dt><dd><p>A custom documentation string <code class="docutils literal notranslate"><span class="pre">s</span></code> (mandatory). The default is the name of
+the OCaml constructor.</p>
+</dd>
+</dl>
+<p>On a field of a constructor:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;elpi.key</span> <span class="pre">&quot;ty&quot;]</span></code></dt><dd><p>The field is the key of the entry in the context map; it can be any of the
+fields of the constructor. <code class="docutils literal notranslate"><span class="pre">ty</span></code> (mandatory) is
+the name of the Elpi type of the variables bound by the context, such as the
+<code class="docutils literal notranslate"><span class="pre">&quot;term&quot;</span></code> of <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.binder</span> <span class="pre">&quot;term&quot;</span> <span class="pre">ctx</span> <span class="pre">...]</span></code>; if the type has parameters
+it is the list <code class="docutils literal notranslate"><span class="pre">[&quot;term&quot;;</span> <span class="pre">&quot;A&quot;;</span> <span class="pre">...]</span></code>, where <code class="docutils literal notranslate"><span class="pre">A</span></code>, <code class="docutils literal notranslate"><span class="pre">B</span></code>, … are the
+names of the parameters, in order. A constructor of the
+context is declared as <code class="docutils literal notranslate"><span class="pre">builtin</span> <span class="pre">func</span> <span class="pre">name</span> <span class="pre">ty</span> <span class="pre">-&gt;</span> <span class="pre">field1,</span> <span class="pre">...,</span> <span class="pre">fieldN</span></code> on the
+Elpi side.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[&#64;elpi.binder</span> <span class="pre">ty</span> <span class="pre">ctx</span> <span class="pre">mk_ctx_entry]</span></code></dt><dd><p>The field is under one binder. <code class="docutils literal notranslate"><span class="pre">ty</span></code> (optional) is the name of the Elpi
+type of the abstraction, the <code class="docutils literal notranslate"><span class="pre">XXX</span></code> of <code class="docutils literal notranslate"><span class="pre">(XXX</span> <span class="pre">-&gt;</span> <span class="pre">term)</span></code> (a list
+<code class="docutils literal notranslate"><span class="pre">[&quot;XXX&quot;;</span> <span class="pre">&quot;A&quot;;</span> <span class="pre">...]</span></code> if the type has parameters, as for <code class="docutils literal notranslate"><span class="pre">[&#64;elpi.key]</span></code>);
+the default is the name of the type being defined. <code class="docutils literal notranslate"><span class="pre">ctx</span></code> (mandatory) is the context in which
+the variable is bound. <code class="docutils literal notranslate"><span class="pre">mk_ctx_entry</span></code> (mandatory) is a function taking all
+the other fields and returning an entry of <code class="docutils literal notranslate"><span class="pre">ctx</span></code>.</p>
+</dd>
+</dl>
+<p>The extension <code class="docutils literal notranslate"><span class="pre">[%elpi</span> <span class="pre">:</span> <span class="pre">ty]</span></code> stands for the conversion of <code class="docutils literal notranslate"><span class="pre">ty</span></code>. It does not
+synthesize any code, it composes existing conversions.</p>
+<p>The structure item <code class="docutils literal notranslate"><span class="pre">[%%elpi.compose_ctx</span> <span class="pre">name</span> <span class="pre">[ty1;</span> <span class="pre">...;</span> <span class="pre">tyn]]</span></code> generates a
+context for several data types; see <a class="reference internal" href="#ppx-compose-ctx"><span class="std std-ref">Several data types under different contexts</span></a>.</p>
+</section>
+<section id="naming-conventions-of-the-generated-code">
+<h3>Naming conventions of the generated code<a class="headerlink" href="#naming-conventions-of-the-generated-code" title="Link to this heading"></a></h3>
+<p>For a type <code class="docutils literal notranslate"><span class="pre">ty</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;ty&gt;</span></code> is the <code class="docutils literal notranslate"><span class="pre">ContextualConversion.t</span></code> and <code class="docutils literal notranslate"><span class="pre">in_ctx_for_&lt;ty&gt;</span></code>
+the <code class="docutils literal notranslate"><span class="pre">ContextualConversion.ctx_readback</span></code>. For a context type <code class="docutils literal notranslate"><span class="pre">ctx</span></code> annotated
+with <code class="docutils literal notranslate"><span class="pre">[&#64;&#64;elpi.index</span> <span class="pre">(module</span> <span class="pre">M)]</span></code>, <code class="docutils literal notranslate"><span class="pre">Elpi_&lt;ctx&gt;_Map</span></code> is a module of signature
+<code class="docutils literal notranslate"><span class="pre">Elpi.API.Utils.Map.S</span></code>, the result of <code class="docutils literal notranslate"><span class="pre">Elpi.API.Utils.Map.Make(M)</span></code>.
+<code class="docutils literal notranslate"><span class="pre">ctx_for_&lt;name&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">in_ctx_for_&lt;name&gt;</span></code>, generated by
+<code class="docutils literal notranslate"><span class="pre">[%%elpi.compose_ctx</span> <span class="pre">name</span> <span class="pre">[...]]</span></code>, have the same shape as the class and the
+<code class="docutils literal notranslate"><span class="pre">ctx_readback</span></code> generated for a type.</p>
+<p>Variables in the generated code are named <code class="docutils literal notranslate"><span class="pre">elpi__something</span></code>, so that they do
+not clash with a variable named <code class="docutils literal notranslate"><span class="pre">elpi_something</span></code> or <code class="docutils literal notranslate"><span class="pre">something</span></code> in the code
+being derived.</p>
+</section>
 </section>
 <section id="also-worth-knowing">
 <h2>Also worth knowing<a class="headerlink" href="#also-worth-knowing" title="Link to this heading"></a></h2>
