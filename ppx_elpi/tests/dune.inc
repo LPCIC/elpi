@@ -600,6 +600,86 @@
 
 
 ; The output of the ppx and of the test executable is generated in
+; test_poly_binder_three_params.generated.* and compared with test_poly_binder_three_params.expected.*, but it is also promoted
+; to test_poly_binder_three_params.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_poly_binder_three_params.generated.ml)
+ (deps (:pp pp.exe) (:input test_poly_binder_three_params.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_poly_binder_three_params.generated.elpi)
+ (action (run ./test_poly_binder_three_params.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_poly_binder_three_params.actual.ml)
+ (action (copy test_poly_binder_three_params.generated.ml test_poly_binder_three_params.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_poly_binder_three_params.actual.elpi)
+ (action (copy test_poly_binder_three_params.generated.elpi test_poly_binder_three_params.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_poly_binder_three_params.actual.ml test_poly_binder_three_params.actual.elpi)
+ (action (diff test_poly_binder_three_params.expected.ml test_poly_binder_three_params.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_poly_binder_three_params.expected.elpi test_poly_binder_three_params.generated.elpi)))
+
+(executable
+  (name test_poly_binder_three_params)
+  (modules test_poly_binder_three_params)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
+; test_poly_binder_two_params.generated.* and compared with test_poly_binder_two_params.expected.*, but it is also promoted
+; to test_poly_binder_two_params.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_poly_binder_two_params.generated.ml)
+ (deps (:pp pp.exe) (:input test_poly_binder_two_params.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_poly_binder_two_params.generated.elpi)
+ (action (run ./test_poly_binder_two_params.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_poly_binder_two_params.actual.ml)
+ (action (copy test_poly_binder_two_params.generated.ml test_poly_binder_two_params.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_poly_binder_two_params.actual.elpi)
+ (action (copy test_poly_binder_two_params.generated.elpi test_poly_binder_two_params.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_poly_binder_two_params.actual.ml test_poly_binder_two_params.actual.elpi)
+ (action (diff test_poly_binder_two_params.expected.ml test_poly_binder_two_params.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_poly_binder_two_params.expected.elpi test_poly_binder_two_params.generated.elpi)))
+
+(executable
+  (name test_poly_binder_two_params)
+  (modules test_poly_binder_two_params)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
 ; test_record_binder.generated.* and compared with test_record_binder.expected.*, but it is also promoted
 ; to test_record_binder.actual.* (ignored by git) in order to be inspectable even when
 ; the test fails.

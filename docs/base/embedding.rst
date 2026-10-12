@@ -218,6 +218,13 @@ by the data being copied have no rule: add one, such as
 ``term.copy x x ==> ...``, for the ones that occur in the data, as the program
 of the example with two binders below does.
 
+The bound variable is copied to itself only if the Elpi type of the bound
+variables is a plain name, as ``term``. If it has parameters, as
+``["term"; "A"]``, copying changes its type, hence the copy goes under two
+variables, related by a rule with a cut (``term.copy F x y :- !``, the cut is
+needed since ``F`` is not an eigenvariable, a current limitation of the
+determinacy checker): see the polymorphic example below.
+
 For a datum ``l`` whose context is the type ``lctx``, the generated code is
 made of:
 
@@ -284,7 +291,7 @@ The entries of the context are polymorphic and, since the copy of a bound
 variable changes the type of the variable (from ``term A`` to ``term B``, if the
 copy function of the parameter goes from ``A`` to ``B``), the deep copy goes
 under the binder with two distinct variables, one for the datum and one for
-its copy, related by a rule that is not indexed:
+its copy, related by a rule with a cut:
 
 .. literalinclude:: ../../ppx_elpi/tests/test_poly_binder.expected.elpi
    :language: elpi
