@@ -320,6 +320,14 @@ let rec for_all23 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3
   | (_, _) -> false
 ;;
 
+(* An error found by a pass of the compiler or by the parser (which are
+   error resilient: they return their errors, see Errors in compiler_data.ml) *)
+type error = {
+  component : string;       (* the pass that found the error, eg "Typechecker" *)
+  loc : Loc.t option;
+  message : string;         (* without the name of the component *)
+}
+
 let pp_loc_opt = function
   | None -> ""
   | Some loc -> Loc.show loc
@@ -401,6 +409,7 @@ let option_mapacc f acc = function
   | None -> acc, None
 let option_iter f = function None -> () | Some x -> f x
 let option_default d = function None -> d | Some x -> x
+let ( @? ) o l = match o with None -> l | Some x -> x :: l
 
 module Pair = struct
 

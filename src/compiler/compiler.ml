@@ -299,7 +299,7 @@ let ast_of_builtins ~calc ~(parser: (module Parse.Parser)) ~file_name =
   let lexbuf = Lexing.from_string text in
   let module P = (val parser) in
   try
-    P.program_from ~loc:(Util.Loc.initial file_name) ~digest:(Digest.string text) lexbuf
+    fst (P.program_from ~max_errors:0 ~loc:(Util.Loc.initial file_name) ~digest:(Digest.string text) lexbuf)
   with Parse.ParseError(loc,msg) ->
     List.iteri (fun i s ->
       Printf.eprintf "%4d: %s\n" (i+1) s)

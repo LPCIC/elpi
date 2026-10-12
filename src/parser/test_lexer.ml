@@ -214,6 +214,7 @@ b
 c
 #line 7 "xx"
 a|}                                   [T(CONSTANT "b", 2, 1, 1,2);T(CONSTANT "c", 3, 3, 3,4);T(CONSTANT "a", 7, 5, 0,1) ];
+  test  "b\n#line 3 \"xx\"\na\n#line 5 \"yy\"\nc"  [T(CONSTANT "b", 1, 0, 0,1);T(CONSTANT "a", 3, 2, 0,1);T(CONSTANT "c", 5, 2, 0,1) ];
 
   (*    01234567890123456789012345 *)
   test  ":name"                       [T(COLON,1,0,0,1); T(NAME,1,0,1,5)];

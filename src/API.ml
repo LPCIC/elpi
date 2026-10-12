@@ -101,13 +101,14 @@ end
 
 module Parse = struct
 
+  (* the parser is error resilient, here the first error is raised *)
   let program ~elpi:{ Setup.parser } ~file =
     let module P = (val parser) in
-    P.program ~file
+    fst (P.program ~max_errors:0 file)
 
   let program_from ~elpi:{ Setup.parser } ~loc ~digest buf =
     let module P = (val parser) in
-    P.program_from ~loc ~digest buf
+    fst (P.program_from ~max_errors:0 ~loc ~digest buf)
 
   let goal ~elpi:{ Setup.parser } ~loc ~text =
     let module P = (val parser) in
