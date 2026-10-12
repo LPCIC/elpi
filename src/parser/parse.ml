@@ -10,6 +10,10 @@ exception ParseError = Parser_config.ParseError
 module type Parser = sig
   val goal : loc:Util.Loc.t -> text:string -> Ast.Goal.t
   val goal_from : loc:Util.Loc.t -> Lexing.lexbuf -> Ast.Goal.t
+  (* the same, but a syntax error is returned instead of being raised as
+     ParseError, with the warnings *)
+  val query : loc:Util.Loc.t -> text:string -> (Ast.Goal.t, Util.error) result * Util.warning list
+  val query_from : loc:Util.Loc.t -> Lexing.lexbuf -> (Ast.Goal.t, Util.error) result * Util.warning list
 
   val program_from : ?max_errors:int -> loc:Util.Loc.t -> digest:Digest.t -> Lexing.lexbuf ->
     Ast.Program.t * Util.error list * Util.warning list
@@ -188,6 +192,16 @@ let skip_char lexbuf =
 
 (* an error of the parser *)
 let make_error (loc, message) = { Util.component = "Parser"; loc = Some loc; message }
+
+let query_from ~loc lexbuf =
+  Warnings.init ();
+  let q =
+    match goal_from ~loc lexbuf with
+    | g -> Ok g
+    | exception Parser_config.ParseError (loc, message) -> Error (make_error (loc, message)) in
+  q, Warnings.consume ()
+
+let query ~loc ~text = query_from ~loc (Lexing.from_string text)
 
 let program_from ?(max_errors = max_int) ~loc:start_loc ~digest lexbuf =
   Hashtbl.clear already_parsed;

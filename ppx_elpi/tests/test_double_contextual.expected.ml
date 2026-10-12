@@ -68,7 +68,7 @@ include
             (match Elpi.API.RawData.look ~depth:elpi__depth elpi__idx with
              | Elpi.API.RawData.Const x -> Some x
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    "context entry applied to a non bound variable")
           else None
       | _ -> None
@@ -110,7 +110,9 @@ include
             let (elpi__state, elpi__13, elpi__10) =
               (fun ~depth elpi__hyps elpi__constraints elpi__state elpi__i ->
                  if elpi__i < 0
-                 then Elpi.API.Utils.type_error "not a bound variable";
+                 then
+                   Elpi.API.Error.error ~component:"ppx_elpi"
+                     "not a bound variable";
                  (elpi__state, (Elpi.API.RawData.mkConst elpi__i), []))
                 ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
                 elpi__9 in
@@ -144,9 +146,10 @@ include
                  match Elpi.API.RawData.look ~depth elpi__t with
                  | Elpi.API.RawData.Const elpi__i when elpi__i >= 0 ->
                      (elpi__state, elpi__i, [])
-                 | _ -> Elpi.API.Utils.type_error "not a bound variable")
-                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
-                elpi__x in
+                 | _ ->
+                     Elpi.API.Error.error ~component:"ppx_elpi"
+                       "not a bound variable") ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__x in
             (match elpi__xs with
              | elpi__1::elpi__2::[] ->
                  let (elpi__state, elpi__1, elpi__3) =
@@ -162,12 +165,12 @@ include
                  (elpi__state, (elpi__6, (TEntry (elpi__1, elpi__2))),
                    (List.concat [elpi__5; elpi__3; elpi__4]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_tyctx_TEntryc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "tyctx"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and tyctx :
@@ -299,7 +302,8 @@ include
               Elpi.API.State.get elpi_tyctx_state elpi__state in
             let elpi__key = (fun x -> x) elpi__29 in
             (if not (Elpi_tyctx_Map.mem elpi__key elpi__ctx2dbl)
-             then Elpi.API.Utils.error "Unbound variable";
+             then
+               Elpi.API.Error.error ~component:"ppx_elpi" "Unbound variable";
              (elpi__state,
                (Elpi.API.RawData.mkBound
                   (Elpi_tyctx_Map.find elpi__key elpi__ctx2dbl)), []))
@@ -364,7 +368,7 @@ include
                not
                  (Elpi.API.RawData.Constants.Map.mem elpi__hd elpi__dbl2ctx)
              then
-               Elpi.API.Utils.error
+               Elpi.API.Error.error ~component:"ppx_elpi"
                  (Format.asprintf "Unbound variable: %s in %a"
                     (Elpi.API.RawData.Constants.show elpi__hd)
                     (Elpi.API.RawData.Constants.Map.pp
@@ -390,7 +394,7 @@ include
                  (elpi__state, (TApp (elpi__22, elpi__19)),
                    (List.concat [elpi__21; elpi__20]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_ty_TAppc)))
@@ -435,12 +439,12 @@ include
                  (elpi__state, (TAll (elpi__28, elpi__23, elpi__24)),
                    (List.concat [elpi__27; elpi__25; elpi__26]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_ty_TAllc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "ty"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and ty :
@@ -548,7 +552,7 @@ include
             (match Elpi.API.RawData.look ~depth:elpi__depth elpi__idx with
              | Elpi.API.RawData.Const x -> Some x
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    "context entry applied to a non bound variable")
           else None
       | _ -> None
@@ -597,7 +601,9 @@ include
             let (elpi__state, elpi__60, elpi__57) =
               (fun ~depth elpi__hyps elpi__constraints elpi__state elpi__i ->
                  if elpi__i < 0
-                 then Elpi.API.Utils.type_error "not a bound variable";
+                 then
+                   Elpi.API.Error.error ~component:"ppx_elpi"
+                     "not a bound variable";
                  (elpi__state, (Elpi.API.RawData.mkConst elpi__i), []))
                 ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
                 elpi__56 in
@@ -631,9 +637,10 @@ include
                  match Elpi.API.RawData.look ~depth elpi__t with
                  | Elpi.API.RawData.Const elpi__i when elpi__i >= 0 ->
                      (elpi__state, elpi__i, [])
-                 | _ -> Elpi.API.Utils.type_error "not a bound variable")
-                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
-                elpi__x in
+                 | _ ->
+                     Elpi.API.Error.error ~component:"ppx_elpi"
+                       "not a bound variable") ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__x in
             (match elpi__xs with
              | elpi__48::elpi__49::[] ->
                  let (elpi__state, elpi__48, elpi__50) =
@@ -649,12 +656,12 @@ include
                  (elpi__state, (elpi__53, (Entry (elpi__48, elpi__49))),
                    (List.concat [elpi__52; elpi__50; elpi__51]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_tctx_Entryc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "tctx"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and tctx :
@@ -799,7 +806,8 @@ include
               Elpi.API.State.get elpi_tctx_state elpi__state in
             let elpi__key = (fun x -> x) elpi__76 in
             (if not (Elpi_tctx_Map.mem elpi__key elpi__ctx2dbl)
-             then Elpi.API.Utils.error "Unbound variable";
+             then
+               Elpi.API.Error.error ~component:"ppx_elpi" "Unbound variable";
              (elpi__state,
                (Elpi.API.RawData.mkBound
                   (Elpi_tctx_Map.find elpi__key elpi__ctx2dbl)), []))
@@ -862,7 +870,7 @@ include
                not
                  (Elpi.API.RawData.Constants.Map.mem elpi__hd elpi__dbl2ctx)
              then
-               Elpi.API.Utils.error
+               Elpi.API.Error.error ~component:"ppx_elpi"
                  (Format.asprintf "Unbound variable: %s in %a"
                     (Elpi.API.RawData.Constants.show elpi__hd)
                     (Elpi.API.RawData.Constants.Map.pp
@@ -886,7 +894,7 @@ include
                  (elpi__state, (App (elpi__69, elpi__66)),
                    (List.concat [elpi__68; elpi__67]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_term_Appc)))
@@ -930,12 +938,12 @@ include
                  (elpi__state, (Lam (elpi__75, elpi__70, elpi__71)),
                    (List.concat [elpi__74; elpi__72; elpi__73]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_term_Lamc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "term"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and term :

@@ -139,7 +139,7 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (B elpi__2), (List.concat [elpi__1]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_simple_Bc)))
@@ -163,12 +163,12 @@ include
                  (elpi__state, (C (elpi__6, elpi__3)),
                    (List.concat [elpi__5; elpi__4]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_simple_Cc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "simple"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and simple :

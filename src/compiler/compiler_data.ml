@@ -6,6 +6,8 @@ module F = Ast.Func
 
 module Symbol = Data.Symbol
 
+let ErrorFun { error = data_error; anomaly = data_anomaly } = error_fun ~component:"Compiler"
+
 module ScopeContext = struct
 
   type language = string
@@ -60,16 +62,16 @@ end = struct
   let set ?loc (_,r) x =
     match !r with
     | None -> r := Some x
-    | Some _ -> anomaly ?loc "MutableOnce"
+    | Some _ -> data_anomaly ?loc "MutableOnce"
   
-  let get (_,x) = match !x with Some x -> x | None -> anomaly "get"
+  let get (_,x) = match !x with Some x -> x | None -> data_anomaly "get"
   let get_name (x,_) = x
   let unset (_,x) = x := None
 
   let pretty fmt (f,x) =
     match !x with
     | None -> Format.fprintf fmt "%a" F.pp f
-    | Some _ -> anomaly "pp"
+    | Some _ -> data_anomaly "pp"
 end
 
 module TypeAssignment = struct
@@ -84,7 +86,7 @@ module TypeAssignment = struct
   let compare_tmode m1 m2 =
     match deref_tmode m1, deref_tmode m2 with
     | MVal m1, MVal m2 -> Mode.compare m1 m2
-    | _ -> anomaly "comparing an inferred mode declaration. Maybe some pred/func declaration is missing"
+    | _ -> data_anomaly "comparing an inferred mode declaration. Maybe some pred/func declaration is missing"
 
   let is_tmode_set t =
     match deref_tmode t with
@@ -261,9 +263,14 @@ let update_ety ety eit = { ety with eit }
           end
       | UVar m -> f fmt pretty m
       (* | UVar m -> MutableOnce.pretty fmt m *)
+    (* (pred), (func) and the types (func ..) (pred ..) have their parentheses *)
+    and self_parenthesized = function
+      | Prop _ -> true
+      | Arr _ as x -> Option.is_some (arrow_tail x)
+      | _ -> false
     and pretty_parens ~lvl fmt = function
       | UVar m -> f fmt (pretty_parens ~lvl) m
-      | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
+      | t when lvl >= lvl_of t && not (self_parenthesized t) -> fprintf fmt "(%a)" pretty t
       | t -> pretty fmt t
     and pretty_pred_mode ?(variadic=false) m fmt (s, t) =
       fprintf fmt "@[<hov 2>%a:%a%s@]" show_mode m (pretty_parens ~lvl:arrs) s (if variadic then ".." else "");
@@ -330,7 +337,7 @@ let update_ety ety eit = { ety with eit }
     | UVar c ->
         match map c with
         | Some x -> x
-        | None -> anomaly "TypeAssignment.subst"
+        | None -> data_anomaly "TypeAssignment.subst"
 
   let fresh (sk: skema) =
     let rec fresh map = function
@@ -365,14 +372,14 @@ let update_ety ety eit = { ety with eit }
   let eq_skema_w_id n (symb1,x) (symb2,y) = 
     try compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality x y = 0
     with InvalidMode -> 
-      error ~loc:(Symbol.get_loc symb1) 
+      data_error ~loc:(Symbol.get_loc symb1) 
         (Format.asprintf "@[<v>duplicate mode declaration for %a.@ - %a %a@ - %a %a@]" F.pp n Symbol.pp symb1 pretty_skema x Symbol.pp symb2 pretty_skema y)
 
 
 
   let check_same_mode ~loc1 ~loc2 (s1, x) (s2, y) =
     if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality x y <> 0 then
-      error ~loc:loc2 (Format.asprintf "@[<v>Two types for the symbol %s cannot only differ on modes or functionality.@\n@[<hov 2>Current declaration:@;<2 0>%a@]@\n@[<v 2>Previous declaration: %a@ (%s)@]@]" (Symbol.pretty s1) pretty_skema x pretty_skema y (Loc.show loc1))
+      data_error ~loc:loc2 (Format.asprintf "@[<v>Two types for the symbol %s cannot only differ on modes or functionality.@\n@[<hov 2>Current declaration:@;<2 0>%a@]@\n@[<v 2>Previous declaration: %a@ (%s)@]@]" (Symbol.pretty s1) pretty_skema x pretty_skema y (Loc.show loc1))
 
   let undup_skemas sk_of_s osl =
     let l = osl |> List.map (fun x -> x, sk_of_s x) in
@@ -395,7 +402,7 @@ let update_ety ety eit = { ety with eit }
 
   let merge_skema s sk1 sk2 =
     if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality sk1 sk2 <> 0 then
-      error ~loc:(Symbol.get_loc s) (Format.asprintf "@[<v>Two incompatible types for the symbol %s.@\n@[<hov 2>Type:@;<2 0>%a@]@\n@[<hov 2>Other type:@;<2 0>%a@]@]" (Symbol.pretty s) pretty_skema sk1 pretty_skema sk2);
+      data_anomaly ~loc:(Symbol.get_loc s) (Format.asprintf "@[<v>Two incompatible types for the symbol %s.@\n@[<hov 2>Type:@;<2 0>%a@]@\n@[<hov 2>Other type:@;<2 0>%a@]@]" (Symbol.pretty s) pretty_skema sk1 pretty_skema sk2);
     sk1
 
   let compare_t_ a b = compare_t_ ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality a b
@@ -580,7 +587,7 @@ end = struct
   
   let merge_indexing s idx1 idx2 =
     if not @@ compatible_indexing idx1 idx2 then
-      error ~loc:(Symbol.get_loc s) ("Incompatible indexing options for symbol " ^ Symbol.get_str s);
+      data_error ~loc:(Symbol.get_loc s) ("Incompatible indexing options for symbol " ^ Symbol.get_str s);
     idx1
   
   let merge_availability s a1 a2 =
@@ -591,7 +598,7 @@ end = struct
     | OCaml ((Builtin _|Core)), OCaml ((File _)) -> a1
     | OCaml ((File _)), OCaml ((Builtin _|Core)) -> a2
     | _ ->
-       error ~loc:(Symbol.get_loc s) ("Incompatible provenance for symbol " ^ Symbol.get_str s ^ ": " ^  show_symbol_availability a1 ^ " != " ^ show_symbol_availability a2)
+       data_error ~loc:(Symbol.get_loc s) ("Incompatible provenance for symbol " ^ Symbol.get_str s ^ ": " ^  show_symbol_availability a1 ^ " != " ^ show_symbol_availability a2)
   
   
   let merge_symbol_metadata s
@@ -676,7 +683,7 @@ end = struct
     | None -> r := Some s
     | Some s' ->
         if not @@ TypingEnv.same_symbol env s' s then
-          anomaly ("SymbolResolver: new " ^ Symbol.show s ^ " != old " ^ Symbol.show s');
+          data_anomaly ("SymbolResolver: new " ^ Symbol.show s ^ " != old " ^ Symbol.show s');
         r := Some s
 
   let resolved_to env r =
@@ -911,7 +918,7 @@ module ScopedTerm = struct
     if Func.equal f Func.implf then L2R
     else if Func.equal f Func.implbangf then L2RBang
     else if Func.equal f Func.rimplf then R2L
-    else anomaly ("not an implication " ^ F.show f)
+    else data_anomaly ("not an implication " ^ F.show f)
     
   (* User Visible *)
     type t_ =
@@ -959,13 +966,13 @@ module ScopedTerm = struct
 
     let ne_list_to_lp_list l =
       match List.rev l with
-      | [] -> anomaly "Ast.list_to_lp_list on empty list"
+      | [] -> data_anomaly "Ast.list_to_lp_list on empty list"
       | h :: _ -> list_to_lp_list ~loc:h.loc l
       
     let rec lp_list_to_list = function
       | { it = App(Global { escape_ns = true }, c, _, x, [xs]) } when F.equal c F.consf  -> x :: lp_list_to_list xs
       | { it = Const(Global { escape_ns = true },c) } when F.equal c F.nilf -> []
-      | { loc; it } -> error ~loc (Format.asprintf "%a is not a list" pp_t_ it)
+      | { loc; it } -> data_error ~loc (Format.asprintf "%a is not a list" pp_t_ it)
     
   end
 
@@ -1116,7 +1123,7 @@ module ScopedTerm = struct
     | App(s,c,cloc,x,xs) when SimpleTerm.is_implf c ->
       begin match xs with
         | [y] -> Impl(SimpleTerm.func_to_impl_kind c,cloc,of_simple_term_loc x, of_simple_term_loc y)
-        | _ -> error ~loc "Use of App for Impl is allowed, but the length of the list in 3rd position must be 1"
+        | _ -> data_error ~loc "Use of App for Impl is allowed, but the length of the list in 3rd position must be 1"
       end
     | App(s,c,cloc,x,xs) -> App(mk_w_ty_loc ~scope:s c ~loc, of_simple_term_loc x :: List.map of_simple_term_loc xs)
     | Var(c,cloc,xs) -> UVar(mk_uvar c ~loc:cloc,List.map of_simple_term_loc xs)
@@ -1146,12 +1153,14 @@ module ScopedTerm = struct
       | UVar(v,xs) -> UVar(v,List.map (rename_loc l c d) xs)
       | Discard _ | CData _ -> t
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
+    (* the symbols of the copy are at the location of the use of the macro *)
+    let clone_const_at ~loc c = clone_const { c with loc }
     let clone_loc ~loc t =
       let m = ref F.Map.empty in
       let rec clone_loc ~loc {it} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
       clone ~loc = function
         | Impl (b, loc, l, r) -> Impl(b, loc, clone_loc ~loc l, clone_loc ~loc r)
-        | Lam (n,ty,bo) -> Lam(Option.map clone_const n, ty, clone_loc ~loc bo)
+        | Lam (n,ty,bo) -> Lam(Option.map (clone_const_at ~loc) n, ty, clone_loc ~loc bo)
         | Discard { heapify } -> Discard { heapify }
         | UVar (v, xs) ->
             let name =
@@ -1162,8 +1171,8 @@ module ScopedTerm = struct
                   m := F.Map.add v.name name' !m;
                   name' in
             let v = { v with name } in
-            UVar (clone_const v, List.map (clone_loc ~loc) xs)
-        | App (g, xs) -> App (clone_const g, List.map (clone_loc ~loc) xs)
+            UVar (clone_const_at ~loc v, List.map (clone_loc ~loc) xs)
+        | App (g, xs) -> App (clone_const_at ~loc g, List.map (clone_loc ~loc) xs)
         | CData _ as t -> t 
         | Spill (t, _) -> Spill (clone_loc ~loc t, ref NoInfo)
         | Cast (t, ty) -> Cast (clone_loc ~loc t, ty) in
@@ -1212,11 +1221,11 @@ module ScopedTerm = struct
         match t with
         | App(n,xs) -> App(n,xs @ args)
         | UVar(c,xs) -> UVar(c,xs @ args)
-        | Impl(_,_,_,_) -> error ~loc "cannot apply impl"
-        | CData _ -> error ~loc "cannot apply cdata"
-        | Spill _ -> error ~loc "cannot apply spill"
-        | Discard _ -> error ~loc "cannot apply discard"
-        | Cast _ -> error ~loc "cannot apply cast"
+        | Impl(_,_,_,_) -> data_error ~loc "cannot apply impl"
+        | CData _ -> data_error ~loc "cannot apply cdata"
+        | Spill _ -> data_error ~loc "cannot apply spill"
+        | Discard _ -> data_error ~loc "cannot apply discard"
+        | Cast _ -> data_error ~loc "cannot apply cast"
         | Lam _ -> load_subst ~loc t args Scope.Map.empty Scope.Set.empty
       in
         if args = [] then unlock t else
@@ -1241,9 +1250,9 @@ module ScopedTerm = struct
             | { it = UVar(f,xs); loc = loc'; ty } -> { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = UVar(f,xs @ l); loc = loc'; ty }) }
             | { it = App({ scope = Bound g } as n,[]); loc = loc'; ty } when g = elpi_language ->
                 { SimpleTerm.loc; it = SimpleTerm.Opaque (in_scoped_term @@ { it = App(n, l); loc = loc'; ty }) }
-            | x -> anomaly ~loc (Format.asprintf "The term is not an elpi varible coming from a quotation: @[%a@]" pretty x)
+            | x -> data_anomaly ~loc (Format.asprintf "The term is not an elpi varible coming from a quotation: @[%a@]" pretty x)
             end
-        | x -> anomaly ~loc (Format.asprintf "The term is not term coming from a quotation: @[%a@]" pp_t_ x)
+        | x -> data_anomaly ~loc (Format.asprintf "The term is not term coming from a quotation: @[%a@]" pp_t_ x)
   
   
     let extend_spill_hyp_from_quotation { SimpleTerm.it; loc } hyps =
@@ -1254,10 +1263,10 @@ module ScopedTerm = struct
             let impl = { loc; it = Impl(L2R, loc, list_to_lp_list ~loc hyps, { loc; it = Opaque (in_scoped_term t) }) } in
             { loc; it = Opaque(in_scoped_term @@ { it = Spill(of_simple_term_loc impl,i); loc; ty = MutableOnce.make (F.from_string "Ty") })}
           | _ ->
-            anomaly ~loc (Format.asprintf "The term is not a spill coming from a quotation: @[%a@]" pp_t_ it)
+            data_anomaly ~loc (Format.asprintf "The term is not a spill coming from a quotation: @[%a@]" pp_t_ it)
           end
       | x ->
-         anomaly ~loc (Format.asprintf "The term is not coming from a quotation: @[%a@]" pp_t_ x)
+         data_anomaly ~loc (Format.asprintf "The term is not coming from a quotation: @[%a@]" pp_t_ x)
 
     let is_spill_from_quotation { SimpleTerm.it } =
       match it with
@@ -1315,14 +1324,14 @@ module QuotationHooks = struct
     | { singlequote_compilation = None } ->
         descriptor := { !descriptor with singlequote_compilation = Some(name,f) }; name
     | { singlequote_compilation = Some(oldname,_) } ->
-          error("Only one custom compilation of 'ident' is supported. Current: "
+          data_error("Only one custom compilation of 'ident' is supported. Current: "
             ^ oldname ^ ", new: " ^ name)
   let declare_backtick_compilation ~descriptor name f =
     match !descriptor with
     | { backtick_compilation = None } ->
         descriptor := { !descriptor with backtick_compilation = Some(name,f) }; name
     | { backtick_compilation = Some(oldname,_) } ->
-          error("Only one custom compilation of `ident` is supported. Current: "
+          data_error("Only one custom compilation of `ident` is supported. Current: "
             ^ oldname ^ ", new: " ^ name)
   
   let set_default_quotation ~descriptor f =
@@ -1335,6 +1344,112 @@ end
   
 module Arity = struct type t = int * Loc.t [@@deriving show, ord] end
 
-exception CompileError of Loc.t option * string
 
-let error ?loc msg = raise (CompileError(loc, msg))
+(* Error resilient compilation: a pass splits its work in units (a clause, a
+   type declaration, ...) and runs each one in [Errors.protect]. A unit that
+   raises ElpiError is dropped from the result of the pass and its error is
+   recorded: nothing is dropped without an error. Only ElpiError is caught
+   (assert false, Failure... propagate).
+   Once [max_errors] errors have been recorded the remaining units are not run
+   (they are dropped too), and a final error says so. *)
+
+(* "Component: message", the form in which an error is shown without its
+   location *)
+let pp_error_message fmt { component; message } =
+  if String.equal component "" then Format.fprintf fmt "%s" message
+  else Format.fprintf fmt "%s: %s" component message
+
+(* "location:" and, on the next line, "Component: message" *)
+let pp_error fmt ({ loc } as e) =
+  match loc with
+  | Some loc -> Format.fprintf fmt "%a@\n%a" Loc.pp loc pp_error_message e
+  | None -> pp_error_message fmt e
+
+let show_error e = Format.asprintf "%a" pp_error e
+
+(* an uncaught ElpiError shows its error *)
+let () = Printexc.register_printer (function
+  | ElpiError e -> Some ("ElpiError: " ^ show_error e)
+  | _ -> None)
+
+module Errors = struct
+
+  (* [max_errors = 0]: the first error is raised (as ElpiError), as if
+     there was no collector; [max_errors > 0]: the errors are recorded, up to
+     [max_errors]. The warnings are always recorded (and never raised), they
+     do not count as errors *)
+  type t = {
+    max_errors : int;
+    mutable count : int;
+    mutable errors : error list; (* most recent first *)
+    mutable skipped : bool; (* the final error was recorded *)
+    mutable warnings : warning list; (* most recent first *)
+  }
+
+  let make ?(max_errors=max_int) () = { max_errors; count = 0; errors = []; skipped = false; warnings = [] }
+
+  let is_full t = t.max_errors > 0 && t.count >= t.max_errors
+
+  let add t e =
+    t.count <- t.count + 1;
+    t.errors <- e :: t.errors
+
+  (* the errors in order of occurrence *)
+  let list t = List.rev t.errors
+
+  let warn t ~component ~id ?loc message =
+    t.warnings <- { warning_id = id; warning = { component; loc; message } } :: t.warnings
+
+  (* the warnings in order of occurrence *)
+  let warnings t = List.rev t.warnings
+
+  (* [protect t ~default f] is [f ()], or [default] if [f] raises ElpiError
+     (the error is recorded) or if too many errors were found. If
+     [t.max_errors = 0] the error is raised. *)
+  let protect t ~default f =
+    if t.max_errors = 0 then f ()
+    else if is_full t then begin
+      if not t.skipped then begin
+        t.skipped <- true;
+        t.errors <-
+          { component = "Compiler"; loc = None;
+            message = Printf.sprintf "too many errors (limit %d): the rest was not checked, the result is incomplete" t.max_errors }
+          :: t.errors
+      end;
+      default
+    end else
+      try f () with ElpiError e -> add t e; default
+
+  (* [Some (f x)], or None if [f x] fails: the error is recorded *)
+  let catch_error t f x =
+    protect t ~default:None (fun () -> Some (f x))
+
+  (* an error that does not drop anything, e.g. one that has a repair *)
+  let report_error t (error : ?loc:Loc.t -> string -> unit) ?loc msg =
+    protect t ~default:() (fun () -> error ?loc msg)
+
+  (* Combinators on lists of units of work. The errors are recorded (see
+     protect) and the item for which [f] fails is dropped: the
+     accumulator of the fold is not updated, the item is not in the result of
+     the map and of the filter. *)
+  let protect_fold_left ~errs f acc l =
+    List.fold_left (fun acc x -> protect errs ~default:acc (fun () -> f acc x)) acc l
+
+  let protect_list_map ~errs f l =
+    List.filter_map (fun x -> protect errs ~default:None (fun () -> Some (f x))) l
+
+  let protect_fMap_fold ~errs f m acc =
+    F.Map.fold (fun k v acc -> protect errs ~default:acc (fun () -> f k v acc)) m acc
+
+  let protect_list_filter ~errs p l =
+    List.filter (fun x -> protect errs ~default:false (fun () -> p x)) l
+
+end
+
+(* for the code that stops at the first error: the result of [f] or its
+   first error, and the warnings found *)
+let first_error f =
+  let errs = Errors.make ~max_errors:0 () in
+  match f errs with
+  | r -> Ok r, Errors.warnings errs
+  | exception ElpiError e -> Error e, Errors.warnings errs

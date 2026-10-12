@@ -79,12 +79,12 @@ include
                  (elpi__state, { num = elpi__4; den = elpi__1 },
                    (List.concat [elpi__3; elpi__2]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_rat_ratc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "rat"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and rat : 'c 'csts . (rat, 'c, 'csts) Elpi.API.ContextualConversion.t =
@@ -253,7 +253,7 @@ include
              | [] ->
                  (elpi__state, (Const elpi__12), (List.concat [elpi__11]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_poly_Constc)))
@@ -267,7 +267,7 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (Var elpi__14), (List.concat [elpi__13]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_poly_Varc)))
@@ -286,7 +286,7 @@ include
                  (elpi__state, (Add (elpi__18, elpi__15)),
                    (List.concat [elpi__17; elpi__16]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_poly_Addc)))
@@ -305,12 +305,12 @@ include
                  (elpi__state, (Mul (elpi__22, elpi__19)),
                    (List.concat [elpi__21; elpi__20]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_poly_Mulc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "poly"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and poly : 'c 'csts . (poly, 'c, 'csts) Elpi.API.ContextualConversion.t =
@@ -467,12 +467,12 @@ include
                  (elpi__state, { coef = elpi__44; exps = elpi__41 },
                    (List.concat [elpi__43; elpi__42]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_monomial_monomialc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "monomial"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and monomial :

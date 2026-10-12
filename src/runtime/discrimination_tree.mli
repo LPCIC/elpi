@@ -11,6 +11,8 @@ module Path : sig
   val of_list : cell list -> t
 end
 
+(* raised by [mkConstant ~safe:true] for a constant that cannot be indexed *)
+exception TooLargeConstant of string
 val mkConstant : safe:bool -> data:int -> arity:int -> cell
 val mkPrimitive : Elpi_util.Util.CData.t -> cell
 

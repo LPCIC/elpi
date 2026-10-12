@@ -20,8 +20,8 @@ let () =
   let _,unit1 = cc ~elpi ~flags ~base:(Compile.empty_base ~elpi) 2 p1 in
   let _,unit2 = cc ~elpi ~flags ~base:(Compile.empty_base ~elpi) 3 p2 in
 
-  let cp = Compile.extend ~base:pmain unit1 in
-  let cp = Compile.extend ~base:cp unit2 in
+  let cp = ok (Compile.extend ~base:pmain unit1) in
+  let cp = ok (Compile.extend ~base:cp unit2) in
 
-  let q = Compile.query cp (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "main")) in
+  let q = Sepcomp.Sepcomp_template.ok_query @@ Compile.query cp (Sepcomp.Sepcomp_template.ok_goal ~elpi "main") in
   exec q

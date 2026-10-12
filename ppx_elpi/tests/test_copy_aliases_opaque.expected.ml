@@ -310,12 +310,12 @@ include
                  (elpi__state, (E (elpi__6, elpi__1, elpi__2)),
                    (List.concat [elpi__5; elpi__3; elpi__4]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_entry_Ec)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "entry"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and entry : 'c 'csts . (entry, 'c, 'csts) Elpi.API.ContextualConversion.t

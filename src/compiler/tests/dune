@@ -1,0 +1,2 @@
+; unit tests of the compiler, see tests/sources for the end-to-end ones
+(test (name test_errors) (libraries elpi.compiler elpi.util) (modules test_errors))

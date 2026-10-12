@@ -338,46 +338,11 @@ let error_fun ~component =
     anomaly = (fun ?loc message -> raise (ElpiError { component; loc; message = "anomaly: " ^ message }));
   }
 
-let pp_loc_opt = function
-  | None -> ""
-  | Some loc -> Loc.show loc
+(* the errors of this module (not exported) *)
+let ErrorFun { error; anomaly } = error_fun ~component:"util"
+
 type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
 type warning = { warning_id : warning_id; warning : error }
-let default_warn ?loc ~id:_ s =
-  Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" (pp_loc_opt loc) s
-let default_error ?loc s =
-  Format.eprintf "@[<hv>Fatal error: %s@,%s@]\n%!" (pp_loc_opt loc) s;
-  exit 1
-let default_anomaly ?loc s =
-  let trace =
-    match Printexc.(get_callstack max_int |> backtrace_slots) with
-    | None -> ""
-    | Some slots ->
-        let lines = Array.mapi Printexc.Slot.format slots in
-        let _, lines_repetitions =
-          List.fold_left (fun (pos,acc) l ->
-            match l with
-            | None -> pos+1, acc
-            | Some _ when pos = 0 -> pos+1, acc
-            | Some l ->
-                match acc with
-                | (l1,q) :: acc when l = l1 -> pos+1, (l1,q+1) :: acc
-                | _ -> pos+1, (l,1) :: acc)
-            (0,[]) (Array.to_list lines) in
-        let lines =
-          lines_repetitions |> List.map (function
-            | (l,1) -> l
-            | (l,n) -> l ^ Printf.sprintf " [%d times]" n) in
-        String.concat "\n" lines
-    in
- Printf.eprintf "%s\nAnomaly: %s %s\n%!" trace (pp_loc_opt loc) s;
-  exit 2
-let default_type_error ?loc s = default_error ?loc s
-
-let warn_f       = ref (Obj.repr default_warn)
-let error_f      = ref (Obj.repr default_error)
-let anomaly_f    = ref (Obj.repr default_anomaly)
-let type_error_f = ref (Obj.repr default_type_error)
 let std_fmt      = ref Format.std_formatter
 let err_fmt      = ref Format.err_formatter
 
@@ -388,17 +353,9 @@ let set_formatters_maxbox i =
   Format.pp_set_max_boxes !std_fmt i;
   Format.pp_set_max_boxes !err_fmt i
 
-let set_warn f       = warn_f       := (Obj.repr f)
-let set_error f      = error_f      := (Obj.repr f)
-let set_anomaly f    = anomaly_f    := (Obj.repr f)
-let set_type_error f = type_error_f := (Obj.repr f)
 let set_std_formatter f = std_fmt := f
 let set_err_formatter f = err_fmt := f
 
-let warn ?loc ~id s : unit = Obj.obj !warn_f ?loc ~id s
-let error ?loc s = Obj.obj !error_f ?loc s
-let anomaly ?loc s = Obj.obj !anomaly_f ?loc s
-let type_error ?loc s = Obj.obj !type_error_f ?loc s
 let printf x = Format.fprintf !std_fmt x
 let eprintf x = Format.fprintf !err_fmt x
 
@@ -723,7 +680,7 @@ let pp f x = (IntMap.find x.ty !m).cdata_pp f x
 let equal x y = x.ty = y.ty && (IntMap.find x.ty !m).cdata_compare x y == 0
 let compare x y =
   if x.ty = y.ty then (IntMap.find x.ty !m).cdata_compare x y
-  else type_error "cdata of different type compared"
+  else error "cdata of different type compared"
 let hash x = (IntMap.find x.ty !m).cdata_hash x
 let name x = (IntMap.find x.ty !m).cdata_name
 let hcons x = (IntMap.find x.ty !m).cdata_canon x
@@ -858,5 +815,5 @@ let version_parser ~what v =
     | [v] when Re.Str.(string_match (regexp "^[0-9a-f]+$") v 0) -> 99, 99, 99
     | _ -> raise (Failure "invalid format")
   with Failure msg ->
-    warn ~id:"version-parser" ("cannot parse version of "^what^" '" ^ v ^ "': " ^ msg);
+    Format.eprintf "@[<hv>Warning: cannot parse version of %s '%s': %s@]\n%!" what v msg;
     0,0,0

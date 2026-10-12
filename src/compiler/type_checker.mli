@@ -14,7 +14,10 @@ type arities = Arity.t F.Map.t
 val check_disjoint : type_abbrevs:ScopedTypeExpression.t F.Map.t -> kinds:arities -> unit
 val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> Symbol.t * Symbol.t option * TypingEnv.symbol_metadata
 
-val check_types : type_abbrevs:type_abbrevs -> kinds:arities -> ScopeTypeExpressionUniqueList.t F.Map.t -> TypingEnv.t
+(* the environment of each declaration, in order; with [errs] a declaration that
+   does not type check is dropped and its error recorded, otherwise the error
+   is raised *)
+val check_types : ?errs:Errors.t -> type_abbrevs:type_abbrevs -> kinds:arities -> ScopeTypeExpressionUniqueList.t F.Map.t -> TypingEnv.t list
   
 val check_macro :
   type_abbrevs:type_abbrevs ->
@@ -33,7 +36,9 @@ val runtime_resolve : runtime_types -> F.t -> Symbol.t
 type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 [@@deriving show]
 
+(* the warnings (linear variables) are recorded in [errs] *)
 val check_rule :
+  errs:Errors.t ->
   type_abbrevs:type_abbrevs ->
   kinds:arities ->
   types:TypingEnv.t ->
@@ -62,7 +67,11 @@ val check_chr_rule :
   ('a,ScopedTerm.t) Ast.Chr.t ->
     ('a,ScopedTerm.t) Ast.Chr.t * env_undeclared
 
+(* with [errs] a symbol whose type cannot be inferred is dropped and its error
+   recorded, otherwise the error is raised; the warning (undeclared globals)
+   is recorded in [errs], otherwise dropped *)
 val check_undeclared :
+  errs:Errors.t option ->
   type_abbrevs:type_abbrevs ->
   unknown:env_undeclared ->
   TypingEnv.t

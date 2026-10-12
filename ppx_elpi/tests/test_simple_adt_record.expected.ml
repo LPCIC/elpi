@@ -107,7 +107,7 @@ include
                  (elpi__state, (K1 { f = elpi__4; g = elpi__1 }),
                    (List.concat [elpi__3; elpi__2]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_simple_K1c)))
@@ -123,12 +123,12 @@ include
                  (elpi__state, (K2 { f2 = elpi__6 }),
                    (List.concat [elpi__5]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_simple_K2c)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "simple"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and simple :

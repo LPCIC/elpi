@@ -15,6 +15,10 @@ val cleanup_fname : string -> string
 module type Parser = sig
   val goal : loc:Util.Loc.t -> text:string -> Ast.Goal.t
   val goal_from : loc:Util.Loc.t -> Lexing.lexbuf -> Ast.Goal.t
+  (* the same, but a syntax error is returned instead of being raised as
+     ParseError, with the warnings *)
+  val query : loc:Util.Loc.t -> text:string -> (Ast.Goal.t, Util.error) result * Util.warning list
+  val query_from : loc:Util.Loc.t -> Lexing.lexbuf -> (Ast.Goal.t, Util.error) result * Util.warning list
 
   (* A declaration with a syntax error is skipped up to the next dot and dropped.
      A syntax error in an accumulated file is located on the accumulate directive.

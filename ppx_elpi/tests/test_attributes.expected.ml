@@ -102,7 +102,7 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (Blue elpi__2), (List.concat [elpi__1]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_color_Bluec)))
@@ -110,7 +110,7 @@ include
             ((fun _default ~depth _ _ state _ -> (state, Red, [])))
               (fun ~depth:elpi__depth elpi__hyps elpi__constraints
                  elpi__state elpi__x ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    (Format.asprintf "Not a constructor of type %s: %a"
                       "color" (Elpi.API.RawPp.term elpi__depth) elpi__x))
               ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
@@ -221,7 +221,7 @@ include
                  elpi_constant_constructor_shape_Squarec [elpi__15]),
               (List.concat [elpi__14]))
         | Hidden _ ->
-            Elpi.API.Utils.error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               ("constructor " ^ ("Hidden" ^ " is not supported"))
     and elpi_readback_shape :
       'c 'csts . (shape, 'c, 'csts) Elpi.API.ContextualConversion.readback =
@@ -238,7 +238,7 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (Circle elpi__7), (List.concat [elpi__6]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_shape_Circlec)))
@@ -252,12 +252,12 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (Square elpi__9), (List.concat [elpi__8]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_shape_Squarec)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "shape"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and shape : 'c 'csts . (shape, 'c, 'csts) Elpi.API.ContextualConversion.t
@@ -430,12 +430,12 @@ include
                  (elpi__state, (N (elpi__19, elpi__16)),
                    (List.concat [elpi__18; elpi__17]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_nested_Nc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "nested"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and nested :

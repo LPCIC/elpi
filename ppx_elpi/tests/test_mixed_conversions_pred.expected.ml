@@ -94,12 +94,12 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (Blue elpi__2), (List.concat [elpi__1]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_color_Bluec)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "color"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and color : 'c 'csts . (color, 'c, 'csts) Elpi.API.ContextualConversion.t
@@ -200,7 +200,7 @@ let level_of (ctx : context) name =
           (fun l n acc -> if n = name then Some l else acc) ctx None
   with
   | Some l -> l
-  | None -> Utils.type_error ("unbound variable " ^ name)
+  | None -> Error.error ~component:"ppx_elpi" ("unbound variable " ^ name)
 let rec embed_lam ~depth (ctx : context) csts state =
   function
   | V s -> (state, (RawData.mkBound (level_of ctx s)), [])
@@ -218,7 +218,7 @@ let rec readback_lam ~depth (ctx : context) csts state t =
   | RawData.Const l ->
       (match RawData.Constants.Map.find_opt l ctx with
        | Some s -> (state, (V s), [])
-       | None -> Utils.type_error "unbound variable")
+       | None -> Error.error ~component:"ppx_elpi" "unbound variable")
   | RawData.App (c, a, b::[]) when c = c_ap ->
       let (state, a, ga) = readback_lam ~depth ctx csts state a in
       let (state, b, gb) = readback_lam ~depth ctx csts state b in
@@ -231,8 +231,8 @@ let rec readback_lam ~depth (ctx : context) csts state t =
            let (state, t, g) =
              readback_lam ~depth:(depth + 1) ctx csts state body in
            (state, (Lm (s, t)), (gs @ g))
-       | _ -> Utils.type_error "lm expects a lambda")
-  | _ -> Utils.type_error "not a lam"
+       | _ -> Error.error ~component:"ppx_elpi" "lm expects a lambda")
+  | _ -> Error.error ~component:"ppx_elpi" "not a lam"
 let lam : (lam, context, Data.constraints) ContextualConversion.t =
   {
     ty = (TyName "lam");

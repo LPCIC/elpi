@@ -5,7 +5,9 @@ open Compiler_data
 open Type_checker
 
 (* checks if the clause adheres to the prescribed determinacy *)
+(* the warnings (flexible rules) are recorded in [errs] *)
 val check_clause :
+  errs:Errors.t ->
   type_abbrevs:type_abbrevs ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->
@@ -13,6 +15,7 @@ val check_clause :
 
 (* checks [guard, !, newgoal] is det *)
 val check_chr_guard_and_newgoal :
+  errs:Errors.t ->
   type_abbrevs:type_abbrevs ->
   types:TypingEnv.t ->
   unknown:env_undeclared ->

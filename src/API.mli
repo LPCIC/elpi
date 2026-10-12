@@ -197,47 +197,42 @@ module Setup : sig
       *)
   val trace : string list -> string list
 
-  (** Override default runtime error functions (they call exit) *)
-  type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
-  val set_warn : (?loc:Ast.Loc.t -> id:warning_id -> string -> unit) -> unit
-  val set_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
-  val set_anomaly : (?loc:Ast.Loc.t -> string -> 'a) -> unit
-  val set_type_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_std_formatter : Format.formatter -> unit
   val set_err_formatter : Format.formatter -> unit
 
 end
 
-module Parse : sig
+module Error : sig
 
-  (** [program file_list] parses a list of files,
-      Raises Failure if the file does not exist. *)
-  val program : elpi:Setup.elpi ->
-    file:string -> Ast.program
-  val program_from : elpi:Setup.elpi ->
-    loc:Ast.Loc.t -> digest:Digest.t -> Lexing.lexbuf -> Ast.program
+  (** An error: of the parser, of a pass of the compiler, of the runtime, of
+      the builtins... *)
+  type t = {
+    component : string;     (** who found the error, eg [Typechecker] *)
+    loc : Ast.Loc.t option;
+    message : string;
+  }
+  val pp : Format.formatter -> t -> unit
+  (** [location:] then, on the next line, [Component: message] *)
+  val pp_message : Format.formatter -> t -> unit
+  (** [Component: message], for who shows the location separately *)
+  val show : t -> string
 
-  (** [goal file_list] parses the query,
-      Raises Failure if the file does not exist.  *)
-  val goal : elpi:Setup.elpi ->
-    loc:Ast.Loc.t -> text:string -> Ast.query
-  val goal_from : elpi:Setup.elpi ->
-    loc:Ast.Loc.t -> Lexing.lexbuf -> Ast.query
+  (** Raised by the builtins and the runtime, and by the passes
+      of the compiler when [flags.max_errors] is 0 (the default): the first
+      error. It is private: it is raised with [error] *)
+  type exn += private ElpiError of t
 
-  (** [resolve f] computes the full path of [f] as the parser would do (also)
-      for files recursively accumulated. Raises Failure if the file does not
-      exist. *)
-  val resolve_file : elpi:Setup.elpi -> ?cwd:string -> unit:string -> unit -> string
+  (** [error ?component ?loc message] raises [ElpiError] *)
+  val error : ?component:string -> ?loc:Ast.Loc.t -> string -> 'a
 
-  (** [std_resolver cwd paths ()] returns a resolver function that looks in cwd
-      and paths (relative to cwd, or absolute) *)
-  val std_resolver :
-    ?cwd:string -> paths:string list -> unit ->
-      (?cwd:string -> unit:string -> unit -> string)
+  (** A warning of the parser or of a pass of the compiler: they return their
+      warnings with their errors (also when [flags.max_errors] is 0) *)
+  (** The kinds of warnings *)
+  type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
 
-  exception ParseError of Ast.Loc.t * string
+  type warning = { warning_id : warning_id; warning : t }
+
 end
-
 
 module Compile : sig
 
@@ -256,6 +251,9 @@ module Compile : sig
     time_typechecking : bool;
     (* skip determinacy analysis *)
     skip_det_checking: bool;
+    (* resilient passes stop after that many errors; 0, the default, means
+       that the first error is raised. *)
+    max_errors: int;
   }
   val default_flags : flags
   val to_setup_flags : flags -> Setup.flags
@@ -263,8 +261,6 @@ module Compile : sig
   type program
   type query
   type executable
-
-  exception CompileError of Ast.Loc.t option * string
 
   (* basic API: Compile all program files in one go.
 
@@ -276,7 +272,7 @@ module Compile : sig
      - the `accumulate` directive inserts `{` and `}` around the accumulated
        code
    *)
-  val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> program
+  val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> program * Error.t list * Error.warning list
 
   (* separate compilation API: scoped_programs and units are marshalable and
      closed w.r.t. the host application (eg quotations are desugared).
@@ -293,7 +289,7 @@ module Compile : sig
   val scoped_program_name : scoped_program -> string
   val scoped_program_digest : scoped_program -> Digest.t
   val scoped_program_deps : scoped_program -> (string * Digest.t) list
-  val scope_ast : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> scoped_program list
+  val scope_ast : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> scoped_program list * Error.t list * Error.warning list
   val scope_builtins : ?flags:flags -> elpi:Setup.elpi -> Setup.builtins -> scoped_program
   
   type compilation_unit
@@ -307,19 +303,20 @@ module Compile : sig
   val compilation_unit_signature_digest : compilation_unit_signature -> Digest.t
 
   val empty_base : elpi:Setup.elpi -> program
-  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> scoped_program -> compilation_unit
-  val extend : ?flags:flags -> base:program -> compilation_unit -> program
+  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> scoped_program -> compilation_unit * Error.t list * Error.warning list
+  val extend : ?flags:flags -> base:program -> compilation_unit -> program * Error.t list * Error.warning list
 
   (* only adds the types/modes from the compilation unit, not its code *)
   val signature : compilation_unit -> compilation_unit_signature
-  val extend_signature : ?flags:flags -> base:program -> compilation_unit_signature -> program
+  val extend_signature : ?flags:flags -> base:program -> compilation_unit_signature -> program * Error.t list * Error.warning list
 
   (** [map_compilation_unit f u] applies [f] to every opaque data (CData)
       node in the unit *)
   val map_compilation_unit : (Ast.Opaque.t -> Ast.Opaque.t) -> compilation_unit -> compilation_unit
 
-  (* then compile the query *)
-  val query : program -> Ast.query -> query
+  (** then compile the query: the query, or its first error, and its
+      warnings *)
+  val query : program -> Ast.query -> (query, Error.t) result * Error.warning list
   
   (* finally obtain the executable *)
   val optimize : query -> executable
@@ -327,19 +324,102 @@ module Compile : sig
   val total_type_checking_time : query -> float
   val total_det_checking_time : query -> float
 
+end
+
+module Parse : sig
+
+  (** The parser does not stop at the first syntax error: a declaration with a
+      syntax error is skipped up to the next dot and dropped, and its error is
+      returned. The parser stops after [flags.max_errors] errors, with a last
+      error that says so; if it is 0 (the default, also when [flags] is not
+      given) the first error is raised as [ParseError]. *)
+
+  (** [program file] parses a file (and its [.sig] if it is a [.mod]).
+      Raises Failure if the file does not exist. *)
+  val program : ?flags:Compile.flags -> elpi:Setup.elpi ->
+    string -> Ast.program * Error.t list * Error.warning list
+  val program_from : ?flags:Compile.flags -> elpi:Setup.elpi ->
+    loc:Ast.Loc.t -> digest:Digest.t -> Lexing.lexbuf -> Ast.program * Error.t list * Error.warning list
+
+  (** [query ~text] parses a query: the query, or its syntax error, and its
+      warnings *)
+  val query : elpi:Setup.elpi ->
+    loc:Ast.Loc.t -> text:string -> (Ast.query, Error.t) result * Error.warning list
+  val query_from : elpi:Setup.elpi ->
+    loc:Ast.Loc.t -> Lexing.lexbuf -> (Ast.query, Error.t) result * Error.warning list
+
+  (** [resolve f] computes the full path of [f] as the parser would do (also)
+      for files recursively accumulated. Raises Failure if the file does not
+      exist. *)
+  val resolve_file : elpi:Setup.elpi -> ?cwd:string -> unit:string -> unit -> string
+
+  (** [std_resolver cwd paths ()] returns a resolver function that looks in cwd
+      and paths (relative to cwd, or absolute) *)
+  val std_resolver :
+    ?cwd:string -> paths:string list -> unit ->
+      (?cwd:string -> unit:string -> unit -> string)
+
+  exception ParseError of Ast.Loc.t * string
+
+end
+
+(** What the language server (elpi-lsp) needs: the information on a unit, by
+    location, and the accumulate directives of a program *)
+module LSP : sig
+
   module IntervalTree : sig
     type 'a t
+    val of_list : (Ast.Loc.t * 'a) list -> 'a t
     val find : Ast.Loc.t -> 'a t -> (Ast.Loc.t * 'a) list
+    (* [fold_file name f t acc] folds [f] on the intervals of the file [name],
+       by their start *)
+    val fold_file : string -> (Ast.Loc.t -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
     val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
   end
 
   type type_
   val pp_type_ : Format.formatter -> type_ -> unit
 
-  type info = { defined : Ast.Loc.t option; type_ : type_ option }
+  type origin = User | Builtin | Core | Undeclared
+  type sort = Predicate | Function | Data
+  type kind =
+    | Term                      (* a sub-expression of a rule: an application, a lambda... *)
+    | Constant of sort * origin  (* a symbol resolved to a declaration *)
+    | Bound                     (* occurrence of a variable bound by x\, pi x\, sigma x\ *)
+    | Binder                    (* the binding occurrence of such a variable *)
+    | Unification_variable      (* a variable of the rule *)
+    | Discard
+    | Literal of [ `Int | `Float | `String | `Other ]
+    | Keyword                   (* :- => , ; ! pi sigma *)
+    | Type_constructor | Type_abbreviation | Type_variable | Type_keyword
+    | Macro                     (* a use of a macro, @name *)
+
+  (** what is at a location of a unit *)
+  (* what is known about a term or a symbol of a rule, a type expression *)
+  type description =
+    | Type of type_   (* of a term, a symbol of a rule *)
+    | Text of string  (* of a type expression: its kind, e.g. "list : type -> type", or the whole type *)
+
+  type info = {
+    kind : kind;
+    description : description option;
+    defined : Ast.Loc.t option;    (* the declaration location *)
+    declaration : bool;            (* the binding occurrence of a variable, the symbol that a rule defines (the head of its head) *)
+    occurrences : Ast.Loc.t list;  (* of a constant or a variable: all its occurrences in the unit (not its binder), by position *)
+  }
   val pp_info : Format.formatter -> info -> unit
 
-  val hover : compilation_unit -> info IntervalTree.t
+  (** [hover sp u] is the information on the unit [u], by location: the terms
+      and the symbols of its rules, CHR rules and macros, and the type
+      expressions of the declarations of its scoped program [sp]. *)
+  val hover : Compile.scoped_program -> Compile.compilation_unit -> info IntervalTree.t
+
+  (** [accumulated p] is the list of the accumulate directives of [p] (not of
+      the files it accumulates): the location of each one, and the files that
+      it accumulates, directly or not, by the names that the locations of their
+      contents have. *)
+  val accumulated : Ast.program -> (Ast.Loc.t * string list) list
+
 end
 
 module Data : sig
@@ -1321,20 +1401,25 @@ module RawData : sig
 
 end
 
-(** This module lets one generate a query by providing a RawData.term directly *)
+(** This module lets one generate a query by providing a RawData.term
+    directly. Like [Compile.query], the functions that make a query return it
+    or its first error, and its warnings *)
 module RawQuery : sig
 
   (** with the possibility to update the state in which the query will run *)
   val compile_ast :
-    Compile.program -> Ast.query -> (State.t -> State.t) -> Compile.query
+    Compile.program -> Ast.query -> (State.t -> State.t) ->
+      (Compile.query, Error.t) result * Error.warning list
 
   (** generate the query ast term with a function. The resulting term is typed, spilled, etc *)
   val compile_term :
-    Compile.program -> (State.t -> State.t * Ast.Term.t) -> Compile.query
-  
+    Compile.program -> (State.t -> State.t * Ast.Term.t) ->
+      (Compile.query, Error.t) result * Error.warning list
+
   (** generate the query term by hand, the result is used as is *)
   val compile_raw_term :
-    Compile.program -> (State.t -> State.t * Data.term * Conversion.extra_goals) -> Compile.query
+    Compile.program -> (State.t -> State.t * Data.term * Conversion.extra_goals) ->
+      (Compile.query, Error.t) result * Error.warning list
 
   (** typechecks only if ctx is empty *)
   val term_to_raw_term :
@@ -1377,17 +1462,6 @@ end
 
 module Utils : sig
 
-  (** A regular error (fatal) *)
-  val error : ?loc:Ast.Loc.t ->string -> 'a
-
-  (** An invariant is broken, i.e. a bug *)
-  val anomaly : ?loc:Ast.Loc.t ->string -> 'a
-
-  (** A type error (in principle ruled out by [elpi-checker.elpi]) *)
-  val type_error : ?loc:Ast.Loc.t ->string -> 'a
-
-  (** A non fatal warning *)
-  val warn : ?loc:Ast.Loc.t -> id:Setup.warning_id -> string -> unit
 
   (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
    * OCaml list! *)

@@ -72,7 +72,7 @@ module CompileTime : sig
     pred_info Constants.Map.t ->
       index -> index
 
-  (* adds 1 clause to its index *)
+  (* adds 1 clause to its index; can raise CompileTimeError (grafting) *)
   val add_to_index :
     det_check: float ref option -> (* update det checking info *)
     depth:int ->
@@ -80,7 +80,7 @@ module CompileTime : sig
     graft:Elpi_parser.Ast.Structured.insertion option ->
     clause -> string option -> index -> pred_info -> index * (overlap_clause option * pred_info)
 
-  (* can raise CannotDeclareClauseForBuiltin *)
+  (* can raise CannotDeclareClauseForBuiltin and CompileTimeError *)
   val clausify1 :
     tail_cut:bool ->
     loc:Loc.t ->
@@ -94,5 +94,6 @@ module CompileTime : sig
 end
 
 module Indexing : sig
+  (* can raise CompileTimeError *)
   val add1clause_overlap_runtime : depth:constant -> pred_info Constants.Map.t -> constant -> time:constant -> clause -> overlap_clause option * pred_info Constants.Map.t
 end
