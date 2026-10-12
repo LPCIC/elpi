@@ -3,7 +3,8 @@
 Elpi in a browser (and in Node), compiled to WebAssembly and to JavaScript:
 
 - the language server `elpi-lsp` (`../lsp/`) in a web worker, used by the VS
-  Code extension `gares.elpi-lang` in vscode.dev;
+  Code extension `gares.elpi-lang` in vscode.dev, and by the Slidev deck of
+  `slidev/`;
 - the API of Elpi for JavaScript: parse, compile and run Elpi programs.
 
 ```
@@ -28,6 +29,7 @@ of HEAD). Its metadata and its README are in `npm/`.
   `api-entry.js` (it inlines the WebAssembly build of the API).
 - `npm/`: the metadata and the README of the npm package.
 - `test/`: the tests, see below.
+- `slidev/`: Elpi in the slides of a [Slidev](https://sli.dev) deck.
 
 ## The server
 

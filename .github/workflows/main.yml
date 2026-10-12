@@ -28,6 +28,13 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    # dune builds in the release profile (smaller binaries; the web build,
+    # webrunner, is in the release profile anyway, see the Makefile), but in the
+    # job fatalwarnings, which turns the warnings of the dev profile into
+    # errors (see the root dune)
+    env:
+      DUNE_PROFILE: ${{ matrix.profile == 'fatalwarnings' && 'dev' || 'release' }}
+
     steps:
     
       - name: Set git to use LF
@@ -190,6 +197,43 @@ jobs:
 
       - name: Test elpi-lsp
         run: opam exec -- make tests-lsp
+
+# webrunner ###################################################################
+#
+# Elpi on the web (release profile): the server and the API for JavaScript,
+# compiled to JavaScript and to WebAssembly, on Linux. wasm_of_ocaml needs
+# binaryen 119 or later, newer than the one of Ubuntu: a release of binaryen
+# is put in the PATH instead.
+
+      - name: Install binaryen
+        if: runner.os == 'Linux' && matrix.profile != 'fatalwarnings'
+        run: |
+          curl -sL https://github.com/WebAssembly/binaryen/releases/download/version_120/binaryen-version_120-x86_64-linux.tar.gz | tar xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/binaryen-version_120/bin" >> "$GITHUB_PATH"
+
+      - name: Build and test Elpi on the web
+        if: runner.os == 'Linux' && matrix.profile != 'fatalwarnings'
+        run: |
+          opam install js_of_ocaml js_of_ocaml-compiler
+          opam install --no-depexts wasm_of_ocaml-compiler
+          opam exec -- make webrunner
+          opam exec -- make test-webrunner
+
+# The npm package of the web build, e.g. for webrunner/slidev: npm install
+# elpi-webrunner-VERSION.tgz
+
+      - name: Pack Elpi on the web (npm)
+        if: runner.os == 'Linux' && matrix.ocaml-compiler == '5.5.x' && matrix.profile != 'fatalwarnings'
+        run: |
+          git fetch --unshallow --tags || git fetch --tags
+          opam exec -- make pack-webrunner
+
+      - name: Save the npm package of Elpi on the web
+        uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux' && matrix.ocaml-compiler == '5.5.x' && matrix.profile != 'fatalwarnings'
+        with:
+          name: elpi-webrunner
+          path: webrunner/elpi-webrunner/elpi-webrunner-*.tgz
 
   aggregate:
     name: Aggregate and plot benchmarking data

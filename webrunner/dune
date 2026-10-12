@@ -4,9 +4,9 @@
 ; one. Not built by default: make webrunner puts them in elpi-webrunner/, the
 ; npm package.
 
-(dirs :standard \ elpi-webrunner)
+(dirs :standard \ elpi-webrunner slidev)
 
-; the language server in a web worker (vscode.dev)
+; the language server in a web worker (vscode.dev, the slides of slidev/)
 (executable
  (name web_lsp_driver)
  (modes js wasm)

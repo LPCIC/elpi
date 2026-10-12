@@ -1,0 +1,20 @@
+{
+  "name": "elpi-slidev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "copy-elpi-webrunner": "node scripts/copy-elpi-webrunner.js",
+    "predev": "npm run copy-elpi-webrunner",
+    "dev": "slidev --open",
+    "prebuild": "npm run copy-elpi-webrunner",
+    "build": "slidev build",
+    "preexport": "npm run copy-elpi-webrunner",
+    "export": "slidev export"
+  },
+  "dependencies": {
+    "@slidev/cli": "^53.0.0",
+    "@slidev/theme-default": "^0.25.0",
+    "elpi-webrunner": "file:../elpi-webrunner",
+    "vue": "^3.5.0"
+  }
+}

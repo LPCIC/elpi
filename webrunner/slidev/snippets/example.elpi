@@ -1,0 +1,9 @@
+% hidden: the facts
+pred age -> string, int.
+age "bob" 23.
+age "alice" 20.
+% hidden-end
+main :- age X Y, print X "is" Y "years old", fail.
+% hidden: the end
+main :- print "all printed".
+% hidden-end
