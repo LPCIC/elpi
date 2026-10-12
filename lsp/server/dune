@@ -1,0 +1,7 @@
+; the language server, independent of how messages come and go: see the
+; drivers ../stdio_driver.ml and ../web_driver.ml
+(library
+ (name elpi_lsp_server)
+ (wrapped false)
+ (optional)
+ (libraries elpi lsp jsonrpc yojson unix))

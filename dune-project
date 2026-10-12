@@ -9,3 +9,5 @@
  (name ppx_elpi))
 
 (package (name elpi-option-legacy-parser))
+
+(package (name elpi-lsp))

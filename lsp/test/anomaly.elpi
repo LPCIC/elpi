@@ -1,0 +1,22 @@
+data person.
+symb mallory : person.
+symb bob     : person.
+symb alice   : person.
+
+pred age -> person, int.
+
+age bob 23.
+age alice 20.
+age mallory 23.
+
+main :- age alice N, print N.
+main :- age P 23, print P.
+main :- ag
+% hidden: examples
+main :-
+  age P A, print "I picked P =" P,
+  age Q A, print "I picked Q =" Q,
+  not(P = Q),
+  print "the last choice worked!",
+  print P "and" Q "are" A "years old".
+% hinned-end

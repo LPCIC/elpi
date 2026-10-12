@@ -1,5 +1,8 @@
 # v4.0.0 (October 2026)
 
+- LSP:
+  - New language server `elpi-lsp` supporting type information via hovering,
+    jump to definition and semantic highlighting. See `lsp/README.md`
 - Compiler:
   - Change: the passes can be error resilient: they return their result and
     the list of the errors found (`Error.t`, with the name of the pass

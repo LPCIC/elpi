@@ -1,0 +1,26 @@
+==== open syntax.elpi ====
+diagnostics of syntax.elpi (version 1): 4
+  1:14-1:15 error: Parser: Term expected, got keyword.
+    | p X :- q (X, r.
+    |               ^
+  2:16-2:17 error: Parser: This infix operator expects a right hand side.
+    | p Y :- Y is 2 + .
+    |                 ^
+  3:4-3:5 error: Parser: unexpected character
+    | p 3 $ .
+    |     ^
+  0:0-0:0 warning: Typechecker: Undeclared globals:
+- File "$DIR/syntax.elpi", line 1, column 0, characters 0-3: p.
+Please add the following text to your program:
+type p int -> (pred).
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  line 0:
+                  | p 1.
+    function decl | =
+    number        |   ^
+  line 4:
+                  | p 4.
+    function decl | =
+    number        |   ^

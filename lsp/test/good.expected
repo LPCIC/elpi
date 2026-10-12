@@ -1,0 +1,188 @@
+==== open good.elpi ====
+diagnostics of good.elpi (version 1): 0
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  line 1:
+                   | func double int -> int.
+    type           |             ^^^    ^^^
+  line 2:
+                   | double X Y :- Y is X * 2.
+    function decl  | ======
+    enumMember     |                      ^
+    variable       |        ^ ^    ^    ^
+    keyword        |            ^^
+    number         |                        ^
+  line 4:
+                   | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    function decl  | ====
+    parameter      |                                                   ^   ^
+    parameter decl |                                             =  =
+    variable       |                  ^        ^ ^           ^                ^            ^
+    keyword        |      ^^           ^
+    number         |                ^
+    string         |                                                                   ^^^
+  line 7:
+                   | symb lam (tm -> tm) -> tm.
+    type           |           ^^    ^^     ^^
+  line 8:
+                   | pred copy tm -> tm.
+    type           |           ^^    ^^
+  line 9:
+                   | copy (lam F) (lam G) :- pi x\ copy (F x) (G x).
+    function decl  | ====
+    enumMember     |       ^^^     ^^^
+    parameter      |                                       ^     ^
+    parameter decl |                            =
+    variable       |           ^       ^                 ^     ^
+    keyword        |                      ^^ ^^
+
+==== hover and definition in good.elpi ====
+hover "double 3"+0 (the cursor is at 4:8): 4:8-4:14
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    hovered    |         ^^^^^^
+    cursor     |         *
+    ? ```elpi-hover
+    ? double : (func int -> int)
+    ? ```
+hover "double int"+0 (the cursor is at 1:5): 1:0-1:22
+  line 1:
+               | func double int -> int.
+    hovered    | ^^^^^^^^^^^^^^^^^^^^^^
+    cursor     |      *
+    ? ```elpi-hover
+    ? (func int -> int)
+    ? ```
+hover "double 3 Y"+9 (the cursor is at 4:17): 4:17-4:18
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    hovered    |                  ^
+    cursor     |                  *
+    ? ```elpi-hover
+    ? Y : int
+    ? ```
+    ? 
+    ? variable of the rule `main`
+hover "twice Y Z"+0 (the cursor is at 4:20): 4:20-4:25
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    hovered    |                     ^^^^^
+    cursor     |                     *
+    ? ```elpi-hover
+    ? twice : (pred int -> int)
+    ? ```
+hover "x\\ y\\ y = x"+6 (the cursor is at 4:50): 4:50-4:51
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    hovered    |                                                   ^
+    cursor     |                                                   *
+    ? ```elpi-hover
+    ? y : int
+    ? ```
+    ? 
+    ? bound by `y\`
+hover "std.map"+4 (the cursor is at 4:35): 4:31-4:38
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    hovered    |                                ^^^^^^^
+    cursor     |                                    *
+    ? ```elpi-hover
+    ? std.map : (func list int, (func int -> int) -> list int)
+    ? ```
+hover "\"\206\187\" L"+5 (the cursor is at 4:70): 4:70-4:71
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    hovered    |                                                                       ^
+    cursor     |                                                                       *
+    ? ```elpi-hover
+    ? L : list int
+    ? ```
+    ? 
+    ? variable of the rule `main`
+hover "% a comment"+3 (the cursor is at 3:3): none
+  line 3:
+               | % a comment with a non-ASCII character: λ
+    cursor     |    *
+hover "X * 2"+1 (the cursor is at 2:20): 2:19-2:24
+  line 2:
+               | double X Y :- Y is X * 2.
+    hovered    |                    ^^^^^
+    cursor     |                     *
+    ? ```elpi-hover
+    ? X * 2 : int
+    ? ```
+hover "X * 2"+4 (the cursor is at 2:23): 2:23-2:24
+  line 2:
+               | double X Y :- Y is X * 2.
+    hovered    |                        ^
+    cursor     |                        *
+    ? ```elpi-hover
+    ? 2 : int
+    ? ```
+definition "double 3"+2 (the cursor is at 4:10):
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    cursor     |           *
+  defined at file://$DIR/good.elpi 1:0-1:22
+    | func double int -> int
+definition "twice Y Z"+1 (the cursor is at 4:21):
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    cursor     |                      *
+  defined at file://$DIR/lib.elpi 0:0-0:21
+    | pred twice int -> int
+definition "double 3 Y"+9 (the cursor is at 4:17):
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    cursor     |                  *
+  defined at file://$DIR/good.elpi 4:0-4:4
+    | main
+definition "std.map"+4 (the cursor is at 4:35):
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    cursor     |                                    *
+  defined at file://$LIBRARY/builtin_stdlib.elpi 135:0-135:40
+    | func map list A, (func A -> B) -> list B
+definition "print \""+1 (the cursor is at 4:61):
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    cursor     |                                                              *
+  defined at file://$LIBRARY/builtin.elpi 525:0-525:24
+    | builtin func print any..
+
+==== change good.elpi (version 2) ====
+diagnostics of good.elpi (version 2): 1
+  10:8-10:9 error: Parser: This infix operator expects a right hand side.
+    | oops :- .
+    |         ^
+hover "double 3"+0 (the cursor is at 4:8): 4:8-4:14
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    hovered    |         ^^^^^^
+    cursor     |         *
+    ? ```elpi-hover
+    ? double : (func int -> int)
+    ? ```
+
+==== change good.elpi (version 3) ====
+diagnostics of good.elpi (version 3): 0
+hover "double 3"+0 (the cursor is at 4:8): 4:8-4:14
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    hovered    |         ^^^^^^
+    cursor     |         *
+    ? ```elpi-hover
+    ? double : (func int -> int)
+    ? ```
+
+==== change good.elpi, 3 changes in a row ====
+diagnostics of good.elpi (version 6): 0
+hover "double 3"+0 (the cursor is at 4:8): 4:8-4:14
+  line 4:
+               | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    hovered    |         ^^^^^^
+    cursor     |         *
+    ? ```elpi-hover
+    ? double : (func int -> int)
+    ? ```

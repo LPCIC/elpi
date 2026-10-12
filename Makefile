@@ -2,8 +2,10 @@ help:
 	@echo 'Build targets:'
 	@echo
 	@echo '  build                  builds elpi'
+	@echo '  world                  builds elpi, ppx_elpi and elpi-lsp, all that install installs'
 	@echo '  build-ppx              builds ppx_elpi (and its tests)'
-	@echo '  install                install elpi'
+	@echo '  build-lsp              builds elpi-lsp (needs sel, lsp)'
+	@echo '  install                installs all the packages (after make world)'
 	@echo '  clean                  remove build artifacts'
 	@echo '  release                release the software (note: git tag -s first)'
 	@echo
@@ -19,6 +21,9 @@ help:
 	@echo
 	@echo '  tests-ppx              runs the ppx_elpi tests (alias runtest-ppx)'
 	@echo '  tests-ppx PROMOTE=true runs and promotes the ppx_elpi tests if different'
+	@echo '  tests-lsp              runs the elpi-lsp tests (alias runtest-lsp, needs sel, lsp)'
+	@echo '  tests-lsp PROMOTE=true runs and promotes the elpi-lsp tests if different'
+	@echo '  perf-lsp               times elpi-lsp on a big document: check vs requests (alias perf-lsp)'
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
 	@echo
@@ -35,6 +40,11 @@ help:
 	@echo '  menhir-explain-conflicts'
 	@echo '  menhir-complete-errormsgs run when updating the grammar'
 	@echo '  menhir-strip-errormsgs remove comments from error message file'
+	@echo
+	@echo 'Options:'
+	@echo
+	@echo '  DUNE_OPTS="opts"       passes opts to dune (build, install and test targets)'
+	@echo '                           e.g. make build DUNE_OPTS="--display short -j 4"'
 	@echo
 
 INSTALL=_build/install/default
@@ -58,13 +68,26 @@ STACK=1114112
 DUNE_OPTS=
 
 build:
-	dune build $(DUNE_OPTS) @all
+	dune build $(DUNE_OPTS) @only-elpi
 
 build-ppx:
 	dune build $(DUNE_OPTS) @ppx_elpi/all
 
 tests-ppx:
 	dune build $(DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-ppx
+
+build-lsp:
+	dune build $(DUNE_OPTS) @lsp/default
+
+tests-lsp:
+	dune build $(DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-lsp
+
+perf-lsp:
+	dune build $(DUNE_OPTS) --force @lsp/perf/perf-lsp
+
+# all the packages (elpi, ppx_elpi, elpi-lsp...): dune install needs them all
+world:
+	dune build $(DUNE_OPTS) @install
 
 install:
 	dune install $(DUNE_OPTS)
@@ -103,11 +126,11 @@ clean:
 	rm -rf docs/build
 
 release:
-	dune-release -p elpi,ppx_elpi
+	dune-release -p elpi,ppx_elpi,elpi-lsp
 
 # testing
 tests:
-	dune build $(DUNE_OPTS) @all-but-ppx
+	dune build $(DUNE_OPTS) @only-elpi
 	dune runtest
 	ulimit -s $(STACK); OCAMLRUNPARAM=l=$(STACK) \
 		dune exec tests/test.exe -- \
@@ -165,4 +188,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: tests tests-ppx build-ppx help install build clean gh-pages doc doc-build doc-serve doc-publish
+.PHONY: tests tests-ppx build-ppx perf-lsp help install build world clean gh-pages doc doc-build doc-serve doc-publish

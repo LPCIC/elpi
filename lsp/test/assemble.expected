@@ -1,0 +1,26 @@
+==== open assemble.elpi ====
+diagnostics of assemble.elpi (version 1): 3
+  6:8-6:9 error: Typechecker: r is unknown.
+    | main :- r.
+    |         ^
+  4:0-4:15 error: Assemble: cannot graft, clause nope not found
+    | :after "nope" q.
+    | ^^^^^^^^^^^^^^^
+  4:16-5:33 error: Assemble: Conjunction in the head of a clause is not supported
+    | :after "nope" q.
+    |                 ^
+    | main :- ((p, q) :- true) => true.
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+==== run ====
+
+==== run main on assemble.elpi ====
+status: error
+  ! runtime: Conjunction in the head of a clause is not supported
+  ! Warning: the program could not be fully compiled: 3 errors
+  # File "$DIR/assemble.elpi", line 7, column 8, characters 94-95:
+  # Typechecker: r is unknown.
+  # File "$DIR/assemble.elpi", line 5, column 0, characters 35-50:
+  # Assemble: cannot graft, clause nope not found
+  # File "$DIR/assemble.elpi", line 6, column -1, characters 51-85:
+  # Assemble: Conjunction in the head of a clause is not supported

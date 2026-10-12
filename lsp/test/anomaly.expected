@@ -1,0 +1,28 @@
+==== open anomaly.elpi ====
+diagnostics of anomaly.elpi (version 1): 2
+  13:8-20:37 error: DetCheck: anomaly: Found clause in prop position
+    | main :- ag
+    |         ^^
+    | % hidden: examples
+    | ^^^^^^^^^^^^^^^^^^
+    | main :-
+    | ^^^^^^^
+    |   age P A, print "I picked P =" P,
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   age Q A, print "I picked Q =" Q,
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   not(P = Q),
+    | ^^^^^^^^^^^^^
+    |   print "the last choice worked!",
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   print P "and" Q "are" A "years old".
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  0:0-0:0 warning: Typechecker: Undeclared globals:
+- File "$DIR/anomaly.elpi", line 14, column 8, characters 217-243: ag.
+Please add the following text to your program:
+type ag (pred) -> (pred).
+
+==== fixed ====
+
+==== change anomaly.elpi (version 2) ====
+diagnostics of anomaly.elpi (version 2): 0

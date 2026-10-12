@@ -1,0 +1,96 @@
+; the common code
+(library
+ (name test_lsp_lib)
+ (optional)
+ (modules test_lsp_lib)
+ (libraries yojson unix str threads.posix))
+
+; the scripts, one per .elpi file, that register themselves
+(library
+ (name test_lsp_scripts)
+ (optional)
+ (modules :standard \ test_lsp_lib test_lsp)
+ (libraries test_lsp_lib))
+
+(executable
+ (name test_lsp)
+ (optional)
+ (modules test_lsp)
+ (link_flags (-linkall)) ; to link the scripts
+ (libraries test_lsp_lib test_lsp_scripts))
+; The output of the script NAME is written to NAME.output by the test and
+; compared with NAME.expected; test_lsp.output has the rest. Add NAME to the
+; targets and a diff for each new script.
+(rule
+ (targets test_lsp.output accbad.output accmissing.output good.output
+          syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output acctype.output lists.output accchar.output run.output
+          assemble.output anomaly.output)
+ (deps (glob_files *.elpi))
+ (action
+  (with-stdout-to test_lsp.output
+   (run %{exe:test_lsp.exe} %{exe:../stdio_driver.exe} .))))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff test_lsp.expected test_lsp.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff accbad.expected accbad.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff accmissing.expected accmissing.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff good.expected good.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff syntax.expected syntax.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff typeerr.expected typeerr.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff warn.expected warn.output)))
+(rule
+ (alias runtest-lsp)
+ (action (diff binders.expected binders.output)))
+(rule
+ (alias runtest-lsp)
+ (action (diff library.expected library.output)))
+(rule
+ (alias runtest-lsp)
+ (action (diff macros.expected macros.output)))
+(rule
+ (alias runtest-lsp)
+ (action (diff libdef.expected libdef.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff acctype.expected acctype.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff lists.expected lists.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff accchar.expected accchar.output)))
+
+
+(rule
+ (alias runtest-lsp)
+ (action (diff run.expected run.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff assemble.expected assemble.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff anomaly.expected anomaly.output)))

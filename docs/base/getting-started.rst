@@ -77,3 +77,11 @@ An `extension for Visual Studio Code <https://github.com/LPCIC/elpi-lang>`_ is
 available in the marketplace; search for "Elpi". Besides syntax highlighting,
 it hosts the interactive trace browser described in
 :doc:`debugging-and-tracing`.
+
+The extension also works with ``elpi-lsp``, the language server of Elpi,
+installed with ``opam install elpi-lsp``. As you type, the editor underlines
+the syntax and type errors of the whole file at once; hovering over a symbol shows
+its type, and Go to Definition jumps to the signature of a predicate. The
+server speaks the standard Language Server Protocol, so other editors can use
+it too. How to build, configure and test it is explained in the
+`README of the language server <https://github.com/LPCIC/elpi/blob/master/lsp/README.md>`_.

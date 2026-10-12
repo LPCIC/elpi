@@ -89,25 +89,13 @@ jobs:
       - name: Build elpi
         run: |
           opam exec -- dune subst
-          opam exec -- make build
+          opam exec -- make build DUNE_OPTS=--verbose
           opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
-          opam exec -- cp _build/install/default/bin/elpi-trace-elaborator elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
-
-      - name: Strip binary
-        run: |
           opam exec -- chmod u+w ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
-          opam exec -- chmod u+w ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
           opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
+          opam exec -- cp _build/install/default/bin/elpi-trace-elaborator elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
+          opam exec -- chmod u+w ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
           opam exec -- strip ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
-
-# Artifacts 1 ################################################################
-
-      - name: Save binary
-        uses: actions/upload-artifact@v4
-        if: matrix.profile != 'fatalwarnings'
-        with:
-          name: elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}
-          path: elpi*-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
 
 # Test ######################################################################
 #
@@ -123,7 +111,7 @@ jobs:
           opam exec -- ls -l tests/sources/*.elpi
           opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe' TIME=--time=C:/.opam/.cygwin/root/bin/time.exe
 
-# Artifacts 2 ################################################################
+# Test artifacts ################################################################
 
       - name: Save logs
         uses: actions/upload-artifact@v4
@@ -151,7 +139,7 @@ jobs:
         run: opam install ./elpi.opam ./ppx_elpi.opam --deps-only
 
       - name: Build ppx_elpi
-        run: opam exec -- make build-ppx
+        run: opam exec -- make build-ppx DUNE_OPTS=--verbose
 
       # the expected output depends on the version of ppx_deriving and ppxlib
       - name: Test ppx_elpi
@@ -159,6 +147,39 @@ jobs:
         run: |
           opam install ./elpi.opam ./ppx_elpi.opam --deps-only --with-test
           opam exec -- make tests-ppx
+
+# elpi-lsp ###################################################################
+#
+# Also done after the main tests: the language server depends on elpi, passing
+# both opam files makes the local elpi.opam satisfy that dependency.
+
+      - name: Install elpi-lsp dependencies
+        run: |
+          opam install ./elpi.opam ./elpi-lsp.opam --deps-only --with-test
+
+      - name: Build elpi-lsp
+        run: |
+          opam exec -- make build-lsp DUNE_OPTS=--verbose
+          opam exec -- cp _build/default/lsp/stdio_driver.exe elpi-lsp.exe
+          opam exec -- chmod u+w ${{ env.workspace }}/elpi-lsp.exe
+          opam exec -- strip ${{ env.workspace }}/elpi-lsp.exe
+
+      - name: Test elpi-lsp
+        run: opam exec -- make tests-lsp
+
+# Binary Artifacts ###############################################################
+
+      - name: Rename binary
+        run: |
+          opam exec -- mv ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi.exe
+          opam exec -- mv ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator.exe
+
+      - name: Save binary
+        uses: actions/upload-artifact@v4
+        if: matrix.profile != 'fatalwarnings'
+        with:
+          name: elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}
+          path: elpi*.exe
 
   aggregate:
     name: Aggregate and plot benchmarking data
@@ -179,6 +200,8 @@ jobs:
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          pattern: .benchmark*
 
       - name: Plotting aggregated data
         run: |

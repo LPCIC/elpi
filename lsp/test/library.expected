@@ -1,0 +1,42 @@
+==== open good.elpi ====
+diagnostics of good.elpi (version 1): 0
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  line 1:
+                   | func double int -> int.
+    type           |             ^^^    ^^^
+  line 2:
+                   | double X Y :- Y is X * 2.
+    function decl  | ======
+    enumMember     |                      ^
+    variable       |        ^ ^    ^    ^
+    keyword        |            ^^
+    number         |                        ^
+  line 4:
+                   | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+    function decl  | ====
+    parameter      |                                                   ^   ^
+    parameter decl |                                             =  =
+    variable       |                  ^        ^ ^           ^                ^            ^
+    keyword        |      ^^           ^
+    number         |                ^
+    string         |                                                                   ^^^
+  line 7:
+                   | symb lam (tm -> tm) -> tm.
+    type           |           ^^    ^^     ^^
+  line 8:
+                   | pred copy tm -> tm.
+    type           |           ^^    ^^
+  line 9:
+                   | copy (lam F) (lam G) :- pi x\ copy (F x) (G x).
+    function decl  | ====
+    enumMember     |       ^^^     ^^^
+    parameter      |                                       ^     ^
+    parameter decl |                            =
+    variable       |           ^       ^                 ^     ^
+    keyword        |                      ^^ ^^
+read-only: true
+
+==== open $LIBRARY/builtin_stdlib.elpi ====
+diagnostics of $LIBRARY/builtin_stdlib.elpi (version 1): 0
