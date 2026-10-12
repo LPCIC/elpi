@@ -1,0 +1,33 @@
+% [twice X Y] holds when Y is twice X.
+% It is a function.
+func twice int -> int.
+twice X Y :- Y is X * 2.
+
+% not the documentation of undocumented: a blank line follows
+
+pred undocumented o:int.
+undocumented 1.
+
+/* the entry point,
+   a multiline comment */
+pred main.
+
+main :- twice 21 A, print A, undocumented _.
+main :- print "a long body",
+  print "line 2", print "line 3",
+  print "line 4", print "line 5",
+  print "line 6", print "line 7",
+  print "line 8",
+  print "line 9: not previewed".
+
+% doc of pa
+pred pa.
+pa :- true. % after code: not documentation
+pred qa.
+pred pg. % about pg, not the documentation of ph
+pred ph.
+% doc of pb
+pred pb % inside the declaration
+  i:int.
+pred uses.
+uses :- pa, qa, ph, pb 1.

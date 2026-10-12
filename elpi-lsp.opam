@@ -1,0 +1,26 @@
+opam-version: "2.0"
+maintainer: "Enrico Tassi <enrico.tassi@inria.fr>"
+authors: [ "Claudio Sacerdoti Coen" "Enrico Tassi" ]
+license: "LGPL-2.1-or-later"
+homepage: "https://github.com/LPCIC/elpi"
+dev-repo: "git+https://github.com/LPCIC/elpi.git"
+bug-reports: "https://github.com/LPCIC/elpi/issues"
+build: [
+  ["dune" "subst"] {dev}
+  ["dune" "build" "-p" name "-j" jobs]
+]
+depends: [
+  "ocaml" {>= "4.14.0" }
+  "dune" {>= "2.9.0"}
+  "elpi" {= version}
+  "sel" {>= "0.6.0"}
+  "lsp" {>= "1.20.0"}
+  "jsonrpc"
+  "yojson"
+]
+synopsis: "A language server (LSP) for Elpi"
+description: """
+elpi-lsp reports the syntax errors, the scoping and type errors of an Elpi
+file, and gives the type of sub-expressions on hover and the definition point
+of symbols.
+"""

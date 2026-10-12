@@ -1,0 +1,10 @@
+==== open accchar.elpi ====
+diagnostics of accchar.elpi (version 1): 2
+  0:0-0:19 error: Parser: in $DIR/charlib.elpi, line 2, column 3: unexpected character
+    | accumulate charlib.
+    | ^^^^^^^^^^^^^^^^^^^
+  1:0-1:1 warning: Typechecker: Undeclared global q.
+Please add the following text to your program:
+type q (pred).
+    | q.
+    | ^

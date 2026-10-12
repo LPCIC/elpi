@@ -1,0 +1,10 @@
+accumulate lib.
+func double int -> int.
+double X Y :- Y is X * 2.
+% a comment with a non-ASCII character: λ
+main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
+
+data tm.
+symb lam (tm -> tm) -> tm.
+pred copy tm -> tm.
+copy (lam F) (lam G) :- pi x\ copy (F x) (G x).

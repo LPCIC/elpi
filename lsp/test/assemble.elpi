@@ -1,0 +1,7 @@
+pred p.
+pred q.
+pred main.
+p :- q.
+:after "nope" q.
+main :- ((p, q) :- true) => true.
+main :- r.

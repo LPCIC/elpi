@@ -1,0 +1,246 @@
+==== open binders.elpi ====
+diagnostics of binders.elpi (version 1): 0
+
+==== variables of the rule, in the head and in the body ====
+highlight "p X Y"+2 (the cursor is at 3:2):
+  definition 3:0-3:5
+  occurrence 3:2-3:3
+  occurrence 3:19-3:20
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    definition | =====
+    occurrence |   ^                ^
+    cursor     |   *
+highlight "z X"+2 (the cursor is at 3:19):
+  definition 3:0-3:5
+  occurrence 3:2-3:3
+  occurrence 3:19-3:20
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    definition | =====
+    occurrence |   ^                ^
+    cursor     |                    *
+definition "z X"+2 (the cursor is at 3:19):
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    cursor     |                    *
+  defined at file://$DIR/binders.elpi 3:0-3:5
+    | p X Y
+  previewed 3:0-3:5
+    | p X Y
+
+==== a variable of another rule ====
+highlight "r X"+2 (the cursor is at 4:11):
+  definition 4:0-4:5
+  occurrence 4:2-4:3
+  occurrence 4:11-4:12
+  line 4:
+               | p X _ :- r X.
+    definition | =====
+    occurrence |   ^        ^
+    cursor     |            *
+
+==== pi ====
+highlight "pi z"+3 (the cursor is at 3:12):
+  definition 3:9-3:14
+  occurrence 3:17-3:18
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    definition |          =====
+    occurrence |                  ^
+    cursor     |             *
+highlight "q z"+2 (the cursor is at 3:17):
+  definition 3:9-3:14
+  occurrence 3:17-3:18
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    definition |          =====
+    occurrence |                  ^
+    cursor     |                  *
+definition "q z"+2 (the cursor is at 3:17):
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    cursor     |                  *
+  defined at file://$DIR/binders.elpi 3:9-3:14
+    | pi z\
+  previewed 3:9-3:14
+    | pi z\
+hover "q z"+2 (the cursor is at 3:17): 3:17-3:18
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    hovered    |                  ^
+    cursor     |                  *
+    ? ```elpi-hover
+    ? z : int
+    ? ```
+    ? 
+    ? bound by `pi z\`
+
+==== sigma ====
+highlight "r W"+2 (the cursor is at 3:33):
+  definition 3:22-3:30
+  occurrence 3:33-3:34
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    definition |                       ========
+    occurrence |                                  ^
+    cursor     |                                  *
+definition "r W"+2 (the cursor is at 3:33):
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    cursor     |                                  *
+  defined at file://$DIR/binders.elpi 3:22-3:30
+    | sigma W\
+  previewed 3:22-3:30
+    | sigma W\
+
+==== a data binder ====
+highlight "b = a"+0 (the cursor is at 3:55):
+  definition 3:52-3:54
+  occurrence 3:55-3:56
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    definition |                                                     ==
+    occurrence |                                                        ^
+    cursor     |                                                        *
+highlight "a\\ b"+0 (the cursor is at 3:49):
+  definition 3:49-3:51
+  occurrence 3:59-3:60
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    definition |                                                  ==
+    occurrence |                                                            ^
+    cursor     |                                                  *
+definition "= a"+2 (the cursor is at 3:59):
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    cursor     |                                                            *
+  defined at file://$DIR/binders.elpi 3:49-3:51
+    | a\
+  previewed 3:49-3:51
+    | a\
+hover "= a"+2 (the cursor is at 3:59): 3:59-3:60
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    hovered    |                                                            ^
+    cursor     |                                                            *
+    ? ```elpi-hover
+    ? a : int
+    ? ```
+    ? 
+    ? bound by `a\`
+
+==== a whole expression: the cursor is on a blank ====
+hover "q z X"+1 (the cursor is at 3:16): 3:15-3:20
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    hovered    |                ^^^^^
+    cursor     |                 *
+    ? ```elpi-hover
+    ? q z X : (func)
+    ? ```
+hover "std.map [Y]"+7 (the cursor is at 3:43): 3:36-3:63
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    hovered    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    cursor     |                                            *
+    ? ```elpi-hover
+    ? std.map ... b = a) _ : (func)
+    ? ```
+
+==== the type of a quantifier ====
+hover "pi z"+0 (the cursor is at 3:9): 3:9-3:11
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    hovered    |          ^^
+    cursor     |          *
+    ? ```elpi-hover
+    ? pi : (func (func int))
+    ? ```
+
+==== a constant: its declaration and its uses ====
+highlight "q z X"+0 (the cursor is at 3:15):
+  definition 0:0-0:15
+  occurrence 3:15-3:16
+  line 0:
+               | pred q int, int.
+    definition | ===============
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    occurrence |                ^
+    cursor     |                *
+highlight "p X _"+0 (the cursor is at 4:0):
+  definition 2:0-2:15
+  occurrence 3:0-3:1
+  occurrence 4:0-4:1
+  line 2:
+               | pred p int, int.
+    definition | ===============
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    occurrence | ^
+  line 4:
+               | p X _ :- r X.
+    occurrence | ^
+    cursor     | *
+
+==== a constant of the standard library: no declaration in the file ====
+highlight "std.map"+1 (the cursor is at 3:37):
+  occurrence 3:36-3:43
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    occurrence |                                     ^^^^^^^
+    cursor     |                                      *
+
+==== not a variable or a constant ====
+highlight "X, sigma"+1 (the cursor is at 3:20):
+  none (the cursor is not on a variable or a constant)
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    cursor     |                     *
+hover "std.map"+1 (the cursor is at 3:37): 3:36-3:43
+  line 3:
+               | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    hovered    |                                     ^^^^^^^
+    cursor     |                                      *
+    ? ```elpi-hover
+    ? std.map : (func list int, (func int -> int) -> list int)
+    ? ```
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  line 0:
+                   | pred q int, int.
+    type           |        ^^^  ^^^
+  line 1:
+                   | pred r int.
+    type           |        ^^^
+  line 2:
+                   | pred p int, int.
+    type           |        ^^^  ^^^
+  line 3:
+                   | p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+    function decl  | =
+    parameter      |                  ^               ^                     ^   ^
+    parameter decl |             =               =                    =  =
+    variable       |   ^ ^              ^                         ^
+    keyword        |       ^^ ^^         ^ ^^^^^       ^
+  line 4:
+                   | p X _ :- r X.
+    function decl  | =
+    variable       |   ^        ^
+    keyword        |       ^^
+  line 7:
+                   | symb lam (tm -> tm) -> tm.
+    type           |           ^^    ^^     ^^
+  line 8:
+                   | func copy tm -> tm.
+    type           |           ^^    ^^
+  line 9:
+                   | copy (lam F) (lam G) :- pi x\ copy (F x) (G x).
+    function decl  | ====
+    enumMember     |       ^^^     ^^^
+    parameter      |                                       ^     ^
+    parameter decl |                            =
+    variable       |           ^       ^                 ^     ^
+    keyword        |                      ^^ ^^
