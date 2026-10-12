@@ -36,7 +36,7 @@ let () =
   let exs = list_init 0 50000 (fun _ -> ex) in
   let rec extend i p =
     if i = 0 then p
-    else extend (i-1) (List.fold_left (fun p u -> Compile.extend ~base:p u) p exs) in
+    else extend (i-1) (List.fold_left (fun p u -> ok (Compile.extend ~base:p u)) p exs) in
   let p = extend 1 p in
   let q = Compile.query p (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "main")) in
   exec q

@@ -261,9 +261,14 @@ let update_ety ety eit = { ety with eit }
           end
       | UVar m -> f fmt pretty m
       (* | UVar m -> MutableOnce.pretty fmt m *)
+    (* (pred), (func) and the types (func ..) (pred ..) have their parentheses *)
+    and self_parenthesized = function
+      | Prop _ -> true
+      | Arr _ as x -> arrow_tail x <> None
+      | _ -> false
     and pretty_parens ~lvl fmt = function
       | UVar m -> f fmt (pretty_parens ~lvl) m
-      | t when lvl >= lvl_of t -> fprintf fmt "(%a)" pretty t
+      | t when lvl >= lvl_of t && not (self_parenthesized t) -> fprintf fmt "(%a)" pretty t
       | t -> pretty fmt t
     and pretty_pred_mode ?(variadic=false) m fmt (s, t) =
       fprintf fmt "@[<hov 2>%a:%a%s@]" show_mode m (pretty_parens ~lvl:arrs) s (if variadic then ".." else "");
@@ -1145,12 +1150,14 @@ module ScopedTerm = struct
       | UVar(v,xs) -> UVar(v,List.map (rename_loc l c d) xs)
       | Discard _ | CData _ -> t
     and rename_loc l c d { it; ty; loc } = { it = rename l c d it; ty; loc } 
+    (* the symbols of the copy are at the location of the use of the macro *)
+    let clone_const_at ~loc c = clone_const { c with loc }
     let clone_loc ~loc t =
       let m = ref F.Map.empty in
       let rec clone_loc ~loc {it} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
       clone ~loc = function
         | Impl (b, loc, l, r) -> Impl(b, loc, clone_loc ~loc l, clone_loc ~loc r)
-        | Lam (n,ty,bo) -> Lam(Option.map clone_const n, ty, clone_loc ~loc bo)
+        | Lam (n,ty,bo) -> Lam(Option.map (clone_const_at ~loc) n, ty, clone_loc ~loc bo)
         | Discard { heapify } -> Discard { heapify }
         | UVar (v, xs) ->
             let name =
@@ -1161,8 +1168,8 @@ module ScopedTerm = struct
                   m := F.Map.add v.name name' !m;
                   name' in
             let v = { v with name } in
-            UVar (clone_const v, List.map (clone_loc ~loc) xs)
-        | App (g, xs) -> App (clone_const g, List.map (clone_loc ~loc) xs)
+            UVar (clone_const_at ~loc v, List.map (clone_loc ~loc) xs)
+        | App (g, xs) -> App (clone_const_at ~loc g, List.map (clone_loc ~loc) xs)
         | CData _ as t -> t 
         | Spill (t, _) -> Spill (clone_loc ~loc t, ref NoInfo)
         | Cast (t, ty) -> Cast (clone_loc ~loc t, ty) in
@@ -1334,6 +1341,117 @@ end
   
 module Arity = struct type t = int * Loc.t [@@deriving show, ord] end
 
-exception CompileError of Loc.t option * string
+type error = Util.error = {
+  component : string;       (* the pass that found the error, eg "Typechecker" *)
+  loc : Loc.t option;
+  message : string;         (* without the name of the component *)
+}
 
-let error ?loc msg = raise (CompileError(loc, msg))
+(* The error of a pass, with the name of the component that found it. Each
+   component instantiates its own [error], see [error_fun] *)
+exception CompileError of error
+
+(* The function that raises the errors of a component, polymorphic in its
+   result: [let ErrorFun { error } = error ~component:"Scope"] *)
+type error_fun = ErrorFun of { error : 'a. ?loc:Loc.t -> string -> 'a }
+let error ~component =
+  ErrorFun { error = fun ?loc message -> raise (CompileError { component; loc; message }) }
+
+(* Error resilient compilation: a pass splits its work in units (a clause, a
+   type declaration, ...) and runs each one in [Errors.protect]. A unit that
+   raises CompileError is dropped from the result of the pass and its error is
+   recorded: nothing is dropped without an error. Only CompileError is caught
+   (anomalies, assert false, Failure... are bugs and propagate).
+   Once [max_errors] errors have been recorded the remaining units are not run
+   (they are dropped too), and a final error says so. *)
+
+(* "Component: message", the form in which an error is shown without its
+   location *)
+let pp_error_message fmt { component; message } =
+  if component = "" then Format.fprintf fmt "%s" message
+  else Format.fprintf fmt "%s: %s" component message
+
+(* "location:" and, on the next line, "Component: message" *)
+let pp_error fmt ({ loc } as e) =
+  match loc with
+  | Some loc -> Format.fprintf fmt "%a@\n%a" Loc.pp loc pp_error_message e
+  | None -> pp_error_message fmt e
+
+let show_error e = Format.asprintf "%a" pp_error e
+
+(* an uncaught CompileError shows its error *)
+let () = Printexc.register_printer (function
+  | CompileError e -> Some ("CompileError: " ^ show_error e)
+  | _ -> None)
+
+module Errors = struct
+
+  (* [max_errors = 0]: the first error is raised (as CompileError), as if
+     there was no collector; [max_errors > 0]: the errors are recorded, up to
+     [max_errors] *)
+  type t = {
+    max_errors : int;
+    mutable count : int;
+    mutable errors : error list; (* most recent first *)
+    mutable skipped : bool; (* the final error was recorded *)
+  }
+
+  let make ?(max_errors=max_int) () = { max_errors; count = 0; errors = []; skipped = false }
+
+  let is_full t = t.max_errors > 0 && t.count >= t.max_errors
+
+  let add t e =
+    t.count <- t.count + 1;
+    t.errors <- e :: t.errors
+
+  (* the errors in order of occurrence *)
+  let list t = List.rev t.errors
+
+  (* [protect t ~default f] is [f ()], or [default] if [f] raises CompileError
+     (the error is recorded) or if too many errors were found. If
+     [t.max_errors = 0] the error is raised. *)
+  let protect t ~default f =
+    if t.max_errors = 0 then f ()
+    else if is_full t then begin
+      if not t.skipped then begin
+        t.skipped <- true;
+        t.errors <-
+          { component = "Compiler"; loc = None;
+            message = Printf.sprintf "too many errors (limit %d): the rest was not checked, the result is incomplete" t.max_errors }
+          :: t.errors
+      end;
+      default
+    end else
+      try f () with CompileError e -> add t e; default
+
+  (* [Some (f x)], or None if [f x] fails: the error is recorded *)
+  let catch_error t f x =
+    protect t ~default:None (fun () -> Some (f x))
+
+  (* an error that does not drop anything, e.g. one that has a repair *)
+  let report_error t (error : ?loc:Loc.t -> string -> unit) ?loc msg =
+    protect t ~default:() (fun () -> error ?loc msg)
+
+  (* Combinators on lists of units of work. The errors are recorded (see
+     protect) and the item for which [f] fails is dropped: the
+     accumulator of the fold is not updated, the item is not in the result of
+     the map and of the filter. *)
+  let protect_fold_left ~errs f acc l =
+    List.fold_left (fun acc x -> protect errs ~default:acc (fun () -> f acc x)) acc l
+
+  let protect_list_map ~errs f l =
+    List.filter_map (fun x -> protect errs ~default:None (fun () -> Some (f x))) l
+
+  let protect_fMap_fold ~errs f m acc =
+    F.Map.fold (fun k v acc -> protect errs ~default:acc (fun () -> f k v acc)) m acc
+
+  let protect_list_filter ~errs p l =
+    List.filter (fun x -> protect errs ~default:false (fun () -> p x)) l
+
+end
+
+(* for the code that wants an exception: the first error *)
+let raise_first (x, errors) =
+  match errors with
+  | [] -> x
+  | e :: _ -> raise (CompileError e)

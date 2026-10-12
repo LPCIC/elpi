@@ -1,8 +1,30 @@
 # v4.0.0 (October 2026)
 
+- Compiler:
+  - Change: the passes can be error resilient: they return their result and
+    the list of the errors found (`Compile.error`, with the name of the pass
+    that found it). With `max_errors > 0` they do not stop at the first error:
+    the items that cannot be scoped, typed, ... are dropped from the output,
+    and their errors are in the list.
+  - Change: new field `max_errors` of `Compile.flags`: stops after
+    that many errors; 0, the default, means that the first error is raised
+    as `CompileError` (whose argument is now a `Compile.error`), as before.
+    See also the flag `-max-errors N` to `elpi`.
+  - new `Compile.iter` to iterate on the symbols of a unit (constants with their
+    declaration, variables with their binder, literals, type expressions of the
+    declarations).
+    A use of a macro, `@name`, is a `Macro` node (with the declaration of the
+    macro); the nodes of its expansion are not visited.
 - Parser:
+  - Change: `Parse.program` and `Parse.program_from` are error
+    resilient when `max_errors > 0`: a declaration with a syntax error is
+    skipped up to the next `.` and dropped, and they return the program and the
+    list of the errors like the passes of the compiler. They take the compiler
+    flags, for `max_errors`; by default the first error is raised as before.
   - Change: a syntax error in an accumulated file is located on the
     accumulate directive, its message gives the position in the file.
+  - New `Parse.accumulated` lists the accumulate directives of a program and
+    the files that each one brings in.
 
 # v3.9.2 (October 2026)
 

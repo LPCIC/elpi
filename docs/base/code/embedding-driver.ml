@@ -28,9 +28,15 @@ let () =
       ~builtins:[Elpi.Builtin.std_builtins; my_builtins]
       ~file_resolver:(E.Parse.std_resolver ~paths:[] ())
       () in
-  let program = E.Parse.program ~elpi ~file:"my_program.elpi" in
+  (* report up to 10 errors, instead of raising the first one *)
+  let flags = { E.Compile.default_flags with E.Compile.max_errors = 10 } in
+  let program, errors = E.Parse.program ~flags ~elpi "my_program.elpi" in
+  List.iter (fun e -> Format.eprintf "%a@." E.Compile.pp_error e) errors;
+  if errors <> [] then exit 1;
   let goal = E.Parse.goal ~elpi ~loc:(E.Ast.Loc.initial "cli") ~text:"main." in
-  let prog = E.Compile.program ~flags:E.Compile.default_flags ~elpi program in
+  let prog, errors = E.Compile.program ~flags ~elpi program in
+  List.iter (fun e -> Format.eprintf "%a@." E.Compile.pp_error e) errors;
+  if errors <> [] then exit 1;
   let executable = E.Compile.optimize (E.Compile.query prog goal) in
   match E.Execute.once executable with
   | E.Execute.Success _ -> print_endline "Success"

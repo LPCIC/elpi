@@ -3,6 +3,8 @@
 (* ------------------------------------------------------------------------- *)
 open Elpi_util.Util
 open Compiler_data
+
+let ErrorFun { error } = error ~component:"Spilling"
 module C = Constants
 open ScopedTerm
 

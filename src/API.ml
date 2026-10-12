@@ -62,7 +62,7 @@ let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags)
   Data.Global_symbols.lock ();
   let header =
     try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins
-    with Compiler_data.CompileError(loc,msg) -> Util.anomaly ?loc msg in
+    with Compiler_data.CompileError ({ loc } as e) -> Util.anomaly ?loc (Format.asprintf "%a" Compiler_data.pp_error_message e) in
   { parser; header; resolver = file_resolver }
 
 let trace = set_trace
@@ -87,6 +87,7 @@ module Ast = struct
   type program = Ast.Program.t
   type query = Ast.Goal.t
   module Loc = Util.Loc
+
   module Goal = Ast.Goal
   module Scope = Compiler_data.Scope
   module Term = Compiler_data.ScopedTerm.QTerm
@@ -97,31 +98,6 @@ module Ast = struct
     let is_global f i = equal f (Util.Constants.Map.find i Data.Global_symbols.table.c2s |> Data.Symbol.get_func)
   end
   module Opaque = Util.CData
-end
-
-module Parse = struct
-
-  (* the parser is error resilient, here the first error is raised *)
-  let program ~elpi:{ Setup.parser } ~file =
-    let module P = (val parser) in
-    fst (P.program ~max_errors:0 file)
-
-  let program_from ~elpi:{ Setup.parser } ~loc ~digest buf =
-    let module P = (val parser) in
-    fst (P.program_from ~max_errors:0 ~loc ~digest buf)
-
-  let goal ~elpi:{ Setup.parser } ~loc ~text =
-    let module P = (val parser) in
-    P.goal ~loc ~text
-  let goal_from ~elpi:{ Setup.parser } ~loc buf =
-    let module P = (val parser) in
-    P.goal_from ~loc buf
-
-  exception ParseError = Elpi_parser.Parser_config.ParseError
-
-  let resolve_file ~elpi:{ Setup.resolver } = resolver
-  let std_resolver = Elpi_util.Util.std_resolver
-
 end
 
 module ED = Data
@@ -178,6 +154,11 @@ module Compile = struct
 
   let to_setup_flags x = x
 
+  type error = Compiler.error = { component : string; loc : Ast.Loc.t option; message : string }
+  let pp_error = Compiler.pp_error
+  let pp_error_message = Compiler.pp_error_message
+  let show_error = Compiler.show_error
+
   let program ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } p =
     Compiler.program_of_ast ~flags ~header p
 
@@ -196,6 +177,7 @@ module Compile = struct
     print_units : bool;
     time_typechecking : bool;
     skip_det_checking: bool;
+    max_errors: int;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
@@ -204,7 +186,7 @@ module Compile = struct
   let scope_builtins ?(flags=Compiler.default_flags) ~elpi:{ Setup.header; parser } builtins =
     Compiler.scoped_of_builtins ~flags ~header builtins
   let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } ~base x =
-    Compiler.unit_of_scoped ~flags ~header x |> Compiler.check_unit ~flags ~base
+    Compiler.compile_unit ~flags ~header ~base x
 
   let extend ?(flags=Compiler.default_flags) ~base u = Compiler.append_unit ~flags ~base u
   let signature u = Compiler.signature_of_checked_compilation_unit u
@@ -219,6 +201,69 @@ module Compile = struct
   type info = Compiler.info = { defined : Ast.Loc.t option; type_ : type_ option }
   let pp_info = Compiler.pp_info
   let hover = Compiler.hover
+  let hover_types = Compiler.hover_types
+  type origin = Compiler.origin = User | Builtin | Core | Undeclared
+  type cls = Compiler.cls = Predicate | Function | Data
+  type kind = Compiler.kind =
+    | Constant of cls * origin
+    | Bound
+    | Binder
+    | Unification_variable
+    | Discard
+    | Literal of [ `Int | `Float | `String | `Other ]
+    | Keyword
+    | Type_constructor | Type_abbreviation | Type_variable | Type_keyword
+    | Macro
+  type node = Compiler.node = {
+    loc : Ast.Loc.t;
+    kind : kind;
+    name : string option;
+    defined : Ast.Loc.t option;
+    declaration : bool;
+  }
+  let pp_node = Compiler.pp_node
+  let iter = Compiler.iter_unit
+end
+
+module Parse = struct
+
+  type error = Compile.error = { component : string; loc : Ast.Loc.t option; message : string }
+
+  let max_errors (flags : Compile.flags option) =
+    (Option.value flags ~default:Compile.default_flags).max_errors
+
+  let program ?flags ~elpi:{ Setup.parser } file =
+    let module P = (val parser) in
+    P.program ~max_errors:(max_errors flags) file
+
+  let program_from ?flags ~elpi:{ Setup.parser } ~loc ~digest buf =
+    let module P = (val parser) in
+    P.program_from ~max_errors:(max_errors flags) ~loc ~digest buf
+
+  let goal ~elpi:{ Setup.parser } ~loc ~text =
+    let module P = (val parser) in
+    P.goal ~loc ~text
+  let goal_from ~elpi:{ Setup.parser } ~loc buf =
+    let module P = (val parser) in
+    P.goal_from ~loc buf
+
+  exception ParseError = Elpi_parser.Parser_config.ParseError
+
+  let accumulated (p : Ast.program) =
+    let open Elpi_parser.Ast in
+    let rec files (o : Program.decl list parser_output) =
+      let name = Elpi_parser.Parse.cleanup_fname o.file_name in
+      (* a .mod comes with its .sig *)
+      let names =
+        if Filename.extension name = ".mod" then [ name; Filename.chop_extension name ^ ".sig" ] else [ name ] in
+      names @ List.concat_map (function Program.Accumulated (_, l) -> List.concat_map files l | _ -> []) o.ast in
+    List.filter_map (function
+      | Program.Accumulated (loc, l) -> Some (loc, List.concat_map files l)
+      | _ -> None) p.ast
+
+  let resolve_file ~elpi:{ Setup.resolver } = resolver
+  let std_resolver = Elpi_util.Util.std_resolver
+
 end
 
 module Execute = struct

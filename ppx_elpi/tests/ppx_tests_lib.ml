@@ -24,8 +24,8 @@ let append s =
   close_out oc
 
 let record_exception = function
-  | Compile.CompileError(loc, msg) ->
-      append (Printf.sprintf "\n/* COMPILE ERROR: %s\n   at: %s */\n" msg
+  | Compile.CompileError ({ loc } as e) ->
+      append (Printf.sprintf "\n/* COMPILE ERROR: %s\n   at: %s */\n" (Format.asprintf "%a" Compile.pp_error_message e)
         (match loc with None -> "unknown location" | Some l -> Ast.Loc.show l))
   | e -> append (Printf.sprintf "\n/* EXCEPTION: %s */\n" (Printexc.to_string e))
 
@@ -69,10 +69,14 @@ let run_program builtin program =
     append ("\n" ^ program);
     let fmt, close = formatter_on_output () in
     let elpi = init builtin in
-    let ast = Parse.program_from ~elpi ~loc:(Ast.Loc.initial "test")
+    let ast, errors = Parse.program_from ~elpi ~loc:(Ast.Loc.initial "test")
         ~digest:(Digest.string program) (Lexing.from_string program) in
+    List.iter (fun e -> Format.eprintf "%a@." Compile.pp_error e) errors;
+    if errors <> [] then exit 1;
     let goal = Parse.goal ~elpi ~loc:(Ast.Loc.initial "test") ~text:"main." in
-    let program = Compile.program ~elpi ~flags:Compile.default_flags ast in
+    let program, errors = Compile.program ~elpi ~flags:Compile.default_flags ast in
+    List.iter (fun e -> Format.eprintf "%a@." Compile.pp_error e) errors;
+    if errors <> [] then exit 1;
     let goal = Compile.query program goal in
     let exe = Compile.optimize goal in
     (* what the program prints is a comment *)
