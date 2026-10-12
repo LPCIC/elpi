@@ -561,7 +561,7 @@ let rec embed_k (module B : Ast_builder.S) c all_kargs all_tmp kargs tmp tys n =
   | (px,ex) :: xs, y :: ys, (FO { embed = t; _ }) :: ts -> [%expr
       let elpi__state, [%p pvar px], [%p pvar y] =
         [%e t] ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state [%e ex] in
-      [%e embed_k (module B) c all_kargs all_tmp xs ys ts (n+1)]]
+      [%e embed_k (module B : Ast_builder.S) c all_kargs all_tmp xs ys ts (n+1)]]
   | (px,ex) :: xs, y :: ys, HO{ build_ctx = f; embed = t; ctx = ctx_name; _ } :: ts ->
       let xtmp = fresh () in
       let elpi_to_key = evar (elpi_to_key ctx_name) in
@@ -576,7 +576,7 @@ let rec embed_k (module B : Ast_builder.S) c all_kargs all_tmp kargs tmp tys n =
         [%e t] ~depth: (elpi__depth + 1) elpi__hyps elpi__constraints elpi__state [%e ex] in
       let [%p pvar px] = Elpi.API.RawData.mkLam [%e evar xtmp] in
       let elpi__state = [%e elpi_pop ] ~depth: (elpi__depth + 1) elpi__state elpi__ctx_key in
-      [%e embed_k (module B) c all_kargs all_tmp xs ys ts (n+1)]]
+      [%e embed_k (module B : Ast_builder.S) c all_kargs all_tmp xs ys ts (n+1)]]
   | _ -> assert false
 ;;
 
