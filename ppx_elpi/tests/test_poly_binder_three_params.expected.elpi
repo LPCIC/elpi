@@ -1,0 +1,35 @@
+
+
+% context items for term A B C (Entry)
+builtin func entry (term A B C) -> string.
+
+
+builtin data term A B C.
+builtin symb const : A -> term A B C = "0".  % Const
+builtin symb tag   : B -> term A B C -> term A B C = "0".  % Tag
+builtin symb pair  : C -> A -> term A B C = "0".  % Pair
+builtin symb lam   : string -> (term A B C -> term A B C) -> term A B C = "0".  % Lam
+
+func term.copy (func X0 -> Y0), (func X1 -> Y1), (func X2 -> Y2), term X0 X1 X2 -> term Y0 Y1 Y2.
+term.copy F0 _ _ (const A0) (const B0) :- (F0 A0 B0).
+term.copy F0 F1 F2 (tag A0 A1) (tag B0 B1) :- (F1 A0 B0), ((term.copy F0 F1 F2) A1 B1).
+term.copy F0 _ F2 (pair A0 A1) (pair B0 B1) :- (F2 A0 B0), (F0 A1 B1).
+term.copy F0 F1 F2 (lam A0 A1) (lam B0 B1) :- (string.copy A0 B0), (pi x\ pi y\ entry x B0 ==> entry y B0 ==> (term.copy F0 F1 F2 x y :- !) ==> ((term.copy F0 F1 F2) (A1 x) (B1 y))).
+
+
+
+
+
+
+
+
+func inc int -> int.
+inc X Y :- Y is X + 1.
+
+main :-
+  term.copy inc string.copy bool.copy
+    (lam "x" x\ tag "t" (lam "y" y\ pair tt 1)) T,
+  T = lam "x" x\ tag "t" (lam "y" y\ pair tt 2).
+
+/* OUTPUT
+*/
