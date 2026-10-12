@@ -561,7 +561,7 @@ let rec embed_k (module B : Ast_builder.S) c all_kargs all_tmp kargs tmp tys n =
   | (px,ex) :: xs, y :: ys, (FO { embed = t; _ }) :: ts -> [%expr
       let elpi__state, [%p pvar px], [%p pvar y] =
         [%e t] ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state [%e ex] in
-      [%e embed_k (module B) c all_kargs all_tmp xs ys ts (n+1)]]
+      [%e embed_k (module B : Ast_builder.S) c all_kargs all_tmp xs ys ts (n+1)]]
   | (px,ex) :: xs, y :: ys, HO{ build_ctx = f; embed = t; ctx = ctx_name; _ } :: ts ->
       let xtmp = fresh () in
       let elpi_to_key = evar (elpi_to_key ctx_name) in
@@ -576,7 +576,7 @@ let rec embed_k (module B : Ast_builder.S) c all_kargs all_tmp kargs tmp tys n =
         [%e t] ~depth: (elpi__depth + 1) elpi__hyps elpi__constraints elpi__state [%e ex] in
       let [%p pvar px] = Elpi.API.RawData.mkLam [%e evar xtmp] in
       let elpi__state = [%e elpi_pop ] ~depth: (elpi__depth + 1) elpi__state elpi__ctx_key in
-      [%e embed_k (module B) c all_kargs all_tmp xs ys ts (n+1)]]
+      [%e embed_k (module B : Ast_builder.S) c all_kargs all_tmp xs ys ts (n+1)]]
   | _ -> assert false
 ;;
 
@@ -924,7 +924,7 @@ let rec find_embed_of (module B : Ast_builder.S) current_mutrec_block  ty = let 
    | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.embed_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]]
   | { ptyp_desc = Ptyp_constr ({ txt = Longident.Lident id; _ }, params); _ }
     when List.mem id current_mutrec_block || is_parameter id ->
-      eapply (evar (elpi_embed_name id)) (List.map (find_embed_of (module B) current_mutrec_block) params)
+      eapply (evar (elpi_embed_name id)) (List.map (find_embed_of (module B : Ast_builder.S) current_mutrec_block) params)
   | t -> [%expr [%e conversion_of (module B) t ].Elpi.API.ContextualConversion.embed ]
   in
   [%expr fun ~depth h c s t -> [%e aux ty ] ~depth h c s t ]
@@ -941,7 +941,7 @@ let rec find_readback_of (module B : Ast_builder.S) current_mutrec_block  ty = l
    | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.readback_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]]
   | { ptyp_desc = Ptyp_constr ({ txt = Longident.Lident id; _ }, params); _ }
     when List.mem id current_mutrec_block || is_parameter id ->
-      eapply (evar (elpi_readback_name id)) (List.map (find_readback_of (module B) current_mutrec_block) params)
+      eapply (evar (elpi_readback_name id)) (List.map (find_readback_of (module B : Ast_builder.S) current_mutrec_block) params)
   | t -> [%expr [%e conversion_of (module B) t ].Elpi.API.ContextualConversion.readback ]
   in
   [%expr fun ~depth h c s t -> [%e aux ty ] ~depth h c s t ]
@@ -953,12 +953,12 @@ let rec find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block  ty = let
       [%expr Elpi.API.ContextualConversion.TyName([%e evar @@ elpi_tname_str id])]
   | { ptyp_desc = Ptyp_constr ({ txt = Longident.Lident id; _ }, p::ps); _ }
     when List.mem id current_mutrec_block ->
-      [%expr Elpi.API.ContextualConversion.TyApp([%e evar @@ elpi_tname_str id],[%e find_ty_ast_of (module B) current_mutrec_block p],[%e elist @@ List.map (find_ty_ast_of (module B) current_mutrec_block) ps ])]
-  | [%type: [%t? typ] list]          -> [%expr Elpi.API.ContextualConversion.TyApp("list", [%e find_ty_ast_of (module B) current_mutrec_block typ ], [])]
-  | [%type: [%t? typ] option]        -> [%expr Elpi.API.ContextualConversion.TyApp("option", [%e find_ty_ast_of (module B) current_mutrec_block typ ], [])]
-  | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.API.ContextualConversion.TyApp("pair", [%e find_ty_ast_of (module B) current_mutrec_block typ1 ], [ [%e find_ty_ast_of (module B) current_mutrec_block typ2 ] ])]
-  | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.API.ContextualConversion.TyApp("triple",  [%e find_ty_ast_of (module B) current_mutrec_block typ1 ], [ [%e find_ty_ast_of (module B) current_mutrec_block typ2 ]; [%e find_ty_ast_of (module B) current_mutrec_block typ3 ] ])]
-  | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.API.ContextualConversion.TyApp("quadruple", [%e find_ty_ast_of (module B) current_mutrec_block typ1 ], [ [%e find_ty_ast_of (module B) current_mutrec_block typ2 ]; [%e find_ty_ast_of (module B) current_mutrec_block typ3 ]; [%e find_ty_ast_of (module B) current_mutrec_block typ4 ]   ])]
+      [%expr Elpi.API.ContextualConversion.TyApp([%e evar @@ elpi_tname_str id],[%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block p],[%e elist @@ List.map (find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block) ps ])]
+  | [%type: [%t? typ] list]          -> [%expr Elpi.API.ContextualConversion.TyApp("list", [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ ], [])]
+  | [%type: [%t? typ] option]        -> [%expr Elpi.API.ContextualConversion.TyApp("option", [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ ], [])]
+  | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.API.ContextualConversion.TyApp("pair", [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ1 ], [ [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ2 ] ])]
+  | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.API.ContextualConversion.TyApp("triple",  [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ1 ], [ [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ2 ]; [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ3 ] ])]
+  | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.API.ContextualConversion.TyApp("quadruple", [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ1 ], [ [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ2 ]; [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ3 ]; [%e find_ty_ast_of (module B : Ast_builder.S) current_mutrec_block typ4 ]   ])]
   | t -> [%expr [%e conversion_of (module B) t ].Elpi.API.ContextualConversion.ty ]
 
 (* The deep copy code is computed here, by the ppx, as a string. [elpi_names]
@@ -1502,12 +1502,7 @@ let elpi_declaration_of_tyd (module B : Ast_builder.S) tyd = let open B in
    field of the constructor (not counting the field below the binder) that
    is the i-th argument of C. *)
 let analyze_build_ctx build_ctx =
-  let rec params acc e =
-    match e with
-    | [%expr fun [%p? { ppat_desc = Ppat_var { txt; _ }; _ }] -> [%e? body]] ->
-        params (txt :: acc) body
-    | _ -> List.rev acc, e in
-  let ps, body = params [] build_ctx in
+  let ps, body = Ppx_elpi_compat.fun_params build_ctx in
   let index v =
     let rec aux i = function
       | [] -> None

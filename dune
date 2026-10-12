@@ -15,3 +15,9 @@
 (env
   (dev
     (flags (:standard -w -9 -w -27 -warn-error -A))))
+
+; like @all, but without ppx_elpi and its (large) tests, see make build-ppx
+(alias
+ (name all-but-ppx)
+ (deps (alias_rec src/all) (alias_rec tests/all) (alias_rec trace/all)
+       elpi_REPL.exe elpi_inspect_unit.exe))

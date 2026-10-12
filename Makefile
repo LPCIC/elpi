@@ -107,7 +107,7 @@ release:
 
 # testing
 tests:
-	$(MAKE) build
+	dune build $(DUNE_OPTS) @all-but-ppx
 	dune runtest
 	ulimit -s $(STACK); OCAMLRUNPARAM=l=$(STACK) \
 		dune exec tests/test.exe -- \

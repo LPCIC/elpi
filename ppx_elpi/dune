@@ -5,9 +5,18 @@
  (libraries re ppxlib elpi)
  (preprocess (pps ppxlib.metaquot))
  (ppx_runtime_libraries elpi)
- (modules ppx_elpi)
+ (modules ppx_elpi ppx_elpi_compat)
  (kind ppx_rewriter)
 )
+
+; the representation of [fun a b -> e] changed in ppxlib 0.36
+(rule
+ (enabled_if (>= %{version:ppxlib} 0.36.0))
+ (action (copy ppx_elpi_compat_new.ml ppx_elpi_compat.ml)))
+
+(rule
+ (enabled_if (< %{version:ppxlib} 0.36.0))
+ (action (copy ppx_elpi_compat_old.ml ppx_elpi_compat.ml)))
 
 (env
   (dev
