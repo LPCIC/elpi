@@ -3,6 +3,15 @@
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
 MacOS.
 
+- Build:
+  - fix compilation on ocaml 5.5.1
+  - fix makefile to not compile the ppx for the test target
+
+# v3.9.0 (October 2026)
+
+Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and
+MacOS.
+
 - Language:
   - New `:autospill` rule attribute: spills every under-applied call in the
     rule, without needing an explicit `{ }` around each one
