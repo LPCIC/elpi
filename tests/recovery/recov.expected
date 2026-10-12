@@ -1,0 +1,121 @@
+== 01_op_no_rhs.elpi
+ERROR 2:16 This infix operator expects a right hand side.
+clause
+clause
+== 02_op_no_lhs.elpi
+ERROR 2:12 This infix operator expects a right hand side.
+clause
+clause
+== 03_open_paren.elpi
+ERROR 2:14 Term expected, got keyword.
+clause
+clause
+== 04_close_paren.elpi
+ERROR 2:10 Term expected, got keyword.
+clause
+clause
+== 05_open_bracket.elpi
+ERROR 2:13 List expected. Examples: [ this , that | More ]. [ Head | Tail ].
+clause
+clause
+== 06_bad_list_tail.elpi
+ERROR 2:5 List expected. Examples: [ this , that | More ]. [ Head | Tail ].
+clause
+clause
+== 07_open_brace.elpi
+ERROR 2:13 Term expected, got keyword.
+clause
+clause
+== 08_missing_dot.elpi
+clause
+clause
+== 09_missing_dot_rule.elpi
+clause
+clause
+clause
+== 10_double_dot.elpi
+ERROR 2:3 Term expected, got keyword.
+clause
+== 11_empty_body.elpi
+ERROR 2:7 This infix operator expects a right hand side.
+clause
+clause
+== 12_trailing_comma.elpi
+ERROR 2:12 This infix operator expects a right hand side.
+clause
+clause
+== 13_lambda_no_body.elpi
+ERROR 2:14 Term expected, got keyword.
+clause
+clause
+== 14_lex_dollar.elpi
+ERROR 2:2 unexpected character
+clause
+clause
+== 15_lex_hash.elpi
+clause
+clause
+clause
+== 16_string_unclosed.elpi
+ERROR 2:3 missing terminator for string starting here
+clause
+== 17_comment_unclosed.elpi
+ERROR 2:0 missing terminator for comment starting here
+clause
+== 18_pred_no_mode.elpi
+ERROR 2:9 Predicate declaration expected. Examples: func append list A, list A -> list A. pred appendR -> list A, list A, list A. func map list A, (func A -> B) -> list B. func if (pred), (func), (func). func intdiv int, int -> int.. . . Examples (legacy syntax): pred append i:list A, i:list A, o:list A. pred append i:list A  i:list A  o:list A.    % optional comma pred map i:list A, i:(pred i:A, o:B), o:list B.
+clause
+clause
+== 19_pred_no_type.elpi
+ERROR 2:16 Predicate declaration expected. Examples: func append list A, list A -> list A. pred appendR -> list A, list A, list A. func map list A, (func A -> B) -> list B. func if (pred), (func), (func). func intdiv int, int -> int.. . . Examples (legacy syntax): pred append i:list A, i:list A, o:list A. pred append i:list A  i:list A  o:list A.    % optional comma pred map i:list A, i:(pred i:A, o:B), o:list B.
+clause
+clause
+== 20_type_no_arrow.elpi
+ERROR 2:13 This infix operator expects a right hand side.
+clause
+clause
+== 21_kind_bad.elpi
+ERROR 2:6 Kind declaration expected. Examples: data term. data list A. kind term  type. % legacy kind list  type -> type. % legacy
+clause
+clause
+== 22_namespace_open.elpi
+clause
+namespace
+clause
+== 23_namespace_no_name.elpi
+ERROR 2:10 syntax error
+clause
+}
+clause
+== 24_extra_close_block.elpi
+clause
+}
+clause
+== 25_eof_in_body.elpi
+ERROR 2:11 This infix operator expects a right hand side.
+clause
+== 26_eof_after_neck.elpi
+ERROR 2:6 This infix operator expects a right hand side.
+clause
+== 27_eof_in_pred.elpi
+ERROR 2:9 Predicate declaration expected. Examples: func append list A, list A -> list A. pred appendR -> list A, list A, list A. func map list A, (func A -> B) -> list B. func if (pred), (func), (func). func intdiv int, int -> int.. . . Examples (legacy syntax): pred append i:list A, i:list A, o:list A. pred append i:list A  i:list A  o:list A.    % optional comma pred map i:list A, i:(pred i:A, o:B), o:list B.
+clause
+== 28_two_errors.elpi
+ERROR 2:16 This infix operator expects a right hand side.
+ERROR 4:11 Term expected, got keyword.
+clause
+clause
+clause
+== 29_error_in_long_clause.elpi
+ERROR 5:8 Term expected, got keyword.
+clause
+clause
+== 30_attribute_bad.elpi
+ERROR 1:6 Malformed 'name' attribute. Example: :name "name of the clause"
+clause
+== 31_infix_dangling.elpi
+ERROR 2:12 This infix operator expects a right hand side.
+clause
+clause
+== 32_infix_no_lhs.elpi
+ERROR 1:10 This infix operator expects a right hand side.

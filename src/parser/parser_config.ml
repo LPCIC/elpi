@@ -15,6 +15,8 @@ module type ParseFile = sig
   val parse_file : ?cwd:string -> string -> Ast.Program.t
   val get_current_client_loc_payload : unit -> Obj.t option
   val set_current_clent_loc_pyload : Obj.t -> unit
+  (* a warning found while parsing *)
+  val warn : Util.warning -> unit
 end
 
 let rec substrings i len_s s =

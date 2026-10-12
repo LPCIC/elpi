@@ -125,7 +125,7 @@ let rec expect s b = function
       match sp with
         | T (tok1,lnum1,bol1,bnum1,cnum1) -> validate s (tok1,lnum1,bol1,bnum1,cnum1) (tok2,lnum2, bol2, bnum2, cnum2)
         | E -> error s cnum2 (Printf.sprintf "wrong lexing: got %s instead of error" (show tok2))
-      with Failure _ ->
+      with Failure _ | Lexer.Error _ | Lexer.Unexpected_character _ ->
         match sp with
         | E -> ()
         | T (tok1,_,_,_,cnum1) -> error s cnum1 (Printf.sprintf "wrong lexing: got error instead of %s" (show tok1))
@@ -214,6 +214,7 @@ b
 c
 #line 7 "xx"
 a|}                                   [T(CONSTANT "b", 2, 1, 1,2);T(CONSTANT "c", 3, 3, 3,4);T(CONSTANT "a", 7, 5, 0,1) ];
+  test  "b\n#line 3 \"xx\"\na\n#line 5 \"yy\"\nc"  [T(CONSTANT "b", 1, 0, 0,1);T(CONSTANT "a", 3, 2, 0,1);T(CONSTANT "c", 5, 2, 0,1) ];
 
   (*    01234567890123456789012345 *)
   test  ":name"                       [T(COLON,1,0,0,1); T(NAME,1,0,1,5)];

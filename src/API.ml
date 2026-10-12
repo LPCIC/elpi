@@ -101,13 +101,21 @@ end
 
 module Parse = struct
 
+  (* the parser is error resilient, here the first error is raised; the
+     warnings are emitted *)
+  let warn ws =
+    List.iter (fun { Util.warning_id; warning = { Util.loc; message } } ->
+      Util.warn ?loc ~id:warning_id message) ws
+
   let program ~elpi:{ Setup.parser } ~file =
     let module P = (val parser) in
-    P.program ~file
+    let p, _, ws = P.program ~max_errors:0 file in
+    warn ws; p
 
   let program_from ~elpi:{ Setup.parser } ~loc ~digest buf =
     let module P = (val parser) in
-    P.program_from ~loc ~digest buf
+    let p, _, ws = P.program_from ~max_errors:0 ~loc ~digest buf in
+    warn ws; p
 
   let goal ~elpi:{ Setup.parser } ~loc ~text =
     let module P = (val parser) in

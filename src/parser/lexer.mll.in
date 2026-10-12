@@ -4,6 +4,8 @@
 (* ------------------------------------------------------------------------- *)
     open Elpi_lexer_config.Tokens
     exception Error of Lexing.position * string
+    (* a character that starts no token, at this position *)
+    exception Unexpected_character of Lexing.position
 
     let real_skip b n =
       let open Lexing in
@@ -96,11 +98,12 @@ and skip_lines v skipno = parse
 | eof { token v lexbuf }
 | _ { skip_lines v skipno lexbuf }
 
-and multilinecomment v nest = parse
-| '\n' { new_line lexbuf; multilinecomment v nest lexbuf }
-| "*/" { if nest = 0 then token v lexbuf else multilinecomment v (nest - 1) lexbuf }
-| "/*" { multilinecomment v (nest+1) lexbuf }
-| _ { multilinecomment v nest lexbuf }
+and multilinecomment v start nest = parse
+| '\n' { new_line lexbuf; multilinecomment v start nest lexbuf }
+| "*/" { if nest = 0 then token v lexbuf else multilinecomment v start (nest - 1) lexbuf }
+| "/*" { multilinecomment v start (nest+1) lexbuf }
+| _ { multilinecomment v start nest lexbuf }
+| eof { raise (Error (start, "missing terminator for comment starting here")) }
 
 and string start b = parse
 | '\n'     { Buffer.add_char b '\n'; new_line lexbuf; string start b lexbuf }
@@ -154,7 +157,7 @@ and lookahead_open b n = parse
   }
 
 and token v = parse
-| ("#line" " "+ (num as n) " "+ '"' ([^'"']+ as f) '"' " "* '\n' as x) {
+| ("#line" " "+ (num as n) " "+ '"' ([^'"']+ as f) '"' " "* '\n') {
     let open Lexing in
     lexbuf.lex_curr_p <- {
       pos_fname = f;
@@ -162,13 +165,14 @@ and token v = parse
       pos_cnum = 0;
       pos_bol = lexbuf.lex_curr_p.pos_bol;
     };
-    lexbuf.lex_abs_pos <- - (String.length x) - lexbuf.lex_start_p.pos_cnum;
+    (* the position of the end of the directive is 0, also after many directives *)
+    lexbuf.lex_abs_pos <- - lexbuf.lex_curr_pos;
     lexbuf.lex_start_p <- lexbuf.lex_curr_p;
     token v lexbuf }
 | ( ' ' | '\t' | '\r' ) { token v lexbuf }
 | '\n' { new_line lexbuf; token v lexbuf }
 | '%' { linecomment v lexbuf }
-| "/*" { multilinecomment v 0 lexbuf }
+| "/*" { multilinecomment v lexbuf.Lexing.lex_start_p 0 lexbuf }
 | "." { FULLSTOP }
 | "_" idchar + as c { CONSTANT c }
 | "_" { FRESHUV }
@@ -240,3 +244,4 @@ and token v = parse
 | ".." { DOTS }
 | '@' idcharstar as c { CONSTANT c }
 | eof { EOF }
+| _ { raise (Unexpected_character lexbuf.Lexing.lex_start_p) }

@@ -420,6 +420,7 @@ let option_mapacc f acc = function
   | None -> acc, None
 let option_iter f = function None -> () | Some x -> f x
 let option_default d = function None -> d | Some x -> x
+let ( @? ) o l = match o with None -> l | Some x -> x :: l
 
 module Pair = struct
 

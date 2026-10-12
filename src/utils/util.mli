@@ -167,6 +167,8 @@ val option_mapacc :
   ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a option -> 'acc * 'b option
 val option_iter : ('a -> unit) -> 'a option -> unit
 val option_default : 'a -> 'a option -> 'a
+(* [None @? l] is [l], [Some x @? l] is [x :: l] *)
+val ( @? ) : 'a option -> 'a list -> 'a list
 
 (***************** Unique ID ****************)
 

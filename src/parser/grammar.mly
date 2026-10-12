@@ -24,6 +24,42 @@ let loc (startpos, endpos) = {
   line_starts_at = startpos.Lexing.pos_bol;
 }
 
+(* the nil that ends the list [a, b] is not written: its location is empty,
+   just before the ] *)
+let implicit_nil (startpos, _) = mkNil (loc (startpos, startpos))
+
+let last_warn_impl = ref (Loc.initial "(dummy)")
+let warn_impl { it; loc } =
+  match it with
+  | App({ it = Const c }, _ ) when Func.(equal c implf) ->
+      if not (Loc.equal !last_warn_impl loc) then
+        C.warn { warning_id = ImplicationPrecedence; warning = { component = "Parser"; loc = Some loc; message =
+{|The standard λProlog infix operator for implication => has higher precedence
+than conjunction. This means that 'A => B, C' reads '(A => B), C'.
+This is a common mistake since it makes A only available to B (and not to C
+as many newcomers may expect).
+If this is really what you want write '(A => B), C' to silence this warning.
+Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
+Infix ==>  has lower precedence than conjunction, hence
+'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.|} } };
+      last_warn_impl := loc
+  | _ -> ()
+
+let warn_impl_conj_precedence = function
+  | App({ it = Const c }, args ) when Func.(equal c andf) ->
+      begin match List.rev args with
+      | { it = Const c } :: args_but_last when Func.(equal c cutf) -> ()
+      | _ :: args_but_last -> List.iter warn_impl args_but_last
+      | _ -> ()
+      end
+  | _ -> ()
+
+(* the applications built by the parser are checked for the warning above *)
+let mkAppF loc (cloc,c) l =
+  let t = mkAppF loc (cloc,c) l in
+  warn_impl_conj_precedence t.it;
+  t
+
 let desugar_multi_binder loc (t : Ast.Term.t) =
   match t.it with
   | App( { it = Const hd } as binder,args)
@@ -132,7 +168,9 @@ let mode_of_IO io =
 %on_error_reduce term
 
 (* non terminals *)
+(* used by accumulate *)
 %type < Program.decl list > program
+%type < Program.decl option > one_decl
 %type < Goal.t > goal
 %type < (Term.t, raw_attribute list, unit,unit) Clause.t > clause
 %type < Term.t > term
@@ -149,6 +187,7 @@ let mode_of_IO io =
 
 (* entry points *)
 %start program
+%start one_decl
 %start goal
 
 (* for testing *)
@@ -159,6 +198,11 @@ let mode_of_IO io =
 (* token precedence are in token_precedence.mly *)
 
 %%
+(* used by the error-resilient parser, one declaration at a time *)
+one_decl:
+| EOF { None }
+| d = decl { Some d }
+
 program:
 | EOF { [] }
 | d = decl; p = program { d :: p }
@@ -432,8 +476,8 @@ head_term:
 | LPAREN; t = term; COLON; ty = type_term RPAREN { mkCast (loc $loc) t ty }
 
 list_items:
-| RBRACKET { [mkNil (loc $loc)] }
-| x = term_noconj; r = RBRACKET { [x;mkNil (loc $loc(r))] }
+| RBRACKET { [implicit_nil $loc] }
+| x = term_noconj; r = RBRACKET { [x;implicit_nil $loc(r)] }
 | x = term_noconj; CONJ; xs = list_items { x :: xs }
 
 list_items_tail:

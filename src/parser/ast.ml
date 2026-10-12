@@ -179,11 +179,11 @@ let mkApp loc = function
   | [{ it = (App _ | Const _ | Quoted _) } as c] -> c
   | { it = App(c,l1) } ::l2 -> { loc; it = App(c,l1@l2) }
   | { it = (Const _ | Quoted _) } as c::l2 -> { loc; it = App(c,l2) }
-  | [] -> anomaly ~loc "empty application"
+  | [] -> raise (NotInProlog(loc,"anomaly: empty application"))
   | x::_ -> raise (NotInProlog(loc,"syntax error: the head of an application must be a constant or a variable, got: " ^ best_effort_pp x.it))
 
 let mkAppF loc (cloc, c) l =
-  if l = [] then anomaly ~loc "empty application";
+  if l = [] then raise (NotInProlog(loc,"anomaly: empty application"));
   if c = "," then
       { loc; it =
         App({ it = Const c; loc = cloc },
@@ -197,36 +197,6 @@ let mkAppF loc (cloc, c) l =
 
 
 
-let last_warn_impl = ref (Loc.initial "(dummy)")
-let warn_impl { it; loc } =
-  match it with
-  | App({ it = Const "=>" }, _ ) ->
-      if !last_warn_impl <> loc then
-        warn ~loc ~id:ImplicationPrecedence
-{|The standard λProlog infix operator for implication => has higher precedence
-than conjunction. This means that 'A => B, C' reads '(A => B), C'.
-This is a common mistake since it makes A only available to B (and not to C
-as many newcomers may expect).
-If this is really what you want write '(A => B), C' to silence this warning.
-Otherwise write 'A => (B, C)', or use the alternative implication operator ==>.
-Infix ==>  has lower precedence than conjunction, hence
-'A ==> B, C' reads 'A ==> (B, C)' and means the same as 'A => (B, C)'.|};
-      last_warn_impl := loc
-  | _ -> ()
-
-let warn_impl_conj_precedence = function
-  | App({ it = Const "," }, args ) ->
-      begin match List.rev args with
-      | { it = Const "!"} :: args_but_last -> ()
-      | _ :: args_but_last -> List.iter warn_impl args_but_last
-      | _ -> ()
-      end
-  | _ -> ()
-
-let mkAppF loc (cloc,c) l =
-  let t = mkAppF loc (cloc,c) l in
-  warn_impl_conj_precedence t.it;
-  t
 
 
 let fresh_uv_names = ref (-1);;

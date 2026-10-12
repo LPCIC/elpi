@@ -1,3 +1,9 @@
+# v4.0.0 (October 2026)
+
+- Parser:
+  - Change: a syntax error in an accumulated file is located on the
+    accumulate directive, its message gives the position in the file.
+
 # v3.9.2 (October 2026)
 
 - PPX:
