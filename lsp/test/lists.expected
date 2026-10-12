@@ -1,0 +1,30 @@
+==== open lists.elpi ====
+diagnostics of lists.elpi (version 1): 0
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  line 0:
+                  | pred l o:list int.
+    type          |          ^^^^^^^^
+  line 1:
+                  | l [1, 2].
+    function decl | =
+    number        |    ^  ^
+  line 2:
+                  | l [].
+    function decl | =
+    enumMember    |   ^^
+  line 3:
+                  | l nil.
+    function decl | =
+    enumMember    |   ^^^
+  line 4:
+                  | l (3 :: nil).
+    function decl | =
+    enumMember    |      ^^ ^^^
+    number        |    ^
+  line 5:
+                  | l [4 | []].
+    function decl | =
+    enumMember    |        ^^
+    number        |    ^

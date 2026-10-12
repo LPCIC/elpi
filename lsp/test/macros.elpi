@@ -1,0 +1,8 @@
+kind tm type.
+type z tm.
+macro @zero :- z.
+macro @pair A B :- (A, B).
+
+pred p tm.
+p @zero.
+p X :- X = @zero, @pair (p z) (p @zero).

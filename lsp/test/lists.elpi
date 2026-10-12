@@ -1,0 +1,6 @@
+pred l o:list int.
+l [1, 2].
+l [].
+l nil.
+l (3 :: nil).
+l [4 | []].

@@ -1,0 +1,83 @@
+==== open run.elpi ====
+diagnostics of run.elpi (version 1): 0
+
+==== run main on run.elpi ====
+status: success
+  | hello
+  | 42
+
+==== run fails. on run.elpi ====
+status: failure
+
+==== run main :-  on run.elpi ====
+status: error
+  ! File "(query)", line 1, column 8, characters 8-8:
+  ! This infix operator expects a right hand side.
+
+==== run undeclared on run.elpi ====
+status: failure
+  ! Warning: Undeclared globals:
+  ! - File "(query)", line 1, column 0, characters 0-10: undeclared.
+  ! Please add the following text to your program:
+  ! type undeclared (pred).
+
+==== run p on a text ====
+status: success
+  | from a text
+
+==== run p 1 on a text ====
+status: failure
+  ! Warning: the program could not be fully compiled: 1 error
+  # File "$DIR/(text)", line 2, column 2, characters 16-19:
+  # Typechecker: literal "a" has type string but p expects an argument of type int
+
+==== run main on a text ====
+status: success
+  | bob is 23
+  | all printed
+  ! Warning: the program could not be fully compiled: 1 error
+  # File "$DIR/(text)", line 3, column 14, characters 53-54:
+  # Typechecker: The type of age is (pred -> string, int), and it is applied to
+  # alice, 20, and x. Too many arguments were supplied.
+
+==== run p on a text ====
+status: failure
+  | before q
+  # Warning: Undeclared globals:
+  # - File "$DIR/(text)", line 2, column 23, characters 31-32: q.
+  # Please add the following text to your program:
+  # type q (func).
+
+==== run p on a text ====
+status: error
+  | before
+  ! boom
+
+==== run p on a text ====
+error: elpi/run: the parameter textDocument (with its uri) is missing
+
+==== run main ====
+error: elpi/run: the parameter textDocument (with its uri) is missing
+
+==== run main on a text ====
+status: success
+  | 4
+
+==== run loop on run.elpi (maxSteps 1000) ====
+status: failure
+  ! no more steps
+
+==== run main on run.elpi (maxSteps 1000) ====
+status: success
+  | hello
+  | 42
+
+==== run main on run.elpi (maxSteps 0) ====
+error: elpi/run: the parameter maxSteps is not a positive integer
+
+==== open good.elpi ====
+diagnostics of good.elpi (version 1): 0
+
+==== run main on good.elpi ====
+status: success
+  | λ [12]

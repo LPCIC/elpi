@@ -1,0 +1,4 @@
+before initialize: error -32002
+capabilities: {"definitionProvider":true,"documentHighlightProvider":true,"hoverProvider":true,"semanticTokensProvider":{"full":true,"legend":{"tokenModifiers":["declaration"],"tokenTypes":["function","enumMember","parameter","variable","keyword","number","string","type","typeParameter","macro"]}},"textDocumentSync":{"change":1,"openClose":true,"save":true}}
+shutdown: null
+server exited with code 0

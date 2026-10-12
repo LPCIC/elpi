@@ -1,0 +1,12 @@
+==== open accbad.elpi ====
+diagnostics of accbad.elpi (version 1): 2
+  0:0-0:18 error: Parser: in $DIR/badlib.elpi, line 1, column 9: Term expected, got keyword.
+    | accumulate badlib.
+    | ^^^^^^^^^^^^^^^^^^
+  1:5-1:6 error: Typechecker: q is unknown.
+    | p :- q.
+    |      ^
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  none
