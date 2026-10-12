@@ -1,0 +1,20 @@
+{
+  "name": "elpi-slidev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "copy-elpi-lsp-web": "node scripts/copy-elpi-lsp-web.js",
+    "predev": "npm run copy-elpi-lsp-web",
+    "dev": "slidev --open",
+    "prebuild": "npm run copy-elpi-lsp-web",
+    "build": "slidev build",
+    "preexport": "npm run copy-elpi-lsp-web",
+    "export": "slidev export"
+  },
+  "dependencies": {
+    "@slidev/cli": "^53.0.0",
+    "@slidev/theme-default": "^0.25.0",
+    "elpi-lsp-web": "file:../../lsp/elpi-lsp-web",
+    "vue": "^3.5.0"
+  }
+}

@@ -85,3 +85,12 @@ its type, and Go to Definition jumps to the signature of a predicate. The
 server speaks the standard Language Server Protocol, so other editors can use
 it too. How to build, configure and test it is explained in the
 `README of the language server <https://github.com/LPCIC/elpi/blob/master/lsp/README.md>`_.
+
+The language server also runs in a web browser, compiled to JavaScript and to
+WebAssembly. The Elpi repository uses it to put editable and runnable Elpi
+code in the slides of a `Slidev <https://sli.dev>`_ presentation: each code
+block becomes an editor that underlines errors and shows types on hover as you
+type, and a runnable block also runs ``main`` and shows what it printed below
+the code. The example deck in
+`etc/slidev <https://github.com/LPCIC/elpi/tree/master/etc/slidev>`_ shows all
+of this, and its README explains how to add it to your own slides.

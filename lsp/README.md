@@ -111,7 +111,8 @@
 ## Web
 
 `web_driver.ml` is the transport for a web worker, used by the
-extension `gares.elpi-lang` in vscode.dev.
+extension `gares.elpi-lang` in vscode.dev, and by the Slidev deck of
+`etc/slidev/`.
 
 ```
 make build-lsp-web      # lsp/elpi-lsp-web/, compiled to JavaScript (needs js_of_ocaml)

@@ -3,9 +3,9 @@
 The language server of [Elpi](https://github.com/LPCIC/elpi) (diagnostics,
 hover, go to definition, highlights, semantic tokens, `elpi/run`) for the web,
 run in a web worker. It is used by the VS Code extension `gares.elpi-lang` in
-vscode.dev, and by the Slidev integration of the Elpi repository. The package
-also has the API of Elpi for JavaScript (parse, compile and run Elpi
-programs), see below.
+vscode.dev, and by the Slidev integration of the Elpi repository
+(`etc/slidev`). The package also has the API of Elpi for JavaScript (parse,
+compile and run Elpi programs), see below.
 
 ## Content
 

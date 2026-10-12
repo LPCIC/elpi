@@ -1,0 +1,501 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "elpi",
+	"displayName": "Elpi",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#namespace-declaration"
+		},
+		{
+			"include": "#clause-declaration"
+		},
+		{
+			"include": "#type-declaration"
+		},
+		{
+			"include": "#typeabbrev-declaration"
+		},
+		{
+			"include": "#kind-declaration"
+		},
+		{
+			"include": "#data-declaration"
+		},
+		{
+			"include": "#pred-declaration"
+		},
+		{
+			"include": "#macro-declaration"
+		},
+		{
+			"include": "#attribute-declaration"
+		},
+		{
+			"include": "#mode-declaration"
+		},
+		{
+			"include": "#rule-declaration"
+		},
+		{
+			"include": "#constraint-declaration"
+		},
+		{
+			"include": "#accumulate-declaration"
+		},
+		{
+			"include": "#shorten-declaration"
+		},
+		{
+			"include": "#variables"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#binders"
+		},
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#clause-def-ident"
+		}
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.block.elpi",
+					"begin": "/\\*",
+					"end": "\\*/"
+				},
+				{
+					"name": "comment.line.percentage.elpi",
+					"match": "%.*$"
+				}
+			]
+		},
+		"attribute-declaration": {
+			"name": "attribute.declaration",
+			"patterns": [
+				{
+					"match": ":if\\s+\"\\S+\"",
+					"name": "entity.name.tag"
+				},
+				{
+					"match": ":functional",
+					"name": "entity.name.tag"
+				},
+				{
+					"match": ":untyped",
+					"name": "entity.name.tag"
+				},
+				{
+					"match": ":name\\s+\"\\S+\"",
+					"name": "entity.name.tag"
+				},
+				{
+					"match": ":before\\s+\"\\S+\"",
+					"name": "entity.name.tag"
+				},
+				{
+					"match": ":after\\s+\"\\S+\"",
+					"name": "entity.name.tag"
+				},
+				{
+					"include": "#indexing-declaration"
+				}
+			]
+		},
+		"indexing-declaration": {
+			"begin": "(:index)\\s*\\(",
+			"end": "\\)",
+			"beginCaptures": {
+				"1": {
+					"name": "entity.name.tag"
+				}
+			},
+			"patterns": [
+				{
+					"match": "_|[0-9]",
+					"name": "constant.numeric"
+				}
+			]
+		},
+		"constraint-declaration": {
+			"begin": "^\\s*(constraint)([^{]+)",
+			"end": "{",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				},
+				"2": {
+					"name": "entity.name.function"
+				}
+			}
+		},
+		"rule-declaration": {
+			"begin": "^\\s*(rule)",
+			"end": "(\\.)\\s",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"patterns": [
+				{
+					"include": "$self"
+				}
+			]
+		},
+		"accumulate-declaration": {
+			"begin": "^\\s*(accumulate)",
+			"end": "(\\.)\\s",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#strings"
+				}
+			]
+		},
+		"pred-declaration": {
+			"name": "pred.declaration",
+			"begin": "(?<!\\()(?<!\\(\\s)((external|builtin)?\\s*(pred|func|symbol|symb))\\s+((([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))|(\\((( |\\t))*(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))(( |\\t))*\\)))\\s*:?",
+			"end": "(?<=\\.\\s)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				},
+				"2": {
+					"name": "keyword.control.elpi"
+				},
+				"3": {
+					"name": "keyword.control.elpi"
+				},
+				"4": {
+					"name": "entity.name.function"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#comments"
+				},
+				{
+					"match": "(->|func|pred|,|\\(|\\))",
+					"name": "keyword.control.elpi"
+				},
+				{
+					"match": "(i:|o:)",
+					"name": "entity.name.tag"
+				},
+				{
+					"match": "(([^,\\. %])(([^,\\. %]))*)",
+					"name": "entity.name.type"
+				}
+			]
+		},
+		"mode-declaration": {
+			"name": "mode.declaration",
+			"begin": "^(\\s*mode)\\s+\\((((([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*))))|((\\((( |\\t))*(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))(( |\\t))*\\)))+)\\s",
+			"end": "([io\\s]+)\\)\\s*(\\.)\\s",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				},
+				"2": {
+					"name": "entity.name.function"
+				}
+			},
+			"endCaptures": {
+				"2": {
+					"name": "keyword.control.elpi"
+				},
+				"1": {
+					"name": "entity.name.tag"
+				}
+			},
+			"patterns": []
+		},
+		"kind-declaration": {
+			"name": "kind.declaration",
+			"begin": "^(\\s*(external|builtin)?\\s*kind)\\s+(?'rec'((([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))|(\\((( |\\t))*(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))(( |\\t))*\\)))(,\\s(\\g'rec'))?)\\s+([^\\.]+)",
+			"end": "(\\.)\\s",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				},
+				"2": {
+					"name": "keyword.control.elpi"
+				},
+				"3": {
+					"name": "entity.name.type"
+				},
+				"8": {
+					"name": "entity.name.type"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#comments"
+				}
+			]
+		},
+		"data-declaration": {
+			"name": "data.declaration",
+			"begin": "^(\\s*(external|builtin)?\\s*data)\\s+((([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))|(\\((( |\\t))*(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))(( |\\t))*\\)))",
+			"end": "(\\.)\\s",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				},
+				"2": {
+					"name": "keyword.control.elpi"
+				},
+				"3": {
+					"name": "entity.name.type"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#comments"
+				},
+				{
+					"match": "(?<![a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_.])(([A-Z]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)|(_([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*))",
+					"name": "entity.name.type"
+				}
+			]
+		},
+		"type-declaration": {
+			"name": "type.declaration",
+			"begin": "^(\\s*(external|builtin)?\\s*type)\\s+(?'rec'((([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))|(\\((( |\\t))*(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))(( |\\t))*\\)))(,\\s(\\g'rec'))?)",
+			"end": "(?<=\\.\\s)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				},
+				"2": {
+					"name": "keyword.control.elpi"
+				},
+				"3": {
+					"name": "entity.name.function"
+				}
+			},
+			"patterns": [
+				{
+					"begin": "",
+					"end": "(\\.\\s)",
+					"endCaptures": {
+						"1": {
+							"name": "keyword.control.elpi"
+						}
+					},
+					"patterns": [
+						{
+							"match": "(([^,\\. %])(([^,\\. %]))*)",
+							"name": "entity.name.type"
+						},
+						{
+							"include": "#comments"
+						}
+					]
+				}
+			]
+		},
+		"typeabbrev-declaration": {
+			"name": "typeabbrev.declaration",
+			"begin": "^(\\s*typeabbrev)",
+			"end": "(?<=\\.\\s)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"patterns": [
+				{
+					"match": "(([^,\\. %])(([^,\\. %]))*)",
+					"name": "entity.name.type"
+				},
+				{
+					"include": "#comments"
+				}
+			]
+		},
+		"macro-declaration": {
+			"name": "macro.declaration",
+			"begin": "^\\s*(macro)\\s+(@(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*))))\\s",
+			"end": "(\\.)\\s",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				},
+				"2": {
+					"name": "entity.name.type"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"patterns": [
+				{
+					"include": "$self"
+				}
+			]
+		},
+		"shorten-declaration": {
+			"begin": "^\\s*(shorten)",
+			"end": "(\\.)\\s",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#shortening-expr"
+				}
+			]
+		},
+		"shortening-expr": {
+			"begin": "(?<![a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_.])((([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*))))\\b\\.{",
+			"end": "}",
+			"beginCaptures": {
+				"1": {
+					"name": "entity.name.section"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#shortening-expr"
+				},
+				{
+					"match": "(?<![a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_.])(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))\\b",
+					"name": "entity.name.function"
+				}
+			]
+		},
+		"namespace-declaration": {
+			"begin": "^\\s*(namespace)\\s(?<![a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_.])((([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*))))\\b\\s*{",
+			"end": "}",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				},
+				"2": {
+					"name": "entity.name.section"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#comments"
+				},
+				{
+					"include": "$self"
+				}
+			]
+		},
+		"variables": {
+			"patterns": [
+				{
+					"match": "(?<![a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_.])(([A-Z]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)|(_([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*))",
+					"name": "variable.language.elpi"
+				},
+				{
+					"match": "(?<![a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_.])(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))\\s*(?=\\\\)",
+					"name": "variable.language.elpi"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.elpi",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.elpi",
+					"match": "\\\\."
+				}
+			]
+		},
+		"numbers": {
+			"name": "constant.numeric.elpi",
+			"match": "(?<![a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_.])((([0-9]([0-9])*)|(-([0-9]([0-9])*)))|((([0-9]([0-9])*)|(-([0-9]([0-9])*)))\\.([0-9]([0-9])*)))\\b"
+		},
+		"keywords": {
+			"name": "keyword.control.elpi",
+			"match": "!|:-|=>|\\[|\\]|,|(?<![a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_.])is\\b|<=>|=|\\?\\-|\\\\|\\|"
+		},
+		"binders": {
+			"name": "binder.elpi",
+			"begin": "(?<![a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_.])(pi|sigma) (((([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))|(([A-Z]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)|(_([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*))| )+)",
+			"end": "(\\\\)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				},
+				"2": {
+					"name": "variable.language.elpi"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.elpi"
+				}
+			}
+		},
+		"clause-def-ident": {
+			"match": "^( *(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))(?=.*:-)|(([a-z](([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]|(\\.([a-z]|[A-Z]))))*)|([+*/^<>`'?@#~=&!](([a-z]|[A-Z]|[0-9]|[+*/^<>`'?@#~=&!\\-$_]|:))*)|(-([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_]([a-zA-Z0-9+*/^<>`'?@#~=&!\\-$_])*)))(?=.*\\.\\s*(%.*)?$))",
+			"name": "entity.name.function"
+		}
+	},
+	"scopeName": "source.elpi"
+}
