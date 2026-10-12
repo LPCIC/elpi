@@ -1,0 +1,34 @@
+{
+  "name": "elpi-lsp-web",
+  "version": "0.0.0-dev",
+  "description": "The language server of Elpi for the web (a web worker), and the API of Elpi for JavaScript, compiled to WebAssembly and to JavaScript",
+  "keywords": [
+    "elpi",
+    "lambda-prolog",
+    "lsp",
+    "language-server",
+    "web-worker",
+    "webassembly"
+  ],
+  "homepage": "https://github.com/LPCIC/elpi/tree/master/lsp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LPCIC/elpi.git",
+    "directory": "lsp"
+  },
+  "bugs": "https://github.com/LPCIC/elpi/issues",
+  "license": "LGPL-2.1-or-later",
+  "main": "web_api.bc.js",
+  "types": "web_api.bc.d.ts",
+  "files": [
+    "elpi-lsp-web.js",
+    "web_driver.bc.js",
+    "web_driver.bc.wasm.js",
+    "web_driver.bc.wasm.assets/*.wasm",
+    "web_api.bc.js",
+    "web_api.bc.d.ts",
+    "web_api.bc.wasm.js",
+    "web_api.bc.wasm.d.ts",
+    "web_api.bc.wasm.assets/*.wasm"
+  ]
+}

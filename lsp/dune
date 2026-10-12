@@ -7,7 +7,38 @@
  (modules stdio_driver)
  (libraries elpi_lsp_server sel lsp jsonrpc yojson unix))
 
+; the language server in a web worker (vscode.dev), compiled to JavaScript
+; (web_driver.bc.js, needs js_of_ocaml) and to WebAssembly (web_driver.bc.wasm.js
+; and its assets, needs wasm_of_ocaml). Not built by default: make
+; build-lsp-web and make build-lsp-web-wa put them in elpi-lsp-web/, with
+; web_entry.js, the entry point that chooses one
+(executable
+ (name web_driver)
+ (modes js wasm)
+ (modules web_driver)
+ (libraries elpi_lsp_server elpi lsp jsonrpc yojson js_of_ocaml))
+
+; the web build, assembled by make build-lsp-web
+(dirs :standard \ elpi-lsp-web)
+
 ; built by default: the server on stdin/stdout
 (alias
  (name default)
  (deps stdio_driver.exe))
+
+; the API of Elpi for JavaScript (Setup, Parse, Compile, Execute), compiled to
+; JavaScript (web_api.bc.js) and to WebAssembly (web_api.bc.wasm.js and its
+; assets), with a copy of its types (web_api.d.ts) next to each, where
+; TypeScript finds them. Not built by default: make build-lsp-web and make
+; build-lsp-web-wa build them
+(executable
+ (name web_api)
+ (modes js wasm)
+ (modules web_api)
+ (libraries elpi js_of_ocaml))
+
+(rule
+ (copy web_api.d.ts web_api.bc.d.ts))
+
+(rule
+ (copy web_api.d.ts web_api.bc.wasm.d.ts))

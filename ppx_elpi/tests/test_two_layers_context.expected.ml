@@ -1155,7 +1155,7 @@ include
                      Elpi.API.Error.error ~component:"ppx_elpi"
                        ~loc:{
                               Elpi.API.Ast.Loc.client_payload = None;
-                              source_name = "./test_two_layers_context.ml";
+                              source_name = "test_two_layers_context.ml";
                               source_start = 1938;
                               source_stop = 1938;
                               line = 65;

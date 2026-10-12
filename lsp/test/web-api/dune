@@ -1,0 +1,31 @@
+; make tests-lsp-web, make tests-lsp-web-wa: test.cjs on the API for
+; JavaScript, lsp/web_api.ml, compiled to JavaScript (needs js_of_ocaml and
+; node) and to WebAssembly (needs wasm_of_ocaml): the outputs are compared
+; with test.expected
+
+(rule
+ (targets test.output)
+ (deps test.cjs test-acc.elpi ../../web_api.bc.js)
+ (action
+  (with-stdout-to test.output
+   (run node test.cjs ../../web_api.bc.js))))
+
+(rule
+ (targets test-wa.output)
+ (deps test.cjs test-acc.elpi ../../web_api.bc.wasm.js (glob_files ../../web_api.bc.wasm.assets/*))
+ (action
+  (with-stdout-to test-wa.output
+   (run node test.cjs ../../web_api.bc.wasm.js))))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff test.expected test.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff test.expected test-wa.output)))
+
+; not built by default
+(rule
+ (alias default)
+ (action (progn)))

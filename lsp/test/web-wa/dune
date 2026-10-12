@@ -1,0 +1,94 @@
+; make tests-lsp-web-wa: the tests of lsp/test run against the web build of the
+; server compiled to WebAssembly (needs wasm_of_ocaml and node), through the
+; bridge of ../web. The outputs are compared with the expected outputs of
+; lsp/test, and of ../web where the web server differs (see there).
+
+(copy_files ../*.elpi)
+(copy_files ../web/{bridge.mjs,worker.cjs})
+
+(rule
+ (targets server.sh)
+ (action
+  (progn
+   (with-stdout-to server.sh
+    (echo "#!/bin/sh\nexec node \"$(dirname \"$0\")/bridge.mjs\" \"$(dirname \"$0\")/../../web_driver.bc.wasm.js\"\n"))
+   (run chmod +x server.sh))))
+
+(rule
+ (targets test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output)
+ (deps (glob_files *.elpi) server.sh bridge.mjs worker.cjs ../../web_driver.bc.wasm.js)
+ (action
+  (with-stdout-to test_lsp.output
+   (run %{exe:../test_lsp.exe} ./server.sh .))))
+
+(rule
+ (alias default)
+ (action (progn)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../test_lsp.expected test_lsp.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../accbad.expected accbad.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../accmissing.expected accmissing.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../syntax.expected syntax.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../typeerr.expected typeerr.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../warn.expected warn.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../binders.expected binders.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../macros.expected macros.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../acctype.expected acctype.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../lists.expected lists.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../accchar.expected accchar.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../run.expected run.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../assemble.expected assemble.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../anomaly.expected anomaly.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../web/libdef.expected libdef.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../web/library.expected library.output)))
+
+(rule
+ (alias runtest-lsp-web-wa)
+ (action (diff ../web/good.expected good.output)))

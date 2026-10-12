@@ -6,12 +6,14 @@ let output_stanzas filename =
 ; The output of the ppx and of the test executable is generated in
 ; %s.generated.* and compared with %s.expected.*, but it is also promoted
 ; to %s.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %%{input}: the
+; name is in the locations of the output, and dune versions spell %%{input}
+; differently (./%s.ml or %s.ml).
 
 (rule
  (targets %s.generated.ml)
  (deps (:pp pp.exe) (:input %s.ml))
- (action (run ./%%{pp} -deriving-keep-w32 both --impl %%{input} -o %%{targets})))
+ (action (run ./%%{pp} -deriving-keep-w32 both --impl %s.ml -o %%{targets})))
 
 (rule
  (target %s.generated.elpi)
@@ -43,10 +45,11 @@ let output_stanzas filename =
   (preprocess (pps ppx_deriving.show ppx_elpi)))
 
 |}
-  base base base base base base base base base base base base base base base base base base base base base
+  base base base base base base base base base base base base base base base base base base base base base base base base
 
 (* Inputs that the ppx must reject: the diagnostic printed on stderr is
-   compared with the expected one *)
+   compared with the expected one (the ppx is given the name of the file, see
+   above) *)
 let output_error_stanzas filename =
   let base = Filename.remove_extension filename in
   Printf.printf {|
@@ -57,7 +60,7 @@ let output_error_stanzas filename =
   (with-stderr-to %%{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%%{pp} --impl %%{input} -o /dev/null))))))
+     (run ./%%{pp} --impl %s.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -70,7 +73,7 @@ let output_error_stanzas filename =
  (action (diff %s.expected.txt %s.generated.txt)))
 
 |}
-  base base base base base base base base
+  base base base base base base base base base
 
 let is_error_test filename =
   Filename.check_suffix filename ".ml" &&

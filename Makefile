@@ -5,9 +5,13 @@ help:
 	@echo '  world                  builds elpi, ppx_elpi and elpi-lsp, all that install installs'
 	@echo '  build-ppx              builds ppx_elpi (and its tests)'
 	@echo '  build-lsp              builds elpi-lsp (needs sel, lsp)'
+	@echo '  build-lsp-web          builds elpi-lsp for the web in lsp/elpi-lsp-web/, and the API for JavaScript (needs lsp, js_of_ocaml)'
+	@echo '  build-lsp-web-wa       ... also compiled to WebAssembly (needs wasm_of_ocaml)'
 	@echo '  install                installs all the packages (after make world)'
 	@echo '  clean                  remove build artifacts'
 	@echo '  release                release the software (note: git tag -s first)'
+	@echo '  release-npm            publish the web build on npm (part of release)'
+	@echo '  pack-lsp-web           the npm package of the web build, versioned by git describe'
 	@echo
 	@echo 'Testing targets:'
 	@echo
@@ -23,6 +27,8 @@ help:
 	@echo '  tests-ppx PROMOTE=true runs and promotes the ppx_elpi tests if different'
 	@echo '  tests-lsp              runs the elpi-lsp tests (alias runtest-lsp, needs sel, lsp)'
 	@echo '  tests-lsp PROMOTE=true runs and promotes the elpi-lsp tests if different'
+	@echo '  tests-lsp-web          runs the elpi-lsp and API tests on the web build (alias runtest-lsp-web, needs node, npx)'
+	@echo '  tests-lsp-web-wa       ... on the WebAssembly build (alias runtest-lsp-web-wa)'
 	@echo '  perf-lsp               times elpi-lsp on a big document: check vs requests (alias perf-lsp)'
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
@@ -82,6 +88,35 @@ build-lsp:
 tests-lsp:
 	dune build $(DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-lsp
 
+# the web build, in lsp/elpi-lsp-web/: the entry point elpi-lsp-web.js, the
+# server compiled to JavaScript and, with build-lsp-web-wa, to WebAssembly,
+# and the API of Elpi for JavaScript (lsp/web_api.ml) compiled the same ways,
+# with its types
+WEB_DIST=lsp/elpi-lsp-web
+build-lsp-web:
+	dune build $(DUNE_OPTS) lsp/web_driver.bc.js lsp/web_api.bc.js lsp/web_api.bc.d.ts
+	mkdir -p $(WEB_DIST)
+	cp -f lsp/web_entry.js $(WEB_DIST)/elpi-lsp-web.js
+	cp -f lsp/npm/package.json lsp/npm/README.md $(WEB_DIST)/
+	cp -f _build/default/lsp/web_driver.bc.js _build/default/lsp/web_api.bc.js _build/default/lsp/web_api.bc.d.ts $(WEB_DIST)/
+	chmod -R u+w $(WEB_DIST)
+
+build-lsp-web-wa: build-lsp-web
+	dune build $(DUNE_OPTS) lsp/web_driver.bc.wasm.js lsp/web_api.bc.wasm.js lsp/web_api.bc.wasm.d.ts
+	rm -rf $(WEB_DIST)/web_driver.bc.wasm.assets $(WEB_DIST)/web_api.bc.wasm.assets
+	cp -rf _build/default/lsp/web_driver.bc.wasm.js _build/default/lsp/web_driver.bc.wasm.assets \
+	  _build/default/lsp/web_api.bc.wasm.js _build/default/lsp/web_api.bc.wasm.assets _build/default/lsp/web_api.bc.wasm.d.ts $(WEB_DIST)/
+	chmod -R u+w $(WEB_DIST)
+
+tests-lsp-web-wa:
+	dune build $(DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-lsp-web-wa
+
+# tests-lsp-web also typechecks lsp/test/web-api/types.ts against
+# lsp/web_api.d.ts (with npx, which downloads TypeScript)
+tests-lsp-web:
+	dune build $(DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-lsp-web
+	npx --yes -p typescript@5.9.3 tsc --noEmit --strict --target es2020 --lib es2020,dom lsp/test/web-api/types.ts
+
 perf-lsp:
 	dune build $(DUNE_OPTS) --force @lsp/perf/perf-lsp
 
@@ -127,6 +162,25 @@ clean:
 
 release:
 	dune-release -p elpi,ppx_elpi,elpi-lsp
+	$(MAKE) release-npm
+
+# the npm package of the web build (lsp/elpi-lsp-web/elpi-lsp-web-VERSION.tgz,
+# after make build-lsp-web or build-lsp-web-wa), with the version given by git
+# describe, e.g. 3.9.2-15-g6d9c3e5eef: it can be installed with npm install
+pack-lsp-web:
+	@v=$$(git describe --tags) || { echo 'pack-lsp-web: git describe needs the tags' >&2; exit 1; }; \
+	cd $(WEB_DIST) && \
+	npm version --no-git-tag-version --allow-same-version "$${v#v}" >/dev/null && \
+	rm -f elpi-lsp-web-*.tgz && npm pack
+
+# the web build, published on npm as elpi-lsp-web (lsp/npm/), with the version
+# of the tag of HEAD (vX.Y.Z); needs npm login, or a token in ~/.npmrc
+release-npm:
+	@tag=$$(git describe --tags --exact-match 2>/dev/null) || { echo 'release-npm: HEAD has no tag' >&2; exit 1; }; \
+	$(MAKE) build-lsp-web-wa DUNE_OPTS=--profile=release && \
+	cd $(WEB_DIST) && \
+	npm version --no-git-tag-version --allow-same-version "$${tag#v}" && \
+	npm publish --access public
 
 # testing
 tests:
@@ -188,4 +242,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: tests tests-ppx build-ppx perf-lsp help install build world clean gh-pages doc doc-build doc-serve doc-publish
+.PHONY: release-npm pack-lsp-web tests tests-ppx build-ppx build-lsp-web build-lsp-web-wa tests-lsp-web tests-lsp-web-wa perf-lsp help install build world clean gh-pages doc doc-build doc-serve doc-publish

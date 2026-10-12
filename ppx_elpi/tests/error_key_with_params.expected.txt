@@ -1,4 +1,4 @@
-File "./error_key_with_params.ml", lines 4-6, characters 0-33:
+File "error_key_with_params.ml", lines 4-6, characters 0-33:
 4 | type 'a tctx = Entry of (string[@elpi.key "term"]) * 'a
 5 | [@@elpi.index (module S)]
 6 | [@@deriving elpi { declaration }]

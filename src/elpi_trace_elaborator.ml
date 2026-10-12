@@ -708,7 +708,7 @@ end = struct
       
 end
 
-let main =
+let () =
   let raw_steps = Raw.read_stdin () in
 
   let { Elaborate.steps;  stack_frames; goal_text } = Elaborate.elaborate raw_steps in

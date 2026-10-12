@@ -22,6 +22,9 @@
     A use of a macro, `@name`, is a `Macro` (with the declaration of the
     macro); the symbols of its expansion are not there.
 - API:
+  - New: part of the modules `Setup`, `Parse`, `Compile` and `Execute` of the
+    API for JavaScript, compiled to JavaScript or to WebAssembly
+    (`lsp/web_api.ml`, `lsp/web_api.d.ts`). See `lsp/README.md`
   - Change: new module `Error`: the type of errors `Error.t` (component,
     location, message), printers, the exception `Error.ElpiError` (formerly
     `Compile.CompileError`, now private: it is raised with `Error.error`).
