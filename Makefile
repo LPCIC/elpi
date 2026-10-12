@@ -5,6 +5,7 @@ help:
 	@echo '  world                  builds elpi, ppx_elpi and elpi-lsp, all that install installs'
 	@echo '  build-ppx              builds ppx_elpi (and its tests)'
 	@echo '  build-lsp              builds elpi-lsp (needs sel, lsp)'
+	@echo '  build-lsp-web          builds elpi-lsp for the web, lsp/elpi-lsp-web.js (needs lsp, js_of_ocaml)'
 	@echo '  install                installs all the packages (after make world)'
 	@echo '  clean                  remove build artifacts'
 	@echo '  release                release the software (note: git tag -s first)'
@@ -23,6 +24,7 @@ help:
 	@echo '  tests-ppx PROMOTE=true runs and promotes the ppx_elpi tests if different'
 	@echo '  tests-lsp              runs the elpi-lsp tests (alias runtest-lsp, needs sel, lsp)'
 	@echo '  tests-lsp PROMOTE=true runs and promotes the elpi-lsp tests if different'
+	@echo '  tests-lsp-web          runs the elpi-lsp tests on the web build (alias runtest-lsp-web, needs node)'
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
 	@echo
@@ -75,6 +77,12 @@ build-lsp:
 
 tests-lsp:
 	dune build $(DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-lsp
+
+build-lsp-web:
+	dune build $(DUNE_OPTS) lsp/elpi-lsp-web.js
+
+tests-lsp-web:
+	dune build $(DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-lsp-web
 
 # all the packages (elpi, ppx_elpi, elpi-lsp...): dune install needs them all
 world:
@@ -179,4 +187,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: tests tests-ppx build-ppx help install build world clean gh-pages doc doc-build doc-serve doc-publish
+.PHONY: tests tests-ppx build-ppx build-lsp-web tests-lsp-web help install build world clean gh-pages doc doc-build doc-serve doc-publish

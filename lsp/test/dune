@@ -81,6 +81,11 @@
  (alias runtest-lsp)
  (action (diff accchar.expected accchar.output)))
 
+; built by default: the tests of this directory, not the ones of web/ (they
+; need js_of_ocaml, see make tests-lsp-web)
+(alias
+ (name default)
+ (deps (alias all)))
 
 (rule
  (alias runtest-lsp)

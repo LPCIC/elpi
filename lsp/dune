@@ -7,6 +7,20 @@
  (modules stdio_driver)
  (libraries elpi_lsp_server sel lsp jsonrpc yojson unix))
 
+; the language server in a web worker (vscode.dev). It needs js_of_ocaml: it
+; is not built by default, see make build-lsp-web
+(executable
+ (name web_driver)
+ (modes js)
+ (modules web_driver)
+ (libraries elpi_lsp_server elpi lsp jsonrpc yojson js_of_ocaml))
+
+; copied to the source tree (and removed by dune clean)
+(rule
+ (targets elpi-lsp-web.js)
+ (mode (promote (until-clean)))
+ (action (copy web_driver.bc.js elpi-lsp-web.js)))
+
 ; built by default: the server on stdin/stdout
 (alias
  (name default)

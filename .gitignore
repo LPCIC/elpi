@@ -31,3 +31,4 @@ ppx_elpi/tests/pp.exe
 ppx_elpi/tests/*.actual.ml
 ppx_elpi/tests/*.actual.elpi
 ppx_elpi/tests/*.actual.txt
+lsp/elpi-lsp-web.js

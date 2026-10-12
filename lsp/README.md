@@ -39,6 +39,7 @@ on stdin/stdout.
   - `runner.ml`: runs a query on a program, for `elpi/run`.
 - `stdio_driver.ml`: the server on stdin/stdout (the executable `elpi-lsp`),
   its main loop driven by [Sel](https://github.com/gares/sel).
+- `web_driver.ml`: the server in a web worker, see below.
 
 - `test/`: the tests. `test_lsp_lib.ml` is a client that starts the server and
   drives it with JSON-RPC messages; each `script_*.ml` is the script for one
@@ -95,7 +96,7 @@ on stdin/stdout.
 
 - `elpi/builtinFile` gives the text of a file of the standard library, that
   is built-in the elpi interpreter, for a client that is given it as an
-  `elpi-builtin:/NAME` URI:
+  `elpi-builtin:/NAME` URI (the web server, see below):
 
   ```ts
   interface BuiltinFileParams {
@@ -103,6 +104,24 @@ on stdin/stdout.
   }
   type BuiltinFileResult = string | null  // the text, null if there is none
   ```
+
+## Web
+
+`web_driver.ml` is the transport for a web worker, used by the
+extension `gares.elpi-lang` in vscode.dev. The files of the standard library are
+`elpi-builtin:/NAME` URIs, whose text the client gets with the request
+`elpi/builtinFile` (see above).
+
+```
+make build-lsp-web    # lsp/elpi-lsp-web.js (needs js_of_ocaml)
+make tests-lsp-web    # the tests of test/ on the web build (needs node)
+```
+
+The tests run the web build in a Node worker through `test/web/bridge.mjs`,
+a stdio server that forwards the messages; the outputs are compared with the
+ones of the native server, but for `good`, `libdef` and `library`, whose
+expected outputs are in `test/web/` (the `elpi-builtin:` URIs). The extension
+has its own tests in a browser (`npm run test-web` in elpi-lang).
 
 ## Performance
 
