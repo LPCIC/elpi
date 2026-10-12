@@ -140,6 +140,9 @@ let anonymize s =
   |> replace "$DIR/./" "$DIR/" |> replace "$DIR\\.\\" "$DIR/" |> replace "$DIR\\" "$DIR/"
   (* the files of the standard library, that the server writes in a temporary directory *)
   |> Str.global_replace (Str.regexp "file://[^ ]*/elpi-lsp-[0-9]+-[0-9a-f]+/") "file://$LIBRARY/"
+  (* the instance of Elpi in the URIs of the web server, which depends on how
+     many documents were opened before *)
+  |> Str.global_replace (Str.regexp "elpi-builtin:/[0-9]+/") "elpi-builtin:/ID/"
   |> Str.global_replace (Str.regexp "\\([a-zA-Z]:\\)?[^ :]*[/\\\\]elpi-lsp-[0-9]+-[0-9a-f]+[/\\\\]") "$LIBRARY/"
 
 let read_file file =
@@ -452,8 +455,10 @@ let with_stdout_to file f =
 (* The output of the script [name] is written to [name].output (in the
    directory of the test), to be
    compared with [name].expected. The standard output has the rest: the
-   capabilities of the server and its shutdown. *)
+   capabilities of the server and its shutdown. The scripts named in the
+   environment variable TEST_LSP_SKIP (separated by commas) are not run. *)
 let main () =
+  let skip = String.split_on_char ',' (Option.value ~default:"" (Sys.getenv_opt "TEST_LSP_SKIP")) in
   (* a request before initialize is an error *)
   let early = request "textDocument/hover" (`Assoc [
       "textDocument", `Assoc [ "uri", `String (uri "good.elpi") ];
@@ -471,7 +476,8 @@ let main () =
       log "script %s (%s)" name file;
       with_stdout_to (Filename.concat dir (name ^ ".output")) (fun () -> script file; close_file file);
       log "script %s done" name)
-    (List.sort (fun (n1, _, _) (n2, _, _) -> String.compare n1 n2) !scripts);
+    (List.sort (fun (n1, _, _) (n2, _, _) -> String.compare n1 n2)
+       (List.filter (fun (n, _, _) -> not (List.exists (String.equal n) skip)) !scripts));
   let r = request "shutdown" `Null in
   Printf.printf "shutdown: %s\n" (Yojson.Safe.to_string (member "result" r));
   notify "exit" `Null;

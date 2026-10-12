@@ -633,8 +633,11 @@ func primitive? any, string.
 primitive? X S :- is_cdata X S.
 
 % [new_int N] unifies N with a different int every time it is called. Values
-% of N are guaranteed to be incresing.
+% of N are guaranteed to be incresing (unless reset_new_int is called).
 builtin func new_int -> int.
+
+% [reset_new_int N] Resets the counter to N.
+builtin func reset_new_int int.
 
 % [findall_solution P L] finds all the solved instances of P and puts them
 % in L in the order in which they are found. Instances can contain

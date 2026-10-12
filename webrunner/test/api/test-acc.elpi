@@ -1,0 +1,2 @@
+pred q o:int.
+q 42.

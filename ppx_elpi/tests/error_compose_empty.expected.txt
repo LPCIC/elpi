@@ -1,4 +1,4 @@
-File "./error_compose_empty.ml", line 1, characters 0-27:
+File "error_compose_empty.ml", line 1, characters 0-27:
 1 | [%%elpi.compose_ctx foo []]
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Error: compose_ctx needs at least one type

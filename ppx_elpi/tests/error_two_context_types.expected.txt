@@ -1,4 +1,4 @@
-File "./error_two_context_types.ml", lines 4-6, characters 0-33:
+File "error_two_context_types.ml", lines 4-6, characters 0-33:
 4 | type a = A of (string[@elpi.key "a"]) [@@elpi.index (module S)]
 5 | and b = B of (string[@elpi.key "b"]) [@@elpi.index (module S)]
 6 | [@@deriving elpi { declaration }]

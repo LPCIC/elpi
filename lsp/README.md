@@ -41,6 +41,8 @@
   - `runner.ml`: runs a query on a program, for `elpi/run`.
 - `stdio_lsp_driver.ml`: the server on stdin/stdout (the executable `elpi-lsp`),
   its main loop driven by [Sel](https://github.com/gares/sel).
+- The server in a web worker, and the API of Elpi for JavaScript, are in
+  `../webrunner/`.
 
 - `test/`: the tests. `test_lsp_lib.ml` is a client that starts the server and
   drives it with JSON-RPC messages; each `script_*.ml` is the script for one
@@ -101,14 +103,22 @@
 
 - `elpi/builtinFile` gives the text of a file of the standard library, that
   is built-in the elpi interpreter, for a client that is given it as an
-  `elpi-builtin:/NAME` URI:
+  `elpi-builtin:/ID/NAME` URI (the web server, see below). Each document has
+  its own instance of Elpi, whose builtins (so whose library) can differ: ID
+  is the instance of the document that the URI comes from, and the text is
+  there while that document is open.
 
   ```ts
   interface BuiltinFileParams {
-    uri: string  // e.g. "elpi-builtin:/builtin_stdlib.elpi"
+    uri: string  // e.g. "elpi-builtin:/3/builtin_stdlib.elpi"
   }
   type BuiltinFileResult = string | null  // the text, null if there is none
   ```
+
+## Web
+
+The server also runs in a web worker, compiled to WebAssembly and to
+JavaScript: see `../webrunner/README.md`.
 
 ## Performance
 

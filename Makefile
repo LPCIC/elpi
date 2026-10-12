@@ -5,9 +5,12 @@ help:
 	@echo '  world                  builds elpi, ppx_elpi and elpi-lsp, all that install installs'
 	@echo '  build-ppx              builds ppx_elpi (and its tests)'
 	@echo '  build-lsp              builds elpi-lsp (needs sel, lsp)'
+	@echo '  webrunner              builds Elpi on the web in webrunner/elpi-webrunner/: elpi-lsp and the API for JavaScript (needs lsp, js_of_ocaml, wasm_of_ocaml, node)'
 	@echo '  install                installs all the packages (after make world)'
 	@echo '  clean                  remove build artifacts'
 	@echo '  release                release the software (note: git tag -s first)'
+	@echo '  release-npm            publish the web build on npm (part of release)'
+	@echo '  pack-webrunner         the npm package of the web build, versioned by git describe'
 	@echo
 	@echo 'Testing targets:'
 	@echo
@@ -23,6 +26,7 @@ help:
 	@echo '  tests-ppx PROMOTE=true runs and promotes the ppx_elpi tests if different'
 	@echo '  tests-lsp              runs the elpi-lsp tests (alias runtest-lsp, needs sel, lsp)'
 	@echo '  tests-lsp PROMOTE=true runs and promotes the elpi-lsp tests if different'
+	@echo '  test-webrunner         runs the tests of the web build, also of its fallbacks (alias runtest-webrunner, needs node, npx)'
 	@echo '  perf-lsp               times elpi-lsp on a big document: check vs requests (alias perf-lsp)'
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
@@ -83,6 +87,30 @@ build-lsp:
 tests-lsp:
 	dune build $(DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-lsp
 
+# Elpi on the web (webrunner/), in webrunner/elpi-webrunner/, the npm package:
+# the entry points elpi-lsp-web.js (the server, in a web worker) and
+# elpi-api.js (the API of Elpi for JavaScript), and what they load, compiled
+# to JavaScript and to WebAssembly. It is always built in the release profile
+# (the dev one gives a JavaScript file ten times bigger), and so are its
+# tests, which test the very files that are packed
+WEB_DIST=webrunner/elpi-webrunner
+WEB_DUNE_OPTS=--profile=release $(DUNE_OPTS)
+WEB_FILES=elpi-lsp-web.js web_lsp_driver.bc.js web_lsp_driver.bc.wasm.js \
+  web_lsp_driver.bc.wasm.assets elpi-api.js elpi-api.d.ts web_api.bc.js
+webrunner:
+	dune build $(WEB_DUNE_OPTS) @webrunner/webrunner
+	rm -rf $(WEB_DIST)
+	mkdir -p $(WEB_DIST)
+	cd _build/default/webrunner && cp -rf $(WEB_FILES) $(CURDIR)/$(WEB_DIST)/
+	cp -f webrunner/npm/package.json webrunner/npm/README.md LICENSE $(WEB_DIST)/
+	chmod -R u+w $(WEB_DIST)
+
+# test-webrunner also typechecks webrunner/test/api/types.ts against
+# webrunner/elpi-api.d.ts (with npx, which downloads TypeScript)
+test-webrunner:
+	dune build $(WEB_DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-webrunner
+	npx --yes -p typescript@5.9.3 tsc --noEmit --strict --target es2020 --lib es2020,dom webrunner/test/api/types.ts
+
 perf-lsp:
 	dune build $(DUNE_OPTS) --force @lsp/perf/perf-lsp
 
@@ -128,6 +156,29 @@ clean:
 
 release:
 	dune-release -p elpi,ppx_elpi,elpi-lsp
+	$(MAKE) release-npm
+
+# the npm package of the web build (webrunner/elpi-webrunner/elpi-webrunner-VERSION.tgz,
+# after make webrunner), with the version given by git
+# describe: X.Y.Z on the tag vX.Y.Z, and X.Y.(Z+1)-dev.N.gHASH N commits after
+# it, e.g. 3.9.3-dev.15.g6d9c3e5eef, which semver puts after 3.9.2 (and before
+# 3.9.3): it can be installed with npm install
+pack-webrunner:
+	@d=$$(git describe --tags --long) || { echo 'pack-webrunner: git describe needs the tags' >&2; exit 1; }; \
+	h=$${d##*-}; d=$${d%-*}; n=$${d##*-}; t=$${d%-*}; t=$${t#v}; \
+	if [ "$$n" = 0 ]; then v=$$t; else v=$${t%.*}.$$(($${t##*.}+1))-dev.$$n.$$h; fi; \
+	cd $(WEB_DIST) && \
+	npm version --no-git-tag-version --allow-same-version "$$v" >/dev/null && \
+	rm -f elpi-webrunner-*.tgz && npm pack
+
+# the web build, published on npm as elpi-webrunner (webrunner/npm/), with the version
+# of the tag of HEAD (vX.Y.Z); needs npm login, or a token in ~/.npmrc
+release-npm:
+	@tag=$$(git describe --tags --exact-match 2>/dev/null) || { echo 'release-npm: HEAD has no tag' >&2; exit 1; }; \
+	$(MAKE) webrunner && \
+	cd $(WEB_DIST) && \
+	npm version --no-git-tag-version --allow-same-version "$${tag#v}" && \
+	npm publish --access public
 
 # testing
 tests:
@@ -189,4 +240,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: tests tests-ppx build-ppx perf-lsp help install build world clean gh-pages doc doc-build doc-serve doc-publish
+.PHONY: release-npm pack-webrunner tests tests-ppx build-ppx webrunner test-webrunner perf-lsp help install build world clean gh-pages doc doc-build doc-serve doc-publish

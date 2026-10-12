@@ -1,0 +1,2 @@
+load elpi-lsp-web.js
+load web_lsp_driver.bc.js

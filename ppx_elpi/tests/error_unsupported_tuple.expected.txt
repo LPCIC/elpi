@@ -1,4 +1,4 @@
-File "./error_unsupported_tuple.ml", lines 2-3, characters 0-33:
+File "error_unsupported_tuple.ml", lines 2-3, characters 0-33:
 2 | type t = A of (int * int * int * int * int)
 3 | [@@deriving elpi { declaration }]
 Error: I don't have quintuples or above at hand, file a bugreport

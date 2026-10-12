@@ -2,12 +2,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_alias_type.generated.* and compared with test_alias_type.expected.*, but it is also promoted
 ; to test_alias_type.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_alias_type.ml or test_alias_type.ml).
 
 (rule
  (targets test_alias_type.generated.ml)
  (deps (:pp pp.exe) (:input test_alias_type.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_alias_type.ml -o %{targets})))
 
 (rule
  (target test_alias_type.generated.elpi)
@@ -42,12 +44,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_attributes.generated.* and compared with test_attributes.expected.*, but it is also promoted
 ; to test_attributes.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_attributes.ml or test_attributes.ml).
 
 (rule
  (targets test_attributes.generated.ml)
  (deps (:pp pp.exe) (:input test_attributes.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_attributes.ml -o %{targets})))
 
 (rule
  (target test_attributes.generated.elpi)
@@ -82,12 +86,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_compose_contextual.generated.* and compared with test_compose_contextual.expected.*, but it is also promoted
 ; to test_compose_contextual.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_compose_contextual.ml or test_compose_contextual.ml).
 
 (rule
  (targets test_compose_contextual.generated.ml)
  (deps (:pp pp.exe) (:input test_compose_contextual.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_compose_contextual.ml -o %{targets})))
 
 (rule
  (target test_compose_contextual.generated.elpi)
@@ -122,12 +128,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_container.generated.* and compared with test_container.expected.*, but it is also promoted
 ; to test_container.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_container.ml or test_container.ml).
 
 (rule
  (targets test_container.generated.ml)
  (deps (:pp pp.exe) (:input test_container.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_container.ml -o %{targets})))
 
 (rule
  (target test_container.generated.elpi)
@@ -162,12 +170,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_copy_aliases_opaque.generated.* and compared with test_copy_aliases_opaque.expected.*, but it is also promoted
 ; to test_copy_aliases_opaque.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_copy_aliases_opaque.ml or test_copy_aliases_opaque.ml).
 
 (rule
  (targets test_copy_aliases_opaque.generated.ml)
  (deps (:pp pp.exe) (:input test_copy_aliases_opaque.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_copy_aliases_opaque.ml -o %{targets})))
 
 (rule
  (target test_copy_aliases_opaque.generated.elpi)
@@ -202,12 +212,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_double_contextual.generated.* and compared with test_double_contextual.expected.*, but it is also promoted
 ; to test_double_contextual.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_double_contextual.ml or test_double_contextual.ml).
 
 (rule
  (targets test_double_contextual.generated.ml)
  (deps (:pp pp.exe) (:input test_double_contextual.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_double_contextual.ml -o %{targets})))
 
 (rule
  (target test_double_contextual.generated.elpi)
@@ -242,12 +254,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_embed_under_binder.generated.* and compared with test_embed_under_binder.expected.*, but it is also promoted
 ; to test_embed_under_binder.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_embed_under_binder.ml or test_embed_under_binder.ml).
 
 (rule
  (targets test_embed_under_binder.generated.ml)
  (deps (:pp pp.exe) (:input test_embed_under_binder.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_embed_under_binder.ml -o %{targets})))
 
 (rule
  (target test_embed_under_binder.generated.elpi)
@@ -282,12 +296,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_mixed_conversions.generated.* and compared with test_mixed_conversions.expected.*, but it is also promoted
 ; to test_mixed_conversions.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_mixed_conversions.ml or test_mixed_conversions.ml).
 
 (rule
  (targets test_mixed_conversions.generated.ml)
  (deps (:pp pp.exe) (:input test_mixed_conversions.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_mixed_conversions.ml -o %{targets})))
 
 (rule
  (target test_mixed_conversions.generated.elpi)
@@ -322,12 +338,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_mixed_conversions_pred.generated.* and compared with test_mixed_conversions_pred.expected.*, but it is also promoted
 ; to test_mixed_conversions_pred.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_mixed_conversions_pred.ml or test_mixed_conversions_pred.ml).
 
 (rule
  (targets test_mixed_conversions_pred.generated.ml)
  (deps (:pp pp.exe) (:input test_mixed_conversions_pred.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_mixed_conversions_pred.ml -o %{targets})))
 
 (rule
  (target test_mixed_conversions_pred.generated.elpi)
@@ -362,12 +380,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_mutual_adt.generated.* and compared with test_mutual_adt.expected.*, but it is also promoted
 ; to test_mutual_adt.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_mutual_adt.ml or test_mutual_adt.ml).
 
 (rule
  (targets test_mutual_adt.generated.ml)
  (deps (:pp pp.exe) (:input test_mutual_adt.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_mutual_adt.ml -o %{targets})))
 
 (rule
  (target test_mutual_adt.generated.elpi)
@@ -402,12 +422,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_mutual_contextual.generated.* and compared with test_mutual_contextual.expected.*, but it is also promoted
 ; to test_mutual_contextual.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_mutual_contextual.ml or test_mutual_contextual.ml).
 
 (rule
  (targets test_mutual_contextual.generated.ml)
  (deps (:pp pp.exe) (:input test_mutual_contextual.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_mutual_contextual.ml -o %{targets})))
 
 (rule
  (target test_mutual_contextual.generated.elpi)
@@ -442,12 +464,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_opaque_type.generated.* and compared with test_opaque_type.expected.*, but it is also promoted
 ; to test_opaque_type.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_opaque_type.ml or test_opaque_type.ml).
 
 (rule
  (targets test_opaque_type.generated.ml)
  (deps (:pp pp.exe) (:input test_opaque_type.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_opaque_type.ml -o %{targets})))
 
 (rule
  (target test_opaque_type.generated.elpi)
@@ -482,12 +506,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_opaque_type_alias.generated.* and compared with test_opaque_type_alias.expected.*, but it is also promoted
 ; to test_opaque_type_alias.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_opaque_type_alias.ml or test_opaque_type_alias.ml).
 
 (rule
  (targets test_opaque_type_alias.generated.ml)
  (deps (:pp pp.exe) (:input test_opaque_type_alias.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_opaque_type_alias.ml -o %{targets})))
 
 (rule
  (target test_opaque_type_alias.generated.elpi)
@@ -522,12 +548,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_poly_adt.generated.* and compared with test_poly_adt.expected.*, but it is also promoted
 ; to test_poly_adt.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_poly_adt.ml or test_poly_adt.ml).
 
 (rule
  (targets test_poly_adt.generated.ml)
  (deps (:pp pp.exe) (:input test_poly_adt.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_poly_adt.ml -o %{targets})))
 
 (rule
  (target test_poly_adt.generated.elpi)
@@ -562,12 +590,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_poly_alias.generated.* and compared with test_poly_alias.expected.*, but it is also promoted
 ; to test_poly_alias.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_poly_alias.ml or test_poly_alias.ml).
 
 (rule
  (targets test_poly_alias.generated.ml)
  (deps (:pp pp.exe) (:input test_poly_alias.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_poly_alias.ml -o %{targets})))
 
 (rule
  (target test_poly_alias.generated.elpi)
@@ -602,12 +632,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_poly_binder.generated.* and compared with test_poly_binder.expected.*, but it is also promoted
 ; to test_poly_binder.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_poly_binder.ml or test_poly_binder.ml).
 
 (rule
  (targets test_poly_binder.generated.ml)
  (deps (:pp pp.exe) (:input test_poly_binder.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_poly_binder.ml -o %{targets})))
 
 (rule
  (target test_poly_binder.generated.elpi)
@@ -642,12 +674,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_poly_binder_three_params.generated.* and compared with test_poly_binder_three_params.expected.*, but it is also promoted
 ; to test_poly_binder_three_params.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_poly_binder_three_params.ml or test_poly_binder_three_params.ml).
 
 (rule
  (targets test_poly_binder_three_params.generated.ml)
  (deps (:pp pp.exe) (:input test_poly_binder_three_params.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_poly_binder_three_params.ml -o %{targets})))
 
 (rule
  (target test_poly_binder_three_params.generated.elpi)
@@ -682,12 +716,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_poly_binder_two_params.generated.* and compared with test_poly_binder_two_params.expected.*, but it is also promoted
 ; to test_poly_binder_two_params.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_poly_binder_two_params.ml or test_poly_binder_two_params.ml).
 
 (rule
  (targets test_poly_binder_two_params.generated.ml)
  (deps (:pp pp.exe) (:input test_poly_binder_two_params.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_poly_binder_two_params.ml -o %{targets})))
 
 (rule
  (target test_poly_binder_two_params.generated.elpi)
@@ -722,12 +758,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_record_binder.generated.* and compared with test_record_binder.expected.*, but it is also promoted
 ; to test_record_binder.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_record_binder.ml or test_record_binder.ml).
 
 (rule
  (targets test_record_binder.generated.ml)
  (deps (:pp pp.exe) (:input test_record_binder.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_record_binder.ml -o %{targets})))
 
 (rule
  (target test_record_binder.generated.elpi)
@@ -762,12 +800,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_simple_adt.generated.* and compared with test_simple_adt.expected.*, but it is also promoted
 ; to test_simple_adt.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_simple_adt.ml or test_simple_adt.ml).
 
 (rule
  (targets test_simple_adt.generated.ml)
  (deps (:pp pp.exe) (:input test_simple_adt.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_simple_adt.ml -o %{targets})))
 
 (rule
  (target test_simple_adt.generated.elpi)
@@ -802,12 +842,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_simple_adt_record.generated.* and compared with test_simple_adt_record.expected.*, but it is also promoted
 ; to test_simple_adt_record.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_simple_adt_record.ml or test_simple_adt_record.ml).
 
 (rule
  (targets test_simple_adt_record.generated.ml)
  (deps (:pp pp.exe) (:input test_simple_adt_record.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_simple_adt_record.ml -o %{targets})))
 
 (rule
  (target test_simple_adt_record.generated.elpi)
@@ -842,12 +884,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_simple_contextual.generated.* and compared with test_simple_contextual.expected.*, but it is also promoted
 ; to test_simple_contextual.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_simple_contextual.ml or test_simple_contextual.ml).
 
 (rule
  (targets test_simple_contextual.generated.ml)
  (deps (:pp pp.exe) (:input test_simple_contextual.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_simple_contextual.ml -o %{targets})))
 
 (rule
  (target test_simple_contextual.generated.elpi)
@@ -882,12 +926,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_simple_contextual_key_last.generated.* and compared with test_simple_contextual_key_last.expected.*, but it is also promoted
 ; to test_simple_contextual_key_last.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_simple_contextual_key_last.ml or test_simple_contextual_key_last.ml).
 
 (rule
  (targets test_simple_contextual_key_last.generated.ml)
  (deps (:pp pp.exe) (:input test_simple_contextual_key_last.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_simple_contextual_key_last.ml -o %{targets})))
 
 (rule
  (target test_simple_contextual_key_last.generated.elpi)
@@ -922,12 +968,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_simple_record.generated.* and compared with test_simple_record.expected.*, but it is also promoted
 ; to test_simple_record.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_simple_record.ml or test_simple_record.ml).
 
 (rule
  (targets test_simple_record.generated.ml)
  (deps (:pp pp.exe) (:input test_simple_record.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_simple_record.ml -o %{targets})))
 
 (rule
  (target test_simple_record.generated.elpi)
@@ -962,12 +1010,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_thomas.generated.* and compared with test_thomas.expected.*, but it is also promoted
 ; to test_thomas.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_thomas.ml or test_thomas.ml).
 
 (rule
  (targets test_thomas.generated.ml)
  (deps (:pp pp.exe) (:input test_thomas.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_thomas.ml -o %{targets})))
 
 (rule
  (target test_thomas.generated.elpi)
@@ -1002,12 +1052,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_three_contexts.generated.* and compared with test_three_contexts.expected.*, but it is also promoted
 ; to test_three_contexts.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_three_contexts.ml or test_three_contexts.ml).
 
 (rule
  (targets test_three_contexts.generated.ml)
  (deps (:pp pp.exe) (:input test_three_contexts.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_three_contexts.ml -o %{targets})))
 
 (rule
  (target test_three_contexts.generated.elpi)
@@ -1042,12 +1094,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_tuples_options.generated.* and compared with test_tuples_options.expected.*, but it is also promoted
 ; to test_tuples_options.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_tuples_options.ml or test_tuples_options.ml).
 
 (rule
  (targets test_tuples_options.generated.ml)
  (deps (:pp pp.exe) (:input test_tuples_options.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_tuples_options.ml -o %{targets})))
 
 (rule
  (target test_tuples_options.generated.elpi)
@@ -1082,12 +1136,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_two_binders.generated.* and compared with test_two_binders.expected.*, but it is also promoted
 ; to test_two_binders.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_two_binders.ml or test_two_binders.ml).
 
 (rule
  (targets test_two_binders.generated.ml)
  (deps (:pp pp.exe) (:input test_two_binders.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_two_binders.ml -o %{targets})))
 
 (rule
  (target test_two_binders.generated.elpi)
@@ -1122,12 +1178,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_two_layers_context.generated.* and compared with test_two_layers_context.expected.*, but it is also promoted
 ; to test_two_layers_context.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_two_layers_context.ml or test_two_layers_context.ml).
 
 (rule
  (targets test_two_layers_context.generated.ml)
  (deps (:pp pp.exe) (:input test_two_layers_context.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_two_layers_context.ml -o %{targets})))
 
 (rule
  (target test_two_layers_context.generated.elpi)
@@ -1162,12 +1220,14 @@
 ; The output of the ppx and of the test executable is generated in
 ; test_variant.generated.* and compared with test_variant.expected.*, but it is also promoted
 ; to test_variant.actual.* (ignored by git) in order to be inspectable even when
-; the test fails.
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_variant.ml or test_variant.ml).
 
 (rule
  (targets test_variant.generated.ml)
  (deps (:pp pp.exe) (:input test_variant.ml))
- (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_variant.ml -o %{targets})))
 
 (rule
  (target test_variant.generated.elpi)
@@ -1206,7 +1266,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_compose_empty.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1226,7 +1286,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_context_directive_too_small.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1246,7 +1306,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_key_with_params.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1266,7 +1326,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_key_without_index.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1286,7 +1346,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_opaque_no_attribute.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1306,7 +1366,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_opaque_params.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1326,7 +1386,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_two_context_types.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1346,7 +1406,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_two_keys.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1366,7 +1426,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_unsupported_tuple.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1386,7 +1446,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_var_arity.ml -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1406,7 +1466,7 @@
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
     (setenv OCAML_COLOR never
-     (run ./%{pp} --impl %{input} -o /dev/null))))))
+     (run ./%{pp} --impl error_var_readback_embed.ml -o /dev/null))))))
 
 (rule
  (mode promote)
