@@ -18,6 +18,9 @@
     the kind of a type constructor or the whole type.
     A use of a macro, `@name`, is a `Macro` (with the declaration of the
     macro); the symbols of its expansion are not there.
+  - Change: an undeclared global is reported by a warning of its own, located
+    at its first occurrence (formerly one warning, without a location, for
+    all the undeclared globals).
 - API:
   - Change: new module `Error`: the type of errors `Error.t` (component,
     location, message), printers, the exception `Error.ElpiError` (formerly
@@ -36,7 +39,10 @@
     `Setup.warning_id` is now `Error.warning_id`.
   - Change: new module `LSP`, with what the language server needs:
     `Compile.hover` and its types (`IntervalTree`, `info`, `kind`, ...) moved
-    there, and `LSP.accumulated`.
+    there, and `LSP.accumulated`. The `info` of a constant has the location of
+    its documentation (`doc`) and of its rules (`body`, from the first to the
+    last one in the unit of its declaration); `LSP.hover` takes the program
+    that the unit extends (`~base`), for the constants declared there.
   - Change: `Parse.goal` and `Parse.goal_from` are now `Parse.query` and
     `Parse.query_from`; like `Compile.query`, they return the query or its
     syntax error (instead of raising `Parse.ParseError`), and its warnings.
@@ -50,6 +56,9 @@
     accumulate directive, its message gives the position in the file.
   - New `LSP.accumulated` lists the accumulate directives of a program and
     the files that each one brings in.
+  - New: the comment block on the line before a declaration (`pred`, `func`,
+    `type`, `kind`...) is its documentation: line comments (`%`) on
+    consecutive lines, or a `/* */` comment (`Ast.Type.doc`).
 
 # v3.9.2 (October 2026)
 

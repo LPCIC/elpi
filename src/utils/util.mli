@@ -113,6 +113,9 @@ module Loc : sig
   val merge : ?merge_payload:(Obj.t option -> Obj.t option -> Obj.t option) -> t -> t -> t
   (* starts/end n chars before/after*)
   val extend : int -> t -> t
+  (* [extend_to l r] is [l] up to the end of [r] (its start and its line are
+     the ones of [l], unlike [merge l r]) *)
+  val extend_to : t -> t -> t
 
 end
 

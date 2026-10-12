@@ -251,6 +251,8 @@ module LSP = struct
     kind : kind;
     description : description option;
     defined : Ast.Loc.t option;
+    doc : Ast.Loc.t option;
+    body : Ast.Loc.t option;
     declaration : bool;
     occurrences : Ast.Loc.t list;
   }

@@ -17,6 +17,11 @@ module type ParseFile = sig
   val set_current_clent_loc_pyload : Obj.t -> unit
   (* a warning found while parsing *)
   val warn : Util.warning -> unit
+  (* a comment read by the lexer, from a position to another *)
+  val add_comment : Lexing.position -> Lexing.position -> unit
+  (* the documentation of the declaration at a location: the comment block
+     on the line before it *)
+  val doc_before : Util.Loc.t -> Util.Loc.t option
 end
 
 let rec substrings i len_s s =

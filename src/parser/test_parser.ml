@@ -102,7 +102,7 @@ and norm_te_ : 'a TypeExpression.t_ -> 'a TypeExpression.t_ = function
   | TArr (a,b) -> TArr (norm_te a, norm_te b)
 let norm_tys l =
   List.map (fun { Type.loc = _; attributes; name; ty } ->
-    { Type.loc = no_loc; attributes; name; ty = norm_te ty }) l
+    { Type.loc = no_loc; attributes; name; ty = norm_te ty; doc = None }) l
 
 (* checks that s1 and s2 parse to the same declaration, up to location;
    [get] extracts the (normalizable) payload and [wrap] rebuilds a decl
@@ -383,16 +383,16 @@ let sanity_check : unit =
           | Extensible ({ start; mk_token; non_enclosed ; at_least_one_char; _ } as e)->
               let start = if at_least_one_char then start ^ "x" else start in
               start, mk_token, (if non_enclosed then Some (fun x -> start ^ x ^ start) else None), Some e in
-    let tok = Lexer.token Elpi_util.Util.StrMap.empty (Lexing.from_string start) in
+    let tok = Lexer.token (Lexer.config Elpi_util.Util.StrMap.empty) (Lexing.from_string start) in
     let token = mk_token start in
     assert(tok = token);
     begin try match fixity with
     | Infix | Infixl | Infixr ->
-        ignore(Parser.Internal.infix_SYMB Lexer.(token Elpi_util.Util.StrMap.empty) (Lexing.from_string start))
+        ignore(Parser.Internal.infix_SYMB Lexer.(token (config Elpi_util.Util.StrMap.empty)) (Lexing.from_string start))
     | Postfix ->
-        ignore(Parser.Internal.postfix_SYMB Lexer.(token Elpi_util.Util.StrMap.empty) (Lexing.from_string start))
+        ignore(Parser.Internal.postfix_SYMB Lexer.(token (config Elpi_util.Util.StrMap.empty)) (Lexing.from_string start))
     | Prefix ->
-        ignore(Parser.Internal.prefix_SYMB Lexer.(token Elpi_util.Util.StrMap.empty) (Lexing.from_string start))
+        ignore(Parser.Internal.prefix_SYMB Lexer.(token (config Elpi_util.Util.StrMap.empty)) (Lexing.from_string start))
     with _ ->
       Printf.eprintf "\n           (*          1         2         3 *)";
       Printf.eprintf "\n           (* 123456789012345678901234567890 *)";
@@ -403,7 +403,7 @@ let sanity_check : unit =
     | None -> ()
     | Some f ->
       let v = f "xx" in
-      assert(CONSTANT v = Lexer.token Elpi_util.Util.StrMap.empty (Lexing.from_string v));
+      assert(CONSTANT v = Lexer.token (Lexer.config Elpi_util.Util.StrMap.empty) (Lexing.from_string v));
     end;
     x) tokens) |> List.concat |> List.length in
   assert(extensible_SYMB = 14)

@@ -254,19 +254,19 @@ pred:
 | attributes = attributes; det = pred_or_func;
   name = constant; args = separated_nonempty_list(option(CONJ),pred_item); o=option(DOTS) {
     let variadic = o <> None in
-   { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred (det, args, variadic) } }
+   { Type.loc=loc $sloc; doc = C.doc_before (loc $sloc); name; attributes; ty = { tloc = loc $loc; tit = TPred (det, args, variadic) } }
  }
 | attributes = attributes; det = pred_or_func;
   name = constant; in_args = separated_list(CONJ,fotype_term); ARROW; out_args = separated_list(CONJ,fotype_term); o=option(DOTS) {
     let args = List.map (fun x -> Mode.Input,x) in_args @ List.map (fun x -> Mode.Output,x) out_args in
     let variadic = o <> None in
-    { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred (det, args, variadic) } }
+    { Type.loc=loc $sloc; doc = C.doc_before (loc $sloc); name; attributes; ty = { tloc = loc $loc; tit = TPred (det, args, variadic) } }
   }
 | attributes = attributes; det = pred_or_func;
   name = constant; in_args = separated_list(CONJ,fotype_term); o=option(DOTS) {
   let args = List.map (fun x -> Mode.Input,x) in_args in
     let variadic = o <> None in
-  { Type.loc=loc $sloc; name; attributes; ty = { tloc = loc $loc; tit = TPred (det, args, variadic) } }
+  { Type.loc=loc $sloc; doc = C.doc_before (loc $sloc); name; attributes; ty = { tloc = loc $loc; tit = TPred (det, args, variadic) } }
 }
 
 pred_item:
@@ -292,28 +292,28 @@ pred_or_func:
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
     names |> List.map (fun n ->
-     { Type.loc=loc $sloc; attributes=[]; name =  n; ty = k })
+     { Type.loc=loc $sloc; doc = C.doc_before (loc $sloc); attributes=[]; name =  n; ty = k })
   }
 | option(EXTERNAL); DATA; name = constant; params = list(constant_w_loc) {
     let type_ = { tloc = loc $sloc; tit = TConst (Func.from_string "type") } in
     let k = List.fold_right (fun _ arr -> { tloc = loc $sloc; tit = TArr (type_, arr) }) params type_ in
-    [ { Type.loc = loc $sloc; attributes = []; name; ty = k } ]
+    [ { Type.loc = loc $sloc; doc = C.doc_before (loc $sloc); attributes = []; name; ty = k } ]
   }
 type_:
 | attributes = attributes;
   TYPE; names = separated_nonempty_list(CONJ,constant); t = type_term {
     names |> List.map (fun n ->
-     { Type.loc=loc $sloc; attributes; name = n; ty = t })
+     { Type.loc=loc $sloc; doc = C.doc_before (loc $sloc); attributes; name = n; ty = t })
   }
 | attributes = attributes;
   SYMBOL; names = separated_nonempty_list(CONJ,constant); option(COLON); ty = type_term; o=option(external_ref) {
     match attributes, o, names with
-    | [External None], Some _, [name] -> [{ Type.loc=loc $sloc; attributes = [External o]; name ; ty }]
+    | [External None], Some _, [name] -> [{ Type.loc=loc $sloc; doc = C.doc_before (loc $sloc); attributes = [External o]; name ; ty }]
     | _, Some _, _ -> raise (ParseError (loc $loc, "Only one symbol with a named external reference can be marked with the external attribute at a time."))
-    | _, None, _ -> List.map (fun n -> { Type.loc=loc $sloc; attributes; name = n; ty }) names
+    | _, None, _ -> List.map (fun n -> { Type.loc=loc $sloc; doc = C.doc_before (loc $sloc); attributes; name = n; ty }) names
 }
 // | EXTERNAL; SYMBOL; name = constant; option(COLON); t = type_term; o=option(external_ref) {
-//     [{ Type.loc=loc $sloc; attributes = [External o]; name ; ty = t }]
+//     [{ Type.loc=loc $sloc; doc = C.doc_before (loc $sloc); attributes = [External o]; name ; ty = t }]
 // }
 
 external_ref:

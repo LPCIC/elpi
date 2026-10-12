@@ -1,0 +1,8 @@
+% a rule in prop position, (h :- b), runs as b => h: here h is relational
+pred q o:int.
+q 1. q 2.
+func t.
+func p -> int.
+p X :- (q X :- t).
+pred main.
+main :- p X, print X.

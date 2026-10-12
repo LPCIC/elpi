@@ -261,7 +261,8 @@ let () =
       (*101*) Success; mut_excl_eigen 5 "f";  duplicate_err 2 1; Success; Success;(*105*)
       (*106*) Success; constr_error 14 13; constr_error 14 13; mut_excl_eigen 9 "f"; Success; (*110*)
       (*111*) mut_excl_eigen 5 "foo"; Success; mut_excl_no_loc "f" false; Success; det_check 5 19;
-      (*116*) Success; det_check 5 2; det_check 7 2; Success; mut_excl_no_loc "p" true
+      (*116*) Success; det_check 5 2; det_check 7 2; Success; mut_excl_no_loc "p" true;
+      (*121*) det_check 6 8; mut_excl_no_loc "true" true; Success
     |] in
   for i = 0 to Array.length status - 1 do
     let name = Printf.sprintf "functionality/test%d.elpi" (i+1) in
