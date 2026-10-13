@@ -8,11 +8,11 @@ type color =
 include
   struct
     [@@@ocaml.warning "-60"]
-    let rec pp_color
-      : Ppx_deriving_runtime.Format.formatter ->
-          color -> Ppx_deriving_runtime.unit
+    let pp_color :
+      Ppx_deriving_runtime.Format.formatter ->
+        color -> Ppx_deriving_runtime.unit
       =
-      ((let open! ((Ppx_deriving_runtime)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime in
           fun fmt ->
             function
             | Red ->
@@ -26,8 +26,8 @@ include
                    "(@[<2>Test_mixed_conversions_pred.Blue@ ";
                  (Ppx_deriving_runtime.Format.fprintf fmt "%d") a0;
                  Ppx_deriving_runtime.Format.fprintf fmt "@])"))
-      [@ocaml.warning "-39"][@ocaml.warning "-A"])
-    and show_color : color -> Ppx_deriving_runtime.string =
+      [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
+    let show_color : color -> Ppx_deriving_runtime.string =
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_color x[@@ocaml.warning
                                                                     "-32"]
     [@@@warning "-26-27-32-39-60"]
@@ -51,90 +51,72 @@ include
       struct class type t = object inherit Elpi.API.PPX.ctx end end
     let rec elpi_embed_color :
       'c 'csts . (color, 'c, 'csts) Elpi.API.ContextualConversion.embedding =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__fun_arg ->
-                match elpi__fun_arg with
-                | Red ->
-                    (elpi__state,
-                      (Elpi.API.RawData.mkAppGlobalL
-                         elpi_constant_constructor_color_Redc []),
-                      (List.concat []))
-                | Green ->
-                    (elpi__state,
-                      (Elpi.API.RawData.mkAppGlobalL
-                         elpi_constant_constructor_color_Greenc []),
-                      (List.concat []))
-                | Blue elpi__3 ->
-                    let (elpi__state, elpi__5, elpi__4) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__3 in
-                    (elpi__state,
-                      (Elpi.API.RawData.mkAppGlobalL
-                         elpi_constant_constructor_color_Bluec [elpi__5]),
-                      (List.concat [elpi__4]))
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+        elpi__fun_arg ->
+        match elpi__fun_arg with
+        | Red ->
+            (elpi__state,
+              (Elpi.API.RawData.mkAppGlobalL
+                 elpi_constant_constructor_color_Redc []), (List.concat []))
+        | Green ->
+            (elpi__state,
+              (Elpi.API.RawData.mkAppGlobalL
+                 elpi_constant_constructor_color_Greenc []),
+              (List.concat []))
+        | Blue elpi__3 ->
+            let (elpi__state, elpi__5, elpi__4) =
+              (fun ~depth h c s t ->
+                 Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.embed
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__3 in
+            (elpi__state,
+              (Elpi.API.RawData.mkAppGlobalL
+                 elpi_constant_constructor_color_Bluec [elpi__5]),
+              (List.concat [elpi__4]))
     and elpi_readback_color :
       'c 'csts . (color, 'c, 'csts) Elpi.API.ContextualConversion.readback =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__x ->
-                match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
-                | Elpi.API.RawData.Const elpi__hd when
-                    elpi__hd == elpi_constant_constructor_color_Redc ->
-                    (elpi__state, Red, [])
-                | Elpi.API.RawData.Const elpi__hd when
-                    elpi__hd == elpi_constant_constructor_color_Greenc ->
-                    (elpi__state, Green, [])
-                | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
-                    elpi__hd == elpi_constant_constructor_color_Bluec ->
-                    let (elpi__state, elpi__2, elpi__1) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.readback
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__x in
-                    (match elpi__xs with
-                     | [] ->
-                         (elpi__state, (Blue elpi__2),
-                           (List.concat [elpi__1]))
-                     | _ ->
-                         Elpi.API.Utils.type_error
-                           ("Not enough arguments to constructor: " ^
-                              (Elpi.API.RawData.Constants.show
-                                 elpi_constant_constructor_color_Bluec)))
-                | _ ->
-                    Elpi.API.Utils.type_error
-                      (Format.asprintf "Not a constructor of type %s: %a"
-                         "color" (Elpi.API.RawPp.term elpi__depth) elpi__x)
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state elpi__x
+        ->
+        match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
+        | Elpi.API.RawData.Const elpi__hd when
+            elpi__hd == elpi_constant_constructor_color_Redc ->
+            (elpi__state, Red, [])
+        | Elpi.API.RawData.Const elpi__hd when
+            elpi__hd == elpi_constant_constructor_color_Greenc ->
+            (elpi__state, Green, [])
+        | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
+            elpi__hd == elpi_constant_constructor_color_Bluec ->
+            let (elpi__state, elpi__2, elpi__1) =
+              (fun ~depth h c s t ->
+                 Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.readback
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__x in
+            (match elpi__xs with
+             | [] -> (elpi__state, (Blue elpi__2), (List.concat [elpi__1]))
+             | _ ->
+                 Elpi.API.Utils.type_error
+                   ("Not enough arguments to constructor: " ^
+                      (Elpi.API.RawData.Constants.show
+                         elpi_constant_constructor_color_Bluec)))
+        | _ ->
+            Elpi.API.Utils.type_error
+              (Format.asprintf "Not a constructor of type %s: %a" "color"
+                 (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and color : 'c 'csts . (color, 'c, 'csts) Elpi.API.ContextualConversion.t
       =
       let kind = Elpi.API.ContextualConversion.TyName "color" in
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc =
-          (fun fmt ->
-             fun () ->
-               Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
-                 ~ty:kind ~name:"red" ~doc:"Red" ~args:[];
-               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
-                 ~ty:kind ~name:"green" ~doc:"Green" ~args:[];
-               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
-                 ~ty:kind ~name:"blue" ~doc:"Blue"
-                 ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty]);
+          (fun fmt () ->
+             Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+               ~ty:kind ~name:"red" ~doc:"Red" ~args:[];
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+               ~ty:kind ~name:"green" ~doc:"Green" ~args:[];
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+               ~ty:kind ~name:"blue" ~doc:"Blue"
+               ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty]);
         pp = pp_color;
         embed = elpi_embed_color;
         readback = elpi_readback_color
@@ -144,12 +126,9 @@ include
       "func color.copy color -> color.\ncolor.copy red red.\ncolor.copy green green.\ncolor.copy (blue A0) (blue B0) :- (int.copy A0 B0).\n\n"
     class ctx_for_color (h : Elpi.API.Data.hyps)  (s : Elpi.API.Data.state)
       : Ctx_for_color.t = object (_) inherit  ((Elpi.API.PPX.ctx) h) end
-    let (in_ctx_for_color :
-      (Ctx_for_color.t, 'csts) Elpi.API.ContextualConversion.ctx_readback) =
-      fun ~depth ->
-        fun h ->
-          fun c ->
-            fun s -> (s, ((new ctx_for_color) h s), c, (List.concat []))
+    let in_ctx_for_color :
+      (Ctx_for_color.t, 'csts) Elpi.API.ContextualConversion.ctx_readback =
+      fun ~depth h c s -> (s, ((new ctx_for_color) h s), c, (List.concat []))
     let () =
       Elpi.API.PPX.add_declarations declaration
         [elpi_color; Elpi.API.BuiltIn.LPCode elpi__color__deep_copy]
@@ -161,38 +140,37 @@ type lam =
   | Lm of string * lam [@@deriving show]
 include
   struct
-    let rec pp_lam
-      : Ppx_deriving_runtime.Format.formatter ->
-          lam -> Ppx_deriving_runtime.unit
+    let rec pp_lam :
+      Ppx_deriving_runtime.Format.formatter ->
+        lam -> Ppx_deriving_runtime.unit
       =
-      ((let __2 = pp_lam
-        and __1 = pp_lam
-        and __0 = pp_lam in
-        ((let open! ((Ppx_deriving_runtime)[@ocaml.warning "-A"]) in
-            fun fmt ->
-              function
-              | V a0 ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_mixed_conversions_pred.V@ ";
-                   (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@])")
-              | Ap (a0, a1) ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_mixed_conversions_pred.Ap (@,";
-                   ((__0 fmt) a0;
-                    Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
-                    (__1 fmt) a1);
-                   Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
-              | Lm (a0, a1) ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_mixed_conversions_pred.Lm (@,";
-                   ((Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                    Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
-                    (__2 fmt) a1);
-                   Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
-          [@ocaml.warning "-A"]))
-      [@ocaml.warning "-39"])
-    and show_lam : lam -> Ppx_deriving_runtime.string =
+      let __2 = pp_lam
+      and __1 = pp_lam
+      and __0 = pp_lam in
+      ((let open! Ppx_deriving_runtime in
+          fun fmt ->
+            function
+            | V a0 ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_mixed_conversions_pred.V@ ";
+                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+            | Ap (a0, a1) ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_mixed_conversions_pred.Ap (@,";
+                 ((__0 fmt) a0;
+                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  (__1 fmt) a1);
+                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+            | Lm (a0, a1) ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_mixed_conversions_pred.Lm (@,";
+                 ((Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
+                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  (__2 fmt) a1);
+                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
+        [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
+    let show_lam : lam -> Ppx_deriving_runtime.string =
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_lam x[@@ocaml.warning
                                                                    "-32"]
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
@@ -202,35 +180,28 @@ let c_lm = RawData.Constants.declare_global_symbol "lm"
 let c_known = RawData.Constants.declare_global_symbol "known"
 let known_ctx : (context, Data.constraints) ContextualConversion.ctx_readback
   =
-  fun ~depth ->
-    fun hyps ->
-      fun csts ->
-        fun state ->
-          let (ctx, state, gls) =
-            List.fold_left
-              (fun (ctx, state, gls) ->
-                 fun { RawData.hdepth = hdepth; hsrc } ->
-                   match RawData.look ~depth:hdepth hsrc with
-                   | RawData.App (c, x, s::[]) when c = c_known ->
-                       (match RawData.look ~depth:hdepth x with
-                        | RawData.Const l ->
-                            let (state, s, g) =
-                              BuiltInData.string.readback ~depth:hdepth state
-                                s in
-                            ((RawData.Constants.Map.add l s ctx), state,
-                              (g @ gls))
-                        | _ -> (ctx, state, gls))
-                   | _ -> (ctx, state, gls))
-              (RawData.Constants.Map.empty, state, []) (RawData.of_hyps hyps) in
-          (state, ctx, csts, gls)
+  fun ~depth hyps csts state ->
+    let (ctx, state, gls) =
+      List.fold_left
+        (fun (ctx, state, gls) { RawData.hdepth = hdepth; hsrc } ->
+           match RawData.look ~depth:hdepth hsrc with
+           | RawData.App (c, x, s::[]) when c = c_known ->
+               (match RawData.look ~depth:hdepth x with
+                | RawData.Const l ->
+                    let (state, s, g) =
+                      BuiltInData.string.readback ~depth:hdepth state s in
+                    ((RawData.Constants.Map.add l s ctx), state, (g @ gls))
+                | _ -> (ctx, state, gls))
+           | _ -> (ctx, state, gls)) (RawData.Constants.Map.empty, state, [])
+        (RawData.of_hyps hyps) in
+    (state, ctx, csts, gls)
 let level_of (ctx : context) name =
   match RawData.Constants.Map.fold
-          (fun l -> fun n -> fun acc -> if n = name then Some l else acc) ctx
-          None
+          (fun l n acc -> if n = name then Some l else acc) ctx None
   with
   | Some l -> l
   | None -> Utils.type_error ("unbound variable " ^ name)
-let rec embed_lam ~depth  (ctx : context) csts state =
+let rec embed_lam ~depth (ctx : context) csts state =
   function
   | V s -> (state, (RawData.mkBound (level_of ctx s)), [])
   | Ap (a, b) ->
@@ -242,7 +213,7 @@ let rec embed_lam ~depth  (ctx : context) csts state =
       let ctx = RawData.Constants.Map.add depth name ctx in
       let (state, t, g) = embed_lam ~depth:(depth + 1) ctx csts state t in
       (state, (RawData.mkAppGlobal c_lm s [RawData.mkLam t]), (gs @ g))
-let rec readback_lam ~depth  (ctx : context) csts state t =
+let rec readback_lam ~depth (ctx : context) csts state t =
   match RawData.look ~depth t with
   | RawData.Const l ->
       (match RawData.Constants.Map.find_opt l ctx with
@@ -267,13 +238,11 @@ let lam : (lam, context, Data.constraints) ContextualConversion.t =
     ty = (TyName "lam");
     pp = pp_lam;
     pp_doc =
-      (fun fmt ->
-         fun () ->
-           Format.fprintf fmt "data lam.@\n";
-           Format.fprintf fmt
-             "builtin symb ap : lam -> lam -> lam = \"0\".@\n";
-           Format.fprintf fmt
-             "builtin symb lm : string -> (lam -> lam) -> lam = \"0\".@\n@\n");
+      (fun fmt () ->
+         Format.fprintf fmt "data lam.@\n";
+         Format.fprintf fmt "builtin symb ap : lam -> lam -> lam = \"0\".@\n";
+         Format.fprintf fmt
+           "builtin symb lm : string -> (lam -> lam) -> lam = \"0\".@\n@\n");
     embed = embed_lam;
     readback = readback_lam
   }
@@ -292,21 +261,14 @@ let describe =
                           (Read
                              (known_ctx,
                                "describes a term and a colour, and applies the term to y")))))))))),
-      (fun (t : lam) ->
-         fun (c : color) ->
-           fun (_s : string BuiltInPredicate.oarg) ->
-             fun (_r : lam BuiltInPredicate.oarg) ->
-               fun ~depth:_ ->
-                 fun (ctx : context) ->
-                   fun (_cst : Data.constraints) ->
-                     fun (_state : State.t) ->
-                       (!:
-                          (Format.asprintf "%a ; %a ; known: %s" pp_color c
-                             pp_lam t
-                             (String.concat ", "
-                                (List.map snd
-                                   (RawData.Constants.Map.bindings ctx)))))
-                         +! (Ap (t, (V "y")))))
+      (fun (t : lam) (c : color) (_s : string BuiltInPredicate.oarg)
+         (_r : lam BuiltInPredicate.oarg) ~depth:_ (ctx : context)
+         (_cst : Data.constraints) (_state : State.t) ->
+         (!:
+            (Format.asprintf "%a ; %a ; known: %s" pp_color c pp_lam t
+               (String.concat ", "
+                  (List.map snd (RawData.Constants.Map.bindings ctx)))))
+           +! (Ap (t, (V "y")))))
 let builtin =
   let open BuiltIn in
     BuiltIn.declare ~file_name

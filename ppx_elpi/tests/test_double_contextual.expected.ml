@@ -18,11 +18,11 @@ type tyctx =
 include
   struct
     [@@@ocaml.warning "-60"]
-    let rec pp_tyctx
-      : Ppx_deriving_runtime.Format.formatter ->
-          tyctx -> Ppx_deriving_runtime.unit
+    let pp_tyctx :
+      Ppx_deriving_runtime.Format.formatter ->
+        tyctx -> Ppx_deriving_runtime.unit
       =
-      ((let open! ((Ppx_deriving_runtime)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime in
           fun fmt ->
             function
             | TEntry (a0, a1) ->
@@ -32,8 +32,8 @@ include
                   Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
                   (Ppx_deriving_runtime.Format.fprintf fmt "%B") a1);
                  Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
-      [@ocaml.warning "-39"][@ocaml.warning "-A"])
-    and show_tyctx : tyctx -> Ppx_deriving_runtime.string =
+      [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
+    let show_tyctx : tyctx -> Ppx_deriving_runtime.string =
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_tyctx x[@@ocaml.warning
                                                                     "-32"]
     [@@@warning "-26-27-32-39-60"]
@@ -48,7 +48,7 @@ include
     module Elpi_tyctx_Map = (Elpi.API.Utils.Map.Make)(String)
     let elpi_tyctx_state =
       Elpi.API.State.declare_component ~name:"tyctx"
-        ~pp:(fun fmt -> fun _ -> Format.fprintf fmt "TODO")
+        ~pp:(fun fmt _ -> Format.fprintf fmt "TODO")
         ~init:(fun () ->
                  ((Elpi_tyctx_Map.empty : Elpi.API.RawData.constant
                                             Elpi_tyctx_Map.t),
@@ -56,7 +56,7 @@ include
                                                              Elpi.API.PPX.ctx_entry
                                                              Elpi.API.RawData.Constants.Map.t)))
         ~start:(fun x -> x) ()
-    let elpi_tyctx_to_key ~depth:_  elpi__fun_arg =
+    let elpi_tyctx_to_key ~depth:_ elpi__fun_arg =
       match elpi__fun_arg with | TEntry (elpi__16, _) -> elpi__16
     let elpi_is_tyctx { Elpi.API.Data.hdepth = elpi__depth; hsrc = elpi__x }
       =
@@ -72,7 +72,7 @@ include
                    "context entry applied to a non bound variable")
           else None
       | _ -> None
-    let elpi_push_tyctx ~depth:elpi__depth  elpi__state elpi__name
+    let elpi_push_tyctx ~depth:elpi__depth elpi__state elpi__name
       elpi__ctx_item =
       let (elpi__ctx2dbl, elpi__dbl2ctx) =
         Elpi.API.State.get elpi_tyctx_state elpi__state in
@@ -85,7 +85,7 @@ include
         Elpi.API.State.set elpi_tyctx_state elpi__state
           (elpi__ctx2dbl, elpi__dbl2ctx) in
       elpi__state
-    let elpi_pop_tyctx ~depth:elpi__depth  elpi__state elpi__name =
+    let elpi_pop_tyctx ~depth:elpi__depth elpi__state elpi__name =
       let (elpi__ctx2dbl, elpi__dbl2ctx) =
         Elpi.API.State.get elpi_tyctx_state elpi__state in
       let elpi__i = elpi__depth in
@@ -103,111 +103,73 @@ include
         ((Elpi.API.RawData.constant * tyctx), 'c, 'csts)
           Elpi.API.ContextualConversion.embedding
       =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__fun_arg ->
-                match elpi__fun_arg with
-                | (elpi__9, TEntry (elpi__7, elpi__8)) ->
-                    let (elpi__state, elpi__13, elpi__10) =
-                      (fun ~depth ->
-                         fun elpi__hyps ->
-                           fun elpi__constraints ->
-                             fun elpi__state ->
-                               fun elpi__i ->
-                                 if elpi__i < 0
-                                 then
-                                   Elpi.API.Utils.type_error
-                                     "not a bound variable";
-                                 (elpi__state,
-                                   (Elpi.API.RawData.mkConst elpi__i), []))
-                        ~depth:elpi__depth elpi__hyps elpi__constraints
-                        elpi__state elpi__9 in
-                    let (elpi__state, elpi__14, elpi__11) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__7 in
-                    let (elpi__state, elpi__15, elpi__12) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__8 in
-                    (elpi__state,
-                      (Elpi.API.RawData.mkAppGlobalL
-                         elpi_constant_constructor_tyctx_TEntryc
-                         [elpi__13; elpi__14; elpi__15]),
-                      (List.concat [elpi__10; elpi__11; elpi__12]))
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+        elpi__fun_arg ->
+        match elpi__fun_arg with
+        | (elpi__9, TEntry (elpi__7, elpi__8)) ->
+            let (elpi__state, elpi__13, elpi__10) =
+              (fun ~depth elpi__hyps elpi__constraints elpi__state elpi__i ->
+                 if elpi__i < 0
+                 then Elpi.API.Utils.type_error "not a bound variable";
+                 (elpi__state, (Elpi.API.RawData.mkConst elpi__i), []))
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__9 in
+            let (elpi__state, elpi__14, elpi__11) =
+              (fun ~depth h c s t ->
+                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__7 in
+            let (elpi__state, elpi__15, elpi__12) =
+              (fun ~depth h c s t ->
+                 Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.embed
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__8 in
+            (elpi__state,
+              (Elpi.API.RawData.mkAppGlobalL
+                 elpi_constant_constructor_tyctx_TEntryc
+                 [elpi__13; elpi__14; elpi__15]),
+              (List.concat [elpi__10; elpi__11; elpi__12]))
     and elpi_readback_tyctx :
       'c 'csts .
         ((Elpi.API.RawData.constant * tyctx), 'c, 'csts)
           Elpi.API.ContextualConversion.readback
       =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__x ->
-                match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
-                | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
-                    elpi__hd == elpi_constant_constructor_tyctx_TEntryc ->
-                    let (elpi__state, elpi__6, elpi__5) =
-                      (fun ~depth ->
-                         fun elpi__hyps ->
-                           fun elpi__constraints ->
-                             fun elpi__state ->
-                               fun elpi__t ->
-                                 match Elpi.API.RawData.look ~depth elpi__t
-                                 with
-                                 | Elpi.API.RawData.Const elpi__i when
-                                     elpi__i >= 0 ->
-                                     (elpi__state, elpi__i, [])
-                                 | _ ->
-                                     Elpi.API.Utils.type_error
-                                       "not a bound variable")
-                        ~depth:elpi__depth elpi__hyps elpi__constraints
-                        elpi__state elpi__x in
-                    (match elpi__xs with
-                     | elpi__1::elpi__2::[] ->
-                         let (elpi__state, elpi__1, elpi__3) =
-                           (fun ~depth ->
-                              fun h ->
-                                fun c ->
-                                  fun s ->
-                                    fun t ->
-                                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
-                                        ~depth h c s t) ~depth:elpi__depth
-                             elpi__hyps elpi__constraints elpi__state elpi__1 in
-                         let (elpi__state, elpi__2, elpi__4) =
-                           (fun ~depth ->
-                              fun h ->
-                                fun c ->
-                                  fun s ->
-                                    fun t ->
-                                      Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.readback
-                                        ~depth h c s t) ~depth:elpi__depth
-                             elpi__hyps elpi__constraints elpi__state elpi__2 in
-                         (elpi__state,
-                           (elpi__6, (TEntry (elpi__1, elpi__2))),
-                           (List.concat [elpi__5; elpi__3; elpi__4]))
-                     | _ ->
-                         Elpi.API.Utils.type_error
-                           ("Not enough arguments to constructor: " ^
-                              (Elpi.API.RawData.Constants.show
-                                 elpi_constant_constructor_tyctx_TEntryc)))
-                | _ ->
-                    Elpi.API.Utils.type_error
-                      (Format.asprintf "Not a constructor of type %s: %a"
-                         "tyctx" (Elpi.API.RawPp.term elpi__depth) elpi__x)
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state elpi__x
+        ->
+        match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
+        | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
+            elpi__hd == elpi_constant_constructor_tyctx_TEntryc ->
+            let (elpi__state, elpi__6, elpi__5) =
+              (fun ~depth elpi__hyps elpi__constraints elpi__state elpi__t ->
+                 match Elpi.API.RawData.look ~depth elpi__t with
+                 | Elpi.API.RawData.Const elpi__i when elpi__i >= 0 ->
+                     (elpi__state, elpi__i, [])
+                 | _ -> Elpi.API.Utils.type_error "not a bound variable")
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__x in
+            (match elpi__xs with
+             | elpi__1::elpi__2::[] ->
+                 let (elpi__state, elpi__1, elpi__3) =
+                   (fun ~depth h c s t ->
+                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
+                        ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                     elpi__constraints elpi__state elpi__1 in
+                 let (elpi__state, elpi__2, elpi__4) =
+                   (fun ~depth h c s t ->
+                      Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.readback
+                        ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                     elpi__constraints elpi__state elpi__2 in
+                 (elpi__state, (elpi__6, (TEntry (elpi__1, elpi__2))),
+                   (List.concat [elpi__5; elpi__3; elpi__4]))
+             | _ ->
+                 Elpi.API.Utils.type_error
+                   ("Not enough arguments to constructor: " ^
+                      (Elpi.API.RawData.Constants.show
+                         elpi_constant_constructor_tyctx_TEntryc)))
+        | _ ->
+            Elpi.API.Utils.type_error
+              (Format.asprintf "Not a constructor of type %s: %a" "tyctx"
+                 (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and tyctx :
       'c 'csts .
         ((Elpi.API.RawData.constant * tyctx), 'c, 'csts)
@@ -217,15 +179,13 @@ include
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc =
-          (fun fmt ->
-             fun () ->
-               ();
-               Elpi.API.PPX.Doc.context_entry fmt ~name:"tentry"
-                 ~doc:"TEntry"
-                 ~key:(Elpi.API.ContextualConversion.TyName "ty")
-                 ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
-                       Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty]);
-        pp = (fun fmt -> fun (_, x) -> pp_tyctx fmt x);
+          (fun fmt () ->
+             ();
+             Elpi.API.PPX.Doc.context_entry fmt ~name:"tentry" ~doc:"TEntry"
+               ~key:(Elpi.API.ContextualConversion.TyName "ty")
+               ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
+                     Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty]);
+        pp = (fun fmt (_, x) -> pp_tyctx fmt x);
         embed = elpi_embed_tyctx;
         readback = elpi_readback_tyctx
       }
@@ -250,60 +210,55 @@ include
     let elpi_tyctx = Elpi.API.BuiltIn.MLDataC tyctx
     class ctx_for_tyctx (h : Elpi.API.Data.hyps)  (s : Elpi.API.Data.state)
       : Ctx_for_tyctx.t = object (_) inherit  ((Elpi.API.PPX.ctx) h) end
-    let (in_ctx_for_tyctx :
-      (Ctx_for_tyctx.t, 'csts) Elpi.API.ContextualConversion.ctx_readback) =
-      fun ~depth ->
-        fun h ->
-          fun c ->
-            fun s -> (s, ((new ctx_for_tyctx) h s), c, (List.concat []))
+    let in_ctx_for_tyctx :
+      (Ctx_for_tyctx.t, 'csts) Elpi.API.ContextualConversion.ctx_readback =
+      fun ~depth h c s -> (s, ((new ctx_for_tyctx) h s), c, (List.concat []))
     let () = Elpi.API.PPX.add_declarations declaration [elpi_tyctx]
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type ty =
   | TVar of string [@elpi.var tyctx]
   | TApp of string * ty 
   | TAll of bool * string *
-  ((ty)[@elpi.binder tyctx (fun b -> fun s -> TEntry (s, b))]) [@@deriving
-                                                                 (show,
-                                                                   (elpi
-                                                                    {
-                                                                    declaration
-                                                                    }))]
+  ((ty)[@elpi.binder tyctx (fun b s -> TEntry (s, b))]) [@@deriving
+                                                          (show,
+                                                            (elpi
+                                                               { declaration
+                                                               }))]
 include
   struct
     [@@@ocaml.warning "-60"]
-    let rec pp_ty
-      : Ppx_deriving_runtime.Format.formatter ->
-          ty -> Ppx_deriving_runtime.unit
+    let rec pp_ty :
+      Ppx_deriving_runtime.Format.formatter ->
+        ty -> Ppx_deriving_runtime.unit
       =
-      ((let __1 = pp_ty
-        and __0 = pp_ty in
-        ((let open! ((Ppx_deriving_runtime)[@ocaml.warning "-A"]) in
-            fun fmt ->
-              function
-              | TVar a0 ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_double_contextual.TVar@ ";
-                   (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@])")
-              | TApp (a0, a1) ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_double_contextual.TApp (@,";
-                   ((Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                    Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
-                    (__0 fmt) a1);
-                   Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
-              | TAll (a0, a1, a2) ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_double_contextual.TAll (@,";
-                   (((Ppx_deriving_runtime.Format.fprintf fmt "%B") a0;
-                     Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
-                     (Ppx_deriving_runtime.Format.fprintf fmt "%S") a1);
-                    Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
-                    (__1 fmt) a2);
-                   Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
-          [@ocaml.warning "-A"]))
-      [@ocaml.warning "-39"])
-    and show_ty : ty -> Ppx_deriving_runtime.string =
+      let __1 = pp_ty
+      and __0 = pp_ty in
+      ((let open! Ppx_deriving_runtime in
+          fun fmt ->
+            function
+            | TVar a0 ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_double_contextual.TVar@ ";
+                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+            | TApp (a0, a1) ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_double_contextual.TApp (@,";
+                 ((Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
+                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  (__0 fmt) a1);
+                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+            | TAll (a0, a1, a2) ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_double_contextual.TAll (@,";
+                 (((Ppx_deriving_runtime.Format.fprintf fmt "%B") a0;
+                   Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                   (Ppx_deriving_runtime.Format.fprintf fmt "%S") a1);
+                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  (__1 fmt) a2);
+                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
+        [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
+    let show_ty : ty -> Ppx_deriving_runtime.string =
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_ty x[@@ocaml.warning
                                                                   "-32"]
     [@@@warning "-26-27-32-39-60"]
@@ -336,217 +291,158 @@ include
         (ty, #Ctx_for_ty.t as 'c, 'csts)
           Elpi.API.ContextualConversion.embedding
       =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__fun_arg ->
-                match elpi__fun_arg with
-                | TVar elpi__29 ->
-                    let (elpi__ctx2dbl, _) =
-                      Elpi.API.State.get elpi_tyctx_state elpi__state in
-                    let elpi__key = (fun x -> x) elpi__29 in
-                    (if not (Elpi_tyctx_Map.mem elpi__key elpi__ctx2dbl)
-                     then Elpi.API.Utils.error "Unbound variable";
-                     (elpi__state,
-                       (Elpi.API.RawData.mkBound
-                          (Elpi_tyctx_Map.find elpi__key elpi__ctx2dbl)), []))
-                | TApp (elpi__32, elpi__33) ->
-                    let (elpi__state, elpi__36, elpi__34) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__32 in
-                    let (elpi__state, elpi__37, elpi__35) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s -> fun t -> elpi_embed_ty ~depth h c s t)
-                        ~depth:elpi__depth elpi__hyps elpi__constraints
-                        elpi__state elpi__33 in
-                    (elpi__state,
-                      (Elpi.API.RawData.mkAppGlobalL
-                         elpi_constant_constructor_ty_TAppc
-                         [elpi__36; elpi__37]),
-                      (List.concat [elpi__34; elpi__35]))
-                | TAll (elpi__38, elpi__39, elpi__40) ->
-                    let (elpi__state, elpi__44, elpi__41) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__38 in
-                    let (elpi__state, elpi__45, elpi__42) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__39 in
-                    let elpi__ctx_entry =
-                      (fun b -> fun s -> TEntry (s, b)) elpi__38 elpi__39 in
-                    let elpi__ctx_key =
-                      elpi_tyctx_to_key ~depth:elpi__depth elpi__ctx_entry in
-                    let elpi__ctx_entry =
-                      {
-                        Elpi.API.PPX.entry = elpi__ctx_entry;
-                        depth = elpi__depth
-                      } in
-                    let elpi__state =
-                      elpi_push_tyctx ~depth:(elpi__depth + 1) elpi__state
-                        elpi__ctx_key elpi__ctx_entry in
-                    let (elpi__state, elpi__47, elpi__43) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s -> fun t -> elpi_embed_ty ~depth h c s t)
-                        ~depth:(elpi__depth + 1) elpi__hyps elpi__constraints
-                        elpi__state elpi__40 in
-                    let elpi__46 = Elpi.API.RawData.mkLam elpi__47 in
-                    let elpi__state =
-                      elpi_pop_tyctx ~depth:(elpi__depth + 1) elpi__state
-                        elpi__ctx_key in
-                    (elpi__state,
-                      (Elpi.API.RawData.mkAppGlobalL
-                         elpi_constant_constructor_ty_TAllc
-                         [elpi__44; elpi__45; elpi__46]),
-                      (List.concat [elpi__41; elpi__42; elpi__43]))
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+        elpi__fun_arg ->
+        match elpi__fun_arg with
+        | TVar elpi__29 ->
+            let (elpi__ctx2dbl, _) =
+              Elpi.API.State.get elpi_tyctx_state elpi__state in
+            let elpi__key = (fun x -> x) elpi__29 in
+            (if not (Elpi_tyctx_Map.mem elpi__key elpi__ctx2dbl)
+             then Elpi.API.Utils.error "Unbound variable";
+             (elpi__state,
+               (Elpi.API.RawData.mkBound
+                  (Elpi_tyctx_Map.find elpi__key elpi__ctx2dbl)), []))
+        | TApp (elpi__32, elpi__33) ->
+            let (elpi__state, elpi__36, elpi__34) =
+              (fun ~depth h c s t ->
+                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__32 in
+            let (elpi__state, elpi__37, elpi__35) =
+              (fun ~depth h c s t -> elpi_embed_ty ~depth h c s t)
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__33 in
+            (elpi__state,
+              (Elpi.API.RawData.mkAppGlobalL
+                 elpi_constant_constructor_ty_TAppc [elpi__36; elpi__37]),
+              (List.concat [elpi__34; elpi__35]))
+        | TAll (elpi__38, elpi__39, elpi__40) ->
+            let (elpi__state, elpi__44, elpi__41) =
+              (fun ~depth h c s t ->
+                 Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.embed
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__38 in
+            let (elpi__state, elpi__45, elpi__42) =
+              (fun ~depth h c s t ->
+                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__39 in
+            let elpi__ctx_entry =
+              (fun b s -> TEntry (s, b)) elpi__38 elpi__39 in
+            let elpi__ctx_key =
+              elpi_tyctx_to_key ~depth:elpi__depth elpi__ctx_entry in
+            let elpi__ctx_entry =
+              { Elpi.API.PPX.entry = elpi__ctx_entry; depth = elpi__depth } in
+            let elpi__state =
+              elpi_push_tyctx ~depth:elpi__depth elpi__state elpi__ctx_key
+                elpi__ctx_entry in
+            let (elpi__state, elpi__47, elpi__43) =
+              (fun ~depth h c s t -> elpi_embed_ty ~depth h c s t)
+                ~depth:(elpi__depth + 1) elpi__hyps elpi__constraints
+                elpi__state elpi__40 in
+            let elpi__46 = Elpi.API.RawData.mkLam elpi__47 in
+            let elpi__state =
+              elpi_pop_tyctx ~depth:elpi__depth elpi__state elpi__ctx_key in
+            (elpi__state,
+              (Elpi.API.RawData.mkAppGlobalL
+                 elpi_constant_constructor_ty_TAllc
+                 [elpi__44; elpi__45; elpi__46]),
+              (List.concat [elpi__41; elpi__42; elpi__43]))
     and elpi_readback_ty :
       'c 'csts .
         (ty, #Ctx_for_ty.t as 'c, 'csts)
           Elpi.API.ContextualConversion.readback
       =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__x ->
-                match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
-                | Elpi.API.RawData.Const elpi__hd when elpi__hd >= 0 ->
-                    let (_, elpi__dbl2ctx) =
-                      Elpi.API.State.get elpi_tyctx_state elpi__state in
-                    (if
-                       not
-                         (Elpi.API.RawData.Constants.Map.mem elpi__hd
-                            elpi__dbl2ctx)
-                     then
-                       Elpi.API.Utils.error
-                         (Format.asprintf "Unbound variable: %s in %a"
-                            (Elpi.API.RawData.Constants.show elpi__hd)
-                            (Elpi.API.RawData.Constants.Map.pp
-                               (Elpi.API.PPX.pp_ctx_entry pp_tyctx))
-                            elpi__dbl2ctx);
-                     (let { Elpi.API.PPX.entry = elpi__entry;
-                            depth = elpi__depth }
-                        =
-                        Elpi.API.RawData.Constants.Map.find elpi__hd
-                          elpi__dbl2ctx in
-                      (elpi__state,
-                        (TVar
-                           (elpi_tyctx_to_key ~depth:elpi__depth elpi__entry)),
-                        [])))
-                | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
-                    elpi__hd == elpi_constant_constructor_ty_TAppc ->
-                    let (elpi__state, elpi__22, elpi__21) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__x in
-                    (match elpi__xs with
-                     | elpi__19::[] ->
-                         let (elpi__state, elpi__19, elpi__20) =
-                           (fun ~depth ->
-                              fun h ->
-                                fun c ->
-                                  fun s ->
-                                    fun t -> elpi_readback_ty ~depth h c s t)
-                             ~depth:elpi__depth elpi__hyps elpi__constraints
-                             elpi__state elpi__19 in
-                         (elpi__state, (TApp (elpi__22, elpi__19)),
-                           (List.concat [elpi__21; elpi__20]))
-                     | _ ->
-                         Elpi.API.Utils.type_error
-                           ("Not enough arguments to constructor: " ^
-                              (Elpi.API.RawData.Constants.show
-                                 elpi_constant_constructor_ty_TAppc)))
-                | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
-                    elpi__hd == elpi_constant_constructor_ty_TAllc ->
-                    let (elpi__state, elpi__28, elpi__27) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.readback
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__x in
-                    (match elpi__xs with
-                     | elpi__23::elpi__24::[] ->
-                         let (elpi__state, elpi__23, elpi__25) =
-                           (fun ~depth ->
-                              fun h ->
-                                fun c ->
-                                  fun s ->
-                                    fun t ->
-                                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
-                                        ~depth h c s t) ~depth:elpi__depth
-                             elpi__hyps elpi__constraints elpi__state
-                             elpi__23 in
-                         let elpi__ctx_entry =
-                           (fun b -> fun s -> TEntry (s, b)) elpi__28
-                             elpi__23 in
-                         let elpi__ctx_key =
-                           elpi_tyctx_to_key ~depth:elpi__depth
-                             elpi__ctx_entry in
-                         let elpi__ctx_entry =
-                           {
-                             Elpi.API.PPX.entry = elpi__ctx_entry;
-                             depth = elpi__depth
-                           } in
-                         let elpi__state =
-                           elpi_push_tyctx ~depth:elpi__depth elpi__state
-                             elpi__ctx_key elpi__ctx_entry in
-                         let (elpi__state, elpi__24, elpi__26) =
-                           match Elpi.API.RawData.look ~depth:elpi__depth
-                                   elpi__24
-                           with
-                           | Elpi.API.RawData.Lam elpi__bo ->
-                               ((fun ~depth ->
-                                   fun h ->
-                                     fun c ->
-                                       fun s ->
-                                         fun t ->
-                                           elpi_readback_ty ~depth h c s t))
-                                 ~depth:(elpi__depth + 1) elpi__hyps
-                                 elpi__constraints elpi__state elpi__bo
-                           | _ -> assert false in
-                         let elpi__state =
-                           elpi_pop_tyctx ~depth:elpi__depth elpi__state
-                             elpi__ctx_key in
-                         (elpi__state, (TAll (elpi__28, elpi__23, elpi__24)),
-                           (List.concat [elpi__27; elpi__25; elpi__26]))
-                     | _ ->
-                         Elpi.API.Utils.type_error
-                           ("Not enough arguments to constructor: " ^
-                              (Elpi.API.RawData.Constants.show
-                                 elpi_constant_constructor_ty_TAllc)))
-                | _ ->
-                    Elpi.API.Utils.type_error
-                      (Format.asprintf "Not a constructor of type %s: %a"
-                         "ty" (Elpi.API.RawPp.term elpi__depth) elpi__x)
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state elpi__x
+        ->
+        match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
+        | Elpi.API.RawData.Const elpi__hd when elpi__hd >= 0 ->
+            let (_, elpi__dbl2ctx) =
+              Elpi.API.State.get elpi_tyctx_state elpi__state in
+            (if
+               not
+                 (Elpi.API.RawData.Constants.Map.mem elpi__hd elpi__dbl2ctx)
+             then
+               Elpi.API.Utils.error
+                 (Format.asprintf "Unbound variable: %s in %a"
+                    (Elpi.API.RawData.Constants.show elpi__hd)
+                    (Elpi.API.RawData.Constants.Map.pp
+                       (Elpi.API.PPX.pp_ctx_entry pp_tyctx)) elpi__dbl2ctx);
+             (let { Elpi.API.PPX.entry = elpi__entry; depth = elpi__depth } =
+                Elpi.API.RawData.Constants.Map.find elpi__hd elpi__dbl2ctx in
+              (elpi__state,
+                (TVar (elpi_tyctx_to_key ~depth:elpi__depth elpi__entry)),
+                [])))
+        | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
+            elpi__hd == elpi_constant_constructor_ty_TAppc ->
+            let (elpi__state, elpi__22, elpi__21) =
+              (fun ~depth h c s t ->
+                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__x in
+            (match elpi__xs with
+             | elpi__19::[] ->
+                 let (elpi__state, elpi__19, elpi__20) =
+                   (fun ~depth h c s t -> elpi_readback_ty ~depth h c s t)
+                     ~depth:elpi__depth elpi__hyps elpi__constraints
+                     elpi__state elpi__19 in
+                 (elpi__state, (TApp (elpi__22, elpi__19)),
+                   (List.concat [elpi__21; elpi__20]))
+             | _ ->
+                 Elpi.API.Utils.type_error
+                   ("Not enough arguments to constructor: " ^
+                      (Elpi.API.RawData.Constants.show
+                         elpi_constant_constructor_ty_TAppc)))
+        | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
+            elpi__hd == elpi_constant_constructor_ty_TAllc ->
+            let (elpi__state, elpi__28, elpi__27) =
+              (fun ~depth h c s t ->
+                 Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.readback
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__x in
+            (match elpi__xs with
+             | elpi__23::elpi__24::[] ->
+                 let (elpi__state, elpi__23, elpi__25) =
+                   (fun ~depth h c s t ->
+                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
+                        ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                     elpi__constraints elpi__state elpi__23 in
+                 let elpi__ctx_entry =
+                   (fun b s -> TEntry (s, b)) elpi__28 elpi__23 in
+                 let elpi__ctx_key =
+                   elpi_tyctx_to_key ~depth:elpi__depth elpi__ctx_entry in
+                 let elpi__ctx_entry =
+                   {
+                     Elpi.API.PPX.entry = elpi__ctx_entry;
+                     depth = elpi__depth
+                   } in
+                 let elpi__state =
+                   elpi_push_tyctx ~depth:elpi__depth elpi__state
+                     elpi__ctx_key elpi__ctx_entry in
+                 let (elpi__state, elpi__24, elpi__26) =
+                   match Elpi.API.RawData.look ~depth:elpi__depth elpi__24
+                   with
+                   | Elpi.API.RawData.Lam elpi__bo ->
+                       ((fun ~depth h c s t ->
+                           elpi_readback_ty ~depth h c s t))
+                         ~depth:(elpi__depth + 1) elpi__hyps
+                         elpi__constraints elpi__state elpi__bo
+                   | _ -> assert false in
+                 let elpi__state =
+                   elpi_pop_tyctx ~depth:elpi__depth elpi__state
+                     elpi__ctx_key in
+                 (elpi__state, (TAll (elpi__28, elpi__23, elpi__24)),
+                   (List.concat [elpi__27; elpi__25; elpi__26]))
+             | _ ->
+                 Elpi.API.Utils.type_error
+                   ("Not enough arguments to constructor: " ^
+                      (Elpi.API.RawData.Constants.show
+                         elpi_constant_constructor_ty_TAllc)))
+        | _ ->
+            Elpi.API.Utils.type_error
+              (Format.asprintf "Not a constructor of type %s: %a" "ty"
+                 (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and ty :
       'c 'csts .
         (ty, #Ctx_for_ty.t as 'c, 'csts) Elpi.API.ContextualConversion.t
@@ -555,22 +451,21 @@ include
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc =
-          (fun fmt ->
-             fun () ->
-               Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:4 ~variant:0
-                 ~ty:kind ~name:"tapp" ~doc:"TApp"
-                 ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
-                       Elpi.API.ContextualConversion.TyName
-                         elpi_constant_type_ty];
-               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:4 ~variant:0
-                 ~ty:kind ~name:"tall" ~doc:"TAll"
-                 ~args:[Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty;
-                       Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
-                       Elpi.API.ContextualConversion.TyApp
-                         ("->", (Elpi.API.ContextualConversion.TyName "ty"),
-                           [Elpi.API.ContextualConversion.TyName
-                              elpi_constant_type_ty])]);
+          (fun fmt () ->
+             Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:4 ~variant:0
+               ~ty:kind ~name:"tapp" ~doc:"TApp"
+               ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
+                     Elpi.API.ContextualConversion.TyName
+                       elpi_constant_type_ty];
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:4 ~variant:0
+               ~ty:kind ~name:"tall" ~doc:"TAll"
+               ~args:[Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty;
+                     Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
+                     Elpi.API.ContextualConversion.TyApp
+                       ("->", (Elpi.API.ContextualConversion.TyName "ty"),
+                         [Elpi.API.ContextualConversion.TyName
+                            elpi_constant_type_ty])]);
         pp = pp_ty;
         embed = elpi_embed_ty;
         readback = elpi_readback_ty
@@ -585,17 +480,14 @@ include
         inherit ! ((ctx_for_tyctx) h s)
         method tyctx = context_made_of_tyctx.Elpi.API.PPX.get s
       end
-    let (in_ctx_for_ty :
-      (Ctx_for_ty.t, 'csts) Elpi.API.ContextualConversion.ctx_readback) =
-      fun ~depth ->
-        fun h ->
-          fun c ->
-            fun s ->
-              let ctx = (new ctx_for_tyctx) h s in
-              let (s, gls0) =
-                Elpi.API.PPX.readback_context ~depth context_made_of_tyctx
-                  ctx h c s in
-              (s, ((new ctx_for_ty) h s), c, (List.concat [gls0]))
+    let in_ctx_for_ty :
+      (Ctx_for_ty.t, 'csts) Elpi.API.ContextualConversion.ctx_readback =
+      fun ~depth h c s ->
+        let ctx = (new ctx_for_tyctx) h s in
+        let (s, gls0) =
+          Elpi.API.PPX.readback_context ~depth context_made_of_tyctx ctx h c
+            s in
+        (s, ((new ctx_for_ty) h s), c, (List.concat [gls0]))
     let () =
       Elpi.API.PPX.add_declarations declaration
         [elpi_ty; Elpi.API.BuiltIn.LPCode elpi__ty__deep_copy]
@@ -606,24 +498,23 @@ type tctx =
 include
   struct
     [@@@ocaml.warning "-60"]
-    let rec pp_tctx
-      : Ppx_deriving_runtime.Format.formatter ->
-          tctx -> Ppx_deriving_runtime.unit
+    let pp_tctx :
+      Ppx_deriving_runtime.Format.formatter ->
+        tctx -> Ppx_deriving_runtime.unit
       =
-      ((let __0 = pp_ty in
-        ((let open! ((Ppx_deriving_runtime)[@ocaml.warning "-A"]) in
-            fun fmt ->
-              function
-              | Entry (a0, a1) ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_double_contextual.Entry (@,";
-                   ((Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                    Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
-                    (__0 fmt) a1);
-                   Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
-          [@ocaml.warning "-A"]))
-      [@ocaml.warning "-39"])
-    and show_tctx : tctx -> Ppx_deriving_runtime.string =
+      let __0 = pp_ty in
+      ((let open! Ppx_deriving_runtime in
+          fun fmt ->
+            function
+            | Entry (a0, a1) ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_double_contextual.Entry (@,";
+                 ((Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
+                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  (__0 fmt) a1);
+                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
+        [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
+    let show_tctx : tctx -> Ppx_deriving_runtime.string =
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_tctx x[@@ocaml.warning
                                                                     "-32"]
     [@@@warning "-26-27-32-39-60"]
@@ -638,7 +529,7 @@ include
     module Elpi_tctx_Map = (Elpi.API.Utils.Map.Make)(String)
     let elpi_tctx_state =
       Elpi.API.State.declare_component ~name:"tctx"
-        ~pp:(fun fmt -> fun _ -> Format.fprintf fmt "TODO")
+        ~pp:(fun fmt _ -> Format.fprintf fmt "TODO")
         ~init:(fun () ->
                  ((Elpi_tctx_Map.empty : Elpi.API.RawData.constant
                                            Elpi_tctx_Map.t),
@@ -646,7 +537,7 @@ include
                                                              Elpi.API.PPX.ctx_entry
                                                              Elpi.API.RawData.Constants.Map.t)))
         ~start:(fun x -> x) ()
-    let elpi_tctx_to_key ~depth:_  elpi__fun_arg =
+    let elpi_tctx_to_key ~depth:_ elpi__fun_arg =
       match elpi__fun_arg with | Entry (elpi__63, _) -> elpi__63
     let elpi_is_tctx { Elpi.API.Data.hdepth = elpi__depth; hsrc = elpi__x } =
       match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
@@ -661,7 +552,7 @@ include
                    "context entry applied to a non bound variable")
           else None
       | _ -> None
-    let elpi_push_tctx ~depth:elpi__depth  elpi__state elpi__name
+    let elpi_push_tctx ~depth:elpi__depth elpi__state elpi__name
       elpi__ctx_item =
       let (elpi__ctx2dbl, elpi__dbl2ctx) =
         Elpi.API.State.get elpi_tctx_state elpi__state in
@@ -674,7 +565,7 @@ include
         Elpi.API.State.set elpi_tctx_state elpi__state
           (elpi__ctx2dbl, elpi__dbl2ctx) in
       elpi__state
-    let elpi_pop_tctx ~depth:elpi__depth  elpi__state elpi__name =
+    let elpi_pop_tctx ~depth:elpi__depth elpi__state elpi__name =
       let (elpi__ctx2dbl, elpi__dbl2ctx) =
         Elpi.API.State.get elpi_tctx_state elpi__state in
       let elpi__i = elpi__depth in
@@ -699,113 +590,73 @@ include
         ((Elpi.API.RawData.constant * tctx), #Ctx_for_tctx.t as 'c, 'csts)
           Elpi.API.ContextualConversion.embedding
       =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__fun_arg ->
-                match elpi__fun_arg with
-                | (elpi__56, Entry (elpi__54, elpi__55)) ->
-                    let (elpi__state, elpi__60, elpi__57) =
-                      (fun ~depth ->
-                         fun elpi__hyps ->
-                           fun elpi__constraints ->
-                             fun elpi__state ->
-                               fun elpi__i ->
-                                 if elpi__i < 0
-                                 then
-                                   Elpi.API.Utils.type_error
-                                     "not a bound variable";
-                                 (elpi__state,
-                                   (Elpi.API.RawData.mkConst elpi__i), []))
-                        ~depth:elpi__depth elpi__hyps elpi__constraints
-                        elpi__state elpi__56 in
-                    let (elpi__state, elpi__61, elpi__58) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__54 in
-                    let (elpi__state, elpi__62, elpi__59) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 ty.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__55 in
-                    (elpi__state,
-                      (Elpi.API.RawData.mkAppGlobalL
-                         elpi_constant_constructor_tctx_Entryc
-                         [elpi__60; elpi__61; elpi__62]),
-                      (List.concat [elpi__57; elpi__58; elpi__59]))
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+        elpi__fun_arg ->
+        match elpi__fun_arg with
+        | (elpi__56, Entry (elpi__54, elpi__55)) ->
+            let (elpi__state, elpi__60, elpi__57) =
+              (fun ~depth elpi__hyps elpi__constraints elpi__state elpi__i ->
+                 if elpi__i < 0
+                 then Elpi.API.Utils.type_error "not a bound variable";
+                 (elpi__state, (Elpi.API.RawData.mkConst elpi__i), []))
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__56 in
+            let (elpi__state, elpi__61, elpi__58) =
+              (fun ~depth h c s t ->
+                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__54 in
+            let (elpi__state, elpi__62, elpi__59) =
+              (fun ~depth h c s t ->
+                 ty.Elpi.API.ContextualConversion.embed ~depth h c s t)
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__55 in
+            (elpi__state,
+              (Elpi.API.RawData.mkAppGlobalL
+                 elpi_constant_constructor_tctx_Entryc
+                 [elpi__60; elpi__61; elpi__62]),
+              (List.concat [elpi__57; elpi__58; elpi__59]))
     and elpi_readback_tctx :
       'c 'csts .
         ((Elpi.API.RawData.constant * tctx), #Ctx_for_tctx.t as 'c, 'csts)
           Elpi.API.ContextualConversion.readback
       =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__x ->
-                match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
-                | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
-                    elpi__hd == elpi_constant_constructor_tctx_Entryc ->
-                    let (elpi__state, elpi__53, elpi__52) =
-                      (fun ~depth ->
-                         fun elpi__hyps ->
-                           fun elpi__constraints ->
-                             fun elpi__state ->
-                               fun elpi__t ->
-                                 match Elpi.API.RawData.look ~depth elpi__t
-                                 with
-                                 | Elpi.API.RawData.Const elpi__i when
-                                     elpi__i >= 0 ->
-                                     (elpi__state, elpi__i, [])
-                                 | _ ->
-                                     Elpi.API.Utils.type_error
-                                       "not a bound variable")
-                        ~depth:elpi__depth elpi__hyps elpi__constraints
-                        elpi__state elpi__x in
-                    (match elpi__xs with
-                     | elpi__48::elpi__49::[] ->
-                         let (elpi__state, elpi__48, elpi__50) =
-                           (fun ~depth ->
-                              fun h ->
-                                fun c ->
-                                  fun s ->
-                                    fun t ->
-                                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
-                                        ~depth h c s t) ~depth:elpi__depth
-                             elpi__hyps elpi__constraints elpi__state
-                             elpi__48 in
-                         let (elpi__state, elpi__49, elpi__51) =
-                           (fun ~depth ->
-                              fun h ->
-                                fun c ->
-                                  fun s ->
-                                    fun t ->
-                                      ty.Elpi.API.ContextualConversion.readback
-                                        ~depth h c s t) ~depth:elpi__depth
-                             elpi__hyps elpi__constraints elpi__state
-                             elpi__49 in
-                         (elpi__state,
-                           (elpi__53, (Entry (elpi__48, elpi__49))),
-                           (List.concat [elpi__52; elpi__50; elpi__51]))
-                     | _ ->
-                         Elpi.API.Utils.type_error
-                           ("Not enough arguments to constructor: " ^
-                              (Elpi.API.RawData.Constants.show
-                                 elpi_constant_constructor_tctx_Entryc)))
-                | _ ->
-                    Elpi.API.Utils.type_error
-                      (Format.asprintf "Not a constructor of type %s: %a"
-                         "tctx" (Elpi.API.RawPp.term elpi__depth) elpi__x)
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state elpi__x
+        ->
+        match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
+        | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
+            elpi__hd == elpi_constant_constructor_tctx_Entryc ->
+            let (elpi__state, elpi__53, elpi__52) =
+              (fun ~depth elpi__hyps elpi__constraints elpi__state elpi__t ->
+                 match Elpi.API.RawData.look ~depth elpi__t with
+                 | Elpi.API.RawData.Const elpi__i when elpi__i >= 0 ->
+                     (elpi__state, elpi__i, [])
+                 | _ -> Elpi.API.Utils.type_error "not a bound variable")
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__x in
+            (match elpi__xs with
+             | elpi__48::elpi__49::[] ->
+                 let (elpi__state, elpi__48, elpi__50) =
+                   (fun ~depth h c s t ->
+                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
+                        ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                     elpi__constraints elpi__state elpi__48 in
+                 let (elpi__state, elpi__49, elpi__51) =
+                   (fun ~depth h c s t ->
+                      ty.Elpi.API.ContextualConversion.readback ~depth h c s
+                        t) ~depth:elpi__depth elpi__hyps elpi__constraints
+                     elpi__state elpi__49 in
+                 (elpi__state, (elpi__53, (Entry (elpi__48, elpi__49))),
+                   (List.concat [elpi__52; elpi__50; elpi__51]))
+             | _ ->
+                 Elpi.API.Utils.type_error
+                   ("Not enough arguments to constructor: " ^
+                      (Elpi.API.RawData.Constants.show
+                         elpi_constant_constructor_tctx_Entryc)))
+        | _ ->
+            Elpi.API.Utils.type_error
+              (Format.asprintf "Not a constructor of type %s: %a" "tctx"
+                 (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and tctx :
       'c 'csts .
         ((Elpi.API.RawData.constant * tctx), #Ctx_for_tctx.t as 'c, 'csts)
@@ -815,14 +666,13 @@ include
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc =
-          (fun fmt ->
-             fun () ->
-               ();
-               Elpi.API.PPX.Doc.context_entry fmt ~name:"entry" ~doc:"Entry"
-                 ~key:(Elpi.API.ContextualConversion.TyName "term")
-                 ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
-                       ty.Elpi.API.ContextualConversion.ty]);
-        pp = (fun fmt -> fun (_, x) -> pp_tctx fmt x);
+          (fun fmt () ->
+             ();
+             Elpi.API.PPX.Doc.context_entry fmt ~name:"entry" ~doc:"Entry"
+               ~key:(Elpi.API.ContextualConversion.TyName "term")
+               ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
+                     ty.Elpi.API.ContextualConversion.ty]);
+        pp = (fun fmt (_, x) -> pp_tctx fmt x);
         embed = elpi_embed_tctx;
         readback = elpi_readback_tctx
       }
@@ -852,67 +702,62 @@ include
         inherit ! ((ctx_for_tyctx) h s)
         method tyctx = context_made_of_tyctx.Elpi.API.PPX.get s
       end
-    let (in_ctx_for_tctx :
-      (Ctx_for_tctx.t, 'csts) Elpi.API.ContextualConversion.ctx_readback) =
-      fun ~depth ->
-        fun h ->
-          fun c ->
-            fun s ->
-              let ctx = (new ctx_for_tyctx) h s in
-              let (s, gls0) =
-                Elpi.API.PPX.readback_context ~depth context_made_of_tyctx
-                  ctx h c s in
-              (s, ((new ctx_for_tctx) h s), c, (List.concat [gls0]))
+    let in_ctx_for_tctx :
+      (Ctx_for_tctx.t, 'csts) Elpi.API.ContextualConversion.ctx_readback =
+      fun ~depth h c s ->
+        let ctx = (new ctx_for_tyctx) h s in
+        let (s, gls0) =
+          Elpi.API.PPX.readback_context ~depth context_made_of_tyctx ctx h c
+            s in
+        (s, ((new ctx_for_tctx) h s), c, (List.concat [gls0]))
     let () = Elpi.API.PPX.add_declarations declaration [elpi_tctx]
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type term =
   | Var of string [@elpi.var tctx]
   | App of term * term 
   | Lam of ty * string *
-  ((term)[@elpi.binder tctx (fun b -> fun s -> Entry (s, b))]) [@@deriving
-                                                                 (show,
-                                                                   (elpi
-                                                                    {
-                                                                    declaration
-                                                                    }))]
+  ((term)[@elpi.binder tctx (fun b s -> Entry (s, b))]) [@@deriving
+                                                          (show,
+                                                            (elpi
+                                                               { declaration
+                                                               }))]
 include
   struct
     [@@@ocaml.warning "-60"]
-    let rec pp_term
-      : Ppx_deriving_runtime.Format.formatter ->
-          term -> Ppx_deriving_runtime.unit
+    let rec pp_term :
+      Ppx_deriving_runtime.Format.formatter ->
+        term -> Ppx_deriving_runtime.unit
       =
-      ((let __3 = pp_term
-        and __2 = pp_ty
-        and __1 = pp_term
-        and __0 = pp_term in
-        ((let open! ((Ppx_deriving_runtime)[@ocaml.warning "-A"]) in
-            fun fmt ->
-              function
-              | Var a0 ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_double_contextual.Var@ ";
-                   (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@])")
-              | App (a0, a1) ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_double_contextual.App (@,";
-                   ((__0 fmt) a0;
-                    Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
-                    (__1 fmt) a1);
-                   Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
-              | Lam (a0, a1, a2) ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt
-                     "(@[<2>Test_double_contextual.Lam (@,";
-                   (((__2 fmt) a0;
-                     Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
-                     (Ppx_deriving_runtime.Format.fprintf fmt "%S") a1);
-                    Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
-                    (__3 fmt) a2);
-                   Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
-          [@ocaml.warning "-A"]))
-      [@ocaml.warning "-39"])
-    and show_term : term -> Ppx_deriving_runtime.string =
+      let __3 = pp_term
+      and __2 = pp_ty
+      and __1 = pp_term
+      and __0 = pp_term in
+      ((let open! Ppx_deriving_runtime in
+          fun fmt ->
+            function
+            | Var a0 ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_double_contextual.Var@ ";
+                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+            | App (a0, a1) ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_double_contextual.App (@,";
+                 ((__0 fmt) a0;
+                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  (__1 fmt) a1);
+                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+            | Lam (a0, a1, a2) ->
+                (Ppx_deriving_runtime.Format.fprintf fmt
+                   "(@[<2>Test_double_contextual.Lam (@,";
+                 (((__2 fmt) a0;
+                   Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                   (Ppx_deriving_runtime.Format.fprintf fmt "%S") a1);
+                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  (__3 fmt) a2);
+                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
+        [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
+    let show_term : term -> Ppx_deriving_runtime.string =
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_term x[@@ocaml.warning
                                                                     "-32"]
     [@@@warning "-26-27-32-39-60"]
@@ -946,214 +791,153 @@ include
         (term, #Ctx_for_term.t as 'c, 'csts)
           Elpi.API.ContextualConversion.embedding
       =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__fun_arg ->
-                match elpi__fun_arg with
-                | Var elpi__76 ->
-                    let (elpi__ctx2dbl, _) =
-                      Elpi.API.State.get elpi_tctx_state elpi__state in
-                    let elpi__key = (fun x -> x) elpi__76 in
-                    (if not (Elpi_tctx_Map.mem elpi__key elpi__ctx2dbl)
-                     then Elpi.API.Utils.error "Unbound variable";
-                     (elpi__state,
-                       (Elpi.API.RawData.mkBound
-                          (Elpi_tctx_Map.find elpi__key elpi__ctx2dbl)), []))
-                | App (elpi__79, elpi__80) ->
-                    let (elpi__state, elpi__83, elpi__81) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s -> fun t -> elpi_embed_term ~depth h c s t)
-                        ~depth:elpi__depth elpi__hyps elpi__constraints
-                        elpi__state elpi__79 in
-                    let (elpi__state, elpi__84, elpi__82) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s -> fun t -> elpi_embed_term ~depth h c s t)
-                        ~depth:elpi__depth elpi__hyps elpi__constraints
-                        elpi__state elpi__80 in
-                    (elpi__state,
-                      (Elpi.API.RawData.mkAppGlobalL
-                         elpi_constant_constructor_term_Appc
-                         [elpi__83; elpi__84]),
-                      (List.concat [elpi__81; elpi__82]))
-                | Lam (elpi__85, elpi__86, elpi__87) ->
-                    let (elpi__state, elpi__91, elpi__88) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 ty.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__85 in
-                    let (elpi__state, elpi__92, elpi__89) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__86 in
-                    let elpi__ctx_entry =
-                      (fun b -> fun s -> Entry (s, b)) elpi__85 elpi__86 in
-                    let elpi__ctx_key =
-                      elpi_tctx_to_key ~depth:elpi__depth elpi__ctx_entry in
-                    let elpi__ctx_entry =
-                      {
-                        Elpi.API.PPX.entry = elpi__ctx_entry;
-                        depth = elpi__depth
-                      } in
-                    let elpi__state =
-                      elpi_push_tctx ~depth:(elpi__depth + 1) elpi__state
-                        elpi__ctx_key elpi__ctx_entry in
-                    let (elpi__state, elpi__94, elpi__90) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s -> fun t -> elpi_embed_term ~depth h c s t)
-                        ~depth:(elpi__depth + 1) elpi__hyps elpi__constraints
-                        elpi__state elpi__87 in
-                    let elpi__93 = Elpi.API.RawData.mkLam elpi__94 in
-                    let elpi__state =
-                      elpi_pop_tctx ~depth:(elpi__depth + 1) elpi__state
-                        elpi__ctx_key in
-                    (elpi__state,
-                      (Elpi.API.RawData.mkAppGlobalL
-                         elpi_constant_constructor_term_Lamc
-                         [elpi__91; elpi__92; elpi__93]),
-                      (List.concat [elpi__88; elpi__89; elpi__90]))
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+        elpi__fun_arg ->
+        match elpi__fun_arg with
+        | Var elpi__76 ->
+            let (elpi__ctx2dbl, _) =
+              Elpi.API.State.get elpi_tctx_state elpi__state in
+            let elpi__key = (fun x -> x) elpi__76 in
+            (if not (Elpi_tctx_Map.mem elpi__key elpi__ctx2dbl)
+             then Elpi.API.Utils.error "Unbound variable";
+             (elpi__state,
+               (Elpi.API.RawData.mkBound
+                  (Elpi_tctx_Map.find elpi__key elpi__ctx2dbl)), []))
+        | App (elpi__79, elpi__80) ->
+            let (elpi__state, elpi__83, elpi__81) =
+              (fun ~depth h c s t -> elpi_embed_term ~depth h c s t)
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__79 in
+            let (elpi__state, elpi__84, elpi__82) =
+              (fun ~depth h c s t -> elpi_embed_term ~depth h c s t)
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__80 in
+            (elpi__state,
+              (Elpi.API.RawData.mkAppGlobalL
+                 elpi_constant_constructor_term_Appc [elpi__83; elpi__84]),
+              (List.concat [elpi__81; elpi__82]))
+        | Lam (elpi__85, elpi__86, elpi__87) ->
+            let (elpi__state, elpi__91, elpi__88) =
+              (fun ~depth h c s t ->
+                 ty.Elpi.API.ContextualConversion.embed ~depth h c s t)
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__85 in
+            let (elpi__state, elpi__92, elpi__89) =
+              (fun ~depth h c s t ->
+                 Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.embed
+                   ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                elpi__constraints elpi__state elpi__86 in
+            let elpi__ctx_entry = (fun b s -> Entry (s, b)) elpi__85 elpi__86 in
+            let elpi__ctx_key =
+              elpi_tctx_to_key ~depth:elpi__depth elpi__ctx_entry in
+            let elpi__ctx_entry =
+              { Elpi.API.PPX.entry = elpi__ctx_entry; depth = elpi__depth } in
+            let elpi__state =
+              elpi_push_tctx ~depth:elpi__depth elpi__state elpi__ctx_key
+                elpi__ctx_entry in
+            let (elpi__state, elpi__94, elpi__90) =
+              (fun ~depth h c s t -> elpi_embed_term ~depth h c s t)
+                ~depth:(elpi__depth + 1) elpi__hyps elpi__constraints
+                elpi__state elpi__87 in
+            let elpi__93 = Elpi.API.RawData.mkLam elpi__94 in
+            let elpi__state =
+              elpi_pop_tctx ~depth:elpi__depth elpi__state elpi__ctx_key in
+            (elpi__state,
+              (Elpi.API.RawData.mkAppGlobalL
+                 elpi_constant_constructor_term_Lamc
+                 [elpi__91; elpi__92; elpi__93]),
+              (List.concat [elpi__88; elpi__89; elpi__90]))
     and elpi_readback_term :
       'c 'csts .
         (term, #Ctx_for_term.t as 'c, 'csts)
           Elpi.API.ContextualConversion.readback
       =
-      fun ~depth:elpi__depth ->
-        fun elpi__hyps ->
-          fun elpi__constraints ->
-            fun elpi__state ->
-              fun elpi__x ->
-                match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
-                | Elpi.API.RawData.Const elpi__hd when elpi__hd >= 0 ->
-                    let (_, elpi__dbl2ctx) =
-                      Elpi.API.State.get elpi_tctx_state elpi__state in
-                    (if
-                       not
-                         (Elpi.API.RawData.Constants.Map.mem elpi__hd
-                            elpi__dbl2ctx)
-                     then
-                       Elpi.API.Utils.error
-                         (Format.asprintf "Unbound variable: %s in %a"
-                            (Elpi.API.RawData.Constants.show elpi__hd)
-                            (Elpi.API.RawData.Constants.Map.pp
-                               (Elpi.API.PPX.pp_ctx_entry pp_tctx))
-                            elpi__dbl2ctx);
-                     (let { Elpi.API.PPX.entry = elpi__entry;
-                            depth = elpi__depth }
-                        =
-                        Elpi.API.RawData.Constants.Map.find elpi__hd
-                          elpi__dbl2ctx in
-                      (elpi__state,
-                        (Var
-                           (elpi_tctx_to_key ~depth:elpi__depth elpi__entry)),
-                        [])))
-                | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
-                    elpi__hd == elpi_constant_constructor_term_Appc ->
-                    let (elpi__state, elpi__69, elpi__68) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t -> elpi_readback_term ~depth h c s t)
-                        ~depth:elpi__depth elpi__hyps elpi__constraints
-                        elpi__state elpi__x in
-                    (match elpi__xs with
-                     | elpi__66::[] ->
-                         let (elpi__state, elpi__66, elpi__67) =
-                           (fun ~depth ->
-                              fun h ->
-                                fun c ->
-                                  fun s ->
-                                    fun t ->
-                                      elpi_readback_term ~depth h c s t)
-                             ~depth:elpi__depth elpi__hyps elpi__constraints
-                             elpi__state elpi__66 in
-                         (elpi__state, (App (elpi__69, elpi__66)),
-                           (List.concat [elpi__68; elpi__67]))
-                     | _ ->
-                         Elpi.API.Utils.type_error
-                           ("Not enough arguments to constructor: " ^
-                              (Elpi.API.RawData.Constants.show
-                                 elpi_constant_constructor_term_Appc)))
-                | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
-                    elpi__hd == elpi_constant_constructor_term_Lamc ->
-                    let (elpi__state, elpi__75, elpi__74) =
-                      (fun ~depth ->
-                         fun h ->
-                           fun c ->
-                             fun s ->
-                               fun t ->
-                                 ty.Elpi.API.ContextualConversion.readback
-                                   ~depth h c s t) ~depth:elpi__depth
-                        elpi__hyps elpi__constraints elpi__state elpi__x in
-                    (match elpi__xs with
-                     | elpi__70::elpi__71::[] ->
-                         let (elpi__state, elpi__70, elpi__72) =
-                           (fun ~depth ->
-                              fun h ->
-                                fun c ->
-                                  fun s ->
-                                    fun t ->
-                                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
-                                        ~depth h c s t) ~depth:elpi__depth
-                             elpi__hyps elpi__constraints elpi__state
-                             elpi__70 in
-                         let elpi__ctx_entry =
-                           (fun b -> fun s -> Entry (s, b)) elpi__75 elpi__70 in
-                         let elpi__ctx_key =
-                           elpi_tctx_to_key ~depth:elpi__depth
-                             elpi__ctx_entry in
-                         let elpi__ctx_entry =
-                           {
-                             Elpi.API.PPX.entry = elpi__ctx_entry;
-                             depth = elpi__depth
-                           } in
-                         let elpi__state =
-                           elpi_push_tctx ~depth:elpi__depth elpi__state
-                             elpi__ctx_key elpi__ctx_entry in
-                         let (elpi__state, elpi__71, elpi__73) =
-                           match Elpi.API.RawData.look ~depth:elpi__depth
-                                   elpi__71
-                           with
-                           | Elpi.API.RawData.Lam elpi__bo ->
-                               ((fun ~depth ->
-                                   fun h ->
-                                     fun c ->
-                                       fun s ->
-                                         fun t ->
-                                           elpi_readback_term ~depth h c s t))
-                                 ~depth:(elpi__depth + 1) elpi__hyps
-                                 elpi__constraints elpi__state elpi__bo
-                           | _ -> assert false in
-                         let elpi__state =
-                           elpi_pop_tctx ~depth:elpi__depth elpi__state
-                             elpi__ctx_key in
-                         (elpi__state, (Lam (elpi__75, elpi__70, elpi__71)),
-                           (List.concat [elpi__74; elpi__72; elpi__73]))
-                     | _ ->
-                         Elpi.API.Utils.type_error
-                           ("Not enough arguments to constructor: " ^
-                              (Elpi.API.RawData.Constants.show
-                                 elpi_constant_constructor_term_Lamc)))
-                | _ ->
-                    Elpi.API.Utils.type_error
-                      (Format.asprintf "Not a constructor of type %s: %a"
-                         "term" (Elpi.API.RawPp.term elpi__depth) elpi__x)
+      fun ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state elpi__x
+        ->
+        match Elpi.API.RawData.look ~depth:elpi__depth elpi__x with
+        | Elpi.API.RawData.Const elpi__hd when elpi__hd >= 0 ->
+            let (_, elpi__dbl2ctx) =
+              Elpi.API.State.get elpi_tctx_state elpi__state in
+            (if
+               not
+                 (Elpi.API.RawData.Constants.Map.mem elpi__hd elpi__dbl2ctx)
+             then
+               Elpi.API.Utils.error
+                 (Format.asprintf "Unbound variable: %s in %a"
+                    (Elpi.API.RawData.Constants.show elpi__hd)
+                    (Elpi.API.RawData.Constants.Map.pp
+                       (Elpi.API.PPX.pp_ctx_entry pp_tctx)) elpi__dbl2ctx);
+             (let { Elpi.API.PPX.entry = elpi__entry; depth = elpi__depth } =
+                Elpi.API.RawData.Constants.Map.find elpi__hd elpi__dbl2ctx in
+              (elpi__state,
+                (Var (elpi_tctx_to_key ~depth:elpi__depth elpi__entry)), [])))
+        | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
+            elpi__hd == elpi_constant_constructor_term_Appc ->
+            let (elpi__state, elpi__69, elpi__68) =
+              (fun ~depth h c s t -> elpi_readback_term ~depth h c s t)
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__x in
+            (match elpi__xs with
+             | elpi__66::[] ->
+                 let (elpi__state, elpi__66, elpi__67) =
+                   (fun ~depth h c s t -> elpi_readback_term ~depth h c s t)
+                     ~depth:elpi__depth elpi__hyps elpi__constraints
+                     elpi__state elpi__66 in
+                 (elpi__state, (App (elpi__69, elpi__66)),
+                   (List.concat [elpi__68; elpi__67]))
+             | _ ->
+                 Elpi.API.Utils.type_error
+                   ("Not enough arguments to constructor: " ^
+                      (Elpi.API.RawData.Constants.show
+                         elpi_constant_constructor_term_Appc)))
+        | Elpi.API.RawData.App (elpi__hd, elpi__x, elpi__xs) when
+            elpi__hd == elpi_constant_constructor_term_Lamc ->
+            let (elpi__state, elpi__75, elpi__74) =
+              (fun ~depth h c s t ->
+                 ty.Elpi.API.ContextualConversion.readback ~depth h c s t)
+                ~depth:elpi__depth elpi__hyps elpi__constraints elpi__state
+                elpi__x in
+            (match elpi__xs with
+             | elpi__70::elpi__71::[] ->
+                 let (elpi__state, elpi__70, elpi__72) =
+                   (fun ~depth h c s t ->
+                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.readback
+                        ~depth h c s t) ~depth:elpi__depth elpi__hyps
+                     elpi__constraints elpi__state elpi__70 in
+                 let elpi__ctx_entry =
+                   (fun b s -> Entry (s, b)) elpi__75 elpi__70 in
+                 let elpi__ctx_key =
+                   elpi_tctx_to_key ~depth:elpi__depth elpi__ctx_entry in
+                 let elpi__ctx_entry =
+                   {
+                     Elpi.API.PPX.entry = elpi__ctx_entry;
+                     depth = elpi__depth
+                   } in
+                 let elpi__state =
+                   elpi_push_tctx ~depth:elpi__depth elpi__state
+                     elpi__ctx_key elpi__ctx_entry in
+                 let (elpi__state, elpi__71, elpi__73) =
+                   match Elpi.API.RawData.look ~depth:elpi__depth elpi__71
+                   with
+                   | Elpi.API.RawData.Lam elpi__bo ->
+                       ((fun ~depth h c s t ->
+                           elpi_readback_term ~depth h c s t))
+                         ~depth:(elpi__depth + 1) elpi__hyps
+                         elpi__constraints elpi__state elpi__bo
+                   | _ -> assert false in
+                 let elpi__state =
+                   elpi_pop_tctx ~depth:elpi__depth elpi__state elpi__ctx_key in
+                 (elpi__state, (Lam (elpi__75, elpi__70, elpi__71)),
+                   (List.concat [elpi__74; elpi__72; elpi__73]))
+             | _ ->
+                 Elpi.API.Utils.type_error
+                   ("Not enough arguments to constructor: " ^
+                      (Elpi.API.RawData.Constants.show
+                         elpi_constant_constructor_term_Lamc)))
+        | _ ->
+            Elpi.API.Utils.type_error
+              (Format.asprintf "Not a constructor of type %s: %a" "term"
+                 (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and term :
       'c 'csts .
         (term, #Ctx_for_term.t as 'c, 'csts) Elpi.API.ContextualConversion.t
@@ -1162,24 +946,22 @@ include
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc =
-          (fun fmt ->
-             fun () ->
-               Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:0
-                 ~ty:kind ~name:"app" ~doc:"App"
-                 ~args:[Elpi.API.ContextualConversion.TyName
-                          elpi_constant_type_term;
-                       Elpi.API.ContextualConversion.TyName
-                         elpi_constant_type_term];
-               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:0
-                 ~ty:kind ~name:"lam" ~doc:"Lam"
-                 ~args:[ty.Elpi.API.ContextualConversion.ty;
-                       Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
-                       Elpi.API.ContextualConversion.TyApp
-                         ("->",
-                           (Elpi.API.ContextualConversion.TyName "term"),
-                           [Elpi.API.ContextualConversion.TyName
-                              elpi_constant_type_term])]);
+          (fun fmt () ->
+             Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:0
+               ~ty:kind ~name:"app" ~doc:"App"
+               ~args:[Elpi.API.ContextualConversion.TyName
+                        elpi_constant_type_term;
+                     Elpi.API.ContextualConversion.TyName
+                       elpi_constant_type_term];
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:0
+               ~ty:kind ~name:"lam" ~doc:"Lam"
+               ~args:[ty.Elpi.API.ContextualConversion.ty;
+                     Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
+                     Elpi.API.ContextualConversion.TyApp
+                       ("->", (Elpi.API.ContextualConversion.TyName "term"),
+                         [Elpi.API.ContextualConversion.TyName
+                            elpi_constant_type_term])]);
         pp = pp_term;
         embed = elpi_embed_term;
         readback = elpi_readback_term
@@ -1194,17 +976,13 @@ include
         inherit ! ((ctx_for_tctx) h s)
         method tctx = context_made_of_tctx.Elpi.API.PPX.get s
       end
-    let (in_ctx_for_term :
-      (Ctx_for_term.t, 'csts) Elpi.API.ContextualConversion.ctx_readback) =
-      fun ~depth ->
-        fun h ->
-          fun c ->
-            fun s ->
-              let ctx = (new ctx_for_tctx) h s in
-              let (s, gls0) =
-                Elpi.API.PPX.readback_context ~depth context_made_of_tctx ctx
-                  h c s in
-              (s, ((new ctx_for_term) h s), c, (List.concat [gls0]))
+    let in_ctx_for_term :
+      (Ctx_for_term.t, 'csts) Elpi.API.ContextualConversion.ctx_readback =
+      fun ~depth h c s ->
+        let ctx = (new ctx_for_tctx) h s in
+        let (s, gls0) =
+          Elpi.API.PPX.readback_context ~depth context_made_of_tctx ctx h c s in
+        (s, ((new ctx_for_term) h s), c, (List.concat [gls0]))
     let () =
       Elpi.API.PPX.add_declarations declaration
         [elpi_term; Elpi.API.BuiltIn.LPCode elpi__term__deep_copy]
@@ -1215,18 +993,13 @@ let term_to_string =
   BuiltInPredicate.ContextualPred
     ("term->string", in_ctx_for_term,
       (In (term, "T", (Out (BuiltInData.stringC, "S", (Read "what else"))))),
-      (fun (t : term) ->
-         fun (_ety : string BuiltInPredicate.oarg) ->
-           fun ~depth:_ ->
-             fun c ->
-               fun (_cst : Data.constraints) ->
-                 fun (_state : State.t) ->
-                   !:
-                     (Format.asprintf "@[<hov>%a@ ; %a@ |-@ %a@]@\n%!"
-                        (RawData.Constants.Map.pp (PPX.pp_ctx_entry pp_tyctx))
-                        c#tyctx
-                        (RawData.Constants.Map.pp (PPX.pp_ctx_entry pp_tctx))
-                        c#tctx term.pp t)))
+      (fun (t : term) (_ety : string BuiltInPredicate.oarg) ~depth:_ c
+         (_cst : Data.constraints) (_state : State.t) ->
+         !:
+           (Format.asprintf "@[<hov>%a@ ; %a@ |-@ %a@]@\n%!"
+              (RawData.Constants.Map.pp (PPX.pp_ctx_entry pp_tyctx)) 
+              c#tyctx (RawData.Constants.Map.pp (PPX.pp_ctx_entry pp_tctx))
+              c#tctx term.pp t)))
 let builtin =
   let open BuiltIn in
     BuiltIn.declare ~file_name

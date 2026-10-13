@@ -5,8 +5,7 @@ type simple = bool[@@elpi.opaque
                     {
                       OpaqueData.name = "simple";
                       doc = "";
-                      pp =
-                        (fun fmt -> fun _ -> Format.fprintf fmt "<simple>");
+                      pp = (fun fmt _ -> Format.fprintf fmt "<simple>");
                       compare = Stdlib.compare;
                       hash = Hashtbl.hash;
                       hconsed = false;
@@ -15,14 +14,14 @@ type simple = bool[@@elpi.opaque
 include
   struct
     [@@@ocaml.warning "-60"]
-    let rec pp_simple
-      : Ppx_deriving_runtime.Format.formatter ->
-          simple -> Ppx_deriving_runtime.unit
+    let pp_simple :
+      Ppx_deriving_runtime.Format.formatter ->
+        simple -> Ppx_deriving_runtime.unit
       =
-      ((let open! ((Ppx_deriving_runtime)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime in
           fun fmt -> Ppx_deriving_runtime.Format.fprintf fmt "%B")
-      [@ocaml.warning "-39"][@ocaml.warning "-A"])
-    and show_simple : simple -> Ppx_deriving_runtime.string =
+      [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
+    let show_simple : simple -> Ppx_deriving_runtime.string =
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_simple x[@@ocaml.warning
                                                                     "-32"]
     [@@@warning "-26-27-32-39-60"]
@@ -35,7 +34,7 @@ include
         {
           OpaqueData.name = "simple";
           doc = "";
-          pp = (fun fmt -> fun _ -> Format.fprintf fmt "<simple>");
+          pp = (fun fmt _ -> Format.fprintf fmt "<simple>");
           compare = Stdlib.compare;
           hash = Hashtbl.hash;
           hconsed = false;
@@ -46,8 +45,8 @@ include
     let simple : 'c . (simple, 'c, 'csts) Elpi.API.ContextualConversion.t =
       let { Elpi.API.Conversion.embed = embed; readback; ty; pp_doc; pp } =
         elpi_opaque_data_decl_simple in
-      let embed ~depth  _ _ s t = embed ~depth s t in
-      let readback ~depth  _ _ s t = readback ~depth s t in
+      let embed ~depth _ _ s t = embed ~depth s t in
+      let readback ~depth _ _ s t = readback ~depth s t in
       { Elpi.API.ContextualConversion.embed = embed; readback; ty; pp_doc; pp
       }
     let elpi_embed_simple = simple.Elpi.API.ContextualConversion.embed
@@ -57,12 +56,10 @@ include
       "func simple.copy simple -> simple.\nsimple.copy X X.\n"
     class ctx_for_simple (h : Elpi.API.Data.hyps)  (s : Elpi.API.Data.state)
       : Ctx_for_simple.t = object (_) inherit  ((Elpi.API.PPX.ctx) h) end
-    let (in_ctx_for_simple :
-      (Ctx_for_simple.t, 'csts) Elpi.API.ContextualConversion.ctx_readback) =
-      fun ~depth ->
-        fun h ->
-          fun c ->
-            fun s -> (s, ((new ctx_for_simple) h s), c, (List.concat []))
+    let in_ctx_for_simple :
+      (Ctx_for_simple.t, 'csts) Elpi.API.ContextualConversion.ctx_readback =
+      fun ~depth h c s ->
+        (s, ((new ctx_for_simple) h s), c, (List.concat []))
     let () =
       Elpi.API.PPX.add_declarations declaration
         [elpi_simple; Elpi.API.BuiltIn.LPCode elpi__simple__deep_copy]

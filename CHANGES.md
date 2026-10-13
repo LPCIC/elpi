@@ -1,3 +1,9 @@
+# Unreleased
+
+- PPX:
+  - fix `[@elpi.binder]`: the context entry was pushed and popped at the
+    wrong depth, embedding a variable under a lambda was off by one (#467)
+
 # v3.9.0 (October 2026)
 
 Requires Menhir 20211230 and OCaml 4.14 or above on Linux, Windows and

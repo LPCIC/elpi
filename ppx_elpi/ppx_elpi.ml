@@ -571,11 +571,11 @@ let rec embed_k (module B : Ast_builder.S) c all_kargs all_tmp kargs tmp tys n =
       let elpi__ctx_entry = [%e eapply f (List.map snd @@ list_take n all_kargs) ] in
       let elpi__ctx_key = [%e elpi_to_key ] ~depth: elpi__depth elpi__ctx_entry in
       let elpi__ctx_entry = { Elpi.API.PPX.entry = elpi__ctx_entry; depth = elpi__depth } in
-      let elpi__state = [%e elpi_push ] ~depth: (elpi__depth + 1) elpi__state elpi__ctx_key elpi__ctx_entry in
+      let elpi__state = [%e elpi_push ] ~depth: elpi__depth elpi__state elpi__ctx_key elpi__ctx_entry in
       let elpi__state, [%p pvar xtmp], [%p pvar y] =
         [%e t] ~depth: (elpi__depth + 1) elpi__hyps elpi__constraints elpi__state [%e ex] in
       let [%p pvar px] = Elpi.API.RawData.mkLam [%e evar xtmp] in
-      let elpi__state = [%e elpi_pop ] ~depth: (elpi__depth + 1) elpi__state elpi__ctx_key in
+      let elpi__state = [%e elpi_pop ] ~depth: elpi__depth elpi__state elpi__ctx_key in
       [%e embed_k (module B : Ast_builder.S) c all_kargs all_tmp xs ys ts (n+1)]]
   | _ -> assert false
 ;;

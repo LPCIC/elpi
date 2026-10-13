@@ -1,4 +1,4 @@
-File "error_var_readback_embed.ml", lines 5-6, characters 0-33:
+File "./error_var_readback_embed.ml", lines 5-6, characters 0-33:
 5 | type term = Var of string [@elpi.var tctx] [@elpi.readback fun ~depth _ _ _ -> assert false] [@elpi.embed fun ~depth _ _ _ -> assert false]
 6 | [@@deriving elpi { declaration }]
 Error: [@elpi.var] on a constructor with [@elpi.readback] and [@elpi.embed]
