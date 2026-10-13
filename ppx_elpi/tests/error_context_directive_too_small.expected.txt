@@ -1,4 +1,4 @@
-File "error_context_directive_too_small.ml", lines 5-6, characters 0-47:
+File "./error_context_directive_too_small.ml", lines 5-6, characters 0-47:
 5 | type term = Var of string [@elpi.var tctx]
 6 | [@@deriving elpi { declaration; context = [] }]
 Error: [deriving elpi { context }] directive contains  but the type mentions more: tctx

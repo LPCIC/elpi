@@ -240,6 +240,46 @@
 
 
 ; The output of the ppx and of the test executable is generated in
+; test_embed_under_binder.generated.* and compared with test_embed_under_binder.expected.*, but it is also promoted
+; to test_embed_under_binder.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_embed_under_binder.generated.ml)
+ (deps (:pp pp.exe) (:input test_embed_under_binder.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_embed_under_binder.generated.elpi)
+ (action (run ./test_embed_under_binder.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_embed_under_binder.actual.ml)
+ (action (copy test_embed_under_binder.generated.ml test_embed_under_binder.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_embed_under_binder.actual.elpi)
+ (action (copy test_embed_under_binder.generated.elpi test_embed_under_binder.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_embed_under_binder.actual.ml test_embed_under_binder.actual.elpi)
+ (action (diff test_embed_under_binder.expected.ml test_embed_under_binder.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_embed_under_binder.expected.elpi test_embed_under_binder.generated.elpi)))
+
+(executable
+  (name test_embed_under_binder)
+  (modules test_embed_under_binder)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
 ; test_mixed_conversions.generated.* and compared with test_mixed_conversions.expected.*, but it is also promoted
 ; to test_mixed_conversions.actual.* (ignored by git) in order to be inspectable even when
 ; the test fails.
@@ -1125,7 +1165,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1144,7 +1185,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1163,7 +1205,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1182,7 +1225,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1201,7 +1245,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1220,7 +1265,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1239,7 +1285,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1258,7 +1305,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1277,7 +1325,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1296,7 +1345,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)
@@ -1315,7 +1365,8 @@
  (action
   (with-stderr-to %{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%{pp} --impl %{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl %{input} -o /dev/null))))))
 
 (rule
  (mode promote)

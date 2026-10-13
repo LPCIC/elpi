@@ -56,7 +56,8 @@ let output_error_stanzas filename =
  (action
   (with-stderr-to %%{target}
    (with-accepted-exit-codes (not 0)
-    (run ./%%{pp} --impl %%{input} -o /dev/null)))))
+    (setenv OCAML_COLOR never
+     (run ./%%{pp} --impl %%{input} -o /dev/null))))))
 
 (rule
  (mode promote)

@@ -148,11 +148,17 @@ jobs:
 # dependency.
 
       - name: Install ppx_elpi dependencies
-        run: |
-          opam install ./elpi.opam ./ppx_elpi.opam --deps-only
+        run: opam install ./elpi.opam ./ppx_elpi.opam --deps-only
 
       - name: Build ppx_elpi
         run: opam exec -- make build-ppx
+
+      # the expected output depends on the version of ppx_deriving and ppxlib
+      - name: Test ppx_elpi
+        if: startsWith(matrix.ocaml-compiler, '5.')
+        run: |
+          opam install ./elpi.opam ./ppx_elpi.opam --deps-only --with-test
+          opam exec -- make tests-ppx
 
   aggregate:
     name: Aggregate and plot benchmarking data
