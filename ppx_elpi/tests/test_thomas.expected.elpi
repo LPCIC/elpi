@@ -1,0 +1,43 @@
+
+
+builtin data rat.
+builtin symb rat : int -> int -> rat = "0".  % rat
+
+func rat.copy rat -> rat.
+rat.copy (rat A0 A1) (rat B0 B1) :- (int.copy A0 B0), (int.copy A1 B1).
+
+
+
+builtin data polyT.
+builtin symb pcst     : rat -> polyT = "0".  % Const
+builtin symb variable : int -> polyT = "0".  % Var
+builtin symb add      : polyT -> polyT -> polyT = "0".  % Add
+builtin symb mul      : polyT -> polyT -> polyT = "0".  % Mul
+
+func polyT.copy polyT -> polyT.
+polyT.copy (pcst A0) (pcst B0) :- (rat.copy A0 B0).
+polyT.copy (variable A0) (variable B0) :- (int.copy A0 B0).
+polyT.copy (add A0 A1) (add B0 B1) :- (polyT.copy A0 B0), (polyT.copy A1 B1).
+polyT.copy (mul A0 A1) (mul B0 B1) :- (polyT.copy A0 B0), (polyT.copy A1 B1).
+
+
+
+builtin data monomial.
+builtin symb monomial : rat -> list (pair int int) -> monomial = "0".  % monomial
+
+func monomial.copy monomial -> monomial.
+monomial.copy (monomial A0 A1) (monomial B0 B1) :- (rat.copy A0 B0), ((list.copy (pair.copy int.copy int.copy)) A1 B1).
+
+
+
+typeabbrev mpoly (list monomial). % mpoly
+
+func mpoly.copy mpoly -> mpoly.
+mpoly.copy A B :- ((list.copy monomial.copy) A B).
+
+% [poly->str P S] prints a polynomial
+builtin func poly->str polyT -> string.
+
+
+
+

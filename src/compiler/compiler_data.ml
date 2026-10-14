@@ -393,8 +393,9 @@ let update_ety ety eit = { ety with eit }
     | [x] -> !filtered, Single x
     | l -> !filtered, Overloaded l
 
-  let merge_skema sk1 sk2 =
-    if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality sk1 sk2 <> 0 then anomaly "merging different skemas";
+  let merge_skema s sk1 sk2 =
+    if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality sk1 sk2 <> 0 then
+      error ~loc:(Symbol.get_loc s) (Format.asprintf "@[<v>Two incompatible types for the symbol %s.@\n@[<hov 2>Type:@;<2 0>%a@]@\n@[<hov 2>Other type:@;<2 0>%a@]@]" (Symbol.pretty s) pretty_skema sk1 pretty_skema sk2);
     sk1
 
   let compare_t_ a b = compare_t_ ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality a b
@@ -596,7 +597,7 @@ end = struct
   let merge_symbol_metadata s
       { ty = ty1; indexing = idx1; availability = a1; implemented_in_ocaml = o1; occur_check = oc1 }
        { ty = ty2; indexing = idx2; availability = a2; implemented_in_ocaml = o2; occur_check = oc2 } =
-    { ty = TypeAssignment.merge_skema ty1 ty2;
+    { ty = TypeAssignment.merge_skema s ty1 ty2;
       indexing = merge_indexing s idx1 idx2;
       availability = merge_availability s a1 a2;
       implemented_in_ocaml = o1 || o2;
