@@ -960,6 +960,46 @@
 
 
 ; The output of the ppx and of the test executable is generated in
+; test_thomas.generated.* and compared with test_thomas.expected.*, but it is also promoted
+; to test_thomas.actual.* (ignored by git) in order to be inspectable even when
+; the test fails.
+
+(rule
+ (targets test_thomas.generated.ml)
+ (deps (:pp pp.exe) (:input test_thomas.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (target test_thomas.generated.elpi)
+ (action (run ./test_thomas.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_thomas.actual.ml)
+ (action (copy test_thomas.generated.ml test_thomas.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_thomas.actual.elpi)
+ (action (copy test_thomas.generated.elpi test_thomas.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_thomas.actual.ml test_thomas.actual.elpi)
+ (action (diff test_thomas.expected.ml test_thomas.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_thomas.expected.elpi test_thomas.generated.elpi)))
+
+(executable
+  (name test_thomas)
+  (modules test_thomas)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
 ; test_three_contexts.generated.* and compared with test_three_contexts.expected.*, but it is also promoted
 ; to test_three_contexts.actual.* (ignored by git) in order to be inspectable even when
 ; the test fails.
