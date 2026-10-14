@@ -35,6 +35,9 @@ typeabbrev mpoly (list monomial). % mpoly
 func mpoly.copy mpoly -> mpoly.
 mpoly.copy A B :- ((list.copy monomial.copy) A B).
 
+% [poly->str P S] prints a polynomial
+builtin func poly->str poly -> string.
+
 
 
 
