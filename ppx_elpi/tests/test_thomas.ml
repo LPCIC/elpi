@@ -8,11 +8,12 @@ type rat = { num: int; den: int }
 [@@deriving show, elpi { declaration }]
 
 type poly =
-| Const of rat
-| Var of int [@elpi.code "variable"] (* var is an elpi builtin *)
+| Const of rat [@elpi.code "pcst"] (* as in the paper *)
+| Var of int [@elpi.code "variable"] (* var is an elpi builtin, not allowed naymore *)
 | Add of poly * poly
 | Mul of poly * poly
 [@@deriving show, elpi { declaration }]
+[@@elpi.type_code "polyT"] (* as in the paper *)
 
 type monomial = { coef: rat; exps: (int * int) list }
 [@@deriving show, elpi { declaration }]

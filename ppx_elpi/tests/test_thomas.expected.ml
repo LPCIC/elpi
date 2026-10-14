@@ -115,10 +115,11 @@ include
         [elpi_rat; Elpi.API.BuiltIn.LPCode elpi__rat__deep_copy]
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type poly =
-  | Const of rat 
+  | Const of rat [@elpi.code "pcst"]
   | Var of int [@elpi.code "variable"]
   | Add of poly * poly 
-  | Mul of poly * poly [@@deriving (show, (elpi { declaration }))]
+  | Mul of poly * poly [@@deriving (show, (elpi { declaration }))][@@elpi.type_code
+                                                                    "polyT"]
 include
   struct
     [@@@ocaml.warning "-60"]
@@ -163,11 +164,11 @@ include
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_poly x[@@ocaml.warning
                                                                     "-32"]
     [@@@warning "-26-27-32-39-60"]
-    let elpi_constant_type_poly = "poly"
+    let elpi_constant_type_poly = "polyT"
     let elpi_constant_type_polyc =
       Elpi.API.RawData.Constants.declare_global_symbol
         elpi_constant_type_poly
-    let elpi_constant_constructor_poly_Const = "const"
+    let elpi_constant_constructor_poly_Const = "pcst"
     let elpi_constant_constructor_poly_Constc =
       Elpi.API.RawData.Constants.declare_global_symbol
         elpi_constant_constructor_poly_Const
@@ -313,14 +314,14 @@ include
               (Format.asprintf "Not a constructor of type %s: %a" "poly"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and poly : 'c 'csts . (poly, 'c, 'csts) Elpi.API.ContextualConversion.t =
-      let kind = Elpi.API.ContextualConversion.TyName "poly" in
+      let kind = Elpi.API.ContextualConversion.TyName "polyT" in
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
              Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:0
-               ~ty:kind ~name:"const" ~doc:"Const"
+               ~ty:kind ~name:"pcst" ~doc:"Const"
                ~args:[rat.Elpi.API.ContextualConversion.ty];
              Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:0
                ~ty:kind ~name:"variable" ~doc:"Var"
@@ -343,7 +344,7 @@ include
       }
     let elpi_poly = Elpi.API.BuiltIn.MLDataC poly
     let elpi__poly__deep_copy =
-      "func poly.copy poly -> poly.\npoly.copy (const A0) (const B0) :- (rat.copy A0 B0).\npoly.copy (variable A0) (variable B0) :- (int.copy A0 B0).\npoly.copy (add A0 A1) (add B0 B1) :- (poly.copy A0 B0), (poly.copy A1 B1).\npoly.copy (mul A0 A1) (mul B0 B1) :- (poly.copy A0 B0), (poly.copy A1 B1).\n\n"
+      "func polyT.copy polyT -> polyT.\npolyT.copy (pcst A0) (pcst B0) :- (rat.copy A0 B0).\npolyT.copy (variable A0) (variable B0) :- (int.copy A0 B0).\npolyT.copy (add A0 A1) (add B0 B1) :- (polyT.copy A0 B0), (polyT.copy A1 B1).\npolyT.copy (mul A0 A1) (mul B0 B1) :- (polyT.copy A0 B0), (polyT.copy A1 B1).\n\n"
     class ctx_for_poly (h : Elpi.API.Data.hyps)  (s : Elpi.API.Data.state)
       : Ctx_for_poly.t = object (_) inherit  ((Elpi.API.PPX.ctx) h) end
     let in_ctx_for_poly :
