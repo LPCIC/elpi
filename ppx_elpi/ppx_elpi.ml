@@ -1,3 +1,10 @@
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* license: GNU Lesser General Public License Version 2.1 or later           *)
+(* This code was orignally written by @gares in 2020 and later simplified by *)
+(* @kiranandcode in 2023. The final integration in 2026 was assisted by      *)
+(* Claude code.                                                              *)
+(* ------------------------------------------------------------------------- *)
+
 [@@@warning "-27"]
 open Ppxlib
 open Ppxlib.Ast_pattern
