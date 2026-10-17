@@ -57,6 +57,7 @@ let usage =
   "\t-test runs the query \"main\"\n" ^ 
   "\t-exec pred  runs the query \"pred ARGS\"\n" ^ 
   "\t-no-det  disable determinacy analysis\n" ^ 
+  "\t-max-errors N  report at most N errors (default 5); 0: stop at the first one\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
   "\t-document-infix-syntax Print the documentation for infix operators\n" ^
@@ -73,6 +74,40 @@ let usage =
   "\t-print prints files after most compilation passes, then exit\n" ^ 
   "\t-print-units prints compilation units data, then exit\n"
 ;;
+
+(* the errors that a pass found, sorted by location (the ones without a
+   location, e.g. "too many errors", come last); none of them is fatal on its
+   own, so they are all labelled in the same way *)
+let report errors =
+  let key (e : API.Compile.error) = match e.loc with
+    | None -> None
+    | Some l -> Some (l.API.Ast.Loc.source_name, l.API.Ast.Loc.source_start) in
+  let cmp a b = match key a, key b with
+    | None, None -> 0 | None, _ -> 1 | _, None -> -1
+    | Some a, Some b -> compare a b in
+  let errors = List.stable_sort cmp errors in
+  List.iter (fun (e : API.Compile.error) ->
+    Format.eprintf "@[<hv>Error: %a@]\n%!" API.Compile.pp_error e)
+    errors
+
+(* the result of a pass, or the errors it found *)
+let or_exit (x, errors) =
+  report errors;
+  if errors <> [] then exit 1;
+  x
+
+let read_all ic =
+  let b = Buffer.create 1024 in
+  (try while true do Buffer.add_channel b ic 1 done with End_of_file -> ());
+  Buffer.contents b
+
+(* with -max-errors 0 the first error is an exception *)
+let raising f =
+  try f ()
+  with
+  | API.Parse.ParseError (loc, message) ->
+      report [ { API.Compile.component = "Parser"; loc = Some loc; message } ]; exit 1
+  | API.Compile.CompileError e -> report [ e ]; exit 1
 
 (* For testing purposes we declare an identity quotation *)
 let quotations = API.Quotation.new_quotations_descriptor ()
@@ -97,6 +132,7 @@ let _ =
   let parse_term = ref false in
   let parse_clause = ref false in
   let skip_det_check = ref false in
+  let max_errors = ref 5 in
   let print_deps = ref false in
   let vars =
     ref API.Compile.(default_flags.defined_variables) in
@@ -106,6 +142,11 @@ let _ =
     | "-test" :: rest -> batch := true; test := true; eat_options rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; eat_options rest
     | "-no-det" :: rest -> skip_det_check := true; eat_options rest
+    | "-max-errors" :: n :: rest ->
+        (match int_of_string_opt n with
+         | Some n when n >= 0 -> max_errors := n
+         | _ -> Printf.eprintf "-max-errors expects a number (0 or more), not %s\n" n; exit 1);
+        eat_options rest
     | "-print" :: rest -> print_lprolog := true; eat_options rest
     | "-print-ast" :: rest -> print_ast := true; eat_options rest
     | "-print-units" :: rest -> print_units := true; eat_options rest
@@ -138,6 +179,7 @@ let _ =
       API.Compile.print_units = !print_units;
       API.Compile.time_typechecking = true;
       API.Compile.skip_det_checking = !skip_det_check;
+      API.Compile.max_errors = !max_errors;
   } in
   if !doc_infix then begin
     Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;
@@ -155,16 +197,14 @@ let _ =
       try API.Parse.goal_from ~elpi ~loc:(API.Ast.Loc.initial "(-parse-term)") (Lexing.from_channel stdin)
       with API.Parse.ParseError(loc,msg) -> Format.eprintf "%a@;%s\n" API.Ast.Loc.pp loc msg; exit 1 in
     Format.printf "Raw term: %a\n" API.Pp.Ast.query g;
-    let p = API.Parse.program_from ~elpi ~loc:(API.Ast.Loc.initial "(parse_term)") ~digest:(Digest.string "")  (Lexing.from_string "") in
-    let prog = API.Compile.program ~flags ~elpi p in
+    let p = raising (fun () -> or_exit (API.Parse.program_from ~flags ~elpi ~loc:(API.Ast.Loc.initial "(parse_term)") ~digest:(Digest.string "")  (Lexing.from_string ""))) in
+    let prog = raising (fun () -> or_exit (API.Compile.program ~flags ~elpi p)) in
     let query = API.Compile.query prog g in
     Format.printf "Compiled term: %a\n" API.Pp.goal query;
     exit 0;
   end;
   if !parse_clause then begin
-    let p =
-      try API.Parse.program_from ~elpi ~loc:(API.Ast.Loc.initial "(-parse-clause)") ~digest:(Digest.string "") (Lexing.from_channel stdin)
-      with API.Parse.ParseError(loc,msg) -> Format.eprintf "%a@;%s\n" API.Ast.Loc.pp loc msg; exit 1 in
+    let p = raising (fun () -> or_exit (API.Parse.program_from ~flags ~elpi ~loc:(API.Ast.Loc.initial "(-parse-clause)") ~digest:(Digest.string "") (Lexing.from_string (read_all stdin)))) in
     Format.printf "Raw clause: %a\n" API.Pp.Ast.program p;
     exit 0;
   end;
@@ -182,12 +222,8 @@ let _ =
     exit 0;
   end;
   if !print_deps then begin
-    let pl = files |> List.map (fun file ->
-      try API.Parse.program ~elpi ~file
-      with API.Parse.ParseError(loc,err) ->
-        Printf.eprintf "%s\n%s\n" (API.Ast.Loc.show loc) err;
-        exit 1) in
-    let all = List.map (API.Compile.scope_ast ~elpi) pl |> List.concat in
+    let pl = files |> List.map (fun file -> raising (fun () -> or_exit (API.Parse.program ~flags ~elpi file))) in
+    let all = List.map (fun p -> raising (fun () -> or_exit (API.Compile.scope_ast ~flags ~elpi p))) pl |> List.concat in
     let name_of = API.Compile.scoped_program_name in
     let all = List.sort (fun p1 p2 -> compare (name_of p1) (name_of p2)) all in
     let all =
@@ -209,12 +245,7 @@ let _ =
     | [x] -> x
     | _ -> Printf.eprintf "Only one file can be specified"; exit 1 in
   let t0_parsing = Unix.gettimeofday () in
-  let p =
-    try API.Parse.program ~elpi ~file
-    with API.Parse.ParseError(loc,err) ->
-      Printf.eprintf "%s\n%s\n" (API.Ast.Loc.show loc) err;
-      exit 1
-  in
+  let p, parse_errors = raising (fun () -> API.Parse.program ~flags ~elpi file) in
   let g =
     if !test then
       API.Parse.goal ~elpi ~loc:(API.Ast.Loc.initial "(-test)") ~text:"main."
@@ -233,6 +264,7 @@ let _ =
         exit 1;
     end in
   if !print_ast then begin
+    report parse_errors;
     Format.eprintf "%a" API.Pp.Ast.program p;
     Format.eprintf "%a" API.Pp.Ast.query g;
     exit 0;
@@ -242,14 +274,16 @@ let _ =
   let query, prog, exec, (type_checking_time, det_checking_time) =
     let t0_compilation = Unix.gettimeofday () in
     try
-      let prog = API.Compile.program ~flags ~elpi p in
+      let prog, compile_errors = raising (fun () -> API.Compile.program ~flags ~elpi p) in
+      (* the syntax errors, then the errors of the compiler *)
+      let prog = or_exit (prog, parse_errors @ compile_errors) in
       let query = API.Compile.query prog g in
       let type_checking_time = API.Compile.total_type_checking_time query, API.Compile.total_det_checking_time query in
       let exec = API.Compile.optimize query in
       Format.eprintf "@\nCompilation time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_compilation);
       query, prog, exec, type_checking_time
-    with API.Compile.CompileError(loc,msg) ->
-      API.Utils.error ?loc msg
+    with API.Compile.CompileError ({ loc } as e) ->
+      API.Utils.error ?loc (Format.asprintf "%a" API.Compile.pp_error_message e)
   in
   Format.eprintf "@\nTypechecking time: %5.3f@\n%!" type_checking_time;
   Format.eprintf "Determinacy checking time: %5.3f@\n%!" det_checking_time;

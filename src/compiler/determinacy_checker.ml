@@ -4,6 +4,8 @@
 open Elpi_util.Util
 open Elpi_parser.Ast
 open Compiler_data
+
+let ErrorFun { error } = error ~component:"DetCheck"
 module C = Constants
 module UF = Symbol.UF
 module S = Elpi_runtime.Data.Global_symbols
@@ -14,7 +16,6 @@ module Format = struct
   let eprintf = fun e -> Format.ifprintf Format.err_formatter e
 end
 
-let error ~loc msg = error ~loc ("DetCheck: " ^  msg)
 
 type dtype =
   | Det  (** -> for deterministic preds *)
@@ -312,7 +313,7 @@ end
 
 let get_const_dtype ~type_abbrevs ~ctx ~var ~loc { ScopedTerm.scope = t; name; ty = tya } =
   let get_ctx = function
-    | None -> error ~loc (Format.asprintf "DetCheck: Bound var %a should be in the local map" F.pp name)
+    | None -> error ~loc (Format.asprintf "Bound var %a should be in the local map" F.pp name)
     | Some e -> e
   in
   let get_con _x = Compilation.type_ass_2func_mut ~loc ~type_abbrevs tya in
@@ -370,7 +371,7 @@ let check_clause, check_chr_guard_and_newgoal =
         Format.asprintf
           "@[<hov 2>Predicate %a has no declared signature,@ providing one could fix the following error@ (inferred \
            signature: %a)@]@\n\
-           DetCheck: " F.pp name TypeAssignment.pretty_mut_once
+           " F.pp name TypeAssignment.pretty_mut_once
           (TypeAssignment.deref @@ ty)
     | _ -> ""
   in
@@ -403,7 +404,7 @@ let check_clause, check_chr_guard_and_newgoal =
         | None -> Any, None
         | Some Any -> Any, None
         | Some (Arrow (m,_,l,r)) -> l, Some r 
-        | Some d -> error ~loc  @@ Format.asprintf "DetCheck: found dtype:%a" pp_dtype d
+        | Some d -> error ~loc  @@ Format.asprintf "found dtype:%a" pp_dtype d
       in
       let rec aux ~user_dtype d tl : (dtype * Good_call.t) =
         Format.eprintf "@[<hov 2>In recursive call for infer.aux with head-term@ @[%a@], good_call is %a -- and dtype@ @[%a@] and user_dytpe is @[%a@]@]@." (Format.pp_print_option ScopedTerm.pretty) (List.nth_opt tl 0)

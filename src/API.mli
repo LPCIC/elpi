@@ -208,37 +208,6 @@ module Setup : sig
 
 end
 
-module Parse : sig
-
-  (** [program file_list] parses a list of files,
-      Raises Failure if the file does not exist. *)
-  val program : elpi:Setup.elpi ->
-    file:string -> Ast.program
-  val program_from : elpi:Setup.elpi ->
-    loc:Ast.Loc.t -> digest:Digest.t -> Lexing.lexbuf -> Ast.program
-
-  (** [goal file_list] parses the query,
-      Raises Failure if the file does not exist.  *)
-  val goal : elpi:Setup.elpi ->
-    loc:Ast.Loc.t -> text:string -> Ast.query
-  val goal_from : elpi:Setup.elpi ->
-    loc:Ast.Loc.t -> Lexing.lexbuf -> Ast.query
-
-  (** [resolve f] computes the full path of [f] as the parser would do (also)
-      for files recursively accumulated. Raises Failure if the file does not
-      exist. *)
-  val resolve_file : elpi:Setup.elpi -> ?cwd:string -> unit:string -> unit -> string
-
-  (** [std_resolver cwd paths ()] returns a resolver function that looks in cwd
-      and paths (relative to cwd, or absolute) *)
-  val std_resolver :
-    ?cwd:string -> paths:string list -> unit ->
-      (?cwd:string -> unit:string -> unit -> string)
-
-  exception ParseError of Ast.Loc.t * string
-end
-
-
 module Compile : sig
 
   module StrSet : sig
@@ -256,6 +225,11 @@ module Compile : sig
     time_typechecking : bool;
     (* skip determinacy analysis *)
     skip_det_checking: bool;
+    (* resilient passes stop after that many errors; 0, the default, means
+       that the first error is raised (CompileError, Parse.ParseError), so
+       that nothing is dropped silently by a client that does not look at the
+       list of errors *)
+    max_errors: int;
   }
   val default_flags : flags
   val to_setup_flags : flags -> Setup.flags
@@ -264,7 +238,27 @@ module Compile : sig
   type query
   type executable
 
-  exception CompileError of Ast.Loc.t option * string
+  (** The passes that compile user text ([program], [scope_ast], [unit],
+      [extend], [extend_signature]) return their result and the list of the
+      errors found, in order of occurrence. With [flags.max_errors] set to 0
+      (the default) the first error is raised as [CompileError] and the list
+      is empty. Otherwise a pass stops after [flags.max_errors] errors and
+      adds a final error saying that the rest was not checked. The queries and
+      the builtins always raise [CompileError]. *)
+  type error = {
+    component : string;     (** the pass that found the error, eg [Typechecker] *)
+    loc : Ast.Loc.t option;
+    message : string;       (** without the name of the component *)
+  }
+  val pp_error : Format.formatter -> error -> unit
+  (** [location:] then, on the next line, [Component: message] *)
+  val pp_error_message : Format.formatter -> error -> unit
+  (** [Component: message], for who shows the location separately *)
+  val show_error : error -> string
+
+  (** Raised by the queries and the builtins, and by the other passes when
+      [flags.max_errors] is 0 (the default): the first error *)
+  exception CompileError of error
 
   (* basic API: Compile all program files in one go.
 
@@ -276,7 +270,7 @@ module Compile : sig
      - the `accumulate` directive inserts `{` and `}` around the accumulated
        code
    *)
-  val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> program
+  val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> program * error list
 
   (* separate compilation API: scoped_programs and units are marshalable and
      closed w.r.t. the host application (eg quotations are desugared).
@@ -293,7 +287,7 @@ module Compile : sig
   val scoped_program_name : scoped_program -> string
   val scoped_program_digest : scoped_program -> Digest.t
   val scoped_program_deps : scoped_program -> (string * Digest.t) list
-  val scope_ast : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> scoped_program list
+  val scope_ast : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> scoped_program list * error list
   val scope_builtins : ?flags:flags -> elpi:Setup.elpi -> Setup.builtins -> scoped_program
   
   type compilation_unit
@@ -307,12 +301,12 @@ module Compile : sig
   val compilation_unit_signature_digest : compilation_unit_signature -> Digest.t
 
   val empty_base : elpi:Setup.elpi -> program
-  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> scoped_program -> compilation_unit
-  val extend : ?flags:flags -> base:program -> compilation_unit -> program
+  val unit : ?flags:flags -> elpi:Setup.elpi -> base:program -> scoped_program -> compilation_unit * error list
+  val extend : ?flags:flags -> base:program -> compilation_unit -> program * error list
 
   (* only adds the types/modes from the compilation unit, not its code *)
   val signature : compilation_unit -> compilation_unit_signature
-  val extend_signature : ?flags:flags -> base:program -> compilation_unit_signature -> program
+  val extend_signature : ?flags:flags -> base:program -> compilation_unit_signature -> program * error list
 
   (** [map_compilation_unit f u] applies [f] to every opaque data (CData)
       node in the unit *)
@@ -329,6 +323,7 @@ module Compile : sig
 
   module IntervalTree : sig
     type 'a t
+    val of_list : (Ast.Loc.t * 'a) list -> 'a t
     val find : Ast.Loc.t -> 'a t -> (Ast.Loc.t * 'a) list
     val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
   end
@@ -339,7 +334,95 @@ module Compile : sig
   type info = { defined : Ast.Loc.t option; type_ : type_ option }
   val pp_info : Format.formatter -> info -> unit
 
+  (** Hover information as an interval tree, cheaper than {!iter}.
+      [hover u] covers the rules of [u]: the type of each sub-expression and
+      the declaration of its head. [hover_types sp] covers the type
+      expressions of the declarations (pred, type, type abbreviations) of [sp]:
+      for each node, its location, a text (the kind of a type constructor, the
+      type itself for compound types), and the location of the declaration of
+      the type constructor when it is in [sp] *)
   val hover : compilation_unit -> info IntervalTree.t
+  val hover_types : scoped_program -> (Ast.Loc.t * string * Ast.Loc.t option) list
+
+  type origin = User | Builtin | Core | Undeclared
+  type cls = Predicate | Function | Data
+  type kind =
+    | Constant of cls * origin  (* a symbol resolved to a declaration *)
+    | Bound                     (* occurrence of a variable bound by x\, pi x\, sigma x\ *)
+    | Binder                    (* the binding occurrence of such a variable *)
+    | Unification_variable      (* a variable of the rule *)
+    | Discard
+    | Literal of [ `Int | `Float | `String | `Other ]
+    | Keyword                   (* :- => , ; ! pi sigma *)
+    | Type_constructor | Type_abbreviation | Type_variable | Type_keyword
+  | Macro                     (* a use of a macro, @name *)
+
+  type node = {
+    loc : Ast.Loc.t;               (* of the name of the symbol *)
+    kind : kind;
+    name : string option;
+    defined : Ast.Loc.t option;    (* the declaration of a constant, the binder (with
+                                      pi/sigma, without the backslash) of a bound
+                                      variable, the head of the rule of a unification variable,
+                                      the declaration of a macro *)
+    declaration : bool;            (* the binding occurrence of a variable, the symbol that a rule defines (the head of its head) *)
+  }
+  val pp_node : Format.formatter -> node -> unit
+
+  (* [iter sp u f] calls [f] on the symbols of the unit [u]: of its rules,
+     CHR rules and macros, and of the type expressions of the declarations of
+     its scoped program [sp] *)
+  val iter : scoped_program -> compilation_unit -> (node -> unit) -> unit
+end
+
+module Parse : sig
+
+  (** The parser does not stop at the first syntax error: a declaration with a
+      syntax error is skipped up to the next dot and dropped, and its error is
+      returned. The errors are in order of occurrence, and [component] is
+      [Parser]. The parser stops after [flags.max_errors] errors, with a last
+      error that says so; if it is 0 (the default, also when [flags] is not
+      given) the first error is raised as [ParseError].
+      The text given to [program_from] must be complete
+      (e.g. [Lexing.from_string]). *)
+  type error = Compile.error = {
+    component : string;
+    loc : Ast.Loc.t option;
+    message : string;
+  }
+
+  (** [program file] parses a file (and its [.sig] if it is a [.mod]).
+      Raises Failure if the file does not exist. *)
+  val program : ?flags:Compile.flags -> elpi:Setup.elpi ->
+    string -> Ast.program * error list
+  val program_from : ?flags:Compile.flags -> elpi:Setup.elpi ->
+    loc:Ast.Loc.t -> digest:Digest.t -> Lexing.lexbuf -> Ast.program * error list
+
+  (** [goal file_list] parses the query,
+      Raises ParseError. *)
+  val goal : elpi:Setup.elpi ->
+    loc:Ast.Loc.t -> text:string -> Ast.query
+  val goal_from : elpi:Setup.elpi ->
+    loc:Ast.Loc.t -> Lexing.lexbuf -> Ast.query
+
+  (** [resolve f] computes the full path of [f] as the parser would do (also)
+      for files recursively accumulated. Raises Failure if the file does not
+      exist. *)
+  val resolve_file : elpi:Setup.elpi -> ?cwd:string -> unit:string -> unit -> string
+
+  (** [std_resolver cwd paths ()] returns a resolver function that looks in cwd
+      and paths (relative to cwd, or absolute) *)
+  val std_resolver :
+    ?cwd:string -> paths:string list -> unit ->
+      (?cwd:string -> unit:string -> unit -> string)
+
+  exception ParseError of Ast.Loc.t * string
+
+  (** [accumulated p] is the list of the accumulate directives of [p] (not of
+      the files it accumulates): the location of each one, and the files that
+      it accumulates, directly or not, by the names that the locations of their
+      contents have. *)
+  val accumulated : Ast.program -> (Ast.Loc.t * string list) list
 end
 
 module Data : sig

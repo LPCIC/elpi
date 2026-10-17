@@ -1,0 +1,6 @@
+pred main.
+main :- print "hello", X is 6 * 7, print X.
+pred fails.
+fails :- 1 = 2.
+pred loop.
+loop :- loop.

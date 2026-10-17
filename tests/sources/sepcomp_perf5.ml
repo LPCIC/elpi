@@ -39,7 +39,7 @@ let () =
   let exs = list_init 0 50000 (fun _ -> ex) in
   let rec extend i p =
     if i = 0 then p
-    else extend (i-1) (List.fold_left (fun base u -> Compile.extend ~base u) p exs) in
+    else extend (i-1) (List.fold_left (fun base u -> ok (Compile.extend ~base u)) p exs) in
   let p = extend 2 base in
   let t2 = Unix.gettimeofday () in
   Printf.printf "extend: %f\n%!" (t2 -. t1);

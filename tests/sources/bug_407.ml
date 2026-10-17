@@ -22,8 +22,10 @@ let () = begin
     ~builtins:[Elpi.Builtin.std_builtins]
     ~flags:(Compile.to_setup_flags flags)
     ~file_resolver:(Parse.std_resolver ~paths:[] ()) () in
-  let base = Parse.program_from ~elpi ~loc:global ~digest:(Digest.string "") (Lexing.from_string base_str) in
-  let pgm = Compile.program ~flags ~elpi base in
+  let base, errors = Parse.program_from ~elpi ~loc:global ~digest:(Digest.string "") (Lexing.from_string base_str) in
+  assert (errors = []);
+  let pgm, errors = Compile.program ~flags ~elpi base in
+  assert (errors = []);
   let query = Compile.optimize @@ RawQuery.compile_term pgm (fun st -> st, query) in
   match Execute.once query with
   | Execute.Success r ->

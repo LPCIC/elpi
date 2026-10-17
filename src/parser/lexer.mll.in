@@ -162,7 +162,8 @@ and token v = parse
       pos_cnum = 0;
       pos_bol = lexbuf.lex_curr_p.pos_bol;
     };
-    lexbuf.lex_abs_pos <- - (String.length x) - lexbuf.lex_start_p.pos_cnum;
+    (* the position of the end of the directive is 0, also after many directives *)
+    lexbuf.lex_abs_pos <- - lexbuf.lex_curr_pos;
     lexbuf.lex_start_p <- lexbuf.lex_curr_p;
     token v lexbuf }
 | ( ' ' | '\t' | '\r' ) { token v lexbuf }

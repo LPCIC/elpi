@@ -34,8 +34,8 @@ jobs:
           env:
             OPAMWITHTEST: false
             
-        - run: opam pin --ignore-constraints-on elpi            add rocq-elpi              https://github.com/LPCIC/coq-elpi.git#master
-        - run: opam pin --ignore-constraints-on elpi            add coq-elpi               https://github.com/LPCIC/coq-elpi.git#master
+        - run: opam pin --ignore-constraints-on elpi            add rocq-elpi              https://github.com/LPCIC/coq-elpi.git#elpi4
+        - run: opam pin --ignore-constraints-on elpi            add coq-elpi               https://github.com/LPCIC/coq-elpi.git#elpi4
         - run: opam pin --ignore-constraints-on elpi            add rocq-stdlib            https://github.com/rocq-prover/stdlib.git#master
         - run: opam pin --ignore-constraints-on elpi            add coq-stdlib             https://github.com/rocq-prover/stdlib.git#master
         #- run: opam pin --ignore-constraints-on elpi,coq-stdlib add coq-trocq-std          https://github.com/rocq-community/trocq.git#master

@@ -1,0 +1,11 @@
+==== open typeerr.elpi ====
+diagnostics of typeerr.elpi (version 1): 1
+  1:11-1:18 error: Typechecker: literal "hello" has type string but = expects an argument of type int
+    | p X :- X = "hello".
+    |            ^^^^^^^
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  line 0:
+               | pred p int.
+    type       |        ^^^

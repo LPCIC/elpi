@@ -236,7 +236,7 @@ let () =
   let mode_err l c = !(Format.asprintf "line %d, column %d.*\nTypechecker.*" l c) in
   let duplicate_err l1 l2 = !(Format.asprintf "line %d.*\n.*cannot only differ.*\n.*\n.*\n.*line %d" l1 l2) in
   let constr_error l1 l2 = !(Format.asprintf "line %d, column %d.*\n.*Invalid determinacy of constructor" l1 l2) in
-  let mut_excl_eigen l p = !(Format.asprintf "line %d.*\nMutual exclusion violated for rules of predicate %s" l p) in
+  let mut_excl_eigen l p = !(Format.asprintf "line %d.*\nAssemble: Mutual exclusion violated for rules of predicate %s" l p) in
   let status = Test.
     [|(* 01*) mut_excl 8 5; Success; det_check 8 7; mut_excl_eigen 8 "q"; mut_excl_eigen 8 "q";            (*05*)
       (* 06*) mut_excl_eigen 8 "q"; mut_excl_eigen 8 "q"; mut_excl_eigen 9 "q"; mut_excl 8 8; mut_excl 8 8; (*10*)

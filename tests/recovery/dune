@@ -1,0 +1,13 @@
+(executable
+ (name recov)
+ (libraries elpi.parser elpi.util))
+
+(rule
+ (deps (source_tree cases))
+ (action
+  (with-stdout-to recov.output
+   (run %{exe:recov.exe} cases))))
+
+(rule
+ (alias runtest)
+ (action (diff recov.expected recov.output)))

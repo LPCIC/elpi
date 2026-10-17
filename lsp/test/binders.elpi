@@ -1,0 +1,10 @@
+pred q int, int.
+pred r int.
+pred p int, int.
+p X Y :- pi z\ q z X, sigma W\ r W, std.map [Y] (a\ b\ b = a) _.
+p X _ :- r X.
+
+data tm.
+symb lam (tm -> tm) -> tm.
+func copy tm -> tm.
+copy (lam F) (lam G) :- pi x\ copy (F x) (G x).

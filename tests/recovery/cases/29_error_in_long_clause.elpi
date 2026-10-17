@@ -1,0 +1,8 @@
+p 1.
+p X :-
+  q X,
+  r X,
+  s X X ),
+  t X,
+  u X.
+p 3.

@@ -1,0 +1,91 @@
+; make tests-lsp-web: the tests of lsp/test run against the web build of the
+; server, lsp/web_driver.ml (needs js_of_ocaml and node), through bridge.mjs.
+; The outputs are compared with the expected outputs of lsp/test, but for the
+; tests where the web server differs (the library files have elpi-builtin:
+; URIs), whose expected outputs are here.
+
+(copy_files ../*.elpi)
+
+(rule
+ (targets server.sh)
+ (action
+  (progn
+   (with-stdout-to server.sh
+    (echo "#!/bin/sh\nexec node \"$(dirname \"$0\")/bridge.mjs\" \"$(dirname \"$0\")/../../web_driver.bc.js\"\n"))
+   (run chmod +x server.sh))))
+
+(rule
+ (targets test_lsp.output accbad.output accmissing.output good.output
+          syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output acctype.output lists.output accchar.output run.output)
+ (deps (glob_files *.elpi) server.sh bridge.mjs ../../web_driver.bc.js)
+ (action
+  (with-stdout-to test_lsp.output
+   (run %{exe:../test_lsp.exe} ./server.sh .))))
+
+; the outputs that are the same as the ones of the native server
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../test_lsp.expected test_lsp.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../accbad.expected accbad.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../accmissing.expected accmissing.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../syntax.expected syntax.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../typeerr.expected typeerr.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../warn.expected warn.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../binders.expected binders.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../macros.expected macros.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../acctype.expected acctype.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../lists.expected lists.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../accchar.expected accchar.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff ../run.expected run.output)))
+
+; the outputs that differ: the library files have elpi-builtin: URIs, and the
+; definitions in accumulated files are not found (they are copied in _build
+; only, while the native locations are in the source tree)
+(rule
+ (alias runtest-lsp-web)
+ (action (diff good.expected good.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff libdef.expected libdef.output)))
+
+(rule
+ (alias runtest-lsp-web)
+ (action (diff library.expected library.output)))
+
+(rule
+ (alias default)
+ (action (progn)))

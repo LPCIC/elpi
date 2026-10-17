@@ -36,6 +36,13 @@ let message_of_state s = try Error_messages.message s with Not_found -> "syntax 
 
 module Parser = Parse.Make(struct let versions = Elpi_util.Util.StrMap.empty let resolver = Elpi_util.Util.std_resolver ~paths:[] () end)
 
+(* the parsing of programs returns the errors: here a syntax error is an exception *)
+let program_from ~loc ~digest lexbuf =
+  match Parser.program_from ~loc ~digest lexbuf with
+  | p, [] -> p
+  | _, { Elpi_util.Util.loc = Some loc; message; _ } :: _ -> raise (Parse.ParseError (loc, message))
+  | _, { message; _ } :: _ -> failwith message
+
 let warn = ref None
 let () = Elpi_util.Util.set_warn (fun ?loc ~id str -> warn := Some str)
 let test s x y w z att ?warns b =
@@ -44,7 +51,7 @@ let test s x y w z att ?warns b =
   let lexbuf = Lexing.from_string s in
   warn := None;
   try
-    let { ast } as p = Parser.program_from ~loc ~digest:(Digest.string s) lexbuf in
+    let { ast } as p = program_from ~loc ~digest:(Digest.string s) lexbuf in
     if ast <> exp then error s p exp;
     match !warn, warns with
     | None, None -> ()
@@ -61,7 +68,7 @@ let testR s x y w z attributes to_match to_remove guard new_goal =
   let lexbuf = Lexing.from_string s in
   let loc = Loc.initial "(input)" in
   try
-    let { ast } as p = Parser.program_from ~loc ~digest:(Digest.string s) lexbuf in
+    let { ast } as p = program_from ~loc ~digest:(Digest.string s) lexbuf in
     if ast <> exp then
       error s p exp
   with Parse.ParseError(loc,message) ->
@@ -72,7 +79,7 @@ let testT s () =
   let lexbuf = Lexing.from_string s in
   let loc = Loc.initial "(input)" in
   try
-    let { ast } as p = Parser.program_from ~loc ~digest:(Digest.string s) lexbuf in
+    let { ast } as p = program_from ~loc ~digest:(Digest.string s) lexbuf in
     match ast with
     | [Program.Pred _] -> ()
     | [Program.Type _] -> ()
@@ -105,7 +112,7 @@ let test_decl_eq get wrap s1 s2 () =
     let lexbuf = Lexing.from_string s in
     let loc = Loc.initial "(input)" in
     try
-      let { ast } = Parser.program_from ~loc ~digest:(Digest.string s) lexbuf in
+      let { ast } = program_from ~loc ~digest:(Digest.string s) lexbuf in
       match ast with
       | [d] ->
         (match get d with
@@ -143,7 +150,7 @@ let testF s i msg =
   let lexbuf = Lexing.from_string s in
   let loc = Loc.initial "(input)" in
   try
-    let _ = Parser.program_from ~loc ~digest:(Digest.string s) lexbuf in
+    let _ = program_from ~loc ~digest:(Digest.string s) lexbuf in
     Printf.eprintf "error, '%s' should not parse\n%!" s;
     exit 1
   with Parse.ParseError(loc,message) ->
@@ -151,8 +158,10 @@ let testF s i msg =
       Printf.eprintf "error, '%s' fails with message '%s'\nwhich does not match '%s'\n%!" s message msg;   
       exit 1;
     end;
-    if loc.Loc.source_start <> i then begin
-      Printf.eprintf "error, '%s' fails at %d instead of %d\n%!" s loc.Loc.source_start i;
+    (* i is where the error is: its start, or the end of the offending token
+       (that the error covers) *)
+    if loc.Loc.source_start <> i && loc.Loc.source_stop <> i then begin
+      Printf.eprintf "error, '%s' fails at %d instead of %d\n%!" s loc.Loc.source_stop i;
       exit 1;
     end
 
@@ -258,19 +267,19 @@ let _ =
   test  "name."             1 4  1 0 [] (c 0 "name");
   test  "p :- a => b => c." 1 16 1 0 [] (app ":-" 2 [c 0 "p";app "=>" 7 [c 5 "a";app "=>" 12 [c 10 "b";c 15 "c"]]]); 
   (*    01234567890123456789012345 *)
-  test  "p :- [ a , b ]."   1 14  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 14 [c 7 "a";c 11 "b";mkNil 13 ~len:1]);
-  test  "p :- [a,b]."       1 10  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 10 [c 6 "a";c 8 "b";mkNil 9 ~len:1]);
-  test  "p :- [ a , {b} ]." 1 16  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 16 [c 7 "a";spill 11 14 (c 12 "b");mkNil 15 ~len:1]);
-  test  "p :- [a,{b}]."     1 12  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 12 [c 6 "a";spill 8 11 (c 9 "b");mkNil 11 ~len:1]);
+  test  "p :- [ a , b ]."   1 14  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 14 [c 7 "a";c 11 "b";mkNil 13 ~len:0]);
+  test  "p :- [a,b]."       1 10  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 10 [c 6 "a";c 8 "b";mkNil 9 ~len:0]);
+  test  "p :- [ a , {b} ]." 1 16  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 16 [c 7 "a";spill 11 14 (c 12 "b");mkNil 15 ~len:0]);
+  test  "p :- [a,{b}]."     1 12  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 12 [c 6 "a";spill 8 11 (c 9 "b");mkNil 11 ~len:0]);
   (*    01234567890123456789012345 *)
-  test  "p :- [(a + b)]."   1 14  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 14 [app "+" 9 [c 7 "a";c 11 "b"];mkNil 13 ~len:1]);
-  test  "p :- [a + b]."     1 12  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 12 [app "+" 8 [c 6 "a";c 10 "b"];mkNil 11 ~len:1]);
-  test  "p :- [ f a , b ]." 1 16  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 16 [app "f" 7 [c 9 "a"];c 13 "b";mkNil 15 ~len:1]);
-  test  "p :- [f a,b]."     1 12  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 12 [app "f" 6 [c 8 "a"];c 10 "b";mkNil 11 ~len:1]);
+  test  "p :- [(a + b)]."   1 14  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 14 [app "+" 9 [c 7 "a";c 11 "b"];mkNil 13 ~len:0]);
+  test  "p :- [a + b]."     1 12  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 12 [app "+" 8 [c 6 "a";c 10 "b"];mkNil 11 ~len:0]);
+  test  "p :- [ f a , b ]." 1 16  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 16 [app "f" 7 [c 9 "a"];c 13 "b";mkNil 15 ~len:0]);
+  test  "p :- [f a,b]."     1 12  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 12 [app "f" 6 [c 8 "a"];c 10 "b";mkNil 11 ~len:0]);
   (*    01234567890123456789012345 *)
-  test  "p :- [(a,b)]."     1 12  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 12 [app "," 8 [c 7 "a";c 9 "b"];mkNil 11 ~len:1]);
+  test  "p :- [(a,b)]."     1 12  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 12 [app "," 8 [c 7 "a";c 9 "b"];mkNil 11 ~len:0]);
   test  "p :- [a,b|c]."     1 12  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 12 [c 6 "a";c 8 "b";c 10 "c"]);
-  test  "p :- [ a , b \\ @f , x \\ b ]." 1 27  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 27 [c 7 "a"; lam "b" 12 (app "," 18 [ c 15 "@f"; lam "x" 21  (c 24 "b")]);mkNil 26 ~len:1]);
+  test  "p :- [ a , b \\ @f , x \\ b ]." 1 27  1 0 [] ((c 0 "p" |- 3) @@ mkSeq 5 27 [c 7 "a"; lam "b" 12 (app "," 18 [ c 15 "@f"; lam "x" 21  (c 24 "b")]);mkNil 26 ~len:0]);
   (*    0123456789012345678901234567890 *)
   test  "X is a."           1 6  1 0 [] (app "is" 2 [c 0 "X";c 5 "a"]);
   testF "p :- f use_sig."   14 ".*term expected";

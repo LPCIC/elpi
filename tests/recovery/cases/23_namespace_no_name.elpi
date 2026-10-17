@@ -1,0 +1,5 @@
+p 1.
+namespace {
+p 2.
+}
+p 3.

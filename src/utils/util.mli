@@ -167,6 +167,8 @@ val option_mapacc :
   ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a option -> 'acc * 'b option
 val option_iter : ('a -> unit) -> 'a option -> unit
 val option_default : 'a -> 'a option -> 'a
+(* [None @? l] is [l], [Some x @? l] is [x :: l] *)
+val ( @? ) : 'a option -> 'a list -> 'a list
 
 (***************** Unique ID ****************)
 
@@ -270,6 +272,14 @@ end
 (******************** errors ******************)
 
 (* A regular error *)
+(** An error found by a pass of the compiler or by the parser, that are error
+    resilient: they return the list of their errors *)
+type error = {
+  component : string;       (** the pass that found the error, eg "Typechecker" *)
+  loc : Loc.t option;
+  message : string;         (** without the name of the component *)
+}
+
 val error : ?loc:Loc.t -> string -> 'a
 (* An invariant is broken, i.e. a bug *)
 val anomaly : ?loc:Loc.t -> string -> 'a

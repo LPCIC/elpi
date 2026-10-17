@@ -1,0 +1,2 @@
+; a Slidev deck, see README.md: nothing to build here
+(dirs :standard \ node_modules dist public)
