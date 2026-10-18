@@ -320,10 +320,29 @@ let rec for_all23 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3
   | (_, _) -> false
 ;;
 
+type error = {
+  component : string; 
+  loc : Loc.t option;
+  message : string;
+}
+
+exception ElpiError of error
+
+type error_fun = ErrorFun of {
+  error : 'a. ?loc:Loc.t -> string -> 'a;
+  anomaly : 'a. ?loc:Loc.t -> string -> 'a;
+}
+let error_fun ~component =
+  ErrorFun {
+    error = (fun ?loc message -> raise (ElpiError { component; loc; message }));
+    anomaly = (fun ?loc message -> raise (ElpiError { component; loc; message = "anomaly: " ^ message }));
+  }
+
 let pp_loc_opt = function
   | None -> ""
   | Some loc -> Loc.show loc
 type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
+type warning = { warning_id : warning_id; warning : error }
 let default_warn ?loc ~id:_ s =
   Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" (pp_loc_opt loc) s
 let default_error ?loc s =
