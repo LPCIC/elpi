@@ -99,12 +99,12 @@ include
                  (elpi__state, { loc = elpi__4; data = elpi__1 },
                    (List.concat [elpi__3; elpi__2]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_located_locatedc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "located"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and located :
@@ -238,7 +238,7 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (A elpi__12), (List.concat [elpi__11]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_term_Ac)))
@@ -259,12 +259,12 @@ include
                  (elpi__state, (B (elpi__16, elpi__13)),
                    (List.concat [elpi__15; elpi__14]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_term_Bc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "term"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and term : 'c 'csts . (term, 'c, 'csts) Elpi.API.ContextualConversion.t =

@@ -88,3 +88,9 @@ let () = declare "bug_407"
   ~description:"misleading API"
   ~expectation:Test.Success
   ()
+
+let () = declare "compile_errors"
+  ~source_dune:"compile_errors.exe"
+  ~description:"the passes of the compiler return all the errors"
+  ~expectation:Test.Success
+  ()

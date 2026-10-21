@@ -61,12 +61,12 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (A elpi__2), (List.concat [elpi__1]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_t1_Ac)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "t1"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and t1 : 'c 'csts . (t1, 'c, 'csts) Elpi.API.ContextualConversion.t =
@@ -155,12 +155,12 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (A elpi__7), (List.concat [elpi__6]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_t2_Ac)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "t2"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and t2 : 'c 'csts . (t2, 'c, 'csts) Elpi.API.ContextualConversion.t =

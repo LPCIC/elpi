@@ -4,6 +4,8 @@
 open Elpi_util.Util
 open Elpi_parser.Ast
 open Compiler_data
+
+let ErrorFun { error; anomaly } = error_fun ~component:"DetCheck"
 module C = Constants
 module UF = Symbol.UF
 module S = Elpi_runtime.Data.Global_symbols
@@ -14,7 +16,6 @@ module Format = struct
   let eprintf = fun e -> Format.ifprintf Format.err_formatter e
 end
 
-let error ~loc msg = error ~loc ("DetCheck: " ^  msg)
 
 type dtype =
   | Det  (** -> for deterministic preds *)
@@ -312,7 +313,7 @@ end
 
 let get_const_dtype ~type_abbrevs ~ctx ~var ~loc { ScopedTerm.scope = t; name; ty = tya } =
   let get_ctx = function
-    | None -> error ~loc (Format.asprintf "DetCheck: Bound var %a should be in the local map" F.pp name)
+    | None -> error ~loc (Format.asprintf "Bound var %a should be in the local map" F.pp name)
     | Some e -> e
   in
   let get_con _x = Compilation.type_ass_2func_mut ~loc ~type_abbrevs tya in
@@ -358,6 +359,14 @@ let spill_err ~loc = anomaly ~loc "Everything should have already been spilled"
       Option.bind (SymbolResolver.resolved_to types x) to_dtype
     | Bound _ -> None
   
+(* where the warnings go: set by check_clause and check_chr_guard_and_newgoal
+   (below) for the time of the check *)
+let current_errs : Errors.t option ref = ref None
+let with_errs errs f =
+  let outer = !current_errs in
+  current_errs := Some errs;
+  Fun.protect ~finally:(fun () -> current_errs := outer) f
+
 let check_clause, check_chr_guard_and_newgoal =
 
   let has_undeclared_signature ~types ~unknown { ScopedTerm.scope = b; name = f } =
@@ -370,7 +379,7 @@ let check_clause, check_chr_guard_and_newgoal =
         Format.asprintf
           "@[<hov 2>Predicate %a has no declared signature,@ providing one could fix the following error@ (inferred \
            signature: %a)@]@\n\
-           DetCheck: " F.pp name TypeAssignment.pretty_mut_once
+           " F.pp name TypeAssignment.pretty_mut_once
           (TypeAssignment.deref @@ ty)
     | _ -> ""
   in
@@ -403,7 +412,7 @@ let check_clause, check_chr_guard_and_newgoal =
         | None -> Any, None
         | Some Any -> Any, None
         | Some (Arrow (m,_,l,r)) -> l, Some r 
-        | Some d -> error ~loc  @@ Format.asprintf "DetCheck: found dtype:%a" pp_dtype d
+        | Some d -> error ~loc  @@ Format.asprintf "found dtype:%a" pp_dtype d
       in
       let rec aux ~user_dtype d tl : (dtype * Good_call.t) =
         Format.eprintf "@[<hov 2>In recursive call for infer.aux with head-term@ @[%a@], good_call is %a -- and dtype@ @[%a@] and user_dytpe is @[%a@]@]@." (Format.pp_print_option ScopedTerm.pretty) (List.nth_opt tl 0)
@@ -830,7 +839,7 @@ let check_clause, check_chr_guard_and_newgoal =
       det_pred
     with LoadFlexClause t ->
       if not has_tail_cut then
-        warn ~loc:t.loc ~id:FlexClause (Format.asprintf "skipping static analysis of flexible rule: %a" ScopedTerm.pretty t);
+        Option.iter (fun errs -> Errors.warn errs ~component:"DetCheck" ~loc:t.loc ~id:FlexClause (Format.asprintf "skipping static analysis of flexible rule: %a" ScopedTerm.pretty t)) !current_errs;
       Det
   in
   let err gc f =
@@ -878,13 +887,15 @@ let check_clause, check_chr_guard_and_newgoal =
         err gc f
   in
 
-  let check_clause ~type_abbrevs ~types ~unknown (t : ScopedTerm.t) : unit =
+  let check_clause ~errs ~type_abbrevs ~types ~unknown (t : ScopedTerm.t) : unit =
+    with_errs errs @@ fun () ->
     let _ : dtype = with_error_handling ~types ~unknown
       (check_clause ~type_abbrevs ~types ~_is_toplevel:true ~ctx:BVar.empty ~var:Uvar.empty) t in
     ()
   in
 
-  let check_chr_guard_and_newgoal ~type_abbrevs ~types ~unknown ~guard ~newgoal : unit =
+  let check_chr_guard_and_newgoal ~errs ~type_abbrevs ~types ~unknown ~guard ~newgoal : unit =
+    with_errs errs @@ fun () ->
     let var = Uvar.empty in
     let var =
       match guard with

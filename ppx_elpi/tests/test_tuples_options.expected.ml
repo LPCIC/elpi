@@ -65,7 +65,7 @@ include
             elpi__hd == elpi_constant_constructor_color_Greenc ->
             (elpi__state, Green, [])
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "color"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and color : 'c 'csts . (color, 'c, 'csts) Elpi.API.ContextualConversion.t
@@ -300,7 +300,7 @@ include
                  (elpi__state, (P (elpi__4, elpi__1)),
                    (List.concat [elpi__3; elpi__2]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_t_Pc)))
@@ -326,7 +326,7 @@ include
                  (elpi__state, (T (elpi__10, elpi__5, elpi__6)),
                    (List.concat [elpi__9; elpi__7; elpi__8]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_t_Tc)))
@@ -357,7 +357,7 @@ include
                  (elpi__state, (Q (elpi__18, elpi__11, elpi__12, elpi__13)),
                    (List.concat [elpi__17; elpi__14; elpi__15; elpi__16]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_t_Qc)))
@@ -376,12 +376,12 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (O elpi__20), (List.concat [elpi__19]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_t_Oc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "t"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and t : 'c 'csts . (t, 'c, 'csts) Elpi.API.ContextualConversion.t =

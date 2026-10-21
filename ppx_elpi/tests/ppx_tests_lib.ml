@@ -24,8 +24,8 @@ let append s =
   close_out oc
 
 let record_exception = function
-  | Compile.CompileError(loc, msg) ->
-      append (Printf.sprintf "\n/* COMPILE ERROR: %s\n   at: %s */\n" msg
+  | Error.ElpiError ({ loc } as e) ->
+      append (Printf.sprintf "\n/* COMPILE ERROR: %s\n   at: %s */\n" (Format.asprintf "%a" Error.pp_message e)
         (match loc with None -> "unknown location" | Some l -> Ast.Loc.show l))
   | e -> append (Printf.sprintf "\n/* EXCEPTION: %s */\n" (Printexc.to_string e))
 
@@ -34,6 +34,14 @@ let protect f =
   (try f () with e -> record_exception e);
   exit 0
 
+let print_warning fmt ?loc msg =
+  Format.fprintf fmt "@\n/* WARNING: %s@\n   at: %s */@\n" msg
+    (match loc with None -> "unknown location" | Some l -> Ast.Loc.show l)
+
+(* the warnings returned by the parser and the compiler *)
+let print_warnings fmt =
+  List.iter (fun { Error.warning = { Error.loc; message } } -> print_warning fmt ?loc message)
+
 (* Output file as a formatter, used for the output of the program, the errors
    and the warnings. Warnings (eg type checking ones) are part of the output. *)
 let formatter_on_output () =
@@ -41,9 +49,7 @@ let formatter_on_output () =
   let fmt = Format.formatter_of_out_channel out in
   Setup.set_err_formatter fmt;
   Setup.set_std_formatter fmt;
-  Setup.set_warn (fun ?loc ~id:_ msg ->
-    Format.fprintf fmt "@\n/* WARNING: %s@\n   at: %s */@\n" msg
-      (match loc with None -> "unknown location" | Some l -> Ast.Loc.show l));
+  Elpi.Builtin.set_runtime_warn (fun ?loc ~id:_ msg -> print_warning fmt ?loc msg);
   fmt, (fun () -> Format.pp_print_flush fmt (); close_out out)
 
 (* Document [builtin] in the output first, so that the output is available
@@ -69,11 +75,21 @@ let run_program builtin program =
     append ("\n" ^ program);
     let fmt, close = formatter_on_output () in
     let elpi = init builtin in
-    let ast = Parse.program_from ~elpi ~loc:(Ast.Loc.initial "test")
+    let ast, errors, warnings = Parse.program_from ~elpi ~loc:(Ast.Loc.initial "test")
         ~digest:(Digest.string program) (Lexing.from_string program) in
-    let goal = Parse.goal ~elpi ~loc:(Ast.Loc.initial "test") ~text:"main." in
-    let program = Compile.program ~elpi ~flags:Compile.default_flags ast in
-    let goal = Compile.query program goal in
+    print_warnings fmt warnings;
+    List.iter (fun e -> Format.eprintf "%a@." Error.pp e) errors;
+    if errors <> [] then exit 1;
+    let goal, warnings = Parse.query ~elpi ~loc:(Ast.Loc.initial "test") ~text:"main." in
+    print_warnings fmt warnings;
+    let goal = match goal with Ok g -> g | Error e -> Format.eprintf "%a@." Error.pp e; exit 1 in
+    let program, errors, warnings = Compile.program ~elpi ~flags:Compile.default_flags ast in
+    print_warnings fmt warnings;
+    List.iter (fun e -> Format.eprintf "%a@." Error.pp e) errors;
+    if errors <> [] then exit 1;
+    let goal, warnings = Compile.query program goal in
+    print_warnings fmt warnings;
+    let goal = match goal with Ok g -> g | Error e -> Format.eprintf "%a@." Error.pp e; exit 1 in
     let exe = Compile.optimize goal in
     (* what the program prints is a comment *)
     Format.fprintf fmt "@\n/* OUTPUT@\n";

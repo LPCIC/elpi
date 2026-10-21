@@ -10,6 +10,15 @@ module F = Ast.Func
 open Util
 open Data
 
+(* the errors of the runtime: ElpiError, with component "runtime" *)
+let ErrorFun { error; anomaly } = error_fun ~component:"runtime"
+let type_error = error
+
+(* an error in a rule found by the parts used by the compiler (clausify,
+   indexing): the compiler reports it as one of its errors, see
+   CompileTimeError *)
+let compile_time_error ?loc msg = raise (CompileTimeError (loc, msg))
+
 (* Internal notion of constraint *)
 type constraint_def = {
   cdepth : int;
@@ -2886,13 +2895,17 @@ let make_new_Map_snd_level_index argno mode =
     arg_idx = Ptmap.empty;
   }
         
-let path_for_dtree ~depth ~check_mut_excl args_idx args =
+(* the path of the arguments of [clause] *)
+let path_for_dtree ~depth ~check_mut_excl args_idx clause =
+  let args = clause.args in
   let max_depths = Discrimination_tree.max_depths args_idx in
   let max_path = Discrimination_tree.max_path args_idx in
   let max_list_length = max_lists_length args in
   let arg_depths = Discrimination_tree.user_upper_bound_depth args_idx in 
   (* Format.printf "[%d] Going to index [%a]\n%!" max_list_length (pplist pp_int ",") arg_depths; *)
-  let path = arg_to_trie_path ~depth ~safe:true ~is_goal:false args arg_depths max_depths ~check_mut_excl max_path max_list_length in
+  let path =
+    try arg_to_trie_path ~depth ~safe:true ~is_goal:false args arg_depths max_depths ~check_mut_excl max_path max_list_length
+    with Discrimination_tree.TooLargeConstant msg -> compile_time_error ?loc:clause.loc msg in
   (* Format.eprintf "Path is %a@." Discrimination_tree.Path.pp path; *)
   path, max_list_length, max_depths
 
@@ -2942,7 +2955,7 @@ let add_clause_to_snd_lvl_idx ~depth ~insert predicate clause = function
        args_idx = Ptmap.add hash (insert clause clauses) args_idx
     }
 | IndexWithDiscriminationTree {mode; arg_depths; args_idx; } ->
-    let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) args_idx clause.args in
+    let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) args_idx clause in
     [%spy "dev:disc-tree:depth-path" ~rid pp_string "Inst: MaxDepths " (pplist pp_int "") (Array.to_list max_depths)];
     IndexWithDiscriminationTree {
       mode; arg_depths; args_idx = Discrimination_tree.index args_idx path clause ~max_list_length
@@ -2959,6 +2972,7 @@ let rec add1clause_runtime ~depth { idx; time; times } predicate clause =
     let snd_lvl_idx = add_clause_to_snd_lvl_idx ~depth ~insert:Bl.cons predicate clause snd_lvl_idx in
     { times; time; idx = Ptmap.add predicate snd_lvl_idx idx }
   with
+  | CompileTimeError (loc, msg) -> error ?loc msg
   | Not_found ->
       (* Unknown predicate, we could detect this statically and forbid it *)
       let idx = Ptmap.add predicate (make_new_Map_snd_level_index 0 []) idx in
@@ -2980,13 +2994,13 @@ let add_to_times loc name time predicate times =
   | None -> times
   | Some id ->
     if StrMap.mem id times then
-      error ?loc ("duplicate clause name " ^ id)
+      compile_time_error ?loc ("duplicate clause name " ^ id)
     else
       StrMap.add id (time,predicate) times
 
 let time_of loc x times =
   try StrMap.find x times
-  with Not_found -> error ?loc ("cannot graft, clause " ^ x ^ " not found")
+  with Not_found -> compile_time_error ?loc ("cannot graft, clause " ^ x ^ " not found")
 
 let remove_from_times id times = StrMap.remove id times
     
@@ -3025,7 +3039,7 @@ let add1clause_overlap_runtime ~depth (idx:pred_info C.Map.t) predicate ~time (c
   | { overlap = Allowed } -> None, idx
   | { overlap = Forbidden dt } as pred_info ->
     clause.timestamp <- [time];
-    let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off pred_info.mode) dt clause.args in
+    let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off pred_info.mode) dt clause in
     let cl_overlap = { 
       overlap_loc = clause.loc; has_cut=has_bang clause.hyps; timestamp=clause.timestamp;
       arg_nb = List.length clause.args
@@ -3050,7 +3064,7 @@ let update_overlap ~det_check overlap ~depth index clause =
           | BitHash { mode; args = arg_depths } -> arg_depths, mode
           | IndexWithDiscriminationTree {mode; arg_depths} -> arg_depths, mode
         in
-        let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) dt clause.args in
+        let path, max_list_length, max_depths = path_for_dtree ~depth ~check_mut_excl:(Off mode) dt clause in
         let has_cut = has_bang clause.hyps in
         let arg_nb = List.length clause.args in
         let overlap_clause = { overlap_loc = clause.loc; has_cut; timestamp=clause.timestamp; arg_nb } in
@@ -3076,7 +3090,7 @@ let rec add1clause_compile_time ~det_check ~depth { idx; time; times } overlap ~
     | Some (Ast.Structured.Remove x) ->
         let reference, predicate1 = time_of clause.loc x times in
         if predicate1 <> predicate then
-          error ?loc:clause.loc ("cannot remove a clause for another predicate");
+          compile_time_error ?loc:clause.loc "cannot remove a clause for another predicate";
         let times = remove_from_times x times in
         clause.timestamp <- reference;
         let snd_lvl_idx = remove_clause_in_snd_lvl_idx (fun x -> x.timestamp = reference) snd_lvl_idx in
@@ -3085,7 +3099,7 @@ let rec add1clause_compile_time ~det_check ~depth { idx; time; times } overlap ~
     | Some (Ast.Structured.Replace x) ->
         let reference, predicate1 = time_of clause.loc x times in
         if predicate1 <> predicate then
-          error ?loc:clause.loc ("cannot replace a clause for another predicate");
+          compile_time_error ?loc:clause.loc "cannot replace a clause for another predicate";
         let times = remove_from_times x times in
         clause.timestamp <- reference;
         let snd_lvl_idx = remove_clause_in_snd_lvl_idx (fun x -> x.timestamp = reference) snd_lvl_idx in
@@ -3308,13 +3322,13 @@ let rec claux1 loc get_mode vars depth tc hyps ts lts lcs t =
   [%trace "clausify" ~rid ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] ~argsdepth:0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
-  | Discard -> error ?loc "ill-formed hypothetical clause: discard in head position"
+  | Discard -> compile_time_error ?loc "ill-formed hypothetical clause: discard in head position"
   | Builtin(RImpl, [g2;g1]) ->
      claux1 loc get_mode vars depth tc ((ts,g1)::hyps) ts lts lcs g2
-  | Builtin(RImpl, []) -> error ?loc "ill-formed hypothetical clause: :-"
+  | Builtin(RImpl, []) -> compile_time_error ?loc "ill-formed hypothetical clause: :-"
   | Builtin(Impl, [g1;g2])->
      claux1 loc get_mode vars depth tc ((ts,g1)::hyps) ts lts lcs g2
-  | Builtin(Impl, []) -> error ?loc "ill-formed hypothetical clause: =>"
+  | Builtin(Impl, []) -> compile_time_error ?loc "ill-formed hypothetical clause: =>"
   | Builtin(Sigma, [arg]) ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      let args =
@@ -3328,7 +3342,7 @@ let rec claux1 loc get_mode vars depth tc hyps ts lts lcs t =
      let b = get_lambda_body ~depth:(depth+lts) arg in
      claux1 loc get_mode (vars+1) depth tc hyps (Arg(vars,0)::ts) (lts+1) lcs b
   | Builtin(And, _) ->
-     error ?loc "Conjunction in the head of a clause is not supported"
+     compile_time_error ?loc "Conjunction in the head of a clause is not supported"
   | Const _
   | App _ as g ->
      let hyps =
@@ -3369,9 +3383,9 @@ let rec claux1 loc get_mode vars depth tc hyps ts lts lcs t =
   | Arg _ | AppArg _ -> raise Flex_head
   | Builtin (c,_) -> raise @@ CannotDeclareClauseForBuiltin(loc,c)
   | (Lam _ | CData _ ) as x ->
-     type_error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
+     compile_time_error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
   | UVar _ | AppUVar _ -> raise Flex_head
-  | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause: [] / ::"
+  | Nil | Cons _ -> compile_time_error ?loc "ill-formed hypothetical clause: [] / ::"
   end]
 
 let clausify ~tail_cut ~loc { index = { idx = index } } ~depth t =
@@ -3387,6 +3401,7 @@ let clausify ~tail_cut ~loc { index = { idx = index } } ~depth t =
       let clause, program, lcs =
         try claux1 loc get_mode 0 depth tail_cut [] [] 0 lcs t
         with
+        | CompileTimeError (loc, msg) -> error ?loc msg
         | Flex_head -> error ?loc "The head of a clause cannot be flexible"
         | CannotDeclareClauseForBuiltin(loc,c) ->
           error ?loc ("Declaring a clause for built in predicate " ^ show_builtin_predicate C.show c)

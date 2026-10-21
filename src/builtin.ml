@@ -10,6 +10,30 @@ open Utils
 open BuiltInPredicate
 open Notation
 
+(* the errors of the builtins at run time, see set_runtime_error: by default
+   ElpiError, with component "builtins" *)
+let default_error ?(prefix="") ?loc message =
+  API.Error.error ~component:"builtins" ?loc (prefix ^ message)
+type runtime_error_hook = { f : 'a. ?loc:Ast.Loc.t -> string -> 'a }
+let error_f = ref { f = fun ?loc message -> default_error ?loc message }
+let anomaly_f = ref { f = fun ?loc message -> default_error ~prefix:"anomaly: " ?loc message }
+let type_error_f = ref { f = fun ?loc message -> default_error ?loc message }
+let set_runtime_error h = error_f := h
+let set_runtime_anomaly h = anomaly_f := h
+let set_runtime_type_error h = type_error_f := h
+
+(* the warnings at run time, see set_runtime_warn: by default printed on
+   stderr *)
+let default_warn ?loc ~id:(_ : Error.warning_id) message =
+  Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!"
+    (match loc with None -> "" | Some loc -> Ast.Loc.show loc) message
+let warn_f = ref default_warn
+let set_runtime_warn f = warn_f := f
+let warn ?loc ~id message = !warn_f ?loc ~id message
+let error ?loc s = !error_f.f ?loc s
+let anomaly ?loc s = !anomaly_f.f ?loc s
+let type_error ?loc s = !type_error_f.f ?loc s
+
 module Str = Re.Str
 
 let in_stream_decl = {
@@ -722,7 +746,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
     | false -> raise No_clause
     | exception Sys_error e ->
       (* No recoverable errors are produced by Sys.file_exists *)
-      Utils.error ("file_exists: " ^ e))),
+      error ("file_exists: " ^ e))),
   DocAbove);
 
   MLCode (Pred ("sys.is_directory",

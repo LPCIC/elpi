@@ -286,27 +286,17 @@ type error_fun = ErrorFun of {
 }
 val error_fun : component:string -> error_fun
 
-(* A regular error *)
-val error : ?loc:Loc.t -> string -> 'a
-(* An invariant is broken, i.e. a bug *)
-val anomaly : ?loc:Loc.t -> string -> 'a
-(* If we type check the program, then these are anomalies *)
-val type_error : ?loc:Loc.t -> string -> 'a
 (* A non fatal warning *)
 type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
 
 (** A warning, as data: what the parser and the passes of the compiler
     return *)
 type warning = { warning_id : warning_id; warning : error }
-val warn : ?loc:Loc.t -> id:warning_id -> string -> unit
+
 (* Indirection for standard print functions *)
 val printf : ('a, Format.formatter, unit) format -> 'a
 val eprintf : ('a, Format.formatter, unit) format -> 'a
 
-val set_warn : (?loc:Loc.t -> id:warning_id -> string -> unit) -> unit
-val set_error : (?loc:Loc.t -> string -> 'a) -> unit
-val set_anomaly : (?loc:Loc.t -> string -> 'a) -> unit
-val set_type_error : (?loc:Loc.t -> string -> 'a) -> unit
 val set_std_formatter : Format.formatter -> unit
 val set_err_formatter : Format.formatter -> unit
 val set_formatters_maxcols : int -> unit

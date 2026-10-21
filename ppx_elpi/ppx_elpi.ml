@@ -430,9 +430,9 @@ let ctx_index_ty (module B : Ast_builder.S) name = let open B in
     readback = [%expr fun ~depth elpi__hyps elpi__constraints elpi__state elpi__t ->
       match Elpi.API.RawData.look ~depth elpi__t with
       | Elpi.API.RawData.Const elpi__i when elpi__i >= 0 -> elpi__state, elpi__i, []
-      | _ -> Elpi.API.Utils.type_error "not a bound variable" ];
+      | _ -> Elpi.API.Error.error ~component:"ppx_elpi" "not a bound variable" ];
     embed    = [%expr fun ~depth elpi__hyps elpi__constraints elpi__state elpi__i ->
-      if elpi__i < 0 then Elpi.API.Utils.type_error "not a bound variable";
+      if elpi__i < 0 then Elpi.API.Error.error ~component:"ppx_elpi" "not a bound variable";
       elpi__state, Elpi.API.RawData.mkConst elpi__i, [] ];
     ty_ast   = elpi_ty_ast (module B) name;
     ty = [%type: Elpi.API.Data.constant ];
@@ -593,13 +593,13 @@ let embed_var (module B : Ast_builder.S) ctx_name args p = let open B in
    let elpi__ctx2dbl, _ = Elpi.API.State.get [%e evar (elpi_state_name ctx_name)] elpi__state in
    let elpi__key = [%e eapply p args] in
    if not ([%e elpi_Map "mem" ] elpi__key elpi__ctx2dbl) then
-     Elpi.API.Utils.error "Unbound variable";
+     Elpi.API.Error.error ~component:"ppx_elpi" "Unbound variable";
    elpi__state, Elpi.API.RawData.mkBound ([%e elpi_Map "find" ] elpi__key elpi__ctx2dbl), []
  ]
 
 let error_constructor_not_supported (module B : Ast_builder.S) (constructor,has_args) = let open B in
      case ~guard:None ~lhs:(ppat_construct (Located.lident constructor) (if has_args then Some (pvar "_") else None))
-       ~rhs:[%expr Elpi.API.Utils.error ("constructor "^[%e estring constructor]^" is not supported") ]
+       ~rhs:[%expr Elpi.API.Error.error ~component:"ppx_elpi" ("constructor "^[%e estring constructor]^" is not supported") ]
 
 let abstract_standard_branch_embed (module B : Ast_builder.S) l e = let open B in
   let rec aux = function
@@ -683,7 +683,7 @@ let readback_k (module B : Ast_builder.S) c mk_k t ts = let open B in
       match elpi__xs with
       | [%p roll_pat ps ] ->
           [%e roll_readback all_kargs 1 (e1 :: es) ps es ts]
-      | _ -> Elpi.API.Utils.type_error
+      | _ -> Elpi.API.Error.error ~component:"ppx_elpi"
               ("Not enough arguments to constructor: " ^ Elpi.API.RawData.Constants.show [%e c])
     ]
 
@@ -693,7 +693,7 @@ let readback_var (module B : Ast_builder.S) ctx_name constructor = let open B in
   [%expr
     let _, elpi__dbl2ctx = Elpi.API.State.get [%e elpi_state_component ] elpi__state in
     if not (Elpi.API.RawData.Constants.Map.mem elpi__hd elpi__dbl2ctx) then
-      Elpi.API.Utils.error (Format.asprintf "Unbound variable: %s in %a"
+      Elpi.API.Error.error ~component:"ppx_elpi" (Format.asprintf "Unbound variable: %s in %a"
         (Elpi.API.RawData.Constants.show elpi__hd)
         (Elpi.API.RawData.Constants.Map.pp (Elpi.API.PPX.pp_ctx_entry [%e evar ("pp_" ^ ctx_name)])) elpi__dbl2ctx);
     let { Elpi.API.PPX.entry = elpi__entry; depth = elpi__depth } = Elpi.API.RawData.Constants.Map.find elpi__hd elpi__dbl2ctx in
@@ -703,12 +703,12 @@ let readback_var (module B : Ast_builder.S) ctx_name constructor = let open B in
 let abstract_standard_branch_readback (module B : Ast_builder.S) pos e = let open B in
    [%expr fun ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state -> function
       | [] -> [%e e ]
-      | _ -> Elpi.API.Utils.error ~loc: [%e elpi_loc_of_position (module B) pos ] "standard branch readback takes 0 arguments"]
+      | _ -> Elpi.API.Error.error ~component:"ppx_elpi" ~loc: [%e elpi_loc_of_position (module B) pos ] "standard branch readback takes 0 arguments"]
 
 let abstract_standard_branch_readback2 (module B : Ast_builder.S) pos e = let open B in
    [%expr fun ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state -> function
      | elpi__x :: elpi__xs -> [%e e ]
-     | [] -> Elpi.API.Utils.error ~loc: [%e elpi_loc_of_position (module B) pos ] "standard branch readback takes 1 argument or more"]
+     | [] -> Elpi.API.Error.error ~component:"ppx_elpi" ~loc: [%e elpi_loc_of_position (module B) pos ] "standard branch readback takes 1 argument or more"]
 
 let readback_branch (module B : Ast_builder.S) is_pred { constant; constructor; arg_types; readback; _ } = let open B in
   let types, mk_k =
@@ -750,7 +750,7 @@ let readback (module B : Ast_builder.S) name is_pred default_readback kl = let o
         [case ~guard:None ~lhs:[%pat? _ ]
           ~rhs:begin
             let standard =
-              [%expr Elpi.API.Utils.type_error (Format.asprintf "Not a constructor of type %s: %a"
+              [%expr Elpi.API.Error.error ~component:"ppx_elpi" (Format.asprintf "Not a constructor of type %s: %a"
                  [%e estring name] (Elpi.API.RawPp.term elpi__depth) elpi__x) ] in
             match default_readback with
             | None -> standard
@@ -785,7 +785,7 @@ let is_ctx_entry (module B : Ast_builder.S) kl = let open B in
         ]
       then match  Elpi.API.RawData.look ~depth: elpi__depth elpi__idx with
         | Elpi.API.RawData.Const x -> Some x
-        | _ -> Elpi.API.Utils.type_error "context entry applied to a non bound variable"
+        | _ -> Elpi.API.Error.error ~component:"ppx_elpi" "context entry applied to a non bound variable"
       else None
     | _ -> None ]
 (*
@@ -803,7 +803,7 @@ let ctx_readback (module B : Ast_builder.S) name = let open B in
         | None -> elpi__m
         | Some elpi__idx ->
              if CMap.mem elpi__idx elpi__m then
-               Elpi.API.Utils.type_error "more than one context entry for the same bound variable";
+               Elpi.API.Error.error ~component:"ppx_elpi" "more than one context entry for the same bound variable";
              CMap.add elpi__idx elpi__hyp elpi__m
         ) CMap.empty (Elpi.API.RawData.of_hyps elpi__hyps) in
     let rec elpi__aux elpi__state elpi__gls elpi__i =

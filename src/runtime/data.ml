@@ -11,6 +11,11 @@ module Fmt = Format
 module F = Ast.Func
 open Util
 
+(* the errors of the data structures (and of the API): ElpiError, with
+   component "data" *)
+let ErrorFun { error = data_error; anomaly = data_anomaly } = error_fun ~component:"data"
+let data_type_error = data_error
+
 (** 
   Used to index the parameters of a predicate P
   - [MapOn N] -> N-th argument at depth 1 (head symbol only)
@@ -216,7 +221,7 @@ and uvar = {
 }
 [@@deriving show, ord]
 
-let cons2tcons ?(loc=Loc.initial"") = function Const t -> TConst t | _ -> anomaly ~loc "Unreachable branch"
+let cons2tcons ?(loc=Loc.initial"") = function Const t -> TConst t | _ -> data_anomaly ~loc "Unreachable branch"
 
 (* we use this projection to be sure we ignore the sign *)
 let uvar_id { uid_private } = abs uid_private [@@inline];;
@@ -440,13 +445,13 @@ end = struct
       | None, None -> None
       | Some x, None -> Some x
       | None, Some x -> Some x
-      | Some _, Some _ -> error ("The state cannot contain two components named "^n) )
+      | Some _, Some _ -> data_error ("The state cannot contain two components named "^n) )
       !m1 !m2)
 
   let get name { data = t } =
     try Obj.obj (StrMap.find name t)
     with Not_found ->
-       anomaly ("State.get: component " ^ name ^ " not found")
+       data_anomaly ("State.get: component " ^ name ^ " not found")
 
   let set name ({ data } as x) v = { x with data = StrMap.add name (Obj.repr v) data }
   let drop name ({ data } as x) = { x with data = StrMap.remove name data }
@@ -460,7 +465,7 @@ end = struct
 
   let declare ~descriptor:extensions ~name ~pp ~init ~clause_compilation_is_over ?(goal_compilation_begins = fun x -> x) ~compilation_is_over ~execution_is_over () =
     if StrMap.mem name !extensions then
-      anomaly ("Extension "^name^" already declared");
+      data_anomaly ("Extension "^name^" already declared");
     extensions := StrMap.add name {
         init = (fun x -> Obj.repr (init x));
         pp = (fun fmt x -> pp fmt (Obj.obj x));
@@ -615,8 +620,8 @@ end = struct
     let unify f s1 s2 (uf,m) = 
       let x,uf =
         match fst s1, fst s2 with
-        | Builtin _, Builtin _ -> anomaly "Builtins cannot be declared twice"
-        | Core, Core -> anomaly "Core symbols cannot be declared twice"
+        | Builtin _, Builtin _ -> data_anomaly "Builtins cannot be declared twice"
+        | Core, Core -> data_anomaly "Core symbols cannot be declared twice"
         (* we use the (possibly) pre-allocated builtin as the canonical *)
         | File _, Builtin _ -> UF.union uf s1 ~canon:s2
         | File _, Core -> UF.union uf s1 ~canon:s2
@@ -639,7 +644,7 @@ end = struct
     let find s (uf,m) =
       let s' = UF.find uf s in
       try RawMap.find s' m
-      with Not_found -> anomaly ("Missing entry from QMap: " ^ show_symbol s)
+      with Not_found -> data_anomaly ("Missing entry from QMap: " ^ show_symbol s)
 
     let find_opt s (uf,m) = RawMap.find_opt (UF.find uf s) m
 
@@ -787,7 +792,7 @@ let declare_global_symbol symb =
   try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
     if table.locked then
-      Util.anomaly "declare_global_symbol called after initialization";
+      data_anomaly "declare_global_symbol called after initialization";
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
     let t = Const n in
@@ -904,7 +909,7 @@ end = struct (* {{{ *)
 
   let new_clique show_constant hyps cl ({ cliques } as chr) =
     let open Constants in
-    if cl = [] then error "empty clique";
+    if cl = [] then data_error "empty clique";
     let c = Set.of_list cl in
     let ctx_filter = Set.of_list hyps in
     
@@ -918,7 +923,7 @@ end = struct (* {{{ *)
       Map.iter (fun _ ({clique=c';ctx_filter=ctx_filter'}) ->
         if Set.equal c c' then (old_ctx_filter := Some ctx_filter'; raise Stop)
         else if not (Set.disjoint c c') then (* different, not disjoint clique *)
-          error ("overlapping constraint cliques:" ^ build_clique_str c ^ "and" ^ build_clique_str c')
+          data_error ("overlapping constraint cliques:" ^ build_clique_str c ^ "and" ^ build_clique_str c')
       ) cliques;
     with Stop -> ());
     let clique = 
@@ -1033,7 +1038,7 @@ let term_of_extra_goal = function
   | Unify(a,b) -> Builtin(Eq,[a;b])
   | RawGoal x -> x
   | x ->
-      Util.anomaly (Printf.sprintf "Unprocessed extra_goal: %s.\nOnly %s and %s can be left unprocessed,\nplease call API.RawData.set_extra_goals_postprocessing.\n"
+      data_anomaly (Printf.sprintf "Unprocessed extra_goal: %s.\nOnly %s and %s can be left unprocessed,\nplease call API.RawData.set_extra_goals_postprocessing.\n"
         (Obj.Extension_constructor.(name (of_val x)))
         (Obj.Extension_constructor.(name (of_val (Unify(dummy,dummy)))))
         (Obj.Extension_constructor.(name (of_val (RawGoal dummy)))))
@@ -1149,7 +1154,7 @@ let set_extra_goals_postprocessing ~descriptor f =
   | { extra_goals_postprocessing = None } ->
      descriptor := { extra_goals_postprocessing = Some f }
   | { extra_goals_postprocessing = Some _ } ->
-      error "set_extra_goals_postprocessing called twice"
+      data_error "set_extra_goals_postprocessing called twice"
 
 end
 
@@ -1393,7 +1398,7 @@ and embed : type a h c.
   fun ~depth hyps constraints state t ->
     let rec aux l state =
       match l with
-      | [] -> type_error
+      | [] -> data_type_error
                   ("Pattern matching failure embedding: " ^ Conversion.show_ty_ast ty ^ Format.asprintf ": %a" pp t)
       | (kname, XK(args,_,matcher)) :: rest ->
         let ok = adt_embed_args ~mkConst ty adt kname ~depth hyps constraints args [] in
@@ -1462,7 +1467,7 @@ let do_allocate_constructors ty l =
   let names =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then
-    anomaly ("Duplicate constructors name in ADT: " ^ Conversion.show_ty_ast ty);
+    data_anomaly ("Duplicate constructors name in ADT: " ^ Conversion.show_ty_ast ty);
   List.fold_left (fun vacc (K(name,_,a,b,m)) ->
     if name = "uvar" then
       vacc
@@ -1480,7 +1485,7 @@ let compile_constructors allocated ty self self_name l =
     else
       let c =
         try StrMap.find name allocated |> fst
-        with Not_found -> anomaly "constructor arguments should be preallocated" in
+        with Not_found -> data_anomaly "constructor arguments should be preallocated" in
       let args = compile_arguments a self in
              Constants.Map.add c (XK(args,compile_builder a b,compile_matcher a m)) acc,
       StrMap.add name (tyargs_of_args self_name args) sacc)
@@ -1562,7 +1567,7 @@ function Decl { ty; constructors; doc; pp } ->
   readback_ref := readback ~mkinterval ~look ~alloc ~mkUnifVar ty cconstructors;
   embed_ref := embed ~mkConst ty pp cconstructors;
   self
-| _ -> anomaly "declare_allocated can only be called on Decl"
+| _ -> data_anomaly "declare_allocated can only be called on Decl"
 
 end
 
@@ -1820,3 +1825,8 @@ type solution = {
 type 'a outcome = Success of solution | Failure | NoMoreSteps
 
 exception CannotDeclareClauseForBuiltin of Loc.t option * builtin_predicate
+
+(* an error in a rule found by the parts of the runtime that the compiler uses
+   (clausify, indexing): the compiler reports it as one of its errors, the
+   runtime (for =>) with Util.error *)
+exception CompileTimeError of Loc.t option * string

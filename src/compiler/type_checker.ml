@@ -8,10 +8,24 @@ open Elpi_parser
 open Ast
 open Compiler_data
 
+let ErrorFun { error; anomaly } = error_fun ~component:"Typechecker"
+
 type type_abbrevs = TypeAssignment.type_abbrevs
 [@@deriving show]
 
 type arities = Arity.t F.Map.t
+
+(* with [errs], a unit of work that fails is dropped and its error recorded;
+   without, the error is raised *)
+let protect_list_map errs f l =
+  match errs with
+  | None -> List.map f l
+  | Some errs -> Errors.protect_list_map ~errs f l
+
+let protect_fMap_fold errs f m acc =
+  match errs with
+  | None -> F.Map.fold f m acc
+  | Some errs -> Errors.protect_fMap_fold ~errs f m acc
 
 let check_disjoint ~type_abbrevs ~kinds =
   kinds |> F.Map.iter (fun k (_,lock) -> if F.Map.mem k type_abbrevs then
@@ -191,8 +205,8 @@ let compile_for_runtime ({ TypingEnv.overloading } as e) =
   F.Map.filter_map (fun _ -> function TypeAssignment.Single s -> Some (TypingEnv.canon e s) | _ -> None) overloading
 let runtime_resolve m f = F.Map.find f m
 
-let check_1types k ~type_abbrevs ~kinds lst : TypingEnv.t list =
-  List.map (check_type ~type_abbrevs ~kinds) lst |>
+let check_1types ?errs k ~type_abbrevs ~kinds lst : TypingEnv.t list =
+  protect_list_map errs (check_type ~type_abbrevs ~kinds) lst |>
   List.map (function
   | (x,None,metadata) ->
       let overloading = F.Map.(add k (TypeAssignment.Single x) empty) in
@@ -204,11 +218,10 @@ let check_1types k ~type_abbrevs ~kinds lst : TypingEnv.t list =
     let symbols = Symbol.QMap.unify (fun _ _ _ -> anomaly "builtins predicates are unique") x q symbols in
     { TypingEnv.overloading; symbols })
 
-let check_types ~type_abbrevs ~kinds (m : t list F.Map.t) =
-  let tel = F.Map.mapi (fun k tl ->
-    (* Format.eprintf "Types for %a\n%!" F.pp k; *)
-    check_1types k ~type_abbrevs ~kinds tl) m in
-  F.Map.fold (fun _ l acc -> List.fold_left TypingEnv.merge_envs acc l) tel TypingEnv.empty
+(* one environment per declaration, in order; with [errs] a declaration that
+   does not type check is dropped *)
+let check_types ?errs ~type_abbrevs ~kinds (m : t list F.Map.t) : TypingEnv.t list =
+  F.Map.fold (fun k tl acc -> List.rev_append (check_1types ?errs k ~type_abbrevs ~kinds tl) acc) m [] |> List.rev
 
 type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 [@@deriving show]
@@ -219,7 +232,6 @@ let pretty_ty valid_mode =
   if valid_mode then TypeAssignment.pretty_mut_once
   else TypeAssignment.pretty_mut_once
 
-let error ~loc msg = error ~loc ("Typechecker: " ^ msg)
 
 let error_not_a_function ~loc c orig_ty args extra =
   let all = args @ extra |> List.filter (fun t -> match t.it with
@@ -404,7 +416,7 @@ let silence_linear_warn f =
   len > 0 && (s.[0] = '_' || s.[len-1] = '_'
               || s.[0] = '%') (* generated name *)
 
-let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) () :
+let checker ?errs ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) () :
   (ScopedTerm.t -> exp:TypeAssignment.t -> ScopedTerm.t * env_undeclared) *
   (ScopedTerm.t -> exp:TypeAssignment.t -> ScopedTerm.t * env_undeclared * bool) *
   (('a, ScopedTerm.t) Ast.Chr.t -> ('a, ScopedTerm.t) Ast.Chr.t * env_undeclared) *
@@ -957,9 +969,9 @@ let checker ~type_abbrevs ~kinds ~types:env ~unknown ?(global_auto_spill=false) 
     if spills <> [] then error ~loc:t.loc "cannot spill in head";
     F.Map.iter (fun k { nocc = n; binder } ->
       if n = 1 && not @@ silence_linear_warn k then
-        warn ~loc:(Symbol.get_loc binder) ~id:LinearVariable
+        Option.iter (fun errs -> Errors.warn errs ~component:"Typechecker" ~loc:(Symbol.get_loc binder) ~id:LinearVariable
           (Format.asprintf "%a is linear: name it _%a (discard) or %a_ (fresh variable)"
-        F.pp k F.pp k F.pp k))
+        F.pp k F.pp k F.pp k)) errs)
       !sigma;
     t, !unknown_global, oc in
 
@@ -997,8 +1009,8 @@ let check_query ~type_abbrevs ~kinds ~types ~unknown ?auto_spill t ~exp =
   let check_query, _, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown ?global_auto_spill:auto_spill () in
   check_query t ~exp
 
-let check_rule ~type_abbrevs ~kinds ~types ~unknown ?auto_spill t ~exp =
-  let _, check_rule, _, _ = checker  ~type_abbrevs ~kinds ~types ~unknown ?global_auto_spill:auto_spill () in
+let check_rule ~errs ~type_abbrevs ~kinds ~types ~unknown ?auto_spill t ~exp =
+  let _, check_rule, _, _ = checker ~errs ~type_abbrevs ~kinds ~types ~unknown ?global_auto_spill:auto_spill () in
   check_rule t ~exp
 
 let check_chr_rule ~type_abbrevs ~kinds ~types ~unknown ?auto_spill r =
@@ -1036,13 +1048,16 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
       id, TypingEnv.{ ty ; indexing; availability = Elpi; implemented_in_ocaml = false; occur_check = true }
   | _ -> assert false
 
-let check_undeclared ~type_abbrevs ~unknown =
+let check_undeclared ~errs ~type_abbrevs ~unknown =
   let w = ref [] in
-  let unknown = F.Map.mapi (check1_undeclared ~type_abbrevs w) unknown in
+  let unknown =
+    protect_fMap_fold errs (fun f x acc ->
+      F.Map.add f (check1_undeclared ~type_abbrevs w f x) acc) unknown F.Map.empty in
   if !w <> [] then begin
     let undeclared, types = List.split !w in
-    warn ~id:UndeclaredGlobal Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared
-     (pplist pp_print_string "") types);
+    (* without [errs] (a query) the warning is dropped *)
+    Option.iter (fun errs -> Errors.warn errs ~component:"Typechecker" ~id:UndeclaredGlobal Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared
+     (pplist pp_print_string "") types)) errs;
   end;
   let pick_a_mode { TypingEnv.ty } =
     let ty = match ty with
@@ -1074,6 +1089,6 @@ let check_pred_name ~types ~loc f =
 
 (* let check ~type_abbrevs a b c =
   try check ~type_abbrevs a b c with
-  | CompileError(_,"Unknown global: %spill") -> Printf.eprintf "SPILLING"; exit 1
-  | CompileError(_,s) when Re.Str.(string_match (regexp "Unknown global: @")) s 0 -> Printf.eprintf "MACRO"; exit 1
-  | CompileError(loc,msg) -> Format.eprintf "Ignoring type error: %a %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop) *)
+  | ElpiError(_,"Unknown global: %spill") -> Printf.eprintf "SPILLING"; exit 1
+  | ElpiError(_,s) when Re.Str.(string_match (regexp "Unknown global: @")) s 0 -> Printf.eprintf "MACRO"; exit 1
+  | ElpiError(loc,msg) -> Format.eprintf "Ignoring type error: %a %s\n" (Util.pp_option Loc.pp) loc msg; TypeAssignment.(Val Prop) *)

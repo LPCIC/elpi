@@ -6,6 +6,21 @@
 
 open API.BuiltIn
 
+(* The errors of the builtins when they run (e.g. halt, a wrong argument):
+   when unset, they raise ElpiError with component "builtins". A hook does not
+   return, it raises: [{ f = fun ?loc msg -> raise (My_error msg) }] *)
+type runtime_error_hook = { f : 'a. ?loc:API.Ast.Loc.t -> string -> 'a }
+val set_runtime_error : runtime_error_hook -> unit
+(* an invariant is broken, i.e. a bug *)
+val set_runtime_anomaly : runtime_error_hook -> unit
+val set_runtime_type_error : runtime_error_hook -> unit
+
+(* A non fatal warning at run time, e.g. of a builtin: printed on stderr
+   unless redirected with [set_runtime_warn] *)
+val warn : ?loc:API.Ast.Loc.t -> id:API.Error.warning_id -> string -> unit
+
+val set_runtime_warn : (?loc:API.Ast.Loc.t -> id:API.Error.warning_id -> string -> unit) -> unit
+
 (* Builtins that are part of the language, like "is" or "!" *)
 val core_builtins : declaration list
 

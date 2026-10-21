@@ -3,29 +3,46 @@ open Elpi.API
 let init () =
   Setup.init ~builtins:[Elpi.Builtin.std_builtins] ~file_resolver:(Parse.std_resolver ~paths:[] ()) ()
 
+(* the result of a pass, after checking that it found no error; the warnings
+   are printed *)
+let ok (x, errors, warnings) =
+  List.iter (fun { Error.warning = e } -> Format.eprintf "Warning: %a@." Error.pp e) warnings;
+  List.iter (fun e -> Format.eprintf "%a@." Error.pp e) errors;
+  if errors <> [] then exit 1;
+  x
+
 let cc ~elpi ~flags ~base i u =
   let u =
-    Compile.unit ~elpi ~flags ~base
+    ok @@ Compile.unit ~elpi ~flags ~base
     (match
-     (Compile.scope_ast ~elpi ~flags
-      (Parse.program_from ~elpi ~digest:(Digest.string u) ~loc:(Ast.Loc.initial (Printf.sprintf "<u%d>" i))
-        (Lexing.from_string u)))
+     ok @@ (Compile.scope_ast ~elpi ~flags
+      (ok (Parse.program_from ~elpi ~digest:(Digest.string u) ~loc:(Ast.Loc.initial (Printf.sprintf "<u%d>" i))
+        (Lexing.from_string u))))
     with [x] -> x | _ -> assert false) in
-  Compile.extend ~flags ~base u, u
+  ok (Compile.extend ~flags ~base u), u
 
 let signature_of u = Compile.signature u
 
-let extend ~flags ~base u = Compile.extend ~flags ~base u
-let extend_signature ~flags ~base u = Compile.extend_signature ~flags ~base u
+let extend ~flags ~base u = ok (Compile.extend ~flags ~base u)
+let extend_signature ~flags ~base u = ok (Compile.extend_signature ~flags ~base u)
 
 let check q =
   ()
   (* if not (Compile.static_check ~checker:(Elpi.Builtin.default_checker ()) q) then exit 1 *)
 
   
+(* the compiled query, after checking that it has no error *)
+let ok_query (q, warnings) =
+  List.iter (fun { Error.warning = e } -> Format.eprintf "Warning: %a@." Error.pp e) warnings;
+  match q with
+  | Ok q -> q
+  | Error e -> Format.eprintf "%a@." Error.pp e; exit 1
+
+(* the parsed query, after checking that it has no error *)
+let ok_goal ~elpi text = ok_query (Parse.query ~elpi ~loc:(Ast.Loc.initial "g") ~text)
+
 let query ~elpi p =
-  Compile.query p
-    (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "main"))
+  ok_query @@ Compile.query p (ok_goal ~elpi "main")
 
 let exec q =
     let exe = Compile.optimize q in

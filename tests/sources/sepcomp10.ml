@@ -1,15 +1,17 @@
 open Elpi.API
 
+let ok = Sepcomp.Sepcomp_template.ok
+
 let cc ~elpi ~flags ~base i u =
-    Compile.unit ~elpi ~flags ~base
+    ok @@ Compile.unit ~elpi ~flags ~base
      (match
-     (Compile.scope_ast ~elpi ~flags
-      (Parse.program_from ~elpi ~loc:(Ast.Loc.initial (Printf.sprintf "<u%d>" i))
-        ~digest:(Digest.string u) (Lexing.from_string u)))
+     ok (Compile.scope_ast ~elpi ~flags
+      (ok (Parse.program_from ~elpi ~loc:(Ast.Loc.initial (Printf.sprintf "<u%d>" i))
+        ~digest:(Digest.string u) (Lexing.from_string u))))
       with [x] -> x | _ -> assert false)
 
   let ccb ~elpi ~flags ~base builtins i  =
-    Compile.unit ~elpi ~flags ~base
+    ok @@ Compile.unit ~elpi ~flags ~base
      (Compile.scope_builtins ~elpi ~flags builtins)
 
 let u1 = {| pred p. p. |}
@@ -41,23 +43,23 @@ let main =
 
   let u2 = ccb ~elpi ~flags ~base b2 2 in
 
-  let base = Compile.extend ~base u1 in
+  let base = ok (Compile.extend ~base u1) in
 
   let ex1 =
     Compile.optimize  @@
-      Compile.query base
-        (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "p")) in
+      Sepcomp.Sepcomp_template.ok_query @@ Compile.query base
+        (Sepcomp.Sepcomp_template.ok_goal ~elpi "p") in
 
   begin match Execute.once ex1 with
   | Execute.Success _ -> ()
   | _ -> exit 1
   end;
 
-  let base = Compile.extend ~base u2 in
+  let base = ok (Compile.extend ~base u2) in
   let ex2 =
     Compile.optimize  @@
-      Compile.query base
-        (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "p, q (stuff 46)")) in
+      Sepcomp.Sepcomp_template.ok_query @@ Compile.query base
+        (Sepcomp.Sepcomp_template.ok_goal ~elpi "p, q (stuff 46)") in
 
   begin match Execute.once ex2 with
   | Execute.Success _ -> ()

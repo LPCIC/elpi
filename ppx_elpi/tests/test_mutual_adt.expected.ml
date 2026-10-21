@@ -145,12 +145,12 @@ include
                  (elpi__state, (B (elpi__4, elpi__1)),
                    (List.concat [elpi__3; elpi__2]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_simple_Bc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "simple"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and elpi_readback_mut :
@@ -170,12 +170,12 @@ include
             (match elpi__xs with
              | [] -> (elpi__state, (D elpi__12), (List.concat [elpi__11]))
              | _ ->
-                 Elpi.API.Utils.type_error
+                 Elpi.API.Error.error ~component:"ppx_elpi"
                    ("Not enough arguments to constructor: " ^
                       (Elpi.API.RawData.Constants.show
                          elpi_constant_constructor_mut_Dc)))
         | _ ->
-            Elpi.API.Utils.type_error
+            Elpi.API.Error.error ~component:"ppx_elpi"
               (Format.asprintf "Not a constructor of type %s: %a" "mut"
                  (Elpi.API.RawPp.term elpi__depth) elpi__x)
     and simple :

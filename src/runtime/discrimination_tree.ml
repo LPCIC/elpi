@@ -36,10 +36,12 @@ let arity_of n =
 let data_of n =
   (n land data_mask)
 
+exception TooLargeConstant of string
+
 let mkConstant ~safe ~data ~arity =
   let rc = encode ~k:kConstant ~data ~arity in
   if safe && (abs data > data_mask || arity >= 1 lsl arity_bits) then
-    anomaly (Printf.sprintf "Indexing at depth > 1 is unsupported since constant %d/%d is too large or wide" data arity);
+    raise (TooLargeConstant (Printf.sprintf "Indexing at depth > 1 is unsupported since constant %d/%d is too large or wide" data arity));
   rc
 
 let mkPrimitive c = encode ~k:kPrimitive ~data:(CData.hash c lsl k_bits) ~arity:0

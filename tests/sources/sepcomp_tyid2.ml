@@ -20,6 +20,6 @@ let () =
   let pmain,_ = cc ~elpi ~flags ~base:pmain 2 p1 in
   let pmain,_ = cc ~elpi ~flags ~base:pmain 3 p2 in
 
-  let q = Compile.query pmain (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "main")) in
+  let q = Sepcomp.Sepcomp_template.ok_query @@ Compile.query pmain (Sepcomp.Sepcomp_template.ok_goal ~elpi "main") in
 
   exec q
