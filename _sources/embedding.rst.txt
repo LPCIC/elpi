@@ -14,11 +14,16 @@ Embedding
 Link with ``ocamlfind`` (``-package elpi``) or dune (``(libraries elpi)``).
 Driving the interpreter is a handful of calls, in order: ``Setup.init``
 builds an interpreter equipped with a set of builtins; ``Parse.program`` and
-``Parse.goal`` read a program and a query from source text;
+``Parse.query`` read a program and a query from source text;
 ``Compile.program``, ``Compile.query`` and ``Compile.optimize`` produce a
 runnable executable; ``Execute.once`` (or ``Execute.loop``, for a REPL) runs
-it. ``elpi_REPL.ml``, the source of the ``elpi`` command itself, is the
-canonical minimal client: every flag aside, it is this sequence.
+it. ``Parse.program`` and ``Compile.program`` raise the first error found in
+the source or, when the ``max_errors`` flag is positive, return the list of
+the errors found, to be checked before going on; ``Parse.query`` and
+``Compile.query`` return the query or its error. These four also return the
+list of the warnings found, to be shown to the user. ``elpi_REPL.ml``, the
+source of the ``elpi`` command itself, is the canonical minimal client: every
+flag aside, it is this sequence.
 
 
 Extending: a builtin written in OCaml
