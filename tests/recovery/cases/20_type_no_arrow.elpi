@@ -1,0 +1,3 @@
+p 1.
+type c int ->.
+p 3.

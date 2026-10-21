@@ -167,6 +167,8 @@ val option_mapacc :
   ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a option -> 'acc * 'b option
 val option_iter : ('a -> unit) -> 'a option -> unit
 val option_default : 'a -> 'a option -> 'a
+(* [None @? l] is [l], [Some x @? l] is [x :: l] *)
+val ( @? ) : 'a option -> 'a list -> 'a list
 
 (***************** Unique ID ****************)
 
@@ -269,6 +271,21 @@ end
 
 (******************** errors ******************)
 
+type error = {
+  component : string;       (** eg "Typechecker" *)
+  loc : Loc.t option;
+  message : string;
+}
+
+type exn += private ElpiError of error
+
+(** The functions that raise the error above, call it once per component *)
+type error_fun = ErrorFun of {
+  error : 'a. ?loc:Loc.t -> string -> 'a;
+  anomaly : 'a. ?loc:Loc.t -> string -> 'a; (* a bug in the component, not a user error *)
+}
+val error_fun : component:string -> error_fun
+
 (* A regular error *)
 val error : ?loc:Loc.t -> string -> 'a
 (* An invariant is broken, i.e. a bug *)
@@ -277,6 +294,10 @@ val anomaly : ?loc:Loc.t -> string -> 'a
 val type_error : ?loc:Loc.t -> string -> 'a
 (* A non fatal warning *)
 type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
+
+(** A warning, as data: what the parser and the passes of the compiler
+    return *)
+type warning = { warning_id : warning_id; warning : error }
 val warn : ?loc:Loc.t -> id:warning_id -> string -> unit
 (* Indirection for standard print functions *)
 val printf : ('a, Format.formatter, unit) format -> 'a

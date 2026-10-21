@@ -108,6 +108,7 @@ goal: AFTER DDARROWBANG VDASH
 This infix operator expects a right hand side.
 
 program: VDASH
+one_decl: VDASH
 program: CONSTANT FULLSTOP VDASH
 
 Unexpected start of program clause or declaration.
