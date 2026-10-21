@@ -10,6 +10,8 @@ type error in the query: {"error":"File \"(query)\", line 1, column 2, character
 noMoreSteps: {"outcome":"noMoreSteps"}
 query syntax error: {"component":"Parser","loc":{"source":"(query)","line":1,"column":4,"start":4,"stop":4},"message":"Term expected, got keyword."}
 thrown ElpiError: {"component":"Typechecker","loc":{"source":"b.elpi","line":1,"column":2,"start":2,"stop":5},"message":"literal \"x\" has type string but p expects an argument of type int"}
+std.fatal-error "boom".: {"error":true,"message":"boom"}
+X is 1 div 0.: {"error":true,"message":"Division_by_zero"}
 syntax errors: [{"component":"Parser","loc":{"source":"c.elpi","line":1,"column":4,"start":4,"stop":5},"message":"Term expected, got keyword.\n"}]
 type errors: ["File \"c.elpi\", line 3, column 2, characters 22-25:\nTypechecker: literal \"x\" has type string but p expects an argument of type int","File \"c.elpi\", line 4, column 0, characters 27-30:\nTypechecker: Unable to infer a closed type for q: Src391 -> (pred)","File \"c.elpi\", line 4, column 0, characters 27-38:\nAssemble: No signature declaration for q. Did you forget to accumulate a file?"]
 warnings: ["LinearVariable"]

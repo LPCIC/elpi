@@ -85,11 +85,18 @@ let query_result (result, warnings) =
 let with_errors name f (x, errors, warnings) =
   obj [ name, f x; "errors", array error errors; "warnings", array warning warnings ]
 
+(* [e] thrown by JavaScript code: with WebAssembly, an error thrown by the OCaml
+   code (Js.Js_error.raise_) can reach the caller as a WebAssembly.Exception
+   that wraps it (e.g. with Node 22), not as the error itself *)
+let js_throw : any -> 'a =
+  let f = Js.Unsafe.pure_js_expr "(function (e) { throw e; })" in
+  fun e -> Js.Unsafe.fun_call f [| e |]
+
 (* an Error with the fields of [fields] *)
 let throw message fields =
   let e = Js.Unsafe.new_obj (Js.Unsafe.get Js.Unsafe.global "Error") [| str message |] in
   List.iter (fun (k, v) -> Js.Unsafe.set e k v) fields;
-  Js.Js_error.raise_ (Js.Js_error.of_error e)
+  js_throw e
 
 (* the exceptions of the API become Errors *)
 let guard f =
@@ -99,6 +106,9 @@ let guard f =
       throw (Format.asprintf "%a@\n%s" Ast.Loc.pp l message)
         [ "component", str "Parser"; "loc", loc l; "message", str message ]
   | Failure message -> throw message [ "message", str message ]
+  | Js.Js_error.Exn e -> js_throw (inject (Js.Js_error.to_error e))
+  (* any other exception, e.g. Division_by_zero raised by a builtin *)
+  | e -> let message = Printexc.to_string e in throw message [ "message", str message ]
 
 let fn1 f = inject (Js.Unsafe.callback_with_arity 1 (fun a -> guard (fun () -> f a)))
 let fn2 f = inject (Js.Unsafe.callback_with_arity 2 (fun a b -> guard (fun () -> f a b)))

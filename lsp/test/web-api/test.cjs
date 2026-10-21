@@ -66,6 +66,12 @@ main :- print "hello", p X, X > 1, print X.
   show("query syntax error", { component: syntax.error.component, loc: syntax.error.loc, message: syntax.error.message.trim() });
   try { Compile.program(elpi, Parse.programFrom(elpi, "p \"x\".\npred p i:int.", { source: "b.elpi" }).program); }
   catch (e) { show("thrown ElpiError", { component: e.component, loc: e.loc, message: e.message.split("\n").pop() }); }
+  // errors raised by a run (std.fatal-error, an exception of a builtin):
+  // thrown as Errors, also by the WebAssembly build
+  for (const q of ['std.fatal-error "boom".', "X is 1 div 0."]) {
+    try { run(q); show(q, "not thrown"); }
+    catch (e) { show(q, { error: e instanceof Error, message: e.message }); }
+  }
   const flags = { maxErrors: 10 };
   const bad = Parse.programFrom(elpi, "p ( .\npred p i:int.\np \"x\".\nq X :- true.\n", { source: "c.elpi", flags });
   show("syntax errors", bad.errors.map((e) => ({ component: e.component, loc: e.loc, message: e.message })));
