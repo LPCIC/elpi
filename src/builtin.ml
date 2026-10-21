@@ -1289,11 +1289,17 @@ unsound_unif X X.
 
   MLCode(Pred("new_int",
      Out(int, "N",
-     Easy     "unifies N with a different int every time it is called. Values of N are guaranteed to be incresing."),
+     Easy     "unifies N with a different int every time it is called. Values of N are guaranteed to be incresing (unless reset_new_int is called)."),
    (fun _ ~depth ->
       incr fresh_int;
       if !fresh_int < 0 then anomaly "new_int: reached max_int";
       !: !fresh_int)),
+  DocAbove);
+
+  MLCode(Pred("reset_new_int",
+     In(int, "N",
+     Easy     "Resets the counter to N."),
+   (fun n ~depth -> fresh_int := n)),
   DocAbove);
 
   LPDoc  {|[findall_solution P L] finds all the solved instances of P and puts them in L in the order in which they are found. Instances can contain eigenvariables and unification variables. P may or may not be instantiated. Instances should be found in L.|};

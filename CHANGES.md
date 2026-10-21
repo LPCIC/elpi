@@ -56,6 +56,10 @@
     accumulate directive, its message gives the position in the file.
   - New `LSP.accumulated` lists the accumulate directives of a program and
     the files that each one brings in.
+- Builtins:
+  - New `reset_new_int N`: resets the counter of `new_int` to `N`, so the
+    next `new_int` gives `N + 1` (its values are increasing only between two
+    resets)
 
 # v3.9.2 (October 2026)
 
