@@ -209,6 +209,13 @@ may be passed more than once;</p></li>
 available in the marketplace; search for “Elpi”. Besides syntax highlighting,
 it hosts the interactive trace browser described in
 <a class="reference internal" href="debugging-and-tracing.html"><span class="doc">Debugging and tracing</span></a>.</p>
+<p>The extension also works with <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code>, the language server of Elpi,
+installed with <code class="docutils literal notranslate"><span class="pre">opam</span> <span class="pre">install</span> <span class="pre">elpi-lsp</span></code>. As you type, the editor underlines
+the syntax and type errors of the whole file at once; hovering over a symbol shows
+its type, and Go to Definition jumps to the signature of a predicate. The
+server speaks the standard Language Server Protocol, so other editors can use
+it too. How to build, configure and test it is explained in the
+<a class="reference external" href="https://github.com/LPCIC/elpi/blob/master/lsp/README.md">README of the language server</a>.</p>
 </section>
 </section>
 
