@@ -730,7 +730,11 @@ let check_clause, check_chr_guard_and_newgoal =
       | CData _ -> anomaly ~loc "Found CData in prop position"
       | Lam _ -> anomaly ~loc "Lambda-abstractions are not props"
       | Discard _ -> anomaly ~loc "Discard found in prop position"
-      | Impl (R2L, _,_, _) -> anomaly ~loc "Found clause in prop position"
+      (* a rule in prop position: at run time (h :- b) is b => h, the body
+         is assumed and the head is the goal *)
+      | Impl (R2L, _, h, b) ->
+          check_clause ~type_abbrevs ~types ~ctx ~var:!var b |> ignore;
+          check ~ctx d h
     in
     (!var, check ~ctx d t)
 

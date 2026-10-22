@@ -404,15 +404,19 @@ module LSP : sig
     kind : kind;
     description : description option;
     defined : Ast.Loc.t option;    (* the declaration location *)
+    doc : Ast.Loc.t option;        (* of a constant: the comment block on the line before its declaration *)
+    body : Ast.Loc.t option;       (* of a constant: from its first to its last rule, in the unit of its declaration *)
     declaration : bool;            (* the binding occurrence of a variable, the symbol that a rule defines (the head of its head) *)
     occurrences : Ast.Loc.t list;  (* of a constant or a variable: all its occurrences in the unit (not its binder), by position *)
   }
   val pp_info : Format.formatter -> info -> unit
 
-  (** [hover sp u] is the information on the unit [u], by location: the terms
-      and the symbols of its rules, CHR rules and macros, and the type
-      expressions of the declarations of its scoped program [sp]. *)
-  val hover : Compile.scoped_program -> Compile.compilation_unit -> info IntervalTree.t
+  (** [hover ?base sp u] is the information on the unit [u], by location: the
+      terms and the symbols of its rules, CHR rules and macros, and the type
+      expressions of the declarations of its scoped program [sp]. [base] is
+      the program [u] extends, for the [doc] and the [body] of the constants
+      declared there. *)
+  val hover : ?base:Compile.program -> Compile.scoped_program -> Compile.compilation_unit -> info IntervalTree.t
 
   (** [accumulated p] is the list of the accumulate directives of [p] (not of
       the files it accumulates): the location of each one, and the files that

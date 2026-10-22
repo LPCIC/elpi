@@ -1,0 +1,2 @@
+pred p int.
+p X :- X = "hello".

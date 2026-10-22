@@ -16,8 +16,9 @@
   (dev
     (flags (:standard -w -9 -w -27 -warn-error -A))))
 
-; like @all, but without ppx_elpi and its (large) tests, see make build-ppx
+; like @all, but without ppx_elpi (see make build-ppx) and elpi-lsp (see make
+; build-lsp), that have additional dependencies
 (alias
- (name all-but-ppx)
- (deps (alias_rec src/all) (alias_rec tests/all) (alias_rec trace/all)
+ (name only-elpi)
+ (deps (package elpi) (alias_rec src/all) (alias_rec tests/all) (alias_rec trace/all)
        elpi_REPL.exe elpi_inspect_unit.exe))

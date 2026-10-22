@@ -1,0 +1,9 @@
+% a rule in prop position, (h :- b), runs as b => h: here h is a function,
+% and so is b, that has no other rule
+func s -> int.
+s 3.
+func t.
+func p -> int.
+p X :- (s X :- t).
+pred main.
+main :- p X, print X.

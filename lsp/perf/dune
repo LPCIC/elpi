@@ -1,0 +1,11 @@
+; a benchmark of the server: not built by default, run it with
+; make perf-lsp (dune build --force @lsp/perf/perf-lsp)
+(executable
+ (name perf)
+ (optional)
+ (modules perf)
+ (libraries elpi_lsp_server elpi unix))
+
+(rule
+ (alias perf-lsp)
+ (action (run %{exe:perf.exe})))

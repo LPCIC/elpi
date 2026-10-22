@@ -157,6 +157,7 @@ module Type : sig
     attributes : 'attribute;
     name : Func.t;
     ty : 'inner_attribute TypeExpression.t;
+    doc : Loc.t option; (* the comment block on the line before (see Parse) *)
   }
   [@@deriving show, ord]
 

@@ -20,6 +20,7 @@ ELPI runs on Linux, MacOS and Windows.
 The simplest way is to use [OPAM](http://opam.ocaml.org/) and type
 ```
 opam install elpi
+opam install ppx_elpi # optional
 ```
 This command gives you the command line tool `elpi` as well as the findlib
 `-package elpi` switch.
@@ -36,42 +37,15 @@ three supported operating systems, click on any
 job from the [Actions](https://github.com/LPCIC/elpi/actions/workflows/main.yml) tab
 to download them.
 
-### Syntax highlight in Visual studio code
+### Editor support
 
 The [extension for vscode](https://github.com/LPCIC/elpi-lang) is available in the
-market place, just look for Elpi.
+market place, just look for Elpi. It works in tandem with the language server
+in this repository [lsp/](lsp/README.md).
 
-### Syntax highlight in vim
-
-We recommend to add the following lines to `~/.vimrc`
-<details><summary>(click to expand)</summary>
-<p>
-  
-```vim
-"elpi
-autocmd BufRead,BufNewFile *.elpi set filetype=lprolog
-
-autocmd FileType lprolog syn match   lprologIdentifier  "\<\l[-a-zA-Z\.+*/\\^<>=`'~?@#$&!_]*\>"
-autocmd FileType lprolog syn region  lprologClause start="^\<\l[-a-zA-Z\.+*/\\^<>=`'~?@#$&!_]*\>" end=" \|:-\|\."
-autocmd FileType lprolog syn match lprologClauseSymbols ":-"
-autocmd FileType lprolog syn match lprologClauseSymbols "\."
-autocmd FileType lprolog hi def link lprologClauseSymbols Type
-
-autocmd FileType lprolog syn keyword elpiKeyword mode macro type pred namespace rule constraint uvar shorten
-autocmd FileType lprolog syn match elpiKeyword ":before"
-autocmd FileType lprolog syn match elpiKeyword ":after"
-autocmd FileType lprolog syn match elpiKeyword ":name"
-autocmd FileType lprolog syn match elpiMacro "@\(\w\|-\)\+"
-autocmd FileType lprolog syn match elpiSpill "{"
-autocmd FileType lprolog syn match elpiSpill "}"
-autocmd FileType lprolog syn region elpiQuotation start="{{" end="}}" contains=@elpiAntiQuotation
-autocmd FileType lprolog hi def link elpiKeyword Keyword
-autocmd FileType lprolog hi def link elpiMacro Special
-autocmd FileType lprolog hi def link elpiSpill Special
 ```
-
-</p>
-</details>
+opam install elpi-lsp
+```
 
 ## Documentation
 

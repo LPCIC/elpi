@@ -56,6 +56,52 @@ end = struct
   let consume () = let ws = List.rev !warnings in warnings := []; ws
 end
 
+module DocComments : sig
+  val with_comments : (unit -> 'a) -> 'a
+  val add : Lexing.position -> Lexing.position -> unit
+  val token_read : Lexing.position -> unit
+  val before : Util.Loc.t -> Util.Loc.t option
+end = struct
+  type block = { start : Lexing.position; stop : Lexing.position }
+
+  (* by file and last line *)
+  let blocks : (string * int, block) Hashtbl.t = Hashtbl.create 17
+  let active = ref false
+
+  (* the file and the line where the last token ends: a comment on that line
+     follows code, it is not documentation (e.g. pred p. % about p) *)
+  let last_token : (string * int) option ref = ref None
+  let token_read (p : Lexing.position) = last_token := Some (p.pos_fname, p.pos_lnum)
+  let follows_code (p : Lexing.position) =
+    match !last_token with
+    | Some (f, l) -> String.equal f p.pos_fname && Int.equal l p.pos_lnum
+    | None -> false
+
+  let with_comments f =
+    if !active then f ()
+    else begin
+      Hashtbl.reset blocks;
+      last_token := None;
+      active := true;
+      Fun.protect f ~finally:(fun () -> active := false; last_token := None; Hashtbl.reset blocks)
+    end
+
+  let add (start : Lexing.position) (stop : Lexing.position) =
+    if !active && not (follows_code start) then
+    let previous = start.pos_fname, start.pos_lnum - 1 in
+    let start =
+      match Hashtbl.find_opt blocks previous with
+      | Some b -> Hashtbl.remove blocks previous; b.start
+      | None -> start in
+    Hashtbl.replace blocks (stop.pos_fname, stop.pos_lnum) { start; stop }
+
+  let before (loc : Util.Loc.t) =
+    Hashtbl.find_opt blocks (loc.source_name, loc.line - 1) |> Option.map (fun { start; stop } ->
+      { Util.Loc.client_payload = None; source_name = start.pos_fname;
+        source_start = start.pos_cnum; source_stop = stop.pos_cnum;
+        line = start.pos_lnum; line_starts_at = start.pos_bol })
+end
+
 
 module ParseFile = struct
   let parse_file ?cwd file = !parse_ref ?cwd file
@@ -63,6 +109,8 @@ module ParseFile = struct
   let set_current_clent_loc_pyload x = client_payload := Some x
   let get_current_client_loc_payload () = !client_payload
   let warn = Warnings.add
+  let add_comment = DocComments.add
+  let doc_before = DocComments.before
 
 end
 
@@ -83,7 +131,16 @@ let raise_parse_error lexbuf stateid =
   } in
   raise (Parser_config.ParseError(loc,message))
 
-let parse ?(lexer=Lexer.(token C.versions)) grammar lexbuf =
+(* the lexer records the comments, for the documentation *)
+let lexer_config = Lexer.config ~comment:ParseFile.add_comment C.versions
+
+(* the lexer, telling DocComments where each token ends *)
+let token lexbuf =
+  let t = Lexer.token lexer_config lexbuf in
+  DocComments.token_read lexbuf.Lexing.lex_curr_p;
+  t
+
+let parse ?(lexer=token) grammar lexbuf =
   let buffer, lexer = MenhirLib.ErrorReports.wrap lexer in
   try
     Grammar.MenhirInterpreter.loop_handle
@@ -204,9 +261,10 @@ let query_from ~loc lexbuf =
 let query ~loc ~text = query_from ~loc (Lexing.from_string text)
 
 let program_from ?(max_errors = max_int) ~loc:start_loc ~digest lexbuf =
+  DocComments.with_comments @@ fun () ->
   Hashtbl.clear already_parsed;
   Warnings.init ();
-  let token = Lexer.token C.versions in
+  let token = token in
 
   lexing_set_position lexbuf start_loc;
 

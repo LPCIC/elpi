@@ -1,0 +1,2 @@
+pred twice int -> int.
+twice X Y :- Y is X + X.

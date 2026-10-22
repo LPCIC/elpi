@@ -1,0 +1,8 @@
+% a rule in prop position, (h :- b), runs as b => h: here the assumed rule,
+% true, overlaps the one of the builtins (true is a function)
+func s -> int.
+s 3.
+func p -> int.
+p X :- (s X :- true).
+pred main.
+main :- p X, print X.

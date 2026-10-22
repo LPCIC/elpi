@@ -129,9 +129,11 @@ type info = {
   kind : kind;
   description : description option;
   defined : Ast.Loc.t option;
+  doc : Ast.Loc.t option;
+  body : Ast.Loc.t option;
   declaration : bool;
   occurrences : Ast.Loc.t list;
 }
 val pp_info : Format.formatter -> info -> unit
 
-val hover : scoped_program -> checked_compilation_unit -> info IntervalTree.t
+val hover : ?base:program -> scoped_program -> checked_compilation_unit -> info IntervalTree.t

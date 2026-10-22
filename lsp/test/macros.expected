@@ -1,0 +1,30 @@
+==== open macros.elpi ====
+diagnostics of macros.elpi (version 1): 0
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  line 1:
+                   | type z tm.
+    type           |        ^^
+  line 2:
+                   | macro @zero :- z.
+    enumMember     |                ^
+  line 3:
+                   | macro @pair A B :- (A, B).
+    parameter      |                     ^  ^
+    parameter decl |             = =
+    keyword        |                      ^
+  line 5:
+                   | pred p tm.
+    type           |        ^^
+  line 6:
+                   | p @zero.
+    function decl  | =
+    macro          |   ^^^^^
+  line 7:
+                   | p X :- X = @zero, @pair (p z) (p @zero).
+    function decl  | =
+    enumMember     |                            ^
+    variable       |   ^    ^
+    keyword        |     ^^          ^
+    macro          |            ^^^^^  ^^^^^          ^^^^^

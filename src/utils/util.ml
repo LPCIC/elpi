@@ -203,6 +203,8 @@ module Loc = struct
     else if is_initial r then l
     else merge ?merge_payload l r
 
+  let extend_to l r = { l with source_stop = r.source_stop }
+
   let extend n l = { l with source_start = l.source_start - n; source_stop = l.source_stop + n }
    
 end

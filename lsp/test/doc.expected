@@ -1,0 +1,97 @@
+==== open doc.elpi ====
+diagnostics of doc.elpi (version 1): 0
+hover "twice 21"+0 (the cursor is at 14:8): 14:8-14:13
+  line 14:
+               | main :- twice 21 A, print A, undocumented _.
+    hovered    |         ^^^^^
+    cursor     |         *
+    ? ```elpi-hover
+    ? twice : (func int -> int)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? [twice X Y] holds when Y is twice X.
+    ? It is a function.
+definition "twice 21"+0 (the cursor is at 14:8):
+  line 14:
+               | main :- twice 21 A, print A, undocumented _.
+    cursor     |         *
+  defined at file://$DIR/doc.elpi 2:0-2:21
+    | func twice int -> int
+  previewed 2:0-3:23
+    | func twice int -> int.
+    | twice X Y :- Y is X * 2
+hover "undocumented _"+0 (the cursor is at 14:29): 14:29-14:41
+  line 14:
+               | main :- twice 21 A, print A, undocumented _.
+    hovered    |                              ^^^^^^^^^^^^
+    cursor     |                              *
+    ? ```elpi-hover
+    ? undocumented : (pred -> int)
+    ? ```
+definition "undocumented _"+0 (the cursor is at 14:29):
+  line 14:
+               | main :- twice 21 A, print A, undocumented _.
+    cursor     |                              *
+  defined at file://$DIR/doc.elpi 7:0-7:23
+    | pred undocumented o:int
+  previewed 7:0-8:14
+    | pred undocumented o:int.
+    | undocumented 1
+hover "main :-"+0 (the cursor is at 14:0): 14:0-14:4
+  line 14:
+               | main :- twice 21 A, print A, undocumented _.
+    hovered    | ^^^^
+    cursor     | *
+    ? ```elpi-hover
+    ? main : (pred)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? the entry point,
+    ? a multiline comment
+definition "main :-"+0 (the cursor is at 14:0):
+  line 14:
+               | main :- twice 21 A, print A, undocumented _.
+    cursor     | *
+  defined at file://$DIR/doc.elpi 12:0-12:9
+    | pred main
+  previewed 12:0-19:17
+    | pred main.
+    | 
+    | main :- twice 21 A, print A, undocumented _.
+    | main :- print "a long body",
+    |   print "line 2", print "line 3",
+    |   print "line 4", print "line 5",
+    |   print "line 6", print "line 7",
+    |   print "line 8",
+hover "qa, ph"+0 (the cursor is at 32:12): 32:12-32:14
+  line 32:
+               | uses :- pa, qa, ph, pb 1.
+    hovered    |             ^^
+    cursor     |             *
+    ? ```elpi-hover
+    ? qa : (pred)
+    ? ```
+hover "ph, pb"+0 (the cursor is at 32:16): 32:16-32:18
+  line 32:
+               | uses :- pa, qa, ph, pb 1.
+    hovered    |                 ^^
+    cursor     |                 *
+    ? ```elpi-hover
+    ? ph : (pred)
+    ? ```
+hover "pb 1"+0 (the cursor is at 32:20): 32:20-32:22
+  line 32:
+               | uses :- pa, qa, ph, pb 1.
+    hovered    |                     ^^
+    cursor     |                     *
+    ? ```elpi-hover
+    ? pb : (pred int)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? doc of pb

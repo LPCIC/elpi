@@ -632,10 +632,10 @@ end = struct (* {{{ *)
       | x -> structure_type_expression_aux ~loc valid t
       in flatten_arrows toplevel_func res
 
-  let structure_kind_attributes { Type.attributes; loc; name; ty } =
+  let structure_kind_attributes { Type.attributes; loc; name; ty; doc } =
     let ty = structure_type_expression loc () (function [] -> Some () | _ -> None) ty in
     match attributes with
-    | [] -> { Type.attributes = (); loc; name; ty }
+    | [] -> { Type.attributes = (); loc; name; ty; doc }
     | x :: _ -> error ~loc ("illegal attribute " ^ show_raw_attribute x)
 
   let structure_external ~loc = function
@@ -646,7 +646,7 @@ end = struct (* {{{ *)
         with Invalid_argument _ -> error ~loc ("illegal external attribute")
 
 
-  let structure_type_attributes { Type.attributes; loc; name; ty } : (symbol_attribute, functionality) Type.t=
+  let structure_type_attributes { Type.attributes; loc; name; ty; doc } : (symbol_attribute, functionality) Type.t=
     let duplicate_err s =
       error ~loc ("duplicate attribute " ^ s) in
     let illegal_err a =
@@ -685,7 +685,7 @@ end = struct (* {{{ *)
             else None }
       | Some _ -> attributes in
     let ty = structure_type_expression loc toplevel_func valid_functional ty in
-    { Type.attributes; loc; name; ty }
+    { Type.attributes; loc; name; ty; doc }
 
   let structure_type_abbreviation { TypeAbbreviation.name; value; nparams; loc } =
     let rec aux = function
@@ -979,7 +979,7 @@ end = struct
   let scope_loc_tye ctx (t: Ast.Structured.functionality Ast.TypeExpression.t) =
     scope_loc_tye ctx t
 
-  let compile_type { Ast.Type.name; loc; attributes = { Ast.Structured.index; availability; occur_check_pred }; ty } =
+  let compile_type { Ast.Type.name; loc; doc; attributes = { Ast.Structured.index; availability; occur_check_pred }; ty } =
     let open ScopedTypeExpression in
     let value = scope_loc_tye F.Set.empty ty in
     let vars =
@@ -1003,7 +1003,7 @@ end = struct
           let s = F.Set.remove c s in
           close s (Lam(c,t)) in
       close vars (Ty value) in
-    { ScopedTypeExpression.name; index; availability; occur_check = occur_check_pred; loc; nparams; value }
+    { ScopedTypeExpression.name; index; availability; occur_check = occur_check_pred; loc; doc; nparams; value }
 
   let scope_term_macro ~loc ~name_loc ~state c args =
     let { macros; macro_uses } = get_mtm state in
@@ -1110,7 +1110,7 @@ end = struct
       | Ast.TypeAbbreviation.Lam(c,loc,_) -> error ~loc "only variables can be abstracted in type schema"
       | Ast.TypeAbbreviation.Ty t -> ScopedTypeExpression.Ty (scope_loc_tye ctx t)
   in
-    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; index = None; occur_check = true; availability = Elpi }
+    { ScopedTypeExpression.name; value = aux F.Set.empty value; nparams; loc; doc = None; index = None; occur_check = true; availability = Elpi }
 
   let compile_type_abbrev ({ Ast.TypeAbbreviation.name; nparams; loc } as ab) =
     let ab = scope_type_abbrev ab in
@@ -1762,6 +1762,24 @@ end = struct
     let more_types = time_this type_check_time (fun () -> Type_checker.check_undeclared ~errs:(Some errs) ~unknown ~type_abbrevs) in
     let u_types = Flatten.merge_type_assignments u_types more_types in
 
+    (* the body of a predicate declared in the unit: from its first to its last
+       rule in the file of its declaration *)
+    let u_types =
+      let head_symbol (t : ScopedTerm.t) =
+        let hd = match t.it with ScopedTerm.Impl (R2L, _, hd, _) -> hd | _ -> t in
+        match hd.it with
+        | ScopedTerm.App ({ scope = Scope.Global { resolved_to }; _ }, _) -> SymbolResolver.resolved_to types resolved_to
+        | _ -> None in
+      let bodies = List.fold_left (fun bodies { Ast.Clause.body } ->
+          match head_symbol body with
+          | Some s when String.equal (Symbol.get_loc s).source_name body.loc.source_name ->
+              let loc = match Symbol.RawMap.find_opt s bodies with
+                | Some l -> Loc.extend_to l body.loc
+                | None -> body.loc in
+              Symbol.RawMap.add s loc bodies
+          | _ -> bodies) Symbol.RawMap.empty clauses in
+      Symbol.RawMap.fold (fun s loc t -> TypingEnv.set_body t s loc) bodies u_types in
+
     let signature = { signature with types = u_types } in
 
     let checked_code = { CheckedFlat.signature; clauses; chr; builtins } in
@@ -2009,11 +2027,24 @@ end = struct
       preds_w_eigen_var_no_cut := C.Map.add pred loc !preds_w_eigen_var_no_cut 
     in
 
+    (* the local rules (assumed with =>) of the rule have the location of the
+       rule, widened by a different number of characters for each one: a
+       location of their own, that tells them apart (e.g. a local rule that
+       overlaps another one is not itself). Their errors give the location of
+       the rule (shown). *)
+    let fresh_locs = ref [] in
     let get_fresh_loc =
       let n = ref 0 in
       fun loc -> 
         incr n;
-        Loc.extend !n loc in
+        let fresh = Loc.extend !n loc in
+        fresh_locs := (fresh, loc) :: !fresh_locs;
+        fresh in
+    let shown loc =
+      match List.find_opt (fun (fresh, _) -> Loc.equal fresh loc) !fresh_locs with
+      | Some (_, loc) -> loc
+      | None -> loc in
+    let error ?loc msg = error ?loc:(Option.map shown loc) msg in
     let runtime_tick = 
       let tick = ref 0 in
       fun () -> decr tick; !tick 
@@ -2061,8 +2092,8 @@ end = struct
       let to_str fmt x =
         match x.overlap_loc with
         | None -> Format.fprintf fmt "- anonymous rule" 
-        | Some loc2 when Loc.equal loc loc2 -> Format.fprintf fmt "- @[<v 0>itself at %a@,did you accumulate %s twice?@]" Loc.pp loc2 (Filename.basename loc2.Loc.source_name)
-        | Some loc2 -> Format.fprintf fmt "- rule at %a" Loc.pp loc2
+        | Some loc2 when Loc.equal loc loc2 -> Format.fprintf fmt "- @[<v 0>itself at %a@,did you accumulate %s twice?@]" Loc.pp (shown loc2) (Filename.basename loc2.Loc.source_name)
+        | Some loc2 -> Format.fprintf fmt "- rule at %a" Loc.pp (shown loc2)
       in
       error ~loc (Format.asprintf "@[<v 0>Mutual exclusion violated for rules of %a.@,@[Offending rule is:@ @[<hov 2>%a@]@]@,This %srule overlaps with:@ %a@]@ @[This may break the determinacy of the predicate. To solve the problem you may want to add a cut in the body of the rule that appears first.@]@ @]"
         pp_global_predicate pred
@@ -2173,7 +2204,7 @@ end = struct
               error_overlapping ~is_local ~loc p [{ overlap_loc = loc1; timestamp =[]; has_cut = false; arg_nb = 0 }] h);
           if is_local && not cl_overlap.has_cut && all_input_eigen_vars then
             (* Here we have a local clause with all input vars being eigenvars + the has no cut in the body, we add the info to the pred *)
-            add_pred_w_eigen_var_no_cut p loc;
+            add_pred_w_eigen_var_no_cut p (shown loc);
           if not is_local || (is_local && not cl_overlap.has_cut) then
             let all_overlapping = get_overlapping index p hd in
             let overlapping =  filter_overlaps cl_overlap.arg_nb all_overlapping in
@@ -2218,6 +2249,8 @@ end = struct
             with 
             | ElpiError _ as e -> raise e
             | Flex_head -> aux ~min_depth ~depth index l end
+        (* a rule in prop position: (l :- h) is h => l *)
+        | Builtin (RImpl, [l; h]) -> aux ~min_depth ~depth index (Builtin (Impl, [h; l]))
         | Builtin (And, l) -> 
             List.iter (aux ~min_depth ~depth index) l
         | _ -> () (* TODO: missing cases *)
@@ -3113,6 +3146,8 @@ type info = {
   kind : kind;
   description : description option;
   defined : Ast.Loc.t option;
+  doc : Ast.Loc.t option;
+  body : Ast.Loc.t option;
   declaration : bool;
   occurrences : Ast.Loc.t list;
 }
@@ -3134,24 +3169,24 @@ let pp_kind fmt = function
 let pp_description fmt = function
   | Type t -> Format.fprintf fmt "Type(%a)" pp_type_ t
   | Text s -> Format.fprintf fmt "Text(%s)" s
-let pp_info fmt { kind; description; defined; declaration; occurrences } =
-  Format.fprintf fmt "@[<hov 2>{ kind = %a;@ description = %a;@ defined = %a;@ declaration = %b;@ occurrences = %d }@]"
+let pp_info fmt { kind; description; defined; doc; body; declaration; occurrences } =
+  Format.fprintf fmt "@[<hov 2>{ kind = %a;@ description = %a;@ defined = %a;@ doc = %a;@ body = %a;@ declaration = %b;@ occurrences = %d }@]"
     pp_kind kind (pp_option pp_description) description
-    (pp_option Ast.Loc.pp) defined declaration (List.length occurrences)
+    (pp_option Ast.Loc.pp) defined (pp_option Ast.Loc.pp) doc (pp_option Ast.Loc.pp) body declaration (List.length occurrences)
 
 let keywords = F.Set.of_list F.[andf; orf; implf; rimplf; cutf; pif; sigmaf]
 
 (* what the walk finds at a location: an info without its occurrences *)
 type item = {
   iloc : Loc.t; ikind : kind; iname : string option; idescription : description option;
-  idefined : Loc.t option; ideclaration : bool;
+  idefined : Loc.t option; idoc : Loc.t option; ibody : Loc.t option; ideclaration : bool;
 }
-let item ?name ?type_ ?text ?defined ?(declaration = false) iloc ikind =
+let item ?name ?type_ ?text ?defined ?doc ?body ?(declaration = false) iloc ikind =
   let idescription = match type_, text with
     | Some t, _ -> Some (Type t)
     | None, Some s -> Some (Text s)
     | None, None -> None in
-  { iloc; ikind; iname = name; idescription; idefined = defined; ideclaration = declaration }
+  { iloc; ikind; iname = name; idescription; idefined = defined; idoc = doc; ibody = body; ideclaration = declaration }
 
 (* the items of the type expressions: [one f e] for a type expression, [all f]
    for the declarations of a scoped program. Their text says what they are:
@@ -3174,7 +3209,7 @@ let type_expression_items (sp : scoped_program) =
    constants (with the declaration they are resolved to), the variables (with
    their binder, or the head of their rule), the literals; [head] is the head
    of the rule the term is in *)
-let term_items ?(rule = false) ~types ~head ~type_items f (t : ScopedTerm.t) =
+let term_items ?(rule = false) ~types ~metadata ~head ~type_items f (t : ScopedTerm.t) =
   let open ScopedTerm in
   (* for a rule, the symbols that it defines: the head of its head (or of the
      heads, if it is a conjunction) *)
@@ -3189,7 +3224,7 @@ let term_items ?(rule = false) ~types ~head ~type_items f (t : ScopedTerm.t) =
       | Impl (R2L, _, hd, _) -> heads_of_atom hd
       | _ -> heads_of_atom t in
   let is_head (l : Loc.t) = List.exists (fun (h : Loc.t) -> h.source_start = l.source_start && h.source_stop = l.source_stop) heads in
-  let emit ?declaration ?name ?type_ ?defined loc kind = f (item ?declaration ?name ?type_ ?defined loc kind) in
+  let emit ?declaration ?name ?type_ ?defined ?doc ?body loc kind = f (item ?declaration ?name ?type_ ?defined ?doc ?body loc kind) in
   let ty_of ty = TypeAssignment.deref_opt ty in
   (* a sub-term, with its type when it has one *)
   let term (t : ScopedTerm.t) = Option.iter (fun type_ -> emit t.loc Term ~type_) (ty_of t.ty) in
@@ -3204,6 +3239,9 @@ let term_items ?(rule = false) ~types ~head ~type_items f (t : ScopedTerm.t) =
     let name = F.show c.name and type_ = ty_of c.ty in
     let sym = SymbolResolver.resolved_to types resolved_to in
     let defined = Option.map Symbol.get_loc sym in
+    let meta = Option.bind sym metadata in
+    let doc = Option.bind meta (fun { TypingEnv.doc } -> doc) in
+    let body = Option.bind meta (fun { TypingEnv.body } -> body) in
     if F.Set.mem c.name keywords then emit c.loc Keyword ~name ?type_ ?defined
     else
       let origin =
@@ -3211,7 +3249,7 @@ let term_items ?(rule = false) ~types ~head ~type_items f (t : ScopedTerm.t) =
         | None -> Undeclared
         | Some s -> (match Symbol.get_provenance s with File _ -> User | Builtin _ -> Builtin | Core -> Core) in
       let cls = match type_ with Some ty -> cls_of ty | None -> Data in
-      emit c.loc (Constant (cls, origin)) ~name ?type_ ?defined ~declaration:(is_head c.loc) in
+      emit c.loc (Constant (cls, origin)) ~name ?type_ ?defined ?doc ?body ~declaration:(is_head c.loc) in
   let rec aux env (t : ScopedTerm.t) =
     match t.it with
     | Impl (_, hdloc, l, r) ->
@@ -3280,8 +3318,13 @@ let is_constant { ikind } = match ikind with Constant _ -> true | _ -> false
    rules and macros (typed and with their symbols resolved by the checks), and
    the type expressions of its declarations, which only the scoped program
    has. Then the occurrences of each symbol are grouped. *)
-let hover (sp : scoped_program) (u : checked_compilation_unit) =
+let hover ?base (sp : scoped_program) (u : checked_compilation_unit) =
   let types = u.checked_code.CheckedFlat.signature.Assembled.types in
+  (* the metadata of a symbol: of the unit, else of the base *)
+  let metadata s =
+    match TypingEnv.resolve_symbol_opt s types with
+    | Some m -> Some m
+    | None -> Option.bind base (fun ((_, p) : program) -> TypingEnv.resolve_symbol_opt s p.Assembled.signature.types) in
   let type_items, declaration_items = type_expression_items sp in
   let items = ref [] in
   let add i = items := i :: !items in
@@ -3294,7 +3337,7 @@ let hover (sp : scoped_program) (u : checked_compilation_unit) =
     add (item name_loc Macro ~name:(F.show macro) ~defined:macro_loc))
     sp.code.Scoped.macro_uses;
   let in_text i = match i.ikind with Term -> true | _ -> not (Hashtbl.mem expansions (key i.iloc)) in
-  let term ?rule ~head t = term_items ?rule ~types ~head ~type_items (fun i -> if in_text i then add i) t in
+  let term ?rule ~head t = term_items ?rule ~types ~metadata ~head ~type_items (fun i -> if in_text i then add i) t in
   List.iter (fun { Ast.Clause.body } -> term ~rule:true ~head:(rule_head body) body) u.checked_code.CheckedFlat.clauses;
   List.iter (fun { Ast.Structured.rules } ->
     List.iter (fun { Ast.Chr.to_match; to_remove; guard; new_goal; loc } ->
@@ -3326,7 +3369,7 @@ let hover (sp : scoped_program) (u : checked_compilation_unit) =
         let l = List.sort_uniq by_position (Option.value ~default:[] (OccurrenceTbl.find_opt groups k)) in
         OccurrenceTbl.replace sorted k l; l in
   List.rev_map (fun i ->
-    i.iloc, { kind = i.ikind; description = i.idescription; defined = i.idefined;
+    i.iloc, { kind = i.ikind; description = i.idescription; defined = i.idefined; doc = i.idoc; body = i.ibody;
               declaration = i.ideclaration; occurrences = (match symbol i with Some k -> occurrences k | None -> []) })
     !items
   |> IntervalTree.of_list

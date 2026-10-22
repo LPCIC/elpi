@@ -1,0 +1,17 @@
+==== open accmissing.elpi ====
+diagnostics of accmissing.elpi (version 1): 2
+  1:0-1:19 error: Parser: File nothere.elpi not found in:
+    | accumulate nothere.
+    | ^^^^^^^^^^^^^^^^^^^
+  0:0-0:1 warning: Typechecker: Undeclared global p.
+Please add the following text to your program:
+type p int -> (pred).
+    | p 1.
+    | ^
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  line 0:
+                  | p 1.
+    function decl | =
+    number        |   ^

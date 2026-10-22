@@ -255,8 +255,8 @@ let update_ety ety eit = { ety with eit }
       | App(f,x,xs) -> fprintf fmt "@[<hov 2>%a@ %a@]" F.pp f (Util.pplist (pretty_parens ~lvl:app) " ") (x::xs)
       | Arr(m,v,s,t) as x ->
           begin match arrow_tail t with
-            | Some Ast.Structured.Function when is_func_modes true x -> fprintf fmt "@[<hov 2>(func%a)@]" (pretty_func ~fst:true true) x
-            | Some Ast.Structured.Relation when is_func_modes true x -> fprintf fmt "@[<hov 2>(pred%a)@]" (pretty_func ~fst:true true) x
+            | Some Ast.Structured.Function when is_func_modes true x -> pretty_func "func" fmt x
+            | Some Ast.Structured.Relation when is_func_modes true x -> pretty_func "pred" fmt x
             | Some _ -> fprintf fmt "@[<hov 2>(pred %a)@]" (pretty_pred_mode ~variadic:(v = Variadic) m) (s, t)
             | None when v = Variadic -> fprintf fmt "variadic %a %a" (pretty_parens ~lvl:arrs) s pretty t
             | None -> fprintf fmt "@[<hov 2>%a ->@ %a@]" (pretty_parens ~lvl:arrs) s pretty t
@@ -278,15 +278,31 @@ let update_ety ety eit = { ety with eit }
       | Prop _ -> ()
       | Arr(m, v, s', r) -> fprintf fmt ", %a" (pretty_pred_mode ~variadic:(v = Variadic) m) (s',r)
       | _ -> assert false
-    and pretty_func ?(fst=false) input fmt x =
-      match x with
-      | Prop _ -> ()
-      | Arr(m, v, s, r) ->
-        let input =
-          if not (is_input m) && input then begin fprintf fmt "@ ->"; false end
-          else (if not fst then fprintf fmt ","; input) in
-        fprintf fmt "@[<hov 2>@ %a%s%a@]" (pretty_parens ~lvl:arrs) s (if v = Variadic then ".." else "") (pretty_func input) r
-      | _ -> assert false
+    (* (func A, B -> C, D) on one line if it fits, otherwise the outputs go
+       on the next line, aligned with the inputs:
+         (func A, B
+            -> C, D)
+       (a list of inputs or of outputs that is too long is broken as well,
+       aligned with its first element) *)
+    and pretty_func kw fmt x =
+      let rec args acc = function
+        | Prop _ -> List.rev acc
+        | Arr (m, v, s, r) -> args ((is_input m, s, v = Variadic) :: acc) r
+        | _ -> assert false in
+      let inputs, outputs = List.partition (fun (i, _, _) -> i) (args [] x) in
+      let arg fmt (_, s, variadic) =
+        fprintf fmt "%a%s" (pretty_parens ~lvl:arrs) s (if variadic then ".." else "") in
+      let args fmt l =
+        fprintf fmt "@[<hov 0>%a@]" (Format.pp_print_list ~pp_sep:(fun fmt () -> fprintf fmt ",@ ") arg) l in
+      (* the outputs start below the inputs: "(" ^ kw ^ " " is as long as
+         the indentation and "-> " *)
+      let indent = String.length kw + 2 - 3 in
+      match inputs, outputs with
+      | _, [] -> fprintf fmt "@[<hv 0>(%s %a)@]" kw args inputs
+      | [], _ -> fprintf fmt "@[<hv 0>(%s -> %a)@]" kw args outputs
+      | _ ->
+          let break fmt () = Format.pp_print_break fmt 1 indent in
+          fprintf fmt "@[<hv 0>(%s %a%a-> %a)@]" kw args inputs break () args outputs
     in
     let pretty fmt t = Format.fprintf fmt "@[%a@]" pretty t
   in 
@@ -507,6 +523,9 @@ module TypingEnv : sig
     availability : Elpi_parser.Ast.Structured.symbol_availability;
     implemented_in_ocaml : bool;
     occur_check : bool;
+    doc : Loc.t option; (* the comment block before the declaration *)
+    body : Loc.t option; (* from the first to the last rule of the predicate,
+                            in the unit of its declaration *)
   }
   [@@deriving show]
 
@@ -537,6 +556,8 @@ module TypingEnv : sig
   val canon : t -> Symbol.t -> Symbol.t
 
   val set_as_implemented_in_ocaml : t -> Symbol.t -> t
+  (* the body of a symbol of [t], nothing for one that is not *)
+  val set_body : t -> Symbol.t -> Loc.t -> t
 
 end = struct
 
@@ -551,6 +572,9 @@ end = struct
     availability : Elpi_parser.Ast.Structured.symbol_availability;
     implemented_in_ocaml : bool;
     occur_check : bool;
+    doc : Loc.t option; (* the comment block before the declaration *)
+    body : Loc.t option; (* from the first to the last rule of the predicate,
+                            in the unit of its declaration *)
   }
   [@@deriving show]
 
@@ -564,6 +588,11 @@ end = struct
     match Symbol.QMap.find_opt s e.symbols with
     | None -> assert false
     | Some m -> { e with symbols = Symbol.QMap.add s { m with implemented_in_ocaml = true } e.symbols }
+
+  let set_body e s body =
+    match Symbol.QMap.find_opt s e.symbols with
+    | None -> e
+    | Some m -> { e with symbols = Symbol.QMap.add s { m with body = Some body } e.symbols }
 
   let compatible_indexing i1 i2 =
     match i1, i2 with
@@ -602,13 +631,15 @@ end = struct
   
   
   let merge_symbol_metadata s
-      { ty = ty1; indexing = idx1; availability = a1; implemented_in_ocaml = o1; occur_check = oc1 }
-       { ty = ty2; indexing = idx2; availability = a2; implemented_in_ocaml = o2; occur_check = oc2 } =
+      { ty = ty1; indexing = idx1; availability = a1; implemented_in_ocaml = o1; occur_check = oc1; doc = d1; body = b1 }
+       { ty = ty2; indexing = idx2; availability = a2; implemented_in_ocaml = o2; occur_check = oc2; doc = d2; body = b2 } =
     { ty = TypeAssignment.merge_skema s ty1 ty2;
       indexing = merge_indexing s idx1 idx2;
       availability = merge_availability s a1 a2;
       implemented_in_ocaml = o1 || o2;
       occur_check = oc1 && oc2;
+      doc = (match d1 with Some _ -> d1 | None -> d2);
+      body = (match b1 with Some _ -> b1 | None -> b2);
     }
   
   let o2l = function  TypeAssignment.Single x -> [x] | Overloaded l -> l
@@ -832,6 +863,7 @@ module ScopedTypeExpression = struct
     value : v_;
     nparams : int;
     loc : Loc.t;
+    doc : Loc.t option; (* the comment block before the declaration *)
     index : Ast.Structured.predicate_indexing option;
     availability : Ast.Structured.symbol_availability;
     occur_check : bool;
@@ -895,11 +927,11 @@ module ScopedTypeExpression = struct
       let t' = smart_map_scoped_loc_ty f t in
       if t == t' then orig else Ty t'
 
-  let smart_map f ({ name; value; nparams; loc; index; availability; occur_check } as orig) =
+  let smart_map f ({ name; value; nparams; loc; doc; index; availability; occur_check } as orig) =
     let name' = f name in
     let value' = smart_map_tye f value in
     if name == name' && value' == value then orig
-    else { name = name'; value = value'; nparams; loc; index; availability; occur_check }
+    else { name = name'; value = value'; nparams; loc; doc; index; availability; occur_check }
 
 end
 

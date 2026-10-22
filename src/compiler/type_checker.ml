@@ -140,7 +140,7 @@ let check_indexing ~loc ~type_abbrevs availability name ty indexing =
       TypingEnv.Index {mode;indexing=runtime; overlap; has_local_without_cut=None;occur_check=true}
   | _ -> DontIndex
 
-let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability; occur_check }: Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
+let check_type ~type_abbrevs ~kinds { value; loc; doc; name; index; availability; occur_check }: Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
   (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
   let indexing = check_indexing ~loc ~type_abbrevs availability name ty index in
@@ -171,7 +171,7 @@ let check_type ~type_abbrevs ~kinds { value; loc; name; index; availability; occ
     F.equal name F.pmf ||
     F.equal name F.eqf
   in
-  symb, quotient, { ty; indexing; availability; implemented_in_ocaml; occur_check }
+  symb, quotient, { ty; indexing; availability; implemented_in_ocaml; occur_check; doc; body = None }
 
 let arrow_of_args args ety =
   let rec aux = function
@@ -1045,7 +1045,7 @@ let check1_undeclared ~type_abbrevs w f (t, id) =
         let {static;runtime} = chose_indexing (Symbol.get_func id) [1] None in
         TypingEnv.Index {mode;indexing=runtime; overlap=Elpi_runtime.Data.mk_Forbidden static; has_local_without_cut=None;occur_check=true}
       in
-      id, TypingEnv.{ ty ; indexing; availability = Elpi; implemented_in_ocaml = false; occur_check = true }
+      id, TypingEnv.{ ty ; indexing; availability = Elpi; implemented_in_ocaml = false; occur_check = true; doc = None; body = None }
   | _ -> assert false
 
 let check_undeclared ~errs ~type_abbrevs ~unknown =
@@ -1053,12 +1053,13 @@ let check_undeclared ~errs ~type_abbrevs ~unknown =
   let unknown =
     protect_fMap_fold errs (fun f x acc ->
       F.Map.add f (check1_undeclared ~type_abbrevs w f x) acc) unknown F.Map.empty in
-  if !w <> [] then begin
-    let undeclared, types = List.split !w in
-    (* without [errs] (a query) the warning is dropped *)
-    Option.iter (fun errs -> Errors.warn errs ~component:"Typechecker" ~id:UndeclaredGlobal Format.(asprintf "@[<v>Undeclared globals:@ @[<v>%a@].@ Please add the following text to your program:@\n%a@]" (pplist (fun fmt (f,loc) -> Format.fprintf fmt "- %a %a" Loc.pp loc F.pp f) ", ") undeclared
-     (pplist pp_print_string "") types)) errs;
-  end;
+  (* a warning for each undeclared global, at its first occurrence; without
+     [errs] (a query) the warnings are dropped *)
+  Option.iter (fun errs ->
+    List.iter (fun ((f, loc), ty) ->
+      Errors.warn errs ~component:"Typechecker" ~id:UndeclaredGlobal ~loc
+        Format.(asprintf "@[<v>Undeclared global %a.@ Please add the following text to your program:@\n%s@]" F.pp f ty))
+      (List.rev !w)) errs;
   let pick_a_mode { TypingEnv.ty } =
     let ty = match ty with
       | TypeAssignment.Lam _ -> assert false

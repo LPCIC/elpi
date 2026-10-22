@@ -24,6 +24,15 @@
       b.lex_start_p <- start_p;
       r
 
+    (* what the lexer is given: the versions of the libraries (for elpi:if),
+       and what it does with a comment (from a position to another), see
+       Parse *)
+    type config = {
+      versions : (int * int * int) Elpi_util.Util.StrMap.t;
+      comment : Lexing.position -> Lexing.position -> unit;
+    }
+    let config ?(comment = fun _ _ -> ()) versions = { versions; comment }
+
     let version_test lexbuf v l ops ma mi p =
       let ma = int_of_string ma in
       let mi = int_of_string mi in
@@ -33,7 +42,7 @@
         | None | Some "elpi" ->
             Elpi_util.Util.version_parser ~what:"elpi" "%%VERSION_NUM%%"
         | Some l ->
-            try Elpi_util.Util.StrMap.find l v
+            try Elpi_util.Util.StrMap.find l v.versions
             with Not_found -> raise (Error (lexbuf.Lexing.lex_curr_p, "elpi: lexer: no version declared for " ^ l)) in
       let op =
         match ops with
@@ -63,19 +72,26 @@ let symbchar = lcase | ucase | digit | schar | ':'
 let symbcharstar = symbchar *
 let symbcharplus = symbchar +
 
-rule linecomment v = parse
-| '\n' { new_line lexbuf; token v lexbuf }
-| eof { token v lexbuf }
+(* a line comment starting at [start] is given to [v.comment] when its line
+   ends, unless it is a directive (elpi:skip, elpi:if) *)
+rule linecomment v start = parse
+| '\n' { v.comment start lexbuf.Lexing.lex_start_p; new_line lexbuf; token v lexbuf }
+| eof { v.comment start lexbuf.Lexing.lex_start_p; token v lexbuf }
 | "elpi:skip " (pnum as n) { linecomment_skip v (int_of_string n) lexbuf }
 | "elpi:if" (' '+) "version" ( ' '+ ([ 'A' - 'Z' 'a' - 'z' '-' '_' '.' ]+ as l) )? (' '+) (("<" | ">" | "=" | ">=" | "<=") as op) (' '+) (pnum as ma) "." (pnum as mi) "." (pnum as p) {
-     if not @@ version_test lexbuf v l op ma mi p then linecomment_if v lexbuf else linecomment_drop v lexbuf }
-| ' ' { linecomment v lexbuf }
-| _ { linecomment_drop v lexbuf }
+     if not @@ version_test lexbuf v l op ma mi p then linecomment_if v lexbuf else linecomment_drop_directive v lexbuf }
+| ' ' { linecomment v start lexbuf }
+| _ { linecomment_drop v start lexbuf }
 
-and linecomment_drop v = parse
+and linecomment_drop v start = parse
+| '\n' { v.comment start lexbuf.Lexing.lex_start_p; new_line lexbuf; token v lexbuf }
+| eof { v.comment start lexbuf.Lexing.lex_start_p; token v lexbuf }
+| _ { linecomment_drop v start lexbuf }
+
+and linecomment_drop_directive v = parse
 | '\n' { new_line lexbuf; token v lexbuf }
 | eof { token v lexbuf }
-| _ { linecomment_drop v lexbuf }
+| _ { linecomment_drop_directive v lexbuf }
 
 and linecomment_skip v skipno = parse
 | '\n' { new_line lexbuf; if skipno > 0 then skip_lines v skipno lexbuf else token v lexbuf }
@@ -100,7 +116,7 @@ and skip_lines v skipno = parse
 
 and multilinecomment v start nest = parse
 | '\n' { new_line lexbuf; multilinecomment v start nest lexbuf }
-| "*/" { if nest = 0 then token v lexbuf else multilinecomment v start (nest - 1) lexbuf }
+| "*/" { if nest = 0 then (v.comment start lexbuf.Lexing.lex_curr_p; token v lexbuf) else multilinecomment v start (nest - 1) lexbuf }
 | "/*" { multilinecomment v start (nest+1) lexbuf }
 | _ { multilinecomment v start nest lexbuf }
 | eof { raise (Error (start, "missing terminator for comment starting here")) }
@@ -171,7 +187,7 @@ and token v = parse
     token v lexbuf }
 | ( ' ' | '\t' | '\r' ) { token v lexbuf }
 | '\n' { new_line lexbuf; token v lexbuf }
-| '%' { linecomment v lexbuf }
+| '%' { linecomment v lexbuf.Lexing.lex_start_p lexbuf }
 | "/*" { multilinecomment v lexbuf.Lexing.lex_start_p 0 lexbuf }
 | "." { FULLSTOP }
 | "_" idchar + as c { CONSTANT c }
