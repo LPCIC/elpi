@@ -10,6 +10,7 @@ help:
 	@echo '  clean                  remove build artifacts'
 	@echo '  release                release the software (note: git tag -s first)'
 	@echo '  release-npm            publish the web build on npm (part of release)'
+	@echo '  release-npm-preview    publish a preview of the web build on npm, with the dist-tag next'
 	@echo '  pack-webrunner         the npm package of the web build, versioned by git describe'
 	@echo
 	@echo 'Testing targets:'
@@ -180,6 +181,19 @@ release-npm:
 	npm version --no-git-tag-version --allow-same-version "$${tag#v}" && \
 	npm publish --access public
 
+# a preview of the web build on npm: the package of pack-webrunner, versioned
+# X.Y.(Z+1)-dev.N.gHASH, published with the dist-tag next instead of latest
+# (npm install elpi-webrunner@next). HEAD must not be a tag (that is
+# release-npm), and the tree must be clean (the version names HEAD). Needs npm
+# login, or a token in ~/.npmrc; NPM_OPTS is passed to npm publish (e.g.
+# NPM_OPTS=--otp=123456)
+release-npm-preview:
+	@if git describe --tags --exact-match >/dev/null 2>&1; then echo 'release-npm-preview: HEAD has a tag, see release-npm' >&2; exit 1; fi; \
+	git diff --quiet HEAD || { echo 'release-npm-preview: the tree has uncommitted changes' >&2; exit 1; }; \
+	$(MAKE) webrunner pack-webrunner && \
+	cd $(WEB_DIST) && \
+	npm publish elpi-webrunner-*.tgz --tag next --access public $(NPM_OPTS)
+
 # testing
 tests:
 	dune build $(DUNE_OPTS) @only-elpi
@@ -240,4 +254,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: release-npm pack-webrunner tests tests-ppx build-ppx webrunner test-webrunner perf-lsp help install build world clean gh-pages doc doc-build doc-serve doc-publish
+.PHONY: release-npm release-npm-preview pack-webrunner tests tests-ppx build-ppx webrunner test-webrunner perf-lsp help install build world clean gh-pages doc doc-build doc-serve doc-publish
