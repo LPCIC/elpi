@@ -1,4 +1,4 @@
-File "./error_key_without_index.ml", lines 3-4, characters 0-33:
+File "error_key_without_index.ml", lines 3-4, characters 0-33:
 3 | type tctx = Entry of (string[@elpi.key "term"]) * bool
 4 | [@@deriving elpi { declaration }]
 Error: type tctx has [@elpi.key] but no index was provided. Use [@elpi.index (module M)]

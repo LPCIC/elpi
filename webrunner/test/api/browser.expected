@@ -1,0 +1,26 @@
+== worker
+load elpi-api.js
+wasm {"outcome":"success","assignments":{"X":"2"},"constraints":"","state":""}
+== worker, no WebAssembly features
+load elpi-api.js
+load web_api.bc.js
+js {"outcome":"success","assignments":{"X":"2"},"constraints":"","state":""}
+== worker, WebAssembly fails
+load elpi-api.js
+load web_api.bc.js
+js {"outcome":"success","assignments":{"X":"2"},"constraints":"","state":""}
+== worker elsewhere, elpiApiUrl, no WebAssembly features
+load elpi-api.js
+load web_api.bc.js
+js {"outcome":"success","assignments":{"X":"2"},"constraints":"","state":""}
+== page
+load elpi-api.js
+wasm {"outcome":"success","assignments":{"X":"2"},"constraints":"","state":""}
+== page, no WebAssembly features
+load elpi-api.js
+load web_api.bc.js
+js {"outcome":"success","assignments":{"X":"2"},"constraints":"","state":""}
+== page, WebAssembly fails
+load elpi-api.js
+load web_api.bc.js
+js {"outcome":"success","assignments":{"X":"2"},"constraints":"","state":""}

@@ -1,0 +1,4 @@
+load elpi-lsp-web.js
+load web_lsp_driver.bc.wasm.js
+fetch *.wasm: 404
+load web_lsp_driver.bc.js

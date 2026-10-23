@@ -11,7 +11,7 @@ build: [
 ]
 depends: [
   "ocaml" {>= "4.14.0" }
-  "dune" {>= "2.9.0"}
+  "dune" {>= "3.17"}
   "elpi" {= version}
   "sel" {>= "0.6.0"}
   "lsp" {>= "1.20.0"}

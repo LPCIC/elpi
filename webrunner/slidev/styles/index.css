@@ -1,0 +1,8 @@
+/* runnable code with its output on the right, see README.md */
+.run-side .slidev-monaco-container {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+}
+/* the output pane: its top border becomes a left one */
+.run-side .slidev-monaco-container > div:nth-child(2) {
+  border-top: 0; border-left: 1px solid #333;
+}

@@ -1,5 +1,5 @@
 ; the language server, independent of how messages come and go: see the
-; drivers ../stdio_driver.ml and ../web_driver.ml
+; drivers ../stdio_lsp_driver.ml and ../../webrunner/web_lsp_driver.ml
 (library
  (name elpi_lsp_server)
  (wrapped false)

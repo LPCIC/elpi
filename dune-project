@@ -1,4 +1,4 @@
-(lang dune 2.9)
+(lang dune 3.17)
 (name elpi)
 (using menhir 2.0)
 
@@ -7,7 +7,5 @@
 
 (package
  (name ppx_elpi))
-
-(package (name elpi-option-legacy-parser))
 
 (package (name elpi-lsp))

@@ -1,8 +1,8 @@
 (* The language server, independent of how messages come and go: the driver
-   (../stdio_driver.ml on stdin/stdout, or ../web_driver.ml in a web worker)
-   calls [init], gives the messages of the client to [handle_json], and runs
-   the checker tasks ([get_checker_tasks], [check_now]) when it sees fit. See
-   server.mli. *)
+   (../stdio_lsp_driver.ml on stdin/stdout, or
+   ../../webrunner/web_lsp_driver.ml in a web worker) calls [init], gives the
+   messages of the client to [handle_json], and runs the checker tasks
+   ([get_checker_tasks], [check_now]) when it sees fit. See server.mli. *)
 
 open Lsp.Types
 

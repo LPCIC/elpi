@@ -1,0 +1,67 @@
+; make test-webrunner: the API of Elpi for JavaScript (../../web_api.ml),
+; loaded by its entry point ../../elpi-api.js, which picks a build:
+;
+; - test.cjs, in Node: the API, with the build that load picks, the ones it
+;   is asked for, and the JavaScript one when the WebAssembly one cannot be
+;   used (no-wasm-features) or fails to start (wasm-fails); the outputs are
+;   the same, test.expected;
+; - load.cjs, in Node: load itself (its errors, a second load);
+; - browser-test.cjs: the API in a page and in a web worker of an emulated
+;   browser (../browser.cjs), in scenarios.
+
+(copy_files ../browser.cjs)
+
+(rule
+ (alias default)
+ (action (progn)))
+
+(rule
+ (targets auto.output)
+ (deps test.cjs test-acc.elpi ../../elpi-api.js ../../web_api.bc.js)
+ (action (with-stdout-to auto.output (run node test.cjs ../../elpi-api.js auto wasm))))
+
+(rule
+ (targets wasm.output)
+ (deps test.cjs test-acc.elpi ../../elpi-api.js ../../web_api.bc.js)
+ (action (with-stdout-to wasm.output (run node test.cjs ../../elpi-api.js wasm wasm))))
+
+(rule
+ (targets js.output)
+ (deps test.cjs test-acc.elpi ../../elpi-api.js ../../web_api.bc.js)
+ (action (with-stdout-to js.output (run node test.cjs ../../elpi-api.js js js))))
+
+(rule
+ (targets no-wasm-features.output)
+ (deps test.cjs test-acc.elpi ../../elpi-api.js ../../web_api.bc.js)
+ (action
+  (with-stdout-to no-wasm-features.output
+   (run node test.cjs ../../elpi-api.js auto js no-wasm-features))))
+
+(rule
+ (targets wasm-fails.output)
+ (deps test.cjs test-acc.elpi ../../elpi-api.js ../../web_api.bc.js)
+ (action
+  (with-stdout-to wasm-fails.output
+   (run node test.cjs ../../elpi-api.js auto js wasm-fails))))
+
+(rule
+ (targets load.output)
+ (deps load.cjs ../../elpi-api.js ../../web_api.bc.js)
+ (action (with-stdout-to load.output (run node load.cjs ../../elpi-api.js))))
+
+(rule
+ (targets browser.output)
+ (deps browser-test.cjs browser.cjs ../../elpi-api.js ../../web_api.bc.js)
+ (action (with-stdout-to browser.output (run node browser-test.cjs ../../elpi-api.js))))
+
+(rule
+ (alias runtest-webrunner)
+ (action
+  (progn
+   (diff test.expected auto.output)
+   (diff test.expected wasm.output)
+   (diff test.expected js.output)
+   (diff test.expected no-wasm-features.output)
+   (diff test.expected wasm-fails.output)
+   (diff load.expected load.output)
+   (diff browser.expected browser.output))))

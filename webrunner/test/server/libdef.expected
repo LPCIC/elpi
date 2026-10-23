@@ -1,0 +1,18 @@
+==== open libdef.elpi ====
+diagnostics of libdef.elpi (version 1): 0
+definition "print"+0 (the cursor is at 0:8):
+  line 0:
+               | main :- print "x", trace.counter "x" N, print N.
+    cursor     |         *
+  defined at elpi-builtin:/ID/builtin.elpi 525:0-525:24
+    | builtin func print any..
+  previewed 525:0-525:24
+    | builtin func print any..
+definition "trace.counter"+0 (the cursor is at 0:19):
+  line 0:
+               | main :- print "x", trace.counter "x" N, print N.
+    cursor     |                    *
+  defined at elpi-builtin:/ID/builtin_set.elpi 255:0-255:40
+    | builtin func trace.counter string -> int
+  previewed 255:0-255:40
+    | builtin func trace.counter string -> int

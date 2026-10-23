@@ -1,13 +1,13 @@
 ; elpi-lsp: the language server on stdin/stdout
 (executable
- (name stdio_driver)
+ (name stdio_lsp_driver)
  (public_name elpi-lsp)
  (optional)
  (package elpi-lsp)
- (modules stdio_driver)
+ (modules stdio_lsp_driver)
  (libraries elpi_lsp_server sel lsp jsonrpc yojson unix))
 
 ; built by default: the server on stdin/stdout
 (alias
  (name default)
- (deps stdio_driver.exe))
+ (deps stdio_lsp_driver.exe))

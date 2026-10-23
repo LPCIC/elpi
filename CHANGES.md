@@ -3,6 +3,8 @@
 - LSP:
   - New language server `elpi-lsp` supporting type information via hovering,
     jump to definition and semantic highlighting. See `lsp/README.md`
+  - It also runs in a browser, in a web worker, compiled to WebAssembly and
+    to JavaScript (the npm package `elpi-webrunner`). See `webrunner/README.md`
 - Compiler:
   - Change: the passes can be error resilient: they return their result and
     the list of the errors found (`Error.t`, with the name of the pass
@@ -25,6 +27,10 @@
     at its first occurrence (formerly one warning, without a location, for
     all the undeclared globals).
 - API:
+  - New: part of the modules `Setup`, `Parse`, `Compile` and `Execute` of the
+    API for JavaScript, compiled to WebAssembly and to JavaScript, with an
+    entry point that picks one (`webrunner/elpi-api.js`, in the npm package
+    `elpi-webrunner`). See `webrunner/README.md`
   - Change: new module `Error`: the type of errors `Error.t` (component,
     location, message), printers, the exception `Error.ElpiError` (formerly
     `Compile.CompileError`, now private: it is raised with `Error.error`).
@@ -62,6 +68,10 @@
   - New: the comment block on the line before a declaration (`pred`, `func`,
     `type`, `kind`...) is its documentation: line comments (`%`) on
     consecutive lines, or a `/* */` comment (`Ast.Type.doc`).
+- Builtins:
+  - New `reset_new_int N`: resets the counter of `new_int` to `N`, so the
+    next `new_int` gives `N + 1` (its values are increasing only between two
+    resets)
 
 # v3.9.2 (October 2026)
 

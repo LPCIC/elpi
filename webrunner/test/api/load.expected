@@ -1,0 +1,8 @@
+unknown backend: TypeError: elpi-api: the backend is one of auto, wasm, js
+wasm without the features: Error: elpi-api: this JavaScript engine lacks what the WebAssembly build needs (GC, exceptions, tail calls)
+wasm that fails: Error: WebAssembly.instantiate failed
+auto twice: {"same":true,"backend":"wasm"}
+js, then auto: {"same":true,"backend":"js"}
+js, then wasm: Error: elpi-api: the js build is loaded already
+wasm that fails, then js: "js"
+frozen: true

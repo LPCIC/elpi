@@ -1,0 +1,174 @@
+;; The tests of lsp/test (make test-webrunner) on the web build of the
+;; server, run by bridge.mjs, one directory each:
+;;
+;; - node-js, node-wasm: the server compiled to JavaScript, to WebAssembly, run
+;;   as in Node (node-worker.cjs), where accumulate reads the files;
+;; - browser-SCENARIO: the entry point elpi-lsp-web.js, run in an emulated
+;;   browser (../browser.cjs) in SCENARIO, where it picks the server; what it
+;;   loads (loaded.log) is compared with loaded-SCENARIO.expected. In a browser
+;;   there are no files, accumulate fails: the scripts that accumulate files
+;;   are not run.
+;;
+;; The outputs are compared (compare.cjs) with the ones of the native server,
+;; but the ones that differ, whose expected outputs are here: the library
+;; files have elpi-builtin: URIs, and the definitions in accumulated files
+;; are not found (they are copied in _build only, while the native locations
+;; are in the source tree).
+
+(copy_files ../browser.cjs)
+
+(rule
+ (alias default)
+ (action (progn)))
+
+(subdir node-js
+ (copy_files ../../../../lsp/test/*.elpi)
+ (rule
+  (targets server.sh)
+  (action
+   (progn
+    (with-stdout-to server.sh
+     (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" node \"$d/../../../web_lsp_driver.bc.js\"\n"))
+    (run chmod +x server.sh))))
+ (rule
+  (targets test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output)
+  (deps (glob_files *.elpi) server.sh ../bridge.mjs ../node-worker.cjs ../../../web_lsp_driver.bc.js)
+  (action
+   (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .))))
+ (rule
+  (alias runtest-webrunner)
+  (deps ../compare.cjs test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (action (run node ../compare.cjs . .. ../../../../lsp/test))))
+
+(subdir node-wasm
+ (copy_files ../../../../lsp/test/*.elpi)
+ (rule
+  (targets server.sh)
+  (action
+   (progn
+    (with-stdout-to server.sh
+     (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" node \"$d/../../../web_lsp_driver.bc.wasm.js\"\n"))
+    (run chmod +x server.sh))))
+ (rule
+  (targets test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output)
+  (deps (glob_files *.elpi) server.sh ../bridge.mjs ../node-worker.cjs ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
+  (action
+   (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .))))
+ (rule
+  (alias runtest-webrunner)
+  (deps ../compare.cjs test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (action (run node ../compare.cjs . .. ../../../../lsp/test))))
+
+(subdir browser-auto
+ (copy_files ../../../../lsp/test/*.elpi)
+ (rule
+  (targets server.sh)
+  (action
+   (progn
+    (with-stdout-to server.sh
+     (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" auto \"$d/loaded.log\"\n"))
+    (run chmod +x server.sh))))
+ (rule
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
+  (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
+  (action
+   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+ (rule
+  (alias runtest-webrunner)
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-auto.expected loaded.log)))))
+
+(subdir browser-no-wasm-features
+ (copy_files ../../../../lsp/test/*.elpi)
+ (rule
+  (targets server.sh)
+  (action
+   (progn
+    (with-stdout-to server.sh
+     (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" no-wasm-features \"$d/loaded.log\"\n"))
+    (run chmod +x server.sh))))
+ (rule
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
+  (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
+  (action
+   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+ (rule
+  (alias runtest-webrunner)
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-no-wasm-features.expected loaded.log)))))
+
+(subdir browser-wasm-fails
+ (copy_files ../../../../lsp/test/*.elpi)
+ (rule
+  (targets server.sh)
+  (action
+   (progn
+    (with-stdout-to server.sh
+     (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" wasm-fails \"$d/loaded.log\"\n"))
+    (run chmod +x server.sh))))
+ (rule
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
+  (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
+  (action
+   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+ (rule
+  (alias runtest-webrunner)
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-wasm-fails.expected loaded.log)))))
+
+(subdir browser-no-wasm-assets
+ (copy_files ../../../../lsp/test/*.elpi)
+ (rule
+  (targets server.sh)
+  (action
+   (progn
+    (with-stdout-to server.sh
+     (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" no-wasm-assets \"$d/loaded.log\"\n"))
+    (run chmod +x server.sh))))
+ (rule
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
+  (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
+  (action
+   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+ (rule
+  (alias runtest-webrunner)
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-no-wasm-assets.expected loaded.log)))))
+
+(subdir browser-wrong-mime
+ (copy_files ../../../../lsp/test/*.elpi)
+ (rule
+  (targets server.sh)
+  (action
+   (progn
+    (with-stdout-to server.sh
+     (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" wrong-mime \"$d/loaded.log\"\n"))
+    (run chmod +x server.sh))))
+ (rule
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
+  (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
+  (action
+   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+ (rule
+  (alias runtest-webrunner)
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-wrong-mime.expected loaded.log)))))
+
+(subdir browser-no-wasm-script
+ (copy_files ../../../../lsp/test/*.elpi)
+ (rule
+  (targets server.sh)
+  (action
+   (progn
+    (with-stdout-to server.sh
+     (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" no-wasm-script \"$d/loaded.log\"\n"))
+    (run chmod +x server.sh))))
+ (rule
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
+  (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
+  (action
+   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+ (rule
+  (alias runtest-webrunner)
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-no-wasm-script.expected loaded.log)))))

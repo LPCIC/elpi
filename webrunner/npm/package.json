@@ -1,0 +1,32 @@
+{
+  "name": "elpi-webrunner",
+  "version": "0.0.0-dev",
+  "description": "The language server of Elpi for the web (a web worker), and the API of Elpi for JavaScript, compiled to WebAssembly and to JavaScript",
+  "keywords": [
+    "elpi",
+    "lambda-prolog",
+    "lsp",
+    "language-server",
+    "web-worker",
+    "webassembly"
+  ],
+  "homepage": "https://github.com/LPCIC/elpi/tree/master/webrunner",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LPCIC/elpi.git",
+    "directory": "webrunner"
+  },
+  "bugs": "https://github.com/LPCIC/elpi/issues",
+  "license": "LGPL-2.1-or-later",
+  "main": "elpi-api.js",
+  "types": "elpi-api.d.ts",
+  "files": [
+    "elpi-lsp-web.js",
+    "web_lsp_driver.bc.js",
+    "web_lsp_driver.bc.wasm.js",
+    "web_lsp_driver.bc.wasm.assets/*.wasm",
+    "elpi-api.js",
+    "elpi-api.d.ts",
+    "web_api.bc.js"
+  ]
+}

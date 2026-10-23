@@ -1,0 +1,50 @@
+; Elpi on the web (see README.md): the language server in a web worker and the
+; API of Elpi for JavaScript, both compiled to JavaScript (needs js_of_ocaml)
+; and to WebAssembly (needs wasm_of_ocaml), with their entry points that pick
+; one. Not built by default: make webrunner puts them in elpi-webrunner/, the
+; npm package.
+
+(dirs :standard \ elpi-webrunner slidev)
+
+; the language server in a web worker (vscode.dev, the slides of slidev/)
+(executable
+ (name web_lsp_driver)
+ (modes js wasm)
+ (modules web_lsp_driver)
+ (libraries elpi_lsp_server elpi lsp jsonrpc yojson js_of_ocaml))
+
+; the API of Elpi for JavaScript (Setup, Parse, Compile, Execute)
+(executable
+ (name web_api)
+ (modes js wasm)
+ (modules web_api)
+ (libraries elpi js_of_ocaml))
+
+; the entry point of the server, the script of the worker
+(rule
+ (targets elpi-lsp-web.js)
+ (deps assemble.cjs server-entry.js)
+ (action
+  (with-stdout-to elpi-lsp-web.js
+   (run node assemble.cjs server server-entry.js))))
+
+; the entry point of the API, with the WebAssembly build inlined
+(rule
+ (targets elpi-api.js)
+ (deps assemble.cjs api-entry.js web_api.bc.wasm.js
+  (glob_files web_api.bc.wasm.assets/*.wasm))
+ (action
+  (with-stdout-to elpi-api.js
+   (run node assemble.cjs api api-entry.js web_api.bc.wasm.js web_api.bc.wasm.assets))))
+
+; the files of the npm package (make webrunner copies them, with npm/)
+(alias
+ (name webrunner)
+ (deps elpi-lsp-web.js web_lsp_driver.bc.js web_lsp_driver.bc.wasm.js
+  (glob_files web_lsp_driver.bc.wasm.assets/*.wasm)
+  elpi-api.js elpi-api.d.ts web_api.bc.js))
+
+; not built by default
+(rule
+ (alias default)
+ (action (progn)))
