@@ -1,57 +1,38 @@
 # v4.0.0 (October 2026)
 
 - LSP:
-  - New language server `elpi-lsp` supporting type information via hovering,
+  - New: language server `elpi-lsp` supporting type information via hovering,
     jump to definition and semantic highlighting. See `lsp/README.md`
-  - It also runs in a browser, in a web worker, compiled to WebAssembly and
-    to JavaScript (the npm package `elpi-webrunner`). See `webrunner/README.md`
+  - New: elpi-webrunner npm package containing the lsp server that runs in a
+    web worker, compiled to WebAssembly and to JavaScript. Moreover
+    part of the `API` modules `Setup`, `Parse`, `Compile` and `Execute`
+    exposed JavaScript. See `webrunner/README.md`
 - Compiler:
+  - Change: new field `max_errors` of `Compile.flags`
   - Change: the passes can be error resilient: they return their result and
-    the list of the errors found (`Error.t`, with the name of the pass
-    that found it). With `max_errors > 0` they do not stop at the first error:
-    the items that cannot be scoped, typed, ... are dropped from the output,
-    and their errors are in the list.
-  - Change: new field `max_errors` of `Compile.flags`: stops after
-    that many errors; 0, the default, means that the first error is raised
-    as `Error.ElpiError`, as before.
+    the list of the errors found. With `Compile.flags.max_errors = 0` they do
+    stop at the first error, as before.
     See also the flag `-max-errors N` to `elpi`.
-  - Change: `Compile.hover` is now `LSP.hover` (see API); it takes the scoped
-    program too and gives, by location, all that is known about a unit
-    (`LSP.info`): the type of each term, its symbols with their `kind`, their
-    declaration (constants), binder (variables) and all their occurrences in
-    the unit, and the type expressions of the declarations, whose `text` is
-    the kind of a type constructor or the whole type.
-    A use of a macro, `@name`, is a `Macro` (with the declaration of the
-    macro); the symbols of its expansion are not there.
   - Change: an undeclared global is reported by a warning of its own, located
     at its first occurrence (formerly one warning, without a location, for
     all the undeclared globals).
 - API:
-  - New: part of the modules `Setup`, `Parse`, `Compile` and `Execute` of the
-    API for JavaScript, compiled to WebAssembly and to JavaScript, with an
-    entry point that picks one (`webrunner/elpi-api.js`, in the npm package
-    `elpi-webrunner`). See `webrunner/README.md`
+  - New: module `LSP`, with what the language server needs
+  - Change: `API.Compile.hover` is now `API.LSP.hover`
   - Change: new module `Error`: the type of errors `Error.t` (component,
     location, message), printers, the exception `Error.ElpiError` (formerly
-    `Compile.CompileError`, now private: it is raised with `Error.error`).
-    The compiler, the runtime and the builtins raise it.
+    `Compile.CompileError`).
   - Change: `Setup.set_error`, `set_anomaly`, `set_type_error` and
     `Utils.error`, `anomaly`, `type_error` are removed; the errors of the
     builtins can be redirected with `Builtin.set_runtime_error`,
     `set_runtime_anomaly`, `set_runtime_type_error` (they take a
     `Builtin.runtime_error_hook`, a function that raises).
-  - Change: the parser (`Parse.program`, `Parse.program_from`) and the passes
+  - Change: the parser and the passes
     of the compiler return their warnings (`Error.warning`) with their result
     and their errors; `Setup.set_warn` is removed. The warnings at run time
     (`Builtin.warn`, formerly `Utils.warn`) can be redirected with
     `Builtin.set_runtime_warn`.
     `Setup.warning_id` is now `Error.warning_id`.
-  - Change: new module `LSP`, with what the language server needs:
-    `Compile.hover` and its types (`IntervalTree`, `info`, `kind`, ...) moved
-    there, and `LSP.accumulated`. The `info` of a constant has the location of
-    its documentation (`doc`) and of its rules (`body`, from the first to the
-    last one in the unit of its declaration); `LSP.hover` takes the program
-    that the unit extends (`~base`), for the constants declared there.
   - Change: `Parse.goal` and `Parse.goal_from` are now `Parse.query` and
     `Parse.query_from`; like `Compile.query`, they return the query or its
     syntax error (instead of raising `Parse.ParseError`), and its warnings.
@@ -59,17 +40,13 @@
   - Change: `Parse.program` and `Parse.program_from` are error
     resilient when `max_errors > 0`: a declaration with a syntax error is
     skipped up to the next `.` and dropped, and they return the program and the
-    list of the errors like the passes of the compiler. They take the compiler
-    flags, for `max_errors`; by default the first error is raised as before.
+    list of the errors like the passes of the compiler.
   - Change: a syntax error in an accumulated file is located on the
     accumulate directive, its message gives the position in the file.
-  - New `LSP.accumulated` lists the accumulate directives of a program and
-    the files that each one brings in.
   - New: the comment block on the line before a declaration (`pred`, `func`,
-    `type`, `kind`...) is its documentation: line comments (`%`) on
-    consecutive lines, or a `/* */` comment (`Ast.Type.doc`).
+    `type`, `kind`...) is its documentation and is used by the LSP server.
 - Builtins:
-  - New `reset_new_int N`: resets the counter of `new_int` to `N`, so the
+  - New: `reset_new_int N`: resets the counter of `new_int` to `N`, so the
     next `new_int` gives `N + 1` (its values are increasing only between two
     resets)
 
