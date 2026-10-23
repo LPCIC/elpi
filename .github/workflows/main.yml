@@ -7,8 +7,25 @@ on:
     branches: [ master ]
 
 jobs:
+  # The versions of OCaml to test, the last one being the latest: the job
+  # fatalwarnings and the npm package use it
+  versions:
+    name: OCaml versions
+    runs-on: ubuntu-latest
+    outputs:
+      compilers: ${{ steps.versions.outputs.compilers }}
+      latest: ${{ steps.versions.outputs.latest }}
+    steps:
+      - id: versions
+        env:
+          COMPILERS: '["4.14.x", "5.5.x"]'
+        run: |
+          echo "compilers=$COMPILERS" >> "$GITHUB_OUTPUT"
+          echo "latest=$(jq -r '.[-1]' <<< "$COMPILERS")" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build and test elpi
+    needs: versions
     strategy:
       fail-fast: false
       matrix:
@@ -16,14 +33,12 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macos-latest
-        ocaml-compiler:
-          - 4.14.x
-          - 5.5.x
+        ocaml-compiler: ${{ fromJSON(needs.versions.outputs.compilers) }}
         profile:
           - dev
         include:
           - os: ubuntu-latest
-            ocaml-compiler: 5.5.x
+            ocaml-compiler: ${{ needs.versions.outputs.latest }}
             profile: fatalwarnings
 
     runs-on: ${{ matrix.os }}
@@ -223,14 +238,14 @@ jobs:
 # elpi-webrunner-VERSION.tgz
 
       - name: Pack Elpi on the web (npm)
-        if: runner.os == 'Linux' && matrix.ocaml-compiler == '5.5.x' && matrix.profile != 'fatalwarnings'
+        if: runner.os == 'Linux' && matrix.ocaml-compiler == needs.versions.outputs.latest && matrix.profile != 'fatalwarnings'
         run: |
           git fetch --unshallow --tags || git fetch --tags
           opam exec -- make pack-webrunner
 
       - name: Save the npm package of Elpi on the web
         uses: actions/upload-artifact@v4
-        if: runner.os == 'Linux' && matrix.ocaml-compiler == '5.5.x' && matrix.profile != 'fatalwarnings'
+        if: runner.os == 'Linux' && matrix.ocaml-compiler == needs.versions.outputs.latest && matrix.profile != 'fatalwarnings'
         with:
           name: elpi-webrunner
           path: webrunner/elpi-webrunner/elpi-webrunner-*.tgz
