@@ -177,7 +177,7 @@ jobs:
       - name: Build elpi-lsp
         run: |
           opam exec -- make build-lsp DUNE_OPTS=--verbose
-          opam exec -- cp _build/default/lsp/stdio_driver.exe elpi-lsp.exe
+          opam exec -- cp _build/default/lsp/stdio_lsp_driver.exe elpi-lsp.exe
           opam exec -- chmod u+w ${{ env.workspace }}/elpi-lsp.exe
           opam exec -- strip ${{ env.workspace }}/elpi-lsp.exe
 

@@ -13,7 +13,7 @@
        make build-lsp
        make tests-lsp
 
-   The server is built as `_build/default/lsp/stdio_driver.exe`; `make
+   The server is built as `_build/default/lsp/stdio_lsp_driver.exe`; `make
    install` installs it as `elpi-lsp`.
 
 3. Install the VS Code extension
@@ -39,7 +39,7 @@
   - `library_disk.ml`: the files of the builtins are written on the disk
     on the fly when one jumps to them.
   - `runner.ml`: runs a query on a program, for `elpi/run`.
-- `stdio_driver.ml`: the server on stdin/stdout (the executable `elpi-lsp`),
+- `stdio_lsp_driver.ml`: the server on stdin/stdout (the executable `elpi-lsp`),
   its main loop driven by [Sel](https://github.com/gares/sel).
 
 - `test/`: the tests. `test_lsp_lib.ml` is a client that starts the server and

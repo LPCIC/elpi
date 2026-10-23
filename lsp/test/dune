@@ -28,7 +28,7 @@
  (deps (glob_files *.elpi))
  (action
   (with-stdout-to test_lsp.output
-   (run %{exe:test_lsp.exe} %{exe:../stdio_driver.exe} .))))
+   (run %{exe:test_lsp.exe} %{exe:../stdio_lsp_driver.exe} .))))
 
 (rule
  (alias runtest-lsp)
