@@ -49,11 +49,9 @@ where `accumulate` reads the files (see `test/server/node-worker.cjs`).
 
 ### Stack size
 
-The web server uses the stack much more than the native one, and the stack of a
-worker is small: a deep computation, e.g. `elpi/run` on
-`tests/sources/lyp/lyp_engine.elpi`, overflows it. The JavaScript server
-answers with the error `internal error: Stack overflow`, the WebAssembly one
-dies. A worker of Node can be given a bigger stack:
+The web server uses the stack much more than the native one.
+The JavaScript server answers with the error `internal error: Stack overflow`,
+the WebAssembly one dies. A worker of Node can be given a bigger stack:
 
 ```js
 new Worker(file, { resourceLimits: { stackSizeMb: 64 } })
