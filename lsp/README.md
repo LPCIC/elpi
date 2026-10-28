@@ -34,7 +34,7 @@
   - `text.ml`: conversions between byte offsets (Elpi locations) and LSP
     positions (0-based lines, columns in UTF-16 code units).
   - `checker.ml`: runs Elpi's compiler (parsing, type checking ...).
-  - `server.ml`: speaks the protocol (see `server.mli`): the documents, the
+  - `server.ml`: speaks the protocol: the documents, the
     requests and notifications, the checks.
   - `library_disk.ml`: the files of the builtins are written on the disk
     on the fly when one jumps to them.
@@ -47,9 +47,9 @@
 - `test/`: the tests. `test_lsp_lib.ml` is a client that starts the server and
   drives it with JSON-RPC messages; each `script_*.ml` is the script for one
   `.elpi` file of the directory;
-  `test_lsp.ml` runs the scripts, closing the file after each one. The output
-  of the script `name` is compared with `test/name.expected`; the rest (the
-  capabilities of the server, its shutdown) with `test/test_lsp.expected`. A
+  `test_lsp.ml` runs the scripts. The output
+  of the script `name` is compared with `test/name.expected`. The
+  capabilities of the server, its shutdown, etc. is compared with `test/test_lsp.expected`. A
   new script needs its output and its comparison to be added to `test/dune`.
 
 ## Custom requests
