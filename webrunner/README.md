@@ -3,7 +3,7 @@
 Elpi in a browser (and in Node), compiled to WebAssembly and to JavaScript:
 
 - the language server `elpi-lsp` (`../lsp/`) in a web worker, used by the VS
-  Code extension `gares.elpi-lang` in vscode.dev, and by the Slidev deck of
+  Code extension `gares.elpi-lang` as a fallback, or in vscode.dev, and by the Slidev deck of
   `slidev/`;
 - the API of Elpi for JavaScript: parse, compile and run Elpi programs.
 
@@ -12,7 +12,7 @@ make webrunner        # webrunner/elpi-webrunner/ (needs lsp, js_of_ocaml, wasm_
 make test-webrunner   # the tests, also of the fallbacks (needs node, npx)
 ```
 
-`webrunner/elpi-webrunner/` is the npm package `elpi-webrunner`: `make
+`webrunner/elpi-webrunner/` is the npm package: `make
 pack-webrunner` makes its tarball, versioned by `git describe`, and `make
 release` publishes it on npm (`make release-npm`, with the version of the tag
 of HEAD). Its metadata and its README are in `npm/`.
@@ -64,8 +64,7 @@ new Worker(file, { resourceLimits: { stackSizeMb: 64 } })
 is `elpi-api.js`, the main module of the npm package: its function `load`
 gives the API, the same whatever the build it starts:
 
-- the WebAssembly one, which is inlined in `elpi-api.js`, when the JavaScript
-  engine supports what it needs (GC, exceptions, tail calls: Chrome 119,
+- the WebAssembly one, which is inlined in `elpi-api.js` (requires Chrome 119,
   Firefox 120, Safari 18.2, Node 22);
 - the JavaScript one, `web_api.bc.js`, otherwise, or when the WebAssembly one
   fails to start. It is the only other file, next to `elpi-api.js`.
