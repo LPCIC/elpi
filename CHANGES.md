@@ -1,3 +1,13 @@
+# Unreleased
+
+- Builtins:
+  - New: data type `std.fmt` (text `std.fmt.txt`, boxes `std.fmt.h`,
+    `std.fmt.v`, `std.fmt.hv`, `std.fmt.hov`, `std.fmt.box`, breaks
+    `std.fmt.brk`, `std.fmt.cut`, `std.fmt.spc` and `std.fmt.nl`,
+    tabulation box `std.fmt.tbox` with `std.fmt.settab`, `std.fmt.tab` and
+    `std.fmt.tbrk`).
+  - New `std.fmt->string` and `std.fmt.output`
+
 # v4.0.0 (October 2026)
 
 - LSP:

@@ -1,0 +1,28 @@
+shorten std.fmt.{ txt, h, v, hv, hov, box, brk, cut, spc, nl, output, tbox, settab, tab, tbrk }.
+
+func list->doc list string -> list std.fmt.
+list->doc [] [].
+list->doc [X] [txt X] :- !.
+list->doc [X|XS] [txt X, txt ";", spc | R] :- list->doc XS R.
+
+func block string, list string -> std.fmt.
+block Name Items (v 2 [txt Name, txt " {", cut, hov 0 {list->doc Items}, brk 0 -2, txt "}"]).
+
+main :-
+  block "record" ["alpha","beta","gamma","delta"] B,
+  std.fmt->string 80 B S1,
+  std.assert! (S1 = "record {\n  alpha; beta; gamma; delta\n}") "wide",
+  std.fmt->string 16 B S2,
+  std.assert! (S2 = "record {\n  alpha; beta;\n  gamma; delta\n}") "narrow",
+  std.fmt->string _ (hv 2 [txt "a", spc, txt "b"]) S3,
+  std.assert! (S3 = "a b") "hv fits",
+  std.fmt->string 80 (box 0 [h [txt "x", spc, txt "y"], nl, txt "z"]) S4,
+  std.assert! (S4 = "x y\nz") "box, h, nl",
+  std.fmt->string _ (tbox [settab, txt "name    ", settab, txt "arity ", settab, txt "kind", nl,
+                           tab, txt "map", tab, txt "3", tab, txt "func", nl,
+                           tab, txt "append", tab, txt "3", tab, txt "pred"]) S5,
+  std.assert! (S5 = "name    arity kind\nmap     3     func\nappend  3     pred") "tbox",
+  std.fmt->string _ (tbox [settab, txt "name    ", settab, txt "k", nl, tab, txt "ab", tbrk 1 0, txt "z"]) S6,
+  std.assert! (S6 = "name    k\nab       z") "tbrk",
+  output std_out 16 B,
+  print "".

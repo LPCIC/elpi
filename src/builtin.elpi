@@ -420,6 +420,34 @@ builtin func input_line in_stream -> string.
 % [eof InStream] checks if no more data can be read from InStream
 builtin func eof in_stream.
 
+%  -- Pretty printing (OCaml's Format) --
+
+% A document laid out by OCaml's Format module. See the documentation of
+% Format for the meaning of boxes and breaks
+builtin data std.fmt.
+builtin symb std.fmt.txt    : string -> std.fmt = "1".  % a string
+builtin symb std.fmt.h      : list std.fmt -> std.fmt = "1".  % horizontal box: breaks never split the line
+builtin symb std.fmt.v      : int -> list std.fmt -> std.fmt = "1".  % vertical box with indentation: every break splits the line
+builtin symb std.fmt.hv     : int -> list std.fmt -> std.fmt = "1".  % horizontal/vertical box with indentation: all breaks split the line, or none does
+builtin symb std.fmt.hov    : int -> list std.fmt -> std.fmt = "1".  % packing box with indentation: a break splits the line only when needed
+builtin symb std.fmt.box    : int -> list std.fmt -> std.fmt = "1".  % structural box with indentation: like std.fmt.hov, but also splits when it reduces indentation
+builtin symb std.fmt.brk    : int -> int -> std.fmt = "1".  % break (std.fmt.brk N O): N spaces, or a newline indented by O more than the box
+builtin symb std.fmt.cut    : std.fmt = "1".  % break hint: nothing, or a newline (std.fmt.brk 0 0)
+builtin symb std.fmt.spc    : std.fmt = "1".  % break hint: a space, or a newline (std.fmt.brk 1 0)
+builtin symb std.fmt.nl     : std.fmt = "1".  % forced newline
+builtin symb std.fmt.tbox   : list std.fmt -> std.fmt = "1".  % tabulation box: its tab stops align columns
+builtin symb std.fmt.settab : std.fmt = "1".  % sets a tab stop at the current column of the enclosing std.fmt.tbox
+builtin symb std.fmt.tab    : std.fmt = "1".  % moves to the next tab stop, or to a new line if there is none (std.fmt.tbrk 0 0)
+builtin symb std.fmt.tbrk   : int -> int -> std.fmt = "1".  % tabulation break (std.fmt.tbrk N O): moves to the next tab stop and then N spaces further, or to a new line shifted by O
+
+% [std.fmt->string Margin Doc S] lays out Doc in S, splitting lines longer
+% than Margin (80 if left unspecified, eg _)
+builtin func std.fmt->string int, std.fmt -> string.
+
+% [std.fmt.output OutStream Margin Doc] lays out Doc on OutStream, splitting
+% lines longer than Margin (80 if left unspecified, eg _)
+builtin func std.fmt.output out_stream, int, std.fmt.
+
 %  -- System --
 
 % [gettimeofday T] sets T to the number of seconds elapsed since 1/1/1970

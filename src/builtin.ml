@@ -79,6 +79,95 @@ let process = AlgebraicData.declare {
   ];
   }|> ContextualConversion.(!<)
 
+(* Documents rendered by OCaml's Format: each constructor is a Format call *)
+type fdoc =
+  | Text of string
+  | H of fdoc list
+  | V of int * fdoc list
+  | HV of int * fdoc list
+  | HOV of int * fdoc list
+  | Box of int * fdoc list
+  | Brk of int * int
+  | Cut
+  | Spc
+  | Nl
+  | TBox of fdoc list
+  | SetTab
+  | Tab
+  | TBrk of int * int
+
+let rec pp_fdoc fmt = function
+  | Text s -> Format.pp_print_string fmt s
+  | H l -> Format.pp_open_hbox fmt (); pp_fdocs fmt l
+  | V (i,l) -> Format.pp_open_vbox fmt i; pp_fdocs fmt l
+  | HV (i,l) -> Format.pp_open_hvbox fmt i; pp_fdocs fmt l
+  | HOV (i,l) -> Format.pp_open_hovbox fmt i; pp_fdocs fmt l
+  | Box (i,l) -> Format.pp_open_box fmt i; pp_fdocs fmt l
+  | Brk (n,o) -> Format.pp_print_break fmt n o
+  | Cut -> Format.pp_print_cut fmt ()
+  | Spc -> Format.pp_print_space fmt ()
+  | Nl -> Format.pp_force_newline fmt ()
+  | TBox l ->
+      Format.pp_open_tbox fmt ();
+      List.iter (pp_fdoc fmt) l;
+      Format.pp_close_tbox fmt ()
+  | SetTab -> Format.pp_set_tab fmt ()
+  | Tab -> Format.pp_print_tab fmt ()
+  | TBrk (n,o) -> Format.pp_print_tbreak fmt n o
+and pp_fdocs fmt l =
+  List.iter (pp_fdoc fmt) l;
+  Format.pp_close_box fmt ()
+
+let format_doc = let open AlgebraicData in let open BuiltInData in declare {
+  ty = TyName "std.fmt";
+  doc = "A document laid out by OCaml's Format module. See the documentation of Format for the meaning of boxes and breaks";
+  pp = pp_fdoc;
+  constructors = [
+    K("std.fmt.txt","a string",A(string,N),
+      B (fun s -> Text s),
+      M (fun ~ok ~ko -> function Text s -> ok s | _ -> ko ()));
+    K("std.fmt.h","horizontal box: breaks never split the line",C(listC,N),
+      B (fun l -> H l),
+      M (fun ~ok ~ko -> function H l -> ok l | _ -> ko ()));
+    K("std.fmt.v","vertical box with indentation: every break splits the line",A(int,C(listC,N)),
+      B (fun i l -> V(i,l)),
+      M (fun ~ok ~ko -> function V(i,l) -> ok i l | _ -> ko ()));
+    K("std.fmt.hv","horizontal/vertical box with indentation: all breaks split the line, or none does",A(int,C(listC,N)),
+      B (fun i l -> HV(i,l)),
+      M (fun ~ok ~ko -> function HV(i,l) -> ok i l | _ -> ko ()));
+    K("std.fmt.hov","packing box with indentation: a break splits the line only when needed",A(int,C(listC,N)),
+      B (fun i l -> HOV(i,l)),
+      M (fun ~ok ~ko -> function HOV(i,l) -> ok i l | _ -> ko ()));
+    K("std.fmt.box","structural box with indentation: like std.fmt.hov, but also splits when it reduces indentation",A(int,C(listC,N)),
+      B (fun i l -> Box(i,l)),
+      M (fun ~ok ~ko -> function Box(i,l) -> ok i l | _ -> ko ()));
+    K("std.fmt.brk","break (std.fmt.brk N O): N spaces, or a newline indented by O more than the box",A(int,A(int,N)),
+      B (fun n o -> Brk(n,o)),
+      M (fun ~ok ~ko -> function Brk(n,o) -> ok n o | _ -> ko ()));
+    K("std.fmt.cut","break hint: nothing, or a newline (std.fmt.brk 0 0)",N,
+      B Cut,
+      M (fun ~ok ~ko -> function Cut -> ok | _ -> ko ()));
+    K("std.fmt.spc","break hint: a space, or a newline (std.fmt.brk 1 0)",N,
+      B Spc,
+      M (fun ~ok ~ko -> function Spc -> ok | _ -> ko ()));
+    K("std.fmt.nl","forced newline",N,
+      B Nl,
+      M (fun ~ok ~ko -> function Nl -> ok | _ -> ko ()));
+    K("std.fmt.tbox","tabulation box: its tab stops align columns",C(listC,N),
+      B (fun l -> TBox l),
+      M (fun ~ok ~ko -> function TBox l -> ok l | _ -> ko ()));
+    K("std.fmt.settab","sets a tab stop at the current column of the enclosing std.fmt.tbox",N,
+      B SetTab,
+      M (fun ~ok ~ko -> function SetTab -> ok | _ -> ko ()));
+    K("std.fmt.tab","moves to the next tab stop, or to a new line if there is none (std.fmt.tbrk 0 0)",N,
+      B Tab,
+      M (fun ~ok ~ko -> function Tab -> ok | _ -> ko ()));
+    K("std.fmt.tbrk","tabulation break (std.fmt.tbrk N O): moves to the next tab stop and then N spaces further, or to a new line shifted by O",A(int,A(int,N)),
+      B (fun n o -> TBrk(n,o)),
+      M (fun ~ok ~ko -> function TBrk(n,o) -> ok n o | _ -> ko ()));
+  ];
+  }|> ContextualConversion.(!<)
+
 let really_input ic s ofs len =
   let rec unsafe_really_input read ic s ofs len =
     if len <= 0 then read else begin
@@ -380,6 +469,13 @@ let unspecC data = let open API.ContextualConversion in let open API.RawData in 
         state, Given x, gls)
 }
 let unspec d = API.ContextualConversion.(!<(unspecC (!> d)))
+
+let render_fdoc ~margin fmt d =
+  let margin = match margin with Unspec -> 80 | Given m -> m in
+  if margin < 2 then error "std.fmt: Margin must be at least 2";
+  Format.pp_set_margin fmt margin;
+  pp_fdoc fmt d;
+  Format.pp_print_flush fmt ()
 
 let pair_decl = (pair (BuiltInData.poly "A") (BuiltInData.poly "B"))
 let option_decl = option (BuiltInData.poly "A")
@@ -727,6 +823,31 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
      with
      | End_of_file -> ()
      | Sys_error msg -> error msg)),
+  DocAbove);
+
+  LPDoc " -- Pretty printing (OCaml's Format) --";
+
+  MLData format_doc;
+
+  MLCode(Pred("std.fmt->string",
+    In(unspec int, "Margin",
+    In(format_doc, "Doc",
+    Out(string,    "S",
+    Easy           "lays out Doc in S, splitting lines longer than Margin (80 if left unspecified, eg _)"))),
+  (fun margin d _ ~depth:_ ->
+     let b = Buffer.create 80 in
+     render_fdoc ~margin (Format.formatter_of_buffer b) d;
+     !:(Buffer.contents b))),
+  DocAbove);
+
+  MLCode(Pred("std.fmt.output",
+    In(out_stream, "OutStream",
+    In(unspec int, "Margin",
+    In(format_doc, "Doc",
+    Easy           "lays out Doc on OutStream, splitting lines longer than Margin (80 if left unspecified, eg _)"))),
+  (fun (o,_) margin d ~depth:_ ->
+     try render_fdoc ~margin (Format.formatter_of_out_channel o) d
+     with Sys_error msg -> error msg)),
   DocAbove);
 
   LPDoc " -- System --";

@@ -1,4 +1,4 @@
-// make test-webrunner: a use of all the API, typechecked against
+// make tests-webrunner: a use of all the API, typechecked against
 // ../../elpi-api.d.ts (not run: test.cjs runs the API)
 
 import { load, LoadedApi, Program, ElpiError, ThrownError } from "../../elpi-api";

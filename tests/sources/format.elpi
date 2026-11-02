@@ -1,0 +1,19 @@
+func args list string -> list std.fmt.
+args [] [].
+args [X] [std.fmt.txt X] :- !.
+args [X|XS] [std.fmt.txt X, std.fmt.txt ",", std.fmt.spc | R] :- args XS R.
+
+main :-
+  D = std.fmt.hov 2 [std.fmt.txt "f(", std.fmt.hov 0 {args ["aaaa","bbbb","cccc","dddd"]}, std.fmt.txt ")"],
+  std.fmt->string _ D S1,
+  std.assert! (S1 = "f(aaaa, bbbb, cccc, dddd)") "wide margin",
+  std.fmt->string 16 D S2,
+  std.assert! (S2 = "f(aaaa, bbbb,\n  cccc, dddd)") "narrow margin",
+  V = std.fmt.v 2 [std.fmt.txt "begin", std.fmt.cut, std.fmt.txt "x", std.fmt.cut, std.fmt.txt "y", std.fmt.brk 0 -2, std.fmt.txt "end"],
+  std.fmt->string _ V S3,
+  std.assert! (S3 = "begin\n  x\n  y\nend") "vbox",
+  std.fmt->string 80 (std.fmt.h [std.fmt.txt "a", std.fmt.spc, std.fmt.txt "b", std.fmt.nl, std.fmt.txt "c"]) S4,
+  std.assert! (S4 = "a b\nc") "hbox and newline",
+  std.fmt.output std_out 16 D,
+  print "",
+  print "ok".
