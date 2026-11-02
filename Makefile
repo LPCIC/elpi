@@ -27,7 +27,7 @@ help:
 	@echo '  tests-ppx PROMOTE=true runs and promotes the ppx_elpi tests if different'
 	@echo '  tests-lsp              runs the elpi-lsp tests (alias runtest-lsp, needs sel, lsp)'
 	@echo '  tests-lsp PROMOTE=true runs and promotes the elpi-lsp tests if different'
-	@echo '  test-webrunner         runs the tests of the web build, also of its fallbacks (alias runtest-webrunner, needs node, npx)'
+	@echo '  tests-webrunner        runs the tests of the web build, also of its fallbacks (alias runtest-webrunner, needs node, npx)'
 	@echo '  perf-lsp               times elpi-lsp on a big document: check vs requests (alias perf-lsp)'
 	@echo
 	@echo '  git/treeish            checkout treeish and build elpi.git.treeish'
@@ -106,9 +106,9 @@ webrunner:
 	cp -f webrunner/npm/package.json webrunner/npm/README.md LICENSE $(WEB_DIST)/
 	chmod -R u+w $(WEB_DIST)
 
-# test-webrunner also typechecks webrunner/test/api/types.ts against
+# tests-webrunner also typechecks webrunner/test/api/types.ts against
 # webrunner/elpi-api.d.ts (with npx, which downloads TypeScript)
-test-webrunner:
+tests-webrunner:
 	dune build $(WEB_DUNE_OPTS) $(if $(filter true,$(PROMOTE)),--auto-promote) @runtest-webrunner
 	npx --yes -p typescript@5.9.3 tsc --noEmit --strict --target es2020 --lib es2020,dom webrunner/test/api/types.ts
 
@@ -254,4 +254,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: release-npm release-npm-preview pack-webrunner tests tests-ppx build-ppx webrunner test-webrunner perf-lsp help install build world clean gh-pages doc doc-build doc-serve doc-publish
+.PHONY: release-npm release-npm-preview pack-webrunner tests tests-ppx build-ppx webrunner tests-webrunner perf-lsp help install build world clean gh-pages doc doc-build doc-serve doc-publish

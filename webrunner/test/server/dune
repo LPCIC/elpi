@@ -1,4 +1,4 @@
-;; The tests of lsp/test (make test-webrunner) on the web build of the
+;; The tests of lsp/test (make tests-webrunner) on the web build of the
 ;; server, run by bridge.mjs, one directory each:
 ;;
 ;; - node-js, node-wasm: the server compiled to JavaScript, to WebAssembly, run

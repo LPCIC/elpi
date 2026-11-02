@@ -372,6 +372,18 @@ let () = declare "linear"
   ()
 
 
+let () = declare "format"
+  ~source_elpi:"format.elpi"
+  ~description:"std.fmt rendered by OCaml's Format"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "f(aaaa, bbbb,\n  cccc, dddd)"))
+  ()
+
+let () = declare "format_shorten"
+  ~source_elpi:"format_shorten.elpi"
+  ~description:"std.fmt used via shorten std.fmt.{...}"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "record {\n  alpha; beta;\n  gamma; delta\n}"))
+  ()
+
 let () = declare "IO_COLON"
   ~source_elpi:"io_colon.elpi"
   ~description:"IO_COLON token"

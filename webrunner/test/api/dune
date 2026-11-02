@@ -1,4 +1,4 @@
-; make test-webrunner: the API of Elpi for JavaScript (../../web_api.ml),
+; make tests-webrunner: the API of Elpi for JavaScript (../../web_api.ml),
 ; loaded by its entry point ../../elpi-api.js, which picks a build:
 ;
 ; - test.cjs, in Node: the API, with the build that load picks, the ones it

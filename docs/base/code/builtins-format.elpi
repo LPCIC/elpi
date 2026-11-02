@@ -1,0 +1,18 @@
+% A document built from std.fmt constructors, laid out at two margins.
+
+shorten std.fmt.{ txt, v, hov, brk, cut, spc }.
+
+func items list string -> list std.fmt.
+items [] [].
+items [X] [txt X] :- !.
+items [X|XS] [txt X, txt ";", spc | R] :- items XS R.
+
+func block string, list string -> std.fmt.
+block Name Xs (v 2 [txt Name, txt " {", cut, hov 0 {items Xs}, brk 0 -2, txt "}"]).
+
+main :-
+  block "record" ["alpha", "beta", "gamma", "delta"] B,
+  std.fmt->string _ B Wide,
+  print Wide,
+  std.fmt->string 16 B Narrow,
+  print Narrow.

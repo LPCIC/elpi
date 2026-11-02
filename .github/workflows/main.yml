@@ -232,7 +232,7 @@ jobs:
           opam install js_of_ocaml js_of_ocaml-compiler
           opam install --no-depexts wasm_of_ocaml-compiler
           opam exec -- make webrunner
-          opam exec -- make test-webrunner
+          opam exec -- make tests-webrunner
 
 # The npm package of the web build, e.g. for webrunner/slidev: npm install
 # elpi-webrunner-VERSION.tgz

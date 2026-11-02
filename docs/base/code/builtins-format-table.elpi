@@ -1,0 +1,13 @@
+% A table: the padded header row sets one tab stop per column.
+
+shorten std.fmt.{ txt, tbox, settab, tab, nl }.
+
+func row pair string (pair string string) -> list std.fmt.
+row (pr Name (pr Arity Kind)) [nl, tab, txt Name, tab, txt Arity, tab, txt Kind].
+
+main :-
+  Header = [settab, txt "name    ", settab, txt "arity ", settab, txt "kind"],
+  std.map [pr "map" (pr "3" "func"), pr "append" (pr "3" "pred")] row Rows,
+  std.flatten [Header|Rows] Cells,
+  std.fmt->string _ (tbox Cells) S,
+  print S.

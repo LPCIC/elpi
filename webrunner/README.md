@@ -9,7 +9,7 @@ Elpi in a browser (and in Node), compiled to WebAssembly and to JavaScript:
 
 ```
 make webrunner        # webrunner/elpi-webrunner/ (needs lsp, js_of_ocaml, wasm_of_ocaml, node)
-make test-webrunner   # the tests, also of the fallbacks (needs node, npx)
+make tests-webrunner  # the tests, also of the fallbacks (needs node, npx)
 ```
 
 `webrunner/elpi-webrunner/` is the npm package: `make

@@ -178,6 +178,64 @@ it, handing back its three standard streams.
    :assert: first two lines: alpha beta\nstring map, two -> 2
 
 
+Pretty printing
+===============
+
+Output that has to fit a given width, such as code or nested data, is
+easier to produce by describing its layout than by computing line breaks
+by hand. Elpi delegates this to OCaml's ``Format`` module: a program builds
+a term of type ``std.fmt`` that describes boxes and break hints, and a
+builtin hands that term to ``Format``, which decides where lines are split.
+The document is ordinary data, so it can be built, inspected and discarded
+on backtracking like any other term; only the final rendering has an
+effect.
+
+The constructors mirror the calls of ``Format`` one to one:
+
+* ``std.fmt.txt S`` is a piece of text, never split;
+* ``std.fmt.h L``, ``std.fmt.v I L``, ``std.fmt.hv I L``, ``std.fmt.hov I L``
+  and ``std.fmt.box I L`` group the documents in the list ``L`` in a box,
+  respectively horizontal (breaks never split the line), vertical (every
+  break splits it), horizontal-or-vertical (all breaks split it, or none
+  does), packing (a break splits the line only when the next item does not
+  fit) and structural (like packing, but also splitting when that reduces
+  the indentation). ``I`` is the indentation, relative to where the box
+  starts, of the lines a split creates;
+* ``std.fmt.brk N O`` is a break hint: ``N`` spaces when the line is not
+  split, otherwise a newline indented by ``O`` more than the box;
+  ``std.fmt.spc`` and ``std.fmt.cut`` abbreviate ``std.fmt.brk 1 0`` and
+  ``std.fmt.brk 0 0``; ``std.fmt.nl`` always splits the line;
+* ``std.fmt.tbox L`` is a tabulation box, which aligns its content in
+  columns: ``std.fmt.settab`` sets a tab stop at the current column,
+  ``std.fmt.tab`` moves to the next tab stop, and ``std.fmt.tbrk N O``
+  moves to the next tab stop and then ``N`` spaces further, or to a new
+  line shifted by ``O`` when no tab stop is left on the line.
+
+:stdlib:`std.fmt->string` ``Margin Doc S`` lays ``Doc`` out in the string
+``S``, splitting lines longer than ``Margin`` columns;
+:stdlib:`std.fmt.output` ``OutStream Margin Doc`` writes the same layout to a
+stream. Passing ``_`` as ``Margin`` selects the default of 80 columns; a
+``Margin`` smaller than 2 is rejected.
+
+The constructor names are long when written in full, so a program that
+builds many documents usually shortens them. The example below lays out
+the same block at two margins: at the default 80 columns the packing box
+keeps all the items on one line, at 16 it splits only the breaks it has to.
+
+.. elpi:: code/builtins-format.elpi
+   :assert: record {\n  alpha; beta; gamma; delta\n}\nrecord {\n  alpha; beta;\n  gamma; delta\n}
+
+Tab stops do not adapt to the cells: a column is as wide as the distance
+between the two tab stops that delimit it, and a cell longer than that
+pushes the rest of its row past the following tab stops. A table therefore
+sets its tab stops in a first row padded to the widest cell of each
+column, typically a header, as in the example below; a ``std.fmt.tab``
+then starts each cell of the following rows.
+
+.. elpi:: code/builtins-format-table.elpi
+   :assert: name    arity kind\nmap     3     func\nappend  3     pred
+
+
 Typed finite maps
 =================
 

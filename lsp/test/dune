@@ -87,7 +87,7 @@
  (action (diff accchar.expected accchar.output)))
 
 ; built by default: the tests of this directory (the ones of the web server
-; are in ../../webrunner/test/server, see make test-webrunner)
+; are in ../../webrunner/test/server, see make tests-webrunner)
 (alias
  (name default)
  (deps (alias all)))
