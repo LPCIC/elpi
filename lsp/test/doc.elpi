@@ -5,7 +5,7 @@ twice X Y :- Y is X * 2.
 
 % not the documentation of undocumented: a blank line follows
 
-pred undocumented o:int.
+pred undocumented -> int.
 undocumented 1.
 
 /* the entry point,
@@ -28,6 +28,19 @@ pred pg. % about pg, not the documentation of ph
 pred ph.
 % doc of pb
 pred pb % inside the declaration
-  i:int.
+  int.
 pred uses.
 uses :- pa, qa, ph, pb 1.
+
+% a comment after the full stop documents a declaration with no comment before
+kind color type.
+symb red : color. % the color of fire
+symb green, blue : color. % two colors
+symb gray : color. /* a block comment: not documentation */
+symb a : color. symb b : color. % documents b, not a
+pred pc
+  color. % after a multi-line signature
+% above pd
+pred pd. % not shown: the comment before wins
+pred uses2.
+uses2 :- pg, pc red, pd, print green blue gray a b ok.

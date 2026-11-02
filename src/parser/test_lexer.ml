@@ -183,6 +183,12 @@ b"|}                                  [T(STRING "a\nb", 2, 3, 0, 5)];
   test  "a.B.c"                       [T(CONSTANT "a.B.c", 1, 0,  0,5)];
   test  "a.B."                        [T(CONSTANT "a.B", 1, 0,  0,3); T(FULLSTOP, 1, 0, 3, 4)];
   test  "a. >"                        [T(CONSTANT "a", 1, 0,  0,1); T(FULLSTOP, 1, 0, 1, 2); T(FAMILY_GT ">", 1, 0, 3,4)];
+  (* the line comment after a full stop is read with it: the full stop ends
+     after it; not a block comment, nor an elpi: directive *)
+  test  "a. % c\nb"                   [T(CONSTANT "a", 1, 0,  0,1); T(FULLSTOP, 1, 0, 1, 6); T(CONSTANT "b", 2, 7, 7,8)];
+  test  "a. /* x\ny */ b"             [T(CONSTANT "a", 1, 0,  0,1); T(FULLSTOP, 1, 0, 1, 2); T(CONSTANT "b", 2, 8, 13,14)];
+  test  "a. /* x */b"                 [T(CONSTANT "a", 1, 0,  0,1); T(FULLSTOP, 1, 0, 1, 2); T(CONSTANT "b", 1, 0, 10,11)];
+  test  "a. % elpi:skip 1\nb\nc"       [T(CONSTANT "a", 1, 0,  0,1); T(FULLSTOP, 1, 0, 1, 2); T(CONSTANT "c", 3, 19, 19,20)];
   (*    01234567890123456789012345 *)
   test  "-->"                         [T(FAMILY_MINUS "-->", 1, 0,  0,3)];
   test  "x.y->z"                      [T(CONSTANT "x.y->z", 1, 0,  0,6)];

@@ -22,8 +22,9 @@
    `elpi-lsp` (not needed if it is in the `PATH`).
 
 4. Open a `.elpi` file: syntax errors and type errors are underlined, all of
-   them at once; hovering shows types, and for a predicate its documentation
-   (the comment block on the line before its declaration); F12 (Go to
+   them at once; hovering shows types, and the documentation of a declared
+   name (the comment block on the line before its declaration, or else the
+   `%` comment after the full stop of the declaration, on its line); F12 (Go to
    Definition) jumps to the declaration of a predicate, and Ctrl+hover
    previews it with its rules (when they follow it, up to 8 lines).
 
