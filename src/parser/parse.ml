@@ -59,31 +59,42 @@ end
 module DocComments : sig
   val with_comments : (unit -> 'a) -> 'a
   val add : Lexing.position -> Lexing.position -> unit
-  val token_read : Lexing.position -> unit
+  val add_trailing : Lexing.position -> Lexing.position -> unit
+  val token_read : fullstop:bool -> Lexing.position -> unit
   val before : Util.Loc.t -> Util.Loc.t option
+  val after : unit -> Util.Loc.t option
 end = struct
   type block = { start : Lexing.position; stop : Lexing.position }
 
   (* by file and last line *)
   let blocks : (string * int, block) Hashtbl.t = Hashtbl.create 17
+
+  (* the line comment after the last full stop, on its line (e.g. symb ok :
+     diagnostic. % Success): the lexer reads it with the full stop, so it is
+     there when the declaration that the full stop ends is built; the next
+     token drops it *)
+  let trailing : block option ref = ref None
   let active = ref false
 
   (* the file and the line where the last token ends: a comment on that line
      follows code, it is not documentation (e.g. pred p. % about p) *)
   let last_token : (string * int) option ref = ref None
-  let token_read (p : Lexing.position) = last_token := Some (p.pos_fname, p.pos_lnum)
+  let token_read ~fullstop (p : Lexing.position) =
+    if not fullstop then trailing := None;
+    last_token := Some (p.pos_fname, p.pos_lnum)
   let follows_code (p : Lexing.position) =
     match !last_token with
     | Some (f, l) -> String.equal f p.pos_fname && Int.equal l p.pos_lnum
     | None -> false
 
+  let reset () = Hashtbl.reset blocks; trailing := None; last_token := None
+
   let with_comments f =
     if !active then f ()
     else begin
-      Hashtbl.reset blocks;
-      last_token := None;
+      reset ();
       active := true;
-      Fun.protect f ~finally:(fun () -> active := false; last_token := None; Hashtbl.reset blocks)
+      Fun.protect f ~finally:(fun () -> active := false; reset ())
     end
 
   let add (start : Lexing.position) (stop : Lexing.position) =
@@ -95,11 +106,17 @@ end = struct
       | None -> start in
     Hashtbl.replace blocks (stop.pos_fname, stop.pos_lnum) { start; stop }
 
+  let add_trailing start stop = if !active then trailing := Some { start; stop }
+
+  let to_loc { start; stop } =
+    { Util.Loc.client_payload = None; source_name = start.pos_fname;
+      source_start = start.pos_cnum; source_stop = stop.pos_cnum;
+      line = start.pos_lnum; line_starts_at = start.pos_bol }
+
   let before (loc : Util.Loc.t) =
-    Hashtbl.find_opt blocks (loc.source_name, loc.line - 1) |> Option.map (fun { start; stop } ->
-      { Util.Loc.client_payload = None; source_name = start.pos_fname;
-        source_start = start.pos_cnum; source_stop = stop.pos_cnum;
-        line = start.pos_lnum; line_starts_at = start.pos_bol })
+    Hashtbl.find_opt blocks (loc.source_name, loc.line - 1) |> Option.map to_loc
+
+  let after () = Option.map to_loc !trailing
 end
 
 
@@ -111,6 +128,7 @@ module ParseFile = struct
   let warn = Warnings.add
   let add_comment = DocComments.add
   let doc_before = DocComments.before
+  let doc_after_dot = DocComments.after
 
 end
 
@@ -132,12 +150,13 @@ let raise_parse_error lexbuf stateid =
   raise (Parser_config.ParseError(loc,message))
 
 (* the lexer records the comments, for the documentation *)
-let lexer_config = Lexer.config ~comment:ParseFile.add_comment C.versions
+let lexer_config =
+  Lexer.config ~comment:ParseFile.add_comment ~trailing_comment:DocComments.add_trailing C.versions
 
 (* the lexer, telling DocComments where each token ends *)
 let token lexbuf =
   let t = Lexer.token lexer_config lexbuf in
-  DocComments.token_read lexbuf.Lexing.lex_curr_p;
+  DocComments.token_read ~fullstop:(match t with Tokens.FULLSTOP -> true | _ -> false) lexbuf.Lexing.lex_curr_p;
   t
 
 let parse ?(lexer=token) grammar lexbuf =

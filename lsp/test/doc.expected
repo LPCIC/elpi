@@ -34,10 +34,10 @@ definition "undocumented _"+0 (the cursor is at 14:29):
   line 14:
                | main :- twice 21 A, print A, undocumented _.
     cursor     |                              *
-  defined at file://$DIR/doc.elpi 7:0-7:23
-    | pred undocumented o:int
+  defined at file://$DIR/doc.elpi 7:0-7:24
+    | pred undocumented -> int
   previewed 7:0-8:14
-    | pred undocumented o:int.
+    | pred undocumented -> int.
     | undocumented 1
 hover "main :-"+0 (the cursor is at 14:0): 14:0-14:4
   line 14:
@@ -95,3 +95,115 @@ hover "pb 1"+0 (the cursor is at 32:20): 32:20-32:22
     ? ---
     ? 
     ? doc of pb
+hover "pg, pc"+0 (the cursor is at 45:9): 45:9-45:11
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |          ^^
+    cursor     |          *
+    ? ```elpi-hover
+    ? pg : (pred)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? about pg, not the documentation of ph
+hover "pc red"+0 (the cursor is at 45:13): 45:13-45:15
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |              ^^
+    cursor     |              *
+    ? ```elpi-hover
+    ? pc : (pred color)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? after a multi-line signature
+hover "red, pd"+0 (the cursor is at 45:16): 45:16-45:19
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |                 ^^^
+    cursor     |                 *
+    ? ```elpi-hover
+    ? red : color
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? the color of fire
+hover "pd, print"+0 (the cursor is at 45:21): 45:21-45:23
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |                      ^^
+    cursor     |                      *
+    ? ```elpi-hover
+    ? pd : (pred)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? above pd
+hover "green blue"+0 (the cursor is at 45:31): 45:31-45:36
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |                                ^^^^^
+    cursor     |                                *
+    ? ```elpi-hover
+    ? green : color
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? two colors
+hover "blue gray"+0 (the cursor is at 45:37): 45:37-45:41
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |                                      ^^^^
+    cursor     |                                      *
+    ? ```elpi-hover
+    ? blue : color
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? two colors
+hover "gray a"+0 (the cursor is at 45:42): 45:42-45:46
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |                                           ^^^^
+    cursor     |                                           *
+    ? ```elpi-hover
+    ? gray : color
+    ? ```
+hover "a b ok"+0 (the cursor is at 45:47): 45:47-45:48
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |                                                ^
+    cursor     |                                                *
+    ? ```elpi-hover
+    ? a : color
+    ? ```
+hover "b ok"+0 (the cursor is at 45:49): 45:49-45:50
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |                                                  ^
+    cursor     |                                                  *
+    ? ```elpi-hover
+    ? b : color
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? documents b, not a
+hover "ok."+0 (the cursor is at 45:51): 45:51-45:53
+  line 45:
+               | uses2 :- pg, pc red, pd, print green blue gray a b ok.
+    hovered    |                                                    ^^
+    cursor     |                                                    *
+    ? ```elpi-hover
+    ? ok : diagnostic
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? Success

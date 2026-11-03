@@ -25,13 +25,20 @@
       r
 
     (* what the lexer is given: the versions of the libraries (for elpi:if),
-       and what it does with a comment (from a position to another), see
-       Parse *)
+       what it does with a comment (from a position to another), and with the
+       line comment that follows a full stop on its line, see Parse *)
     type config = {
       versions : (int * int * int) Elpi_util.Util.StrMap.t;
       comment : Lexing.position -> Lexing.position -> unit;
+      trailing_comment : Lexing.position -> Lexing.position -> unit;
     }
-    let config ?(comment = fun _ _ -> ()) versions = { versions; comment }
+    let config ?(comment = fun _ _ -> ()) ?(trailing_comment = fun _ _ -> ()) versions =
+      { versions; comment; trailing_comment }
+
+    (* a line comment that is an elpi: directive is not a comment *)
+    let is_directive c =
+      let c = String.trim c in
+      String.length c >= 5 && String.equal (String.sub c 0 5) "elpi:"
 
     let version_test lexbuf v l ops ma mi p =
       let ma = int_of_string ma in
@@ -121,6 +128,20 @@ and multilinecomment v start nest = parse
 | _ { multilinecomment v start nest lexbuf }
 | eof { raise (Error (start, "missing terminator for comment starting here")) }
 
+(* after a full stop: the line comment that follows it on its line, if any,
+   is given to [v.trailing_comment] and read; nothing is read otherwise, nor
+   if it is an elpi: directive, left to token *)
+and trailing_comment v = parse
+| ([' ' '\t' '\r']* as ws) '%' ([^ '\n']* as c) {
+    let open Lexing in
+    if is_directive c then begin
+      lexbuf.lex_curr_pos <- lexbuf.lex_start_pos;
+      lexbuf.lex_curr_p <- lexbuf.lex_start_p
+    end else
+      let start = { lexbuf.lex_start_p with pos_cnum = lexbuf.lex_start_p.pos_cnum + String.length ws } in
+      v.trailing_comment start lexbuf.lex_curr_p }
+| "" { () }
+
 and string start b = parse
 | '\n'     { Buffer.add_char b '\n'; new_line lexbuf; string start b lexbuf }
 | '\\' 'n' { Buffer.add_char b '\n'; string start b lexbuf }
@@ -189,7 +210,12 @@ and token v = parse
 | '\n' { new_line lexbuf; token v lexbuf }
 | '%' { linecomment v lexbuf.Lexing.lex_start_p lexbuf }
 | "/*" { multilinecomment v lexbuf.Lexing.lex_start_p 0 lexbuf }
-| "." { FULLSTOP }
+| "." {
+    (* the line comment after it, if any, is read with it (it ends after it) *)
+    let start_p = lexbuf.Lexing.lex_start_p in
+    trailing_comment v lexbuf;
+    lexbuf.Lexing.lex_start_p <- start_p;
+    FULLSTOP }
 | "_" idchar + as c { CONSTANT c }
 | "_" { FRESHUV }
 | num as i { INTEGER (int_of_string i) }

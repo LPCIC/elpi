@@ -7,6 +7,10 @@
     tabulation box `std.fmt.tbox` with `std.fmt.settab`, `std.fmt.tab` and
     `std.fmt.tbrk`).
   - New `std.fmt->string` and `std.fmt.output`
+- Parser:
+  - New: a declaration with no comment before it is documented by the line
+    comment that follows its full stop on the same line (e.g.
+    `symb ok : diagnostic. % Success`), shown on hover by the language server
 
 # v4.0.0 (October 2026)
 

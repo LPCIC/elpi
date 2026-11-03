@@ -22,6 +22,8 @@ module type ParseFile = sig
   (* the documentation of the declaration at a location: the comment block
      on the line before it *)
   val doc_before : Util.Loc.t -> Util.Loc.t option
+  (* the comment after the full stop just read, on its line *)
+  val doc_after_dot : unit -> Util.Loc.t option
 end
 
 let rec substrings i len_s s =

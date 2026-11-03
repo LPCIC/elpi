@@ -33,6 +33,13 @@
   `_build/default/webrunner/test/server/node-js/NAME.output` over it after
   checking that the diff is only positions.
 
+## Elpi code (tests, examples, the manual)
+- Give `pred` and `func` their signature with an arrow, inputs before it and
+  outputs after it: `pred lookup string -> int.`, not
+  `pred lookup i:string, o:int.`.
+- Write a colon after the names of a `symb`: `symb red : color.`, also
+  `symb red, green : color.`.
+
 ## OCaml code
 - Do not use polymorphic equality (`=`, `<>`, `compare`, `List.mem`) when a
   dedicated function exists: `String.equal`, `Int.compare`, `Loc.equal`,
