@@ -40,6 +40,84 @@ rather than an ordinary comment. The three are ``% elpi:skip N`` (skip the
 next ``N`` lines), ``% elpi:if version …`` and ``% elpi:endif``; they are
 described in :doc:`rule-attributes`.
 
+Documentation comments
+----------------------
+
+A comment can also document a declaration. Elpi itself ignores it, but the
+parser records which comment documents which declaration, and tools read
+it from there: the language server, for example, shows it below the type
+when the mouse hovers over a use of the declared name. The declarations that
+can be documented are ``pred`` and ``func`` signatures and the ``kind``,
+``type`` and ``symb`` declarations, also when they are ``builtin``. Rules,
+macros and type abbreviations cannot.
+
+The comment that documents a declaration is the block of comments ending on
+the line just above it. Comments on consecutive lines form one block, whether
+they are line comments or block comments, so a documentation comment can
+span as many lines as needed. Any gap breaks the association: a single blank
+line between the comment and the declaration is enough for the declaration
+to be left undocumented, and a blank line inside a group of comments splits
+it into two blocks, of which only the second documents what follows.
+
+.. code-block:: elpi
+
+   % [twice N M] holds when M is N doubled.
+   % N must be known.
+   func twice int -> int.
+
+   % an unrelated remark
+
+   pred undocumented.
+
+   /* the price of an item,
+      looked up by its name */
+   :index (1)
+   pred price string -> float.
+
+Here ``twice`` is documented by the two line comments above it, which form
+a single block. ``undocumented`` has no documentation: the blank line after
+the remark separates the two, so the remark documents nothing. ``price`` is
+documented by the block comment. When a declaration has attributes, as
+``price`` does, the declaration starts at the first attribute, so that is
+where the documentation goes: above the attributes, not between them and
+the signature.
+
+A short declaration can be documented on its own line instead. When there
+is no comment above it, a line comment that follows its full stop on the
+same line documents it:
+
+.. code-block:: elpi
+
+   kind answer type.
+   symb yes : answer.   % the query holds
+   symb no : answer.    % the query fails
+   % the answer to every query
+   pred ask -> answer.  % not shown: the comment above comes first
+
+Here ``yes`` and ``no`` are documented by the comments on their right,
+while ``ask`` is documented by the comment above it, which wins over the
+one after its full stop. Only a line comment, starting with ``%`` right
+after the full stop (spaces aside), documents in this way: a block comment
+there does not. It documents only the declaration that this full stop
+ends: in
+``symb a : t. symb b : t. % …`` the comment documents ``b`` and not ``a``. A
+declaration that introduces several names at once, such as
+``symb x, y : t.``, gives the same documentation to all of them.
+
+Every other comment that follows code on its line is not documentation: a
+comment after a rule, a block comment after a full stop, or a comment
+after a token in the middle of a declaration documents nothing, and it does
+not start a documentation block for the declaration below either. The ``elpi:``
+directives are never documentation, wherever they appear.
+
+Tools show the text of the comment without its markers. The ``/*`` and
+``*/`` of a block comment are removed, and every line loses the blanks at
+its start and end, so the indentation of the lines of a block comment is
+not kept. The ``%`` that starts a line comment is removed together with one
+space after it; anything after that, further spaces or a second ``%``, is
+kept as written, which is the way to indent a line of a documentation
+comment.
+
 
 Identifiers
 ===========
