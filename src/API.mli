@@ -1466,6 +1466,12 @@ end
 
 module Utils : sig
 
+  (** [normalize_path p] is [p] without the components [.] and [..], and on
+      Windows with [/] as the separator and a lowercase drive letter, so that
+      two names of the same file compare equal (e.g. one built with
+      [Filename.concat] and one from a URI). Unlike [Unix.realpath], the file
+      does not need to exist and symbolic links are not resolved. *)
+  val normalize_path : string -> string
 
   (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
    * OCaml list! *)

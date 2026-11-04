@@ -11,6 +11,9 @@
   - New: a declaration with no comment before it is documented by the line
     comment that follows its full stop on the same line (e.g.
     `symb ok : diagnostic. % Success`), shown on hover by the language server
+- API:
+  - New: `Utils.normalize_path`, a path without `.` and `..` (and on Windows
+    with `/` and a lowercase drive), for files that need not exist
 
 # v4.0.0 (October 2026)
 

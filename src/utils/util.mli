@@ -347,6 +347,10 @@ val std_resolver :
   ?cwd:string -> paths:string list -> unit ->
      (?cwd:string -> unit:string -> unit -> string)
 
+(* [path] without the components . and .., and on Windows with / as the
+   separator and a lowercase drive; the file does not need to exist *)
+val normalize_path : string -> string
+
 type constant = int
 val pp_constant : Format.formatter -> constant -> unit
 val show_constant : constant -> string

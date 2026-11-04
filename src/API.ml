@@ -1435,6 +1435,8 @@ end
 
 
 module Utils = struct
+  let normalize_path = Elpi_util.Util.normalize_path
+
   let lp_list_to_list ~depth t =
     let module R = (val !r) in let open R in
     lp_list_to_list ~depth t
