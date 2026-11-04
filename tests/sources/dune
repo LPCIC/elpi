@@ -14,6 +14,7 @@
 (executable (name sepcomp_perf3) (modules sepcomp_perf3) (libraries sepcomp))
 (executable (name sepcomp_perf4) (modules sepcomp_perf4) (libraries sepcomp))
 (executable (name sepcomp_perf5) (modules sepcomp_perf5) (libraries sepcomp))
+(executable (name sepcomp_perf6) (modules sepcomp_perf6) (libraries sepcomp unix))
 (executable (name sepcomp_tyid)  (modules sepcomp_tyid)  (libraries sepcomp))
 (executable (name sepcomp_tyid2)  (modules sepcomp_tyid2)  (libraries sepcomp))
 (executable (name sepcomp_hover)  (modules sepcomp_hover)  (libraries sepcomp))
@@ -21,3 +22,4 @@
 (executable (name sepcomp_extend_sig2)  (modules sepcomp_extend_sig2)  (libraries sepcomp))
 (executable (name bug_407)  (modules bug_407)  (libraries elpi))
 (executable (name compile_errors)  (modules compile_errors)  (libraries sepcomp))
+(executable (name graft_perf) (modules graft_perf) (libraries sepcomp))

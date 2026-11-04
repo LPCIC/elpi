@@ -2,201 +2,130 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-module Array = struct
-  (* Main code taken from OCaml-bazaar, Library General
-     Public License version 2. *)
-  type 'a t = 'a data ref
+(* A purely functional sequence: the elements in [front], then those in [rear],
+   a skew-binary random access list (Okasaki, Purely Functional Data Structures)
+   turned around, so that the end where adding is cheap is the last one.
 
-  and 'a data =
-    | Array of 'a array
-    | Diff of int * 'a * 'a t
-    [@@deriving show]
-  
-  let empty () = ref @@ Array [||]
-    
-  (* `reroot t` ensures that `t` becomes an `Array` node.
-      This is written in CPS to avoid any stack overflow. *)
-  let rec rerootk t k = match !t with
-    | Array _ -> k ()
-    | Diff (i, v, t') ->
-        rerootk t' (fun () ->
-            (match !t' with
-       | Array a as n ->
-           let v' = a.(i) in
-           a.(i) <- v;
-           t := n;
-           t' := Diff (i, v', t)
-       | Diff _ -> assert false
-            );
-            k()
-          )
-  
-  let reroot t = rerootk t (fun () -> ())
+   [rear] is a list of complete binary trees, the most recent first, whose sizes
+   strictly increase but for the first two, which can be equal. Adding an element
+   either makes a new tree out of these two, or a new leaf. Hence cons and rcons
+   are O(1) in the worst case, however a list is shared. *)
 
-  let get t i =
-    match !t with
-    | Array a ->
-        a.(i)
-    | Diff _ ->
-        reroot t;
-        (match !t with Array a -> a.(i) | Diff _ -> assert false)
-  
-  let set t i v =
-    reroot t;
-    match !t with
-    | Array a as n ->
-        let old = a.(i) in
-        if old == v then
-    t
-        else (
-    a.(i) <- v;
-    let res = ref n in
-    t := Diff (i, old, res);
-    res
-        )
-    | Diff _ ->
-        assert false
+(* [Node (x, l, r)] holds the elements of [l], then the ones of [r], then [x] *)
+type 'a tree = Leaf of 'a | Node of 'a * 'a tree * 'a tree
+type 'a spine = Nil | Tree of int * 'a tree * 'a spine
+type 'a t = { front : 'a list; rear : 'a spine }
 
-  (* New code, all bugs are mine ;-) *)
-  let extend len t a =
-    let data = reroot t; match ! t with Array x -> x | Diff _ -> assert false in
-    let newlength = 2*(max 1 len) in
-    if newlength > Sys.max_array_length then begin
-      Printf.eprintf "bl: too many items: %d > %d (max array length)" newlength Sys.max_array_length;
-      exit 1
-    end;
-    let newdata = Array.make newlength a in
-    if len > 0 then
-      Array.blit data 0 newdata 0 len;
-    ref @@ Array newdata
-      
-      
-  let shift_right t i len =
-    let rec shift t j =
-      if j < i then t
-      else shift (set t (j+1) (get t j)) (j-1)
-    in
-      shift t (i+len-1)
+let empty () = { front = []; rear = Nil }
+let cons x l = { l with front = x :: l.front }
 
-  let shift_left t i len =
-    let rec shift t j =
-      if j = len-1 then t
-      else shift (set t j (get t (j+1))) (j + 1)
-    in
-      shift t i
+let snoc spine x =
+  match spine with
+  | Tree (w1, t1, Tree (w2, t2, rest)) when w1 = w2 -> Tree ((2 * w1) + 1, Node (x, t2, t1), rest)
+  | s -> Tree (1, Leaf x, s)
 
-  let rec length t = match !t with Diff(_,_,x) -> length x | Array a -> Array.length a
+let rcons x l = { l with rear = snoc l.rear x }
 
-  let of_list l = ref @@ Array (Array.of_list l)
-end
+(* What is left to visit, from a tree: unless it is empty it starts with Emit, so
+   that the next element is at hand *)
+type 'a stack = Done | Emit of 'a * 'a stack | Visit of 'a tree * 'a stack
+type 'a scan = 'a list * 'a stack
 
-type 'a t =
-  | BArray of { len : int; data : 'a Array.t }
-  | BCons of 'a * 'a t
-  [@@deriving show]
+let rec push t k =
+  match t with
+  | Leaf x -> Emit (x, k)
+  | Node (x, l, r) -> push l (Visit (r, Emit (x, k)))
 
-let empty () = BArray { len = 0; data = Array.empty () }
+let normalize = function Visit (t, k) -> push t k | k -> k
 
-let extendk len data a k =
-  let newdata = Array.extend len data a in
-  BArray { len = len + 1; data = k newdata }
-let extend len data a = extendk len data a (fun x -> x)
-  
-let cons head tail = BCons(head,tail)
+let stack_of_spine s =
+  let rec aux k = function Nil -> k | Tree (_, t, s) -> aux (Visit (t, k)) s in
+  normalize (aux Done s)
 
-let rec rcons elt l =
-  match l with
-  | BCons(x,xs) -> BCons(x,rcons elt xs)
-  | BArray { len; data } when len < Array.length data -> BArray { len = len + 1; data = Array.set data len elt }
-  | BArray { len; data } -> extend len data elt
+let to_scan { front; rear } = (front, stack_of_spine rear)
+let is_empty = function [], Done -> true | _ -> false
 
-let rec replace f x = function
-  | BCons (head,tail) when f head -> BCons(x,tail)
-  | BCons (head, tail) -> BCons (head, replace f x tail)
-  | BArray { len; data } as a ->
-      let rec aux i =
-        if i < len then
-          if f data.(i) then BArray { len; data = Array.set data i x }
-          else aux (i+1)
-        else
-          a
-      in
-        aux 0
+let next = function
+  | x :: xs, k -> (x, (xs, k))
+  | [], Emit (x, k) -> (x, ([], normalize k))
+  | [], (Done | Visit _) -> assert false
 
-let rec remove f = function
-  | BCons (head,tail) when f head -> tail
-  | BCons (head, tail) -> BCons (head, remove f tail)
-  | BArray { len; data } as a ->
-      let rec aux i =
-        if i < len then
-          if f data.(i) then BArray { len = len-1; data = Array.shift_left data i len }
-          else aux (i+1)
-        else 
-          a
-      in
-        aux 0
-
-let rec insert f x = function
-  | BCons (head, tail) when f head > 0 -> BCons (head, BCons(x,tail))
-  | BCons (head, tail) -> BCons (head, insert f x tail)
-  | BArray { len; data } ->
-    let rec aux i =
-      if i < len then
-        if f data.(i) > 0 then
-          if len < Array.length data then begin
-            let data = Array.shift_right data i (len-i) in
-            BArray { len = len + 1; data = Array.set data i x }
-          end else
-            extendk len data x (fun data ->
-              let data = Array.shift_right data i (len-i) in
-              Array.set data i x)
-        else
-          aux (i+1)
-      else
-          if len < Array.length data then begin
-            BArray { len = len + 1; data = Array.set data len x }
-          end else
-            extendk len data x (fun data -> Array.set data len x)
-
-    in
-      aux 0
-          
-type 'a scan = 'a t * int
-let to_scan x = x, 0
-let is_empty (x,n) =
-  match x with
-  | BArray { len } -> len = n
-  | BCons _ -> false
-
-let next (x,n) =
-  match x with
-  | BArray { len; data } -> assert(n < len); data.(n), (x,n+1)
-  | BCons (a,xs) -> a, (xs,n)
-
-(* ocaml >= 4.14
-let[@tail_mod_cons] rec to_list_aux i len data =
-  if i = len then []
-  else data.(i) :: to_list_aux (i+1) len data *)
-
-let rec to_list_aux i len data acc =
-  if i = len then List.rev acc
-  else to_list_aux (i+1) len data (data.(i) :: acc)
-
-let rec to_list = function
-  | BCons(x,xs) -> x :: to_list xs
-  | BArray { len; data } -> to_list_aux 0 len data []
-
-let to_list (x,n) =
-  if n = 0 then to_list x else
-  match x with
-  | BCons _ -> assert false
-  | BArray { len; data } -> to_list_aux n len data []
-
-let of_list l = let data = Array.of_list l in BArray { len = Array.length data; data }, 0
-
-let length (x,i) =
-  let rec aux i = function
-    | BCons (_,l) -> aux (i+1) l
-    | BArray { len } -> i + len
+let to_list s =
+  let rec aux acc s =
+    if is_empty s then List.rev acc
+    else
+      let x, s = next s in
+      aux (x :: acc) s
   in
-  aux (-i) x
+  aux [] s
+
+let of_list l = (l, Done)
+
+let length s =
+  let rec aux n s = if is_empty s then n else aux (n + 1) (snd (next s)) in
+  aux 0 s
+
+(* An edit changes the first element [y] such that [test y] into the list
+   [rewrite y ys], where [ys] are the elements after [y]. Searching allocates
+   nothing: only the part that changes is turned into a list. *)
+
+let rec tree_exists test = function
+  | Leaf x -> test x
+  | Node (x, l, r) -> tree_exists test l || tree_exists test r || test x
+
+let tree_to_list t = to_list ([], normalize (Visit (t, Done)))
+
+(* [test] holds on an element of [l] *)
+let edit_list test rewrite l =
+  let rec aux acc = function
+    | [] -> assert false
+    | y :: ys -> if test y then List.rev_append acc (rewrite y ys) else aux (y :: acc) ys
+  in
+  aux [] l
+
+(* [edit_tree test rewrite w t older] adds to [older] the elements of [t], of
+   size [w], edited. [test] holds on an element of [t]. The subtrees before
+   that element are shared: they are smaller than the trees of [older], whose
+   sizes strictly increase, so they can be put on top of it. *)
+let rec edit_tree test rewrite w t older =
+  match t with
+  | Leaf y -> List.fold_left snoc older (rewrite y [])
+  | Node (x, l, r) ->
+      let w = (w - 1) / 2 in
+      if tree_exists test l then
+        let s = edit_tree test rewrite w l older in
+        snoc (List.fold_left snoc s (tree_to_list r)) x
+      else if tree_exists test r then snoc (edit_tree test rewrite w r (Tree (w, l, older))) x
+      else List.fold_left snoc (Tree (w, r, Tree (w, l, older))) (rewrite x [])
+
+(* The trees older than the first element to change are shared *)
+let rec edit_spine test rewrite = function
+  | Nil -> None
+  | Tree (w, t, older) -> (
+      match edit_spine test rewrite older with
+      | Some older -> Some (List.fold_left snoc older (tree_to_list t))
+      | None -> if tree_exists test t then Some (edit_tree test rewrite w t older) else None)
+
+let edit test rewrite l =
+  if List.exists test l.front then Some { l with front = edit_list test rewrite l.front }
+  else Option.map (fun rear -> { l with rear }) (edit_spine test rewrite l.rear)
+
+let replace f x l = Option.value (edit f (fun _ ys -> x :: ys) l) ~default:l
+let remove f l = Option.value (edit f (fun _ ys -> ys) l) ~default:l
+
+let insert f x l =
+  let test y = f y > 0 in
+  if List.exists test l.front then { l with front = edit_list test (fun y ys -> x :: y :: ys) l.front }
+  else
+    let before_rear = match stack_of_spine l.rear with Emit (y, _) -> test y | Done | Visit _ -> false in
+    if before_rear then { l with front = l.front @ [ x ] }
+    else
+      match edit_spine test (fun y ys -> x :: y :: ys) l.rear with
+      | Some rear -> { l with rear }
+      | None -> rcons x l
+
+let pp pp_elt fmt l =
+  let pp_sep fmt () = Format.fprintf fmt ";@ " in
+  Format.fprintf fmt "@[<hov 2>[%a]@]" (Format.pp_print_list ~pp_sep pp_elt) (to_list (to_scan l))
+
+let show pp_elt l = Format.asprintf "%a" (pp pp_elt) l
