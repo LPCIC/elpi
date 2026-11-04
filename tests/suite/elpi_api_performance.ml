@@ -46,3 +46,10 @@ let () = declare "sepcomp_perf6"
   ~description:"separate compilation, extending the same base many times"
   ~expectation:Test.Success
   ()
+
+let () = declare "graft_perf"
+  ~source_dune:"graft_perf.exe"
+  ~after:"graft_perf"
+  ~description:"many grafts in long lists of rules and in many lists"
+  ~expectation:Test.Success
+  ()

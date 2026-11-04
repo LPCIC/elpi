@@ -75,3 +75,28 @@ let test_against_list () =
 ;;
 
 let _ = test_against_list ()
+
+(* edits allocate in proportion to what follows the edited element, and
+   nothing when no element matches *)
+let test_edit_cost () =
+  let build n = let rec aux i acc = if i > n then acc else aux (i+1) (rcons i acc) in aux 1 (empty ()) in
+  let n = 65536 in
+  let base = build n in
+  let allocated f =
+    let t0 = Gc.allocated_bytes () in
+    for _ = 1 to 100 do ignore (Sys.opaque_identity (f ())) done;
+    Gc.allocated_bytes () -. t0 in
+  let small = float_of_int (n * Sys.word_size / 8) in
+  assert (allocated (fun () -> remove (fun x -> x = 0) base) < small /. 64.);
+  assert (allocated (fun () -> replace (fun x -> x = 0) 0 base) < small /. 64.);
+  assert (allocated (fun () -> insert (fun x -> Int.compare x (n + 1)) 0 base) < small);
+  assert (allocated (fun () -> replace (fun x -> x = n - 5) 0 base) < small);
+  assert (allocated (fun () -> remove (fun x -> x = n - 5) base) < small);
+  assert (allocated (fun () -> insert (fun x -> Int.compare x (n - 5)) 0 base) < small);
+  let contents l = to_list (to_scan l) in
+  let expected = contents base in
+  assert (contents (replace (fun x -> x = n - 5) 0 base) = List.map (fun x -> if x = n - 5 then 0 else x) expected);
+  assert (contents base = expected)
+;;
+
+let _ = test_edit_cost ()
