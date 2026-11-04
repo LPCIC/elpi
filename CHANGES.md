@@ -1,4 +1,5 @@
-# Unreleased
+# v4.0.1 (October 2026)
+
 
 - Builtins:
   - New: data type `std.fmt` (text `std.fmt.txt`, boxes `std.fmt.h`,
