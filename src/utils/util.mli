@@ -343,9 +343,17 @@ module CData : sig
 end
 
 (* file access *)
+(* raises Failure if the file is not found *)
 val std_resolver :
   ?cwd:string -> paths:string list -> unit ->
      (?cwd:string -> unit:string -> unit -> string)
+
+(* [path] without the components . and .., and on Windows with / as the
+   separator and a lowercase drive; the file does not need to exist *)
+val normalize_path : string -> string
+
+(* the text of a file on the disk; raises Failure if it cannot be read *)
+val std_reader : string -> string
 
 type constant = int
 val pp_constant : Format.formatter -> constant -> unit

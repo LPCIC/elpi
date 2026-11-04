@@ -41,9 +41,11 @@ worker by itself) otherwise, also when the WebAssembly one fails to start; the f
 served next to each other. The WebAssembly server is about 2-3 times faster.
 
 The messages are JavaScript objects, received by `onmessage` and sent by
-`postMessage`. There are no files: `accumulate` fails, and the files of the
-standard library are `elpi-builtin:/ID/NAME` documents (see `elpi/builtinFile`
-in `../lsp/README.md`). In Node (e.g. the server bundled with the extension for
+`postMessage`. There are no files: `accumulate` finds only the documents that
+the client has opened (see "Open documents" in `../lsp/README.md`), so a client
+opens all the files of a program; the files of the standard library are
+`elpi-builtin:/ID/NAME` documents (see `elpi/builtinFile` in
+`../lsp/README.md`). In Node (e.g. the server bundled with the extension for
 the desktop) the builds can be run in a `Worker` of `worker_threads` instead,
 where `accumulate` reads the files (see `test/server/node-worker.cjs`).
 
@@ -169,8 +171,11 @@ the default, the first error is thrown instead, as an `Error` with the same
 fields. A query, parsed (`Parse.query`) or compiled (`Compile.query`), is
 `{ query, warnings }`, or `{ error, warnings }` if it has an error.
 
-Accumulated files are read with the file system of Node, through the
-`fileResolver` of `Setup.init`; in a browser there are none.
+Accumulated files are found by the `fileResolver` of `Setup.init`, and read
+with the file system of Node. Its `fileReader`, `path => text or null`, is
+asked first: it gives the text of a file that is not on disk (in a browser,
+where there is no file system) or that is newer than the disk (e.g. the
+unsaved text of an editor).
 
 ## Tests
 

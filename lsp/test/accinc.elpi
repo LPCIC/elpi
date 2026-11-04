@@ -1,0 +1,3 @@
+accumulate inclib.
+pred main.
+main :- inclib X, print X.

@@ -10,6 +10,7 @@ let parser_for dir =
   (module Parse.Make (struct
     let versions = Util.StrMap.empty
     let resolver = Util.std_resolver ~paths:[ dir ] ()
+    let reader = Util.std_reader
   end) : Parse.Parser_w_Internals)
 
 let read file =

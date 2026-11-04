@@ -747,6 +747,27 @@ let rec readsymlinks f =
   
 exception File_not_found of string
 
+let normalize_path path =
+  let path =
+    if Sys.win32 then
+      String.mapi (fun i c -> if Char.equal c '\\' then '/' else if i = 0 then Char.lowercase_ascii c else c) path
+    else path in
+  let absolute = not (Filename.is_relative path) in
+  let root = String.length path > 0 && Char.equal path.[0] '/' in
+  let parts = List.fold_left (fun acc p ->
+      match p, acc with
+      | ("" | "."), _ -> acc
+      | "..", (x :: rest) when not (String.equal x "..") -> rest
+      | "..", _ when absolute -> acc
+      | _ -> p :: acc) [] (String.split_on_char '/' path) in
+  (if root then "/" else "") ^ String.concat "/" (List.rev parts)
+
+let std_reader f =
+  try
+    let ic = open_in_bin f in
+    Fun.protect ~finally:(fun () -> close_in ic) (fun () -> really_input_string ic (in_channel_length ic))
+  with Sys_error msg -> raise (Failure msg)
+
 let std_resolver ?(cwd=Sys.getcwd()) ~paths () =
   let dirs = List.map (fun f -> make_absolute cwd (readsymlinks f)) paths in
 fun ?(cwd=Sys.getcwd()) ~unit:(origfilename as filename) () ->

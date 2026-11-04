@@ -146,14 +146,25 @@ let resolver_of (f : any) ?cwd ~unit () =
   try to_string (Js.Unsafe.fun_call f [| str unit; Option.fold ~none:null ~some:str cwd |])
   with Js.Js_error.Exn e -> failwith (Js.Js_error.message e)
 
+(* file readers: path => its text, or null/undefined to read the file *)
+
+let reader_of (f : any) path =
+  match
+    try Option.map to_string (opt (Js.Unsafe.fun_call f [| str path |]))
+    with Js.Js_error.Exn e -> failwith (Js.Js_error.message e)
+  with
+  | Some text -> text
+  | None -> Parse.std_reader path
+
 (* Setup *)
 
 let setup = obj [
-  (* init({ flags, fileResolver }) *)
+  (* init({ flags, fileResolver, fileReader }) *)
   "init", fn1 (fun options ->
     opaque (Setup.init
       ?flags:(Option.map Compile.to_setup_flags (flags_opt options))
       ?file_resolver:(Option.map resolver_of (field options "fileResolver"))
+      ?file_reader:(Option.map reader_of (field options "fileReader"))
       ~builtins:[Builtin.std_builtins] ()));
   (* setStdFormatter(f), setErrFormatter(f): f(string) gets what Elpi prints *)
   "setStdFormatter", fn1 (fun f -> Setup.set_std_formatter (formatter_of f); null);

@@ -1,0 +1,23 @@
+==== open accinc.elpi ====
+diagnostics of accinc.elpi (version 1): 0
+hover "inclib X"+0 (the cursor is at 2:8): 2:8-2:14
+  line 2:
+               | main :- inclib X, print X.
+    hovered    |         ^^^^^^
+    cursor     |         *
+    ? ```elpi-hover
+    ? inclib : (pred -> int)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? a file found through -I include (see dune)
+definition "inclib X"+0 (the cursor is at 2:8):
+  line 2:
+               | main :- inclib X, print X.
+    cursor     |         *
+  defined at file://$DIR/include/inclib.elpi 1:0-1:18
+    | pred inclib -> int
+  previewed 1:0-2:9
+    | pred inclib -> int.
+    | inclib 42

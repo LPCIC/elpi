@@ -1,0 +1,3 @@
+% a file found through -I include (see dune)
+pred inclib -> int.
+inclib 42.

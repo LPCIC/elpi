@@ -30,3 +30,6 @@ accumulate errors: []
 accumulate main: {"outcome":"success","assignments":{},"constraints":"","state":""}
 accumulate output: "42\n"
 accumulate a missing file: [{"component":"Parser","line":1,"message":"cannot find nonexistent.elpi"}]
+file reader errors: []
+file reader main: {"outcome":"success","assignments":{},"constraints":"","state":""}
+file reader output: "from the reader 42\n"

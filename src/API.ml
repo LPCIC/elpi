@@ -54,14 +54,14 @@ type elpi = {
 type flags = Compiler.flags
 
 
-let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver () : elpi =
+let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
     | Some x -> x
     | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
-  let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver end) : Parse.Parser) in
+  let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader end) : Parse.Parser) in
   Data.Global_symbols.lock ();
   let header =
     try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins
@@ -224,6 +224,7 @@ module Parse = struct
 
   let resolve_file ~elpi:{ Setup.resolver } = resolver
   let std_resolver = Elpi_util.Util.std_resolver
+  let std_reader = Elpi_util.Util.std_reader
 
 end
 
@@ -1435,6 +1436,8 @@ end
 
 
 module Utils = struct
+  let normalize_path = Elpi_util.Util.normalize_path
+
   let lp_list_to_list ~depth t =
     let module R = (val !r) in let open R in
     lp_list_to_list ~depth t

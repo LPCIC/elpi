@@ -12,7 +12,7 @@ async function main() {
   let output = "";
   Setup.setStdFormatter((s) => (output += s));
   Setup.setErrFormatter(() => {});
-  const e = Setup.init({ fileResolver: (unit, cwd) => unit, flags: { definedVariables: ["V"] } });
+  const e = Setup.init({ fileResolver: (unit, cwd) => unit, fileReader: (path) => null, flags: { definedVariables: ["V"] } });
 
   const ast = Parse.programFrom(e, "pred p o:int.\np 1. p 2.", { source: "a.elpi", flags: { maxErrors: 3 } });
   const errors: ElpiError[] = ast.errors;

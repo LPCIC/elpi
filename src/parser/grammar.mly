@@ -228,9 +228,9 @@ decl:
 | LCURLY { Program.Begin (loc $sloc) }
 | RCURLY { Program.End (loc $sloc) }
 | ext = accumulate; l = separated_nonempty_list(CONJ,filename); FULLSTOP {
-    Program.Accumulated(loc $sloc,List.(map (fun x ->
-      let cwd = Filename.dirname (loc $sloc).source_name in
-      C.parse_file ~cwd (x ^ ext)) l))
+    let loc = loc $sloc in
+    let cwd = Filename.dirname loc.source_name in
+    Program.Accumulated(loc, List.map (fun x -> C.parse_accumulated_file ~loc ~cwd (x ^ ext)) l)
   }
 | LOCAL; l = separated_nonempty_list(CONJ,constant); option(type_term); FULLSTOP {
     raise (ParseError(loc $loc,"local keyword is no longer supported"))  }

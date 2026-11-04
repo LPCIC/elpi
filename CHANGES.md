@@ -11,6 +11,37 @@
   - New: a declaration with no comment before it is documented by the line
     comment that follows its full stop on the same line (e.g.
     `symb ok : diagnostic. % Success`), shown on hover by the language server
+  - Change: when an accumulated file cannot be found or has an error, the
+    resilient parser (`?max_errors`) keeps it as a unit with no contents: it
+    is in the `deps` of the program, and the file that accumulates it keeps
+    its other contents. A syntax error is reported at its position in the
+    accumulated file
+- Compiler:
+  - Fix: `Compile.scope_ast` gives a file accumulated several times (by files
+    in different directories, or through different files) once; it gave it
+    once per file accumulating it, so that compiling the units one by one
+    loaded it again (the rules of its predicates overlapped with themselves)
+- API:
+  - New: `Setup.init ?file_reader` gives the text of a file the parser reads
+    (an accumulated file), or raises `Failure`; the default,
+    `Parse.std_reader`, reads the disk
+  - New: `Utils.normalize_path`, a path without `.` and `..` (and on Windows
+    with `/` and a lowercase drive), for files that need not exist
+- LSP:
+  - Fix: `elpi-lsp` takes `-I DIR`, where accumulated files are searched (it
+    was ignored)
+  - New: `accumulate` finds the documents open in the editor before the files
+    on the disk, and reads their text: unsaved edits count, and a program of
+    several files works in the server for the web, which has no disk; a change
+    rechecks the open documents that accumulate the changed one
+  - Fix: a file accumulated through a path with `..` (e.g. `../lang/anf`)
+    finds the files it accumulates next to it (they were searched in the
+    directory the server runs in)
+  - Fix: a file accumulated several times is loaded once (see
+    `Compile.scope_ast`)
+- Webrunner:
+  - New: `Setup.init({ fileReader })` in JavaScript, the `file_reader` of the
+    API: `path => text or null`
 - Runtime:
   - Fix: the clause lists of the index are now purely functional, so extending
     the same program many times no longer copies them

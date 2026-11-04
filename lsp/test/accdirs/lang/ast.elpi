@@ -1,0 +1,7 @@
+% accumulated twice by main.elpi, through a.elpi and through b.elpi: once
+% only, else the two rules of norm overlap with themselves
+namespace ast {
+func norm int -> int.
+norm 0 0 :- !.
+norm N N.
+}
