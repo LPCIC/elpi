@@ -13,7 +13,7 @@
   (targets test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../node-worker.cjs ../../../web_lsp_driver.bc.js)
   (action
-   (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .))))
+   (setenv TEST_LSP_SKIP accinc (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
   (deps ../compare.cjs test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
@@ -32,7 +32,7 @@
   (targets test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../node-worker.cjs ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .))))
+   (setenv TEST_LSP_SKIP accinc (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
   (deps ../compare.cjs test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
@@ -51,7 +51,7 @@
   (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
   (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
@@ -70,7 +70,7 @@
   (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
   (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
@@ -89,7 +89,7 @@
   (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
   (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
@@ -108,7 +108,7 @@
   (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
   (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
@@ -127,7 +127,7 @@
   (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
   (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
@@ -146,7 +146,7 @@
   (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
   (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))

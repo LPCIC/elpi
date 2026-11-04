@@ -59,19 +59,22 @@ let handle_event = function
   | CheckDocumentRequest task -> protect "check" Server.check_now task; []
 
 (* the command line: --max-errors N, the maximum number of errors per file;
-   the other arguments (e.g. --stdio) are ignored *)
-let max_errors =
-  let rec args max_errors = function
+   -I DIR, a directory where accumulated files are searched (as for elpi, a
+   relative one is relative to the current directory); the other arguments
+   (e.g. --stdio) are ignored *)
+let max_errors, include_paths =
+  let rec args max_errors paths = function
     | "--max-errors" :: n :: rest ->
         (match int_of_string_opt n with
-         | Some n when n > 0 -> args (Some n) rest
-         | _ -> log "invalid argument of --max-errors: %s" n; args max_errors rest)
-    | _ :: rest -> args max_errors rest
-    | [] -> max_errors in
-  args None (List.tl (Array.to_list Sys.argv))
+         | Some n when n > 0 -> args (Some n) paths rest
+         | _ -> log "invalid argument of --max-errors: %s" n; args max_errors paths rest)
+    | "-I" :: dir :: rest -> args max_errors (dir :: paths) rest
+    | _ :: rest -> args max_errors paths rest
+    | [] -> max_errors, List.rev paths in
+  args None [] (List.tl (Array.to_list Sys.argv))
 
 let () =
-  Server.init ~send:output_json ~exit ~builtin_library_location ?max_errors ()
+  Server.init ~send:output_json ~exit ~builtin_library_location ?max_errors ~include_paths ()
 
 let () =
   log "started";

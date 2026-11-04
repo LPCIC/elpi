@@ -19,9 +19,12 @@ val log : ('a, unit, string, unit) format4 -> 'a
     [check]), freed with it. *)
 type instance
 
-(** a new instance, with the standard builtins; accumulated files are
-    resolved relative to the accumulating file *)
-val new_instance : unit -> instance
+(** a new instance, with the standard builtins; accumulated files are found
+    by [file_resolver] (see [Setup.init]), by default relative to the
+    accumulating file *)
+val new_instance :
+  ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
+  unit -> instance
 
 val elpi : instance -> Setup.elpi
 

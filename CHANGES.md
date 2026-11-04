@@ -27,6 +27,9 @@
     `Parse.std_reader`, reads the disk
   - New: `Utils.normalize_path`, a path without `.` and `..` (and on Windows
     with `/` and a lowercase drive), for files that need not exist
+- LSP:
+  - Fix: `elpi-lsp` takes `-I DIR`, where accumulated files are searched (it
+    was ignored)
 - elpi-webrunner:
   - New: `Setup.init({ fileReader })` in JavaScript, the `file_reader` of the
     API: `path => text or null`

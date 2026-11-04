@@ -28,6 +28,20 @@
    Definition) jumps to the declaration of a predicate, and Ctrl+hover
    previews it with its rules (when they follow it, up to 8 lines).
 
+## Command line
+
+`elpi-lsp` speaks the protocol on its standard input and output. It takes:
+
+- `-I DIR`: a directory where `accumulate` looks for files, after the
+  directory of the accumulating file, as for `elpi`; it can be given more
+  than once, and a relative `DIR` is relative to the directory where the
+  server is started;
+- `--max-errors N`: the maximum number of errors reported for a file
+  (default 100); the client can override it with the initialization option
+  `maxErrors`.
+
+Other arguments, such as `--stdio`, are ignored.
+
 ## Structure
 
 - `server/`: the server, independent of how messages come and go (the

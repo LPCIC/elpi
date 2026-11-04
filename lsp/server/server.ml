@@ -17,14 +17,29 @@ let exit_ref : (int -> unit) ref = ref Stdlib.exit
 let builtin_library_location_ref : (Checker.instance -> string -> (DocumentUri.t * string) option) ref =
   ref (fun _ _ -> None)
 
+(* the directories where accumulated files are searched, after the directory
+   of the accumulating file (the parser passes it as ~cwd), like the -I
+   options of elpi; TJPATH is not used (only the REPL honours it) *)
+let include_paths : string list ref = ref []
+
+let resolver ?cwd ~unit () =
+  (* std_resolver takes a ?cwd too: the resolver it returns is built first,
+     so that ?cwd goes to that resolver *)
+  let resolve = Elpi.API.Parse.std_resolver ~paths:!include_paths () in
+  resolve ?cwd ~unit ()
+
 (* whether init was called *)
 let init_called = ref false
 
-let init ~send ~exit ~builtin_library_location ?max_errors () =
+let init ~send ~exit ~builtin_library_location ?max_errors ?include_paths:(dirs = []) () =
   send_ref := send;
   exit_ref := exit;
   builtin_library_location_ref := builtin_library_location;
   Option.iter (fun n -> Checker.max_errors := n) max_errors;
+  (* relative to the current directory now, not when a program run by the
+     server has changed it *)
+  include_paths :=
+    List.map (fun d -> if Filename.is_relative d then Filename.concat (Sys.getcwd ()) d else d) dirs;
   init_called := true
 
 (* sends a message to the client *)
@@ -340,7 +355,7 @@ let run (params : Jsonrpc.Structured.t option) : (Yojson.Safe.t, Jsonrpc.Respons
   | Some (`String _), _, None, _ -> Error (InvalidParams, "elpi/run: the parameter textDocument (with its uri) is missing")
   | Some (`String query), Some (`String text), Some uri, Ok max_steps ->
       (* a text that is not a document: a new instance of Elpi *)
-      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ()) ~path:(text_path uri) ~text ~query ())
+      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ~file_resolver:resolver ()) ~path:(text_path uri) ~text ~query ())
   | Some (`String query), _, Some uri, Ok max_steps ->
       (match Hashtbl.find_opt documents uri with
        | Some doc -> Ok (Runner.run ?max_steps ~instance:doc.instance ~path:doc.path ~text:doc.text.Text.text ~query ())
@@ -372,7 +387,7 @@ let set_text uri version text =
   (match Hashtbl.find_opt documents uri with
    | None ->
        Hashtbl.replace documents uri { path = path_of_uri uri; text = Text.make text; version;
-                                       checked = -1; hover = None; instance = Checker.new_instance () }
+                                       checked = -1; hover = None; instance = Checker.new_instance ~file_resolver:resolver () }
    | Some doc ->
        doc.text <- Text.make text;
        doc.version <- version;

@@ -33,12 +33,6 @@ let log fmt = Printf.ksprintf (fun s -> prerr_endline ("[elpi-lsp] " ^ s)) fmt
    return their warnings, the ones at run time are collected by Runner *)
 let () = Setup.set_std_formatter Format.err_formatter
 
-(* accumulated files are resolved relative to the accumulating file (the
-   parser passes its directory as ~cwd); TJPATH is not used (only the REPL
-   honours it) *)
-let resolver = Parse.std_resolver ~paths:[] ()
-
-
 (* --- the files of the standard library ------------------------------------- *)
 
 (* The builtins and the standard library are not in files that the server can
@@ -118,11 +112,11 @@ type instance = { id : int; elpi : Setup.elpi; library : (string, string) Hashtb
 
 let new_instance =
   let next = ref 0 in
-  fun () ->
+  fun ?(file_resolver = Parse.std_resolver ~paths:[] ()) () ->
     incr next;
     let builtins = Elpi.Builtin.std_builtins in
     { id = !next;
-      elpi = Setup.init ~builtins:[builtins] ~file_resolver:resolver ();
+      elpi = Setup.init ~builtins:[builtins] ~file_resolver ();
       library = lazy (compute_library_files builtins);
       cache = { units = Hashtbl.create 17; clock = 0 } }
 

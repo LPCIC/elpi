@@ -20,12 +20,16 @@ open Lsp.Types
       elpi/builtinFile makes the URI with [library_uri];
     - [max_errors] is the maximum number of errors reported for a file
       (default 100); the client can override it with the initialization
-      option maxErrors. *)
+      option maxErrors;
+    - [include_paths] are the directories where accumulated files are
+      searched, after the directory of the accumulating file (as the -I
+      options of elpi); a relative one is relative to the current directory. *)
 val init :
   send:(Yojson.Safe.t -> unit) ->
   exit:(int -> unit) ->
   builtin_library_location:(Checker.instance -> string -> (DocumentUri.t * string) option) ->
   ?max_errors:int ->
+  ?include_paths:string list ->
   unit -> unit
 
 (** [library_uri ~prefix instance name] is [prefix]ID/NAME, the URI of the file

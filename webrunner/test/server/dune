@@ -14,6 +14,11 @@
 ;; files have elpi-builtin: URIs, and the definitions in accumulated files
 ;; are not found (they are copied in _build only, while the native locations
 ;; are in the source tree).
+;;
+;; The script accinc is not run: it needs the server to be given -I (see
+;; lsp/test/dune), and the web server has no command line. For the same
+;; reason the errors of accmissing list no directory: its expected output is
+;; here.
 
 (copy_files ../browser.cjs)
 

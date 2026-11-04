@@ -24,11 +24,11 @@
 (rule
  (targets test_lsp.output accbad.output accmissing.output good.output
           syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output
-          assemble.output anomaly.output)
- (deps (glob_files *.elpi))
+          assemble.output anomaly.output accinc.output)
+ (deps (glob_files *.elpi) (glob_files include/*.elpi))
  (action
   (with-stdout-to test_lsp.output
-   (run %{exe:test_lsp.exe} %{exe:../stdio_lsp_driver.exe} .))))
+   (run %{exe:test_lsp.exe} %{exe:../stdio_lsp_driver.exe} . -I include))))
 
 (rule
  (alias runtest-lsp)
@@ -85,6 +85,10 @@
 (rule
  (alias runtest-lsp)
  (action (diff accchar.expected accchar.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff accinc.expected accinc.output)))
 
 ; built by default: the tests of this directory (the ones of the web server
 ; are in ../../webrunner/test/server, see make tests-webrunner)

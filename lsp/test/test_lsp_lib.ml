@@ -2,16 +2,20 @@
    drives it with JSON-RPC messages, and the printing of a summary of the
    answers. A test is a script, registered with [register], per .elpi file of
    the test directory; [main] runs them all (see test_lsp.ml).
-   usage: test_lsp SERVER DIR, where DIR holds the .elpi files of the test *)
+   usage: test_lsp SERVER DIR [ARG...], where DIR holds the .elpi files of the
+   test and the ARGs are given to the server *)
 
 open Yojson.Safe.Util
 
-let server, dir =
-  match Sys.argv with
-  | [| _; s; d |] -> s, d
-  | _ -> prerr_endline "usage: test_lsp SERVER DIR"; exit 2
+let server, dir, server_args =
+  match Array.to_list Sys.argv with
+  | _ :: s :: d :: args -> s, d, args
+  | _ -> prerr_endline "usage: test_lsp SERVER DIR [ARG...]"; exit 2
 
 let dir = if Filename.is_relative dir then Filename.concat (Sys.getcwd ()) dir else dir
+(* without a final /. (from the argument .): a file in a subdirectory, e.g.
+   one found with -I, is then anonymized as $DIR/SUB/FILE *)
+let dir = if String.equal (Filename.basename dir) Filename.current_dir_name then Filename.dirname dir else dir
 
 (* --- progress and timeout ---------------------------------------------------- *)
 
@@ -30,7 +34,7 @@ let log fmt =
 let to_server_r, to_server_w = Unix.pipe ~cloexec:true ()
 let from_server_r, from_server_w = Unix.pipe ~cloexec:true ()
 
-let pid = Unix.create_process server [| server |] to_server_r from_server_w Unix.stderr
+let pid = Unix.create_process server (Array.of_list (server :: server_args)) to_server_r from_server_w Unix.stderr
 let () = Unix.close to_server_r; Unix.close from_server_w
 let oc = Unix.out_channel_of_descr to_server_w
 let ic = Unix.in_channel_of_descr from_server_r
