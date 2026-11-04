@@ -65,54 +65,64 @@ let length s =
   let rec aux n s = if is_empty s then n else aux (n + 1) (snd (next s)) in
   aux 0 s
 
-(* [at y ys] is the replacement of the list [y :: ys], if it has to change. *)
-let edit_list at l =
+(* An edit changes the first element [y] such that [test y] into the list
+   [rewrite y ys], where [ys] are the elements after [y]. Searching allocates
+   nothing: only the part that changes is turned into a list. *)
+
+let rec tree_exists test = function
+  | Leaf x -> test x
+  | Node (x, l, r) -> tree_exists test l || tree_exists test r || test x
+
+let tree_to_list t = to_list ([], normalize (Visit (t, Done)))
+
+(* [test] holds on an element of [l] *)
+let edit_list test rewrite l =
   let rec aux acc = function
-    | [] -> None
-    | y :: ys -> (
-        match at y ys with
-        | Some l -> Some (List.rev_append acc l)
-        | None -> aux (y :: acc) ys)
+    | [] -> assert false
+    | y :: ys -> if test y then List.rev_append acc (rewrite y ys) else aux (y :: acc) ys
   in
   aux [] l
 
+(* [edit_tree test rewrite w t older] adds to [older] the elements of [t], of
+   size [w], edited. [test] holds on an element of [t]. The subtrees before
+   that element are shared: they are smaller than the trees of [older], whose
+   sizes strictly increase, so they can be put on top of it. *)
+let rec edit_tree test rewrite w t older =
+  match t with
+  | Leaf y -> List.fold_left snoc older (rewrite y [])
+  | Node (x, l, r) ->
+      let w = (w - 1) / 2 in
+      if tree_exists test l then
+        let s = edit_tree test rewrite w l older in
+        snoc (List.fold_left snoc s (tree_to_list r)) x
+      else if tree_exists test r then snoc (edit_tree test rewrite w r (Tree (w, l, older))) x
+      else List.fold_left snoc (Tree (w, r, Tree (w, l, older))) (rewrite x [])
+
 (* The trees older than the first element to change are shared *)
-let rec edit_spine at = function
+let rec edit_spine test rewrite = function
   | Nil -> None
-  | Tree (_, t, older) -> (
-      let elements () = to_list ([], normalize (Visit (t, Done))) in
-      match edit_spine at older with
-      | Some older -> Some (List.fold_left snoc older (elements ()))
-      | None -> Option.map (List.fold_left snoc older) (edit_list at (elements ())))
+  | Tree (w, t, older) -> (
+      match edit_spine test rewrite older with
+      | Some older -> Some (List.fold_left snoc older (tree_to_list t))
+      | None -> if tree_exists test t then Some (edit_tree test rewrite w t older) else None)
 
-let edit at l =
-  match edit_list at l.front with
-  | Some front -> Some { l with front }
-  | None -> Option.map (fun rear -> { l with rear }) (edit_spine at l.rear)
+let edit test rewrite l =
+  if List.exists test l.front then Some { l with front = edit_list test rewrite l.front }
+  else Option.map (fun rear -> { l with rear }) (edit_spine test rewrite l.rear)
 
-let replace f x l =
-  let at y ys = if f y then Some (x :: ys) else None in
-  Option.value (edit at l) ~default:l
-
-let remove f l =
-  let at y ys = if f y then Some ys else None in
-  Option.value (edit at l) ~default:l
+let replace f x l = Option.value (edit f (fun _ ys -> x :: ys) l) ~default:l
+let remove f l = Option.value (edit f (fun _ ys -> ys) l) ~default:l
 
 let insert f x l =
-  let at y ys = if f y > 0 then Some (x :: y :: ys) else None in
-  match edit_list at l.front with
-  | Some front -> { l with front }
-  | None -> (
-      let before_rear =
-        match stack_of_spine l.rear with
-        | Emit (y, _) -> f y > 0
-        | Done | Visit _ -> false
-      in
-      if before_rear then { l with front = List.rev_append (List.rev l.front) [ x ] }
-      else
-        match edit_spine at l.rear with
-        | Some rear -> { l with rear }
-        | None -> rcons x l)
+  let test y = f y > 0 in
+  if List.exists test l.front then { l with front = edit_list test (fun y ys -> x :: y :: ys) l.front }
+  else
+    let before_rear = match stack_of_spine l.rear with Emit (y, _) -> test y | Done | Visit _ -> false in
+    if before_rear then { l with front = l.front @ [ x ] }
+    else
+      match edit_spine test (fun y ys -> x :: y :: ys) l.rear with
+      | Some rear -> { l with rear }
+      | None -> rcons x l
 
 let pp pp_elt fmt l =
   let pp_sep fmt () = Format.fprintf fmt ";@ " in
