@@ -33,6 +33,8 @@ end
 module type Config = sig
   val versions : (int * int * int) Util.StrMap.t
   val resolver : ?cwd:string -> unit:string -> unit -> string
+  (* the text of a file; raises Failure if it cannot be read *)
+  val reader : string -> string
 
 end
 
@@ -195,13 +197,15 @@ let parse ?(lexer=token) grammar lexbuf =
 
 let already_parsed = Hashtbl.create 11
 
-let parse_one_file digest filename =
+(* the text of a .sig file, if there is one (Teyjus compatibility) *)
+let read_sig f = try Some (C.reader f) with Failure _ -> None
+
+let parse_file_contents ~filename text =
+  let digest = Digest.string text in
   if Hashtbl.mem already_parsed digest then
     Hashtbl.find already_parsed digest
-  else 
-    let ic = open_in filename in
-    Fun.protect ~finally:(fun () -> close_in ic) @@ fun () ->
-    let lexbuf = Lexing.from_channel ic in
+  else
+    let lexbuf = Lexing.from_string text in
     let dest = cleanup_fname filename in
     lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = dest };
     let ast = parse Grammar.Incremental.program lexbuf in
@@ -217,17 +221,17 @@ let () =
   let filename =
     try C.resolver ?cwd ~unit:filename ()
     with Failure msg -> raise (Cannot_accumulate msg) in
-  let digest = Digest.file filename in
+  let text = C.reader filename in
   if String.equal (Filename.extension filename) ".mod" then
     (* Teyjus compatibility *)
     let sig_filename = Filename.chop_extension filename ^ ".sig" in
-    if Sys.file_exists sig_filename then
-      let ds = Digest.file sig_filename in
-      let s = parse_one_file ds sig_filename in
-      let m = parse_one_file digest filename in
-      { Ast.file_name = filename; digest = Digest.string (ds^digest); deps = []; ast = s.ast @ m.ast  }
-    else parse_one_file digest filename
-  else parse_one_file digest filename)
+    match read_sig sig_filename with
+    | Some sig_text ->
+      let s = parse_file_contents ~filename:sig_filename sig_text in
+      let m = parse_file_contents ~filename text in
+      { Ast.file_name = filename; digest = Digest.string (s.digest ^ m.digest); deps = []; ast = s.ast @ m.ast  }
+    | None -> parse_file_contents ~filename text
+  else parse_file_contents ~filename text)
 
 let to_lexing_loc { Util.Loc.source_name; line; line_starts_at; source_start; _ } =
   { Lexing.pos_fname = source_name;
@@ -366,22 +370,19 @@ let program_from ?(max_errors = max_int) ~loc:start_loc ~digest lexbuf =
 let program ?max_errors file =
   Hashtbl.clear already_parsed;
   let filename = C.resolver ~unit:file () in
-  let read f =
-    let ic = open_in_bin f in
-    Fun.protect ~finally:(fun () -> close_in ic) (fun () -> really_input_string ic (in_channel_length ic)) in
-  let one f =
-    let text = read f in
+  let one f text =
     let dest = cleanup_fname f in
     let p, errors, warnings = program_from ?max_errors ~loc:(Util.Loc.initial dest) ~digest:(Digest.string text) (Lexing.from_string text) in
     { p with Ast.file_name = f }, errors, warnings in
   if String.equal (Filename.extension filename) ".mod" then begin
     let sig_filename = Filename.chop_extension filename ^ ".sig" in
-    if Sys.file_exists sig_filename then begin
-      let s, es, ws = one sig_filename in
-      let m, em, wm = one filename in
+    match read_sig sig_filename with
+    | Some sig_text ->
+      let s, es, ws = one sig_filename sig_text in
+      let m, em, wm = one filename (C.reader filename) in
       { Ast.file_name = filename; digest = Digest.string (s.Ast.digest ^ m.Ast.digest); deps = []; ast = s.ast @ m.ast }, es @ em, ws @ wm
-    end else one filename
-  end else one filename
+    | None -> one filename (C.reader filename)
+  end else one filename (C.reader filename)
 
 
 module Internal = struct

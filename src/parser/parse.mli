@@ -43,6 +43,8 @@ end
 module type Config = sig
   val versions : (int * int * int) Util.StrMap.t
   val resolver : ?cwd:string -> unit:string -> unit -> string
+  (* the text of a file; raises Failure if it cannot be read *)
+  val reader : string -> string
 end
 
 module Make(C : Config) : Parser_w_Internals

@@ -170,8 +170,16 @@ module Setup : sig
       @param file_resolver maps a file name to an absolute path, if not specified the
         options like [-I] or the env variable [TJPATH] serve as resolver. The
         resolver returns the abslute file name
-        (possibly adjusting the unit extension). By default it fails.
+        (possibly adjusting the unit extension), and raises [Failure] with a
+        message for the user if there is no such file. By default it fails.
         See also {!val:Parse.std_resolver}.
+      @param file_reader gives the text of a file that the parser reads (an
+        accumulated file, or the one given to {!val:Parse.program}), and raises
+        [Failure] with a message for the user if it cannot be read. By default
+        it reads the disk ({!val:Parse.std_reader}); a reader can also give
+        files that are not on the disk, e.g. documents open in an editor, and
+        call {!val:Parse.std_reader} for the others. The resolver must accept
+        the names it answers for, even if there is no such file on the disk.
 
       @return a handle [elpi] to an elpi instance equipped with the given
         [builtins] and where accumulate resolves files with the given
@@ -185,6 +193,7 @@ module Setup : sig
     ?calc:calc_descriptor ->
     builtins:builtins list ->
     ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
+    ?file_reader:(string -> string) ->
     unit ->
     elpi
 
@@ -354,10 +363,16 @@ module Parse : sig
   val resolve_file : elpi:Setup.elpi -> ?cwd:string -> unit:string -> unit -> string
 
   (** [std_resolver cwd paths ()] returns a resolver function that looks in cwd
-      and paths (relative to cwd, or absolute) *)
+      and paths (relative to cwd, or absolute), and raises [Failure] if the
+      file is in none of them *)
   val std_resolver :
     ?cwd:string -> paths:string list -> unit ->
       (?cwd:string -> unit:string -> unit -> string)
+
+  (** [std_reader f] is the text of the file [f] on the disk, and raises
+      [Failure] if it cannot be read: the default [file_reader] of
+      {!val:Setup.init} *)
+  val std_reader : string -> string
 
   exception ParseError of Ast.Loc.t * string
 

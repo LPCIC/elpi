@@ -17,6 +17,9 @@
     once per file accumulating it, so that compiling the units one by one
     loaded it again (the rules of its predicates overlapped with themselves)
 - API:
+  - New: `Setup.init ?file_reader` gives the text of a file the parser reads
+    (an accumulated file), or raises `Failure`; the default,
+    `Parse.std_reader`, reads the disk
   - New: `Utils.normalize_path`, a path without `.` and `..` (and on Windows
     with `/` and a lowercase drive), for files that need not exist
 

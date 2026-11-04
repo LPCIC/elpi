@@ -762,6 +762,12 @@ let normalize_path path =
       | _ -> p :: acc) [] (String.split_on_char '/' path) in
   (if root then "/" else "") ^ String.concat "/" (List.rev parts)
 
+let std_reader f =
+  try
+    let ic = open_in_bin f in
+    Fun.protect ~finally:(fun () -> close_in ic) (fun () -> really_input_string ic (in_channel_length ic))
+  with Sys_error msg -> raise (Failure msg)
+
 let std_resolver ?(cwd=Sys.getcwd()) ~paths () =
   let dirs = List.map (fun f -> make_absolute cwd (readsymlinks f)) paths in
 fun ?(cwd=Sys.getcwd()) ~unit:(origfilename as filename) () ->
