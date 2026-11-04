@@ -169,8 +169,11 @@ the default, the first error is thrown instead, as an `Error` with the same
 fields. A query, parsed (`Parse.query`) or compiled (`Compile.query`), is
 `{ query, warnings }`, or `{ error, warnings }` if it has an error.
 
-Accumulated files are read with the file system of Node, through the
-`fileResolver` of `Setup.init`; in a browser there are none.
+Accumulated files are found by the `fileResolver` of `Setup.init`, and read
+with the file system of Node. Its `fileReader`, `path => text or null`, is
+asked first: it gives the text of a file that is not on disk (in a browser,
+where there is no file system) or that is newer than the disk (e.g. the
+unsaved text of an editor).
 
 ## Tests
 

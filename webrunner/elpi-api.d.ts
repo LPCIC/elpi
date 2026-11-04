@@ -64,6 +64,10 @@ export type WithErrors<K extends string, T> =
 // directive
 export type FileResolver = (unit: string, cwd: string | null) => string;
 
+// path => the text of the file, or null to read it from the file system;
+// the path is the one the file resolver returned
+export type FileReader = (path: string) => string | null | undefined;
+
 // Execute.outcome; the terms are pretty-printed, as the REPL prints them
 export type Outcome =
   | { outcome: "success"; assignments: { [variable: string]: string };
@@ -79,8 +83,10 @@ export type ThrownError = Error & Partial<ElpiError>;
 
 export interface Setup {
   // an instance of Elpi, with the standard builtins
-  // (Elpi.Builtin.std_builtins); accumulate fails without a fileResolver
-  init(options?: { flags?: Partial<Flags>; fileResolver?: FileResolver }): Elpi;
+  // (Elpi.Builtin.std_builtins); accumulate fails without a fileResolver;
+  // a fileReader gives the text of files, e.g. ones not on disk
+  init(options?: { flags?: Partial<Flags>; fileResolver?: FileResolver;
+                   fileReader?: FileReader }): Elpi;
   // f gets what Elpi prints
   setStdFormatter(f: (s: string) => void): void;
   setErrFormatter(f: (s: string) => void): void;

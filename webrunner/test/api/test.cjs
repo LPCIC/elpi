@@ -127,6 +127,25 @@ main :- print "hello", p X, X > 1, print X.
   show("accumulate output", output);
   const missing = Parse.programFrom(elpiFiles, "accumulate nonexistent.", { source: "d.elpi", flags: { maxErrors: 10 } });
   show("accumulate a missing file", missing.errors.map((e) => ({ component: e.component, line: e.loc && e.loc.line, message: e.message })));
+
+  // accumulate: a file the file reader gives, which is not on disk; the
+  // reader answers null for the others, read from disk
+  const virtual = { "/virtual/v.elpi": "pred v o:string.\nv \"from the reader\".\n" };
+  const elpiVirtual = Setup.init({
+    fileResolver: (unit, cwd) => {
+      const name = unit.endsWith(".elpi") ? unit : unit + ".elpi";
+      const file = path.join(cwd || "/virtual", name);
+      if (file in virtual) return file;
+      return fileResolver(unit, cwd);
+    },
+    fileReader: (file) => virtual[file] ?? null,
+  });
+  const vacc = Parse.programFrom(elpiVirtual, "accumulate v.\naccumulate test-acc.\nmain :- v S, q X, print S X.", { source: "/virtual/main.elpi" });
+  show("file reader errors", texts(vacc.errors));
+  const vaccp = Compile.program(elpiVirtual, vacc.program);
+  output = "";
+  show("file reader main", Execute.once(Compile.optimize(Compile.query(vaccp.program, goal(elpiVirtual, "main.")).query)));
+  show("file reader output", output);
   Setup.setErrFormatter(() => {});
 }
 
