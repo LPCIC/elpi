@@ -1,0 +1,4 @@
+accumulate "../a/a".
+accumulate "../b/b".
+func main int -> int.
+main X Y :- fa X Z, fb Z Y.

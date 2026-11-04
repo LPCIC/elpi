@@ -1,0 +1,7 @@
+% accumulated through ../lang/anf by a.elpi: ast is found here, next to it
+accumulate ast.
+shorten ast.{ norm }.
+namespace anf {
+func twice int -> int.
+twice X Y :- norm X Z, Y is Z * 2.
+}

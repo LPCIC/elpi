@@ -34,6 +34,11 @@
     on the disk, and reads their text: unsaved edits count, and a program of
     several files works in the server for the web, which has no disk; a change
     rechecks the open documents that accumulate the changed one
+  - Fix: a file accumulated through a path with `..` (e.g. `../lang/anf`)
+    finds the files it accumulates next to it (they were searched in the
+    directory the server runs in)
+  - Fix: a file accumulated several times is loaded once (see
+    `Compile.scope_ast`)
 - elpi-webrunner:
   - New: `Setup.init({ fileReader })` in JavaScript, the `file_reader` of the
     API: `path => text or null`

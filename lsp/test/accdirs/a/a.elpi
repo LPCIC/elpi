@@ -1,0 +1,4 @@
+accumulate "../lang/anf".
+shorten anf.{ twice }.
+func fa int -> int.
+fa X Y :- twice X Y.
