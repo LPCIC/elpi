@@ -780,20 +780,26 @@ end = struct (* {{{ *)
           aux_run ns blocks clauses macros kinds types tabbrs chr rest
 
     in
+    (* the files, each after the ones it accumulates, and the digests of the
+       files already there: a file accumulated again, by the same file or by
+       another one, directly or not, is a dependency but appears once *)
     let rec aux_accumulate file_name digest accs deps = function
       | Program.Accumulated (_,[]) :: rest -> aux_accumulate file_name digest accs deps rest
 
       | Program.Accumulated (loc,x :: more) :: rest ->
           let rest = Program.Accumulated (loc, more) :: rest in
+          let deps = (x.file_name,x.digest) :: deps in
           if StrSet.mem x.digest accs then
-            aux_accumulate file_name digest accs ((x.file_name,x.digest) :: deps) rest
+            aux_accumulate file_name digest accs deps rest
           else
-            aux_accumulate x.file_name x.digest accs [] x.ast @ aux_accumulate file_name digest (StrSet.add x.digest accs) ((x.file_name,x.digest) :: deps) rest
+            let files, accs = aux_accumulate x.file_name x.digest (StrSet.add x.digest accs) [] x.ast in
+            let more_files, accs = aux_accumulate file_name digest accs deps rest in
+            files @ more_files, accs
 
-      | rest -> [{ file_name; deps = List.rev deps; digest; ast = rest }]
+      | rest -> [{ file_name; deps = List.rev deps; digest; ast = rest }], accs
     in
 
-    let files = aux_accumulate file_name digest StrSet.empty [] dl in
+    let files, _ = aux_accumulate file_name digest StrSet.empty [] dl in
     files |> List.map (fun x ->
       (* an extra } is ignored: the program goes on after it *)
       let rec top (acc : Structured.program option) chr_acc ast =

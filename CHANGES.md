@@ -11,6 +11,11 @@
   - New: a declaration with no comment before it is documented by the line
     comment that follows its full stop on the same line (e.g.
     `symb ok : diagnostic. % Success`), shown on hover by the language server
+- Compiler:
+  - Fix: `Compile.scope_ast` gives a file accumulated several times (by files
+    in different directories, or through different files) once; it gave it
+    once per file accumulating it, so that compiling the units one by one
+    loaded it again (the rules of its predicates overlapped with themselves)
 - API:
   - New: `Utils.normalize_path`, a path without `.` and `..` (and on Windows
     with `/` and a lowercase drive), for files that need not exist
