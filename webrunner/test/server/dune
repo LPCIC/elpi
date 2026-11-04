@@ -6,8 +6,8 @@
 ;; - browser-SCENARIO: the entry point elpi-lsp-web.js, run in an emulated
 ;;   browser (../browser.cjs) in SCENARIO, where it picks the server; what it
 ;;   loads (loaded.log) is compared with loaded-SCENARIO.expected. In a browser
-;;   there are no files, accumulate fails: the scripts that accumulate files
-;;   are not run.
+;;   there are no files, accumulate finds only the open documents: the scripts
+;;   that accumulate files are not run, but accopen (open documents only) is.
 ;;
 ;; The outputs are compared (compare.cjs) with the ones of the native server,
 ;; but the ones that differ, whose expected outputs are here: the library
@@ -17,8 +17,8 @@
 ;;
 ;; The script accinc is not run: it needs the server to be given -I (see
 ;; lsp/test/dune), and the web server has no command line. For the same
-;; reason the errors of accmissing list no directory: its expected output is
-;; here.
+;; reason the errors of accmissing and accopen list no directory: their
+;; expected outputs are here.
 
 (copy_files ../browser.cjs)
 

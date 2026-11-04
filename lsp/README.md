@@ -42,6 +42,17 @@
 
 Other arguments, such as `--stdio`, are ignored.
 
+## Open documents
+
+`accumulate` looks first for a document open in the editor, by its path
+relative to the accumulating file, then for a file on the disk (there, then in
+the `-I` directories). An open document is read from the editor: its unsaved
+edits count. When a document changes, the open documents that accumulate it
+(directly or not) are checked again; when it is closed, they read it from the
+disk again, if it is there. So a program of several files works where there is
+no disk, as in the server for the web (`../webrunner/`): the client opens all
+its files.
+
 ## Structure
 
 - `server/`: the server, independent of how messages come and go (the

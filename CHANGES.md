@@ -30,6 +30,10 @@
 - LSP:
   - Fix: `elpi-lsp` takes `-I DIR`, where accumulated files are searched (it
     was ignored)
+  - New: `accumulate` finds the documents open in the editor before the files
+    on the disk, and reads their text: unsaved edits count, and a program of
+    several files works in the server for the web, which has no disk; a change
+    rechecks the open documents that accumulate the changed one
 - elpi-webrunner:
   - New: `Setup.init({ fileReader })` in JavaScript, the `file_reader` of the
     API: `path => text or null`

@@ -24,7 +24,7 @@
 (rule
  (targets test_lsp.output accbad.output accmissing.output good.output
           syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output
-          assemble.output anomaly.output accinc.output)
+          assemble.output anomaly.output accinc.output accopen.output)
  (deps (glob_files *.elpi) (glob_files include/*.elpi))
  (action
   (with-stdout-to test_lsp.output
@@ -107,3 +107,7 @@
 (rule
  (alias runtest-lsp)
  (action (diff anomaly.expected anomaly.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff accopen.expected accopen.output)))

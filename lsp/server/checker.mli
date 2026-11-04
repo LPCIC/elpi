@@ -20,10 +20,11 @@ val log : ('a, unit, string, unit) format4 -> 'a
 type instance
 
 (** a new instance, with the standard builtins; accumulated files are found
-    by [file_resolver] (see [Setup.init]), by default relative to the
-    accumulating file *)
+    by [file_resolver] and read by [file_reader] (see [Setup.init]), by
+    default relative to the accumulating file and on the disk *)
 val new_instance :
   ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
+  ?file_reader:(string -> string) ->
   unit -> instance
 
 val elpi : instance -> Setup.elpi
@@ -82,6 +83,7 @@ type hover
 type result = {
   diagnostics : diagnostic list;
   hover : hover option; (** unless the parser failed (the text can have errors) *)
+  accumulates : string list; (** the files it accumulates, directly or not *)
 }
 
 (** [check ~instance ~path text] checks the document [path] whose contents is

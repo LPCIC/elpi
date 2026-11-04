@@ -163,6 +163,11 @@ let section fmt =
       first_section := false;
       Printf.printf "==== %s ====\n" s) fmt
 
+let uri_of_file = uri
+
+(* the last text sent for each file *)
+let sent : (string, string) Hashtbl.t = Hashtbl.create 7
+
 (* the text of a range of a file (of [text] if given), as the lines it covers, quoted; the file is
    given by the uri of the server answer *)
 (* the text of [uri]: a file, or a file of the standard library that the web
@@ -175,7 +180,11 @@ let text_of_uri uri =
     | _ -> ""
   else
     try let ic = open_in_bin (path_of_uri uri) in
-      let s = really_input_string ic (in_channel_length ic) in close_in ic; s with Sys_error _ -> ""
+      let s = really_input_string ic (in_channel_length ic) in close_in ic; s with Sys_error _ ->
+      (* a document that is not a file (see open_text) *)
+      Hashtbl.fold (fun f t acc ->
+          if String.equal acc "" && String.equal (anonymize (normalize_uri (uri_of_file f))) (anonymize (normalize_uri uri)) then t else acc)
+        sent ""
 
 let snippet ?(underline=false) ?text uri range =
   let text = match text with Some t -> t | None -> text_of_uri uri in
@@ -217,8 +226,6 @@ let pp_range r =
 
 let severity = function 1 -> "error" | 2 -> "warning" | 3 -> "info" | _ -> "hint"
 
-(* the last text sent for each file *)
-let sent : (string, string) Hashtbl.t = Hashtbl.create 7
 
 (* the diagnostics published for a file *)
 let rec wait_publish file =
@@ -236,8 +243,12 @@ let rec wait_publish file =
     end
   end else wait_publish file
 
-let wait_diagnostics file =
-  let version, ds = wait_publish file in
+(* the text of [file]: on the disk, or else as last sent to the server (a
+   document that is not a file, see open_text) *)
+let text_of file =
+  try read_file file with Sys_error _ -> Hashtbl.find sent file
+
+let print_diagnostics file (version, ds) =
   Printf.printf "diagnostics of %s%s: %d\n" (anonymize file)
     (match version with `Int v -> Printf.sprintf " (version %d)" v | _ -> "") (List.length ds);
   List.iter (fun d ->
@@ -247,6 +258,45 @@ let wait_diagnostics file =
       if not (Yojson.Safe.equal (member "start" range) (member "end" range)) then
         print_endline (snippet ~underline:true ~text:(Hashtbl.find sent file) (uri file) range))
     ds
+
+let wait_diagnostics file = print_diagnostics file (wait_publish file)
+
+(* the next diagnostics published for each of [files], in any order, printed in
+   the order of [files] *)
+let await_diagnostics files =
+  let got = Hashtbl.create 3 in
+  while List.exists (fun f -> not (Hashtbl.mem got f)) files do
+    log "waiting for the diagnostics of %s" (String.concat ", " files);
+    let m = receive () in
+    if Yojson.Safe.equal (member "method" m) (`String "textDocument/publishDiagnostics") then begin
+      let u = member "params" m |> member "uri" |> to_string in
+      match List.find_opt (fun f -> same_uri u (uri f) && not (Hashtbl.mem got f)) files with
+      | Some f -> Hashtbl.replace got f (member "params" m |> member "version",
+                                         member "params" m |> member "diagnostics" |> to_list)
+      | None -> log "ignored the diagnostics of %s" u
+    end
+  done;
+  List.iter (fun f -> print_diagnostics f (Hashtbl.find got f)) files
+
+(* a document with the text [text], whatever is on the disk: there may be no
+   file [file] *)
+let open_text file text =
+  section "open %s (not on the disk)" (anonymize file);
+  Hashtbl.replace sent file text;
+  notify "textDocument/didOpen" (`Assoc [ "textDocument", `Assoc [
+      "uri", `String (uri file); "languageId", `String "elpi"; "version", `Int 1;
+      "text", `String text ] ])
+
+let change_text file version text =
+  section "change %s (version %d)" (anonymize file) version;
+  Hashtbl.replace sent file text;
+  notify "textDocument/didChange" (`Assoc [
+      "textDocument", `Assoc [ "uri", `String (uri file); "version", `Int version ];
+      "contentChanges", `List [ `Assoc [ "text", `String text ] ] ])
+
+let close_text file =
+  section "close %s" (anonymize file);
+  notify "textDocument/didClose" (`Assoc [ "textDocument", `Assoc [ "uri", `String (uri file) ] ])
 
 let open_file file =
   section "open %s" (anonymize file);
@@ -276,7 +326,7 @@ let change_file_burst file first_version texts =
 (* the LSP position of the [k]-th character after the first occurrence of
    [needle] in [file], counting columns in UTF-16 code units *)
 let position file needle k =
-  let s = read_file file in
+  let s = text_of file in
   let rec find i = if String.equal (String.sub s i (String.length needle)) needle then i else find (i + 1) in
   let off = find 0 + k in
   let line = ref 0 and col = ref 0 in
@@ -297,7 +347,7 @@ let pos_of x = member "line" x |> to_int, member "character" x |> to_int
    ranges as (line, column, line, column)): so that it is visible where the
    cursor is and what is highlighted. *)
 let show_marks file rows =
-  let lines = Array.of_list (String.split_on_char '\n' (read_file file)) in
+  let lines = Array.of_list (String.split_on_char '\n' (text_of file)) in
   let width = List.fold_left (fun w (label, _, _) -> max w (String.length label)) 10 rows in
   let involved = List.sort_uniq Int.compare
       (List.concat_map (fun (_, _, ranges) ->

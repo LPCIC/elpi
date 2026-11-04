@@ -17,16 +17,66 @@ let exit_ref : (int -> unit) ref = ref Stdlib.exit
 let builtin_library_location_ref : (Checker.instance -> string -> (DocumentUri.t * string) option) ref =
   ref (fun _ _ -> None)
 
+(* --- the documents open in the editor, and accumulate ----------------------- *)
+
 (* the directories where accumulated files are searched, after the directory
    of the accumulating file (the parser passes it as ~cwd), like the -I
    options of elpi; TJPATH is not used (only the REPL honours it) *)
 let include_paths : string list ref = ref []
 
+(* The documents open in the editor, by path: an accumulated file that is open
+   is read from the editor, not from the disk, so its unsaved edits count, and
+   a program of several files works where there is no disk (the server in a
+   browser). *)
+let open_documents : (string, string) Hashtbl.t = Hashtbl.create 7
+
+(* the keys of open_documents, and the files of the accumulates of the
+   documents, are normalized paths *)
+let normalize_path = Elpi.API.Utils.normalize_path
+
+let set_open_document path text = Hashtbl.replace open_documents (normalize_path path) text
+let close_document path = Hashtbl.remove open_documents (normalize_path path)
+
+(* accumulate finds an open document first, relative to the directory of the
+   accumulating file (~cwd), then a file on the disk, there or in the -I
+   directories *)
 let resolver ?cwd ~unit () =
-  (* std_resolver takes a ?cwd too: the resolver it returns is built first,
-     so that ?cwd goes to that resolver *)
-  let resolve = Elpi.API.Parse.std_resolver ~paths:!include_paths () in
-  resolve ?cwd ~unit ()
+  let dir = Option.value cwd ~default:(Sys.getcwd ()) in
+  let path = normalize_path (if Filename.is_relative unit then Filename.concat dir unit else unit) in
+  if Hashtbl.mem open_documents path then path
+  else
+    (* std_resolver takes a ?cwd too: the resolver it returns is built
+       first, so that ?cwd goes to that resolver *)
+    let resolve = Elpi.API.Parse.std_resolver ~paths:!include_paths () in
+    resolve ?cwd ~unit ()
+
+let reader path =
+  match Hashtbl.find_opt open_documents (normalize_path path) with
+  | Some text -> text
+  | None -> Elpi.API.Parse.std_reader path
+
+(* the parser names a file in the locations of its contents without
+   /_build/CONTEXT (see Parse.cleanup_fname) *)
+let without_build path =
+  let marker = "/_build/" in
+  let n = String.length path and m = String.length marker in
+  let rec find i = if i + m > n then None else if String.equal (String.sub path i m) marker then Some i else find (i + 1) in
+  match find 0 with
+  | None -> path
+  | Some i ->
+      match String.index_from_opt path (i + m) '/' with
+      | Some j -> String.sub path 0 i ^ String.sub path j (n - j)
+      | None -> path
+
+(* the text of the open document named [name] in a location *)
+let open_document_text name =
+  let name = normalize_path name in
+  match Hashtbl.find_opt open_documents name with
+  | Some _ as t -> t
+  | None ->
+      Hashtbl.fold (fun path text acc ->
+          match acc with Some _ -> acc | None -> if String.equal (without_build path) name then Some text else None)
+        open_documents None
 
 (* whether init was called *)
 let init_called = ref false
@@ -65,6 +115,7 @@ type document = {
   mutable version : int;            (* the version of the client, it grows at each change *)
   mutable checked : int;            (* the version last checked *)
   mutable hover : Checker.hover option; (* the symbols of the last checked version *)
+  mutable accumulates : string list; (* the files its last checked version accumulates *)
   instance : Checker.instance;      (* the instance of Elpi of the document *)
 }
 
@@ -101,11 +152,12 @@ let severity : Checker.severity -> DiagnosticSeverity.t = function
 
 let check uri doc =
   let t0 = Unix.gettimeofday () in
-  let { Checker.diagnostics; hover } = Checker.check ~instance:doc.instance ~path:doc.path doc.text.Text.text in
+  let { Checker.diagnostics; hover; accumulates } = Checker.check ~instance:doc.instance ~path:doc.path doc.text.Text.text in
   log "checked %s (version %d) in %.3fs: %d diagnostics" doc.path doc.version
     (Unix.gettimeofday () -. t0) (List.length diagnostics);
   doc.checked <- doc.version;
   doc.hover <- hover;
+  doc.accumulates <- List.map normalize_path accumulates;
   let diagnostics = List.map (fun { Checker.start; stop; severity = s; message } ->
       Diagnostic.create ~range:(Text.range doc.text start stop) ~severity:(severity s)
         ~source:"elpi" ~message:(`String message) ()) diagnostics in
@@ -173,14 +225,9 @@ let initialize (params : InitializeParams.t) =
 (* the text of a file, to convert the location of a definition *)
 let text_of_file doc file =
   if String.equal file doc.path then Some doc.text
-  else if Sys.file_exists file then
-    try
-      let ic = open_in_bin file in
-      let s = Fun.protect ~finally:(fun () -> close_in ic)
-          (fun () -> really_input_string ic (in_channel_length ic)) in
-      Some (Text.make s)
-    with Sys_error _ -> None
-  else None
+  else match open_document_text file with
+  | Some text -> Some (Text.make text)
+  | None -> try Some (Text.make (Elpi.API.Parse.std_reader file)) with Failure _ -> None
 
 (* the text and the URI of the file of a location (the [source_name] of a
    location of [doc]'s program): the document (whose path can be a whole URI,
@@ -355,7 +402,7 @@ let run (params : Jsonrpc.Structured.t option) : (Yojson.Safe.t, Jsonrpc.Respons
   | Some (`String _), _, None, _ -> Error (InvalidParams, "elpi/run: the parameter textDocument (with its uri) is missing")
   | Some (`String query), Some (`String text), Some uri, Ok max_steps ->
       (* a text that is not a document: a new instance of Elpi *)
-      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ~file_resolver:resolver ()) ~path:(text_path uri) ~text ~query ())
+      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ~file_resolver:resolver ~file_reader:reader ()) ~path:(text_path uri) ~text ~query ())
   | Some (`String query), _, Some uri, Ok max_steps ->
       (match Hashtbl.find_opt documents uri with
        | Some doc -> Ok (Runner.run ?max_steps ~instance:doc.instance ~path:doc.path ~text:doc.text.Text.text ~query ())
@@ -381,17 +428,34 @@ let handle_request : type a. a Lsp.Client_request.t -> (a, Jsonrpc.Response.Erro
 
 (* --- notifications --------------------------------------------------------------- *)
 
+(* the other documents are checked again: all of them ([only] None), or the
+   ones that accumulate [only]; the compiled units that did not change come
+   from the cache *)
+let recheck_others ?only uri =
+  Hashtbl.iter (fun u (doc : document) ->
+      if not (DocumentUri.equal u uri)
+      && (match only with None -> true | Some p -> List.exists (String.equal (normalize_path p)) doc.accumulates)
+      then begin doc.checked <- -1; check_later u end)
+    documents
+
 (* an opened or changed document is dirty: it is checked when the user is
-   idle *)
+   idle. Its text is what the other documents accumulate (open_documents):
+   when it is opened, the others are checked again (an accumulate may find it
+   now), when it changes, the ones that accumulate it *)
 let set_text uri version text =
+  let path = path_of_uri uri in
+  set_open_document path text;
   (match Hashtbl.find_opt documents uri with
    | None ->
-       Hashtbl.replace documents uri { path = path_of_uri uri; text = Text.make text; version;
-                                       checked = -1; hover = None; instance = Checker.new_instance ~file_resolver:resolver () }
+       Hashtbl.replace documents uri { path; text = Text.make text; version;
+                                       checked = -1; hover = None; accumulates = [];
+                                       instance = Checker.new_instance ~file_resolver:resolver ~file_reader:reader () };
+       recheck_others uri
    | Some doc ->
        doc.text <- Text.make text;
        doc.version <- version;
-       doc.hover <- None);
+       doc.hover <- None;
+       recheck_others ~only:path uri);
   check_later uri
 
 let handle_notification : Lsp.Client_notification.t -> unit = function
@@ -404,13 +468,15 @@ let handle_notification : Lsp.Client_notification.t -> unit = function
        | { text; range = None; _ } :: _ -> set_text uri version text
        | _ -> log "ignoring an incremental change")
   | DidSaveTextDocument { textDocument = { uri }; _ } ->
-      (* the other documents may accumulate the saved file (accumulated files
-         are read from the disk): they are checked again; the compiled units
-         that did not change come from the cache *)
-      Hashtbl.iter (fun u (doc : document) ->
-          if not (DocumentUri.equal u uri) then begin doc.checked <- -1; check_later u end)
-        documents
+      (* the other documents may accumulate files on the disk that changed
+         with the save: they are checked again *)
+      recheck_others uri
   | TextDocumentDidClose { textDocument = { uri } } ->
+      (* the ones that accumulate it read it from the disk again, if it is
+         there *)
+      let path = path_of_uri uri in
+      close_document path;
+      recheck_others ~only:path uri;
       Hashtbl.remove documents uri;
       Hashtbl.remove dirty uri;
       send_notification (PublishDiagnostics (PublishDiagnosticsParams.create ~uri ~diagnostics:[] ()))

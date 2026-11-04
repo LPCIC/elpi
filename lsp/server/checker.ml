@@ -22,6 +22,7 @@ type hover = unit_info list
 type result = {
   diagnostics : diagnostic list;
   hover : hover option; (* unless the parser failed (the text can have errors) *)
+  accumulates : string list; (* the files it accumulates, directly or not *)
 }
 
 let log fmt = Printf.ksprintf (fun s -> prerr_endline ("[elpi-lsp] " ^ s)) fmt
@@ -112,11 +113,11 @@ type instance = { id : int; elpi : Setup.elpi; library : (string, string) Hashtb
 
 let new_instance =
   let next = ref 0 in
-  fun ?(file_resolver = Parse.std_resolver ~paths:[] ()) () ->
+  fun ?(file_resolver = Parse.std_resolver ~paths:[] ()) ?(file_reader = Parse.std_reader) () ->
     incr next;
     let builtins = Elpi.Builtin.std_builtins in
     { id = !next;
-      elpi = Setup.init ~builtins:[builtins] ~file_resolver ();
+      elpi = Setup.init ~builtins:[builtins] ~file_resolver ~file_reader ();
       library = lazy (compute_library_files builtins);
       cache = { units = Hashtbl.create 17; clock = 0 } }
 
@@ -252,7 +253,10 @@ let compile ~instance:{ elpi; cache } ~path ~accumulated ast =
         let c = compile_unit ~extend ~elpi ~cache ~flags ~key ~base:base sp in
         key, c.extended, errors @ c.errors, warnings @ c.warnings, c.info :: infos)
       (flags_key, Compile.empty_base ~elpi, e0, w0, []) sps in
-  errors, warnings, List.rev infos
+  (* the files the program accumulates, directly or not: also the ones with
+     errors, which the parser keeps as units with no contents *)
+  let accumulates = List.concat_map (fun sp -> List.map fst (Compile.scoped_program_deps sp)) sps in
+  errors, warnings, List.rev infos, accumulates
 
 let diag_of_error ~path ~accumulated severity (e : Error.t) =
   diag_of_loc ~path ~accumulated severity e.loc (Format.asprintf "%a" Error.pp_message e)
@@ -282,15 +286,15 @@ let check ~instance ~path text =
   match resilient_parse ~elpi:instance.elpi ~path text with
   | exception e ->
       let loc, msg = error_of_exn e in
-      { diagnostics = [ diag_of_loc ~path ~accumulated:[] Error loc msg ]; hover = None }
+      { diagnostics = [ diag_of_loc ~path ~accumulated:[] Error loc msg ]; hover = None; accumulates = [] }
   | ast, parse_errors, parse_warnings ->
       let accumulated = LSP.accumulated ast in
       let syntax = syntax_diagnostics ~path ~accumulated text parse_errors in
-      let errors, warnings, hover = compile ~instance ~path ~accumulated ast in
+      let errors, warnings, hover, accumulates = compile ~instance ~path ~accumulated ast in
       let errors = List.map (diag_of_error ~path ~accumulated Error) errors in
       let ws = List.concat_map (fun w -> List.map (diag_of_error ~path ~accumulated Warning) (spread_undeclared hover w))
           (parse_warnings @ warnings) in
-      { diagnostics = syntax @ errors @ ws; hover = Some hover }
+      { diagnostics = syntax @ errors @ ws; hover = Some hover; accumulates }
 
 (* --- queries on the symbols --------------------------------------------------- *)
 

@@ -1,0 +1,73 @@
+==== open virtual/b.elpi (not on the disk) ====
+diagnostics of virtual/b.elpi (version 1): 0
+
+==== open virtual/a.elpi (not on the disk) ====
+diagnostics of virtual/a.elpi (version 1): 0
+diagnostics of virtual/b.elpi (version 1): 0
+hover "vb X"+0 (the cursor is at 2:8): 2:8-2:10
+  line 2:
+               | main :- vb X, Y is X + 1, print Y.
+    hovered    |         ^^
+    cursor     |         *
+    ? ```elpi-hover
+    ? vb : (pred -> int)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? vb, declared in b.elpi
+definition "vb X"+0 (the cursor is at 2:8):
+  line 2:
+               | main :- vb X, Y is X + 1, print Y.
+    cursor     |         *
+  defined at file://$DIR/virtual/b.elpi 1:0-1:13
+    | pred vb o:int
+  previewed 1:0-2:4
+    | pred vb o:int.
+    | vb 7
+
+==== change virtual/b.elpi (version 2) ====
+diagnostics of virtual/b.elpi (version 2): 0
+diagnostics of virtual/a.elpi (version 1): 1
+  2:19-2:24 error: Typechecker: + is overloaded but none of its types matches:
+  string -> int -> A
+Its types are:
+  int -> int -> int, 
+  float -> float -> float
+    | main :- vb X, Y is X + 1, print Y.
+    |                    ^^^^^
+
+==== change virtual/b.elpi (version 3) ====
+diagnostics of virtual/b.elpi (version 3): 0
+diagnostics of virtual/a.elpi (version 1): 0
+
+==== change virtual/b.elpi (version 4) ====
+diagnostics of virtual/b.elpi (version 4): 1
+  1:8-1:9 error: Parser: This infix operator expects a right hand side.
+    | vb 7 :- .
+    |         ^
+diagnostics of virtual/a.elpi (version 1): 2
+  0:0-0:15 error: In $DIR/virtual/b.elpi, line 2, column 10: Parser: This infix operator expects a right hand side.
+    | accumulate "b".
+    | ^^^^^^^^^^^^^^^
+  2:8-2:10 warning: Typechecker: Undeclared global vb.
+Please add the following text to your program:
+type vb int -> (func).
+    | main :- vb X, Y is X + 1, print Y.
+    |         ^^
+
+==== change virtual/b.elpi (version 5) ====
+diagnostics of virtual/b.elpi (version 5): 0
+diagnostics of virtual/a.elpi (version 1): 0
+
+==== close virtual/b.elpi ====
+diagnostics of virtual/b.elpi: 0
+diagnostics of virtual/a.elpi (version 1): 2
+  0:0-0:15 error: Parser: File b.elpi not found in:
+    | accumulate "b".
+    | ^^^^^^^^^^^^^^^
+  2:8-2:10 warning: Typechecker: Undeclared global vb.
+Please add the following text to your program:
+type vb int -> (func).
+    | main :- vb X, Y is X + 1, print Y.
+    |         ^^

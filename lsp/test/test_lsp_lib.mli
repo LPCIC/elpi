@@ -57,6 +57,20 @@ val change_file_burst : string -> int -> string list -> unit
     diagnostics for [file]. *)
 val close_file : string -> unit
 
+(** Documents that need not be files: [open_text file text] sends [didOpen]
+    with [text] (there may be no file [file] on the disk), [change_text file
+    version text] sends [didChange], [close_text file] sends [didClose]. They
+    do not wait: an edit can make the server check other documents too, whose
+    diagnostics {!await_diagnostics} prints. *)
+val open_text : string -> string -> unit
+val change_text : string -> int -> string -> unit
+val close_text : string -> unit
+
+(** [await_diagnostics files] waits for the next diagnostics published for each
+    of [files], in any order, and prints them in the order of [files], as
+    {!open_file} does. *)
+val await_diagnostics : string list -> unit
+
 (** [change_file file version text] sends [didChange] with the whole [text]
     as the new contents of the open [file], and prints the diagnostics as
     {!open_file} does. *)

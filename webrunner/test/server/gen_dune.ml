@@ -5,7 +5,7 @@
 (* the scripts of lsp/test, in the order of lsp/test/dune *)
 let scripts =
   [ "accbad"; "accmissing"; "good"; "syntax"; "typeerr"; "warn"; "binders"; "library"; "macros"; "libdef"; "doc";
-    "acctype"; "lists"; "accchar"; "run"; "assemble"; "anomaly"; "accinc" ]
+    "acctype"; "lists"; "accchar"; "run"; "assemble"; "anomaly"; "accinc"; "accopen" ]
 
 (* accinc needs the server to be given -I, the web server has no command line *)
 let node_skip = [ "accinc" ]

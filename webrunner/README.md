@@ -41,9 +41,11 @@ worker by itself) otherwise, also when the WebAssembly one fails to start; the f
 served next to each other. The WebAssembly server is about 2-3 times faster.
 
 The messages are JavaScript objects, received by `onmessage` and sent by
-`postMessage`. There are no files: `accumulate` fails, and the files of the
-standard library are `elpi-builtin:/ID/NAME` documents (see `elpi/builtinFile`
-in `../lsp/README.md`). In Node (e.g. the server bundled with the extension for
+`postMessage`. There are no files: `accumulate` finds only the documents that
+the client has opened (see "Open documents" in `../lsp/README.md`), so a client
+opens all the files of a program; the files of the standard library are
+`elpi-builtin:/ID/NAME` documents (see `elpi/builtinFile` in
+`../lsp/README.md`). In Node (e.g. the server bundled with the extension for
 the desktop) the builds can be run in a `Worker` of `worker_threads` instead,
 where `accumulate` reads the files (see `test/server/node-worker.cjs`).
 
