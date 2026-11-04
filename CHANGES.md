@@ -11,6 +11,9 @@
   - New: a declaration with no comment before it is documented by the line
     comment that follows its full stop on the same line (e.g.
     `symb ok : diagnostic. % Success`), shown on hover by the language server
+- Runtime:
+  - Fix: the clause lists of the index are now purely functional, so extending
+    the same program many times no longer copies them
 
 # v4.0.0 (October 2026)
 

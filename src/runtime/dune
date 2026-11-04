@@ -2,7 +2,7 @@
   (name elpi_runtime)
   (public_name elpi.runtime)
   (preprocess (per_module
-    ((pps ppx_deriving.std) data discrimination_tree bl)
+    ((pps ppx_deriving.std) data discrimination_tree)
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") runtime)
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"false\"") runtime_trace_off)
     ))
