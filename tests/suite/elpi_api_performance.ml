@@ -39,3 +39,17 @@ let () = declare "sepcomp_perf5"
   ~description:"separate compilation linker perf and time distribution"
   ~expectation:Test.Success
   ()
+
+let () = declare "sepcomp_perf6"
+  ~source_dune:"sepcomp_perf6.exe"
+  ~after:"sepcomp_perf6"
+  ~description:"separate compilation, extending the same base many times"
+  ~expectation:Test.Success
+  ()
+
+let () = declare "graft_perf"
+  ~source_dune:"graft_perf.exe"
+  ~after:"graft_perf"
+  ~description:"many grafts in long lists of rules and in many lists"
+  ~expectation:Test.Success
+  ()

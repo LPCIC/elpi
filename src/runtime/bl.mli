@@ -2,7 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-(* functional lists with O(1) rcons *)
+(* purely functional lists with O(1) cons and rcons, even when shared *)
 
 type 'a t
 val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
