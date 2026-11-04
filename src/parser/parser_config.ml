@@ -12,7 +12,10 @@ exception ParseError of Util.Loc.t * string
    resolution is not a parser business *)
 
 module type ParseFile = sig
-  val parse_file : ?cwd:string -> string -> Ast.Program.t
+  (* the file of an accumulate directive at [loc]; when the parser is
+     resilient, a file that cannot be found or parsed is one with no
+     contents (the error is recorded) *)
+  val parse_accumulated_file : loc:Util.Loc.t -> ?cwd:string -> string -> Ast.Program.t
   val get_current_client_loc_payload : unit -> Obj.t option
   val set_current_clent_loc_pyload : Obj.t -> unit
   (* a warning found while parsing *)

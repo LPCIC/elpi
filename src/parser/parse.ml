@@ -46,6 +46,9 @@ module Make(C : Config) = struct
 let parse_ref : (?cwd:string -> string -> Ast.Program.t) ref =
   ref (fun ?cwd:_ _ -> assert false)
 
+(* a file to accumulate that cannot be found: the message of the resolver *)
+exception Cannot_resolve_accumulated_file of string
+
 (* the warnings found while parsing a program *)
 module Warnings : sig
   val init : unit -> unit
@@ -56,6 +59,24 @@ end = struct
   let init () = warnings := []
   let add w = warnings := w :: !warnings
   let consume () = let ws = List.rev !warnings in warnings := []; ws
+end
+
+(* the errors found while parsing a program: until there are max_errors of
+   them, an error is recorded and the parser goes on, then it stops (with
+   max_errors = 0 the first error is raised) *)
+module Errors : sig
+  val init : max_errors:int -> unit
+  val max_errors_reached : unit -> bool
+  val add : Util.Loc.t * string -> unit
+  val consume : unit -> (Util.Loc.t * string) list  (* in order, and forgets them *)
+end = struct
+  let max_errors = ref 0
+  let count = ref 0
+  let errors : (Util.Loc.t * string) list ref = ref [] (* most recent first *)
+  let init ~max_errors:n = max_errors := n; count := 0; errors := []
+  let max_errors_reached () = !count >= !max_errors
+  let add e = incr count; errors := e :: !errors
+  let consume () = let es = List.rev !errors in errors := []; es
 end
 
 module DocComments : sig
@@ -123,7 +144,20 @@ end
 
 
 module ParseFile = struct
-  let parse_file ?cwd file = !parse_ref ?cwd file
+  (* until max_errors is reached, a file that cannot be found or parsed is
+     one with no contents (the error is recorded), so that the program still
+     depends on it. Its digest is not the one of a text, which a file with
+     contents has. Then the error goes up to the parser, which stops. *)
+  let parse_accumulated_file ~loc ?cwd file =
+    let empty file_name = { Ast.file_name; digest = Digest.string ("not parsed " ^ file_name); deps = []; ast = [] } in
+    match !parse_ref ?cwd file with
+    | p -> p
+    | exception Cannot_resolve_accumulated_file msg when not (Errors.max_errors_reached ()) ->
+        Errors.add (loc, msg);
+        empty (match cwd with Some d when Filename.is_relative file -> Filename.concat d file | _ -> file)
+    | exception Parser_config.ParseError (l, msg) when not (Errors.max_errors_reached ()) ->
+        Errors.add (l, msg);
+        empty (C.resolver ?cwd ~unit:file ())
   let client_payload : Obj.t option ref = ref None
   let set_current_clent_loc_pyload x = client_payload := Some x
   let get_current_client_loc_payload () = !client_payload
@@ -213,14 +247,11 @@ let parse_file_contents ~filename text =
     Hashtbl.add already_parsed digest output;
     output
 
-(* a file to accumulate that cannot be found: the message of the resolver *)
-exception Cannot_accumulate of string
-
 let () =
   parse_ref := (fun ?cwd filename ->
   let filename =
     try C.resolver ?cwd ~unit:filename ()
-    with Failure msg -> raise (Cannot_accumulate msg) in
+    with Failure msg -> raise (Cannot_resolve_accumulated_file msg) in
   let text = C.reader filename in
   if String.equal (Filename.extension filename) ".mod" then
     (* Teyjus compatibility *)
@@ -325,25 +356,30 @@ let program_from ?(max_errors = max_int) ~loc:start_loc ~digest lexbuf =
     | Some p -> { loc with Util.Loc.source_start = p.pos_cnum; line = p.pos_lnum; line_starts_at = p.pos_bol }
     | None -> loc in
 
-  (* the declarations and the errors (most recent first) *)
-  let rec loop declarations errors error_count =
+  (* the parser stops: nothing is dropped silently *)
+  let stop declarations =
+    Errors.add (to_loc lexbuf, Printf.sprintf "too many errors (limit %d): the rest was not parsed, the result is incomplete" max_errors);
+    declarations in
+
+  (* the declarations (most recent first); the errors are in Errors *)
+  let rec loop declarations =
     last_token_lexed := None; first_token_lexed_loc := None;
     (* an error: it is recorded, the rest of the declaration is skipped *)
     let recover (loc, msg) =
       if max_errors = 0 then raise (Parser_config.ParseError (loc, msg));
-      skip ();
-      let errors = (loc, msg) :: errors in
-      match !last_token_lexed with
-      | Some Tokens.EOF -> declarations, errors
-      | _ -> loop declarations errors (error_count + 1) in
-    if max_errors > 0 && error_count >= max_errors then
-      (* nothing is dropped silently *)
-      declarations,
-      (to_loc lexbuf, Printf.sprintf "too many errors (limit %d): the rest was not parsed, the result is incomplete" max_errors) :: errors
+      if Errors.max_errors_reached () then stop declarations
+      else begin
+        Errors.add (loc, msg);
+        skip ();
+        match !last_token_lexed with
+        | Some Tokens.EOF -> declarations
+        | _ -> loop declarations
+      end in
+    if max_errors > 0 && Errors.max_errors_reached () then stop declarations
     else
     match parse ~lexer Grammar.Incremental.one_decl lexbuf with
-    | Some d -> loop (d :: declarations) errors error_count
-    | None -> declarations, errors
+    | Some d -> loop (d :: declarations)
+    | None -> declarations
     | exception Parser_config.ParseError (loc, msg) when not (String.equal loc.Util.Loc.source_name start_loc.Util.Loc.source_name) ->
         (* an error in an accumulated file: it is reported on the accumulate
            directive, with the position in the file *)
@@ -356,14 +392,16 @@ let program_from ?(max_errors = max_int) ~loc:start_loc ~digest lexbuf =
         recover ((if loc.Util.Loc.source_start = loc.source_stop
                      && loc.source_stop = lexbuf.Lexing.lex_curr_p.pos_cnum
                   then to_loc lexbuf else loc), msg)
-    | exception Cannot_accumulate msg -> recover (declaration_loc (), msg) in
-  let declarations, errors = loop [] [] 0 in
+    | exception Cannot_resolve_accumulated_file msg -> recover (declaration_loc (), msg) in
+  Errors.init ~max_errors;
+  let declarations = loop [] in
+  let errors = Errors.consume () in
   let ast = List.rev declarations in
   let filename = let open Util.Loc in
     Printf.sprintf "%s:%d:%d" start_loc.source_name start_loc.source_stop lexbuf.Lexing.lex_curr_pos in
   let ws = Warnings.consume () in
   { Ast.file_name = filename; deps = []; digest; ast },
-  List.rev_map make_error errors,
+  List.map make_error errors,
   ws
 
 (* a file, with its .sig if it is a .mod (as parse_ref does) *)

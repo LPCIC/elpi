@@ -94,4 +94,29 @@ let () =
   (match Compile.scope_ast ~elpi ~flags ast with
    | _ -> prerr_endline "compile error not raised"; exit 1
    | exception Error.ElpiError { Error.component = "Structure"; message; _ } when contains message "duplicate attribute" -> ());
+  (* accumulated files with errors: each error counts towards max_errors, and
+     until it is reached the file is a unit with no contents, a dependency *)
+  let files = [ "a.elpi", "p :- ."; "b.elpi", "q :- ." ] in
+  let find f = List.find_opt (fun (n, _) -> String.equal n f) files in
+  let elpi = Setup.init ~builtins:[ Elpi.Builtin.std_builtins ]
+      ~file_resolver:(fun ?cwd:_ ~unit () -> match find unit with Some _ -> unit | None -> failwith ("no " ^ unit))
+      ~file_reader:(fun f -> match find f with Some (_, t) -> t | None -> failwith ("no " ^ f)) () in
+  let parse max_errors =
+    let flags = { Compile.default_flags with Compile.max_errors } in
+    let text = "accumulate a, b.\n" in
+    Parse.program_from ~flags ~elpi ~loc:(Ast.Loc.initial "src") ~digest:(Digest.string text) (Lexing.from_string text) in
+  let ast, errors, _ = parse 100 in
+  let deps = List.concat_map (fun sp -> List.map fst (Compile.scoped_program_deps sp))
+      (let sps, _, _ = Compile.scope_ast ~elpi ast in sps) in
+  if List.length errors <> 2 || not (List.exists (String.equal "a.elpi") deps && List.exists (String.equal "b.elpi") deps) then begin
+    List.iter (fun e -> Format.eprintf "%a@." Error.pp e) errors;
+    prerr_endline ("accumulate: deps " ^ String.concat ", " deps);
+    exit 1
+  end;
+  (match parse 1 with
+   | _, [ _; { Error.message; _ } ], _ when contains message "too many errors" -> ()
+   | _, errors, _ ->
+       List.iter (fun e -> Format.eprintf "%a@." Error.pp e) errors;
+       prerr_endline "accumulate: max_errors";
+       exit 1);
   exit 0

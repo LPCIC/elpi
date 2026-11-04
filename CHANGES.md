@@ -11,6 +11,11 @@
   - New: a declaration with no comment before it is documented by the line
     comment that follows its full stop on the same line (e.g.
     `symb ok : diagnostic. % Success`), shown on hover by the language server
+  - Change: when an accumulated file cannot be found or has an error, the
+    resilient parser (`?max_errors`) keeps it as a unit with no contents: it
+    is in the `deps` of the program, and the file that accumulates it keeps
+    its other contents. A syntax error is reported at its position in the
+    accumulated file
 - Compiler:
   - Fix: `Compile.scope_ast` gives a file accumulated several times (by files
     in different directories, or through different files) once; it gave it
