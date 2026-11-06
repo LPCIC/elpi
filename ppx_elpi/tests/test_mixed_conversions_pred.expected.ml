@@ -240,9 +240,8 @@ let lam : (lam, context, Data.constraints) ContextualConversion.t =
     pp_doc =
       (fun fmt () ->
          Format.fprintf fmt "data lam.@\n";
-         Format.fprintf fmt "builtin symb ap : lam -> lam -> lam = \"0\".@\n";
-         Format.fprintf fmt
-           "builtin symb lm : string -> (lam -> lam) -> lam = \"0\".@\n@\n");
+         Format.fprintf fmt "symb ap : lam -> lam -> lam.@\n";
+         Format.fprintf fmt "symb lm : string -> (lam -> lam) -> lam.@\n@\n");
     embed = embed_lam;
     readback = readback_lam
   }
@@ -274,7 +273,8 @@ let builtin =
     BuiltIn.declare ~file_name
       ((PPX.to_list declaration) @
          [MLDataC lam;
-         LPCode "builtin func known lam -> string.";
+         LPCode "func known lam -> string.";
+         MLConstants [c_ap; c_lm; c_known];
          MLCode (describe, DocAbove)])
 let program =
   {|

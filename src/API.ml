@@ -38,12 +38,10 @@ module Setup = struct
 type state_descriptor = Data.State.descriptor
 type quotations_descriptor = Compiler_data.QuotationHooks.descriptor ref
 type hoas_descriptor = Data.HoasHooks.descriptor ref
-type calc_descriptor = Data.CalcHooks.descriptor ref
 
 let default_state_descriptor = Data.State.new_descriptor ()
 let default_quotations_descriptor = Compiler_data.QuotationHooks.new_descriptor ()
 let default_hoas_descriptor = Data.HoasHooks.new_descriptor ()
-let default_calc_descriptor = Data.CalcHooks.new_descriptor ()
 
 type builtins = Compiler.declared_builtins
 type elpi = {
@@ -54,7 +52,7 @@ type elpi = {
 type flags = Compiler.flags
 
 
-let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) () : elpi =
+let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
@@ -62,9 +60,8 @@ let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags)
     | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
   let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader end) : Parse.Parser) in
-  Data.Global_symbols.lock ();
   let header =
-    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins
+    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas builtins
     with Util.ElpiError ({ loc } as e) -> data_anomaly ?loc (Format.asprintf "%a" Compiler_data.pp_error_message e) in
   { parser; header; resolver = file_resolver }
 
@@ -182,6 +179,7 @@ module Compile = struct
     time_typechecking : bool;
     skip_det_checking: bool;
     max_errors: int;
+    builtin_stubs: bool;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
@@ -410,8 +408,9 @@ module RawOpaqueData = struct
       Format.fprintf fmt "@\n";
     end;
     Format.fprintf fmt "@[<hov 2>data %s.@]@\n@\n" name;
-    List.iter (fun (variant,(c,_)) ->
-      Format.fprintf fmt "@[<hov 2>builtin symb %s : %s = \"%d\".@]@\n" c name variant)
+    List.iter (fun (variant,(c,v)) ->
+      ED.BuiltInPredicate.ADT.record_printed_constant (values_map v);
+      Format.fprintf fmt "@[<hov 2>symb %s : %s = \"%d\".@]@\n" c name variant)
       constants
     in
   { cin; cino; cout; isc; name = c },
@@ -769,6 +768,8 @@ module RawData = struct
       ED.Global_symbols.declare_global_symbol ?variant x
 
     let show c = Util.Constants.show c
+
+    let lookup name = Compiler.lookup_global_name name
 
     let orc    = ED.Global_symbols.orc
 
@@ -1148,15 +1149,16 @@ end
 
 module BuiltIn = struct
   include ED.BuiltInPredicate
+  type calc_operations = ED.CalcHooks.operations
 
   let declare ~file_name l = Compiler.declare_builtins ~file_name l
 
   let of_file ~file_name = Compiler.declared_builtins_of_file ~file_name
 
-  let document_fmt fmt ?(calc=Setup.default_calc_descriptor) file_name =
-    Compiler.document_fmt fmt ~calc:(List.rev !calc) file_name
-  let document_file ?header ?(calc=Setup.default_calc_descriptor) file_name =
-    Compiler.document_file ?header ~calc:(List.rev !calc) ~file:(Compiler.file_of_declared_builtins file_name) file_name
+  let document_fmt fmt file_name =
+    Compiler.document_fmt fmt file_name
+  let document_file ?header file_name =
+    Compiler.document_file ?header ~file:(Compiler.file_of_declared_builtins file_name) file_name
 end
 
 module State = struct
@@ -1216,8 +1218,6 @@ end
 
 module Calc = struct
 
-  let new_calc_descriptor = ED.CalcHooks.new_descriptor
-
   type operation_declaration = {
     symbol : string;
     infix : bool;
@@ -1229,17 +1229,17 @@ module Calc = struct
     let ty_decl args =
       let c, variant = ED.Global_symbols.declare_overloaded_global_symbol symbol in
       let ty_decl = if infix then
-        Printf.sprintf "builtin symb (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
+        Printf.sprintf "symb (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
       else
-        Printf.sprintf "builtin symb %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
+        Printf.sprintf "symb %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
       c, { ED.CalcHooks.ty_decl = ty_decl; code }
     in
     List.map ty_decl args
 
-   let register ~descriptor d =
-     let e = compile_operation_declaration d in
-     descriptor := e @ !descriptor
-    
+  (* the variants of an operation in order: when the type checker cannot
+     choose, e.g. for a bare (+), it takes the first one (int) *)
+  let operations l = List.concat_map compile_operation_declaration l
+
   let register_eval n (symbol,tys) code =
     let infix, n = n < 0, abs n in
     let args = tys |> List.map (fun ty -> List.init (n+1) (fun _ -> ty)) in
@@ -1383,7 +1383,6 @@ module Calc = struct
     | _ -> data_type_error "Wrong arguments to string_to_real")
   ]
 
-  let () = List.iter (register ~descriptor:Setup.default_calc_descriptor) default_calc
 
   let eval ~depth state x =
    let table = ED.State.get ED.CalcHooks.eval state in
@@ -1430,6 +1429,9 @@ module Calc = struct
       Read(unit_ctx, "unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]"))),
         (fun t _ ~depth _ _ state -> !: (eval ~depth state t))),
     DocAbove);
+
+    LPDoc " --- Operators ---";
+    MLCalc (operations default_calc);
     ]
 
 end
@@ -1635,14 +1637,17 @@ module PPX = struct
       ED.BuiltInPredicate.ADT.document_kind fmt ty
     (* builtin func name Key -> Field1, ..., FieldN, the declaration of an entry of a
        context, a predicate about a bound variable of type Key *)
-    let context_entry fmt ~name ~doc ~key ~args =
+    let context_entry fmt ~variant ~name ~doc ~key ~args =
+      (match ED.Symbol.RawMap.find_opt (ED.Symbol.make (Builtin { variant }) (Elpi_parser.Ast.Func.from_string name)) ED.Global_symbols.table.s2ct with
+       | Some (c, _) -> ED.BuiltInPredicate.ADT.record_printed_constant c
+       | None -> ());
       let show = ED.Conversion.show_ty_ast ~prec:ED.Conversion.Arrow in
       let outs =
         if args = [] then ""
         else " -> " ^ String.concat ", " (List.map show args) in
       Format.fprintf fmt "%% context items for %s%s@\n"
         (show key) (if doc = "" then "" else " (" ^ doc ^ ")");
-      Format.fprintf fmt "@[<hov2>builtin func %s %s%s.@]@\n@\n" name (ED.Conversion.show_ty_ast ~prec:ED.Conversion.AppArg key) outs
+      Format.fprintf fmt "@[<hov2>func %s %s%s.@]@\n@\n" name (ED.Conversion.show_ty_ast ~prec:ED.Conversion.AppArg key) outs
 
     let constructor fmt ~max_name_len ~variant ~name ~doc ~ty ~args =
       ED.BuiltInPredicate.ADT.document_constructor

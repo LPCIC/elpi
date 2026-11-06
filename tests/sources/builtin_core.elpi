@@ -1,0 +1,4 @@
+% only builtin.elpi declares the symbols of the language
+builtin func ! = "core".
+
+main.

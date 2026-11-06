@@ -65,6 +65,7 @@ let table = Fork.new_local {
   c2s = Constants.Map.empty;
   c2t = Hashtbl.create 37;
   frozen_constants = 0;
+  first_frozen = 1;
 }
 
 (* let () = at_exit (fun () -> let open Hashtbl in let s = stats !table.c2t in
@@ -89,11 +90,14 @@ let mkConst x =
     xx
   [@@inline]
   
+(* frozen constants grow up, after the program constants (see the schema next
+   to Compiler.SymbolMap); frozen-K is the K-th of its run *)
 let fresh_global_constant () =
-   !table.frozen_constants <- !table.frozen_constants - 1;
+   !table.frozen_constants <- !table.frozen_constants + 1;
    let n = !table.frozen_constants in
+   Global_symbols.note_instance_constant n;
    let xx = Const n in
-   !table.c2s <- Constants.Map.add n (Symbol.make (File (Loc.initial "(chr)")) (F.from_string @@ "frozen-" ^ string_of_int n)) !table.c2s ;
+   !table.c2s <- Constants.Map.add n (Symbol.make (File (Loc.initial "(chr)")) (F.from_string @@ "frozen-" ^ string_of_int (n - !table.first_frozen))) !table.c2s ;
    Hashtbl.add !table.c2t n xx;
    n, xx
 

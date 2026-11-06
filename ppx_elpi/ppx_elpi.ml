@@ -203,8 +203,9 @@ open Ppxlib.Ast_pattern
 
     [@elpi.variant n] The variant of the global symbol of the constructor.
       [n] mandatory: an integer literal, >= 1. Constructors with the same name
-      (eg in different types) must have different variants, and the Elpi
-      declaration is [builtin symb name : ... = "n"].
+      (eg in different types) must have different variants. The Elpi
+      declaration is a plain [symb name : ...]: the builtins file knows the
+      variant.
 
     [@elpi.embed f] Custom embedding code.
       [f] mandatory: function of type
@@ -1234,6 +1235,7 @@ let pp_doc (module B : Ast_builder.S) kind elpi_name elpi_code elpi_doc is_pred 
                  of the bound variable the entry is about *)
               [%expr
                 Elpi.API.PPX.Doc.context_entry fmt
+                ~variant:[%e eint variant ]
                 ~name:[%e estring c]
                 ~doc:[%e estring elpi_doc ]
                 ~key:[%e ty_ast_of_arg (ctx_index_ty_of_args (module B) arg_types) ]

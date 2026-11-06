@@ -1,0 +1,5 @@
+% = "N" is only for the text of a builtins file
+data t.
+symb foo : t = "2".
+
+main.

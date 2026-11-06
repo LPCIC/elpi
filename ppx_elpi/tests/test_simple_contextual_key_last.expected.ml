@@ -183,7 +183,8 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"entry" ~doc:"Entry"
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:0 ~name:"entry"
+               ~doc:"Entry"
                ~key:(Elpi.API.ContextualConversion.TyName "term")
                ~args:[Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty;
                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty]);

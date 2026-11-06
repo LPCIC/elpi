@@ -5,7 +5,7 @@
 (* the scripts of lsp/test, in the order of lsp/test/dune *)
 let scripts =
   [ "accbad"; "accmissing"; "good"; "syntax"; "typeerr"; "warn"; "binders"; "library"; "macros"; "libdef"; "doc";
-    "acctype"; "lists"; "accchar"; "run"; "assemble"; "anomaly"; "accinc"; "accopen"; "accdirs" ]
+    "acctype"; "lists"; "accchar"; "run"; "assemble"; "anomaly"; "accinc"; "accopen"; "accdirs"; "stubs" ]
 
 (* accinc needs the server to be given -I, the web server has no command line;
    the files of accdirs are in subdirectories of lsp/test, which are not copied *)

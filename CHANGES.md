@@ -7,6 +7,63 @@
     abbreviation hides the variable. Unifying two open terms built with such
     a constructor can alias variables of different types. Use `any` or a
     concrete type instead
+  - Fix: an overloaded constant with no arguments whose expected type is not
+    known yet (e.g. `(+)` passed to a variable, `Apply (+) 2 3`) is
+    ambiguous, an error; it silently took its first type, since undoing a
+    tentative unification did not reset the type variables reached through
+    an assigned one
+- Language:
+  - Change: `builtin` is only for the symbols of the language (with
+    `= "core"`, only in `builtin.elpi`) and for the predicates implemented by
+    an `MLCode` (`builtin func`). `builtin symb` without `= "core"` is a
+    parse error, `builtin pred` / `func` with no `MLCode` is an error, and
+    `builtin data` is no longer accepted. Before, a `builtin symb` with no
+    `= "N"` and such a predicate silently became Elpi symbols
+  - Change: the OCaml symbols of a builtins file are declared in its text with
+    no `builtin`: a plain `symb` for a constructor of its `MLData` or a
+    symbol of its `MLConstants`, a plain `pred` / `func` signature for a
+    predicate of its `MLConstants` whose rules are in Elpi (e.g. `;`). The
+    builtins file binds them. `= "N"` at the end of a `symb` picks one variant
+    when the file has several, and is an error elsewhere
+  - Change: the symbols of the language (`!`, `,`, `=>`, `:-`, `=!=>`,
+    `==>`, `pi`, `sigma`, `=`, `pattern_match`, `findall_solutions`,
+    `declare_constraint`, `uvar`, `as`) are declared in `builtin.elpi` with
+    `= "core"`, which can also end a `builtin func` signature; no other file
+    can declare them
+  - Change: two declarations of an OCaml symbol with the same variant and
+    different types are an error (it was an anomaly)
+- API:
+  - New: `RawData.Constants.lookup "p"` gives the constant of `p` in the
+    program that runs, so that OCaml code can build and match terms of an
+    ordinary predicate or symbol, with no global symbol
+  - New: `BuiltIn.MLConstants [c1; ...]` binds the global symbols `c1` ...
+    (`Constants.declare_global_symbol`) to the declarations of the same name
+    in the text of its builtins file, as `MLData` does for its constructors:
+    a plain `symb`, or a plain `pred` / `func` signature for a predicate
+    whose rules are in Elpi. With several variants of a name, the `symb` says
+    which one with `= "N"`. Each constant must be declared by the text
+  - New: compilation flag `builtin_stubs` (`Compile.flags`), to accept the
+    declarations that OCaml neither declares nor implements (`builtin func`
+    with no `MLCode`, `= "N"` outside a builtins file)
+  - New: global symbols (`Constants.declare_global_symbol`), data types
+    (`AlgebraicData.declare`, `OpaqueData.declare`), calc operations and
+    builtins files (`BuiltIn.declare`) can be declared after `Setup.init`,
+    e.g. by a plugin linked later: a program accumulates such a builtins
+    file with `Compile.scope_builtins`, `Compile.unit` and `Compile.extend`.
+    State components and quotations must still be declared before
+    `Setup.init`
+  - New: `BuiltIn.MLCalc (Calc.operations [...])` declares calc operations in
+    a builtins file: the programs that accumulate it can evaluate them
+  - Change: `Calc.register`, `Calc.new_calc_descriptor`,
+    `Setup.calc_descriptor`, `Setup.init ?calc` and the `?calc` argument of
+    `BuiltIn.document_fmt` / `document_file` are removed: use `MLCalc`.
+    `Calc.calc` includes the standard operations
+- Runtime:
+  - Change: frozen constants are printed `frozen-K`, K their index in the
+    run (they were `frozen--NNN`)
+- LSP:
+  - New: elpi-lsp accepts `builtin` declarations whose OCaml code is not
+    loaded (stubs), e.g. the documentation of the builtins of rocq-elpi
 
 # v4.0.1 (October 2026)
 

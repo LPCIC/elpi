@@ -94,3 +94,21 @@ let () = declare "compile_errors"
   ~description:"the passes of the compiler return all the errors"
   ~expectation:Test.Success
   ()
+
+let () = declare "builtin_lookup"
+  ~source_dune:"builtin_lookup.exe"
+  ~description:"OCaml terms of an Elpi predicate: Constants.lookup"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "hyp 3"))
+  ()
+
+let () = declare "late_globals"
+  ~source_dune:"late_globals.exe"
+  ~description:"global symbols, data types, calc operations and builtins declared after Setup.init"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "3 4 12 1 circle 4 4 43"))
+  ()
+
+let () = declare "builtin_constant"
+  ~source_dune:"builtin_constant.exe"
+  ~description:"global symbols bound by MLConstants: two more variants of (+), told apart by = \"N\", and a func"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "ab [1, 2, 3] 3 glob 4"))
+  ()

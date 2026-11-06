@@ -2,15 +2,19 @@ open Elpi.API
 
 let global = Ast.Loc.initial "init"
 let base_str = 
-  {| data foo.
-     builtin symb mk_t : int -> foo = "1".
-
-     pred is_t -> foo, int.
+  {| pred is_t -> foo, int.
      is_t (mk_t N) N.
   |}
 
 let is_t_c = RawData.Constants.declare_global_symbol "is_t"
 let mk_t_c = RawData.Constants.declare_global_symbol ~variant:1 "mk_t"
+
+(* mk_t is OCaml's: the builtins file binds it *)
+let foo_builtins =
+  BuiltIn.declare ~file_name:"foo.elpi" [
+    BuiltIn.LPCode "data foo. symb mk_t : int -> foo.";
+    BuiltIn.MLConstants [mk_t_c];
+  ]
 let query = 
   Ast.Term.mkAppGlobal ~loc:global ~hdloc:global is_t_c
     (Ast.Term.mkVar ~loc:global ~hdloc:global (Ast.Name.from_string "X") []) 
@@ -19,7 +23,7 @@ let query =
 let () = begin 
   let flags = { Compile.default_flags with Compile.print_units = true } in
   let elpi = Setup.init 
-    ~builtins:[Elpi.Builtin.std_builtins]
+    ~builtins:[Elpi.Builtin.std_builtins; foo_builtins]
     ~flags:(Compile.to_setup_flags flags)
     ~file_resolver:(Parse.std_resolver ~paths:[] ()) () in
   let base, errors, _ = Parse.program_from ~elpi ~loc:global ~digest:(Digest.string "") (Lexing.from_string base_str) in
