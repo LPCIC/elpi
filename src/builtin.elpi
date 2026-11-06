@@ -106,17 +106,17 @@ symb (i-) : int -> int -> int = "1".
 
 symb (r-) : float -> float -> float = "1". 
 
-symb (+) : float -> float -> float = "2". 
-
 symb (+) : int -> int -> int = "1". 
+
+symb (+) : float -> float -> float = "2". 
 
 symb (i+) : int -> int -> int = "1". 
 
 symb (r+) : float -> float -> float = "1". 
 
-symb (*) : float -> float -> float = "2". 
-
 symb (*) : int -> int -> int = "1". 
+
+symb (*) : float -> float -> float = "2". 
 
 symb (/) : float -> float -> float = "1". 
 
@@ -126,29 +126,29 @@ symb (div) : int -> int -> int = "1".
 
 symb (^) : string -> string -> string = "1". 
 
-symb (~) : float -> float = "2". 
-
 symb (~) : int -> int = "1". 
+
+symb (~) : float -> float = "2". 
 
 symb (i~) : int -> int = "1". 
 
 symb (r~) : float -> float = "1". 
 
-symb abs : float -> float = "2".
-
 symb abs : int -> int = "1".
+
+symb abs : float -> float = "2".
 
 symb iabs : int -> int = "1".
 
 symb rabs : float -> float = "1".
 
-symb max : float -> float -> float = "2".
-
 symb max : int -> int -> int = "1".
 
-symb min : float -> float -> float = "2".
+symb max : float -> float -> float = "2".
 
 symb min : int -> int -> int = "1".
+
+symb min : float -> float -> float = "2".
 
 symb sqrt : float -> float = "1".
 

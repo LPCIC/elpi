@@ -1236,8 +1236,9 @@ module Calc = struct
     in
     List.map ty_decl args
 
-  (* the variants of an operation are printed last first, as they always were *)
-  let operations l = List.concat_map (fun d -> List.rev (compile_operation_declaration d)) l
+  (* the variants of an operation in order: when the type checker cannot
+     choose, e.g. for a bare (+), it takes the first one (int) *)
+  let operations l = List.concat_map compile_operation_declaration l
 
   let register_eval n (symbol,tys) code =
     let infix, n = n < 0, abs n in
