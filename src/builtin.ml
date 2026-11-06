@@ -233,7 +233,7 @@ let char : char Conversion.t =  {
 
 
 
-let pair_decl a b = let open AlgebraicData in Decl {
+let pair a b = let open AlgebraicData in declare {
   ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
   doc = "Pair: the constructor is pr, since ',' is for conjunction";
   pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.Conversion.pp b.Conversion.pp) o);
@@ -242,15 +242,9 @@ let pair_decl a b = let open AlgebraicData in Decl {
       B (fun a b -> (a,b)),
       M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
   ];
-  }
-let pair_alloc =
-  let open AlgebraicData in
-  allocate_constructors (Param (fun a -> Param (fun b-> pair_decl a b)))
-let pair a b =
-  let open AlgebraicData in
-  declare_allocated pair_alloc (pair_decl a b) |> ContextualConversion.(!<)
+  } |> ContextualConversion.(!<)
 
-let triple_decl a b c = let open AlgebraicData in Decl {
+let triple a b c = let open AlgebraicData in declare {
   ty = TyApp ("triple",a.Conversion.ty,[b.Conversion.ty;c.Conversion.ty]);
   doc = "Triple: the constructor is triple, since ',' is for conjunction";
   pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_triple a.Conversion.pp b.Conversion.pp c.Conversion.pp) o);
@@ -259,15 +253,9 @@ let triple_decl a b c = let open AlgebraicData in Decl {
       B (fun a b c -> (a,b, c)),
       M (fun ~ok ~ko:_ -> function (a,b,c) -> ok a b c));
   ]
-  }
-let triple_alloc =
-  let open AlgebraicData in
-  allocate_constructors (Param (fun a -> Param (fun b -> Param (fun c -> triple_decl a b c))))
-let triple a b c =
-  let open AlgebraicData in
-  declare_allocated triple_alloc (triple_decl a b c) |> ContextualConversion.(!<)
+  } |> ContextualConversion.(!<)
 
-let quadruple_decl a b c d = let open AlgebraicData in Decl {
+let quadruple a b c d = let open AlgebraicData in declare {
   ty = TyApp ("quadruple",a.Conversion.ty,[b.Conversion.ty;c.Conversion.ty;d.Conversion.ty]);
   doc = "Quadruple: the constructor is quadruple, since ',' is for conjunction";
   pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_quadruple a.Conversion.pp b.Conversion.pp c.Conversion.pp d.Conversion.pp) o);
@@ -276,15 +264,9 @@ let quadruple_decl a b c d = let open AlgebraicData in Decl {
       B (fun a b c d -> (a,b,c,d)),
       M (fun ~ok ~ko:_ -> function (a,b,c,d) -> ok a b c d));
   ]
-  }
-let quadruple_alloc =
-  let open AlgebraicData in
-  allocate_constructors (Param (fun a -> Param (fun b -> Param (fun c -> Param (fun d -> quadruple_decl a b c d)))))
-let quadruple a b c d =
-  let open AlgebraicData in
-  declare_allocated quadruple_alloc (quadruple_decl a b c d) |> ContextualConversion.(!<)
+  } |> ContextualConversion.(!<)
 
-let option_decl a = let open AlgebraicData in Decl {
+let option a = let open AlgebraicData in declare {
   ty = TyApp("option",a.Conversion.ty,[]);
   doc = "The option type (aka Maybe)";
   pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.Conversion.pp) o);
@@ -296,13 +278,7 @@ let option_decl a = let open AlgebraicData in Decl {
       B (fun x -> Some x),
       M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ()));
   ];
-  }
-let option_alloc =
-  let open AlgebraicData in
-  allocate_constructors (Param option_decl)
-let option a =
-  let open AlgebraicData in
-  declare_allocated option_alloc (option_decl a) |> ContextualConversion.(!<)
+  } |> ContextualConversion.(!<)
 
 module PPX = struct
 
@@ -326,7 +302,7 @@ module PPX = struct
     constants = [];
   }
   
-  let pair_decl a b = let open AlgebraicData in Decl {
+  let pair a b = let open AlgebraicData in declare {
     ty = TyApp ("pair",a.ContextualConversion.ty,[b.ContextualConversion.ty]);
     doc = "Pair: the constructor is pr, since ',' is for conjunction";
     pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.ContextualConversion.pp b.ContextualConversion.pp) o);
@@ -336,11 +312,8 @@ module PPX = struct
         M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
     ]
   }
-  let pair a b =
-    let open AlgebraicData in
-    declare_allocated pair_alloc (pair_decl a b)
 
-  let triple_decl a b c = let open AlgebraicData in Decl {
+  let triple a b c = let open AlgebraicData in declare {
     ty = TyApp ("triple",a.ContextualConversion.ty,[b.ContextualConversion.ty;c.ContextualConversion.ty]);
     doc = "Triple: the constructor is triple, since ',' is for conjunction";
     pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_triple a.ContextualConversion.pp b.ContextualConversion.pp c.ContextualConversion.pp) o);
@@ -350,11 +323,8 @@ module PPX = struct
         M (fun ~ok ~ko:_ -> function (a,b,c) -> ok a b c));
     ]
   }
-  let triple a b c =
-    let open AlgebraicData in
-    declare_allocated triple_alloc (triple_decl a b c)
 
-  let quadruple_decl a b c d = let open AlgebraicData in Decl {
+  let quadruple a b c d = let open AlgebraicData in declare {
     ty = TyApp ("quadruple",a.ContextualConversion.ty,[b.ContextualConversion.ty;c.ContextualConversion.ty;d.ContextualConversion.ty]);
     doc = "Quadruple: the constructor is quadruple, since ',' is for conjunction";
     pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_quadruple a.ContextualConversion.pp b.ContextualConversion.pp c.ContextualConversion.pp d.ContextualConversion.pp) o);
@@ -364,11 +334,8 @@ module PPX = struct
         M (fun ~ok ~ko:_ -> function (a,b,c,d) -> ok a b c d));
     ]
   }
-  let quadruple a b c d =
-    let open AlgebraicData in
-    declare_allocated quadruple_alloc (quadruple_decl a b c d)
 
-  let option_decl a = let open AlgebraicData in Decl {
+  let option a = let open AlgebraicData in declare {
     ty = TyApp("option",a.ContextualConversion.ty,[]);
     doc = "The option type (aka Maybe)";
     pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.ContextualConversion.pp) o);
@@ -381,9 +348,6 @@ module PPX = struct
         M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
     ]
   }
-  let option a =
-    let open AlgebraicData in
-    declare_allocated option_alloc (option_decl a)
 
   let hack embed = {
     ContextualConversion.embed;

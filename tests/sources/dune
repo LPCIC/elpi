@@ -25,3 +25,4 @@
 (executable (name graft_perf) (modules graft_perf) (libraries sepcomp))
 (executable (name builtin_lookup) (modules builtin_lookup) (libraries sepcomp))
 (executable (name builtin_constant) (modules builtin_constant) (libraries sepcomp str))
+(executable (name late_globals) (modules late_globals) (libraries sepcomp))

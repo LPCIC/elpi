@@ -64,23 +64,48 @@ let filter1_if { defined_variables } proj c =
   | Some e when StrSet.mem e defined_variables -> true
   | Some _ -> false
 
-(* Symbol table of a compilation unit (part of the compiler state).
+(* Symbol table of a program (part of the compiler state).
 
-   The initial value is taken from Data.Global_symbols, then both global
-   names and local ones are allocated (hashconsed) in this table.
+   The initial value is taken from Data.Global_symbols, then the constants of
+   the program are allocated (hashconsed) in this table. A global declared
+   after the table is created (a late global) is looked up in
+   Data.Global_symbols when the program meets it.
 
-   Given a two symbols table (base and second) we can obtain a new one
-   (updated base) via [build_shift] that contains the union of the symbols
-   and a relocation to be applied to a program that lives in the second table.
-   The code applying the shift is also supposed to re-hashcons and recognize
-   builtins.
+   The numbers (constants are OCaml ints):
+
+    max_int
+       bound variables                               fixed
+    0
+       builtin predicates (-1 .. -11)                fixed
+    -12
+       static globals (linked before Setup.init)     shared, OCaml constants
+       late globals (declared after)   | grows down  shared, OCaml constants, at any
+                                                     time (also at run time, by a builtin)
+    G = Global_symbols.table.last_global
+       ... free ...
+       frozen constants                ^ grows up    per run, at run time, from the
+                                                     last program constant
+       program constants               ^ grows up    per instance, at compile time only
+    bottom = -(Discrimination_tree.data_mask + 1) / 2 = -2^(Sys.int_size - 7)
+       unused
+    min_int
+
+   Globals are numbers that the OCaml code holds, the same in every program.
+   The constants of a program (program and frozen constants) are known only to
+   it: two programs reuse the same numbers. Why bottom: a constant cell of the
+   discrimination tree keeps the low [Sys.int_size - 6] bits of a constant
+   (data_mask; its 6 high bits are the tags, 4 kinds x 16 arities), so a
+   negative constant c shares a cell with the bound variable
+   [data_mask + 1 + c]; bottom is half way, so that no constant above bottom
+   shares a cell with a bound variable below [-bottom].
+   Global_symbols.check_no_overlap_prog_csts_w_glob_csts keeps the two growing parts apart.
 *)
 
 module SymbolMap : sig
   type table [@@deriving show]
 
   val pp_table : Format.formatter -> table -> unit
-  val equal_globals : table -> table -> bool
+  val same_constants : table -> table -> bool
   (* val diff : table -> table -> table *)
 
   val empty : unit -> table
@@ -95,65 +120,68 @@ module SymbolMap : sig
 end = struct
   open Compiler_data
 
+  (* The constants of a program, which grow up from Global_symbols.bottom.
+     The globals (static or late) are not copied here: they are looked up in
+     the live table of Data.Global_symbols (global_symbol, global_constant),
+     so a late global is seen by an existing program and nothing goes stale. *)
   type table = {
     ast2ct : (constant * D.term) D.Symbol.RawMap.t;
-    c2t : D.term Constants.Map.t;
+    c2t : D.term Constants.Map.t; (* also the bound variables *)
     c2s : Symbol.t Constants.Map.t;
-    last_global : int;
+    last_constant : int; (* the last program constant allocated, they grow up *)
   }
   [@@deriving show]
 
-  let equal_globals m1 m2 = m1.last_global = m2.last_global
+  (* no program constant was allocated in between *)
+  let same_constants m1 m2 = m1.last_constant = m2.last_constant
 
+  (* a global of the live table, by symbol and by number *)
+  let global_symbol (x:D.Symbol.t) =
+    match D.Symbol.get_provenance x with
+    | Builtin _ | Core -> D.Symbol.RawMap.find_opt x D.Global_symbols.table.s2ct
+    | File _ -> None
 
-  (* let diff big small =
-    Util.Constants.Map.fold (fun c s m ->
-      { m with c2s = Util.Constants.Map.remove c m.c2s; c2t = Util.Constants.Map.remove c m.c2t; ast2ct = .Map.remove (F.from_string s) m.ast2ct}
-      ) small.c2s big *)
+  let global_constant c =
+    match Util.Constants.Map.find_opt c D.Global_symbols.table.c2s with
+    | Some s -> Option.map (fun (_, t) -> s, t) (D.Symbol.RawMap.find_opt s D.Global_symbols.table.s2ct)
+    | None -> None
 
-  let compile { last_global; c2t; c2s; ast2ct } =
-    let t = { D.c2s; c2t = Hashtbl.create (Util.Constants.Map.cardinal c2t); frozen_constants = last_global; } in
-  (* We could compile the Map c2t to a Hash table upfront, but there is no need
-     since it is extended at run time anyway *)
-  (* Symbol.RawMap.iter (fun k (c,v) -> lrt c = c Hashtbl.add t.c2t c v; Hashtbl.add t.c2s c (F.show k)) ast2ct; *)
-    t
-    
+  (* the names of the globals are found by the runtime in Global_symbols *)
+  let compile { last_constant; c2t; c2s; _ } =
+    { D.c2s; c2t = Hashtbl.create (Util.Constants.Map.cardinal c2t);
+      frozen_constants = last_constant; first_frozen = last_constant + 1 }
+
   let compile_s2c { ast2ct } = ast2ct
 
-  let allocate_global_symbol_aux (x:D.Symbol.t) ({ c2t; c2s; ast2ct; last_global } as table) =
-    try table, D.Symbol.RawMap.find x ast2ct
-    with Not_found ->
-      (* Format.eprintf "NEW %a -> %d\n" Symbol.pp x last_global; *)
-      let last_global = last_global - 1 in
-      let n = last_global in
+  let allocate_global_symbol_aux (x:D.Symbol.t) ({ c2t; c2s; ast2ct; last_constant } as table) =
+    match D.Symbol.RawMap.find_opt x ast2ct with
+    | Some p -> table, p
+    | None ->
+      match global_symbol x with
+      | Some p -> table, p
+      | None ->
+      let last_constant = last_constant + 1 in
+      let n = last_constant in
+      D.Global_symbols.check_no_overlap_prog_csts_w_glob_csts n;
       let xx = D.Term.Const n in
       let p = n,xx in
       let c2t = Util.Constants.Map.add n xx c2t in
       let ast2ct = D.Symbol.RawMap.add x p ast2ct in
       let c2s = Util.Constants.Map.add n x c2s in
-      { c2t; c2s; ast2ct; last_global }, p
+      { c2t; c2s; ast2ct; last_constant }, p
 
   let get_global_symbol { ast2ct } s =
-    try
-      Some (fst @@ D.Symbol.RawMap.find s ast2ct)
-    with Not_found ->
-      None
+    match D.Symbol.RawMap.find_opt s ast2ct with
+    | Some (c, _) -> Some c
+    | None -> Option.map fst (global_symbol s)
 
-  let empty () =
-    if not @@ D.Global_symbols.table.locked then
-      anomaly "SymbolMap created before Global_symbols.table is locked";
+  let empty () = {
+    ast2ct = D.Symbol.RawMap.empty;
+    last_constant = D.Global_symbols.bottom - 1;
+    c2s = Util.Constants.Map.empty;
+    c2t = Util.Constants.Map.empty;
+  }
 
-    let table = {
-      ast2ct = D.Global_symbols.( table.s2ct);
-      last_global = D.Global_symbols.table.last_global;
-      c2s = D.Global_symbols.table.c2s;
-      c2t = Util.Constants.Map.map (fun s ->
-        let _, t = D.Symbol.RawMap.find s D.Global_symbols.(table.s2ct) in
-        t) D.Global_symbols.(table.c2s);
-    } in
-    (*T2.go allocate_global_symbol_aux*) 
-    table
-    
   let allocate_global_symbol state table (x:D.Symbol.t) =
     if not (D.State.get D.while_compiling state) then
       anomaly (Format.asprintf "Cannot allocate a symbol for %a. Global symbols can only be allocated during compilation" D.Symbol.pp x);
@@ -176,14 +204,22 @@ end = struct
     if not (D.State.get D.while_compiling state) then
       D.Const c
     else
-      try Util.Constants.Map.find c table.c2t
-      with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
+      match Util.Constants.Map.find_opt c table.c2t with
+      | Some t -> t
+      | None ->
+        match global_constant c with
+        | Some (_, t) -> t
+        | None -> anomaly ("unknown symbol " ^ string_of_int c)
 
   let global_name state table c =
     if not (D.State.get D.while_compiling state) then
       anomaly "get_canonical can only be used during compilation";
-    try Symbol.get_func @@ Util.Constants.Map.find c table.c2s
-    with Not_found -> anomaly ("unknown symbol " ^ string_of_int c)
+    match Util.Constants.Map.find_opt c table.c2s with
+    | Some s -> Symbol.get_func s
+    | None ->
+        match global_constant c with
+        | Some (s, _) -> Symbol.get_func s
+        | None -> anomaly ("unknown symbol " ^ string_of_int c)
 
 end
 
@@ -2563,7 +2599,7 @@ let extend_signature ~errs state assembled u =
 
   let compile_query_term state { Assembled.symbols; builtins; signature = { types; type_abbrevs } } ?ctx ?(amap = F.Map.empty) ~depth t =
     let (symbols', amap), rt = spill_todbl ~builtins ?ctx ~needs_spilling:false state symbols ~types ~type_abbrevs ~depth ~amap t in
-    if SymbolMap.equal_globals symbols' symbols then amap, rt
+    if SymbolMap.same_constants symbols' symbols then amap, rt
     else error ~loc:t.ScopedTerm.loc "cannot allocate new symbols in the query"
 
 end
@@ -2894,7 +2930,14 @@ let symtab : ((constant * D.term) Symbol.RawMap.t * Type_checker.runtime_types) 
 let global_name_to_constant state s =
   let symbols2c,str2symbol = State.get symtab state in
   match Type_checker.runtime_resolve str2symbol (F.from_string s) with
-  | s -> fst @@  Symbol.RawMap.find s symbols2c
+  | s ->
+      (match Symbol.RawMap.find_opt s symbols2c with
+       | Some (c, _) -> c
+       | None ->
+           (* a global: not in the table of the program *)
+           match Symbol.RawMap.find_opt s Global_symbols.table.s2ct with
+           | Some (c, _) -> c
+           | None -> compiler_error (Format.asprintf "cannot resolve symbol %s at run time: the program does not declare it" (Symbol.get_str s)))
   | exception Not_found -> compiler_error (Format.asprintf "cannot resolve symbol %s at run time: the program does not declare it, or overloads it" s)
 
 let lookup_global_name name state =
@@ -3011,6 +3054,8 @@ exception RelocationError of string
 
 let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols; signature }) (t : term) : term =
   let relocate c =
+    (* a global has the same number in every program *)
+    if Util.Constants.Map.mem c D.Global_symbols.table.c2s then c else
     let s = Util.Constants.Map.find c symbol_table.c2s in
     let f = s |> Symbol.get_func in
     let get_variant s =

@@ -753,25 +753,20 @@ module AlgebraicData : sig
         ('match_stateful_t,'match_t,'t) match_t
       -> ('t,'h,'c) constructor
 
-  type ('t,'h,'c) base_declaration = {
+  type ('t,'h,'c) declaration = {
     ty : Conversion.ty_ast;
     doc : doc;
     pp : Format.formatter -> 't -> unit;
     constructors : ('t,'h,'c) constructor list;
   }
 
-  type ('t,'h,'c) declaration =
-  | Decl : ('t,'h,'c) base_declaration -> ('t,'h,'c) declaration
-  | Param : ('t Conversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
-  | ParamC : (('t,'h,'c) ContextualConversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
-
-  type allocation
-
   (** The constructors are global symbols with the default variant or with
-      [variant], see [RawData.Constants.declare_global_symbol] *)
-  val allocate_constructors : ?variant:string -> ('t,'h,'c) declaration -> allocation
-  val declare_allocated : allocation -> ('t,'h,'c) declaration -> ('t,'h,'c) ContextualConversion.t
-  val declare : ?variant:string -> ('t,'h,'c) base_declaration -> ('t,'h,'c) ContextualConversion.t
+      [variant], see [RawData.Constants.declare_global_symbol]. The same name
+      and variant give the same constant: the conversion of a parametric type
+      can be a function, e.g. [let option a = declare { ty =
+      TyApp("option",a.ty,[]); ... }], each of its instances has the same
+      constructors. It can be called after [Setup.init]. *)
+  val declare : ?variant:string -> ('t,'h,'c) declaration -> ('t,'h,'c) ContextualConversion.t
 
 end
 

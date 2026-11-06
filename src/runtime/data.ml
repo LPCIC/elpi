@@ -709,20 +709,25 @@ module Global_symbols : sig
     (* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
     mutable s2ct : (constant * term) Symbol.RawMap.t;
     mutable c2s : Symbol.symbol Constants.Map.t;
-    (* negative *)
+    (* negative, the lowest global (G in the schema of Compiler.SymbolMap);
+       it moves down at each declaration, also after Setup.init *)
     mutable last_global : int;
-
-    (* Once the system is initialized this shall change no more *)
-    mutable locked: bool;
   }
   val table : t
 
-  (* Static initialization, eg link time. The same name and variant give
-     the same constant. A variant is the name of the library followed by a
-     dot and a name, e.g. "std.1" or "json.1", so that two libraries do not
-     collide; "" is the default variant *)
+  (* At any time: link time, dynlink time, or while a program runs. The
+     same name and variant give the same constant. A variant is the name of
+     the library followed by a dot and a name, e.g. "std.1" or "json.1", so
+     that two libraries do not collide; "" is the default variant *)
   val declare_global_symbol : ?variant:string -> string -> constant
-  val lock : unit -> unit
+
+  (* The constants of an instance (program and frozen constants) start at
+     [bottom] and grow up, see the schema next to Compiler.SymbolMap.
+     [check_no_overlap_prog_csts_w_glob_csts c] records that an instance
+     uses [c]: an error if [c] reaches the globals, which in turn cannot grow
+     down to [c]. *)
+  val bottom : constant
+  val check_no_overlap_prog_csts_w_glob_csts : constant -> unit
 
   (* whether an OCaml symbol with this name has the default variant *)
   val is_default_symbol : string -> bool
@@ -764,7 +769,6 @@ type t = {
   mutable s2ct : (constant * term) Symbol.RawMap.t;
   mutable c2s : Symbol.t Constants.Map.t;
   mutable last_global : int;
-  mutable locked : bool;
 }
 [@@deriving show]
 
@@ -772,8 +776,27 @@ let table = {
   last_global = - builtin_predicate_max;
   s2ct = Symbol.RawMap.empty;
   c2s = Constants.Map.empty;
-  locked = false;
 }
+
+(* The lowest constant. A cell of the discrimination tree keeps only the
+   low [Sys.int_size - 6] bits of a constant (Discrimination_tree.data_mask),
+   so two constants that differ by a multiple of [data_mask + 1] would share
+   a cell. Global and program constants are negative, bound variables are
+   not: the former stay >= [bottom], the latter below [-bottom], so all of
+   them fit in [data_mask + 1] consecutive integers and no two share a cell
+   (tested in test_discrimination_tree.ml) *)
+let bottom = - ((Discrimination_tree.data_mask + 1) / 2)
+
+(* The highest constant used by an instance: a plain ref, shared by all the
+   instances and not saved by Fork, so that a late global never takes it *)
+let highest_used = ref (bottom - 1)
+
+let out_of_constants () =
+  data_error "out of constants: the globals and the constants of the programs overlap"
+
+let check_no_overlap_prog_csts_w_glob_csts c =
+  if c >= table.last_global then out_of_constants ();
+  if c > !highest_used then highest_used := c
 
 (* the builtin predicates are core symbols, like the core data symbols below *)
 let () = builtin_predicates |> List.iter (fun p ->
@@ -791,8 +814,7 @@ let show_variant_annotation variant =
 let declare_global_symbol symb =
   try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
-    if table.locked then
-      data_anomaly "declare_global_symbol called after initialization";
+    if table.last_global - 1 <= !highest_used then out_of_constants ();
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
     let t = Const n in
@@ -812,8 +834,6 @@ let consc, cons = declare_core_symbol ECons
 let declare_global_symbol ?variant str =
   let symb = Symbol.make_builtin ?variant (Ast.Func.from_string str) in
   declare_global_symbol symb
-
-let lock () = table.locked <- true
 
 let is_default_symbol name =
   Symbol.RawMap.mem (Symbol.make_builtin (Ast.Func.from_string name)) table.s2ct
@@ -1292,17 +1312,12 @@ type ('t,'h,'c) constructor =
       ('match_stateful_t,'match_t,'t) match_t
     -> ('t,'h,'c) constructor
 
-type ('t,'h,'c) base_declaration = {
+type ('t,'h,'c) declaration = {
   ty : Conversion.ty_ast;
   doc : doc;
   pp : Format.formatter -> 't -> unit;
   constructors : ('t,'h,'c) constructor list;
 }
-
-type ('t,'h,'c) declaration =
-| Decl : ('t,'h,'c) base_declaration -> ('t,'h,'c) declaration
-| Param : ('t Conversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
-| ParamC : (('t,'h,'c) ContextualConversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
 
 type allocation = (constant * string) StrMap.t
 
@@ -1469,7 +1484,7 @@ let rec tyargs_of_args : type a b c d e. string -> (a,b,c,d,e) compiled_construc
   | XN -> [false,self,""]
   | XA ({ ty },rest) -> (false,Conversion.show_ty_ast ~prec:Arrow ty,"") :: tyargs_of_args self rest
 
-let do_allocate_constructors ~variant ty l =
+let allocate_constructors ~variant ty l =
   let names =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then
@@ -1525,39 +1540,13 @@ let document_adt doc ty ks cks vks fmt () =
       let argsdoc = StrMap.find name cks in
       document_constructor fmt max_name_len name (StrMap.find name vks |> snd) doc argsdoc) ks
 
-let rec allocate_constructors: type t h c. mkinterval:(int -> int -> int -> term list) -> look:(depth:int -> term -> term) -> mkConst:(int -> term) -> alloc:(?name:doc -> State.t -> State.t * 'a) -> mkUnifVar:
-    ('a -> args:term list -> State.t -> term) ->
-      ?variant:string -> (t,h,c) declaration -> allocation =
-      fun ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ?(variant="") ->
-function
-| Decl { ty; constructors; doc; pp } -> do_allocate_constructors ~variant ty constructors
-| Param f ->
-  let a = {
-    ContextualConversion.ty = Conversion.TyName "A";
-    pp = (fun fmt _ -> ());
-    pp_doc = (fun fmt () -> ());
-    constants = [];
-    readback = (fun ~depth hyps constraints state term -> assert false);
-    embed = (fun ~depth hyps constraints state term -> assert false);
-  } |> ContextualConversion.(!<) in
-  allocate_constructors ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ~variant (f a)
-| ParamC f ->
-  let a = {
-    ContextualConversion.ty = Conversion.TyName "A";
-    pp = (fun fmt _ -> ());
-    pp_doc = (fun fmt () -> ());
-    constants = [];
-    readback = (fun ~depth hyps constraints state term -> assert false);
-    embed = (fun ~depth hyps constraints state term -> assert false);
-  } in
-  allocate_constructors ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ~variant (f a)
-
-
-  let declare_allocated: type t h c. mkinterval:(int -> int -> int -> term list) -> look:(depth:int -> term -> term) -> mkConst:(int -> term) -> alloc:(?name:doc -> State.t -> State.t * 'a) -> mkUnifVar:
+  let declare: type t h c. mkinterval:(int -> int -> int -> term list) -> look:(depth:int -> term -> term) -> mkConst:(int -> term) -> alloc:(?name:doc -> State.t -> State.t * 'a) -> mkUnifVar:
   ('a -> args:term list -> State.t -> term) ->
-    allocation -> (t,h,c) declaration -> (t,h,c) ContextualConversion.t =
-    fun ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar allocated ->
-function Decl { ty; constructors; doc; pp } ->
+    ?variant:string -> (t,h,c) declaration -> (t,h,c) ContextualConversion.t =
+    fun ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ?(variant="") { ty; constructors; doc; pp } ->
+  (* the same name and variant give the same constant: declaring the type
+     again, e.g. [pair a b] for other [a] and [b], gives the same constructors *)
+  let allocated = allocate_constructors ~variant ty constructors in
   let readback_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let embed_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let sconstructors_ref = ref StrMap.empty in
@@ -1580,7 +1569,6 @@ function Decl { ty; constructors; doc; pp } ->
   readback_ref := readback ~mkinterval ~look ~alloc ~mkUnifVar ty cconstructors;
   embed_ref := embed ~mkConst ty pp cconstructors;
   self
-| _ -> data_anomaly "declare_allocated can only be called on Decl"
 
 end
 
@@ -1807,7 +1795,8 @@ end
 type symbol_table = {
   mutable c2s : Symbol.t Constants.Map.t;
   c2t : (constant, term) Hashtbl.t;
-  mutable frozen_constants : int;
+  mutable frozen_constants : int; (* the last constant allocated, they grow up *)
+  first_frozen : int; (* the first frozen constant, frozen-0 *)
 }
 [@@deriving show]
 

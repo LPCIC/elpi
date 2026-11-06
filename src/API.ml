@@ -62,7 +62,6 @@ let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags)
     | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
   let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader end) : Parse.Parser) in
-  Data.Global_symbols.lock ();
   let header =
     try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins
     with Util.ElpiError ({ loc } as e) -> data_anomaly ?loc (Format.asprintf "%a" Compiler_data.pp_error_message e) in
@@ -926,32 +925,14 @@ module AlgebraicData = struct
   type name = string
   type doc = string
 
-  let allocate_constructors ?variant x =
+  let declare ?variant x =
     let module R = (val !r) in
-    ED.BuiltInPredicate.ADT.allocate_constructors
+    ED.BuiltInPredicate.ADT.declare
       ~look:R.deref_head
       ~mkinterval:R.mkinterval
       ~mkConst:R.mkConst
       ~alloc:FlexibleData.Elpi.make
       ~mkUnifVar:RawData.mkUnifVar ?variant x
-
-  let declare_allocated alloc x =
-    let module R = (val !r) in
-    ED.BuiltInPredicate.ADT.declare_allocated
-      ~look:R.deref_head
-      ~mkinterval:R.mkinterval
-      ~mkConst:R.mkConst
-      ~alloc:FlexibleData.Elpi.make
-      ~mkUnifVar:RawData.mkUnifVar alloc x
-
-  let declare ?variant x =
-    begin match x.ED.BuiltInPredicate.ADT.ty with
-    | TyApp(s,_,_) -> data_error ("Declaration of " ^ s ^ " requires allocate_constructors + declare_allocated")
-    | TyName _ -> ()
-    end;
-    let x = ED.BuiltInPredicate.ADT.Decl x in
-    let alloc = allocate_constructors ?variant x in
-    declare_allocated alloc x
 
        
 end
