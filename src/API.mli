@@ -1055,7 +1055,13 @@ module BuiltIn : sig
       * to implement the desired builtin *)
     | LPCode of string
 
-  (** What is passed to [Setup.init] *)
+  (** An OCaml builtins declaration, what is passed to [Setup.init]. It can
+      also be called after [Setup.init] (e.g. by a plugin linked later, with
+      its global symbols, data types and calc operations): a program then
+      accumulates it with [Compile.scope_builtins], [Compile.unit] and
+      [Compile.extend] on its base. Such a declaration must not declare state
+      components or quotations, see [State.declare_component] and
+      [Quotation] *)
   val declare :
     file_name:string -> declaration list -> Setup.builtins
 
@@ -1104,6 +1110,8 @@ module State : sig
       'a component
   [@@deprecated "Use [declare_component] instead"]
 
+  (** Before [Setup.init]: an instance does not see a component declared
+      after it was created *)
   val declare_component :
     ?descriptor:Setup.state_descriptor ->
     name:string ->
@@ -1488,6 +1496,8 @@ module RawQuery : sig
   val global_name_to_constant : State.t -> string -> RawData.constant
 end
 
+(** Quotations are registered before [Setup.init]: an instance does not see
+    the ones registered after it was created *)
 module Quotation : sig
 
   type quotation = language:Ast.Scope.language -> State.t -> Ast.Loc.t -> string -> Ast.Term.t
