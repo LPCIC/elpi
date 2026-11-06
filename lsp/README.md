@@ -53,6 +53,15 @@ disk again, if it is there. So a program of several files works where there is
 no disk, as in the server for the web (`../webrunner/`): the client opens all
 its files.
 
+## Packages and plugins
+
+`accumulate "+pkg/path"` reads `path.elpi` in the directory of the findlib
+package `pkg`, and `accumulate "+pkg"` the plugin of `pkg`. `elpi-lsp` does not
+load plugins: it reads their stub instead, the file `pkg.plugin.elpi` that the
+package installs next to its META (the documentation of the plugin), and
+accepts its `builtin` declarations with no OCaml code. The server for the web
+has no packages.
+
 ## Structure
 
 - `server/`: the server, independent of how messages come and go (the

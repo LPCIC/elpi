@@ -86,6 +86,7 @@ It assumes familiarity with λProlog; the reference for standard λProlog is
    :caption: Embedding and extending
 
    embedding
+   plugins
 
 .. toctree::
    :maxdepth: 2

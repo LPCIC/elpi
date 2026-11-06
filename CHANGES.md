@@ -1,5 +1,24 @@
 # Unreleased
 
+- Plugins and packages:
+  - New: `accumulate "+pkg/path"` accumulates `path.elpi` in the directory of
+    package `pkg`, and `accumulate "+pkg"` the plugin of package `pkg`, the
+    builtins that its OCaml code registers with `API.Plugin.register
+    ~name:"pkg"`; any other string is a path, as before
+  - New: `Setup.init ?packages`: the directory of a package and, optionally,
+    a way to load its OCaml code when its plugin is accumulated. A plugin can
+    be loaded before or after `Setup.init`; one loaded after it cannot
+    declare state components nor quotations. A plugin that cannot be loaded
+    is replaced by its stub, the file `pkg.plugin.elpi` in the directory of
+    the package
+  - New: library `elpi.dynload` (module `Elpi_dynload`): the packages of
+    findlib, loaded with dynlink, and the project file `elpi.toml` (`paths`,
+    `prelude`, `preload`)
+  - New: the `elpi` command dynlinks the plugins it meets and reads the
+    `elpi.toml` next to its file (`-config FILE`, `-no-config`); `elpi-lsp`
+    reads the stubs of the plugins
+  - New: package `elpi-json`, Yojson bindings as a plugin
+
 - Type checker:
   - Change: a constructor whose arguments mention a type variable that its
     result type does not mention (an existential type, e.g.
