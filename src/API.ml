@@ -62,7 +62,6 @@ let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags)
     | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
   let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader end) : Parse.Parser) in
-  Data.Global_symbols.lock ();
   let header =
     try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins
     with Util.ElpiError ({ loc } as e) -> data_anomaly ?loc (Format.asprintf "%a" Compiler_data.pp_error_message e) in

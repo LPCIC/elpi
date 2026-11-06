@@ -722,19 +722,23 @@ module Global_symbols : sig
     (* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
     mutable s2ct : (constant * term) Symbol.RawMap.t;
     mutable c2s : Symbol.symbol Constants.Map.t;
-    (* negative *)
+    (* negative, the lowest global (G in the schema of Compiler.SymbolMap);
+       it moves down at each declaration, also after Setup.init *)
     mutable last_global : int;
-
-    (* Once the system is initialized this shall change no more *)
-    mutable locked: bool;
   }
   val table : t
 
-  (* Static initialization, eg link time *)
+  (* At any time: link time, dynlink time, or while a program runs *)
   val declare_global_symbol : ?variant:int -> string -> constant
   (* Used by auto-generated code, eg ADT *)
   val declare_overloaded_global_symbol : string -> constant * int
-  val lock : unit -> unit
+
+  (* The constants of an instance (program and frozen constants) start at
+     [bottom] and grow up, see the schema next to Compiler.SymbolMap.
+     [note_instance_constant c] records that an instance uses [c]: an error if
+     [c] reaches the globals, which in turn cannot grow down to [c]. *)
+  val bottom : constant
+  val note_instance_constant : constant -> unit
 
   open Symbol
 
@@ -769,7 +773,6 @@ type t = {
   mutable s2ct : (constant * term) Symbol.RawMap.t;
   mutable c2s : Symbol.t Constants.Map.t;
   mutable last_global : int;
-  mutable locked : bool;
 }
 [@@deriving show]
 
@@ -777,8 +780,23 @@ let table = {
   last_global = - builtin_predicate_max;
   s2ct = Symbol.RawMap.empty;
   c2s = Constants.Map.empty;
-  locked = false;
 }
+
+(* Half of data_mask in Discrimination_tree: a constant keeps the low
+   [Sys.int_size - 6] bits there, so constants above [bottom] never share a
+   cell with the bound variables below [-bottom] *)
+let bottom = - (1 lsl (Sys.int_size - 7))
+
+(* The highest constant used by an instance: a plain ref, shared by all the
+   instances and not saved by Fork, so that a late global never takes it *)
+let highest_used = ref (bottom - 1)
+
+let out_of_constants () =
+  data_error "out of constants: the globals and the constants of the programs overlap"
+
+let note_instance_constant c =
+  if c >= table.last_global then out_of_constants ();
+  if c > !highest_used then highest_used := c
 
 (* the builtin predicates are core symbols, like the core data symbols below *)
 let () = builtin_predicates |> List.iter (fun p ->
@@ -798,8 +816,7 @@ let () =
 let declare_global_symbol symb =
   try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
-    if table.locked then
-      data_anomaly "declare_global_symbol called after initialization";
+    if table.last_global - 1 <= !highest_used then out_of_constants ();
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
     let t = Const n in
@@ -823,8 +840,6 @@ let declare_overloaded_global_symbol str =
 let declare_global_symbol ?variant str =
   let symb = Symbol.make_builtin ?variant (Ast.Func.from_string str) in
   declare_global_symbol symb
-
-let lock () = table.locked <- true
 
 let orc                 = declare_global_symbol F.(show orf)
 
@@ -1811,7 +1826,8 @@ end
 type symbol_table = {
   mutable c2s : Symbol.t Constants.Map.t;
   c2t : (constant, term) Hashtbl.t;
-  mutable frozen_constants : int;
+  mutable frozen_constants : int; (* the last constant allocated, they grow up *)
+  first_frozen : int; (* the first frozen constant, frozen-0 *)
 }
 [@@deriving show]
 
