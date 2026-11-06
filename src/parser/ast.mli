@@ -58,7 +58,7 @@ type raw_attribute =
   | Before of string
   | Replace of string
   | Remove of string
-  | External of string option
+  | Builtin_attr of string option
   | Index of int list * string option
   | Functional
   | Untyped

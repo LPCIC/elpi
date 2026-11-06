@@ -780,13 +780,20 @@ let table = {
   locked = false;
 }
 
+(* the builtin predicates are core symbols, like the core data symbols below *)
 let () = builtin_predicates |> List.iter (fun p ->
   let c = const_of_builtin_predicate p in
-  let s = Symbol.make_builtin (func_of_builtin_predicate (fun _ -> assert false) p) in
+  let s = Symbol.make Core (func_of_builtin_predicate (fun _ -> assert false) p) in
   let t = Const c in
   table.c2s <- Constants.Map.add c s table.c2s;
   table.s2ct <- Symbol.RawMap.add s (c,t) table.s2ct
 )
+
+(* aliases: other names for a core symbol, only for its declaration; the
+   parser turns [A ==> B] into [A => B] *)
+let () =
+  let c = const_of_builtin_predicate Impl in
+  table.s2ct <- Symbol.RawMap.add (Symbol.make Core (F.from_string "==>")) (c,Const c) table.s2ct
 
 let declare_global_symbol symb =
   try fst @@ Symbol.RawMap.find symb table.s2ct
@@ -1491,10 +1498,22 @@ let compile_constructors allocated ty self self_name l =
       StrMap.add name (tyargs_of_args self_name args) sacc)
         (Constants.Map.empty,StrMap.empty) l
 
+(* While the text of a builtins unit is printed, the constructors printed, with
+   their variant, in order. The text has no builtin keyword: the unit marks
+   them as OCaml symbols (see Compiler.ast_of_builtins). *)
+let printed_constructors : (string * int) list ref option ref = ref None
+
+(* While the text of a builtins unit is printed, the other global symbols
+   printed (the operators of calc, the constants of an opaque data type),
+   as implied MLConstants (see Compiler.ast_of_builtins). *)
+let printed_constants : constant list ref option ref = ref None
+let record_printed_constant c = Option.iter (fun l -> l := c :: !l) !printed_constants
+
 let document_constructor fmt max_name_len name variant doc argsdoc =
+  Option.iter (fun l -> l := (name, variant) :: !l) !printed_constructors;
   let pad = String.make (max_name_len - String.length name) ' ' in
-  Fmt.fprintf fmt "@[<hov2>builtin symb %s%s :@[<hov>%a@] = \"%d\". %s@]@\n"
-    name pad pp_ty_args argsdoc variant (if doc = "" then "" else " % " ^ doc)
+  Fmt.fprintf fmt "@[<hov2>symb %s%s :@[<hov>%a@]. %s@]@\n"
+    name pad pp_ty_args argsdoc (if doc = "" then "" else " % " ^ doc)
 
 let kind_param i = if i < 26 then String.make 1 (Char.chr (Char.code 'A' + i)) else Printf.sprintf "A%d" i
 
@@ -1503,8 +1522,8 @@ let document_kind fmt ty =
   | Conversion.TyApp(s,_,l) ->
       let arity = List.length l + 1 in
       let params = String.concat " " (List.init arity kind_param) in
-      Fmt.fprintf fmt "@[<hov 2>builtin data %s %s.@]@\n" s params
-  | Conversion.TyName s -> Fmt.fprintf fmt "@[<hov 2>builtin data %s.@]@\n" s
+      Fmt.fprintf fmt "@[<hov 2>data %s %s.@]@\n" s params
+  | Conversion.TyName s -> Fmt.fprintf fmt "@[<hov 2>data %s.@]@\n" s
 
 let document_adt doc ty ks cks vks fmt () =
   if doc <> "" then
@@ -1575,6 +1594,7 @@ type declaration =
   | MLCode of t * doc_spec
   | MLData : 'a Conversion.t -> declaration
   | MLDataC : ('a,'h,'c) ContextualConversion.t -> declaration
+  | MLConstants of constant list
   | LPDoc  of string
   | LPCode of string
 
@@ -1762,7 +1782,9 @@ let document fmt l calc_list =
   let document_calc_operators name =
     if name = "calc" then begin
       Format.fprintf fmt "%s@\n@\n" "%  --- Operators ---";
-      List.iter (fun (_,x) -> Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) calc_list
+      List.iter (fun (c,x) ->
+        ADT.record_printed_constant c;
+        Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) calc_list
     end in
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) ->
@@ -1773,6 +1795,7 @@ let document fmt l calc_list =
         document_calc_operators name
     | MLData { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | MLDataC { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
+    | MLConstants _ -> ()
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
     | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;
   Fmt.fprintf fmt "@\n@\n";

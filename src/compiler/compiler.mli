@@ -15,6 +15,7 @@ type flags = {
   time_typechecking : bool; (* bench type checker *)
   skip_det_checking: bool;
   max_errors: int; (* resilient passes stop after that many errors; default 0: the first error is raised *)
+  builtin_stubs: bool; (* accept builtin declarations OCaml neither declares nor implements *)
 }
 val default_flags : flags
 
@@ -95,6 +96,7 @@ val runtime_hack_term_to_raw_term :
   ?ctx:constant Compiler_data.Scope.Map.t ->
   depth:int -> Compiler_data.ScopedTerm.t -> term
 val global_name_to_constant : State.t -> string -> constant
+val lookup_global_name : string -> State.t -> constant
 
 module IntervalTree : sig
   type 'a t

@@ -418,7 +418,8 @@ let update_ety ety eit = { ety with eit }
 
   let merge_skema s sk1 sk2 =
     if compare_skema ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality sk1 sk2 <> 0 then
-      data_anomaly ~loc:(Symbol.get_loc s) (Format.asprintf "@[<v>Two incompatible types for the symbol %s.@\n@[<hov 2>Type:@;<2 0>%a@]@\n@[<hov 2>Other type:@;<2 0>%a@]@]" (Symbol.pretty s) pretty_skema sk1 pretty_skema sk2);
+      (* two declarations resolved to the same symbol, e.g. builtin symb f ... = "N" twice *)
+      data_error ~loc:(Symbol.get_loc s) (Format.asprintf "@[<v>Two incompatible types for the symbol %s (a builtin name and variant denote one OCaml symbol, with one type).@\n@[<hov 2>Type:@;<2 0>%a@]@\n@[<hov 2>Other type:@;<2 0>%a@]@]" (Symbol.pretty s) pretty_skema sk1 pretty_skema sk2);
     sk1
 
   let compare_t_ a b = compare_t_ ~cmp_mode:compare_tmode ~cmp_func:Ast.Structured.compare_functionality a b

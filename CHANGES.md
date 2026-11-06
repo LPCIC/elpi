@@ -7,6 +7,42 @@
     abbreviation hides the variable. Unifying two open terms built with such
     a constructor can alias variables of different types. Use `any` or a
     concrete type instead
+- Language:
+  - Change: `builtin` is only for the symbols of the language (with
+    `= "core"`, only in `builtin.elpi`) and for the predicates implemented by
+    an `MLCode` (`builtin func`). `builtin symb` without `= "core"` is a
+    parse error, `builtin pred` / `func` with no `MLCode` is an error, and
+    `builtin data` is no longer accepted. Before, a `builtin symb` with no
+    `= "N"` and such a predicate silently became Elpi symbols
+  - Change: the OCaml symbols of a builtins file are declared in its text with
+    no `builtin`: a plain `symb` for a constructor of its `MLData` or a
+    symbol of its `MLConstants`, a plain `pred` / `func` signature for a
+    predicate of its `MLConstants` whose rules are in Elpi (e.g. `;`). The
+    builtins file binds them. `= "N"` at the end of a `symb` picks one variant
+    when the file has several, and is an error elsewhere
+  - Change: the symbols of the language (`!`, `,`, `=>`, `:-`, `=!=>`,
+    `==>`, `pi`, `sigma`, `=`, `pattern_match`, `findall_solutions`,
+    `declare_constraint`, `uvar`, `as`) are declared in `builtin.elpi` with
+    `= "core"`, which can also end a `builtin func` signature; no other file
+    can declare them
+  - Change: two declarations of an OCaml symbol with the same variant and
+    different types are an error (it was an anomaly)
+- API:
+  - New: `RawData.Constants.lookup "p"` gives the constant of `p` in the
+    program that runs, so that OCaml code can build and match terms of an
+    ordinary predicate or symbol, with no global symbol
+  - New: `BuiltIn.MLConstants [c1; ...]` binds the global symbols `c1` ...
+    (`Constants.declare_global_symbol`) to the declarations of the same name
+    in the text of its builtins file, as `MLData` does for its constructors:
+    a plain `symb`, or a plain `pred` / `func` signature for a predicate
+    whose rules are in Elpi. With several variants of a name, the `symb` says
+    which one with `= "N"`. Each constant must be declared by the text
+  - New: compilation flag `builtin_stubs` (`Compile.flags`), to accept the
+    declarations that OCaml neither declares nor implements (`builtin func`
+    with no `MLCode`, `= "N"` outside a builtins file)
+- LSP:
+  - New: elpi-lsp accepts `builtin` declarations whose OCaml code is not
+    loaded (stubs), e.g. the documentation of the builtins of rocq-elpi
 
 # v4.0.1 (October 2026)
 

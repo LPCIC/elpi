@@ -249,7 +249,7 @@ and token v = parse
 | "data" { DATA }
 | "type" { TYPE }
 | "typeabbrev" { TYPEABBREV }
-| ("external" | "builtin") { EXTERNAL }
+| ("external" | "builtin") { BUILTIN }
 | "module" { MODULE }
 | "sig" { SIG }
 | ("symbol" | "symb") { SYMBOL }

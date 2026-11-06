@@ -239,9 +239,12 @@ let compile_unit ?(extend = true) ~elpi ~cache ~flags ~key ~base sp =
 (* The compiler passes return all the errors they find, and a unit without the
    items that are wrong: the program is compiled once. *)
 let compile ~instance:{ elpi; cache } ~path ~accumulated ast =
+  (* the builtins of a file may have no OCaml code here, e.g. the
+     documentation of the builtins of an application of Elpi (a stub) *)
   let flags = { Compile.default_flags with
                 Compile.max_errors = !max_errors;
-                skip_det_checking = !is_library_path path } in
+                skip_det_checking = !is_library_path path;
+                builtin_stubs = true } in
   let sps, e0, w0 = timed "scope" (fun () -> Compile.scope_ast ~elpi ~flags ast) in
   let extend = not (!is_library_path path) in
   (* the flags that change the result of compile_unit start the key *)

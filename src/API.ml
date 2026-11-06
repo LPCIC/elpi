@@ -182,6 +182,7 @@ module Compile = struct
     time_typechecking : bool;
     skip_det_checking: bool;
     max_errors: int;
+    builtin_stubs: bool;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
@@ -410,8 +411,9 @@ module RawOpaqueData = struct
       Format.fprintf fmt "@\n";
     end;
     Format.fprintf fmt "@[<hov 2>data %s.@]@\n@\n" name;
-    List.iter (fun (variant,(c,_)) ->
-      Format.fprintf fmt "@[<hov 2>builtin symb %s : %s = \"%d\".@]@\n" c name variant)
+    List.iter (fun (variant,(c,v)) ->
+      ED.BuiltInPredicate.ADT.record_printed_constant (values_map v);
+      Format.fprintf fmt "@[<hov 2>symb %s : %s = \"%d\".@]@\n" c name variant)
       constants
     in
   { cin; cino; cout; isc; name = c },
@@ -769,6 +771,8 @@ module RawData = struct
       ED.Global_symbols.declare_global_symbol ?variant x
 
     let show c = Util.Constants.show c
+
+    let lookup name = Compiler.lookup_global_name name
 
     let orc    = ED.Global_symbols.orc
 
@@ -1229,9 +1233,9 @@ module Calc = struct
     let ty_decl args =
       let c, variant = ED.Global_symbols.declare_overloaded_global_symbol symbol in
       let ty_decl = if infix then
-        Printf.sprintf "builtin symb (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
+        Printf.sprintf "symb (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
       else
-        Printf.sprintf "builtin symb %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
+        Printf.sprintf "symb %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
       c, { ED.CalcHooks.ty_decl = ty_decl; code }
     in
     List.map ty_decl args
@@ -1635,14 +1639,17 @@ module PPX = struct
       ED.BuiltInPredicate.ADT.document_kind fmt ty
     (* builtin func name Key -> Field1, ..., FieldN, the declaration of an entry of a
        context, a predicate about a bound variable of type Key *)
-    let context_entry fmt ~name ~doc ~key ~args =
+    let context_entry fmt ~variant ~name ~doc ~key ~args =
+      (match ED.Symbol.RawMap.find_opt (ED.Symbol.make (Builtin { variant }) (Elpi_parser.Ast.Func.from_string name)) ED.Global_symbols.table.s2ct with
+       | Some (c, _) -> ED.BuiltInPredicate.ADT.record_printed_constant c
+       | None -> ());
       let show = ED.Conversion.show_ty_ast ~prec:ED.Conversion.Arrow in
       let outs =
         if args = [] then ""
         else " -> " ^ String.concat ", " (List.map show args) in
       Format.fprintf fmt "%% context items for %s%s@\n"
         (show key) (if doc = "" then "" else " (" ^ doc ^ ")");
-      Format.fprintf fmt "@[<hov2>builtin func %s %s%s.@]@\n@\n" name (ED.Conversion.show_ty_ast ~prec:ED.Conversion.AppArg key) outs
+      Format.fprintf fmt "@[<hov2>func %s %s%s.@]@\n@\n" name (ED.Conversion.show_ty_ast ~prec:ED.Conversion.AppArg key) outs
 
     let constructor fmt ~max_name_len ~variant ~name ~doc ~ty ~args =
       ED.BuiltInPredicate.ADT.document_constructor

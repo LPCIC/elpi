@@ -72,7 +72,6 @@ type t = Tokens.token =
   | FAMILY_EQ of (string)
   | FAMILY_BTICK of (string)
   | FAMILY_AND of (string)
-  | EXTERNAL
   | EXPORTDEF
   | EQ2
   | EQ
@@ -91,6 +90,7 @@ type t = Tokens.token =
   | CONJ
   | COLON
   | CLOSED
+  | BUILTIN
   | BIND
   | BEFORE
   | AUTOSPILL
