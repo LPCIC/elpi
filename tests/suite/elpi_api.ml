@@ -103,8 +103,8 @@ let () = declare "builtin_lookup"
 
 let () = declare "late_globals"
   ~source_dune:"late_globals.exe"
-  ~description:"global symbols, data types and builtins declared after Setup.init"
-  ~expectation:Test.(SuccessOutput (Str.regexp_string "3 4 12 1 circle 4 4"))
+  ~description:"global symbols, data types, calc operations and builtins declared after Setup.init"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "3 4 12 1 circle 4 4 43"))
   ()
 
 let () = declare "builtin_constant"

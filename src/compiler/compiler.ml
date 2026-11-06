@@ -332,14 +332,14 @@ let declared_builtins ~file_name =
   with Not_found -> builtins_error ("Builtins for file " ^ file_name ^ " were not declared")
 let file_of_declared_builtins x = x
 
-let document_fmt fmt ~calc file_name =
+let document_fmt fmt file_name =
   let _, l = declared_builtins ~file_name in
-  Data.BuiltInPredicate.document fmt l calc
-let document_file ?header:_ ~calc ~file:name file_name =
+  Data.BuiltInPredicate.document fmt l
+let document_file ?header:_ ~file:name file_name =
   let _, l = declared_builtins ~file_name in
   let oc = open_out name in
   let fmt = Format.formatter_of_out_channel oc in
-  Data.BuiltInPredicate.document fmt l calc;
+  Data.BuiltInPredicate.document fmt l;
   Format.pp_print_flush fmt ();
   close_out oc
 
@@ -432,7 +432,7 @@ let bind_mlconstants ~file_name ~implied ~constructors decls ({ Ast.ast } as p :
       builtins_error (Printf.sprintf "%s (variant %d), an OCaml symbol of %s, is not declared by its text (symb, pred or func)" name variant file_name));
   { p with ast }
 
-let ast_of_builtins ~calc ~(parser: (module Parse.Parser)) ~file_name =
+let ast_of_builtins ~(parser: (module Parse.Parser)) ~file_name =
   let _, decls = declared_builtins ~file_name in
   (* This is a bit ugly, since we print and then parse... *)
   let b = Buffer.create 1024 in
@@ -443,7 +443,7 @@ let ast_of_builtins ~calc ~(parser: (module Parse.Parser)) ~file_name =
   Fun.protect ~finally:(fun () ->
       Data.BuiltInPredicate.ADT.printed_constructors := None;
       Data.BuiltInPredicate.ADT.printed_constants := None) (fun () ->
-    Data.BuiltInPredicate.document fmt decls calc;
+    Data.BuiltInPredicate.document fmt decls;
     Format.pp_print_flush fmt ());
   let text = Buffer.contents b in
   let lexbuf = Lexing.from_string text in
@@ -2609,6 +2609,16 @@ let extend1 ~errs flags (state, base) unit =
   let total_type_checking_time = total_type_checking_time +. type_checking_time in
   let total_det_checking_time = total_det_checking_time +. det_checking_time +. mutexcl_time in
 
+  (* the operators of the builtins file (MLCalc) join the evaluation map *)
+  let state =
+    Option.fold ~none:state ~some:(fun (_,file_name) ->
+      let _, decls = declared_builtins ~file_name in
+      List.fold_left (fun state -> function
+        | BuiltInPredicate.MLCalc ops ->
+            D.State.update CalcHooks.eval state (fun m ->
+              List.fold_left (fun m (c,{ CalcHooks.code }) -> Constants.Map.add c code m) m ops)
+        | _ -> state) state decls) unit.checked_code.CheckedFlat.builtins in
+
   let base = { Assembled.builtins; hash; symbols; chr; clauses; prolog_program; signature; indexing; total_type_checking_time; total_det_checking_time } in
   let hash = hash_base base in
   state, { base with hash }
@@ -2720,9 +2730,9 @@ let without_errors f =
       let ErrorFun { error } = error_fun ~component in
       error ?loc message
 
-let scoped_of_builtins ~flags:_ ~header:(s,u) ?(calc=[]) builtins =
+let scoped_of_builtins ~flags:_ ~header:(s,u) builtins =
   let parser = Option.get @@ D.State.get parser s in
-  let builtins_src = ast_of_builtins ~calc ~parser ~file_name:builtins in
+  let builtins_src = ast_of_builtins ~parser ~file_name:builtins in
   match without_errors (fun errs -> scope ~errs ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:(Some builtins) builtins_src) with
   | [x] -> x
   | _ -> assert false
@@ -2734,12 +2744,12 @@ let pp_error = Compiler_data.pp_error
 let pp_error_message = Compiler_data.pp_error_message
 let show_error = Compiler_data.show_error
 
-let scoped_of_ast ~flags ~header:(s,u) ?(calc=[]) p =
+let scoped_of_ast ~flags ~header:(s,u) p =
   with_errors ~flags (fun errs ->
     scope ~errs ~user_text:(not flags.builtin_stubs) ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:None p)
 
 
-let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor calc_descriptor builtins : header =
+let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor builtins : header =
   let state = D.State.(init (merge_descriptors D.elpi_state_descriptor state_descriptor)) in
   let state =
     match hoas_descriptor.D.HoasHooks.extra_goals_postprocessing with
@@ -2755,15 +2765,12 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let state = D.State.set CustomFunctorCompilation.singlequote state singlequote_compilation in
   let state = D.State.set Quotation.default_quotation state default_quotation in
   let state = D.State.set Quotation.named_quotations state named_quotations in
-  let state =
-    let eval_map = List.fold_left (fun m (c,{ CalcHooks.code }) -> Constants.Map.add c code m) Constants.Map.empty (List.rev calc_descriptor) in
-    D.State.set CalcHooks.eval state eval_map in
   let state = D.State.set parser state (Some p) in
   let state = D.State.set D.while_compiling state true in
   let base = Assembled.empty () in
   (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
   builtins |> List.fold_left (fun (state,base as header) builtins ->
-    let scoped = scoped_of_builtins ~flags ~calc:calc_descriptor ~header builtins in
+    let scoped = scoped_of_builtins ~flags ~header builtins in
     let u = without_errors (fun errs -> unit_or_header_of_scoped ~errs state scoped) in
     print_unit flags u;
     let u = without_errors (fun errs -> Check.check ~errs ~flags state ~base u) in

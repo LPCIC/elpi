@@ -1,6 +1,6 @@
 (* OCaml code linked after Setup.init (as a dynlinked plugin would be): it
-   declares a global symbol, a data type (AlgebraicData) and a builtins file
-   using them, which an existing base accumulates *)
+   declares a global symbol, a data type (AlgebraicData), a calc operation
+   and a builtins file using them, which an existing base accumulates *)
 open Elpi.API
 open RawData
 open Sepcomp.Sepcomp_template
@@ -27,8 +27,16 @@ let late () =
   let open BuiltInPredicate in
   let open BuiltInPredicate.Notation in
   let open ContextualConversion in
+  let twice = Calc.{ symbol = "twice"; infix = false; args = [["int"; "int"]];
+    code = (function
+      | [x] ->
+          (match look ~depth:0 x with
+           | CData d when RawOpaqueData.is_int d -> RawOpaqueData.of_int (2 * RawOpaqueData.to_int d)
+           | _ -> Error.error ~component:"late" "twice: not an int")
+      | _ -> Error.error ~component:"late" "twice: one argument") } in
   declare ~file_name:"late.elpi" [
     MLData shape;
+    MLCalc (Calc.operations [twice]);
     LPCode "data box. symb box : int -> box.";
     MLConstants [boxc];
     MLCode(Pred("mk-box",
@@ -78,6 +86,7 @@ main :-
   mk-box 3 B, B = box N, box-size (box 4) M,
   area (circle 2) A, area square A1,
   grow (circle 2) C, C = circle R,
-  print N M A A1 C R.
+  T is twice 21 + 1,
+  print N M A A1 C R T.
 |} in
   exec (query ~elpi base)
