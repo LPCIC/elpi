@@ -1,0 +1,10 @@
+(library
+  (name elpi_json)
+  (public_name elpi-json)
+  (modules elpi_json)
+  (libraries elpi yojson))
+
+(executable
+  (name gen_stub)
+  (modules gen_stub)
+  (libraries elpi_json))
