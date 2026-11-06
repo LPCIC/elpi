@@ -51,15 +51,48 @@ type elpi = {
 }
 type flags = Compiler.flags
 
+type packages = {
+  dir : string -> string;
+  load : (string -> unit) option;
+}
 
-let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) () : elpi =
+(* [accumulate "+pkg"]: the text of the builtins of the plugin of [pkg],
+   loading it with [packages] if it is not registered yet. A plugin loaded
+   after Setup.init cannot extend the state nor set quotations: the instance
+   would not see them *)
+let plugin_of_packages ~packages ~state ~quotations pkg =
+  let file_name = Parse.plugin_file_name pkg in
+  let registered () = Compiler.is_declared_builtins ~file_name in
+  if not (registered ()) then begin
+    match packages with
+    | Some { load = Some load } ->
+        let components () = Data.State.(components Data.elpi_state_descriptor + components state) in
+        let c0 = components () and q0 = !quotations in
+        (try load pkg with Failure msg ->
+          failwith (Printf.sprintf "plugin %s is not available: %s" pkg msg));
+        if components () > c0 then
+          failwith (Printf.sprintf "plugin %s declares state components: it must be loaded before Setup.init" pkg);
+        if not (q0 == !quotations) then
+          failwith (Printf.sprintf "plugin %s declares quotations: it must be loaded before Setup.init" pkg);
+        if not (registered ()) then
+          failwith (Printf.sprintf "package %s did not register its plugin (Elpi.API.Plugin.register ~name:%S)" pkg pkg)
+    | _ -> ()
+  end;
+  if registered () then Some (Compiler.text_of_builtins ~file_name) else None
+
+let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) ?packages () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
     | Some x -> x
     | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
-  let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader end) : Parse.Parser) in
+  let package_dir pkg =
+    match packages with
+    | Some { dir } -> dir pkg
+    | None -> failwith (Printf.sprintf "accumulate \"+%s\": packages are disabled since Setup.init was not given ~packages" pkg) in
+  let plugin = plugin_of_packages ~packages ~state ~quotations in
+  let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader let package_dir = package_dir let plugin = plugin end) : Parse.Parser) in
   let header =
     try Compiler.header_of_ast ~flags ~parser state !quotations !hoas builtins
     with Util.ElpiError ({ loc } as e) -> data_anomaly ?loc (Format.asprintf "%a" Compiler_data.pp_error_message e) in
@@ -1159,6 +1192,12 @@ module BuiltIn = struct
     Compiler.document_fmt fmt file_name
   let document_file ?header file_name =
     Compiler.document_file ?header ~file:(Compiler.file_of_declared_builtins file_name) file_name
+end
+
+module Plugin = struct
+  let file_name name = Elpi_parser.Parse.plugin_file_name name
+  let register ~name l = BuiltIn.declare ~file_name:(file_name name) l
+  let is_registered name = Compiler.is_declared_builtins ~file_name:(file_name name)
 end
 
 module State = struct

@@ -146,6 +146,19 @@ module Setup : sig
   (* Built-in predicates, see {!module:BuiltIn} *)
   type builtins
 
+  (* The packages of the host, for [accumulate "+pkg/path"] (a file in the
+     directory of package [pkg]) and [accumulate "+pkg"] (the plugin of
+     package [pkg], see {!module:Plugin}). [dir pkg] is the directory of
+     [pkg]; [load pkg], if given, loads the OCaml code of [pkg] (e.g. by
+     dynlinking it), which registers its plugin. Both raise [Failure] with a
+     message. Without [load], the stub [pkg.plugin.elpi] in [dir pkg] (the
+     documentation of the plugin) stands for a plugin that is not
+     registered. *)
+  type packages = {
+    dir : string -> string;
+    load : (string -> unit) option;
+  }
+
   (* Compilation flags, see {!module:Compile} *)
   type flags
   
@@ -178,6 +191,10 @@ module Setup : sig
         call {!val:Parse.std_reader} for the others. The resolver must accept
         the names it answers for, even if there is no such file on the disk.
 
+      @param packages gives the packages of the host ([accumulate "+pkg"] and
+        [accumulate "+pkg/path"]); without it they are an error, but a
+        plugin already registered can still be accumulated.
+
       @return a handle [elpi] to an elpi instance equipped with the given
         [builtins] and where accumulate resolves files with the given
         [file_resolver]. *)
@@ -190,6 +207,7 @@ module Setup : sig
     builtins:builtins list ->
     ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
     ?file_reader:(string -> string) ->
+    ?packages:packages ->
     unit ->
     elpi
 
@@ -1077,6 +1095,18 @@ module BuiltIn : sig
   val document_fmt : Format.formatter -> Setup.builtins -> unit
   val document_file : ?header:string  -> Setup.builtins -> unit
 
+end
+
+(** A plugin is the OCaml code of a package [pkg] (e.g. a findlib package):
+    the builtins it registers with [register ~name:pkg], which a program
+    accumulates with [accumulate "+pkg"]. A plugin can be registered at any
+    time: linked statically, or loaded on demand by [Setup.packages.load] when
+    the accumulate is met. A plugin loaded after [Setup.init] cannot declare
+    state components nor quotations (an instance does not see them): such a
+    plugin must be loaded before [Setup.init]. *)
+module Plugin : sig
+  val register : name:string -> BuiltIn.declaration list -> Setup.builtins
+  val is_registered : string -> bool
 end
 
 (* ************************************************************************* *)

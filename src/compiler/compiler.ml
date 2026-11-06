@@ -324,6 +324,7 @@ let declare_builtins ~file_name l =
   declared_builtins := Util.StrMap.add file_name (build_predmap l,l) !declared_builtins;
   file_name
 
+let is_declared_builtins ~file_name = Util.StrMap.mem file_name !declared_builtins
 let declared_builtins_of_file ~file_name =
   if Util.StrMap.mem file_name !declared_builtins then file_name
   else builtins_error ("Builtins for file " ^ file_name ^ " were not declared")
@@ -432,9 +433,14 @@ let bind_mlconstants ~file_name ~implied ~constructors decls ({ Ast.ast } as p :
       builtins_error (Printf.sprintf "%s (variant %d), an OCaml symbol of %s, is not declared by its text (symb, pred or func)" name variant file_name));
   { p with ast }
 
-let ast_of_builtins ~(parser: (module Parse.Parser)) ~file_name =
+(* the unit of an accumulated plugin ("+pkg", see Parse.plugin_file_name) *)
+let is_plugin_unit file_name =
+  Parse.is_plugin_file_name file_name && is_declared_builtins ~file_name
+
+(* the text of a builtins file, with the constructors and the other global
+   symbols printed (to bind them, see bind_builtins) *)
+let builtins_text ~file_name =
   let _, decls = declared_builtins ~file_name in
-  (* This is a bit ugly, since we print and then parse... *)
   let b = Buffer.create 1024 in
   let fmt = Format.formatter_of_buffer b in
   let constructors = ref [] and implied = ref [] in
@@ -445,13 +451,24 @@ let ast_of_builtins ~(parser: (module Parse.Parser)) ~file_name =
       Data.BuiltInPredicate.ADT.printed_constants := None) (fun () ->
     Data.BuiltInPredicate.document fmt decls;
     Format.pp_print_flush fmt ());
-  let text = Buffer.contents b in
+  Buffer.contents b, List.rev !constructors, !implied
+
+let text_of_builtins ~file_name = let text, _, _ = builtins_text ~file_name in text
+
+(* the AST of the text of a builtins file, with its OCaml symbols bound *)
+let bind_builtins ~file_name (p : Ast.Program.t) =
+  let _, decls = declared_builtins ~file_name in
+  let _, constructors, implied = builtins_text ~file_name in
+  mark_constructors_of_mldata ~file_name constructors p
+  |> bind_mlconstants ~file_name ~implied ~constructors decls
+
+let ast_of_builtins ~(parser: (module Parse.Parser)) ~file_name =
+  (* This is a bit ugly, since we print and then parse... *)
+  let text = text_of_builtins ~file_name in
   let lexbuf = Lexing.from_string text in
   let module P = (val parser) in
   match P.program_from ~loc:(Util.Loc.initial file_name) ~digest:(Digest.string text) lexbuf with
-  | p, [], [] ->
-      mark_constructors_of_mldata ~file_name (List.rev !constructors) p
-      |> bind_mlconstants ~file_name ~implied:!implied ~constructors:!constructors decls
+  | p, [], [] -> bind_builtins ~file_name p
   | _, errors, warnings ->
     (* the code of the builtins has no warnings *)
     let { Util.loc; message; _ } =
@@ -2670,19 +2687,33 @@ let check_user_declarations ~errs (p : Ast.Program.t) =
   let rec aux l = l |> List.iter (function
     | Ast.Program.Type l -> List.iter check l
     | Ast.Program.Pred t -> check t
-    | Ast.Program.Accumulated (_, l) -> List.iter (fun { Ast.ast } -> aux ast) l
+    | Ast.Program.Accumulated (_, l) ->
+        (* the unit of a plugin is the text of a builtins file *)
+        List.iter (fun { Ast.ast; file_name } -> if not (is_plugin_unit file_name) then aux ast) l
     | _ -> ()) in
   aux p.Ast.ast
 
+(* the units of the plugins accumulated by a program, with their OCaml
+   symbols bound (as Compiler.ast_of_builtins does for a builtins file) *)
+let rec bind_plugin_units (p : Ast.Program.t) =
+  let ast = p.Ast.ast |> List.map (function
+    | Ast.Program.Accumulated (loc, l) ->
+        Ast.Program.Accumulated (loc, l |> List.map (fun (x : Ast.Program.t) ->
+          if is_plugin_unit x.file_name then bind_builtins ~file_name:x.file_name x
+          else bind_plugin_units x))
+    | d -> d) in
+  { p with ast }
+
 let scope ~errs ?(user_text=false) s ~toplevel_macros ~builtins p : scoped_program list =
   if user_text then check_user_declarations ~errs p;
+  let p = bind_plugin_units p in
   let pl = RecoverStructure.run ~errs s p in
   pl |> List.map (fun { Ast.ast = p; digest; deps; file_name} -> 
     let p = Scope_Quotation_Macro.run ~errs ~toplevel_macros s p in
     {
       version = "%%VERSION_NUM%%";
       code = p;
-      builtins;
+      builtins = if is_plugin_unit file_name then Some file_name else builtins;
       file_name;
       digest;
       deps;

@@ -34,7 +34,7 @@ let chunk s (p1,p2) =
 
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
 
-module Parser = Parse.Make(struct let versions = Elpi_util.Util.StrMap.empty let resolver = Elpi_util.Util.std_resolver ~paths:[] () let reader = Elpi_util.Util.std_reader end)
+module Parser = Parse.Make(struct let versions = Elpi_util.Util.StrMap.empty let resolver = Elpi_util.Util.std_resolver ~paths:[] () let reader = Elpi_util.Util.std_reader let package_dir _ = failwith "no packages" let plugin _ = None end)
 
 (* the parsing of programs returns the errors: here a syntax error is an exception *)
 let warn = ref None

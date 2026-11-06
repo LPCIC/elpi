@@ -35,8 +35,30 @@ module type Config = sig
   val resolver : ?cwd:string -> unit:string -> unit -> string
   (* the text of a file; raises Failure if it cannot be read *)
   val reader : string -> string
-
+  (* [accumulate "+pkg/path"]: the directory of package [pkg]; raises Failure
+     (e.g. when packages are disabled) *)
+  val package_dir : string -> string
+  (* [accumulate "+pkg"]: the text of the builtins of the plugin [pkg], once
+     loaded; None if it cannot be loaded here, then its stub
+     [pkg.plugin.elpi] in [package_dir pkg] is read instead; raises Failure *)
+  val plugin : string -> string option
 end
+
+type reference = Path of string | Package_file of string * string | Plugin of string
+
+(* "+pkg/path" and "+pkg" (the extension that accumulate appends is dropped
+   from the name of the package); anything else is a path *)
+let reference_of_string s =
+  let n = String.length s in
+  if n > 1 && s.[0] = '+' then
+    let rest = String.sub s 1 (n - 1) in
+    match String.index_opt rest '/' with
+    | Some i -> Package_file (String.sub rest 0 i, String.sub rest (i + 1) (String.length rest - i - 1))
+    | None -> Plugin (Filename.remove_extension rest)
+  else Path s
+
+let plugin_file_name pkg = "+" ^ pkg
+let is_plugin_file_name s = String.length s > 1 && s.[0] = '+'
 
 (* the name of a file in the locations of its contents *)
 let cleanup_fname filename = Re.Str.replace_first (Re.Str.regexp "/_build/[^/]+") "" filename
@@ -247,8 +269,8 @@ let parse_file_contents ~filename text =
     Hashtbl.add already_parsed digest output;
     output
 
-let () =
-  parse_ref := (fun ?cwd filename ->
+(* a file, found by the resolver; with its .sig if it is a .mod *)
+let parse_file ?cwd filename =
   let filename =
     try C.resolver ?cwd ~unit:filename ()
     with Failure msg -> raise (Cannot_resolve_accumulated_file msg) in
@@ -262,7 +284,20 @@ let () =
       let m = parse_file_contents ~filename text in
       { Ast.file_name = filename; digest = Digest.string (s.digest ^ m.digest); deps = []; ast = s.ast @ m.ast  }
     | None -> parse_file_contents ~filename text
-  else parse_file_contents ~filename text)
+  else parse_file_contents ~filename text
+
+let () =
+  parse_ref := (fun ?cwd filename ->
+  let host f = try f () with Failure msg -> raise (Cannot_resolve_accumulated_file msg) in
+  match reference_of_string filename with
+  | Path f -> parse_file ?cwd f
+  | Package_file (pkg, path) -> parse_file (Filename.concat (host (fun () -> C.package_dir pkg)) path)
+  | Plugin pkg ->
+      match host (fun () -> C.plugin pkg) with
+      (* the unit of a plugin is the text of its builtins *)
+      | Some text -> parse_file_contents ~filename:(plugin_file_name pkg) text
+      (* its stub, the documentation of the plugin *)
+      | None -> parse_file (Filename.concat (host (fun () -> C.package_dir pkg)) (pkg ^ ".plugin.elpi")))
 
 let to_lexing_loc { Util.Loc.source_name; line; line_starts_at; source_start; _ } =
   { Lexing.pos_fname = source_name;

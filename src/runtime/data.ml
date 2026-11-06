@@ -376,6 +376,8 @@ module State : sig
   type descriptor
   val new_descriptor : unit -> descriptor
   val merge_descriptors : descriptor -> descriptor -> descriptor
+  (* the number of components declared in a descriptor *)
+  val components : descriptor -> int
 
   (* filled in with components *)
   type 'a component
@@ -439,6 +441,7 @@ end = struct
   let dummy : t = { data = StrMap.empty; stage = Dummy; extensions = ref StrMap.empty }
  
   let new_descriptor () : descriptor = ref StrMap.empty
+  let components d = StrMap.cardinal !d
   let merge_descriptors m1 m2 =
     ref (StrMap.merge (fun n e1 e2 ->
       match e1, e2 with

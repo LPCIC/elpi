@@ -101,6 +101,12 @@ let () = declare "builtin_lookup"
   ~expectation:Test.(SuccessOutput (Str.regexp_string "hyp 3"))
   ()
 
+let () = declare "plugins"
+  ~source_dune:"plugins.exe"
+  ~description:"accumulate \"+pkg\" and \"+pkg/path\": plugins (static, on demand, stubs) and package files"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "all plugin cases ok"))
+  ()
+
 let () = declare "late_globals"
   ~source_dune:"late_globals.exe"
   ~description:"global symbols, data types, calc operations and builtins declared after Setup.init"
