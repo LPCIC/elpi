@@ -38,12 +38,10 @@ module Setup = struct
 type state_descriptor = Data.State.descriptor
 type quotations_descriptor = Compiler_data.QuotationHooks.descriptor ref
 type hoas_descriptor = Data.HoasHooks.descriptor ref
-type calc_descriptor = Data.CalcHooks.descriptor ref
 
 let default_state_descriptor = Data.State.new_descriptor ()
 let default_quotations_descriptor = Compiler_data.QuotationHooks.new_descriptor ()
 let default_hoas_descriptor = Data.HoasHooks.new_descriptor ()
-let default_calc_descriptor = Data.CalcHooks.new_descriptor ()
 
 type builtins = Compiler.declared_builtins
 type elpi = {
@@ -54,7 +52,7 @@ type elpi = {
 type flags = Compiler.flags
 
 
-let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) () : elpi =
+let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
@@ -63,7 +61,7 @@ let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags)
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
   let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader end) : Parse.Parser) in
   let header =
-    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins
+    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas builtins
     with Util.ElpiError ({ loc } as e) -> data_anomaly ?loc (Format.asprintf "%a" Compiler_data.pp_error_message e) in
   { parser; header; resolver = file_resolver }
 
@@ -1136,15 +1134,16 @@ end
 
 module BuiltIn = struct
   include ED.BuiltInPredicate
+  type calc_operations = ED.CalcHooks.operations
 
   let declare ~file_name l = Compiler.declare_builtins ~file_name l
 
   let of_file ~file_name = Compiler.declared_builtins_of_file ~file_name
 
-  let document_fmt fmt ?(calc=Setup.default_calc_descriptor) file_name =
-    Compiler.document_fmt fmt ~calc:(List.rev !calc) file_name
-  let document_file ?header ?(calc=Setup.default_calc_descriptor) file_name =
-    Compiler.document_file ?header ~calc:(List.rev !calc) ~file:(Compiler.file_of_declared_builtins file_name) file_name
+  let document_fmt fmt file_name =
+    Compiler.document_fmt fmt file_name
+  let document_file ?header file_name =
+    Compiler.document_file ?header ~file:(Compiler.file_of_declared_builtins file_name) file_name
 end
 
 module State = struct
@@ -1204,8 +1203,6 @@ end
 
 module Calc = struct
 
-  let new_calc_descriptor = ED.CalcHooks.new_descriptor
-
   type operation_declaration = {
     symbol : string;
     infix : bool;
@@ -1214,19 +1211,22 @@ module Calc = struct
     code : ED.term list -> ED.term;
   }
 
+  (* the same symbol and variant give the same global symbol: building the
+     same operations again (e.g. a plugin initialised twice) declares nothing
+     new *)
   let compile_operation_declaration { symbol; infix; variant; args; code } =
     let c = ED.Global_symbols.declare_global_symbol ~variant symbol in
-    let annotation = ED.Global_symbols.show_variant_annotation variant in
-    let ty_decl = if infix then
+    let ty_decl annotation = if infix then
       Printf.sprintf "symb (%s) : %s%s. " symbol (String.concat " -> " args) annotation
     else
       Printf.sprintf "symb %s : %s%s." symbol (String.concat " -> " args) annotation in
     c, { ED.CalcHooks.ty_decl = ty_decl; code }
 
-   let register ~descriptor d =
-     let e = compile_operation_declaration d in
-     descriptor := e :: !descriptor
-    
+  (* the variants of an operation in order (int before float): the order of
+     their declarations in the text *)
+  let operations l = List.map compile_operation_declaration l
+
+  (* an operation on several types has the variants std.1, std.2 ... *)
   let register_eval n (symbol,tys) code =
     let infix, n = n < 0, abs n in
     let variant i = match tys with [_] -> "" | _ -> Printf.sprintf "std.%d" (i + 1) in
@@ -1370,7 +1370,6 @@ module Calc = struct
     | _ -> data_type_error "Wrong arguments to string_to_real")
   ]
 
-  let () = List.iter (register ~descriptor:Setup.default_calc_descriptor) default_calc
 
   let eval ~depth state x =
    let table = ED.State.get ED.CalcHooks.eval state in
@@ -1417,6 +1416,9 @@ module Calc = struct
       Read(unit_ctx, "unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]"))),
         (fun t _ ~depth _ _ state -> !: (eval ~depth state t))),
     DocAbove);
+
+    LPDoc " --- Operators ---";
+    MLCalc (operations default_calc);
     ]
 
 end

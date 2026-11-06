@@ -326,27 +326,22 @@ let declared_builtins ~file_name =
   with Not_found -> builtins_error ("Builtins for file " ^ file_name ^ " were not declared")
 let file_of_declared_builtins x = x
 
-let document_fmt fmt ~calc file_name =
+let document_fmt fmt file_name =
   let _, l = declared_builtins ~file_name in
-  Data.BuiltInPredicate.document fmt l calc
-let document_file ?header:_ ~calc ~file:name file_name =
+  Data.BuiltInPredicate.document fmt l
+let document_file ?header:_ ~file:name file_name =
   let _, l = declared_builtins ~file_name in
   let oc = open_out name in
   let fmt = Format.formatter_of_out_channel oc in
-  Data.BuiltInPredicate.document fmt l calc;
+  Data.BuiltInPredicate.document fmt l;
   Format.pp_print_flush fmt ();
   close_out oc
 
 
 (* The text of a builtins file names its OCaml symbols: the constants of the
    conversions of its MLData (e.g. the constructors of an AlgebraicData), its
-   MLConstants and the operators of calc, if it documents calc ([calc]). A
-   [symb], or a [pred] / [func] signature, with the name of one of them
-   denotes it; with several variants of a name, the [symb] says which one with
-   [= "N"] (the text prints it only then, see
-   Global_symbols.show_variant_annotation). Each is declared once. [builtin] on a
-   predicate is only for those implemented by an MLCode. *)
-let bind_mlconstants ~file_name ~calc decls ({ Ast.ast } as p : Ast.Program.t) =
+   MLConstants and the operators of its MLCalc *)
+let bind_mlconstants ~file_name decls ({ Ast.ast } as p : Ast.Program.t) =
   let name_variant c =
     match Util.Constants.Map.find_opt c D.Global_symbols.table.c2s with
     | Some s ->
@@ -362,9 +357,7 @@ let bind_mlconstants ~file_name ~calc decls ({ Ast.ast } as p : Ast.Program.t) =
         | BuiltInPredicate.MLData { Conversion.constants } -> List.map name_variant constants
         | BuiltInPredicate.MLDataC { ContextualConversion.constants } -> List.map name_variant constants
         | BuiltInPredicate.MLConstants l -> List.map name_variant l
-        (* the operators are documented after calc, see Data.BuiltInPredicate.document *)
-        | BuiltInPredicate.MLCode ((Pred("calc",_,_) | ContextualPred("calc",_,_,_)), _) ->
-            List.map (fun (c, _) -> name_variant c) calc
+        | BuiltInPredicate.MLCalc ops -> List.map (fun (c, _) -> name_variant c) ops
         | _ -> []) decls) in
   let mlcode = decls |> List.filter_map (function
     | BuiltInPredicate.MLCode ((Pred(name,_,_) | ContextualPred(name,_,_,_)), _) -> Some name
@@ -420,15 +413,15 @@ let bind_mlconstants ~file_name ~calc decls ({ Ast.ast } as p : Ast.Program.t) =
       builtins_error (Printf.sprintf "%s%s, an OCaml symbol of %s, is not declared by its text (symb, pred or func)" name (D.Global_symbols.show_variant_annotation variant) file_name));
   { p with ast }
 
-let ast_of_builtins ~calc ~(parser: (module Parse.Parser)) ~file_name =
+let ast_of_builtins ~(parser: (module Parse.Parser)) ~file_name =
   let _, decls = declared_builtins ~file_name in
   (* This is a bit ugly, since we print and then parse... *)
-  let text = Data.BuiltInPredicate.document_to_string decls calc in
+  let text = Data.BuiltInPredicate.document_to_string decls in
   let lexbuf = Lexing.from_string text in
   let module P = (val parser) in
   match P.program_from ~loc:(Util.Loc.initial file_name) ~digest:(Digest.string text) lexbuf with
   | p, [], [] ->
-      bind_mlconstants ~file_name ~calc decls p
+      bind_mlconstants ~file_name decls p
   | _, errors, warnings ->
     (* the code of the builtins has no warnings *)
     let { Util.loc; message; _ } =
@@ -2574,6 +2567,16 @@ let extend1 ~errs flags (state, base) unit =
   let total_type_checking_time = total_type_checking_time +. type_checking_time in
   let total_det_checking_time = total_det_checking_time +. det_checking_time +. mutexcl_time in
 
+  (* the operators of the builtins file (MLCalc) join the evaluation map *)
+  let state =
+    Option.fold ~none:state ~some:(fun (_,file_name) ->
+      let _, decls = declared_builtins ~file_name in
+      List.fold_left (fun state -> function
+        | BuiltInPredicate.MLCalc ops ->
+            D.State.update CalcHooks.eval state (fun m ->
+              List.fold_left (fun m (c,{ CalcHooks.code }) -> Constants.Map.add c code m) m ops)
+        | _ -> state) state decls) unit.checked_code.CheckedFlat.builtins in
+
   let base = { Assembled.builtins; hash; symbols; chr; clauses; prolog_program; signature; indexing; total_type_checking_time; total_det_checking_time } in
   let hash = hash_base base in
   state, { base with hash }
@@ -2686,9 +2689,9 @@ let without_errors f =
       let ErrorFun { error } = error_fun ~component in
       error ?loc message
 
-let scoped_of_builtins ~flags:_ ~header:(s,u) ?(calc=[]) builtins =
+let scoped_of_builtins ~flags:_ ~header:(s,u) builtins =
   let parser = Option.get @@ D.State.get parser s in
-  let builtins_src = ast_of_builtins ~calc ~parser ~file_name:builtins in
+  let builtins_src = ast_of_builtins ~parser ~file_name:builtins in
   match without_errors (fun errs -> scope ~errs ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:(Some builtins) builtins_src) with
   | [x] -> x
   | _ -> assert false
@@ -2700,12 +2703,12 @@ let pp_error = Compiler_data.pp_error
 let pp_error_message = Compiler_data.pp_error_message
 let show_error = Compiler_data.show_error
 
-let scoped_of_ast ~flags ~header:(s,u) ?(calc=[]) p =
+let scoped_of_ast ~flags ~header:(s,u) p =
   with_errors ~flags (fun errs ->
     scope ~errs ~user_text:(not flags.builtin_stubs) ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:None p)
 
 
-let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor calc_descriptor builtins : header =
+let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor builtins : header =
   let state = D.State.(init (merge_descriptors D.elpi_state_descriptor state_descriptor)) in
   let state =
     match hoas_descriptor.D.HoasHooks.extra_goals_postprocessing with
@@ -2721,15 +2724,12 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let state = D.State.set CustomFunctorCompilation.singlequote state singlequote_compilation in
   let state = D.State.set Quotation.default_quotation state default_quotation in
   let state = D.State.set Quotation.named_quotations state named_quotations in
-  let state =
-    let eval_map = List.fold_left (fun m (c,{ CalcHooks.code }) -> Constants.Map.add c code m) Constants.Map.empty (List.rev calc_descriptor) in
-    D.State.set CalcHooks.eval state eval_map in
   let state = D.State.set parser state (Some p) in
   let state = D.State.set D.while_compiling state true in
   let base = Assembled.empty () in
   (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
   builtins |> List.fold_left (fun (state,base as header) builtins ->
-    let scoped = scoped_of_builtins ~flags ~calc:calc_descriptor ~header builtins in
+    let scoped = scoped_of_builtins ~flags ~header builtins in
     let u = without_errors (fun errs -> unit_or_header_of_scoped ~errs state scoped) in
     print_unit flags u;
     let u = without_errors (fun errs -> Check.check ~errs ~flags state ~base u) in

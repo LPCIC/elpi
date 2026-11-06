@@ -1187,9 +1187,11 @@ end
 module CalcHooks = struct
 
 type run = term list -> term
-type eval = { code : run; ty_decl : string; }
-type descriptor = (constant * eval) list
-let new_descriptor () : descriptor ref = ref []
+(* [ty_decl annotation]: the declaration of the operator, with the
+   [= "variant"] of Global_symbols.show_variant_annotation *)
+type eval = { code : run; ty_decl : string -> string; }
+(* the operators of a builtins file (MLCalc), with their global symbol *)
+type operations = (constant * eval) list
 
 let eval : run Constants.Map.t State.component =
   State.declare ~descriptor:elpi_state_descriptor ~name:"elpi:eval"
@@ -1577,6 +1579,7 @@ type declaration =
   | MLData : 'a Conversion.t -> declaration
   | MLDataC : ('a,'h,'c) ContextualConversion.t -> declaration
   | MLConstants of constant list
+  | MLCalc of CalcHooks.operations
   | LPDoc  of string
   | LPCode of string
 
@@ -1755,28 +1758,27 @@ let document_ppx_pred fmt docspec name ffi =
     doc [] ffi
 ;;
 
-let document fmt l calc_list =
+let document fmt l =
   let omargin = Fmt.pp_get_margin fmt () in
   Fmt.pp_set_margin fmt 75;
   Fmt.fprintf fmt "@[<v>";
   Fmt.fprintf fmt "@\n@\n";
-  (* the operators of the calc builtin are documented right after it *)
-  let document_calc_operators name =
-    if name = "calc" then begin
-      Format.fprintf fmt "%s@\n@\n" "%  --- Operators ---";
-      List.iter (fun (c,x) ->
-        Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) calc_list
-    end in
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) ->
-        document_pred fmt docspec name ffi;
-        document_calc_operators name
+        document_pred fmt docspec name ffi
     | MLCode(ContextualPred(name,_,ffi,_), docspec) ->
-        document_ppx_pred fmt docspec name ffi;
-        document_calc_operators name
+        document_ppx_pred fmt docspec name ffi
     | MLData { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | MLDataC { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | MLConstants _ -> ()
+    | MLCalc ops ->
+        List.iter (fun (c,x) ->
+          let annotation = match Constants.Map.find_opt c Global_symbols.table.c2s with
+            | Some s -> (match Symbol.get_provenance s with
+                | Builtin { variant } -> Global_symbols.show_variant_annotation variant
+                | _ -> "")
+            | None -> "" in
+          Format.fprintf fmt "%s@\n@\n" (x.CalcHooks.ty_decl annotation)) ops
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
     | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;
   Fmt.fprintf fmt "@\n@\n";
@@ -1784,8 +1786,7 @@ let document fmt l calc_list =
   Fmt.pp_set_margin fmt omargin
 ;;
 
-let document_to_string l calc_list =
-  Format.asprintf "%a" (fun fmt () -> document fmt l calc_list) ()
+let document_to_string l = Format.asprintf "%a" document l
 
 type builtin_table = (int, t) Hashtbl.t
 [@@deriving show]

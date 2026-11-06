@@ -23,11 +23,11 @@ type declared_builtins
 val declare_builtins : file_name:string -> Data.BuiltInPredicate.declaration list -> declared_builtins
 val declared_builtins_of_file : file_name:string -> declared_builtins
 val file_of_declared_builtins : declared_builtins -> string
-val document_fmt : Format.formatter -> calc:CalcHooks.descriptor -> declared_builtins -> unit
-val document_file : ?header:string  -> calc:CalcHooks.descriptor -> file:string -> declared_builtins -> unit
+val document_fmt : Format.formatter -> declared_builtins -> unit
+val document_file : ?header:string  -> file:string -> declared_builtins -> unit
 
 type header
-val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descriptor -> Compiler_data.QuotationHooks.descriptor -> HoasHooks.descriptor -> CalcHooks.descriptor -> declared_builtins list -> header
+val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descriptor -> Compiler_data.QuotationHooks.descriptor -> HoasHooks.descriptor -> declared_builtins list -> header
 
 val pp_error : Format.formatter -> error -> unit          (* location:, newline, Component: message *)
 val pp_error_message : Format.formatter -> error -> unit  (* Component: message *)
@@ -40,8 +40,8 @@ type scoped_program
 val scoped_program_name : scoped_program -> string
 val scoped_program_digest : scoped_program -> Digest.t
 val scoped_program_deps : scoped_program -> Ast.dependencies
-val scoped_of_builtins : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> declared_builtins -> scoped_program
-val scoped_of_ast : flags:flags -> header:header -> ?calc:CalcHooks.descriptor -> Ast.Program.t -> scoped_program list * error list * warning list
+val scoped_of_builtins : flags:flags -> header:header -> declared_builtins -> scoped_program
+val scoped_of_ast : flags:flags -> header:header -> Ast.Program.t -> scoped_program list * error list * warning list
 
 type checked_compilation_unit
 val pp_checked_compilation_unit : Format.formatter -> checked_compilation_unit -> unit
