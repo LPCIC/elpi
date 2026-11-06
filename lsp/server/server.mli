@@ -30,6 +30,7 @@ val init :
   builtin_library_location:(Checker.instance -> string -> (DocumentUri.t * string) option) ->
   ?max_errors:int ->
   ?include_paths:string list ->
+  ?packages:Elpi.API.Setup.packages ->
   unit -> unit
 
 (** [library_uri ~prefix instance name] is [prefix]ID/NAME, the URI of the file

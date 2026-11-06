@@ -21,10 +21,12 @@ type instance
 
 (** a new instance, with the standard builtins; accumulated files are found
     by [file_resolver] and read by [file_reader] (see [Setup.init]), by
-    default relative to the accumulating file and on the disk *)
+    default relative to the accumulating file and on the disk; the packages
+    of [accumulate "+pkg"] are the ones of [packages] (see [Setup.init]) *)
 val new_instance :
   ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
   ?file_reader:(string -> string) ->
+  ?packages:Setup.packages ->
   unit -> instance
 
 val elpi : instance -> Setup.elpi

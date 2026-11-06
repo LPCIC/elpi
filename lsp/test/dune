@@ -24,12 +24,13 @@
 (rule
  (targets test_lsp.output accbad.output accmissing.output good.output
           syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output
-          assemble.output anomaly.output accinc.output accopen.output accdirs.output stubs.output)
- (deps (glob_files *.elpi) (glob_files include/*.elpi) (glob_files accdirs/lang/*.elpi) (glob_files accdirs/a/*.elpi)
+          assemble.output anomaly.output accinc.output accopen.output accdirs.output stubs.output pkgs.output)
+ (deps (glob_files *.elpi) (glob_files include/*.elpi) (glob_files pkgs/elpi-test-lsp/*) (glob_files accdirs/lang/*.elpi) (glob_files accdirs/a/*.elpi)
        (glob_files accdirs/b/*.elpi) (glob_files accdirs/main/*.elpi))
  (action
   (with-stdout-to test_lsp.output
-   (run %{exe:test_lsp.exe} %{exe:../stdio_lsp_driver.exe} . -I include))))
+   (setenv OCAMLPATH pkgs
+    (run %{exe:test_lsp.exe} %{exe:../stdio_lsp_driver.exe} . -I include)))))
 
 (rule
  (alias runtest-lsp)
@@ -42,6 +43,10 @@
 (rule
  (alias runtest-lsp)
  (action (diff stubs.expected stubs.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff pkgs.expected pkgs.output)))
 
 (rule
  (alias runtest-lsp)

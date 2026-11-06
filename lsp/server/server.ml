@@ -81,8 +81,12 @@ let open_document_text name =
 (* whether init was called *)
 let init_called = ref false
 
-let init ~send ~exit ~builtin_library_location ?max_errors ?include_paths:(dirs = []) () =
+(* the packages of accumulate "+pkg", given by the transport *)
+let packages_ref : Elpi.API.Setup.packages option ref = ref None
+
+let init ~send ~exit ~builtin_library_location ?max_errors ?include_paths:(dirs = []) ?packages () =
   send_ref := send;
+  packages_ref := packages;
   exit_ref := exit;
   builtin_library_location_ref := builtin_library_location;
   Option.iter (fun n -> Checker.max_errors := n) max_errors;
@@ -402,7 +406,7 @@ let run (params : Jsonrpc.Structured.t option) : (Yojson.Safe.t, Jsonrpc.Respons
   | Some (`String _), _, None, _ -> Error (InvalidParams, "elpi/run: the parameter textDocument (with its uri) is missing")
   | Some (`String query), Some (`String text), Some uri, Ok max_steps ->
       (* a text that is not a document: a new instance of Elpi *)
-      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ~file_resolver:resolver ~file_reader:reader ()) ~path:(text_path uri) ~text ~query ())
+      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ~file_resolver:resolver ~file_reader:reader ?packages:!packages_ref ()) ~path:(text_path uri) ~text ~query ())
   | Some (`String query), _, Some uri, Ok max_steps ->
       (match Hashtbl.find_opt documents uri with
        | Some doc -> Ok (Runner.run ?max_steps ~instance:doc.instance ~path:doc.path ~text:doc.text.Text.text ~query ())
@@ -449,7 +453,7 @@ let set_text uri version text =
    | None ->
        Hashtbl.replace documents uri { path; text = Text.make text; version;
                                        checked = -1; hover = None; accumulates = [];
-                                       instance = Checker.new_instance ~file_resolver:resolver ~file_reader:reader () };
+                                       instance = Checker.new_instance ~file_resolver:resolver ~file_reader:reader ?packages:!packages_ref () };
        recheck_others uri
    | Some doc ->
        doc.text <- Text.make text;

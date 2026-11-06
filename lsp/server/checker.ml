@@ -113,11 +113,11 @@ type instance = { id : int; elpi : Setup.elpi; library : (string, string) Hashtb
 
 let new_instance =
   let next = ref 0 in
-  fun ?(file_resolver = Parse.std_resolver ~paths:[] ()) ?(file_reader = Parse.std_reader) () ->
+  fun ?(file_resolver = Parse.std_resolver ~paths:[] ()) ?(file_reader = Parse.std_reader) ?packages () ->
     incr next;
     let builtins = Elpi.Builtin.std_builtins in
     { id = !next;
-      elpi = Setup.init ~builtins:[builtins] ~file_resolver ~file_reader ();
+      elpi = Setup.init ~builtins:[builtins] ~file_resolver ~file_reader ?packages ();
       library = lazy (compute_library_files builtins);
       cache = { units = Hashtbl.create 17; clock = 0 } }
 

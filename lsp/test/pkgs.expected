@@ -1,0 +1,31 @@
+==== open pkgs.elpi ====
+diagnostics of pkgs.elpi (version 1): 0
+hover "lsp.f 3"+0 (the cursor is at 3:9): 3:9-3:14
+  line 3:
+               | p N M :- lsp.f 3 N, util.five M.
+    hovered    |          ^^^^^
+    cursor     |          *
+    ? ```elpi-hover
+    ? lsp.f : (func int -> int)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? [lsp.f N M] M is N plus one
+definition "lsp.f 3"+0 (the cursor is at 3:9):
+  line 3:
+               | p N M :- lsp.f 3 N, util.five M.
+    cursor     |          *
+  defined at file://$DIR/pkgs/elpi-test-lsp/elpi-test-lsp.plugin.elpi 4:0-4:29
+    | builtin func lsp.f int -> int
+  previewed 4:0-4:29
+    | builtin func lsp.f int -> int
+definition "util.five M"+0 (the cursor is at 3:20):
+  line 3:
+               | p N M :- lsp.f 3 N, util.five M.
+    cursor     |                     *
+  defined at file://$DIR/pkgs/elpi-test-lsp/util.elpi 1:0-1:21
+    | func util.five -> int
+  previewed 1:0-2:11
+    | func util.five -> int.
+    | util.five 5

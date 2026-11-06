@@ -23,6 +23,7 @@ let load pkg =
   | Dynlink.Error e -> failwith (Dynlink.error_message e)
 
 let packages = { Setup.dir; load = Some load }
+let directories = { Setup.dir; load = None }
 
 let preload pkg =
   if not (Plugin.is_registered pkg) then begin

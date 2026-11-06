@@ -7,6 +7,11 @@
     plugin), [accumulate "+pkg/path"] reads a file in its directory *)
 val packages : Elpi.API.Setup.packages
 
+(** The same, without loading: [accumulate "+pkg"] reads the stub of the
+    plugin, [pkg.plugin.elpi] in the directory of [pkg] (e.g. for elpi-lsp,
+    that only checks programs) *)
+val directories : Elpi.API.Setup.packages
+
 (** Loads the plugin of a package before [Setup.init] (needed if it declares
     state components or quotations); raises [Failure] *)
 val preload : string -> unit

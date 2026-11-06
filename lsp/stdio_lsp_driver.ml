@@ -74,7 +74,9 @@ let max_errors, include_paths =
   args None [] (List.tl (Array.to_list Sys.argv))
 
 let () =
-  Server.init ~send:output_json ~exit ~builtin_library_location ?max_errors ~include_paths ()
+  (* the plugins of accumulate "+pkg" are not loaded: their stubs are read *)
+  Server.init ~send:output_json ~exit ~builtin_library_location ?max_errors ~include_paths
+    ~packages:Elpi_dynload.directories ()
 
 let () =
   log "started";
