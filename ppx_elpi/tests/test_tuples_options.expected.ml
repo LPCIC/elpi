@@ -76,10 +76,13 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                ~ty:kind ~name:"red" ~doc:"Red" ~args:[];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                ~ty:kind ~name:"green" ~doc:"Green" ~args:[]);
+        constants =
+          [elpi_constant_constructor_color_Redc;
+          elpi_constant_constructor_color_Greenc];
         pp = pp_color;
         embed = elpi_embed_color;
         readback = elpi_readback_color
@@ -391,25 +394,25 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"p" ~doc:"P"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.ContextualConversion.TyApp
                        ("pair",
                          (Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty),
                          [Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty])];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"t" ~doc:"T"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      color.Elpi.API.ContextualConversion.ty];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"q" ~doc:"Q"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      color.Elpi.API.ContextualConversion.ty;
                      Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"o" ~doc:"O"
                ~args:[Elpi.API.ContextualConversion.TyApp
                         ("list",
@@ -417,6 +420,11 @@ include
                              ("option",
                                (color.Elpi.API.ContextualConversion.ty), [])),
                           [])]);
+        constants =
+          [elpi_constant_constructor_t_Pc;
+          elpi_constant_constructor_t_Tc;
+          elpi_constant_constructor_t_Qc;
+          elpi_constant_constructor_t_Oc];
         pp;
         embed = elpi_embed_t;
         readback = elpi_readback_t
@@ -480,6 +488,7 @@ include
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc = (fun fmt () -> Elpi.API.PPX.Doc.kind fmt kind ~doc:""; ());
+        constants = [];
         pp = pp_tr;
         embed = elpi_embed_tr;
         readback = elpi_readback_tr
@@ -558,6 +567,7 @@ include
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc = (fun fmt () -> Elpi.API.PPX.Doc.kind fmt kind ~doc:""; ());
+        constants = [];
         pp = pp_qd;
         embed = elpi_embed_qd;
         readback = elpi_readback_qd

@@ -182,6 +182,7 @@ module Compile = struct
     time_typechecking : bool;
     skip_det_checking: bool;
     max_errors: int;
+    builtin_stubs: bool;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
@@ -352,6 +353,7 @@ type 'a readback = 'a ED.Conversion.readback
 type 'a t = 'a ED.Conversion.t =  {
   ty : ty_ast;
   pp_doc : Format.formatter -> unit -> unit;
+  constants : Data.constant list;
   pp : Format.formatter -> 'a -> unit;
   embed : 'a embedding;   (* 'a -> term *)
   readback : 'a readback; (* term -> 'a *)
@@ -410,24 +412,25 @@ module RawOpaqueData = struct
       Format.fprintf fmt "@\n";
     end;
     Format.fprintf fmt "@[<hov 2>data %s.@]@\n@\n" name;
-    List.iter (fun (variant,(c,_)) ->
-      Format.fprintf fmt "@[<hov 2>builtin symb %s : %s = \"%d\".@]@\n" c name variant)
+    List.iter (fun (variant,(c,v)) ->
+      Format.fprintf fmt "@[<hov 2>symb %s : %s%s.@]@\n" c name (ED.Global_symbols.show_variant_annotation variant))
       constants
     in
   { cin; cino; cout; isc; name = c },
-  { Conversion.embed; readback; ty; pp_doc; pp }
+  { Conversion.embed; readback; ty; pp_doc; pp;
+    constants = List.map (fun (_,(_,v)) -> values_map v) constants }
 
-  let conversion_of_cdata (type a) ~name ?doc ?(constants=[]) ~compare ~pp cd =
+  let conversion_of_cdata (type a) ~name ?doc ?(constants=[]) ?(variant="") ~compare ~pp cd =
     let module VM = Map.Make(struct type t = a let compare = compare end) in
     let constants_map, values_map, constants =
       List.fold_right (fun (n,v) (cm,vm,cl) ->
-        let c, variant = ED.Global_symbols.declare_overloaded_global_symbol n in
+        let c = ED.Global_symbols.declare_global_symbol ~variant n in
         Util.Constants.Map.add c v cm, VM.add v c vm,(variant,(n,v)) :: cl)
       constants (Util.Constants.Map.empty,VM.empty,[]) in
     let values_map x = VM.find x values_map in
     conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants:(List.rev constants) ~pp cd
 
-  let declare { name; doc; pp; compare; hash; hconsed; constants; } =
+  let declare ?variant { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = Util.CData.declare {
       data_compare = compare;
       data_pp = pp;
@@ -435,16 +438,16 @@ module RawOpaqueData = struct
       data_name = name;
       data_hconsed = hconsed;
    } in
-   conversion_of_cdata ~name ~doc ~constants ~compare ~pp cdata
+   conversion_of_cdata ~name ~doc ~constants ?variant ~compare ~pp cdata
 
    module PPX = struct
-     let declare d =
-       let (cd, _) = declare d in
+     let declare ?variant d =
+       let (cd, _) = declare ?variant d in
        cd, d.doc
    end
 
-   let conversion_of_cdata ~name ?doc ?constants ~compare ~pp cd =
-     snd @@ conversion_of_cdata ~name ?doc ?constants ~compare ~pp cd
+   let conversion_of_cdata ~name ?doc ?constants ?variant ~compare ~pp cd =
+     snd @@ conversion_of_cdata ~name ?doc ?constants ?variant ~compare ~pp cd
 
    let morph1 { cin; cout } f x = cin (f (cout x))
    let morph2 { cin; cout } f x y = cin (f (cout x) (cout y))
@@ -502,7 +505,7 @@ module OpaqueData = struct
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
   }
 
-  let declare x = snd @@ RawOpaqueData.declare x
+  let declare ?variant x = snd @@ RawOpaqueData.declare ?variant x
 
 end
 
@@ -518,7 +521,7 @@ module BuiltInData = struct
     let readback ~depth state t = state, t, [] in
     { Conversion.embed; readback; ty = Conversion.TyName ty;
       pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
-      pp_doc = (fun fmt () -> ()) }
+      pp_doc = (fun fmt () -> ()); constants = []; }
 
   let any = poly "any"
 
@@ -556,7 +559,7 @@ module BuiltInData = struct
       pp = (fun fmt (t,d) ->
         let module R = (val !r) in let open R in
         Pp.uppterm d [] ~argsdepth:d ED.empty_env fmt t);
-      pp_doc = (fun fmt () -> ()) }
+      pp_doc = (fun fmt () -> ()); constants = []; }
    
   let map_acc f s l =
     let rec aux acc extra s = function
@@ -582,7 +585,7 @@ module BuiltInData = struct
     { Conversion.embed; readback;
       ty = TyApp ("list",d.ty,[]);
       pp;
-      pp_doc = (fun fmt () -> ()) }
+      pp_doc = (fun fmt () -> ()); constants = []; }
 
   let listC (d : ('a,'h,'cst) ContextualConversion.t) =
   let embed ~depth h cst s l =
@@ -599,28 +602,32 @@ module BuiltInData = struct
   { ContextualConversion.embed; readback;
     ty = TyApp ("list",d.ContextualConversion.ty,[]);
     pp;
-    pp_doc = (fun fmt () -> ()) }    
+    pp_doc = (fun fmt () -> ()); constants = []; }    
 
   (* Conversions that can be used in any context, as the contextual ones *)
   let intC : 'c 'csts. (int,'c,'csts) ContextualConversion.t = {
     ContextualConversion.ty = int.Conversion.ty; pp = int.Conversion.pp; pp_doc = int.Conversion.pp_doc;
     embed = (fun ~depth _ _ s x -> int.Conversion.embed ~depth s x);
     readback = (fun ~depth _ _ s x -> int.Conversion.readback ~depth s x);
+    constants = int.Conversion.constants;
   }
   let floatC : 'c 'csts. (float,'c,'csts) ContextualConversion.t = {
     ContextualConversion.ty = float.Conversion.ty; pp = float.Conversion.pp; pp_doc = float.Conversion.pp_doc;
     embed = (fun ~depth _ _ s x -> float.Conversion.embed ~depth s x);
     readback = (fun ~depth _ _ s x -> float.Conversion.readback ~depth s x);
+    constants = float.Conversion.constants;
   }
   let stringC : 'c 'csts. (string,'c,'csts) ContextualConversion.t = {
     ContextualConversion.ty = string.Conversion.ty; pp = string.Conversion.pp; pp_doc = string.Conversion.pp_doc;
     embed = (fun ~depth _ _ s x -> string.Conversion.embed ~depth s x);
     readback = (fun ~depth _ _ s x -> string.Conversion.readback ~depth s x);
+    constants = string.Conversion.constants;
   }
   let locC : 'c 'csts. (Util.Loc.t,'c,'csts) ContextualConversion.t = {
     ContextualConversion.ty = loc.Conversion.ty; pp = loc.Conversion.pp; pp_doc = loc.Conversion.pp_doc;
     embed = (fun ~depth _ _ s x -> loc.Conversion.embed ~depth s x);
     readback = (fun ~depth _ _ s x -> loc.Conversion.readback ~depth s x);
+    constants = loc.Conversion.constants;
   }
 
   let polyC : 'c 'csts. string -> (ED.term,'c,'csts) ContextualConversion.t =
@@ -630,7 +637,7 @@ module BuiltInData = struct
     let readback ~depth _ _ state t = state, t, [] in
     { ContextualConversion.embed; readback; ty = Conversion.TyName "any";
       pp = (fun fmt _ -> Format.fprintf fmt "<any>");
-      pp_doc = (fun fmt () -> ()) }
+      pp_doc = (fun fmt () -> ()); constants = []; }
 
 end
 
@@ -763,12 +770,11 @@ module RawData = struct
   module Constants = struct
 
     let declare_global_symbol ?variant x =
-      begin match variant with
-      | Some n -> if n < 1 then data_error "declare_global_symbol: variants are >= 0"
-      | None -> () end;
       ED.Global_symbols.declare_global_symbol ?variant x
 
     let show c = Util.Constants.show c
+
+    let lookup name = Compiler.lookup_global_name name
 
     let orc    = ED.Global_symbols.orc
 
@@ -910,6 +916,7 @@ module FlexibleData = struct
       | RawData.UnifVar(k,args) ->
           state, (k,args), []
       | _ -> raise (Conversion.TypeErr (TyName "uvar",depth,t)));
+    constants = [];
   }
 
 end
@@ -919,14 +926,14 @@ module AlgebraicData = struct
   type name = string
   type doc = string
 
-  let allocate_constructors x =
+  let allocate_constructors ?variant x =
     let module R = (val !r) in
     ED.BuiltInPredicate.ADT.allocate_constructors
       ~look:R.deref_head
       ~mkinterval:R.mkinterval
       ~mkConst:R.mkConst
       ~alloc:FlexibleData.Elpi.make
-      ~mkUnifVar:RawData.mkUnifVar x
+      ~mkUnifVar:RawData.mkUnifVar ?variant x
 
   let declare_allocated alloc x =
     let module R = (val !r) in
@@ -937,13 +944,13 @@ module AlgebraicData = struct
       ~alloc:FlexibleData.Elpi.make
       ~mkUnifVar:RawData.mkUnifVar alloc x
 
-  let declare x =
+  let declare ?variant x =
     begin match x.ED.BuiltInPredicate.ADT.ty with
     | TyApp(s,_,_) -> data_error ("Declaration of " ^ s ^ " requires allocate_constructors + declare_allocated")
     | TyName _ -> ()
     end;
     let x = ED.BuiltInPredicate.ADT.Decl x in
-    let alloc = allocate_constructors x in
+    let alloc = allocate_constructors ?variant x in
     declare_allocated alloc x
 
        
@@ -1042,17 +1049,17 @@ module BuiltInPredicate = struct
        - map2, fold1, fold2: several inputs, last is the output  -> (func In.. -> Out) *)
     let sty x = ED.Conversion.show_ty_ast x.Conversion.ty
     let func_A_ty x = Conversion.TyName (Printf.sprintf "(func %s)" (sty x))
-    let func_A x = { Conversion.ty = func_A_ty x; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<func_A>"); pp_doc = (fun fmt () -> ()) }
+    let func_A x = { Conversion.ty = func_A_ty x; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<func_A>"); pp_doc = (fun fmt () -> ()); constants = []; }
     let func_AB_ty x y = Conversion.TyName (Printf.sprintf "(func %s, %s)" (sty x) (sty y))
-    let func_AB x y = { Conversion.ty = func_AB_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<func_AB>"); pp_doc = (fun fmt () -> ()) }
+    let func_AB x y = { Conversion.ty = func_AB_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<func_AB>"); pp_doc = (fun fmt () -> ()); constants = []; }
     let func_A_B_ty x y = Conversion.TyName (Printf.sprintf "(func %s -> %s)" (sty x) (sty y))
-    let func_A_B x y = { Conversion.ty = func_A_B_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<func_A_B>"); pp_doc = (fun fmt () -> ()) }
+    let func_A_B x y = { Conversion.ty = func_A_B_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<func_A_B>"); pp_doc = (fun fmt () -> ()); constants = []; }
     let func_AB_C_ty x y z = Conversion.TyName (Printf.sprintf "(func %s, %s -> %s)" (sty x) (sty y) (sty z))
-    let func_AB_C x y z = { Conversion.ty = func_AB_C_ty x y z; readback = (fun ~depth state e -> state,(e,x,y,z),[]); embed = (fun ~depth state (x,_,_,_) -> state,x,[]); pp = (fun fmt (x,_,_,_) -> Format.fprintf fmt "<func_AB_C>"); pp_doc = (fun fmt () -> ()) }
+    let func_AB_C x y z = { Conversion.ty = func_AB_C_ty x y z; readback = (fun ~depth state e -> state,(e,x,y,z),[]); embed = (fun ~depth state (x,_,_,_) -> state,x,[]); pp = (fun fmt (x,_,_,_) -> Format.fprintf fmt "<func_AB_C>"); pp_doc = (fun fmt () -> ()); constants = []; }
     let func_AB_B_ty x a = Conversion.TyName (Printf.sprintf "(func %s, %s -> %s)" (sty x) a a)
-    let func_AB_B x a = { Conversion.ty = func_AB_B_ty x a; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<func_AB_B>"); pp_doc = (fun fmt () -> ()) }
+    let func_AB_B x a = { Conversion.ty = func_AB_B_ty x a; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<func_AB_B>"); pp_doc = (fun fmt () -> ()); constants = []; }
     let func_ABC_C_ty x y a = Conversion.TyName (Printf.sprintf "(func %s, %s, %s -> %s)" (sty x) (sty y) a a)
-    let func_ABC_C x y a = { Conversion.ty = func_ABC_C_ty x y a; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<func_ABC_C>"); pp_doc = (fun fmt () -> ()) }
+    let func_ABC_C x y a = { Conversion.ty = func_ABC_C_ty x y a; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<func_ABC_C>"); pp_doc = (fun fmt () -> ()); constants = []; }
 
 
     let filter1 ~once ~depth ~filter (f,c1) m state =
@@ -1221,34 +1228,33 @@ module Calc = struct
   type operation_declaration = {
     symbol : string;
     infix : bool;
-    args : string list list;
+    variant : string;
+    args : string list;
     code : ED.term list -> ED.term;
   }
 
-  let compile_operation_declaration { symbol; infix; args; code } =
-    let ty_decl args =
-      let c, variant = ED.Global_symbols.declare_overloaded_global_symbol symbol in
-      let ty_decl = if infix then
-        Printf.sprintf "builtin symb (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
-      else
-        Printf.sprintf "builtin symb %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
-      c, { ED.CalcHooks.ty_decl = ty_decl; code }
-    in
-    List.map ty_decl args
+  let compile_operation_declaration { symbol; infix; variant; args; code } =
+    let c = ED.Global_symbols.declare_global_symbol ~variant symbol in
+    let annotation = ED.Global_symbols.show_variant_annotation variant in
+    let ty_decl = if infix then
+      Printf.sprintf "symb (%s) : %s%s. " symbol (String.concat " -> " args) annotation
+    else
+      Printf.sprintf "symb %s : %s%s." symbol (String.concat " -> " args) annotation in
+    c, { ED.CalcHooks.ty_decl = ty_decl; code }
 
    let register ~descriptor d =
      let e = compile_operation_declaration d in
-     descriptor := e @ !descriptor
+     descriptor := e :: !descriptor
     
   let register_eval n (symbol,tys) code =
     let infix, n = n < 0, abs n in
-    let args = tys |> List.map (fun ty -> List.init (n+1) (fun _ -> ty)) in
-    [{ symbol; infix; args; code }]
- 
+    let variant i = match tys with [_] -> "" | _ -> Printf.sprintf "std.%d" (i + 1) in
+    tys |> List.mapi (fun i ty ->
+      { symbol; infix; variant = variant i; args = List.init (n+1) (fun _ -> ty); code })
+
  let register_eval_ty symbol ty code =
    let infix = false in
-   let args = [ty] in
-   [{ symbol; infix; args; code }]
+   [{ symbol; infix; variant = ""; args = ty; code }]
 
 
  let register_evals n l f = List.map (fun i -> register_eval n i f) l |> List.flatten
@@ -1635,18 +1641,23 @@ module PPX = struct
       ED.BuiltInPredicate.ADT.document_kind fmt ty
     (* builtin func name Key -> Field1, ..., FieldN, the declaration of an entry of a
        context, a predicate about a bound variable of type Key *)
-    let context_entry fmt ~name ~doc ~key ~args =
+    let context_entry fmt ~variant:_ ~name ~doc ~key ~args =
       let show = ED.Conversion.show_ty_ast ~prec:ED.Conversion.Arrow in
       let outs =
         if args = [] then ""
         else " -> " ^ String.concat ", " (List.map show args) in
       Format.fprintf fmt "%% context items for %s%s@\n"
         (show key) (if doc = "" then "" else " (" ^ doc ^ ")");
-      Format.fprintf fmt "@[<hov2>builtin func %s %s%s.@]@\n@\n" name (ED.Conversion.show_ty_ast ~prec:ED.Conversion.AppArg key) outs
+      Format.fprintf fmt "@[<hov2>func %s %s%s.@]@\n@\n" name (ED.Conversion.show_ty_ast ~prec:ED.Conversion.AppArg key) outs
 
     let constructor fmt ~max_name_len ~variant ~name ~doc ~ty ~args =
       ED.BuiltInPredicate.ADT.document_constructor
         fmt max_name_len name variant doc (List.map (fun x -> (false,ED.Conversion.show_ty_ast ~prec:Arrow x,"")) (args @ [ty]))
+
+    (* a constructor with the type given by [@elpi.code name code] *)
+    let custom_constructor fmt ~variant ~name ~doc ~code =
+      Format.fprintf fmt "@[<hov2>symb %s :@[<hov> %s@]%s. %% %s@]@\n" name code
+        (ED.Global_symbols.show_variant_annotation variant) doc
     type prec_level = ED.Conversion.prec_level = Arrow | AppArg
     let show_ty_ast = ED.Conversion.show_ty_ast
           

@@ -186,13 +186,16 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"a" ~doc:"A" ~args:[];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"b" ~doc:"B"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.ContextualConversion.TyName
                        elpi_constant_type_mut]);
+        constants =
+          [elpi_constant_constructor_simple_Ac;
+          elpi_constant_constructor_simple_Bc];
         pp = pp_simple;
         embed = elpi_embed_simple;
         readback = elpi_readback_simple
@@ -204,12 +207,15 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"c" ~doc:"C" ~args:[];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"d" ~doc:"D"
                ~args:[Elpi.API.ContextualConversion.TyName
                         elpi_constant_type_simple]);
+        constants =
+          [elpi_constant_constructor_mut_Cc;
+          elpi_constant_constructor_mut_Dc];
         pp = pp_mut;
         embed = elpi_embed_mut;
         readback = elpi_readback_mut

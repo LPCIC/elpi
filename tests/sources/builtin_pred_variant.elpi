@@ -1,0 +1,4 @@
+% a builtin predicate takes no variant
+builtin func foo = "1".
+
+main.

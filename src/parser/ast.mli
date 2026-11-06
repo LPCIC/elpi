@@ -17,6 +17,7 @@ module Func : sig
   val andf : t
   val orf : t
   val implf : t
+  val dimplf : t
   val implbangf : t
   val rimplf : t
   val cutf : t
@@ -280,7 +281,7 @@ and functionality = Function | Relation
 and variadic = Variadic | NotVariadic
 and provenance =
   | Core (* baked into the elpi runtime *)
-  | Builtin of { variant : int } (* buitin or host declared *)
+  | Builtin of { variant : string } (* buitin or host declared; "" is the default variant *)
   | File of Loc.t
 [@@deriving show, ord]
 

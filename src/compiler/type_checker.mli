@@ -12,12 +12,13 @@ type arities = Arity.t F.Map.t
 
 
 val check_disjoint : type_abbrevs:ScopedTypeExpression.t F.Map.t -> kinds:arities -> unit
-val check_type : type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> Symbol.t * Symbol.t option * TypingEnv.symbol_metadata
+(* [stubs]: a builtin symbol need not be declared in OCaml *)
+val check_type : ?stubs:bool -> type_abbrevs:type_abbrevs -> kinds:arities -> ScopedTypeExpression.t -> Symbol.t * Symbol.t option * TypingEnv.symbol_metadata
 
 (* the environment of each declaration, in order; with [errs] a declaration that
    does not type check is dropped and its error recorded, otherwise the error
    is raised *)
-val check_types : ?errs:Errors.t -> type_abbrevs:type_abbrevs -> kinds:arities -> ScopeTypeExpressionUniqueList.t F.Map.t -> TypingEnv.t list
+val check_types : ?errs:Errors.t -> ?stubs:bool -> type_abbrevs:type_abbrevs -> kinds:arities -> ScopeTypeExpressionUniqueList.t F.Map.t -> TypingEnv.t list
   
 val check_macro :
   type_abbrevs:type_abbrevs ->

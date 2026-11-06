@@ -304,7 +304,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
           (aux (hdlvl+1) depth) a F.pp F.eqf
           (aux (hdlvl+1) depth) b)
     | Builtin (((Impl | ImplBang) as bp), [a;b]) ->
-      let op = if bp == Impl then "==>" else "=!=>" in
+      let op = F.show (if bp == Impl then F.dimplf else F.implbangf) in
       let _, hdlvl = Elpi_parser.Parser_config.precedence_of op in
       with_parens prec hdlvl (fun _ ->
         Fmt.fprintf f "@[<hov 1>(%a)@ %s@ %a@]"

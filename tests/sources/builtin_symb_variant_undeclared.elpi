@@ -1,0 +1,5 @@
+% = "variant" is only for the text of an OCaml builtins declaration
+data t.
+symb foo : t = "test.2".
+
+main.

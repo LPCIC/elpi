@@ -96,8 +96,10 @@ let lam : (lam, context, Data.constraints) ContextualConversion.t = {
   pp = pp_lam;
   pp_doc = (fun fmt () ->
     Format.fprintf fmt "data lam.@\n";
-    Format.fprintf fmt "builtin symb ap : lam -> lam -> lam = \"0\".@\n";
-    Format.fprintf fmt "builtin symb lm : string -> (lam -> lam) -> lam = \"0\".@\n@\n");
+    Format.fprintf fmt "symb ap : lam -> lam -> lam.@\n";
+    Format.fprintf fmt "symb lm : string -> (lam -> lam) -> lam.@\n@\n");
+  (* the symbols that pp_doc declares *)
+  constants = [c_ap; c_lm];
   embed = embed_lam;
   readback = readback_lam;
 }
@@ -124,7 +126,9 @@ let builtin = let open BuiltIn in
   BuiltIn.declare ~file_name ((PPX.to_list declaration) @ [
     MLDataC lam;
     (* the hypotheses read by the context readback *)
-    LPCode "builtin func known lam -> string.";
+    LPCode "func known lam -> string.";
+    (* the global symbols of the text above, bound to their declarations *)
+    MLConstants [c_ap; c_lm; c_known];
     MLCode(describe,DocAbove);
   ])
 

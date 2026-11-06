@@ -165,9 +165,11 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"entry" ~doc:"Entry"
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:"" ~name:"entry"
+               ~doc:"Entry"
                ~key:(Elpi.API.ContextualConversion.TyName "term")
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_tctx_Entryc];
         pp = (fun fmt (_, x) -> pp_tctx fmt x);
         embed = elpi_embed_tctx;
         readback = elpi_readback_tctx
@@ -370,13 +372,14 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:""
                ~ty:kind ~name:"lam" ~doc:"Lam"
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.ContextualConversion.TyApp
                        ("->", (Elpi.API.ContextualConversion.TyName "term"),
                          [Elpi.API.ContextualConversion.TyName
                             elpi_constant_type_term])]);
+        constants = [elpi_constant_constructor_term_Lamc];
         pp = pp_term;
         embed = elpi_embed_term;
         readback = elpi_readback_term

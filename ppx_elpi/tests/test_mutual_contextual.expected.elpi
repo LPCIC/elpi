@@ -1,12 +1,12 @@
 
 
 % context items for term (Entry)
-builtin func entry term -> string.
+func entry term -> string.
 
 
-builtin data term.
-builtin symb let  : decl -> term -> term = "0".  % Let
-builtin symb unit : term = "0".  % Unit
+data term.
+symb let  : decl -> term -> term.  % Let
+symb unit : term.  % Unit
 
 func term.copy term -> term.
 term.copy (let A0 A1) (let B0 B1) :- (decl.copy A0 B0), (term.copy A1 B1).
@@ -14,8 +14,8 @@ term.copy unit unit.
 
 
 
-builtin data decl.
-builtin symb def : string -> (term -> term) -> decl = "0".  % Def
+data decl.
+symb def : string -> (term -> term) -> decl.  % Def
 
 func decl.copy decl -> decl.
 decl.copy (def A0 A1) (def B0 B1) :- (string.copy A0 B0), (pi x\ entry x B0 ==> term.copy x x ==> (term.copy (A1 x) (B1 x))).

@@ -22,6 +22,7 @@ type flags = {
   time_typechecking : bool;
   skip_det_checking: bool;
   max_errors: int;
+  builtin_stubs: bool;
 }
 [@@deriving show]
 
@@ -31,6 +32,7 @@ let default_flags = {
   time_typechecking = false;
   skip_det_checking = false;
   max_errors = 0;
+  builtin_stubs = false;
 }
 
 let time_this r f =
@@ -300,18 +302,97 @@ let document_file ?header:_ ~calc ~file:name file_name =
   close_out oc
 
 
+(* The text of a builtins file names its OCaml symbols: the constants of the
+   conversions of its MLData (e.g. the constructors of an AlgebraicData), its
+   MLConstants and the operators of calc, if it documents calc ([calc]). A
+   [symb], or a [pred] / [func] signature, with the name of one of them
+   denotes it; with several variants of a name, the [symb] says which one with
+   [= "N"] (the text prints it only then, see
+   Global_symbols.show_variant_annotation). Each is declared once. [builtin] on a
+   predicate is only for those implemented by an MLCode. *)
+let bind_mlconstants ~file_name ~calc decls ({ Ast.ast } as p : Ast.Program.t) =
+  let name_variant c =
+    match Util.Constants.Map.find_opt c D.Global_symbols.table.c2s with
+    | Some s ->
+        (match D.Symbol.get_provenance s with
+         | Builtin { variant } -> D.Symbol.get_str s, variant
+         | _ -> builtins_error (Printf.sprintf "MLConstants of %s: %s is a symbol of the language" file_name (D.Symbol.get_str s)))
+    | None -> builtins_error (Printf.sprintf "MLConstants of %s: %d is not a constant of Constants.declare_global_symbol" file_name c) in
+  (* a symbol given twice (e.g. by an MLData and an MLConstants) is one symbol *)
+  let compare_nv (n1, v1) (n2, v2) = match String.compare n1 n2 with 0 -> String.compare v1 v2 | c -> c in
+  let constants =
+    List.sort_uniq compare_nv (
+      List.concat_map (function
+        | BuiltInPredicate.MLData { Conversion.constants } -> List.map name_variant constants
+        | BuiltInPredicate.MLDataC { ContextualConversion.constants } -> List.map name_variant constants
+        | BuiltInPredicate.MLConstants l -> List.map name_variant l
+        (* the operators are documented after calc, see Data.BuiltInPredicate.document *)
+        | BuiltInPredicate.MLCode ((Pred("calc",_,_) | ContextualPred("calc",_,_,_)), _) ->
+            List.map (fun (c, _) -> name_variant c) calc
+        | _ -> []) decls) in
+  let mlcode = decls |> List.filter_map (function
+    | BuiltInPredicate.MLCode ((Pred(name,_,_) | ContextualPred(name,_,_,_)), _) -> Some name
+    | _ -> None) in
+  let bound = ref [] in
+  let bind_once ~loc name v =
+    if List.exists (fun (k, w) -> String.equal k name && String.equal w v) !bound then
+      builtins_error ~loc (Printf.sprintf "%s%s, an OCaml symbol of %s, is declared twice by its text" name (D.Global_symbols.show_variant_annotation v) file_name);
+    bound := (name, v) :: !bound in
+  let variants name = List.filter_map (fun (k, v) -> if String.equal k name then Some v else None) constants in
+  let bind ~ns ~pred ({ Ast.Type.name; attributes; loc } as t) =
+    let name = String.concat "." (List.rev (F.show name :: ns)) in
+    let annotation = List.find_map (function Ast.External o -> Some o | _ -> None) attributes in
+    match annotation, variants name with
+    | Some (Some "core"), _ -> t
+    | Some None, _ when pred ->
+        if not (List.exists (String.equal name) mlcode) then
+          builtins_error ~loc (Printf.sprintf "%s is declared builtin but no MLCode of %s implements it%s" name file_name
+            (match variants name with [] -> "" | _ -> ": it is in the MLConstants, drop builtin"));
+        t
+    | Some (Some s), vs ->
+        if List.exists (String.equal s) vs then (bind_once ~loc name s; t)
+        else builtins_error ~loc (Printf.sprintf "%s = \"%s\" is not an OCaml symbol of %s (MLData, MLConstants)" name s file_name)
+    | Some None, _ -> builtins_error ~loc (Printf.sprintf "builtin symb %s: only the symbols of the language are builtin" name)
+    | None, vs when List.exists (String.equal "") vs ->
+        bind_once ~loc name ""; { t with attributes = Ast.External (Some "") :: attributes }
+    | None, [] when not pred && D.Global_symbols.is_default_symbol name ->
+        (* e.g. the pp_doc of a hand-written Conversion.t printing the symb of
+           an OCaml constant: the file must list it *)
+        builtins_error ~loc (Printf.sprintf "%s is the name of an OCaml symbol (Constants.declare_global_symbol) that %s does not list: add it to its MLConstants" name file_name)
+    | None, [] -> t
+    | None, vs ->
+        builtins_error ~loc (Printf.sprintf "%s is the name of OCaml symbols with a variant: choose one with %s"
+          name (String.concat " or " (List.map (fun v -> Printf.sprintf "= \"%s\"" v) (List.sort String.compare vs)))) in
+  (* the namespaces around a declaration, innermost first; a block that is
+     not a namespace pushes nothing *)
+  let rec bind_all stack = function
+    | [] -> []
+    | d :: rest ->
+        let ns = List.concat stack in
+        let d, stack =
+          match d with
+          | Ast.Program.Type l -> Ast.Program.Type (List.map (bind ~ns ~pred:false) l), stack
+          | Ast.Program.Pred t -> Ast.Program.Pred (bind ~ns ~pred:true t), stack
+          | Ast.Program.Namespace (_, n) -> d, [F.show n] :: stack
+          | Ast.Program.Begin _ | Ast.Program.Constraint _ -> d, [] :: stack
+          | Ast.Program.End _ -> d, (match stack with _ :: s -> s | [] -> [])
+          | d -> d, stack in
+        d :: bind_all stack rest in
+  let ast = bind_all [] ast in
+  constants |> List.iter (fun (name, variant) ->
+    if not (List.exists (fun (k, v) -> String.equal k name && String.equal v variant) !bound) then
+      builtins_error (Printf.sprintf "%s%s, an OCaml symbol of %s, is not declared by its text (symb, pred or func)" name (D.Global_symbols.show_variant_annotation variant) file_name));
+  { p with ast }
+
 let ast_of_builtins ~calc ~(parser: (module Parse.Parser)) ~file_name =
   let _, decls = declared_builtins ~file_name in
   (* This is a bit ugly, since we print and then parse... *)
-  let b = Buffer.create 1024 in
-  let fmt = Format.formatter_of_buffer b in
-  Data.BuiltInPredicate.document fmt decls calc;
-  Format.pp_print_flush fmt ();
-  let text = Buffer.contents b in
+  let text = Data.BuiltInPredicate.document_to_string decls calc in
   let lexbuf = Lexing.from_string text in
   let module P = (val parser) in
   match P.program_from ~loc:(Util.Loc.initial file_name) ~digest:(Digest.string text) lexbuf with
-  | p, [], [] -> p
+  | p, [], [] ->
+      bind_mlconstants ~file_name ~calc decls p
   | _, errors, warnings ->
     (* the code of the builtins has no warnings *)
     let { Util.loc; message; _ } =
@@ -639,11 +720,9 @@ end = struct (* {{{ *)
     | x :: _ -> error ~loc ("illegal attribute " ^ show_raw_attribute x)
 
   let structure_external ~loc = function
-    | None -> Builtin { variant = 0 }
+    | None -> Builtin { variant = "" }
     | Some "core" -> Core
-    | Some s ->
-        try (Builtin { variant = int_of_string s })
-        with Invalid_argument _ -> error ~loc ("illegal external attribute")
+    | Some variant -> Builtin { variant }
 
 
   let structure_type_attributes { Type.attributes; loc; name; ty; doc } : (symbol_attribute, functionality) Type.t=
@@ -656,7 +735,7 @@ end = struct (* {{{ *)
       | External o :: rest ->
          begin match r.availability with
            | Structured.Elpi -> aux_tatt { r with availability = Structured.OCaml (structure_external ~loc o) } f rest
-           | Structured.OCaml _ -> duplicate_err "external"
+           | Structured.OCaml _ -> duplicate_err "builtin"
          end
       | Index(i,index_type) :: rest ->
          let it =
@@ -1590,7 +1669,7 @@ end = struct
     let all_ty_names = F.Map.merge merge all_ty_names kinds in
     (* a type declaration that is wrong, or that is incompatible with the
        others (or with the base), is dropped *)
-    let declarations = Type_checker.check_types ~errs ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds types in
+    let declarations = Type_checker.check_types ~errs ~stubs:flags.builtin_stubs ~type_abbrevs:all_type_abbrevs ~kinds:all_kinds types in
     let all_types, types =
       Errors.protect_fold_left ~errs (fun (all_types, types) d ->
           Flatten.merge_type_assignments all_types d, TypingEnv.merge_envs types d)
@@ -1705,7 +1784,7 @@ end = struct
       let { TypingEnv.indexing; availability } = TypingEnv.resolve_symbol symb new_types in
       begin match availability with
         | Ast.Structured.OCaml _ -> ()
-        | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "External predicate with no signature %s" name)
+        | _ -> anomaly ~loc:(Symbol.get_loc symb) (Format.asprintf "Builtin predicate with no signature %s" name)
       end;
       (symb, name) :: acc)
     ) builtins [],
@@ -1719,6 +1798,23 @@ end = struct
         ~none:(types, u_types)
       builtins in
 
+    (* a declaration is OCaml's: in the text of a builtins file, a global
+       symbol it binds or a predicate implemented by one of its MLCode;
+       elsewhere, a builtin predicate implemented by an MLCode (a
+       redeclaration). Unless it is a stub *)
+    let is_builtins_file = Option.is_some builtins in
+    if not flags.builtin_stubs then
+    TypingEnv.all_symbols u_types |> List.iter (fun (s, { TypingEnv.availability }) ->
+      match availability with
+      | Ast.Structured.OCaml (Builtin _ as p) ->
+          let name = Symbol.get_func s in
+          let is_global = D.Symbol.RawMap.mem (Symbol.make p name) D.Global_symbols.table.s2ct in
+          if not (is_global && is_builtins_file) && not (TypingEnv.resolve_symbol s types).implemented_in_ocaml then
+            Errors.protect errs ~default:() (fun () ->
+              error_builtins ~loc:(Symbol.get_loc s)
+                (Format.asprintf "%a is declared builtin but no MLCode implements it" F.pp name))
+      | _ -> ());
+
     TypingEnv.iter_names (fun k -> function
       | TypeAssignment.Single _ -> ()
       | Overloaded l ->
@@ -1729,7 +1825,7 @@ end = struct
             | Core | File _ -> false
             | Builtin _ -> true) l in
           if TypingEnv.undup u_types l |> List.length <> List.length l then
-          error_builtins ("Overloaded external symbol " ^ F.show k ^ " must be assigned different ids.\nDid you use the external symbol ... = \"id\". syntax?"))
+          error_builtins ("Overloaded builtin symbol " ^ F.show k ^ " must be assigned different variants.\nDid you give each one its variant, symb ... = \"variant\"?"))
     ) u_types;
 
     (* returns unkown types + checked clauses *)
@@ -2487,7 +2583,29 @@ end
   API
  ****************************************************************************)
 
-let scope ~errs s ~toplevel_macros ~builtins p : scoped_program list =
+(* Only the text of an OCaml builtins declaration names the variant of an
+   OCaml symbol (= "variant") or declares the symbols of the language
+   (= "core"); a [builtin] predicate of another file is a redeclaration,
+   checked against the MLCode that implements it *)
+let check_user_declarations ~errs (p : Ast.Program.t) =
+  let check ({ Ast.Type.attributes; loc; name } : _ Ast.Type.t) =
+    attributes |> List.iter (function
+      | Ast.External (Some "core") ->
+          Errors.protect errs ~default:() (fun () ->
+            compiler_error ~loc (F.show name ^ ": only builtin.elpi declares the symbols of the language (= \"core\")"))
+      | Ast.External (Some _) ->
+          Errors.protect errs ~default:() (fun () ->
+            compiler_error ~loc (F.show name ^ ": = \"variant\" is only for the text of an OCaml builtins declaration, where it picks one of its OCaml symbols (MLData, MLConstants)"))
+      | _ -> ()) in
+  let rec aux l = l |> List.iter (function
+    | Ast.Program.Type l -> List.iter check l
+    | Ast.Program.Pred t -> check t
+    | Ast.Program.Accumulated (_, l) -> List.iter (fun { Ast.ast } -> aux ast) l
+    | _ -> ()) in
+  aux p.Ast.ast
+
+let scope ~errs ?(user_text=false) s ~toplevel_macros ~builtins p : scoped_program list =
+  if user_text then check_user_declarations ~errs p;
   let pl = RecoverStructure.run ~errs s p in
   pl |> List.map (fun { Ast.ast = p; digest; deps; file_name} -> 
     let p = Scope_Quotation_Macro.run ~errs ~toplevel_macros s p in
@@ -2558,7 +2676,7 @@ let show_error = Compiler_data.show_error
 
 let scoped_of_ast ~flags ~header:(s,u) ?(calc=[]) p =
   with_errors ~flags (fun errs ->
-    scope ~errs ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:None p)
+    scope ~errs ~user_text:(not flags.builtin_stubs) ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:None p)
 
 
 let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor calc_descriptor builtins : header =
@@ -2623,7 +2741,7 @@ let compile_unit ~flags ~header ~base:(st,base) scoped : checked_compilation_uni
 
 let program_of_ast ~flags ~header:(header : State.t * Assembled.program) p : program * error list * warning list =
   with_errors ~flags (fun errs ->
-    let pl = scope ~errs ~toplevel_macros:(snd header).Assembled.signature.toplevel_macros (fst header) ~builtins:None p in
+    let pl = scope ~errs ~user_text:(not flags.builtin_stubs) ~toplevel_macros:(snd header).Assembled.signature.toplevel_macros (fst header) ~builtins:None p in
     let header, _ =
       pl |> List.fold_left (fun ((header, seen) as acc) (p : scoped_program) ->
         if StrSet.mem p.digest seen then acc
@@ -2787,7 +2905,10 @@ let global_name_to_constant state s =
   let symbols2c,str2symbol = State.get symtab state in
   match Type_checker.runtime_resolve str2symbol (F.from_string s) with
   | s -> fst @@  Symbol.RawMap.find s symbols2c
-  | exception Not_found -> compiler_error (Format.asprintf "cannot resolve overloaded symbol (%s) at runtime" s)
+  | exception Not_found -> compiler_error (Format.asprintf "cannot resolve symbol %s at run time: the program does not declare it, or overloads it" s)
+
+let lookup_global_name name state =
+  global_name_to_constant state name
 
 module Compiler : sig
 
@@ -2911,7 +3032,7 @@ let relocate_closed_term ~from:symbol_table ~to_:(_,{ Assembled.symbols; signatu
       | (Single s) ->
         SymbolMap.get_global_symbol symbols s
       | (Overloaded l) ->
-        begin match List.filter (fun x -> get_variant s = get_variant x) l with
+        begin match List.filter (fun x -> Option.equal String.equal (get_variant s) (get_variant x)) l with
         | [] -> None
         | [x] -> SymbolMap.get_global_symbol symbols x
         | x1::x2::_ -> anomaly ("Cannot relocate overloaded symbol " ^ F.show f ^"\nDeclarations:\n - " ^ Loc.show (Symbol.get_loc x1) ^ "\n - " ^ Loc.show (Symbol.get_loc x2))

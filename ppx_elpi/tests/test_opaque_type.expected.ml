@@ -34,11 +34,18 @@ include
     module Ctx_for_simple =
       struct class type t = object inherit Elpi.API.PPX.ctx end end
     let simple : 'c . (simple, 'c, 'csts) Elpi.API.ContextualConversion.t =
-      let { Elpi.API.Conversion.embed = embed; readback; ty; pp_doc; pp } =
-        elpi_opaque_data_decl_simple in
+      let { Elpi.API.Conversion.embed = embed; readback; ty; pp_doc;
+            constants; pp }
+        = elpi_opaque_data_decl_simple in
       let embed ~depth _ _ s t = embed ~depth s t in
       let readback ~depth _ _ s t = readback ~depth s t in
-      { Elpi.API.ContextualConversion.embed = embed; readback; ty; pp_doc; pp
+      {
+        Elpi.API.ContextualConversion.embed = embed;
+        readback;
+        ty;
+        pp_doc;
+        constants;
+        pp
       }
     let elpi_embed_simple = simple.Elpi.API.ContextualConversion.embed
     let elpi_readback_simple = simple.Elpi.API.ContextualConversion.readback

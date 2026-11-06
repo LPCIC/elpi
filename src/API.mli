@@ -263,6 +263,10 @@ module Compile : sig
     (* resilient passes stop after that many errors; 0, the default, means
        that the first error is raised. *)
     max_errors: int;
+    (* accept the declarations that OCaml neither declares nor implements
+       (eg [builtin func] with no MLCode). This is used by elpi-lsp.
+       Default false. *)
+    builtin_stubs: bool;
   }
   val default_flags : flags
   val to_setup_flags : flags -> Setup.flags
@@ -556,6 +560,9 @@ module Conversion : sig
   type 'a t = {
     ty : ty_ast;
     pp_doc : Format.formatter -> unit -> unit;
+    (** the global symbols ({!RawData.Constants.declare_global_symbol}) that
+        [pp_doc] declares with [symb] *)
+    constants : Data.constant list;
     pp : Format.formatter -> 'a -> unit;
     embed : 'a embedding;   (* 'a -> term *)
     readback : 'a readback; (* term -> 'a *)
@@ -583,6 +590,8 @@ module ContextualConversion : sig
   type ('a,'h,'c) t = {
     ty : ty_ast;
     pp_doc : Format.formatter -> unit -> unit;
+    (** see {!Conversion.t} *)
+    constants : Data.constant list;
     pp : Format.formatter -> 'a -> unit;
     embed : ('a,'h,'c) embedding;   (* 'a -> term *)
     readback : ('a,'h,'c) readback; (* term -> 'a *)
@@ -617,7 +626,7 @@ module BuiltInData : sig
   val list   : 'a Conversion.t -> 'a list Conversion.t
   val loc    : Ast.Loc.t Conversion.t
 
-  (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
+  (* poly "A" is what one would use for, say, [func eq A, A.] *)
   val poly   : string -> Data.term Conversion.t
 
   (* like poly "A" but "A" must be a closed term, e.g. no unification variables
@@ -662,7 +671,9 @@ module OpaqueData : sig
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
   }
 
-  val declare : 'a declaration -> 'a Conversion.t
+  (** The constants of the type are global symbols with the default variant
+      or with [variant], see [RawData.Constants.declare_global_symbol] *)
+  val declare : ?variant:string -> 'a declaration -> 'a Conversion.t
 
 end
 
@@ -756,9 +767,11 @@ module AlgebraicData : sig
 
   type allocation
 
-  val allocate_constructors : ('t,'h,'c) declaration -> allocation
+  (** The constructors are global symbols with the default variant or with
+      [variant], see [RawData.Constants.declare_global_symbol] *)
+  val allocate_constructors : ?variant:string -> ('t,'h,'c) declaration -> allocation
   val declare_allocated : allocation -> ('t,'h,'c) declaration -> ('t,'h,'c) ContextualConversion.t
-  val declare : ('t,'h,'c) base_declaration -> ('t,'h,'c) ContextualConversion.t
+  val declare : ?variant:string -> ('t,'h,'c) base_declaration -> ('t,'h,'c) ContextualConversion.t
 
 end
 
@@ -898,7 +911,7 @@ module BuiltInPredicate : sig
    *  variables such as X (UnifVar).
    *
    *  An example of an API taking advantage of this feature is
-   *    pred typecheck i:term, o:ty, o:diagnostic
+   *    func typecheck term -> ty, diagnostic.
    *  that can be used to both check a term is well typed and backtrack if not
    *    typecheck T TY ok
    *  or assert a term is illtyped or to test weather it is illtyped
@@ -1012,13 +1025,14 @@ module BuiltIn : sig
   (** Where to print the documentation. For the running example DocAbove
     * generates
     *   % [div N M D R] division of N by M gives D with reminder R
-    *   pred div i:int, i:int, o:int, o:int.
+    *   builtin func div int, int -> int, int.
     * while DocNext generates
-    *   pred div % division of N by M gives D with reminder R
-    *    i:int, % N
-    *    i:int, % M
-    *    o:int, % D
-    *    o:int. % R
+    *   builtin func div % division of N by M gives D with reminder R
+    *     int,    % N
+    *     int     % M
+    *     ->
+    *     int,    % D
+    *     int.    % R
     * The latter format it is useful to give longer doc for each argument. *)
   type doc_spec = DocAbove | DocNext
 
@@ -1028,9 +1042,14 @@ module BuiltIn : sig
   type declaration =
     (* Real OCaml code *)
     | MLCode of BuiltInPredicate.t * doc_spec
-    (* Declaration of an OCaml data *)
+    (* Declaration of an OCaml data. It binds the [constants] of the
+       conversion (e.g. the constructors of an AlgebraicData), as an
+       MLConstants does *)
     | MLData : 'a Conversion.t -> declaration
     | MLDataC : ('a,'h,'c) ContextualConversion.t -> declaration
+    (* Global symbols (results of [RawData.Constants.declare_global_symbol])
+       It prints nothing. *)
+    | MLConstants of Data.constant list
     (* Extra doc *)
     | LPDoc  of string
     (* Sometimes you wrap OCaml code in regular predicates in order
@@ -1237,10 +1256,12 @@ module RawOpaqueData : sig
     name : string;
   }
 
-  val declare : 'a declaration -> 'a cdata * 'a Conversion.t
+  (** The constants of the type are global symbols with the default variant
+      or with [variant], see [RawData.Constants.declare_global_symbol] *)
+  val declare : ?variant:string -> 'a declaration -> 'a cdata * 'a Conversion.t
 
   module PPX : sig
-    val declare : 'a declaration -> 'a cdata * (*'a Data.Constants.Map.t * *) doc
+    val declare : ?variant:string -> 'a declaration -> 'a cdata * (*'a Data.Constants.Map.t * *) doc
   end
 
   val pp : Format.formatter -> t -> unit
@@ -1285,7 +1306,9 @@ module Calc : sig
   type operation_declaration = {
     symbol : string;
     infix : bool; (* used for the doc *)
-    args : string list list; (* multiple types for the same symbol *)
+    variant : string; (* "" for the default one, see
+                         [RawData.Constants.declare_global_symbol] *)
+    args : string list; (* the types of the arguments and of the result *)
     code : Data.term list -> Data.term;
   }
 
@@ -1390,7 +1413,22 @@ module RawData : sig
 
   module Constants : sig
 
-    val declare_global_symbol : ?variant:int -> string -> constant
+    (** A global symbol declared by hand:
+        - list it in the [BuiltIn.MLConstants] of an OCaml builtins
+        declaration ([BuiltIn.declare])
+        - be sure the Elpi text of that declaration contains plain
+        [symb f : ty] (or a [pred] / [func] signature), followed by
+        [= "variant"] if it is not the default variant.
+        The same name and variant give the same constant. Several global
+        symbols can share a name if their variants differ: a variant is the
+        name of the library followed by a dot and a name, e.g. ["std.1"] or
+        ["json.1"], so that two libraries cannot collide. Without [variant],
+        the default variant: two libraries that declare the same name share
+        the symbol. *)
+    val declare_global_symbol : ?variant:string -> string -> constant
+
+    (** [lookup "p" st] gives the constant of [p] in the program that runs. *)
+    val lookup : string -> State.t -> constant
 
     val show : constant -> string
 
@@ -1618,18 +1656,20 @@ module PPX : sig
   module Doc : sig
     val kind : Format.formatter -> Conversion.ty_ast -> doc:string -> unit
     val comment : Format.formatter -> string -> unit
-    (* [max_name_len] is the length of the longest constructor name of the
-       type, used to align the declarations *)
-    (* builtin func name Key -> Field1, ..., FieldN, the declaration of an entry of a
-       context: a predicate about a bound variable of type Key *)
-    val context_entry : Format.formatter ->
+    (* func name Key -> Fields, the declaration of an entry of a context *)
+    val context_entry : Format.formatter -> variant:string ->
       name:string -> doc:string ->
       key:Conversion.ty_ast ->
       args:Conversion.ty_ast list -> unit
+    (* [max_name_len] is the length of the longest constructor name of the
+       type, used to align the declarations *)
     val constructor : Format.formatter ->
-      max_name_len:int -> variant:int -> name:string -> doc:string ->
+      max_name_len:int -> variant:string -> name:string -> doc:string ->
      ty:Conversion.ty_ast ->
      args:Conversion.ty_ast list -> unit
+    (* a constructor whose type is given as text, [code] *)
+    val custom_constructor : Format.formatter ->
+      variant:string -> name:string -> doc:string -> code:string -> unit
     type prec_level = Arrow | AppArg
     val show_ty_ast: ?prec:prec_level -> Conversion.ty_ast -> string
 

@@ -176,10 +176,11 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"e1" ~doc:"E1"
-               ~key:(Elpi.API.ContextualConversion.TyName "t1")
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:"" ~name:"e1"
+               ~doc:"E1" ~key:(Elpi.API.ContextualConversion.TyName "t1")
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_c1_E1c];
         pp = (fun fmt (_, x) -> pp_c1 fmt x);
         embed = elpi_embed_c1;
         readback = elpi_readback_c1
@@ -437,13 +438,13 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:""
                ~ty:kind ~name:"a1" ~doc:"A1"
                ~args:[Elpi.API.ContextualConversion.TyName
                         elpi_constant_type_t1;
                      Elpi.API.ContextualConversion.TyName
                        elpi_constant_type_t1];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:""
                ~ty:kind ~name:"l1" ~doc:"L1"
                ~args:[Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty;
                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
@@ -451,6 +452,9 @@ include
                        ("->", (Elpi.API.ContextualConversion.TyName "t1"),
                          [Elpi.API.ContextualConversion.TyName
                             elpi_constant_type_t1])]);
+        constants =
+          [elpi_constant_constructor_t1_A1c;
+          elpi_constant_constructor_t1_L1c];
         pp = pp_t1;
         embed = elpi_embed_t1;
         readback = elpi_readback_t1
@@ -647,10 +651,11 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"e2" ~doc:"E2"
-               ~key:(Elpi.API.ContextualConversion.TyName "t2")
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:"" ~name:"e2"
+               ~doc:"E2" ~key:(Elpi.API.ContextualConversion.TyName "t2")
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_c2_E2c];
         pp = (fun fmt (_, x) -> pp_c2 fmt x);
         embed = elpi_embed_c2;
         readback = elpi_readback_c2
@@ -908,13 +913,13 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:""
                ~ty:kind ~name:"a2" ~doc:"A2"
                ~args:[Elpi.API.ContextualConversion.TyName
                         elpi_constant_type_t2;
                      Elpi.API.ContextualConversion.TyName
                        elpi_constant_type_t2];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:""
                ~ty:kind ~name:"l2" ~doc:"L2"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
@@ -922,6 +927,9 @@ include
                        ("->", (Elpi.API.ContextualConversion.TyName "t2"),
                          [Elpi.API.ContextualConversion.TyName
                             elpi_constant_type_t2])]);
+        constants =
+          [elpi_constant_constructor_t2_A2c;
+          elpi_constant_constructor_t2_L2c];
         pp = pp_t2;
         embed = elpi_embed_t2;
         readback = elpi_readback_t2

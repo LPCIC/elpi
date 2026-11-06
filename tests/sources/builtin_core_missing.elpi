@@ -1,0 +1,4 @@
+% ! is a symbol of the language: no other file declares it
+builtin func !.
+
+main.

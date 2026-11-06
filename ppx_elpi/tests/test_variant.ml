@@ -6,10 +6,10 @@ open Elpi.API
 
 let declaration = PPX.empty_declaration ()
 
-type t1 = A of int [@elpi.variant 1]
+type t1 = A of int [@elpi.variant "test.1"]
 [@@deriving show, elpi { declaration }]
 
-type t2 = A of string [@elpi.variant 2]
+type t2 = A of string [@elpi.variant "test.2"]
 [@@deriving show, elpi { declaration }]
 
 let builtin = BuiltIn.declare ~file_name (PPX.to_list declaration)

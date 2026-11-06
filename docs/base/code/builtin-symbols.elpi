@@ -1,0 +1,3 @@
+% some and tt are constructors of data types declared in OCaml (MLData);
+% 1 + 2 and 1.0 + 2.0 use the variants 1 and 2 of (+), declared in OCaml
+main :- X = some tt, Y is 1 + 2, Z is 1.0 + 2.0, print X Y Z.

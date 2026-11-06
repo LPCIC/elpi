@@ -139,13 +139,16 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:""
                ~ty:kind ~name:"k1" ~doc:"K1"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty;
                      Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:2 ~variant:""
                ~ty:kind ~name:"k2" ~doc:"K2"
                ~args:[Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty]);
+        constants =
+          [elpi_constant_constructor_simple_K1c;
+          elpi_constant_constructor_simple_K2c];
         pp = pp_simple;
         embed = elpi_embed_simple;
         readback = elpi_readback_simple

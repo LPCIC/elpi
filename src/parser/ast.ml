@@ -33,6 +33,7 @@ module Func = struct
   let andf = from_string ","
   let orf = from_string ";"
   let implf = from_string "=>"
+  let dimplf = from_string "==>"
   let implbangf = from_string "=!=>"
   let rimplf = from_string ":-"
   let cutf = from_string "!"
@@ -352,7 +353,7 @@ let cloc =
 module Structured = struct
 type provenance =
   | Core (* baked into the elpi runtime *)
-  | Builtin of { variant : int } (* builtin or host declared *)
+  | Builtin of { variant : string } (* builtin or host declared; "" is the default variant *)
   | File of Loc.t
 [@@deriving show, ord]
   

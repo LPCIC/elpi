@@ -36,6 +36,7 @@ include
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc = (fun fmt () -> Elpi.API.PPX.Doc.kind fmt kind ~doc:""; ());
+        constants = [];
         pp = pp_id;
         embed = elpi_embed_id;
         readback = elpi_readback_id
@@ -131,6 +132,7 @@ include
         {
           Elpi.API.ContextualConversion.ty = kind;
           pp_doc = (fun fmt () -> Elpi.API.PPX.Doc.kind fmt kind ~doc:""; ());
+          constants = [];
           pp = (pp_counted elpi__param__a.pp);
           embed =
             (elpi_embed_counted
@@ -194,11 +196,18 @@ include
     module Ctx_for_secret =
       struct class type t = object inherit Elpi.API.PPX.ctx end end
     let secret : 'c . (secret, 'c, 'csts) Elpi.API.ContextualConversion.t =
-      let { Elpi.API.Conversion.embed = embed; readback; ty; pp_doc; pp } =
-        elpi_opaque_data_decl_secret in
+      let { Elpi.API.Conversion.embed = embed; readback; ty; pp_doc;
+            constants; pp }
+        = elpi_opaque_data_decl_secret in
       let embed ~depth _ _ s t = embed ~depth s t in
       let readback ~depth _ _ s t = readback ~depth s t in
-      { Elpi.API.ContextualConversion.embed = embed; readback; ty; pp_doc; pp
+      {
+        Elpi.API.ContextualConversion.embed = embed;
+        readback;
+        ty;
+        pp_doc;
+        constants;
+        pp
       }
     let elpi_embed_secret = secret.Elpi.API.ContextualConversion.embed
     let elpi_readback_secret = secret.Elpi.API.ContextualConversion.readback
@@ -326,11 +335,12 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"e" ~doc:"E"
                ~args:[id.Elpi.API.ContextualConversion.ty;
                      secret.Elpi.API.ContextualConversion.ty;
                      (counted Elpi.API.BuiltInData.floatC).Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_entry_Ec];
         pp = pp_entry;
         embed = elpi_embed_entry;
         readback = elpi_readback_entry
