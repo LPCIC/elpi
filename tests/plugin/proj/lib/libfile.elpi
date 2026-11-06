@@ -1,0 +1,3 @@
+% found through paths = ["lib"]
+func lib.answer -> int.
+lib.answer 42.

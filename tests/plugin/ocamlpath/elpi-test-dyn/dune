@@ -1,0 +1,16 @@
+; the findlib package elpi-test-dyn (not installed): its plugins, a file of
+; the package, and its META (no requires: elpi is linked in the executable)
+(rule (copy ../../elpi_test_dyn.cmxs elpi_test_dyn.cmxs))
+(rule (copy ../../elpi_test_dyn.cma elpi_test_dyn.cma))
+(rule (copy ../../elpi_test_dyn_state.cmxs elpi_test_dyn_state.cmxs))
+(rule (copy ../../elpi_test_dyn_state.cma elpi_test_dyn_state.cma))
+(rule
+  (with-stdout-to META
+    (progn
+      (echo "description = \"elpi test plugins\"\n")
+      (echo "plugin(byte) = \"elpi_test_dyn.cma\"\n")
+      (echo "plugin(native) = \"elpi_test_dyn.cmxs\"\n")
+      (echo "package \"state\" (\n")
+      (echo "  plugin(byte) = \"elpi_test_dyn_state.cma\"\n")
+      (echo "  plugin(native) = \"elpi_test_dyn_state.cmxs\"\n")
+      (echo ")\n"))))

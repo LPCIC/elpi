@@ -1,0 +1,6 @@
+; plugins loaded with findlib (dynlink), and the configuration of a project
+; (elpi.toml), for the elpi command; the elpi library does not depend on it
+(library
+  (name elpi_dynload)
+  (public_name elpi.dynload)
+  (libraries elpi findlib.dynload))

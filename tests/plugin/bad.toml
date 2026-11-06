@@ -1,0 +1,3 @@
+# an elpi.toml with an unknown key
+paths = ["lib"]
+plugins = ["x"]

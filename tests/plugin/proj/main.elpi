@@ -1,0 +1,3 @@
+accumulate libfile.
+accumulate "+elpi-test-dyn.state".
+main :- pre.hello, lib.answer A, dyn.tick N, dyn.tick M, print A N M.
