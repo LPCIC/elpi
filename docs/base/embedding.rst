@@ -78,9 +78,10 @@ its text are OCaml's, through its declarations:
 * a symbol, or a predicate whose rules are written in Elpi, that OCaml
   declares with ``Constants.declare_global_symbol``, is declared with a plain
   ``symb``, or a plain ``func`` or ``pred`` signature with its rules, and the
-  builtins file lists its constant in ``MLConstants``. The operators of
-  ``calc`` and the constants of an opaque data type (``std_in`` …) are
-  implied ``MLConstants`` of the declarations that print them;
+  builtins file lists its constant in ``MLConstants``. The operations of an
+  ``MLCalc`` (the ones of ``calc``, ``+`` …) and the constants of an opaque
+  data type (``std_in`` …) are implied ``MLConstants`` of the declarations
+  that print them;
 * several OCaml symbols can share a name: each has its own *variant*, a
   number (``~variant:n`` on the OCaml side, 0 by default). Each variant has
   its own type, and the type checker chooses among them. When a builtins file
@@ -132,6 +133,18 @@ of ``p`` in it. ``hyp`` is such a predicate in this other test:
 
 .. literalinclude:: ../../tests/sources/builtin_lookup.ml
    :language: ocaml
+
+OCaml code linked after ``Setup.init``, like a plugin loaded on demand, can
+declare global symbols, data types, calc operations and a builtins file
+using them. A program that already exists accumulates that file with
+``Compile.scope_builtins``, ``Compile.unit`` and ``Compile.extend``, as in this
+test of Elpi:
+
+.. literalinclude:: ../../tests/sources/late_globals.ml
+   :language: ocaml
+
+State components and quotations are not supported this way: an instance does
+not see the ones declared after it was created.
 
 
 Extending: a quotation

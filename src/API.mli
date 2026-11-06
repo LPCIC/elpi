@@ -1058,7 +1058,12 @@ module BuiltIn : sig
       * to implement the desired builtin *)
     | LPCode of string
 
-  (** What is passed to [Setup.init] *)
+  (** What is passed to [Setup.init]. It can also be called after
+      [Setup.init] (e.g. by a plugin linked later, with its global symbols,
+      data types and calc operations): a program then accumulates the file
+      with [Compile.scope_builtins], [Compile.unit] and [Compile.extend] on its
+      base. Such a file must not declare state components or quotations, see
+      [State.declare_component] and [Quotation] *)
   val declare :
     file_name:string -> declaration list -> Setup.builtins
 
@@ -1107,6 +1112,8 @@ module State : sig
       'a component
   [@@deprecated "Use [declare_component] instead"]
 
+  (** Before [Setup.init]: an instance does not see a component declared
+      after it was created *)
   val declare_component :
     ?descriptor:Setup.state_descriptor ->
     name:string ->
@@ -1419,7 +1426,9 @@ module RawData : sig
         [symb f : ty = "n"]. The constructors of an
         [AlgebraicData] are global symbols too, declared for you (their
         variant is 1 for the first type with that constructor name, 2 for the
-        second ...). *)
+        second ...). It can be called at any time, also after [Setup.init]
+        and while a program runs: a program meets the symbol when it compiles
+        a unit that names it. *)
     val declare_global_symbol : ?variant:int -> string -> constant
 
     (** [lookup "p"] gives the constant of [p] in the program that runs, an
@@ -1489,6 +1498,8 @@ module RawQuery : sig
   val global_name_to_constant : State.t -> string -> RawData.constant
 end
 
+(** Quotations are registered before [Setup.init]: an instance does not see
+    the ones registered after it was created *)
 module Quotation : sig
 
   type quotation = language:Ast.Scope.language -> State.t -> Ast.Loc.t -> string -> Ast.Term.t

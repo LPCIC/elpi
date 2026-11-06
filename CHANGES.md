@@ -40,6 +40,22 @@
   - New: compilation flag `builtin_stubs` (`Compile.flags`), to accept the
     declarations that OCaml neither declares nor implements (`builtin func`
     with no `MLCode`, `= "N"` outside a builtins file)
+  - New: global symbols (`Constants.declare_global_symbol`), data types
+    (`AlgebraicData.declare`, `OpaqueData.declare`), calc operations and
+    builtins files (`BuiltIn.declare`) can be declared after `Setup.init`,
+    e.g. by a plugin linked later: a program accumulates such a builtins
+    file with `Compile.scope_builtins`, `Compile.unit` and `Compile.extend`.
+    State components and quotations must still be declared before
+    `Setup.init`
+  - New: `BuiltIn.MLCalc (Calc.operations [...])` declares calc operations in
+    a builtins file: the programs that accumulate it can evaluate them
+  - Change: `Calc.register`, `Calc.new_calc_descriptor`,
+    `Setup.calc_descriptor`, `Setup.init ?calc` and the `?calc` argument of
+    `BuiltIn.document_fmt` / `document_file` are removed: use `MLCalc`.
+    `Calc.calc` includes the standard operations
+- Runtime:
+  - Change: frozen constants are printed `frozen-K`, K their index in the
+    run (they were `frozen--NNN`)
 - LSP:
   - New: elpi-lsp accepts `builtin` declarations whose OCaml code is not
     loaded (stubs), e.g. the documentation of the builtins of rocq-elpi
