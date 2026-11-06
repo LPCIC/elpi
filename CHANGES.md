@@ -7,6 +7,11 @@
     abbreviation hides the variable. Unifying two open terms built with such
     a constructor can alias variables of different types. Use `any` or a
     concrete type instead
+  - Fix: an overloaded constant with no arguments whose expected type is not
+    known yet (e.g. `(+)` passed to a variable, `Apply (+) 2 3`) is
+    ambiguous, an error; it silently took its first type, since undoing a
+    tentative unification did not reset the type variables reached through
+    an assigned one
 - Language:
   - Change: `builtin` is only for the symbols of the language (with
     `= "core"`, only in `builtin.elpi`) and for the predicates implemented by

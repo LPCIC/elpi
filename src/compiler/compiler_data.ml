@@ -442,15 +442,20 @@ let update_ety ety eit = { ety with eit }
   (* Folds f over the UVar leaves of t, ignoring modes *)
   let fold_uvars f acc (t : 'a t_) = fold_t__ f (fun acc _ -> acc) acc t
 
+  (* the unset type and mode variables of a type, also the ones reached through
+     a set variable: undoing a unification resets them all *)
   let vars_of (Val t)  =
-    fold_t__
-      (fun (xs,acc) (x : t MutableOnce.t) -> if MutableOnce.is_set x then xs, acc else x :: xs, acc)
-      (fun (acc,xs) (x : tmode) ->
-         match x with
-         | MRef x when MutableOnce.is_set x -> acc,xs
-         | MRef x -> acc,x :: xs
-         | MVal _ -> acc,xs)
-      ([],[]) t
+    let rec mode (xs,ms as acc) = function
+      | MRef m when MutableOnce.is_set m -> mode acc (MutableOnce.get m)
+      | MRef m -> xs, m :: ms
+      | MVal _ -> acc in
+    let rec aux (xs,ms as acc) = function
+      | Prop _ | Any | Cons _ -> acc
+      | App (_,x,l) -> List.fold_left aux (aux acc x) l
+      | Arr (m,_,s,t) -> aux (aux (mode acc m) s) t
+      | UVar x when MutableOnce.is_set x -> aux acc (unval (MutableOnce.get x))
+      | UVar x -> x :: xs, ms in
+    aux ([],[]) t
 
   let to_func_mode ~(type_abbrevs:type_abbrevs) f = 
     let apply_ta f c acc l =
