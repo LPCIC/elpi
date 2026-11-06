@@ -501,39 +501,43 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode {|
 % [X = T] unifies X with Y, possibly assigning unification
 % variables in X and Y.
-builtin func (=) -> A, A.
+builtin func (=) -> A, A = "core".
 
 % [pattern_matching T P] matches T against pattern P, only
 % variables in P are assigned.
-builtin func pattern_match A -> A.|};
+builtin func pattern_match A -> A = "core".|};
 
-  LPCode "builtin func (pi) (func A).";
-  LPCode "builtin func (sigma) (func A).";
+  LPCode "builtin func (pi) (func A) = \"core\".";
+  LPCode "builtin func (sigma) (func A) = \"core\".";
 
   MLData BuiltInData.int;
   MLData BuiltInData.string;
   MLData BuiltInData.float;
 
-  LPCode "builtin pred (;) (pred), (pred).";
+  LPCode "pred (;) (pred), (pred).";
+  MLConstants [RawData.Constants.orc];
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
-  (* cannot use pred syntax here, because they are core *)
+  (* the symbols of the language: = "core" is mandatory. The implications
+     are overloaded (a premise or a list of premises), hence the symb syntax *)
   LPCode "builtin symb (:-)  : (func) -> (func) -> (func) = \"core\".";
   LPCode "builtin symb (:-)  : (func) -> list (pred) -> (func) = \"core\".";
-  LPCode "builtin symb (,)   : (func (func) ..) .";
+  LPCode "builtin symb (,)   : (func (func) ..) = \"core\".";
   LPCode "builtin symb uvar  : A = \"core\".";
   LPCode "builtin symb (as)  : A -> A -> A = \"core\".";
   LPCode "builtin symb (=>)  : (pred) -> (func) -> (func) = \"core\".";
   LPCode "builtin symb (=>)  : list (pred) -> (func) -> (func) = \"core\"."; (* HACK in TC to handle this*)
-  LPCode "builtin symb (==>) : (pred) -> (func) -> (func).";
-  LPCode "builtin symb (==>) : list (pred) -> (func) -> (func).";
+  LPCode "builtin symb (==>) : (pred) -> (func) -> (func) = \"core\".";
+  LPCode "builtin symb (==>) : list (pred) -> (func) -> (func) = \"core\".";
+  LPCode "builtin symb (=!=>) : (pred) -> (func) -> (func) = \"core\".";
+  LPCode "builtin symb (=!=>) : list (pred) -> (func) -> (func) = \"core\".";
 
   LPDoc " -- Control --";
 
   (* This is not implemented here, since the API had no access to the
    * choice points *)
-  LPCode "builtin func !. % The cut operator";
+  LPCode "builtin func ! = \"core\". % The cut operator";
 
   LPCode "func not (pred).";
   LPCode "not X :- X, !, fail.";
@@ -543,7 +547,7 @@ builtin func pattern_match A -> A.|};
    * store of syntactic constraints *)
   LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
           "% on Key1 Key2 ... (variables, or lists thereof).\n"^
-          "builtin func declare_constraint (func) -> any .. .");
+          "builtin func declare_constraint (func) -> any .. = \"core\".");
   MLCode(Pred("print_constraints",
     Full(raw_ctx,"prints all constraints"),
     (fun ~depth _ constraints state ->
@@ -1424,7 +1428,7 @@ unsound_unif X X.
   DocAbove);
 
   LPDoc  {|[findall_solution P L] finds all the solved instances of P and puts them in L in the order in which they are found. Instances can contain eigenvariables and unification variables. P may or may not be instantiated. Instances should be found in L.|};
-  LPCode "builtin func findall_solutions (pred) -> list (pred).";
+  LPCode "builtin func findall_solutions (pred) -> list (pred) = \"core\".";
 
   MLData safe;
 

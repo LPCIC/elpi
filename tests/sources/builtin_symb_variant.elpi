@@ -1,0 +1,5 @@
+% builtin.elpi declares two variants of (+), OCaml's:
+%   symb (+) : int -> int -> int = "1".
+%   symb (+) : float -> float -> float = "2".
+% the type checker chooses one by type
+main :- X is 1 + 2, Y is 1.0 + 2.0, print X Y.

@@ -263,6 +263,12 @@ module Compile : sig
     (* resilient passes stop after that many errors; 0, the default, means
        that the first error is raised. *)
     max_errors: int;
+    (* accept the declarations that OCaml neither declares nor implements
+       ([builtin func] with no MLCode, [= "N"] outside a builtins file), e.g.
+       the documentation of builtins whose OCaml code is not linked (elpi-lsp
+       checks programs this way). A stub predicate has no code: it is an
+       ordinary predicate. Default false. *)
+    builtin_stubs: bool;
   }
   val default_flags : flags
   val to_setup_flags : flags -> Setup.flags
@@ -1028,9 +1034,21 @@ module BuiltIn : sig
   type declaration =
     (* Real OCaml code *)
     | MLCode of BuiltInPredicate.t * doc_spec
-    (* Declaration of an OCaml data *)
+    (* Declaration of an OCaml data. It implies the MLConstants of its
+       constructors (an AlgebraicData, or a type derived by ppx_elpi): the
+       [symb] lines that its documentation prints denote them *)
     | MLData : 'a Conversion.t -> declaration
     | MLDataC : ('a,'h,'c) ContextualConversion.t -> declaration
+    (* Global symbols (results of [RawData.Constants.declare_global_symbol])
+       that the Elpi text of the same builtins file declares (e.g. in an
+       [LPCode]) with no [builtin] keyword: [symb f : ty.] for a data
+       constructor, a [pred] or [func] signature for a predicate whose rules
+       are in Elpi. Several global symbols named [f] (different variants) need
+       [= "N"] at the end of the [symb] to tell them apart. Each one must be
+       declared by the text. It prints nothing. The operators of calc and the
+       constants of an opaque data type are implied MLConstants of the
+       declarations that print them. *)
+    | MLConstants of Data.constant list
     (* Extra doc *)
     | LPDoc  of string
     (* Sometimes you wrap OCaml code in regular predicates in order
@@ -1390,7 +1408,25 @@ module RawData : sig
 
   module Constants : sig
 
+    (** A global symbol: a constant fixed in OCaml, the same in every
+        program. List it in the [BuiltIn.MLConstants] of a builtins file, and
+        the text of that file declares it with a plain [symb f : ty] (or a
+        [pred] / [func] signature); with several variants of [f] there, the
+        text declares [declare_global_symbol ~variant:n "f"] with
+        [symb f : ty = "n"]. The constructors of an
+        [AlgebraicData] are global symbols too, declared for you (their
+        variant is 1 for the first type with that constructor name, 2 for the
+        second ...). *)
     val declare_global_symbol : ?variant:int -> string -> constant
+
+    (** [lookup "p"] gives the constant of [p] in the program that runs, an
+        ordinary symbol declared in Elpi (no [builtin]): OCaml code builds and
+        matches terms with it, with no global symbol. Use it while a program
+        runs (in a builtin, or a conversion), e.g.
+        [let pc = lookup "p" in ... mkApp (pc state) x [] ...]. The result is
+        cached for the last program. Raises an error if the program does not
+        declare [p], or overloads it. *)
+    val lookup : string -> State.t -> constant
 
     val show : constant -> string
 
@@ -1620,9 +1656,10 @@ module PPX : sig
     val comment : Format.formatter -> string -> unit
     (* [max_name_len] is the length of the longest constructor name of the
        type, used to align the declarations *)
-    (* builtin func name Key -> Field1, ..., FieldN, the declaration of an entry of a
-       context: a predicate about a bound variable of type Key *)
-    val context_entry : Format.formatter ->
+    (* func name Key -> Field1, ..., FieldN, the declaration of an entry of a
+       context: a predicate about a bound variable of type Key, whose global
+       symbol (of [variant]) the builtins file binds *)
+    val context_entry : Format.formatter -> variant:int ->
       name:string -> doc:string ->
       key:Conversion.ty_ast ->
       args:Conversion.ty_ast list -> unit

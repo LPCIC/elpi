@@ -1,8 +1,8 @@
 
 
-builtin data simple.
-builtin symb k1 : int -> bool -> simple = "0".  % K1
-builtin symb k2 : bool -> simple = "0".  % K2
+data simple.
+symb k1 : int -> bool -> simple.  % K1
+symb k2 : bool -> simple.  % K2
 
 func simple.copy simple -> simple.
 simple.copy (k1 A0 A1) (k1 B0 B1) :- (int.copy A0 B0), (bool.copy A1 B1).

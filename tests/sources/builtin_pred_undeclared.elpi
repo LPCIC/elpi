@@ -1,0 +1,5 @@
+% p is not implemented by an MLCode: an error
+builtin pred p int.
+p 1.
+
+main :- p 1.

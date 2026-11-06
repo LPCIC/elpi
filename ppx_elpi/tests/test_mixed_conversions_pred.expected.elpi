@@ -1,9 +1,9 @@
 
 
-builtin data color.
-builtin symb red   : color = "0".  % Red
-builtin symb green : color = "0".  % Green
-builtin symb blue  : int -> color = "0".  % Blue
+data color.
+symb red   : color.  % Red
+symb green : color.  % Green
+symb blue  : int -> color.  % Blue
 
 func color.copy color -> color.
 color.copy red red.
@@ -13,11 +13,11 @@ color.copy (blue A0) (blue B0) :- (int.copy A0 B0).
 
 
 data lam.
-builtin symb ap : lam -> lam -> lam = "0".
-builtin symb lm : string -> (lam -> lam) -> lam = "0".
+symb ap : lam -> lam -> lam.
+symb lm : string -> (lam -> lam) -> lam.
 
 
-builtin func known lam -> string.
+func known lam -> string.
 
 % [describe T C S R] describes a term and a colour, and applies the term to
 % y

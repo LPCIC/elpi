@@ -45,7 +45,7 @@
 %token DATA
 %token TYPE
 %token TYPEABBREV
-%token EXTERNAL
+%token BUILTIN
 %token MODULE
 %token SIG
 %token SYMBOL

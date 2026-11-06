@@ -216,7 +216,13 @@ program:
 decl:
 | c = clause; FULLSTOP { Program.Clause c }
 | r = chr_rule; FULLSTOP { Program.Chr r }
-| p = pred; FULLSTOP { Program.Pred (with_doc p) }
+| p = pred; o = option(builtin_ref); FULLSTOP {
+    match o, p.Type.attributes with
+    | None, _ -> Program.Pred (with_doc p)
+    | Some "core", [Builtin_attr None] -> Program.Pred (with_doc { p with Type.attributes = [Builtin_attr o] })
+    | Some _, [Builtin_attr None] -> raise (ParseError (loc $loc(o), "A builtin predicate takes no variant: only = \"core\" can follow it."))
+    | Some _, _ -> raise (ParseError (loc $loc(o), "Only a builtin declaration can end with = \"...\"."))
+  }
 | t = type_; FULLSTOP { Program.Type (List.map with_doc t) }
 | t = kind; FULLSTOP { Program.Kind (List.map with_doc t) }
 | m = macro; FULLSTOP { Program.Macro m }
@@ -300,7 +306,7 @@ kind:
     names |> List.map (fun n ->
      { Type.loc=loc $sloc; doc = None; attributes=[]; name =  n; ty = k })
   }
-| option(EXTERNAL); DATA; name = constant; params = list(constant_w_loc) {
+| DATA; name = constant; params = list(constant_w_loc) {
     let type_ = { tloc = loc $sloc; tit = TConst (Func.from_string "type") } in
     let k = List.fold_right (fun _ arr -> { tloc = loc $sloc; tit = TArr (type_, arr) }) params type_ in
     [ { Type.loc = loc $sloc; doc = None; attributes = []; name; ty = k } ]
@@ -312,17 +318,25 @@ type_:
      { Type.loc=loc $sloc; doc = None; attributes; name = n; ty = t })
   }
 | attributes = attributes;
-  SYMBOL; names = separated_nonempty_list(CONJ,constant); option(COLON); ty = type_term; o=option(external_ref) {
-    match attributes, o, names with
-    | [External None], Some _, [name] -> [{ Type.loc=loc $sloc; doc = None; attributes = [External o]; name ; ty }]
-    | _, Some _, _ -> raise (ParseError (loc $loc, "Only one symbol with a named external reference can be marked with the external attribute at a time."))
-    | _, None, _ -> List.map (fun n -> { Type.loc=loc $sloc; doc = None; attributes; name = n; ty }) names
+  SYMBOL; names = separated_nonempty_list(CONJ,constant); option(COLON); ty = type_term; o=option(builtin_ref) {
+    (* builtin is only for the symbols of the language (= "core"); = "N"
+       picks one variant among the OCaml symbols of a builtins file *)
+    let is_builtin = List.exists (function Builtin_attr None -> true | _ -> false) attributes in
+    match o, names with
+    | Some "core", [name] when is_builtin ->
+        let attributes = Builtin_attr o :: List.filter (function Builtin_attr None -> false | _ -> true) attributes in
+        [{ Type.loc=loc $sloc; doc = None; attributes; name ; ty }]
+    | _ when is_builtin ->
+        raise (ParseError (loc $sloc, "Only the symbols of the language are declared builtin (with = \"core\"): an OCaml symbol is declared with symb, and bound by its builtins file (MLData, MLConstants)."))
+    | Some _, [name] -> [{ Type.loc=loc $sloc; doc = None; attributes = Builtin_attr o :: attributes; name ; ty }]
+    | Some _, _ -> raise (ParseError (loc $loc(o), "Only one symbol at a time can be given a variant with = \"...\"."))
+    | None, _ -> List.map (fun n -> { Type.loc=loc $sloc; doc = None; attributes; name = n; ty }) names
 }
-// | EXTERNAL; SYMBOL; name = constant; option(COLON); t = type_term; o=option(external_ref) {
+// | BUILTIN; SYMBOL; name = constant; option(COLON); t = type_term; o=option(builtin_ref) {
 //     [{ Type.loc=loc $sloc; doc = None; attributes = [External o]; name ; ty = t }]
 // }
 
-external_ref:
+builtin_ref:
 | EQ; i=STRING { i }
 
 atype_term:
@@ -429,7 +443,7 @@ clause:
 
 attributes:
 | { [] }
-| EXTERNAL { [ External None ] }
+| BUILTIN { [ Builtin_attr None ] }
 | COLON; l = separated_nonempty_list(COLON, attribute) { l }
 
 attribute:
@@ -439,7 +453,7 @@ attribute:
 | BEFORE; s = STRING { Before s }
 | REPLACE; s = STRING { Replace s }
 | REMOVE; s = STRING { Remove s }
-| EXTERNAL { External None }
+| BUILTIN { Builtin_attr None }
 | FUNCTIONAL { Functional }
 | UNTYPED { Untyped }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN; o = option(STRING) { Index (l,o) }

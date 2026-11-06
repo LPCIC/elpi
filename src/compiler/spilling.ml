@@ -29,9 +29,9 @@ let is_prop ~type_abbrevs x =
   | Some n -> List.length n = 0
   | None -> false
 
+(* f is a core predicate: pi, sigma, (,) *)
 let mk_global ~types ~loc f l =
-  (* TODO: check only builtins *)
-  let s = Symbol.make_builtin f in
+  let s = Symbol.make Core f in
   let f_ty = TypingEnv.(resolve_symbol s types).ty |> (fun x -> TypeAssignment.apply x l) |> TypeAssignment.create in
   { scope = Scope.mkResolvedGlobal types s; name = f; ty = f_ty; loc }
 
