@@ -1,6 +1,9 @@
 % An operator can be used as an ordinary constant by writing it (op).
+% The signature of apply says which of the variants of (+) is passed.
+
+func apply (int -> int -> int), int, int -> int.
+apply F A B R :- R is F A B.
 
 main :-
-  Apply = (f\ a\ b\ f a b),
-  S is Apply (+) 2 3,
+  apply (+) 2 3 S,
   print "the result is" S.

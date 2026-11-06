@@ -1,0 +1,2 @@
+% a bare overloaded constant whose expected type is not known is ambiguous
+main :- X = (+), print X.
