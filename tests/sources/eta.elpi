@@ -1,5 +1,5 @@
 data tm.
-symb c (tm -> A) -> tm.
+symb c (tm -> any) -> tm.
 symb g tm -> tm.
 macro @ctx A :- c (_\ A). % to have depth > 0 in unif
 

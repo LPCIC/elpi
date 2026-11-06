@@ -1,3 +1,13 @@
+# Unreleased
+
+- Type checker:
+  - Change: a constructor whose arguments mention a type variable that its
+    result type does not mention (an existential type, e.g.
+    `symb pack : A -> (A -> string) -> box.`) is rejected, also when a type
+    abbreviation hides the variable. Unifying two open terms built with such
+    a constructor can alias variables of different types. Use `any` or a
+    concrete type instead
+
 # v4.0.1 (October 2026)
 
 

@@ -19,7 +19,7 @@ pred clause2 -> any.
 clause2 (x\y\(X x : prop), (F y (X x) : prop)) :- F = a\b\b.
 pred clause3 -> any.
 
-symb r A -> B.
+symb r any -> any.
 pred prune_arg -> any.
 pred prune_arg2 -> any.
 pred prune_arg3 -> any.

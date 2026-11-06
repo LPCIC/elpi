@@ -1,0 +1,5 @@
+kind box type -> type.
+typeabbrev (phantom A) (box int).
+symb pack : A -> phantom A.
+
+main.

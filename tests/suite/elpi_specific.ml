@@ -658,6 +658,18 @@ let () = declare "errmsg_unknown"
   ~expectation:(FailureOutput (Str.regexp "pair is unknown"))
   ()
 
+let () = declare "existential_type"
+  ~source_elpi:"existential_type.elpi"
+  ~description:"existential types are rejected"
+  ~expectation:(FailureOutput (Str.regexp "pack has an existential type"))
+  ()
+
+let () = declare "existential_type_abbrev"
+  ~source_elpi:"existential_type_abbrev.elpi"
+  ~description:"existential types are rejected, also behind a type abbreviation"
+  ~expectation:(FailureOutput (Str.regexp "pack has an existential type"))
+  ()
+
 let () = declare "errmsg_arity"
   ~source_elpi:"errmsg_arity.elpi"
   ~description:"missing argument"

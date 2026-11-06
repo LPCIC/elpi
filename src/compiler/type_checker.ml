@@ -140,8 +140,37 @@ let check_indexing ~loc ~type_abbrevs availability name ty indexing =
       TypingEnv.Index {mode;indexing=runtime; overlap; has_local_without_cut=None;occur_check=true}
   | _ -> DontIndex
 
+(* A constructor whose arguments mention a type variable that its result type
+   does not mention has an existential type. Unifying two open terms built
+   with it can alias variables of different types, so we reject it. *)
+let check_no_existential ~type_abbrevs ~loc name ty =
+  let open TypeAssignment in
+  let rec expand = function
+    | Cons a when F.Map.mem a type_abbrevs -> expand (apply (F.Map.find a type_abbrevs).skema [])
+    | App (a, x, xs) when F.Map.mem a type_abbrevs -> expand (apply (F.Map.find a type_abbrevs).skema (x :: xs))
+    | t -> t
+  in
+  let rec spine args t =
+    match expand t with
+    | Arr (_, _, s, t) -> spine (s :: args) t
+    | t -> (args, t)
+  in
+  let rec body = function Lam (_, sk) -> body sk | Ty t -> t in
+  let vars acc t = fold_uvars (fun acc v -> F.Set.add v acc) acc t in
+  let args, res = spine [] (body ty) in
+  let existentials = F.Set.diff (List.fold_left vars F.Set.empty args) (vars F.Set.empty res) in
+  match F.Set.elements existentials with
+  | [] -> ()
+  | v :: _ ->
+      error ~loc
+        (Format.asprintf
+           "@[<hov>%a has an existential type, which is not supported:@ the type variable@ %a@ occurs in its \
+            arguments but not in its result type.@]"
+           F.pp name F.pp v)
+
 let check_type ~type_abbrevs ~kinds { value; loc; doc; name; index; availability; occur_check }: Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
+  if Option.is_none (is_prop ~type_abbrevs ty) then check_no_existential ~type_abbrevs ~loc name ty;
   (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
   let indexing = check_indexing ~loc ~type_abbrevs availability name ty index in
   let symb = Symbol.make (File loc) name in

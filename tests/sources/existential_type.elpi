@@ -1,0 +1,4 @@
+kind box type.
+symb pack : A -> B -> (A -> B -> string) -> box.
+
+main.

@@ -4,7 +4,7 @@ test-unif T :- T, !, print "--> Unif success" T "\n".
 % test-unif T :- print "--> FAIL in this unification:" T "\n".
 
 pred p -> A.
-symb f A -> B.
+symb f any -> any.
 symb a A.
 
 main :-
