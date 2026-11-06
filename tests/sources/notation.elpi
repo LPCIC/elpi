@@ -36,8 +36,8 @@ pred (~z) -> (pred).
 pred (?w) -> (pred).
 pred (+x) -> (pred), (pred).
 pred (++x) -> (pred), (pred).
-symb (+y) A -> B -> C.
-symb (*x) A -> B -> C.
+symb (+y) any -> any -> any.
+symb (*x) any -> any -> any.
 
 main :- print (f a +x g [b] +y d), cd +x d.
 

@@ -438,6 +438,9 @@ let update_ety ety eit = { ety with eit }
       Some (Ty (Obj.magic t : F.t t_)) (* No UVar nodes *)
     with Not_monomorphic -> None
 
+  (* Folds f over the UVar leaves of t, ignoring modes *)
+  let fold_uvars f acc (t : 'a t_) = fold_t__ f (fun acc _ -> acc) acc t
+
   let vars_of (Val t)  =
     fold_t__
       (fun (xs,acc) (x : t MutableOnce.t) -> if MutableOnce.is_set x then xs, acc else x :: xs, acc)
