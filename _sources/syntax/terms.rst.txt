@@ -70,7 +70,10 @@ An infix, prefix or postfix operator is another notation for an application:
 precedence and associativity, is fixed by the language; the table is in
 :doc:`lexical-conventions`. To use an operator as an ordinary constant, say to
 pass it as an argument or give it a rule, wrap it in parentheses. Here ``(+)`` is the bare constant behind ``a + b``, passed as the
-first argument of a higher-order ``Apply``:
+first argument of a higher-order ``apply``. Its signature also tells the
+type checker which of the variants of ``+`` (on ``int``, on ``float``) is
+meant: a bare ``(+)`` passed where its type is not known is ambiguous, an
+error.
 
 **../code/apply.elpi:**
 
