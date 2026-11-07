@@ -1,0 +1,2 @@
+# the Elpi package json, installed as the findlib package elpi-json
+name = "json"

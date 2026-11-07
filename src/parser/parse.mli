@@ -50,13 +50,21 @@ module type Config = sig
   val package_dir : string -> string
   (* [accumulate "+pkg"]: the text of the builtins of the plugin [pkg], once
      loaded; None if it cannot be loaded here, then its stub
-     [pkg.plugin.elpi] in [package_dir pkg] is read instead; raises Failure *)
+     [pkg.builtins.elpi] in [package_dir pkg] is read instead; raises Failure *)
   val plugin : string -> string option
+  (* [accumulate "+/path"]: the root of the project that contains a
+     directory; raises Failure *)
+  val root_of_dir : string -> string
 end
 
 (* the reference of an accumulate directive: a path, a file in the directory
-   of a package ("+pkg/path"), or the plugin of a package ("+pkg") *)
-type reference = Path of string | Package_file of string * string | Plugin of string
+   of a package ("+pkg/path"), a file in the root of the project of the
+   accumulating file ("+/path"), or the plugin of a package ("+pkg") *)
+type reference =
+  | Path of string
+  | Package_file of string * string
+  | Current_package_file of string
+  | Plugin of string
 val reference_of_string : string -> reference
 
 (* the file name of the unit of the plugin of [pkg]: "+pkg" *)

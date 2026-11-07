@@ -217,11 +217,15 @@ decl:
 | c = clause; FULLSTOP { Program.Clause c }
 | r = chr_rule; FULLSTOP { Program.Chr r }
 | p = pred; o = option(builtin_ref); FULLSTOP {
-    match o, p.Type.attributes with
-    | None, _ -> Program.Pred (with_doc p)
-    | Some "core", [Builtin_attr None] -> Program.Pred (with_doc { p with Type.attributes = [Builtin_attr o] })
-    | Some _, [Builtin_attr None] -> raise (ParseError (loc $loc(o), "A builtin predicate takes no variant: only = \"core\" can follow it."))
-    | Some _, _ -> raise (ParseError (loc $loc(o), "Only a builtin declaration can end with = \"...\"."))
+    (* builtin can come with other attributes, e.g. :builtin :index(1) *)
+    let is_builtin = List.exists (function Builtin_attr None -> true | _ -> false) p.Type.attributes in
+    match o with
+    | None -> Program.Pred (with_doc p)
+    | Some "core" when is_builtin ->
+        let attributes = Builtin_attr o :: List.filter (function Builtin_attr None -> false | _ -> true) p.Type.attributes in
+        Program.Pred (with_doc { p with Type.attributes })
+    | Some _ when is_builtin -> raise (ParseError (loc $loc(o), "A builtin predicate takes no variant: only = \"core\" can follow it."))
+    | Some _ -> raise (ParseError (loc $loc(o), "Only a builtin declaration can end with = \"...\"."))
   }
 | t = type_; FULLSTOP { Program.Type (List.map with_doc t) }
 | t = kind; FULLSTOP { Program.Kind (List.map with_doc t) }
@@ -314,6 +318,9 @@ kind:
 type_:
 | attributes = attributes;
   TYPE; names = separated_nonempty_list(CONJ,constant); t = type_term {
+    (* as for symb: an OCaml symbol is not declared builtin *)
+    if List.exists (function Builtin_attr None -> true | _ -> false) attributes then
+      raise (ParseError (loc $sloc, "Only the symbols of the language are declared builtin (with = \"core\"): an OCaml symbol is declared with symb, and bound by its builtins file (MLData, MLConstants)."));
     names |> List.map (fun n ->
      { Type.loc=loc $sloc; doc = None; attributes; name = n; ty = t })
   }

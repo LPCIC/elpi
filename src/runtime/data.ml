@@ -736,6 +736,16 @@ module Global_symbols : sig
   (* Used by auto-generated code, eg ADT *)
   val declare_overloaded_global_symbol : string -> constant * int
 
+  (* the number of OCaml symbols (Builtin, variants) with this name *)
+  val ocaml_symbols : string -> int
+  (* whether several OCaml symbols have this name *)
+  val is_overloaded : string -> bool
+
+  (* the [= "N"] of the declaration of an OCaml symbol in the text of a
+     builtins file: only for an overloaded name, which needs it; a name with
+     one OCaml symbol is bound by name *)
+  val variant_annotation : string -> int -> string
+
   (* The constants of an instance (program and frozen constants) start at
      [bottom] and grow up, see the schema next to Compiler.SymbolMap.
      [note_instance_constant c] records that an instance uses [c]: an error if
@@ -785,10 +795,10 @@ let table = {
   c2s = Constants.Map.empty;
 }
 
-(* Half of data_mask in Discrimination_tree: a constant keeps the low
-   [Sys.int_size - 6] bits there, so constants above [bottom] never share a
-   cell with the bound variables below [-bottom] *)
-let bottom = - (1 lsl (Sys.int_size - 7))
+(* Half of data_mask in Discrimination_tree: a constant keeps the low bits of
+   data_mask there ([Sys.int_size - 6] bits), so constants above [bottom]
+   never share a cell with the bound variables below [-bottom] *)
+let bottom = - ((Discrimination_tree.data_mask + 1) / 2)
 
 (* The highest constant used by an instance: a plain ref, shared by all the
    instances and not saved by Fork, so that a late global never takes it *)
@@ -810,15 +820,24 @@ let () = builtin_predicates |> List.iter (fun p ->
   table.s2ct <- Symbol.RawMap.add s (c,t) table.s2ct
 )
 
-(* aliases: other names for a core symbol, only for its declaration; the
-   parser turns [A ==> B] into [A => B] *)
-let () =
-  let c = const_of_builtin_predicate Impl in
-  table.s2ct <- Symbol.RawMap.add (Symbol.make Core (F.from_string "==>")) (c,Const c) table.s2ct
+(* the number of OCaml symbols of each name *)
+let builtin_names : int F.Map.t ref = ref F.Map.empty
+
+let ocaml_symbols name = Option.value ~default:0 (F.Map.find_opt (F.from_string name) !builtin_names)
+let is_overloaded name = ocaml_symbols name > 1
+
+let variant_annotation name variant =
+  if is_overloaded name then Printf.sprintf " = \"%d\"" variant else ""
 
 let declare_global_symbol symb =
   try fst @@ Symbol.RawMap.find symb table.s2ct
   with Not_found ->
+    (match Symbol.get_provenance symb with
+     | Builtin _ ->
+         let f = F.from_string (Symbol.get_str symb) in
+         let n = Option.value ~default:0 (F.Map.find_opt f !builtin_names) in
+         builtin_names := F.Map.add f (n + 1) !builtin_names
+     | _ -> ());
     if table.last_global - 1 <= !highest_used then out_of_constants ();
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
@@ -1186,7 +1205,10 @@ end
 module CalcHooks = struct
 
 type run = term list -> term
-type eval = { code : run; ty_decl : string; }
+(* [ty_decl annotation]: the declaration of the operator, with the [= "N"]
+   of Global_symbols.variant_annotation (computed when printed, since the
+   variants of an operator are declared one after the other) *)
+type eval = { code : run; ty_decl : string -> string; }
 (* the operators of a builtins file (MLCalc), with their global symbol *)
 type operations = (constant * eval) list
 
@@ -1516,22 +1538,23 @@ let compile_constructors allocated ty self self_name l =
       StrMap.add name (tyargs_of_args self_name args) sacc)
         (Constants.Map.empty,StrMap.empty) l
 
-(* While the text of a builtins unit is printed, the constructors printed, with
-   their variant, in order. The text has no builtin keyword: the unit marks
-   them as OCaml symbols (see Compiler.ast_of_builtins). *)
-let printed_constructors : (string * int) list ref option ref = ref None
-
-(* While the text of a builtins unit is printed, the other global symbols
-   printed (the operators of calc, the constants of an opaque data type),
-   as implied MLConstants (see Compiler.ast_of_builtins). *)
-let printed_constants : constant list ref option ref = ref None
-let record_printed_constant c = Option.iter (fun l -> l := c :: !l) !printed_constants
+(* While the text of a builtins file is printed (see document_symbols), the
+   OCaml symbols it declares and that the declarations do not list (the
+   constructors of MLData, the operators of calc, the constants of an opaque
+   data type, the context entries of the ppx): implied MLConstants *)
+let printed_symbols : constant list ref option ref = ref None
+let record_printed_constant c = Option.iter (fun l -> l := c :: !l) !printed_symbols
 
 let document_constructor fmt max_name_len name variant doc argsdoc =
-  Option.iter (fun l -> l := (name, variant) :: !l) !printed_constructors;
+  (* a constructor is an OCaml symbol: without it the symb would be an Elpi
+     one, which the OCaml terms never match *)
+  (match Symbol.RawMap.find_opt (Symbol.make (Builtin { variant }) (F.from_string name)) Global_symbols.table.s2ct with
+   | Some (c, _) -> record_printed_constant c
+   | None -> data_anomaly (Printf.sprintf "the constructor %s (variant %d) is not a global symbol" name variant));
   let pad = String.make (max_name_len - String.length name) ' ' in
-  Fmt.fprintf fmt "@[<hov2>symb %s%s :@[<hov>%a@]. %s@]@\n"
-    name pad pp_ty_args argsdoc (if doc = "" then "" else " % " ^ doc)
+  Fmt.fprintf fmt "@[<hov2>symb %s%s :@[<hov>%a@]%s. %s@]@\n"
+    name pad pp_ty_args argsdoc (Global_symbols.variant_annotation name variant)
+    (if doc = "" then "" else " % " ^ doc)
 
 let kind_param i = if i < 26 then String.make 1 (Char.chr (Char.code 'A' + i)) else Printf.sprintf "A%d" i
 
@@ -1809,13 +1832,30 @@ let document fmt l =
     | MLCalc ops ->
         List.iter (fun (c,x) ->
           ADT.record_printed_constant c;
-          Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) ops
+          let annotation = match Constants.Map.find_opt c Global_symbols.table.c2s with
+            | Some s -> (match Symbol.get_provenance s with
+                | Builtin { variant } -> Global_symbols.variant_annotation (Symbol.get_str s) variant
+                | _ -> "")
+            | None -> "" in
+          Format.fprintf fmt "%s@\n@\n" (x.CalcHooks.ty_decl annotation)) ops
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
     | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;
   Fmt.fprintf fmt "@\n@\n";
   Fmt.fprintf fmt "@]@.";
   Fmt.pp_set_margin fmt omargin
 ;;
+
+(* [document] to a string, and the OCaml symbols that the text declares and
+   the declarations do not list (implied MLConstants, see printed_symbols) *)
+let document_symbols l =
+  let b = Buffer.create 1024 in
+  let fmt = Fmt.formatter_of_buffer b in
+  let printed = ref [] in
+  ADT.printed_symbols := Some printed;
+  Fun.protect ~finally:(fun () -> ADT.printed_symbols := None) (fun () ->
+    document fmt l;
+    Fmt.pp_print_flush fmt ());
+  Buffer.contents b, List.rev !printed
 
 type builtin_table = (int, t) Hashtbl.t
 [@@deriving show]

@@ -2,6 +2,7 @@
   (name elpi_json)
   (public_name elpi-json)
   (modules elpi_json)
+  (preprocess (pps ppx_deriving.show ppx_elpi))
   (libraries elpi yojson))
 
 (executable

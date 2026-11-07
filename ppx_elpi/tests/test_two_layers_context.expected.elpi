@@ -31,7 +31,7 @@ func decl term -> string, ty.
 data term.
 symb appl : list term -> term.  % bla bla
 symb lam  : string -> ty -> (term -> term) -> term.  % Lam
-type type-cast term -> ty -> term. % Cast
+symb type-cast : term -> ty -> term. % Cast
 
 func term.copy term -> term.
 term.copy (appl A0) (appl B0) :- ((list.copy term.copy) A0 B0).

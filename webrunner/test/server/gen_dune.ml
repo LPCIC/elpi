@@ -5,14 +5,15 @@
 (* the scripts of lsp/test, in the order of lsp/test/dune *)
 let scripts =
   [ "accbad"; "accmissing"; "good"; "syntax"; "typeerr"; "warn"; "binders"; "library"; "macros"; "libdef"; "doc";
-    "acctype"; "lists"; "accchar"; "run"; "assemble"; "anomaly"; "accinc"; "accopen"; "accdirs"; "stubs" ]
+    "acctype"; "lists"; "accchar"; "run"; "assemble"; "anomaly"; "accinc"; "accopen"; "accdirs"; "stubs"; "proj"; "projtoml"; "badproj" ]
 
 (* accinc needs the server to be given -I, the web server has no command line;
-   the files of accdirs are in subdirectories of lsp/test, which are not copied *)
-let node_skip = [ "accinc"; "accdirs" ]
+   the files of accdirs, proj and badproj are in subdirectories of lsp/test, which are
+   not copied *)
+let node_skip = [ "accinc"; "accdirs"; "proj"; "projtoml"; "badproj" ]
 
 (* in a browser there are no files: the scripts that accumulate files *)
-let browser_skip = [ "accbad"; "accchar"; "accdirs"; "accinc"; "acctype"; "good"; "library"; "run" ]
+let browser_skip = [ "accbad"; "accchar"; "accdirs"; "accinc"; "acctype"; "good"; "library"; "proj"; "projtoml"; "badproj"; "run" ]
 
 let browser_scenarios = [ "auto"; "no-wasm-features"; "wasm-fails"; "no-wasm-assets"; "wrong-mime"; "no-wasm-script" ]
 

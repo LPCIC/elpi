@@ -3,4 +3,4 @@
 (library
   (name elpi_dynload)
   (public_name elpi.dynload)
-  (libraries elpi findlib.dynload))
+  (libraries elpi unix findlib.dynload))

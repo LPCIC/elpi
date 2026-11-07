@@ -12,6 +12,7 @@ let parser_for dir =
     let resolver = Util.std_resolver ~paths:[ dir ] ()
     let reader = Util.std_reader
     let package_dir _ = failwith "no packages"
+    let root_of_dir _ = failwith "no packages"
     let plugin _ = None
   end) : Parse.Parser_w_Internals)
 

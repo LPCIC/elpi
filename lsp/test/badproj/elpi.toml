@@ -1,0 +1,3 @@
+# a wrong elpi.toml
+name = "bad"
+plugins = ["x"]

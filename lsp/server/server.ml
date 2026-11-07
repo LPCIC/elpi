@@ -40,14 +40,14 @@ let close_document path = Hashtbl.remove open_documents (normalize_path path)
 (* accumulate finds an open document first, relative to the directory of the
    accumulating file (~cwd), then a file on the disk, there or in the -I
    directories *)
-let resolver ?cwd ~unit () =
+let resolver ?(paths = []) ?cwd ~unit () =
   let dir = Option.value cwd ~default:(Sys.getcwd ()) in
   let path = normalize_path (if Filename.is_relative unit then Filename.concat dir unit else unit) in
   if Hashtbl.mem open_documents path then path
   else
     (* std_resolver takes a ?cwd too: the resolver it returns is built
        first, so that ?cwd goes to that resolver *)
-    let resolve = Elpi.API.Parse.std_resolver ~paths:!include_paths () in
+    let resolve = Elpi.API.Parse.std_resolver ~paths:(!include_paths @ paths) () in
     resolve ?cwd ~unit ()
 
 let reader path =
@@ -84,9 +84,21 @@ let init_called = ref false
 (* the packages of accumulate "+pkg", given by the transport *)
 let packages_ref : Elpi.API.Setup.packages option ref = ref None
 
-let init ~send ~exit ~builtin_library_location ?max_errors ?include_paths:(dirs = []) ?packages () =
+(* the project of a document (its elpi.toml), given by the transport *)
+type project = {
+  root : string;
+  paths : string list;
+  prelude : string list;
+  error : string option;
+}
+
+let no_project = { root = "."; paths = []; prelude = []; error = None }
+let project_ref : (string -> project) ref = ref (fun _ -> no_project)
+
+let init ~send ~exit ~builtin_library_location ?max_errors ?include_paths:(dirs = []) ?packages ?project () =
   send_ref := send;
   packages_ref := packages;
+  Option.iter (fun f -> project_ref := f) project;
   exit_ref := exit;
   builtin_library_location_ref := builtin_library_location;
   Option.iter (fun n -> Checker.max_errors := n) max_errors;
@@ -121,7 +133,11 @@ type document = {
   mutable hover : Checker.hover option; (* the symbols of the last checked version *)
   mutable accumulates : string list; (* the files its last checked version accumulates *)
   instance : Checker.instance;      (* the instance of Elpi of the document *)
+  project : project;                (* its elpi.toml, read when it was opened *)
 }
+
+(* the prelude of a project, for the checker *)
+let prelude_of { root; prelude; _ } = match prelude with [] -> None | l -> Some (root, l)
 
 let documents : (DocumentUri.t, document) Hashtbl.t = Hashtbl.create 7
 
@@ -156,7 +172,12 @@ let severity : Checker.severity -> DiagnosticSeverity.t = function
 
 let check uri doc =
   let t0 = Unix.gettimeofday () in
-  let { Checker.diagnostics; hover; accumulates } = Checker.check ~instance:doc.instance ~path:doc.path doc.text.Text.text in
+  let { Checker.diagnostics; hover; accumulates } =
+    Checker.check ~instance:doc.instance ~path:doc.path ?prelude:(prelude_of doc.project) doc.text.Text.text in
+  (* an error in elpi.toml, at the start of the document *)
+  let diagnostics = match doc.project.error with
+    | None -> diagnostics
+    | Some message -> { Checker.start = 0; stop = 0; severity = Checker.Error; message } :: diagnostics in
   log "checked %s (version %d) in %.3fs: %d diagnostics" doc.path doc.version
     (Unix.gettimeofday () -. t0) (List.length diagnostics);
   doc.checked <- doc.version;
@@ -406,10 +427,10 @@ let run (params : Jsonrpc.Structured.t option) : (Yojson.Safe.t, Jsonrpc.Respons
   | Some (`String _), _, None, _ -> Error (InvalidParams, "elpi/run: the parameter textDocument (with its uri) is missing")
   | Some (`String query), Some (`String text), Some uri, Ok max_steps ->
       (* a text that is not a document: a new instance of Elpi *)
-      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ~file_resolver:resolver ~file_reader:reader ?packages:!packages_ref ()) ~path:(text_path uri) ~text ~query ())
+      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ~file_resolver:(resolver ~paths:[]) ~file_reader:reader ?packages:!packages_ref ()) ~path:(text_path uri) ~text ~query ())
   | Some (`String query), _, Some uri, Ok max_steps ->
       (match Hashtbl.find_opt documents uri with
-       | Some doc -> Ok (Runner.run ?max_steps ~instance:doc.instance ~path:doc.path ~text:doc.text.Text.text ~query ())
+       | Some doc -> Ok (Runner.run ?max_steps ?prelude:(prelude_of doc.project) ~instance:doc.instance ~path:doc.path ~text:doc.text.Text.text ~query ())
        | None -> Error (InvalidParams, "elpi/run: the document is not open, and there is no parameter text"))
   | Some _, _, _, _ -> Error (InvalidParams, "elpi/run: the parameter query is not a string")
 
@@ -451,9 +472,13 @@ let set_text uri version text =
   set_open_document path text;
   (match Hashtbl.find_opt documents uri with
    | None ->
+       (* the elpi.toml of the project is read when the document is opened *)
+       let project = !project_ref path in
+       let file_resolver = resolver ~paths:project.paths in
        Hashtbl.replace documents uri { path; text = Text.make text; version;
                                        checked = -1; hover = None; accumulates = [];
-                                       instance = Checker.new_instance ~file_resolver:resolver ~file_reader:reader ?packages:!packages_ref () };
+                                       instance = Checker.new_instance ~file_resolver ~file_reader:reader ?packages:!packages_ref ();
+                                       project };
        recheck_others uri
    | Some doc ->
        doc.text <- Text.make text;

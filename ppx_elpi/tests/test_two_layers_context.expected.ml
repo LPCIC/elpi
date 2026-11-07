@@ -1192,8 +1192,8 @@ include
                        ("->", (Elpi.API.ContextualConversion.TyName "term"),
                          [Elpi.API.ContextualConversion.TyName
                             elpi_constant_type_term])];
-             Format.fprintf fmt "@[<hov2>type %s@[<hov> %s. %% %s@]@]@\n"
-               "type-cast" "term -> ty -> term" "Cast");
+             Elpi.API.PPX.Doc.custom_constructor fmt ~variant:0
+               ~name:"type-cast" ~doc:"Cast" ~code:"term -> ty -> term");
         pp =
           (let rec aux fmt =
              function

@@ -147,16 +147,19 @@ module Setup : sig
   type builtins
 
   (* The packages of the host, for [accumulate "+pkg/path"] (a file in the
-     directory of package [pkg]) and [accumulate "+pkg"] (the plugin of
-     package [pkg], see {!module:Plugin}). [dir pkg] is the directory of
-     [pkg]; [load pkg], if given, loads the OCaml code of [pkg] (e.g. by
-     dynlinking it), which registers its plugin. Both raise [Failure] with a
-     message. Without [load], the stub [pkg.plugin.elpi] in [dir pkg] (the
-     documentation of the plugin) stands for a plugin that is not
-     registered. *)
+     directory of package [pkg]), [accumulate "+/path"] (a file in the root
+     of the project of the accumulating file) and [accumulate "+pkg"] (the
+     plugin of package [pkg], see {!module:Plugin}). [dir pkg] is the
+     directory of [pkg]; [load pkg], if given, loads the OCaml code of [pkg]
+     (e.g. by dynlinking it), which registers its plugin; [root_of_dir d] is
+     the root of the project that contains the directory [d]. They raise
+     [Failure] with a message. Without [load], the stub [pkg.builtins.elpi]
+     in [dir pkg] (the documentation of the plugin) stands for a plugin that
+     is not registered. *)
   type packages = {
     dir : string -> string;
     load : (string -> unit) option;
+    root_of_dir : string -> string;
   }
 
   (* Compilation flags, see {!module:Compile} *)
@@ -1097,8 +1100,9 @@ module BuiltIn : sig
 
 end
 
-(** A plugin is the OCaml code of a package [pkg] (e.g. a findlib package):
-    the builtins it registers with [register ~name:pkg], which a program
+(** A plugin is the OCaml code of a package [pkg] (for elpi.dynload, the
+    findlib package [elpi-pkg]): the builtins it registers with [register
+    ~name:pkg], which a program
     accumulates with [accumulate "+pkg"]. A plugin can be registered at any
     time: linked statically, or loaded on demand by [Setup.packages.load] when
     the accumulate is met. A plugin loaded after [Setup.init] cannot declare
@@ -1107,6 +1111,11 @@ end
 module Plugin : sig
   val register : name:string -> BuiltIn.declaration list -> Setup.builtins
   val is_registered : string -> bool
+
+  (* [ensure_registered ~load name]: if the plugin [name] is not registered,
+     [load name] (e.g. dynlinks its package), which must register it; raises
+     [Failure] with a message *)
+  val ensure_registered : load:(string -> unit) -> string -> unit
 end
 
 (* ************************************************************************* *)
@@ -1568,6 +1577,16 @@ module Utils : sig
       does not need to exist and symbolic links are not resolved. *)
   val normalize_path : string -> string
 
+  (** [string_literal s] is the Elpi string literal of [s], e.g. to write
+      an accumulate directive in a generated text: only the backslash and
+      the double quote are escaped, the other bytes (UTF-8 included) are kept
+      as they are (OCaml's %S escapes them in a way Elpi does not read) *)
+  val string_literal : string -> string
+
+  (** [accumulate_text l] is the text of a program that accumulates the
+      strings [l] in order (e.g. a prelude, then a file) *)
+  val accumulate_text : string list -> string
+
   (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
    * OCaml list! *)
   val list_to_lp_list : Data.term list -> Data.term
@@ -1711,6 +1730,9 @@ module PPX : sig
       max_name_len:int -> variant:int -> name:string -> doc:string ->
      ty:Conversion.ty_ast ->
      args:Conversion.ty_ast list -> unit
+    (* a constructor whose type is given as text, [code] *)
+    val custom_constructor : Format.formatter ->
+      variant:int -> name:string -> doc:string -> code:string -> unit
     type prec_level = Arrow | AppArg
     val show_ty_ast: ?prec:prec_level -> Conversion.ty_ast -> string
 

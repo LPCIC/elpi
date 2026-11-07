@@ -1,0 +1,3 @@
+accumulate "+/lib/names".   % lib/names.elpi at the root of the project
+
+main :- names.all L, std.forall L (n\ print "hello" n).

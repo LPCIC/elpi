@@ -1,0 +1,6 @@
+% a file in a subdirectory: "+/lib/libfile" is lib/libfile.elpi at the root
+% of the project
+accumulate "+/lib/libfile".
+
+func deep.answer -> int.
+deep.answer A :- lib.answer B, A is B + 1.

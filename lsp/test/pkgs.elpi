@@ -1,4 +1,4 @@
-accumulate "+elpi-test-lsp".
-accumulate "+elpi-test-lsp/util".
+accumulate "+test-lsp".
+accumulate "+test-lsp/util".
 func p -> int, int.
 p N M :- lsp.f 3 N, util.five M.

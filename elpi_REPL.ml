@@ -62,7 +62,7 @@ let usage =
   "\t-document-builtins Print documentation for built-in predicates\n" ^
   "\t-document-infix-syntax Print the documentation for infix operators\n" ^
   "\t-I PATH  search for accumulated files in PATH\n" ^
-  "\t-config FILE  the elpi.toml of the project (default: the one next to the file)\n" ^
+  "\t-config FILE  the elpi.toml of the project (default: the nearest one above the file)\n" ^
   "\t-no-config  no elpi.toml\n" ^
   "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
   "\t                                          compatibility)\n" ^
@@ -194,17 +194,20 @@ let _ =
   let execpath = Filename.dirname (Sys.executable_name) in
   let argv = List.tl (Array.to_list Sys.argv) in
   let argv = eat_options argv in
-  (* the elpi.toml of the project: given, or the one next to the file (the
-     first argument that is a file) *)
+  (* the elpi.toml of the project: given, or the nearest one above the file (the
+     first argument that is a file, with or without .elpi); it names the
+     project being run, found in its sources *)
   let config =
     let or_fail f x = try f x with Failure msg -> Printf.eprintf "Error: %s\n" msg; exit 1 in
     if !no_config then None
     else match !config_file with
       | Some f -> Some (or_fail Elpi_dynload.config_of_file f)
       | None ->
-          match List.find_opt (fun s -> String.length s > 0 && s.[0] <> '-' && Sys.file_exists s) argv with
-          | Some f -> or_fail Elpi_dynload.config_next_to f
+          let is_file s = Sys.file_exists s || Sys.file_exists (s ^ ".elpi") in
+          match List.find_opt (fun s -> String.length s > 0 && s.[0] <> '-' && is_file s) argv with
+          | Some f -> or_fail Elpi_dynload.config_above f
           | None -> None in
+  Option.iter Elpi_dynload.declare_project config;
   let config_paths = match config with Some c -> c.Elpi_dynload.paths | None -> [] in
   let paths = tjpath @ installpath @ [execpath] @ !extra_paths @ config_paths in
   (* plugins that declare state components or quotations are loaded before
@@ -286,8 +289,9 @@ let _ =
   let p, parse_errors, parse_warnings = raising (fun () ->
     match config with
     | Some ({ Elpi_dynload.prelude = _ :: _ } as c) when (match files with [] -> false | _ -> true) ->
-        (* the prelude, then the file *)
-        let text = Elpi_dynload.with_prelude c file in
+        (* the prelude, then the file, found as Parse.program finds it *)
+        let file = API.Parse.resolve_file ~elpi ~unit:file () in
+        let text = try Elpi_dynload.with_prelude c file with Failure msg -> Printf.eprintf "Error: %s\n" msg; exit 1 in
         API.Parse.program_from ~flags ~elpi ~loc:(API.Ast.Loc.initial (Filename.concat (Filename.dirname c.file) "(prelude)"))
           ~digest:(Digest.string text) (Lexing.from_string text)
     | _ -> API.Parse.program ~flags ~elpi file) in

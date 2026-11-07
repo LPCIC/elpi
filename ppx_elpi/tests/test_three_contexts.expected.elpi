@@ -6,7 +6,7 @@ func e1 t1 -> string, int.
 
 data t1.
 symb a1 : t1 -> t1 -> t1.  % A1
-symb k  : int -> t1.  % K1
+symb k  : int -> t1 = "1".  % K1
 symb l1 : int -> string -> (t1 -> t1) -> t1.  % L1
 
 func t1.copy t1 -> t1.
@@ -22,7 +22,7 @@ func e2 t2 -> string, int.
 
 data t2.
 symb a2 : t2 -> t2 -> t2.  % A2
-symb k  : int -> t2.  % K2
+symb k  : int -> t2 = "2".  % K2
 symb l2 : int -> string -> (t2 -> t2) -> t2.  % L2
 
 func t2.copy t2 -> t2.
@@ -38,7 +38,7 @@ func e3 t3 -> string, int.
 
 data t3.
 symb a3 : t3 -> t3 -> t3.  % A3
-symb k  : int -> t3.  % K3
+symb k  : int -> t3 = "3".  % K3
 symb l3 : int -> string -> (t3 -> t3) -> t3.  % L3
 
 func t3.copy t3 -> t3.

@@ -449,11 +449,15 @@ let update_ety ety eit = { ety with eit }
       | MRef m when MutableOnce.is_set m -> mode acc (MutableOnce.get m)
       | MRef m -> xs, m :: ms
       | MVal _ -> acc in
+    (* an assigned variable is followed once: types can share them *)
+    let followed = ref [] in
     let rec aux (xs,ms as acc) = function
       | Prop _ | Any | Cons _ -> acc
       | App (_,x,l) -> List.fold_left aux (aux acc x) l
       | Arr (m,_,s,t) -> aux (aux (mode acc m) s) t
-      | UVar x when MutableOnce.is_set x -> aux acc (unval (MutableOnce.get x))
+      | UVar x when MutableOnce.is_set x ->
+          if List.memq x !followed then acc
+          else begin followed := x :: !followed; aux acc (unval (MutableOnce.get x)) end
       | UVar x -> x :: xs, ms in
     aux ([],[]) t
 

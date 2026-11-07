@@ -1,5 +1,5 @@
-% Utilities on json values, written in Elpi: accumulate "+elpi-json/utils".
-accumulate "+elpi-json".
+% Utilities on json values, written in Elpi: accumulate "+json/utils".
+accumulate "+json".
 
 % [json.lookup J K V] V is the value of the key K of the object J
 func json.lookup json, string -> json.

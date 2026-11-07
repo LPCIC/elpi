@@ -13,6 +13,10 @@ end
 
 (* raised by [mkConstant ~safe:true] for a constant that cannot be indexed *)
 exception TooLargeConstant of string
+(* the bits of the data of a cell (the other bits are its tags); see
+   Data.Global_symbols.bottom *)
+val data_mask : int
+
 val mkConstant : safe:bool -> data:int -> arity:int -> cell
 val mkPrimitive : Elpi_util.Util.CData.t -> cell
 

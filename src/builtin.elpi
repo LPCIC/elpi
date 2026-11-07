@@ -100,47 +100,47 @@ builtin func calc A -> A.
 
 %  --- Operators ---
 
-symb (-) : A -> A -> A = "1". 
+symb (-) : A -> A -> A. 
 
-symb (i-) : int -> int -> int = "1". 
+symb (i-) : int -> int -> int. 
 
-symb (r-) : float -> float -> float = "1". 
+symb (r-) : float -> float -> float. 
 
 symb (+) : int -> int -> int = "1". 
 
 symb (+) : float -> float -> float = "2". 
 
-symb (i+) : int -> int -> int = "1". 
+symb (i+) : int -> int -> int. 
 
-symb (r+) : float -> float -> float = "1". 
+symb (r+) : float -> float -> float. 
 
 symb (*) : int -> int -> int = "1". 
 
 symb (*) : float -> float -> float = "2". 
 
-symb (/) : float -> float -> float = "1". 
+symb (/) : float -> float -> float. 
 
-symb (mod) : int -> int -> int = "1". 
+symb (mod) : int -> int -> int. 
 
-symb (div) : int -> int -> int = "1". 
+symb (div) : int -> int -> int. 
 
-symb (^) : string -> string -> string = "1". 
+symb (^) : string -> string -> string. 
 
 symb (~) : int -> int = "1". 
 
 symb (~) : float -> float = "2". 
 
-symb (i~) : int -> int = "1". 
+symb (i~) : int -> int. 
 
-symb (r~) : float -> float = "1". 
+symb (r~) : float -> float. 
 
 symb abs : int -> int = "1".
 
 symb abs : float -> float = "2".
 
-symb iabs : int -> int = "1".
+symb iabs : int -> int.
 
-symb rabs : float -> float = "1".
+symb rabs : float -> float.
 
 symb max : int -> int -> int = "1".
 
@@ -150,51 +150,51 @@ symb min : int -> int -> int = "1".
 
 symb min : float -> float -> float = "2".
 
-symb sqrt : float -> float = "1".
+symb sqrt : float -> float.
 
-symb sin : float -> float = "1".
+symb sin : float -> float.
 
-symb cos : float -> float = "1".
+symb cos : float -> float.
 
-symb arctan : float -> float = "1".
+symb arctan : float -> float.
 
-symb ln : float -> float = "1".
+symb ln : float -> float.
 
-symb exp : float -> float = "1".
+symb exp : float -> float.
 
-symb tan : float -> float = "1".
+symb tan : float -> float.
 
-symb arcsin : float -> float = "1".
+symb arcsin : float -> float.
 
-symb arccos : float -> float = "1".
+symb arccos : float -> float.
 
-symb arctan2 : float -> float -> float = "1".
+symb arctan2 : float -> float -> float.
 
-symb pow : float -> float -> float = "1".
+symb pow : float -> float -> float.
 
-symb int_to_real : int -> float = "1".
+symb int_to_real : int -> float.
 
-symb floor : float -> int = "1".
+symb floor : float -> int.
 
-symb ceil : float -> int = "1".
+symb ceil : float -> int.
 
-symb truncate : float -> int = "1".
+symb truncate : float -> int.
 
-symb size : string -> int = "1".
+symb size : string -> int.
 
-symb chr : int -> string = "1".
+symb chr : int -> string.
 
-symb rhc : string -> int = "1".
+symb rhc : string -> int.
 
-symb string_to_int : string -> int = "1".
+symb string_to_int : string -> int.
 
-symb int_to_string : int -> string = "1".
+symb int_to_string : int -> string.
 
-symb substring : string -> int -> int -> string = "1".
+symb substring : string -> int -> int -> string.
 
-symb real_to_string : float -> string = "1".
+symb real_to_string : float -> string.
 
-symb string_to_real : string -> float = "1".
+symb string_to_real : string -> float.
 
 %  -- Arithmetic tests --
 
@@ -387,12 +387,12 @@ symb error : string -> diagnostic.  % Failure
 
 data in_stream.
 
-symb std_in : in_stream = "1".
+symb std_in : in_stream.
 
 data out_stream.
 
-symb std_err : out_stream = "1".
-symb std_out : out_stream = "1".
+symb std_err : out_stream.
+symb std_out : out_stream.
 
 % [open_in FileName InStream] opens FileName for input
 builtin func open_in string -> in_stream.

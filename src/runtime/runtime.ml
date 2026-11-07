@@ -61,11 +61,13 @@ end = struct
   type t = Constants.t
   let dummy = Data.dummy
 
+(* the table before a program is installed: frozen constants start at
+   bottom, as for a program with no constants *)
 let table = Fork.new_local {
   c2s = Constants.Map.empty;
   c2t = Hashtbl.create 37;
-  frozen_constants = 0;
-  first_frozen = 1;
+  frozen_constants = Global_symbols.bottom - 1;
+  first_frozen = Global_symbols.bottom;
 }
 
 (* let () = at_exit (fun () -> let open Hashtbl in let s = stats !table.c2t in

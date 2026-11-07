@@ -1,7 +1,7 @@
 
 
 data t1.
-symb a : int -> t1.  % A
+symb a : int -> t1 = "1".  % A
 
 func t1.copy t1 -> t1.
 t1.copy (a A0) (a B0) :- (int.copy A0 B0).
@@ -9,7 +9,7 @@ t1.copy (a A0) (a B0) :- (int.copy A0 B0).
 
 
 data t2.
-symb a : string -> t2.  % A
+symb a : string -> t2 = "2".  % A
 
 func t2.copy t2 -> t2.
 t2.copy (a A0) (a B0) :- (string.copy A0 B0).

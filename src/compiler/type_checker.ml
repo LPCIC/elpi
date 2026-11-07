@@ -187,7 +187,11 @@ let check_type ?(stubs=false) ~type_abbrevs ~kinds { value; loc; doc; name; inde
             | _ -> Printf.sprintf "Constants.declare_global_symbol %S" (Symbol.get_str bsymb) in
           error ~loc ("Symbol " ^ Symbol.pretty bsymb ^ " is declared as an OCaml symbol but OCaml does not declare it.\nCheck for calls to " ^ hint)
       | exception Not_found -> None in
-    let is_core = Symbol.RawMap.mem (Symbol.make Core name) Elpi_runtime.Data.Global_symbols.table.s2ct in
+    (* ==> is another name of =>, only for its declaration (the parser turns
+       [A ==> B] into [A => B]) *)
+    let is_core =
+      Symbol.RawMap.mem (Symbol.make Core name) Elpi_runtime.Data.Global_symbols.table.s2ct
+      || F.equal name (F.from_string "==>") in
     match availability with
     | Elpi -> None
     | OCaml (File _) -> anomaly "provenance File cannot be provided by the user"

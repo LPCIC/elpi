@@ -2,22 +2,41 @@
 
 - Plugins and packages:
   - New: `accumulate "+pkg/path"` accumulates `path.elpi` in the directory of
-    package `pkg`, and `accumulate "+pkg"` the plugin of package `pkg`, the
-    builtins that its OCaml code registers with `API.Plugin.register
-    ~name:"pkg"`; any other string is a path, as before
-  - New: `Setup.init ?packages`: the directory of a package and, optionally,
-    a way to load its OCaml code when its plugin is accumulated. A plugin can
-    be loaded before or after `Setup.init`; one loaded after it cannot
-    declare state components nor quotations. A plugin that cannot be loaded
-    is replaced by its stub, the file `pkg.plugin.elpi` in the directory of
-    the package
+    package `pkg`, `accumulate "+/path"` the one in the root of the project
+    of the accumulating file (the nearest `elpi.toml`), and `accumulate "+pkg"` the plugin of package
+    `pkg`, the builtins that its OCaml code registers with
+    `API.Plugin.register ~name:"pkg"`; any other string is a path, as before
+  - New: `Setup.init ?packages`: the directory of a package, the root of the
+    project of a directory and, optionally, a way to load the OCaml code of a package
+    when its plugin is accumulated. A plugin can be loaded before or after
+    `Setup.init`; one loaded after it cannot declare state components nor
+    quotations. A plugin that cannot be loaded is replaced by its stub, the
+    file `pkg.builtins.elpi` in the directory of the package
   - New: library `elpi.dynload` (module `Elpi_dynload`): the packages of
-    findlib, loaded with dynlink, and the project file `elpi.toml` (`paths`,
-    `prelude`, `preload`)
+    findlib (the Elpi package `foo` is the findlib package `elpi-foo`),
+    loaded with dynlink, and the project file `elpi.toml` (`name`, `paths`,
+    `prelude`, `preload`) at the root of a project
   - New: the `elpi` command dynlinks the plugins it meets and reads the
-    `elpi.toml` next to its file (`-config FILE`, `-no-config`); `elpi-lsp`
-    reads the stubs of the plugins
-  - New: package `elpi-json`, Yojson bindings as a plugin
+    nearest `elpi.toml` above its file (`-config FILE`, `-no-config`);
+    `elpi-lsp` reads the stubs of the plugins, and the `elpi.toml` of a
+    document when it is opened (`name`, `paths`, `prelude`)
+  - New: package `elpi-json`, Yojson bindings as the plugin `json`
+  - New: ppx_elpi attribute `[@@elpi.namespace "ns"]`, a prefix for the
+    names of the constructors
+  - New: `API.Utils.string_literal` and `API.Utils.accumulate_text`, the
+    Elpi literal of a string and a program accumulating strings (for
+    generated texts)
+  - New: `API.Plugin.ensure_registered`, load a plugin and check that it
+    registered itself
+  - New: `Elpi_dynload.declare_project`, the package of a project is found
+    in its sources
+  - Change: in the text of a builtins file, `= "N"` is printed only on an
+    overloaded name (several OCaml symbols); a name with one OCaml symbol is
+    bound by name. An OCaml symbol declared twice by the text, or a `symb`
+    with the name of an OCaml symbol that the file does not list, is an
+    error
+  - Change: ppx_elpi prints the constructors of `[@elpi.code name code]`
+    with `symb` and binds them to their OCaml symbol
 
 - Type checker:
   - Change: a constructor whose arguments mention a type variable that its

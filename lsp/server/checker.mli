@@ -88,11 +88,13 @@ type result = {
   accumulates : string list; (** the files it accumulates, directly or not *)
 }
 
-(** [check ~instance ~path text] checks the document [path] whose contents is
-    [text] with [instance]. The units of the program (the accumulated files,
-    then the document) are cached: with the same instance, an accumulated file
-    is compiled once, not at each check. *)
-val check : instance:instance -> path:string -> string -> result
+(** [check ~instance ~path ?prelude text] checks the document [path] whose
+    contents is [text] with [instance]. [prelude], [(dir, entries)], are the
+    strings of accumulate of the prelude of a project ([dir] is the directory
+    of its elpi.toml), accumulated before the document. The units of the
+    program (the accumulated files, then the document) are cached: with the
+    same instance, an accumulated file is compiled once, not at each check. *)
+val check : instance:instance -> path:string -> ?prelude:string * string list -> string -> result
 
 (** {2 Requests}
 

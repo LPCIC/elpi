@@ -1,0 +1,34 @@
+
+
+data value.
+symb val.null       : value.  % Null
+symb val.number     : int -> value.  % Number
+symb pair-of-values : value -> value -> value.  % Pair
+
+func value.copy value -> value.
+value.copy val.null val.null.
+value.copy (val.number A0) (val.number B0) :- (int.copy A0 B0).
+value.copy (pair-of-values A0 A1) (pair-of-values B0 B1) :- (value.copy A0 B0), (value.copy A1 B1).
+
+
+
+data point.
+symb geo.point : int -> int -> point.  % point
+
+func point.copy point -> point.
+point.copy (geo.point A0 A1) (geo.point B0 B1) :- (int.copy A0 B0), (int.copy A1 B1).
+
+
+
+
+
+
+
+
+main :-
+  value.copy (pair-of-values val.null (val.number 1)) X,
+  X = pair-of-values val.null (val.number 1),
+  point.copy (geo.point 1 2) (geo.point 1 2).
+
+/* OUTPUT
+*/

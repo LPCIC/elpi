@@ -11,10 +11,73 @@ let _ =
   let open BuiltIn in
   let open BuiltInPredicate in
   let open BuiltInPredicate.Notation in
-  Plugin.register ~name:"elpi-test.static" [
+  Plugin.register ~name:"test.static" [
     MLCode(Pred("static.answer", Out(BuiltInData.int, "N", Easy "N is 42"),
       (fun _ ~depth:_ -> !: 42)), DocAbove);
   ]
+
+(* a symbol listed twice in MLConstants (as a symbol listed and implied) is
+   bound once *)
+let _ =
+  let k = Constants.declare_global_symbol "dup.k" in
+  let open BuiltIn in
+  Plugin.register ~name:"test.dup" [
+    LPCode "data dk. symb dup.k : dk.";
+    MLConstants [k];
+    MLConstants [k];
+  ]
+
+(* the text of a builtins file declares each OCaml symbol once; a symbol in
+   a namespace is another name *)
+let _ =
+  let k = Constants.declare_global_symbol "twice" in
+  let open BuiltIn in
+  Plugin.register ~name:"test.twice" [
+    LPCode "data tw. symb twice : tw. symb twice : tw.";
+    MLConstants [k];
+  ]
+
+let _ =
+  let k = Constants.declare_global_symbol "nsk" in
+  let open BuiltIn in
+  Plugin.register ~name:"test.ns" [
+    LPCode "data nst. namespace inner { symb nsk : int -> nst. }";
+    LPCode "symb nsk : nst.";
+    MLConstants [k];
+  ]
+
+(* a symb with the name of an OCaml symbol that the file does not list (e.g.
+   printed by a hand-written Conversion.t) *)
+let _ =
+  ignore (Constants.declare_global_symbol "unlisted");
+  let open BuiltIn in
+  Plugin.register ~name:"test.unlisted" [ LPCode "data ul. symb unlisted : ul." ]
+
+(* the same operation built twice: one symbol, not two variants with the
+   same type (which would print = "2") *)
+let calc_twice =
+  let thrice () = Calc.{ symbol = "thrice"; infix = false; args = [["int"; "int"]];
+    code = (function
+      | [x] -> (match look ~depth:0 x with
+          | CData d when RawOpaqueData.is_int d -> RawOpaqueData.of_int (3 * RawOpaqueData.to_int d)
+          | _ -> Error.error "thrice: not an int")
+      | _ -> Error.error "thrice: one argument") } in
+  let open BuiltIn in
+  ignore (Calc.operations [thrice ()]);
+  let b = Plugin.register ~name:"test.calc" [ MLCalc (Calc.operations [thrice ()]) ] in
+  Format.asprintf "%a" BuiltIn.document_fmt b
+
+(* an operation that overloads an existing operator: + on strings *)
+let _ =
+  let plus = Calc.{ symbol = "+"; infix = true; args = [["string"; "string"; "string"]];
+    code = (function
+      | [x; y] -> (match look ~depth:0 x, look ~depth:0 y with
+          | CData a, CData b when RawOpaqueData.is_string a && RawOpaqueData.is_string b ->
+              RawOpaqueData.of_string (RawOpaqueData.to_string a ^ RawOpaqueData.to_string b)
+          | _ -> Error.error "+: not strings")
+      | _ -> Error.error "+: two arguments") } in
+  let open BuiltIn in
+  Plugin.register ~name:"test.plus" [ MLCalc (Calc.operations [plus]) ]
 
 (* plugins loaded on demand, after Setup.init *)
 type shape = Circle of int | Square
@@ -43,7 +106,7 @@ let late () =
   let open BuiltInPredicate in
   let open BuiltInPredicate.Notation in
   let open ContextualConversion in
-  ignore @@ Plugin.register ~name:"elpi-test.late" [
+  ignore @@ Plugin.register ~name:"test.late" [
     MLData shape;
     MLCalc (Calc.operations [twice]);
     LPCode "data box. symb box : int -> box.";
@@ -59,20 +122,32 @@ let late () =
   ]
 
 let load = function
-  | "elpi-test.late" -> late ()
-  | "elpi-test.stateful" ->
-      ignore (State.declare_component ~name:"elpi-test:late" ~pp:(fun _ _ -> ())
+  | "test.late" -> late ()
+  | "test.stateful" ->
+      ignore (State.declare_component ~name:"test:late" ~pp:(fun _ _ -> ())
         ~init:(fun () -> 0) ~start:(fun x -> x) ());
-      ignore @@ Plugin.register ~name:"elpi-test.stateful" []
-  | "elpi-test.lazy" -> () (* it does not register its plugin *)
+      ignore @@ Plugin.register ~name:"test.stateful" []
+  | "test.hoas" ->
+      RawData.set_extra_goals_postprocessing (fun goals state -> state, goals);
+      ignore @@ Plugin.register ~name:"test.hoas" []
+  | "test.quot" ->
+      ignore (Quotation.register_named_quotation ~name:"testq" (fun ~language:_ _ _ _ -> assert false));
+      ignore @@ Plugin.register ~name:"test.quot" []
+  | "test.lazy" -> () (* it does not register its plugin *)
   | p -> failwith ("no package " ^ p)
 
 let package_dir = function
-  | "elpi-test" | "elpi-test.stub" -> dir
+  | "test" | "test.stub" -> dir
   | p -> failwith ("no package " ^ p)
 
-let with_load = { Setup.dir = package_dir; load = Some load }
-let dir_only = { Setup.dir = package_dir; load = None }
+(* "+/path": the files in tests/sources/plugins belong to package test *)
+let root_of_dir d =
+  let n = String.length dir in
+  if String.length d >= n && String.equal (String.sub d 0 n) dir then dir
+  else failwith ("no project contains " ^ d)
+
+let with_load = { Setup.dir = package_dir; load = Some load; root_of_dir }
+let dir_only = { Setup.dir = package_dir; load = None; root_of_dir }
 
 (* the output of main, or the first error *)
 let run ?packages ?(stubs=false) name text =
@@ -103,11 +178,24 @@ let run ?packages ?(stubs=false) name text =
               | Execute.Success _ -> String.trim (Buffer.contents buf)
               | _ -> "main failed"
 
+(* the first parse error of a program, with the file of its location, in
+   error resilient mode (as elpi-lsp) *)
+let run_located ?packages name text =
+  let elpi = Setup.init ~builtins:[Elpi.Builtin.std_builtins]
+    ~file_resolver:(Parse.std_resolver ~paths:[] ()) ?packages () in
+  let flags = { Compile.default_flags with Compile.max_errors = 5 } in
+  match Parse.program_from ~flags ~elpi ~loc:(Ast.Loc.initial (Filename.concat dir (name ^ ".elpi")))
+          ~digest:(Digest.string text) (Lexing.from_string text) with
+  | exception e -> "exception " ^ Printexc.to_string e
+  | _, { Error.loc = Some l; _ } :: _, _ -> "error in " ^ Filename.basename l.Ast.Loc.source_name
+  | _, { Error.loc = None; message; _ } :: _, _ -> message
+  | _, [], _ -> "no error"
+
 (* separate compilation: the unit of a plugin, marshaled and read back *)
 let sepcomp () =
   let elpi = Setup.init ~builtins:[Elpi.Builtin.std_builtins]
     ~file_resolver:(Parse.std_resolver ~paths:[] ()) () in
-  let text = {| accumulate "+elpi-test.static". main :- static.answer N, print "sepcomp" N. |} in
+  let text = {| accumulate "+test.static". main :- static.answer N, print "sepcomp" N. |} in
   let ast, _, _ = Parse.program_from ~elpi ~loc:(Ast.Loc.initial (Filename.concat dir "sepcomp.elpi"))
     ~digest:(Digest.string text) (Lexing.from_string text) in
   let scoped, _, _ = Compile.scope_ast ~elpi ast in
@@ -138,30 +226,70 @@ let check name ~expect got =
 
 let () =
   check "static" ~expect:"42"
-    (run "static" {| accumulate "+elpi-test.static". main :- static.answer N, print N. |});
+    (run "static" {| accumulate "+test.static". main :- static.answer N, print N. |});
   check "static without packages" ~expect:"42"
-    (run ~packages:dir_only "static2" {| accumulate "+elpi-test.static". main :- static.answer N, print N. |});
+    (run ~packages:dir_only "static2" {| accumulate "+test.static". main :- static.answer N, print N. |});
   check "on demand" ~expect:"3 12 43"
     (run ~packages:with_load "late" {|
-      accumulate "+elpi-test.late".
+      accumulate "+test.late".
       main :- late.mk-box 3 B, B = box N, late.area (circle 2) A, T is twice 21 + 1, print N A T. |});
   check "package file" ~expect:"14"
-    (run ~packages:dir_only "file" {| accumulate "+elpi-test/util". main :- util.double 7 X, print X. |});
+    (run ~packages:dir_only "file" {| accumulate "+test/util". main :- util.double 7 X, print X. |});
+  check "current package" ~expect:"14"
+    (run ~packages:dir_only "current" {| accumulate "+/util". main :- util.double 7 X, print X. |});
+  check "current package in a subdirectory" ~expect:"28"
+    (run ~packages:dir_only "deep" {| accumulate "sub/deep". main :- deep.quadruple 7 X, print X. |});
+  (* a syntax error in a file of a package is an error of the program, not an
+     exception: the unit of the file is named by its path *)
+  check "syntax error in a package file" ~expect:"error in broken.elpi"
+    (run_located ~packages:dir_only "broken" {| accumulate "+test/broken". main. |});
+  (* a generated accumulate keeps UTF-8, quotes and backslashes (%S does
+     not, for Elpi) *)
+  let s = "jos\xc3\xa9 \"q\" a\\b" in
+  check "string literal" ~expect:("[ " ^ s ^ " ]")
+    (run "literal" (Printf.sprintf {| main :- X = %s, print "[" X "]". |} (Utils.string_literal s)));
+  check "duplicate MLConstants" ~expect:"[ dup.k ]"
+    (run "dup" {| accumulate "+test.dup". main :- X = dup.k, print "[" X "]". |});
+  check "declared twice" ~expect:"twice (variant 0), an OCaml symbol of +test.twice, is declared twice by its text"
+    (run "twice" {| accumulate "+test.twice". main. |});
+  check "operation built twice" ~expect:"symb thrice : int -> int.\n" calc_twice;
+  check "operation built twice, used" ~expect:"[ 6 ]"
+    (run "calc" {| accumulate "+test.calc". main :- X is thrice 2, print "[" X "]". |});
+  check "overloaded operator" ~expect:"[ ab 3 ]"
+    (run "plus" {| accumulate "+test.plus". main :- X is "a" + "b", N is 1 + 2, print "[" X N "]". |});
+  check "unlisted OCaml symbol" ~expect:"unlisted is the name of an OCaml symbol (Constants.declare_global_symbol) that +test.unlisted does not list"
+    (run "unlisted" {| accumulate "+test.unlisted". main. |});
+  check "namespaced name" ~expect:"[ nsk inner.nsk 3 ]"
+    (run "ns" {| accumulate "+test.ns". main :- X = nsk, Y = inner.nsk 3, print "[" X Y "]". |});
+  check "current package without packages" ~expect:"packages are disabled"
+    (run "nocurrent" {| accumulate "+/util". main. |});
+  check "no file" ~expect:"accumulate \"+test/\": no file after the package"
+    (run ~packages:dir_only "nofile" {| accumulate "+test/". main. |});
+  check "no package" ~expect:"no package after +"
+    (run ~packages:dir_only "nopkgname" {| accumulate "+". main. |});
+  (* two files with the same text in two directories: each resolves its own
+     accumulates *)
+  check "same text, two directories" ~expect:"[ 1 2 ]"
+    (run "twin" {| accumulate "twin/a/t". accumulate "twin/b/t". main :- twin.a A, twin.b B, print "[" A B "]". |});
   check "plus path" ~expect:"7"
     (run "plus" {| accumulate "./+x". main :- plusfile X, print X. |});
   check "no packages" ~expect:"packages are disabled"
-    (run "nopkg" {| accumulate "+elpi-test/util". main. |});
-  check "missing" ~expect:"plugin elpi-test.missing is not available: no package elpi-test.missing"
-    (run ~packages:with_load "missing" {| accumulate "+elpi-test.missing". main. |});
-  check "not registered" ~expect:"package elpi-test.lazy did not register its plugin"
-    (run ~packages:with_load "lazy" {| accumulate "+elpi-test.lazy". main. |});
-  check "state component" ~expect:"plugin elpi-test.stateful declares state components: it must be loaded before Setup.init"
-    (run ~packages:with_load "stateful" {| accumulate "+elpi-test.stateful". main. |});
+    (run "nopkg" {| accumulate "+test/util". main. |});
+  check "missing" ~expect:"plugin test.missing is not available: no package test.missing"
+    (run ~packages:with_load "missing" {| accumulate "+test.missing". main. |});
+  check "not registered" ~expect:"package test.lazy did not register its plugin"
+    (run ~packages:with_load "lazy" {| accumulate "+test.lazy". main. |});
+  check "state component" ~expect:"plugin test.stateful declares state components: it must be loaded before Setup.init"
+    (run ~packages:with_load "stateful" {| accumulate "+test.stateful". main. |});
+  check "late quotation" ~expect:"plugin test.quot declares quotations: it must be loaded before Setup.init"
+    (run ~packages:with_load "quot" {| accumulate "+test.quot". main. |});
+  check "HOAS hooks" ~expect:"plugin test.hoas sets HOAS hooks: it must be loaded before Setup.init"
+    (run ~packages:with_load "hoas" {| accumulate "+test.hoas". main. |});
   check "stub with builtin_stubs" ~expect:"stub ok"
-    (run ~packages:dir_only ~stubs:true "stub" {| accumulate "+elpi-test.stub". main :- print "stub ok". |});
+    (run ~packages:dir_only ~stubs:true "stub" {| accumulate "+test.stub". main :- print "stub ok". |});
   check "stub without builtin_stubs" ~expect:"stub.f is declared builtin but no MLCode implements it"
-    (run ~packages:dir_only "stub2" {| accumulate "+elpi-test.stub". main. |});
-  check "separate compilation" ~expect:"+elpi-test.static " (sepcomp ());
+    (run ~packages:dir_only "stub2" {| accumulate "+test.stub". main. |});
+  check "separate compilation" ~expect:"+test.static " (sepcomp ());
   check "separate compilation runs" ~expect:"sepcomp 42" (sepcomp ());
   if !failures > 0 then exit 1;
   print_endline "all plugin cases ok"

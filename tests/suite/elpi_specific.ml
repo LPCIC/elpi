@@ -730,3 +730,21 @@ let () = declare "builtin_pred_variant"
   ~description:"a builtin predicate with a variant"
   ~expectation:Test.(FailureOutput (Str.regexp "A builtin predicate takes no variant"))
   ()
+
+let () = declare "builtin_core_attrs"
+  ~source_elpi:"builtin_core_attrs.elpi"
+  ~description:"builtin with other attributes and = core"
+  ~expectation:Test.(FailureOutput (Str.regexp "only builtin.elpi declares the symbols of the language"))
+  ()
+
+let () = declare "builtin_type"
+  ~source_elpi:"builtin_type.elpi"
+  ~description:"the legacy type declaration with builtin"
+  ~expectation:Test.(FailureOutput (Str.regexp "Only the symbols of the language are declared builtin"))
+  ()
+
+let () = declare "overload_bare"
+  ~source_elpi:"overload_bare.elpi"
+  ~description:"a bare overloaded constant of unknown type"
+  ~expectation:Test.(FailureOutput (Str.regexp_string "+ is overloaded but too many of its types match"))
+  ()

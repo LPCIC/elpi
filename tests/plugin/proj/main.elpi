@@ -1,3 +1,4 @@
 accumulate libfile.
-accumulate "+elpi-test-dyn.state".
-main :- pre.hello, lib.answer A, dyn.tick N, dyn.tick M, print A N M.
+accumulate "+test-dyn.state".
+accumulate "+/src/deep/answer".
+main :- pre.hello, lib.answer A, deep.answer D, dyn.tick N, dyn.tick M, print A D N M.

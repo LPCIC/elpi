@@ -1,0 +1,3 @@
+% at the root of the project lspproj: "+/lib/util"
+func util.seven -> int.
+util.seven 7.
