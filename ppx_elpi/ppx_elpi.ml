@@ -169,6 +169,11 @@ open Ppxlib.Ast_pattern
       [code] optional: a string used as the Elpi kind declaration of the type
         (instead of the generated one).
 
+    [@@elpi.namespace "ns"]
+      ["ns"] mandatory: a string put, followed by a dot, in front of the Elpi
+      name of the constructors that have the default one (no [@elpi.code]).
+      Eg [Foo] becomes ns.foo. The name of the type is not affected.
+
     [@@elpi.type_doc s]
       [s] mandatory: a string, a comment printed before the declaration of the
       type. By default there is none.
@@ -203,8 +208,9 @@ open Ppxlib.Ast_pattern
 
     [@elpi.variant n] The variant of the global symbol of the constructor.
       [n] mandatory: an integer literal, >= 1. Constructors with the same name
-      (eg in different types) must have different variants, and the Elpi
-      declaration is [builtin symb name : ... = "n"].
+      (eg in different types) must have different variants. The Elpi
+      declaration is a plain [symb name : ...]: the builtins file knows the
+      variant.
 
     [@elpi.embed f] Custom embedding code.
       [f] mandatory: function of type
@@ -222,9 +228,10 @@ open Ppxlib.Ast_pattern
       [name] mandatory: a string that stands for the name of the constructor
         in Elpi. The default is the name of the OCaml constructor in lowercase
         where _ is replaced by - . Eg Foo_BAR becomes foo-bar.
-      [code] optional: is a string used as the Elpi type declaration for the
-        constructor. Default is derived from the types of the fields. Example
-        "type lam (term -> term) -> term. % Lam"
+      [code] optional: is a string used as the Elpi type of the constructor.
+        Default is derived from the types of the fields. Example
+        "(term -> term) -> term", printed as
+        "symb lam : (term -> term) -> term. % Lam"
 
     [@elpi.doc s] Custom documentation.
       [s] mandatory: a string. Default doc is the name of the OCaml constructor,
@@ -295,6 +302,7 @@ let att_elpi_def_k_readback = Attribute.(declare "elpi.default_constructor_readb
 let att_elpi_tpp            = Attribute.(declare "elpi.pp" Context.type_declaration (single_expr_payload __) (fun x -> x))
 let att_elpi_tindex         = Attribute.(declare "elpi.index" Context.type_declaration (single_expr_payload (pexp_pack __)) (fun x -> x))
 let att_elpi_tcdata         = Attribute.(declare "elpi.opaque" Context.type_declaration (single_expr_payload __) (fun x -> x))
+let att_elpi_tnamespace     = Attribute.(declare "elpi.namespace" Context.type_declaration (single_expr_payload (estring __)) (fun x -> x))
 
 let att_elpi_var      = Attribute.(declare "elpi.var"      Context.constructor_declaration (single_expr_payload __) (fun x -> x))
 let att_elpi_skip     = Attribute.(declare "elpi.skip"     Context.constructor_declaration (pstr nil) ())
@@ -1011,9 +1019,11 @@ let one_or_two_strings (module B : Ast_builder.S) = function
      option_get (one_string x), one_string y
   | _ -> error "string or ident expected"
 
-let get_elpi_code (module B : Ast_builder.S) kname kattributes =
+let get_elpi_code (module B : Ast_builder.S) ?namespace kname kattributes =
   match Attribute.get att_elpi_code kattributes with
-  | None -> elpi_name_mangle kname, None
+  | None ->
+      let name = elpi_name_mangle kname in
+      (match namespace with Some ns -> ns ^ "." ^ name | None -> name), None
   | Some payload -> one_or_two_strings (module B) payload.pexp_desc
 
 let get_elpi_tcode (module B : Ast_builder.S) kname kattributes =
@@ -1046,11 +1056,11 @@ let parse_lident_list (module B : Ast_builder.S) = let open B in
   in
     aux
 
-let analyze_tuple_constructor (module B : Ast_builder.S) tyname kname kattributes tl constructor pattern same_mutrec_block = let open B in
+let analyze_tuple_constructor (module B : Ast_builder.S) ?namespace tyname kname kattributes tl constructor pattern same_mutrec_block = let open B in
     let c_str = elpi_kname_str tyname kname in
     let c = elpi_kname tyname kname in
     let elpi_doc = get_elpi_doc kname kattributes in
-    let str, elpi_code = get_elpi_code (module B) kname kattributes in
+    let str, elpi_code = get_elpi_code (module B) ?namespace kname kattributes in
     let decl_str = value_binding ~pat:(pvar c_str) ~expr:(estring str) in
     let variant = Attribute.get att_elpi_variant kattributes in
     let decl =
@@ -1129,7 +1139,7 @@ let analyze_tuple_constructor (module B : Ast_builder.S) tyname kname kattribute
    }
 ;;
 
-let analyze_constructor (module B : Ast_builder.S) tyname same_mutrec_block decl = let open B in
+let analyze_constructor (module B : Ast_builder.S) ?namespace tyname same_mutrec_block decl = let open B in
   match decl with
   | { pcd_name = { txt = kname ; _ }; pcd_args; _ } when Attribute.get att_elpi_skip decl = Some () ->
       Skip { constructor_name = kname; has_args = not (pcd_args = Pcstr_tuple []) }
@@ -1140,12 +1150,12 @@ let analyze_constructor (module B : Ast_builder.S) tyname same_mutrec_block decl
       let match_k args =
         if args = [] then ppat_construct (Located.lident kname) None
         else ppat_construct (Located.lident kname) (Some (ppat_tuple args)) in
-      analyze_tuple_constructor (module B) tyname kname decl tl make_k match_k same_mutrec_block
+      analyze_tuple_constructor (module B) ?namespace tyname kname decl tl make_k match_k same_mutrec_block
   | { pcd_name = { txt = kname ; _ }; pcd_args = Pcstr_record lbltl; pcd_res = None; _ } ->
       let lbls, tl = List.(split (map (fun { pld_name = { txt; _ }; pld_type; _} -> txt, pld_type) lbltl)) in
       let make_k args = pexp_construct (Located.lident kname) (Some (pexp_record (List.map2 (fun x y -> B.Located.lident x,y) lbls args) None)) in
       let match_k args = ppat_construct (Located.lident kname) (Some (ppat_record (List.map2 (fun x y -> B.Located.lident x,y) lbls args) Closed)) in
-      analyze_tuple_constructor (module B) tyname kname decl tl make_k match_k same_mutrec_block
+      analyze_tuple_constructor (module B) ?namespace tyname kname decl tl make_k match_k same_mutrec_block
   | { pcd_loc = loc; _ } -> error ~loc "unsupportd constructor declaration"
 
 let extract_tyvar (x,_) =
@@ -1228,12 +1238,14 @@ let pp_doc (module B : Ast_builder.S) kind elpi_name elpi_code elpi_doc is_pred 
           match elpi_code with
           | Some code ->
               [%expr
-                Format.fprintf fmt "@[<hov2>type %s@[<hov> %s. %% %s@]@]@\n" [%e estring c] [%e code] [%e estring elpi_doc ]]
+                Elpi.API.PPX.Doc.custom_constructor fmt
+                ~variant:[%e eint variant ] ~name:[%e estring c] ~doc:[%e estring elpi_doc ] ~code:[%e code]]
           | None when is_pred ->
               (* func name Key -> Field1, ..., FieldN, where Key is the type
                  of the bound variable the entry is about *)
               [%expr
                 Elpi.API.PPX.Doc.context_entry fmt
+                ~variant:[%e eint variant ]
                 ~name:[%e estring c]
                 ~doc:[%e estring elpi_doc ]
                 ~key:[%e ty_ast_of_arg (ctx_index_ty_of_args (module B) arg_types) ]
@@ -1731,7 +1743,8 @@ let analyze_typedecl (module B : Ast_builder.S) same_mutrec_block tdecl =
     } ->
       let params, typ = analyze_params (module B) params in
       let csts = List.map typ#constructor_declaration csts in
-      let csts = List.map (analyze_constructor (module B) name same_mutrec_block) csts in
+      let namespace = Attribute.get att_elpi_tnamespace tdecl in
+      let csts = List.map (analyze_constructor (module B) ?namespace name same_mutrec_block) csts in
       let elpi_name, elpi_code = get_elpi_tcode (module B) name tdecl in
       let elpi_doc = get_elpi_tdoc name tdecl in
       let default_readback = get_elpi_tdefkreadback tdecl in
@@ -1759,7 +1772,8 @@ let analyze_typedecl (module B : Ast_builder.S) same_mutrec_block tdecl =
         pcd_loc = B.loc;
         pcd_attributes = ptype_attributes;
         } in
-      let csts = [analyze_tuple_constructor (module B) name name kdecl tl make_k match_k same_mutrec_block] in
+      let namespace = Attribute.get att_elpi_tnamespace tdecl in
+      let csts = [analyze_tuple_constructor (module B) ?namespace name name kdecl tl make_k match_k same_mutrec_block] in
       let elpi_name, elpi_code = get_elpi_tcode (module B) name tdecl in
       let elpi_doc = get_elpi_tdoc name tdecl in
       let default_readback = get_elpi_tdefkreadback tdecl in
@@ -1863,6 +1877,7 @@ let expand_sig ~loc ~path:_ (_r,_tydecl) (_index : module_expr option) = nYI ~lo
 
 let attributes = Attribute.([
   T att_elpi_tcode;
+  T att_elpi_tnamespace;
   T att_elpi_tdoc;
   T att_elpi_var ;
   T att_elpi_skip ;

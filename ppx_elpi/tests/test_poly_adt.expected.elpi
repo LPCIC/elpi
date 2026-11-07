@@ -1,9 +1,9 @@
 
 
-builtin data simple A.
-builtin symb a : simple A = "0".  % A
-builtin symb b : int -> simple A = "0".  % B
-builtin symb c : list A -> int -> simple A = "0".  % C
+data simple A.
+symb a : simple A.  % A
+symb b : int -> simple A.  % B
+symb c : list A -> int -> simple A.  % C
 
 func simple.copy (func X0 -> Y0), simple X0 -> simple Y0.
 simple.copy _ a a.

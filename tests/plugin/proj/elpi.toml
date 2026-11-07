@@ -1,0 +1,5 @@
+# the project of main.elpi, at its root
+name = "proj"
+paths = ["lib"]
+prelude = ["pre"]
+preload = ["test-dyn.state"]

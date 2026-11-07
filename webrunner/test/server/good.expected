@@ -155,9 +155,9 @@ definition "print \""+1 (the cursor is at 4:61):
   line 4:
                | main :- double 3 Y, twice Y Z, std.map [Z] (x\ y\ y = x) L, print "λ" L.
     cursor     |                                                              *
-  defined at elpi-builtin:/ID/builtin.elpi 553:0-553:24
+  defined at elpi-builtin:/ID/builtin.elpi 556:0-556:24
     | builtin func print any..
-  previewed 553:0-553:24
+  previewed 556:0-556:24
     | builtin func print any..
 
 ==== change good.elpi (version 2) ====

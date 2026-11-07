@@ -38,7 +38,7 @@ let log_runtime_warning ?loc ~id:_ msg = Checker.log "warning: %s%s" (show_loc l
    runs [query] (a final dot is
    optional) once, for at most [max_steps] steps of the interpreter (then the
    status is failure, with the error "no more steps") *)
-let run ?max_steps ~instance ~path ~text ~query () : Yojson.Safe.t =
+let run ?max_steps ?prelude ~instance ~path ~text ~query () : Yojson.Safe.t =
   let output = Buffer.create 1024 in
   let fmt = Format.formatter_of_buffer output in
   let show_warning { Error.warning = ({ loc } as e) } =
@@ -71,8 +71,21 @@ let run ?max_steps ~instance ~path ~text ~query () : Yojson.Safe.t =
         let elpi = Checker.elpi instance in
         let flags = { Compile.default_flags with Compile.max_errors = !Checker.max_errors } in
         let ast, parse_errors, parse_warnings =
-          Parse.program_from ~flags ~elpi ~loc:(Ast.Loc.initial path) ~digest:(Digest.string text)
-            (Lexing.from_string text) in
+          match prelude with
+          | Some (dir, (_ :: _ as entries)) when Filename.check_suffix path ".elpi" || Filename.check_suffix path ".mod" ->
+              (* the prelude of the project, then the document (an open
+                 document is found by the resolver of the instance); a .mod
+                 with its .sig, as import does *)
+              let main =
+                if Filename.check_suffix path ".mod" then
+                  "import " ^ Utils.string_literal (Filename.chop_suffix path ".mod") ^ ".\n"
+                else Utils.accumulate_text [Filename.chop_suffix path ".elpi"] in
+              let text = Utils.accumulate_text entries ^ main in
+              Parse.program_from ~flags ~elpi ~loc:(Ast.Loc.initial (Filename.concat dir "(prelude)"))
+                ~digest:(Digest.string text) (Lexing.from_string text)
+          | _ ->
+              Parse.program_from ~flags ~elpi ~loc:(Ast.Loc.initial path) ~digest:(Digest.string text)
+                (Lexing.from_string text) in
         let program, compile_errors, compile_warnings = Compile.program ~flags ~elpi ast in
         Ok (elpi, program, List.map Error.show (parse_errors @ compile_errors),
             List.map show_warning (parse_warnings @ compile_warnings))

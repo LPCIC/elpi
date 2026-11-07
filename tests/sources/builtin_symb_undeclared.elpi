@@ -1,0 +1,4 @@
+% builtin symb is only for the symbols of the language (= "core")
+builtin symb foo : int.
+
+main :- print foo.

@@ -1,0 +1,3 @@
+% a file of the package test-dyn (findlib elpi-test-dyn): "+test-dyn/util"
+func util.triple int -> int.
+util.triple X Y :- Y is X * 3.

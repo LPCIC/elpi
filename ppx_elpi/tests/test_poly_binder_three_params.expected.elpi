@@ -1,14 +1,14 @@
 
 
 % context items for term A B C (Entry)
-builtin func entry (term A B C) -> string.
+func entry (term A B C) -> string.
 
 
-builtin data term A B C.
-builtin symb const : A -> term A B C = "0".  % Const
-builtin symb tag   : B -> term A B C -> term A B C = "0".  % Tag
-builtin symb pair  : C -> A -> term A B C = "0".  % Pair
-builtin symb lam   : string -> (term A B C -> term A B C) -> term A B C = "0".  % Lam
+data term A B C.
+symb const : A -> term A B C.  % Const
+symb tag   : B -> term A B C -> term A B C.  % Tag
+symb pair  : C -> A -> term A B C.  % Pair
+symb lam   : string -> (term A B C -> term A B C) -> term A B C.  % Lam
 
 func term.copy (func X0 -> Y0), (func X1 -> Y1), (func X2 -> Y2), term X0 X1 X2 -> term Y0 Y1 Y2.
 term.copy F0 _ _ (const A0) (const B0) :- (F0 A0 B0).

@@ -183,8 +183,8 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"tdecl" ~doc:"TDecl"
-               ~key:(Elpi.API.ContextualConversion.TyName "tye")
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:0 ~name:"tdecl"
+               ~doc:"TDecl" ~key:(Elpi.API.ContextualConversion.TyName "tye")
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty]);
         pp = (fun fmt (_, x) -> pp_tctx fmt x);
@@ -833,8 +833,8 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"decl" ~doc:"Decl"
-               ~key:(Elpi.API.ContextualConversion.TyName "term")
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:0 ~name:"decl"
+               ~doc:"Decl" ~key:(Elpi.API.ContextualConversion.TyName "term")
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      ty.Elpi.API.ContextualConversion.ty]);
         pp = (fun fmt (_, x) -> pp_ctx fmt x);
@@ -1192,8 +1192,8 @@ include
                        ("->", (Elpi.API.ContextualConversion.TyName "term"),
                          [Elpi.API.ContextualConversion.TyName
                             elpi_constant_type_term])];
-             Format.fprintf fmt "@[<hov2>type %s@[<hov> %s. %% %s@]@]@\n"
-               "type-cast" "term -> ty -> term" "Cast");
+             Elpi.API.PPX.Doc.custom_constructor fmt ~variant:0
+               ~name:"type-cast" ~doc:"Cast" ~code:"term -> ty -> term");
         pp =
           (let rec aux fmt =
              function

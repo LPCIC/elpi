@@ -73,8 +73,22 @@ let max_errors, include_paths =
     | [] -> max_errors, List.rev paths in
   args None [] (List.tl (Array.to_list Sys.argv))
 
+(* the nearest elpi.toml above a document, as for elpi; it names the project
+   of the document, found in its sources ("+name/..."). A document with no
+   path on the disk (e.g. untitled:) has no project. *)
+let project path =
+  if Filename.is_relative path then Server.no_project else
+  match Elpi_dynload.config_above path with
+  | None -> Server.no_project
+  | Some ({ Elpi_dynload.file; paths; prelude; _ } as c) ->
+      Elpi_dynload.declare_project c;
+      { Server.root = Filename.dirname file; paths; prelude; error = None }
+  | exception Failure msg -> { Server.no_project with error = Some msg }
+
 let () =
-  Server.init ~send:output_json ~exit ~builtin_library_location ?max_errors ~include_paths ()
+  (* the plugins of accumulate "+pkg" are not loaded: their stubs are read *)
+  Server.init ~send:output_json ~exit ~builtin_library_location ?max_errors ~include_paths
+    ~packages:Elpi_dynload.directories ~project ()
 
 let () =
   log "started";

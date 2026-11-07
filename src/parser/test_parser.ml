@@ -34,7 +34,7 @@ let chunk s (p1,p2) =
 
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
 
-module Parser = Parse.Make(struct let versions = Elpi_util.Util.StrMap.empty let resolver = Elpi_util.Util.std_resolver ~paths:[] () let reader = Elpi_util.Util.std_reader end)
+module Parser = Parse.Make(struct let versions = Elpi_util.Util.StrMap.empty let resolver = Elpi_util.Util.std_resolver ~paths:[] () let reader = Elpi_util.Util.std_reader let package_dir _ = failwith "no packages" let plugin _ = None let root_of_dir _ = failwith "no packages" end)
 
 (* the parsing of programs returns the errors: here a syntax error is an exception *)
 let warn = ref None
@@ -342,17 +342,17 @@ let _ =
   testK "data pair A B."   "kind pair type -> type -> type."          ();
   testK "data pair A B C." "kind pair type -> type -> type -> type."  ();
   testF "data foo, bar."   9 "syntax error";
-  testT "builtin data tm."  ();
-  testT "external data tm."  ();
-  testK "builtin data tm."   "data tm."   ();
-  testK "external data tm."  "data tm."   ();
+  testF "builtin data tm."  8 "Builtin declaration expected";
+  testF "external data tm." 9 "Builtin declaration expected";
   (*    01234567890123456789012345 *)
   testT "symbol x : int."  ();
   testT "symb x : int."  ();
   testS "symb x : int." "symbol x : int." ();
-  testS "external symb x : int." "external symbol x : int." ();
-  testT "builtin symb x : int."  ();
-  testS "builtin symb x : int." "external symbol x : int." ();
+  testS "external symb x : int = \"core\"." "external symbol x : int = \"core\"." ();
+  testT "builtin symb x : int = \"core\"."  ();
+  testS "builtin symb x : int = \"core\"." "external symbol x : int = \"core\"." ();
+  testF "builtin symb x : int." 0 "Only the symbols of the language are declared builtin";
+  testS "symb x : int = \"1\"." "symbol x : int = \"1\"." ();
   (*    01234567890123456789012345 *)
   testT ":external pred x."  ();
   testT ":builtin pred x."  ();

@@ -1,0 +1,3 @@
+% builtin with other attributes, then = "core": only builtin.elpi may
+:builtin :index(1) pred p i:int = "core".
+main.

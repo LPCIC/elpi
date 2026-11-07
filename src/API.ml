@@ -38,12 +38,10 @@ module Setup = struct
 type state_descriptor = Data.State.descriptor
 type quotations_descriptor = Compiler_data.QuotationHooks.descriptor ref
 type hoas_descriptor = Data.HoasHooks.descriptor ref
-type calc_descriptor = Data.CalcHooks.descriptor ref
 
 let default_state_descriptor = Data.State.new_descriptor ()
 let default_quotations_descriptor = Compiler_data.QuotationHooks.new_descriptor ()
 let default_hoas_descriptor = Data.HoasHooks.new_descriptor ()
-let default_calc_descriptor = Data.CalcHooks.new_descriptor ()
 
 type builtins = Compiler.declared_builtins
 type elpi = {
@@ -53,18 +51,69 @@ type elpi = {
 }
 type flags = Compiler.flags
 
+type packages = {
+  dir : string -> string;
+  load : (string -> unit) option;
+  root_of_dir : string -> string;
+}
 
-let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ?(calc=default_calc_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) () : elpi =
+(* the plugin of [pkg] is registered, loading it with [load] if needed; then
+   [after ()] checks what the loading did *)
+let ensure_plugin ?(after = fun () -> ()) ~load pkg =
+  let registered () = Compiler.is_declared_builtins ~file_name:(Parse.plugin_file_name pkg) in
+  if not (registered ()) then begin
+    (try load pkg with Failure msg ->
+      failwith (Printf.sprintf "plugin %s is not available: %s" pkg msg));
+    after ();
+    if not (registered ()) then
+      failwith (Printf.sprintf "package %s did not register its plugin (Elpi.API.Plugin.register ~name:%S)" pkg pkg)
+  end
+
+(* [accumulate "+pkg"]: the text of the builtins of the plugin of [pkg],
+   loading it with [packages] if it is not registered yet. A plugin loaded
+   after Setup.init cannot extend the state, set quotations nor set HOAS
+   hooks: the instance would not see them *)
+let plugin_of_packages ~packages ~state ~quotations ~hoas pkg =
+  let file_name = Parse.plugin_file_name pkg in
+  (match packages with
+   | Some { load = Some load } ->
+       (* the descriptors of the instance, and the default one of
+          State.declare_component if the host gave another *)
+       let descriptors =
+         Data.elpi_state_descriptor :: state ::
+         (if state == default_state_descriptor then [] else [default_state_descriptor]) in
+       let components () = List.fold_left (fun n d -> n + Data.State.components d) 0 descriptors in
+       let c0 = components () and q0 = !quotations and h0 = !hoas in
+       let after () =
+         if components () > c0 then
+           failwith (Printf.sprintf "plugin %s declares state components: it must be loaded before Setup.init" pkg);
+         if not (q0 == !quotations) then
+           failwith (Printf.sprintf "plugin %s declares quotations: it must be loaded before Setup.init" pkg);
+         if not (h0 == !hoas) then
+           failwith (Printf.sprintf "plugin %s sets HOAS hooks: it must be loaded before Setup.init" pkg) in
+       ensure_plugin ~after ~load pkg
+   | _ -> ());
+  if Compiler.is_declared_builtins ~file_name then Some (Compiler.text_of_builtins ~file_name) else None
+
+let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) ?packages () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
     | Some x -> x
     | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
-  let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader end) : Parse.Parser) in
-  Data.Global_symbols.lock ();
+  let package_dir pkg =
+    match packages with
+    | Some { dir } -> dir pkg
+    | None -> failwith (Printf.sprintf "accumulate \"+%s\": packages are disabled since Setup.init was not given ~packages" pkg) in
+  let root_of_dir dir =
+    match packages with
+    | Some { root_of_dir } -> root_of_dir dir
+    | None -> failwith "accumulate \"+/...\": packages are disabled since Setup.init was not given ~packages" in
+  let plugin = plugin_of_packages ~packages ~state ~quotations ~hoas in
+  let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader let package_dir = package_dir let plugin = plugin let root_of_dir = root_of_dir end) : Parse.Parser) in
   let header =
-    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins
+    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas builtins
     with Util.ElpiError ({ loc } as e) -> data_anomaly ?loc (Format.asprintf "%a" Compiler_data.pp_error_message e) in
   { parser; header; resolver = file_resolver }
 
@@ -182,6 +231,7 @@ module Compile = struct
     time_typechecking : bool;
     skip_det_checking: bool;
     max_errors: int;
+    builtin_stubs: bool;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
@@ -410,8 +460,9 @@ module RawOpaqueData = struct
       Format.fprintf fmt "@\n";
     end;
     Format.fprintf fmt "@[<hov 2>data %s.@]@\n@\n" name;
-    List.iter (fun (variant,(c,_)) ->
-      Format.fprintf fmt "@[<hov 2>builtin symb %s : %s = \"%d\".@]@\n" c name variant)
+    List.iter (fun (variant,(c,v)) ->
+      ED.BuiltInPredicate.ADT.record_printed_constant (values_map v);
+      Format.fprintf fmt "@[<hov 2>symb %s : %s%s.@]@\n" c name (ED.Global_symbols.variant_annotation c variant))
       constants
     in
   { cin; cino; cout; isc; name = c },
@@ -769,6 +820,8 @@ module RawData = struct
       ED.Global_symbols.declare_global_symbol ?variant x
 
     let show c = Util.Constants.show c
+
+    let lookup name = Compiler.lookup_global_name name
 
     let orc    = ED.Global_symbols.orc
 
@@ -1148,15 +1201,26 @@ end
 
 module BuiltIn = struct
   include ED.BuiltInPredicate
+  type calc_operations = ED.CalcHooks.operations
 
   let declare ~file_name l = Compiler.declare_builtins ~file_name l
 
   let of_file ~file_name = Compiler.declared_builtins_of_file ~file_name
 
-  let document_fmt fmt ?(calc=Setup.default_calc_descriptor) file_name =
-    Compiler.document_fmt fmt ~calc:(List.rev !calc) file_name
-  let document_file ?header ?(calc=Setup.default_calc_descriptor) file_name =
-    Compiler.document_file ?header ~calc:(List.rev !calc) ~file:(Compiler.file_of_declared_builtins file_name) file_name
+  let document_fmt fmt file_name =
+    Compiler.document_fmt fmt file_name
+  let document_file ?header file_name =
+    Compiler.document_file ?header ~file:(Compiler.file_of_declared_builtins file_name) file_name
+end
+
+module Plugin = struct
+  let file_name name = Elpi_parser.Parse.plugin_file_name name
+  let register ~name l =
+    if String.equal name "" || String.contains name '/' || String.contains name '\\' then
+      data_anomaly (Printf.sprintf "Plugin.register: %S is not a package name (no / nor \\, not empty)" name);
+    BuiltIn.declare ~file_name:(file_name name) l
+  let is_registered name = Compiler.is_declared_builtins ~file_name:(file_name name)
+  let ensure_registered ~load name = Setup.ensure_plugin ~load name
 end
 
 module State = struct
@@ -1216,8 +1280,6 @@ end
 
 module Calc = struct
 
-  let new_calc_descriptor = ED.CalcHooks.new_descriptor
-
   type operation_declaration = {
     symbol : string;
     infix : bool;
@@ -1225,21 +1287,35 @@ module Calc = struct
     code : ED.term list -> ED.term;
   }
 
+  (* the global symbol of an operator with a type: declared once, so that
+     building the same operations again (e.g. a plugin initialised twice)
+     declares no new variant *)
+  let operator_symbols : int Util.StrMap.t ref = ref Util.StrMap.empty
+
+  let operator_symbol symbol args =
+    let key = String.concat " -> " (symbol :: args) in
+    match Util.StrMap.find_opt key !operator_symbols with
+    | Some c -> c
+    | None ->
+        let c, _variant = ED.Global_symbols.declare_overloaded_global_symbol symbol in
+        operator_symbols := Util.StrMap.add key c !operator_symbols;
+        c
+
   let compile_operation_declaration { symbol; infix; args; code } =
     let ty_decl args =
-      let c, variant = ED.Global_symbols.declare_overloaded_global_symbol symbol in
-      let ty_decl = if infix then
-        Printf.sprintf "builtin symb (%s) : %s = \"%d\". " symbol (String.concat " -> " args) variant
+      let c = operator_symbol symbol args in
+      let ty_decl annotation = if infix then
+        Printf.sprintf "symb (%s) : %s%s. " symbol (String.concat " -> " args) annotation
       else
-        Printf.sprintf "builtin symb %s : %s = \"%d\"." symbol (String.concat " -> " args) variant in
+        Printf.sprintf "symb %s : %s%s." symbol (String.concat " -> " args) annotation in
       c, { ED.CalcHooks.ty_decl = ty_decl; code }
     in
     List.map ty_decl args
 
-   let register ~descriptor d =
-     let e = compile_operation_declaration d in
-     descriptor := e @ !descriptor
-    
+  (* the variants of an operation in order (int before float): the order of
+     their declarations in the text *)
+  let operations l = List.concat_map compile_operation_declaration l
+
   let register_eval n (symbol,tys) code =
     let infix, n = n < 0, abs n in
     let args = tys |> List.map (fun ty -> List.init (n+1) (fun _ -> ty)) in
@@ -1383,7 +1459,6 @@ module Calc = struct
     | _ -> data_type_error "Wrong arguments to string_to_real")
   ]
 
-  let () = List.iter (register ~descriptor:Setup.default_calc_descriptor) default_calc
 
   let eval ~depth state x =
    let table = ED.State.get ED.CalcHooks.eval state in
@@ -1430,6 +1505,9 @@ module Calc = struct
       Read(unit_ctx, "unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]"))),
         (fun t _ ~depth _ _ state -> !: (eval ~depth state t))),
     DocAbove);
+
+    LPDoc " --- Operators ---";
+    MLCalc (operations default_calc);
     ]
 
 end
@@ -1437,6 +1515,19 @@ end
 
 module Utils = struct
   let normalize_path = Elpi_util.Util.normalize_path
+
+  let string_literal s =
+    let b = Buffer.create (String.length s + 2) in
+    Buffer.add_char b '"';
+    String.iter (function
+      | '"' -> Buffer.add_string b "\\\""
+      | '\\' -> Buffer.add_string b "\\\\"
+      | c -> Buffer.add_char b c) s;
+    Buffer.add_char b '"';
+    Buffer.contents b
+
+  let accumulate_text l =
+    String.concat "" (List.map (fun s -> "accumulate " ^ string_literal s ^ ".\n") l)
 
   let lp_list_to_list ~depth t =
     let module R = (val !r) in let open R in
@@ -1635,18 +1726,31 @@ module PPX = struct
       ED.BuiltInPredicate.ADT.document_kind fmt ty
     (* builtin func name Key -> Field1, ..., FieldN, the declaration of an entry of a
        context, a predicate about a bound variable of type Key *)
-    let context_entry fmt ~name ~doc ~key ~args =
+    let context_entry fmt ~variant ~name ~doc ~key ~args =
+      (* the symbol of the entry is an OCaml one: without it the func would be
+         an ordinary predicate, which the OCaml terms never match *)
+      (match ED.Symbol.RawMap.find_opt (ED.Symbol.make (Builtin { variant }) (Elpi_parser.Ast.Func.from_string name)) ED.Global_symbols.table.s2ct with
+       | Some (c, _) -> ED.BuiltInPredicate.ADT.record_printed_constant c
+       | None -> data_anomaly (Printf.sprintf "PPX: the context entry %s (variant %d) is not a global symbol" name variant));
       let show = ED.Conversion.show_ty_ast ~prec:ED.Conversion.Arrow in
       let outs =
         if args = [] then ""
         else " -> " ^ String.concat ", " (List.map show args) in
       Format.fprintf fmt "%% context items for %s%s@\n"
         (show key) (if doc = "" then "" else " (" ^ doc ^ ")");
-      Format.fprintf fmt "@[<hov2>builtin func %s %s%s.@]@\n@\n" name (ED.Conversion.show_ty_ast ~prec:ED.Conversion.AppArg key) outs
+      Format.fprintf fmt "@[<hov2>func %s %s%s.@]@\n@\n" name (ED.Conversion.show_ty_ast ~prec:ED.Conversion.AppArg key) outs
 
     let constructor fmt ~max_name_len ~variant ~name ~doc ~ty ~args =
       ED.BuiltInPredicate.ADT.document_constructor
         fmt max_name_len name variant doc (List.map (fun x -> (false,ED.Conversion.show_ty_ast ~prec:Arrow x,"")) (args @ [ty]))
+
+    (* a constructor with the type given by [@elpi.code name code] *)
+    let custom_constructor fmt ~variant ~name ~doc ~code =
+      (match ED.Symbol.RawMap.find_opt (ED.Symbol.make (Builtin { variant }) (Elpi_parser.Ast.Func.from_string name)) ED.Global_symbols.table.s2ct with
+       | Some (c, _) -> ED.BuiltInPredicate.ADT.record_printed_constant c
+       | None -> data_anomaly (Printf.sprintf "PPX: the constructor %s (variant %d) is not a global symbol" name variant));
+      Format.fprintf fmt "@[<hov2>symb %s :@[<hov> %s@]%s. %% %s@]@\n" name code
+        (ED.Global_symbols.variant_annotation name variant) doc
     type prec_level = ED.Conversion.prec_level = Arrow | AppArg
     let show_ty_ast = ED.Conversion.show_ty_ast
           

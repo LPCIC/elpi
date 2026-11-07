@@ -34,9 +34,7 @@ there are, but this manual writes each as a type variable:
    data dict K V.   % a two-parameter type constructor
 
 Each ``data`` declaration introduces exactly one name; ``data a, b.`` is a
-syntax error. A ``data`` declaration may be prefixed with a bare ``builtin``,
-for uniformity with ``symb`` / ``pred`` / ``func``, but on ``data`` the
-parser accepts the keyword and then ignores it.
+syntax error.
 
 Three built-in types are *opaque*: ``int``, ``string`` and ``float`` are
 backed directly by OCaml values. They have literal syntax (``42``, ``"hi"``,
@@ -77,9 +75,11 @@ with no comma before it, is the type) but reads less clearly.
 Two older spellings, ``symbol`` and ``type``, are still accepted; see
 :doc:`../compatibility`.
 
-A constant that the host application provides through the FFI is declared
-``builtin symb name type``, optionally with a trailing ``= "variant"`` that
-selects one OCaml implementation among several (:doc:`../embedding`).
+A constant that the host application declares in OCaml is written with a
+plain ``symb`` too: the builtins file that declares it binds it, as described
+in :doc:`../embedding`. In the text of that file only, a trailing
+``= "variant"``, as in ``symb (+) : int -> int -> int = "1".``, selects one
+OCaml symbol among several with the same name.
 
 ``symb`` is for data constructors only. A predicate is declared with a
 ``pred`` or ``func`` signature, the subject of the next section.
@@ -195,8 +195,8 @@ itself:
 * ``:index (…)`` chooses how the predicate is indexed for rule selection
   (:doc:`../features/argument-indexing`);
 * ``:external``, or the bare keyword ``builtin``, says the predicate is
-  implemented in OCaml through the FFI (:doc:`../embedding`). The same keyword
-  may precede a ``symb`` that names an FFI constructor;
+  implemented in OCaml through the FFI (an ``MLCode``); the compiler checks it
+  (:doc:`../embedding`);
 * ``:nooc`` turns off the occur check for the predicate; it is described in
   :doc:`../features/unification-and-variables`.
 

@@ -29,7 +29,7 @@ jobs:
       - name: Build
         run: |
           eval $(opam env)
-          opam install ./elpi.opam --deps-only --with-doc
+          opam install ./elpi.opam ./ppx_elpi.opam ./elpi-json.opam --deps-only --with-doc
           make doc-build
 
       - name: Save doc artifact

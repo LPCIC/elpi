@@ -1,0 +1,11 @@
+; the stub of the plugin json (its documentation), installed next to the
+; META: accumulate "+json" reads it when the plugin is not loaded (elpi-lsp)
+(rule
+ (with-stdout-to json.builtins.elpi (run src/gen_stub.exe)))
+
+; the files of the package: accumulate "+json/utils" ..., and the elpi.toml
+; that names the project
+(install
+ (package elpi-json)
+ (section lib)
+ (files json.builtins.elpi utils.elpi elpi.toml))

@@ -1,0 +1,3 @@
+accumulate "+/lib/util".
+func q -> int.
+q N :- util.seven N.

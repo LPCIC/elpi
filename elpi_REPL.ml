@@ -62,6 +62,8 @@ let usage =
   "\t-document-builtins Print documentation for built-in predicates\n" ^
   "\t-document-infix-syntax Print the documentation for infix operators\n" ^
   "\t-I PATH  search for accumulated files in PATH\n" ^
+  "\t-config FILE  the elpi.toml of the project (default: the nearest one above the file)\n" ^
+  "\t-no-config  no elpi.toml\n" ^
   "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
   "\t                                          compatibility)\n" ^
   "\t--version prints the version of Elpi (also -v or -version)\n" ^ 
@@ -150,6 +152,7 @@ let _ =
   let skip_det_check = ref false in
   let max_errors = ref 5 in
   let print_deps = ref false in
+  let config_file = ref None and no_config = ref false in
   let vars =
     ref API.Compile.(default_flags.defined_variables) in
   let rec eat_options = function
@@ -173,6 +176,8 @@ let _ =
     | "-document-infix-syntax" :: rest -> doc_infix := true; eat_options rest
     | "-D" :: var :: rest -> vars := API.Compile.StrSet.add var !vars; eat_options rest
     | "-I" :: p :: rest -> extra_paths := !extra_paths @ [p]; eat_options rest
+    | "-config" :: f :: rest -> config_file := Some f; eat_options rest
+    | "-no-config" :: rest -> no_config := true; eat_options rest
     | ("-h" | "--help" | "-help") :: _ -> Printf.eprintf "%s" usage; exit 0
     | ("-v" | "--version" | "-version") :: _ -> Printf.printf "%s\n" "%%VERSION_NUM%%"; exit 0
     | "--" :: rest -> "--" :: rest
@@ -189,13 +194,34 @@ let _ =
   let execpath = Filename.dirname (Sys.executable_name) in
   let argv = List.tl (Array.to_list Sys.argv) in
   let argv = eat_options argv in
-  let paths = tjpath @ installpath @ [execpath] @ !extra_paths in
+  (* the elpi.toml of the project: given, or the nearest one above the file (the
+     first argument that is a file, with or without .elpi); it names the
+     project being run, found in its sources *)
+  let config =
+    let or_fail f x = try f x with Failure msg -> Printf.eprintf "Error: %s\n" msg; exit 1 in
+    if !no_config then None
+    else match !config_file with
+      | Some f -> Some (or_fail Elpi_dynload.config_of_file f)
+      | None ->
+          let is_file s = Sys.file_exists s || Sys.file_exists (s ^ ".elpi") in
+          match List.find_opt (fun s -> String.length s > 0 && s.[0] <> '-' && is_file s) argv with
+          | Some f -> or_fail Elpi_dynload.config_above f
+          | None -> None in
+  Option.iter Elpi_dynload.declare_project config;
+  let config_paths = match config with Some c -> c.Elpi_dynload.paths | None -> [] in
+  let paths = tjpath @ installpath @ [execpath] @ !extra_paths @ config_paths in
+  (* plugins that declare state components or quotations are loaded before
+     Setup.init *)
+  Option.iter (fun c -> c.Elpi_dynload.preload |> List.iter (fun pkg ->
+    try Elpi_dynload.preload pkg
+    with Failure msg -> Printf.eprintf "Error: %s: preload %s: %s\n" c.Elpi_dynload.file pkg msg; exit 1)) config;
   let flags = {
       API.Compile.defined_variables = !vars;
       API.Compile.print_units = !print_units;
       API.Compile.time_typechecking = true;
       API.Compile.skip_det_checking = !skip_det_check;
       API.Compile.max_errors = !max_errors;
+      API.Compile.builtin_stubs = false;
   } in
   if !doc_infix then begin
     Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;
@@ -207,6 +233,7 @@ let _ =
       ~flags:(API.Compile.to_setup_flags flags)
       ~builtins:[Builtin.std_builtins]
       ~file_resolver:(API.Parse.std_resolver ~paths ())
+      ~packages:Elpi_dynload.packages
       () in
   if !parse_term then begin
     let g = query_or_exit (API.Parse.query_from ~elpi ~loc:(API.Ast.Loc.initial "(-parse-term)") (Lexing.from_channel stdin)) in
@@ -259,7 +286,15 @@ let _ =
     | [x] -> x
     | _ -> Printf.eprintf "Only one file can be specified"; exit 1 in
   let t0_parsing = Unix.gettimeofday () in
-  let p, parse_errors, parse_warnings = raising (fun () -> API.Parse.program ~flags ~elpi file) in
+  let p, parse_errors, parse_warnings = raising (fun () ->
+    match config with
+    | Some ({ Elpi_dynload.prelude = _ :: _ } as c) when (match files with [] -> false | _ -> true) ->
+        (* the prelude, then the file, found as Parse.program finds it *)
+        let file = API.Parse.resolve_file ~elpi ~unit:file () in
+        let text = try Elpi_dynload.with_prelude c file with Failure msg -> Printf.eprintf "Error: %s\n" msg; exit 1 in
+        API.Parse.program_from ~flags ~elpi ~loc:(API.Ast.Loc.initial (Filename.concat (Filename.dirname c.file) "(prelude)"))
+          ~digest:(Digest.string text) (Lexing.from_string text)
+    | _ -> API.Parse.program ~flags ~elpi file) in
   let g =
     if !test then
       query_or_exit (API.Parse.query ~elpi ~loc:(API.Ast.Loc.initial "(-test)") ~text:"main.")

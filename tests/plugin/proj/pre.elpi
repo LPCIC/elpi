@@ -1,0 +1,3 @@
+% the prelude of the project, accumulated before main.elpi
+func pre.hello.
+pre.hello :- print "hello from the prelude".

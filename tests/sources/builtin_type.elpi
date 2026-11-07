@@ -1,0 +1,3 @@
+% the legacy type declaration does not take builtin either
+builtin type foo int.
+main.

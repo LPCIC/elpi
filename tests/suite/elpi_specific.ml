@@ -688,3 +688,63 @@ let () = declare "macro_uv"
   ~expectation:Success
   ()
 
+
+let () = declare "builtin_symb_undeclared"
+  ~source_elpi:"builtin_symb_undeclared.elpi"
+  ~description:"a builtin symbol that is not core"
+  ~expectation:Test.(FailureOutput (Str.regexp "Only the symbols of the language are declared builtin"))
+  ()
+
+let () = declare "builtin_pred_undeclared"
+  ~source_elpi:"builtin_pred_undeclared.elpi"
+  ~description:"a builtin predicate that no MLCode implements"
+  ~expectation:Test.(FailureOutput (Str.regexp "p is declared builtin but no MLCode implements it"))
+  ()
+
+let () = declare "builtin_symb_variant"
+  ~source_elpi:"builtin_symb_variant.elpi"
+  ~description:"two variants of an OCaml symbol of builtin.elpi"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "3 3.0"))
+  ()
+
+let () = declare "builtin_symb_variant_undeclared"
+  ~source_elpi:"builtin_symb_variant_undeclared.elpi"
+  ~description:"a symb with a variant outside a builtins file"
+  ~expectation:Test.(FailureOutput (Str.regexp "= \"N\" is only for the text of a builtins file"))
+  ()
+
+let () = declare "builtin_core"
+  ~source_elpi:"builtin_core.elpi"
+  ~description:"a core symbol declared outside builtin.elpi"
+  ~expectation:Test.(FailureOutput (Str.regexp "only builtin.elpi declares the symbols of the language"))
+  ()
+
+let () = declare "builtin_core_missing"
+  ~source_elpi:"builtin_core_missing.elpi"
+  ~description:"a core symbol declared without = core"
+  ~expectation:Test.(FailureOutput (Str.regexp "! is a symbol of the language, only builtin.elpi declares it"))
+  ()
+
+let () = declare "builtin_pred_variant"
+  ~source_elpi:"builtin_pred_variant.elpi"
+  ~description:"a builtin predicate with a variant"
+  ~expectation:Test.(FailureOutput (Str.regexp "A builtin predicate takes no variant"))
+  ()
+
+let () = declare "builtin_core_attrs"
+  ~source_elpi:"builtin_core_attrs.elpi"
+  ~description:"builtin with other attributes and = core"
+  ~expectation:Test.(FailureOutput (Str.regexp "only builtin.elpi declares the symbols of the language"))
+  ()
+
+let () = declare "builtin_type"
+  ~source_elpi:"builtin_type.elpi"
+  ~description:"the legacy type declaration with builtin"
+  ~expectation:Test.(FailureOutput (Str.regexp "Only the symbols of the language are declared builtin"))
+  ()
+
+let () = declare "overload_bare"
+  ~source_elpi:"overload_bare.elpi"
+  ~description:"a bare overloaded constant of unknown type"
+  ~expectation:Test.(FailureOutput (Str.regexp_string "+ is overloaded but too many of its types match"))
+  ()

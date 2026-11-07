@@ -1,0 +1,88 @@
+; plugins dynlinked by the elpi command, from the findlib tree in ocamlpath/
+; (OCAMLPATH is set to it, relative to this directory)
+(library
+  (name elpi_test_dyn)
+  (modules elpi_test_dyn)
+  (libraries elpi))
+
+(executable
+  (name same_name)
+  (modules same_name)
+  (libraries elpi elpi.dynload unix str))
+
+; two projects with the same name
+(rule
+ (deps (source_tree same))
+ (action (with-stdout-to same_name.output (run ./same_name.exe))))
+
+(rule (alias runtest) (action (diff same_name.expected same_name.output)))
+
+(library
+  (name elpi_test_dyn_state)
+  (modules elpi_test_dyn_state)
+  (libraries elpi))
+
+; accumulate "+test-dyn" dynlinks the plugin on demand
+(rule
+ (deps (alias_rec ocamlpath/all) main.elpi)
+ (action
+  (with-stdout-to main.output
+   (with-stderr-to main.err
+    (setenv OCAMLPATH ocamlpath
+     (run %{exe:../../elpi_REPL.exe} -no-config -test main.elpi))))))
+
+; a plugin declaring a state component cannot be loaded on demand
+(rule
+ (deps (alias_rec ocamlpath/all) state.elpi)
+ (action
+  (with-outputs-to state.output
+   (setenv OCAMLPATH ocamlpath
+    (with-accepted-exit-codes (not 0)
+     (run %{exe:../../elpi_REPL.exe} -no-config -test state.elpi))))))
+
+; a plugin whose OCaml code cannot be dynlinked
+(rule
+ (deps (alias_rec ocamlpath/all) broken.elpi)
+ (action
+  (with-outputs-to broken.output
+   (setenv OCAMLPATH ocamlpath
+    (with-accepted-exit-codes (not 0)
+     (run %{exe:../../elpi_REPL.exe} -no-config -test broken.elpi))))))
+
+(rule (alias runtest)
+ (action (run grep -q "plugin test-dyn.broken is not available" %{dep:broken.output})))
+
+; the elpi.toml of proj/: paths, prelude and preload
+(rule
+ (deps (alias_rec ocamlpath/all) (source_tree proj))
+ (action
+  (with-stdout-to proj.output
+   (with-stderr-to proj.err
+    (setenv OCAMLPATH ocamlpath
+     (run %{exe:../../elpi_REPL.exe} -test proj/main.elpi))))))
+
+; a main file in a subdirectory of proj/: the elpi.toml above it
+(rule
+ (deps (alias_rec ocamlpath/all) (source_tree proj))
+ (action
+  (with-stdout-to projsub.output
+   (with-stderr-to projsub.err
+    (setenv OCAMLPATH ocamlpath
+     (run %{exe:../../elpi_REPL.exe} -test proj/src/sub.elpi))))))
+
+(rule (alias runtest) (action (diff main.expected main.output)))
+(rule (alias runtest) (action (diff projsub.expected projsub.output)))
+(rule (alias runtest)
+ (action (run grep -q "plugin test-dyn.state declares state components: it must be loaded before Setup.init" %{dep:state.output})))
+(rule (alias runtest) (action (diff proj.expected proj.output)))
+
+; a wrong elpi.toml, given with -config
+(rule
+ (deps bad.toml main.elpi)
+ (action
+  (with-outputs-to bad.output
+   (with-accepted-exit-codes (not 0)
+    (run %{exe:../../elpi_REPL.exe} -config bad.toml -test main.elpi)))))
+
+(rule (alias runtest)
+ (action (run grep -q "bad.toml:3: unknown key plugins (name, paths, prelude and preload are)" %{dep:bad.output})))

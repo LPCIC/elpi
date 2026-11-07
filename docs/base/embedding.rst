@@ -60,6 +60,93 @@ is passed to ``Setup.init``, ``my_program.elpi`` can call ``sys.file_exists``
 like any other predicate, with no further wiring on the Elpi side.
 
 
+Declarations implemented in OCaml
+====================================
+
+The Elpi side of a builtins file (the text that ``elpi -document-builtins``
+prints, and that ``src/builtin.elpi`` holds for the standard library) declares
+the names that OCaml provides. The builtins file itself says which names of
+its text are OCaml's, through its declarations:
+
+* a predicate implemented by an ``MLCode``, like ``print``, is declared
+  ``builtin func``: it is functional by construction, and has no rules;
+* a constructor of a data type that OCaml declares with its conversion (an
+  ``MLData`` of an ``AlgebraicData``, or a type derived by ppx_elpi), like
+  ``some`` or ``tt``, is declared with a plain ``symb``. In Elpi 4.0 the text
+  said ``builtin symb``; now the builtins file says it is OCaml's: an
+  ``MLData`` implies the ``MLConstants`` (below) of all its constructors;
+* a symbol, or a predicate whose rules are written in Elpi, that OCaml
+  declares with ``Constants.declare_global_symbol``, is declared with a plain
+  ``symb``, or a plain ``func`` or ``pred`` signature with its rules, and the
+  builtins file lists its constant in ``MLConstants``. The operations of an
+  ``MLCalc`` (the ones of ``calc``, ``+`` …) and the constants of an opaque
+  data type (``std_in`` …) are implied ``MLConstants`` of the declarations
+  that print them;
+* several OCaml symbols can share a name: each has its own *variant*, a
+  number (``~variant:n`` on the OCaml side, 0 by default). Each variant has
+  its own type, and the type checker chooses among them. When a builtins file
+  has several variants of a name, its text declares each one with ``= "n"``
+  at the end of the ``symb``, for variant ``n``. ``= "n"`` is an error
+  outside the text of a builtins file, and so is a variant that is not one of
+  the file's OCaml symbols;
+* the symbols of the language itself (``!``, ``,``, ``=>``, ``:-``, ``pi``,
+  ``sigma``, ``=``, ``uvar``, ``as`` …) are declared only in
+  ``builtin.elpi``, with ``builtin`` and ``= "core"``. No other file can
+  declare them.
+
+The compiler checks the Elpi side against OCaml: ``builtin func`` on a
+predicate that no ``MLCode`` implements is an error, never an ordinary
+predicate. Another file can repeat the signature of such a predicate, e.g.
+``builtin func print any.. .``, and it denotes the same predicate.
+
+In this program ``some`` and ``tt`` are constructors of ``MLData`` types, and
+``1 + 2`` and ``1.0 + 2.0`` use two variants of ``(+)``, declared in
+``builtin.elpi`` as ``symb (+) : int -> int -> int = "1".`` and
+``symb (+) : float -> float -> float = "2".``:
+
+.. elpi:: code/builtin-symbols.elpi
+   :assert: some tt 3 3.0
+
+OCaml code that builds or matches terms needs the *constant* of a name: a
+global symbol has one constant, fixed when the OCaml code is linked and the
+same in every program, returned by ``Constants.declare_global_symbol``.
+ppx_elpi names the constant of each constructor
+(``elpi_constant_constructor_T_Kc``); an ``AlgebraicData`` hides it, since its
+conversion builds and matches the terms itself. In this test of Elpi a
+builtins file adds two more variants of ``(+)``, on strings and on lists, and
+a predicate ``glob`` whose rule is in Elpi; ``MLConstants`` binds them to the
+constants that OCaml declares, and the text tells the two variants of
+``(+)`` apart with ``= "n"``:
+
+.. literalinclude:: ../../tests/sources/builtin_constant.ml
+   :language: ocaml
+   :end-before: (* a symb with the name of two MLConstants must say which one *)
+
+Each constant of ``MLConstants`` must be declared by the text of its builtins
+file, and a ``symb`` whose name has several variants there must say which
+one with ``= "n"``; otherwise ``Setup.init`` fails.
+
+An ordinary symbol or predicate, declared in Elpi with no global symbol, has
+a constant chosen by each program: ``RawData.Constants.lookup "p"`` returns a
+function that, given the state of the program that runs, gives the constant
+of ``p`` in it. ``hyp`` is such a predicate in this other test:
+
+.. literalinclude:: ../../tests/sources/builtin_lookup.ml
+   :language: ocaml
+
+OCaml code linked after ``Setup.init``, like a plugin loaded on demand, can
+declare global symbols, data types, calc operations and a builtins file
+using them. A program that already exists accumulates that file with
+``Compile.scope_builtins``, ``Compile.unit`` and ``Compile.extend``, as in this
+test of Elpi:
+
+.. literalinclude:: ../../tests/sources/late_globals.ml
+   :language: ocaml
+
+State components and quotations are not supported this way: an instance does
+not see the ones declared after it was created.
+
+
 Extending: a quotation
 ========================
 
@@ -363,7 +450,8 @@ let them coexist give each one its own *variant* with ``[@elpi.variant n]``:
    :start-after: (* Two constructors with the same name in two types, with different variants *)
    :end-before: let () = Ppx_tests_lib
 
-The declarations generated for it carry the variant, and both ``a`` are used
+The declarations generated for it are two plain ``symb a``: the builtins file
+knows the variant of each one, its text does not need to. Both ``a`` are used
 in the same program:
 
 .. literalinclude:: ../../ppx_elpi/tests/test_variant.expected.elpi
@@ -403,6 +491,12 @@ On a type declaration:
   ``code`` (optional) is a string used as the Elpi kind declaration of the
   type, instead of the generated one.
 
+``[@@elpi.namespace "ns"]``
+  ``ns`` (mandatory) is a string put, followed by a dot, in front of the Elpi
+  name of the constructors that have the default name (no ``[@elpi.code]``):
+  with ``[@@elpi.namespace "json"]`` the constructor ``Null`` is
+  ``json.null``. The name of the type is not affected.
+
 ``[@@elpi.type_doc s]``
   ``s`` (mandatory) is a string, a comment printed before the declaration of
   the type. There is none by default.
@@ -438,8 +532,8 @@ On a constructor:
 ``[@elpi.variant n]``
   The variant of the global symbol of the constructor. ``n`` (mandatory) is an
   integer literal, at least 1. Constructors with the same name, for example in
-  different types, need different variants, and the Elpi declaration is
-  ``builtin symb name : ... = "n"``; see :ref:`ppx-variant`.
+  different types, need different variants. The generated Elpi declaration
+  stays a plain ``symb``, as explained in :ref:`ppx-variant`.
 
 ``[@elpi.embed f]``, ``[@elpi.readback f]``
   Custom embedding (resp. readback) code. ``f`` (mandatory) has type
@@ -452,9 +546,9 @@ On a constructor:
   A custom Elpi declaration. ``name`` (mandatory) is a string, the name of the
   constructor in Elpi; the default is the name of the OCaml constructor in
   lowercase with ``_`` replaced by ``-``, so ``Foo_BAR`` becomes ``foo-bar``.
-  ``code`` (optional) is a string used as the declaration of the constructor,
-  the default one being derived from the types of its fields, for example
-  ``"type lam (term -> term) -> term. % Lam"``.
+  ``code`` (optional) is a string used as the type of the constructor, the
+  default one being derived from the types of its fields: for example
+  ``"(term -> term) -> term"`` gives ``symb lam : (term -> term) -> term.``.
 
 ``[@elpi.doc s]``
   A custom documentation string ``s`` (mandatory). The default is the name of

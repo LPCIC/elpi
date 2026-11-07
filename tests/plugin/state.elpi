@@ -1,0 +1,2 @@
+accumulate "+test-dyn.state".
+main :- dyn.tick N, print N.

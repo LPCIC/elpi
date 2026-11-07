@@ -1,0 +1,10 @@
+% Utilities on json values, written in Elpi: accumulate "+json/utils".
+accumulate "+json".
+
+% [json.lookup J K V] V is the value of the key K of the object J
+func json.lookup json, string -> json.
+json.lookup (json.assoc L) K V :- json.lookup.aux L K V.
+
+func json.lookup.aux list (pair string json), string -> json.
+json.lookup.aux [pr K V|_] K V :- !.
+json.lookup.aux [_|L] K V :- json.lookup.aux L K V.

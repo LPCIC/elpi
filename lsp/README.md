@@ -53,6 +53,24 @@ disk again, if it is there. So a program of several files works where there is
 no disk, as in the server for the web (`../webrunner/`): the client opens all
 its files.
 
+## Packages and plugins
+
+`accumulate "+pkg/path"` reads `path.elpi` in the directory of the findlib
+package `elpi-pkg`, `accumulate "+/path"` the one at the root of the project
+of the file (the directory of the nearest `elpi.toml` above it), and `accumulate "+pkg"` the plugin of `pkg`. `elpi-lsp` does not
+load plugins: it reads their stub instead, the file `pkg.builtins.elpi` that
+the package installs next to its META (the documentation of the plugin), and
+accepts its `builtin` declarations with no OCaml code.
+
+When a document is opened, the server reads the nearest `elpi.toml` above it,
+as `elpi` does: `paths` are searched by its accumulates (after `-I`),
+`prelude` is checked before it (its warnings are not shown), `"+name/path"`
+with the `name` of the project reads its sources; `preload` is ignored,
+since no plugin is loaded. An error in `elpi.toml` is shown at the start of
+the document. The file is not watched: an edit counts
+for the documents opened after it. The server for the web has no packages
+and reads no `elpi.toml`.
+
 ## Structure
 
 - `server/`: the server, independent of how messages come and go (the

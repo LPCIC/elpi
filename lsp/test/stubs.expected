@@ -1,0 +1,38 @@
+==== open stubs.elpi ====
+diagnostics of stubs.elpi (version 1): 0
+hover "my.say \""+0 (the cursor is at 13:34): 13:34-13:40
+  line 13:
+               | p (my.tm 3) (my.tm "x") my.nil :- my.say "hello".
+    hovered    |                                   ^^^^^^
+    cursor     |                                   *
+    ? ```elpi-hover
+    ? my.say : (func string)
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? [my.say S] prints S on the screen
+hover "my.tm 3"+0 (the cursor is at 13:3): 13:3-13:8
+  line 13:
+               | p (my.tm 3) (my.tm "x") my.nil :- my.say "hello".
+    hovered    |    ^^^^^
+    cursor     |    *
+    ? ```elpi-hover
+    ? my.tm : int -> my.term
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? a number or a string, as a term
+hover "my.nil :-"+0 (the cursor is at 13:24): 13:24-13:30
+  line 13:
+               | p (my.tm 3) (my.tm "x") my.nil :- my.say "hello".
+    hovered    |                         ^^^^^^
+    cursor     |                         *
+    ? ```elpi-hover
+    ? my.nil : my.term
+    ? ```
+    ? 
+    ? ---
+    ? 
+    ? the empty term

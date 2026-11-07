@@ -1,12 +1,12 @@
 
 
 % context items for tye (TDecl)
-builtin func tdecl tye -> string, bool.
+func tdecl tye -> string, bool.
 
 
-builtin data tye.
-builtin symb tconst : string -> tye = "0".  % TConst
-builtin symb tarrow : tye -> tye -> tye = "0".  % TArrow
+data tye.
+symb tconst : string -> tye.  % TConst
+symb tarrow : tye -> tye -> tye.  % TArrow
 
 func tye.copy tye -> tye.
 tye.copy (tconst A0) (tconst B0) :- (string.copy A0 B0).
@@ -14,9 +14,9 @@ tye.copy (tarrow A0 A1) (tarrow B0 B1) :- (tye.copy A0 B0), (tye.copy A1 B1).
 
 
 
-builtin data ty.
-builtin symb mono   : tye -> ty = "0".  % Mono
-builtin symb forall : string -> bool -> (tye -> ty) -> ty = "0".  % Forall
+data ty.
+symb mono   : tye -> ty.  % Mono
+symb forall : string -> bool -> (tye -> ty) -> ty.  % Forall
 
 func ty.copy ty -> ty.
 ty.copy (mono A0) (mono B0) :- (tye.copy A0 B0).
@@ -25,13 +25,13 @@ ty.copy (forall A0 A1 A2) (forall B0 B1 B2) :- (string.copy A0 B0), (bool.copy A
 
 
 % context items for term (Decl)
-builtin func decl term -> string, ty.
+func decl term -> string, ty.
 
 
-builtin data term.
-builtin symb appl : list term -> term = "0".  % bla bla
-builtin symb lam  : string -> ty -> (term -> term) -> term = "0".  % Lam
-type type-cast term -> ty -> term. % Cast
+data term.
+symb appl : list term -> term.  % bla bla
+symb lam  : string -> ty -> (term -> term) -> term.  % Lam
+symb type-cast : term -> ty -> term. % Cast
 
 func term.copy term -> term.
 term.copy (appl A0) (appl B0) :- ((list.copy term.copy) A0 B0).

@@ -1,0 +1,9 @@
+accumulate "+json".
+accumulate "+json/utils".
+
+main :-
+  json.from_string "{ \"name\": \"elpi\", \"tags\": [1, 2] }" J ok,
+  json.lookup J "tags" T,
+  print T,
+  json.to_string J S ok,
+  print S.

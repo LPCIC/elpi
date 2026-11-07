@@ -1,13 +1,13 @@
 
 
 % context items for t1 (E1)
-builtin func e1 t1 -> string, int.
+func e1 t1 -> string, int.
 
 
-builtin data t1.
-builtin symb a1 : t1 -> t1 -> t1 = "0".  % A1
-builtin symb k  : int -> t1 = "1".  % K1
-builtin symb l1 : int -> string -> (t1 -> t1) -> t1 = "0".  % L1
+data t1.
+symb a1 : t1 -> t1 -> t1.  % A1
+symb k  : int -> t1 = "1".  % K1
+symb l1 : int -> string -> (t1 -> t1) -> t1.  % L1
 
 func t1.copy t1 -> t1.
 t1.copy (a1 A0 A1) (a1 B0 B1) :- (t1.copy A0 B0), (t1.copy A1 B1).
@@ -17,13 +17,13 @@ t1.copy (l1 A0 A1 A2) (l1 B0 B1 B2) :- (int.copy A0 B0), (string.copy A1 B1), (p
 
 
 % context items for t2 (E2)
-builtin func e2 t2 -> string, int.
+func e2 t2 -> string, int.
 
 
-builtin data t2.
-builtin symb a2 : t2 -> t2 -> t2 = "0".  % A2
-builtin symb k  : int -> t2 = "2".  % K2
-builtin symb l2 : int -> string -> (t2 -> t2) -> t2 = "0".  % L2
+data t2.
+symb a2 : t2 -> t2 -> t2.  % A2
+symb k  : int -> t2 = "2".  % K2
+symb l2 : int -> string -> (t2 -> t2) -> t2.  % L2
 
 func t2.copy t2 -> t2.
 t2.copy (a2 A0 A1) (a2 B0 B1) :- (t2.copy A0 B0), (t2.copy A1 B1).
@@ -33,13 +33,13 @@ t2.copy (l2 A0 A1 A2) (l2 B0 B1 B2) :- (int.copy A0 B0), (string.copy A1 B1), (p
 
 
 % context items for t3 (E3)
-builtin func e3 t3 -> string, int.
+func e3 t3 -> string, int.
 
 
-builtin data t3.
-builtin symb a3 : t3 -> t3 -> t3 = "0".  % A3
-builtin symb k  : int -> t3 = "3".  % K3
-builtin symb l3 : int -> string -> (t3 -> t3) -> t3 = "0".  % L3
+data t3.
+symb a3 : t3 -> t3 -> t3.  % A3
+symb k  : int -> t3 = "3".  % K3
+symb l3 : int -> string -> (t3 -> t3) -> t3.  % L3
 
 func t3.copy t3 -> t3.
 t3.copy (a3 A0 A1) (a3 B0 B1) :- (t3.copy A0 B0), (t3.copy A1 B1).

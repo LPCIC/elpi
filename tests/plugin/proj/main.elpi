@@ -1,0 +1,4 @@
+accumulate libfile.
+accumulate "+test-dyn.state".
+accumulate "+/src/deep/answer".
+main :- pre.hello, lib.answer A, deep.answer D, dyn.tick N, dyn.tick M, print A D N M.

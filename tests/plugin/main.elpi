@@ -1,0 +1,3 @@
+accumulate "+test-dyn".
+accumulate "+test-dyn/util".
+main :- dyn.double 21 X, util.triple 2 Y, print X Y.

@@ -113,11 +113,11 @@ type instance = { id : int; elpi : Setup.elpi; library : (string, string) Hashtb
 
 let new_instance =
   let next = ref 0 in
-  fun ?(file_resolver = Parse.std_resolver ~paths:[] ()) ?(file_reader = Parse.std_reader) () ->
+  fun ?(file_resolver = Parse.std_resolver ~paths:[] ()) ?(file_reader = Parse.std_reader) ?packages () ->
     incr next;
     let builtins = Elpi.Builtin.std_builtins in
     { id = !next;
-      elpi = Setup.init ~builtins:[builtins] ~file_resolver ~file_reader ();
+      elpi = Setup.init ~builtins:[builtins] ~file_resolver ~file_reader ?packages ();
       library = lazy (compute_library_files builtins);
       cache = { units = Hashtbl.create 17; clock = 0 } }
 
@@ -238,11 +238,27 @@ let compile_unit ?(extend = true) ~elpi ~cache ~flags ~key ~base sp =
 
 (* The compiler passes return all the errors they find, and a unit without the
    items that are wrong: the program is compiled once. *)
-let compile ~instance:{ elpi; cache } ~path ~accumulated ast =
+let compile ~instance:{ elpi; cache } ~path ~accumulated ?prelude ast =
+  (* the builtins of a file may have no OCaml code here, e.g. the
+     documentation of the builtins of an application of Elpi (a stub) *)
   let flags = { Compile.default_flags with
                 Compile.max_errors = !max_errors;
-                skip_det_checking = !is_library_path path } in
+                skip_det_checking = !is_library_path path;
+                builtin_stubs = true } in
   let sps, e0, w0 = timed "scope" (fun () -> Compile.scope_ast ~elpi ~flags ast) in
+  (* the units of the prelude come first; a file that the document
+     accumulates too is compiled once. The warnings of the prelude are not
+     the document's: they would be shown at its start in every document of
+     the project (its errors are, since the document depends on them) *)
+  let sps, e0, prelude_digests =
+    match prelude with
+    | None -> sps, e0, []
+    | Some p ->
+        let psps, pe, _ = timed "scope prelude" (fun () -> Compile.scope_ast ~elpi ~flags p) in
+        let digests = List.map Compile.scoped_program_digest psps in
+        let fresh sp = not (List.exists (String.equal (Compile.scoped_program_digest sp)) digests) in
+        psps @ List.filter fresh sps, pe @ e0, digests in
+  let in_prelude sp = List.exists (String.equal (Compile.scoped_program_digest sp)) prelude_digests in
   let extend = not (!is_library_path path) in
   (* the flags that change the result of compile_unit start the key *)
   let flags_key = Printf.sprintf "max_errors=%d skip_det_checking=%b extend=%b"
@@ -251,7 +267,8 @@ let compile ~instance:{ elpi; cache } ~path ~accumulated ast =
     List.fold_left (fun (key, base, errors, warnings, infos) sp ->
         let key = Digest.string (key ^ Compile.scoped_program_digest sp) in
         let c = compile_unit ~extend ~elpi ~cache ~flags ~key ~base:base sp in
-        key, c.extended, errors @ c.errors, warnings @ c.warnings, c.info :: infos)
+        let ws = if in_prelude sp then [] else c.warnings in
+        key, c.extended, errors @ c.errors, warnings @ ws, c.info :: infos)
       (flags_key, Compile.empty_base ~elpi, e0, w0, []) sps in
   (* the files the program accumulates, directly or not: also the ones with
      errors, which the parser keeps as units with no contents *)
@@ -280,7 +297,21 @@ let spread_undeclared (hover : unit_info list) ({ Error.warning_id; warning } : 
        | _ -> [ warning ])
   | _ -> [ warning ]
 
-let check ~instance ~path text =
+(* the prelude of a project ([dir] is the directory of its elpi.toml): the
+   files accumulated before the document, parsed as a program of its own in
+   [dir]; its errors are shown at the start of the document *)
+let parse_prelude ~elpi (dir, entries) =
+  match entries with
+  | [] -> None, []
+  | _ ->
+      let text = Utils.accumulate_text entries in
+      let at_start message = { start = 0; stop = 0; severity = Error; message = "In the prelude of elpi.toml: " ^ String.trim message } in
+      match resilient_parse ~elpi ~path:(Filename.concat dir "(prelude)") text with
+      | exception e -> let _, msg = error_of_exn e in None, [ at_start msg ]
+      | ast, errors, _ ->
+          Some ast, List.map (fun (e : Error.t) -> at_start (Format.asprintf "%a" Error.pp_message e)) errors
+
+let check_document ~instance ~path ?prelude text =
   (* the resilient parser does not fail, but for robustness the exception is
      reported as an error *)
   match resilient_parse ~elpi:instance.elpi ~path text with
@@ -290,11 +321,17 @@ let check ~instance ~path text =
   | ast, parse_errors, parse_warnings ->
       let accumulated = LSP.accumulated ast in
       let syntax = syntax_diagnostics ~path ~accumulated text parse_errors in
-      let errors, warnings, hover, accumulates = compile ~instance ~path ~accumulated ast in
+      let errors, warnings, hover, accumulates = compile ~instance ~path ~accumulated ?prelude ast in
       let errors = List.map (diag_of_error ~path ~accumulated Error) errors in
       let ws = List.concat_map (fun w -> List.map (diag_of_error ~path ~accumulated Warning) (spread_undeclared hover w))
           (parse_warnings @ warnings) in
       { diagnostics = syntax @ errors @ ws; hover = Some hover; accumulates }
+
+let check ~instance ~path ?prelude text =
+  let prelude, prelude_errors =
+    match prelude with None -> None, [] | Some p -> parse_prelude ~elpi:instance.elpi p in
+  let ({ diagnostics } as r) = check_document ~instance ~path ?prelude text in
+  { r with diagnostics = prelude_errors @ diagnostics }
 
 (* --- queries on the symbols --------------------------------------------------- *)
 

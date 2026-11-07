@@ -9,3 +9,5 @@
  (name ppx_elpi))
 
 (package (name elpi-lsp))
+
+(package (name elpi-json))

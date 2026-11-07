@@ -85,9 +85,10 @@ Comparisons are *goals*, not expressions: ``X < Y`` succeeds or fails, it is
 not written under ``is``. ``<`` ``>`` ``=<`` ``>=`` work on ``int``,
 ``float`` or ``string``, with ``i< r< s<`` … fixing the type.
 
-This set is **extensible from the host application**: ``API.Calc.register``
-adds an operation (a symbol, its argument types, and an OCaml function) to a
-``calc_descriptor`` passed to ``API.Setup.init ~calc`` (:doc:`embedding`).
+The host application can add operations: a builtins file lists them with
+``MLCalc (API.Calc.operations [...])``, each one a symbol, its argument types
+and an OCaml function, and the programs that accumulate that file can
+evaluate them. Builtins files are described in :doc:`embedding`.
 
 
 Standard data types

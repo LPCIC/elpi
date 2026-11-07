@@ -184,8 +184,8 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"tentry" ~doc:"TEntry"
-               ~key:(Elpi.API.ContextualConversion.TyName "ty")
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:0 ~name:"tentry"
+               ~doc:"TEntry" ~key:(Elpi.API.ContextualConversion.TyName "ty")
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      Elpi.Builtin.PPX.bool.Elpi.API.ContextualConversion.ty]);
         pp = (fun fmt (_, x) -> pp_tyctx fmt x);
@@ -675,7 +675,8 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"entry" ~doc:"Entry"
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:0 ~name:"entry"
+               ~doc:"Entry"
                ~key:(Elpi.API.ContextualConversion.TyName "term")
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      ty.Elpi.API.ContextualConversion.ty]);
