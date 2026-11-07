@@ -462,6 +462,48 @@
 
 
 ; The output of the ppx and of the test executable is generated in
+; test_namespace.generated.* and compared with test_namespace.expected.*, but it is also promoted
+; to test_namespace.actual.* (ignored by git) in order to be inspectable even when
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_namespace.ml or test_namespace.ml).
+
+(rule
+ (targets test_namespace.generated.ml)
+ (deps (:pp pp.exe) (:input test_namespace.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_namespace.ml -o %{targets})))
+
+(rule
+ (target test_namespace.generated.elpi)
+ (action (run ./test_namespace.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_namespace.actual.ml)
+ (action (copy test_namespace.generated.ml test_namespace.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_namespace.actual.elpi)
+ (action (copy test_namespace.generated.elpi test_namespace.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_namespace.actual.ml test_namespace.actual.elpi)
+ (action (diff test_namespace.expected.ml test_namespace.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_namespace.expected.elpi test_namespace.generated.elpi)))
+
+(executable
+  (name test_namespace)
+  (modules test_namespace)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
 ; test_opaque_type.generated.* and compared with test_opaque_type.expected.*, but it is also promoted
 ; to test_opaque_type.actual.* (ignored by git) in order to be inspectable even when
 ; the test fails. The ppx is given the name of the file, not %{input}: the
