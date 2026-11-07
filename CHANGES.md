@@ -7,6 +7,7 @@
     abbreviation hides the variable. Unifying two open terms built with such
     a constructor can alias variables of different types. Use `any` or a
     concrete type instead
+  - Fix: a bug made a random choice on ambiguous overloade constant
 
 # v4.0.1 (October 2026)
 

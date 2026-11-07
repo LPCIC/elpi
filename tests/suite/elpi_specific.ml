@@ -688,3 +688,9 @@ let () = declare "macro_uv"
   ~expectation:Success
   ()
 
+
+let () = declare "overload_bare"
+  ~source_elpi:"overload_bare.elpi"
+  ~description:"a bare overloaded constant of unknown type"
+  ~expectation:Test.(FailureOutput (Str.regexp_string "+ is overloaded but too many of its types match"))
+  ()
