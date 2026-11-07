@@ -403,6 +403,12 @@ On a type declaration:
   ``code`` (optional) is a string used as the Elpi kind declaration of the
   type, instead of the generated one.
 
+``[@@elpi.namespace "ns"]``
+  ``ns`` (mandatory) is a string put, followed by a dot, in front of the Elpi
+  name of the constructors that have the default name (no ``[@elpi.code]``):
+  with ``[@@elpi.namespace "json"]`` the constructor ``Null`` is
+  ``json.null``. The name of the type is not affected.
+
 ``[@@elpi.type_doc s]``
   ``s`` (mandatory) is a string, a comment printed before the declaration of
   the type. There is none by default.

@@ -1,5 +1,7 @@
 # Unreleased
 
+- PPX:
+  - New: [@@elpi.namespace] to put all constructors into a namespace
 - Type checker:
   - Change: a constructor whose arguments mention a type variable that its
     result type does not mention (an existential type, e.g.
