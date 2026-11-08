@@ -10,6 +10,57 @@
     a constructor can alias variables of different types. Use `any` or a
     concrete type instead
   - Fix: a bug made a random choice on ambiguous overloade constant
+- Language:
+  - Change: `builtin` is only for the symbols of the language (with
+    `= "core"`, only in `builtin.elpi`) and for the predicates implemented by
+    an `MLCode` (`builtin func`). `builtin symb` without `= "core"` is a
+    parse error, `builtin pred` / `func` with no `MLCode` is an error, and
+    `builtin data` is no longer accepted. Before, a `builtin symb` with no
+    `= "N"` and such a predicate silently became Elpi symbols
+  - Change: the OCaml symbols of an OCaml builtins declaration
+    (`BuiltIn.declare`) are declared in its Elpi text with no `builtin`: a
+    plain `symb` for a constructor of its `MLData` or a symbol of its
+    `MLConstants`, a plain `pred` / `func` signature for a predicate of its
+    `MLConstants` whose rules are in Elpi (e.g. `;`). The OCaml builtins
+    declaration binds them. `= "v"` at the end of a `symb` picks the OCaml
+    symbol with variant `v`, a plain `symb` the one with the default variant;
+    `= "v"` is an error elsewhere. The text that Elpi prints for an OCaml
+    builtins declaration has `= "v"` on every symbol with a variant. An OCaml
+    symbol declared twice by the text, or a `symb` with the name of an OCaml
+    symbol (with the default variant) that the declaration does not list, is
+    an error
+  - Change: the symbols of the language (`!`, `,`, `=>`, `:-`, `=!=>`,
+    `==>`, `pi`, `sigma`, `=`, `pattern_match`, `findall_solutions`,
+    `declare_constraint`, `uvar`, `as`) are declared in `builtin.elpi` with
+    `= "core"`, which can also end a `builtin func` signature; no other file
+    can declare them
+  - Change: two declarations of an OCaml symbol with the same variant and
+    different types are an error (it was an anomaly)
+- API:
+  - New: `RawData.Constants.lookup "p"` gives the constant of `p` in the
+    program that runs, so that OCaml code can build and match terms of an
+    ordinary predicate or symbol, with no global symbol
+  - New: `BuiltIn.MLConstants [c1; ...]` binds the global symbols `c1` ...
+    (`Constants.declare_global_symbol`) to the declarations of the same name
+    in the text of its OCaml builtins declaration, as `MLData` does for the `constants` of
+    its conversion:
+    a plain `symb`, or a plain `pred` / `func` signature for a predicate
+    whose rules are in Elpi. The `symb` of a constant with a variant `v` ends
+    with `= "v"`. Each constant must be declared by the text
+  - Change: `Conversion.t` and `ContextualConversion.t` have a field
+    `constants`, the global symbols that their `pp_doc` declares (the
+    constructors of an `AlgebraicData`, the constants of an `OpaqueData`, the
+    ones of a type derived by ppx_elpi): the `MLData` of the conversion binds
+    them. A hand-written conversion gives `constants = []`, or the symbols
+    its `pp_doc` prints
+  - New: compilation flag `builtin_stubs` (`Compile.flags`), to accept the
+    declarations that OCaml neither declares nor implements (`builtin func`
+    with no `MLCode`, `= "v"` outside an OCaml builtins declaration)
+  - Change: ppx_elpi prints the constructors of `[@elpi.code name code]`
+    with `symb` and binds them to their OCaml symbol
+- LSP:
+  - New: elpi-lsp accepts `builtin` declarations whose OCaml code is not
+    loaded (stubs), e.g. the documentation of the builtins of rocq-elpi
 
 # v4.0.1 (October 2026)
 

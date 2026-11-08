@@ -118,7 +118,7 @@ open Ppxlib.Ast_pattern
        order.
     [@@deriving elpi { declaration = l }]
        Also add to l (made by Elpi.API.PPX.empty_declaration ()) the MLDataC
-       declarations that were derived, each one followed by the LPCode of its
+       declarations that were derived (they bind the constructors), each one followed by the LPCode of its
        deep copy function (see below). Elpi.API.PPX.to_list l returns them in
        the order they were added.
 
@@ -206,10 +206,11 @@ open Ppxlib.Ast_pattern
 
     [@elpi.skip] Not exposed to Elpi.
 
-    [@elpi.variant n] The variant of the global symbol of the constructor.
-      [n] mandatory: an integer literal, >= 1. Constructors with the same name
-      (eg in different types) must have different variants, and the Elpi
-      declaration is [builtin symb name : ... = "n"].
+    [@elpi.variant "v"] The variant of the global symbol of the constructor.
+      ["v"] mandatory: a string literal, the name of the library followed by
+      a dot and a name, eg ["json.1"], so that two libraries cannot collide.
+      Constructors with the same name (eg in different types) must have
+      different variants. The Elpi declaration is [symb name : ... = "v"].
 
     [@elpi.embed f] Custom embedding code.
       [f] mandatory: function of type
@@ -227,9 +228,10 @@ open Ppxlib.Ast_pattern
       [name] mandatory: a string that stands for the name of the constructor
         in Elpi. The default is the name of the OCaml constructor in lowercase
         where _ is replaced by - . Eg Foo_BAR becomes foo-bar.
-      [code] optional: is a string used as the Elpi type declaration for the
-        constructor. Default is derived from the types of the fields. Example
-        "type lam (term -> term) -> term. % Lam"
+      [code] optional: is a string used as the Elpi type of the constructor.
+        Default is derived from the types of the fields. Example
+        "(term -> term) -> term", printed as
+        "symb lam : (term -> term) -> term. % Lam"
 
     [@elpi.doc s] Custom documentation.
       [s] mandatory: a string. Default doc is the name of the OCaml constructor,
@@ -307,7 +309,7 @@ let att_elpi_skip     = Attribute.(declare "elpi.skip"     Context.constructor_d
 let att_elpi_embed    = Attribute.(declare "elpi.embed"    Context.constructor_declaration (single_expr_payload __) (fun x -> x))
 let att_elpi_readback = Attribute.(declare "elpi.readback" Context.constructor_declaration (single_expr_payload __) (fun x -> x))
 let att_elpi_code     = Attribute.(declare "elpi.code"     Context.constructor_declaration (single_expr_payload __) (fun x -> x))
-let att_elpi_variant  = Attribute.(declare "elpi.variant"  Context.constructor_declaration (single_expr_payload (eint __)) (fun x -> x))
+let att_elpi_variant  = Attribute.(declare "elpi.variant"  Context.constructor_declaration (single_expr_payload (estring __)) (fun x -> x))
 let att_elpi_doc      = Attribute.(declare "elpi.doc"      Context.constructor_declaration (single_expr_payload (estring __)) (fun x -> x))
 
 let att_elpi_key    = Attribute.(declare "elpi.key"    Context.core_type (single_expr_payload __) (fun x -> x))
@@ -459,7 +461,7 @@ and expose = {
   declaration : structure_item list; (* constants for constructor *)
   constant : expression;
   constant_name : string;
-  variant : int; (* [@elpi.variant n], 0 by default *)
+  variant : string; (* [@elpi.variant "v"], "" (the default variant) by default *)
   constructor : expression list -> expression;
   pattern : pattern list -> pattern;
   arg_types : arg_type list;
@@ -1064,7 +1066,7 @@ let analyze_tuple_constructor (module B : Ast_builder.S) ?namespace tyname kname
     let decl =
       match variant with
       | None -> value_binding ~pat:(pvar c) ~expr:[%expr Elpi.API.RawData.Constants.declare_global_symbol [%e evar @@ c_str ] ]
-      | Some n -> value_binding ~pat:(pvar c) ~expr:[%expr Elpi.API.RawData.Constants.declare_global_symbol ~variant:[%e eint n] [%e evar @@ c_str ] ] in
+      | Some n -> value_binding ~pat:(pvar c) ~expr:[%expr Elpi.API.RawData.Constants.declare_global_symbol ~variant:[%e estring n] [%e evar @@ c_str ] ] in
     let tl =
       tl |> List.map (fun ty ->
           match Attribute.get att_elpi_binder ty with
@@ -1125,7 +1127,7 @@ let analyze_tuple_constructor (module B : Ast_builder.S) ?namespace tyname kname
       declaration = [pstr_value Nonrecursive [decl_str]; pstr_value Nonrecursive [decl]] ;
       constant = evar c;
       constant_name = str;
-      variant = option_default 0 variant;
+      variant = option_default "" variant;
       elpi_code = option_map estring elpi_code;
       elpi_doc;
       arg_types = tl;
@@ -1236,12 +1238,14 @@ let pp_doc (module B : Ast_builder.S) kind elpi_name elpi_code elpi_doc is_pred 
           match elpi_code with
           | Some code ->
               [%expr
-                Format.fprintf fmt "@[<hov2>type %s@[<hov> %s. %% %s@]@]@\n" [%e estring c] [%e code] [%e estring elpi_doc ]]
+                Elpi.API.PPX.Doc.custom_constructor fmt
+                ~variant:[%e estring variant ] ~name:[%e estring c] ~doc:[%e estring elpi_doc ] ~code:[%e code]]
           | None when is_pred ->
               (* func name Key -> Field1, ..., FieldN, where Key is the type
                  of the bound variable the entry is about *)
               [%expr
                 Elpi.API.PPX.Doc.context_entry fmt
+                ~variant:[%e estring variant ]
                 ~name:[%e estring c]
                 ~doc:[%e estring elpi_doc ]
                 ~key:[%e ty_ast_of_arg (ctx_index_ty_of_args (module B) arg_types) ]
@@ -1250,7 +1254,7 @@ let pp_doc (module B : Ast_builder.S) kind elpi_name elpi_code elpi_doc is_pred 
           | None -> [%expr
              Elpi.API.PPX.Doc.constructor fmt
              ~max_name_len:[%e eint max_name_len ]
-             ~variant:[%e eint variant ]
+             ~variant:[%e estring variant ]
              ~ty:[%e kind ]
              ~name:[%e estring c]
              ~doc:[%e estring elpi_doc ]
@@ -1331,10 +1335,10 @@ let embed_type (module B : Ast_builder.S) name params is_pred all_ctx = let open
 
 let lift_conversion (module B : Ast_builder.S) e = let open B in
   [%expr
-    let { Elpi.API.Conversion.embed; readback; ty; pp_doc; pp } = [%e e ] in
+    let { Elpi.API.Conversion.embed; readback; ty; pp_doc; constants; pp } = [%e e ] in
     let embed = (fun ~depth _ _ s t -> embed ~depth s t) in
     let readback = (fun ~depth _ _ s t -> readback ~depth s t) in
-    { Elpi.API.ContextualConversion.embed; readback; ty; pp_doc; pp }
+    { Elpi.API.ContextualConversion.embed; readback; ty; pp_doc; constants; pp }
   ]
 
 let coversion_for_opaque (module B : Ast_builder.S) elpi_name name = let open B in
@@ -1375,6 +1379,7 @@ let conversion_for_tyd (module B : Ast_builder.S) all_ctx { name; params;  elpi_
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc = [%e pp_doc (module B) [%expr kind] (estring elpi_name) (option_map estring elpi_code) (if elpi_doc = name then "" else elpi_doc) is_pred [] ];
+        constants = [];
         pp = [%e pp_for_conversion (module B) name is_pred params pp ];
         embed = [%e eapply (evar (elpi_embed_name name)) (List.map (fun x -> [%expr [%e evar x].Elpi.API.ContextualConversion.embed]) params) ];
         readback = [%e eapply (evar (elpi_readback_name name)) (List.map (fun x -> [%expr [%e evar x].Elpi.API.ContextualConversion.readback]) params) ];
@@ -1385,6 +1390,9 @@ let conversion_for_tyd (module B : Ast_builder.S) all_ctx { name; params;  elpi_
         {
           Elpi.API.ContextualConversion.ty = kind;
           pp_doc = [%e pp_doc (module B) [%expr kind] (estring elpi_name) (option_map estring elpi_code) (if elpi_doc = name then "" else elpi_doc) is_pred csts ];
+          (* the constructors (or context entries) that pp_doc prints *)
+          constants = [%e elist (drop_skip csts |> List.filter_map (fun { constant; embed; readback; _ } ->
+            if is_name embed || is_name readback then None else Some constant)) ];
           pp = [%e pp_for_conversion (module B) name is_pred params pp ];
           embed = [%e eapply (evar (elpi_embed_name name)) (List.map (fun x -> [%expr [%e evar x].Elpi.API.ContextualConversion.embed]) params) ];
           readback = [%e eapply (evar (elpi_readback_name name)) (List.map (fun x -> [%expr [%e evar x].Elpi.API.ContextualConversion.readback]) params) ];

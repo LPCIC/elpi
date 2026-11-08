@@ -4,17 +4,17 @@ data ty.
 func ty.copy ty -> ty.
 
 % context items for term (TmEntry)
-builtin func tmentry term -> string.
+func tmentry term -> string.
 
 
 % context items for ty (TyEntry)
-builtin func tyentry ty -> string.
+func tyentry ty -> string.
 
 
-builtin data term.
-builtin symb app  : term -> term -> term = "0".  % App
-builtin symb lam  : string -> (term -> term) -> term = "0".  % Lam
-builtin symb tlam : string -> (ty -> term) -> term = "0".  % TLam
+data term.
+symb app  : term -> term -> term.  % App
+symb lam  : string -> (term -> term) -> term.  % Lam
+symb tlam : string -> (ty -> term) -> term.  % TLam
 
 func term.copy term -> term.
 term.copy (app A0 A1) (app B0 B1) :- (term.copy A0 B0), (term.copy A1 B1).

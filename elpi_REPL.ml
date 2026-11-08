@@ -196,6 +196,7 @@ let _ =
       API.Compile.time_typechecking = true;
       API.Compile.skip_det_checking = !skip_det_check;
       API.Compile.max_errors = !max_errors;
+      API.Compile.builtin_stubs = false;
   } in
   if !doc_infix then begin
     Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;

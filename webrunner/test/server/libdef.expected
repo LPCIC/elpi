@@ -4,9 +4,9 @@ definition "print"+0 (the cursor is at 0:8):
   line 0:
                | main :- print "x", trace.counter "x" N, print N.
     cursor     |         *
-  defined at elpi-builtin:/ID/builtin.elpi 553:0-553:24
+  defined at elpi-builtin:/ID/builtin.elpi 556:0-556:24
     | builtin func print any..
-  previewed 553:0-553:24
+  previewed 556:0-556:24
     | builtin func print any..
 definition "trace.counter"+0 (the cursor is at 0:19):
   line 0:

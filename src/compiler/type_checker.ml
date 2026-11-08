@@ -168,7 +168,7 @@ let check_no_existential ~type_abbrevs ~loc name ty =
             arguments but not in its result type.@]"
            F.pp name F.pp v)
 
-let check_type ~type_abbrevs ~kinds { value; loc; doc; name; index; availability; occur_check }: Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
+let check_type ?(stubs=false) ~type_abbrevs ~kinds { value; loc; doc; name; index; availability; occur_check }: Symbol.t * Symbol.t option * TypingEnv.symbol_metadata =
   let ty = check_type ~type_abbrevs ~kinds ~loc ~name F.Set.empty value in
   if Option.is_none (is_prop ~type_abbrevs ty) then check_no_existential ~type_abbrevs ~loc name ty;
   (* Format.eprintf " - %a : %a\n%!" F.pp name TypeAssignment.pretty_skema ty; *)
@@ -178,19 +178,33 @@ let check_type ~type_abbrevs ~kinds { value; loc; doc; name; index; availability
     let to_unify must bsymb =
       match Symbol.RawMap.find bsymb Elpi_runtime.Data.Global_symbols.table.s2ct with
       | _ -> Some bsymb
+      | exception Not_found when must && stubs -> Some bsymb
       | exception Not_found when must ->
           let hint =
             match Symbol.get_provenance bsymb with
-            | Builtin { variant } when variant <> 0 ->
-                Printf.sprintf "Constants.declare_global_symbol ~variant:%d %S" variant (Symbol.get_str bsymb)
+            | Builtin { variant } when not (String.equal variant "") ->
+                Printf.sprintf "Constants.declare_global_symbol ~variant:%S %S" variant (Symbol.get_str bsymb)
             | _ -> Printf.sprintf "Constants.declare_global_symbol %S" (Symbol.get_str bsymb) in
-          error ~loc ("Symbol " ^ Symbol.pretty bsymb ^ " marked as external is not declared in OCaml.\nCheck for calls to " ^ hint)
+          error ~loc ("Symbol " ^ Symbol.pretty bsymb ^ " is declared as an OCaml symbol but OCaml does not declare it.\nCheck for calls to " ^ hint)
       | exception Not_found -> None in
+    (* ==> is another name of =>, only for its declaration (the parser turns
+       [A ==> B] into [A => B]) *)
+    let is_core =
+      Elpi_runtime.Data.is_core_name name || ScopedTerm.SimpleTerm.is_dimplf name in
     match availability with
     | Elpi -> None
     | OCaml (File _) -> anomaly "provenance File cannot be provided by the user"
-    | OCaml Core -> Symbol.make Core name |> to_unify (Option.is_none (is_prop ~type_abbrevs ty))
-    | OCaml (Builtin { variant } as b) -> Symbol.make b name |> to_unify (variant != 0) (* TODO: this is hack for builtins, they could be overloaded as well *)
+    | OCaml Core ->
+        if not is_core then
+          error ~loc (F.show name ^ " is not a symbol of the language: = \"core\" is only for those");
+        (* the implications are declared twice (a premise, a list of premises):
+           they stay two symbols, and are compiled by their own node (Impl) *)
+        if ScopedTerm.SimpleTerm.is_implf name || ScopedTerm.SimpleTerm.is_dimplf name then None
+        else Some (Symbol.make Core name)
+    | OCaml (Builtin { variant } as b) ->
+        if is_core then
+          error ~loc (F.show name ^ " is a symbol of the language, only builtin.elpi declares it");
+        Symbol.make b name |> to_unify (not (String.equal variant "")) (* TODO: this is hack for builtins, they could be overloaded as well *)
     (* | OCaml None -> Symbol.make_builtin name |> to_unify false  *)
   in
   let implemented_in_ocaml = 
@@ -234,8 +248,8 @@ let compile_for_runtime ({ TypingEnv.overloading } as e) =
   F.Map.filter_map (fun _ -> function TypeAssignment.Single s -> Some (TypingEnv.canon e s) | _ -> None) overloading
 let runtime_resolve m f = F.Map.find f m
 
-let check_1types ?errs k ~type_abbrevs ~kinds lst : TypingEnv.t list =
-  protect_list_map errs (check_type ~type_abbrevs ~kinds) lst |>
+let check_1types ?errs ?stubs k ~type_abbrevs ~kinds lst : TypingEnv.t list =
+  protect_list_map errs (check_type ?stubs ~type_abbrevs ~kinds) lst |>
   List.map (function
   | (x,None,metadata) ->
       let overloading = F.Map.(add k (TypeAssignment.Single x) empty) in
@@ -249,8 +263,8 @@ let check_1types ?errs k ~type_abbrevs ~kinds lst : TypingEnv.t list =
 
 (* one environment per declaration, in order; with [errs] a declaration that
    does not type check is dropped *)
-let check_types ?errs ~type_abbrevs ~kinds (m : t list F.Map.t) : TypingEnv.t list =
-  F.Map.fold (fun k tl acc -> List.rev_append (check_1types ?errs k ~type_abbrevs ~kinds tl) acc) m [] |> List.rev
+let check_types ?errs ?stubs ~type_abbrevs ~kinds (m : t list F.Map.t) : TypingEnv.t list =
+  F.Map.fold (fun k tl acc -> List.rev_append (check_1types ?errs ?stubs k ~type_abbrevs ~kinds tl) acc) m [] |> List.rev
 
 type env_undeclared = (TypeAssignment.t * Symbol.t) F.Map.t
 [@@deriving show]

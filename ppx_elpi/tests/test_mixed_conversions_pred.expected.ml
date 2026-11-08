@@ -110,13 +110,17 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                ~ty:kind ~name:"red" ~doc:"Red" ~args:[];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                ~ty:kind ~name:"green" ~doc:"Green" ~args:[];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                ~ty:kind ~name:"blue" ~doc:"Blue"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty]);
+        constants =
+          [elpi_constant_constructor_color_Redc;
+          elpi_constant_constructor_color_Greenc;
+          elpi_constant_constructor_color_Bluec];
         pp = pp_color;
         embed = elpi_embed_color;
         readback = elpi_readback_color
@@ -240,9 +244,9 @@ let lam : (lam, context, Data.constraints) ContextualConversion.t =
     pp_doc =
       (fun fmt () ->
          Format.fprintf fmt "data lam.@\n";
-         Format.fprintf fmt "builtin symb ap : lam -> lam -> lam = \"0\".@\n";
-         Format.fprintf fmt
-           "builtin symb lm : string -> (lam -> lam) -> lam = \"0\".@\n@\n");
+         Format.fprintf fmt "symb ap : lam -> lam -> lam.@\n";
+         Format.fprintf fmt "symb lm : string -> (lam -> lam) -> lam.@\n@\n");
+    constants = [c_ap; c_lm];
     embed = embed_lam;
     readback = readback_lam
   }
@@ -274,7 +278,8 @@ let builtin =
     BuiltIn.declare ~file_name
       ((PPX.to_list declaration) @
          [MLDataC lam;
-         LPCode "builtin func known lam -> string.";
+         LPCode "func known lam -> string.";
+         MLConstants [c_ap; c_lm; c_known];
          MLCode (describe, DocAbove)])
 let program =
   {|

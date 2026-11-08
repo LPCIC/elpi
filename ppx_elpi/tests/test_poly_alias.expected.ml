@@ -71,6 +71,7 @@ include
         {
           Elpi.API.ContextualConversion.ty = kind;
           pp_doc = (fun fmt () -> Elpi.API.PPX.Doc.kind fmt kind ~doc:""; ());
+          constants = [];
           pp = (pp_simple elpi__param__a.pp);
           embed =
             (elpi_embed_simple

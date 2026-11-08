@@ -2,7 +2,8 @@ let file_name = Sys.argv.(1)
 open Elpi.API
 let declaration = PPX.empty_declaration ()
 type t1 =
-  | A of int [@elpi.variant 1][@@deriving (show, (elpi { declaration }))]
+  | A of int [@elpi.variant "test.1"][@@deriving
+                                       (show, (elpi { declaration }))]
 include
   struct
     [@@@ocaml.warning "-60"]
@@ -28,7 +29,7 @@ include
       Elpi.API.RawData.Constants.declare_global_symbol elpi_constant_type_t1
     let elpi_constant_constructor_t1_A = "a"
     let elpi_constant_constructor_t1_Ac =
-      Elpi.API.RawData.Constants.declare_global_symbol ~variant:1
+      Elpi.API.RawData.Constants.declare_global_symbol ~variant:"test.1"
         elpi_constant_constructor_t1_A
     module Ctx_for_t1 =
       struct class type t = object inherit Elpi.API.PPX.ctx end end
@@ -76,9 +77,10 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:1
-               ~ty:kind ~name:"a" ~doc:"A"
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1
+               ~variant:"test.1" ~ty:kind ~name:"a" ~doc:"A"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_t1_Ac];
         pp = pp_t1;
         embed = elpi_embed_t1;
         readback = elpi_readback_t1
@@ -96,7 +98,8 @@ include
         [elpi_t1; Elpi.API.BuiltIn.LPCode elpi__t1__deep_copy]
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type t2 =
-  | A of string [@elpi.variant 2][@@deriving (show, (elpi { declaration }))]
+  | A of string [@elpi.variant "test.2"][@@deriving
+                                          (show, (elpi { declaration }))]
 include
   struct
     [@@@ocaml.warning "-60"]
@@ -122,7 +125,7 @@ include
       Elpi.API.RawData.Constants.declare_global_symbol elpi_constant_type_t2
     let elpi_constant_constructor_t2_A = "a"
     let elpi_constant_constructor_t2_Ac =
-      Elpi.API.RawData.Constants.declare_global_symbol ~variant:2
+      Elpi.API.RawData.Constants.declare_global_symbol ~variant:"test.2"
         elpi_constant_constructor_t2_A
     module Ctx_for_t2 =
       struct class type t = object inherit Elpi.API.PPX.ctx end end
@@ -170,9 +173,10 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:2
-               ~ty:kind ~name:"a" ~doc:"A"
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1
+               ~variant:"test.2" ~ty:kind ~name:"a" ~doc:"A"
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_t2_Ac];
         pp = pp_t2;
         embed = elpi_embed_t2;
         readback = elpi_readback_t2

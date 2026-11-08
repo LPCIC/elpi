@@ -21,7 +21,7 @@ type c1 = E1 of (string[@elpi.key "t1"]) * int
 type t1 =
   | V1 of string [@elpi.var c1]
   | A1 of t1 * t1
-  | K1 of int [@elpi.code "k"] [@elpi.variant 1]
+  | K1 of int [@elpi.code "k"] [@elpi.variant "test.1"]
   | L1 of int * string *
       (t1[@elpi.binder "t1" c1
          (fun i s -> E1(s,i))])
@@ -39,7 +39,7 @@ type c2 = E2 of (string[@elpi.key "t2"]) * int
 type t2 =
   | V2 of string [@elpi.var c2]
   | A2 of t2 * t2
-  | K2 of int [@elpi.code "k"] [@elpi.variant 2]
+  | K2 of int [@elpi.code "k"] [@elpi.variant "test.2"]
   | L2 of int * string *
       (t2[@elpi.binder "t2" c2
          (fun i s -> E2(s,i))])
@@ -57,7 +57,7 @@ type c3 = E3 of (string[@elpi.key "t3"]) * int
 type t3 =
   | V3 of string [@elpi.var c3]
   | A3 of t3 * t3
-  | K3 of int [@elpi.code "k"] [@elpi.variant 3]
+  | K3 of int [@elpi.code "k"] [@elpi.variant "test.3"]
   | L3 of int * string *
       (t3[@elpi.binder "t3" c3
          (fun i s -> E3(s,i))])

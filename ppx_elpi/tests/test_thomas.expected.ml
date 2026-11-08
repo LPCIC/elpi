@@ -94,10 +94,11 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:""
                ~ty:kind ~name:"rat" ~doc:"rat"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_rat_ratc];
         pp = pp_rat;
         embed = elpi_embed_rat;
         readback = elpi_readback_rat
@@ -320,24 +321,29 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:""
                ~ty:kind ~name:"pcst" ~doc:"Const"
                ~args:[rat.Elpi.API.ContextualConversion.ty];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:""
                ~ty:kind ~name:"variable" ~doc:"Var"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:""
                ~ty:kind ~name:"add" ~doc:"Add"
                ~args:[Elpi.API.ContextualConversion.TyName
                         elpi_constant_type_poly;
                      Elpi.API.ContextualConversion.TyName
                        elpi_constant_type_poly];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:""
                ~ty:kind ~name:"mul" ~doc:"Mul"
                ~args:[Elpi.API.ContextualConversion.TyName
                         elpi_constant_type_poly;
                      Elpi.API.ContextualConversion.TyName
                        elpi_constant_type_poly]);
+        constants =
+          [elpi_constant_constructor_poly_Constc;
+          elpi_constant_constructor_poly_Varc;
+          elpi_constant_constructor_poly_Addc;
+          elpi_constant_constructor_poly_Mulc];
         pp = pp_poly;
         embed = elpi_embed_poly;
         readback = elpi_readback_poly
@@ -483,7 +489,7 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:8 ~variant:""
                ~ty:kind ~name:"monomial" ~doc:"monomial"
                ~args:[rat.Elpi.API.ContextualConversion.ty;
                      Elpi.API.ContextualConversion.TyApp
@@ -493,6 +499,7 @@ include
                               (Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty),
                               [Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty])),
                          [])]);
+        constants = [elpi_constant_constructor_monomial_monomialc];
         pp = pp_monomial;
         embed = elpi_embed_monomial;
         readback = elpi_readback_monomial
@@ -562,6 +569,7 @@ include
       {
         Elpi.API.ContextualConversion.ty = kind;
         pp_doc = (fun fmt () -> Elpi.API.PPX.Doc.kind fmt kind ~doc:""; ());
+        constants = [];
         pp = pp_mpoly;
         embed = elpi_embed_mpoly;
         readback = elpi_readback_mpoly

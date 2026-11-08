@@ -170,11 +170,13 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"entry" ~doc:"Entry"
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:"" ~name:"entry"
+               ~doc:"Entry"
                ~key:(Elpi.API.ContextualConversion.TyApp
                        ("term", (Elpi.API.ContextualConversion.TyName "A"),
                          []))
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_tctx_Entryc];
         pp = (fun fmt (_, x) -> pp_tctx fmt x);
         embed = elpi_embed_tctx;
         readback = elpi_readback_tctx
@@ -441,10 +443,10 @@ include
           pp_doc =
             (fun fmt () ->
                Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                  ~ty:kind ~name:"const" ~doc:"Const"
                  ~args:[elpi__param__a.Elpi.API.ContextualConversion.ty];
-               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+               Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                  ~ty:kind ~name:"lam" ~doc:"Lam"
                  ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                        Elpi.API.ContextualConversion.TyApp
@@ -457,6 +459,9 @@ include
                               (elpi_constant_type_term,
                                 (elpi__param__a.Elpi.API.ContextualConversion.ty),
                                 [])])]);
+          constants =
+            [elpi_constant_constructor_term_Constc;
+            elpi_constant_constructor_term_Lamc];
           pp = (pp_term elpi__param__a.pp);
           embed =
             (elpi_embed_term

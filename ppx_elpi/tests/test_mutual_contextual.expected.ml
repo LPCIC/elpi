@@ -165,9 +165,11 @@ include
         pp_doc =
           (fun fmt () ->
              ();
-             Elpi.API.PPX.Doc.context_entry fmt ~name:"entry" ~doc:"Entry"
+             Elpi.API.PPX.Doc.context_entry fmt ~variant:"" ~name:"entry"
+               ~doc:"Entry"
                ~key:(Elpi.API.ContextualConversion.TyName "term")
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_tctx_Entryc];
         pp = (fun fmt (_, x) -> pp_tctx fmt x);
         embed = elpi_embed_tctx;
         readback = elpi_readback_tctx
@@ -476,14 +478,17 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:4 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:4 ~variant:""
                ~ty:kind ~name:"let" ~doc:"Let"
                ~args:[Elpi.API.ContextualConversion.TyName
                         elpi_constant_type_decl;
                      Elpi.API.ContextualConversion.TyName
                        elpi_constant_type_term];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:4 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:4 ~variant:""
                ~ty:kind ~name:"unit" ~doc:"Unit" ~args:[]);
+        constants =
+          [elpi_constant_constructor_term_Letc;
+          elpi_constant_constructor_term_Unitc];
         pp = pp_term;
         embed = elpi_embed_term;
         readback = elpi_readback_term
@@ -498,13 +503,14 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:3 ~variant:""
                ~ty:kind ~name:"def" ~doc:"Def"
                ~args:[Elpi.API.BuiltInData.stringC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.ContextualConversion.TyApp
                        ("->", (Elpi.API.ContextualConversion.TyName "term"),
                          [Elpi.API.ContextualConversion.TyName
                             elpi_constant_type_term])]);
+        constants = [elpi_constant_constructor_decl_Defc];
         pp = pp_decl;
         embed = elpi_embed_decl;
         readback = elpi_readback_decl

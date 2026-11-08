@@ -1,0 +1,14 @@
+% The documentation of builtins whose OCaml code is not loaded (a stub):
+% elpi-lsp accepts them, OCaml neither declares nor implements them here.
+data my.term.
+
+% [my.say S] prints S on the screen
+builtin func my.say string.
+
+% a number or a string, as a term
+symb my.tm : int -> my.term = "1".
+symb my.tm : string -> my.term = "2".
+symb my.nil : my.term = "1". % the empty term
+
+func p -> my.term, my.term, my.term.
+p (my.tm 3) (my.tm "x") my.nil :- my.say "hello".

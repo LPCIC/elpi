@@ -123,13 +123,17 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"The colours";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                ~ty:kind ~name:"red" ~doc:"Red" ~args:[];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                ~ty:kind ~name:"green" ~doc:"Green" ~args:[];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:5 ~variant:""
                ~ty:kind ~name:"blue" ~doc:"Blue"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty]);
+        constants =
+          [elpi_constant_constructor_color_Redc;
+          elpi_constant_constructor_color_Greenc;
+          elpi_constant_constructor_color_Bluec];
         pp = pp_color;
         embed = elpi_embed_color;
         readback = elpi_readback_color
@@ -268,12 +272,15 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:6 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:6 ~variant:""
                ~ty:kind ~name:"round" ~doc:"A circle"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:6 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:6 ~variant:""
                ~ty:kind ~name:"square" ~doc:"Square"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty]);
+        constants =
+          [elpi_constant_constructor_shape_Circlec;
+          elpi_constant_constructor_shape_Squarec];
         pp = pp_shape;
         embed = elpi_embed_shape;
         readback = elpi_readback_shape
@@ -446,7 +453,7 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:1 ~variant:""
                ~ty:kind ~name:"n" ~doc:"N"
                ~args:[Elpi.API.ContextualConversion.TyApp
                         ("option",
@@ -460,6 +467,7 @@ include
                          [Elpi.API.ContextualConversion.TyApp
                             ("list",
                               (color.Elpi.API.ContextualConversion.ty), [])])]);
+        constants = [elpi_constant_constructor_nested_Nc];
         pp = pp_nested;
         embed = elpi_embed_nested;
         readback = elpi_readback_nested

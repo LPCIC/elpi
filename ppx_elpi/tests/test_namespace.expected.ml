@@ -146,17 +146,21 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:14 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:14 ~variant:""
                ~ty:kind ~name:"val.null" ~doc:"Null" ~args:[];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:14 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:14 ~variant:""
                ~ty:kind ~name:"val.number" ~doc:"Number"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty];
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:14 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:14 ~variant:""
                ~ty:kind ~name:"pair-of-values" ~doc:"Pair"
                ~args:[Elpi.API.ContextualConversion.TyName
                         elpi_constant_type_value;
                      Elpi.API.ContextualConversion.TyName
                        elpi_constant_type_value]);
+        constants =
+          [elpi_constant_constructor_value_Nullc;
+          elpi_constant_constructor_value_Numberc;
+          elpi_constant_constructor_value_Pairc];
         pp = pp_value;
         embed = elpi_embed_value;
         readback = elpi_readback_value
@@ -268,10 +272,11 @@ include
         pp_doc =
           (fun fmt () ->
              Elpi.API.PPX.Doc.kind fmt kind ~doc:"";
-             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:9 ~variant:0
+             Elpi.API.PPX.Doc.constructor fmt ~max_name_len:9 ~variant:""
                ~ty:kind ~name:"geo.point" ~doc:"point"
                ~args:[Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty;
                      Elpi.API.BuiltInData.intC.Elpi.API.ContextualConversion.ty]);
+        constants = [elpi_constant_constructor_point_pointc];
         pp = pp_point;
         embed = elpi_embed_point;
         readback = elpi_readback_point

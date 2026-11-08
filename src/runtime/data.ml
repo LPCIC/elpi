@@ -538,14 +538,12 @@ let func_of_core_symbol = function
   | Uv    -> F.from_string "uvar"
   | ECons  -> F.consf
   | ENil   -> F.nilf
-let is_core_symbol f =
-  let rec aux i =
-    if i < max_core_symbol then
-      F.equal f (func_of_core_symbol (Option.get (core_symbol_of_enum i))) || aux (i+1)
-    else
-      false
-  in
-      aux 0
+(* the names of the language: the builtin predicates and the core symbols *)
+let core_names =
+  F.Set.of_list
+    (List.map (func_of_builtin_predicate (fun _ -> assert false)) builtin_predicates
+     @ List.map func_of_core_symbol [As; Uv; ECons; ENil])
+let is_core_name f = F.Set.mem f core_names
 
 (* Globally unique identifier for symbols with a quotient *)
 module Symbol : sig 
@@ -578,8 +576,7 @@ module Symbol : sig
   val compare : uf:UF.t -> t -> t -> int
 
   val make : provenance -> F.t -> t
-  val make_builtin : ?variant:int -> F.t -> t
-  val make_variant_builtin : F.t -> t * int (* variant *)
+  val make_builtin : ?variant:string -> F.t -> t
 
   val get_loc : t -> Loc.t
   val get_provenance : t -> provenance
@@ -608,7 +605,7 @@ end = struct
   let pretty (prov,f) = F.show f ^ match prov with
     | Core -> " (core symbol)"
     | File _ -> ""
-    | Builtin { variant } -> if variant <> 0 then " (variant "^string_of_int variant ^")" else ""
+    | Builtin { variant } -> if String.equal variant "" then "" else " (variant "^variant ^")"
 
   module QMap = struct
     
@@ -681,29 +678,19 @@ end = struct
   | x :: xs -> let x = UF.find uf x in if List.exists (fun y -> compare ~uf x y = 0) xs then undup ~uf xs else x :: undup ~uf xs
 
   let is_builtin (p,f) s =
-    F.equal f s && match p with Builtin { variant } -> variant = 0 | _ -> false
+    F.equal f s && match p with Builtin { variant } -> String.equal variant "" | _ -> false
 
   let get_provenance (l,_) = l
   let get_loc (l,f) =
     match l with
     | File l -> l
     | Core -> Loc.initial ("("^__FILE__^":"^F.show f^")")
-    | Builtin { variant } -> Loc.initial ("(ocaml:"^F.show f^":"^string_of_int variant^")")
+    | Builtin { variant } -> Loc.initial ("(ocaml:"^F.show f^(if String.equal variant "" then "" else ":"^variant)^")")
   let get_str (_,f) = F.show f
   let get_func (_,f) = f
   
   let make prov name = prov, name
-  let make_builtin ?(variant=0) name = Builtin { variant }, name
-  let make_variant_builtin =
-    let state = ref F.Map.empty in
-    let incr name =
-      let n = try F.Map.find name !state with Not_found -> 0 in
-      let n = n + 1 in
-      state := F.Map.add name n !state;
-      n in
-    fun name ->
-      let variant = incr name in
-      (Builtin { variant }, name), variant
+  let make_builtin ?(variant="") name = Builtin { variant }, name
 end
 
 
@@ -730,11 +717,18 @@ module Global_symbols : sig
   }
   val table : t
 
-  (* Static initialization, eg link time *)
-  val declare_global_symbol : ?variant:int -> string -> constant
-  (* Used by auto-generated code, eg ADT *)
-  val declare_overloaded_global_symbol : string -> constant * int
+  (* Static initialization, eg link time. The same name and variant give
+     the same constant. A variant is the name of the library followed by a
+     dot and a name, e.g. "std.1" or "json.1", so that two libraries do not
+     collide; "" is the default variant *)
+  val declare_global_symbol : ?variant:string -> string -> constant
   val lock : unit -> unit
+
+  (* whether an OCaml symbol with this name has the default variant *)
+  val is_default_symbol : string -> bool
+
+  (* the [= "variant"] of the declaration, nothing for the default variant *)
+  val show_variant_annotation : string -> string
 
   open Symbol
 
@@ -742,6 +736,7 @@ module Global_symbols : sig
   val cut : symbol
   val and_ : symbol
   val impl : symbol
+  val implbang : symbol
   val rImpl : symbol
   val pi : symbol
   val sigma : symbol
@@ -780,13 +775,18 @@ let table = {
   locked = false;
 }
 
+(* the builtin predicates are core symbols, like the core data symbols below *)
 let () = builtin_predicates |> List.iter (fun p ->
   let c = const_of_builtin_predicate p in
-  let s = Symbol.make_builtin (func_of_builtin_predicate (fun _ -> assert false) p) in
+  let s = Symbol.make Core (func_of_builtin_predicate (fun _ -> assert false) p) in
   let t = Const c in
   table.c2s <- Constants.Map.add c s table.c2s;
   table.s2ct <- Symbol.RawMap.add s (c,t) table.s2ct
 )
+
+
+let show_variant_annotation variant =
+  if String.equal variant "" then "" else Printf.sprintf " = \"%s\"" variant
 
 let declare_global_symbol symb =
   try fst @@ Symbol.RawMap.find symb table.s2ct
@@ -809,15 +809,14 @@ let asc, as_ = declare_core_symbol As
 let nilc, nil = declare_core_symbol ENil
 let consc, cons = declare_core_symbol ECons
 
-let declare_overloaded_global_symbol str =
-  let symb, variant = Symbol.make_variant_builtin (Ast.Func.from_string str) in
-  declare_global_symbol symb, variant
-
 let declare_global_symbol ?variant str =
   let symb = Symbol.make_builtin ?variant (Ast.Func.from_string str) in
   declare_global_symbol symb
 
 let lock () = table.locked <- true
+
+let is_default_symbol name =
+  Symbol.RawMap.mem (Symbol.make_builtin (Ast.Func.from_string name)) table.s2ct
 
 let orc                 = declare_global_symbol F.(show orf)
 
@@ -826,6 +825,7 @@ let publish_builtin b = Constants.Map.find (const_of_builtin_predicate b) table.
 let cut = publish_builtin Cut
 let and_ = publish_builtin And
 let impl = publish_builtin Impl
+let implbang = publish_builtin ImplBang
 let rImpl = publish_builtin RImpl
 let pi = publish_builtin Pi
 let sigma = publish_builtin Sigma
@@ -1001,6 +1001,8 @@ module Conversion = struct
   type 'a t = {
     ty : ty_ast;
     pp_doc : Format.formatter -> unit -> unit [@opaque];
+    (* the global symbols that pp_doc declares *)
+    constants : constant list;
     pp : Format.formatter -> 'a -> unit [@opaque];
     embed : 'a embedding [@opaque];   (* 'a -> term *)
     readback : 'a readback [@opaque]; (* term -> 'a *)
@@ -1061,6 +1063,8 @@ module ContextualConversion = struct
   type ('a,'hyps,'constraints) t = {
     ty : ty_ast;
     pp_doc : Format.formatter -> unit -> unit [@opaque];
+    (* the global symbols that pp_doc declares, see Conversion.t *)
+    constants : constant list;
     pp : Format.formatter -> 'a -> unit [@opaque];
     embed : ('a,'hyps,'constraints) embedding [@opaque];   (* 'a -> term *)
     readback : ('a,'hyps,'constraints) readback [@opaque]; (* term -> 'a *)
@@ -1074,13 +1078,13 @@ module ContextualConversion = struct
   let raw_ctx : (hyps,constraints) ctx_readback = fun ~depth:_ h c s -> s, h, c, []
 
 
-  let (!<) { ty; pp_doc; pp; embed; readback; } = {
-    Conversion.ty; pp; pp_doc;
+  let (!<) { ty; pp_doc; constants; pp; embed; readback; } = {
+    Conversion.ty; pp; pp_doc; constants;
     embed = (fun ~depth s t -> embed ~depth () () s t);
     readback = (fun ~depth s t -> readback ~depth () () s t);
   }
-  let (!>) { Conversion.ty; pp_doc; pp; embed; readback; } = {
-    ty; pp; pp_doc;
+  let (!>) { Conversion.ty; pp_doc; constants; pp; embed; readback; } = {
+    ty; pp; pp_doc; constants;
     embed = (fun ~depth _ _ s t -> embed ~depth s t);
     readback = (fun ~depth _ _ s t -> readback ~depth s t);
   }
@@ -1088,41 +1092,43 @@ module ContextualConversion = struct
   let (!<<) f x = (!<) (f ((!>) x))
 
   let (!>>) (f : 'a Conversion.t -> 'b Conversion.t) cc =
-  let mk h c { ty; pp_doc; pp; embed; readback; } = {
-    Conversion.ty; pp; pp_doc;
+  let mk h c { ty; pp_doc; constants; pp; embed; readback; } = {
+    Conversion.ty; pp; pp_doc; constants;
     embed = (fun ~depth s t -> embed ~depth h c s t);
     readback = (fun ~depth s t -> readback ~depth h c s t);
   } in
-  let mk_pp { ty; pp_doc; pp; } = {
-    Conversion.ty; pp; pp_doc;
+  let mk_pp { ty; pp_doc; constants; pp; } = {
+    Conversion.ty; pp; pp_doc; constants;
     embed = (fun ~depth s t -> assert false);
     readback = (fun ~depth s t -> assert false);
   } in
-  let { Conversion.ty; pp; pp_doc } = f (mk_pp cc) in
+  let { Conversion.ty; pp; pp_doc; constants } = f (mk_pp cc) in
   {
     ty;
     pp;
     pp_doc;
+    constants;
     embed = (fun ~depth h c s t -> (f (mk h c cc)).embed ~depth s t);
     readback = (fun ~depth h c s t -> (f (mk h c cc)).readback ~depth s t);
   }
   
   let (!>>>) (f : 'a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) cc dd = 
-  let mk h c { ty; pp_doc; pp; embed; readback; } = {
-    Conversion.ty; pp; pp_doc;
+  let mk h c { ty; pp_doc; constants; pp; embed; readback; } = {
+    Conversion.ty; pp; pp_doc; constants;
     embed = (fun ~depth s t -> embed ~depth h c s t);
     readback = (fun ~depth s t -> readback ~depth h c s t);
   } in
-  let mk_pp { ty; pp_doc; pp; } = {
-    Conversion.ty; pp; pp_doc;
+  let mk_pp { ty; pp_doc; constants; pp; } = {
+    Conversion.ty; pp; pp_doc; constants;
     embed = (fun ~depth s t -> assert false);
     readback = (fun ~depth s t -> assert false);
   } in
-  let { Conversion.ty; pp; pp_doc } = f (mk_pp cc)  (mk_pp dd) in
+  let { Conversion.ty; pp; pp_doc; constants } = f (mk_pp cc)  (mk_pp dd) in
   {
     ty;
     pp;
     pp_doc;
+    constants;
     embed = (fun ~depth h c s t -> (f (mk h c cc) (mk h c dd)).embed ~depth s t);
     readback = (fun ~depth h c s t -> (f (mk h c cc) (mk h c dd)).readback ~depth s t);
   }
@@ -1298,7 +1304,7 @@ type ('t,'h,'c) declaration =
 | Param : ('t Conversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
 | ParamC : (('t,'h,'c) ContextualConversion.t -> ('t1,'h,'c) declaration) -> ('t1,'h,'c) declaration
 
-type allocation = (constant * int) StrMap.t
+type allocation = (constant * string) StrMap.t
 
 type ('b,'m,'t,'h,'c) compiled_constructor_arguments =
   | XN : (State.t -> State.t * 't,State.t -> State.t * term * Conversion.extra_goals, 't,'h,'c) compiled_constructor_arguments
@@ -1463,7 +1469,7 @@ let rec tyargs_of_args : type a b c d e. string -> (a,b,c,d,e) compiled_construc
   | XN -> [false,self,""]
   | XA ({ ty },rest) -> (false,Conversion.show_ty_ast ~prec:Arrow ty,"") :: tyargs_of_args self rest
 
-let do_allocate_constructors ty l =
+let do_allocate_constructors ~variant ty l =
   let names =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then
@@ -1472,8 +1478,8 @@ let do_allocate_constructors ty l =
     if name = "uvar" then
       vacc
     else
-      let c_variant = Global_symbols.declare_overloaded_global_symbol name in
-      StrMap.add name c_variant vacc)
+      let c = Global_symbols.declare_global_symbol ~variant name in
+      StrMap.add name (c, variant) vacc)
     StrMap.empty l
 
 let compile_constructors allocated ty self self_name l =
@@ -1493,8 +1499,9 @@ let compile_constructors allocated ty self self_name l =
 
 let document_constructor fmt max_name_len name variant doc argsdoc =
   let pad = String.make (max_name_len - String.length name) ' ' in
-  Fmt.fprintf fmt "@[<hov2>builtin symb %s%s :@[<hov>%a@] = \"%d\". %s@]@\n"
-    name pad pp_ty_args argsdoc variant (if doc = "" then "" else " % " ^ doc)
+  Fmt.fprintf fmt "@[<hov2>symb %s%s :@[<hov>%a@]%s. %s@]@\n"
+    name pad pp_ty_args argsdoc (Global_symbols.show_variant_annotation variant)
+    (if doc = "" then "" else " % " ^ doc)
 
 let kind_param i = if i < 26 then String.make 1 (Char.chr (Char.code 'A' + i)) else Printf.sprintf "A%d" i
 
@@ -1503,8 +1510,8 @@ let document_kind fmt ty =
   | Conversion.TyApp(s,_,l) ->
       let arity = List.length l + 1 in
       let params = String.concat " " (List.init arity kind_param) in
-      Fmt.fprintf fmt "@[<hov 2>builtin data %s %s.@]@\n" s params
-  | Conversion.TyName s -> Fmt.fprintf fmt "@[<hov 2>builtin data %s.@]@\n" s
+      Fmt.fprintf fmt "@[<hov 2>data %s %s.@]@\n" s params
+  | Conversion.TyName s -> Fmt.fprintf fmt "@[<hov 2>data %s.@]@\n" s
 
 let document_adt doc ty ks cks vks fmt () =
   if doc <> "" then
@@ -1520,28 +1527,30 @@ let document_adt doc ty ks cks vks fmt () =
 
 let rec allocate_constructors: type t h c. mkinterval:(int -> int -> int -> term list) -> look:(depth:int -> term -> term) -> mkConst:(int -> term) -> alloc:(?name:doc -> State.t -> State.t * 'a) -> mkUnifVar:
     ('a -> args:term list -> State.t -> term) ->
-      (t,h,c) declaration -> allocation =
-      fun ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ->
+      ?variant:string -> (t,h,c) declaration -> allocation =
+      fun ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ?(variant="") ->
 function
-| Decl { ty; constructors; doc; pp } -> do_allocate_constructors ty constructors
+| Decl { ty; constructors; doc; pp } -> do_allocate_constructors ~variant ty constructors
 | Param f ->
   let a = {
     ContextualConversion.ty = Conversion.TyName "A";
     pp = (fun fmt _ -> ());
     pp_doc = (fun fmt () -> ());
+    constants = [];
     readback = (fun ~depth hyps constraints state term -> assert false);
     embed = (fun ~depth hyps constraints state term -> assert false);
   } |> ContextualConversion.(!<) in
-  allocate_constructors ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar (f a)
+  allocate_constructors ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ~variant (f a)
 | ParamC f ->
   let a = {
     ContextualConversion.ty = Conversion.TyName "A";
     pp = (fun fmt _ -> ());
     pp_doc = (fun fmt () -> ());
+    constants = [];
     readback = (fun ~depth hyps constraints state term -> assert false);
     embed = (fun ~depth hyps constraints state term -> assert false);
   } in
-  allocate_constructors ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar (f a)
+  allocate_constructors ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar ~variant (f a)
 
 
   let declare_allocated: type t h c. mkinterval:(int -> int -> int -> term list) -> look:(depth:int -> term -> term) -> mkConst:(int -> term) -> alloc:(?name:doc -> State.t -> State.t * 'a) -> mkUnifVar:
@@ -1552,11 +1561,15 @@ function Decl { ty; constructors; doc; pp } ->
   let readback_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let embed_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let sconstructors_ref = ref StrMap.empty in
+  (* the constructors, in their order: the MLData of the conversion binds them *)
+  let constants = constructors |> List.filter_map (fun (K(name,_,_,_,_)) ->
+    if name = "uvar" then None else Some (fst (StrMap.find name allocated))) in
   let self = {
     ContextualConversion.ty;
     pp;
     pp_doc = (fun fmt () ->
       document_adt doc ty constructors !sconstructors_ref allocated fmt ());
+    constants;
     readback = (fun ~depth hyps constraints state term ->
       !readback_ref ~depth hyps constraints state term);
     embed = (fun ~depth hyps constraints state term ->
@@ -1575,6 +1588,7 @@ type declaration =
   | MLCode of t * doc_spec
   | MLData : 'a Conversion.t -> declaration
   | MLDataC : ('a,'h,'c) ContextualConversion.t -> declaration
+  | MLConstants of constant list
   | LPDoc  of string
   | LPCode of string
 
@@ -1762,7 +1776,8 @@ let document fmt l calc_list =
   let document_calc_operators name =
     if name = "calc" then begin
       Format.fprintf fmt "%s@\n@\n" "%  --- Operators ---";
-      List.iter (fun (_,x) -> Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) calc_list
+      List.iter (fun (c,x) ->
+        Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) calc_list
     end in
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) ->
@@ -1773,12 +1788,16 @@ let document fmt l calc_list =
         document_calc_operators name
     | MLData { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | MLDataC { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
+    | MLConstants _ -> ()
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
     | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;
   Fmt.fprintf fmt "@\n@\n";
   Fmt.fprintf fmt "@]@.";
   Fmt.pp_set_margin fmt omargin
 ;;
+
+let document_to_string l calc_list =
+  Format.asprintf "%a" (fun fmt () -> document fmt l calc_list) ()
 
 type builtin_table = (int, t) Hashtbl.t
 [@@deriving show]
