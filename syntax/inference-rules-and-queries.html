@@ -7,7 +7,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inference rules and queries &mdash; Elpi  documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
 
@@ -202,7 +202,7 @@ fresh constant’s scope.</p>
 <span class="linenos"> 6</span>count-names<span class="w"> </span><span class="nv">Where</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>names<span class="w"> </span><span class="nv">Ns</span><span class="kd">,</span><span class="w"> </span>std.length<span class="w"> </span><span class="nv">Ns</span><span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">Where</span><span class="w"> </span><span class="s2">&quot;sees&quot;</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="s2">&quot;name(s)&quot;</span><span class="o">.</span>
 <span class="linenos"> 7</span>
 <span class="linenos"> 8</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
-<span class="linenos"> 9</span><span class="w">  </span>(<span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>count-names<span class="w"> </span><span class="s2">&quot;inside&quot;</span><span class="w"> </span><span class="o">)</span><span class="w"> </span><span class="kd">,</span><span class="w">   </span><span class="c">% without the ( ) the next line is inside too</span>
+<span class="linenos"> 9</span><span class="w">  </span><span class="p">(</span><span class="w"> </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span>count-names<span class="w"> </span><span class="s2">&quot;inside&quot;</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="kd">,</span><span class="w">   </span><span class="c">% without the ( ) the next line is inside too</span>
 <span class="linenos">10</span><span class="w">  </span>count-names<span class="w"> </span><span class="s2">&quot;after&quot;</span><span class="o">.</span>
 </pre></div>
 </div>
@@ -245,7 +245,7 @@ single solution <code class="docutils literal notranslate"><span class="pre">cop
 <span class="linenos">15</span>copy<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">X</span><span class="o">.</span>
 <span class="linenos">16</span>
 <span class="linenos">17</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
-<span class="linenos">18</span><span class="w">  </span>copy<span class="w"> </span>a<span class="w"> </span>b<span class="w"> </span><span class="kd">=!=&gt;</span><span class="w"> </span>std.findall<span class="w"> </span>(copy<span class="w"> </span>a<span class="w"> </span><span class="nv">Z_</span><span class="o">)</span><span class="w"> </span><span class="nv">Sols</span><span class="kd">,</span>
+<span class="linenos">18</span><span class="w">  </span>copy<span class="w"> </span>a<span class="w"> </span>b<span class="w"> </span><span class="kd">=!=&gt;</span><span class="w"> </span>std.findall<span class="w"> </span><span class="p">(</span>copy<span class="w"> </span>a<span class="w"> </span><span class="nv">Z_</span><span class="p">)</span><span class="w"> </span><span class="nv">Sols</span><span class="kd">,</span>
 <span class="linenos">19</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;solutions of copy a:&quot;</span><span class="w"> </span><span class="nv">Sols</span><span class="o">.</span>
 </pre></div>
 </div>
@@ -258,7 +258,7 @@ single solution <code class="docutils literal notranslate"><span class="pre">cop
 <p>A rule head can name a subterm with <code class="docutils literal notranslate"><span class="pre">(t</span> <span class="pre">as</span> <span class="pre">N)</span></code> (<a class="reference internal" href="terms.html"><span class="doc">Terms</span></a>), so the body
 refers to it without spelling it out again. In a head, <code class="docutils literal notranslate"><span class="pre">as</span></code> may wrap an
 argument or a piece of one, but not the head as a whole:</p>
-<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>whd<span class="w"> </span>(lam<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">T</span><span class="o">)</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span><span class="w"> </span><span class="c">% a lambda is already in weak head normal form</span>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>whd<span class="w"> </span><span class="p">(</span>lam<span class="w"> </span><span class="nv">F</span><span class="w"> </span><span class="kd">as</span><span class="w"> </span><span class="nv">T</span><span class="p">)</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span><span class="w"> </span><span class="c">% a lambda is already in weak head normal form</span>
 </pre></div>
 </div>
 </section>
@@ -310,7 +310,7 @@ the sequent separator used in <code class="docutils literal notranslate"><span c
 <span class="linenos">12</span>ancestor<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>parent<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Z</span><span class="kd">,</span><span class="w"> </span>ancestor<span class="w"> </span><span class="nv">Z</span><span class="w"> </span><span class="nv">Y</span><span class="o">.</span>
 <span class="linenos">13</span>
 <span class="linenos">14</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
-<span class="linenos">15</span><span class="w">  </span>std.findall<span class="w"> </span>(ancestor<span class="w"> </span>alice<span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="nv">All</span><span class="kd">,</span><span class="w">   </span><span class="c">% the query: every Y with `ancestor alice Y`</span>
+<span class="linenos">15</span><span class="w">  </span>std.findall<span class="w"> </span><span class="p">(</span>ancestor<span class="w"> </span>alice<span class="w"> </span><span class="nv">_</span><span class="p">)</span><span class="w"> </span><span class="nv">All</span><span class="kd">,</span><span class="w">   </span><span class="c">% the query: every Y with `ancestor alice Y`</span>
 <span class="linenos">16</span><span class="w">  </span>std.length<span class="w"> </span><span class="nv">All</span><span class="w"> </span><span class="nv">N</span><span class="kd">,</span>
 <span class="linenos">17</span><span class="w">  </span>print<span class="w"> </span><span class="s2">&quot;alice has&quot;</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="s2">&quot;descendants&quot;</span><span class="o">.</span>
 </pre></div>

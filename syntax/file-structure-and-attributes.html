@@ -7,7 +7,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>File structure and attributes &mdash; Elpi  documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
 
@@ -248,7 +248,7 @@ predicate: it disappears before the program runs, and it does not cross a file
 or block boundary, being visible only in the file (or <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">…</span> <span class="pre">}</span></code> block) that
 defines it.</p>
 <div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>macro<span class="w"> </span><span class="kd">@</span>newline<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="s2">&quot;\n&quot;</span><span class="o">.</span>
-macro<span class="w"> </span><span class="kd">@</span>of<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(of<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">T</span><span class="kd">,</span><span class="w"> </span>pp<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">N</span><span class="o">).</span>
+macro<span class="w"> </span><span class="kd">@</span>of<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="p">(</span>of<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">T</span><span class="kd">,</span><span class="w"> </span>pp<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">N</span><span class="p">)</span><span class="o">.</span>
 </pre></div>
 </div>
 <p>Expansion is <em>hygienic</em>: a macro’s own variables, those in <code class="docutils literal notranslate"><span class="pre">Body</span></code> not among
@@ -261,7 +261,7 @@ need to pick unlikely names to avoid a clash.</p>
 <span class="linenos">2</span><span class="c">% happen to share a name with a variable already in scope where the macro</span>
 <span class="linenos">3</span><span class="c">% is used.</span>
 <span class="linenos">4</span>
-<span class="linenos">5</span>macro<span class="w"> </span><span class="kd">@</span>check<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>(<span class="nv">Tmp</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;macro&#39;s Tmp =&quot;</span><span class="w"> </span><span class="nv">Tmp</span><span class="o">).</span>
+<span class="linenos">5</span>macro<span class="w"> </span><span class="kd">@</span>check<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="p">(</span><span class="nv">Tmp</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;macro&#39;s Tmp =&quot;</span><span class="w"> </span><span class="nv">Tmp</span><span class="p">)</span><span class="o">.</span>
 <span class="linenos">6</span>
 <span class="linenos">7</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="nv">Tmp</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="mi">999</span><span class="kd">,</span><span class="w"> </span><span class="kd">@</span>check<span class="w"> </span><span class="mi">5</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;caller&#39;s Tmp is still&quot;</span><span class="w"> </span><span class="nv">Tmp</span><span class="o">.</span>
 </pre></div>
@@ -275,8 +275,8 @@ above pairs the “typed” and “pretty-printed” facts that a hypothetical r
 (<a class="reference internal" href="inference-rules-and-queries.html"><span class="doc">Inference rules and queries</span></a>) must add together at every bound variable
 of a term with binders; each <code class="docutils literal notranslate"><span class="pre">&#64;of</span> <span class="pre">x</span> <span class="pre">Name</span> <span class="pre">A</span></code> expands to <code class="docutils literal notranslate"><span class="pre">of</span> <span class="pre">x</span> <span class="pre">A,</span> <span class="pre">pp</span> <span class="pre">x</span> <span class="pre">Name</span></code>
 in place, so the two cannot drift apart as the surrounding code changes:</p>
-<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>of<span class="w"> </span>(lambda<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">F</span><span class="o">)</span><span class="w"> </span>(arr<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="o">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span>
-<span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span><span class="kd">@</span>of<span class="w"> </span>x<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>of<span class="w"> </span>(<span class="nv">F</span><span class="w"> </span>x<span class="o">)</span><span class="w"> </span><span class="nv">B</span><span class="o">.</span>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span>of<span class="w"> </span><span class="p">(</span>lambda<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">F</span><span class="p">)</span><span class="w"> </span><span class="p">(</span>arr<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="p">)</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="w">  </span><span class="kd">pi</span><span class="w"> </span><span class="nv">x</span>\<span class="w"> </span><span class="kd">@</span>of<span class="w"> </span>x<span class="w"> </span><span class="nv">Name</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="kd">==&gt;</span><span class="w"> </span>of<span class="w"> </span><span class="p">(</span><span class="nv">F</span><span class="w"> </span>x<span class="p">)</span><span class="w"> </span><span class="nv">B</span><span class="o">.</span>
 </pre></div>
 </div>
 </section>

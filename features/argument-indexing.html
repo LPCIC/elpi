@@ -7,7 +7,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Argument indexing &mdash; Elpi  documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
 
@@ -149,7 +149,7 @@ trying.</p>
 argument’s own head symbol, not looking inside it). <code class="docutils literal notranslate"><span class="pre">:index</span> <span class="pre">(&lt;spec&gt;)</span> <span class="pre">&quot;type&quot;</span></code>
 changes this, and is written before a <code class="docutils literal notranslate"><span class="pre">pred</span></code> / <code class="docutils literal notranslate"><span class="pre">func</span></code> signature
 (<a class="reference internal" href="../syntax/type-declarations.html"><span class="doc">Type declarations</span></a>):</p>
-<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="p">:</span>index<span class="w"> </span>(<span class="nv">_</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="p">:</span>index<span class="w"> </span><span class="p">(</span><span class="nv">_</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
 <span class="kd">pred</span><span class="w"> </span><span class="nf">mymap</span><span class="w"> </span><span class="kt">(A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">B)</span>,<span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">A</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">list</span><span class="w"> </span><span class="kt">B</span>.
 </pre></div>
 </div>
@@ -164,7 +164,7 @@ only option when a single argument is indexed at depth 1), <code class="docutils
 <h2>Which index to use<a class="headerlink" href="#which-index-to-use" title="Link to this heading"></a></h2>
 <p>The default costs almost nothing and fits almost every predicate. It looks at
 one thing, the head symbol of the first argument, so it tells two rules
-apart exactly when that symbol does. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/6b6304ac3007cf80854711eade50728a63b568b5/src/builtin.elpi#L849"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/6b6304ac3007cf80854711eade50728a63b568b5/src/builtin.elpi#L914"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a> and most
+apart exactly when that symbol does. <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/e4a6acdc1523c94ef84bd6100db83cee0f2de5ff/src/builtin.elpi#L852"><code class="docutils literal notranslate"><span class="pre">std.map</span></code></a>, <a class="stdlib reference external" href="https://github.com/LPCIC/elpi/blob/e4a6acdc1523c94ef84bd6100db83cee0f2de5ff/src/builtin.elpi#L917"><code class="docutils literal notranslate"><span class="pre">std.mem</span></code></a> and most
 λProlog predicates have a few rules distinguished by precisely that, and the
 index with the least overhead wins; <a class="reference internal" href="../bibliography.html#bib-hdr"><span class="std std-ref">the HDR thesis</span></a> §3.2.5
 reports that for the bulk of λProlog code the default beats the richer
@@ -208,11 +208,11 @@ for a goal when <code class="docutils literal notranslate"><span class="pre">hgo
 rule it is <em>provided</em>, in a goal it is <em>required</em>. A flexible goal is all
 <code class="docutils literal notranslate"><span class="pre">0</span></code>s and so requires nothing (<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&amp;</span> <span class="pre">x</span> <span class="pre">=</span> <span class="pre">0</span></code>); a flexible rule is all
 <code class="docutils literal notranslate"><span class="pre">1</span></code>s and so provides everything (<code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">&amp;</span> <span class="pre">1</span> <span class="pre">=</span> <span class="pre">x</span></code>).</p>
-<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="p">:</span>index<span class="w"> </span>(<span class="mi">2</span><span class="o">)</span><span class="w"> </span><span class="s2">&quot;Hash&quot;</span>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="p">:</span>index<span class="w"> </span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;Hash&quot;</span>
 <span class="kd">pred</span><span class="w"> </span><span class="nf">mult</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">nat</span>,<span class="w"> </span><span class="kt">nat</span>,<span class="w"> </span><span class="kt">nat</span>.
 mult<span class="w"> </span>o<span class="w"> </span><span class="nv">X</span><span class="w"> </span>o<span class="o">.</span>
-mult<span class="w"> </span>(s<span class="w"> </span><span class="o">(</span>s<span class="w"> </span>o<span class="o">))</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">C</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>plus<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">C</span><span class="o">.</span>
-mult<span class="w"> </span>(s<span class="w"> </span><span class="nv">A</span><span class="o">)</span><span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">C</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>mult<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">R</span><span class="kd">,</span><span class="w"> </span>plus<span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="nv">C</span><span class="o">.</span>
+mult<span class="w"> </span><span class="p">(</span>s<span class="w"> </span><span class="p">(</span>s<span class="w"> </span>o<span class="p">))</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">C</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>plus<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">C</span><span class="o">.</span>
+mult<span class="w"> </span><span class="p">(</span>s<span class="w"> </span><span class="nv">A</span><span class="p">)</span><span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">C</span><span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>mult<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">R</span><span class="kd">,</span><span class="w"> </span>plus<span class="w"> </span><span class="nv">B</span><span class="w"> </span><span class="nv">R</span><span class="w"> </span><span class="nv">C</span><span class="o">.</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">:index</span> <span class="pre">(2)</span></code> indexes the first argument down to depth 2. Suppose the head

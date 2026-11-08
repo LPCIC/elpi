@@ -7,7 +7,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lexical conventions &mdash; Elpi  documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=78bb11f5" />
 
@@ -161,7 +161,7 @@ prints the resulting term.</p>
 <div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="c">% a line comment runs to the end of the line</span>
 
 <span class="c">/* a block comment,</span>
-<span class="w">   </span><span class="c">/* which may be nested */</span>
+<span class="c">   /* which may be nested */</span>
 <span class="w">   </span>up<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>matching<span class="w"> </span>close<span class="w"> </span><span class="kd">*/</span>
 </pre></div>
 </div>
@@ -197,8 +197,8 @@ it into two blocks, of which only the second documents what follows.</p>
 <span class="kd">pred</span><span class="w"> </span><span class="nf">undocumented</span>.
 
 <span class="c">/* the price of an item,</span>
-<span class="w">   </span>looked<span class="w"> </span>up<span class="w"> </span>by<span class="w"> </span>its<span class="w"> </span>name<span class="w"> </span><span class="kd">*/</span>
-<span class="p">:</span>index<span class="w"> </span>(<span class="mi">1</span><span class="o">)</span>
+<span class="c">   looked up by its name */</span>
+<span class="p">:</span>index<span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 <span class="kd">pred</span><span class="w"> </span><span class="nf">price</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="kt">-&gt;</span><span class="w"> </span><span class="kt">float</span>.
 </pre></div>
 </div>
@@ -474,7 +474,7 @@ literal and a two-line string, in one small program:</p>
 <span class="linenos">10</span>price<span class="w"> </span>pear<span class="w">  </span><span class="mi">0</span><span class="o">.</span><span class="mi">45</span><span class="o">.</span>
 <span class="linenos">11</span>
 <span class="linenos">12</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
-<span class="linenos">13</span><span class="w">  </span>std.findall<span class="w"> </span>(price<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">_</span><span class="o">)</span><span class="w"> </span><span class="nv">All</span><span class="kd">,</span><span class="w">   </span><span class="c">% _ is the wildcard</span>
+<span class="linenos">13</span><span class="w">  </span>std.findall<span class="w"> </span><span class="p">(</span>price<span class="w"> </span><span class="nv">_</span><span class="w"> </span><span class="nv">_</span><span class="p">)</span><span class="w"> </span><span class="nv">All</span><span class="kd">,</span><span class="w">   </span><span class="c">% _ is the wildcard</span>
 <span class="linenos">14</span><span class="w">  </span>std.length<span class="w"> </span><span class="nv">All</span><span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w">              </span><span class="c">% std.length is one qualified name</span>
 <span class="linenos">15</span><span class="w">  </span><span class="nv">Discount</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="kd">-</span><span class="mi">5</span><span class="kd">,</span><span class="w">                 </span><span class="c">% a negative integer literal</span>
 <span class="linenos">16</span><span class="w">  </span><span class="nv">Note</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="s2">&quot;prices in euro,</span>
