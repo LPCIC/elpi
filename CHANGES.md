@@ -10,6 +10,10 @@
     a constructor can alias variables of different types. Use `any` or a
     concrete type instead
   - Fix: a bug made a random choice on ambiguous overloade constant
+- Builtins:
+  - Change: `<`, `>`, `=<` and `>=` no longer compare two constants (by the
+    order they were allocated in): they are a type error, as on any other
+    term that is not an int, a float or a string
 - Language:
   - Change: `builtin` is only for the symbols of the language (with
     `= "core"`, only in `builtin.elpi`) and for the predicates implemented by

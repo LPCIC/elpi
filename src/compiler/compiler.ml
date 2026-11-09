@@ -2488,16 +2488,6 @@ let new_symbols_of_types ~(base_sig:Assembled.signature) new_types =
   symbs |> List.filter_map (fun (symb, { TypingEnv.indexing } ) -> match indexing with Index m -> Some (symb, m) | _ -> None)
 
 let allocate_new_symbols state ~symbols ~new_defined_symbols =
-  (* THE MISTERY: allocating symbols following their declaration order makes the grundlagen job 30% faster (600M less memory):
-          time   typchk wall   mem
-    with: 14.75   0.53  16.69 2348.4M
-    wout: 19.61   0.56  21.72 2789.1M 
-  *)
-  let new_defined_symbols =
-    if List.length new_defined_symbols > 2000 then
-      new_defined_symbols |> List.sort (fun s1 s2 -> compare (Symbol.get_loc s1).line (Symbol.get_loc s2).line)
-    else
-      new_defined_symbols in
   List.fold_left (fun symbols s -> SymbolMap.allocate_global_symbol state symbols s |> fst)
     symbols new_defined_symbols
 
