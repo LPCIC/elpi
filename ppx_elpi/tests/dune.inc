@@ -798,6 +798,48 @@
 
 
 ; The output of the ppx and of the test executable is generated in
+; test_polymorphic_variant.generated.* and compared with test_polymorphic_variant.expected.*, but it is also promoted
+; to test_polymorphic_variant.actual.* (ignored by git) in order to be inspectable even when
+; the test fails. The ppx is given the name of the file, not %{input}: the
+; name is in the locations of the output, and dune versions spell %{input}
+; differently (./test_polymorphic_variant.ml or test_polymorphic_variant.ml).
+
+(rule
+ (targets test_polymorphic_variant.generated.ml)
+ (deps (:pp pp.exe) (:input test_polymorphic_variant.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl test_polymorphic_variant.ml -o %{targets})))
+
+(rule
+ (target test_polymorphic_variant.generated.elpi)
+ (action (run ./test_polymorphic_variant.exe %{target})))
+
+(rule
+ (mode promote)
+ (target test_polymorphic_variant.actual.ml)
+ (action (copy test_polymorphic_variant.generated.ml test_polymorphic_variant.actual.ml)))
+
+(rule
+ (mode promote)
+ (target test_polymorphic_variant.actual.elpi)
+ (action (copy test_polymorphic_variant.generated.elpi test_polymorphic_variant.actual.elpi)))
+
+(rule
+ (alias runtest-ppx)
+ (deps test_polymorphic_variant.actual.ml test_polymorphic_variant.actual.elpi)
+ (action (diff test_polymorphic_variant.expected.ml test_polymorphic_variant.generated.ml)))
+
+(rule
+ (alias runtest-ppx)
+ (action (diff test_polymorphic_variant.expected.elpi test_polymorphic_variant.generated.elpi)))
+
+(executable
+  (name test_polymorphic_variant)
+  (modules test_polymorphic_variant)
+  (libraries ppx_tests_lib)
+  (preprocess (pps ppx_deriving.show ppx_elpi)))
+
+
+; The output of the ppx and of the test executable is generated in
 ; test_record_binder.generated.* and compared with test_record_binder.expected.*, but it is also promoted
 ; to test_record_binder.actual.* (ignored by git) in order to be inspectable even when
 ; the test fails. The ppx is given the name of the file, not %{input}: the
@@ -1419,6 +1461,46 @@
  (alias runtest-ppx)
  (deps error_opaque_params.actual.txt)
  (action (diff error_opaque_params.expected.txt error_opaque_params.generated.txt)))
+
+
+(rule
+ (target error_polymorphic_variant_inherit.generated.txt)
+ (deps (:pp pp.exe) (:input error_polymorphic_variant_inherit.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl error_polymorphic_variant_inherit.ml -o /dev/null))))))
+
+(rule
+ (mode promote)
+ (target error_polymorphic_variant_inherit.actual.txt)
+ (action (copy error_polymorphic_variant_inherit.generated.txt error_polymorphic_variant_inherit.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_polymorphic_variant_inherit.actual.txt)
+ (action (diff error_polymorphic_variant_inherit.expected.txt error_polymorphic_variant_inherit.generated.txt)))
+
+
+(rule
+ (target error_polymorphic_variant_open.generated.txt)
+ (deps (:pp pp.exe) (:input error_polymorphic_variant_open.ml))
+ (action
+  (with-stderr-to %{target}
+   (with-accepted-exit-codes (not 0)
+    (setenv OCAML_COLOR never
+     (run ./%{pp} --impl error_polymorphic_variant_open.ml -o /dev/null))))))
+
+(rule
+ (mode promote)
+ (target error_polymorphic_variant_open.actual.txt)
+ (action (copy error_polymorphic_variant_open.generated.txt error_polymorphic_variant_open.actual.txt)))
+
+(rule
+ (alias runtest-ppx)
+ (deps error_polymorphic_variant_open.actual.txt)
+ (action (diff error_polymorphic_variant_open.expected.txt error_polymorphic_variant_open.generated.txt)))
 
 
 (rule

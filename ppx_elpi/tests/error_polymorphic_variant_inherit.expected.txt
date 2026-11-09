@@ -1,0 +1,4 @@
+File "error_polymorphic_variant_inherit.ml", line 3, characters 11-12:
+3 | type t = [ s | `B of int ]
+               ^
+Error: a polymorphic variant that includes another type is not supported: list its tags

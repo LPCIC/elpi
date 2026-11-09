@@ -25,6 +25,9 @@ open Ppxlib.Ast_pattern
     - a datum: a syntax tree, potentially with binders
     - the context for a datum: all data with binders must be equipped with
       one or more data types describing the info attached to bound variables.
+    A closed polymorphic variant, eg [type t = [ `K | `S of int ]], is an
+    algebraic type whose constructors are its tags ([`R of int * int] has two
+    arguments).
 
   The type must come with a pretty printer named following the usual
   convention (named pp if the type is named t, pp_ty otherwise). Using both
@@ -455,7 +458,7 @@ let ctx_index_ty_of_args (module B : Ast_builder.S) arg_types =
   | None -> assert false (* consistency_check *)
 
 type elpi_constructor =
-  | Skip of { constructor_name : string; has_args : bool }
+  | Skip of { constructor_name : string; has_args : bool; is_tag : bool (* a tag of a polymorphic variant *) }
   | Expose of expose
 and expose = {
   declaration : structure_item list; (* constants for constructor *)
@@ -561,7 +564,7 @@ let rec drop_skip = function
   | Expose x :: l -> x :: drop_skip l
 let rec keep_skip = function
   | [] -> []
-  | Skip { constructor_name; has_args } :: l -> (constructor_name, has_args) :: keep_skip l
+  | Skip { constructor_name; has_args; is_tag } :: l -> (constructor_name, has_args, is_tag) :: keep_skip l
   | Expose _ :: l -> keep_skip l
 
 let rec list_take i = function
@@ -605,8 +608,10 @@ let embed_var (module B : Ast_builder.S) ctx_name args p = let open B in
    elpi__state, Elpi.API.RawData.mkBound ([%e elpi_Map "find" ] elpi__key elpi__ctx2dbl), []
  ]
 
-let error_constructor_not_supported (module B : Ast_builder.S) (constructor,has_args) = let open B in
-     case ~guard:None ~lhs:(ppat_construct (Located.lident constructor) (if has_args then Some (pvar "_") else None))
+let error_constructor_not_supported (module B : Ast_builder.S) (constructor,has_args,is_tag) = let open B in
+     let arg = if has_args then Some (pvar "_") else None in
+     let lhs = if is_tag then ppat_variant constructor arg else ppat_construct (Located.lident constructor) arg in
+     case ~guard:None ~lhs
        ~rhs:[%expr Elpi.API.Error.error ~component:"ppx_elpi" ("constructor "^[%e estring constructor]^" is not supported") ]
 
 let abstract_standard_branch_embed (module B : Ast_builder.S) l e = let open B in
@@ -617,7 +622,7 @@ let abstract_standard_branch_embed (module B : Ast_builder.S) l e = let open B i
   [%expr fun ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state -> [%e aux l ]]
 
 let embed_branch (module B : Ast_builder.S) is_pred = function
- | Skip { constructor_name; has_args } -> error_constructor_not_supported (module B) (constructor_name,has_args)
+ | Skip { constructor_name; has_args; is_tag } -> error_constructor_not_supported (module B) (constructor_name,has_args,is_tag)
  | Expose { constant; arg_types; embed; pattern; _ } -> let open B in
   let pvl, pattern, types =
     let pvl = List.map (fun _ -> fresh()) arg_types in
@@ -1142,7 +1147,7 @@ let analyze_tuple_constructor (module B : Ast_builder.S) ?namespace tyname kname
 let analyze_constructor (module B : Ast_builder.S) ?namespace tyname same_mutrec_block decl = let open B in
   match decl with
   | { pcd_name = { txt = kname ; _ }; pcd_args; _ } when Attribute.get att_elpi_skip decl = Some () ->
-      Skip { constructor_name = kname; has_args = not (pcd_args = Pcstr_tuple []) }
+      Skip { constructor_name = kname; has_args = not (pcd_args = Pcstr_tuple []); is_tag = false }
   | { pcd_name = { txt = kname ; _ }; pcd_args = Pcstr_tuple tl; pcd_res = None; _ } ->
       let make_k args =
         if args = [] then pexp_construct (Located.lident kname) None
@@ -1157,6 +1162,36 @@ let analyze_constructor (module B : Ast_builder.S) ?namespace tyname same_mutrec
       let match_k args = ppat_construct (Located.lident kname) (Some (ppat_record (List.map2 (fun x y -> B.Located.lident x,y) lbls args) Closed)) in
       analyze_tuple_constructor (module B) ?namespace tyname kname decl tl make_k match_k same_mutrec_block
   | { pcd_loc = loc; _ } -> error ~loc "unsupportd constructor declaration"
+
+(* a tag of a polymorphic variant, [`K] or [`K of t]: a constructor whose
+   arguments are the components of [t] if it is a tuple. [decl] is the tag as
+   a constructor declaration (with the attributes of the tag) *)
+let analyze_tag (module B : Ast_builder.S) ?namespace tyname same_mutrec_block decl = let open B in
+  match decl with
+  | { pcd_name = { txt = kname ; _ }; pcd_args; _ } when Attribute.get att_elpi_skip decl = Some () ->
+      Skip { constructor_name = kname; has_args = not (pcd_args = Pcstr_tuple []); is_tag = true }
+  | { pcd_name = { txt = kname ; _ }; pcd_args = Pcstr_tuple tl; _ } ->
+      let make_k = function
+        | [] -> pexp_variant kname None
+        | [x] -> pexp_variant kname (Some x)
+        | args -> pexp_variant kname (Some (pexp_tuple args)) in
+      let match_k = function
+        | [] -> ppat_variant kname None
+        | [x] -> ppat_variant kname (Some x)
+        | args -> ppat_variant kname (Some (ppat_tuple args)) in
+      analyze_tuple_constructor (module B) ?namespace tyname kname decl tl make_k match_k same_mutrec_block
+  | { pcd_loc = loc; _ } -> error ~loc "unsupportd tag"
+
+let constructor_of_tag (module B : Ast_builder.S) = function
+  | { prf_desc = Rtag ({ txt; _ }, _, tys); prf_loc; prf_attributes } ->
+      let tl = match tys with
+        | [] -> []
+        | [{ ptyp_desc = Ptyp_tuple l; _ }] -> l
+        | [ty] -> [ty]
+        | _ -> error ~loc:prf_loc "a tag with a conjunctive type is not supported" in
+      { pcd_name = B.Located.mk txt; pcd_args = Pcstr_tuple tl; pcd_vars = []; pcd_res = None;
+        pcd_loc = prf_loc; pcd_attributes = prf_attributes }
+  | { prf_loc = loc; _ } -> error ~loc "a polymorphic variant that includes another type is not supported: list its tags"
 
 let extract_tyvar (x,_) =
   match x.ptyp_desc with
@@ -1721,6 +1756,27 @@ let analyze_typedecl (module B : Ast_builder.S) same_mutrec_block tdecl =
       let index = get_elpi_tindex tdecl in
       let cdata = get_elpi_tcdata ~loc:B.loc tdecl in
       { name; params; type_decl = Opaque cdata; elpi_name; elpi_code; elpi_doc; pp; index }
+
+  | {
+    ptype_name = { txt = name ; _ };
+    ptype_params = params;
+    ptype_cstrs = _;
+    ptype_kind = Ptype_abstract;
+    ptype_manifest = Some { ptyp_desc = Ptyp_variant (rows, closed, labels); ptyp_loc; _ };
+    _
+    } ->
+      if not (closed = Closed && labels = None) then
+        error ~loc:ptyp_loc "only a closed polymorphic variant is supported: [ `A | `B of t ]";
+      let params, typ = analyze_params (module B) params in
+      let csts = List.map (fun r -> typ#constructor_declaration (constructor_of_tag (module B) r)) rows in
+      let namespace = Attribute.get att_elpi_tnamespace tdecl in
+      let csts = List.map (analyze_tag (module B) ?namespace name same_mutrec_block) csts in
+      let elpi_name, elpi_code = get_elpi_tcode (module B) name tdecl in
+      let elpi_doc = get_elpi_tdoc name tdecl in
+      let default_readback = get_elpi_tdefkreadback tdecl in
+      let pp = get_elpi_pp tdecl in
+      let index = get_elpi_tindex tdecl in
+      { name; params; type_decl = Algebraic(csts,default_readback); elpi_name; elpi_code; elpi_doc; pp; index }
 
   | {
     ptype_name = { txt = name ; _ };
