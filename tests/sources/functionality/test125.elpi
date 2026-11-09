@@ -1,0 +1,6 @@
+% a cast to any does not hide a relational atom in the body of a function
+func f int -> list any.
+f X [(Y : any)] :-
+  (Y = X ; Y = 1).
+pred main.
+main :- f 1 _.

@@ -516,10 +516,15 @@ let check_clause, check_chr_guard_and_newgoal =
           Format.eprintf "Calling type_ass_2func_mut in Discard@.";
           (Compilation.type_ass_2func_mut ~loc ~type_abbrevs ty, Good_call.init ())
       | CData _ -> (Exp [], Good_call.init ())
-      | Cast (t, _) ->
+      | Cast (t, tye) ->
           let d, good = infer ~exp ~was_input ctx t in
           if Good_call.is_wrong good then raise (FatalDetError (None, good));
-          (d, good)
+          (* a cast to any is any: the type checker does not bind a type
+             variable to any, e.g. in [(X : any)] the type variable of ::
+             stays a variable, which only any can be compared with *)
+          (match tye.ScopedTypeExpression.it with
+           | ScopedTypeExpression.Any -> (Any, good)
+           | _ -> (d, good))
       | Spill (_, _) -> spill_err ~loc
     in
     let ((det, gc) as r) = infer ~exp ~was_input:false ctx t in
