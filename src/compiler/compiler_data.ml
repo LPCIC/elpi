@@ -1,3 +1,6 @@
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* license: GNU Lesser General Public License Version 2.1 or later           *)
+(* ------------------------------------------------------------------------- *)
 open Elpi_util
 open Elpi_parser
 open Elpi_runtime
