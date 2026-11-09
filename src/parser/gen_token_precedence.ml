@@ -1,3 +1,6 @@
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* license: GNU Lesser General Public License Version 2.1 or later           *)
+(* ------------------------------------------------------------------------- *)
 open Elpi_lexer_config.Lexer_config
 
 let pp_mehir_fixity fmt = function
