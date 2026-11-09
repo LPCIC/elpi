@@ -5,6 +5,8 @@
   - New: `[@@deriving elpi]` on a closed polymorphic variant, e.g.
     ``type t = [ `A | `B of int ]``: its tags are the constructors
 - Type checker:
+  - Fix: a cast to `any` as the argument of a polymorphic constructor, e.g.
+    `[(X : any)]`, broke an invariant of the determinacy checker
   - Change: a constructor whose arguments mention a type variable that its
     result type does not mention (an existential type, e.g.
     `symb pack : A -> (A -> string) -> box.`) is rejected, also when a type

@@ -1,0 +1,10 @@
+% a cast to any, e.g. in a list of any: the type variable of :: is not bound
+% to any by the type checker, the cast is any for the determinacy checker
+kind term type.
+symb q : list any -> term.
+func ok term -> term.
+ok X (q [(X : any), ("a" : any), ((x\ x) : any)]).
+func items int -> list any.
+items X L :- L = [(X : any)].
+pred main.
+main :- ok (q []) _, items 1 [_].
