@@ -1,0 +1,33 @@
+==== open spill.elpi ====
+diagnostics of spill.elpi (version 1): 0
+
+==== semantic tokens ====
+semantic tokens (^ the token, = a declaration):
+  line 0:
+                   | func f int -> int.
+    type           |        ^^^    ^^^
+  line 1:
+                   | f X Y :- Y is X + 1.
+    function decl  | =
+    enumMember     |                 ^
+    variable       |   ^ ^    ^    ^
+    keyword        |       ^^
+    number         |                   ^
+  line 2:
+                   | pred p int, int.
+    type           |        ^^^  ^^^
+  line 3:
+                   | p X Y :- Y = {f X}, print {f {f Y}}.
+    function decl  | =
+    variable       |   ^ ^    ^      ^               ^
+    keyword        |       ^^          ^
+  line 4:
+                   | pred q int.
+    type           |        ^^^
+  line 5:
+                   | q Z :- std.map [Z] (x\ y\ y = {f x}) _.
+    function decl  | =
+    parameter      |                           ^      ^
+    parameter decl |                     =  =
+    variable       |   ^             ^
+    keyword        |     ^^

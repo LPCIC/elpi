@@ -525,6 +525,9 @@ type program = {
   clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
   chr : (Symbol.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : ((Symbol.t * string) list * declared_builtins) option;
+  (* the rules that were spilled, by their location: their body as written
+     (typed), e.g. for the semantic tokens of elpi-lsp *)
+  as_written : (Loc.t * ScopedTerm.t) list;
 }
 [@@deriving show]
 
@@ -1735,7 +1738,7 @@ end = struct
      spilling fails, it is dropped (it is only partially typed, or not
      spilled). If the determinacy check fails it is kept (it is well typed and
      spilled) and the error recorded. *)
-  let check_clause ~errs ~flags ~det_check_time ~type_check_time ~unknown ~type_abbrevs ~kinds ~types
+  let check_clause ~errs ~flags ~det_check_time ~type_check_time ~unknown ~type_abbrevs ~kinds ~types ~as_written
       ({ Ast.Clause.body; needs_spilling; attributes = ({ Ast.Structured.typecheck; occur_check; autospill } as atts) } as clause) =
     if not typecheck then unknown, Some { clause with needs_spilling = false; attributes = { atts with occur_check } }
     else
@@ -1747,9 +1750,10 @@ end = struct
       | None -> unknown, None
       | Some (t, unknown, occur_check_pred) ->
           let spilled =
-            if needs_spilling || autospill then
+            if needs_spilling || autospill then begin
+              as_written := (clause.loc, t) :: !as_written;
               Errors.protect errs ~default:None (fun () -> Some (Spilling.main_clause ~types ~type_abbrevs t))
-            else Some t in
+            end else Some t in
           match spilled with
           | None -> unknown, None
           | Some t ->
@@ -1858,8 +1862,9 @@ end = struct
     ) u_types;
 
     (* returns unkown types + checked clauses *)
+    let as_written = ref [] in
     let unknown, clauses = List.fold_left (fun (unknown,clauses) clause ->
-      match check_clause ~errs ~flags ~det_check_time ~type_check_time ~unknown ~type_abbrevs ~kinds ~types clause with
+      match check_clause ~errs ~flags ~det_check_time ~type_check_time ~unknown ~type_abbrevs ~kinds ~types ~as_written clause with
       | unknown, Some clause -> unknown, clause :: clauses
       | unknown, None -> unknown, clauses) (F.Map.empty,[]) clauses in
     let clauses = List.rev clauses in
@@ -1913,7 +1918,7 @@ end = struct
 
     let signature = { signature with types = u_types } in
 
-    let checked_code = { CheckedFlat.signature; clauses; chr; builtins } in
+    let checked_code = { CheckedFlat.signature; clauses; chr; builtins; as_written = !as_written } in
 
   { version; checked_code; base_hash = hash_base base;
     type_checking_time = if flags.time_typechecking then !type_check_time +. check_sig else 0.0;
@@ -3500,7 +3505,13 @@ let hover ?base (sp : scoped_program) (u : checked_compilation_unit) =
     sp.code.Scoped.macro_uses;
   let in_text i = match i.ikind with Term -> true | _ -> not (Hashtbl.mem expansions (key i.iloc)) in
   let term ?rule ~head t = term_items ?rule ~types ~metadata ~head ~type_items (fun i -> if in_text i then add i) t in
-  List.iter (fun { Ast.Clause.body } -> term ~rule:true ~head:(rule_head body) body) u.checked_code.CheckedFlat.clauses;
+  (* a spilled rule is seen as written: its spilled calls are where the text
+     has them, the variables and conjunctions spilling makes are not in it *)
+  let as_written = Hashtbl.create 7 in
+  List.iter (fun (l, t) -> Hashtbl.replace as_written (key l) t) u.checked_code.CheckedFlat.as_written;
+  List.iter (fun { Ast.Clause.body; loc } ->
+    let body = Option.value ~default:body (Hashtbl.find_opt as_written (key loc)) in
+    term ~rule:true ~head:(rule_head body) body) u.checked_code.CheckedFlat.clauses;
   List.iter (fun { Ast.Structured.rules } ->
     List.iter (fun { Ast.Chr.to_match; to_remove; guard; new_goal; loc } ->
       let sequents = to_match @ to_remove @ Option.to_list new_goal in
@@ -3598,9 +3609,9 @@ let smart_map_cdata_in_block_constraint f ({ Ast.Structured.rules; _ } as orig) 
   else { orig with Ast.Structured.rules = rules' }
 
 let map_compilation_unit (f : CData.t -> CData.t) (u : checked_compilation_unit) : checked_compilation_unit =
-  let { checked_code = { CheckedFlat.clauses; chr; builtins; signature }; _ } = u in
+  let { checked_code = { CheckedFlat.clauses; chr; builtins; signature; as_written }; _ } = u in
   let clauses' = smart_map (smart_map_cdata_in_clause f) clauses in
   let chr' = smart_map (smart_map_cdata_in_block_constraint f) chr in
   if clauses == clauses' && chr == chr' then u
-  else { u with checked_code = { CheckedFlat.clauses = clauses'; chr = chr'; builtins; signature } }
+  else { u with checked_code = { CheckedFlat.clauses = clauses'; chr = chr'; builtins; signature; as_written } }
 

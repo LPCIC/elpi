@@ -1,0 +1,6 @@
+func f int -> int.
+f X Y :- Y is X + 1.
+pred p int, int.
+p X Y :- Y = {f X}, print {f {f Y}}.
+pred q int.
+q Z :- std.map [Z] (x\ y\ y = {f x}) _.

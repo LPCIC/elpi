@@ -104,6 +104,9 @@
 - LSP:
   - New: elpi-lsp accepts `builtin` declarations whose OCaml code is not
     loaded (stubs), e.g. the documentation of the builtins of rocq-elpi
+  - Fix: the semantic tokens and the hover of a rule with spilling
+    (`{f X}`) follow its text: the variables and conjunctions that spilling
+    makes covered the spilled calls
 
 # v4.0.1 (October 2026)
 
