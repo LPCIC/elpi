@@ -427,6 +427,12 @@ module Internal = struct
   let kVariable = kVariable
   let kOther = kOther
 
+  let k_lshift = k_lshift
+  let ka_lshift = ka_lshift
+  let k_mask = k_mask
+  let arity_mask = arity_mask
+  let int_of_cell n = n
+
   let k_of = k_of
   let arity_of = arity_of
   let data_of = data_of

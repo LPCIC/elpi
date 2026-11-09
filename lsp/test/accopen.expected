@@ -32,8 +32,8 @@ diagnostics of virtual/a.elpi (version 1): 1
   2:19-2:24 error: Typechecker: + is overloaded but none of its types matches:
   string -> int -> A
 Its types are:
-  float -> float -> float, 
-  int -> int -> int
+  int -> int -> int, 
+  float -> float -> float
     | main :- vb X, Y is X + 1, print Y.
     |                    ^^^^^
 

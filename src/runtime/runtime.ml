@@ -61,10 +61,13 @@ end = struct
   type t = Constants.t
   let dummy = Data.dummy
 
+(* the table before a program is installed: frozen constants start at
+   bottom, as for a program with no constants *)
 let table = Fork.new_local {
   c2s = Constants.Map.empty;
   c2t = Hashtbl.create 37;
-  frozen_constants = 0;
+  frozen_constants = Global_symbols.bottom - 1;
+  first_frozen = Global_symbols.bottom;
 }
 
 (* let () = at_exit (fun () -> let open Hashtbl in let s = stats !table.c2t in
@@ -89,11 +92,14 @@ let mkConst x =
     xx
   [@@inline]
   
+(* frozen constants grow up, after the program constants (see the schema next
+   to Compiler.SymbolMap); frozen-K is the K-th of its run *)
 let fresh_global_constant () =
-   !table.frozen_constants <- !table.frozen_constants - 1;
+   !table.frozen_constants <- !table.frozen_constants + 1;
    let n = !table.frozen_constants in
+   Global_symbols.check_no_overlap_prog_csts_w_glob_csts n;
    let xx = Const n in
-   !table.c2s <- Constants.Map.add n (Symbol.make (File (Loc.initial "(chr)")) (F.from_string @@ "frozen-" ^ string_of_int n)) !table.c2s ;
+   !table.c2s <- Constants.Map.add n (Symbol.make (File (Loc.initial "(chr)")) (F.from_string @@ "frozen-" ^ string_of_int (n - !table.first_frozen))) !table.c2s ;
    Hashtbl.add !table.c2t n xx;
    n, xx
 

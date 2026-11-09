@@ -62,6 +62,41 @@
     with no `MLCode`, `= "v"` outside an OCaml builtins declaration)
   - Change: ppx_elpi prints the constructors of `[@elpi.code name code]`
     with `symb` and binds them to their OCaml symbol
+  - New: global symbols (`Constants.declare_global_symbol`), data types
+    (`AlgebraicData.declare`, `OpaqueData.declare`), calc operations and
+    OCaml builtins declarations (`BuiltIn.declare`) can be declared after
+    `Setup.init`, e.g. by a plugin linked later: a program accumulates such
+    a declaration with `Compile.scope_builtins`, `Compile.unit` and `Compile.extend`.
+    State components and quotations must still be declared before
+    `Setup.init`
+  - New: `BuiltIn.MLCalc (Calc.operations [...])` declares calc operations in
+    an OCaml builtins declaration: the programs that accumulate it can
+    evaluate them
+  - Change: `Calc.register`, `Calc.new_calc_descriptor`,
+    `Setup.calc_descriptor`, `Setup.init ?calc` and the `?calc` argument of
+    `BuiltIn.document_fmt` / `document_file` are removed: use `MLCalc`.
+    `Calc.calc` includes the standard operations
+  - Change: `AlgebraicData.declare` also declares parametric types, e.g.
+    `let option a = declare { ty = TyApp ("option", a.ty, []); ... }`: the
+    instances have the same constructors (the same name and variant give the
+    same global symbol). `AlgebraicData.allocate_constructors`, `declare_allocated`,
+    `allocation`, `Param`, `ParamC` and `Decl` are removed, and
+    `base_declaration` is renamed `declaration`
+  - Change: the variant of a global symbol is a string, by convention the
+    name of the library followed by a dot and a name, e.g. `"std.1"` or
+    `"json.1"`, so that two libraries cannot collide; `""` is the default
+    variant: `Constants.declare_global_symbol ~variant:"json.1"`,
+    `[@elpi.variant "json.1"]` in ppx_elpi, and the new `?variant` of
+    `AlgebraicData.declare` and `OpaqueData.declare` (for all the constructors
+    or constants of the type). Constructors, opaque constants and calc
+    operations no longer get a fresh variant each: the same name with the
+    same variant is the same symbol, and two types for it are an error.
+    `Calc.operation_declaration` has a `variant` and one type (`args :
+    string list`): an operation on several types is a declaration per type.
+    The standard ones are `std.1` (`int`) and `std.2` (`float`)
+- Runtime:
+  - Change: frozen constants are printed `frozen-K`, K their index in the
+    run (they were `frozen--NNN`)
 - LSP:
   - New: elpi-lsp accepts `builtin` declarations whose OCaml code is not
     loaded (stubs), e.g. the documentation of the builtins of rocq-elpi
