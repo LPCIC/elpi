@@ -85,8 +85,8 @@ declarations:
   opaque data type (``std_in`` …) are in the ``constants`` of its conversion,
   like the constructors above, and a hand-written conversion whose
   ``pp_doc`` prints the ``symb`` of global symbols lists them there too. The
-  operators of ``calc`` are OCaml symbols of the builtins file that documents
-  ``calc``;
+  operations of an ``MLCalc`` (the ones of ``calc``, ``+`` …) are OCaml
+  symbols of the OCaml builtins declaration that contains it;
 * several OCaml symbols can share a name: each has its own *variant*, a
   string given on the OCaml side (``~variant:"v"``). A variant is the name of
   the library followed by a dot and a name, such as ``"std.1"`` or
@@ -150,6 +150,18 @@ of ``p`` in it. ``hyp`` is such a predicate in this other test:
 
 .. literalinclude:: ../../tests/sources/builtin_lookup.ml
    :language: ocaml
+
+OCaml code linked after ``Setup.init``, like a plugin loaded on demand, can
+declare global symbols, data types, calc operations and an OCaml builtins
+declaration using them. A program that already exists accumulates it with
+``Compile.scope_builtins``, ``Compile.unit`` and ``Compile.extend``, as in this
+test of Elpi:
+
+.. literalinclude:: ../../tests/sources/late_globals.ml
+   :language: ocaml
+
+State components and quotations are not supported this way: an instance does
+not see the ones declared after it was created.
 
 
 Extending: a quotation
