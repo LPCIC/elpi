@@ -23,6 +23,25 @@ pred type_g -> id, ann, deg, term.
 % specification for referred definition
 pred cast_g -> id, ann, deg, term, term.
 
+% Ages %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% the annotation R is the N-th one (see grundlagen_lyp_ages.elpi)
+pred ann+age ann -> int.
+
+% the referred declaration or definition X is the N-th one
+pred id+age id -> int.
+id+age X N :- cast_g X R _ _ _, !, ann+age R N.
+id+age X N :- type_g X R _ _, !, ann+age R N.
+
+% older X1 X2: referred declarations and definitions by their age; a local
+% reference (bound by pi) is younger than all of them, and two local
+% references are not compared (the left one is expanded)
+older X1 X2 :- id+age X1 N1, !, older-than N1 X2.
+
+pred older-than int, id.
+older-than N1 X2 :- id+age X2 N2, !, N1 < N2.
+older-than _ _.
+
 % Signature Validity %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 pred valid_g -> genv.

@@ -597,10 +597,6 @@ builtin func pattern_match A -> A = "core".|};
             if p (out x) (out y) then () else raise No_clause
           else
         type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")")
-     (* HACK: grundlagen.elpi uses the "age" of constants *)
-     | Const t1, Const t2 ->
-        let is_lt = if t1 < 0 && t2 < 0 then p t2 t1 else p t1 t2 in
-        if not is_lt then raise No_clause else ()
      | _ -> type_error ("Wrong arguments to " ^psym^ " (or to " ^pname^ ")"))),
   DocAbove))
 

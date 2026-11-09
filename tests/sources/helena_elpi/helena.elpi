@@ -109,6 +109,25 @@ symb gdec+1 label -> term -> (term -> term) -> term.
 symb gdec+2 term -> term -> term.
 pred g+line -> term, label, term.
 
+% AGES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% label+age C N = the label C is the N-th one (see grundlagen_ages.elpi)
+pred label+age label -> int.
+
+% ref+age R N = the global reference R is the N-th one
+pred ref+age term -> int.
+ref+age R N :- g+line R C _, !, label+age C N.
+
+% older R1 R2 = R1 is older than R2: global references by their age; a local
+% reference (bound by pi) is younger than all the global ones, and two local
+% references are not compared (the right one is expanded)
+pred older term, term.
+older R1 R2 :- ref+age R1 N1, !, older-than N1 R2.
+
+pred older-than int, term.
+older-than N1 R2 :- ref+age R2 N2, !, N1 < N2.
+older-than _ _.
+
 % rtm+0 T1 S1 M1 M2 S2 T2 :- before, print begin-rtm1 T1 S1 M1, fail.
 
 rtm+0 (appr V T) S M M (scons S V) T.
@@ -238,7 +257,7 @@ maybe+sn T1 S1 M1 T M M2 S2 T2 :- r+exp T2 M2 e+dx N U, !, age+check T1 S1 M1 T 
 maybe+sn T1 S1 M1 T M M2 S2 T2 :- conv+l T S1 M M2 S2 T2.
 
 % age-implied left expansion
-age+check T1 S1 M1 T M N U M2 S2 T2 :- T2 < T1, !, conv+l T S1 M M2 S2 T2.
+age+check T1 S1 M1 T M N U M2 S2 T2 :- older T2 T1, !, conv+l T S1 M M2 S2 T2.
 
 % age-implied right expansion
 age+check T1 S1 M1 T M N U M2 S2 T2 :- conv+r U S2 N M1 S1 T1.

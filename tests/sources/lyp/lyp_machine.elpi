@@ -237,7 +237,10 @@ conv_t T1 S1 S2 X2 :- def_l X2 T2, !, % print "d",
 
 pred conv_i i:id, o:term, o:stack, o:stack, o:term, i:id.
 
-conv_i X1 _ S1 S2 T2 X2 :- X1 < X2, !, conv_t X1 S1 S2 T2.
+% older X1 X2 = X1 is older than X2 (the rules are in lyp_global.elpi)
+pred older id, id.
+
+conv_i X1 _ S1 S2 T2 X2 :- older X1 X2, !, conv_t X1 S1 S2 T2.
 
 conv_i _ T1 S1 S2 _ X2 :- conv_t T1 S1 S2 X2.
 
