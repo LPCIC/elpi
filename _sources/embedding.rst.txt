@@ -227,7 +227,10 @@ Three kinds of OCaml types are supported:
 - **algebraic** types, such as ``type t = K | S``. An algebraic type has one
   of two roles: a *datum*, that is a syntax tree, possibly with binders, or the
   *context* of a datum. A datum with binders needs one or more context types
-  describing the information attached to its bound variables.
+  describing the information attached to its bound variables. A closed
+  polymorphic variant, such as ``type t = [ `K | `S of int ]``, is an
+  algebraic type whose constructors are its tags; a tag whose argument is a
+  tuple, such as ```R of int * int``, has one argument per component.
 
 The type must come with a pretty printer named after the usual convention
 (``pp`` if the type is called ``t``, ``pp_ty`` for a type called ``ty``).

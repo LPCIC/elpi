@@ -644,7 +644,10 @@ parameters are not supported;</p></li>
 <li><p><strong>algebraic</strong> types, such as <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">t</span> <span class="pre">=</span> <span class="pre">K</span> <span class="pre">|</span> <span class="pre">S</span></code>. An algebraic type has one
 of two roles: a <em>datum</em>, that is a syntax tree, possibly with binders, or the
 <em>context</em> of a datum. A datum with binders needs one or more context types
-describing the information attached to its bound variables.</p></li>
+describing the information attached to its bound variables. A closed
+polymorphic variant, such as <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">t</span> <span class="pre">=</span> <span class="pre">[</span> <span class="pre">`K</span> <span class="pre">|</span> <span class="pre">`S</span> <span class="pre">of</span> <span class="pre">int</span> <span class="pre">]</span></code>, is an
+algebraic type whose constructors are its tags; a tag whose argument is a
+tuple, such as <code class="docutils literal notranslate"><span class="pre">`R</span> <span class="pre">of</span> <span class="pre">int</span> <span class="pre">*</span> <span class="pre">int</span></code>, has one argument per component.</p></li>
 </ul>
 <p>The type must come with a pretty printer named after the usual convention
 (<code class="docutils literal notranslate"><span class="pre">pp</span></code> if the type is called <code class="docutils literal notranslate"><span class="pre">t</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ty</span></code> for a type called <code class="docutils literal notranslate"><span class="pre">ty</span></code>).
