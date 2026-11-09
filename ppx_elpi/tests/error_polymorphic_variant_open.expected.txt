@@ -1,0 +1,4 @@
+File "error_polymorphic_variant_open.ml", line 2, characters 9-28:
+2 | type t = [> `A | `B of int ]
+             ^^^^^^^^^^^^^^^^^^^
+Error: only a closed polymorphic variant is supported: [ `A | `B of t ]

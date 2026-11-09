@@ -1,0 +1,45 @@
+
+
+data shape.
+symb dot    : shape.  % Dot
+symb circle : int -> shape.  % Circle
+symb rect   : int -> int -> shape.  % Rect
+symb secret : bool -> shape.  % Hidden
+
+func shape.copy shape -> shape.
+shape.copy dot dot.
+shape.copy (circle A0) (circle B0) :- (int.copy A0 B0).
+shape.copy (rect A0 A1) (rect B0 B1) :- (int.copy A0 B0), (int.copy A1 B1).
+shape.copy (secret A0) (secret B0) :- (bool.copy A0 B0).
+
+
+
+data tagged A.
+symb plain : tagged A.  % Plain
+symb tag   : A -> tagged A.  % Tag
+
+func tagged.copy (func X0 -> Y0), tagged X0 -> tagged Y0.
+tagged.copy _ plain plain.
+tagged.copy F0 (tag A0) (tag B0) :- (F0 A0 B0).
+
+
+
+% [grow S T] T is S, twice as large
+builtin func grow shape -> shape.
+
+
+
+
+
+
+main :-
+  shape.copy (rect 1 2) X, X = rect 1 2,
+  grow dot dot,
+  grow (circle 3) (circle 6),
+  grow (rect 1 2) (rect 2 4),
+  grow (secret tt) (secret ff),
+  tagged.copy shape.copy (tag (circle 1)) Y, Y = tag (circle 1),
+  tagged.copy shape.copy plain Z, Z = plain.
+
+/* OUTPUT
+*/
