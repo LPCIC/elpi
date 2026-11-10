@@ -21,6 +21,11 @@
     order they were allocated in): they are a type error, as on any other
     term that is not an int, a float or a string
 - Language:
+  - Fix: a block of a namespace sees the symbols that the namespace
+    declares in its other blocks, also in the files that come before and in
+    the library, e.g. `p` in `namespace n { pred p. } namespace n { q :- p. }`
+    is `n.p` (#346). Before, only the ones of the block itself. Inside
+    `namespace std { }` the symbols of `std` have their short name
   - Fix: in a namespace, an anonymous block `{ ... }` and what follows it
     swapped the renaming of the predicates and the one of the types: a
     predicate of the namespace with rules but no signature, or a type of the

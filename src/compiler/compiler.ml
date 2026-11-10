@@ -1406,7 +1406,9 @@ module Flatten : sig
 
   (* a declaration that clashes with a previous one is dropped, and the error
      recorded *)
-  val run : errs:Errors.t -> State.t -> Scoped.program -> Flat.program
+  (* [base] is the signature of the program that the unit extends: a
+     namespace sees the symbols that it declares there too *)
+  val run : errs:Errors.t -> base:Assembled.signature -> State.t -> Scoped.program -> Flat.program
   val merge_kinds :
     errs:Errors.t ->
     Arity.t F.Map.t ->
@@ -1579,7 +1581,44 @@ module Flatten : sig
       
 
   (* the errors are only needed by the merge_* functions *)
-let compile_block ~errs =
+(* The symbols that the blocks of each namespace of a program declare, by full
+   name: a block of a namespace sees the ones of all the blocks of the
+   namespace, also of a nested one (namespace n { namespace m { .. } }) or a
+   dotted one (namespace n.m { .. }), and the ones of the program [base] that
+   the unit extends *)
+let namespace_symbols ~(base : Assembled.signature) pbody =
+  let preds = ref F.Set.empty and tys = ref F.Set.empty in
+  TypingEnv.iter_names (fun c _ -> preds := F.Set.add c !preds) base.Assembled.types;
+  F.Map.iter (fun c _ -> tys := F.Set.add c !tys) base.Assembled.kinds;
+  F.Map.iter (fun c _ -> tys := F.Set.add c !tys) base.Assembled.type_abbrevs;
+  let rec walk prefix (pb : Scoped.pbody) =
+    List.iter (function
+      | Scoped.Namespace (extra, pb) ->
+          let prefix = prefix @ [extra] in
+          preds := F.Set.union (prepend prefix pb.Scoped.pred_symbols) !preds;
+          tys := F.Set.union (prepend prefix pb.Scoped.ty_symbols) !tys;
+          walk prefix pb
+      | Scoped.Shorten (_, pb) | Scoped.Constraints (_, pb) | Scoped.Block pb -> walk prefix pb
+      | Scoped.Clauses _ -> ()) pb.Scoped.body in
+  walk [] pbody;
+  (* [members set prefix] are the names of [set] in namespace [prefix],
+     without the prefix *)
+  let members all =
+    let cache = Hashtbl.create 7 in
+    fun prefix ->
+      let p = String.concat namespace_separator prefix ^ namespace_separator in
+      match Hashtbl.find_opt cache p with
+      | Some s -> s
+      | None ->
+          let n = String.length p in
+          let s = F.Set.fold (fun c acc ->
+            let c = F.show c in
+            if String.length c > n && String.equal (String.sub c 0 n) p
+            then F.Set.add (F.from_string (String.sub c n (String.length c - n))) acc else acc) all F.Set.empty in
+          Hashtbl.add cache p s; s in
+  members !preds, members !tys
+
+let compile_block ~errs ~namespace_preds ~namespace_tys =
   let merge_kinds = merge_kinds ~errs in
   let rec compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst = function
     | [] -> kinds, types, type_abbrevs, clauses, chr
@@ -1593,8 +1632,9 @@ let compile_block ~errs =
         compile_block kinds types type_abbrevs clauses chr inpsubst intysubst body in
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   | Scoped.Namespace (extra, { kinds = k; types = t; type_abbrevs = ta; body; pred_symbols = ps; ty_symbols = ts }) :: rest ->
-      let new_pred_subst = push_subst extra ps pred_subst in
-      let new_ty_subst = push_subst extra ts ty_subst in
+      let prefix = pred_subst.old_prefix @ [extra] in
+      let new_pred_subst = push_subst extra (F.Set.union ps (namespace_preds prefix)) pred_subst in
+      let new_ty_subst = push_subst extra (F.Set.union ts (namespace_tys prefix)) ty_subst in
       let kinds = merge_kinds (apply_subst_kinds new_ty_subst k) kinds in
       (* Format.eprintf "@[<v>Types before:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) t; *)
       let types = merge_types TypingEnv.empty (apply_subst_types new_pred_subst new_ty_subst t) types in
@@ -1634,11 +1674,12 @@ let compile_block ~errs =
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   in compile_block
 
-  let compile_body ~errs { Scoped.kinds; types; type_abbrevs; ty_symbols = _; pred_symbols = _; body } =
-    compile_block ~errs kinds types type_abbrevs [] [] empty_subst empty_subst body
+  let compile_body ~errs ~base ({ Scoped.kinds; types; type_abbrevs; ty_symbols = _; pred_symbols = _; body } as pb) =
+    let namespace_preds, namespace_tys = namespace_symbols ~base pb in
+    compile_block ~errs ~namespace_preds ~namespace_tys kinds types type_abbrevs [] [] empty_subst empty_subst body
 
-  let run ~errs state { Scoped.pbody; toplevel_macros; macro_uses = _ } =
-    let kinds, types, type_abbrevs, clauses_rev, chr_rev = compile_body ~errs pbody in
+  let run ~errs ~base state { Scoped.pbody; toplevel_macros; macro_uses = _ } =
+    let kinds, types, type_abbrevs, clauses_rev, chr_rev = compile_body ~errs ~base pbody in
     let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros } in
     { Flat.clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; builtins = None; signature } (* TODO builtins can be in a unit *)
 
@@ -2657,9 +2698,9 @@ let scope ~errs ?(user_text=false) s ~toplevel_macros ~builtins p : scoped_progr
     })
 
 (* Compiler passes *)
-let unit_or_header_of_scoped ~errs s (p : scoped_program) : unchecked_compilation_unit =
+let unit_or_header_of_scoped ~errs ~(base : Assembled.program) s (p : scoped_program) : unchecked_compilation_unit =
   assert ("%%VERSION_NUM%%" = p.version);
-  let f = Flatten.run ~errs s p.code in
+  let f = Flatten.run ~errs ~base:base.Assembled.signature s p.code in
   {
     version = "%%VERSION_NUM%%";
     code = { f with builtins = p.builtins };
@@ -2739,7 +2780,7 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
   builtins |> List.fold_left (fun (state,base as header) builtins ->
     let scoped = scoped_of_builtins ~flags ~header builtins in
-    let u = without_errors (fun errs -> unit_or_header_of_scoped ~errs state scoped) in
+    let u = without_errors (fun errs -> unit_or_header_of_scoped ~errs ~base state scoped) in
     print_unit flags u;
     let u = without_errors (fun errs -> Check.check ~errs ~flags state ~base u) in
   (* with toplevel_macros = u.checked_code.signature.toplevel_macros } in *)
@@ -2753,7 +2794,7 @@ let empty_base ~header:b = b
 
 let unit_of_scoped ~flags ~header:(s, u) p : unchecked_compilation_unit * error list * warning list =
   with_errors ~flags (fun errs ->
-    let u = unit_or_header_of_scoped ~errs s p in
+    let u = unit_or_header_of_scoped ~errs ~base:u s p in
     print_unit flags u;
     u)
 
@@ -2770,7 +2811,7 @@ let append_unit_signature ~flags ~base:(s,p) unit : program * error list * warni
 let compile_unit ~flags ~header ~base:(st,base) scoped : checked_compilation_unit * error list * warning list =
   let (s, _) = header in
   with_errors ~flags (fun errs ->
-    let u = unit_or_header_of_scoped ~errs s scoped in
+    let u = unit_or_header_of_scoped ~errs ~base s scoped in
     print_unit flags u;
     Check.check ~errs ~flags st ~base u)
 
@@ -2785,7 +2826,7 @@ let program_of_ast ~flags ~header:(header : State.t * Assembled.program) p : pro
              error that says so is recorded *)
           Errors.protect errs ~default:acc (fun () ->
             let (st, base) = header in
-            let u = unit_or_header_of_scoped ~errs st p in
+            let u = unit_or_header_of_scoped ~errs ~base st p in
             print_unit flags u;
             let u = Check.check ~errs ~flags st ~base u in
             Assemble.extend ~errs flags st base u, StrSet.add p.digest seen))

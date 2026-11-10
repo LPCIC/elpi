@@ -26,6 +26,16 @@ let () = declare "namespace04"
   ~description:"an anonymous block in a namespace"
   ~expectation:Test.(SuccessOutput (Str.regexp_string "foo.a"))
   ()
+let () = declare "namespace05"
+  ~source_elpi:"namespaces05.elpi"
+  ~description:"the blocks of a namespace see each other's symbols"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "n.a\nok"))
+  ()
+let () = declare "namespace06"
+  ~source_elpi:"namespaces06.elpi"
+  ~description:"a namespace sees its symbols of the files before"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "ok"))
+  ()
 
 let () = declare "shorten"
   ~source_elpi:"shorten.elpi"
