@@ -256,7 +256,7 @@ let print_diagnostics file (version, ds) =
         (severity (member "severity" d |> to_int)) (anonymize (member "message" d |> to_string));
       let range = member "range" d in
       if not (Yojson.Safe.equal (member "start" range) (member "end" range)) then
-        print_endline (snippet ~underline:true ~text:(Hashtbl.find sent file) (uri file) range))
+        print_endline (snippet ~underline:true ~text:(match Hashtbl.find_opt sent file with Some t -> t | None -> read_file file) (uri file) range))
     ds
 
 let wait_diagnostics file = print_diagnostics file (wait_publish file)

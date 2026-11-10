@@ -150,18 +150,91 @@ let severity : Checker.severity -> DiagnosticSeverity.t = function
   | Warning -> Warning
   | Information -> Information
 
+(* the text of a file, to convert the location of a definition *)
+let text_of_file doc file =
+  if String.equal file doc.path then Some doc.text
+  else match open_document_text file with
+  | Some text -> Some (Text.make text)
+  | None -> try Some (Text.make (Elpi.API.Parse.std_reader file)) with Failure _ -> None
+
+(* the text and the URI of the file of a location (the [source_name] of a
+   location of [doc]'s program): the document (whose path can be a whole URI,
+   e.g. untitled:), a file of the library (it does not exist: its name is
+   relative, and a file of the user next to the document can have the same
+   name), or a file (relative to the document) *)
+let source_text doc uri source_name =
+  if String.equal source_name doc.path then Some (doc.text, uri)
+  else if Filename.is_relative source_name && Option.is_some (Checker.library_text doc.instance source_name) then
+    Option.map (fun (uri, text) -> Text.make text, uri) (builtin_library_location doc.instance source_name)
+  else
+    let file =
+      if Filename.is_relative source_name
+      then Filename.concat (Filename.dirname doc.path) source_name else source_name in
+    Option.map (fun t -> t, if String.equal file doc.path then uri else DocumentUri.of_path file)
+      (text_of_file doc file)
+
+let diagnostic text { Checker.start; stop; severity = s; message } =
+  Diagnostic.create ~range:(Text.range text start stop) ~severity:(severity s)
+    ~source:"elpi" ~message:(`String message) ()
+
+(* The warnings of the documents located in other files, accumulated ones
+   (Checker.elsewhere), are shown in those files: here by the URI of the file,
+   then by the URI of the document. A file gets the ones of all the documents
+   that accumulate it, unless it is open: then it is checked, and shows its
+   own diagnostics. *)
+let elsewhere : (DocumentUri.t, (DocumentUri.t, Diagnostic.t list) Hashtbl.t) Hashtbl.t = Hashtbl.create 7
+
+let is_open uri = Option.is_some (open_document_text (path_of_uri uri))
+
+let publish_elsewhere target =
+  if not (is_open target) then begin
+    let ds = match Hashtbl.find_opt elsewhere target with
+      | None -> []
+      | Some by -> Hashtbl.fold (fun _ ds acc -> acc @ ds) by [] in
+    let same d d' = Yojson.Safe.equal (Diagnostic.yojson_of_t d) (Diagnostic.yojson_of_t d') in
+    let ds = List.rev (List.fold_left (fun acc d -> if List.exists (same d) acc then acc else d :: acc) [] ds) in
+    send_notification (PublishDiagnostics (PublishDiagnosticsParams.create ~uri:target ~diagnostics:ds ()))
+  end
+
+(* the warnings [ds] that the document [uri] puts in other files, in place of
+   the ones it put before *)
+let set_elsewhere uri (ds : (DocumentUri.t * Diagnostic.t) list) =
+  let old = Hashtbl.fold (fun target by acc ->
+      if Hashtbl.mem by uri then (Hashtbl.remove by uri; target :: acc) else acc) elsewhere [] in
+  List.iter (fun (target, d) ->
+      let by = match Hashtbl.find_opt elsewhere target with
+        | Some by -> by
+        | None -> let by = Hashtbl.create 3 in Hashtbl.replace elsewhere target by; by in
+      Hashtbl.replace by uri (Option.value (Hashtbl.find_opt by uri) ~default:[] @ [ d ]))
+    ds;
+  let targets = List.fold_left (fun acc t -> if List.exists (DocumentUri.equal t) acc then acc else t :: acc)
+      [] (old @ List.map fst ds) in
+  List.iter publish_elsewhere (List.rev targets)
+
 let check uri doc =
   let t0 = Unix.gettimeofday () in
-  let { Checker.diagnostics; hover; accumulates } = Checker.check ~instance:doc.instance ~path:doc.path doc.text.Text.text in
+  let { Checker.diagnostics; elsewhere; hover; accumulates } =
+    Checker.check ~instance:doc.instance ~path:doc.path doc.text.Text.text in
+  (* a warning in another file goes there, unless the file is open (it has
+     its own), or cannot be read, or is in the library (it stays here) *)
+  let here, there = List.partition_map Fun.id (List.filter_map (fun { Checker.file; in_file; here } ->
+      (* the accumulated file, which the location names without /_build/CONTEXT *)
+      let file = Option.value ~default:file
+          (List.find_opt (fun p -> String.equal p file || String.equal (without_build p) file) accumulates) in
+      if Filename.is_relative file && Option.is_some (Checker.library_text doc.instance file) then Some (Either.Left here)
+      else if Option.is_some (open_document_text file) then None
+      else match source_text doc uri file with
+        | Some (text, target) -> Some (Either.Right (target, diagnostic text in_file))
+        | None -> Some (Either.Left here)) elsewhere) in
+  let diagnostics = diagnostics @ here in
   log "checked %s (version %d) in %.3fs: %d diagnostics" doc.path doc.version
     (Unix.gettimeofday () -. t0) (List.length diagnostics);
   doc.checked <- doc.version;
   doc.hover <- hover;
   doc.accumulates <- List.map normalize_path accumulates;
-  let diagnostics = List.map (fun { Checker.start; stop; severity = s; message } ->
-      Diagnostic.create ~range:(Text.range doc.text start stop) ~severity:(severity s)
-        ~source:"elpi" ~message:(`String message) ()) diagnostics in
-  send_notification (PublishDiagnostics (PublishDiagnosticsParams.create ~uri ~version:doc.version ~diagnostics ()))
+  let diagnostics = List.map (diagnostic doc.text) diagnostics in
+  send_notification (PublishDiagnostics (PublishDiagnosticsParams.create ~uri ~version:doc.version ~diagnostics ()));
+  set_elsewhere uri there
 
 (* the hover information of a document, checking it first if needed *)
 let hover_of uri =
@@ -221,29 +294,6 @@ let initialize (params : InitializeParams.t) =
       ~hoverProvider:(`Bool true) ~definitionProvider:(`Bool true) ~documentHighlightProvider:(`Bool true) ~semanticTokensProvider () in
   InitializeResult.create ~capabilities
     ~serverInfo:(InitializeResult.create_serverInfo ~name:"elpi-lsp" ~version:"0.1" ()) ()
-
-(* the text of a file, to convert the location of a definition *)
-let text_of_file doc file =
-  if String.equal file doc.path then Some doc.text
-  else match open_document_text file with
-  | Some text -> Some (Text.make text)
-  | None -> try Some (Text.make (Elpi.API.Parse.std_reader file)) with Failure _ -> None
-
-(* the text and the URI of the file of a location (the [source_name] of a
-   location of [doc]'s program): the document (whose path can be a whole URI,
-   e.g. untitled:), a file of the library (it does not exist: its name is
-   relative, and a file of the user next to the document can have the same
-   name), or a file (relative to the document) *)
-let source_text doc uri source_name =
-  if String.equal source_name doc.path then Some (doc.text, uri)
-  else if Filename.is_relative source_name && Option.is_some (Checker.library_text doc.instance source_name) then
-    Option.map (fun (uri, text) -> Text.make text, uri) (builtin_library_location doc.instance source_name)
-  else
-    let file =
-      if Filename.is_relative source_name
-      then Filename.concat (Filename.dirname doc.path) source_name else source_name in
-    Option.map (fun t -> t, if String.equal file doc.path then uri else DocumentUri.of_path file)
-      (text_of_file doc file)
 
 let hover ({ textDocument = { uri }; position; _ } : HoverParams.t) =
   match hover_of uri with
@@ -479,7 +529,9 @@ let handle_notification : Lsp.Client_notification.t -> unit = function
       recheck_others ~only:path uri;
       Hashtbl.remove documents uri;
       Hashtbl.remove dirty uri;
-      send_notification (PublishDiagnostics (PublishDiagnosticsParams.create ~uri ~diagnostics:[] ()))
+      send_notification (PublishDiagnostics (PublishDiagnosticsParams.create ~uri ~diagnostics:[] ()));
+      (* its warnings in other files go away *)
+      set_elsewhere uri []
   | Initialized -> ()
   | SetTrace { value } -> Checker.set_trace value
   | CancelRequest _ ->

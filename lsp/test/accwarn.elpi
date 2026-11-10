@@ -1,0 +1,3 @@
+accumulate "accwarn_lib".
+
+main :- p 1.

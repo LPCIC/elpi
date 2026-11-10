@@ -1,0 +1,3 @@
+% accumulated by accwarn.elpi: its warning is shown here
+pred p int.
+p X.
