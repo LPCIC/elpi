@@ -286,8 +286,9 @@ and pbody = {
 }
 and block =
   | Clauses of (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list (* TODO: use a map : predicate -> clause list to speed up insertion *)
-  | Namespace of string * pbody
-  | Shorten of F.t Ast.Structured.shorthand list * pbody
+  (* with their region, as in Ast.Structured *)
+  | Namespace of Loc.t * string * pbody
+  | Shorten of Loc.t * F.t Ast.Structured.shorthand list * pbody
   | Constraints of (F.t,ScopedTerm.t) Ast.Structured.block_constraint * pbody
   | Block of pbody
 [@@deriving show]
@@ -864,6 +865,10 @@ end = struct (* {{{ *)
   let run ~errs _ { file_name; digest; ast = dl } =
     let catch_error f x = Errors.catch_error errs f x in
     let report_error ?loc msg = Errors.report_error errs error ?loc msg in
+    (* from [start] to the closing brace that [rest] starts with, if any *)
+    let region (start : Loc.t) = function
+      | Program.End stop :: _ -> Loc.extend_to start stop
+      | _ -> { start with Loc.source_stop = max_int } in
     let rec aux_run ns blocks clauses macros kinds types tabbrs chr = function
       | Program.Ignored _ :: rest ->
           aux_run ns blocks clauses macros kinds types tabbrs chr rest
@@ -891,7 +896,7 @@ end = struct (* {{{ *)
           let p, chr1, rest = aux_run (n::ns) [] [] [] [] [] [] [] rest in
           if chr1 <> [] then
             report_error ~loc "CHR cannot be declared inside a namespace block"; (* the rules are dropped *)
-          aux_end_block loc ns (Namespace (n,p) :: cl2b clauses @ blocks)
+          aux_end_block loc ns (Namespace (region loc rest,n,p) :: cl2b clauses @ blocks)
             [] macros kinds types tabbrs chr rest
       | Program.Shorten (loc,[]) :: _ ->
           anomaly ~loc "parser returns empty list of shorten directives"
@@ -901,7 +906,7 @@ end = struct (* {{{ *)
           let p, chr1, rest = aux_run ns [] [] [] [] [] [] [] rest in
           if chr1 <> [] then
             report_error ~loc "CHR cannot be declared after a shorthand"; (* the rules are dropped *)
-          aux_run ns ((Shorten(shorthands,p) :: cl2b clauses @ blocks))
+          aux_run ns ((Shorten(region loc rest,shorthands,p) :: cl2b clauses @ blocks))
             [] macros kinds types tabbrs chr rest
 
       | Program.Accumulated (loc,l) :: rest ->
@@ -1405,7 +1410,7 @@ end = struct
             | Scoped.Clauses l :: rest -> Scoped.Clauses (compiled_cl @ l) :: rest
             | rest -> Scoped.Clauses compiled_cl :: rest in
           kinds, types, type_abbrevs, defs, ty_defs, compiled_rest
-      | Namespace (prefix, p) :: rest ->
+      | Namespace (region, prefix, p) :: rest ->
           let prefix = F.show prefix in
           let _, p = compile_program macros state p in
           let kinds, types, type_abbrevs, defs, ty_defs, compiled_rest =
@@ -1414,8 +1419,8 @@ end = struct
       (* Format.eprintf "CB: ty_sym %s: %a\n" prefix F.Set.pp ty_symbols; *)
           let pred_symbols = prepend [prefix] p.Scoped.pred_symbols in
           kinds, types, type_abbrevs, F.Set.union defs pred_symbols, F.Set.union ty_defs ty_symbols,
-          Scoped.Namespace(prefix, p) :: compiled_rest
-      | Shorten(shorthands,p) :: rest ->
+          Scoped.Namespace(region, prefix, p) :: compiled_rest
+      | Shorten(region,shorthands,p) :: rest ->
           let shorts = List.fold_left (fun s { Ast.Structured.short_name } ->
             F.Set.add short_name s) F.Set.empty shorthands in
           let _, p = compile_program macros state p in
@@ -1424,7 +1429,7 @@ end = struct
           kinds, types, type_abbrevs,
           F.Set.union defs (F.Set.diff p.Scoped.pred_symbols shorts), (* TODO shorten/ shorten-ty *)
           F.Set.union ty_defs (F.Set.diff p.Scoped.ty_symbols shorts),
-          Scoped.Shorten(shorthands, p) :: compiled_rest
+          Scoped.Shorten(region, shorthands, p) :: compiled_rest
       | Constraints ({loc;ctx_filter; clique; rules}, p) :: rest ->
           (* XXX missing check for nested constraints *)
           let rules = Errors.protect_list_map ~errs (compile_chr_rule state macros) rules in
@@ -1460,6 +1465,14 @@ module Flatten : sig
   (* [base] is the signature of the program that the unit extends: a
      namespace sees the symbols that it declares there too *)
   val run : errs:Errors.t -> base:Assembled.signature -> State.t -> Scoped.program -> Flat.program
+
+  (* the renaming in force in a block: short name -> full name *)
+  type subst = { old_prefix : string list; subst : F.t F.Map.t }
+  val empty_subst : subst
+  (* [push_subst ns symbols s]: entering namespace [ns], that declares [symbols] *)
+  val push_subst : string -> F.Set.t -> subst -> subst
+  val push_subst_shorthands : F.t Ast.Structured.shorthand list -> subst -> subst
+
   val merge_kinds :
     errs:Errors.t ->
     Arity.t F.Map.t ->
@@ -1636,7 +1649,7 @@ let compile_block ~errs ~namespace_preds ~namespace_tys =
   let merge_kinds = merge_kinds ~errs in
   let rec compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst = function
     | [] -> kinds, types, type_abbrevs, clauses, chr
-    | Scoped.Shorten(shorthands, { kinds = k; types = t; type_abbrevs = ta; body; pred_symbols = _; ty_symbols = _ }) :: rest ->
+    | Scoped.Shorten(_, shorthands, { kinds = k; types = t; type_abbrevs = ta; body; pred_symbols = _; ty_symbols = _ }) :: rest ->
       let inpsubst = push_subst_shorthands shorthands pred_subst in
       let intysubst = push_subst_shorthands shorthands ty_subst in
       let kinds = merge_kinds (apply_subst_kinds intysubst k) kinds in
@@ -1645,7 +1658,7 @@ let compile_block ~errs ~namespace_preds ~namespace_tys =
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr inpsubst intysubst body in
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
-  | Scoped.Namespace (extra, { kinds = k; types = t; type_abbrevs = ta; body; pred_symbols = ps; ty_symbols = ts }) :: rest ->
+  | Scoped.Namespace (_, extra, { kinds = k; types = t; type_abbrevs = ta; body; pred_symbols = ps; ty_symbols = ts }) :: rest ->
       let prefix = pred_subst.old_prefix @ [extra] in
       let new_pred_subst = push_subst extra (F.Set.union ps (namespace_preds prefix)) pred_subst in
       let new_ty_subst = push_subst extra (F.Set.union ts (namespace_tys prefix)) ty_subst in
@@ -3314,7 +3327,7 @@ let walk_type_expressions (sp : scoped_program) =
     F.Map.iter (fun c (_, loc) -> kinds := F.Map.add c loc !kinds) pb.Scoped.kinds;
     List.iter (fun (c, (t : ScopedTypeExpression.t)) -> abbrevs := F.Map.add c t.loc !abbrevs) pb.Scoped.type_abbrevs;
     List.iter (function
-      | Scoped.Namespace (_, pb) | Scoped.Shorten (_, pb) | Scoped.Constraints (_, pb) | Scoped.Block pb -> collect pb
+      | Scoped.Namespace (_, _, pb) | Scoped.Shorten (_, _, pb) | Scoped.Constraints (_, pb) | Scoped.Block pb -> collect pb
       | Scoped.Clauses _ -> ()) pb.Scoped.body in
   collect sp.code.Scoped.pbody;
   (* the location of a predicate type may start before its keyword (where
@@ -3345,7 +3358,7 @@ let walk_type_expressions (sp : scoped_program) =
     F.Map.iter (fun _ l -> List.iter (fun (t : ScopedTypeExpression.t) -> v f t.value) l) pb.Scoped.types;
     List.iter (fun (_, (t : ScopedTypeExpression.t)) -> v f t.value) pb.Scoped.type_abbrevs;
     List.iter (function
-      | Scoped.Namespace (_, pb) | Scoped.Shorten (_, pb) | Scoped.Constraints (_, pb) | Scoped.Block pb -> decls f pb
+      | Scoped.Namespace (_, _, pb) | Scoped.Shorten (_, _, pb) | Scoped.Constraints (_, pb) | Scoped.Block pb -> decls f pb
       | Scoped.Clauses _ -> ()) pb.Scoped.body in
   (fun f -> e f ?in_arrow:None), (fun f -> decls f sp.code.Scoped.pbody)
 
@@ -3616,6 +3629,92 @@ let hover ?base (sp : scoped_program) (u : checked_compilation_unit) =
               declaration = i.ideclaration; occurrences = (match symbol i with Some k -> occurrences k | None -> []) })
     !items
   |> IntervalTree.of_list
+
+(* ---- the symbols of a program, the scopes of a scoped program ---- *)
+
+type symbol_kind =
+  | Symbol_constant of cls * origin
+  | Symbol_type of int
+  | Symbol_type_abbreviation
+  | Symbol_macro
+
+type symbol = {
+  name : string;
+  skind : symbol_kind;
+  detail : string;
+  defined : Loc.t option;
+  doc : Loc.t option;
+}
+
+let symbols_starting_with ~prefix ((_, p) : program) =
+  let wanted name =
+    match prefix with
+    | [] -> true
+    | l -> List.exists (fun prefix -> String.starts_with ~prefix name) l in
+  let { Assembled.types; kinds; type_abbrevs; toplevel_macros; _ } = p.Assembled.signature in
+  let acc = ref [] in
+  let add name skind detail defined doc = acc := { name; skind; detail; defined; doc } :: !acc in
+  let rec cls_of = function
+    | TypeAssignment.Prop Ast.Structured.Relation -> Predicate
+    | TypeAssignment.Prop Ast.Structured.Function -> Function
+    | TypeAssignment.Arr (_, _, _, r) -> cls_of r
+    | _ -> Data in
+  let rec cls_of_skema = function TypeAssignment.Lam (_, t) -> cls_of_skema t | TypeAssignment.Ty t -> cls_of t in
+  let skema sk = Format.asprintf "%a" TypeAssignment.pretty_skema sk in
+  TypingEnv.iter_names (fun name symbols ->
+    let n = F.show name in
+    if wanted n then
+      let symbols = match symbols with TypeAssignment.Single s -> [ s ] | TypeAssignment.Overloaded l -> l in
+      List.iter (fun s ->
+        Option.iter (fun { TypingEnv.ty; doc } ->
+          let origin, defined =
+            match Symbol.get_provenance s with
+            | File loc -> User, Some loc
+            | Builtin _ -> Builtin, None
+            | Core -> Core, None in
+          add n (Symbol_constant (cls_of_skema ty, origin)) (skema ty) defined doc)
+          (TypingEnv.resolve_symbol_opt s types))
+        symbols) types;
+  let kind n = String.concat " -> " (List.init (n + 1) (fun _ -> "type")) in
+  F.Map.iter (fun name (arity, loc) ->
+    let n = F.show name in
+    if wanted n then add n (Symbol_type arity) (kind arity) (Some loc) None) kinds;
+  F.Map.iter (fun name { TypeAssignment.skema = sk; loc } ->
+    let n = F.show name in
+    if wanted n then add n Symbol_type_abbreviation (skema sk) (Some loc) None) type_abbrevs;
+  F.Map.iter (fun name (_, loc) ->
+    let n = F.show name in
+    if wanted n then add n Symbol_macro "" (Some loc) None) toplevel_macros;
+  List.sort (fun a b -> String.compare a.name b.name) !acc
+
+type scopes = (string * string) list IntervalTree.t
+
+(* The renaming that Flatten applies, attached to the region where it is in
+   force: a region that changes it (a namespace, a shorten) gets the whole
+   renaming, so the innermost region is enough. The renaming of the
+   predicates and the one of the types are merged. *)
+let scopes (sp : scoped_program) : scopes =
+  let regions = ref [] in
+  let pairs { Flatten.subst } = F.Map.fold (fun k v acc -> (F.show k, F.show v) :: acc) subst [] in
+  let rec walk subst (pb : Scoped.pbody) = List.iter (block subst) pb.Scoped.body
+  and block subst = function
+    | Scoped.Namespace (region, ns, pb) ->
+        let subst = Flatten.push_subst ns (F.Set.union pb.Scoped.pred_symbols pb.Scoped.ty_symbols) subst in
+        regions := (region, pairs subst) :: !regions;
+        walk subst pb
+    | Scoped.Shorten (region, shorthands, pb) ->
+        let subst = Flatten.push_subst_shorthands shorthands subst in
+        regions := (region, pairs subst) :: !regions;
+        walk subst pb
+    | Scoped.Constraints (_, pb) | Scoped.Block pb -> walk subst pb
+    | Scoped.Clauses _ -> () in
+  walk Flatten.empty_subst sp.code.Scoped.pbody;
+  IntervalTree.of_list !regions
+
+let scope_at (t : scopes) loc =
+  match IntervalTree.find loc t with
+  | (_, s) :: _ -> s
+  | [] -> []
 
 (* ---- map_compilation_unit: apply a CData.t -> CData.t mapping ---- *)
 

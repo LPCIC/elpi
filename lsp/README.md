@@ -26,7 +26,9 @@
    name (the comment block on the line before its declaration, or else the
    `%` comment after the full stop of the declaration, on its line); F12 (Go to
    Definition) jumps to the declaration of a predicate, and Ctrl+hover
-   previews it with its rules (when they follow it, up to 8 lines).
+   previews it with its rules (when they follow it, up to 8 lines); names
+   are completed as you type (after `std.`, the symbols of `std`; in a
+   namespace or after `shorten`, the short names too).
 
 ## Command line
 

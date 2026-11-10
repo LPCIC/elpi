@@ -258,6 +258,23 @@ module LSP = struct
   let pp_info = Compiler.pp_info
   let hover = Compiler.hover
 
+  type symbol_kind = Compiler.symbol_kind =
+    | Symbol_constant of sort * origin
+    | Symbol_type of int
+    | Symbol_type_abbreviation
+    | Symbol_macro
+  type symbol = Compiler.symbol = {
+    name : string;
+    skind : symbol_kind;
+    detail : string;
+    defined : Ast.Loc.t option;
+    doc : Ast.Loc.t option;
+  }
+  let symbols_starting_with = Compiler.symbols_starting_with
+  type scopes = Compiler.scopes
+  let scopes = Compiler.scopes
+  let scope_at = Compiler.scope_at
+
   let accumulated (p : Ast.program) =
     let open Elpi_parser.Ast in
     let rec files (o : Program.decl list parser_output) =

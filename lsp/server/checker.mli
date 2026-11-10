@@ -80,6 +80,9 @@ type diagnostic = {
     below; computed when needed *)
 type hover
 
+(** what completion needs of a checked document *)
+type completion
+
 (** a warning located in another file than the document (an accumulated
     one): [in_file] is in [file] (the source name of its location), [here] is
     the same warning in the document (on the accumulate directive that brings
@@ -94,6 +97,7 @@ type result = {
   diagnostics : diagnostic list; (** without the [elsewhere] ones *)
   elsewhere : elsewhere list;
   hover : hover option; (** unless the parser failed (the text can have errors) *)
+  completion : completion option; (** idem *)
   accumulates : string list; (** the files it accumulates, directly or not *)
 }
 
@@ -152,3 +156,23 @@ val token_modifiers : string list
     one, the length, the type and the modifiers. Tokens that overlap or span
     lines are dropped. *)
 val semantic_tokens : path:string -> Text.t -> hover -> int array
+
+(** {2 Completion} *)
+
+type completion_kind =
+  | Namespace                  (** the next segment of longer names *)
+  | Symbol of LSP.symbol_kind
+
+type completion_item = {
+  label : string;              (** what follows the last dot of the name at the cursor *)
+  item_kind : completion_kind;
+  detail : string option;      (** the type of the symbol *)
+  doc : Ast.Loc.t option;      (** the comment block before its declaration *)
+  start : int;                 (** the byte offset where the label goes, up to the cursor *)
+}
+
+(** the completions of the name before the cursor (possibly qualified, e.g.
+    std.ma): the symbols of the program by their full name, and by the short
+    names valid at the cursor (in a namespace, after a shorten directive);
+    nothing for a variable *)
+val completions_at : path:string -> text:Text.t -> int -> completion -> completion_item list

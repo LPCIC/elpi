@@ -433,6 +433,38 @@ module LSP : sig
       declared there. *)
   val hover : ?base:Compile.program -> Compile.scoped_program -> Compile.compilation_unit -> info IntervalTree.t
 
+  (** a symbol of a program, for completion *)
+  type symbol_kind =
+    | Symbol_constant of sort * origin  (* a pred, a func, a symb *)
+    | Symbol_type of int                (* a type constructor, with its number of arguments *)
+    | Symbol_type_abbreviation
+    | Symbol_macro                      (* its name starts with @ *)
+
+  type symbol = {
+    name : string;                (* the full name, e.g. "std.map" *)
+    skind : symbol_kind;
+    detail : string;              (* its type, or its kind (empty for a macro) *)
+    defined : Ast.Loc.t option;   (* the declaration location (none for an OCaml builtin) *)
+    doc : Ast.Loc.t option;       (* of a constant: the comment block on the line before its declaration *)
+  }
+
+  (** [symbols_starting_with ~prefix p] is the list of the symbols of [p]
+      whose full name starts with one of the strings of [prefix] (all of them
+      if [prefix] is empty), sorted by name. An overloaded name gives a symbol
+      per declaration. *)
+  val symbols_starting_with : prefix:string list -> Compile.program -> symbol list
+
+  (** The short names in force in the regions of a scoped program: inside a
+      namespace, the names that it declares; after a shorten directive, until
+      the end of its block, the short names it introduces. *)
+  type scopes
+  val scopes : Compile.scoped_program -> scopes
+
+  (** [scope_at s loc] is the list of the short names valid at [loc], each
+      with the full name it stands for (empty outside any namespace or
+      shorten) *)
+  val scope_at : scopes -> Ast.Loc.t -> (string * string) list
+
   (** [accumulated p] is the list of the accumulate directives of [p] (not of
       the files it accumulates): the location of each one, and the files that
       it accumulates, directly or not, by the names that the locations of their
