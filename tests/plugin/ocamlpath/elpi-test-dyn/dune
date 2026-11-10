@@ -1,0 +1,30 @@
+; the findlib package elpi-test-dyn (not installed): its plugins, its files,
+; its elpi.toml and its META (no requires: elpi is linked in the executable)
+(rule (copy ../../elpi_test_dyn.cmxs elpi_test_dyn.cmxs))
+(rule (copy ../../elpi_test_dyn.cma elpi_test_dyn.cma))
+(rule (copy ../../elpi_test_dyn_state.cmxs elpi_test_dyn_state.cmxs))
+(rule (copy ../../elpi_test_dyn_state.cma elpi_test_dyn_state.cma))
+(rule (copy ../../elpi_test_dyn_quote.cmxs elpi_test_dyn_quote.cmxs))
+(rule (copy ../../elpi_test_dyn_quote.cma elpi_test_dyn_quote.cma))
+(rule
+  (with-stdout-to META
+    (progn
+      (echo "description = \"elpi test plugins\"\n")
+      (echo "plugin(byte) = \"elpi_test_dyn.cma\"\n")
+      (echo "plugin(native) = \"elpi_test_dyn.cmxs\"\n")
+      (echo "package \"state\" (\n")
+      (echo "  plugin(byte) = \"elpi_test_dyn_state.cma\"\n")
+      (echo "  plugin(native) = \"elpi_test_dyn_state.cmxs\"\n")
+      (echo ")\n")
+      (echo "package \"quote\" (\n")
+      (echo "  plugin(byte) = \"elpi_test_dyn_quote.cma\"\n")
+      (echo "  plugin(native) = \"elpi_test_dyn_quote.cmxs\"\n")
+      (echo ")\n")
+      (echo "package \"broken\" (\n")
+      (echo "  plugin(byte) = \"missing.cma\"\n")
+      (echo "  plugin(native) = \"missing.cmxs\"\n")
+      (echo ")\n"))))
+; the stub of the plugin, its documentation, as elpi-json generates its own
+(rule
+  (with-stdout-to elpi-test-dyn.builtins.elpi
+    (run ../../gen_stub.exe elpi-test-dyn)))

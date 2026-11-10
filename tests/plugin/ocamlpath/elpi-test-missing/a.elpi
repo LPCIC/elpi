@@ -1,0 +1,2 @@
+% accumulates a file that was not installed
+accumulate "+/notinstalled".

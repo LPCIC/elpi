@@ -1,0 +1,2 @@
+# a package whose a.elpi accumulates a file that is not installed
+name = "elpi-test-missing"

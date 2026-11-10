@@ -1,0 +1,7 @@
+# the project of the findlib package elpi-test-dyn, next to its META: a
+# project that uses it gets its paths, prelude and preload
+name = "elpi-test-dyn"
+prelude = ["+/macros"]
+preload = ["elpi-test-dyn.state"]
+[paths]
+"dyn.lib" = "+/lib"   # dyn.lib/x is lib/x in the directory of the package

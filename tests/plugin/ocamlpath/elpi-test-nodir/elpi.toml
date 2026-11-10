@@ -1,0 +1,5 @@
+# the directory of [dev-only-paths] is not installed: a project that uses
+# this package does not see it
+name = "elpi-test-nodir"
+[dev-only-paths]
+"nodir" = "+/missing"

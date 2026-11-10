@@ -1,0 +1,3 @@
+% a file of the package elpi-test-dyn, found through its [paths]: "dyn.lib/double"
+func dyn.double int -> int.
+dyn.double X Y :- Y is X * 2.

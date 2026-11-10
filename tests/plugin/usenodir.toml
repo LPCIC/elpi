@@ -1,0 +1,3 @@
+# a project that uses a package whose [dev-only-paths] are not installed
+name = "usenodir"
+use = ["+elpi-test-nodir"]

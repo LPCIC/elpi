@@ -1,0 +1,3 @@
+description = "a badly installed package, for elpi -check-package"
+plugin(byte) = "elpi_test_missing.cma"
+plugin(native) = "elpi_test_missing.cmxs"
