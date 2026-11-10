@@ -173,7 +173,12 @@ let rec spill ~type_abbrevs ~types ?(extra = 0) args ({ loc; ty; it } as t) : sp
   (* Format.eprintf "@[<hov 2>spill %a :@ %a@]\n" pretty t TypeAssignment.pretty (TypeAssignment.deref ty); *)
   match it with
   | CData _ | Discard _ -> ([], [ t ])
-  | Cast (t, _) -> spill ~types ~type_abbrevs args t
+  | Cast (c, e) ->
+      (* the cast is kept, e.g. to any for the determinacy checker; a spill
+         that becomes several arguments is left without it *)
+      (match spill ~types ~type_abbrevs args c with
+       | spills, [ c' ] -> spills, [ { t with it = Cast (c', e) } ]
+       | r -> r)
   | Spill (t, { contents = NoInfo }) -> assert false (* no type checking *)
   | Spill (t, { contents = Phantom _ }) -> assert false (* escapes type checker *)
   | Spill (t, { contents = Main n }) ->
