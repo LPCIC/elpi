@@ -442,7 +442,7 @@ let mk_tmp_file =
   let dir = Filename.get_temp_dir_name () in
   fun x y ->
     incr tmp;
-    dir ^ Filename.dir_sep ^ x ^ "__" ^ string_of_int !tmp ^ "__" ^ y
+    dir ^ filename_dirsep ^ x ^ "__" ^ string_of_int !tmp ^ "__" ^ y
     
 let () =
   let sample = mk_tmp_file "trace.json" ".new" in

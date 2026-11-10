@@ -734,17 +734,6 @@ let declare { data_compare; data_pp; data_hash; data_name; data_hconsed } =
   let map { cout; _ } { cin; _ } f x = cin (f (cout x))
 end
 
-let make_absolute cwd filename =
-  if not (Filename.is_relative filename) then filename
-  else Filename.concat cwd filename
-
-let rec readsymlinks f =
-  try
-    let link = Unix.readlink f in
-    if not(Filename.is_relative link) then readsymlinks link
-    else readsymlinks Filename.(concat (dirname f) link)
-  with Unix.Unix_error _ | Failure _ -> f
-  
 exception File_not_found of string
 
 let normalize_path path =
@@ -762,13 +751,50 @@ let normalize_path path =
       | _ -> p :: acc) [] (String.split_on_char '/' path) in
   (if root then "/" else "") ^ String.concat "/" (List.rev parts)
 
+(* also on Windows, that accepts it: names joined with Filename.concat mix
+   / and \ there, and end up so in messages and in the outputs of the tests *)
+let filename_dirsep = "/"
+let filename_concat dir file = normalize_path (Filename.concat dir file)
+
+let make_absolute cwd filename =
+  if not (Filename.is_relative filename) then filename
+  else filename_concat cwd filename
+
+let rec readsymlinks f =
+  try
+    let link = Unix.readlink f in
+    if not(Filename.is_relative link) then readsymlinks link
+    else readsymlinks (filename_concat (Filename.dirname f) link)
+  with Unix.Unix_error _ | Failure _ -> f
+
 let std_reader f =
   try
     let ic = open_in_bin f in
     Fun.protect ~finally:(fun () -> close_in ic) (fun () -> really_input_string ic (in_channel_length ic))
   with Sys_error msg -> raise (Failure msg)
 
-let std_resolver ?(cwd=Sys.getcwd()) ~paths () =
+(* the files that [unit], prefix/rest, names in the directories of its prefix:
+   dir/rest, in the order of [prefixes] *)
+let prefixed_units prefixes unit =
+  prefixes |> List.filter_map (fun (prefix, dir) ->
+    let p = prefix ^ "/" in
+    let n = String.length p in
+    if not (String.equal prefix "") && String.length unit > n && String.equal (String.sub unit 0 n) p
+    then Some (filename_concat dir (String.sub unit n (String.length unit - n)))
+    else None)
+
+let rec std_resolver ?(cwd=Sys.getcwd()) ?(prefixes=[]) ~paths () =
+  match prefixes with
+  | _ :: _ ->
+      (* a unit prefix/rest: in the directories of the prefix first *)
+      let prefixes = List.map (fun (p, d) -> p, make_absolute cwd (readsymlinks d)) prefixes in
+      let resolve = std_resolver ~cwd ~paths () in
+      fun ?cwd ~unit () ->
+        let rec first = function
+          | [] -> resolve ?cwd ~unit ()
+          | u :: us -> (try resolve ?cwd ~unit:u () with Failure _ -> first us) in
+        first (prefixed_units prefixes unit)
+  | [] ->
   let dirs = List.map (fun f -> make_absolute cwd (readsymlinks f)) paths in
 fun ?(cwd=Sys.getcwd()) ~unit:(origfilename as filename) () ->
   let rec iter_tjpath dirnames =
@@ -777,7 +803,7 @@ fun ?(cwd=Sys.getcwd()) ~unit:(origfilename as filename) () ->
      else
       match dirnames with
          [] -> raise (File_not_found filename)
-       | dirname::dirnames->Filename.concat dirname filename,dirnames,true in
+       | dirname::dirnames->filename_concat dirname filename,dirnames,true in
     let prefixname = Filename.remove_extension filename in
      let change_suffix filename =
       if Filename.check_suffix filename ".elpi" then

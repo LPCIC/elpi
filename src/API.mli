@@ -146,6 +146,24 @@ module Setup : sig
   (* Built-in predicates, see {!module:BuiltIn} *)
   type builtins
 
+  (* The packages of the host, for [accumulate "+pkg/path"] (a file in the
+     directory of package [pkg]), [accumulate "+/path"] (a file in the root
+     of the project of the accumulating file) and [accumulate "+pkg"] (the
+     plugin of package [pkg], see {!module:Plugin}). [dir ~pkg] is the
+     directory of [pkg]; [load ~pkg], if given, loads the OCaml code of [pkg]
+     (e.g. by dynlinking it), which registers its plugin; [root_of_dir ~dir]
+     is the root of the project that contains the directory [dir]. They raise
+     an error with {!val:Error.error}, which is reported as an error of the
+     accumulate (with the location of the error, if any, in its message).
+     Without [load], the stub [pkg.builtins.elpi]
+     in [dir ~pkg] (the documentation of the plugin) stands for a plugin that
+     is not registered. *)
+  type packages = {
+    dir : pkg:string -> string;
+    load : (pkg:string -> unit) option;
+    root_of_dir : dir:string -> string;
+  }
+
   (* Compilation flags, see {!module:Compile} *)
   type flags
   
@@ -178,6 +196,10 @@ module Setup : sig
         call {!val:Parse.std_reader} for the others. The resolver must accept
         the names it answers for, even if there is no such file on the disk.
 
+      @param packages gives the packages of the host ([accumulate "+pkg"] and
+        [accumulate "+pkg/path"]); without it they are an error, but a
+        plugin already registered can still be accumulated.
+
       @return a handle [elpi] to an elpi instance equipped with the given
         [builtins] and where accumulate resolves files with the given
         [file_resolver]. *)
@@ -190,6 +212,7 @@ module Setup : sig
     builtins:builtins list ->
     ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
     ?file_reader:(string -> string) ->
+    ?packages:packages ->
     unit ->
     elpi
 
@@ -236,6 +259,28 @@ module Error : sig
   type warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
 
   type warning = { warning_id : warning_id; warning : t }
+
+  (** The name of a kind of warnings, in kebab-case (e.g. [linear-variable]),
+      and back *)
+  val warning_name : warning_id -> string
+  val warning_of_name : string -> warning_id option
+
+  (** all the kinds of warnings *)
+  val all_warnings : warning_id list
+
+  (** What to do with a kind of warnings: nothing, show it (the default), or
+      make it an error *)
+  type warning_level = Off | On | As_error
+
+  (** [warning_spec s] are the levels given by a spec of one kind of
+      warnings: [+name] turns it on, [-name] off, [@name] makes it an error;
+      [all] names all the kinds (e.g. [-linear-variable], [@all]). Raises an
+      {!ElpiError} *)
+  val warning_spec : string -> (warning_id * warning_level) list
+
+  (** [warning_level levels id], the level of [id]: the last one given in
+      [levels], [On] if none *)
+  val warning_level : (warning_id * warning_level) list -> warning_id -> warning_level
 
 end
 
@@ -364,10 +409,16 @@ module Parse : sig
 
   (** [std_resolver cwd paths ()] returns a resolver function that looks in cwd
       and paths (relative to cwd, or absolute), and raises [Failure] if the
-      file is in none of them *)
+      file is in none of them. With [prefixes], [(prefix, dir)] pairs, a unit
+      [prefix/rest] is looked up as [dir/rest] first (in the order of
+      [prefixes], several directories can share a prefix), as Rocq's [-Q] *)
   val std_resolver :
-    ?cwd:string -> paths:string list -> unit ->
+    ?cwd:string -> ?prefixes:(string * string) list -> paths:string list -> unit ->
       (?cwd:string -> unit:string -> unit -> string)
+
+  (** [prefixed_units prefixes unit]: [dir/rest] for each [(prefix, dir)]
+      such that [unit] is [prefix/rest], in order *)
+  val prefixed_units : (string * string) list -> string -> string list
 
   (** [std_reader f] is the text of the file [f] on the disk, and raises
       [Failure] if it cannot be read: the default [file_reader] of
@@ -1077,6 +1128,28 @@ module BuiltIn : sig
 
 end
 
+(** A plugin is the OCaml code of a package [pkg] (for elpi.dynload, the
+    findlib package [pkg]): the builtins it registers with [register
+    ~name:pkg], which a program
+    accumulates with [accumulate "+pkg"]. A plugin can be registered at any
+    time: linked statically, or loaded on demand by [Setup.packages.load] when
+    the accumulate is met. A plugin loaded after [Setup.init] cannot declare
+    state components nor quotations (an instance does not see them): such a
+    plugin must be loaded before [Setup.init]. *)
+module Plugin : sig
+  val register : name:string -> BuiltIn.declaration list -> Setup.builtins
+  val is_registered : string -> bool
+
+  (** the builtins of a registered plugin, e.g. to give them to [Setup.init];
+      raises an {!Error.ElpiError} if it is not registered *)
+  val builtins : string -> Setup.builtins
+
+  (* [ensure_registered ~load name]: if the plugin [name] is not registered,
+     [load ~pkg:name] (e.g. dynlinks its package), which must register it;
+     raises an {!Error.ElpiError} *)
+  val ensure_registered : load:(pkg:string -> unit) -> string -> unit
+end
+
 (* ************************************************************************* *)
 (* ********************* Advanced Extension API **************************** *)
 (* ************************************************************************* *)
@@ -1535,6 +1608,25 @@ module Utils : sig
       [Filename.concat] and one from a URI). Unlike [Unix.realpath], the file
       does not need to exist and symbolic links are not resolved. *)
   val normalize_path : string -> string
+
+  (** The separator of the names of files: [/], also on Windows, which
+      accepts it; use it instead of [Filename.dir_sep] (["\\"] on Windows), so
+      that a name has one separator in messages *)
+  val filename_dirsep : string
+
+  (** [filename_concat dir file] is [normalize_path (Filename.concat dir file)]:
+      [dir] and [file] joined with {!filename_dirsep}, also on Windows *)
+  val filename_concat : string -> string -> string
+
+  (** [string_literal s] is the Elpi string literal of [s], e.g. to write
+      an accumulate directive in a generated text: only the backslash and
+      the double quote are escaped, the other bytes (UTF-8 included) are kept
+      as they are (OCaml's %S escapes them in a way Elpi does not read) *)
+  val string_literal : string -> string
+
+  (** [accumulate_text l] is the text of a program that accumulates the
+      strings [l] in order (e.g. a prelude, then a file) *)
+  val accumulate_text : string list -> string
 
   (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
    * OCaml list! *)

@@ -150,7 +150,7 @@ let () = declare "dt_var"
   ()
 
 let () = 
-  let sample = Filename.get_temp_dir_name () ^ Filename.dir_sep ^ "dt_max_depths.log" in
+  let sample = Filename.get_temp_dir_name () ^ filename_dirsep ^ "dt_max_depths.log" in
   declare "dt_max_depths"
   ~source_elpi:"dt_max_depths.elpi"
   ~description:"discrimination_tree max_depth"
@@ -159,7 +159,7 @@ let () =
   ()
 
 let () = 
-  let sample = Filename.get_temp_dir_name () ^ Filename.dir_sep ^ "dt_empty_list.log" in
+  let sample = Filename.get_temp_dir_name () ^ filename_dirsep ^ "dt_empty_list.log" in
   declare "dt_empty_list"
   ~source_elpi:"dt_empty_list.elpi"
   ~description:"discrimination_tree empty_list"

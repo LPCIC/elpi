@@ -343,14 +343,26 @@ module CData : sig
 end
 
 (* file access *)
-(* raises Failure if the file is not found *)
+(* raises Failure if the file is not found; with [prefixes], a unit
+   prefix/rest is looked up as dir/rest in the directories of prefix first *)
 val std_resolver :
-  ?cwd:string -> paths:string list -> unit ->
+  ?cwd:string -> ?prefixes:(string * string) list -> paths:string list -> unit ->
      (?cwd:string -> unit:string -> unit -> string)
+
+(* [prefixed_units prefixes unit]: dir/rest for each (prefix, dir) of
+   [prefixes] such that [unit] is prefix/rest, in order *)
+val prefixed_units : (string * string) list -> string -> string list
 
 (* [path] without the components . and .., and on Windows with / as the
    separator and a lowercase drive; the file does not need to exist *)
 val normalize_path : string -> string
+
+(* the separator of the names of files, / also on Windows *)
+val filename_dirsep : string
+
+(* [filename_concat dir file] is [normalize_path (Filename.concat dir file)]:
+   joined with filename_dirsep *)
+val filename_concat : string -> string -> string
 
 (* the text of a file on the disk; raises Failure if it cannot be read *)
 val std_reader : string -> string

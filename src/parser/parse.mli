@@ -45,6 +45,31 @@ module type Config = sig
   val resolver : ?cwd:string -> unit:string -> unit -> string
   (* the text of a file; raises Failure if it cannot be read *)
   val reader : string -> string
+  (* [accumulate "+pkg/path"]: the directory of package [pkg]; raises an
+     ElpiError (e.g. when packages are disabled) *)
+  val package_dir : pkg:string -> string
+  (* [accumulate "+pkg"]: the text of the builtins of the plugin [pkg], once
+     loaded; None if it cannot be loaded here, then its stub
+     [pkg.builtins.elpi] in [package_dir ~pkg] is read instead; raises an
+     ElpiError *)
+  val plugin : pkg:string -> string option
+  (* [accumulate "+/path"]: the root of the project that contains a
+     directory; raises an ElpiError *)
+  val root_of_dir : dir:string -> string
 end
+
+(* the reference of an accumulate directive: a path, a file in the directory
+   of a package ("+pkg/path"), a file in the root of the project of the
+   accumulating file ("+/path"), or the plugin of a package ("+pkg") *)
+type reference =
+  | Path of string
+  | Package_file of string * string
+  | Current_package_file of string
+  | Plugin of string
+val reference_of_string : string -> reference
+
+(* the file name of the unit of the plugin of [pkg]: "+pkg" *)
+val plugin_file_name : string -> string
+val is_plugin_file_name : string -> bool
 
 module Make(C : Config) : Parser_w_Internals
