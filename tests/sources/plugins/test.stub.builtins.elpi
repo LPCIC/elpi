@@ -1,0 +1,3 @@
+% the stub of the plugin test.stub: its documentation, with no code
+% [stub.f N M] doubles N
+builtin func stub.f int -> int.

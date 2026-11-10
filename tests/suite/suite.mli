@@ -1,4 +1,8 @@
 
+(** /, also on Windows, as Elpi.API.Utils.filename_dirsep: the suite does not
+    link elpi *)
+val filename_dirsep : string
+
 module Util : sig
 
   val strip_cwd : string -> string

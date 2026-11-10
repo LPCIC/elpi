@@ -22,6 +22,9 @@ val default_flags : flags
 type declared_builtins
 val declare_builtins : file_name:string -> Data.BuiltInPredicate.declaration list -> declared_builtins
 val declared_builtins_of_file : file_name:string -> declared_builtins
+val is_declared_builtins : file_name:string -> bool
+(* the Elpi text of a builtins file (the one -document-builtins prints) *)
+val text_of_builtins : file_name:string -> string
 val file_of_declared_builtins : declared_builtins -> string
 val document_fmt : Format.formatter -> declared_builtins -> unit
 val document_file : ?header:string  -> file:string -> declared_builtins -> unit

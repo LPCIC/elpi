@@ -34,7 +34,10 @@ let chunk s (p1,p2) =
 
 let message_of_state s = try Error_messages.message s with Not_found -> "syntax error"
 
-module Parser = Parse.Make(struct let versions = Elpi_util.Util.StrMap.empty let resolver = Elpi_util.Util.std_resolver ~paths:[] () let reader = Elpi_util.Util.std_reader end)
+let no_packages () =
+  let Elpi_util.Util.ErrorFun { error; _ } = Elpi_util.Util.error_fun ~component:"test_parser" in
+  error "no packages"
+module Parser = Parse.Make(struct let versions = Elpi_util.Util.StrMap.empty let resolver = Elpi_util.Util.std_resolver ~paths:[] () let reader = Elpi_util.Util.std_reader let package_dir ~pkg:_ = no_packages () let plugin ~pkg:_ = None let root_of_dir ~dir:_ = no_packages () end)
 
 (* the parsing of programs returns the errors: here a syntax error is an exception *)
 let warn = ref None
@@ -408,3 +411,14 @@ let sanity_check : unit =
     x) tokens) |> List.concat |> List.length in
   assert(extensible_SYMB = 14)
 
+
+(* the names of files in locations: a copy of dune is named as its source,
+   not a file installed in _build/install *)
+let () =
+  let check a b =
+    let c = Parse.cleanup_fname a in
+    if not (String.equal c b) then (Printf.eprintf "cleanup_fname %s = %s, not %s\n" a c b; exit 1) in
+  check "/p/_build/default/src/a.elpi" "/p/src/a.elpi";
+  check "/p/_build/default" "/p";
+  check "/p/src/a.elpi" "/p/src/a.elpi";
+  check "/p/_build/install/default/lib/pkg/a.elpi" "/p/_build/install/default/lib/pkg/a.elpi"

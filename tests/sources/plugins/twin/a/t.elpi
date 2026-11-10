@@ -1,0 +1,2 @@
+% the same text in twin/a and twin/b: x is the file next to it
+accumulate "x".

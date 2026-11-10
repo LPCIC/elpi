@@ -1,6 +1,10 @@
 (* elpi: embedded lambda prolog interpreter                                  *)
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
+(* as Elpi.API.Utils.filename_dirsep (the suite does not link elpi): /, also
+   on Windows *)
+let filename_dirsep = "/"
+
 module Test = struct
 
 type fname = string
@@ -292,7 +296,7 @@ let strip_cwd file =
   let name = Filename.temp_file "elpi" "txt" in
   let oc = open_out name in
   let ic = open_in file in
-  let rex = Str.regexp_string (Str.global_replace (Str.regexp_string "\\") "/" (Sys.getcwd () ^ Filename.dir_sep)) in
+  let rex = Str.regexp_string (Str.global_replace (Str.regexp_string "\\") "/" (Sys.getcwd () ^ filename_dirsep)) in
   try
     while true do
       let l = input_line ic in
