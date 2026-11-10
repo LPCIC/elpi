@@ -21,6 +21,11 @@ let () = declare "namespace03"
   ~source_elpi:"namespaces03.elpi"
   ~description:"namespacing of predicates and constants"
   ()
+let () = declare "namespace04"
+  ~source_elpi:"namespaces04.elpi"
+  ~description:"an anonymous block in a namespace"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "foo.a"))
+  ()
 
 let () = declare "shorten"
   ~source_elpi:"shorten.elpi"

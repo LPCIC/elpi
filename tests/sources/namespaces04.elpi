@@ -1,0 +1,14 @@
+% an anonymous block inside a namespace, and the rules after it, see the
+% names of the namespace: r, which has rules but no signature, and the type t
+namespace foo {
+  kind t type.
+  symb a : t.
+  r.
+  {
+    pred q.
+    q :- r.
+  }
+  pred p -> t.
+  p X :- X = (a : t).
+}
+main :- foo.q, foo.p X, print X.

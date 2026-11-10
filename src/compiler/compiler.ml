@@ -1628,8 +1628,8 @@ let compile_block ~errs =
       let types = merge_types TypingEnv.empty (apply_subst_types ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
       let kinds, types, type_abbrevs, clauses, chr =
-        compile_block kinds types type_abbrevs clauses chr ty_subst pred_subst body in
-      compile_block kinds types type_abbrevs clauses chr ty_subst pred_subst rest
+        compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst body in
+      compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   in compile_block
 
   let compile_body ~errs { Scoped.kinds; types; type_abbrevs; ty_symbols = _; pred_symbols = _; body } =

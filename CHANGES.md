@@ -21,6 +21,10 @@
     order they were allocated in): they are a type error, as on any other
     term that is not an int, a float or a string
 - Language:
+  - Fix: in a namespace, an anonymous block `{ ... }` and what follows it
+    swapped the renaming of the predicates and the one of the types: a
+    predicate of the namespace with rules but no signature, or a type of the
+    namespace, was not found there
   - Change: `builtin` is only for the symbols of the language (with
     `= "core"`, only in `builtin.elpi`) and for the predicates implemented by
     an `MLCode` (`builtin func`). `builtin symb` without `= "core"` is a
