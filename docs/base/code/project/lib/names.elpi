@@ -1,0 +1,2 @@
+func names.all -> list string.
+names.all ["Alice", "Bob"].
