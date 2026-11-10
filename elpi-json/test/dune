@@ -1,0 +1,24 @@
+(executable
+  (name test_json)
+  (libraries elpi_json))
+
+(rule
+ (deps ../utils.elpi)
+ (action (with-stdout-to test_json.output (run ./test_json.exe %{workspace_root}/elpi-json))))
+
+(rule (alias runtest) (package elpi-json)
+ (action (diff test_json.expected test_json.output)))
+
+; elpi -check-package elpi-json, as dune installs it in _build/install
+; (%{workspace_root} is _build/default): its elpi.toml, its plugin and stub
+; (up to date), utils.elpi
+(rule
+ (package elpi-json)
+ (deps %{workspace_root}/elpi-json.install)
+ (action
+  (with-stdout-to check_package.output
+   (setenv OCAMLPATH %{workspace_root}/../install/default/lib
+    (run %{exe:../../elpi_REPL.exe} -check-package elpi-json)))))
+
+(rule (alias runtest) (package elpi-json)
+ (action (run grep -q "^+elpi-json  *ok (plugin loaded, stub up to date)" %{dep:check_package.output}))) ; no $: \r\n on Windows
