@@ -69,6 +69,7 @@ def process(source, base_path):
                                   ' did not pass the :assert: check (' + expression + ')',
                                   file=sys.stderr)
                             print('  output was: ' + repr(output), file=sys.stderr)
+                            print('  errors were: ' + repr(errors), file=sys.stderr)
                             sys.exit(1)
 
             if hidden:

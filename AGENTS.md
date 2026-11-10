@@ -47,6 +47,11 @@
   Plain `=` stays acceptable on ints, chars and variants without an `equal`.
 - Keep the code compatible with OCaml 4.14, the lowest supported version:
   for example no `List.is_empty`.
+- Join file names with `/`, also on Windows (which accepts it): use
+  `Util.filename_concat` / `Util.filename_dirsep` (`API.Utils` outside the
+  library), not `Filename.concat` / `Filename.dir_sep`, which give `\`
+  there: the name would end up in messages and in the expected outputs of
+  the tests with a mix of separators.
 - Formatting follows `.ocamlformat` (margin 120).
 - Builtins are declared through the FFI in `src/builtin.ml` (`MLCode`,
   `MLData`, `AlgebraicData`, `OpaqueData`); follow the existing entries and
