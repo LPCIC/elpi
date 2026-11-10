@@ -1,0 +1,4 @@
+# an elpi.toml whose [paths] names an unknown package
+name = "badpath"
+[paths]
+"x" = "+nopkg/dir"

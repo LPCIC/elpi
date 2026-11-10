@@ -1,0 +1,3 @@
+pred p int.
+p X.
+main :- p 1.

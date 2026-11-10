@@ -1,0 +1,4 @@
+# an absolute directory: an error
+name = "abspath"
+[paths]
+"x" = "/usr/lib/elpi"

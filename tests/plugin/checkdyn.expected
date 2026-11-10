@@ -1,0 +1,5 @@
+elpi.toml                  ok (name elpi-test-dyn)
++elpi-test-dyn             ok (plugin loaded, stub up to date)
++elpi-test-dyn/lib/double  ok
++elpi-test-dyn/macros      ok (in the prelude)
++elpi-test-dyn/util        ok

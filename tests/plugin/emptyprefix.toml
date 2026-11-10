@@ -1,0 +1,4 @@
+# an empty prefix: an error
+name = "emptyprefix"
+[paths]
+"" = "+/lib"

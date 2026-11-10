@@ -1,0 +1,4 @@
+% found through [dev-only-paths] "proj.tests" = "+/tests": the project is
+% its own
+func tests.check -> int.
+tests.check 7.

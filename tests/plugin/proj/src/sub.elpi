@@ -1,0 +1,3 @@
+% a main file in a subdirectory: elpi finds the elpi.toml above it
+accumulate "+/src/deep/answer".
+main :- pre.hello, deep.answer D, print D.

@@ -62,6 +62,16 @@ let usage =
   "\t-document-builtins Print documentation for built-in predicates\n" ^
   "\t-document-infix-syntax Print the documentation for infix operators\n" ^
   "\t-I PATH  search for accumulated files in PATH\n" ^
+  "\t-config FILE  the elpi.toml of the project (default: the nearest one above the file)\n" ^
+  "\t-no-config  no elpi.toml\n" ^
+  "\t-check-package PKG  checks the installed findlib package PKG: its\n" ^
+  "\t         elpi.toml, its plugin and stub, and that each of its .elpi files\n" ^
+  "\t         (listed as +PKG/file) compiles where it is installed\n" ^
+  "\t-w SPEC  the level of a kind of warnings, after the ones of elpi.toml:\n" ^
+  "\t         +name turns name on, -name off, @name makes it an error; all is\n" ^
+  "\t         all of them; repeat it for several kinds, the last one wins,\n" ^
+  "\t         e.g. -w -linear-variable -w @undeclared-global. The names:\n" ^
+  String.concat "" (List.map (fun id -> "\t           " ^ API.Error.warning_name id ^ "\n") API.Error.all_warnings) ^
   "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
   "\t                                          compatibility)\n" ^
   "\t--version prints the version of Elpi (also -v or -version)\n" ^ 
@@ -92,14 +102,23 @@ let report errors =
     errors
 
 (* the warnings that a pass found, in order *)
+(* the levels of the kinds of warnings (elpi.toml, then -w), and whether a
+   warning that is an error was reported *)
+let warning_levels = ref []
+let warning_errors = ref false
+
 let report_warnings warnings =
-  List.iter (fun { API.Error.warning = e } ->
-    Format.eprintf "@[<hv>Warning: %a@]\n%!" API.Error.pp e)
+  List.iter (fun { API.Error.warning_id; warning = e } ->
+    match API.Error.warning_level !warning_levels warning_id with
+    | API.Error.Off -> ()
+    | API.Error.On -> Format.eprintf "@[<hv>Warning: %a@]\n%!" API.Error.pp e
+    | API.Error.As_error -> warning_errors := true; Format.eprintf "@[<hv>Error: %a@]\n%!" API.Error.pp e)
     warnings
 
 (* the compiled query, or its error; the warnings are printed *)
 let query_or_exit (q, warnings) =
   report_warnings warnings;
+  if !warning_errors then exit 1;
   match q with
   | Ok q -> q
   | Error e -> report [ e ]; exit 1
@@ -108,7 +127,7 @@ let query_or_exit (q, warnings) =
 let or_exit (x, errors, warnings) =
   report_warnings warnings;
   report errors;
-  if errors <> [] then exit 1;
+  if errors <> [] || !warning_errors then exit 1;
   x
 
 let read_all ic =
@@ -150,6 +169,9 @@ let _ =
   let skip_det_check = ref false in
   let max_errors = ref 5 in
   let print_deps = ref false in
+  let config_file = ref None and no_config = ref false in
+  let check_package = ref None in
+  let warning_specs = ref [] in
   let vars =
     ref API.Compile.(default_flags.defined_variables) in
   let rec eat_options = function
@@ -173,6 +195,10 @@ let _ =
     | "-document-infix-syntax" :: rest -> doc_infix := true; eat_options rest
     | "-D" :: var :: rest -> vars := API.Compile.StrSet.add var !vars; eat_options rest
     | "-I" :: p :: rest -> extra_paths := !extra_paths @ [p]; eat_options rest
+    | "-config" :: f :: rest -> config_file := Some f; eat_options rest
+    | "-no-config" :: rest -> no_config := true; eat_options rest
+    | "-check-package" :: pkg :: rest -> check_package := Some pkg; eat_options rest
+    | "-w" :: spec :: rest -> warning_specs := spec :: !warning_specs; eat_options rest
     | ("-h" | "--help" | "-help") :: _ -> Printf.eprintf "%s" usage; exit 0
     | ("-v" | "--version" | "-version") :: _ -> Printf.printf "%s\n" "%%VERSION_NUM%%"; exit 0
     | "--" :: rest -> "--" :: rest
@@ -189,7 +215,62 @@ let _ =
   let execpath = Filename.dirname (Sys.executable_name) in
   let argv = List.tl (Array.to_list Sys.argv) in
   let argv = eat_options argv in
-  let paths = tjpath @ installpath @ [execpath] @ !extra_paths in
+  (* the package as installed: no elpi.toml of a project is read *)
+  Option.iter (fun pkg ->
+    let report = Elpi_dynload.check_package ~pkg in
+    let width = List.fold_left (fun w (item, _) -> max w (String.length item)) 0 report |> min 40 in
+    let indent = String.make (width + 2) ' ' in
+    let indented s = String.concat ("\n" ^ indent) (String.split_on_char '\n' s) in
+    let failed = ref false in
+    report |> List.iter (fun (item, result) ->
+      let pad = String.make (max 1 (width + 2 - String.length item)) ' ' in
+      match result with
+      | Elpi_dynload.Checked what -> Printf.printf "%s%s%s\n" item pad what
+      | Elpi_dynload.Failed errors ->
+          failed := true;
+          Printf.printf "%s%s%s\n" item pad (String.concat ("\n" ^ indent) (List.map indented errors)));
+    exit (if !failed then 1 else 0)) !check_package;
+  (* the elpi.toml of the project: given, or the nearest one above the file (the
+     first argument that is a file, with or without .elpi); it names the
+     project being run, found in its sources *)
+  let config =
+    if !no_config then None
+    else match !config_file with
+      | Some file -> Some (raising (fun () -> Elpi_dynload.config_of_file ~file))
+      | None ->
+          let is_file s = Sys.file_exists s || Sys.file_exists (s ^ ".elpi") in
+          match List.find_opt (fun s -> String.length s > 0 && s.[0] <> '-' && is_file s) argv with
+          | Some file -> raising (fun () -> Elpi_dynload.config_above ~file)
+          | None -> None in
+  Option.iter Elpi_dynload.declare_project config;
+  (* the warnings: of elpi.toml, then of -w, in order; the ones at run time
+     too *)
+  warning_levels :=
+    (match config with Some c -> c.Elpi_dynload.warnings | None -> [])
+    @ List.concat_map (fun s -> raising (fun () -> API.Error.warning_spec s)) (List.rev !warning_specs);
+  Builtin.set_runtime_warn (fun ?loc ~id message ->
+    let show = match loc with None -> "" | Some loc -> API.Ast.Loc.show loc in
+    match API.Error.warning_level !warning_levels id with
+    | API.Error.Off -> ()
+    | API.Error.On -> Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" show message
+    | API.Error.As_error -> Format.eprintf "@[<hv>Error: %s@,%s@]\n%!" show message; exit 1);
+  (* the [paths] of elpi.toml: "" are searched for any file, after -I, a
+     prefix for the files under it *)
+  let config_paths = match config with
+    | Some c -> c.Elpi_dynload.paths @ c.Elpi_dynload.dev_only_paths (* the project is its own *)
+    | None -> [] in
+  let prefixes = List.filter (fun (p, _) -> not (String.equal p "")) config_paths in
+  let config_dirs = List.filter_map (fun (p, d) -> if String.equal p "" then Some d else None) config_paths in
+  let paths = tjpath @ installpath @ [execpath] @ !extra_paths @ config_dirs in
+  (* plugins that declare state components or quotations are loaded before
+     Setup.init *)
+  Option.iter (fun c -> c.Elpi_dynload.preload |> List.iter (fun pkg ->
+    raising (fun () -> Elpi_dynload.preload ~pkg))) config;
+  (* the prelude: builtins of Setup.init, so that its macros are seen by the
+     files *)
+  let prelude = match config with
+    | Some c -> raising (fun () -> Elpi_dynload.prelude_builtins c)
+    | None -> [] in
   let flags = {
       API.Compile.defined_variables = !vars;
       API.Compile.print_units = !print_units;
@@ -202,13 +283,14 @@ let _ =
     Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;
     exit 0
   end;
-  let elpi =
+  let elpi = raising (fun () ->
     API.Setup.init
       ~quotations
       ~flags:(API.Compile.to_setup_flags flags)
-      ~builtins:[Builtin.std_builtins]
-      ~file_resolver:(API.Parse.std_resolver ~paths ())
-      () in
+      ~builtins:(Builtin.std_builtins :: prelude)
+      ~file_resolver:(API.Parse.std_resolver ~prefixes ~paths ())
+      ~packages:Elpi_dynload.packages
+      ()) in
   if !parse_term then begin
     let g = query_or_exit (API.Parse.query_from ~elpi ~loc:(API.Ast.Loc.initial "(-parse-term)") (Lexing.from_channel stdin)) in
     Format.printf "Raw term: %a\n" API.Pp.Ast.query g;
@@ -260,7 +342,8 @@ let _ =
     | [x] -> x
     | _ -> Printf.eprintf "Only one file can be specified"; exit 1 in
   let t0_parsing = Unix.gettimeofday () in
-  let p, parse_errors, parse_warnings = raising (fun () -> API.Parse.program ~flags ~elpi file) in
+  let p, parse_errors, parse_warnings = raising (fun () ->
+    API.Parse.program ~flags ~elpi file) in
   let g =
     if !test then
       query_or_exit (API.Parse.query ~elpi ~loc:(API.Ast.Loc.initial "(-test)") ~text:"main.")

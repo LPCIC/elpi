@@ -26,6 +26,7 @@ depends: [
   "fileutils" {with-test}
   "yojson" {with-test}
   "dune" {>= "3.17"}
+  "ocamlfind" {>= "1.9"}
   "conf-time" {with-test}
   "atdgen" {>= "2.10.0"}
   "atdts" {>= "2.10.0"}

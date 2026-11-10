@@ -1,0 +1,3 @@
+% the prefix nodir is in the [dev-only-paths] of elpi-test-nodir: not here
+accumulate "nodir/x".
+main.

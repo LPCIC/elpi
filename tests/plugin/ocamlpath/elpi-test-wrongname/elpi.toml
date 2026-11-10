@@ -1,0 +1,2 @@
+# the name is not elpi-test-wrongname: an error for a project that uses it
+name = "other"
