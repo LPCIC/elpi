@@ -107,6 +107,9 @@
   - Fix: the semantic tokens and the hover of a rule with spilling
     (`{f X}`) follow its text: the variables and conjunctions that spilling
     makes covered the spilled calls
+  - Fix: the arguments of a macro are hovered, defined and colored as
+    written, e.g. the variable of `@pi-decl N (a\ q a)`; an error in an
+    argument is at the argument (it was at the use of the macro)
 
 # v4.0.1 (October 2026)
 

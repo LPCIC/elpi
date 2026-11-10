@@ -1208,7 +1208,9 @@ module ScopedTerm = struct
       let m = ref F.Map.empty in
       let rec clone_loc ~loc {it} = {it=clone ~loc it;loc;ty=TypeAssignment.new_ty ()} and
       clone ~loc = function
-        | Impl (b, loc, l, r) -> Impl(b, loc, clone_loc ~loc l, clone_loc ~loc r)
+        (* the implication too is at the location of the use (its own one
+           is in the declaration of the macro) *)
+        | Impl (b, _, l, r) -> Impl(b, loc, clone_loc ~loc l, clone_loc ~loc r)
         | Lam (n,ty,bo) -> Lam(Option.map (clone_const_at ~loc) n, ty, clone_loc ~loc bo)
         | Discard { heapify } -> Discard { heapify }
         | UVar (v, xs) ->
@@ -1263,7 +1265,18 @@ module ScopedTerm = struct
         | Spill(t,i) -> Spill(subst_loc map fv t,i)
         | Cast(t,ty) -> Cast(subst_loc map fv t,ty)
         | Discard _ | CData _ -> t
-      and subst_loc map fv { it; ty; loc } = {loc; it = (subst map fv it); ty}
+      (* an occurrence of a variable that is substituted: by a term (e.g. an
+         argument of a macro), the term itself, with its location and type; by
+         a variable (e.g. the variable of a macro given to a lambda argument),
+         the occurrence, renamed, keeps its location and type: so the text as
+         written is the one that is typed *)
+      and subst_loc map fv ({ it; ty; loc } as t) =
+        match it with
+        | App({ scope = Bound l; name = c } as occ, []) when Scope.Map.mem (c,l) map ->
+            (match Scope.Map.find (c,l) map with
+             | { it = App({ scope = Bound _ as scope; name }, []) } -> { t with it = App({ occ with scope; name }, []) }
+             | hd -> hd)
+        | _ -> {loc; it = (subst map fv it); ty}
       and app_loc { it; loc; ty } args : t = {loc; it = (app ~loc it args); ty}
       and app ~loc t (args : t list) =
         if args = [] then t else

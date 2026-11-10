@@ -1,0 +1,6 @@
+kind tm type.
+pred decl tm, int.
+pred q tm.
+macro @pi-decl N F :- pi x\ decl x N => F x.
+pred p.
+p :- @pi-decl 1 (a\ q a).

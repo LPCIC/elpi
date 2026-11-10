@@ -24,7 +24,7 @@
 (rule
  (targets test_lsp.output accbad.output accmissing.output good.output
           syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output
-          assemble.output anomaly.output accinc.output accopen.output accdirs.output stubs.output spill.output)
+          assemble.output anomaly.output accinc.output accopen.output accdirs.output stubs.output spill.output macrobind.output)
  (deps (glob_files *.elpi) (glob_files include/*.elpi) (glob_files accdirs/lang/*.elpi) (glob_files accdirs/a/*.elpi)
        (glob_files accdirs/b/*.elpi) (glob_files accdirs/main/*.elpi))
  (action
@@ -124,3 +124,7 @@
 (rule
  (alias runtest-lsp)
  (action (diff spill.expected spill.output)))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff macrobind.expected macrobind.output)))

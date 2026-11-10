@@ -134,7 +134,8 @@ let () = declare "macro_type"
 let () = declare "macro_type_err_pos"
   ~source_elpi:"macro_type_err_pos.elpi"
   ~description:"polymorphic macro"
-  ~expectation:(FailureOutput (Str.regexp "line 5, column 8.*\nTypechecker"))
+  (* the error is at the argument "4", which keeps its location *)
+  ~expectation:(FailureOutput (Str.regexp "line 5, column 11.*\nTypechecker"))
   ()
 
 (* 

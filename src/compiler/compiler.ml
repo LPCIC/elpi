@@ -272,8 +272,10 @@ type program = {
   macro_uses : macro_use list;
 }
 (* @name in the text: the name, the term that it expands to (whose nodes all
-   have this location), the macro and its declaration *)
-and macro_use = { name_loc : Loc.t; expansion_loc : Loc.t; macro : F.t; macro_loc : Loc.t }
+   have this location), the macro and its declaration, and its arguments as
+   written (the expansion has them, but rewritten: e.g. a lambda applied to a
+   variable of the macro is reduced) *)
+and macro_use = { name_loc : Loc.t; expansion_loc : Loc.t; macro : F.t; macro_loc : Loc.t; args : ScopedTerm.t list }
 and pbody = {
   kinds : Arity.t F.Map.t;
   types : ScopeTypeExpressionUniqueList.t F.Map.t;
@@ -1127,7 +1129,7 @@ end = struct
     match F.Map.find_opt c macros with
     | None -> error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
     | Some (t, macro_loc) ->
-        Option.iter (fun uses -> uses := { Scoped.name_loc; expansion_loc = loc; macro = c; macro_loc } :: !uses) macro_uses;
+        Option.iter (fun uses -> uses := { Scoped.name_loc; expansion_loc = loc; macro = c; macro_loc; args } :: !uses) macro_uses;
         ScopedTerm.(beta (clone_loc ~loc t) args)
 
   (* would be better when symbols are resolved, in particular andf, nil and cons *)
@@ -3376,7 +3378,7 @@ let type_expression_items (sp : scoped_program) =
    constants (with the declaration they are resolved to), the variables (with
    their binder, or the head of their rule), the literals; [head] is the head
    of the rule the term is in *)
-let term_items ?(rule = false) ~types ~metadata ~head ~type_items f (t : ScopedTerm.t) =
+let term_items ?(rule = false) ?(macro_args = fun _ -> None) ~types ~metadata ~head ~type_items f (t : ScopedTerm.t) =
   let open ScopedTerm in
   (* for a rule, the symbols that it defines: the head of its head (or of the
      heads, if it is a conjunction) *)
@@ -3418,6 +3420,10 @@ let term_items ?(rule = false) ~types ~metadata ~head ~type_items f (t : ScopedT
       let cls = match type_ with Some ty -> cls_of ty | None -> Data in
       emit c.loc (Constant (cls, origin)) ~name ?type_ ?defined ?doc ?body ~declaration:(is_head c.loc) in
   let rec aux env (t : ScopedTerm.t) =
+    (* the expansion of a use of a macro: its arguments as written *)
+    match macro_args t.loc with
+    | Some args -> term t; List.iter (aux env) args
+    | None ->
     match t.it with
     | Impl (_, hdloc, l, r) ->
         term t;
@@ -3504,7 +3510,10 @@ let hover ?base (sp : scoped_program) (u : checked_compilation_unit) =
     add (item name_loc Macro ~name:(F.show macro) ~defined:macro_loc))
     sp.code.Scoped.macro_uses;
   let in_text i = match i.ikind with Term -> true | _ -> not (Hashtbl.mem expansions (key i.iloc)) in
-  let term ?rule ~head t = term_items ?rule ~types ~metadata ~head ~type_items (fun i -> if in_text i then add i) t in
+  let args_of_use = Hashtbl.create 17 in
+  List.iter (fun { Scoped.expansion_loc; args; _ } -> Hashtbl.replace args_of_use (key expansion_loc) args) sp.code.Scoped.macro_uses;
+  let macro_args l = Hashtbl.find_opt args_of_use (key l) in
+  let term ?rule ~head t = term_items ?rule ~macro_args ~types ~metadata ~head ~type_items (fun i -> if in_text i then add i) t in
   (* a spilled rule is seen as written: its spilled calls are where the text
      has them, the variables and conjunctions spilling makes are not in it *)
   let as_written = Hashtbl.create 7 in
