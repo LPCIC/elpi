@@ -1,0 +1,5 @@
+==== open quoteproj/main.elpi ====
+diagnostics of quoteproj/main.elpi (version 1): 1
+  3:7-3:19 error: Typechecker: literal "not an int" has type string but bad expects an argument of type int
+    | bad {{ "not an int" }}.
+    |        ^^^^^^^^^^^^

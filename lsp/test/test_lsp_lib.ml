@@ -7,12 +7,18 @@
 
 open Yojson.Safe.Util
 
+(* as Elpi.API.Utils.filename_concat (this client does not link elpi): the
+   names joined with /, also on Windows, since they are in the outputs *)
+let filename_concat dir file =
+  let n = String.length dir in
+  if n = 0 then file else if dir.[n - 1] = '/' || dir.[n - 1] = '\\' then dir ^ file else dir ^ "/" ^ file
+
 let server, dir, server_args =
   match Array.to_list Sys.argv with
   | _ :: s :: d :: args -> s, d, args
   | _ -> prerr_endline "usage: test_lsp SERVER DIR [ARG...]"; exit 2
 
-let dir = if Filename.is_relative dir then Filename.concat (Sys.getcwd ()) dir else dir
+let dir = if Filename.is_relative dir then filename_concat (Sys.getcwd ()) dir else dir
 (* without a final /. (from the argument .): a file in a subdirectory, e.g.
    one found with -I, is then anonymized as $DIR/SUB/FILE *)
 let dir = if String.equal (Filename.basename dir) Filename.current_dir_name then Filename.dirname dir else dir
@@ -82,7 +88,7 @@ let notify meth params =
 
 (* the files of the test directory, or a file with its path *)
 let uri file =
-  let path = if Filename.is_relative file then Filename.concat dir file else file in
+  let path = if Filename.is_relative file then filename_concat dir file else file in
   (* on Windows C:\a\b is file:///C:/a/b *)
   let path = String.map (fun c -> if Char.equal c '\\' then '/' else c) path in
   "file://" ^ (if not (String.equal path "") && not (Char.equal path.[0] '/') then "/" else "") ^ path
@@ -150,7 +156,7 @@ let anonymize s =
   |> Str.global_replace (Str.regexp "\\([a-zA-Z]:\\)?[^ :]*[/\\\\]elpi-lsp-[0-9]+-[0-9a-f]+[/\\\\]") "$LIBRARY/"
 
 let read_file file =
-  let ic = open_in_bin (if Filename.is_relative file then Filename.concat dir file else file) in
+  let ic = open_in_bin (if Filename.is_relative file then filename_concat dir file else file) in
   let s = really_input_string ic (in_channel_length ic) in
   close_in ic; s
 
@@ -313,6 +319,18 @@ let change_file file version text =
       "textDocument", `Assoc [ "uri", `String (uri file); "version", `Int version ];
       "contentChanges", `List [ `Assoc [ "text", `String text ] ] ]);
   wait_diagnostics file
+
+(* [file] is written with [text] and the server told, as an editor that
+   watches it does (didChangeWatchedFiles) *)
+let write_watched_file file text =
+  section "write %s" (anonymize file);
+  let path = if Filename.is_relative file then filename_concat dir file else file in
+  if not (Sys.file_exists (Filename.dirname path)) then Sys.mkdir (Filename.dirname path) 0o755;
+  let oc = open_out_bin path in
+  output_string oc text;
+  close_out oc;
+  notify "workspace/didChangeWatchedFiles" (`Assoc [
+      "changes", `List [ `Assoc [ "uri", `String (uri file); "type", `Int 2 ] ] ])
 
 let change_file_burst file first_version texts =
   section "change %s, %d changes in a row" file (List.length texts);
@@ -520,7 +538,8 @@ let main () =
   Printf.printf "before initialize: error %s\n"
     (Yojson.Safe.to_string (member "error" early |> member "code"));
   (* the client takes LocationLinks for definitions, as VS Code does *)
-  let capabilities = `Assoc [ "textDocument", `Assoc [ "definition", `Assoc [ "linkSupport", `Bool true ] ] ] in
+  let capabilities = `Assoc [ "textDocument", `Assoc [ "definition", `Assoc [ "linkSupport", `Bool true ] ];
+                              "workspace", `Assoc [ "didChangeWatchedFiles", `Assoc [ "dynamicRegistration", `Bool true ] ] ] in
   let init = request "initialize" (`Assoc [ "processId", `Null; "rootUri", `Null; "capabilities", capabilities ]) in
   let caps = init |> member "result" |> member "capabilities" in
   token_types := (try member "semanticTokensProvider" caps |> member "legend" |> member "tokenTypes" |> to_list |> List.map to_string with _ -> []);
@@ -528,7 +547,7 @@ let main () =
   notify "initialized" (`Assoc []);
   List.iter (fun (name, file, script) ->
       log "script %s (%s)" name file;
-      with_stdout_to (Filename.concat dir (name ^ ".output")) (fun () -> script file; close_file file);
+      with_stdout_to (filename_concat dir (name ^ ".output")) (fun () -> script file; close_file file);
       log "script %s done" name)
     (List.sort (fun (n1, _, _) (n2, _, _) -> String.compare n1 n2)
        (List.filter (fun (n, _, _) -> not (List.exists (String.equal n) skip)) !scripts));

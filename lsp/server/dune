@@ -4,4 +4,19 @@
  (name elpi_lsp_server)
  (wrapped false)
  (optional)
+ (preprocessor_deps lsp_config.mlh)
+ (preprocess (pps ppx_optcomp))
  (libraries elpi lsp jsonrpc yojson unix))
+
+; the version of the library lsp, for the modules it renamed:
+; [%%define lsp (1, 28, 1)]
+(rule
+ (target lsp_config.mlh)
+ (action
+  (with-stdout-to
+   %{target}
+   (progn
+    (echo "(* Automatically generated, don't edit *)\n")
+    (echo "[%%define lsp ")
+    (run %{exe:../../trace/ppx/version_parser.exe} %{version:lsp})
+    (echo "]\n")))))

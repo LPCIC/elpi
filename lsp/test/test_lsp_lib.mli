@@ -76,6 +76,12 @@ val await_diagnostics : string list -> unit
     {!open_file} does. *)
 val change_file : string -> int -> string -> unit
 
+(** [write_watched_file file text] writes [text] to [file] and sends
+    [didChangeWatchedFiles] for it, as an editor that watches [file]; its
+    directory is made if missing. It does
+    not wait, see {!await_diagnostics}. *)
+val write_watched_file : string -> string -> unit
+
 (** [hover file needle k] requests the hover at the [k]-th character after the
     first occurrence of [needle] in [file]. It prints the cursor position and the
     hovered range, the lines involved with the range ([^]) and the cursor ([*])

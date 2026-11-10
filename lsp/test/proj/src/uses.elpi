@@ -1,0 +1,3 @@
+accumulate found.
+func r -> int, int.
+r A B :- pre.eight A, found.nine B.

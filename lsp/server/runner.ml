@@ -70,6 +70,7 @@ let run ?max_steps ~instance ~path ~text ~query () : Yojson.Safe.t =
       try
         let elpi = Checker.elpi instance in
         let flags = { Compile.default_flags with Compile.max_errors = !Checker.max_errors } in
+        (* the prelude of the project is in the builtins of the instance *)
         let ast, parse_errors, parse_warnings =
           Parse.program_from ~flags ~elpi ~loc:(Ast.Loc.initial path) ~digest:(Digest.string text)
             (Lexing.from_string text) in

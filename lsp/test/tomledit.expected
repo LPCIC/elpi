@@ -1,0 +1,13 @@
+==== write tomledit/main.elpi ====
+
+==== write tomledit/elpi.toml ====
+
+==== open tomledit/main.elpi ====
+diagnostics of tomledit/main.elpi (version 1): 0
+
+==== write tomledit/elpi.toml ====
+diagnostics of tomledit/main.elpi (version 1): 1
+  0:0-0:0 error: $DIR/tomledit/elpi.toml:2: key = "...", key = [ "...", ... ] or [section] expected
+
+==== write tomledit/elpi.toml ====
+diagnostics of tomledit/main.elpi (version 1): 0
