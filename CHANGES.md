@@ -7,6 +7,8 @@
 - Type checker:
   - Fix: a cast to `any` as the argument of a polymorphic constructor, e.g.
     `[(X : any)]`, broke an invariant of the determinacy checker
+  - Fix: spilling dropped casts, e.g. `(X : any)` in a rule with a spill:
+    the invariant of the determinacy checker broke again
   - Change: a constructor whose arguments mention a type variable that its
     result type does not mention (an existential type, e.g.
     `symb pack : A -> (A -> string) -> box.`) is rejected, also when a type

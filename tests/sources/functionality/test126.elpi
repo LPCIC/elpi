@@ -1,0 +1,10 @@
+% a cast to any in a rule that is spilled: spilling keeps the cast, which
+% the determinacy checker sees as any
+kind term type.
+symb q : list any -> term.
+func mk term, list term -> term.
+mk T _ T.
+func idx term, list term -> term.
+idx IT A R :- mk IT [ q [(IT : any)] ] I, mk I {std.rev A} R.
+pred main.
+main :- idx (q []) [] _.
