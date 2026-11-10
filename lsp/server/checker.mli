@@ -80,8 +80,19 @@ type diagnostic = {
     below; computed when needed *)
 type hover
 
+(** a warning located in another file than the document (an accumulated
+    one): [in_file] is in [file] (the source name of its location), [here] is
+    the same warning in the document (on the accumulate directive that brings
+    [file] in, or at the start) *)
+type elsewhere = {
+  file : string;
+  in_file : diagnostic;
+  here : diagnostic;
+}
+
 type result = {
-  diagnostics : diagnostic list;
+  diagnostics : diagnostic list; (** without the [elsewhere] ones *)
+  elsewhere : elsewhere list;
   hover : hover option; (** unless the parser failed (the text can have errors) *)
   accumulates : string list; (** the files it accumulates, directly or not *)
 }

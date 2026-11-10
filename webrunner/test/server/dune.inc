@@ -10,13 +10,13 @@
      (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" node \"$d/../../../web_lsp_driver.bc.js\"\n"))
     (run chmod +x server.sh))))
  (rule
-  (targets test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output accopen.output stubs.output)
+  (targets test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output accwarn.output)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../node-worker.cjs ../../../web_lsp_driver.bc.js)
   (action
    (setenv TEST_LSP_SKIP accinc,accdirs (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
-  (deps ../compare.cjs test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output accopen.output stubs.output (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (deps ../compare.cjs test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output accwarn.output (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
   (action (run node ../compare.cjs . .. ../../../../lsp/test))))
 
 (subdir node-wasm
@@ -29,13 +29,13 @@
      (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" node \"$d/../../../web_lsp_driver.bc.wasm.js\"\n"))
     (run chmod +x server.sh))))
  (rule
-  (targets test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output accopen.output stubs.output)
+  (targets test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output accwarn.output)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../node-worker.cjs ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
    (setenv TEST_LSP_SKIP accinc,accdirs (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
-  (deps ../compare.cjs test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output accopen.output stubs.output (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (deps ../compare.cjs test_lsp.output accbad.output accmissing.output good.output syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output accwarn.output (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
   (action (run node ../compare.cjs . .. ../../../../lsp/test))))
 
 (subdir browser-auto
@@ -48,13 +48,13 @@
      (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" auto \"$d/loaded.log\"\n"))
     (run chmod +x server.sh))))
  (rule
-  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log)
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,accwarn,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
-  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
   (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-auto.expected loaded.log)))))
 
 (subdir browser-no-wasm-features
@@ -67,13 +67,13 @@
      (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" no-wasm-features \"$d/loaded.log\"\n"))
     (run chmod +x server.sh))))
  (rule
-  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log)
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,accwarn,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
-  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
   (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-no-wasm-features.expected loaded.log)))))
 
 (subdir browser-wasm-fails
@@ -86,13 +86,13 @@
      (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" wasm-fails \"$d/loaded.log\"\n"))
     (run chmod +x server.sh))))
  (rule
-  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log)
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,accwarn,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
-  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
   (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-wasm-fails.expected loaded.log)))))
 
 (subdir browser-no-wasm-assets
@@ -105,13 +105,13 @@
      (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" no-wasm-assets \"$d/loaded.log\"\n"))
     (run chmod +x server.sh))))
  (rule
-  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log)
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,accwarn,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
-  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
   (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-no-wasm-assets.expected loaded.log)))))
 
 (subdir browser-wrong-mime
@@ -124,13 +124,13 @@
      (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" wrong-mime \"$d/loaded.log\"\n"))
     (run chmod +x server.sh))))
  (rule
-  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log)
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,accwarn,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
-  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
   (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-wrong-mime.expected loaded.log)))))
 
 (subdir browser-no-wasm-script
@@ -143,11 +143,11 @@
      (echo "#!/bin/sh\nd=\"$(dirname \"$0\")\"\nexec node \"$d/../bridge.mjs\" browser \"$d/../../../elpi-lsp-web.js\" no-wasm-script \"$d/loaded.log\"\n"))
     (run chmod +x server.sh))))
  (rule
-  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log)
+  (targets test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log)
   (deps (glob_files *.elpi) server.sh ../bridge.mjs ../worker.cjs ../browser.cjs ../../../elpi-lsp-web.js ../../../web_lsp_driver.bc.js ../../../web_lsp_driver.bc.wasm.js (glob_files ../../../web_lsp_driver.bc.wasm.assets/*.wasm))
   (action
-   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
+   (setenv TEST_LSP_SKIP accbad,accchar,accdirs,accinc,acctype,good,library,accwarn,run (with-stdout-to test_lsp.output (run %{exe:../../../../lsp/test/test_lsp.exe} ./server.sh .)))))
  (rule
   (alias runtest-webrunner)
-  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
+  (deps ../compare.cjs test_lsp.output accmissing.output syntax.output typeerr.output warn.output binders.output macros.output libdef.output doc.output lists.output assemble.output anomaly.output accopen.output stubs.output spill.output macrobind.output loaded.log (glob_files ../*.expected) (glob_files ../../../../lsp/test/*.expected))
   (action (progn (run node ../compare.cjs . .. ../../../../lsp/test) (diff ../loaded-no-wasm-script.expected loaded.log)))))

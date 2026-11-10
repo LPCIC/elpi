@@ -272,8 +272,10 @@ type program = {
   macro_uses : macro_use list;
 }
 (* @name in the text: the name, the term that it expands to (whose nodes all
-   have this location), the macro and its declaration *)
-and macro_use = { name_loc : Loc.t; expansion_loc : Loc.t; macro : F.t; macro_loc : Loc.t }
+   have this location), the macro and its declaration, and its arguments as
+   written (the expansion has them, but rewritten: e.g. a lambda applied to a
+   variable of the macro is reduced) *)
+and macro_use = { name_loc : Loc.t; expansion_loc : Loc.t; macro : F.t; macro_loc : Loc.t; args : ScopedTerm.t list }
 and pbody = {
   kinds : Arity.t F.Map.t;
   types : ScopeTypeExpressionUniqueList.t F.Map.t;
@@ -525,6 +527,9 @@ type program = {
   clauses : (ScopedTerm.t,Ast.Structured.attribute,bool,bool) Ast.Clause.t list;
   chr : (Symbol.t,ScopedTerm.t) Ast.Structured.block_constraint list;
   builtins : ((Symbol.t * string) list * declared_builtins) option;
+  (* the rules that were spilled, by their location: their body as written
+     (typed), e.g. for the semantic tokens of elpi-lsp *)
+  as_written : (Loc.t * ScopedTerm.t) list;
 }
 [@@deriving show]
 
@@ -1124,7 +1129,7 @@ end = struct
     match F.Map.find_opt c macros with
     | None -> error ~loc (Format.asprintf "@[<hv>Unknown macro %a.@ Known macros: %a@]" F.pp c (pplist F.pp ", ") (F.Map.bindings macros|>List.map fst))
     | Some (t, macro_loc) ->
-        Option.iter (fun uses -> uses := { Scoped.name_loc; expansion_loc = loc; macro = c; macro_loc } :: !uses) macro_uses;
+        Option.iter (fun uses -> uses := { Scoped.name_loc; expansion_loc = loc; macro = c; macro_loc; args } :: !uses) macro_uses;
         ScopedTerm.(beta (clone_loc ~loc t) args)
 
   (* would be better when symbols are resolved, in particular andf, nil and cons *)
@@ -1735,7 +1740,7 @@ end = struct
      spilling fails, it is dropped (it is only partially typed, or not
      spilled). If the determinacy check fails it is kept (it is well typed and
      spilled) and the error recorded. *)
-  let check_clause ~errs ~flags ~det_check_time ~type_check_time ~unknown ~type_abbrevs ~kinds ~types
+  let check_clause ~errs ~flags ~det_check_time ~type_check_time ~unknown ~type_abbrevs ~kinds ~types ~as_written
       ({ Ast.Clause.body; needs_spilling; attributes = ({ Ast.Structured.typecheck; occur_check; autospill } as atts) } as clause) =
     if not typecheck then unknown, Some { clause with needs_spilling = false; attributes = { atts with occur_check } }
     else
@@ -1747,9 +1752,10 @@ end = struct
       | None -> unknown, None
       | Some (t, unknown, occur_check_pred) ->
           let spilled =
-            if needs_spilling || autospill then
+            if needs_spilling || autospill then begin
+              as_written := (clause.loc, t) :: !as_written;
               Errors.protect errs ~default:None (fun () -> Some (Spilling.main_clause ~types ~type_abbrevs t))
-            else Some t in
+            end else Some t in
           match spilled with
           | None -> unknown, None
           | Some t ->
@@ -1858,8 +1864,9 @@ end = struct
     ) u_types;
 
     (* returns unkown types + checked clauses *)
+    let as_written = ref [] in
     let unknown, clauses = List.fold_left (fun (unknown,clauses) clause ->
-      match check_clause ~errs ~flags ~det_check_time ~type_check_time ~unknown ~type_abbrevs ~kinds ~types clause with
+      match check_clause ~errs ~flags ~det_check_time ~type_check_time ~unknown ~type_abbrevs ~kinds ~types ~as_written clause with
       | unknown, Some clause -> unknown, clause :: clauses
       | unknown, None -> unknown, clauses) (F.Map.empty,[]) clauses in
     let clauses = List.rev clauses in
@@ -1913,7 +1920,7 @@ end = struct
 
     let signature = { signature with types = u_types } in
 
-    let checked_code = { CheckedFlat.signature; clauses; chr; builtins } in
+    let checked_code = { CheckedFlat.signature; clauses; chr; builtins; as_written = !as_written } in
 
   { version; checked_code; base_hash = hash_base base;
     type_checking_time = if flags.time_typechecking then !type_check_time +. check_sig else 0.0;
@@ -3371,7 +3378,7 @@ let type_expression_items (sp : scoped_program) =
    constants (with the declaration they are resolved to), the variables (with
    their binder, or the head of their rule), the literals; [head] is the head
    of the rule the term is in *)
-let term_items ?(rule = false) ~types ~metadata ~head ~type_items f (t : ScopedTerm.t) =
+let term_items ?(rule = false) ?(macro_args = fun _ -> None) ~types ~metadata ~head ~type_items f (t : ScopedTerm.t) =
   let open ScopedTerm in
   (* for a rule, the symbols that it defines: the head of its head (or of the
      heads, if it is a conjunction) *)
@@ -3413,6 +3420,10 @@ let term_items ?(rule = false) ~types ~metadata ~head ~type_items f (t : ScopedT
       let cls = match type_ with Some ty -> cls_of ty | None -> Data in
       emit c.loc (Constant (cls, origin)) ~name ?type_ ?defined ?doc ?body ~declaration:(is_head c.loc) in
   let rec aux env (t : ScopedTerm.t) =
+    (* the expansion of a use of a macro: its arguments as written *)
+    match macro_args t.loc with
+    | Some args -> term t; List.iter (aux env) args
+    | None ->
     match t.it with
     | Impl (_, hdloc, l, r) ->
         term t;
@@ -3499,8 +3510,17 @@ let hover ?base (sp : scoped_program) (u : checked_compilation_unit) =
     add (item name_loc Macro ~name:(F.show macro) ~defined:macro_loc))
     sp.code.Scoped.macro_uses;
   let in_text i = match i.ikind with Term -> true | _ -> not (Hashtbl.mem expansions (key i.iloc)) in
-  let term ?rule ~head t = term_items ?rule ~types ~metadata ~head ~type_items (fun i -> if in_text i then add i) t in
-  List.iter (fun { Ast.Clause.body } -> term ~rule:true ~head:(rule_head body) body) u.checked_code.CheckedFlat.clauses;
+  let args_of_use = Hashtbl.create 17 in
+  List.iter (fun { Scoped.expansion_loc; args; _ } -> Hashtbl.replace args_of_use (key expansion_loc) args) sp.code.Scoped.macro_uses;
+  let macro_args l = Hashtbl.find_opt args_of_use (key l) in
+  let term ?rule ~head t = term_items ?rule ~macro_args ~types ~metadata ~head ~type_items (fun i -> if in_text i then add i) t in
+  (* a spilled rule is seen as written: its spilled calls are where the text
+     has them, the variables and conjunctions spilling makes are not in it *)
+  let as_written = Hashtbl.create 7 in
+  List.iter (fun (l, t) -> Hashtbl.replace as_written (key l) t) u.checked_code.CheckedFlat.as_written;
+  List.iter (fun { Ast.Clause.body; loc } ->
+    let body = Option.value ~default:body (Hashtbl.find_opt as_written (key loc)) in
+    term ~rule:true ~head:(rule_head body) body) u.checked_code.CheckedFlat.clauses;
   List.iter (fun { Ast.Structured.rules } ->
     List.iter (fun { Ast.Chr.to_match; to_remove; guard; new_goal; loc } ->
       let sequents = to_match @ to_remove @ Option.to_list new_goal in
@@ -3598,9 +3618,9 @@ let smart_map_cdata_in_block_constraint f ({ Ast.Structured.rules; _ } as orig) 
   else { orig with Ast.Structured.rules = rules' }
 
 let map_compilation_unit (f : CData.t -> CData.t) (u : checked_compilation_unit) : checked_compilation_unit =
-  let { checked_code = { CheckedFlat.clauses; chr; builtins; signature }; _ } = u in
+  let { checked_code = { CheckedFlat.clauses; chr; builtins; signature; as_written }; _ } = u in
   let clauses' = smart_map (smart_map_cdata_in_clause f) clauses in
   let chr' = smart_map (smart_map_cdata_in_block_constraint f) chr in
   if clauses == clauses' && chr == chr' then u
-  else { u with checked_code = { CheckedFlat.clauses = clauses'; chr = chr'; builtins; signature } }
+  else { u with checked_code = { CheckedFlat.clauses = clauses'; chr = chr'; builtins; signature; as_written } }
 

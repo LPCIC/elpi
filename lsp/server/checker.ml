@@ -19,8 +19,16 @@ type unit_info = LSP.info LSP.IntervalTree.t Lazy.t
 
 type hover = unit_info list
 
+(* a warning located in another file (an accumulated one) *)
+type elsewhere = {
+  file : string;       (* the source name of its location *)
+  in_file : diagnostic; (* in that file *)
+  here : diagnostic;   (* in the document, as diag_of_loc puts it *)
+}
+
 type result = {
   diagnostics : diagnostic list;
+  elsewhere : elsewhere list;
   hover : hover option; (* unless the parser failed (the text can have errors) *)
   accumulates : string list; (* the files it accumulates, directly or not *)
 }
@@ -289,15 +297,26 @@ let check ~instance ~path text =
   match resilient_parse ~elpi:instance.elpi ~path text with
   | exception e ->
       let loc, msg = error_of_exn e in
-      { diagnostics = [ diag_of_loc ~path ~accumulated:[] Error loc msg ]; hover = None; accumulates = [] }
+      { diagnostics = [ diag_of_loc ~path ~accumulated:[] Error loc msg ]; elsewhere = []; hover = None; accumulates = [] }
   | ast, parse_errors, parse_warnings ->
       let accumulated = LSP.accumulated ast in
       let syntax = syntax_diagnostics ~path ~accumulated text parse_errors in
       let errors, warnings, hover, accumulates = compile ~instance ~path ~accumulated ast in
       let errors = List.map (diag_of_error ~path ~accumulated Error) errors in
-      let ws = List.concat_map (fun w -> List.map (diag_of_error ~path ~accumulated Warning) (spread_undeclared hover w))
+      let ws = List.concat_map (fun w ->
+          List.map (fun (w : Error.t) ->
+              let here = diag_of_error ~path ~accumulated Warning w in
+              match w.loc with
+              | Some { source_name; source_start; source_stop; _ }
+                when not (String.equal source_name path) && not (String.equal source_name "") ->
+                  let message = String.trim (Format.asprintf "%a" Error.pp_message w) in
+                  Either.Right { file = source_name; here;
+                                 in_file = { start = source_start; stop = source_stop; severity = Warning; message } }
+              | _ -> Either.Left here)
+            (spread_undeclared hover w))
           (parse_warnings @ warnings) in
-      { diagnostics = syntax @ errors @ ws; hover = Some hover; accumulates }
+      let ws, elsewhere = List.partition_map Fun.id ws in
+      { diagnostics = syntax @ errors @ ws; elsewhere; hover = Some hover; accumulates }
 
 (* --- queries on the symbols --------------------------------------------------- *)
 
