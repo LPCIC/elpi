@@ -1,0 +1,6 @@
+# a project with a preloaded plugin that installs the default quotation (the
+# findlib package elpi-test-dyn.quote of tests/plugin), and a prelude with a
+# macro: the documents see both
+name = "quoteproj"
+prelude = ["+/pre"]
+preload = ["elpi-test-dyn.quote"]

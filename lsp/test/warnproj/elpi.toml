@@ -1,0 +1,6 @@
+# the levels of the warnings: a linear variable is not shown, an undeclared
+# global is an error
+name = "warnproj"
+[warnings]
+linear-variable = "off"
+undeclared-global = "error"

@@ -121,12 +121,14 @@ type instance = { id : int; elpi : Setup.elpi; library : (string, string) Hashtb
 
 let new_instance =
   let next = ref 0 in
-  fun ?(file_resolver = Parse.std_resolver ~paths:[] ()) ?(file_reader = Parse.std_reader) () ->
+  fun ?(file_resolver = Parse.std_resolver ~paths:[] ()) ?(file_reader = Parse.std_reader) ?packages ?(builtins = []) () ->
+    (* the builtins can be stubs: their OCaml code is not here *)
+    let flags = Compile.to_setup_flags { Compile.default_flags with Compile.builtin_stubs = true } in
+    let elpi = Setup.init ~flags ~builtins:(Elpi.Builtin.std_builtins :: builtins) ~file_resolver ~file_reader ?packages () in
     incr next;
-    let builtins = Elpi.Builtin.std_builtins in
     { id = !next;
-      elpi = Setup.init ~builtins:[builtins] ~file_resolver ~file_reader ();
-      library = lazy (compute_library_files builtins);
+      elpi;
+      library = lazy (compute_library_files Elpi.Builtin.std_builtins);
       cache = { units = Hashtbl.create 17; clock = 0 } }
 
 let id { id } = id
@@ -192,10 +194,21 @@ let resilient_parse ~elpi ~path text =
    the client asks for traces (the setting elpi-lsp.debug of VS Code) *)
 let profile = ref (Option.is_some (Sys.getenv_opt "ELPI_LSP_PROFILE"))
 let verbose = ref false
+[%%import "lsp_config.mlh"]
+
+(* lsp 1.28 renamed TraceValues to TraceValue *)
+[%%if lsp < (1, 28, 0)]
+module TraceValue = Lsp.Types.TraceValues
+[%%else]
+module TraceValue = Lsp.Types.TraceValue
+[%%endif]
+
+type trace_value = TraceValue.t
+
 let set_trace = function
-  | Lsp.Types.TraceValues.Off -> profile := Option.is_some (Sys.getenv_opt "ELPI_LSP_PROFILE"); verbose := false
-  | Lsp.Types.TraceValues.Messages | Compact -> profile := true; verbose := false
-  | Lsp.Types.TraceValues.Verbose -> profile := true; verbose := true
+  | TraceValue.Off -> profile := Option.is_some (Sys.getenv_opt "ELPI_LSP_PROFILE"); verbose := false
+  | TraceValue.Messages | Compact -> profile := true; verbose := false
+  | TraceValue.Verbose -> profile := true; verbose := true
 
 let timed what f =
   if not !profile then f () else begin
@@ -291,7 +304,7 @@ let spread_undeclared (hover : unit_info list) ({ Error.warning_id; warning } : 
        | _ -> [ warning ])
   | _ -> [ warning ]
 
-let check ~instance ~path text =
+let check ?(warnings = []) ~instance ~path text =
   (* the resilient parser does not fail, but for robustness the exception is
      reported as an error *)
   match resilient_parse ~elpi:instance.elpi ~path text with
@@ -301,20 +314,26 @@ let check ~instance ~path text =
   | ast, parse_errors, parse_warnings ->
       let accumulated = LSP.accumulated ast in
       let syntax = syntax_diagnostics ~path ~accumulated text parse_errors in
-      let errors, warnings, hover, accumulates = compile ~instance ~path ~accumulated ast in
+      let errors, compile_warnings, hover, accumulates = compile ~instance ~path ~accumulated ast in
       let errors = List.map (diag_of_error ~path ~accumulated Error) errors in
-      let ws = List.concat_map (fun w ->
-          List.map (fun (w : Error.t) ->
-              let here = diag_of_error ~path ~accumulated Warning w in
-              match w.loc with
-              | Some { source_name; source_start; source_stop; _ }
-                when not (String.equal source_name path) && not (String.equal source_name "") ->
-                  let message = String.trim (Format.asprintf "%a" Error.pp_message w) in
-                  Either.Right { file = source_name; here;
-                                 in_file = { start = source_start; stop = source_stop; severity = Warning; message } }
-              | _ -> Either.Left here)
-            (spread_undeclared hover w))
-          (parse_warnings @ warnings) in
+      (* the levels of the warnings: off ones are not shown, error ones are
+         errors *)
+      let ws = List.concat_map (fun (w : Error.warning) ->
+          match Error.warning_level warnings w.warning_id with
+          | Error.Off -> []
+          | (Error.On | Error.As_error) as l ->
+              let severity = if l == Error.As_error then Error else Warning in
+              List.map (fun (w : Error.t) ->
+                  let here = diag_of_error ~path ~accumulated severity w in
+                  match w.loc with
+                  | Some { source_name; source_start; source_stop; _ }
+                    when not (String.equal source_name path) && not (String.equal source_name "") ->
+                      let message = String.trim (Format.asprintf "%a" Error.pp_message w) in
+                      Either.Right { file = source_name; here;
+                                     in_file = { start = source_start; stop = source_stop; severity; message } }
+                  | _ -> Either.Left here)
+                (spread_undeclared hover w))
+          (parse_warnings @ compile_warnings) in
       let ws, elsewhere = List.partition_map Fun.id ws in
       { diagnostics = syntax @ errors @ ws; elsewhere; hover = Some hover; accumulates }
 

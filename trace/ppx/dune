@@ -18,10 +18,6 @@
    (progn
     (echo "(* Automatically generated, don't edit *)\n")
     (echo "[%%define ppxlib ")
-    (run ./version_parser.exe %{version:ppxlib})
+    (run %{exe:../../etc/version_parser.exe} %{version:ppxlib})
     (echo "]\n")))))
 
-(executable
- (name version_parser)
- (modules version_parser)
- (libraries str))

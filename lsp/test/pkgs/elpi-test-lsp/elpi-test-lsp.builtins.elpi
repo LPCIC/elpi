@@ -1,0 +1,5 @@
+% the stub of the plugin of elpi-test-lsp, read since elpi-lsp does not load
+% plugins
+
+% [lsp.f N M] M is N plus one
+builtin func lsp.f int -> int.
