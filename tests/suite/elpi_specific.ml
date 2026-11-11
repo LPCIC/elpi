@@ -769,3 +769,9 @@ let () = declare "namespace07"
   ~description:"in a namespace, a predicate does not hide a type"
   ~expectation:Test.(SuccessOutput (Str.regexp_string "1"))
   ()
+
+let () = declare "namespace08"
+  ~source_elpi:"namespaces08.elpi"
+  ~description:"a namespace sees its rules without signature of the files before"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "ok"))
+  ()

@@ -443,6 +443,56 @@ let ast_of_builtins ~(parser: (module Parse.Parser)) ~file_name =
     | None -> () end;
     anomaly ?loc message
 
+let namespace_separatorc = '.'
+let namespace_separator = String.make 1 namespace_separatorc
+
+(* The symbols declared in each namespace: for namespace n.m, the names x such
+   that n.m.x is declared, as a predicate or as a type. A block of namespace
+   n.m sees all of them, also the ones declared in another block, in another
+   unit, or outside the namespace by their full name. *)
+module Namespaces : sig
+  type t
+  val pp : Format.formatter -> t -> unit
+  val empty : t
+  (* from the full names of the predicates and of the types *)
+  val of_symbols : preds:F.Set.t -> tys:F.Set.t -> t
+  val union : t -> t -> t
+  (* the names declared in namespace [prefix], without the prefix *)
+  val preds : t -> string list -> F.Set.t
+  val tys : t -> string list -> F.Set.t
+end = struct
+  type members = { preds : F.Set.t; tys : F.Set.t }
+  [@@deriving show]
+  type t = members StrMap.t
+  let pp fmt t =
+    StrMap.iter (fun k m -> Format.fprintf fmt "@[<hov 2>%s:@ %a@]@ " k pp_members m) t
+  let empty = StrMap.empty
+  let union_members a b = { preds = F.Set.union a.preds b.preds; tys = F.Set.union a.tys b.tys }
+  let union = StrMap.union (fun _ a b -> Some (union_members a b))
+  (* n.m.x is a member x.. of n and m.x of n.m *)
+  let add pick t c =
+    let s = F.show c in
+    let len = String.length s in
+    let rec aux t i =
+      match String.index_from_opt s i namespace_separatorc with
+      | Some j when j + 1 < len ->
+          let t =
+            if j = 0 then t else
+            let prefix = String.sub s 0 j in
+            let name = F.from_string (String.sub s (j + 1) (len - j - 1)) in
+            let m = Option.value ~default:{ preds = F.Set.empty; tys = F.Set.empty } (StrMap.find_opt prefix t) in
+            StrMap.add prefix (pick m name) t in
+          aux t (j + 1)
+      | _ -> t in
+    aux t 0
+  let of_symbols ~preds ~tys =
+    let t = F.Set.fold (fun c t -> add (fun m x -> { m with preds = F.Set.add x m.preds }) t c) preds empty in
+    F.Set.fold (fun c t -> add (fun m x -> { m with tys = F.Set.add x m.tys }) t c) tys t
+  let find t prefix = StrMap.find_opt (String.concat namespace_separator prefix) t
+  let preds t prefix = match find t prefix with Some m -> m.preds | None -> F.Set.empty
+  let tys t prefix = match find t prefix with Some m -> m.tys | None -> F.Set.empty
+end
+
 module Flat = struct
 
 type unchecked_signature = {
@@ -450,6 +500,8 @@ type unchecked_signature = {
   kinds : Arity.t F.Map.t;
   types : ScopeTypeExpressionUniqueList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
+  (* the namespaces of the unit *)
+  namespaces : Namespaces.t;
 }
 [@@deriving show]
 
@@ -472,6 +524,7 @@ module Assembled = struct
     types : TypingEnv.t;
     type_abbrevs : Type_checker.type_abbrevs;
     ty_names : Loc.t F.Map.t;
+    namespaces : Namespaces.t;
   }
   [@@deriving show]
   
@@ -503,6 +556,7 @@ module Assembled = struct
     type_abbrevs = F.Map.empty;
     toplevel_macros = F.Map.empty;
     ty_names = F.Map.empty;
+    namespaces = Namespaces.empty;
   }
   let empty () = {
     clauses = [];
@@ -1002,9 +1056,6 @@ module CustomFunctorCompilation = struct
     | None -> ScopedTerm.mkGlobalApp ~loc x []
     | Some (language,f) -> ScopedTerm.(unlock @@ of_simple_term_loc @@ f ~language state loc (F.show x))
 end
-
-let namespace_separatorc = '.'
-let namespace_separator = String.make 1 namespace_separatorc
 
 let prefix_const prefix c =
   F.from_string (String.concat namespace_separator (prefix @ [F.show c]))
@@ -1581,43 +1632,6 @@ module Flatten : sig
       
 
   (* the errors are only needed by the merge_* functions *)
-(* The symbols that the blocks of each namespace of a program declare, by full
-   name: a block of a namespace sees the ones of all the blocks of the
-   namespace, also of a nested one (namespace n { namespace m { .. } }) or a
-   dotted one (namespace n.m { .. }), and the ones of the program [base] that
-   the unit extends *)
-let namespace_symbols ~(base : Assembled.signature) pbody =
-  let preds = ref F.Set.empty and tys = ref F.Set.empty in
-  TypingEnv.iter_names (fun c _ -> preds := F.Set.add c !preds) base.Assembled.types;
-  F.Map.iter (fun c _ -> tys := F.Set.add c !tys) base.Assembled.kinds;
-  F.Map.iter (fun c _ -> tys := F.Set.add c !tys) base.Assembled.type_abbrevs;
-  let rec walk prefix (pb : Scoped.pbody) =
-    List.iter (function
-      | Scoped.Namespace (extra, pb) ->
-          let prefix = prefix @ [extra] in
-          preds := F.Set.union (prepend prefix pb.Scoped.pred_symbols) !preds;
-          tys := F.Set.union (prepend prefix pb.Scoped.ty_symbols) !tys;
-          walk prefix pb
-      | Scoped.Shorten (_, pb) | Scoped.Constraints (_, pb) | Scoped.Block pb -> walk prefix pb
-      | Scoped.Clauses _ -> ()) pb.Scoped.body in
-  walk [] pbody;
-  (* [members set prefix] are the names of [set] in namespace [prefix],
-     without the prefix *)
-  let members all =
-    let cache = Hashtbl.create 7 in
-    fun prefix ->
-      let p = String.concat namespace_separator prefix ^ namespace_separator in
-      match Hashtbl.find_opt cache p with
-      | Some s -> s
-      | None ->
-          let n = String.length p in
-          let s = F.Set.fold (fun c acc ->
-            let c = F.show c in
-            if String.length c > n && String.equal (String.sub c 0 n) p
-            then F.Set.add (F.from_string (String.sub c n (String.length c - n))) acc else acc) all F.Set.empty in
-          Hashtbl.add cache p s; s in
-  members !preds, members !tys
-
 let compile_block ~errs ~namespace_preds ~namespace_tys =
   let merge_kinds = merge_kinds ~errs in
   let rec compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst = function
@@ -1674,13 +1688,15 @@ let compile_block ~errs ~namespace_preds ~namespace_tys =
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   in compile_block
 
-  let compile_body ~errs ~base ({ Scoped.kinds; types; type_abbrevs; ty_symbols = _; pred_symbols = _; body } as pb) =
-    let namespace_preds, namespace_tys = namespace_symbols ~base pb in
-    compile_block ~errs ~namespace_preds ~namespace_tys kinds types type_abbrevs [] [] empty_subst empty_subst body
-
+  (* the symbols of the unit, by full name, are computed by Scope *)
   let run ~errs ~base state { Scoped.pbody; toplevel_macros; macro_uses = _ } =
-    let kinds, types, type_abbrevs, clauses_rev, chr_rev = compile_body ~errs ~base pbody in
-    let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros } in
+    let { Scoped.kinds; types; type_abbrevs; ty_symbols; pred_symbols; body } = pbody in
+    let namespaces = Namespaces.of_symbols ~preds:pred_symbols ~tys:ty_symbols in
+    let all_namespaces = Namespaces.union base.Assembled.namespaces namespaces in
+    let kinds, types, type_abbrevs, clauses_rev, chr_rev =
+      compile_block ~errs ~namespace_preds:(Namespaces.preds all_namespaces) ~namespace_tys:(Namespaces.tys all_namespaces)
+        kinds types type_abbrevs [] [] empty_subst empty_subst body in
+    let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros; namespaces } in
     { Flat.clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; builtins = None; signature } (* TODO builtins can be in a unit *)
 
 
@@ -1703,9 +1719,9 @@ end = struct
 
 
   let check_signature ~errs ~flags (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * TypingEnv.t =
-    let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots } = base_signature in
+    let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots; namespaces = ons } = base_signature in
     
-    let { Flat.kinds; types; type_abbrevs; toplevel_macros } = signature in
+    let { Flat.kinds; types; type_abbrevs; toplevel_macros; namespaces } = signature in
 
     let all_kinds = Flatten.merge_kinds ~errs ok kinds in
     let check_k_begin = Unix.gettimeofday () in
@@ -1760,8 +1776,9 @@ end = struct
         toplevel_macros (F.Map.empty, otlm) in
     let check_t_end = Unix.gettimeofday () in
 
-    { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names },
-    { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; ty_names = all_ty_names },
+    { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names; namespaces },
+    { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; ty_names = all_ty_names;
+      namespaces = Namespaces.union ons namespaces },
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types
 
@@ -2550,8 +2567,8 @@ end = struct
         extend1_chr ~builtins ~types flags state clique acc r)) (symbols,chr) rules
 
 let extend1_signature ~errs base_signature ({ signature } : checked_compilation_unit_signature) =
-  let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots } = base_signature in
-  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; ty_names } = signature in
+  let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots; namespaces = ons } = base_signature in
+  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; ty_names; namespaces } = signature in
   let kinds = Flatten.merge_kinds ~errs ok kinds in
   F.Map.iter (fun k TypeAssignment.{ loc; } -> if F.Map.mem k ots && not (Loc.equal loc (F.Map.find k ots)) then error ~loc ("Illegal type abbreviation for " ^ F.show k ^ ". A type with the same name already exists in " ^ Loc.show (F.Map.find k ots))) type_abbrevs;
   let type_abbrevs = Flatten.merge_checked_type_abbrevs ~errs ota type_abbrevs in
@@ -2559,7 +2576,8 @@ let extend1_signature ~errs base_signature ({ signature } : checked_compilation_
   let toplevel_macros = Flatten.merge_toplevel_macros ~errs types otlm toplevel_macros in
   let merge _ _ b = Some b in
   let ty_names = F.Map.union merge ots ty_names in
-  { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names }
+  let namespaces = Namespaces.union ons namespaces in
+  { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names; namespaces }
 
 let new_symbols_of_types ~(base_sig:Assembled.signature) new_types =
   let symbs = TypingEnv.all_symbols new_types in
