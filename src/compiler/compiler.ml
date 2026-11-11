@@ -1330,7 +1330,7 @@ end = struct
       let defs_ta = defs_of_assoclist type_abbrevs in
       let kinds, types, type_abbrevs, defs_b, defs_ty, body =
         compile_body active_macros kinds types type_abbrevs F.Set.empty F.Set.empty state body in
-      let ty_symbols = F.Set.(union defs_k (union defs_t (union defs_ta defs_ty))) in
+      let ty_symbols = F.Set.(union defs_k (union defs_ta defs_ty)) in
       let pred_symbols = F.Set.(union defs_t defs_b) in
       (* Format.eprintf "CP: types: %d\n" (F.Map.cardinal types);
       Format.eprintf "CP: ty_sym: %a\n" F.Set.pp ty_symbols; *)
@@ -1523,16 +1523,18 @@ module Flatten : sig
   let apply_subst_chrs s sty = smart_map_chrs (subst_global s) ~tyf:(subst_global sty)
 
 
-  let apply_subst_types s = ScopeTypeExpressionUniqueList.smart_map (ScopedTypeExpression.smart_map (subst_global s))
-
-  let apply_subst_types s l =
-    F.Map.fold (fun k v m -> F.Map.add (subst_global s k) (apply_subst_types s v) m) l F.Map.empty
+  (* the name of a signature is a term, its type is a type *)
+  let apply_subst_types pred_subst ty_subst l =
+    let pred_f = subst_global pred_subst and ty_f = subst_global ty_subst in
+    F.Map.fold (fun k v m ->
+      F.Map.add (pred_f k) (ScopeTypeExpressionUniqueList.smart_map (ScopedTypeExpression.smart_map ~name:pred_f ty_f) v) m)
+      l F.Map.empty
 
   let apply_subst_kinds s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
   
   let apply_subst_type_abbrevs s l =
-    List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
+    List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map ~name:(subst_global s) (subst_global s) v) l
 
   let merge_type_assignments = TypingEnv.merge_envs
   
@@ -1585,7 +1587,7 @@ let compile_block ~errs =
       let inpsubst = push_subst_shorthands shorthands pred_subst in
       let intysubst = push_subst_shorthands shorthands ty_subst in
       let kinds = merge_kinds (apply_subst_kinds intysubst k) kinds in
-      let types = merge_types TypingEnv.empty (apply_subst_types intysubst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types inpsubst intysubst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs intysubst ta) in
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr inpsubst intysubst body in
@@ -1595,8 +1597,8 @@ let compile_block ~errs =
       let new_ty_subst = push_subst extra ts ty_subst in
       let kinds = merge_kinds (apply_subst_kinds new_ty_subst k) kinds in
       (* Format.eprintf "@[<v>Types before:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) t; *)
-      let types = merge_types TypingEnv.empty (apply_subst_types new_ty_subst t) types in
-      (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) (apply_subst_types new_ty_subst t); *)
+      let types = merge_types TypingEnv.empty (apply_subst_types new_pred_subst new_ty_subst t) types in
+      (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) (apply_subst_types new_pred_subst new_ty_subst t); *)
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs new_ty_subst ta) in
       (* a type abbreviation that has the name of a type is dropped *)
       let type_abbrevs =
@@ -1616,7 +1618,7 @@ let compile_block ~errs =
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   | Scoped.Constraints (ch, { kinds = k; types = t; type_abbrevs = ta; body }) :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
-      let types = merge_types TypingEnv.empty (apply_subst_types ty_subst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types pred_subst ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
       (* let modes = merge_modes (apply_subst_modes subst m) modes in *)
       let chr = apply_subst_chrs pred_subst  ty_subst ch :: chr in
@@ -1625,7 +1627,7 @@ let compile_block ~errs =
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   | Scoped.Block { kinds=k; types = t; type_abbrevs = ta; body; ty_symbols = _ } :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
-      let types = merge_types TypingEnv.empty (apply_subst_types ty_subst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types pred_subst ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst body in

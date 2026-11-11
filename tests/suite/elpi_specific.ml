@@ -753,3 +753,9 @@ let () = declare "builtin_type"
   ~description:"the legacy type declaration with builtin"
   ~expectation:Test.(FailureOutput (Str.regexp "Only the symbols of the language are declared builtin"))
   ()
+
+let () = declare "namespace07"
+  ~source_elpi:"namespaces07.elpi"
+  ~description:"in a namespace, a predicate does not hide a type"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "1"))
+  ()

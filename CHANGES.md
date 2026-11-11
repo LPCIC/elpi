@@ -25,6 +25,9 @@
     swapped the renaming of the predicates and the one of the types: a
     predicate of the namespace with rules but no signature, or a type of the
     namespace, was not found there
+  - Fix: in a namespace, a predicate or a constant does not hide a type
+    with the same name, e.g. in `namespace n { pred term. pred p term. }`
+    the argument of `p` has the type `term`, not `n.term`
   - Change: `builtin` is only for the symbols of the language (with
     `= "core"`, only in `builtin.elpi`) and for the predicates implemented by
     an `MLCode` (`builtin func`). `builtin symb` without `= "core"` is a
