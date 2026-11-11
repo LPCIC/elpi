@@ -20,14 +20,17 @@ let () = register ~name:"completion" "completion.elpi" (fun file ->
   completion file "foo.bar 3" 0 ~only:[ "foo"; "bar"; "other" ];
   (* after shorten std.{ map }, map is std.map *)
   completion file "map [1]" 2 ~only:[ "map" ];
-  (* types, macros *)
-  completion file "color." 3 ~only:[ "color" ];
+  (* on a signature line the types, elsewhere the terms *)
+  completion file "colors list color" 14 ~only:[ "color"; "colors" ];
+  completion file "symb red, green : color" 21 ~only:[ "color"; "colors" ];
+  completion file "pred bar int" 11 ~only:[ "int"; "ints" ];
+  (* macros *)
   completion file "@twice" 3;
   (* a variable, the full stop of a rule: nothing *)
   completion file "L :-" 1;
   completion file "@twice true." 12;
   (* types, type abbreviations *)
-  completion file "int -> int" 2 ~only:[ "int"; "ints" ];
+  completion file "int -> int" 2 ~only:[ "int"; "ints"; "double" ];
   (* while typing: the rule has a syntax error *)
   let typing = "completion_typing.elpi" in
   open_text typing (read_file file ^ "\nmain :- std.ma");

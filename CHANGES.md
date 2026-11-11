@@ -4,7 +4,8 @@
   - New: completion of names (`textDocument/completion`, also triggered by
     `.`): `std.` offers the symbols and the namespaces of `std`, and the
     short names valid at the cursor (in a namespace, after a `shorten`
-    directive) are offered too
+    directive) are offered too. On a line starting with `pred` or `func`
+    the types are offered, elsewhere the terms
 - API:
   - New: `LSP.symbols_starting_with` lists the symbols of a program whose
     full name starts with one of the given prefixes, with their kind, type,

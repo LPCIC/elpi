@@ -561,7 +561,25 @@ let completions_at ~path ~(text : Text.t) off { program; scopes } =
           if n > k && String.ends_with ~suffix:short full then Some (String.sub full 0 (n - k)) else None)
         scope
       |> List.sort_uniq String.compare in
-    let symbols = LSP.symbols_starting_with ~prefix:(word :: List.map (fun q -> q ^ word) omitted) program in
+    (* on the line of a signature (it starts with pred or func) the types,
+       elsewhere the terms *)
+    let types =
+      let s = text.Text.text in
+      let rec line_start i = if i > 0 && not (Char.equal s.[i - 1] '\n') then line_start (i - 1) else i in
+      let rec skip i = if i < off && (Char.equal s.[i] ' ' || Char.equal s.[i] '\t') then skip (i + 1) else i in
+      let i = skip (line_start wstart) in
+      let keyword k =
+        let n = String.length k in
+        i + n < String.length s && String.equal (String.sub s i n) k
+        && (match s.[i + n] with ' ' | '\t' | '\n' | '\r' -> true | _ -> false) in
+      keyword "pred" || keyword "func" in
+    let wanted (s : LSP.symbol) =
+      match s.skind with
+      | LSP.Symbol_type _ | LSP.Symbol_type_abbreviation -> types
+      | LSP.Symbol_constant _ | LSP.Symbol_macro -> not types in
+    let symbols =
+      LSP.symbols_starting_with ~prefix:(word :: List.map (fun q -> q ^ word) omitted) program
+      |> List.filter wanted in
     let seen = Hashtbl.create 97 in
     let items = ref [] in
     let add key item = if not (Hashtbl.mem seen key) then (Hashtbl.add seen key (); items := item :: !items) in

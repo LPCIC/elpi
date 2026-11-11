@@ -8,7 +8,6 @@ completion "std.map []"+4 (the cursor is at 30:42):
     map (kind 9)
     map (kind 20) : std.map.private.map K V -> (func K, K -> cmp) -> std.map K V
     map (kind 3) : (func list A, (func A -> B) -> list B)
-    map (kind 7) : type -> type -> type
     mem (kind 2) : (pred list A -> A)
       ? [mem L X] succeeds every time if X occurs inside L
     string (kind 9)
@@ -22,7 +21,6 @@ completion "std.map []"+6 (the cursor is at 30:44):
     map (kind 9)
     map (kind 20) : std.map.private.map K V -> (func K, K -> cmp) -> std.map K V
     map (kind 3) : (func list A, (func A -> B) -> list B)
-    map (kind 7) : type -> type -> type
     map2 (kind 3) : (func list A, list B, (func A, B -> C) -> list C)
     mem: not offered
     and others
@@ -87,14 +85,28 @@ completion "map [1]"+2 (the cursor is at 30:14):
     cursor     |               *
     map (kind 20) : std.map.private.map K V -> (func K, K -> cmp) -> std.map K V
     map (kind 3) : (func list A, (func A -> B) -> list B)
-    map (kind 7) : type -> type -> type
     and others
-completion "color."+3 (the cursor is at 5:21):
+completion "colors list color"+14 (the cursor is at 29:19):
+  line 29:
+               | pred colors list color.
+    replaced   |                  ^^
+    cursor     |                    *
+    color (kind 7) : type
+    colors: not offered
+completion "symb red, green : color"+21 (the cursor is at 5:21):
   line 5:
                | symb red, green : color.
     replaced   |                   ^^^
     cursor     |                      *
-    color (kind 7) : type
+    colors (kind 2) : (pred list color)
+    color: not offered
+completion "pred bar int"+11 (the cursor is at 12:13):
+  line 12:
+               |   pred bar int -> int.
+    replaced   |            ^^
+    cursor     |              *
+    int (kind 7) : type
+    ints (kind 25) : list int
     and others
 completion "@twice"+3 (the cursor is at 9:9):
   line 9:
@@ -115,9 +127,9 @@ completion "int -> int"+2 (the cursor is at 1:14):
                | func double int -> int.
     replaced   |             ^^
     cursor     |               *
-    int (kind 9)
     int (kind 7) : type
     ints (kind 25) : list int
+    double: not offered
     and others
 
 ==== open completion_typing.elpi (not on the disk) ====
@@ -129,7 +141,6 @@ completion "main :- std.ma"+14 (the cursor is at 32:14):
     map (kind 9)
     map (kind 20) : std.map.private.map K V -> (func K, K -> cmp) -> std.map K V
     map (kind 3) : (func list A, (func A -> B) -> list B)
-    map (kind 7) : type -> type -> type
     map2 (kind 3) : (func list A, list B, (func A, B -> C) -> list C)
     mem: not offered
     and others
