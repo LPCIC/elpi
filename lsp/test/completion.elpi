@@ -29,3 +29,24 @@ shorten std.{ map }.
 
 pred colors list color.
 colors L :- map [1] (x\y\ y = red) L, std.map [] (x\y\ true) _, double 1 _, @twice true.
+
+namespace lib {
+  namespace private {
+    pred helper.
+    helper :- inner.
+    pred inner.
+    inner.
+  }
+  pred api.
+  api :- private.helper.
+  pred lookup (std.map int int) -> int.
+  lookup M V :- std.map.find 1 M V.
+}
+
+kind term type.
+namespace tt {
+  pred term.
+  term.
+  pred use term -> int.
+  use _ 1 :- term.
+}

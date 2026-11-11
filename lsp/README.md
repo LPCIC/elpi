@@ -28,7 +28,9 @@
    Definition) jumps to the declaration of a predicate, and Ctrl+hover
    previews it with its rules (when they follow it, up to 8 lines); names
    are completed as you type (after `std.`, the symbols of `std`; in a
-   namespace or after `shorten`, the short names too).
+   namespace or after `shorten`, the short names too). A name with a
+   `private` segment, e.g. `std.map.private.find`, is offered only once
+   that segment is typed (after `std.map.private.`).
 
 ## Command line
 

@@ -83,13 +83,22 @@ A library's public surface
 ==========================
 
 Namespacing and ``shorten`` together let a file expose a small public API and
-keep its helpers out of the way: nest the helpers under an ``internal``
+keep its helpers out of the way: nest the helpers under a ``private``
 namespace, define the public predicates alongside it (they reach
-``internal.…`` unqualified, being in the same enclosing namespace), and
+``private.…`` unqualified, being in the same enclosing namespace), and
 ``shorten`` only the public names for whoever accumulates the file.
 
 .. elpi:: ../code/library-api.elpi
    :assert: result: 21
+
+The name ``private`` is a convention, which the standard library follows
+(``std.map.private.find``): the language checks nothing, and
+``mylib.private.helper`` can be used from anywhere. The language server
+follows it too: its completion does not offer a name with a ``private``
+segment, unless that segment is already typed. After ``mylib.`` it offers
+``public-api`` but neither ``private`` nor ``private.helper``; after
+``mylib.private.`` it offers ``helper``. Inside the ``private`` namespace
+itself, ``helper`` is offered by its short name.
 
 
 Macros

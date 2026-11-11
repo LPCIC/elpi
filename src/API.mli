@@ -454,16 +454,22 @@ module LSP : sig
       per declaration. *)
   val symbols_starting_with : prefix:string list -> Compile.program -> symbol list
 
-  (** The short names in force in the regions of a scoped program: inside a
-      namespace, the names that it declares; after a shorten directive, until
-      the end of its block, the short names it introduces. *)
-  type scopes
-  val scopes : Compile.scoped_program -> scopes
-
-  (** [scope_at s loc] is the list of the short names valid at [loc], each
-      with the full name it stands for (empty outside any namespace or
+  (** The short names valid at a location, each with the full name it
+      stands for: the ones of the terms (predicates, constants) and the ones
+      of the types, which can differ (empty outside any namespace or
       shorten) *)
-  val scope_at : scopes -> Ast.Loc.t -> (string * string) list
+  type scope = { terms : (string * string) list; types : (string * string) list }
+
+  (** The short names in force in the regions of a scoped program: inside a
+      namespace, the names that the namespace declares (in any of its blocks,
+      in the unit and in the program [base] the unit extends, as the compiler
+      sees them); after a shorten directive, until the end of its block, the
+      short names it introduces. *)
+  type scopes
+  val scopes : ?base:Compile.program -> Compile.scoped_program -> scopes
+
+  (** [scope_at s loc] is the scope at [loc] *)
+  val scope_at : scopes -> Ast.Loc.t -> scope
 
   (** [accumulated p] is the list of the accumulate directives of [p] (not of
       the files it accumulates): the location of each one, and the files that

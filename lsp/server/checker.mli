@@ -174,6 +174,7 @@ type completion_item = {
 (** the completions of the name before the cursor (possibly qualified, e.g.
     std.ma): the symbols of the program by their full name, and by the short
     names valid at the cursor (in a namespace, after a shorten directive);
-    nothing for a variable. On a line that starts with pred or func (a
+    nothing for a variable, nor a name with a [private] segment that is not
+    typed yet (std.map.private.find is offered after std.map.private.). On a line that starts with pred or func (a
     signature) they are the types, elsewhere the terms (constants, macros). *)
 val completions_at : path:string -> text:Text.t -> int -> completion -> completion_item list

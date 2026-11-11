@@ -74,9 +74,9 @@ completion "foo.bar 3"+0 (the cursor is at 24:11):
                |   other :- foo.bar 3 _.
     replaced   |            ^
     cursor     |            *
+    bar (kind 2) : (pred int -> int)
     foo (kind 9)
     other (kind 2) : (pred)
-    bar: not offered
     and others
 completion "map [1]"+2 (the cursor is at 30:14):
   line 30:
@@ -108,6 +108,47 @@ completion "pred bar int"+11 (the cursor is at 12:13):
     int (kind 7) : type
     ints (kind 25) : list int
     and others
+completion "std.map.find"+8 (the cursor is at 42:24):
+  line 42:
+               |   lookup M V :- std.map.find 1 M V.
+    replaced   |                         ^
+    cursor     |                         *
+    find (kind 3) : (func K, std.map K V -> V)
+      ? [find K M V] looks in M for the value V associated to K
+    private: not offered
+    and others
+completion "private.helper."+3 (the cursor is at 40:12):
+  line 40:
+               |   api :- private.helper.
+    cursor     |             *
+    private: not offered
+    and others
+completion "private.helper."+9 (the cursor is at 40:18):
+  line 40:
+               |   api :- private.helper.
+    replaced   |                  ^
+    cursor     |                   *
+    helper (kind 2) : (pred)
+completion "inner."+3 (the cursor is at 35:17):
+  line 35:
+               |     helper :- inner.
+    replaced   |               ^^^
+    cursor     |                  *
+    inner (kind 2) : (pred)
+completion "use term"+6 (the cursor is at 49:13):
+  line 49:
+               |   pred use term -> int.
+    replaced   |            ^^
+    cursor     |              *
+    term (kind 7) : type
+completion "1 :- term"+7 (the cursor is at 50:15):
+  line 50:
+               |   use _ 1 :- term.
+    replaced   |              ^^
+    cursor     |                *
+    term (kind 2) : (pred)
+    term_to_string (kind 3) : (func -> any, string)
+      ? [term_to_string T S] prints T to S
 completion "@twice"+3 (the cursor is at 9:9):
   line 9:
                | macro @twice X :- (X, X).
@@ -133,8 +174,8 @@ completion "int -> int"+2 (the cursor is at 1:14):
     and others
 
 ==== open completion_typing.elpi (not on the disk) ====
-completion "main :- std.ma"+14 (the cursor is at 32:14):
-  line 32:
+completion "main :- std.ma"+14 (the cursor is at 53:14):
+  line 53:
                | main :- std.ma
     replaced   |             ^^
     cursor     |               *
@@ -144,8 +185,8 @@ completion "main :- std.ma"+14 (the cursor is at 32:14):
     map2 (kind 3) : (func list A, list B, (func A, B -> C) -> list C)
     mem: not offered
     and others
-completion "main :- std.ma"+9 (the cursor is at 32:9):
-  line 32:
+completion "main :- std.ma"+9 (the cursor is at 53:9):
+  line 53:
                | main :- std.ma
     replaced   |         ^
     cursor     |          *

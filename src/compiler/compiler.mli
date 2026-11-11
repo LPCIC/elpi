@@ -156,6 +156,7 @@ type symbol = {
 
 val symbols_starting_with : prefix:string list -> program -> symbol list
 
+type scope = { terms : (string * string) list; types : (string * string) list }
 type scopes
-val scopes : scoped_program -> scopes
-val scope_at : scopes -> Ast.Loc.t -> (string * string) list
+val scopes : ?base:program -> scoped_program -> scopes
+val scope_at : scopes -> Ast.Loc.t -> scope

@@ -3687,34 +3687,46 @@ let symbols_starting_with ~prefix ((_, p) : program) =
     if wanted n then add n Symbol_macro "" (Some loc) None) toplevel_macros;
   List.sort (fun a b -> String.compare a.name b.name) !acc
 
-type scopes = (string * string) list IntervalTree.t
+type scope = { terms : (string * string) list; types : (string * string) list }
+type scopes = scope IntervalTree.t
 
-(* The renaming that Flatten applies, attached to the region where it is in
-   force: a region that changes it (a namespace, a shorten) gets the whole
-   renaming, so the innermost region is enough. The renaming of the
-   predicates and the one of the types are merged. *)
-let scopes (sp : scoped_program) : scopes =
+(* The renamings that Flatten applies (of the terms, of the types), attached
+   to the region where they are in force: a region that changes them (a
+   namespace, a shorten) gets them whole, so the innermost region is enough.
+   As in Flatten.run, a namespace renames the names that it declares in the
+   unit and in the program [base] the unit extends. *)
+let scopes ?base (sp : scoped_program) : scopes =
+  let { Scoped.pred_symbols; ty_symbols } = sp.code.Scoped.pbody in
+  let namespaces =
+    let own = Namespaces.of_symbols ~preds:pred_symbols ~tys:ty_symbols in
+    match base with
+    | Some ((_, p) : program) -> Namespaces.union p.Assembled.signature.Assembled.namespaces own
+    | None -> own in
   let regions = ref [] in
   let pairs { Flatten.subst } = F.Map.fold (fun k v acc -> (F.show k, F.show v) :: acc) subst [] in
-  let rec walk subst (pb : Scoped.pbody) = List.iter (block subst) pb.Scoped.body
-  and block subst = function
+  let add region psubst tsubst = regions := (region, { terms = pairs psubst; types = pairs tsubst }) :: !regions in
+  let rec walk psubst tsubst (pb : Scoped.pbody) = List.iter (block psubst tsubst) pb.Scoped.body
+  and block psubst tsubst = function
     | Scoped.Namespace (region, ns, pb) ->
-        let subst = Flatten.push_subst ns (F.Set.union pb.Scoped.pred_symbols pb.Scoped.ty_symbols) subst in
-        regions := (region, pairs subst) :: !regions;
-        walk subst pb
+        let prefix = psubst.Flatten.old_prefix @ [ ns ] in
+        let psubst = Flatten.push_subst ns (F.Set.union pb.Scoped.pred_symbols (Namespaces.preds namespaces prefix)) psubst in
+        let tsubst = Flatten.push_subst ns (F.Set.union pb.Scoped.ty_symbols (Namespaces.tys namespaces prefix)) tsubst in
+        add region psubst tsubst;
+        walk psubst tsubst pb
     | Scoped.Shorten (region, shorthands, pb) ->
-        let subst = Flatten.push_subst_shorthands shorthands subst in
-        regions := (region, pairs subst) :: !regions;
-        walk subst pb
-    | Scoped.Constraints (_, pb) | Scoped.Block pb -> walk subst pb
+        let psubst = Flatten.push_subst_shorthands shorthands psubst in
+        let tsubst = Flatten.push_subst_shorthands shorthands tsubst in
+        add region psubst tsubst;
+        walk psubst tsubst pb
+    | Scoped.Constraints (_, pb) | Scoped.Block pb -> walk psubst tsubst pb
     | Scoped.Clauses _ -> () in
-  walk Flatten.empty_subst sp.code.Scoped.pbody;
+  walk Flatten.empty_subst Flatten.empty_subst sp.code.Scoped.pbody;
   IntervalTree.of_list !regions
 
 let scope_at (t : scopes) loc =
   match IntervalTree.find loc t with
   | (_, s) :: _ -> s
-  | [] -> []
+  | [] -> { terms = []; types = [] }
 
 (* ---- map_compilation_unit: apply a CData.t -> CData.t mapping ---- *)
 

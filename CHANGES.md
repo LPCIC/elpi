@@ -5,13 +5,16 @@
     `.`): `std.` offers the symbols and the namespaces of `std`, and the
     short names valid at the cursor (in a namespace, after a `shorten`
     directive) are offered too. On a line starting with `pred` or `func`
-    the types are offered, elsewhere the terms
+    the types are offered, elsewhere the terms. A name with a `private`
+    segment (e.g. `std.map.private.find`) is offered only once that segment
+    is typed
 - API:
   - New: `LSP.symbols_starting_with` lists the symbols of a program whose
     full name starts with one of the given prefixes, with their kind, type,
     location and documentation
   - New: `LSP.scopes` and `LSP.scope_at` give the short names valid at a
-    location of a scoped program, with the full name they stand for
+    location of a scoped program, with the full name they stand for, for the
+    terms and for the types
 - PPX:
   - New: [@@elpi.namespace] to put all constructors into a namespace
   - New: `[@@deriving elpi]` on a closed polymorphic variant, e.g.

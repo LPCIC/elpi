@@ -273,7 +273,7 @@ let compile ~instance:{ elpi; cache } ~path ~accumulated ast =
      errors, which the parser keeps as units with no contents *)
   let accumulates = List.concat_map (fun sp -> List.map fst (Compile.scoped_program_deps sp)) sps in
   (* the document is the last unit *)
-  let scopes = lazy (match List.rev sps with sp :: _ -> Some (LSP.scopes sp) | [] -> None) in
+  let scopes = lazy (match List.rev sps with sp :: _ -> Some (LSP.scopes ~base:program sp) | [] -> None) in
   errors, warnings, List.rev infos, { program; scopes }, accumulates
 
 let diag_of_error ~path ~accumulated severity (e : Error.t) =
@@ -539,7 +539,21 @@ type completion_item = {
 (* The names that complete the one before the cursor: the full names of the
    symbols, and the short names valid at the cursor (the scope, see
    LSP.scope_at). Only the segment after the last dot of the name is
-   completed: a longer name gives the namespace that follows it. *)
+   completed: a longer name gives the namespace that follows it. A name with a
+   private segment still to be typed is not offered. *)
+(* whether the line of [wstart] is a signature (it starts with pred or func):
+   there the types are completed, elsewhere the terms *)
+let signature_line (text : Text.t) wstart off =
+  let s = text.Text.text in
+  let rec line_start i = if i > 0 && not (Char.equal s.[i - 1] '\n') then line_start (i - 1) else i in
+  let rec skip i = if i < off && (Char.equal s.[i] ' ' || Char.equal s.[i] '\t') then skip (i + 1) else i in
+  let i = skip (line_start wstart) in
+  let keyword k =
+    let n = String.length k in
+    i + n < String.length s && String.equal (String.sub s i n) k
+    && (match s.[i + n] with ' ' | '\t' | '\n' | '\r' -> true | _ -> false) in
+  keyword "pred" || keyword "func"
+
 let completions_at ~path ~(text : Text.t) off { program; scopes } =
   let wstart = Text.word_start text off in
   let word = String.sub text.Text.text wstart (off - wstart) in
@@ -552,7 +566,11 @@ let completions_at ~path ~(text : Text.t) off { program; scopes } =
   else
     let start = wstart + qlen in
     let loc = { (Ast.Loc.initial path) with source_start = off; source_stop = off } in
-    let scope = match Lazy.force scopes with Some s -> LSP.scope_at s loc | None -> [] in
+    let types = signature_line text wstart off in
+    let scope =
+      match Lazy.force scopes with
+      | Some s -> let { LSP.terms; types = tys } = LSP.scope_at s loc in if types then tys else terms
+      | None -> [] in
     (* a short name stands for a full name that ends with it: the beginning of
        the full name is what the short name omits *)
     let omitted =
@@ -561,18 +579,6 @@ let completions_at ~path ~(text : Text.t) off { program; scopes } =
           if n > k && String.ends_with ~suffix:short full then Some (String.sub full 0 (n - k)) else None)
         scope
       |> List.sort_uniq String.compare in
-    (* on the line of a signature (it starts with pred or func) the types,
-       elsewhere the terms *)
-    let types =
-      let s = text.Text.text in
-      let rec line_start i = if i > 0 && not (Char.equal s.[i - 1] '\n') then line_start (i - 1) else i in
-      let rec skip i = if i < off && (Char.equal s.[i] ' ' || Char.equal s.[i] '\t') then skip (i + 1) else i in
-      let i = skip (line_start wstart) in
-      let keyword k =
-        let n = String.length k in
-        i + n < String.length s && String.equal (String.sub s i n) k
-        && (match s.[i + n] with ' ' | '\t' | '\n' | '\r' -> true | _ -> false) in
-      keyword "pred" || keyword "func" in
     let wanted (s : LSP.symbol) =
       match s.skind with
       | LSP.Symbol_type _ | LSP.Symbol_type_abbreviation -> types
@@ -589,7 +595,10 @@ let completions_at ~path ~(text : Text.t) off { program; scopes } =
         let names = if starts_with word s.name then s.name :: short_names else short_names in
         List.iter (fun name ->
             let rest = String.sub name qlen (String.length name - qlen) in
-            if String.length rest > 0 && is_name_start rest.[0] then
+            (* a private name (a segment is private, e.g. std.map.private.find)
+               is offered only once its private segment is typed *)
+            let private_ = List.exists (String.equal "private") (String.split_on_char '.' rest) in
+            if String.length rest > 0 && is_name_start rest.[0] && not private_ then
               match String.index_opt rest '.' with
               | Some i ->
                   let label = String.sub rest 0 i in

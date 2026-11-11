@@ -16,7 +16,7 @@ let () = register ~name:"completion" "completion.elpi" (fun file ->
   (* in the namespace, the short names of the symbols that it declares *)
   completion file "bar 1 _" 2 ~only:[ "bar"; "baz" ];
   completion file "baz.qux" 4;
-  (* another block of the same namespace does not declare bar *)
+  (* another block of the same namespace sees bar too *)
   completion file "foo.bar 3" 0 ~only:[ "foo"; "bar"; "other" ];
   (* after shorten std.{ map }, map is std.map *)
   completion file "map [1]" 2 ~only:[ "map" ];
@@ -24,6 +24,16 @@ let () = register ~name:"completion" "completion.elpi" (fun file ->
   completion file "colors list color" 14 ~only:[ "color"; "colors" ];
   completion file "symb red, green : color" 21 ~only:[ "color"; "colors" ];
   completion file "pred bar int" 11 ~only:[ "int"; "ints" ];
+  (* a name with a private segment is offered once that segment is typed *)
+  completion file "std.map.find" 8 ~only:[ "find"; "private" ];
+  completion file "private.helper." 3 ~only:[ "private" ];
+  completion file "private.helper." 9;
+  (* in the private namespace, its names are not private *)
+  completion file "inner." 3 ~only:[ "inner" ];
+  (* a predicate of the namespace and a global type with the same name:
+     the type in a signature, the predicate in a rule *)
+  completion file "use term" 6;
+  completion file "1 :- term" 7;
   (* macros *)
   completion file "@twice" 3;
   (* a variable, the full stop of a rule: nothing *)

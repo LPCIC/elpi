@@ -271,6 +271,7 @@ module LSP = struct
     doc : Ast.Loc.t option;
   }
   let symbols_starting_with = Compiler.symbols_starting_with
+  type scope = Compiler.scope = { terms : (string * string) list; types : (string * string) list }
   type scopes = Compiler.scopes
   let scopes = Compiler.scopes
   let scope_at = Compiler.scope_at
