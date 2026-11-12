@@ -1,0 +1,9 @@
+% in a namespace, a predicate does not hide a type with the same name
+kind term type.
+type c term.
+namespace n {
+  pred term.
+  pred p term -> int.
+  p c 1.
+}
+main :- n.p c X, print X.

@@ -943,8 +943,9 @@ module ScopedTypeExpression = struct
       let t' = smart_map_scoped_loc_ty f t in
       if t == t' then orig else Ty t'
 
-  let smart_map f ({ name; value; nparams; loc; doc; index; availability; occur_check } as orig) =
-    let name' = f name in
+  (* [name] renames the declared name, [f] the types in the value *)
+  let smart_map ~name:fn f ({ name; value; nparams; loc; doc; index; availability; occur_check } as orig) =
+    let name' = fn name in
     let value' = smart_map_tye f value in
     if name == name' && value' == value then orig
     else { name = name'; value = value'; nparams; loc; doc; index; availability; occur_check }

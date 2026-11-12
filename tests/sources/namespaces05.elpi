@@ -1,0 +1,29 @@
+% a block of a namespace sees the symbols that the other blocks of the
+% namespace declare, also nested and dotted ones (issue #346)
+namespace n {
+  pred p.
+  p.
+  namespace m { pred r. r. }
+  kind t type.
+  symb a : t.
+}
+pred p.
+p :- fail.
+namespace n {
+  pred q.
+  % p is n.p (not the global p), m.r is n.m.r
+  q :- p, m.r.
+  pred s -> t.
+  s a.
+}
+namespace n.m {
+  pred u.
+  u :- r.
+}
+namespace n {
+  namespace m {
+    pred w.
+    w :- u, r.
+  }
+}
+main :- n.q, n.s X, print X, n.m.u, n.m.w, print "ok".

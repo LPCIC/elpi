@@ -1,0 +1,12 @@
+% a block of a namespace sees the symbols that the namespace declares in
+% the files that come before, and in the library (issue #346)
+accumulate namespaces06_lib.
+namespace n {
+  pred q.
+  q :- p.
+}
+namespace std {
+  pred twice-mem list int -> int.
+  twice-mem L X :- mem L X, mem L X.
+}
+main :- n.q, std.twice-mem [1,2] 2, print "ok".

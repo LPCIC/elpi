@@ -1,0 +1,8 @@
+% a namespace sees the predicates with rules but no signature of the files
+% before
+accumulate namespaces08_lib.
+namespace m {
+  pred s.
+  s :- r.
+}
+main :- m.s, print "ok".

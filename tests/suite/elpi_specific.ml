@@ -21,6 +21,21 @@ let () = declare "namespace03"
   ~source_elpi:"namespaces03.elpi"
   ~description:"namespacing of predicates and constants"
   ()
+let () = declare "namespace04"
+  ~source_elpi:"namespaces04.elpi"
+  ~description:"an anonymous block in a namespace"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "foo.a"))
+  ()
+let () = declare "namespace05"
+  ~source_elpi:"namespaces05.elpi"
+  ~description:"the blocks of a namespace see each other's symbols"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "n.a\nok"))
+  ()
+let () = declare "namespace06"
+  ~source_elpi:"namespaces06.elpi"
+  ~description:"a namespace sees its symbols of the files before"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "ok"))
+  ()
 
 let () = declare "shorten"
   ~source_elpi:"shorten.elpi"
@@ -747,4 +762,16 @@ let () = declare "builtin_type"
   ~source_elpi:"builtin_type.elpi"
   ~description:"the legacy type declaration with builtin"
   ~expectation:Test.(FailureOutput (Str.regexp "Only the symbols of the language are declared builtin"))
+  ()
+
+let () = declare "namespace07"
+  ~source_elpi:"namespaces07.elpi"
+  ~description:"in a namespace, a predicate does not hide a type"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "1"))
+  ()
+
+let () = declare "namespace08"
+  ~source_elpi:"namespaces08.elpi"
+  ~description:"a namespace sees its rules without signature of the files before"
+  ~expectation:Test.(SuccessOutput (Str.regexp_string "ok"))
   ()

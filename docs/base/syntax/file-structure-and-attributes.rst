@@ -46,7 +46,11 @@ Namespaces
 
    main :- json.parse Text T.
 
-A name only *used* inside the block, not defined there, stays global.
+A name only *used* inside the block, not defined in the namespace, stays
+global. A namespace is all its blocks together: a block also sees the names
+defined in the other blocks of the namespace, in the same file, in the files
+accumulated before it, and in the standard library (inside
+``namespace std { … }``, ``mem`` is ``std.mem``).
 
 ``namespace`` blocks nest, and so do their prefixes: a predicate declared in
 ``namespace outer { namespace inner { … } }`` is reached from outside as

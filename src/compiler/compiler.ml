@@ -443,6 +443,56 @@ let ast_of_builtins ~(parser: (module Parse.Parser)) ~file_name =
     | None -> () end;
     anomaly ?loc message
 
+let namespace_separatorc = '.'
+let namespace_separator = String.make 1 namespace_separatorc
+
+(* The symbols declared in each namespace: for namespace n.m, the names x such
+   that n.m.x is declared, as a predicate or as a type. A block of namespace
+   n.m sees all of them, also the ones declared in another block, in another
+   unit, or outside the namespace by their full name. *)
+module Namespaces : sig
+  type t
+  val pp : Format.formatter -> t -> unit
+  val empty : t
+  (* from the full names of the predicates and of the types *)
+  val of_symbols : preds:F.Set.t -> tys:F.Set.t -> t
+  val union : t -> t -> t
+  (* the names declared in namespace [prefix], without the prefix *)
+  val preds : t -> string list -> F.Set.t
+  val tys : t -> string list -> F.Set.t
+end = struct
+  type members = { preds : F.Set.t; tys : F.Set.t }
+  [@@deriving show]
+  type t = members StrMap.t
+  let pp fmt t =
+    StrMap.iter (fun k m -> Format.fprintf fmt "@[<hov 2>%s:@ %a@]@ " k pp_members m) t
+  let empty = StrMap.empty
+  let union_members a b = { preds = F.Set.union a.preds b.preds; tys = F.Set.union a.tys b.tys }
+  let union = StrMap.union (fun _ a b -> Some (union_members a b))
+  (* n.m.x is a member x.. of n and m.x of n.m *)
+  let add pick t c =
+    let s = F.show c in
+    let len = String.length s in
+    let rec aux t i =
+      match String.index_from_opt s i namespace_separatorc with
+      | Some j when j + 1 < len ->
+          let t =
+            if j = 0 then t else
+            let prefix = String.sub s 0 j in
+            let name = F.from_string (String.sub s (j + 1) (len - j - 1)) in
+            let m = Option.value ~default:{ preds = F.Set.empty; tys = F.Set.empty } (StrMap.find_opt prefix t) in
+            StrMap.add prefix (pick m name) t in
+          aux t (j + 1)
+      | _ -> t in
+    aux t 0
+  let of_symbols ~preds ~tys =
+    let t = F.Set.fold (fun c t -> add (fun m x -> { m with preds = F.Set.add x m.preds }) t c) preds empty in
+    F.Set.fold (fun c t -> add (fun m x -> { m with tys = F.Set.add x m.tys }) t c) tys t
+  let find t prefix = StrMap.find_opt (String.concat namespace_separator prefix) t
+  let preds t prefix = match find t prefix with Some m -> m.preds | None -> F.Set.empty
+  let tys t prefix = match find t prefix with Some m -> m.tys | None -> F.Set.empty
+end
+
 module Flat = struct
 
 type unchecked_signature = {
@@ -450,6 +500,8 @@ type unchecked_signature = {
   kinds : Arity.t F.Map.t;
   types : ScopeTypeExpressionUniqueList.t F.Map.t;
   type_abbrevs : (F.t * ScopedTypeExpression.t) list;
+  (* the namespaces of the unit *)
+  namespaces : Namespaces.t;
 }
 [@@deriving show]
 
@@ -472,6 +524,7 @@ module Assembled = struct
     types : TypingEnv.t;
     type_abbrevs : Type_checker.type_abbrevs;
     ty_names : Loc.t F.Map.t;
+    namespaces : Namespaces.t;
   }
   [@@deriving show]
   
@@ -503,6 +556,7 @@ module Assembled = struct
     type_abbrevs = F.Map.empty;
     toplevel_macros = F.Map.empty;
     ty_names = F.Map.empty;
+    namespaces = Namespaces.empty;
   }
   let empty () = {
     clauses = [];
@@ -1003,9 +1057,6 @@ module CustomFunctorCompilation = struct
     | Some (language,f) -> ScopedTerm.(unlock @@ of_simple_term_loc @@ f ~language state loc (F.show x))
 end
 
-let namespace_separatorc = '.'
-let namespace_separator = String.make 1 namespace_separatorc
-
 let prefix_const prefix c =
   F.from_string (String.concat namespace_separator (prefix @ [F.show c]))
 
@@ -1330,7 +1381,7 @@ end = struct
       let defs_ta = defs_of_assoclist type_abbrevs in
       let kinds, types, type_abbrevs, defs_b, defs_ty, body =
         compile_body active_macros kinds types type_abbrevs F.Set.empty F.Set.empty state body in
-      let ty_symbols = F.Set.(union defs_k (union defs_t (union defs_ta defs_ty))) in
+      let ty_symbols = F.Set.(union defs_k (union defs_ta defs_ty)) in
       let pred_symbols = F.Set.(union defs_t defs_b) in
       (* Format.eprintf "CP: types: %d\n" (F.Map.cardinal types);
       Format.eprintf "CP: ty_sym: %a\n" F.Set.pp ty_symbols; *)
@@ -1406,7 +1457,9 @@ module Flatten : sig
 
   (* a declaration that clashes with a previous one is dropped, and the error
      recorded *)
-  val run : errs:Errors.t -> State.t -> Scoped.program -> Flat.program
+  (* [base] is the signature of the program that the unit extends: a
+     namespace sees the symbols that it declares there too *)
+  val run : errs:Errors.t -> base:Assembled.signature -> State.t -> Scoped.program -> Flat.program
   val merge_kinds :
     errs:Errors.t ->
     Arity.t F.Map.t ->
@@ -1523,16 +1576,18 @@ module Flatten : sig
   let apply_subst_chrs s sty = smart_map_chrs (subst_global s) ~tyf:(subst_global sty)
 
 
-  let apply_subst_types s = ScopeTypeExpressionUniqueList.smart_map (ScopedTypeExpression.smart_map (subst_global s))
-
-  let apply_subst_types s l =
-    F.Map.fold (fun k v m -> F.Map.add (subst_global s k) (apply_subst_types s v) m) l F.Map.empty
+  (* the name of a signature is a term, its type is a type *)
+  let apply_subst_types pred_subst ty_subst l =
+    let pred_f = subst_global pred_subst and ty_f = subst_global ty_subst in
+    F.Map.fold (fun k v m ->
+      F.Map.add (pred_f k) (ScopeTypeExpressionUniqueList.smart_map (ScopedTypeExpression.smart_map ~name:pred_f ty_f) v) m)
+      l F.Map.empty
 
   let apply_subst_kinds s l =
     F.Map.fold (fun k v m -> F.Map.add (subst_global s k) v m) l F.Map.empty
   
   let apply_subst_type_abbrevs s l =
-    List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map (subst_global s) v) l
+    List.map (fun (k, v) -> subst_global s k, ScopedTypeExpression.smart_map ~name:(subst_global s) (subst_global s) v) l
 
   let merge_type_assignments = TypingEnv.merge_envs
   
@@ -1577,7 +1632,7 @@ module Flatten : sig
       
 
   (* the errors are only needed by the merge_* functions *)
-let compile_block ~errs =
+let compile_block ~errs ~namespace_preds ~namespace_tys =
   let merge_kinds = merge_kinds ~errs in
   let rec compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst = function
     | [] -> kinds, types, type_abbrevs, clauses, chr
@@ -1585,18 +1640,19 @@ let compile_block ~errs =
       let inpsubst = push_subst_shorthands shorthands pred_subst in
       let intysubst = push_subst_shorthands shorthands ty_subst in
       let kinds = merge_kinds (apply_subst_kinds intysubst k) kinds in
-      let types = merge_types TypingEnv.empty (apply_subst_types intysubst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types inpsubst intysubst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs intysubst ta) in
       let kinds, types, type_abbrevs, clauses, chr =
         compile_block kinds types type_abbrevs clauses chr inpsubst intysubst body in
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   | Scoped.Namespace (extra, { kinds = k; types = t; type_abbrevs = ta; body; pred_symbols = ps; ty_symbols = ts }) :: rest ->
-      let new_pred_subst = push_subst extra ps pred_subst in
-      let new_ty_subst = push_subst extra ts ty_subst in
+      let prefix = pred_subst.old_prefix @ [extra] in
+      let new_pred_subst = push_subst extra (F.Set.union ps (namespace_preds prefix)) pred_subst in
+      let new_ty_subst = push_subst extra (F.Set.union ts (namespace_tys prefix)) ty_subst in
       let kinds = merge_kinds (apply_subst_kinds new_ty_subst k) kinds in
       (* Format.eprintf "@[<v>Types before:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) t; *)
-      let types = merge_types TypingEnv.empty (apply_subst_types new_ty_subst t) types in
-      (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) (apply_subst_types new_ty_subst t); *)
+      let types = merge_types TypingEnv.empty (apply_subst_types new_pred_subst new_ty_subst t) types in
+      (* Format.eprintf "@[<v>Types after:@ %a@]@," F.Map.(pp ScopeTypeExpressionUniqueList.pretty) (apply_subst_types new_pred_subst new_ty_subst t); *)
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs new_ty_subst ta) in
       (* a type abbreviation that has the name of a type is dropped *)
       let type_abbrevs =
@@ -1616,7 +1672,7 @@ let compile_block ~errs =
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   | Scoped.Constraints (ch, { kinds = k; types = t; type_abbrevs = ta; body }) :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
-      let types = merge_types TypingEnv.empty (apply_subst_types ty_subst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types pred_subst ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
       (* let modes = merge_modes (apply_subst_modes subst m) modes in *)
       let chr = apply_subst_chrs pred_subst  ty_subst ch :: chr in
@@ -1625,19 +1681,22 @@ let compile_block ~errs =
       compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   | Scoped.Block { kinds=k; types = t; type_abbrevs = ta; body; ty_symbols = _ } :: rest ->
       let kinds = merge_kinds (apply_subst_kinds ty_subst k) kinds in
-      let types = merge_types TypingEnv.empty (apply_subst_types ty_subst t) types in
+      let types = merge_types TypingEnv.empty (apply_subst_types pred_subst ty_subst t) types in
       let type_abbrevs = merge_type_abbrevs type_abbrevs (apply_subst_type_abbrevs ty_subst ta) in
       let kinds, types, type_abbrevs, clauses, chr =
-        compile_block kinds types type_abbrevs clauses chr ty_subst pred_subst body in
-      compile_block kinds types type_abbrevs clauses chr ty_subst pred_subst rest
+        compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst body in
+      compile_block kinds types type_abbrevs clauses chr pred_subst ty_subst rest
   in compile_block
 
-  let compile_body ~errs { Scoped.kinds; types; type_abbrevs; ty_symbols = _; pred_symbols = _; body } =
-    compile_block ~errs kinds types type_abbrevs [] [] empty_subst empty_subst body
-
-  let run ~errs state { Scoped.pbody; toplevel_macros; macro_uses = _ } =
-    let kinds, types, type_abbrevs, clauses_rev, chr_rev = compile_body ~errs pbody in
-    let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros } in
+  (* the symbols of the unit, by full name, are computed by Scope *)
+  let run ~errs ~base state { Scoped.pbody; toplevel_macros; macro_uses = _ } =
+    let { Scoped.kinds; types; type_abbrevs; ty_symbols; pred_symbols; body } = pbody in
+    let namespaces = Namespaces.of_symbols ~preds:pred_symbols ~tys:ty_symbols in
+    let all_namespaces = Namespaces.union base.Assembled.namespaces namespaces in
+    let kinds, types, type_abbrevs, clauses_rev, chr_rev =
+      compile_block ~errs ~namespace_preds:(Namespaces.preds all_namespaces) ~namespace_tys:(Namespaces.tys all_namespaces)
+        kinds types type_abbrevs [] [] empty_subst empty_subst body in
+    let signature = { Flat.kinds; types; type_abbrevs; toplevel_macros; namespaces } in
     { Flat.clauses = List.(flatten (rev clauses_rev)); chr = List.rev chr_rev; builtins = None; signature } (* TODO builtins can be in a unit *)
 
 
@@ -1660,9 +1719,9 @@ end = struct
 
 
   let check_signature ~errs ~flags (base_signature : Assembled.signature) (signature : Flat.unchecked_signature) : Assembled.signature * Assembled.signature * float * TypingEnv.t =
-    let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots } = base_signature in
+    let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots; namespaces = ons } = base_signature in
     
-    let { Flat.kinds; types; type_abbrevs; toplevel_macros } = signature in
+    let { Flat.kinds; types; type_abbrevs; toplevel_macros; namespaces } = signature in
 
     let all_kinds = Flatten.merge_kinds ~errs ok kinds in
     let check_k_begin = Unix.gettimeofday () in
@@ -1717,8 +1776,9 @@ end = struct
         toplevel_macros (F.Map.empty, otlm) in
     let check_t_end = Unix.gettimeofday () in
 
-    { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names },
-    { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; ty_names = all_ty_names },
+    { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names; namespaces },
+    { Assembled.kinds = all_kinds; types = all_types; type_abbrevs = all_type_abbrevs; toplevel_macros = all_toplevel_macros; ty_names = all_ty_names;
+      namespaces = Namespaces.union ons namespaces },
     (if flags.time_typechecking then check_t_end -. check_t_begin +. check_k_end -. check_k_begin else 0.0),
     types
 
@@ -2507,8 +2567,8 @@ end = struct
         extend1_chr ~builtins ~types flags state clique acc r)) (symbols,chr) rules
 
 let extend1_signature ~errs base_signature ({ signature } : checked_compilation_unit_signature) =
-  let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots } = base_signature in
-  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; ty_names } = signature in
+  let { Assembled.kinds = ok; types = ot; type_abbrevs = ota; toplevel_macros = otlm; ty_names = ots; namespaces = ons } = base_signature in
+  let { Assembled.toplevel_macros; kinds; types; type_abbrevs; ty_names; namespaces } = signature in
   let kinds = Flatten.merge_kinds ~errs ok kinds in
   F.Map.iter (fun k TypeAssignment.{ loc; } -> if F.Map.mem k ots && not (Loc.equal loc (F.Map.find k ots)) then error ~loc ("Illegal type abbreviation for " ^ F.show k ^ ". A type with the same name already exists in " ^ Loc.show (F.Map.find k ots))) type_abbrevs;
   let type_abbrevs = Flatten.merge_checked_type_abbrevs ~errs ota type_abbrevs in
@@ -2516,7 +2576,8 @@ let extend1_signature ~errs base_signature ({ signature } : checked_compilation_
   let toplevel_macros = Flatten.merge_toplevel_macros ~errs types otlm toplevel_macros in
   let merge _ _ b = Some b in
   let ty_names = F.Map.union merge ots ty_names in
-  { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names }
+  let namespaces = Namespaces.union ons namespaces in
+  { Assembled.kinds; types; type_abbrevs; toplevel_macros; ty_names; namespaces }
 
 let new_symbols_of_types ~(base_sig:Assembled.signature) new_types =
   let symbs = TypingEnv.all_symbols new_types in
@@ -2655,9 +2716,9 @@ let scope ~errs ?(user_text=false) s ~toplevel_macros ~builtins p : scoped_progr
     })
 
 (* Compiler passes *)
-let unit_or_header_of_scoped ~errs s (p : scoped_program) : unchecked_compilation_unit =
+let unit_or_header_of_scoped ~errs ~(base : Assembled.program) s (p : scoped_program) : unchecked_compilation_unit =
   assert ("%%VERSION_NUM%%" = p.version);
-  let f = Flatten.run ~errs s p.code in
+  let f = Flatten.run ~errs ~base:base.Assembled.signature s p.code in
   {
     version = "%%VERSION_NUM%%";
     code = { f with builtins = p.builtins };
@@ -2737,7 +2798,7 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
   builtins |> List.fold_left (fun (state,base as header) builtins ->
     let scoped = scoped_of_builtins ~flags ~header builtins in
-    let u = without_errors (fun errs -> unit_or_header_of_scoped ~errs state scoped) in
+    let u = without_errors (fun errs -> unit_or_header_of_scoped ~errs ~base state scoped) in
     print_unit flags u;
     let u = without_errors (fun errs -> Check.check ~errs ~flags state ~base u) in
   (* with toplevel_macros = u.checked_code.signature.toplevel_macros } in *)
@@ -2751,7 +2812,7 @@ let empty_base ~header:b = b
 
 let unit_of_scoped ~flags ~header:(s, u) p : unchecked_compilation_unit * error list * warning list =
   with_errors ~flags (fun errs ->
-    let u = unit_or_header_of_scoped ~errs s p in
+    let u = unit_or_header_of_scoped ~errs ~base:u s p in
     print_unit flags u;
     u)
 
@@ -2768,7 +2829,7 @@ let append_unit_signature ~flags ~base:(s,p) unit : program * error list * warni
 let compile_unit ~flags ~header ~base:(st,base) scoped : checked_compilation_unit * error list * warning list =
   let (s, _) = header in
   with_errors ~flags (fun errs ->
-    let u = unit_or_header_of_scoped ~errs s scoped in
+    let u = unit_or_header_of_scoped ~errs ~base s scoped in
     print_unit flags u;
     Check.check ~errs ~flags st ~base u)
 
@@ -2783,7 +2844,7 @@ let program_of_ast ~flags ~header:(header : State.t * Assembled.program) p : pro
              error that says so is recorded *)
           Errors.protect errs ~default:acc (fun () ->
             let (st, base) = header in
-            let u = unit_or_header_of_scoped ~errs st p in
+            let u = unit_or_header_of_scoped ~errs ~base st p in
             print_unit flags u;
             let u = Check.check ~errs ~flags st ~base u in
             Assemble.extend ~errs flags st base u, StrSet.add p.digest seen))
