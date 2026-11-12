@@ -173,7 +173,11 @@ covered in <a class="reference internal" href="../compatibility.html"><span clas
 main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>json.parse<span class="w"> </span><span class="nv">Text</span><span class="w"> </span><span class="nv">T</span><span class="o">.</span>
 </pre></div>
 </div>
-<p>A name only <em>used</em> inside the block, not defined there, stays global.</p>
+<p>A name only <em>used</em> inside the block, not defined in the namespace, stays
+global. A namespace is all its blocks together: a block also sees the names
+defined in the other blocks of the namespace, in the same file, in the files
+accumulated before it, and in the standard library (inside
+<code class="docutils literal notranslate"><span class="pre">namespace</span> <span class="pre">std</span> <span class="pre">{</span> <span class="pre">…</span> <span class="pre">}</span></code>, <code class="docutils literal notranslate"><span class="pre">mem</span></code> is <code class="docutils literal notranslate"><span class="pre">std.mem</span></code>).</p>
 <p><code class="docutils literal notranslate"><span class="pre">namespace</span></code> blocks nest, and so do their prefixes: a predicate declared in
 <code class="docutils literal notranslate"><span class="pre">namespace</span> <span class="pre">outer</span> <span class="pre">{</span> <span class="pre">namespace</span> <span class="pre">inner</span> <span class="pre">{</span> <span class="pre">…</span> <span class="pre">}</span> <span class="pre">}</span></code> is reached from outside as
 <code class="docutils literal notranslate"><span class="pre">outer.inner.name</span></code>.</p>
