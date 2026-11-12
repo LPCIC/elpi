@@ -21,7 +21,7 @@
     order they were allocated in): they are a type error, as on any other
     term that is not an int, a float or a string
 - Language:
-  - Fix: a block of a namespace sees the symbols that the namespace
+  - Change/Fix: a block of a namespace sees the symbols that the namespace
     declares in its other blocks, also in the files that come before and in
     the library, e.g. `p` in `namespace n { pred p. } namespace n { q :- p. }`
     is `n.p` (#346). Before, only the ones of the block itself. Inside
