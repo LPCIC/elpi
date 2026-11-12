@@ -540,7 +540,8 @@ type completion_item = {
    symbols, and the short names valid at the cursor (the scope, see
    LSP.scope_at). Only the segment after the last dot of the name is
    completed: a longer name gives the namespace that follows it. A name with a
-   private segment still to be typed is not offered. *)
+   private segment still to be typed is not offered, nor a symbol whose type
+   mentions a private name. *)
 (* whether the line of [wstart] is a signature (it starts with pred or func):
    there the types are completed, elsewhere the terms *)
 let signature_line (text : Text.t) wstart off =
@@ -583,9 +584,25 @@ let completions_at ~path ~(text : Text.t) off { program; scopes } =
       match s.skind with
       | LSP.Symbol_type _ | LSP.Symbol_type_abbreviation -> types
       | LSP.Symbol_constant _ | LSP.Symbol_macro -> not types in
+    (* a symbol whose type mentions a private name (e.g. the constructor
+       std.map, of std.map.private.map K V -> ...) is private too, unless a
+       private segment is typed or the cursor is in a private namespace (or
+       after a shorten of private names) *)
+    let mentions_private s =
+      let is_name_char c = match c with 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '-' | '\'' | '.' -> true | _ -> false in
+      let n = String.length s in
+      let rec names i acc =
+        if i >= n then acc
+        else if is_name_char s.[i] then
+          let rec stop j = if j < n && is_name_char s.[j] then stop (j + 1) else j in
+          let j = stop i in
+          names j (String.sub s i (j - i) :: acc)
+        else names (i + 1) acc in
+      List.exists (fun name -> List.exists (String.equal "private") (String.split_on_char '.' name)) (names 0 []) in
+    let private_allowed = mentions_private word || List.exists mentions_private omitted in
     let symbols =
       LSP.symbols_starting_with ~prefix:(word :: List.map (fun q -> q ^ word) omitted) program
-      |> List.filter wanted in
+      |> List.filter (fun (s : LSP.symbol) -> wanted s && (private_allowed || not (mentions_private s.detail))) in
     let seen = Hashtbl.create 97 in
     let items = ref [] in
     let add key item = if not (Hashtbl.mem seen key) then (Hashtbl.add seen key (); items := item :: !items) in
@@ -609,4 +626,15 @@ let completions_at ~path ~(text : Text.t) off { program; scopes } =
                       detail = (if String.equal s.detail "" then None else Some s.detail) })
           names)
       symbols;
-    List.sort (fun a b -> String.compare a.label b.label) !items
+    (* the predicates and the functions first, then the data constructors,
+       the types, the macros, the namespaces; by name *)
+    let rank = function
+      | Symbol (LSP.Symbol_constant ((LSP.Predicate | LSP.Function), _)) -> 0
+      | Symbol (LSP.Symbol_constant (LSP.Data, _)) -> 1
+      | Symbol (LSP.Symbol_type _ | LSP.Symbol_type_abbreviation) -> 2
+      | Symbol LSP.Symbol_macro -> 3
+      | Namespace -> 4 in
+    List.sort (fun a b ->
+        match Int.compare (rank a.item_kind) (rank b.item_kind) with
+        | 0 -> String.compare a.label b.label
+        | c -> c) !items

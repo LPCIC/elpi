@@ -36,6 +36,8 @@ namespace lib {
     helper :- inner.
     pred inner.
     inner.
+    kind t type.
+    pred inner-t -> t.
   }
   pred api.
   api :- private.helper.

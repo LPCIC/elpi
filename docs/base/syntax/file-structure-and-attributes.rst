@@ -97,8 +97,12 @@ The name ``private`` is a convention, which the standard library follows
 follows it too: its completion does not offer a name with a ``private``
 segment, unless that segment is already typed. After ``mylib.`` it offers
 ``public-api`` but neither ``private`` nor ``private.helper``; after
-``mylib.private.`` it offers ``helper``. Inside the ``private`` namespace
-itself, ``helper`` is offered by its short name.
+``mylib.private.`` it offers ``helper``. A symbol whose type mentions a
+private name is hidden in the same way: the standard library makes
+``std.map`` an abstract type with a constructor ``std.map`` of type
+``std.map.private.map K V -> … -> std.map K V``, which completion does not
+offer. Inside the ``private`` namespace itself, its names and the symbols
+whose types mention them are offered by their short name.
 
 
 Macros

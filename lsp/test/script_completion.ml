@@ -28,8 +28,10 @@ let () = register ~name:"completion" "completion.elpi" (fun file ->
   completion file "std.map.find" 8 ~only:[ "find"; "private" ];
   completion file "private.helper." 3 ~only:[ "private" ];
   completion file "private.helper." 9;
-  (* in the private namespace, its names are not private *)
-  completion file "inner." 3 ~only:[ "inner" ];
+  (* in the private namespace, its names are not private, nor the ones of
+     the symbols whose type mentions them (elsewhere they are: see the
+     constructor std.map above, of type std.map.private.map K V -> ..) *)
+  completion file "inner." 3 ~only:[ "inner"; "inner-t" ];
   (* a predicate of the namespace and a global type with the same name:
      the type in a signature, the predicate in a rule *)
   completion file "use term" 6;

@@ -7,7 +7,9 @@
     directive) are offered too. On a line starting with `pred` or `func`
     the types are offered, elsewhere the terms. A name with a `private`
     segment (e.g. `std.map.private.find`) is offered only once that segment
-    is typed
+    is typed, and so is a symbol whose type mentions such a name. The
+    predicates and functions come first, then the data constructors, the
+    types, the macros and the namespaces
 - API:
   - New: `LSP.symbols_starting_with` lists the symbols of a program whose
     full name starts with one of the given prefixes, with their kind, type,

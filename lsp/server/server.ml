@@ -360,11 +360,13 @@ let completion ({ textDocument = { uri }; position; _ } : CompletionParams.t) =
             | Symbol (Symbol_type _) -> Class
             | Symbol Symbol_type_abbreviation -> TypeParameter
             | Symbol Symbol_macro -> Snippet in
-          let item ({ label; item_kind; detail; doc = d; start } : Checker.completion_item) =
+          (* the client sorts by sortText (by label if there is none): it keeps
+             the order of the checker *)
+          let item i ({ label; item_kind; detail; doc = d; start } : Checker.completion_item) =
             let textEdit = `TextEdit (TextEdit.create ~newText:label ~range:(Text.range doc.text start off)) in
-            CompletionItem.create ~label ~kind:(kind item_kind) ?detail
+            CompletionItem.create ~label ~kind:(kind item_kind) ?detail ~sortText:(Printf.sprintf "%06d" i)
               ?documentation:(Option.bind d documentation) ~textEdit () in
-          Some (`CompletionList (CompletionList.create ~isIncomplete:false ~items:(List.map item items) ()))
+          Some (`CompletionList (CompletionList.create ~isIncomplete:false ~items:(List.mapi item items) ()))
 
 (* The range that the client previews for a definition (e.g. VS Code on
    Ctrl+hover): the declaration, extended with the body (the rules) when it

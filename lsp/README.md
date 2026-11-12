@@ -30,7 +30,8 @@
    are completed as you type (after `std.`, the symbols of `std`; in a
    namespace or after `shorten`, the short names too). A name with a
    `private` segment, e.g. `std.map.private.find`, is offered only once
-   that segment is typed (after `std.map.private.`).
+   that segment is typed (after `std.map.private.`); so is a symbol whose
+   type mentions such a name, e.g. the constructor of `std.map`.
 
 ## Command line
 
