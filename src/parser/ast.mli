@@ -244,8 +244,10 @@ and ('func,'term) block_constraint = {
 }
 and block =
   | Clauses of (Term.t,attribute,unit,unit) Clause.t list
-  | Namespace of Func.t * program
-  | Shorten of Func.t shorthand list * program
+  (* the region: from the directive to the closing brace of the block (the
+     end of the enclosing block for a shorten), up to max_int when missing *)
+  | Namespace of Loc.t * Func.t * program
+  | Shorten of Loc.t * Func.t shorthand list * program
   | Constraints of (Func.t,Term.t) block_constraint * program
   | Block of program
 and attribute = {

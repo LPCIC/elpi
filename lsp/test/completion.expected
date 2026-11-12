@@ -1,0 +1,193 @@
+==== open completion.elpi ====
+diagnostics of completion.elpi (version 1): 0
+completion "std.map []"+4 (the cursor is at 30:42):
+  line 30:
+               | colors L :- map [1] (x\y\ y = red) L, std.map [] (x\y\ true) _, double 1 _, @twice true.
+    replaced   |                                           ^
+    cursor     |                                           *
+    map (kind 3) : (func list A, (func A -> B) -> list B)
+    mem (kind 2) : (pred list A -> A)
+      ? [mem L X] succeeds every time if X occurs inside L
+    map (kind 9)
+    string (kind 9)
+    std: not offered
+    and others
+completion "std.map []"+6 (the cursor is at 30:44):
+  line 30:
+               | colors L :- map [1] (x\y\ y = red) L, std.map [] (x\y\ true) _, double 1 _, @twice true.
+    replaced   |                                           ^^
+    cursor     |                                             *
+    map (kind 3) : (func list A, (func A -> B) -> list B)
+    map2 (kind 3) : (func list A, list B, (func A, B -> C) -> list C)
+    map (kind 9)
+    mem: not offered
+    and others
+completion "double 1"+3 (the cursor is at 30:67):
+  line 30:
+               | colors L :- map [1] (x\y\ y = red) L, std.map [] (x\y\ true) _, double 1 _, @twice true.
+    replaced   |                                                                 ^^^
+    cursor     |                                                                    *
+    double (kind 3) : (func int -> int)
+      ? [double X Y] holds when Y is twice X.
+completion "red) L"+2 (the cursor is at 30:32):
+  line 30:
+               | colors L :- map [1] (x\y\ y = red) L, std.map [] (x\y\ true) _, double 1 _, @twice true.
+    replaced   |                               ^^
+    cursor     |                                 *
+    reset_new_int (kind 3) : (func int)
+      ? [reset_new_int N] Resets the counter to N.
+    rex_match (kind 3) : (func string, string)
+      ? Deprecated, use rex.match
+    rex_replace (kind 3) : (func string, string, string -> string)
+      ? Deprecated, use rex.replace
+    rex_split (kind 3) : (func string, string -> list string)
+      ? Deprecated, use rex.split
+    real_to_string (kind 20) : float -> string
+    red (kind 20) : color
+    rex (kind 9)
+completion "foo.bar 2"+4 (the cursor is at 19:31):
+  line 19:
+               |   use :- bar 1 _, baz.qux, foo.bar 2 _.
+    replaced   |                                ^
+    cursor     |                                *
+    bar (kind 2) : (pred int -> int)
+    other (kind 2) : (pred)
+    use (kind 2) : (pred)
+    baz (kind 9)
+completion "bar 1 _"+2 (the cursor is at 19:11):
+  line 19:
+               |   use :- bar 1 _, baz.qux, foo.bar 2 _.
+    replaced   |          ^^
+    cursor     |            *
+    bar (kind 2) : (pred int -> int)
+    baz (kind 9)
+completion "baz.qux"+4 (the cursor is at 19:22):
+  line 19:
+               |   use :- bar 1 _, baz.qux, foo.bar 2 _.
+    replaced   |                       ^
+    cursor     |                       *
+    qux (kind 2) : (pred)
+completion "foo.bar 3"+0 (the cursor is at 24:11):
+  line 24:
+               |   other :- foo.bar 3 _.
+    replaced   |            ^
+    cursor     |            *
+    bar (kind 2) : (pred int -> int)
+    other (kind 2) : (pred)
+    foo (kind 9)
+    and others
+completion "map [1]"+2 (the cursor is at 30:14):
+  line 30:
+               | colors L :- map [1] (x\y\ y = red) L, std.map [] (x\y\ true) _, double 1 _, @twice true.
+    replaced   |             ^^
+    cursor     |               *
+    map (kind 3) : (func list A, (func A -> B) -> list B)
+    and others
+completion "colors list color"+14 (the cursor is at 29:19):
+  line 29:
+               | pred colors list color.
+    replaced   |                  ^^
+    cursor     |                    *
+    color (kind 7) : type
+    colors: not offered
+completion "symb red, green : color"+21 (the cursor is at 5:21):
+  line 5:
+               | symb red, green : color.
+    replaced   |                   ^^^
+    cursor     |                      *
+    colors (kind 2) : (pred list color)
+    color: not offered
+completion "pred bar int"+11 (the cursor is at 12:13):
+  line 12:
+               |   pred bar int -> int.
+    replaced   |            ^^
+    cursor     |              *
+    int (kind 7) : type
+    ints (kind 25) : list int
+    and others
+completion "std.map.find"+8 (the cursor is at 44:24):
+  line 44:
+               |   lookup M V :- std.map.find 1 M V.
+    replaced   |                         ^
+    cursor     |                         *
+    find (kind 3) : (func K, std.map K V -> V)
+      ? [find K M V] looks in M for the value V associated to K
+    private: not offered
+    and others
+completion "private.helper."+3 (the cursor is at 42:12):
+  line 42:
+               |   api :- private.helper.
+    cursor     |             *
+    private: not offered
+    and others
+completion "private.helper."+9 (the cursor is at 42:18):
+  line 42:
+               |   api :- private.helper.
+    replaced   |                  ^
+    cursor     |                   *
+    helper (kind 2) : (pred)
+completion "inner."+3 (the cursor is at 35:17):
+  line 35:
+               |     helper :- inner.
+    replaced   |               ^^^
+    cursor     |                  *
+    inner (kind 2) : (pred)
+    inner-t (kind 2) : (pred -> lib.private.t)
+completion "use term"+6 (the cursor is at 51:13):
+  line 51:
+               |   pred use term -> int.
+    replaced   |            ^^
+    cursor     |              *
+    term (kind 7) : type
+completion "1 :- term"+7 (the cursor is at 52:15):
+  line 52:
+               |   use _ 1 :- term.
+    replaced   |              ^^
+    cursor     |                *
+    term (kind 2) : (pred)
+    term_to_string (kind 3) : (func -> any, string)
+      ? [term_to_string T S] prints T to S
+completion "@twice"+3 (the cursor is at 9:9):
+  line 9:
+               | macro @twice X :- (X, X).
+    replaced   |       ^^^
+    cursor     |          *
+    @twice (kind 15)
+completion "L :-"+1 (the cursor is at 30:8): none
+  line 30:
+               | colors L :- map [1] (x\y\ y = red) L, std.map [] (x\y\ true) _, double 1 _, @twice true.
+    cursor     |         *
+completion "@twice true."+12 (the cursor is at 30:88): none
+  line 30:
+               | colors L :- map [1] (x\y\ y = red) L, std.map [] (x\y\ true) _, double 1 _, @twice true.
+    cursor     |                                                                                         *
+completion "int -> int"+2 (the cursor is at 1:14):
+  line 1:
+               | func double int -> int.
+    replaced   |             ^^
+    cursor     |               *
+    int (kind 7) : type
+    ints (kind 25) : list int
+    double: not offered
+    and others
+
+==== open completion_typing.elpi (not on the disk) ====
+completion "main :- std.ma"+14 (the cursor is at 55:14):
+  line 55:
+               | main :- std.ma
+    replaced   |             ^^
+    cursor     |               *
+    map (kind 3) : (func list A, (func A -> B) -> list B)
+    map2 (kind 3) : (func list A, list B, (func A, B -> C) -> list C)
+    map (kind 9)
+    mem: not offered
+    and others
+completion "main :- std.ma"+9 (the cursor is at 55:9):
+  line 55:
+               | main :- std.ma
+    replaced   |         ^
+    cursor     |          *
+    std (kind 9)
+    and others
+
+==== close completion_typing.elpi ====

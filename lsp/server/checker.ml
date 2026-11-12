@@ -19,6 +19,10 @@ type unit_info = LSP.info LSP.IntervalTree.t Lazy.t
 
 type hover = unit_info list
 
+(* what completion needs: the program (the accumulated files and the
+   document) and the scopes of the document *)
+type completion = { program : Compile.program; scopes : LSP.scopes option Lazy.t }
+
 (* a warning located in another file (an accumulated one) *)
 type elsewhere = {
   file : string;       (* the source name of its location *)
@@ -30,6 +34,7 @@ type result = {
   diagnostics : diagnostic list;
   elsewhere : elsewhere list;
   hover : hover option; (* unless the parser failed (the text can have errors) *)
+  completion : completion option; (* idem *)
   accumulates : string list; (* the files it accumulates, directly or not *)
 }
 
@@ -258,7 +263,7 @@ let compile ~instance:{ elpi; cache } ~path ~accumulated ast =
   (* the flags that change the result of compile_unit start the key *)
   let flags_key = Printf.sprintf "max_errors=%d skip_det_checking=%b extend=%b"
       flags.Compile.max_errors flags.Compile.skip_det_checking extend in
-  let _, _, errors, warnings, infos =
+  let _, program, errors, warnings, infos =
     List.fold_left (fun (key, base, errors, warnings, infos) sp ->
         let key = Digest.string (key ^ Compile.scoped_program_digest sp) in
         let c = compile_unit ~extend ~elpi ~cache ~flags ~key ~base:base sp in
@@ -267,7 +272,9 @@ let compile ~instance:{ elpi; cache } ~path ~accumulated ast =
   (* the files the program accumulates, directly or not: also the ones with
      errors, which the parser keeps as units with no contents *)
   let accumulates = List.concat_map (fun sp -> List.map fst (Compile.scoped_program_deps sp)) sps in
-  errors, warnings, List.rev infos, accumulates
+  (* the document is the last unit *)
+  let scopes = lazy (match List.rev sps with sp :: _ -> Some (LSP.scopes ~base:program sp) | [] -> None) in
+  errors, warnings, List.rev infos, { program; scopes }, accumulates
 
 let diag_of_error ~path ~accumulated severity (e : Error.t) =
   diag_of_loc ~path ~accumulated severity e.loc (Format.asprintf "%a" Error.pp_message e)
@@ -297,11 +304,11 @@ let check ~instance ~path text =
   match resilient_parse ~elpi:instance.elpi ~path text with
   | exception e ->
       let loc, msg = error_of_exn e in
-      { diagnostics = [ diag_of_loc ~path ~accumulated:[] Error loc msg ]; elsewhere = []; hover = None; accumulates = [] }
+      { diagnostics = [ diag_of_loc ~path ~accumulated:[] Error loc msg ]; elsewhere = []; hover = None; completion = None; accumulates = [] }
   | ast, parse_errors, parse_warnings ->
       let accumulated = LSP.accumulated ast in
       let syntax = syntax_diagnostics ~path ~accumulated text parse_errors in
-      let errors, warnings, hover, accumulates = compile ~instance ~path ~accumulated ast in
+      let errors, warnings, hover, completion, accumulates = compile ~instance ~path ~accumulated ast in
       let errors = List.map (diag_of_error ~path ~accumulated Error) errors in
       let ws = List.concat_map (fun w ->
           List.map (fun (w : Error.t) ->
@@ -316,7 +323,7 @@ let check ~instance ~path text =
             (spread_undeclared hover w))
           (parse_warnings @ warnings) in
       let ws, elsewhere = List.partition_map Fun.id ws in
-      { diagnostics = syntax @ errors @ ws; elsewhere; hover = Some hover; accumulates }
+      { diagnostics = syntax @ errors @ ws; elsewhere; hover = Some hover; completion = Some completion; accumulates }
 
 (* --- queries on the symbols --------------------------------------------------- *)
 
@@ -516,3 +523,118 @@ let semantic_tokens ~path (text : Text.t) (hover : hover) =
         last_line := line; last_col := col; last_stop := stop
       end) tokens;
   Array.of_list (List.rev !data)
+
+(* --- completion ----------------------------------------------------------- *)
+
+type completion_kind = Namespace | Symbol of LSP.symbol_kind
+
+type completion_item = {
+  label : string;
+  item_kind : completion_kind;
+  detail : string option;
+  doc : Ast.Loc.t option;
+  start : int;
+}
+
+(* The names that complete the one before the cursor: the full names of the
+   symbols, and the short names valid at the cursor (the scope, see
+   LSP.scope_at). Only the segment after the last dot of the name is
+   completed: a longer name gives the namespace that follows it. A name with a
+   private segment still to be typed is not offered, nor a symbol whose type
+   mentions a private name. *)
+(* whether the line of [wstart] is a signature (it starts with pred or func):
+   there the types are completed, elsewhere the terms *)
+let signature_line (text : Text.t) wstart off =
+  let s = text.Text.text in
+  let rec line_start i = if i > 0 && not (Char.equal s.[i - 1] '\n') then line_start (i - 1) else i in
+  let rec skip i = if i < off && (Char.equal s.[i] ' ' || Char.equal s.[i] '\t') then skip (i + 1) else i in
+  let i = skip (line_start wstart) in
+  let keyword k =
+    let n = String.length k in
+    i + n < String.length s && String.equal (String.sub s i n) k
+    && (match s.[i + n] with ' ' | '\t' | '\n' | '\r' -> true | _ -> false) in
+  keyword "pred" || keyword "func"
+
+let completions_at ~path ~(text : Text.t) off { program; scopes } =
+  let wstart = Text.word_start text off in
+  let word = String.sub text.Text.text wstart (off - wstart) in
+  let starts_with prefix s = String.starts_with ~prefix s in
+  let is_name_start c = match c with 'a' .. 'z' | '@' -> true | _ -> false in
+  let qlen = match String.rindex_opt word '.' with Some i -> i + 1 | None -> 0 in
+  if String.length word > 0 && not (is_name_start word.[0]) then [] (* a variable *)
+  (* a dot that is not in a name: the end of a rule, a float *)
+  else if off > 0 && Char.equal text.Text.text.[off - 1] '.' && Int.equal qlen 0 then []
+  else
+    let start = wstart + qlen in
+    let loc = { (Ast.Loc.initial path) with source_start = off; source_stop = off } in
+    let types = signature_line text wstart off in
+    let scope =
+      match Lazy.force scopes with
+      | Some s -> let { LSP.terms; types = tys } = LSP.scope_at s loc in if types then tys else terms
+      | None -> [] in
+    (* a short name stands for a full name that ends with it: the beginning of
+       the full name is what the short name omits *)
+    let omitted =
+      List.filter_map (fun (short, full) ->
+          let n = String.length full and k = String.length short in
+          if n > k && String.ends_with ~suffix:short full then Some (String.sub full 0 (n - k)) else None)
+        scope
+      |> List.sort_uniq String.compare in
+    let wanted (s : LSP.symbol) =
+      match s.skind with
+      | LSP.Symbol_type _ | LSP.Symbol_type_abbreviation -> types
+      | LSP.Symbol_constant _ | LSP.Symbol_macro -> not types in
+    (* a symbol whose type mentions a private name (e.g. the constructor
+       std.map, of std.map.private.map K V -> ...) is private too, unless a
+       private segment is typed or the cursor is in a private namespace (or
+       after a shorten of private names) *)
+    let mentions_private s =
+      let is_name_char c = match c with 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '-' | '\'' | '.' -> true | _ -> false in
+      let n = String.length s in
+      let rec names i acc =
+        if i >= n then acc
+        else if is_name_char s.[i] then
+          let rec stop j = if j < n && is_name_char s.[j] then stop (j + 1) else j in
+          let j = stop i in
+          names j (String.sub s i (j - i) :: acc)
+        else names (i + 1) acc in
+      List.exists (fun name -> List.exists (String.equal "private") (String.split_on_char '.' name)) (names 0 []) in
+    let private_allowed = mentions_private word || List.exists mentions_private omitted in
+    let symbols =
+      LSP.symbols_starting_with ~prefix:(word :: List.map (fun q -> q ^ word) omitted) program
+      |> List.filter (fun (s : LSP.symbol) -> wanted s && (private_allowed || not (mentions_private s.detail))) in
+    let seen = Hashtbl.create 97 in
+    let items = ref [] in
+    let add key item = if not (Hashtbl.mem seen key) then (Hashtbl.add seen key (); items := item :: !items) in
+    List.iter (fun (s : LSP.symbol) ->
+        let short_names = List.filter_map (fun (short, full) ->
+            if String.equal full s.name && starts_with word short then Some short else None) scope in
+        let names = if starts_with word s.name then s.name :: short_names else short_names in
+        List.iter (fun name ->
+            let rest = String.sub name qlen (String.length name - qlen) in
+            (* a private name (a segment is private, e.g. std.map.private.find)
+               is offered only once its private segment is typed *)
+            let private_ = List.exists (String.equal "private") (String.split_on_char '.' rest) in
+            if String.length rest > 0 && is_name_start rest.[0] && not private_ then
+              match String.index_opt rest '.' with
+              | Some i ->
+                  let label = String.sub rest 0 i in
+                  add (label, None) { label; item_kind = Namespace; detail = None; doc = None; start }
+              | None ->
+                  add (rest, Some s.detail)
+                    { label = rest; item_kind = Symbol s.skind; start; doc = s.doc;
+                      detail = (if String.equal s.detail "" then None else Some s.detail) })
+          names)
+      symbols;
+    (* the predicates and the functions first, then the data constructors,
+       the types, the macros, the namespaces; by name *)
+    let rank = function
+      | Symbol (LSP.Symbol_constant ((LSP.Predicate | LSP.Function), _)) -> 0
+      | Symbol (LSP.Symbol_constant (LSP.Data, _)) -> 1
+      | Symbol (LSP.Symbol_type _ | LSP.Symbol_type_abbreviation) -> 2
+      | Symbol LSP.Symbol_macro -> 3
+      | Namespace -> 4 in
+    List.sort (fun a b ->
+        match Int.compare (rank a.item_kind) (rank b.item_kind) with
+        | 0 -> String.compare a.label b.label
+        | c -> c) !items

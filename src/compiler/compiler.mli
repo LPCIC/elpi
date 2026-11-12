@@ -139,3 +139,24 @@ type info = {
 val pp_info : Format.formatter -> info -> unit
 
 val hover : ?base:program -> scoped_program -> checked_compilation_unit -> info IntervalTree.t
+
+type symbol_kind =
+  | Symbol_constant of cls * origin
+  | Symbol_type of int
+  | Symbol_type_abbreviation
+  | Symbol_macro
+
+type symbol = {
+  name : string;
+  skind : symbol_kind;
+  detail : string;
+  defined : Ast.Loc.t option;
+  doc : Ast.Loc.t option;
+}
+
+val symbols_starting_with : prefix:string list -> program -> symbol list
+
+type scope = { terms : (string * string) list; types : (string * string) list }
+type scopes
+val scopes : ?base:program -> scoped_program -> scopes
+val scope_at : scopes -> Ast.Loc.t -> scope

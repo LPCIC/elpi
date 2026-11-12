@@ -69,3 +69,18 @@ let word_end t off =
   else
     let rec go i = if i < n && not (is_blank t.text.[i]) then go (i + 1) else i in
     go off
+
+(* the start of the name that ends at [off], for completion: the characters
+   of a name (see lexer.mll.in, idchar) and dots, from a letter or a @ (so
+   that the - of :- is not part of it) *)
+let word_start t off =
+  let is_idchar c =
+    match c with
+    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '.' -> true
+    | '+' | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#' | '~' | '=' | '&' | '!' | '-' | '$' | '_' -> true
+    | _ -> false in
+  let starts c = match c with 'a' .. 'z' | 'A' .. 'Z' | '@' -> true | _ -> false in
+  let off = max 0 (min off (length t)) in
+  let rec back i = if i > 0 && is_idchar t.text.[i - 1] then back (i - 1) else i in
+  let rec forward i = if i < off && not (starts t.text.[i]) then forward (i + 1) else i in
+  forward (back off)
