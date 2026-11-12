@@ -1,0 +1,12 @@
+% a cast to any in the head: in [(A : any)] the variable gets the dtype any,
+% not the type variable of ::, and can be used at any type in the body
+kind term type.
+symb q : list any -> term.
+symb c : term.
+pred p term -> list int.
+p (q [(A : any), (B : any)]) L :- !, p A L1, p B L2, std.append L1 L2 L.
+p _ [].
+func g term -> term.
+g (q [(F : any)]) Y :- Y = F.
+pred main.
+main :- p (q [c, c]) [], g (q [q []]) _.
