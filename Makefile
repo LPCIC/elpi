@@ -72,8 +72,11 @@ STACK=1114112
 
 DUNE_OPTS=
 
+# also @install, for _build/install/default/bin/elpi (the runner of the tests,
+# the binary of the CI): since dune 3.25 the dependency on the package elpi
+# of @only-elpi no longer fills _build/install
 build:
-	dune build $(DUNE_OPTS) @only-elpi
+	dune build $(DUNE_OPTS) --only-packages elpi @only-elpi @install
 
 build-ppx:
 	dune build $(DUNE_OPTS) @ppx_elpi/all
