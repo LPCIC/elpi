@@ -6,7 +6,8 @@
     ``type t = [ `A | `B of int ]``: its tags are the constructors
 - Type checker:
   - Fix: a cast to `any` as the argument of a polymorphic constructor, e.g.
-    `[(X : any)]`, broke an invariant of the determinacy checker
+    `[(X : any)]`, broke an invariant of the determinacy checker, also in
+    the head of a rule (`p (q [(A : any)]) :- p A.`)
   - Fix: spilling dropped casts, e.g. `(X : any)` in a rule with a spill:
     the invariant of the determinacy checker broke again
   - Change: a constructor whose arguments mention a type variable that its

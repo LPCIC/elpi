@@ -628,6 +628,9 @@ let check_clause, check_chr_guard_and_newgoal =
           | _ -> anomaly ~loc (Format.asprintf "Found lambda term with dtype %a" pp_dtype d))
       | CData _ -> ()
       | Spill _ -> spill_err ~loc
+      (* a cast to any is any, as in infer: in [(X : any)] the dtype of the
+         elements of the list is the type variable of ::, which X would get *)
+      | Cast (t, { ScopedTypeExpression.it = ScopedTypeExpression.Any; _ }) -> assume ~was_input ctx Any t
       | Cast (t, _) -> assume ~was_input ctx d t
     in
     assume ~was_input ctx d t;

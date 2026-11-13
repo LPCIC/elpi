@@ -1,0 +1,10 @@
+% a variable under a cast to any in the head has an unknown determinacy:
+% called in the body of a function, it is a relational atom
+kind term type.
+symb q : list any -> term.
+func g term.
+g (q [(F : any)]) :- F.
+pred r.
+r. r.
+pred main.
+main :- g (q [r]).
