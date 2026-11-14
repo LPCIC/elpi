@@ -1614,8 +1614,9 @@ module Utils : sig
       that a name has one separator in messages *)
   val filename_dirsep : string
 
-  (** [filename_concat dir file] is [normalize_path (Filename.concat dir file)]:
-      [dir] and [file] joined with {!filename_dirsep}, also on Windows *)
+  (** [filename_concat dir file] is [Filename.concat dir file], with
+      {!filename_dirsep} as the separator also on Windows; the name is not
+      normalized (see {!normalize_path}) *)
   val filename_concat : string -> string -> string
 
   (** [string_literal s] is the Elpi string literal of [s], e.g. to write

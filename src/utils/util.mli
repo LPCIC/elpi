@@ -360,8 +360,8 @@ val normalize_path : string -> string
 (* the separator of the names of files, / also on Windows *)
 val filename_dirsep : string
 
-(* [filename_concat dir file] is [normalize_path (Filename.concat dir file)]:
-   joined with filename_dirsep *)
+(* [filename_concat dir file] is [Filename.concat dir file] joined with
+   filename_dirsep, also on Windows: not normalized *)
 val filename_concat : string -> string -> string
 
 (* the text of a file on the disk; raises Failure if it cannot be read *)

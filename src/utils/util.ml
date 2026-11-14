@@ -752,9 +752,14 @@ let normalize_path path =
   (if root then "/" else "") ^ String.concat "/" (List.rev parts)
 
 (* also on Windows, that accepts it: names joined with Filename.concat mix
-   / and \ there, and end up so in messages and in the outputs of the tests *)
+   / and \ there, and end up so in messages and in the outputs of the tests.
+   As Filename.concat, nothing else is changed: not normalized (normalize_path
+   would also drop . and .. and lowercase the drive) *)
 let filename_dirsep = "/"
-let filename_concat dir file = normalize_path (Filename.concat dir file)
+let filename_concat dir file =
+  let n = String.length dir in
+  if n = 0 || Char.equal dir.[n - 1] '/' || Char.equal dir.[n - 1] '\\' then dir ^ file
+  else dir ^ filename_dirsep ^ file
 
 let make_absolute cwd filename =
   if not (Filename.is_relative filename) then filename
