@@ -35,15 +35,75 @@ module type Config = sig
   val resolver : ?cwd:string -> unit:string -> unit -> string
   (* the text of a file; raises Failure if it cannot be read *)
   val reader : string -> string
-
+  (* [accumulate "+pkg/path"]: the directory of package [pkg]; raises an
+     ElpiError (e.g. when packages are disabled) *)
+  val package_dir : pkg:string -> string
+  (* [accumulate "+pkg"]: the text of the builtins of the plugin [pkg], once
+     loaded; None if it cannot be loaded here, then its stub
+     [pkg.builtins.elpi] in [package_dir ~pkg] is read instead; raises an
+     ElpiError *)
+  val plugin : pkg:string -> string option
+  (* [accumulate "+/path"]: the root of the project that contains a
+     directory; raises an ElpiError *)
+  val root_of_dir : dir:string -> string
 end
 
-(* the name of a file in the locations of its contents *)
-let cleanup_fname filename = Re.Str.replace_first (Re.Str.regexp "/_build/[^/]+") "" filename
+type reference =
+  | Path of string
+  | Package_file of string * string
+  | Current_package_file of string
+  | Plugin of string
+
+(* "+pkg/path", "+/path" and "+pkg" (the extension that accumulate appends
+   is dropped from the name of the package); anything else is a path *)
+(* without the extension that accumulate appended (see grammar.mly) *)
+let chop_appended s =
+  let chop ext s = if Filename.check_suffix s ext then Filename.chop_suffix s ext else s in
+  List.fold_left (fun s ext -> chop ext s) s [".elpi"; ".mod"; ".sig"]
+
+let reference_of_string s =
+  let n = String.length s in
+  if n > 1 && s.[0] = '+' then
+    let rest = String.sub s 1 (n - 1) in
+    (* the first separator; on Windows \ is one too *)
+    let sep =
+      let slash = String.index_opt rest '/' in
+      if not Sys.win32 then slash else
+      match slash, String.index_opt rest '\\' with
+      | Some i, Some j -> Some (min i j)
+      | None, x | x, None -> x in
+    match sep with
+    | Some 0 -> Current_package_file (String.sub rest 1 (String.length rest - 1))
+    | Some i -> Package_file (String.sub rest 0 i, String.sub rest (i + 1) (String.length rest - i - 1))
+    | None -> Plugin (chop_appended rest)
+  else Path s
+
+let plugin_file_name pkg = "+" ^ pkg
+let is_plugin_file_name s = String.length s > 1 && s.[0] = '+'
+
+(* the name of a file in the locations of its contents: without the first
+   /_build/CONTEXT, so that a file that dune copied is named as its source;
+   but /_build/install/..., where dune puts the files of the packages, is not
+   a copy of the sources (the path without it is not a file) *)
+let cleanup_fname filename =
+  let marker = "/_build/" in
+  let n = String.length filename and m = String.length marker in
+  let rec find i = if i + m > n then None else if String.equal (String.sub filename i m) marker then Some i else find (i + 1) in
+  match find 0 with
+  | None -> filename
+  | Some i ->
+      let j = match String.index_from_opt filename (i + m) '/' with Some j -> j | None -> n in
+      if String.equal (String.sub filename (i + m) (j - i - m)) "install" then filename
+      else String.sub filename 0 i ^ String.sub filename j (n - j)
 
 module Make(C : Config) = struct
   
 let parse_ref : (?cwd:string -> string -> Ast.Program.t) ref =
+  ref (fun ?cwd:_ _ -> assert false)
+
+(* the name of the file that parse_ref reads, e.g. to name a file that cannot
+   be parsed; raises Failure (the resolver) or Cannot_resolve_accumulated_file *)
+let resolve_ref : (?cwd:string -> string -> string) ref =
   ref (fun ?cwd:_ _ -> assert false)
 
 (* a file to accumulate that cannot be found: the message of the resolver *)
@@ -154,10 +214,10 @@ module ParseFile = struct
     | p -> p
     | exception Cannot_resolve_accumulated_file msg when not (Errors.max_errors_reached ()) ->
         Errors.add (loc, msg);
-        empty (match cwd with Some d when Filename.is_relative file -> Filename.concat d file | _ -> file)
+        empty (match cwd with Some d when Filename.is_relative file -> Util.filename_concat d file | _ -> file)
     | exception Parser_config.ParseError (l, msg) when not (Errors.max_errors_reached ()) ->
         Errors.add (l, msg);
-        empty (C.resolver ?cwd ~unit:file ())
+        empty (try !resolve_ref ?cwd file with Failure _ | Cannot_resolve_accumulated_file _ -> file)
   let client_payload : Obj.t option ref = ref None
   let set_current_clent_loc_pyload x = client_payload := Some x
   let get_current_client_loc_payload () = !client_payload
@@ -234,21 +294,33 @@ let already_parsed = Hashtbl.create 11
 (* the text of a .sig file, if there is one (Teyjus compatibility) *)
 let read_sig f = try Some (C.reader f) with Failure _ -> None
 
+(* a text is parsed once per directory: its accumulates ("./x", "+/x") are
+   resolved from its directory, so the same text elsewhere is another
+   program *)
 let parse_file_contents ~filename text =
   let digest = Digest.string text in
-  if Hashtbl.mem already_parsed digest then
-    Hashtbl.find already_parsed digest
+  let key = Filename.dirname filename ^ "\000" ^ digest in
+  if Hashtbl.mem already_parsed key then
+    Hashtbl.find already_parsed key
   else
     let lexbuf = Lexing.from_string text in
     let dest = cleanup_fname filename in
     lexbuf.Lexing.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = dest };
     let ast = parse Grammar.Incremental.program lexbuf in
+    (* the digest of a file covers the files it accumulates: the same text
+       accumulating other files is another unit *)
+    let accumulated = List.concat_map (function
+      | Ast.Program.Accumulated (_, l) -> List.map (fun (p : Ast.Program.t) -> p.digest) l
+      | _ -> []) ast in
+    let digest = match accumulated with
+      | [] -> digest
+      | l -> Digest.string (String.concat "" (digest :: l)) in
     let output = { Ast.file_name = filename; deps = []; digest; ast } in
-    Hashtbl.add already_parsed digest output;
+    Hashtbl.add already_parsed key output;
     output
 
-let () =
-  parse_ref := (fun ?cwd filename ->
+(* a file, found by the resolver; with its .sig if it is a .mod *)
+let parse_file ?cwd filename =
   let filename =
     try C.resolver ?cwd ~unit:filename ()
     with Failure msg -> raise (Cannot_resolve_accumulated_file msg) in
@@ -262,7 +334,47 @@ let () =
       let m = parse_file_contents ~filename text in
       { Ast.file_name = filename; digest = Digest.string (s.digest ^ m.digest); deps = []; ast = s.ast @ m.ast  }
     | None -> parse_file_contents ~filename text
-  else parse_file_contents ~filename text)
+  else parse_file_contents ~filename text
+
+(* what the string of an accumulate names: a text (the builtins of a loaded
+   plugin) or a file, to be found by the resolver *)
+type located = Contents of string * string | File of string option * string
+
+let locate ?cwd filename =
+  (* an error of the host (a package that cannot be found or loaded, an
+     elpi.toml that cannot be read...) is an error of the accumulate; its own
+     location, if any, is in the message *)
+  let host f =
+    try f () with Util.ElpiError { Util.loc; message; _ } ->
+      raise (Cannot_resolve_accumulated_file
+        (match loc with None -> message | Some l -> Printf.sprintf "%s: %s" (Util.Loc.show l) message)) in
+  let no_file () = (* "+pkg/" or "+/": the extension that accumulate appends, alone *)
+    raise (Cannot_resolve_accumulated_file (Printf.sprintf "accumulate %S: no file after the package" (chop_appended filename))) in
+  match reference_of_string filename with
+  | Package_file (_, path) | Current_package_file path when String.equal (chop_appended path) "" -> no_file ()
+  | Plugin pkg when String.equal pkg "" ->
+      raise (Cannot_resolve_accumulated_file "accumulate \"+\": no package after +")
+  | Path f -> File (cwd, f)
+  | Package_file (pkg, path) -> File (None, Util.filename_concat (host (fun () -> C.package_dir ~pkg)) path)
+  | Current_package_file path ->
+      let dir = match cwd with Some d -> d | None -> Sys.getcwd () in
+      File (None, Util.filename_concat (host (fun () -> C.root_of_dir ~dir)) path)
+  | Plugin pkg ->
+      match host (fun () -> C.plugin ~pkg) with
+      (* the unit of a plugin is the text of its builtins *)
+      | Some text -> Contents (plugin_file_name pkg, text)
+      (* its stub, the documentation of the plugin *)
+      | None -> File (None, Util.filename_concat (host (fun () -> C.package_dir ~pkg)) (pkg ^ ".builtins.elpi"))
+
+let () =
+  parse_ref := (fun ?cwd filename ->
+    match locate ?cwd filename with
+    | Contents (filename, text) -> parse_file_contents ~filename text
+    | File (cwd, f) -> parse_file ?cwd f);
+  resolve_ref := (fun ?cwd filename ->
+    match locate ?cwd filename with
+    | Contents (filename, _) -> filename
+    | File (cwd, f) -> C.resolver ?cwd ~unit:f ())
 
 let to_lexing_loc { Util.Loc.source_name; line; line_starts_at; source_start; _ } =
   { Lexing.pos_fname = source_name;
@@ -400,6 +512,15 @@ let program_from ?(max_errors = max_int) ~loc:start_loc ~digest lexbuf =
   let filename = let open Util.Loc in
     Printf.sprintf "%s:%d:%d" start_loc.source_name start_loc.source_stop lexbuf.Lexing.lex_curr_pos in
   let ws = Warnings.consume () in
+  (* as for an accumulated file, the digest covers the files it accumulates:
+     the same text is the same unit, whether it is parsed here or accumulated
+     (e.g. by a prelude) *)
+  let accumulated = List.concat_map (function
+    | Ast.Program.Accumulated (_, l) -> List.map (fun (p : Ast.Program.t) -> p.digest) l
+    | _ -> []) ast in
+  let digest = match accumulated with
+    | [] -> digest
+    | l -> Digest.string (String.concat "" (digest :: l)) in
   { Ast.file_name = filename; deps = []; digest; ast },
   List.map make_error errors,
   ws

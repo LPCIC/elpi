@@ -1,0 +1,6 @@
+% a file in a subdirectory of the package test: "+/util" is util.elpi at the
+% root of the package, with no ../
+accumulate "+/util".
+
+func deep.quadruple int -> int.
+deep.quadruple X Y :- util.double X Z, util.double Z Y.

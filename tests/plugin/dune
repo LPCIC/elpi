@@ -1,0 +1,301 @@
+; plugins dynlinked by the elpi command, from the findlib tree in ocamlpath/
+; (OCAMLPATH is set to it, relative to this directory)
+(library
+  (name elpi_test_dyn)
+  (modules elpi_test_dyn)
+  (libraries elpi))
+
+; prints the stub of a plugin linked in it
+(executable
+  (name gen_stub)
+  (modules gen_stub)
+  (link_flags (-linkall))
+  (libraries elpi elpi_test_dyn))
+
+(library
+  (name elpi_test_missing)
+  (modules elpi_test_missing)
+  (libraries elpi))
+
+(executable
+  (name same_name)
+  (modules same_name)
+  (libraries elpi elpi.dynload unix str))
+
+; two projects with the same name
+(rule
+ (deps (source_tree same))
+ (action (with-stdout-to same_name.output (run ./same_name.exe))))
+
+(rule (alias runtest) (action (diff same_name.expected same_name.output)))
+
+(library
+  (name elpi_test_dyn_state)
+  (modules elpi_test_dyn_state)
+  (libraries elpi))
+
+(library
+  (name elpi_test_dyn_quote)
+  (modules elpi_test_dyn_quote)
+  (libraries elpi))
+
+; accumulate "+elpi-test-dyn" dynlinks the plugin on demand
+(rule
+ (deps (alias_rec ocamlpath/all) main.elpi)
+ (action
+  (with-stdout-to main.output
+   (with-stderr-to main.err
+    (setenv OCAMLPATH ocamlpath
+     (run %{exe:../../elpi_REPL.exe} -no-config -test main.elpi))))))
+
+; a plugin declaring a state component cannot be loaded on demand
+(rule
+ (deps (alias_rec ocamlpath/all) state.elpi)
+ (action
+  (with-outputs-to state.output
+   (setenv OCAMLPATH ocamlpath
+    (with-accepted-exit-codes (not 0)
+     (run %{exe:../../elpi_REPL.exe} -no-config -test state.elpi))))))
+
+; a plugin whose OCaml code cannot be dynlinked
+(rule
+ (deps (alias_rec ocamlpath/all) broken.elpi)
+ (action
+  (with-outputs-to broken.output
+   (setenv OCAMLPATH ocamlpath
+    (with-accepted-exit-codes (not 0)
+     (run %{exe:../../elpi_REPL.exe} -no-config -test broken.elpi))))))
+
+(rule (alias runtest)
+ (action (run grep -q "plugin elpi-test-dyn.broken is not available" %{dep:broken.output})))
+
+; the elpi.toml of proj/: paths, prelude and preload
+(rule
+ (deps (alias_rec ocamlpath/all) (source_tree proj))
+ (action
+  (with-stdout-to proj.output
+   (with-stderr-to proj.err
+    (setenv OCAMLPATH ocamlpath
+     (run %{exe:../../elpi_REPL.exe} -test proj/main.elpi))))))
+
+; a main file in a subdirectory of proj/: the elpi.toml above it
+(rule
+ (deps (alias_rec ocamlpath/all) (source_tree proj))
+ (action
+  (with-stdout-to projsub.output
+   (with-stderr-to projsub.err
+    (setenv OCAMLPATH ocamlpath
+     (run %{exe:../../elpi_REPL.exe} -test proj/src/sub.elpi))))))
+
+(rule (alias runtest) (action (diff main.expected main.output)))
+(rule (alias runtest) (action (diff projsub.expected projsub.output)))
+(rule (alias runtest)
+ (action (run grep -q "plugin elpi-test-dyn.state declares state components: it must be loaded before Setup.init" %{dep:state.output})))
+(rule (alias runtest) (action (diff proj.expected proj.output)))
+
+; a wrong elpi.toml, given with -config
+(rule
+ (deps bad.toml main.elpi)
+ (action
+  (with-outputs-to bad.output
+   (with-accepted-exit-codes (not 0)
+    (run %{exe:../../elpi_REPL.exe} -config bad.toml -test main.elpi)))))
+
+(rule (alias runtest)
+ (action
+  (progn
+   (run grep -q "bad.toml\", line 3," %{dep:bad.output})
+   (run grep -qF "elpi.toml: unknown key plugins (name, use, prelude, preload and the sections [paths], [dev-only-paths] and [warnings] are)" %{dep:bad.output}))))
+
+; the section [warnings] of elpi.toml: a linear variable is an error, unless
+; -w turns it off
+(rule
+ (deps (source_tree warnproj))
+ (action
+  (with-outputs-to warnproj.output
+   (with-accepted-exit-codes (not 0)
+    (run %{exe:../../elpi_REPL.exe} -test warnproj/main.elpi)))))
+
+(rule (alias runtest)
+ (action
+  (progn
+   (run grep -q "^Error: .*main.elpi\", line 2" %{dep:warnproj.output})
+   (run grep -q "X is linear" %{dep:warnproj.output}))))
+
+(rule
+ (deps (source_tree warnproj))
+ (action
+  (with-outputs-to warnproj-off.output
+   (run %{exe:../../elpi_REPL.exe} -w -linear-variable -test warnproj/main.elpi))))
+
+(rule (alias runtest)
+ (action (run sh -c "! grep -q linear %{dep:warnproj-off.output}")))
+
+; a directory of [paths] in a package that findlib does not know
+(rule
+ (deps badpath.toml main.elpi)
+ (action
+  (with-outputs-to badpath.output
+   (with-accepted-exit-codes (not 0)
+    (run %{exe:../../elpi_REPL.exe} -config badpath.toml -test main.elpi)))))
+
+(rule (alias runtest)
+ (action
+  (progn
+   (run grep -q "badpath.toml\", line 4," %{dep:badpath.output})
+   (run grep -qF "elpi.toml: no findlib package nopkg" %{dep:badpath.output}))))
+
+
+; use: the paths, prelude and preload of the elpi.toml of elpi-test-dyn
+(rule
+ (deps (alias_rec ocamlpath/all) (source_tree ocamlpath) (source_tree useproj))
+ (action
+  (with-stdout-to useproj.output
+   (with-stderr-to useproj.err
+    (setenv OCAMLPATH ocamlpath
+     (run %{exe:../../elpi_REPL.exe} -test useproj/main.elpi))))))
+
+(rule (alias runtest) (action (diff useproj.expected useproj.output)))
+
+; use of a package with no elpi.toml (str, of OCaml)
+(rule
+ (deps usenotoml.toml main.elpi)
+ (action
+  (with-outputs-to usenotoml.output
+   (with-accepted-exit-codes (not 0)
+    (run %{exe:../../elpi_REPL.exe} -config usenotoml.toml -test main.elpi)))))
+
+(rule (alias runtest)
+ (action
+  (progn
+   (run grep -q "usenotoml.toml\", line 3," %{dep:usenotoml.output})
+   (run grep -qF "elpi.toml: use \"+str\": no elpi.toml in" %{dep:usenotoml.output}))))
+
+; a relative directory: +/ is needed, so that an installed elpi.toml means the same
+(rule
+ (deps relpath.toml main.elpi)
+ (action
+  (with-outputs-to relpath.output
+   (with-accepted-exit-codes (not 0)
+    (run %{exe:../../elpi_REPL.exe} -config relpath.toml -test main.elpi)))))
+
+(rule (alias runtest)
+ (action
+  (progn
+   (run grep -q "relpath.toml\", line 4," %{dep:relpath.output})
+   (run grep -qF "elpi.toml: \"lib\": write \"+/lib\" (relative to elpi.toml)" %{dep:relpath.output}))))
+
+; an elpi.toml with no name
+(rule
+ (deps noname.toml main.elpi)
+ (action
+  (with-outputs-to noname.output
+   (with-accepted-exit-codes (not 0)
+    (run %{exe:../../elpi_REPL.exe} -config noname.toml -test main.elpi)))))
+
+(rule (alias runtest)
+ (action
+  (progn
+   (run grep -q "noname.toml\", line 1," %{dep:noname.output})
+   (run grep -qF "elpi.toml: no key name: name = \"pkg\", the findlib name of the package of the project" %{dep:noname.output}))))
+
+; use of a package whose elpi.toml has another name
+(rule
+ (deps usewrongname.toml main.elpi (source_tree ocamlpath))
+ (action
+  (with-outputs-to usewrongname.output
+   (setenv OCAMLPATH ocamlpath
+    (with-accepted-exit-codes (not 0)
+     (run %{exe:../../elpi_REPL.exe} -config usewrongname.toml -test main.elpi))))))
+
+(rule (alias runtest)
+ (action
+  (progn
+   (run grep -q "usewrongname.toml\", line 3," %{dep:usewrongname.output})
+   (run grep -qF "is \"other\", not the findlib name \"elpi-test-wrongname\"" %{dep:usewrongname.output}))))
+
+; use of a package whose [dev-only-paths] are not installed: they are not
+; used, nor checked
+(rule
+ (deps (alias_rec ocamlpath/all) usenodir.toml main.elpi (source_tree ocamlpath))
+ (action
+  (with-stdout-to usenodir.output
+   (with-stderr-to usenodir.err
+    (setenv OCAMLPATH ocamlpath
+     (run %{exe:../../elpi_REPL.exe} -config usenodir.toml -test main.elpi))))))
+
+(rule (alias runtest) (action (diff main.expected usenodir.output)))
+
+; ... and a prefix of them does not resolve
+(rule
+ (deps (alias_rec ocamlpath/all) usenodir.toml usedevprefix.elpi (source_tree ocamlpath))
+ (action
+  (with-outputs-to usedevprefix.output
+   (setenv OCAMLPATH ocamlpath
+    (with-accepted-exit-codes (not 0)
+     (run %{exe:../../elpi_REPL.exe} -config usenodir.toml -test usedevprefix.elpi))))))
+
+(rule (alias runtest)
+ (action (run grep -q "nodir/x" %{dep:usedevprefix.output})))
+
+; -w is repeated, one kind at a time, the last one wins
+(rule
+ (deps (source_tree warnproj))
+ (action
+  (with-outputs-to warnproj-repeat.output
+   (run %{exe:../../elpi_REPL.exe} -w @linear-variable -w -linear-variable -test warnproj/main.elpi))))
+
+(rule (alias runtest)
+ (action (run sh -c "! grep -q linear %{dep:warnproj-repeat.output}")))
+
+; a spec of several kinds is an error
+(rule
+ (deps (source_tree warnproj))
+ (action
+  (with-outputs-to warnproj-combined.output
+   (with-accepted-exit-codes (not 0)
+    (run %{exe:../../elpi_REPL.exe} -w -linear-variable@undeclared-global -test warnproj/main.elpi)))))
+
+(rule (alias runtest)
+ (action
+  (run grep -qF "\"-linear-variable@undeclared-global\": a spec is +name, -name or @name, one kind of warnings" %{dep:warnproj-combined.output})))
+
+; elpi -check-package: the installed elpi.toml, the plugin and its stub, and
+; each .elpi file of the package
+(rule
+ (deps (alias_rec ocamlpath/all) (source_tree ocamlpath))
+ (action
+  (with-stdout-to checkdyn.output
+   (setenv OCAMLPATH ocamlpath
+    (run %{exe:../../elpi_REPL.exe} -check-package elpi-test-dyn)))))
+
+(rule (alias runtest) (action (diff checkdyn.expected checkdyn.output)))
+
+; a badly installed package: a missing file, a stale stub
+(rule
+ (deps (alias_rec ocamlpath/all) (source_tree ocamlpath))
+ (action
+  (with-stdout-to checkmissing.output
+   (setenv OCAMLPATH ocamlpath
+    (with-accepted-exit-codes 1
+     (run %{exe:../../elpi_REPL.exe} -check-package elpi-test-missing))))))
+
+(rule (alias runtest)
+ (action
+  (progn
+   (run grep -q "^+elpi-test-missing/a  *File .*a.elpi\", line 2" %{dep:checkmissing.output})
+   (run grep -q "notinstalled.elpi not found" %{dep:checkmissing.output})
+   (run grep -q "^+elpi-test-missing/b  *ok" %{dep:checkmissing.output}) ; no $: \r\n on Windows
+   (run grep -q "elpi-test-missing.builtins.elpi differs from the documentation of the plugin" %{dep:checkmissing.output}))))
+
+; a package whose elpi.toml has another name
+(rule
+ (deps (alias_rec ocamlpath/all) (source_tree ocamlpath))
+ (action
+  (with-stdout-to checkwrongname.output
+   (setenv OCAMLPATH ocamlpath
+    (with-accepted-exit-codes 1
+     (run %{exe:../../elpi_REPL.exe} -check-package elpi-test-wrongname))))))
+
+(rule (alias runtest)
+ (action (run grep -qF "is \"other\", not the findlib name \"elpi-test-wrongname\"" %{dep:checkwrongname.output})))

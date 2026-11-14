@@ -129,7 +129,10 @@ doc:
 	dune build $(DUNE_OPTS) @doc
 
 doc-build: doc
-	dune build $(DUNE_OPTS) elpi_REPL.exe
+	# elpi-json in _build/install, where findlib finds it (dune exec), for
+	# the examples that accumulate "+elpi-json"; also elpi, that it requires:
+	# since dune 3.25 elpi-json.install does not put it there
+	dune build $(DUNE_OPTS) elpi_REPL.exe elpi.install elpi-json.install
 	rm -rf docs/build
 	rm -rf docs/source
 	cp -r docs/base docs/source

@@ -6,6 +6,15 @@
 
 open Lsp.Types
 
+[%%import "lsp_config.mlh"]
+
+(* lsp 1.28 moved InitializeResult.create_serverInfo to ServerInfo.create *)
+[%%if lsp < (1, 28, 0)]
+let server_info = InitializeResult.create_serverInfo
+[%%else]
+let server_info = ServerInfo.create
+[%%endif]
+
 let log = Checker.log
 
 (* --- given by the driver (init) ------------------------------------------------- *)
@@ -40,14 +49,22 @@ let close_document path = Hashtbl.remove open_documents (normalize_path path)
 (* accumulate finds an open document first, relative to the directory of the
    accumulating file (~cwd), then a file on the disk, there or in the -I
    directories *)
-let resolver ?cwd ~unit () =
+(* [paths]: the prefix ("" for any file) and a directory, as the [paths] of
+   elpi.toml; an open document is found also through a prefix *)
+let resolver ?(paths = []) ?cwd ~unit () =
+  let prefixes = List.filter (fun (p, _) -> not (String.equal p "")) paths in
+  let dirs = List.filter_map (fun (p, d) -> if String.equal p "" then Some d else None) paths in
   let dir = Option.value cwd ~default:(Sys.getcwd ()) in
-  let path = normalize_path (if Filename.is_relative unit then Filename.concat dir unit else unit) in
-  if Hashtbl.mem open_documents path then path
-  else
+  let path = normalize_path (if Filename.is_relative unit then Elpi.API.Utils.filename_concat dir unit else unit) in
+  let open_path =
+    List.find_opt (fun p -> Hashtbl.mem open_documents p)
+      (List.map normalize_path (Elpi.API.Parse.prefixed_units prefixes unit) @ [ path ]) in
+  match open_path with
+  | Some p -> p
+  | None ->
     (* std_resolver takes a ?cwd too: the resolver it returns is built
        first, so that ?cwd goes to that resolver *)
-    let resolve = Elpi.API.Parse.std_resolver ~paths:!include_paths () in
+    let resolve = Elpi.API.Parse.std_resolver ~prefixes ~paths:(!include_paths @ dirs) () in
     resolve ?cwd ~unit ()
 
 let reader path =
@@ -56,7 +73,7 @@ let reader path =
   | None -> Elpi.API.Parse.std_reader path
 
 (* the parser names a file in the locations of its contents without
-   /_build/CONTEXT (see Parse.cleanup_fname) *)
+   /_build/CONTEXT, but /_build/install (see Parse.cleanup_fname) *)
 let without_build path =
   let marker = "/_build/" in
   let n = String.length path and m = String.length marker in
@@ -65,6 +82,7 @@ let without_build path =
   | None -> path
   | Some i ->
       match String.index_from_opt path (i + m) '/' with
+      | Some j when String.equal (String.sub path (i + m) (j - i - m)) "install" -> path
       | Some j -> String.sub path 0 i ^ String.sub path j (n - j)
       | None -> path
 
@@ -81,15 +99,32 @@ let open_document_text name =
 (* whether init was called *)
 let init_called = ref false
 
-let init ~send ~exit ~builtin_library_location ?max_errors ?include_paths:(dirs = []) () =
+(* the packages of accumulate "+pkg", given by the transport *)
+let packages_ref : Elpi.API.Setup.packages option ref = ref None
+
+(* the project of a document (its elpi.toml), given by the transport *)
+type project = {
+  root : string;
+  paths : (string * string) list;
+  builtins : Elpi.API.Setup.builtins list;
+  warnings : (Elpi.API.Error.warning_id * Elpi.API.Error.warning_level) list;
+  error : string option;
+}
+
+let no_project = { root = "."; paths = []; builtins = []; warnings = []; error = None }
+let find_project_file_ref : (path:string -> project) ref = ref (fun ~path:_ -> no_project)
+
+let init ~send ~exit ~builtin_library_location ?max_errors ?include_paths:(dirs = []) ?packages ?find_project_file () =
   send_ref := send;
+  packages_ref := packages;
+  Option.iter (fun f -> find_project_file_ref := f) find_project_file;
   exit_ref := exit;
   builtin_library_location_ref := builtin_library_location;
   Option.iter (fun n -> Checker.max_errors := n) max_errors;
   (* relative to the current directory now, not when a program run by the
      server has changed it *)
   include_paths :=
-    List.map (fun d -> if Filename.is_relative d then Filename.concat (Sys.getcwd ()) d else d) dirs;
+    List.map (fun d -> if Filename.is_relative d then Elpi.API.Utils.filename_concat (Sys.getcwd ()) d else d) dirs;
   init_called := true
 
 (* sends a message to the client *)
@@ -116,7 +151,8 @@ type document = {
   mutable checked : int;            (* the version last checked *)
   mutable hover : Checker.hover option; (* the symbols of the last checked version *)
   mutable accumulates : string list; (* the files its last checked version accumulates *)
-  instance : Checker.instance;      (* the instance of Elpi of the document *)
+  mutable instance : Checker.instance; (* the instance of Elpi of the document *)
+  mutable project : project;        (* its elpi.toml, read when it was opened or changed *)
 }
 
 let documents : (DocumentUri.t, document) Hashtbl.t = Hashtbl.create 7
@@ -169,7 +205,7 @@ let source_text doc uri source_name =
   else
     let file =
       if Filename.is_relative source_name
-      then Filename.concat (Filename.dirname doc.path) source_name else source_name in
+      then Elpi.API.Utils.filename_concat (Filename.dirname doc.path) source_name else source_name in
     Option.map (fun t -> t, if String.equal file doc.path then uri else DocumentUri.of_path file)
       (text_of_file doc file)
 
@@ -214,7 +250,7 @@ let set_elsewhere uri (ds : (DocumentUri.t * Diagnostic.t) list) =
 let check uri doc =
   let t0 = Unix.gettimeofday () in
   let { Checker.diagnostics; elsewhere; hover; accumulates } =
-    Checker.check ~instance:doc.instance ~path:doc.path doc.text.Text.text in
+    Checker.check ~warnings:doc.project.warnings ~instance:doc.instance ~path:doc.path doc.text.Text.text in
   (* a warning in another file goes there, unless the file is open (it has
      its own), or cannot be read, or is in the library (it stays here) *)
   let here, there = List.partition_map Fun.id (List.filter_map (fun { Checker.file; in_file; here } ->
@@ -227,6 +263,10 @@ let check uri doc =
         | Some (text, target) -> Some (Either.Right (target, diagnostic text in_file))
         | None -> Some (Either.Left here)) elsewhere) in
   let diagnostics = diagnostics @ here in
+  (* an error in elpi.toml, at the start of the document *)
+  let diagnostics = match doc.project.error with
+    | None -> diagnostics
+    | Some message -> { Checker.start = 0; stop = 0; severity = Checker.Error; message } :: diagnostics in
   log "checked %s (version %d) in %.3fs: %d diagnostics" doc.path doc.version
     (Unix.gettimeofday () -. t0) (List.length diagnostics);
   doc.checked <- doc.version;
@@ -277,11 +317,18 @@ let set_client_options = function
    request *)
 let link_support = ref false
 
+(* the client can be asked to watch the elpi.toml files *)
+let watch_support = ref false
+
 let initialize (params : InitializeParams.t) =
   Option.iter Checker.set_trace params.trace;
   link_support :=
     (match params.capabilities.textDocument with
      | Some { definition = Some { linkSupport = Some b; _ }; _ } -> b
+     | _ -> false);
+  watch_support :=
+    (match params.capabilities.workspace with
+     | Some { didChangeWatchedFiles = Some { dynamicRegistration = Some b; _ }; _ } -> b
      | _ -> false);
   set_client_options params.initializationOptions;
   let textDocumentSync =
@@ -292,8 +339,7 @@ let initialize (params : InitializeParams.t) =
       ~legend:(SemanticTokensLegend.create ~tokenTypes:Checker.token_types ~tokenModifiers:Checker.token_modifiers) ()) in
   let capabilities = ServerCapabilities.create ~textDocumentSync
       ~hoverProvider:(`Bool true) ~definitionProvider:(`Bool true) ~documentHighlightProvider:(`Bool true) ~semanticTokensProvider () in
-  InitializeResult.create ~capabilities
-    ~serverInfo:(InitializeResult.create_serverInfo ~name:"elpi-lsp" ~version:"0.1" ()) ()
+  InitializeResult.create ~capabilities ~serverInfo:(server_info ~name:"elpi-lsp" ~version:"0.1" ()) ()
 
 let hover ({ textDocument = { uri }; position; _ } : HoverParams.t) =
   match hover_of uri with
@@ -433,7 +479,7 @@ let text_path uri =
   let p = path_of_uri uri in
   let is_dir = (try Sys.is_directory p with Sys_error _ -> false)
                || (String.length p > 0 && Char.equal p.[String.length p - 1] '/') in
-  if is_dir then Filename.concat p "(text)" else p
+  if is_dir then Elpi.API.Utils.filename_concat p "(text)" else p
 
 let run (params : Jsonrpc.Structured.t option) : (Yojson.Safe.t, Jsonrpc.Response.Error.Code.t * string) result =
   let field name = match params with Some (`Assoc l) -> List.assoc_opt name l | _ -> None in
@@ -452,7 +498,7 @@ let run (params : Jsonrpc.Structured.t option) : (Yojson.Safe.t, Jsonrpc.Respons
   | Some (`String _), _, None, _ -> Error (InvalidParams, "elpi/run: the parameter textDocument (with its uri) is missing")
   | Some (`String query), Some (`String text), Some uri, Ok max_steps ->
       (* a text that is not a document: a new instance of Elpi *)
-      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ~file_resolver:resolver ~file_reader:reader ()) ~path:(text_path uri) ~text ~query ())
+      Ok (Runner.run ?max_steps ~instance:(Checker.new_instance ~file_resolver:(resolver ~paths:[]) ~file_reader:reader ?packages:!packages_ref ()) ~path:(text_path uri) ~text ~query ())
   | Some (`String query), _, Some uri, Ok max_steps ->
       (match Hashtbl.find_opt documents uri with
        | Some doc -> Ok (Runner.run ?max_steps ~instance:doc.instance ~path:doc.path ~text:doc.text.Text.text ~query ())
@@ -488,6 +534,37 @@ let recheck_others ?only uri =
       then begin doc.checked <- -1; check_later u end)
     documents
 
+(* the project of a document at [path] (its elpi.toml) and the instance
+   that checks it. An error in the prelude is shown at the start of the
+   document, which is checked without it *)
+let open_project path =
+  let project = !find_project_file_ref ~path in
+  let file_resolver = resolver ~paths:project.paths in
+  let new_instance builtins = Checker.new_instance ~file_resolver ~file_reader:reader ?packages:!packages_ref ~builtins () in
+  try new_instance project.builtins, project
+  with Elpi.API.Error.ElpiError e ->
+    new_instance [], { project with builtins = []; error = Some ("In the prelude of elpi.toml: " ^ Elpi.API.Error.show e) }
+
+(* an elpi.toml changed (or appeared, or went away): the projects of all the
+   documents are read again, and the documents checked again *)
+let reload_projects () =
+  Hashtbl.iter (fun u (doc : document) ->
+      let instance, project = open_project doc.path in
+      doc.instance <- instance;
+      doc.project <- project;
+      doc.checked <- -1;
+      check_later u)
+    documents
+
+(* asks the client to tell when an elpi.toml changes (didChangeWatchedFiles) *)
+let watch_projects () =
+  if !watch_support then
+    let watcher = FileSystemWatcher.create ~globPattern:(`Pattern "**/elpi.toml") () in
+    let registerOptions = DidChangeWatchedFilesRegistrationOptions.(yojson_of_t (create ~watchers:[ watcher ])) in
+    let registration = Registration.create ~id:"elpi.toml" ~method_:"workspace/didChangeWatchedFiles" ~registerOptions () in
+    let request = Lsp.Server_request.ClientRegisterCapability (RegistrationParams.create ~registrations:[ registration ]) in
+    send (Jsonrpc.Request.yojson_of_t (Lsp.Server_request.to_jsonrpc_request request ~id:(`String "watch-elpi.toml")))
+
 (* an opened or changed document is dirty: it is checked when the user is
    idle. Its text is what the other documents accumulate (open_documents):
    when it is opened, the others are checked again (an accumulate may find it
@@ -497,9 +574,11 @@ let set_text uri version text =
   set_open_document path text;
   (match Hashtbl.find_opt documents uri with
    | None ->
+       (* the elpi.toml of the project is read when the document is opened *)
+       let instance, project = open_project path in
        Hashtbl.replace documents uri { path; text = Text.make text; version;
                                        checked = -1; hover = None; accumulates = [];
-                                       instance = Checker.new_instance ~file_resolver:resolver ~file_reader:reader () };
+                                       instance; project };
        recheck_others uri
    | Some doc ->
        doc.text <- Text.make text;
@@ -515,7 +594,10 @@ let handle_notification : Lsp.Client_notification.t -> unit = function
   | TextDocumentDidChange { textDocument = { uri; version }; contentChanges } ->
       (* full synchronization: the last change is the whole text *)
       (match List.rev contentChanges with
-       | { text; range = None; _ } :: _ -> set_text uri version text
+       (* lsp 1.28 made a change a variant: partial or whole document *)
+       | ({ text; range = None; _ } :: _) [@if lsp < (1, 28, 0)] -> set_text uri version text
+       | (`TextDocumentContentChangeWholeDocument { TextDocumentContentChangeWholeDocument.text } :: _)
+         [@if lsp >= (1, 28, 0)] -> set_text uri version text
        | _ -> log "ignoring an incremental change")
   | DidSaveTextDocument { textDocument = { uri }; _ } ->
       (* the other documents may accumulate files on the disk that changed
@@ -532,7 +614,10 @@ let handle_notification : Lsp.Client_notification.t -> unit = function
       send_notification (PublishDiagnostics (PublishDiagnosticsParams.create ~uri ~diagnostics:[] ()));
       (* its warnings in other files go away *)
       set_elsewhere uri []
-  | Initialized -> ()
+  (* lsp 1.28 gave Initialized its parameters *)
+  | Initialized [@if lsp < (1, 28, 0)] -> watch_projects ()
+  | Initialized _ [@if lsp >= (1, 28, 0)] -> watch_projects ()
+  | DidChangeWatchedFiles _ -> reload_projects ()
   | SetTrace { value } -> Checker.set_trace value
   | CancelRequest _ ->
       (* a request is answered as soon as it is read: none is pending *)
@@ -560,6 +645,7 @@ let handle : Jsonrpc.Packet.t -> unit = function
       (match Lsp.Client_notification.of_jsonrpc n with
        | Ok n -> handle_notification n
        | Error e -> log "ignoring notification %s: %s" n.method_ e)
+  | Response _ -> () (* to the registration of the watcher *)
   | _ -> log "ignoring a message"
 
 (* handles a message as JSON *)

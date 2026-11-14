@@ -1,0 +1,3 @@
+# an elpi.toml that uses a package with no elpi.toml
+name = "usenotoml"
+use = ["+str"]

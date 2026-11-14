@@ -1,0 +1,2 @@
+% accumulated by the prelude: its macro is seen by main.elpi too
+macro @forty-two :- 42.

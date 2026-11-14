@@ -1,0 +1,4 @@
+# a directory relative to the current one: an error
+name = "relpath"
+[paths]
+"" = "lib"

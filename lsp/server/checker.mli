@@ -19,12 +19,17 @@ val log : ('a, unit, string, unit) format4 -> 'a
     [check]), freed with it. *)
 type instance
 
-(** a new instance, with the standard builtins; accumulated files are found
+(** a new instance, with the standard builtins and then [builtins] (e.g. the
+    prelude of a project; they can be stubs); accumulated files are found
     by [file_resolver] and read by [file_reader] (see [Setup.init]), by
-    default relative to the accumulating file and on the disk *)
+    default relative to the accumulating file and on the disk; the packages
+    of [accumulate "+pkg"] are the ones of [packages] (see [Setup.init]).
+    Raises an [Error.ElpiError] if [builtins] have an error *)
 val new_instance :
   ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
   ?file_reader:(string -> string) ->
+  ?packages:Setup.packages ->
+  ?builtins:Setup.builtins list ->
   unit -> instance
 
 val elpi : instance -> Setup.elpi
@@ -35,10 +40,19 @@ val id : instance -> int
 (** the maximum number of errors reported for a file (default 100) *)
 val max_errors : int ref
 
+[%%import "lsp_config.mlh"]
+
+(* the trace levels of the client: lsp 1.28 renamed TraceValues to TraceValue *)
+[%%if lsp < (1, 28, 0)]
+type trace_value = Lsp.Types.TraceValues.t
+[%%else]
+type trace_value = Lsp.Types.TraceValue.t
+[%%endif]
+
 (** the trace level asked by the client: [Messages] logs the time of the
     phases of a check, [Verbose] also the units of the program (as the
     environment variable ELPI_LSP_PROFILE does for the time) *)
-val set_trace : Lsp.Types.TraceValues.t -> unit
+val set_trace : trace_value -> unit
 
 (** An error of Elpi (or any exception), as a location and a message *)
 val error_of_exn : exn -> Ast.Loc.t option * string
@@ -97,11 +111,13 @@ type result = {
   accumulates : string list; (** the files it accumulates, directly or not *)
 }
 
-(** [check ~instance ~path text] checks the document [path] whose contents is
-    [text] with [instance]. The units of the program (the accumulated files,
-    then the document) are cached: with the same instance, an accumulated file
-    is compiled once, not at each check. *)
-val check : instance:instance -> path:string -> string -> result
+(** [check ?warnings ~instance ~path text] checks the document [path] whose
+    contents is [text] with [instance]; [warnings] are the levels of the
+    kinds of warnings (see [Error.warning_level]): an off one is not shown,
+    an error one is an error. The units of the program (the accumulated
+    files, then the document) are cached: with the same instance, an
+    accumulated file is compiled once, not at each check. *)
+val check : ?warnings:(Error.warning_id * Error.warning_level) list -> instance:instance -> path:string -> string -> result
 
 (** {2 Requests}
 

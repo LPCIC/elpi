@@ -1,0 +1,10 @@
+# the project of main.elpi, at its root
+name = "proj"
+prelude = ["+/pre"]
+preload = ["elpi-test-dyn.state"]
+[paths]
+"" = "+/lib"                # any file, after -I
+"proj.deep" = "+/src/deep"  # proj.deep/x is src/deep/x
+"dyn" = "+elpi-test-dyn"    # dyn/x is x in the directory of package elpi-test-dyn
+[dev-only-paths]
+"proj.tests" = "+/tests"    # only for proj itself, not for a project that uses it

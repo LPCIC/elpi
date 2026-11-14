@@ -1,0 +1,11 @@
+==== open proj/src/prefixed.elpi ====
+diagnostics of proj/src/prefixed.elpi (version 1): 0
+definition "util.seven N"+0 (the cursor is at 2:7):
+  line 2:
+               | s N :- util.seven N.
+    cursor     |        *
+  defined at file://$DIR/proj/lib/util.elpi 1:0-1:22
+    | func util.seven -> int
+  previewed 1:0-2:12
+    | func util.seven -> int.
+    | util.seven 7

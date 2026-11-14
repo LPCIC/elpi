@@ -1,0 +1,3 @@
+% the prelude of quoteproj: builtins of the instance, its macros are seen by
+% the documents
+macro @nine :- 9.

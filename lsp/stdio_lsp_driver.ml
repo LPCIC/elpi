@@ -73,8 +73,37 @@ let max_errors, include_paths =
     | [] -> max_errors, List.rev paths in
   args None [] (List.tl (Array.to_list Sys.argv))
 
+(* an error shown at the start of a document: on one line, file:line: *)
+let one_line { Elpi.API.Error.loc; message; _ } =
+  match loc with
+  | Some { source_name; line; _ } -> Printf.sprintf "%s:%d: %s" source_name line message
+  | None -> message
+
+(* the nearest elpi.toml above a document, as for elpi; it names the project
+   of the document, found in its sources ("+name/..."). Its preload plugins
+   are loaded now, before the instance of the document is created, so that
+   their quotations and state components are seen. A document with no path
+   on the disk (e.g. untitled:) has no project. *)
+let find_project_file ~path =
+  if Filename.is_relative path then Server.no_project else
+  match Elpi_dynload.config_above ~file:path with
+  | None -> Server.no_project
+  | Some ({ Elpi_dynload.file; paths; dev_only_paths; preload; warnings; _ } as c) ->
+      Elpi_dynload.declare_project c;
+      (* the project of the document is its own: its [dev-only-paths] count *)
+      let paths = paths @ dev_only_paths in
+      let project = { Server.root = Filename.dirname file; paths; builtins = []; warnings; error = None } in
+      (try
+         List.iter (fun pkg -> Elpi_dynload.preload ~pkg) preload;
+         { project with builtins = Elpi_dynload.prelude_builtins c }
+       with Elpi.API.Error.ElpiError e -> { project with error = Some (one_line e) })
+  | exception Elpi.API.Error.ElpiError e -> { Server.no_project with error = Some (one_line e) }
+
 let () =
-  Server.init ~send:output_json ~exit ~builtin_library_location ?max_errors ~include_paths ()
+  (* the other plugins, of accumulate "+pkg", are not loaded: their stubs are
+     read *)
+  Server.init ~send:output_json ~exit ~builtin_library_location ?max_errors ~include_paths
+    ~packages:Elpi_dynload.packages_stubs ~find_project_file ()
 
 let () =
   log "started";

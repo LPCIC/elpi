@@ -1,0 +1,6 @@
+% the prelude of the project, given to Setup.init before main.elpi: its
+% macros are seen by main.elpi, also the ones of the files it accumulates
+accumulate pre-lib.
+func pre.hello.
+pre.hello :- print "hello from the prelude".
+macro @hello :- pre.hello.

@@ -58,6 +58,19 @@ let parser : (module Parse.Parser) option D.State.component = D.State.declare
   ~init:(fun () -> None)
   ()
 
+(* the digests of the units of the header (the texts of the builtins and the
+   files they accumulate, e.g. a prelude): a program that accumulates one of
+   them does not add it again *)
+let header_units : StrSet.t D.State.component = D.State.declare
+  ~descriptor:D.elpi_state_descriptor
+  ~name:"elpi:header_units"
+  ~pp:(fun fmt _ -> Format.fprintf fmt "<header units>")
+  ~clause_compilation_is_over:(fun x -> x)
+  ~compilation_is_over:(fun x -> Some x)
+  ~execution_is_over:(fun _ -> None)
+  ~init:(fun () -> StrSet.empty)
+  ()
+
 let filter1_if { defined_variables } proj c =
   match proj c with
   | None -> true
@@ -320,6 +333,7 @@ let declare_builtins ~file_name l =
   declared_builtins := Util.StrMap.add file_name (build_predmap l,l) !declared_builtins;
   file_name
 
+let is_declared_builtins ~file_name = Util.StrMap.mem file_name !declared_builtins
 let declared_builtins_of_file ~file_name =
   if Util.StrMap.mem file_name !declared_builtins then file_name
   else builtins_error ("Builtins for file " ^ file_name ^ " were not declared")
@@ -342,8 +356,12 @@ let document_file ?header:_ ~file:name file_name =
 
 (* The text of a builtins file names its OCaml symbols: the constants of the
    conversions of its MLData (e.g. the constructors of an AlgebraicData), its
-   MLConstants and the operators of its MLCalc *)
-let bind_mlconstants ~file_name decls ({ Ast.ast } as p : Ast.Program.t) =
+   MLConstants and the operators of its MLCalc. With [stubs] the text can
+   name symbols that have no OCaml code here (builtin predicates without an
+   MLCode, symbols = "variant" of no MLData nor MLConstants), e.g. the
+   documentation of the builtins of an application of Elpi given to
+   Setup.init *)
+let bind_mlconstants ?(stubs = false) ~file_name decls ({ Ast.ast } as p : Ast.Program.t) =
   let name_variant c =
     match Util.Constants.Map.find_opt c D.Global_symbols.table.c2s with
     | Some s ->
@@ -376,12 +394,13 @@ let bind_mlconstants ~file_name decls ({ Ast.ast } as p : Ast.Program.t) =
     match annotation, variants name with
     | Some (Some "core"), _ -> t
     | Some None, _ when pred ->
-        if not (List.exists (String.equal name) mlcode) then
+        if not stubs && not (List.exists (String.equal name) mlcode) then
           builtins_error ~loc (Printf.sprintf "%s is declared builtin but no MLCode of %s implements it%s" name file_name
             (match variants name with [] -> "" | _ -> ": it is in the MLConstants, drop builtin"));
         t
     | Some (Some s), vs ->
         if List.exists (String.equal s) vs then (bind_once ~loc name s; t)
+        else if stubs then t
         else builtins_error ~loc (Printf.sprintf "%s = \"%s\" is not an OCaml symbol of %s (MLData, MLConstants)" name s file_name)
     | Some None, _ -> builtins_error ~loc (Printf.sprintf "builtin symb %s: only the symbols of the language are builtin" name)
     | None, vs when List.exists (String.equal "") vs ->
@@ -415,15 +434,30 @@ let bind_mlconstants ~file_name decls ({ Ast.ast } as p : Ast.Program.t) =
       builtins_error (Printf.sprintf "%s%s, an OCaml symbol of %s, is not declared by its text (symb, pred or func)" name (D.Global_symbols.show_variant_annotation variant) file_name));
   { p with ast }
 
-let ast_of_builtins ~(parser: (module Parse.Parser)) ~file_name =
+(* the unit of an accumulated plugin ("+pkg", see Parse.plugin_file_name) *)
+let is_plugin_unit file_name =
+  Parse.is_plugin_file_name file_name && is_declared_builtins ~file_name
+
+let text_of_builtins ~file_name =
   let _, decls = declared_builtins ~file_name in
-  (* This is a bit ugly, since we print and then parse... *)
-  let text = Data.BuiltInPredicate.document_to_string decls in
+  Data.BuiltInPredicate.document_to_string decls
+
+(* the AST of the text of a builtins file, with its OCaml symbols bound *)
+let bind_builtins ?stubs ~file_name (p : Ast.Program.t) =
+  let _, decls = declared_builtins ~file_name in
+  bind_mlconstants ?stubs ~file_name decls p
+
+let ast_of_builtins ~stubs ~(parser: (module Parse.Parser)) ~file_name =
+  (* This is a bit ugly, since we print and then parse... A declaration made
+     of one text (e.g. a file of a prelude) is that text, so that its
+     locations are the ones of the file *)
+  let text = match declared_builtins ~file_name with
+    | _, [ BuiltInPredicate.LPCode s ] -> s
+    | _ -> text_of_builtins ~file_name in
   let lexbuf = Lexing.from_string text in
   let module P = (val parser) in
   match P.program_from ~loc:(Util.Loc.initial file_name) ~digest:(Digest.string text) lexbuf with
-  | p, [], [] ->
-      bind_mlconstants ~file_name decls p
+  | p, [], [] -> bind_builtins ~stubs ~file_name p
   | _, errors, warnings ->
     (* the code of the builtins has no warnings *)
     let { Util.loc; message; _ } =
@@ -2697,19 +2731,33 @@ let check_user_declarations ~errs (p : Ast.Program.t) =
   let rec aux l = l |> List.iter (function
     | Ast.Program.Type l -> List.iter check l
     | Ast.Program.Pred t -> check t
-    | Ast.Program.Accumulated (_, l) -> List.iter (fun { Ast.ast } -> aux ast) l
+    | Ast.Program.Accumulated (_, l) ->
+        (* the unit of a plugin is the text of a builtins file *)
+        List.iter (fun { Ast.ast; file_name } -> if not (is_plugin_unit file_name) then aux ast) l
     | _ -> ()) in
   aux p.Ast.ast
 
+(* the units of the plugins accumulated by a program, with their OCaml
+   symbols bound (as Compiler.ast_of_builtins does for a builtins file) *)
+let rec bind_plugin_units (p : Ast.Program.t) =
+  let ast = p.Ast.ast |> List.map (function
+    | Ast.Program.Accumulated (loc, l) ->
+        Ast.Program.Accumulated (loc, l |> List.map (fun (x : Ast.Program.t) ->
+          if is_plugin_unit x.file_name then bind_builtins ~file_name:x.file_name x
+          else bind_plugin_units x))
+    | d -> d) in
+  { p with ast }
+
 let scope ~errs ?(user_text=false) s ~toplevel_macros ~builtins p : scoped_program list =
   if user_text then check_user_declarations ~errs p;
+  let p = bind_plugin_units p in
   let pl = RecoverStructure.run ~errs s p in
   pl |> List.map (fun { Ast.ast = p; digest; deps; file_name} -> 
     let p = Scope_Quotation_Macro.run ~errs ~toplevel_macros s p in
     {
       version = "%%VERSION_NUM%%";
       code = p;
-      builtins;
+      builtins = if is_plugin_unit file_name then Some file_name else builtins;
       file_name;
       digest;
       deps;
@@ -2757,12 +2805,19 @@ let without_errors f =
       let ErrorFun { error } = error_fun ~component in
       error ?loc message
 
-let scoped_of_builtins ~flags:_ ~header:(s,u) builtins =
+(* the units of the text of builtins: the files it accumulates (e.g. a file
+   of a prelude), each after the ones it accumulates, then the text *)
+let scoped_units_of_builtins ~flags ~header:(s,u) builtins =
   let parser = Option.get @@ D.State.get parser s in
-  let builtins_src = ast_of_builtins ~parser ~file_name:builtins in
-  match without_errors (fun errs -> scope ~errs ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:(Some builtins) builtins_src) with
+  let builtins_src = ast_of_builtins ~stubs:flags.builtin_stubs ~parser ~file_name:builtins in
+  without_errors (fun errs -> scope ~errs ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:(Some builtins) builtins_src)
+
+(* a text of builtins that accumulates no file *)
+let scoped_of_builtins ~flags ~header builtins =
+  match scoped_units_of_builtins ~flags ~header builtins with
   | [x] -> x
-  | _ -> assert false
+  | _ -> builtins_error ~loc:(Util.Loc.initial builtins)
+           (Printf.sprintf "the text of the builtins %s accumulates files: it is not one unit" builtins)
 
 (* the passes below return their result, the list of the errors and the list
    of the warnings found (see with_errors): with flags.max_errors = 0 the
@@ -2771,9 +2826,23 @@ let pp_error = Compiler_data.pp_error
 let pp_error_message = Compiler_data.pp_error_message
 let show_error = Compiler_data.show_error
 
+(* [p] without the files it accumulates that are in the header already (e.g.
+   a file of a prelude): their declarations and rules are there *)
+let rec drop_header_units units (p : Ast.Program.t) =
+  let ast = p.Ast.ast |> List.map (function
+    | Ast.Program.Accumulated (loc, l) ->
+        Ast.Program.Accumulated (loc, l |> List.filter_map (fun (x : Ast.Program.t) ->
+          if StrSet.mem x.digest units then None else Some (drop_header_units units x)))
+    | d -> d) in
+  { p with ast }
+
 let scoped_of_ast ~flags ~header:(s,u) p =
+  let units = D.State.get header_units s in
+  let in_header sp = StrSet.mem (scoped_program_digest sp) units in
+  let p = drop_header_units units p in
   with_errors ~flags (fun errs ->
-    scope ~errs ~user_text:(not flags.builtin_stubs) ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:None p)
+    scope ~errs ~user_text:(not flags.builtin_stubs) ~toplevel_macros:u.Assembled.signature.toplevel_macros s ~builtins:None p
+    |> List.filter (fun sp -> not (in_header sp)))
 
 
 let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor builtins : header =
@@ -2796,8 +2865,14 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
   let state = D.State.set D.while_compiling state true in
   let base = Assembled.empty () in
   (* let state = State.set Symbols.table state (Symbols.global_table ()) in *)
-  builtins |> List.fold_left (fun (state,base as header) builtins ->
-    let scoped = scoped_of_builtins ~flags ~header builtins in
+  (* a file accumulated by two texts of builtins (e.g. by two files of a
+     prelude) is in the header once *)
+  let seen = ref StrSet.empty in
+  builtins |> List.fold_left (fun header builtins ->
+    scoped_units_of_builtins ~flags ~header builtins |> List.fold_left (fun (state,base as header) scoped ->
+    let digest = scoped_program_digest scoped in
+    if StrSet.mem digest !seen then header else begin
+    seen := StrSet.add digest !seen;
     let u = without_errors (fun errs -> unit_or_header_of_scoped ~errs ~base state scoped) in
     print_unit flags u;
     let u = without_errors (fun errs -> Check.check ~errs ~flags state ~base u) in
@@ -2805,8 +2880,9 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
     (* Printf.eprintf "header_of_ast: types u %d\n%!" (F.Map.cardinal u.checked_code.CheckedFlat.signature.types); *)
     let h = without_errors (fun errs -> Assemble.extend ~errs flags state base u) in
     (* Printf.eprintf "header_of_ast: types h %d\n%!" (F.Map.cardinal (snd h).Assembled.signature.types); *)
-    h)
+    h end) header)
    (state,base)
+  |> fun (state, base) -> D.State.set header_units state !seen, base
 
 let empty_base ~header:b = b
 
@@ -2834,6 +2910,9 @@ let compile_unit ~flags ~header ~base:(st,base) scoped : checked_compilation_uni
     Check.check ~errs ~flags st ~base u)
 
 let program_of_ast ~flags ~header:(header : State.t * Assembled.program) p : program * error list * warning list =
+  (* the units of the header (e.g. a prelude) are not added again *)
+  let units = D.State.get header_units (fst header) in
+  let p = drop_header_units units p in
   with_errors ~flags (fun errs ->
     let pl = scope ~errs ~user_text:(not flags.builtin_stubs) ~toplevel_macros:(snd header).Assembled.signature.toplevel_macros (fst header) ~builtins:None p in
     let header, _ =
@@ -2848,7 +2927,7 @@ let program_of_ast ~flags ~header:(header : State.t * Assembled.program) p : pro
             print_unit flags u;
             let u = Check.check ~errs ~flags st ~base u in
             Assemble.extend ~errs flags st base u, StrSet.add p.digest seen))
-        (header, StrSet.empty) in
+        (header, units) in
     header)
 
 let total_type_checking_time { WithMain.total_type_checking_time = x } = x

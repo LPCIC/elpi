@@ -1,0 +1,7 @@
+# a project: "+/path" is a file at its root; elpi-lsp reads paths and
+# prelude when a document is opened
+name = "lspproj"
+prelude = ["+/pre"]
+[paths]
+"" = "+/inc"
+"lsp.lib" = "+/lib"   # lsp.lib/x is lib/x

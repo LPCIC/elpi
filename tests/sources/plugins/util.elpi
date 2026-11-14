@@ -1,0 +1,3 @@
+% a file of the package test, accumulated with "+test/util"
+func util.double int -> int.
+util.double X Y :- Y is X * 2.

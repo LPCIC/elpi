@@ -51,18 +51,73 @@ type elpi = {
 }
 type flags = Compiler.flags
 
+type packages = {
+  dir : pkg:string -> string;
+  load : (pkg:string -> unit) option;
+  root_of_dir : dir:string -> string;
+}
 
-let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) () : elpi =
+(* the errors about packages and plugins *)
+let Util.ErrorFun { error = packages_error; _ } = Util.error_fun ~component:"Packages"
+
+(* the plugin of [pkg] is registered, loading it with [load] if needed; then
+   [after ()] checks what the loading did *)
+let ensure_plugin ?(after = fun () -> ()) ~load pkg =
+  let registered () = Compiler.is_declared_builtins ~file_name:(Parse.plugin_file_name pkg) in
+  if not (registered ()) then begin
+    (try load ~pkg with Util.ElpiError { Util.message; _ } ->
+      packages_error (Printf.sprintf "plugin %s is not available: %s" pkg message));
+    after ();
+    if not (registered ()) then
+      packages_error (Printf.sprintf "package %s did not register its plugin (Elpi.API.Plugin.register ~name:%S)" pkg pkg)
+  end
+
+(* [accumulate "+pkg"]: the text of the builtins of the plugin of [pkg],
+   loading it with [packages] if it is not registered yet. A plugin loaded
+   after Setup.init cannot extend the state, set quotations nor set HOAS
+   hooks: the instance would not see them *)
+let plugin_of_packages ~packages ~state ~quotations ~hoas ~pkg =
+  let file_name = Parse.plugin_file_name pkg in
+  (match packages with
+   | Some { load = Some load } ->
+       (* the descriptors of the instance, and the default one of
+          State.declare_component if the host gave another *)
+       let descriptors =
+         Data.elpi_state_descriptor :: state ::
+         (if state == default_state_descriptor then [] else [default_state_descriptor]) in
+       let components () = List.fold_left (fun n d -> n + Data.State.components d) 0 descriptors in
+       let c0 = components () and q0 = !quotations and h0 = !hoas in
+       let after () =
+         if components () > c0 then
+           packages_error (Printf.sprintf "plugin %s declares state components: it must be loaded before Setup.init" pkg);
+         if not (q0 == !quotations) then
+           packages_error (Printf.sprintf "plugin %s declares quotations: it must be loaded before Setup.init" pkg);
+         if not (h0 == !hoas) then
+           packages_error (Printf.sprintf "plugin %s sets HOAS hooks: it must be loaded before Setup.init" pkg) in
+       ensure_plugin ~after ~load pkg
+   | _ -> ());
+  if Compiler.is_declared_builtins ~file_name then Some (Compiler.text_of_builtins ~file_name) else None
+
+let init ?(versions=Elpi_util.Util.StrMap.empty) ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ~builtins ?file_resolver ?(file_reader = Elpi_util.Util.std_reader) ?packages () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
     | Some x -> x
     | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
-  let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader end) : Parse.Parser) in
-  let header =
-    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas builtins
-    with Util.ElpiError ({ loc } as e) -> data_anomaly ?loc (Format.asprintf "%a" Compiler_data.pp_error_message e) in
+  let package_dir ~pkg =
+    match packages with
+    | Some { dir } -> dir ~pkg
+    | None -> packages_error (Printf.sprintf "accumulate \"+%s\": packages are disabled since Setup.init was not given ~packages" pkg) in
+  let root_of_dir ~dir =
+    match packages with
+    | Some { root_of_dir } -> root_of_dir ~dir
+    | None -> packages_error "accumulate \"+/...\": packages are disabled since Setup.init was not given ~packages" in
+  let plugin = plugin_of_packages ~packages ~state ~quotations ~hoas in
+  let parser = (module Parse.Make(struct let versions = versions let resolver = file_resolver let reader = file_reader let package_dir = package_dir let plugin = plugin let root_of_dir = root_of_dir end) : Parse.Parser) in
+  (* an error in the text of the builtins, e.g. of a prelude, is raised as it
+     is *)
+  let header = Compiler.header_of_ast ~flags ~parser state !quotations !hoas builtins in
   { parser; header; resolver = file_resolver }
 
 let trace = set_trace
@@ -135,6 +190,35 @@ module Error = struct
     error ?loc message
   type warning_id = Util.warning_id = LinearVariable | UndeclaredGlobal | FlexClause | ImplicationPrecedence | NestedAccumulate
   type warning = Util.warning = { warning_id : warning_id; warning : t }
+
+  let warning_names = [
+    LinearVariable, "linear-variable";
+    UndeclaredGlobal, "undeclared-global";
+    FlexClause, "flex-clause";
+    ImplicationPrecedence, "implication-precedence";
+    NestedAccumulate, "nested-accumulate";
+  ]
+  let warning_name id = List.assq id warning_names
+  let warning_of_name n = List.find_map (fun (id, m) -> if String.equal n m then Some id else None) warning_names
+  let all_warnings = List.map fst warning_names
+
+  type warning_level = Off | On | As_error
+
+  let warning_spec s =
+    let names = "all" :: List.map snd warning_names in
+    let fail () =
+      error ~component:"Warnings"
+        (Printf.sprintf "%S: a spec is +name, -name or @name, one kind of warnings, the names are %s" s
+           (String.concat ", " names)) in
+    let n = String.length s in
+    if n < 2 then fail ();
+    let level = match s.[0] with '+' -> On | '-' -> Off | '@' -> As_error | _ -> fail () in
+    let name = String.sub s 1 (n - 1) in
+    if String.equal name "all" then List.map (fun (id, _) -> id, level) warning_names
+    else match warning_of_name name with Some id -> [ id, level ] | None -> fail ()
+
+  let warning_level levels id =
+    List.fold_left (fun l (id', l') -> if id' == id then l' else l) On levels
 end
 
 module Compile = struct
@@ -222,6 +306,7 @@ module Parse = struct
 
   let resolve_file ~elpi:{ Setup.resolver } = resolver
   let std_resolver = Elpi_util.Util.std_resolver
+  let prefixed_units = Elpi_util.Util.prefixed_units
   let std_reader = Elpi_util.Util.std_reader
 
 end
@@ -1146,6 +1231,22 @@ module BuiltIn = struct
     Compiler.document_file ?header ~file:(Compiler.file_of_declared_builtins file_name) file_name
 end
 
+module Plugin = struct
+  let file_name name = Elpi_parser.Parse.plugin_file_name name
+  let register ~name l =
+    if String.equal name "" || String.contains name '/' || String.contains name '\\' then
+      data_anomaly (Printf.sprintf "Plugin.register: %S is not a package name (no / nor \\, not empty)" name);
+    BuiltIn.declare ~file_name:(file_name name) l
+  let is_registered name = Compiler.is_declared_builtins ~file_name:(file_name name)
+  let builtins name =
+    if not (is_registered name) then begin
+      let Util.ErrorFun { error; _ } = Util.error_fun ~component:"Packages" in
+      error (Printf.sprintf "plugin %s is not registered" name)
+    end;
+    Compiler.declared_builtins_of_file ~file_name:(file_name name)
+  let ensure_registered ~load name = Setup.ensure_plugin ~load name
+end
+
 module State = struct
   include ED.State
   let new_state_descriptor = ED.State.new_descriptor
@@ -1426,6 +1527,21 @@ end
 
 module Utils = struct
   let normalize_path = Elpi_util.Util.normalize_path
+  let filename_dirsep = Elpi_util.Util.filename_dirsep
+  let filename_concat = Elpi_util.Util.filename_concat
+
+  let string_literal s =
+    let b = Buffer.create (String.length s + 2) in
+    Buffer.add_char b '"';
+    String.iter (function
+      | '"' -> Buffer.add_string b "\\\""
+      | '\\' -> Buffer.add_string b "\\\\"
+      | c -> Buffer.add_char b c) s;
+    Buffer.add_char b '"';
+    Buffer.contents b
+
+  let accumulate_text l =
+    String.concat "" (List.map (fun s -> "accumulate " ^ string_literal s ^ ".\n") l)
 
   let lp_list_to_list ~depth t =
     let module R = (val !r) in let open R in

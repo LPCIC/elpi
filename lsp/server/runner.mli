@@ -27,5 +27,6 @@
     - constraints: only on success, the constraints left by the run, as the REPL
       prints them, e.g. "{c0} : hyps ?- goal /* suspended on X0 */". *)
 val run :
-  ?max_steps:int -> instance:Checker.instance -> path:string -> text:string -> query:string -> unit ->
+  ?max_steps:int ->
+  instance:Checker.instance -> path:string -> text:string -> query:string -> unit ->
   Yojson.Safe.t

@@ -29,7 +29,12 @@ jobs:
       - name: Build
         run: |
           eval $(opam env)
-          opam install ./elpi.opam --deps-only --with-doc
+          # elpi-json is not in the opam repository yet: the version of its
+          # opam file is dev, and its "elpi" {= version} cannot be satisfied
+          # (elpi.opam counts as the latest released elpi), so its
+          # dependencies beyond elpi's are installed by name
+          opam install ./elpi.opam ./ppx_elpi.opam --deps-only --with-doc
+          opam install "yojson>=2.0"
           make doc-build
 
       - name: Save doc artifact

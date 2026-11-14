@@ -1,0 +1,8 @@
+accumulate libfile.
+accumulate "+/pre". % in the prelude already: not added again
+accumulate "+elpi-test-dyn.state".
+accumulate "+/src/deep/answer".
+accumulate "proj.deep/more".
+accumulate "dyn/util".
+accumulate "proj.tests/t".
+main :- @hello, lib.answer A, A = @forty-two, deep.more 7, deep.answer D, dyn.tick N, dyn.tick M, util.triple 5 T, tests.check C, print A D N M T C.

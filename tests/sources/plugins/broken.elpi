@@ -1,0 +1,3 @@
+% a file of the package test with a syntax error
+func broken.p -> int.
+broken.p X :- X is .
