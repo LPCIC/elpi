@@ -12,7 +12,7 @@ definition "fb Z Y"+0 (the cursor is at 3:20):
   line 3:
                | main X Y :- fa X Z, fb Z Y.
     cursor     |                     *
-  defined at file://$DIR/accdirs/b/b.elpi 2:0-2:18
+  defined at file://$DIR/accdirs/main/../b/b.elpi 2:0-2:18
     | func fb int -> int
   previewed 2:0-3:18
     | func fb int -> int.
