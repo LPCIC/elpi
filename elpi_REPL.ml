@@ -150,9 +150,34 @@ let _ =
   API.Quotation.register_named_quotation ~descriptor:quotations ~name:"elpi"
     API.Quotation.elpi
 
-let _ =
-  (* Memtrace.trace_if_requested (); <-- new line *)
-  (* Hashtbl.randomize (); *)
+(* the options of the command line *)
+type options = {
+  test : bool;
+  exec : string;
+  print_lprolog : bool;
+  print_ast : bool;
+  batch : bool;
+  doc_builtins : bool;
+  doc_infix : bool;
+  delay_outside_fragment : bool;
+  print_passes : bool;
+  print_units : bool;
+  extra_paths : string list;
+  parse_term : bool;
+  parse_clause : bool;
+  skip_det_check : bool;
+  max_errors : int;
+  print_deps : bool;
+  config_file : string option;
+  no_config : bool;
+  check_package : string option;
+  warning_specs : string list; (* in order *)
+  vars : API.Compile.StrSet.t;
+}
+
+(* the options, and the rest of the command line (the files, then -- and the
+   arguments of the query, and the options of the trace); -h and -v exit *)
+let parse_options argv =
   let test = ref false in
   let exec = ref "" in
   let print_lprolog = ref false in
@@ -160,7 +185,7 @@ let _ =
   let batch = ref false in
   let doc_builtins = ref false in
   let doc_infix = ref false in
-  let delay_outside_fragment = ref false in 
+  let delay_outside_fragment = ref false in
   let print_passes = ref false in
   let print_units = ref false in
   let extra_paths = ref [] in
@@ -204,38 +229,40 @@ let _ =
     | "--" :: rest -> "--" :: rest
     | x :: rest -> x :: eat_options rest
   in
-  let tjpath =
-    let v = try Sys.getenv "TJPATH" with Not_found -> "" in
-    Str.split (Str.regexp ":") v in
-  let installpath = 
-    let v = try Sys.getenv "OCAMLPATH" with Not_found -> "" in
-    (Filename.dirname Sys.executable_name ^ "/../lib/") ::
-    (Filename.dirname Sys.executable_name ^ "/../lib/ocaml") ::
-    Str.split (Str.regexp ":") v in
-  let execpath = Filename.dirname (Sys.executable_name) in
-  let argv = List.tl (Array.to_list Sys.argv) in
-  let argv = eat_options argv in
-  (* the package as installed: no elpi.toml of a project is read *)
-  Option.iter (fun pkg ->
-    let report = Elpi_dynload.check_package ~pkg in
-    let width = List.fold_left (fun w (item, _) -> max w (String.length item)) 0 report |> min 40 in
-    let indent = String.make (width + 2) ' ' in
-    let indented s = String.concat ("\n" ^ indent) (String.split_on_char '\n' s) in
-    let failed = ref false in
-    report |> List.iter (fun (item, result) ->
-      let pad = String.make (max 1 (width + 2 - String.length item)) ' ' in
-      match result with
-      | Elpi_dynload.Checked what -> Printf.printf "%s%s%s\n" item pad what
-      | Elpi_dynload.Failed errors ->
-          failed := true;
-          Printf.printf "%s%s%s\n" item pad (String.concat ("\n" ^ indent) (List.map indented errors)));
-    exit (if !failed then 1 else 0)) !check_package;
-  (* the elpi.toml of the project: given, or the nearest one above the file (the
-     first argument that is a file, with or without .elpi); it names the
-     project being run, found in its sources *)
+  let rest = eat_options argv in
+  { test = !test; exec = !exec; print_lprolog = !print_lprolog; print_ast = !print_ast;
+    batch = !batch; doc_builtins = !doc_builtins; doc_infix = !doc_infix;
+    delay_outside_fragment = !delay_outside_fragment; print_passes = !print_passes;
+    print_units = !print_units; extra_paths = !extra_paths; parse_term = !parse_term;
+    parse_clause = !parse_clause; skip_det_check = !skip_det_check; max_errors = !max_errors;
+    print_deps = !print_deps; config_file = !config_file; no_config = !no_config;
+    check_package = !check_package; warning_specs = List.rev !warning_specs; vars = !vars },
+  rest
+
+(* elpi -check-package PKG: the package as installed, one line per item; no
+   elpi.toml of a project is read *)
+let check_package pkg =
+  let report = Elpi_dynload.check_package ~pkg in
+  let width = List.fold_left (fun w (item, _) -> max w (String.length item)) 0 report |> min 40 in
+  let indent = String.make (width + 2) ' ' in
+  let indented s = String.concat ("\n" ^ indent) (String.split_on_char '\n' s) in
+  let failed = ref false in
+  report |> List.iter (fun (item, result) ->
+    let pad = String.make (max 1 (width + 2 - String.length item)) ' ' in
+    match result with
+    | Elpi_dynload.Checked what -> Printf.printf "%s%s%s\n" item pad what
+    | Elpi_dynload.Failed errors ->
+        failed := true;
+        Printf.printf "%s%s%s\n" item pad (String.concat ("\n" ^ indent) (List.map indented errors)));
+  exit (if !failed then 1 else 0)
+
+(* the elpi.toml of the project: given, or the nearest one above the file (the
+   first argument that is a file, with or without .elpi); it names the
+   project being run, found in its sources *)
+let project_config options argv =
   let config =
-    if !no_config then None
-    else match !config_file with
+    if options.no_config then None
+    else match options.config_file with
       | Some file -> Some (raising (fun () -> Elpi_dynload.config_of_file ~file))
       | None ->
           let is_file s = Sys.file_exists s || Sys.file_exists (s ^ ".elpi") in
@@ -243,99 +270,130 @@ let _ =
           | Some file -> raising (fun () -> Elpi_dynload.config_above ~file)
           | None -> None in
   Option.iter Elpi_dynload.declare_project config;
-  (* the warnings: of elpi.toml, then of -w, in order; the ones at run time
-     too *)
+  config
+
+(* the warnings: of elpi.toml, then of -w, in order; the ones at run time
+   too *)
+let set_warnings options config =
   warning_levels :=
     (match config with Some c -> c.Elpi_dynload.warnings | None -> [])
-    @ List.concat_map (fun s -> raising (fun () -> API.Error.warning_spec s)) (List.rev !warning_specs);
+    @ List.concat_map (fun s -> raising (fun () -> API.Error.warning_spec s)) options.warning_specs;
   Builtin.set_runtime_warn (fun ?loc ~id message ->
     let show = match loc with None -> "" | Some loc -> API.Ast.Loc.show loc in
     match API.Error.warning_level !warning_levels id with
     | API.Error.Off -> ()
     | API.Error.On -> Format.eprintf "@[<hv>Warning: %s@,%s@]\n%!" show message
-    | API.Error.As_error -> Format.eprintf "@[<hv>Error: %s@,%s@]\n%!" show message; exit 1);
-  (* the [paths] of elpi.toml: "" are searched for any file, after -I, a
-     prefix for the files under it *)
+    | API.Error.As_error -> Format.eprintf "@[<hv>Error: %s@,%s@]\n%!" show message; exit 1)
+
+(* where accumulated files are searched: TJPATH, the installation, the
+   directory of the command, -I, the directories of [paths] in elpi.toml;
+   and the prefixes of [paths] *)
+let search_paths options config =
+  let tjpath =
+    let v = try Sys.getenv "TJPATH" with Not_found -> "" in
+    Str.split (Str.regexp ":") v in
+  let installpath =
+    let v = try Sys.getenv "OCAMLPATH" with Not_found -> "" in
+    (Filename.dirname Sys.executable_name ^ "/../lib/") ::
+    (Filename.dirname Sys.executable_name ^ "/../lib/ocaml") ::
+    Str.split (Str.regexp ":") v in
+  let execpath = Filename.dirname (Sys.executable_name) in
+  (* the [paths] of elpi.toml: a prefix for the files under it *)
   let config_paths = match config with
     | Some c -> c.Elpi_dynload.paths @ c.Elpi_dynload.dev_only_paths (* the project is its own *)
     | None -> [] in
-  let prefixes = List.filter (fun (p, _) -> not (String.equal p "")) config_paths in
-  let config_dirs = List.filter_map (fun (p, d) -> if String.equal p "" then Some d else None) config_paths in
-  let paths = tjpath @ installpath @ [execpath] @ !extra_paths @ config_dirs in
+  tjpath @ installpath @ [execpath] @ options.extra_paths, config_paths
+
+(* the preload and the prelude of elpi.toml *)
+let load_project config =
   (* plugins that declare state components or quotations are loaded before
      Setup.init *)
   Option.iter (fun c -> c.Elpi_dynload.preload |> List.iter (fun pkg ->
     raising (fun () -> Elpi_dynload.preload ~pkg))) config;
   (* the prelude: builtins of Setup.init, so that its macros are seen by the
      files *)
-  let prelude = match config with
-    | Some c -> raising (fun () -> Elpi_dynload.prelude_builtins c)
-    | None -> [] in
-  let flags = {
-      API.Compile.defined_variables = !vars;
-      API.Compile.print_units = !print_units;
-      API.Compile.time_typechecking = true;
-      API.Compile.skip_det_checking = !skip_det_check;
-      API.Compile.max_errors = !max_errors;
-      API.Compile.builtin_stubs = false;
-  } in
-  if !doc_infix then begin
-    Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;
-    exit 0
-  end;
-  let elpi = raising (fun () ->
+  match config with
+  | Some c -> raising (fun () -> Elpi_dynload.prelude_builtins c)
+  | None -> []
+
+let compile_flags options = {
+    API.Compile.defined_variables = options.vars;
+    API.Compile.print_units = options.print_units;
+    API.Compile.time_typechecking = true;
+    API.Compile.skip_det_checking = options.skip_det_check;
+    API.Compile.max_errors = options.max_errors;
+    API.Compile.builtin_stubs = false;
+}
+
+let setup ~flags ~prelude ~paths ~prefixes =
+  raising (fun () ->
     API.Setup.init
       ~quotations
       ~flags:(API.Compile.to_setup_flags flags)
       ~builtins:(Builtin.std_builtins :: prelude)
       ~file_resolver:(API.Parse.std_resolver ~prefixes ~paths ())
       ~packages:Elpi_dynload.packages
-      ()) in
-  if !parse_term then begin
-    let g = query_or_exit (API.Parse.query_from ~elpi ~loc:(API.Ast.Loc.initial "(-parse-term)") (Lexing.from_channel stdin)) in
-    Format.printf "Raw term: %a\n" API.Pp.Ast.query g;
-    let p = raising (fun () -> or_exit (API.Parse.program_from ~flags ~elpi ~loc:(API.Ast.Loc.initial "(parse_term)") ~digest:(Digest.string "")  (Lexing.from_string ""))) in
-    let prog = raising (fun () -> or_exit (API.Compile.program ~flags ~elpi p)) in
-    let query = query_or_exit (API.Compile.query prog g) in
-    Format.printf "Compiled term: %a\n" API.Pp.goal query;
-    exit 0;
-  end;
-  if !parse_clause then begin
-    let p = raising (fun () -> or_exit (API.Parse.program_from ~flags ~elpi ~loc:(API.Ast.Loc.initial "(-parse-clause)") ~digest:(Digest.string "") (Lexing.from_string (read_all stdin)))) in
-    Format.printf "Raw clause: %a\n" API.Pp.Ast.program p;
-    exit 0;
-  end;
-  let argv = API.Setup.trace argv in
+      ())
+
+(* -document-infix-syntax *)
+let document_infix_syntax () =
+  Printf.eprintf "%s" Elpi_parser.Parser_config.legacy_parser_compat_error;
+  exit 0
+
+(* -parse-term: a term read from stdin, parsed then compiled *)
+let parse_term ~flags elpi =
+  let g = query_or_exit (API.Parse.query_from ~elpi ~loc:(API.Ast.Loc.initial "(-parse-term)") (Lexing.from_channel stdin)) in
+  Format.printf "Raw term: %a\n" API.Pp.Ast.query g;
+  let p = raising (fun () -> or_exit (API.Parse.program_from ~flags ~elpi ~loc:(API.Ast.Loc.initial "(parse_term)") ~digest:(Digest.string "")  (Lexing.from_string ""))) in
+  let prog = raising (fun () -> or_exit (API.Compile.program ~flags ~elpi p)) in
+  let query = query_or_exit (API.Compile.query prog g) in
+  Format.printf "Compiled term: %a\n" API.Pp.goal query;
+  exit 0
+
+(* -parse-clause: a rule read from stdin, parsed *)
+let parse_clause ~flags elpi =
+  let p = raising (fun () -> or_exit (API.Parse.program_from ~flags ~elpi ~loc:(API.Ast.Loc.initial "(-parse-clause)") ~digest:(Digest.string "") (Lexing.from_string (read_all stdin)))) in
+  Format.printf "Raw clause: %a\n" API.Pp.Ast.program p;
+  exit 0
+
+(* the files, then the arguments after -- *)
+let files_and_args argv =
   let rec eat_filenames acc = function
     | [] -> List.rev acc, []
     | "--" :: rest -> List.rev acc, rest
     | s :: _ when String.length s > 0 && s.[0] == '-' ->
         Printf.eprintf "Unrecognized option: %s\n%s" s usage; exit 1
     | x :: rest -> eat_filenames (x::acc) rest in
-  let files, argv = eat_filenames [] argv in
-  set_terminal_width ();
-  if !doc_builtins then begin
-    API.BuiltIn.document_file Builtin.std_builtins;
-    exit 0;
-  end;
-  if !print_deps then begin
-    let pl = files |> List.map (fun file -> raising (fun () -> or_exit (API.Parse.program ~flags ~elpi file))) in
-    let all = List.map (fun p -> raising (fun () -> or_exit (API.Compile.scope_ast ~flags ~elpi p))) pl |> List.concat in
-    let name_of = API.Compile.scoped_program_name in
-    let all = List.sort (fun p1 p2 -> compare (name_of p1) (name_of p2)) all in
-    let all =
-      let rec undup = function
-        | [] -> []
-        | x :: y :: rest when name_of x = name_of y -> undup (y :: rest)
-        | x :: rest -> x :: undup rest in
-      undup all in
-    Printf.printf "digraph deps {\n";
-    all |> List.iter (fun x ->
-      let deps = API.Compile.scoped_program_deps x in
-      deps |> List.iter (fun d -> Printf.printf "%S -> %S;\n" (name_of x) (fst d)));
-    Printf.printf "}\n";
-    exit 0
-  end;
+  eat_filenames [] argv
+
+(* -document-builtins *)
+let document_builtins () =
+  API.BuiltIn.document_file Builtin.std_builtins;
+  exit 0
+
+(* -deps: the graph of the accumulated files, for dot *)
+let print_deps ~flags elpi files =
+  let pl = files |> List.map (fun file -> raising (fun () -> or_exit (API.Parse.program ~flags ~elpi file))) in
+  let all = List.map (fun p -> raising (fun () -> or_exit (API.Compile.scope_ast ~flags ~elpi p))) pl |> List.concat in
+  let name_of = API.Compile.scoped_program_name in
+  let all = List.sort (fun p1 p2 -> compare (name_of p1) (name_of p2)) all in
+  let all =
+    let rec undup = function
+      | [] -> []
+      | x :: y :: rest when name_of x = name_of y -> undup (y :: rest)
+      | x :: rest -> x :: undup rest in
+    undup all in
+  Printf.printf "digraph deps {\n";
+  all |> List.iter (fun x ->
+    let deps = API.Compile.scoped_program_deps x in
+    deps |> List.iter (fun d -> Printf.printf "%S -> %S;\n" (name_of x) (fst d)));
+  Printf.printf "}\n";
+  exit 0
+
+(* the program in [files] (one at most), its query (main, -exec, or read from
+   stdin), compiled and run: in batch mode the exit code says whether it
+   succeeded *)
+let run options ~flags elpi files argv =
   let file =
     match files with
     | [] -> "/dev/null"
@@ -345,26 +403,26 @@ let _ =
   let p, parse_errors, parse_warnings = raising (fun () ->
     API.Parse.program ~flags ~elpi file) in
   let g =
-    if !test then
+    if options.test then
       query_or_exit (API.Parse.query ~elpi ~loc:(API.Ast.Loc.initial "(-test)") ~text:"main.")
-    else if !exec <> "" then
+    else if options.exec <> "" then
       query_or_exit (API.Parse.query ~elpi
         ~loc:(API.Ast.Loc.initial "(-exec)")
-        ~text:(Printf.sprintf "%s [%s]." !exec
+        ~text:(Printf.sprintf "%s [%s]." options.exec
           String.(concat ", " (List.map (Printf.sprintf "\"%s\"") argv))))
     else begin
      Printf.printf "goal> %!";
      let buff = Lexing.from_channel stdin in
      query_or_exit (API.Parse.query_from ~elpi ~loc:(API.Ast.Loc.initial "(stdin)") buff)
     end in
-  if !print_ast then begin
+  if options.print_ast then begin
     report_warnings parse_warnings;
     report parse_errors;
     Format.eprintf "%a" API.Pp.Ast.program p;
     Format.eprintf "%a" API.Pp.Ast.query g;
     exit 0;
   end;
-  
+
   Format.eprintf "@\nParsing time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_parsing);
   let query, prog, exec, (type_checking_time, det_checking_time) =
     let t0_compilation = Unix.gettimeofday () in
@@ -381,25 +439,25 @@ let _ =
   in
   Format.eprintf "@\nTypechecking time: %5.3f@\n%!" type_checking_time;
   Format.eprintf "Determinacy checking time: %5.3f@\n%!" det_checking_time;
-  if !print_lprolog then begin
+  if options.print_lprolog then begin
     API.Pp.program Format.std_formatter prog;
     Format.printf "\n\n%% query\n?- ";
     API.Pp.goal Format.std_formatter query;
     exit 0;
   end;
-  if !print_passes || !print_units then begin
+  if options.print_passes || options.print_units then begin
     exit 0;
   end;
-  if not !batch then 
+  if not options.batch then
     raising (fun () -> API.Execute.loop
-      ~delay_outside_fragment:!delay_outside_fragment ~more ~pp:print_solution
+      ~delay_outside_fragment:options.delay_outside_fragment ~more ~pp:print_solution
       exec)
   else begin
     Gc.compact ();
     if
       let t0 = Unix.gettimeofday () in
       let b = raising (fun () -> API.Execute.once
-          ~delay_outside_fragment:!delay_outside_fragment exec) in
+          ~delay_outside_fragment:options.delay_outside_fragment exec) in
       let t1 = Unix.gettimeofday () in
       match b with
       | API.Execute.Success _ -> print_solution (t1 -. t0) b; true
@@ -407,4 +465,26 @@ let _ =
     then exit 0
     else exit 1
   end
-;;
+
+let main () =
+  (* Memtrace.trace_if_requested (); <-- new line *)
+  (* Hashtbl.randomize (); *)
+  let options, argv = parse_options (List.tl (Array.to_list Sys.argv)) in
+  Option.iter check_package options.check_package;
+  let config = project_config options argv in
+  set_warnings options config;
+  let paths, prefixes = search_paths options config in
+  let prelude = load_project config in
+  let flags = compile_flags options in
+  if options.doc_infix then document_infix_syntax ();
+  let elpi = setup ~flags ~prelude ~paths ~prefixes in
+  if options.parse_term then parse_term ~flags elpi;
+  if options.parse_clause then parse_clause ~flags elpi;
+  let argv = API.Setup.trace argv in
+  let files, argv = files_and_args argv in
+  set_terminal_width ();
+  if options.doc_builtins then document_builtins ();
+  if options.print_deps then print_deps ~flags elpi files;
+  run options ~flags elpi files argv
+
+let () = main ()
