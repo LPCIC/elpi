@@ -583,3 +583,14 @@ let run ?file ?text ?max_steps query =
        | `List cs -> List.iter (fun c -> lines "?" (to_string c)) cs
        | _ -> ())
   | _ -> Printf.printf "error: %s\n" (member "error" r |> member "message" |> to_string)
+
+(* [debug file]: the output of the server run as [SERVER -debug FILE] (no
+   protocol), anonymized, with / for the separators of Windows, and its exit
+   code *)
+let debug file =
+  let args = Array.of_list ((server :: server_args) @ [ "-debug"; file ]) in
+  let ic = Unix.open_process_args_in server args in
+  let out = In_channel.input_all ic in
+  let code = match Unix.close_process_in ic with Unix.WEXITED n -> n | _ -> -1 in
+  print_string (anonymize (String.map (fun c -> if Char.equal c '\\' then '/' else c) out));
+  Printf.printf "exit %d\n%!" code

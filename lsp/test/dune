@@ -24,7 +24,7 @@
 (rule
  (targets test_lsp.output accbad.output accmissing.output good.output
           syntax.output typeerr.output warn.output binders.output library.output macros.output libdef.output doc.output acctype.output lists.output accchar.output run.output
-          assemble.output anomaly.output accinc.output accopen.output accdirs.output stubs.output pkgs.output proj.output projtoml.output badproj.output quoteproj.output spill.output macrobind.output warnproj.output projprefix.output tomledit.output accwarn.output recoverproj.output)
+          assemble.output anomaly.output accinc.output accopen.output accdirs.output stubs.output pkgs.output proj.output projtoml.output badproj.output quoteproj.output spill.output macrobind.output warnproj.output projprefix.output tomledit.output accwarn.output recoverproj.output debug.output)
  (deps (glob_files *.elpi) (glob_files include/*.elpi) (glob_files pkgs/elpi-test-lsp/*) (glob_files accdirs/lang/*.elpi) (glob_files accdirs/a/*.elpi)
        (glob_files accdirs/b/*.elpi) (glob_files accdirs/main/*.elpi)
        proj/elpi.toml (glob_files proj/*.elpi) (glob_files proj/src/*.elpi) (glob_files proj/lib/*.elpi)
@@ -184,13 +184,6 @@
 (rule
  (alias runtest-lsp)
  (action (diff recoverproj.expected recoverproj.output)))
-
-; elpi-lsp -debug FILE: the project of FILE and its diagnostics, printed
-(rule
- (deps recoverproj/elpi.toml recoverproj/main.elpi (glob_files recoverproj/lib/*.elpi))
- (action
-  (with-stdout-to debug.output
-   (system "{ %{exe:../stdio_lsp_driver.exe} -debug recoverproj/main.elpi 2>/dev/null; echo exit $?; } | sed \"s|$(pwd)|\\$DIR|g\""))))
 
 (rule
  (alias runtest-lsp)
