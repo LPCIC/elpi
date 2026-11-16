@@ -775,3 +775,15 @@ let () = declare "namespace08"
   ~description:"a namespace sees its rules without signature of the files before"
   ~expectation:Test.(SuccessOutput (Str.regexp_string "ok"))
   ()
+
+let () = declare "quotation_none"
+  ~source_elpi:"quotation_none.elpi"
+  ~description:"{{ ... }} with no default quotation is an error"
+  ~expectation:Test.(FailureOutput (Str.regexp_string "{{ ... }}: no default quotation is declared"))
+  ()
+
+let () = declare "quotation_unknown"
+  ~source_elpi:"quotation_unknown.elpi"
+  ~description:"{{:name ... }} with no quotation name is an error"
+  ~expectation:Test.(FailureOutput (Str.regexp_string "{{:nosuch ... }}: no quotation nosuch"))
+  ()

@@ -34,6 +34,11 @@
     e.g. through `OCAMLPATH`) keeps its name in the locations, so that its
     relative `accumulate` are found; `/_build/CONTEXT` is still dropped from
     the other files, named as their sources
+- Compiler:
+  - Fix: `{{ ... }}` with no default quotation declared, and `{{:name ... }}`
+    with no quotation `name`, are errors located at the quotation (they were
+    anomalies); the message says how a quotation is declared, or which ones
+    are
 - Type checker:
   - Fix: a cast to `any` as the argument of a polymorphic constructor, e.g.
     `[(X : any)]`, broke an invariant of the determinacy checker, also in

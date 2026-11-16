@@ -1287,14 +1287,20 @@ end = struct
       let unquote =
         match kind with
         | None ->
+            (* the default quotation is declared by the host or a plugin, with
+               Quotation.set_default_quotation, before Setup.init *)
             let default_quotation = State.get default_quotation state in
             if Option.is_none default_quotation then
-              anomaly ~loc "No default quotation";
+              error ~loc "{{ ... }}: no default quotation is declared (by the host, or by a plugin loaded before Setup.init, e.g. by preload in elpi.toml)";
             option_get default_quotation ~language:"default"
         | Some name ->
             let named_quotations = State.get named_quotations state in
             try StrMap.find name named_quotations ~language:name
-            with Not_found -> anomaly ~loc ("No '"^name^"' quotation") in
+            with Not_found ->
+              let known = match StrMap.bindings named_quotations with
+                | [] -> "none is declared"
+                | l -> "the declared ones are " ^ String.concat ", " (List.map fst l) in
+              error ~loc (Printf.sprintf "{{:%s ... }}: no quotation %s (%s)" name name known) in
       let state = update_mtm state (fun x -> { x with ctx }) in
       let simple_t =
         try unquote state qloc data
