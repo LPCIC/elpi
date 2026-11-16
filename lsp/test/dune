@@ -184,3 +184,14 @@
 (rule
  (alias runtest-lsp)
  (action (diff recoverproj.expected recoverproj.output)))
+
+; elpi-lsp -debug FILE: the project of FILE and its diagnostics, printed
+(rule
+ (deps recoverproj/elpi.toml recoverproj/main.elpi (glob_files recoverproj/lib/*.elpi))
+ (action
+  (with-stdout-to debug.output
+   (system "{ %{exe:../stdio_lsp_driver.exe} -debug recoverproj/main.elpi 2>/dev/null; echo exit $?; } | sed \"s|$(pwd)|\\$DIR|g\""))))
+
+(rule
+ (alias runtest-lsp)
+ (action (diff debug.expected debug.output)))

@@ -1,0 +1,7 @@
+project: recoverproj ($DIR/recoverproj/elpi.toml)
+  use: +not-installed
+  path: rp.lib = $DIR/recoverproj/lib
+  error (entry left out): $DIR/recoverproj/elpi.toml:4: no findlib package not-installed
+diagnostics of $DIR/recoverproj/main.elpi: 1
+$DIR/recoverproj/main.elpi:1:1-1:1: error: $DIR/recoverproj/elpi.toml:4: no findlib package not-installed
+exit 1

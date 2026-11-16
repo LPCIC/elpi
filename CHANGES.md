@@ -19,6 +19,11 @@
     `Elpi_dynload.config_of_file ~recover:true` and `config_above
     ~recover:true` give them in the field `errors`, `prelude_builtins
     ~on_error`; `elpi` still stops at the first one
+  - New: `elpi-lsp -debug FILE` checks `FILE` as when an editor opens it and
+    prints, in the terminal, the project of the file (its `elpi.toml` as the
+    server reads it: entries left out, paths, preloaded plugins, prelude)
+    and the diagnostics; the exit code is 1 if one is an error.
+    `elpi-lsp --help` lists the options
   - New: `elpi -check-package pkg` checks an installed package: its
     `elpi.toml`, its plugin and whether its stub is up to date, and that
     each of its `.elpi` files compiles where it is installed;

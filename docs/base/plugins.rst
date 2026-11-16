@@ -141,7 +141,8 @@ Location
    ``elpi.toml`` changed. An entry of it that is wrong, such as a package of
    ``use`` that is not installed, is left out and its error is shown at the
    start of the document; the other entries count (``elpi`` stops at the
-   first error instead). The nearest ``elpi.toml`` above an accumulated file is also
+   first error instead). ``elpi-lsp -debug FILE`` prints the project of
+   ``FILE`` as the server reads it. The nearest ``elpi.toml`` above an accumulated file is also
    found when that file accumulates ``"+/..."``, whatever the options. The
    search stops at the root of a repository (a directory with ``.git``,
    ``.hg``, ``dune-workspace``, ``_RocqProject`` or ``_CoqProject``) and does not look

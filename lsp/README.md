@@ -38,7 +38,15 @@
   server is started;
 - `--max-errors N`: the maximum number of errors reported for a file
   (default 100); the client can override it with the initialization option
-  `maxErrors`.
+  `maxErrors`;
+- `-debug FILE`: no protocol, for the terminal: the server checks `FILE` as
+  when an editor opens it, prints what it finds and exits. First the project
+  of the file, as the server reads its `elpi.toml` (the entries left out and
+  why, the paths, the plugins preloaded, the prelude, with each plugin or its
+  stub), then the diagnostics, as `file:line:column`, of the file and of the
+  files it accumulates. The log of the server is on the standard error. The
+  exit code is 1 if a diagnostic is an error;
+- `-h`, `-help`, `--help`: the list of the options.
 
 Other arguments, such as `--stdio`, are ignored.
 
