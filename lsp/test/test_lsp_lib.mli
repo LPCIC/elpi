@@ -83,6 +83,14 @@ val change_file : string -> int -> string -> unit
     if the server has no answer. *)
 val hover : string -> string -> int -> unit
 
+(** [completion ?only file needle k] requests the completions at the [k]-th
+    character after the first occurrence of [needle] in [file]. It prints the
+    range the items replace and, for each item, its label, its kind (the
+    number of the protocol), its detail and its documentation (prefixed by
+    [?]). With [only], it prints only the items with one of these labels, says
+    which of them are not offered, and whether there are others. *)
+val completion : ?only:string list -> string -> string -> int -> unit
+
 (** [definition_file file needle k] is the path of the file where the symbol at
     the position is defined, as the server says (a file of the standard library,
     that the server generates). *)

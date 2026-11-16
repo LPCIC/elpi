@@ -115,6 +115,7 @@ type document = {
   mutable version : int;            (* the version of the client, it grows at each change *)
   mutable checked : int;            (* the version last checked *)
   mutable hover : Checker.hover option; (* the symbols of the last checked version *)
+  mutable completion : Checker.completion option; (* of the last version that could be checked *)
   mutable accumulates : string list; (* the files its last checked version accumulates *)
   instance : Checker.instance;      (* the instance of Elpi of the document *)
 }
@@ -213,7 +214,7 @@ let set_elsewhere uri (ds : (DocumentUri.t * Diagnostic.t) list) =
 
 let check uri doc =
   let t0 = Unix.gettimeofday () in
-  let { Checker.diagnostics; elsewhere; hover; accumulates } =
+  let { Checker.diagnostics; elsewhere; hover; completion; accumulates } =
     Checker.check ~instance:doc.instance ~path:doc.path doc.text.Text.text in
   (* a warning in another file goes there, unless the file is open (it has
      its own), or cannot be read, or is in the library (it stays here) *)
@@ -231,6 +232,8 @@ let check uri doc =
     (Unix.gettimeofday () -. t0) (List.length diagnostics);
   doc.checked <- doc.version;
   doc.hover <- hover;
+  (* completion is asked while typing: an older version is better than none *)
+  if Option.is_some completion then doc.completion <- completion;
   doc.accumulates <- List.map normalize_path accumulates;
   let diagnostics = List.map (diagnostic doc.text) diagnostics in
   send_notification (PublishDiagnostics (PublishDiagnosticsParams.create ~uri ~version:doc.version ~diagnostics ()));
@@ -291,7 +294,8 @@ let initialize (params : InitializeParams.t) =
     `SemanticTokensOptions (SemanticTokensOptions.create ~full:(`Bool true)
       ~legend:(SemanticTokensLegend.create ~tokenTypes:Checker.token_types ~tokenModifiers:Checker.token_modifiers) ()) in
   let capabilities = ServerCapabilities.create ~textDocumentSync
-      ~hoverProvider:(`Bool true) ~definitionProvider:(`Bool true) ~documentHighlightProvider:(`Bool true) ~semanticTokensProvider () in
+      ~hoverProvider:(`Bool true) ~definitionProvider:(`Bool true) ~documentHighlightProvider:(`Bool true) ~semanticTokensProvider
+      ~completionProvider:(CompletionOptions.create ~triggerCharacters:[ "." ] ()) () in
   InitializeResult.create ~capabilities
     ~serverInfo:(InitializeResult.create_serverInfo ~name:"elpi-lsp" ~version:"0.1" ()) ()
 
@@ -322,6 +326,47 @@ let hover ({ textDocument = { uri }; position; _ } : HoverParams.t) =
             | _ -> value in
           let contents = `MarkupContent (MarkupContent.create ~kind:Markdown ~value) in
           Some (Hover.create ~contents ~range:(Text.range doc.text source_start source_stop) ())
+
+(* The completions of the name before the cursor: each one replaces the
+   segment of the name after its last dot *)
+let completion ({ textDocument = { uri }; position; _ } : CompletionParams.t) =
+  match Hashtbl.find_opt documents uri with
+  | None -> None
+  | Some doc ->
+      if not (Int.equal doc.checked doc.version) then check uri doc;
+      match doc.completion with
+      | None -> None
+      | Some c ->
+          let off = Text.offset_of_position doc.text position in
+          let items = Checker.completions_at ~path:doc.path ~text:doc.text off c in
+          (* the texts of the files of the documentation, read once *)
+          let texts = Hashtbl.create 7 in
+          let text_of name =
+            match Hashtbl.find_opt texts name with
+            | Some t -> t
+            | None -> let t = source_text doc uri name in Hashtbl.add texts name t; t in
+          let documentation (d : Elpi.API.Ast.Loc.t) =
+            match text_of d.source_name with
+            | Some (t, _) ->
+                (match Checker.doc_text t.Text.text d with
+                 | "" -> None
+                 | value -> Some (`MarkupContent (MarkupContent.create ~kind:Markdown ~value)))
+            | None -> None in
+          let kind : Checker.completion_kind -> CompletionItemKind.t = function
+            | Namespace -> Module
+            | Symbol (Symbol_constant (Predicate, _)) -> Method
+            | Symbol (Symbol_constant (Function, _)) -> Function
+            | Symbol (Symbol_constant (Data, _)) -> EnumMember
+            | Symbol (Symbol_type _) -> Class
+            | Symbol Symbol_type_abbreviation -> TypeParameter
+            | Symbol Symbol_macro -> Snippet in
+          (* the client sorts by sortText (by label if there is none): it keeps
+             the order of the checker *)
+          let item i ({ label; item_kind; detail; doc = d; start } : Checker.completion_item) =
+            let textEdit = `TextEdit (TextEdit.create ~newText:label ~range:(Text.range doc.text start off)) in
+            CompletionItem.create ~label ~kind:(kind item_kind) ?detail ~sortText:(Printf.sprintf "%06d" i)
+              ?documentation:(Option.bind d documentation) ~textEdit () in
+          Some (`CompletionList (CompletionList.create ~isIncomplete:false ~items:(List.mapi item items) ()))
 
 (* The range that the client previews for a definition (e.g. VS Code on
    Ctrl+hover): the declaration, extended with the body (the rules) when it
@@ -471,6 +516,7 @@ let handle_request : type a. a Lsp.Client_request.t -> (a, Jsonrpc.Response.Erro
   | TextDocumentHover params -> Ok (hover params)
   | TextDocumentDefinition params -> Ok (definition params)
   | TextDocumentHighlight params -> Ok (highlight params)
+  | TextDocumentCompletion params -> Ok (completion params)
   | SemanticTokensFull params -> Ok (semantic_tokens params)
   | UnknownRequest { meth = "elpi/builtinFile"; params } -> Ok (builtin_file params)
   | UnknownRequest { meth = "elpi/run"; params } -> run params
@@ -498,7 +544,7 @@ let set_text uri version text =
   (match Hashtbl.find_opt documents uri with
    | None ->
        Hashtbl.replace documents uri { path; text = Text.make text; version;
-                                       checked = -1; hover = None; accumulates = [];
+                                       checked = -1; hover = None; completion = None; accumulates = [];
                                        instance = Checker.new_instance ~file_resolver:resolver ~file_reader:reader () };
        recheck_others uri
    | Some doc ->

@@ -23,3 +23,7 @@ val range : t -> int -> int -> Lsp.Types.Range.t
     errors that only have a position; at least one character, at most the end
     of the line *)
 val word_end : t -> int -> int
+
+(** [word_start t off] is the start of the name (possibly qualified, e.g.
+    std.ma) that ends at [off]: it is [off] when there is none *)
+val word_start : t -> int -> int

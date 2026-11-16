@@ -2,12 +2,12 @@
 % public entry point through `shorten`.
 
 namespace mylib {
-  namespace internal {
+  namespace private {
     func helper int -> int.
     helper X Y :- Y is X * 2.
   }
   func public-api int -> int.
-  public-api X Y :- internal.helper X Y0, Y is Y0 + 1.
+  public-api X Y :- private.helper X Y0, Y is Y0 + 1.
 }
 
 shorten mylib.{ public-api }.

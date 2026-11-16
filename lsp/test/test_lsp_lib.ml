@@ -394,6 +394,38 @@ let hover file needle k =
     |> List.iter (fun l -> Printf.printf "    ? %s\n" l)
   end
 
+let completion ?only file needle k =
+  let r = request "textDocument/completion" (at file needle k) |> member "result" in
+  Printf.printf "completion %S+%d %s:" needle k (cursor_text file needle k);
+  let items = match r with
+    | `Null -> []
+    | `List l -> l
+    | r -> member "items" r |> to_list in
+  (match items with [] -> print_endline " none" | _ -> print_newline ());
+  let label i = member "label" i |> to_string in
+  let shown = match only with
+    | None -> items
+    | Some ls -> List.filter (fun i -> List.exists (String.equal (label i)) ls) items in
+  (* the range replaced, the same for all the items *)
+  (match shown with
+   | i :: _ -> show_marks file [ "replaced", '^', [ range_of (member "textEdit" i |> member "range") ]; cursor_row file needle k ]
+   | [] -> show_marks file [ cursor_row file needle k ]);
+  let kind i = match member "kind" i with `Int n -> string_of_int n | _ -> "-" in
+  List.iter (fun i ->
+      Printf.printf "    %s (kind %s)%s\n" (label i) (kind i)
+        (match member "detail" i with `String d -> " : " ^ d | _ -> "");
+      (match member "documentation" i with
+       | `Assoc _ as d ->
+           String.split_on_char '\n' (member "value" d |> to_string)
+           |> List.iter (fun l -> Printf.printf "      ? %s\n" l)
+       | _ -> ())) shown;
+  (match only with
+   | Some ls ->
+       List.iter (fun l -> if not (List.exists (fun i -> String.equal (label i) l) items) then
+                     Printf.printf "    %s: not offered\n" l) ls;
+       if List.length shown < List.length items then print_endline "    and others"
+   | None -> ())
+
 let definition ?none file needle k =
   let r = request "textDocument/definition" (at file needle k) |> member "result" in
   Printf.printf "definition %S+%d %s:" needle k (cursor_text file needle k);

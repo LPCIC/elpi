@@ -1,0 +1,54 @@
+% [double X Y] holds when Y is twice X.
+func double int -> int.
+double X Y :- Y is X * 2.
+
+kind color type.
+symb red, green : color.
+
+typeabbrev ints (list int).
+
+macro @twice X :- (X, X).
+
+namespace foo {
+  pred bar int -> int.
+  bar X X.
+  namespace baz {
+    pred qux.
+    qux.
+  }
+  pred use.
+  use :- bar 1 _, baz.qux, foo.bar 2 _.
+}
+
+namespace foo {
+  pred other.
+  other :- foo.bar 3 _.
+}
+
+shorten std.{ map }.
+
+pred colors list color.
+colors L :- map [1] (x\y\ y = red) L, std.map [] (x\y\ true) _, double 1 _, @twice true.
+
+namespace lib {
+  namespace private {
+    pred helper.
+    helper :- inner.
+    pred inner.
+    inner.
+    kind t type.
+    pred inner-t -> t.
+  }
+  pred api.
+  api :- private.helper.
+  pred lookup (std.map int int) -> int.
+  lookup M V :- std.map.find 1 M V.
+}
+
+kind term type.
+namespace tt {
+  pred term.
+  term.
+  pred use term -> int.
+  use _ 1 :- term.
+}
