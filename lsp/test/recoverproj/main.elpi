@@ -1,0 +1,3 @@
+accumulate "rp.lib/ten".
+func p -> int.
+p N :- rp.ten N.

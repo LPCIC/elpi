@@ -263,11 +263,11 @@ let project_config options argv =
   let config =
     if options.no_config then None
     else match options.config_file with
-      | Some file -> Some (raising (fun () -> Elpi_dynload.config_of_file ~file))
+      | Some file -> Some (raising (fun () -> Elpi_dynload.config_of_file ~file ()))
       | None ->
           let is_file s = Sys.file_exists s || Sys.file_exists (s ^ ".elpi") in
           match List.find_opt (fun s -> String.length s > 0 && s.[0] <> '-' && is_file s) argv with
-          | Some file -> raising (fun () -> Elpi_dynload.config_above ~file)
+          | Some file -> raising (fun () -> Elpi_dynload.config_above ~file ())
           | None -> None in
   Option.iter Elpi_dynload.declare_project config;
   config

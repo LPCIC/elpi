@@ -32,14 +32,15 @@ open Lsp.Types
     [paths] where accumulated files are also searched, [builtins]
     the ones of its prelude, [warnings]
     the levels of the kinds of warnings,
-    [error] an error in the elpi.toml, shown at the start of
+    [errors] the errors of its elpi.toml (the entries left out, the
+    plugins that cannot be preloaded, the prelude), shown at the start of
     the document *)
 type project = {
   root : string;
   paths : (string * string) list;
   builtins : Elpi.API.Setup.builtins list;
   warnings : (Elpi.API.Error.warning_id * Elpi.API.Error.warning_level) list;
-  error : string option;
+  errors : string list;
 }
 
 val no_project : project

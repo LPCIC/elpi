@@ -1,0 +1,6 @@
+# a project whose use names a package that is not installed: that entry is
+# left out and shown, its own paths still count
+name = "recoverproj"
+use = ["+not-installed"]
+[paths]
+"rp.lib" = "+/lib"

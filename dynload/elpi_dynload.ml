@@ -73,6 +73,7 @@ type config = {
   prelude : string list; (* "+pkg", "+pkg/file" or absolute; after the ones of use *)
   preload : string list; (* after the ones of use *)
   warnings : (Error.warning_id * Error.warning_level) list; (* in order *)
+  errors : Error.t list; (* the entries left out, in order; also the ones of use *)
 }
 
 type value = String of string | List of string list
@@ -207,11 +208,19 @@ let name_mismatch ~pkg ~file c =
   if String.equal c.name pkg then None
   else Some (Printf.sprintf "the name in %s is %S, not the findlib name %S" file c.name pkg)
 
-(* [visiting]: the files whose use leads to [file], for the cycles *)
+(* [recover errors f default]: f (), or default when it fails, its error
+   recorded in [errors] *)
+let recover errors f default = try f () with Error.ElpiError e -> errors := e :: !errors; default
+
+(* [visiting]: the files whose use leads to [file], for the cycles. An entry
+   that is wrong is left out, its error is in [errors]: the others count. An
+   error of the whole file (it cannot be read, its syntax, its name) is
+   raised *)
 let rec config_of_file_in ~visiting file =
   match Hashtbl.find_opt configs file with
   | Some (stamps, c) when List.for_all (fun (f, d) -> String.equal (stamp f) d) stamps -> stamps, c
   | _ ->
+  let errors = ref [] in
   let text = try Parse.std_reader file with Failure msg -> config_error ~loc:(Ast.Loc.initial file) msg in
   let own_stamp = Digest.string text in
   (* the location of a line of [file] *)
@@ -242,7 +251,7 @@ let rec config_of_file_in ~visiting file =
       | "off" -> Error.Off | "on" -> Error.On | "error" -> Error.As_error
       | _ -> fail line (Printf.sprintf "the level of warning %s is \"off\", \"on\" or \"error\"" w) in
     List.map (fun id -> id, level) ids in
-  entries |> List.iter (fun (k, line, v) ->
+  let check (k, line, v) =
     match v with
     | String _ when String.equal k "name" -> ()
     | List _ when List.exists (String.equal k) lists -> ()
@@ -253,7 +262,8 @@ let rec config_of_file_in ~visiting file =
         fail line (Printf.sprintf "%s is a section: [%s], then \"prefix\" = \"+/dir\"" k k)
     | String s when Option.is_some (warning k) -> ignore (warning_levels line (Option.get (warning k)) s)
     | List _ when Option.is_some (warning k) -> fail line ("the level of warning " ^ Option.get (warning k) ^ " is a string")
-    | _ -> fail line ("unknown key " ^ k ^ " (" ^ keys ^ " are)"));
+    | _ -> fail line ("unknown key " ^ k ^ " (" ^ keys ^ " are)") in
+  let entries = List.filter (fun e -> recover errors (fun () -> check e; true) false) entries in
   let warnings = entries |> List.concat_map (fun (k, line, v) ->
     match warning k, v with Some w, String s -> warning_levels line w s | _ -> []) in
   let find k = List.find_map (fun (k', _, v) -> if String.equal k k' then Some v else None) entries in
@@ -284,21 +294,23 @@ let rec config_of_file_in ~visiting file =
   (* an empty prefix would be a directory searched for any file, also by the
      projects that use this one: their files could be hidden by its ones;
      that is what -I is for *)
+  let directory line p d = recover errors (fun () -> [ p, place line "directory" d ]) [] in
   let paths_of section = entries |> List.concat_map (fun (k, line, v) ->
     match section k, v with
-    | Some "", _ -> fail line "an empty prefix is not allowed: give the files a prefix (\"p\" = \"+/dir\" for p/x), or use -I"
-    | Some p, String d -> [ p, place line "directory" d ]
-    | Some p, List ds -> List.map (fun d -> p, place line "directory" d) ds
+    | Some "", _ ->
+        recover errors (fun () -> fail line "an empty prefix is not allowed: give the files a prefix (\"p\" = \"+/dir\" for p/x), or use -I") []
+    | Some p, String d -> directory line p d
+    | Some p, List ds -> List.concat_map (directory line p) ds
     | None, _ -> []) in
   let paths = paths_of path and dev_only_paths = paths_of dev_only_path in
   (* "+pkg" and "+pkg/file" are kept (the plugin, or a file found when the
      prelude is loaded), "+/file" is made absolute *)
-  let prelude = get "prelude" |> List.map (fun e ->
-    if String.length e > 1 && e.[0] = '+' && e.[1] <> '/' then e
-    else place (line_of "prelude") "file" e) in
+  let prelude = get "prelude" |> List.concat_map (fun e ->
+    if String.length e > 1 && e.[0] = '+' && e.[1] <> '/' then [ e ]
+    else recover errors (fun () -> [ place (line_of "prelude") "file" e ]) []) in
   (* the elpi.toml of each package of use *)
   let use = get "use" in
-  let used = use |> List.map (fun u ->
+  let used = use |> List.concat_map (fun u -> recover errors (fun () ->
     let line = line_of "use" in
     let pkg = if String.length u > 1 && u.[0] = '+' then String.sub u 1 (String.length u - 1) else "" in
     if String.equal pkg "" || String.contains pkg '/' then
@@ -312,17 +324,30 @@ let rec config_of_file_in ~visiting file =
     (* the elpi.toml of pkg is the one of the project pkg; its
        [dev-only-paths] are not used *)
     (match name_mismatch ~pkg ~file:f c with Some msg -> fail line (Printf.sprintf "use %S: %s" u msg) | None -> ());
-    used) in
+    [ used ]) []) in
   let stamps = dedup (fun (f, _) (g, _) -> String.equal f g) ((file, own_stamp) :: List.concat_map fst used) in
   let used = List.map snd used in
   let paths = dedup (fun (p, d) (q, e) -> String.equal p q && String.equal d e) (paths @ List.concat_map (fun c -> c.paths) used) in
   let prelude = dedup String.equal (List.concat_map (fun c -> c.prelude) used @ prelude) in
   let preload = dedup String.equal (List.concat_map (fun c -> c.preload) used @ get "preload") in
-  let c = { file; name; use; paths; dev_only_paths; prelude; preload; warnings } in
-  Hashtbl.replace configs file (stamps, c);
+  let line_of_error = function { Error.loc = Some { Ast.Loc.line; _ }; _ } -> line | _ -> 0 in
+  let errors = List.stable_sort (fun a b -> Int.compare (line_of_error a) (line_of_error b)) (List.rev !errors) in
+  let errors = errors @ List.concat_map (fun c -> c.errors) used in
+  let c = { file; name; use; paths; dev_only_paths; prelude; preload; warnings; errors } in
+  (* one with errors is read again: they can depend on the packages
+     installed (a package of use, of "+pkg/dir") *)
+  if List.length errors = 0 then Hashtbl.replace configs file (stamps, c);
   stamps, c
 
-let config_of_file ~file = snd (config_of_file_in ~visiting:[] (absolute file))
+(* the first error of [c], if any, is raised *)
+let strict c =
+  match c.errors with
+  | [] -> c
+  | { Error.component; loc; message } :: _ -> Error.error ~component ?loc message
+
+let config_of_file ?(recover = false) ~file () =
+  let c = snd (config_of_file_in ~visiting:[] (absolute file)) in
+  if recover then c else strict c
 
 (* The nearest elpi.toml in [dir] or above, up to the root of a repository
    (a directory with .git, .hg, dune-workspace, _RocqProject or _CoqProject) and
@@ -331,7 +356,7 @@ let config_of_file ~file = snd (config_of_file_in ~visiting:[] (absolute file))
 let is_repository_root dir =
   List.exists (fun d -> Sys.file_exists (Utils.filename_concat dir d)) [".git"; ".hg"; "dune-workspace"; "_RocqProject"; "_CoqProject"]
 
-let rec config_in dir =
+let rec config_in ~recover dir =
   let dir_slash = with_slash dir in
   let is_home_or_above =
     match Option.map with_slash (Sys.getenv_opt "HOME") with
@@ -339,17 +364,18 @@ let rec config_in dir =
     | None -> false in
   if is_home_or_above then None else
   let f = toml_in dir in
-  if Sys.file_exists f then Some (config_of_file ~file:f)
+  if Sys.file_exists f then Some (config_of_file ~recover ~file:f ())
   else if is_repository_root dir then None
   else
     let up = Filename.dirname dir in
-    if String.equal up dir then None else config_in up
+    if String.equal up dir then None else config_in ~recover up
 
-let config_above ~file = config_in (Filename.dirname (absolute file))
+let config_above ?(recover = false) ~file () = config_in ~recover (Filename.dirname (absolute file))
 
 let root_of_dir ~dir =
   let dir = absolute dir in
-  match config_in dir with
+  (* only the place of elpi.toml counts, not the errors of its entries *)
+  match config_in ~recover:true dir with
   | Some { file; _ } -> Filename.dirname file
   | None -> packages_error (Printf.sprintf "no elpi.toml in %s or above it (up to the root of its repository)" dir)
 
@@ -384,12 +410,16 @@ let prelude_file config entry =
   else if Filename.is_relative entry then Utils.filename_concat root (with_ext entry)
   else with_ext entry
 
-let prelude_builtins config =
-  config.prelude |> List.map (fun entry ->
+let prelude_builtins ?on_error config =
+  config.prelude |> List.concat_map (fun entry ->
     let plugin = String.length entry > 1 && entry.[0] = '+' && not (String.contains entry '/') in
     let pkg = String.sub entry 1 (max 0 (String.length entry - 1)) in
-    if plugin && Plugin.is_registered pkg then Plugin.builtins pkg
-    else builtins_of_file (prelude_file config entry))
+    let builtins () =
+      if plugin && Plugin.is_registered pkg then Plugin.builtins pkg
+      else builtins_of_file (prelude_file config entry) in
+    match on_error with
+    | None -> [ builtins () ]
+    | Some f -> try [ builtins () ] with Error.ElpiError e -> f e; [])
 
 (* --- checking an installed package ---------------------------------------- *)
 
@@ -434,13 +464,13 @@ let check_package ~pkg =
   | Ok dir ->
   let dir = absolute dir in
   let toml = toml_in dir in
-  let empty = { file = toml; name = pkg; use = []; paths = []; dev_only_paths = []; prelude = []; preload = []; warnings = [] } in
+  let empty = { file = toml; name = pkg; use = []; paths = []; dev_only_paths = []; prelude = []; preload = []; warnings = []; errors = [] } in
   (* 1. its elpi.toml, read as use reads it: [dev-only-paths] are not used *)
   let config =
     if not (Sys.file_exists toml) then begin
       add "elpi.toml" (Checked (Printf.sprintf "none (only \"+%s/file\" accumulates)" pkg)); Some empty
     end else
-      match snd (config_of_file_in ~visiting:[] toml) with
+      match strict (snd (config_of_file_in ~visiting:[] toml)) with
       | c ->
           (match name_mismatch ~pkg ~file:toml c with
            | Some msg -> add "elpi.toml" (Failed [ msg ])

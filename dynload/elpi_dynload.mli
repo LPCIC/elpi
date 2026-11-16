@@ -63,16 +63,26 @@ type config = {
   warnings : (Elpi.API.Error.warning_id * Elpi.API.Error.warning_level) list;
       (** in the order of the file, see [Elpi.API.Error.warning_level]; not
           the ones of [use] *)
+  errors : Elpi.API.Error.t list;
+      (** the errors of the entries left out (a wrong key, a directory or a
+          file that cannot be found, a package of [use] with no
+          [elpi.toml] ...), located at their line, in order; then the ones
+          of the files of [use] *)
 }
 
 (** raises an [Elpi.API.Error.ElpiError] located at the line of the error;
-    an edited file is read again, also when an [elpi.toml] of [use] changed *)
-val config_of_file : file:string -> config
+    an edited file is read again, also when an [elpi.toml] of [use] changed.
+    With [~recover:true] (default false) an error of an entry does not stop
+    the others: the entry is left out, its error is in [errors]; only an
+    error of the whole file (it cannot be read, its syntax, its [name]) is
+    raised. A configuration with errors is read again the next time, since
+    they can depend on the packages installed *)
+val config_of_file : ?recover:bool -> file:string -> unit -> config
 
 (** the nearest [elpi.toml] in the directory of a file or above it, if any:
     up to the root of a repository (a directory with .git, .hg, dune-workspace,
     _RocqProject or _CoqProject), and not in the home directory or above it *)
-val config_above : file:string -> config option
+val config_above : ?recover:bool -> file:string -> unit -> config option
 
 (** the package named by the [name] of a configuration is found in its root
     (the directory of its [elpi.toml]), not in findlib, e.g. for a project
@@ -85,8 +95,9 @@ val declare_project : config -> unit
     visible in every file of the project. An entry is found as [accumulate]
     finds it: ["+pkg"] is the plugin of [pkg] if it is registered, its stub
     [pkg.builtins.elpi] otherwise. A file is the text of the builtins, and can accumulate
-    other files. Raises an [Elpi.API.Error.ElpiError] *)
-val prelude_builtins : config -> Elpi.API.Setup.builtins list
+    other files. Raises an [Elpi.API.Error.ElpiError], or with [on_error]
+    gives it the error of an entry and leaves the entry out *)
+val prelude_builtins : ?on_error:(Elpi.API.Error.t -> unit) -> config -> Elpi.API.Setup.builtins list
 
 (** The result of an item of [check_package]: what was found, or the errors *)
 type check_result = Checked of string | Failed of string list

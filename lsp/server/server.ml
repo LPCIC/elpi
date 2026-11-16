@@ -107,10 +107,10 @@ type project = {
   paths : (string * string) list;
   builtins : Elpi.API.Setup.builtins list;
   warnings : (Elpi.API.Error.warning_id * Elpi.API.Error.warning_level) list;
-  error : string option;
+  errors : string list;
 }
 
-let no_project = { root = "."; paths = []; builtins = []; warnings = []; error = None }
+let no_project = { root = "."; paths = []; builtins = []; warnings = []; errors = [] }
 let find_project_file_ref : (path:string -> project) ref = ref (fun ~path:_ -> no_project)
 
 let init ~send ~exit ~builtin_library_location ?max_errors ?include_paths:(dirs = []) ?packages ?find_project_file () =
@@ -262,10 +262,10 @@ let check uri doc =
         | Some (text, target) -> Some (Either.Right (target, diagnostic text in_file))
         | None -> Some (Either.Left here)) elsewhere) in
   let diagnostics = diagnostics @ here in
-  (* an error in elpi.toml, at the start of the document *)
-  let diagnostics = match doc.project.error with
-    | None -> diagnostics
-    | Some message -> { Checker.start = 0; stop = 0; severity = Checker.Error; message } :: diagnostics in
+  (* the errors of elpi.toml, at the start of the document *)
+  let diagnostics =
+    List.map (fun message -> { Checker.start = 0; stop = 0; severity = Checker.Error; message }) doc.project.errors
+    @ diagnostics in
   log "checked %s (version %d) in %.3fs: %d diagnostics" doc.path doc.version
     (Unix.gettimeofday () -. t0) (List.length diagnostics);
   doc.checked <- doc.version;
@@ -542,7 +542,7 @@ let open_project path =
   let new_instance builtins = Checker.new_instance ~file_resolver ~file_reader:reader ?packages:!packages_ref ~builtins () in
   try new_instance project.builtins, project
   with Elpi.API.Error.ElpiError e ->
-    new_instance [], { project with builtins = []; error = Some ("In the prelude of elpi.toml: " ^ Elpi.API.Error.show e) }
+    new_instance [], { project with builtins = []; errors = project.errors @ [ "In the prelude of elpi.toml: " ^ Elpi.API.Error.show e ] }
 
 (* an elpi.toml changed (or appeared, or went away): the projects of all the
    documents are read again, and the documents checked again *)

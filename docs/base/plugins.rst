@@ -138,8 +138,10 @@ Location
    runs or above it. The option ``-config FILE`` names another file, and
    ``-no-config`` reads none. ``elpi-lsp`` reads the nearest one above a
    document when the document is opened, and again when it is opened after
-   ``elpi.toml`` changed; an error in it is shown at the start of the
-   document. The nearest ``elpi.toml`` above an accumulated file is also
+   ``elpi.toml`` changed. An entry of it that is wrong, such as a package of
+   ``use`` that is not installed, is left out and its error is shown at the
+   start of the document; the other entries count (``elpi`` stops at the
+   first error instead). The nearest ``elpi.toml`` above an accumulated file is also
    found when that file accumulates ``"+/..."``, whatever the options. The
    search stops at the root of a repository (a directory with ``.git``,
    ``.hg``, ``dune-workspace``, ``_RocqProject`` or ``_CoqProject``) and does not look

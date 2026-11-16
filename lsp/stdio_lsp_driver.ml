@@ -86,18 +86,20 @@ let one_line { Elpi.API.Error.loc; message; _ } =
    on the disk (e.g. untitled:) has no project. *)
 let find_project_file ~path =
   if Filename.is_relative path then Server.no_project else
-  match Elpi_dynload.config_above ~file:path with
+  (* an entry of elpi.toml that is wrong (e.g. a package of use that is not
+     installed) is left out, and shown: the others count *)
+  match Elpi_dynload.config_above ~recover:true ~file:path () with
   | None -> Server.no_project
-  | Some ({ Elpi_dynload.file; paths; dev_only_paths; preload; warnings; _ } as c) ->
+  | Some ({ Elpi_dynload.file; paths; dev_only_paths; preload; warnings; errors; _ } as c) ->
       Elpi_dynload.declare_project c;
       (* the project of the document is its own: its [dev-only-paths] count *)
       let paths = paths @ dev_only_paths in
-      let project = { Server.root = Filename.dirname file; paths; builtins = []; warnings; error = None } in
-      (try
-         List.iter (fun pkg -> Elpi_dynload.preload ~pkg) preload;
-         { project with builtins = Elpi_dynload.prelude_builtins c }
-       with Elpi.API.Error.ElpiError e -> { project with error = Some (one_line e) })
-  | exception Elpi.API.Error.ElpiError e -> { Server.no_project with error = Some (one_line e) }
+      let errors = ref (List.rev_map one_line errors) in
+      let on_error e = errors := one_line e :: !errors in
+      List.iter (fun pkg -> try Elpi_dynload.preload ~pkg with Elpi.API.Error.ElpiError e -> on_error e) preload;
+      let builtins = Elpi_dynload.prelude_builtins ~on_error c in
+      { Server.root = Filename.dirname file; paths; builtins; warnings; errors = List.rev !errors }
+  | exception Elpi.API.Error.ElpiError e -> { Server.no_project with errors = [ one_line e ] }
 
 let () =
   (* the other plugins, of accumulate "+pkg", are not loaded: their stubs are

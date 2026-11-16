@@ -12,6 +12,13 @@
     nearest `elpi.toml` above its file (`-config FILE`, `-no-config`);
     `elpi-lsp` reads the stubs of the plugins, and the `elpi.toml` of a
     document when it is opened
+  - New: `elpi-lsp` leaves out the entries of `elpi.toml` that are wrong
+    (e.g. a package of `use` that is not installed, a plugin of `preload`
+    that cannot be loaded, a file of `prelude`) and shows their errors at
+    the start of the document: the other entries count.
+    `Elpi_dynload.config_of_file ~recover:true` and `config_above
+    ~recover:true` give them in the field `errors`, `prelude_builtins
+    ~on_error`; `elpi` still stops at the first one
   - New: `elpi -check-package pkg` checks an installed package: its
     `elpi.toml`, its plugin and whether its stub is up to date, and that
     each of its `.elpi` files compiles where it is installed;

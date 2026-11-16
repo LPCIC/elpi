@@ -1,0 +1,12 @@
+==== open recoverproj/main.elpi ====
+diagnostics of recoverproj/main.elpi (version 1): 1
+  0:0-0:0 error: $DIR/recoverproj/elpi.toml:4: no findlib package not-installed
+definition "rp.ten N"+0 (the cursor is at 2:7):
+  line 2:
+               | p N :- rp.ten N.
+    cursor     |        *
+  defined at file://$DIR/recoverproj/lib/ten.elpi 1:0-1:18
+    | func rp.ten -> int
+  previewed 1:0-2:9
+    | func rp.ten -> int.
+    | rp.ten 10
