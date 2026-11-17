@@ -1,0 +1,3 @@
+% the prelude of the project lspproj, accumulated before each document
+func pre.eight -> int.
+pre.eight 8.

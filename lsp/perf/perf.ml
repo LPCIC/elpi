@@ -51,12 +51,12 @@ let print_table ~t_check rows =
   List.iter (fun r -> print_endline (line r)) (List.tl table)
 
 let () =
-  let path = Filename.concat (Sys.getcwd ()) "perf.elpi" in
+  let path = Elpi.API.Utils.filename_concat (Sys.getcwd ()) "perf.elpi" in
   (* the units before the document (the standard library) are compiled once
      and cached by the server, for the instance of the document: they are
      compiled here, before measuring *)
   let instance = Checker.new_instance () in
-  ignore (Checker.check ~instance ~path:(Filename.concat (Sys.getcwd ()) "warmup.elpi") "pred w.\nw.\n");
+  ignore (Checker.check ~instance ~path:(Elpi.API.Utils.filename_concat (Sys.getcwd ()) "warmup.elpi") "pred w.\nw.\n");
   let text = document () in
   let n_lines = List.length (String.split_on_char '\n' text) - 1 in
   Printf.printf "document: %d lines, %d bytes\n%!" n_lines (String.length text);

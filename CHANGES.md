@@ -1,9 +1,49 @@
 # Unreleased
 
+- Plugins and packages:
+  - New: `accumulate "+pkg/path"` accumulates `path.elpi` in the directory of
+    package `pkg`, `accumulate "+/path"` is relative to the nearest `elpi.toml`,
+    and `accumulate "+pkg"` the plugin code registered by
+    `API.Plugin.register ~name:"pkg"`
+  - New: `Setup.init ?packages`
+  - New: library `Elpi_dynload`: the packages found and loaded via findlib, and
+    the project file format (`elpi.toml`)
+  - New: the `elpi` command dynlinks the plugins it meets and reads the
+    nearest `elpi.toml` above its file (`-config FILE`, `-no-config`);
+    `elpi-lsp` reads the stubs of the plugins, and the `elpi.toml` of a
+    document when it is opened
+  - New: `elpi-lsp` leaves out the entries of `elpi.toml` that are wrong
+    (e.g. a package of `use` that is not installed, a plugin of `preload`
+    that cannot be loaded, a file of `prelude`) and shows their errors at
+    the start of the document: the other entries count.
+    `Elpi_dynload.config_of_file ~recover:true` and `config_above
+    ~recover:true` give them in the field `errors`, `prelude_builtins
+    ~on_error`; `elpi` still stops at the first one
+  - New: `elpi-lsp -debug FILE` checks `FILE` as when an editor opens it and
+    prints, in the terminal, the project of the file (its `elpi.toml` as the
+    server reads it: entries left out, paths, preloaded plugins, prelude)
+    and the diagnostics; the exit code is 1 if one is an error.
+    `elpi-lsp --help` lists the options
+  - New: `elpi -check-package pkg` checks an installed package: its
+    `elpi.toml`, its plugin and whether its stub is up to date, and that
+    each of its `.elpi` files compiles where it is installed;
+    `Elpi_dynload.check_package`
+  - New: package `elpi-json`, Yojson bindings as its plugin (`accumulate
+    "+elpi-json"`)
 - PPX:
   - New: [@@elpi.namespace] to put all constructors into a namespace
   - New: `[@@deriving elpi]` on a closed polymorphic variant, e.g.
     ``type t = [ `A | `B of int ]``: its tags are the constructors
+- Parser:
+  - Fix: a file in `_build/install` (where dune puts the packages it builds,
+    e.g. through `OCAMLPATH`) keeps its name in the locations, so that its
+    relative `accumulate` are found; `/_build/CONTEXT` is still dropped from
+    the other files, named as their sources
+- Compiler:
+  - Fix: `{{ ... }}` with no default quotation declared, and `{{:name ... }}`
+    with no quotation `name`, are errors located at the quotation (they were
+    anomalies); the message says how a quotation is declared, or which ones
+    are
 - Type checker:
   - Fix: a cast to `any` as the argument of a polymorphic constructor, e.g.
     `[(X : any)]`, broke an invariant of the determinacy checker, also in
@@ -60,6 +100,14 @@
   - Change: two declarations of an OCaml symbol with the same variant and
     different types are an error (it was an anomaly)
 - API:
+  - New: `Plugin.builtins name`, the builtins of a registered plugin, e.g.
+    to give them to `Setup.init`
+  - Change: with `builtin_stubs`, the text of the builtins given to
+    `Setup.init` can name symbols without OCaml code too (builtin
+    predicates without an `MLCode`, symbols `= "variant"` of no `MLData`
+    nor `MLConstants`), and it can accumulate files; an error in that text
+    is raised as it is (it was an anomaly). A program does not add again a
+    file that is in its builtins already (e.g. in a prelude)
   - New: `RawData.Constants.lookup "p"` gives the constant of `p` in the
     program that runs, so that OCaml code can build and match terms of an
     ordinary predicate or symbol, with no global symbol
@@ -117,6 +165,9 @@
   - Change: frozen constants are printed `frozen-K`, K their index in the
     run (they were `frozen--NNN`)
 - LSP:
+  - Fix: builds with the library `lsp` 1.28 (`TraceValue`, `ServerInfo`,
+    the parameters of `Initialized`, the changes of a document as a variant),
+    and still with the older ones
   - New: elpi-lsp accepts `builtin` declarations whose OCaml code is not
     loaded (stubs), e.g. the documentation of the builtins of rocq-elpi
   - Fix: the semantic tokens and the hover of a rule with spilling
@@ -128,6 +179,10 @@
   - Fix: a warning located in an accumulated file is shown in that file
     (it was on the `accumulate` directive of the document); when the file
     is open, it shows its own diagnostics
+  - Fix: an `elpi.toml` that changes is read again, and the open documents
+    of its project checked again (the server asks the editor to watch the
+    `elpi.toml` files); an error in it was not shown until the document was
+    opened again
 
 # v4.0.1 (October 2026)
 

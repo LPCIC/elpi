@@ -1,0 +1,4 @@
+; the findlib package elpi-test-missing (not installed), badly installed: a
+; file accumulates one that is not there, and its stub is stale
+(rule (copy ../../elpi_test_missing.cmxs elpi_test_missing.cmxs))
+(rule (copy ../../elpi_test_missing.cma elpi_test_missing.cma))

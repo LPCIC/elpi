@@ -442,7 +442,7 @@ let mk_tmp_file =
   let dir = Filename.get_temp_dir_name () in
   fun x y ->
     incr tmp;
-    dir ^ Filename.dir_sep ^ x ^ "__" ^ string_of_int !tmp ^ "__" ^ y
+    dir ^ filename_dirsep ^ x ^ "__" ^ string_of_int !tmp ^ "__" ^ y
     
 let () =
   let sample = mk_tmp_file "trace.json" ".new" in
@@ -774,4 +774,16 @@ let () = declare "namespace08"
   ~source_elpi:"namespaces08.elpi"
   ~description:"a namespace sees its rules without signature of the files before"
   ~expectation:Test.(SuccessOutput (Str.regexp_string "ok"))
+  ()
+
+let () = declare "quotation_none"
+  ~source_elpi:"quotation_none.elpi"
+  ~description:"{{ ... }} with no default quotation is an error"
+  ~expectation:Test.(FailureOutput (Str.regexp_string "{{ ... }}: no default quotation is declared"))
+  ()
+
+let () = declare "quotation_unknown"
+  ~source_elpi:"quotation_unknown.elpi"
+  ~description:"{{:name ... }} with no quotation name is an error"
+  ~expectation:Test.(FailureOutput (Str.regexp_string "{{:nosuch ... }}: no quotation nosuch"))
   ()

@@ -1,0 +1,8 @@
+; the sub-library elpi.dynload of package elpi: plugins loaded with
+; findlib (dynlink) and the configuration of a project (elpi.toml), for the
+; elpi command and elpi-lsp; the library elpi does not depend on it (nor on
+; findlib)
+(library
+  (name elpi_dynload)
+  (public_name elpi.dynload)
+  (libraries elpi unix findlib.dynload))

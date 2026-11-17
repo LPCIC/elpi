@@ -1,0 +1,4 @@
+pred p o:int, o:int.
+p A B :- A = {{ 1 + 2 }}, B = @nine.
+pred bad o:int.
+bad {{ "not an int" }}.

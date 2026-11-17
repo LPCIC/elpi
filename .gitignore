@@ -4,6 +4,7 @@
 .vscode
 
 elpi.*
+!elpi.toml
 
 data.csv
 data.csv.dat

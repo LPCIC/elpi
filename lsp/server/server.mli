@@ -23,13 +23,36 @@ open Lsp.Types
       option maxErrors;
     - [include_paths] are the directories where accumulated files are
       searched, after the directory of the accumulating file (as the -I
-      options of elpi); a relative one is relative to the current directory. *)
+      options of elpi); a relative one is relative to the current directory;
+    - [packages] are the packages of accumulate "+pkg";
+    - [find_project_file ~path] is the project of the document [path] (its
+      elpi.toml), asked when the document is opened; by default, none. *)
+
+(** the project of a document: [root] is the directory of its elpi.toml,
+    [paths] where accumulated files are also searched, [builtins]
+    the ones of its prelude, [warnings]
+    the levels of the kinds of warnings,
+    [errors] the errors of its elpi.toml (the entries left out, the
+    plugins that cannot be preloaded, the prelude), shown at the start of
+    the document *)
+type project = {
+  root : string;
+  paths : (string * string) list;
+  builtins : Elpi.API.Setup.builtins list;
+  warnings : (Elpi.API.Error.warning_id * Elpi.API.Error.warning_level) list;
+  errors : string list;
+}
+
+val no_project : project
+
 val init :
   send:(Yojson.Safe.t -> unit) ->
   exit:(int -> unit) ->
   builtin_library_location:(Checker.instance -> string -> (DocumentUri.t * string) option) ->
   ?max_errors:int ->
   ?include_paths:string list ->
+  ?packages:Elpi.API.Setup.packages ->
+  ?find_project_file:(path:string -> project) ->
   unit -> unit
 
 (** [library_uri ~prefix instance name] is [prefix]ID/NAME, the URI of the file

@@ -5,7 +5,7 @@
  (optional)
  (package elpi-lsp)
  (modules stdio_lsp_driver)
- (libraries elpi_lsp_server sel lsp jsonrpc yojson unix))
+ (libraries elpi_lsp_server elpi.dynload sel lsp jsonrpc yojson unix))
 
 ; built by default: the server on stdin/stdout
 (alias

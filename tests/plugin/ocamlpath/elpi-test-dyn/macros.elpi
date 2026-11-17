@@ -1,0 +1,3 @@
+% the prelude of the package elpi-test-dyn: its macros are seen by the
+% files of the projects that use it
+macro @seven :- 7.

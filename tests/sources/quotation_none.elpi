@@ -1,0 +1,2 @@
+% {{ ... }} with no default quotation: an error, not an anomaly
+main :- X = {{ hello }}, print X.

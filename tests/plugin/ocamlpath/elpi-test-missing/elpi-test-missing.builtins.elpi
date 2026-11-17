@@ -1,0 +1,2 @@
+% a stale stub: the plugin declares missing.triple, not missing.double
+func missing.double int -> int.

@@ -1,0 +1,3 @@
+# a project that uses a package whose elpi.toml has another name
+name = "usewrongname"
+use = ["+elpi-test-wrongname"]

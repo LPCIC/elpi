@@ -1,0 +1,20 @@
+==== open proj/src/uses.elpi ====
+diagnostics of proj/src/uses.elpi (version 1): 0
+definition "pre.eight A"+0 (the cursor is at 2:9):
+  line 2:
+               | r A B :- pre.eight A, found.nine B.
+    cursor     |          *
+  defined at file://$DIR/proj/pre.elpi 1:0-1:21
+    | func pre.eight -> int
+  previewed 1:0-2:11
+    | func pre.eight -> int.
+    | pre.eight 8
+definition "found.nine B"+0 (the cursor is at 2:22):
+  line 2:
+               | r A B :- pre.eight A, found.nine B.
+    cursor     |                       *
+  defined at file://$DIR/proj/inc/found.elpi 1:0-1:22
+    | func found.nine -> int
+  previewed 1:0-2:12
+    | func found.nine -> int.
+    | found.nine 9

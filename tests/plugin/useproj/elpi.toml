@@ -1,0 +1,4 @@
+# a project that uses the package elpi-test-dyn: its paths, its prelude and
+# its preload are the ones of this project too
+name = "useproj"
+use = ["+elpi-test-dyn"]

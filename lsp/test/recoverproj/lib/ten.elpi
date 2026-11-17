@@ -1,0 +1,3 @@
+% a file of recoverproj, found through its [paths]
+func rp.ten -> int.
+rp.ten 10.

@@ -38,7 +38,15 @@
   server is started;
 - `--max-errors N`: the maximum number of errors reported for a file
   (default 100); the client can override it with the initialization option
-  `maxErrors`.
+  `maxErrors`;
+- `-debug FILE`: no protocol, for the terminal: the server checks `FILE` as
+  when an editor opens it, prints what it finds and exits. First the project
+  of the file, as the server reads its `elpi.toml` (the entries left out and
+  why, the paths, the plugins preloaded, the prelude, with each plugin or its
+  stub), then the diagnostics, as `file:line:column`, of the file and of the
+  files it accumulates. The log of the server is on the standard error. The
+  exit code is 1 if a diagnostic is an error;
+- `-h`, `-help`, `--help`: the list of the options.
 
 Other arguments, such as `--stdio`, are ignored.
 
@@ -52,6 +60,29 @@ edits count. When a document changes, the open documents that accumulate it
 disk again, if it is there. So a program of several files works where there is
 no disk, as in the server for the web (`../webrunner/`): the client opens all
 its files.
+
+## Packages and plugins
+
+`accumulate "+pkg/path"` reads `path.elpi` in the directory of the findlib
+package `pkg` (named as findlib does, e.g. `+elpi-json`), `accumulate "+/path"` the one at the root of the project
+of the file (the directory of the nearest `elpi.toml` above it), and `accumulate "+pkg"` the plugin of `pkg`. `elpi-lsp` does not
+load plugins: it reads their stub instead, the file `pkg.builtins.elpi` that
+the package installs next to its META (the documentation of the plugin), and
+accepts its `builtin` declarations with no OCaml code.
+
+When a document is opened, the server reads the nearest `elpi.toml` above it,
+as `elpi` does: its `[paths]` are used by its accumulates (a prefix, or
+`""` for a directory searched after `-I`),
+`prelude` is given to the instance of the document as builtins (their macros
+are seen by the document, and their `builtin` declarations can have no OCaml
+code), `"+name/path"` with the `name` of the project reads its sources, and
+the plugins of `preload` are loaded (the only ones that are, e.g. to install
+a quotation). The levels of its section `[warnings]` apply to the
+diagnostics: an `"off"` warning is not shown, an `"error"` one is an error.
+An error in `elpi.toml` or in its prelude is shown at the start of the
+document. The file is not watched: an edit counts
+for the documents opened after it. The server for the web has no packages
+and reads no `elpi.toml`.
 
 ## Structure
 

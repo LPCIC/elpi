@@ -1,0 +1,8 @@
+; build tools, not installed
+
+; prints a version (e.g. 1.28.1, v0.36.0-...) as (a, b, c), for the
+; [%%define] of ppx_optcomp: trace/ppx (ppxlib), lsp/server (lsp)
+(executable
+ (name version_parser)
+ (modules version_parser)
+ (libraries str))

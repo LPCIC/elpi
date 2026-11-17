@@ -1,0 +1,12 @@
+==== open warnproj/main.elpi ====
+diagnostics of warnproj/main.elpi (version 1): 2
+  0:0-0:1 error: Typechecker: Undeclared global q.
+Please add the following text to your program:
+type q int -> (pred).
+    | q 1.
+    | ^
+  2:7-2:8 error: Typechecker: Undeclared global q.
+Please add the following text to your program:
+type q int -> (pred).
+    | p X :- q 1.
+    |        ^

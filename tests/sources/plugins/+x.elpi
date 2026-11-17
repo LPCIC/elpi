@@ -1,0 +1,3 @@
+% a file whose name starts with +, accumulated as "./+x"
+func plusfile -> int.
+plusfile 7.

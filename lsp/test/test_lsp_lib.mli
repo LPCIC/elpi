@@ -39,6 +39,12 @@ val section : ('a, unit, string, unit) format4 -> 'a
 (** The contents of a file of the test directory. *)
 val read_file : string -> string
 
+(** [debug file] runs the server as [SERVER -debug FILE], with no protocol,
+    and prints its output (the project of [file] and its diagnostics, see
+    the README of elpi-lsp), then its exit code. The paths are anonymized,
+    with [/] as the separator also on Windows. *)
+val debug : string -> unit
+
 (** {2 Requests} *)
 
 (** [open_file file] sends [didOpen] with the contents of [file] and prints the
@@ -75,6 +81,12 @@ val await_diagnostics : string list -> unit
     as the new contents of the open [file], and prints the diagnostics as
     {!open_file} does. *)
 val change_file : string -> int -> string -> unit
+
+(** [write_watched_file file text] writes [text] to [file] and sends
+    [didChangeWatchedFiles] for it, as an editor that watches [file]; its
+    directory is made if missing. It does
+    not wait, see {!await_diagnostics}. *)
+val write_watched_file : string -> string -> unit
 
 (** [hover file needle k] requests the hover at the [k]-th character after the
     first occurrence of [needle] in [file]. It prints the cursor position and the

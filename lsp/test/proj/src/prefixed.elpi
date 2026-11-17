@@ -1,0 +1,3 @@
+accumulate "lsp.lib/util".
+func s -> int.
+s N :- util.seven N.

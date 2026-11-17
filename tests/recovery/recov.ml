@@ -6,11 +6,18 @@
 open Elpi_util
 open Elpi_parser
 
+let no_packages () =
+  let Util.ErrorFun { error; _ } = Util.error_fun ~component:"recov" in
+  error "no packages"
+
 let parser_for dir =
   (module Parse.Make (struct
     let versions = Util.StrMap.empty
     let resolver = Util.std_resolver ~paths:[ dir ] ()
     let reader = Util.std_reader
+    let package_dir ~pkg:_ = no_packages ()
+    let root_of_dir ~dir:_ = no_packages ()
+    let plugin ~pkg:_ = None
   end) : Parse.Parser_w_Internals)
 
 let read file =
@@ -36,7 +43,7 @@ let cases dir =
   |> List.sort String.compare
   |> List.iter (fun f ->
       Printf.printf "== %s\n" f;
-      let { Ast.ast; _ }, errors, _ = resilient p (Filename.concat dir f) in
+      let { Ast.ast; _ }, errors, _ = resilient p (Elpi_util.Util.filename_concat dir f) in
       List.iter (fun { Util.loc; message; _ } ->
           match loc with
           | Some { Util.Loc.line; source_start; line_starts_at; _ } ->

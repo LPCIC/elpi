@@ -32,14 +32,14 @@ let make_dir digest =
     | _ -> false
     | exception Unix.Unix_error _ -> false in
   let make d = try Unix.mkdir d 0o700; true with Unix.Unix_error _ -> false in
-  let dir = Filename.concat base (prefix () ^ Digest.to_hex digest) in
+  let dir = Elpi.API.Utils.filename_concat base (prefix () ^ Digest.to_hex digest) in
   ignore (make dir);
   if private_dir dir then dir
   else begin
     Checker.log "%s is not a private directory, the library is written elsewhere" dir;
     let rnd = Random.State.make_self_init () in
     let rec fresh n =
-      let d = Filename.concat base (Printf.sprintf "%s%06x" (prefix ()) (Random.State.bits rnd land 0xffffff)) in
+      let d = Elpi.API.Utils.filename_concat base (Printf.sprintf "%s%06x" (prefix ()) (Random.State.bits rnd land 0xffffff)) in
       if make d then d else if n > 0 then fresh (n - 1) else failwith "cannot make a directory for the library" in
     fresh 100
   end
@@ -58,7 +58,7 @@ let file instance name =
   match Checker.library_text instance name with
   | None -> None
   | Some text ->
-      let path = Filename.concat (dir instance) name in
+      let path = Elpi.API.Utils.filename_concat (dir instance) name in
       (try
          if not (Sys.file_exists path) then begin
            (* written aside then renamed: a file that is there is complete *)
@@ -86,4 +86,4 @@ let is_library_path path =
   let prefix = prefix () in
   String.length name > String.length prefix
   && String.equal (String.sub name 0 (String.length prefix)) prefix
-  && (try String.equal (normalize dir) (normalize (Filename.concat (base ()) name)) with Failure _ -> false)
+  && (try String.equal (normalize dir) (normalize (Elpi.API.Utils.filename_concat (base ()) name)) with Failure _ -> false)

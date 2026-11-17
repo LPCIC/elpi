@@ -1,0 +1,4 @@
+# the levels of the warnings: a linear variable is an error
+name = "warnproj"
+[warnings]
+linear-variable = "error"

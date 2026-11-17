@@ -1,0 +1,3 @@
+% a file of the package elpi-test-lsp
+func util.five -> int.
+util.five 5.
