@@ -1,3 +1,8 @@
+# v4.1.1 (November 2026)
+
+- elpi-json:
+  - Fix: tests do not depend on elpi being installed
+
 # v4.1.0 (November 2026)
 
 - Plugins and packages (see the "Plugins and packages" section in the manual):
