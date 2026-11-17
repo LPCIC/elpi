@@ -1,6 +1,15 @@
 (executable
   (name test_json)
+  (modules test_json)
   (libraries elpi_json))
+
+; elpi -check-package, built here: under -p elpi-json the executable elpi of
+; package elpi is not part of the build. It does not link elpi_json: it
+; dynlinks the plugin as installed
+(executable
+  (name check_package)
+  (modules check_package)
+  (libraries elpi elpi.dynload))
 
 (rule
  (deps ../utils.elpi)
@@ -18,7 +27,7 @@
  (action
   (with-stdout-to check_package.output
    (setenv OCAMLPATH %{workspace_root}/../install/default/lib
-    (run %{exe:../../elpi_REPL.exe} -check-package elpi-json)))))
+    (run ./check_package.exe elpi-json)))))
 
 (rule (alias runtest) (package elpi-json)
  (action (run grep -q "^+elpi-json  *ok (plugin loaded, stub up to date)" %{dep:check_package.output}))) ; no $: \r\n on Windows
