@@ -129,30 +129,10 @@ jobs:
           opam exec -- ls -l tests/sources/*.elpi
           opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe' TIME=--time=C:/.opam/.cygwin/root/bin/time.exe
 
-# Test artifacts ################################################################
-
-      - name: Save logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: .logs-${{ matrix.ocaml-compiler }}-${{ runner.os }}
-          path: _log
-          retention-days: 1
-
-# Binary Artifacts ###############################################################
-#
-# Saved before ppx_elpi and elpi-lsp, so that a failure there does not lose
-# them
-
       - name: Rename binary
         run: |
           opam exec -- mv ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi.exe
           opam exec -- mv ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator.exe
-
-      - name: Save binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}
-          path: elpi*.exe
 
 # ppx_elpi ###################################################################
 #
@@ -176,11 +156,12 @@ jobs:
           opam exec -- chmod u+w ${{ env.workspace }}/elpi-lsp.exe
           opam exec -- strip ${{ env.workspace }}/elpi-lsp.exe
 
-      - name: Save elpi-lsp binary
+      # the binaries: elpi.exe, elpi-trace-elaborator.exe and elpi-lsp.exe
+      - name: Save the binaries
         uses: actions/upload-artifact@v4
         with:
-          name: elpi-lsp-${{ matrix.ocaml-compiler }}-${{ runner.os }}
-          path: elpi-lsp.exe
+          name: elpi-binaries-${{ runner.os }}
+          path: elpi*.exe
 
       - name: Test elpi-lsp
         run: opam exec -- make tests-lsp
