@@ -9,7 +9,7 @@ on:
 
 jobs:
     test-users-mc:
-        name: "test users: math-comp"
+        name: "test users: math-comp and Trocq"
         runs-on: ubuntu-latest
         env:
           OPAMWITHTEST: true
@@ -22,84 +22,83 @@ jobs:
             ocaml-compiler: 4.14.x
             opam-local-packages:
 
-        - run: opam pin add dune 3.23.1
-          env:
-            OPAMWITHTEST: false
+        # Rocq and its stdlib do not depend on elpi: the switch (_opam) once
+        # they are installed is cached, by the commit of the branch of stdlib
+        # and by month (for the version of Rocq). They stay pinned for the
+        # steps below
+        - name: Commits of the cached packages
+          id: commits
+          run: |
+            echo "stdlib=$(git ls-remote https://github.com/rocq-prover/stdlib.git refs/heads/master | cut -f1)" >> "$GITHUB_OUTPUT"
+            echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
 
-        - run: opam pin add sexplib0 v0.16.0
+        - name: Restore Rocq and its stdlib
+          id: rocq
+          uses: actions/cache/restore@v4
+          with:
+            path: _opam
+            key: users-rocq-${{ steps.commits.outputs.stdlib }}-${{ steps.commits.outputs.month }}
+
+        - name: Install Rocq and its stdlib
+          if: steps.rocq.outputs.cache-hit != 'true'
           env:
             OPAMWITHTEST: false
+          run: |
+            opam pin add dune 3.23.1
+            opam pin add sexplib0 v0.16.0
+            opam pin add -n rocq-stdlib https://github.com/rocq-prover/stdlib.git#master
+            opam pin add -n coq-stdlib  https://github.com/rocq-prover/stdlib.git#master
+            opam install rocq-stdlib coq-stdlib
+
+        - name: Save Rocq and its stdlib
+          if: steps.rocq.outputs.cache-hit != 'true'
+          uses: actions/cache/save@v4
+          with:
+            path: _opam
+            key: ${{ steps.rocq.outputs.cache-primary-key }}
 
         - run: opam pin add elpi .
           env:
             OPAMWITHTEST: false
             
         # pinned only (-n), then installed by one opam install: one solution
-        # for all of them, so Rocq is built once (rocq-micromega-plugin holds
-        # it at 9.2: pinned and installed one at a time, the packages before
-        # it were built on 9.3, then rebuilt) and independent packages are
-        # built in parallel. They are all named in the install, so that
-        # OPAMWITHTEST applies to each of them
+        # for all of them, and independent packages are built in parallel.
+        # They are all named in the install, so that OPAMWITHTEST applies to
+        # each of them. The master branch of rocq-micromega-plugin works with
+        # Rocq 9.3, but its opam file says rocq-core < 9.3~: the bound is
+        # removed when it is pinned (--edit, with a sed as the editor; the
+        # edited file needs the version that a pin gives otherwise)
         - name: Pin the users
           run: |
+            cat > "$RUNNER_TEMP/no-rocq-bound" <<'EOF'
+            #!/bin/sh
+            sed -i 's/ & < "9.3~"//' "$1"
+            grep -q '^version:' "$1" || sed -i '1a version: "dev"' "$1"
+            EOF
+            chmod +x "$RUNNER_TEMP/no-rocq-bound"
+            OPAMEDITOR="$RUNNER_TEMP/no-rocq-bound" opam pin add -n --edit rocq-micromega-plugin https://github.com/rocq-community/micromega-plugin.git#master
             opam pin add -n rocq-elpi                  https://github.com/LPCIC/coq-elpi.git#elpi-json
             opam pin add -n coq-elpi                   https://github.com/LPCIC/coq-elpi.git#elpi-json
-            opam pin add -n rocq-stdlib                https://github.com/rocq-prover/stdlib.git#master
-            opam pin add -n coq-stdlib                 https://github.com/rocq-prover/stdlib.git#master
             opam pin add -n rocq-hierarchy-builder     https://github.com/math-comp/hierarchy-builder.git#master
             opam pin add -n rocq-mathcomp-boot         https://github.com/math-comp/math-comp.git#master
             opam pin add -n rocq-mathcomp-order        https://github.com/math-comp/math-comp.git#master
             opam pin add -n rocq-mathcomp-finite-group https://github.com/math-comp/math-comp.git#master
             opam pin add -n rocq-mathcomp-fingroup     https://github.com/math-comp/math-comp.git#master
-            opam pin add -n rocq-micromega-plugin      https://github.com/rocq-community/micromega-plugin.git#master
             opam pin add -n rocq-mathcomp-algebra      https://github.com/math-comp/math-comp.git#master
             opam pin add -n coq-mathcomp-algebra       https://github.com/math-comp/math-comp.git#master
             opam pin add -n rocq-mathcomp-solvable     https://github.com/math-comp/math-comp.git#master
             opam pin add -n rocq-mathcomp-field        https://github.com/math-comp/math-comp.git#master
+            opam pin add -n coq-trocq-std              https://github.com/gares/trocq.git#elpi-4.1-lsp
+            opam pin add -n coq-trocq-std-examples     https://github.com/gares/trocq.git#elpi-4.1-lsp
 
         - name: Install the users
           run: >-
-            opam install --ignore-constraints-on elpi
-            rocq-elpi coq-elpi rocq-stdlib coq-stdlib rocq-hierarchy-builder
+            opam install --ignore-constraints-on elpi,coq-stdlib
+            rocq-elpi coq-elpi rocq-hierarchy-builder
             rocq-mathcomp-boot rocq-mathcomp-order rocq-mathcomp-finite-group
             rocq-mathcomp-fingroup rocq-micromega-plugin rocq-mathcomp-algebra
             coq-mathcomp-algebra rocq-mathcomp-solvable rocq-mathcomp-field
-
-    # Trocq on Rocq master: not in the job above, where rocq-micromega-plugin
-    # downgrades Rocq to 9.2 and Trocq does not build there (dependent
-    # inversion in Param_arrow.v). Its examples need math-comp, hence
-    # rocq-micromega-plugin, so they are not built.
-    test-users-trocq:
-        name: "test users: trocq"
-        runs-on: ubuntu-latest
-        env:
-          OPAMWITHTEST: true
-          OPAMVERBOSE: true
-        steps:
-        - uses: actions/checkout@v4
-
-        - uses: ocaml/setup-ocaml@v3
-          with:
-            ocaml-compiler: 4.14.x
-            opam-local-packages:
-
-        - run: opam pin add dune 3.23.1
-          env:
-            OPAMWITHTEST: false
-
-        - run: opam pin add sexplib0 v0.16.0
-          env:
-            OPAMWITHTEST: false
-
-        - run: opam pin add elpi .
-          env:
-            OPAMWITHTEST: false
-
-        - run: opam pin --ignore-constraints-on elpi            add rocq-elpi              https://github.com/LPCIC/coq-elpi.git#elpi-json
-        - run: opam pin --ignore-constraints-on elpi            add coq-elpi               https://github.com/LPCIC/coq-elpi.git#elpi-json
-        - run: opam pin --ignore-constraints-on elpi            add rocq-stdlib            https://github.com/rocq-prover/stdlib.git#master
-        - run: opam pin --ignore-constraints-on elpi            add coq-stdlib             https://github.com/rocq-prover/stdlib.git#master
-        - run: opam pin --ignore-constraints-on elpi,coq-stdlib add coq-trocq-std          https://github.com/gares/trocq.git#elpi-4.1-lsp
+            coq-trocq-std coq-trocq-std-examples
 
     # test-users-br:
     #   name: "test users: bluerock.io"
