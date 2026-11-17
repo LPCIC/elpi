@@ -1,188 +1,78 @@
-# Unreleased
+# v4.1.0 (November 2026)
 
-- Plugins and packages:
-  - New: `accumulate "+pkg/path"` accumulates `path.elpi` in the directory of
-    package `pkg`, `accumulate "+/path"` is relative to the nearest `elpi.toml`,
-    and `accumulate "+pkg"` the plugin code registered by
-    `API.Plugin.register ~name:"pkg"`
-  - New: `Setup.init ?packages`
-  - New: library `Elpi_dynload`: the packages found and loaded via findlib, and
-    the project file format (`elpi.toml`)
-  - New: the `elpi` command dynlinks the plugins it meets and reads the
-    nearest `elpi.toml` above its file (`-config FILE`, `-no-config`);
-    `elpi-lsp` reads the stubs of the plugins, and the `elpi.toml` of a
-    document when it is opened
-  - New: `elpi-lsp` leaves out the entries of `elpi.toml` that are wrong
-    (e.g. a package of `use` that is not installed, a plugin of `preload`
-    that cannot be loaded, a file of `prelude`) and shows their errors at
-    the start of the document: the other entries count.
-    `Elpi_dynload.config_of_file ~recover:true` and `config_above
-    ~recover:true` give them in the field `errors`, `prelude_builtins
-    ~on_error`; `elpi` still stops at the first one
-  - New: `elpi-lsp -debug FILE` checks `FILE` as when an editor opens it and
-    prints, in the terminal, the project of the file (its `elpi.toml` as the
-    server reads it: entries left out, paths, preloaded plugins, prelude)
-    and the diagnostics; the exit code is 1 if one is an error.
-    `elpi-lsp --help` lists the options
+- Plugins and packages (see the "Plugins and packages" section in the manual):
+  - New: project file `elpi.toml`: the package name, the packages it uses,
+    a prelude seen by every file, plugins to preload, search paths
+    (`[paths]`, `[dev-only-paths]`) and warning levels. The `elpi` command
+    reads the nearest one above its file (`-config FILE`, `-no-config`),
+    `elpi-lsp` the one closer to each document
+  - New: `accumulate "+pkg/path"` reads `path.elpi` in the directory of the
+    findlib package `pkg`, `accumulate "+/path"` reads it relative to the
+    project root (the nearest `elpi.toml`), and `accumulate "+pkg"` loads
+    the plugin of `pkg`: OCaml builtins, found and dynlinked by findlib
   - New: `elpi -check-package pkg` checks an installed package: its
-    `elpi.toml`, its plugin and whether its stub is up to date, and that
-    each of its `.elpi` files compiles where it is installed;
-    `Elpi_dynload.check_package`
-  - New: package `elpi-json`, Yojson bindings as its plugin (`accumulate
-    "+elpi-json"`)
-- PPX:
-  - New: [@@elpi.namespace] to put all constructors into a namespace
-  - New: `[@@deriving elpi]` on a closed polymorphic variant, e.g.
-    ``type t = [ `A | `B of int ]``: its tags are the constructors
-- Parser:
-  - Fix: a file in `_build/install` (where dune puts the packages it builds,
-    e.g. through `OCAMLPATH`) keeps its name in the locations, so that its
-    relative `accumulate` are found; `/_build/CONTEXT` is still dropped from
-    the other files, named as their sources
-- Compiler:
-  - Fix: `{{ ... }}` with no default quotation declared, and `{{:name ... }}`
-    with no quotation `name`, are errors located at the quotation (they were
-    anomalies); the message says how a quotation is declared, or which ones
-    are
-- Type checker:
-  - Fix: a cast to `any` as the argument of a polymorphic constructor, e.g.
-    `[(X : any)]`, broke an invariant of the determinacy checker, also in
-    the head of a rule (`p (q [(A : any)]) :- p A.`)
-  - Fix: spilling dropped casts, e.g. `(X : any)` in a rule with a spill:
-    the invariant of the determinacy checker broke again
-  - Change: a constructor whose arguments mention a type variable that its
-    result type does not mention (an existential type, e.g.
-    `symb pack : A -> (A -> string) -> box.`) is rejected, also when a type
-    abbreviation hides the variable. Unifying two open terms built with such
-    a constructor can alias variables of different types. Use `any` or a
-    concrete type instead
-  - Fix: a bug made a random choice on ambiguous overloade constant
-- Builtins:
-  - Change: `<`, `>`, `=<` and `>=` no longer compare two constants (by the
-    order they were allocated in): they are a type error, as on any other
-    term that is not an int, a float or a string
-- Language:
-  - Change/Fix: a block of a namespace sees the symbols that the namespace
-    declares in its other blocks, also in the files that come before and in
-    the library, e.g. `p` in `namespace n { pred p. } namespace n { q :- p. }`
-    is `n.p` (#346). Before, only the ones of the block itself. Inside
-    `namespace std { }` the symbols of `std` have their short name
-  - Fix: in a namespace, an anonymous block `{ ... }` and what follows it
-    swapped the renaming of the predicates and the one of the types: a
-    predicate of the namespace with rules but no signature, or a type of the
-    namespace, was not found there
-  - Fix: in a namespace, a predicate or a constant does not hide a type
-    with the same name, e.g. in `namespace n { pred term. pred p term. }`
-    the argument of `p` has the type `term`, not `n.term`
-  - Change: `builtin` is only for the symbols of the language (with
-    `= "core"`, only in `builtin.elpi`) and for the predicates implemented by
-    an `MLCode` (`builtin func`). `builtin symb` without `= "core"` is a
-    parse error, `builtin pred` / `func` with no `MLCode` is an error, and
-    `builtin data` is no longer accepted. Before, a `builtin symb` with no
-    `= "N"` and such a predicate silently became Elpi symbols
-  - Change: the OCaml symbols of an OCaml builtins declaration
-    (`BuiltIn.declare`) are declared in its Elpi text with no `builtin`: a
-    plain `symb` for a constructor of its `MLData` or a symbol of its
-    `MLConstants`, a plain `pred` / `func` signature for a predicate of its
-    `MLConstants` whose rules are in Elpi (e.g. `;`). The OCaml builtins
-    declaration binds them. `= "v"` at the end of a `symb` picks the OCaml
-    symbol with variant `v`, a plain `symb` the one with the default variant;
-    `= "v"` is an error elsewhere. The text that Elpi prints for an OCaml
-    builtins declaration has `= "v"` on every symbol with a variant. An OCaml
-    symbol declared twice by the text, or a `symb` with the name of an OCaml
-    symbol (with the default variant) that the declaration does not list, is
-    an error
-  - Change: the symbols of the language (`!`, `,`, `=>`, `:-`, `=!=>`,
-    `==>`, `pi`, `sigma`, `=`, `pattern_match`, `findall_solutions`,
-    `declare_constraint`, `uvar`, `as`) are declared in `builtin.elpi` with
-    `= "core"`, which can also end a `builtin func` signature; no other file
-    can declare them
-  - Change: two declarations of an OCaml symbol with the same variant and
-    different types are an error (it was an anomaly)
-- API:
-  - New: `Plugin.builtins name`, the builtins of a registered plugin, e.g.
-    to give them to `Setup.init`
-  - Change: with `builtin_stubs`, the text of the builtins given to
-    `Setup.init` can name symbols without OCaml code too (builtin
-    predicates without an `MLCode`, symbols `= "variant"` of no `MLData`
-    nor `MLConstants`), and it can accumulate files; an error in that text
-    is raised as it is (it was an anomaly). A program does not add again a
-    file that is in its builtins already (e.g. in a prelude)
-  - New: `RawData.Constants.lookup "p"` gives the constant of `p` in the
-    program that runs, so that OCaml code can build and match terms of an
-    ordinary predicate or symbol, with no global symbol
-  - New: `BuiltIn.MLConstants [c1; ...]` binds the global symbols `c1` ...
-    (`Constants.declare_global_symbol`) to the declarations of the same name
-    in the text of its OCaml builtins declaration, as `MLData` does for the `constants` of
-    its conversion:
-    a plain `symb`, or a plain `pred` / `func` signature for a predicate
-    whose rules are in Elpi. The `symb` of a constant with a variant `v` ends
-    with `= "v"`. Each constant must be declared by the text
-  - Change: `Conversion.t` and `ContextualConversion.t` have a field
-    `constants`, the global symbols that their `pp_doc` declares (the
-    constructors of an `AlgebraicData`, the constants of an `OpaqueData`, the
-    ones of a type derived by ppx_elpi): the `MLData` of the conversion binds
-    them. A hand-written conversion gives `constants = []`, or the symbols
-    its `pp_doc` prints
-  - New: compilation flag `builtin_stubs` (`Compile.flags`), to accept the
-    declarations that OCaml neither declares nor implements (`builtin func`
-    with no `MLCode`, `= "v"` outside an OCaml builtins declaration)
-  - Change: ppx_elpi prints the constructors of `[@elpi.code name code]`
-    with `symb` and binds them to their OCaml symbol
-  - New: global symbols (`Constants.declare_global_symbol`), data types
-    (`AlgebraicData.declare`, `OpaqueData.declare`), calc operations and
-    OCaml builtins declarations (`BuiltIn.declare`) can be declared after
-    `Setup.init`, e.g. by a plugin linked later: a program accumulates such
-    a declaration with `Compile.scope_builtins`, `Compile.unit` and `Compile.extend`.
-    State components and quotations must still be declared before
-    `Setup.init`
-  - New: `BuiltIn.MLCalc (Calc.operations [...])` declares calc operations in
-    an OCaml builtins declaration: the programs that accumulate it can
-    evaluate them
-  - Change: `Calc.register`, `Calc.new_calc_descriptor`,
-    `Setup.calc_descriptor`, `Setup.init ?calc` and the `?calc` argument of
-    `BuiltIn.document_fmt` / `document_file` are removed: use `MLCalc`.
-    `Calc.calc` includes the standard operations
-  - Change: `AlgebraicData.declare` also declares parametric types, e.g.
-    `let option a = declare { ty = TyApp ("option", a.ty, []); ... }`: the
-    instances have the same constructors (the same name and variant give the
-    same global symbol). `AlgebraicData.allocate_constructors`, `declare_allocated`,
-    `allocation`, `Param`, `ParamC` and `Decl` are removed, and
-    `base_declaration` is renamed `declaration`
-  - Change: the variant of a global symbol is a string, by convention the
-    name of the library followed by a dot and a name, e.g. `"std.1"` or
-    `"json.1"`, so that two libraries cannot collide; `""` is the default
-    variant: `Constants.declare_global_symbol ~variant:"json.1"`,
-    `[@elpi.variant "json.1"]` in ppx_elpi, and the new `?variant` of
-    `AlgebraicData.declare` and `OpaqueData.declare` (for all the constructors
-    or constants of the type). Constructors, opaque constants and calc
-    operations no longer get a fresh variant each: the same name with the
-    same variant is the same symbol, and two types for it are an error.
-    `Calc.operation_declaration` has a `variant` and one type (`args :
-    string list`): an operation on several types is a declaration per type.
-    The standard ones are `std.1` (`int`) and `std.2` (`float`)
-- Runtime:
-  - Change: frozen constants are printed `frozen-K`, K their index in the
-    run (they were `frozen--NNN`)
+    `elpi.toml`, its plugin and stub, and that each of its files compiles
+  - New: sample package `elpi-json`, binding some Yojson APIs
 - LSP:
-  - Fix: builds with the library `lsp` 1.28 (`TraceValue`, `ServerInfo`,
-    the parameters of `Initialized`, the changes of a document as a variant),
-    and still with the older ones
-  - New: elpi-lsp accepts `builtin` declarations whose OCaml code is not
-    loaded (stubs), e.g. the documentation of the builtins of rocq-elpi
-  - Fix: the semantic tokens and the hover of a rule with spilling
-    (`{f X}`) follow its text: the variables and conjunctions that spilling
-    makes covered the spilled calls
-  - Fix: the arguments of a macro are hovered, defined and colored as
-    written, e.g. the variable of `@pi-decl N (a\ q a)`; an error in an
-    argument is at the argument (it was at the use of the macro)
-  - Fix: a warning located in an accumulated file is shown in that file
-    (it was on the `accumulate` directive of the document); when the file
-    is open, it shows its own diagnostics
-  - Fix: an `elpi.toml` that changes is read again, and the open documents
-    of its project checked again (the server asks the editor to watch the
-    `elpi.toml` files); an error in it was not shown until the document was
-    opened again
+  - New: `elpi-lsp -debug FILE` checks a file as an editor would and prints
+    its project and its diagnostics in the terminal
+  - New: a changed `elpi.toml` is read again and its documents checked again
+  - New: the stubs of plugins (`builtin` declarations whose OCaml code is
+    not loaded, e.g. rocq-elpi's) are accepted
+  - Fix: hover, definition and colors of rules with spilling (`{f X}`) and
+    of macro arguments follow the text; a warning in an accumulated file is
+    shown in that file
+- Language:
+  - Change: a block of a namespace sees the symbols the namespace declares
+    in its other blocks, also in earlier files (#346): in
+    `namespace n { pred p. } namespace n { q :- p. }` the `p` is `n.p`
+  - Fix: in a namespace, a predicate does not hide a type of the same name,
+    and an anonymous block `{ ... }` no longer breaks the names of what
+    follows
+  - Change: the `builtin` keyword is reserved for the core symbols of the
+    language and for predicates implemented in OCaml, it is not for data types
+- Type checker:
+  - Change: a constructor whose arguments use a type variable that its
+    result type does not (an existential) is rejected
+  - Fix: casts to `any` (e.g. `[(X : any)]`, also with spilling) and a
+    random choice among overloaded constants
+- Builtins:
+  - Change: `<`, `>`, `=<`, `>=` on non-numeric values is a type error
+- PPX:
+  - New: `[@@elpi.namespace]` puts all constructors in a namespace
+  - New: `[@@deriving elpi]` on a closed polymorphic variant, e.g.
+    ``[ `A | `B of int ]``
+- Fixes:
+  - `{{ ... }}` with no default quotation, or `{{:name ... }}` with no
+    quotation `name`, is an error at the quotation that says how to declare
+    one
+  - a file under `_build/install` keeps its name in locations, so its
+    relative `accumulate` work
+- API (for OCaml code embedding Elpi):
+  - New: `Setup.init ?packages`, `API.Plugin.register` / `builtins`, and
+    the library `elpi.dynload` (findlib loading, `elpi.toml`,
+    `check_package`)
+  - New: `RawData.Constants.lookup "p"`, the constant of `p` in the running
+    program; `BuiltIn.MLConstants` binds global symbols to their
+    declaration in the text; flag `builtin_stubs`
+  - New: global symbols, data types, calc operations and builtins
+    declarations can be declared after `Setup.init` (e.g. by a plugin);
+    state components and quotations still before
+  - Change: `Conversion.t` and `ContextualConversion.t` have a field
+    `constants` (`[]` for a hand-written conversion)
+  - Change: calc operations are declared with `BuiltIn.MLCalc`;
+    `Calc.register`, `Calc.new_calc_descriptor`, `Setup.calc_descriptor` and
+    `?calc` are removed
+  - Change: `AlgebraicData.declare` declares parametric types too;
+    `allocate_constructors`, `declare_allocated`, `allocation`, `Param`,
+    `ParamC` and `Decl` are removed, `base_declaration` is `declaration`
+  - Change: the variant of a global symbol is a string, e.g. `"json.1"`
+    (`""` by default): the same name and variant is the same symbol
+    (`?variant` of `declare_global_symbol`, `AlgebraicData.declare`,
+    `OpaqueData.declare`, `[@elpi.variant]`); `Calc.operation_declaration`
+    has a `variant` and one type
+  - Change: a file already in the builtins given to `Setup.init` (e.g. a
+    prelude) is not added again by a program that accumulates it
 
 # v4.0.1 (October 2026)
 
