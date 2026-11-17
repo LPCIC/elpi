@@ -1,0 +1,552 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plugins and packages &mdash; Elpi  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=78bb11f5" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Compatibility with Teyjus, Prolog and legacy Elpi" href="compatibility.html" />
+    <link rel="prev" title="Embedding and extending Elpi" href="embedding.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Elpi
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Syntax</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="syntax/lexical-conventions.html">Lexical conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/terms.html">Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/type-declarations.html">Type declarations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/inference-rules-and-queries.html">Inference rules and queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/constraint-handling-rules.html">Constraint handling rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/file-structure-and-attributes.html">File structure and attributes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="syntax/rule-attributes.html">Rule attributes</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Semantics</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="semantics/overview.html">Elpi = λProlog + CHR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/logic-programming-model.html">Logic Programming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/chr.html">The constraint store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="semantics/formal-semantics.html">Formal semantics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Language features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/unification-and-variables.html">Unification and variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/binders-and-hoas.html">Binders and HOAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/control-and-cut.html">Control and cut</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/spilling.html">Spilling and functional syntax</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/types-and-type-checking.html">Types and type checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/determinacy-checking.html">Determinacy checking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/argument-indexing.html">Argument indexing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/pitfalls.html">Pitfalls</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/stlc.html">Simply-typed λ-calculus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/hindley-milner.html">Hindley-Milner type inference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="builtins.html">Built-in predicates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard-library.html">The standard library</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Debugging &amp; tooling</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="debugging-and-tracing.html">Debugging and tracing</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Embedding and extending</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="embedding.html">Embedding and extending Elpi</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Plugins and packages</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#naming-a-package">Naming a package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#projects">Projects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#writing-a-plugin">Writing a plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loading-a-plugin">Loading a plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-stub-of-a-plugin">The stub of a plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-project-file">The project file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-other-packages">Using other packages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#checking-an-installed-package">Checking an installed package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#in-a-host-application">In a host application</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="compatibility.html">Compatibility with Teyjus, Prolog and legacy Elpi</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="elpi/index.html#http://">elpi</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Elpi</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Plugins and packages</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/plugins.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="plugins-and-packages">
+<h1>Plugins and packages<a class="headerlink" href="#plugins-and-packages" title="Link to this heading"></a></h1>
+<p>A <em>package</em> is a directory containing Elpi files and/or the OCaml code of
+a <em>plugin</em> that adds builtins to Elpi.
+Technically, a plugin is just an ordinary OCaml library that registers some
+builtins when loaded.</p>
+<section id="naming-a-package">
+<h2>Naming a package<a class="headerlink" href="#naming-a-package" title="Link to this heading"></a></h2>
+<p>Package names start with <code class="docutils literal notranslate"><span class="pre">+</span></code>, and a program accumulates the plugin or
+the files of a package via the <code class="docutils literal notranslate"><span class="pre">accumulate</span></code> directive.</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;lib/util&quot;</span><span class="o">.</span><span class="w">          </span><span class="c">% the file lib/util.elpi</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+foo/bar&quot;</span><span class="o">.</span><span class="w">          </span><span class="c">% bar.elpi in the directory of package foo</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+foo.bar/baz&quot;</span><span class="o">.</span><span class="w">      </span><span class="c">% baz.elpi in the directory of package foo.bar</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+/lib/util&quot;</span><span class="o">.</span><span class="w">        </span><span class="c">% lib/util.elpi in the root of the current package</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+foo.bar&quot;</span><span class="o">.</span><span class="w">          </span><span class="c">% the plugin of package foo.bar</span>
+</pre></div>
+</div>
+<p>A string with a <code class="docutils literal notranslate"><span class="pre">/</span></code> after the name of the package names a file in the
+directory of the package; one with no <code class="docutils literal notranslate"><span class="pre">/</span></code> names the plugin of the package.
+With no name, as in <code class="docutils literal notranslate"><span class="pre">&quot;+/lib/util&quot;</span></code>, the file is looked up in the root of the
+<em>current</em> package (see <a class="reference internal" href="#projects">Projects</a>). It is recommended to always use
+<code class="docutils literal notranslate"><span class="pre">+/..</span></code> paths within a package, since these are relative to the root of
+the package and not the file that loads them, making files relocatable within
+the project file structure.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">elpi</span></code> and <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code> a package name is a findlib package name and
+it is rooted where <code class="docutils literal notranslate"><span class="pre">ocamlfind</span> <span class="pre">query</span> <span class="pre">pkgname</span></code> prints. For
+example the package <code class="docutils literal notranslate"><span class="pre">elpi-json</span></code>, installed by the opam package of the same
+name, gives the builtins of its plugin and a file of utilities,
+<code class="docutils literal notranslate"><span class="pre">utils.elpi</span></code>:</p>
+<p><strong>code/json.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+elpi-json&quot;</span><span class="o">.</span>
+<span class="linenos">2</span><span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+elpi-json/utils&quot;</span><span class="o">.</span>
+<span class="linenos">3</span>
+<span class="linenos">4</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span>
+<span class="linenos">5</span><span class="w">  </span>json.from_string<span class="w"> </span><span class="s2">&quot;{ \&quot;</span><span class="nv">name\</span><span class="s2">&quot;: \&quot;</span><span class="nv">elpi\</span><span class="s2">&quot;, \&quot;</span><span class="nv">tags\</span><span class="s2">&quot;: [1, 2] }&quot;</span><span class="w"> </span><span class="nv">J</span><span class="w"> </span>ok<span class="kd">,</span>
+<span class="linenos">6</span><span class="w">  </span>json.lookup<span class="w"> </span><span class="nv">J</span><span class="w"> </span><span class="s2">&quot;tags&quot;</span><span class="w"> </span><span class="nv">T</span><span class="kd">,</span>
+<span class="linenos">7</span><span class="w">  </span>print<span class="w"> </span><span class="nv">T</span><span class="kd">,</span>
+<span class="linenos">8</span><span class="w">  </span>json.to_string<span class="w"> </span><span class="nv">J</span><span class="w"> </span><span class="nv">S</span><span class="w"> </span>ok<span class="kd">,</span>
+<span class="linenos">9</span><span class="w">  </span>print<span class="w"> </span><span class="nv">S</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">json.list [json.int 1, json.int 2]</span>
+<span class="go">{&quot;name&quot;:&quot;elpi&quot;,&quot;tags&quot;:[1,2]}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">elpi</span></code> loads the OCaml code of <code class="docutils literal notranslate"><span class="pre">elpi-json</span></code> when it meets <code class="docutils literal notranslate"><span class="pre">accumulate</span>
+<span class="pre">&quot;+elpi-json&quot;</span></code> (the file of utilities accumulates it too).</p>
+</section>
+<section id="projects">
+<h2>Projects<a class="headerlink" href="#projects" title="Link to this heading"></a></h2>
+<p>A <em>project</em> is the package being written: a directory with a file
+<code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> at its root:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>greet/
+  elpi.toml         name = &quot;greet&quot;
+  lib/names.elpi
+  src/main.elpi     accumulate &quot;+/lib/names&quot;.
+</pre></div>
+</div>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># the root of the project greet</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;greet&quot;</span>
+</pre></div>
+</div>
+<p><strong>code/project/src/main.elpi:</strong></p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+/lib/names&quot;</span><span class="o">.</span><span class="w">   </span><span class="c">% lib/names.elpi at the root of the project</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span>main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>names.all<span class="w"> </span><span class="nv">L</span><span class="kd">,</span><span class="w"> </span>std.forall<span class="w"> </span><span class="nv">L</span><span class="w"> </span><span class="p">(</span><span class="nv">n\</span><span class="w"> </span>print<span class="w"> </span><span class="s2">&quot;hello&quot;</span><span class="w"> </span>n<span class="p">)</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">hello Alice</span>
+<span class="go">hello Bob</span>
+</pre></div>
+</div>
+<p>The project of a file opened by the LSP server is found
+walking the file path backward and not among the installed packages:
+<code class="docutils literal notranslate"><span class="pre">&quot;+greet/lib/names&quot;</span></code> is the same file as <code class="docutils literal notranslate"><span class="pre">&quot;+/lib/names&quot;</span></code> there. Another
+project accumulates the files of <code class="docutils literal notranslate"><span class="pre">greet</span></code> as <code class="docutils literal notranslate"><span class="pre">&quot;+greet/...&quot;</span></code> once
+<code class="docutils literal notranslate"><span class="pre">greet</span></code> is installed, as the findlib package <code class="docutils literal notranslate"><span class="pre">greet</span></code> with its
+<code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> next to its <code class="docutils literal notranslate"><span class="pre">META</span></code> (see <a class="reference internal" href="#using-other-packages">Using other packages</a>).</p>
+</section>
+<section id="writing-a-plugin">
+<h2>Writing a plugin<a class="headerlink" href="#writing-a-plugin" title="Link to this heading"></a></h2>
+<p>The OCaml code of a plugin calls <code class="docutils literal notranslate"><span class="pre">Plugin.register</span></code> when it is loaded, with
+the name of its findlib package and a list of declarations, the same as for
+<code class="docutils literal notranslate"><span class="pre">BuiltIn.declare</span></code> (see <a class="reference internal" href="embedding.html"><span class="doc">Embedding and extending Elpi</span></a>). This one, from the tests of Elpi,
+is the plugin of the findlib package <code class="docutils literal notranslate"><span class="pre">elpi-test-dyn</span></code>:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="c">(* a plugin dynlinked by the elpi command: the plugin of findlib</span>
+<span class="c">   package elpi-test-dyn *)</span>
+<span class="k">open</span> <span class="nn">Elpi</span><span class="p">.</span><span class="nc">API</span>
+
+<span class="k">let</span> <span class="bp">()</span> <span class="o">=</span>
+  <span class="k">let</span> <span class="k">open</span> <span class="nc">BuiltIn</span> <span class="k">in</span>
+  <span class="k">let</span> <span class="k">open</span> <span class="nc">BuiltInPredicate</span> <span class="k">in</span>
+  <span class="k">let</span> <span class="k">open</span> <span class="nn">BuiltInPredicate</span><span class="p">.</span><span class="nc">Notation</span> <span class="k">in</span>
+  <span class="n">ignore</span> <span class="o">@@</span> <span class="nn">Plugin</span><span class="p">.</span><span class="n">register</span> <span class="o">~</span><span class="n">name</span><span class="o">:</span><span class="s2">&quot;elpi-test-dyn&quot;</span> <span class="o">[</span>
+    <span class="nc">MLCode</span><span class="o">(</span><span class="nc">Pred</span><span class="o">(</span><span class="s2">&quot;dyn.double&quot;</span><span class="o">,</span> <span class="nc">In</span><span class="o">(</span><span class="nn">BuiltInData</span><span class="p">.</span><span class="n">int</span><span class="o">,</span> <span class="s2">&quot;N&quot;</span><span class="o">,</span> <span class="nc">Out</span><span class="o">(</span><span class="nn">BuiltInData</span><span class="p">.</span><span class="n">int</span><span class="o">,</span> <span class="s2">&quot;M&quot;</span><span class="o">,</span> <span class="nc">Easy</span> <span class="s2">&quot;M is 2 * N&quot;</span><span class="o">)),</span>
+      <span class="o">(</span><span class="k">fun</span> <span class="n">n</span> <span class="o">_</span> <span class="o">~</span><span class="n">depth</span><span class="o">:_</span> <span class="o">-&gt;</span> <span class="o">!:</span> <span class="o">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="o">))),</span> <span class="nc">DocAbove</span><span class="o">);</span>
+  <span class="o">]</span>
+</pre></div>
+</div>
+<p>A library of dune with a <code class="docutils literal notranslate"><span class="pre">public_name</span></code> is a findlib package, and dune
+builds the <code class="docutils literal notranslate"><span class="pre">.cmxs</span></code> that <code class="docutils literal notranslate"><span class="pre">elpi</span></code> loads:</p>
+<div class="highlight-scheme notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">library</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">name</span><span class="w"> </span><span class="nv">elpi_test_dyn</span><span class="p">)</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">public_name</span><span class="w"> </span><span class="nv">elpi-test-dyn</span><span class="p">)</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">libraries</span><span class="w"> </span><span class="nv">elpi</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>A program uses its builtins once it accumulates it, here with a file of the
+same package:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+elpi-test-dyn&quot;</span><span class="o">.</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+elpi-test-dyn/util&quot;</span><span class="o">.</span>
+main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>dyn.double<span class="w"> </span><span class="mi">21</span><span class="w"> </span><span class="nv">X</span><span class="kd">,</span><span class="w"> </span>util.triple<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">Y</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">X</span><span class="w"> </span><span class="nv">Y</span><span class="o">.</span>
+</pre></div>
+</div>
+</section>
+<section id="loading-a-plugin">
+<h2>Loading a plugin<a class="headerlink" href="#loading-a-plugin" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">elpi</span></code> dynlinks the package of a plugin when it meets its <code class="docutils literal notranslate"><span class="pre">accumulate</span></code>,
+if the plugin is not registered yet: loaded before (a package can be linked
+in a host application) or later,
+a plugin works the same way. The one exception: a plugin loaded after
+<code class="docutils literal notranslate"><span class="pre">Setup.init</span></code> cannot declare state components (<code class="docutils literal notranslate"><span class="pre">State.declare_component</span></code>)
+nor quotations. A plugin that needs to desclare state components or quotations
+has to be listed in the <code class="docutils literal notranslate"><span class="pre">preload</span></code> key of the <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>.</p>
+</section>
+<section id="the-stub-of-a-plugin">
+<h2>The stub of a plugin<a class="headerlink" href="#the-stub-of-a-plugin" title="Link to this heading"></a></h2>
+<p>By convention the file <code class="docutils literal notranslate"><span class="pre">pkgname.builtins.elpi</span></code> is the documentation of
+the plugin as printed by <code class="docutils literal notranslate"><span class="pre">BuiltIn.document_fmt</span></code>. The LSP loads these
+stubs instead of dynlinking their code.</p>
+<p>For example the package <code class="docutils literal notranslate"><span class="pre">elpi-json</span></code> generates its stub <code class="docutils literal notranslate"><span class="pre">elpi-json.builtins.elpi</span></code>
+when it is built and installs it next to its <code class="docutils literal notranslate"><span class="pre">META</span></code>, with its <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>:</p>
+<div class="highlight-scheme notranslate"><div class="highlight"><pre><span></span><span class="c1">; the stub of the plugin elpi-json (its documentation), installed next to</span>
+<span class="c1">; the META: accumulate &quot;+elpi-json&quot; reads it when the plugin is not loaded (elpi-lsp)</span>
+<span class="p">(</span><span class="nf">rule</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">with-stdout-to</span><span class="w"> </span><span class="nv">elpi-json</span><span class="o">.</span><span class="nv">builtins</span><span class="o">.</span><span class="nv">elpi</span><span class="w"> </span><span class="p">(</span><span class="nf">run</span><span class="w"> </span><span class="nv">src/gen_stub</span><span class="o">.</span><span class="nv">exe</span><span class="p">)))</span>
+
+<span class="c1">; the files of the package: accumulate &quot;+elpi-json/utils&quot; ..., and the elpi.toml</span>
+<span class="c1">; that names the project</span>
+<span class="p">(</span><span class="nf">install</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">package</span><span class="w"> </span><span class="nv">elpi-json</span><span class="p">)</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">section</span><span class="w"> </span><span class="nv">lib</span><span class="p">)</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">files</span><span class="w"> </span><span class="nv">elpi-json</span><span class="o">.</span><span class="nv">builtins</span><span class="o">.</span><span class="nv">elpi</span><span class="w"> </span><span class="nv">utils</span><span class="o">.</span><span class="nv">elpi</span><span class="w"> </span><span class="nv">elpi</span><span class="o">.</span><span class="nv">toml</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>The program that prints it is one line:</p>
+<div class="highlight-ocaml notranslate"><div class="highlight"><pre><span></span><span class="c">(* prints the stub of the plugin, its documentation: elpi-json.builtins.elpi *)</span>
+<span class="k">let</span> <span class="bp">()</span> <span class="o">=</span> <span class="nn">Elpi</span><span class="p">.</span><span class="nn">API</span><span class="p">.</span><span class="nn">BuiltIn</span><span class="p">.</span><span class="n">document_fmt</span> <span class="nn">Format</span><span class="p">.</span><span class="n">std_formatter</span> <span class="nn">Elpi_json</span><span class="p">.</span><span class="n">builtins</span>
+</pre></div>
+</div>
+</section>
+<section id="the-project-file">
+<h2>The project file<a class="headerlink" href="#the-project-file" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> is read by <code class="docutils literal notranslate"><span class="pre">elpi</span></code> and by <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code>.</p>
+<dl>
+<dt>Location</dt><dd><p><code class="docutils literal notranslate"><span class="pre">elpi</span></code> reads the nearest <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> in the directory of the file it
+runs or above it. The option <code class="docutils literal notranslate"><span class="pre">-config</span> <span class="pre">FILE</span></code> names another file, and
+<code class="docutils literal notranslate"><span class="pre">-no-config</span></code> reads none. <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code> reads the nearest one above a
+document when the document is opened, and again when it is opened after
+<code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> changed. An entry of it that is wrong, such as a package of
+<code class="docutils literal notranslate"><span class="pre">use</span></code> that is not installed, is left out and its error is shown at the
+start of the document; the other entries count (<code class="docutils literal notranslate"><span class="pre">elpi</span></code> stops at the
+first error instead). <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span> <span class="pre">-debug</span> <span class="pre">FILE</span></code> prints the project of
+<code class="docutils literal notranslate"><span class="pre">FILE</span></code> as the server reads it. The nearest <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> above an accumulated file is also
+found when that file accumulates <code class="docutils literal notranslate"><span class="pre">&quot;+/...&quot;</span></code>, whatever the options. The
+search stops at the root of a repository (a directory with <code class="docutils literal notranslate"><span class="pre">.git</span></code>,
+<code class="docutils literal notranslate"><span class="pre">.hg</span></code>, <code class="docutils literal notranslate"><span class="pre">dune-workspace</span></code>, <code class="docutils literal notranslate"><span class="pre">_RocqProject</span></code> or <code class="docutils literal notranslate"><span class="pre">_CoqProject</span></code>) and does not look
+in the home directory
+or above it, so that a stray <code class="docutils literal notranslate"><span class="pre">~/elpi.toml</span></code> is not the project of every
+file.</p>
+</dd>
+<dt>Syntax</dt><dd><p>A subset of TOML: one <code class="docutils literal notranslate"><span class="pre">key</span> <span class="pre">=</span> <span class="pre">value</span></code> per line (a list can span several
+lines), where the value is a string or a list of strings, and comments
+from <code class="docutils literal notranslate"><span class="pre">#</span></code> to the end of the line. The only tables are the sections
+<code class="docutils literal notranslate"><span class="pre">[paths]</span></code> and <code class="docutils literal notranslate"><span class="pre">[warnings]</span></code> (below), whose keys are on the lines
+after them; a key can be quoted (<code class="docutils literal notranslate"><span class="pre">&quot;a.b&quot;</span> <span class="pre">=</span> <span class="pre">...</span></code>). A string is
+written between double quotes, with the escapes of TOML (<code class="docutils literal notranslate"><span class="pre">\&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">\\</span></code>, <code class="docutils literal notranslate"><span class="pre">\n</span></code>, <code class="docutils literal notranslate"><span class="pre">\t</span></code>, <code class="docutils literal notranslate"><span class="pre">\uXXXX</span></code> …), or between single quotes,
+with no escapes (<code class="docutils literal notranslate"><span class="pre">'C:\dir'</span></code>).</p>
+</dd>
+<dt>Keys</dt><dd><p>Each key is given at most once, and only <code class="docutils literal notranslate"><span class="pre">name</span></code> is required.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">name</span></code></dt><dd><p>a string, the findlib name of the package of the project (not empty,
+with no <code class="docutils literal notranslate"><span class="pre">/</span></code> nor <code class="docutils literal notranslate"><span class="pre">\</span></code>), as in <code class="docutils literal notranslate"><span class="pre">&quot;+name/...&quot;</span></code>: its <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>
+is installed in the directory of that package, which is checked when
+another project uses it and by <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-check-package</span></code>
+(<a class="reference internal" href="#checking-an-installed-package">Checking an installed package</a>)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">use</span></code></dt><dd><p>a list of packages, written <code class="docutils literal notranslate"><span class="pre">&quot;+pkg&quot;</span></code>, whose <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> (in the
+directory of the package) is used too: their <code class="docutils literal notranslate"><span class="pre">[paths]</span></code>,
+<code class="docutils literal notranslate"><span class="pre">prelude</span></code> and <code class="docutils literal notranslate"><span class="pre">preload</span></code> are transitively set for the users, as
+described in <a class="reference internal" href="#using-other-packages">Using other packages</a></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[paths]</span></code></dt><dd><p>a section: each key is a prefix, and its value a directory or a list
+of directories, as Rocq’s <code class="docutils literal notranslate"><span class="pre">-Q</span></code>. A host application can find the
+accumulated files its own way, with the <code class="docutils literal notranslate"><span class="pre">file_resolver</span></code> of
+<code class="docutils literal notranslate"><span class="pre">Setup.init</span></code>, as Rocq does with its logical paths; <code class="docutils literal notranslate"><span class="pre">[paths]</span></code>
+replicates that resolver outside the application, so that <code class="docutils literal notranslate"><span class="pre">elpi</span></code>
+and <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code> find the same files. <code class="docutils literal notranslate"><span class="pre">accumulate</span> <span class="pre">&quot;a.b/x&quot;</span></code> reads
+<code class="docutils literal notranslate"><span class="pre">x.elpi</span></code> in the directories of the prefix <code class="docutils literal notranslate"><span class="pre">a.b</span></code> (written
+<code class="docutils literal notranslate"><span class="pre">&quot;a.b&quot;</span> <span class="pre">=</span> <span class="pre">&quot;+/src/b&quot;</span></code>, quoted since it has a dot), in order. The
+prefix cannot be empty: a directory searched for any file would be
+searched also by the projects that <em>use</em> this one, and its files could
+hide theirs; such a directory is given with <code class="docutils literal notranslate"><span class="pre">-I</span></code>. <code class="docutils literal notranslate"><span class="pre">paths</span> <span class="pre">=</span> <span class="pre">[...]</span></code>,
+a list, is an error</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[dev-only-paths]</span></code></dt><dd><p>a section like <code class="docutils literal notranslate"><span class="pre">[paths]</span></code>, used only when <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> is the one
+of the project being worked on: the nearest one above the file that
+<code class="docutils literal notranslate"><span class="pre">elpi</span></code> runs or that <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code> checks, or the one given with
+<code class="docutils literal notranslate"><span class="pre">-config</span></code>. It is not used when another project reads <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>
+through <code class="docutils literal notranslate"><span class="pre">use</span></code>, nor by <code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-check-package</span></code>, so it can name
+directories that are not installed, such as the tests of the
+project: <code class="docutils literal notranslate"><span class="pre">rocq-elpi</span></code> has <code class="docutils literal notranslate"><span class="pre">&quot;elpi.tests&quot;</span> <span class="pre">=</span> <span class="pre">&quot;+/tests&quot;</span></code> there. Its
+prefixes come after the ones of <code class="docutils literal notranslate"><span class="pre">[paths]</span></code></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">prelude</span></code></dt><dd><p>a list of strings found as the ones of <code class="docutils literal notranslate"><span class="pre">accumulate</span></code> are, e.g.
+<code class="docutils literal notranslate"><span class="pre">&quot;+elpi-json/utils&quot;</span></code>: their files are given to <code class="docutils literal notranslate"><span class="pre">Setup.init</span></code> as
+builtins, so that their macros are seen by every file of the project.
+<code class="docutils literal notranslate"><span class="pre">&quot;+pkg&quot;</span></code> is the plugin of <code class="docutils literal notranslate"><span class="pre">pkg</span></code>, or its stub if the plugin is not
+loaded. A file of the prelude can accumulate other files; a file that
+a program accumulates and that is in the prelude already is not added
+again</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">preload</span></code></dt><dd><p>a list of findlib packages whose plugins are loaded <em>before</em>
+<code class="docutils literal notranslate"><span class="pre">Setup.init</span></code>, and not when a file accumulates them. A plugin can
+declare state components, or quotations that change how the files of
+the project are parsed (<code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">...</span> <span class="pre">}}</span></code> in <code class="docutils literal notranslate"><span class="pre">rocq-elpi-lsp-shim</span></code>): these
+exist only if the plugin is loaded before the first file is read, so
+such a plugin has to be preloaded. <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code> loads them too, when
+a document of the project is opened</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">[warnings]</span></code></dt><dd><p>a section: each key is a kind of warnings, and its value <code class="docutils literal notranslate"><span class="pre">&quot;off&quot;</span></code>
+(the warning is not shown), <code class="docutils literal notranslate"><span class="pre">&quot;on&quot;</span></code> (the default) or <code class="docutils literal notranslate"><span class="pre">&quot;error&quot;</span></code>
+(the warning is an error: <code class="docutils literal notranslate"><span class="pre">elpi</span></code> stops, <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code> shows it as
+an error). The kinds are <code class="docutils literal notranslate"><span class="pre">linear-variable</span></code>, <code class="docutils literal notranslate"><span class="pre">undeclared-global</span></code>,
+<code class="docutils literal notranslate"><span class="pre">flex-clause</span></code>, <code class="docutils literal notranslate"><span class="pre">implication-precedence</span></code> and <code class="docutils literal notranslate"><span class="pre">nested-accumulate</span></code>;
+<code class="docutils literal notranslate"><span class="pre">all</span></code> is all of them, and a later key overrides an earlier one. The
+option <code class="docutils literal notranslate"><span class="pre">-w</span> <span class="pre">SPEC</span></code> of <code class="docutils literal notranslate"><span class="pre">elpi</span></code> changes the level of one kind after
+<code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>: <code class="docutils literal notranslate"><span class="pre">+name</span></code> turns it on, <code class="docutils literal notranslate"><span class="pre">-name</span></code> off, and <code class="docutils literal notranslate"><span class="pre">&#64;name</span></code>
+makes it an error. It is repeated for several kinds, and a later one
+overrides an earlier one, e.g. <code class="docutils literal notranslate"><span class="pre">-w</span> <span class="pre">-linear-variable</span> <span class="pre">-w</span>
+<span class="pre">&#64;undeclared-global</span></code></p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>A directory of <code class="docutils literal notranslate"><span class="pre">[paths]</span></code> or a file of <code class="docutils literal notranslate"><span class="pre">prelude</span></code> is written as in
+<code class="docutils literal notranslate"><span class="pre">accumulate</span></code>: <code class="docutils literal notranslate"><span class="pre">&quot;+/dir&quot;</span></code> is <code class="docutils literal notranslate"><span class="pre">dir</span></code> in the root of the project (the
+directory of <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>), <code class="docutils literal notranslate"><span class="pre">&quot;+pkg/dir&quot;</span></code> is <code class="docutils literal notranslate"><span class="pre">dir</span></code> in the directory of
+the package <code class="docutils literal notranslate"><span class="pre">pkg</span></code>. A relative or absolute path, such as <code class="docutils literal notranslate"><span class="pre">&quot;lib&quot;</span></code>, is an error, so that an
+<code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> means the same in the sources of a project and where its package
+is installed. An unknown key, a duplicate one, or a value of the wrong kind
+is an error located at its line of <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>, such as <code class="docutils literal notranslate"><span class="pre">elpi.toml:</span> <span class="pre">unknown</span>
+<span class="pre">key</span> <span class="pre">plugins</span> <span class="pre">(name,</span> <span class="pre">use,</span> <span class="pre">prelude,</span> <span class="pre">preload</span> <span class="pre">and</span> <span class="pre">the</span> <span class="pre">sections</span> <span class="pre">[paths],</span>
+<span class="pre">[dev-only-paths]</span> <span class="pre">and</span> <span class="pre">[warnings]</span> <span class="pre">are)</span></code> on line 3. For example, the project of this test:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># the project of main.elpi, at its root</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;proj&quot;</span>
+<span class="n">prelude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;+/pre&quot;</span><span class="p">]</span>
+<span class="n">preload</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;elpi-test-dyn.state&quot;</span><span class="p">]</span>
+<span class="k">[paths]</span>
+<span class="s2">&quot;proj.lib&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;+/lib&quot;</span><span class="w">        </span><span class="c1"># proj.lib/x is lib/x</span>
+<span class="s2">&quot;proj.deep&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;+/src/deep&quot;</span><span class="w">  </span><span class="c1"># proj.deep/x is src/deep/x</span>
+<span class="s2">&quot;dyn&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;+elpi-test-dyn&quot;</span><span class="w">    </span><span class="c1"># dyn/x is x in the directory of package elpi-test-dyn</span>
+<span class="k">[dev-only-paths]</span>
+<span class="s2">&quot;proj.tests&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;+/tests&quot;</span><span class="w">    </span><span class="c1"># only for proj itself, not for a project that uses it</span>
+</pre></div>
+</div>
+<p>has its main file accumulate a file found through <code class="docutils literal notranslate"><span class="pre">[paths]</span></code> (<code class="docutils literal notranslate"><span class="pre">libfile</span></code>,
+in <code class="docutils literal notranslate"><span class="pre">lib</span></code>, <code class="docutils literal notranslate"><span class="pre">proj.deep/more</span></code>, in <code class="docutils literal notranslate"><span class="pre">src/deep</span></code>, and <code class="docutils literal notranslate"><span class="pre">dyn/util</span></code>, in the
+directory of the package <code class="docutils literal notranslate"><span class="pre">elpi-test-dyn</span></code>), one found through
+<code class="docutils literal notranslate"><span class="pre">[dev-only-paths]</span></code> (<code class="docutils literal notranslate"><span class="pre">proj.tests/t</span></code>, in <code class="docutils literal notranslate"><span class="pre">tests</span></code>), a preloaded plugin
+and a file of the project, and use a macro of its prelude:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;proj.lib/libfile&quot;</span><span class="o">.</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+/pre&quot;</span><span class="o">.</span><span class="w"> </span><span class="c">% in the prelude already: not added again</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+elpi-test-dyn.state&quot;</span><span class="o">.</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+/src/deep/answer&quot;</span><span class="o">.</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;proj.deep/more&quot;</span><span class="o">.</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;dyn/util&quot;</span><span class="o">.</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;proj.tests/t&quot;</span><span class="o">.</span>
+main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span><span class="kd">@</span>hello<span class="kd">,</span><span class="w"> </span>lib.answer<span class="w"> </span><span class="nv">A</span><span class="kd">,</span><span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="kd">=</span><span class="w"> </span><span class="kd">@</span>forty-two<span class="kd">,</span><span class="w"> </span>deep.more<span class="w"> </span><span class="mi">7</span><span class="kd">,</span><span class="w"> </span>deep.answer<span class="w"> </span><span class="nv">D</span><span class="kd">,</span><span class="w"> </span>dyn.tick<span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w"> </span>dyn.tick<span class="w"> </span><span class="nv">M</span><span class="kd">,</span><span class="w"> </span>util.triple<span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="nv">T</span><span class="kd">,</span><span class="w"> </span>tests.check<span class="w"> </span><span class="nv">C</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">A</span><span class="w"> </span><span class="nv">D</span><span class="w"> </span><span class="nv">N</span><span class="w"> </span><span class="nv">M</span><span class="w"> </span><span class="nv">T</span><span class="w"> </span><span class="nv">C</span><span class="o">.</span>
+</pre></div>
+</div>
+</section>
+<section id="using-other-packages">
+<h2>Using other packages<a class="headerlink" href="#using-other-packages" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> of a project is installed with its package, next to its
+<code class="docutils literal notranslate"><span class="pre">META</span></code>, and the files that it names are installed where it expects them:
+the installed tree mirrors the sources, so that <code class="docutils literal notranslate"><span class="pre">&quot;+/...&quot;</span></code> keeps its meaning.
+A project that builds on other packages names them in <code class="docutils literal notranslate"><span class="pre">use</span></code>; their
+<code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> gives the project their <code class="docutils literal notranslate"><span class="pre">[paths]</span></code>, their <code class="docutils literal notranslate"><span class="pre">prelude</span></code> and their
+<code class="docutils literal notranslate"><span class="pre">preload</span></code>, so that it need not repeat how their files accumulate one
+another. The packages of <code class="docutils literal notranslate"><span class="pre">use</span></code> are followed transitively: the <code class="docutils literal notranslate"><span class="pre">[paths]</span></code>
+of a used package come after the ones of the project, and its <code class="docutils literal notranslate"><span class="pre">prelude</span></code> and
+<code class="docutils literal notranslate"><span class="pre">preload</span></code> before; an entry given twice counts once. <code class="docutils literal notranslate"><span class="pre">[dev-only-paths]</span></code>
+and <code class="docutils literal notranslate"><span class="pre">[warnings]</span></code> are not used.</p>
+<p>A package with no <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>, or whose <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> has a <code class="docutils literal notranslate"><span class="pre">name</span></code> that
+is not the findlib name of the package, is an error at the line of <code class="docutils literal notranslate"><span class="pre">use</span></code>.</p>
+<p>For example, the package <code class="docutils literal notranslate"><span class="pre">elpi-test-dyn</span></code> of the tests installs this
+<code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>, with the files <code class="docutils literal notranslate"><span class="pre">macros.elpi</span></code> and <code class="docutils literal notranslate"><span class="pre">lib/double.elpi</span></code>:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># the project of the findlib package elpi-test-dyn, next to its META: a</span>
+<span class="c1"># project that uses it gets its paths, prelude and preload</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;elpi-test-dyn&quot;</span>
+<span class="n">prelude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;+/macros&quot;</span><span class="p">]</span>
+<span class="n">preload</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;elpi-test-dyn.state&quot;</span><span class="p">]</span>
+<span class="k">[paths]</span>
+<span class="s2">&quot;dyn.lib&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;+/lib&quot;</span><span class="w">   </span><span class="c1"># dyn.lib/x is lib/x in the directory of the package</span>
+</pre></div>
+</div>
+<p>and a project that uses it:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># a project that uses the package elpi-test-dyn: its paths, its prelude and</span>
+<span class="c1"># its preload are the ones of this project too</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;useproj&quot;</span>
+<span class="n">use</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;+elpi-test-dyn&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>finds <code class="docutils literal notranslate"><span class="pre">lib/double.elpi</span></code> through the prefix <code class="docutils literal notranslate"><span class="pre">dyn.lib</span></code>, sees the macro of
+its prelude, and has its plugin <code class="docutils literal notranslate"><span class="pre">elpi-test-dyn.state</span></code> preloaded:</p>
+<div class="highlight-elpi notranslate"><div class="highlight"><pre><span></span><span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;dyn.lib/double&quot;</span><span class="o">.</span><span class="w">        </span><span class="c">% through the [paths] of elpi-test-dyn</span>
+<span class="kd">accumulate</span><span class="w"> </span><span class="s2">&quot;+elpi-test-dyn.state&quot;</span><span class="o">.</span><span class="w">  </span><span class="c">% preloaded by elpi-test-dyn</span>
+main<span class="w"> </span><span class="p">:</span><span class="kd">-</span><span class="w"> </span>dyn.double<span class="w"> </span><span class="kd">@</span>seven<span class="w"> </span><span class="nv">D</span><span class="kd">,</span><span class="w"> </span>dyn.tick<span class="w"> </span><span class="nv">N</span><span class="kd">,</span><span class="w"> </span>print<span class="w"> </span><span class="nv">D</span><span class="w"> </span><span class="nv">N</span><span class="o">.</span><span class="w"> </span><span class="c">% @seven: its prelude</span>
+</pre></div>
+</div>
+<p>In the same way the <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code> of <code class="docutils literal notranslate"><span class="pre">rocq-elpi</span></code> names the files of its
+prelude and the logical paths (<code class="docutils literal notranslate"><span class="pre">elpi_elpi</span></code>, <code class="docutils literal notranslate"><span class="pre">elpi.apps.derive.elpi</span></code>)
+that its files accumulate, and a library written with it, such as Trocq,
+has <code class="docutils literal notranslate"><span class="pre">use</span> <span class="pre">=</span> <span class="pre">[&quot;+rocq-elpi&quot;]</span></code> and only its own <code class="docutils literal notranslate"><span class="pre">[paths]</span></code>.</p>
+</section>
+<section id="checking-an-installed-package">
+<h2>Checking an installed package<a class="headerlink" href="#checking-an-installed-package" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">elpi</span> <span class="pre">-check-package</span> <span class="pre">pkg</span></code> checks the package <code class="docutils literal notranslate"><span class="pre">pkg</span></code> as findlib finds it
+installed, so that a file that was not installed shows up before another
+project needs it. It checks:</p>
+<ul class="simple">
+<li><p>its <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>, if it has one, read as <code class="docutils literal notranslate"><span class="pre">use</span></code> reads it: its <code class="docutils literal notranslate"><span class="pre">name</span></code>
+is <code class="docutils literal notranslate"><span class="pre">pkg</span></code>, and its <code class="docutils literal notranslate"><span class="pre">[dev-only-paths]</span></code> are not used;</p></li>
+<li><p>its plugin, if it installs a stub <code class="docutils literal notranslate"><span class="pre">pkg.builtins.elpi</span></code>: the plugin is
+dynlinked and registers under the name <code class="docutils literal notranslate"><span class="pre">pkg</span></code>, the stub compiles, and
+the stub is the documentation that <code class="docutils literal notranslate"><span class="pre">BuiltIn.document_fmt</span></code> prints for
+the plugin, so it is not stale;</p></li>
+<li><p>each <code class="docutils literal notranslate"><span class="pre">.elpi</span></code> file of its directory (the stubs aside), shown as the
+<code class="docutils literal notranslate"><span class="pre">&quot;+pkg/file&quot;</span></code> that accumulates it: the file is parsed and compiled as
+<code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code> compiles a document of a project that uses <code class="docutils literal notranslate"><span class="pre">pkg</span></code>, with
+the <code class="docutils literal notranslate"><span class="pre">preload</span></code>, <code class="docutils literal notranslate"><span class="pre">prelude</span></code> and <code class="docutils literal notranslate"><span class="pre">[paths]</span></code> of its <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>. So
+every file that it accumulates, directly or not, must be installed.</p></li>
+</ul>
+<p>It prints one line for each of these items, <code class="docutils literal notranslate"><span class="pre">ok</span></code> or the errors, and exits
+with 1 if one of them failed. The install of dune, in
+<code class="docutils literal notranslate"><span class="pre">_build/install/default/lib</span></code>, has the same layout as the installed
+package, so a package can be checked before it is installed:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>dune<span class="w"> </span>build<span class="w"> </span>@install
+<span class="nv">OCAMLPATH</span><span class="o">=</span><span class="nv">$PWD</span>/_build/install/default/lib<span class="w"> </span>elpi<span class="w"> </span>-check-package<span class="w"> </span>elpi-test-dyn
+</pre></div>
+</div>
+<p>For the package <code class="docutils literal notranslate"><span class="pre">elpi-test-dyn</span></code> of the tests, whose <code class="docutils literal notranslate"><span class="pre">macros.elpi</span></code> is its
+prelude, it prints:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>elpi.toml                  ok (name elpi-test-dyn)
++elpi-test-dyn             ok (plugin loaded, stub up to date)
++elpi-test-dyn/lib/double  ok
++elpi-test-dyn/macros      ok (in the prelude)
++elpi-test-dyn/util        ok
+</pre></div>
+</div>
+</section>
+<section id="in-a-host-application">
+<h2>In a host application<a class="headerlink" href="#in-a-host-application" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Setup.init</span> <span class="pre">~packages</span></code> gives Elpi the packages of the host: the directory of
+a package, the root of the project that contains a directory (for
+<code class="docutils literal notranslate"><span class="pre">&quot;+/...&quot;</span></code>)
+and, optionally, a function that loads the OCaml code of a package. Without
+it, <code class="docutils literal notranslate"><span class="pre">accumulate</span> <span class="pre">&quot;+...&quot;</span></code> is an error, but a plugin registered by the host can
+still be accumulated. The library <code class="docutils literal notranslate"><span class="pre">elpi.dynload</span></code> (module <code class="docutils literal notranslate"><span class="pre">Elpi_dynload</span></code>)
+provides the ones of findlib and of <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>: <code class="docutils literal notranslate"><span class="pre">packages</span></code> loads plugins
+with dynlink, as <code class="docutils literal notranslate"><span class="pre">elpi</span></code> does, <code class="docutils literal notranslate"><span class="pre">packages_stubs</span></code> reads their stubs
+instead, as <code class="docutils literal notranslate"><span class="pre">elpi-lsp</span></code> does; it also reads <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="embedding.html" class="btn btn-neutral float-left" title="Embedding and extending Elpi" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="compatibility.html" class="btn btn-neutral float-right" title="Compatibility with Teyjus, Prolog and legacy Elpi" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Enrico Tassi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

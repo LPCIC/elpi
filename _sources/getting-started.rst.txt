@@ -94,6 +94,27 @@ server speaks the standard Language Server Protocol, so other editors can use
 it too. How to build, configure and test it is explained in the
 `README of the language server <https://github.com/LPCIC/elpi/blob/master/lsp/README.md>`_.
 
+When the editor shows errors that you do not expect, such as an accumulated
+file that is not found, ``elpi-lsp -debug FILE`` shows in the terminal what
+the server sees: it checks ``FILE`` as when the editor opens it, prints the
+project of the file and the diagnostics, and exits (with code 1 if a
+diagnostic is an error). The project is its ``elpi.toml``, described in
+:doc:`plugins`, as the server reads it: the paths where accumulated files are searched (a
+missing directory is marked), the plugins loaded before the file, the files
+of the prelude, and the entries left out with their error. Here the
+``elpi.toml`` of the project uses a package that is not installed:
+
+.. literalinclude:: ../../lsp/test/recoverproj/elpi.toml
+   :language: toml
+
+and ``elpi-lsp -debug recoverproj/main.elpi`` prints (``$DIR`` stands for
+the current directory, the last line is the exit code):
+
+.. literalinclude:: ../../lsp/test/debug.expected
+   :language: text
+
+``elpi-lsp --help`` lists the options.
+
 The language server also runs in a web browser, compiled to JavaScript and to
 WebAssembly. The Elpi repository uses it to put editable and runnable Elpi
 code in the slides of a `Slidev <https://sli.dev>`_ presentation: each code
