@@ -34,20 +34,36 @@ jobs:
           env:
             OPAMWITHTEST: false
             
-        - run: opam pin --ignore-constraints-on elpi            add rocq-elpi              https://github.com/LPCIC/coq-elpi.git#elpi-json
-        - run: opam pin --ignore-constraints-on elpi            add coq-elpi               https://github.com/LPCIC/coq-elpi.git#elpi-json
-        - run: opam pin --ignore-constraints-on elpi            add rocq-stdlib            https://github.com/rocq-prover/stdlib.git#master
-        - run: opam pin --ignore-constraints-on elpi            add coq-stdlib             https://github.com/rocq-prover/stdlib.git#master
-        - run: opam pin --ignore-constraints-on elpi            add rocq-hierarchy-builder https://github.com/math-comp/hierarchy-builder.git#master
-        - run: opam pin --ignore-constraints-on elpi            add rocq-mathcomp-boot     https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi            add rocq-mathcomp-order    https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi            add rocq-mathcomp-finite-group https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi            add rocq-mathcomp-fingroup https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi            add rocq-micromega-plugin  https://github.com/rocq-community/micromega-plugin.git#master
-        - run: opam pin --ignore-constraints-on elpi            add rocq-mathcomp-algebra  https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi            add coq-mathcomp-algebra  https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi            add rocq-mathcomp-solvable https://github.com/math-comp/math-comp.git#master
-        - run: opam pin --ignore-constraints-on elpi            add rocq-mathcomp-field    https://github.com/math-comp/math-comp.git#master
+        # pinned only (-n), then installed by one opam install: one solution
+        # for all of them, so Rocq is built once (rocq-micromega-plugin holds
+        # it at 9.2: pinned and installed one at a time, the packages before
+        # it were built on 9.3, then rebuilt) and independent packages are
+        # built in parallel. They are all named in the install, so that
+        # OPAMWITHTEST applies to each of them
+        - name: Pin the users
+          run: |
+            opam pin add -n rocq-elpi                  https://github.com/LPCIC/coq-elpi.git#elpi-json
+            opam pin add -n coq-elpi                   https://github.com/LPCIC/coq-elpi.git#elpi-json
+            opam pin add -n rocq-stdlib                https://github.com/rocq-prover/stdlib.git#master
+            opam pin add -n coq-stdlib                 https://github.com/rocq-prover/stdlib.git#master
+            opam pin add -n rocq-hierarchy-builder     https://github.com/math-comp/hierarchy-builder.git#master
+            opam pin add -n rocq-mathcomp-boot         https://github.com/math-comp/math-comp.git#master
+            opam pin add -n rocq-mathcomp-order        https://github.com/math-comp/math-comp.git#master
+            opam pin add -n rocq-mathcomp-finite-group https://github.com/math-comp/math-comp.git#master
+            opam pin add -n rocq-mathcomp-fingroup     https://github.com/math-comp/math-comp.git#master
+            opam pin add -n rocq-micromega-plugin      https://github.com/rocq-community/micromega-plugin.git#master
+            opam pin add -n rocq-mathcomp-algebra      https://github.com/math-comp/math-comp.git#master
+            opam pin add -n coq-mathcomp-algebra       https://github.com/math-comp/math-comp.git#master
+            opam pin add -n rocq-mathcomp-solvable     https://github.com/math-comp/math-comp.git#master
+            opam pin add -n rocq-mathcomp-field        https://github.com/math-comp/math-comp.git#master
+
+        - name: Install the users
+          run: >-
+            opam install --ignore-constraints-on elpi
+            rocq-elpi coq-elpi rocq-stdlib coq-stdlib rocq-hierarchy-builder
+            rocq-mathcomp-boot rocq-mathcomp-order rocq-mathcomp-finite-group
+            rocq-mathcomp-fingroup rocq-micromega-plugin rocq-mathcomp-algebra
+            coq-mathcomp-algebra rocq-mathcomp-solvable rocq-mathcomp-field
 
     # Trocq on Rocq master: not in the job above, where rocq-micromega-plugin
     # downgrades Rocq to 9.2 and Trocq does not build there (dependent

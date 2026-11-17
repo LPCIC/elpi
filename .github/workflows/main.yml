@@ -6,26 +6,14 @@ on:
   pull_request:
     branches: [ master ]
 
-jobs:
-  # The versions of OCaml to test, the last one being the latest: the job
-  # fatalwarnings and the npm package use it
-  versions:
-    name: OCaml versions
-    runs-on: ubuntu-latest
-    outputs:
-      compilers: ${{ steps.versions.outputs.compilers }}
-      latest: ${{ steps.versions.outputs.latest }}
-    steps:
-      - id: versions
-        env:
-          COMPILERS: '["4.14.x", "5.5.x"]'
-        run: |
-          echo "compilers=$COMPILERS" >> "$GITHUB_OUTPUT"
-          echo "latest=$(jq -r '.[-1]' <<< "$COMPILERS")" >> "$GITHUB_OUTPUT"
+# Each component (elpi, ppx_elpi, elpi-lsp, elpi-json, the plugins) is built
+# and tested once on each OS, with the latest OCaml (job test); the web build
+# and the fatalwarnings build are on Linux only. The lowest supported OCaml
+# is checked by building everything, without tests (job build-lowest).
 
-  build:
+jobs:
+  test:
     name: Build and test elpi
-    needs: versions
     strategy:
       fail-fast: false
       matrix:
@@ -33,25 +21,19 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macos-latest
-        ocaml-compiler: ${{ fromJSON(needs.versions.outputs.compilers) }}
-        profile:
-          - dev
-        include:
-          - os: ubuntu-latest
-            ocaml-compiler: ${{ needs.versions.outputs.latest }}
-            profile: fatalwarnings
+        ocaml-compiler:
+          - 5.5.x
 
     runs-on: ${{ matrix.os }}
 
     # dune builds in the release profile (smaller binaries; the web build,
-    # webrunner, is in the release profile anyway, see the Makefile), but in the
-    # job fatalwarnings, which turns the warnings of the dev profile into
-    # errors (see the root dune)
+    # webrunner, is in the release profile anyway, see the Makefile); the
+    # fatalwarnings build, at the end, is in the dev profile
     env:
-      DUNE_PROFILE: ${{ matrix.profile == 'fatalwarnings' && 'dev' || 'release' }}
+      DUNE_PROFILE: release
 
     steps:
-    
+
       - name: Set git to use LF
         run: |
           git config --global core.autocrlf false
@@ -61,7 +43,7 @@ jobs:
         uses: actions/checkout@v4
 
 # Environment setup ###########################################################
-# 
+#
 # We install missing bits and we mae ${{ env.workspace }} points to the current
 # working directory in a system agnostic way
 #
@@ -96,17 +78,31 @@ jobs:
           opam init --reinit --cygwin-extra-packages=time,which,wdiff
 #          & "C:/.opam/.cygwin/setup-x86_64.exe" -s https://mirrors.kernel.org/sourceware/cygwin/ -v -q -P time,which,wdiff
 
+# Dependencies ################################################################
+#
+# The ones of all the packages, at once. setup-ocaml caches the switch with
+# the compiler only: the switch (_opam, in the workspace) with the
+# dependencies is cached too, by opam files and by month (so that they are
+# updated now and then). On a hit, opam install finds them installed.
+
+      - name: Month
+        id: month
+        shell: bash
+        run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the dependencies
+        uses: actions/cache@v4
+        with:
+          path: _opam
+          key: opam-deps-${{ runner.os }}-${{ matrix.ocaml-compiler }}-${{ hashFiles('*.opam') }}-${{ steps.month.outputs.month }}
+
+      - name: Install the dependencies
+        run: |
+          opam install ./elpi.opam ./ppx_elpi.opam ./elpi-lsp.opam --deps-only --with-test
+
 # Build ######################################################################
 #
 # We generate binaries like elpi-4.07.1-Linux.exe in the working directory
-  
-      - name: Install real dependencies
-        run: |
-          opam install ./elpi.opam --deps-only --with-doc --with-test
-
-      - name: Enable warn as errors
-        if: runner.os == 'Linux' && matrix.profile == 'fatalwarnings'
-        run: sed -ibak 's/-A/+A/' dune
 
       - name: Build elpi
         run: |
@@ -121,14 +117,14 @@ jobs:
 
 # Test ######################################################################
 #
-# We run the test suite which also produces data.csf containing benchmarks
+# The test suite of elpi, and dune runtest (the plugins, elpi-json...)
 
       - name: Test elpi on Unix
-        if: runner.os != 'Windows' && matrix.profile != 'fatalwarnings'
+        if: runner.os != 'Windows'
         run: opam exec -- make tests RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe'
 
       - name: Test elpi on Windows
-        if: runner.os == 'Windows' && matrix.profile != 'fatalwarnings'
+        if: runner.os == 'Windows'
         run: |
           opam exec -- ls -l tests/sources/*.elpi
           opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe' TIME=--time=C:/.opam/.cygwin/root/bin/time.exe
@@ -137,18 +133,9 @@ jobs:
 
       - name: Save logs
         uses: actions/upload-artifact@v4
-        if: matrix.profile != 'fatalwarnings'
         with:
           name: .logs-${{ matrix.ocaml-compiler }}-${{ runner.os }}
           path: _log
-          retention-days: 1
-
-      - name: Save benchmarking data
-        uses: actions/upload-artifact@v4
-        if: matrix.profile != 'fatalwarnings'
-        with:
-          name: .benchmark-${{ matrix.ocaml-compiler }}-${{ runner.os }}
-          path: data.csv
           retention-days: 1
 
 # Binary Artifacts ###############################################################
@@ -163,38 +150,24 @@ jobs:
 
       - name: Save binary
         uses: actions/upload-artifact@v4
-        if: matrix.profile != 'fatalwarnings'
         with:
           name: elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}
           path: elpi*.exe
 
 # ppx_elpi ###################################################################
 #
-# Done last, so that it does not interfere with the above. ppx_elpi depends on
-# elpi, passing both opam files makes the local elpi.opam satisfy that
-# dependency.
-
-      - name: Install ppx_elpi dependencies
-        run: opam install ./elpi.opam ./ppx_elpi.opam --deps-only
+# Done last, so that it does not interfere with the above
 
       - name: Build ppx_elpi
         run: opam exec -- make build-ppx DUNE_OPTS=--verbose
 
       # the expected output depends on the version of ppx_deriving and ppxlib
       - name: Test ppx_elpi
-        if: startsWith(matrix.ocaml-compiler, '5.')
-        run: |
-          opam install ./elpi.opam ./ppx_elpi.opam --deps-only --with-test
-          opam exec -- make tests-ppx
+        run: opam exec -- make tests-ppx
 
 # elpi-lsp ###################################################################
 #
-# Also done after the main tests: the language server depends on elpi, passing
-# both opam files makes the local elpi.opam satisfy that dependency.
-
-      - name: Install elpi-lsp dependencies
-        run: |
-          opam install ./elpi.opam ./elpi-lsp.opam --deps-only --with-test
+# Also done after the main tests
 
       - name: Build elpi-lsp
         run: |
@@ -205,7 +178,6 @@ jobs:
 
       - name: Save elpi-lsp binary
         uses: actions/upload-artifact@v4
-        if: matrix.profile != 'fatalwarnings'
         with:
           name: elpi-lsp-${{ matrix.ocaml-compiler }}-${{ runner.os }}
           path: elpi-lsp.exe
@@ -221,13 +193,13 @@ jobs:
 # is put in the PATH instead.
 
       - name: Install binaryen
-        if: runner.os == 'Linux' && matrix.profile != 'fatalwarnings'
+        if: runner.os == 'Linux'
         run: |
           curl -sL https://github.com/WebAssembly/binaryen/releases/download/version_120/binaryen-version_120-x86_64-linux.tar.gz | tar xz -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/binaryen-version_120/bin" >> "$GITHUB_PATH"
 
       - name: Build and test Elpi on the web
-        if: runner.os == 'Linux' && matrix.profile != 'fatalwarnings'
+        if: runner.os == 'Linux'
         run: |
           opam install js_of_ocaml js_of_ocaml-compiler
           opam install --no-depexts wasm_of_ocaml-compiler
@@ -238,48 +210,60 @@ jobs:
 # elpi-webrunner-VERSION.tgz
 
       - name: Pack Elpi on the web (npm)
-        if: runner.os == 'Linux' && matrix.ocaml-compiler == needs.versions.outputs.latest && matrix.profile != 'fatalwarnings'
+        if: runner.os == 'Linux'
         run: |
           git fetch --unshallow --tags || git fetch --tags
           opam exec -- make pack-webrunner
 
       - name: Save the npm package of Elpi on the web
         uses: actions/upload-artifact@v4
-        if: runner.os == 'Linux' && matrix.ocaml-compiler == needs.versions.outputs.latest && matrix.profile != 'fatalwarnings'
+        if: runner.os == 'Linux'
         with:
           name: elpi-webrunner
           path: webrunner/elpi-webrunner/elpi-webrunner-*.tgz
 
-  aggregate:
-    name: Aggregate and plot benchmarking data
+# fatalwarnings ###############################################################
+#
+# On Linux, last: the warnings of the dev profile turned into errors (see the
+# root dune), for all the packages and the tests
+
+      - name: Build with warnings as errors
+        if: runner.os == 'Linux'
+        run: |
+          sed -i 's/-A/+A/' dune
+          opam exec -- dune build --profile dev @install @only-elpi @ppx_elpi/all @lsp/all @elpi-json/all
+
+  # The lowest supported OCaml: everything builds (no tests)
+  build-lowest:
+    name: Build elpi (lowest OCaml)
     runs-on: ubuntu-latest
-    needs: build
-    if: always()
-
-    strategy:
-      fail-fast: false
-
+    env:
+      DUNE_PROFILE: release
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Install extra stuff
-        run: |
-          sudo apt-get update
-          sudo apt-get install lua5.1 gnuplot
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - name: Use OCaml 4.14.x
+        uses: ocaml/setup-ocaml@v3
         with:
-          pattern: .benchmark*
+          ocaml-compiler: 4.14.x
+          opam-local-packages:
 
-      - name: Plotting aggregated data
-        run: |
-          cat .benchmark-*/data.csv > data.csv
-          tests/plot data.csv
-          gnuplot data.csv.plot
+      - name: Month
+        id: month
+        run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
 
-      - name: Save benchmarking plot
-        uses: actions/upload-artifact@v4
+      - name: Cache the dependencies
+        uses: actions/cache@v4
         with:
-          name: benchmark-plot
-          path: data.csv.svg
+          path: _opam
+          key: opam-deps-lowest-${{ runner.os }}-4.14.x-${{ hashFiles('*.opam') }}-${{ steps.month.outputs.month }}
+
+      # yojson: elpi-json, a with-test dependency of elpi
+      - name: Install the dependencies
+        run: |
+          opam install ./elpi.opam ./ppx_elpi.opam ./elpi-lsp.opam --deps-only
+          opam install yojson
+
+      - name: Build everything
+        run: opam exec -- make world DUNE_OPTS=--verbose
