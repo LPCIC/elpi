@@ -1,3 +1,9 @@
+# Unreleased
+
+- elpi-json:
+  - Fix: `dune runtest -p elpi-json` runs only the tests of elpi-json, the
+    others need the `elpi` command of package elpi
+
 # v4.1.1 (November 2026)
 
 - elpi-json:
