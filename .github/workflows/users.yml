@@ -43,7 +43,6 @@ jobs:
         - name: Pin the users
           run: |
             opam pin add -n rocq-elpi                  https://github.com/LPCIC/coq-elpi.git#elpi-json
-            opam pin add -n coq-elpi                   https://github.com/LPCIC/coq-elpi.git#elpi-json
             opam pin add -n rocq-stdlib                https://github.com/rocq-prover/stdlib.git#master
             opam pin add -n coq-stdlib                 https://github.com/rocq-prover/stdlib.git#master
             opam pin add -n rocq-hierarchy-builder     https://github.com/math-comp/hierarchy-builder.git#master
@@ -60,7 +59,7 @@ jobs:
         - name: Install the users
           run: >-
             opam install --ignore-constraints-on elpi
-            rocq-elpi coq-elpi rocq-stdlib coq-stdlib rocq-hierarchy-builder
+            rocq-elpi rocq-stdlib coq-stdlib rocq-hierarchy-builder
             rocq-mathcomp-boot rocq-mathcomp-order rocq-mathcomp-finite-group
             rocq-mathcomp-fingroup rocq-micromega-plugin rocq-mathcomp-algebra
             coq-mathcomp-algebra rocq-mathcomp-solvable rocq-mathcomp-field
@@ -96,7 +95,6 @@ jobs:
             OPAMWITHTEST: false
 
         - run: opam pin --ignore-constraints-on elpi            add rocq-elpi              https://github.com/LPCIC/coq-elpi.git#elpi-json
-        - run: opam pin --ignore-constraints-on elpi            add coq-elpi               https://github.com/LPCIC/coq-elpi.git#elpi-json
         - run: opam pin --ignore-constraints-on elpi            add rocq-stdlib            https://github.com/rocq-prover/stdlib.git#master
         - run: opam pin --ignore-constraints-on elpi            add coq-stdlib             https://github.com/rocq-prover/stdlib.git#master
         - run: opam pin --ignore-constraints-on elpi,coq-stdlib add coq-trocq-std          https://github.com/gares/trocq.git#elpi-4.1-lsp
