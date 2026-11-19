@@ -3379,6 +3379,8 @@ let rec claux1 loc get_mode vars depth tc hyps ts lts lcs t =
      in
      let c = { depth = depth+lcs; args; hyps; mode = get_mode hd; vars; loc; timestamp = []; oc = true } in
      [%spy "dev:claudify:extra-clause" ~rid (ppclause ~hd) c];
+     let depth = depth + lcs in
+     let g = if vars = 0 then g else move ~argsdepth:depth (Array.init vars (fun _ -> UVar (oref ~depth C.dummy, 0))) ~from:depth ~to_:depth g in
      (hd,c), { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g } as r,args) when g != C.dummy ->
      claux1 loc get_mode vars depth tc hyps ts lts lcs
