@@ -162,7 +162,7 @@ clean:
 	rm -rf docs/build
 
 release:
-	dune-release -p elpi,ppx_elpi,elpi-lsp
+	dune-release -p elpi,ppx_elpi,elpi-lsp,elpi-json
 	$(MAKE) release-npm
 
 # the npm package of the web build (webrunner/elpi-webrunner/elpi-webrunner-VERSION.tgz,
