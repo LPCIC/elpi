@@ -274,9 +274,15 @@ stubs instead of dynlinking their code.</p>
 <p>For example the package <code class="docutils literal notranslate"><span class="pre">elpi-json</span></code> generates its stub <code class="docutils literal notranslate"><span class="pre">elpi-json.builtins.elpi</span></code>
 when it is built and installs it next to its <code class="docutils literal notranslate"><span class="pre">META</span></code>, with its <code class="docutils literal notranslate"><span class="pre">elpi.toml</span></code>:</p>
 <div class="highlight-scheme notranslate"><div class="highlight"><pre><span></span><span class="c1">; the stub of the plugin elpi-json (its documentation), installed next to</span>
-<span class="c1">; the META: accumulate &quot;+elpi-json&quot; reads it when the plugin is not loaded (elpi-lsp)</span>
+<span class="c1">; the META: accumulate &quot;+elpi-json&quot; reads it when the plugin is not loaded</span>
+<span class="c1">; (elpi-lsp). The rule is promoted, like the one that generates the</span>
+<span class="c1">; builtins of Elpi (src/dune): elpi-json.builtins.elpi is kept in the</span>
+<span class="c1">; sources, and its diff shows how a change of the plugin changes its</span>
+<span class="c1">; signatures</span>
 <span class="p">(</span><span class="nf">rule</span>
-<span class="w"> </span><span class="p">(</span><span class="nf">with-stdout-to</span><span class="w"> </span><span class="nv">elpi-json</span><span class="o">.</span><span class="nv">builtins</span><span class="o">.</span><span class="nv">elpi</span><span class="w"> </span><span class="p">(</span><span class="nf">run</span><span class="w"> </span><span class="nv">src/gen_stub</span><span class="o">.</span><span class="nv">exe</span><span class="p">)))</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">targets</span><span class="w"> </span><span class="nv">elpi-json</span><span class="o">.</span><span class="nv">builtins</span><span class="o">.</span><span class="nv">elpi</span><span class="p">)</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">mode</span><span class="w"> </span><span class="nv">promote</span><span class="p">)</span>
+<span class="w"> </span><span class="p">(</span><span class="nf">action</span><span class="w"> </span><span class="p">(</span><span class="nf">with-stdout-to</span><span class="w"> </span><span class="nv">elpi-json</span><span class="o">.</span><span class="nv">builtins</span><span class="o">.</span><span class="nv">elpi</span><span class="w"> </span><span class="p">(</span><span class="nf">run</span><span class="w"> </span><span class="nv">src/gen_stub</span><span class="o">.</span><span class="nv">exe</span><span class="p">))))</span>
 
 <span class="c1">; the files of the package: accumulate &quot;+elpi-json/utils&quot; ..., and the elpi.toml</span>
 <span class="c1">; that names the project</span>
