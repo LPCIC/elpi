@@ -1,7 +1,13 @@
 ; the stub of the plugin elpi-json (its documentation), installed next to
-; the META: accumulate "+elpi-json" reads it when the plugin is not loaded (elpi-lsp)
+; the META: accumulate "+elpi-json" reads it when the plugin is not loaded
+; (elpi-lsp). The rule is promoted, like the one that generates the
+; builtins of Elpi (src/dune): elpi-json.builtins.elpi is kept in the
+; sources, and its diff shows how a change of the plugin changes its
+; signatures
 (rule
- (with-stdout-to elpi-json.builtins.elpi (run src/gen_stub.exe)))
+ (targets elpi-json.builtins.elpi)
+ (mode promote)
+ (action (with-stdout-to elpi-json.builtins.elpi (run src/gen_stub.exe))))
 
 ; the files of the package: accumulate "+elpi-json/utils" ..., and the elpi.toml
 ; that names the project

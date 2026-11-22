@@ -1,4 +1,4 @@
-(* elpi-json: Yojson bindings for Elpi, the plugin json of findlib package
+(* elpi-json: Yojson bindings for Elpi, the plugin of the findlib package
    elpi-json *)
 
 (** [Yojson.Basic.t], the Elpi type [json]; the builtins that read a [json]

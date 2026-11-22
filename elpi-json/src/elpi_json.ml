@@ -83,7 +83,7 @@ let json_pretty_to_string = MLCode(Pred("json.pretty_to_string",
   DocAbove)
 
 let builtins : Setup.builtins = Plugin.register ~name:"elpi-json" ([
-    LPDoc {|Yojson bindings for Elpi: the plugin json (findlib package elpi-json)|};
+    LPDoc {|Yojson bindings for Elpi: the plugin of the findlib package elpi-json|};
     LPDoc {|license: GNU Lesser General Public License Version 2.1 or later|};
     LPDoc {|------------------------------------------------------------------------|};
   ] @ Elpi.API.PPX.to_list declaration @ [
