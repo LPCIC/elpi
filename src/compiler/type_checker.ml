@@ -107,9 +107,15 @@ let chose_indexing predicate l k =
       error ("Wrong indexing for " ^ F.show predicate ^
               ": Map indexes exactly one argument at depth 1")) 0 l
 
+(* An unbounded indexing depth. Not max_int: the index is part of the
+   compiled program, which can be marshaled (e.g. in a Rocq .vo file) and
+   read by a program where ints have 31 bits (e.g. compiled with
+   wasm_of_ocaml), where 2^62-1 does not fit. *)
+let max_indexing_depth = (1 lsl 30) - 1
+
 let maximize_indexing_input modes =
   let open Elpi_runtime.Data in
-  let depths = List.map (function Util.Mode.Fo Input | Util.Mode.Ho (Input, _) -> max_int | _ -> 0) modes in
+  let depths = List.map (function Util.Mode.Fo Input | Util.Mode.Ho (Input, _) -> max_indexing_depth | _ -> 0) modes in
   DiscriminationTree depths
 
 let rec is_prop ~type_abbrevs = function
